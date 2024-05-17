@@ -80,7 +80,7 @@ class LandsatHlsRaster: public GeoIndexedRaster
          *--------------------------------------------------------------------*/
 
                 LandsatHlsRaster (lua_State* L, GeoParms* _parms);
-       virtual ~LandsatHlsRaster (void);
+               ~LandsatHlsRaster (void) override;
 
         void    getIndexFile     (const OGRGeometry* geo, std::string& file) final;
         bool    findRasters      (const OGRGeometry* geo) override;

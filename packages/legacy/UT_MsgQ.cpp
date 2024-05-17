@@ -65,23 +65,21 @@ UT_MsgQ::UT_MsgQ(CommandProcessor* cmd_proc, const char* obj_name):
     CommandableObject(cmd_proc, obj_name, TYPE)
 {
     /* Register Commands */
-    registerCommand("BLOCKING_RECEIVE_TEST", (cmdFunc_t)&UT_MsgQ::blockingReceiveUnitTestCmd, 0, "");
-    registerCommand("SUBSCRIBE_UNSUBSCRIBE_TEST", (cmdFunc_t)&UT_MsgQ::subscribeUnsubscribeUnitTestCmd, 0, "");
-    registerCommand("PERFORMANCE_TEST", (cmdFunc_t)&UT_MsgQ::performanceUnitTestCmd, 0, "[<depth> <size>]");
-    registerCommand("SUBSCRIBER_OF_OPPORTUNITY_TEST", (cmdFunc_t)&UT_MsgQ::subscriberOfOpporunityUnitTestCmd, 0, "");
+    registerCommand("BLOCKING_RECEIVE_TEST", static_cast<cmdFunc_t>(&UT_MsgQ::blockingReceiveUnitTestCmd), 0, "");
+    registerCommand("SUBSCRIBE_UNSUBSCRIBE_TEST", static_cast<cmdFunc_t>(&UT_MsgQ::subscribeUnsubscribeUnitTestCmd), 0, "");
+    registerCommand("PERFORMANCE_TEST", static_cast<cmdFunc_t>(&UT_MsgQ::performanceUnitTestCmd), 0, "[<depth> <size>]");
+    registerCommand("SUBSCRIBER_OF_OPPORTUNITY_TEST", static_cast<cmdFunc_t>(&UT_MsgQ::subscriberOfOpporunityUnitTestCmd), 0, "");
 }
 
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-UT_MsgQ::~UT_MsgQ(void)
-{
-}
+UT_MsgQ::~UT_MsgQ(void) = default;
 
 /*----------------------------------------------------------------------------
  * blockingReceiveUnitTestCmd  -
  *----------------------------------------------------------------------------*/
-int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
+int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     (void)argc;
     (void)argv;
@@ -112,7 +110,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     long data = 0;
     for(int i = 0; i < unit_test_parms.qdepth; i++)
     {
-        int status1 = pubq->postCopy((void*)&data, sizeof(long));
+        const int status1 = pubq->postCopy(static_cast<void*>(&data), sizeof(long));
         if(status1 <= 0)
         {
             print2term("[%d] ERROR: post %ld error %d\n", __LINE__, data, status1);
@@ -123,7 +121,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
 
     /* STEP 2: Verify that Post Times Out */
-    int status2 = pubq->postCopy((void*)&data, sizeof(long), SYS_TIMEOUT);
+    const int status2 = pubq->postCopy(static_cast<void*>(&data), sizeof(long), SYS_TIMEOUT);
     if(status2 != MsgQ::STATE_TIMEOUT)
     {
         print2term("[%d] ERROR: post %ld did not timeout: %d\n", __LINE__, data, status2);
@@ -135,7 +133,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     long value = 0;
     for(int i = 0; i < unit_test_parms.qdepth; i++)
     {
-        int status3 = subq->receiveCopy((void*)&value, sizeof(long), SYS_TIMEOUT);
+        const int status3 = subq->receiveCopy(static_cast<void*>(&value), sizeof(long), SYS_TIMEOUT);
         if(status3 != sizeof(long))
         {
             print2term("[%d] ERROR: receive failed with status %d\n", __LINE__, status3);
@@ -150,7 +148,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     }
 
     /* STEP 4: Verify that Receive Times Out */
-    int status4 = subq->receiveCopy((void*)&value, sizeof(long), SYS_TIMEOUT);
+    const int status4 = subq->receiveCopy(static_cast<void*>(&value), sizeof(long), SYS_TIMEOUT);
     if(status4 != MsgQ::STATE_TIMEOUT)
     {
         print2term("[%d] ERROR: receive %ld did not timeout: %d\n", __LINE__, data, status4);
@@ -170,7 +168,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * subscriberThread  -
  *----------------------------------------------------------------------------*/
-int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
+int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     (void)argc;
     (void)argv;
@@ -187,7 +185,7 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE
     unit_test_parms.numsubs = 3;
 
     /* Initialize Random Seed */
-    srand((unsigned int)time(NULL));
+    srand(static_cast<unsigned int>(time(NULL)));
 
     /* Create Thread Data */
     Thread** p_pid = new Thread* [unit_test_parms.numpubs];
@@ -201,14 +199,14 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE
         pubparms[p] = new parms_t;
         memcpy(pubparms[p], &unit_test_parms, sizeof(parms_t));
         pubparms[p]->threadid = p;
-        p_pid[p] = new Thread(publisherThread, (void*)pubparms[p]);
+        p_pid[p] = new Thread(publisherThread, static_cast<void*>(pubparms[p]));
     }
     for(int s = 0; s < unit_test_parms.numsubs; s++)
     {
         subparms[s] = new parms_t;
         memcpy(subparms[s], &unit_test_parms, sizeof(parms_t));
         subparms[s]->threadid = s;
-        s_pid[s] = new Thread(subscriberThread, (void*)subparms[s]);
+        s_pid[s] = new Thread(subscriberThread, static_cast<void*>(subparms[s]));
     }
 
     /* Join Threads */
@@ -246,11 +244,11 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE
     }
 
     /* Check Results */
-    int numq = MsgQ::numQ();
+    const int numq = MsgQ::numQ();
     if(numq > 0)
     {
         MsgQ::queueDisplay_t* msgQs = new MsgQ::queueDisplay_t[numq];
-        int cnumq = MsgQ::listQ(msgQs, numq);
+        const int cnumq = MsgQ::listQ(msgQs, numq);
         for(int i = 0; i < cnumq; i++)
         {
             if(StringLib::match(msgQs[i].name, unit_test_parms.qname))
@@ -279,7 +277,7 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE
 /*----------------------------------------------------------------------------
  * performanceUnitTestCmd  -
  *----------------------------------------------------------------------------*/
-int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
+int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     long depth = 500000;
     long size = 1000;
@@ -317,7 +315,7 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
     {
         perf_thread_t* RAW = new perf_thread_t[numsubs];
 
-        clock_t total_start = clock();
+        const clock_t total_start = clock();
 
         /* Kick-off Subscribers */
         Thread** t = new Thread* [numsubs];
@@ -338,10 +336,10 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         {
             for(int j = 0; j < size; j++)
             {
-                pkt[j] = (unsigned char)sequence++;
+                pkt[j] = static_cast<unsigned char>(sequence++);
             }
 
-            int status = p->postCopy(pkt, size);
+            const int status = p->postCopy(pkt, size);
             if(status <= 0)
             {
                 print2term("[%d] ERROR: unable to post pkt %d with error %d\n", __LINE__, i, status);
@@ -350,7 +348,7 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         }
         delete [] pkt;
         clock_t end = clock();
-        double pub_time = ((double) (end - start)) / CLOCKS_PER_SEC;
+        const double pub_time = ((double) (end - start)) / CLOCKS_PER_SEC;
 
         /* Start Subscribers */
         start = clock();
@@ -367,10 +365,10 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
         }
         delete [] t;
         end = clock();
-        double sub_time = ((double) (end - start)) / CLOCKS_PER_SEC;
+        const double sub_time = static_cast<double>(end - start) / CLOCKS_PER_SEC;
 
-        clock_t total_end = clock();
-        double total_time = ((double) (total_end - total_start)) / CLOCKS_PER_SEC;
+        const clock_t total_end = clock();
+        const double total_time = static_cast<double>(total_end - total_start) / CLOCKS_PER_SEC;
 
         /* Print Results */
         print2term("%ld, %ld, %d, %lf, %lf, %lf\n", depth, size, numsubs, pub_time, sub_time, total_time);
@@ -394,7 +392,7 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
 /*----------------------------------------------------------------------------
  * subscriberOfOpporunityUnitTestCmd  -
  *----------------------------------------------------------------------------*/
-int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE])
+int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
 {
     (void)argc;
     (void)argv;
@@ -411,7 +409,7 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SI
     unit_test_parms.numsubs = 10;
 
     /* Initialize Random Seed */
-    srand((unsigned int)time(NULL));
+    srand(static_cast<unsigned int>(time(NULL)));
 
     /* Create Thread Data */
     Thread** p_pid = new Thread* [unit_test_parms.numpubs];
@@ -425,14 +423,14 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SI
         pubparms[p] = new parms_t;
         memcpy(pubparms[p], &unit_test_parms, sizeof(parms_t));
         pubparms[p]->threadid = p;
-        p_pid[p] = new Thread(publisherThread, (void*)pubparms[p]);
+        p_pid[p] = new Thread(publisherThread, static_cast<void*>(pubparms[p]));
     }
     for(int s = 0; s < unit_test_parms.numsubs; s++)
     {
         subparms[s] = new parms_t;
         memcpy(subparms[s], &unit_test_parms, sizeof(parms_t));
         subparms[s]->threadid = s;
-        s_pid[s] = new Thread(opportunityThread, (void*)subparms[s]);
+        s_pid[s] = new Thread(opportunityThread, static_cast<void*>(subparms[s]));
     }
 
     /* Join Threads */
@@ -459,11 +457,11 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SI
     }
 
     /* Check Results */
-    int numq = MsgQ::numQ();
+    const int numq = MsgQ::numQ();
     if(numq > 0)
     {
         MsgQ::queueDisplay_t* msgQs = new MsgQ::queueDisplay_t[numq];
-        int cnumq = MsgQ::listQ(msgQs, numq);
+        const int cnumq = MsgQ::listQ(msgQs, numq);
         for(int i = 0; i < cnumq; i++)
         {
             if(StringLib::match(msgQs[i].name, unit_test_parms.qname))
@@ -494,7 +492,7 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SI
  *----------------------------------------------------------------------------*/
 void* UT_MsgQ::subscriberThread(void* parm)
 {
-    parms_t* unit_test_parms = (parms_t*)parm;
+    parms_t* unit_test_parms = static_cast<parms_t*>(parm);
 
     /* Initialize Checking Variables */
     unit_test_parms->lastvalue = new long[unit_test_parms->numpubs];
@@ -512,10 +510,10 @@ void* UT_MsgQ::subscriberThread(void* parm)
     while(loops--)
     {
         randomDelay(1);
-        int status = q->receiveCopy((void*)&data, sizeof(long), 1000 * unit_test_parms->numpubs);
+        const int status = q->receiveCopy(static_cast<void*>(&data), sizeof(long), 1000 * unit_test_parms->numpubs);
         if(status > 0)
         {
-            int threadid = data >> 16;
+            const int threadid = data >> 16;
             if(threadid < 0 || threadid >= unit_test_parms->numpubs)
             {
                 print2term("[%d] ERROR: out of bounds threadid in %d: %d", __LINE__, unit_test_parms->threadid, threadid);
@@ -560,7 +558,7 @@ void* UT_MsgQ::subscriberThread(void* parm)
  *----------------------------------------------------------------------------*/
 void* UT_MsgQ::publisherThread(void* parm)
 {
-    parms_t* unit_test_parms = (parms_t*)parm;
+    parms_t* unit_test_parms = static_cast<parms_t*>(parm);
 
     /* Last Value Instantiation */
     unit_test_parms->lastvalue = new long;
@@ -577,7 +575,7 @@ void* UT_MsgQ::publisherThread(void* parm)
     while(loops--)
     {
         randomDelay(1);
-        int status = q->postCopy((void*)&data, sizeof(long), 2000 * unit_test_parms->numpubs);
+        const int status = q->postCopy(static_cast<void*>(&data), sizeof(long), 2000 * unit_test_parms->numpubs);
         if(status > 0)
         {
             *unit_test_parms->lastvalue = data++;
@@ -607,7 +605,7 @@ void* UT_MsgQ::publisherThread(void* parm)
  *----------------------------------------------------------------------------*/
 void* UT_MsgQ::performanceThread(void* parm)
 {
-    perf_thread_t* RAW = (perf_thread_t*)parm;
+    perf_thread_t* RAW = static_cast<perf_thread_t*>(parm);
     unsigned long sequence = 0;
 
     /* Wait to Start */
@@ -617,7 +615,7 @@ void* UT_MsgQ::performanceThread(void* parm)
     for(int pktnum = 0; pktnum < RAW->depth; pktnum++)
     {
         Subscriber::msgRef_t ref;
-        int status = RAW->s->receiveRef(ref, SYS_TIMEOUT);
+        const int status = RAW->s->receiveRef(ref, SYS_TIMEOUT);
         if(status > 0)
         {
             if(ref.size != RAW->size)
@@ -627,12 +625,12 @@ void* UT_MsgQ::performanceThread(void* parm)
             }
             else
             {
-                unsigned char* pkt = (unsigned char*)ref.data;
+                const unsigned char* pkt = reinterpret_cast<unsigned char*>(ref.data);
                 for(int i = 0; i < RAW->size; i++)
                 {
-                    if(pkt[i] != (unsigned char)sequence++)
+                    if(pkt[i] != static_cast<unsigned char>(sequence++))
                     {
-                        print2term("[%d] ERROR:  invalid sequence detected in data: %d != %d\n", __LINE__, pkt[i], (unsigned char)(sequence - 1));
+                        print2term("[%d] ERROR:  invalid sequence detected in data: %d != %d\n", __LINE__, pkt[i], static_cast<unsigned char>(sequence - 1));
                         RAW->f = true;
                     }
                 }
@@ -654,7 +652,7 @@ void* UT_MsgQ::performanceThread(void* parm)
 
     /* Check Empty */
     Subscriber::msgRef_t ref;
-    int status = RAW->s->receiveRef(ref, IO_CHECK);
+    const int status = RAW->s->receiveRef(ref, IO_CHECK);
     if(status != MsgQ::STATE_EMPTY)
     {
         print2term("[%d] ERROR: queue unexpectedly not empty, return status %d\n", __LINE__, status);
@@ -670,7 +668,7 @@ void* UT_MsgQ::performanceThread(void* parm)
  *----------------------------------------------------------------------------*/
 void* UT_MsgQ::opportunityThread(void* parm)
 {
-    parms_t* unit_test_parms = (parms_t*)parm;
+    parms_t* unit_test_parms = static_cast<parms_t*>(parm);
 
     /* Initialize Checking Variables */
     unit_test_parms->lastvalue = new long[unit_test_parms->numpubs];
@@ -689,10 +687,10 @@ void* UT_MsgQ::opportunityThread(void* parm)
     while(loops--)
     {
         if(loops % 10 == 0) randomDelay(2);
-        int status = q->receiveCopy((void*)&data, sizeof(long), SYS_TIMEOUT);
+        const int status = q->receiveCopy(static_cast<void*>(&data), sizeof(long), SYS_TIMEOUT);
         if(status > 0)
         {
-            int threadid = data >> 16;
+            const int threadid = data >> 16;
             if(threadid < 0 || threadid >= unit_test_parms->numpubs)
             {
                 print2term("[%d] ERROR: out of bounds threadid in %d: %d\n", __LINE__, unit_test_parms->threadid, threadid);
@@ -737,6 +735,6 @@ void* UT_MsgQ::opportunityThread(void* parm)
  *----------------------------------------------------------------------------*/
 void UT_MsgQ::randomDelay(long max_milliseconds)
 {
-    long us = rand() % (max_milliseconds * 1000);
+    const long us = rand() % (max_milliseconds * 1000); // NOLINT(concurrency-mt-unsafe)
     OsApi::sleep((double)us / 1000000.0);
 }

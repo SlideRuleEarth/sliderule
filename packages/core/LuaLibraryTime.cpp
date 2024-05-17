@@ -83,7 +83,7 @@ int LuaLibraryTime::luaopen_timelib (lua_State *L)
  *----------------------------------------------------------------------------*/
 int LuaLibraryTime::ltime_latch (lua_State* L)
 {
-    double now = TimeLib::latchtime();
+    const double now = TimeLib::latchtime();
     lua_pushnumber(L, now);     /* push "now" as result */
     return 1;                   /* one result */
 }
@@ -96,7 +96,7 @@ int LuaLibraryTime::ltime_latch (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibraryTime::ltime_getgps (lua_State* L)
 {
-    int64_t now = TimeLib::gpstime();
+    const int64_t now = TimeLib::gpstime();
     lua_pushnumber(L, (lua_Number)now); /* push "now" as result */
     return 1;                           /* one result */
 }
@@ -109,7 +109,7 @@ int LuaLibraryTime::ltime_getgps (lua_State* L)
  *----------------------------------------------------------------------------*/
 int LuaLibraryTime::ltime_getgmt (lua_State* L)
 {
-    TimeLib::gmt_time_t now = TimeLib::gmttime();
+    const TimeLib::gmt_time_t now = TimeLib::gmttime();
     lua_pushnumber(L, now.year);                    /* push "year" as result */
     lua_pushnumber(L, now.doy);                     /* push "day of year" as result */
     lua_pushnumber(L, now.hour);                    /* push "hour" as result */
@@ -129,7 +129,7 @@ int LuaLibraryTime::ltime_getgmt (lua_State* L)
 int LuaLibraryTime::ltime_gps2gmt (lua_State* L)
 {
     const int64_t gpsms = (int64_t)lua_tonumber(L, 1);     /* get argument 1 */
-    TimeLib::gmt_time_t now = TimeLib::gps2gmttime(gpsms);
+    const TimeLib::gmt_time_t now = TimeLib::gps2gmttime(gpsms);
     lua_pushnumber(L, now.year);                    /* push "year" as result */
     lua_pushnumber(L, now.doy);                     /* push "day of year" as result */
     lua_pushnumber(L, now.hour);                    /* push "hour" as result */
@@ -151,7 +151,7 @@ int LuaLibraryTime::ltime_cds2gmt (lua_State* L)
 {
     const int days = (int)lua_tonumber(L, 1);      /* get argument 1 */
     const int ms = (int)lua_tonumber(L, 2);        /* get argument 2 */
-    TimeLib::gmt_time_t now = TimeLib::cds2gmttime(days, ms);
+    const TimeLib::gmt_time_t now = TimeLib::cds2gmttime(days, ms);
     lua_pushnumber(L, now.year);                    /* push "year" as result */
     lua_pushnumber(L, now.doy);                     /* push "day of year" as result */
     lua_pushnumber(L, now.hour);                    /* push "hour" as result */
@@ -186,7 +186,7 @@ int LuaLibraryTime::ltime_gmt2gps (lua_State* L)
         gmt.minute = (int)lua_tonumber(L, 4);           /* get argument 4 */
         gmt.second = (int)lua_tonumber(L, 5);           /* get argument 5 */
         gmt.millisecond = (int)lua_tonumber(L, 5) - gmt.second; /* fractional part */
-        int64_t ms = TimeLib::gmt2gpstime(gmt);
+        const int64_t ms = TimeLib::gmt2gpstime(gmt);
         lua_pushnumber(L, (lua_Number)ms);              /* push "ms" as result */
         return 1;                                       /* one result */
     }
@@ -194,7 +194,7 @@ int LuaLibraryTime::ltime_gmt2gps (lua_State* L)
     const char* gmt = lua_tostring(L, 1);               /* get argument 1 */
     if(!gmt) return luaL_error(L, "invalid string passed to gmt2gps function");
 
-    int64_t ms = TimeLib::str2gpstime(gmt);
+    const int64_t ms = TimeLib::str2gpstime(gmt);
     lua_pushnumber(L, (lua_Number)ms);                  /* push "ms" as result */
     return 1;                                           /* one result */
 }
@@ -209,8 +209,8 @@ int LuaLibraryTime::ltime_gmt2gps (lua_State* L)
 int LuaLibraryTime::ltime_gps2date (lua_State* L)
 {
     const int64_t gpsms = (int64_t)lua_tonumber(L, 1);     /* get argument 1 */
-    TimeLib::gmt_time_t now = TimeLib::gps2gmttime(gpsms);
-    TimeLib::date_t date = TimeLib::gmt2date(now);
+    const TimeLib::gmt_time_t now = TimeLib::gps2gmttime(gpsms);
+    const TimeLib::date_t date = TimeLib::gmt2date(now);
     lua_pushinteger(L, now.year);                   /* push "year" as result */
     lua_pushinteger(L, date.month);                 /* push "month" as result */
     lua_pushinteger(L, date.day);                   /* push "day" as result */

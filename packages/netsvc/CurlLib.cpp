@@ -62,10 +62,10 @@ void CurlLib::deinit (void)
 /*----------------------------------------------------------------------------
  * request
  *----------------------------------------------------------------------------*/
-long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, 
+long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size,
                        bool verify_peer, bool verify_hostname, int timeout,
-                       List<string*>* headers, 
-                       const char* unix_socket, 
+                       List<string*>* headers,
+                       const char* unix_socket,
                        List<string*>* rsps_headers)
 {
     long http_code = 0;
@@ -75,7 +75,7 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
     data_t rqst;
     if(data)
     {
-        rqst.data = (char*)data;
+        rqst.data = const_cast<char*>(data);
         rqst.size = StringLib::size(data);
     }
     else
@@ -106,7 +106,7 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
 
         if(unix_socket)
         {
-            curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH, (char*)unix_socket);
+            curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH, const_cast<char*>(unix_socket));
         }
 
         if(rsps_headers)
@@ -142,7 +142,7 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
 
         /* Add Headers */
         struct curl_slist* hdr_slist = NULL;
-        if(headers && headers->length() > 0)
+        if(headers && !headers->empty())
         {
             for(int i = 0; i < headers->length(); i++)
             {
@@ -178,7 +178,7 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
         }
 
         /* Perform the request, res will get the return code */
-        CURLcode res = curl_easy_perform(curl);
+        const CURLcode res = curl_easy_perform(curl);
 
         /* Check for Success */
         if(res == CURLE_OK)
@@ -216,7 +216,7 @@ long CurlLib::postAsStream (const char* url, const char* data, Publisher* outq, 
 
     /* Initialize Request */
     data_t rqst;
-    rqst.data = (char*)data;
+    rqst.data = const_cast<char*>(data);
     rqst.size = StringLib::size(data);
 
     /* Initialize cURL */
@@ -237,7 +237,7 @@ long CurlLib::postAsStream (const char* url, const char* data, Publisher* outq, 
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, outq);
 
         /* Perform the request, res will get the return code */
-        CURLcode res = curl_easy_perform(curl);
+        const CURLcode res = curl_easy_perform(curl);
 
         /* Check for Success */
         if(res == CURLE_OK)
@@ -259,7 +259,7 @@ long CurlLib::postAsStream (const char* url, const char* data, Publisher* outq, 
     /* Terminate Stream */
     if(with_terminator)
     {
-        int rc = outq->postCopy("", 0, DATA_TIMEOUT * 1000);
+        const int rc = outq->postCopy("", 0, DATA_TIMEOUT * 1000);
         if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on %s: %d", outq->getName(), rc);
     }
 
@@ -270,14 +270,14 @@ long CurlLib::postAsStream (const char* url, const char* data, Publisher* outq, 
 /*----------------------------------------------------------------------------
  * postAsRecord
  *----------------------------------------------------------------------------*/
-long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, bool* active)
+long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, const bool* active)
 {
     long http_code = 0;
     CURL* curl = NULL;
 
     /* Initialize Request */
     data_t rqst;
-    rqst.data = (char*)data;
+    rqst.data = const_cast<char*>(data);
     rqst.size = StringLib::size(data);
 
     /* Initialize Response (only used if as_record is true) */
@@ -311,7 +311,7 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &parser);
 
         /* Perform the request, res will get the return code */
-        CURLcode res = curl_easy_perform(curl);
+        const CURLcode res = curl_easy_perform(curl);
 
         /* Check for Success */
         if(res == CURLE_OK)
@@ -345,7 +345,7 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
     /* Terminate Stream */
     if(with_terminator)
     {
-        int rc = outq->postCopy("", 0, DATA_TIMEOUT * 1000);
+        const int rc = outq->postCopy("", 0, DATA_TIMEOUT * 1000);
         if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on %s: %d", outq->getName(), rc);
     }
 
@@ -364,7 +364,7 @@ int CurlLib::getHeaders (lua_State* L, int index, List<string*>& header_list)
     if((lua_gettop(L) >= index) && lua_istable(L, index))
     {
         /* Iterate through each listed item in table */
-        int num_strings = lua_rawlen(L, index);
+        const int num_strings = lua_rawlen(L, index);
         for(int i = 0; i < num_strings; i++)
         {
             /* Get item */
@@ -384,8 +384,8 @@ int CurlLib::getHeaders (lua_State* L, int index, List<string*>& header_list)
         if(num_strings == 0)
         {
             lua_pushnil(L);  // push nil to start the iteration
-            while(lua_next(L, index) != 0) 
-            { 
+            while(lua_next(L, index) != 0)
+            {
                 const char* key = LuaObject::getLuaString(L, -2);
                 const char* value = LuaObject::getLuaString(L, -1);
                 string* header = new string(FString("%s: %s", key, value).c_str());
@@ -414,10 +414,10 @@ int CurlLib::luaGet (lua_State* L)
         /* Get Parameters */
         const char* url             = LuaObject::getLuaString(L, 1);
         const char* data            = LuaObject::getLuaString(L, 2, true, NULL);
-        int         num_hdrs        = CurlLib::getHeaders(L, 3, header_list); (void)num_hdrs;
-        bool        verify_peer     = LuaObject::getLuaBoolean(L, 4, true, false);
-        bool        verify_hostname = LuaObject::getLuaBoolean(L, 5, true, false);
-        bool        get_rsps_hdrs   = LuaObject::getLuaBoolean(L, 6, true, false);
+        const int   num_hdrs        = CurlLib::getHeaders(L, 3, header_list); (void)num_hdrs;
+        const bool  verify_peer     = LuaObject::getLuaBoolean(L, 4, true, false);
+        const bool  verify_hostname = LuaObject::getLuaBoolean(L, 5, true, false);
+        const bool  get_rsps_hdrs   = LuaObject::getLuaBoolean(L, 6, true, false);
 
         /* Optionally Allocate List to Hold Response Headers */
         if(get_rsps_hdrs)
@@ -429,7 +429,7 @@ int CurlLib::luaGet (lua_State* L)
         /* Perform Request */
         const char* response = NULL;
         int size = 0;
-        long http_code = CurlLib::request(EndpointObject::GET, url, data, &response, &size, verify_peer, verify_hostname, DATA_TIMEOUT, &header_list, NULL, rsps_headers);
+        const long http_code = CurlLib::request(EndpointObject::GET, url, data, &response, &size, verify_peer, verify_hostname, DATA_TIMEOUT, &header_list, NULL, rsps_headers);
         if(response)
         {
             /* get status and push response */
@@ -446,14 +446,14 @@ int CurlLib::luaGet (lua_State* L)
                 /* push pair for each header */
                 for(int i = 0; i < rsps_headers->length(); i++)
                 {
-                    string* hdr_str = rsps_headers->get(i);
-                    size_t pos = hdr_str->find(':');
+                    const string* hdr_str = rsps_headers->get(i);
+                    const size_t pos = hdr_str->find(':');
                     string key = hdr_str->substr(0,pos);
                     string value = hdr_str->substr(pos+1);
-                    size_t c1 = value.find_first_not_of(" \t\n\r");
+                    const size_t c1 = value.find_first_not_of(" \t\n\r");
                     if(string::npos != c1)
                     {
-                        size_t c2 = value.find_last_not_of(" \t\n\r");
+                        const size_t c2 = value.find_last_not_of(" \t\n\r");
                         value = value.substr(c1, (c2 - c1 + 1));
                         for (char &c: key) c = std::tolower(c); // convert key to lower case
                         LuaEngine::setAttrStr(L, key.c_str(), value.c_str());
@@ -494,14 +494,14 @@ int CurlLib::luaPut (lua_State* L)
         /* Get Parameters */
         const char* url             = LuaObject::getLuaString(L, 1);
         const char* data            = LuaObject::getLuaString(L, 2, true, NULL);
-        int         num_hdrs        = CurlLib::getHeaders(L, 3, header_list); (void)num_hdrs;
-        bool        verify_peer     = LuaObject::getLuaBoolean(L, 4, true, false);
-        bool        verify_hostname = LuaObject::getLuaBoolean(L, 5, true, false);
+        const int   num_hdrs        = CurlLib::getHeaders(L, 3, header_list); (void)num_hdrs;
+        const bool  verify_peer     = LuaObject::getLuaBoolean(L, 4, true, false);
+        const bool  verify_hostname = LuaObject::getLuaBoolean(L, 5, true, false);
 
         /* Perform Request */
         const char* response = NULL;
         int size = 0;
-        long http_code = CurlLib::request(EndpointObject::PUT, url, data, &response, &size, verify_peer, verify_hostname, DATA_TIMEOUT, &header_list);
+        const long http_code = CurlLib::request(EndpointObject::PUT, url, data, &response, &size, verify_peer, verify_hostname, DATA_TIMEOUT, &header_list);
         if(response)
         {
             status = (http_code >= 200 && http_code < 300);
@@ -537,12 +537,12 @@ int CurlLib::luaPost (lua_State* L)
         /* Get Parameters */
         const char* url         = LuaObject::getLuaString(L, 1);
         const char* data        = LuaObject::getLuaString(L, 2, true, "{}");
-        int         num_hdrs    = CurlLib::getHeaders(L, 3, header_list); (void)num_hdrs;
+        const int   num_hdrs    = CurlLib::getHeaders(L, 3, header_list); (void)num_hdrs;
 
         /* Perform Request */
         const char* response = NULL;
         int size = 0;
-        long http_code = CurlLib::request(EndpointObject::POST, url, data, &response, &size, false, false, DATA_TIMEOUT, &header_list);
+        const long http_code = CurlLib::request(EndpointObject::POST, url, data, &response, &size, false, false, DATA_TIMEOUT, &header_list);
         if(response)
         {
             status = (http_code >= 200 && http_code < 300);
@@ -597,19 +597,19 @@ void CurlLib::combineResponse (List<data_t>* rsps_set, const char** response, in
 /*----------------------------------------------------------------------------
  * CurlLib::postRecords
  *----------------------------------------------------------------------------*/
-size_t CurlLib::postRecords(void *buffer, size_t size, size_t nmemb, void *userp)
+size_t CurlLib::postRecords(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     parser_t* parser = static_cast<parser_t*>(userp);
     int32_t bytes_to_process = static_cast<int32_t>(size * nmemb);
-    uint8_t* input_data = static_cast<uint8_t*>(buffer);
+    const uint8_t* input_data = static_cast<const uint8_t*>(buffer);
     uint32_t input_index = 0;
 
     while((!parser->active || *parser->active) && (bytes_to_process > 0))
     {
         if(parser->rec_size == 0) // record header
         {
-            int32_t hdr_bytes_needed = RECOBJ_HDR_SIZE - parser->hdr_index;
-            int32_t hdr_bytes_to_process = MIN(hdr_bytes_needed, bytes_to_process);
+            const int32_t hdr_bytes_needed = RECOBJ_HDR_SIZE - parser->hdr_index;
+            const int32_t hdr_bytes_to_process = MIN(hdr_bytes_needed, bytes_to_process);
             for(int i = 0; i < hdr_bytes_to_process; i++) parser->hdr_buf[parser->hdr_index++] = input_data[input_index++];
             bytes_to_process -= hdr_bytes_to_process;
 
@@ -617,10 +617,10 @@ size_t CurlLib::postRecords(void *buffer, size_t size, size_t nmemb, void *userp
             if(parser->hdr_index == RECOBJ_HDR_SIZE)
             {
                 // parser header
-                RecordObject::rec_hdr_t* rec_hdr = reinterpret_cast<RecordObject::rec_hdr_t*>(parser->hdr_buf);
-                uint16_t version = OsApi::swaps(rec_hdr->version);
-                uint16_t type_size = OsApi::swaps(rec_hdr->type_size);
-                uint32_t data_size = OsApi::swapl(rec_hdr->data_size);
+                const RecordObject::rec_hdr_t* rec_hdr = reinterpret_cast<RecordObject::rec_hdr_t*>(parser->hdr_buf);
+                const uint16_t version = OsApi::swaps(rec_hdr->version);
+                const uint16_t type_size = OsApi::swaps(rec_hdr->type_size);
+                const uint32_t data_size = OsApi::swapl(rec_hdr->data_size);
                 if(version != RecordObject::RECORD_FORMAT_VERSION)
                 {
                     mlog(CRITICAL, "Invalid record version in response from %s: %d", parser->url, version);
@@ -639,8 +639,8 @@ size_t CurlLib::postRecords(void *buffer, size_t size, size_t nmemb, void *userp
         }
         else // record body
         {
-            int32_t rec_bytes_needed = parser->rec_size - parser->rec_index;
-            int32_t rec_bytes_to_process = MIN(rec_bytes_needed, bytes_to_process);
+            const int32_t rec_bytes_needed = parser->rec_size - parser->rec_index;
+            const int32_t rec_bytes_to_process = MIN(rec_bytes_needed, bytes_to_process);
             memcpy(&parser->rec_buf[parser->rec_index], &input_data[input_index], rec_bytes_to_process);
             parser->rec_index += rec_bytes_to_process;
             input_index += rec_bytes_to_process;
@@ -678,7 +678,7 @@ size_t CurlLib::postRecords(void *buffer, size_t size, size_t nmemb, void *userp
 /*----------------------------------------------------------------------------
  * CurlLib::postData
  *----------------------------------------------------------------------------*/
-size_t CurlLib::postData(void *buffer, size_t size, size_t nmemb, void *userp)
+size_t CurlLib::postData(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     Publisher* outq = static_cast<Publisher*>(userp);
     return outq->postCopy(buffer, size * nmemb, DATA_TIMEOUT * 1000);
@@ -687,7 +687,7 @@ size_t CurlLib::postData(void *buffer, size_t size, size_t nmemb, void *userp)
 /*----------------------------------------------------------------------------
  * CurlLib::writeData
  *----------------------------------------------------------------------------*/
-size_t CurlLib::writeData(void *buffer, size_t size, size_t nmemb, void *userp)
+size_t CurlLib::writeData(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     List<data_t>* rsps_set = static_cast<List<data_t>*>(userp);
 
@@ -710,7 +710,7 @@ size_t CurlLib::readData(void* buffer, size_t size, size_t nmemb, void *userp)
 {
     data_t* rqst = static_cast<data_t*>(userp);
 
-    size_t buffer_size = size * nmemb;
+    const size_t buffer_size = size * nmemb;
     size_t bytes_to_copy = rqst->size;
     if(bytes_to_copy > buffer_size) bytes_to_copy = buffer_size;
 
@@ -727,11 +727,11 @@ size_t CurlLib::readData(void* buffer, size_t size, size_t nmemb, void *userp)
 /*----------------------------------------------------------------------------
  * CurlLib::writerHeader
  *----------------------------------------------------------------------------*/
-size_t CurlLib::writerHeader(void* buffer, size_t size, size_t nmemb, void *userp) 
+size_t CurlLib::writerHeader(const void* buffer, size_t size, size_t nmemb, void *userp)
 {
     List<string*>* rsps_headers = reinterpret_cast<List<string*>*>(userp);
-    string* header = new string((char*)buffer);
+    string* header = new string(static_cast<const char*>(buffer));
     rsps_headers->add(header);
-    size_t total_size = size * nmemb;
+    const size_t total_size = size * nmemb;
     return total_size;
 }

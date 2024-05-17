@@ -75,7 +75,7 @@ class DeviceObject: public LuaObject
          *--------------------------------------------------------------------*/
 
                             DeviceObject        (lua_State* L, role_t _role);
-        virtual             ~DeviceObject       (void);
+                            ~DeviceObject       (void) override;
         static char*        getDeviceList       (void);
         static int          luaList             (lua_State* L);
 

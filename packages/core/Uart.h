@@ -63,7 +63,7 @@ class Uart: public DeviceObject
         static int      luaCreate           (lua_State* L);
 
                         Uart                (lua_State* L, const char* _device, int _baud, parity_t _parity);
-        virtual         ~Uart               ();
+                        ~Uart               (void) override;
 
         bool            isConnected         (int num_connections=0) override;
         void            closeConnection     (void) override;

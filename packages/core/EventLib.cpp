@@ -70,7 +70,7 @@ static RecordObject::fieldDef_t eventRecDef[] =
     {"attr",    RecordObject::STRING,   offsetof(EventLib::event_t, attr),    0,                        NULL, NATIVE_FLAGS}
 };
 
-static RecordObject::fieldDef_t alertRecDef[] = 
+static RecordObject::fieldDef_t alertRecDef[] =
 {
     {"code",    RecordObject::INT32,    offsetof(EventLib::alert_t, code),    1,                        NULL, NATIVE_FLAGS},
     {"level",   RecordObject::INT32,    offsetof(EventLib::alert_t, level),   1,                        NULL, NATIVE_FLAGS},
@@ -243,8 +243,8 @@ uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t l
     /* Build Attribute */
     va_list args;
     va_start(args, attr_fmt);
-    int vlen = vsnprintf(event.attr, MAX_ATTR_SIZE - 1, attr_fmt, args);
-    int attr_size = MAX(MIN(vlen + 1, MAX_ATTR_SIZE), 1);
+    const int vlen = vsnprintf(event.attr, MAX_ATTR_SIZE - 1, attr_fmt, args);
+    const int attr_size = MAX(MIN(vlen + 1, MAX_ATTR_SIZE), 1);
     event.attr[attr_size - 1] = '\0';
     va_end(args);
 
@@ -288,7 +288,7 @@ void EventLib::stopTrace(uint32_t id, event_level_t lvl)
  *----------------------------------------------------------------------------*/
 void EventLib::stashId (uint32_t id)
 {
-    Thread::setGlobal(trace_key, (void*)(unsigned long long)id);
+    Thread::setGlobal(trace_key, reinterpret_cast<void*>(static_cast<unsigned long long>(id))); // NOLINT(performance-no-int-to-ptr)
 }
 
 /*----------------------------------------------------------------------------
@@ -296,7 +296,7 @@ void EventLib::stashId (uint32_t id)
  *----------------------------------------------------------------------------*/
 uint32_t EventLib::grabId (void)
 {
-    return (uint32_t)(unsigned long long)Thread::getGlobal(trace_key);
+    return static_cast<uint32_t>(reinterpret_cast<unsigned long long>(Thread::getGlobal(trace_key)));
 }
 
 /*----------------------------------------------------------------------------
@@ -329,8 +329,8 @@ bool EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
     /* Build Attribute - <log message> */
     va_list args;
     va_start(args, msg_fmt);
-    int vlen = vsnprintf(event.attr, MAX_ATTR_SIZE - 1, msg_fmt, args);
-    int attr_size = MAX(MIN(vlen + 1, MAX_ATTR_SIZE), 1);
+    const int vlen = vsnprintf(event.attr, MAX_ATTR_SIZE - 1, msg_fmt, args);
+    const int attr_size = MAX(MIN(vlen + 1, MAX_ATTR_SIZE), 1);
     event.attr[attr_size - 1] = '\0';
     va_end(args);
 
@@ -341,7 +341,7 @@ bool EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
 /*----------------------------------------------------------------------------
  * alertMsg
  *----------------------------------------------------------------------------*/
-bool EventLib::alertMsg (const char* file_name, unsigned int line_number, event_level_t lvl, int code, void* rspsq, bool* active, const char* errmsg, ...)
+bool EventLib::alertMsg (const char* file_name, unsigned int line_number, event_level_t lvl, int code, void* rspsq, const bool* active, const char* errmsg, ...)
 {
     bool status = true;
 
@@ -354,8 +354,8 @@ bool EventLib::alertMsg (const char* file_name, unsigned int line_number, event_
     /* Build Message */
     va_list args;
     va_start(args, errmsg);
-    int vlen = vsnprintf(alert->text, MAX_ALERT_SIZE - 1, errmsg, args);
-    int attr_size = MAX(MIN(vlen + 1, MAX_ALERT_SIZE), 1);
+    const int vlen = vsnprintf(alert->text, MAX_ALERT_SIZE - 1, errmsg, args);
+    const int attr_size = MAX(MIN(vlen + 1, MAX_ALERT_SIZE), 1);
     alert->text[attr_size - 1] = '\0';
     va_end(args);
 
@@ -399,18 +399,18 @@ void EventLib::generateMetric (event_level_t lvl, const char* name, metric_subty
     StringLib::formats(event.attr, MAX_ATTR_SIZE, "%lf", value);
 
     /* Post Metric */
-    int attr_size = StringLib::size(event.attr) + 1;
+    const int attr_size = StringLib::size(event.attr) + 1;
     sendEvent(&event, attr_size);
 }
 
 /*----------------------------------------------------------------------------
  * sendEvent
  *----------------------------------------------------------------------------*/
-bool EventLib::sendEvent (event_t* event, int attr_size)
+bool EventLib::sendEvent (const event_t* event, int attr_size)
 {
-    int event_record_size = offsetof(event_t, attr) + attr_size;
+    const int event_record_size = offsetof(event_t, attr) + attr_size;
     RecordObject record(eventRecType, event_record_size, false);
-    event_t* data = (event_t*)record.getRecordData();
+    event_t* data = reinterpret_cast<event_t*>(record.getRecordData());
     memcpy(data, event, event_record_size);
     return record.post(outq, 0, NULL, false);
 }

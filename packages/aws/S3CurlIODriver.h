@@ -69,7 +69,7 @@ class S3CurlIODriver: public Asset::IODriver
          *--------------------------------------------------------------------*/
 
         static IODriver*    create          (const Asset* _asset, const char* resource);
-        virtual int64_t     ioRead          (uint8_t* data, int64_t size, uint64_t pos) override;
+        int64_t             ioRead          (uint8_t* data, int64_t size, uint64_t pos) override;
 
         // fixed GET - memory preallocated
         static int64_t      get             (uint8_t* data, int64_t size, uint64_t pos,
@@ -104,7 +104,7 @@ class S3CurlIODriver: public Asset::IODriver
 
         explicit            S3CurlIODriver  (const Asset* _asset);
         explicit            S3CurlIODriver  (const Asset* _asset, const char* resource);
-        virtual             ~S3CurlIODriver (void);
+                            ~S3CurlIODriver (void) override;
 
         /*--------------------------------------------------------------------
          * Data

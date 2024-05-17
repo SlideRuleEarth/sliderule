@@ -70,6 +70,8 @@ GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _g
    cellSize   (0),
    bbox       (),
    radiusInPixels(0),
+   geoTransform(),
+   invGeoTransform(),
    ssError    (SS_NO_ERRORS)
 {
 }
@@ -94,7 +96,7 @@ void GdalRaster::open(void)
         return;
     }
 
-    dset = (GDALDataset*)GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
+    dset = static_cast<GDALDataset*>(GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL));
     if(dset == NULL)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open raster: %s:", fileName.c_str());
 
@@ -104,7 +106,7 @@ void GdalRaster::open(void)
     xsize = dset->GetRasterXSize();
     ysize = dset->GetRasterYSize();
 
-    CPLErr err = dset->GetGeoTransform(geoTransform);
+    const CPLErr err = dset->GetGeoTransform(geoTransform);
     CHECK_GDALERR(err);
     if(!GDALInvGeoTransform(geoTransform, invGeoTransform))
     {
@@ -153,11 +155,11 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi)
         if(dset == NULL)
             open();
 
-        double z = poi->getZ();
-        //mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+        const double z = poi->getZ();
+        mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
         if(poi->transform(transf) != OGRERR_NONE)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi->getX(), poi->getY(), poi->getZ());
-        //mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+        mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
 
         /*
          * Attempt to read raster only if it contains the point of interest.
@@ -165,7 +167,7 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi)
         if((poi->getX() >= bbox.lon_min) && (poi->getX() <= bbox.lon_max) &&
            (poi->getY() >= bbox.lat_min) && (poi->getY() <= bbox.lat_max))
         {
-            double vertical_shift = z - poi->getZ();
+            const double vertical_shift = z - poi->getZ();
             sample = new RasterSample(gpsTime, fileId, vertical_shift);
             if(parms->sampling_algo == GRIORA_NearestNeighbour)
                 readPixel(poi, sample);
@@ -244,10 +246,10 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
         double aoi_maxy = std::max(env.MinY, env.MaxY);
         if(SUBSET_DEBUG_TRACE) mlog(DEBUG, "map aoi:     (%13.04lf, %13.04lf) (%13.04lf, %13.04lf)", aoi_minx, aoi_miny, aoi_maxx, aoi_maxy);
 
-        double raster_minx = bbox.lon_min;
-        double raster_miny = bbox.lat_min;
-        double raster_maxx = bbox.lon_max;
-        double raster_maxy = bbox.lat_max;
+        const double raster_minx = bbox.lon_min;
+        const double raster_miny = bbox.lat_min;
+        const double raster_maxx = bbox.lon_max;
+        const double raster_maxy = bbox.lat_max;
         if(SUBSET_DEBUG_TRACE) mlog(DEBUG, "map raster:  (%13.04lf, %13.04lf) (%13.04lf, %13.04lf)", raster_minx, raster_miny, raster_maxx, raster_maxy);
 
         /*
@@ -300,8 +302,8 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
         map2pixel(aoi_maxx, aoi_miny, lrx, lry);
         if(SUBSET_DEBUG_TRACE) mlog(DEBUG, "pixel aoi:   (%13d, %13d) (%13d, %13d)", ulx, uly, lrx, lry);
 
-        uint32_t _xsize = lrx - ulx;
-        uint32_t _ysize = lry - uly;
+        const uint32_t _xsize = lrx - ulx;
+        const uint32_t _ysize = lry - uly;
 
         /* Sanity check for GCC optimizer 'bug'. Raster's top left corner pixel must be (0, 0) */
         int raster_ulx;
@@ -374,13 +376,13 @@ uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint
         if(uly + _ysize > ysize)
             throw RunTimeException(CRITICAL, RTE_ERROR, "rows out of bounds");
 
-        GDALDataType dtype = band->GetRasterDataType();
+        const GDALDataType dtype = band->GetRasterDataType();
 
         /* Make all uint64_t, with uint32_t got an overflow */
-        uint64_t typeSize  = GDALGetDataTypeSizeBytes(dtype);
-        uint64_t longXsize = static_cast<uint64_t>(_xsize);
-        uint64_t longYsize = static_cast<uint64_t>(_ysize);
-        uint64_t size      = longXsize * longYsize * typeSize;
+        const uint64_t typeSize  = GDALGetDataTypeSizeBytes(dtype);
+        const uint64_t longXsize = static_cast<uint64_t>(_xsize);
+        const uint64_t longYsize = static_cast<uint64_t>(_ysize);
+        const uint64_t size      = longXsize * longYsize * typeSize;
         data = new uint8_t[size];
         CHECKPTR(data);
 
@@ -411,7 +413,7 @@ uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint
     }
     catch (const RunTimeException &e)
     {
-        mlog(e.level(), "Error subsetting: %s", e.what());
+        mlog(e.level(), "Error reading pixel: %s", e.what());
         delete [] data;
         data = NULL;
     }
@@ -426,7 +428,7 @@ uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint
 void GdalRaster::setCRSfromWkt(OGRSpatialReference& sref, const char* wkt)
 {
     // mlog(DEBUG, "%s", wkt.c_str());
-    OGRErr ogrerr = sref.importFromWkt(wkt);
+    const OGRErr ogrerr = sref.importFromWkt(wkt);
     CHECK_GDALERR(ogrerr);
 }
 
@@ -454,7 +456,7 @@ void GdalRaster::initAwsAccess(GeoParms* _parms)
 #ifdef __aws__
         const char* path = _parms->asset->getPath();
         const char* identity = _parms->asset->getIdentity();
-        CredentialStore::Credential credentials = CredentialStore::get(identity);
+        const CredentialStore::Credential credentials = CredentialStore::get(identity);
         if(credentials.provided)
         {
             VSISetPathSpecificOption(path, "AWS_ACCESS_KEY_ID", credentials.accessKeyId);
@@ -518,17 +520,24 @@ void GdalRaster::readPixel(const OGRPoint* poi, RasterSample* sample)
         band->GetBlockSize(&xBlockSize, &yBlockSize);
 
         /* Raster offsets to block of interest */
-        int xblk = x / xBlockSize;
-        int yblk = y / yBlockSize;
+        const int xblk = x / xBlockSize;
+        const int yblk = y / yBlockSize;
 
         GDALRasterBlock* block = NULL;
         int cnt = 1;
-        do
+        while(true)
         {
             /* Retry read if error */
             block = band->GetLockedBlockRef(xblk, yblk, false);
-        } while(block == NULL && cnt-- && s3sleep());
-        CHECKPTR(block);
+            if(block == NULL && cnt--) s3sleep();
+            else break;
+        }
+
+        if(block == NULL)
+        {
+            ssError |= SS_READ_ERROR;
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get block: %d, %d", xblk, yblk);
+        }
 
         /* Get data block pointer, no memory copied but block is locked */
         void* data = block->GetDataRef();
@@ -540,79 +549,79 @@ void GdalRaster::readPixel(const OGRPoint* poi, RasterSample* sample)
         }
 
         /* Calculate x, y inside of block */
-        int _x = x % xBlockSize;
-        int _y = y % yBlockSize;
-        int offset = _y * xBlockSize + _x;
+        const int _x = x % xBlockSize;
+        const int _y = y % yBlockSize;
+        const int offset = _y * xBlockSize + _x;
 
         /* Be carefull using offset based on the pixel data type */
         switch(band->GetRasterDataType())
         {
             case GDT_Byte:
             {
-                uint8_t* p   = static_cast<uint8_t*>(data);
+                const uint8_t* p   = static_cast<uint8_t*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_Int8:
             {
-                int8_t* p   = static_cast<int8_t*>(data);
+                const int8_t* p   = static_cast<int8_t*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_UInt16:
             {
-                uint16_t* p  = static_cast<uint16_t*>(data);
+                const uint16_t* p  = static_cast<uint16_t*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_Int16:
             {
-                int16_t* p   = static_cast<int16_t*>(data);
+                const int16_t* p   = static_cast<int16_t*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_UInt32:
             {
-                uint32_t* p  = static_cast<uint32_t*>(data);
+                const uint32_t* p  = static_cast<uint32_t*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_Int32:
             {
-                int32_t* p   = static_cast<int32_t*>(data);
+                const int32_t* p   = static_cast<int32_t*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_Int64:
             {
-                int64_t* p   = static_cast<int64_t*>(data);
+                const int64_t* p   = static_cast<int64_t*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_UInt64:
             {
-                uint64_t* p  = static_cast<uint64_t*>(data);
+                const uint64_t* p  = static_cast<uint64_t*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_Float32:
             {
-                float* p     = static_cast<float*>(data);
+                const float* p     = static_cast<float*>(data);
                 sample->value = p[offset];
             }
             break;
 
             case GDT_Float64:
             {
-                double* p    = static_cast<double*>(data);
+                const double* p    = static_cast<double*>(data);
                 sample->value = p[offset];
             }
             break;
@@ -685,14 +694,14 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, RasterSample* sample)
             offset = radiusInPixels;
         }
 
-        int _x = x - offset;
-        int _y = y - offset;
+        const int _x = x - offset;
+        const int _y = y - offset;
 
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);
         args.eResampleAlg = static_cast<GDALRIOResampleAlg>(parms->sampling_algo);
 
-        bool validWindow = containsWindow(_x, _y, xsize, ysize, windowSize);
+        const bool validWindow = containsWindow(_x, _y, xsize, ysize, windowSize);
         if(validWindow)
         {
             readWithRetry(_x, _y, windowSize, windowSize, &sample->value, 1, 1, &args);
@@ -727,16 +736,16 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, RasterSample* sample)
         int y;
         map2pixel(poi, x, y);
 
-        int windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
-        int newx = x - radiusInPixels;
-        int newy = y - radiusInPixels;
+        const int windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
+        const int newx = x - radiusInPixels;
+        const int newy = y - radiusInPixels;
 
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);
         args.eResampleAlg = static_cast<GDALRIOResampleAlg>(parms->sampling_algo);
         samplesArray = new double[windowSize*windowSize];
 
-        bool validWindow = containsWindow(newx, newy, xsize, ysize, windowSize);
+        const bool validWindow = containsWindow(newx, newy, xsize, ysize, windowSize);
         if(validWindow)
         {
             readWithRetry(newx, newy, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
@@ -745,7 +754,7 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, RasterSample* sample)
             double min = std::numeric_limits<double>::max();
             double max = std::numeric_limits<double>::min();
             double sum = 0;
-            double nodata = band->GetNoDataValue();
+            const double nodata = band->GetNoDataValue();
             std::vector<double> validSamples;
             /*
              * Only use pixels within radius from pixel containing point of interest.
@@ -764,11 +773,11 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, RasterSample* sample)
                     if(dataIsElevation)
                         value += sample->verticalShift;
 
-                    double x2 = _x + newx;  /* Current pixel in buffer */
-                    double y2 = _y + newy;
-                    double xd = std::pow(x2 - x1, 2);
-                    double yd = std::pow(y2 - y1, 2);
-                    double d  = std::sqrt(xd + yd);
+                    const double x2 = _x + newx;  /* Current pixel in buffer */
+                    const double y2 = _y + newy;
+                    const double xd = std::pow(x2 - x1, 2);
+                    const double yd = std::pow(y2 - y1, 2);
+                    const double d  = std::sqrt(xd + yd);
 
                     if(std::islessequal(d, radiusInPixels))
                     {
@@ -780,16 +789,16 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, RasterSample* sample)
                 }
             }
 
-            int validSamplesCnt = validSamples.size();
+            const int validSamplesCnt = validSamples.size();
             if(validSamplesCnt > 0)
             {
                 double stdev = 0;  /* Standard deviation */
                 double mad   = 0;  /* Median absolute deviation (MAD) */
-                double mean  = sum / validSamplesCnt;
+                const double mean  = sum / validSamplesCnt;
 
                 for(int i = 0; i < validSamplesCnt; i++)
                 {
-                    double value = validSamples[i];
+                    const double value = validSamples[i];
                     stdev += std::pow(value - mean, 2);
                     mad   += std::fabs(value - mean);
                 }
@@ -802,7 +811,7 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, RasterSample* sample)
                  * For performance use nth_element algorithm from std library since it sorts only part of the vector
                  * NOTE: (vector will be reordered by nth_element)
                  */
-                std::size_t n = validSamplesCnt / 2;
+                const std::size_t n = validSamplesCnt / 2;
                 std::nth_element(validSamples.begin(), validSamples.begin() + n, validSamples.end());
                 double median = validSamples[n];
                 if(!(validSamplesCnt & 0x1))
@@ -890,8 +899,8 @@ void GdalRaster::createTransform(void)
     }
 
     /* Limit to area of interest if AOI was set */
-    bbox_t* aoi  = &parms->aoi_bbox;
-    bool useaoi  = !((aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max));
+    bbox_t* aoi = &parms->aoi_bbox;
+    const bool useaoi = !((aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max));
     if(useaoi)
     {
         if(!options.SetAreaOfInterest(aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max))
@@ -923,7 +932,7 @@ int GdalRaster::radius2pixels(int _radius) const
     if(_radius == 0) return 0;
     if(csize == 0) csize = 1;
 
-    int radiusInMeters = ((_radius + csize - 1) / csize) * csize; // Round up to multiples of cell size
+    const int radiusInMeters = ((_radius + csize - 1) / csize) * csize; // Round up to multiples of cell size
     return radiusInMeters / csize;
 }
 
@@ -953,12 +962,19 @@ void GdalRaster::readWithRetry(int x, int y, int _xsize, int _ysize, void *data,
      */
     int cnt = 1;
     CPLErr err = CE_None;
-    do
+    while(true)
     {
+        /* Retry read if error */
         err = band->RasterIO(GF_Read, x, y, _xsize, _ysize, data, dataXsize, dataYsize, GDT_Float64, 0, 0, args);
-    } while(err != CE_None && cnt-- && s3sleep());
+        if(err != CE_None && cnt--) s3sleep();
+        else break;
+    }
 
-    if (err != CE_None) throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed");
+    if (err != CE_None)
+    {
+        ssError |= SS_READ_ERROR;
+        throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed: %d", err);
+    }
 }
 
 
@@ -977,15 +993,19 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
 
         /* If parentPath is a vrt rename it to .tif */
         if (vsiName.substr(vsiName.length() - 4) == ".vrt")
-            vsiName = vsiName.substr(0, vsiName.length() - 4) + "_vrt.tif";
+        {
+            vsiName.erase(vsiName.length() - 4);
+            vsiName += "_vrt.tif";
 
-        GDALDataType dtype = band->GetRasterDataType();
+        }
+
+        const GDALDataType dtype = band->GetRasterDataType();
 
         /* Calculate size of subset */
-        uint64_t cols = _xsize;
-        uint64_t rows = _ysize;
-        uint64_t dataSize = GDALGetDataTypeSizeBytes(dtype);
-        uint64_t size = cols * rows * dataSize;
+        const uint64_t cols = _xsize;
+        const uint64_t rows = _ysize;
+        const uint64_t dataSize = GDALGetDataTypeSizeBytes(dtype);
+        const uint64_t size = cols * rows * dataSize;
 
         subset = new RasterSubset(size, vsiName);
         const uint8_t* data = subset->getData();
@@ -1015,7 +1035,7 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
 
             GDALDriver* driver = GetGDALDriverManager()->GetDriverByName("GTiff");
             CHECKPTR(driver);
-            subDset = (GDALDataset*)driver->Create(subset->rasterName.c_str(), _xsize, _ysize, 1, dtype, options);
+            subDset = driver->Create(subset->rasterName.c_str(), _xsize, _ysize, 1, dtype, options);
             CHECKPTR(subDset);
 
             /* Copy data to subraster */
@@ -1065,7 +1085,7 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
         {
             ssError |= SS_MEMPOOL_ERROR;
             mlog(ERROR, "RasterSubset requested memory: %lu MB, available: %lu MB, max: %lu MB", size / (1024*1024),
-                subset->getPoolSize()  / (1024*1024),
+                RasterSubset::getPoolSize() / (1024*1024),
                 RasterSubset::MAX_SIZE / (1024*1024));
         }
     }
@@ -1097,8 +1117,8 @@ void GdalRaster::map2pixel(double mapx, double mapy, int& x, int& y)
  *----------------------------------------------------------------------------*/
 void GdalRaster::pixel2map(int x, int y, double& mapx, double& mapy)
 {
-    double _x = static_cast<double>(x) + 0.5;
-    double _y = static_cast<double>(y) + 0.5;
+    const double _x = static_cast<double>(x) + 0.5;
+    const double _y = static_cast<double>(y) + 0.5;
 
     mapx = (geoTransform[0] + ((geoTransform[1] * _x) + (geoTransform[2] * _y)));
     mapy = (geoTransform[3] + ((geoTransform[4] * _y) + (geoTransform[5] * _y)));

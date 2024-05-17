@@ -90,7 +90,7 @@ int LuaLibraryCmd::lcmd_exec (lua_State* L)
     /* Get Lua Engine Object */
     lua_pushstring(L, LuaEngine::LUA_SELFKEY);
     lua_gettable(L, LUA_REGISTRYINDEX); /* retrieve value */
-    LuaEngine* li = static_cast<LuaEngine*>(lua_touserdata(L, -1));
+    const LuaEngine* li = static_cast<LuaEngine*>(lua_touserdata(L, -1));
     if(li)
     {
         /* Get Key */
@@ -104,7 +104,7 @@ int LuaLibraryCmd::lcmd_exec (lua_State* L)
         /* Execute String */
         if(cmdProc->postCommand("%s %s%s", str, CommandProcessor::STORE, store_key))
         {
-            int ret_size = cmdProc->getCurrentValue(cmdProc->getName(), store_key, &cmd_status, sizeof(cmd_status), cmd_timeout, true);
+            const int ret_size = cmdProc->getCurrentValue(cmdProc->getName(), store_key, &cmd_status, sizeof(cmd_status), cmd_timeout, true);
             if(ret_size <= 0)
             {
                 mlog(CRITICAL, "Command verification timed out");
@@ -185,12 +185,12 @@ int LuaLibraryCmd::lcmd_stopuntil (lua_State* L)
 {
     bool status = false;
 
-    const char* obj_name    = lua_tostring(L, 1);  /* get argument 1 */
-    bool        exists      = lua_toboolean(L, 2) == 1;  /* get argument 2 - note lua_toboolean returns integer 1 or 0 instead of bool */
-    int         wait_secs   = (int)lua_tonumber(L, 3);  /* get argument 3 * - note lua_tonumber returns double */
+    const char* obj_name          = lua_tostring(L, 1);  /* get argument 1 */
+    const bool        exists      = lua_toboolean(L, 2) == 1;  /* get argument 2 - note lua_toboolean returns integer 1 or 0 instead of bool */
+    int               wait_secs   = (int)lua_tonumber(L, 3);  /* get argument 3 * - note lua_tonumber returns double */
 
-    bool        pend        = wait_secs == 0;
-    bool        check       = wait_secs < 0;
+    const bool        pend        = wait_secs == 0;
+    const bool        check       = wait_secs < 0;
 
     while(true)
     {

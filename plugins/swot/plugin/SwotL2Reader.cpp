@@ -102,7 +102,7 @@ int SwotL2Reader::luaCreate (lua_State* L)
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
         parms = dynamic_cast<SwotParms*>(getLuaObject(L, 4, SwotParms::OBJECT_TYPE));
-        bool send_terminator = getLuaBoolean(L, 5, true, true);
+        const bool send_terminator = getLuaBoolean(L, 5, true, true);
 
         /* Return Reader Object */
         return createLuaObject(L, new SwotL2Reader(L, asset, resource, outq_name, parms, send_terminator));
@@ -230,7 +230,7 @@ SwotL2Reader::Region::Region (Asset* asset, const char* resource, SwotParms* _pa
     {
         rasterregion(_parms);
     }
-    else if(_parms->polygon.length() > 0)
+    else if(!_parms->polygon.empty())
     {
         polyregion(_parms);
     }
@@ -274,8 +274,8 @@ void SwotL2Reader::Region::polyregion (SwotParms* _parms)
         bool inclusion = false;
 
         /* Project Line Coordinate */
-        MathLib::coord_t line_coord = {CONVERT_LON(lon[line]), CONVERT_LAT(lat[line])};
-        MathLib::point_t line_point = MathLib::coord2point(line_coord, _parms->projection);
+        const MathLib::coord_t line_coord = {CONVERT_LON(lon[line]), CONVERT_LAT(lat[line])};
+        const MathLib::point_t line_point = MathLib::coord2point(line_coord, _parms->projection);
 
         /* Test Inclusion */
         if(MathLib::inpoly(_parms->projected_poly, _parms->points_in_poly, line_point))
@@ -324,7 +324,7 @@ void SwotL2Reader::Region::rasterregion (SwotParms* _parms)
     while(line < lat.size)
     {
         /* Check Inclusion */
-        bool inclusion = _parms->raster->includes(CONVERT_LON(lon[line]), CONVERT_LAT(lat[line]));
+        const bool inclusion = _parms->raster->includes(CONVERT_LON(lon[line]), CONVERT_LAT(lat[line]));
         inclusion_mask[line] = inclusion;
 
         /* If Coordinate Is In Raster */
@@ -387,11 +387,11 @@ void* SwotL2Reader::geoThread (void* parm)
     SwotL2Reader* reader = static_cast<SwotL2Reader*>(parm);
 
     /* Calculate Total Size of Record Data */
-    int total_size = offsetof(geo_rec_t, scan) + (sizeof(scan_rec_t) * reader->region.num_lines);
+    const int total_size = offsetof(geo_rec_t, scan) + (sizeof(scan_rec_t) * reader->region.num_lines);
 
     /* Create Record Object */
     RecordObject rec_obj(geoRecType, total_size);
-    geo_rec_t* rec_data = (geo_rec_t*)rec_obj.getRecordData();
+    geo_rec_t* rec_data = reinterpret_cast<geo_rec_t*>(rec_obj.getRecordData());
 
     /* Populate Record Object */
     StringLib::copy(rec_data->granule, reader->resource, MAX_GRANULE_NAME_STR);
@@ -406,7 +406,7 @@ void* SwotL2Reader::geoThread (void* parm)
 
     /* Post Record */
     unsigned char* rec_buf;
-    int rec_size = rec_obj.serialize(&rec_buf, RecordObject::REFERENCE);
+    const int rec_size = rec_obj.serialize(&rec_buf, RecordObject::REFERENCE);
     int post_status = MsgQ::STATE_TIMEOUT;
     while( reader->active && ((post_status = reader->outQ->postCopy(rec_buf, rec_size, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT) );
     if(post_status <= 0)
@@ -427,7 +427,7 @@ void* SwotL2Reader::geoThread (void* parm)
 void* SwotL2Reader::varThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = (info_t*)parm;
+    info_t* info = static_cast<info_t*>(parm);
     SwotL2Reader* reader = info->reader;
     stats_t local_stats = {0, 0, 0, 0, 0};
 
@@ -436,7 +436,7 @@ void* SwotL2Reader::varThread (void* parm)
     results.data = NULL;
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, reader->traceId, "swot_l2_reader", "{\"asset\":\"%s\", \"resource\":\"%s\"}", reader->asset->getName(), reader->resource);
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "swot_l2_reader", "{\"asset\":\"%s\", \"resource\":\"%s\"}", reader->asset->getName(), reader->resource);
 
     try
     {
@@ -448,17 +448,17 @@ void* SwotL2Reader::varThread (void* parm)
         {
             /* Create Record Object */
             RecordObject rec_obj(varRecType);
-            var_rec_t* rec_data = (var_rec_t*)rec_obj.getRecordData();
+            var_rec_t* rec_data = reinterpret_cast<var_rec_t*>(rec_obj.getRecordData());
             StringLib::copy(rec_data->granule, reader->resource, MAX_GRANULE_NAME_STR);
             StringLib::copy(rec_data->variable, info->variable_name, MAX_VARIABLE_NAME_STR);
-            rec_data->datatype = (uint32_t)results.datatype;
+            rec_data->datatype = static_cast<uint32_t>(results.datatype);
             rec_data->elements = results.elements;
             rec_data->width = results.elements / reader->region.num_lines;
             rec_data->size = results.datasize;
 
             /* Post Record */
             unsigned char* rec_buf;
-            int rec_size = rec_obj.serialize(&rec_buf, RecordObject::REFERENCE, sizeof(var_rec_t) + results.datasize);
+            const int rec_size = rec_obj.serialize(&rec_buf, RecordObject::REFERENCE, sizeof(var_rec_t) + results.datasize);
             int post_status = MsgQ::STATE_TIMEOUT;
             while( reader->active && ((post_status = reader->outQ->postCopy(rec_buf, rec_size - results.datasize, results.data, results.datasize, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT) )
             {
@@ -530,7 +530,7 @@ int SwotL2Reader::luaStats (lua_State* L)
     try
     {
         /* Get Clear Parameter */
-        bool with_clear = getLuaBoolean(L, 2, true, false);
+        const bool with_clear = getLuaBoolean(L, 2, true, false);
 
         /* Create Statistics Table */
         lua_newtable(L);

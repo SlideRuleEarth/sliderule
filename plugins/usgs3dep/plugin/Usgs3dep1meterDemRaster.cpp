@@ -66,7 +66,8 @@ Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State* L, GeoParms* _parms)
         throw RunTimeException(ERROR, RTE_ERROR, "Empty CATALOG/geojson index file received");
 
     /* Create in memory index file */
-    VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), (GByte*)_parms->catalog, (vsi_l_offset)strlen(_parms->catalog), FALSE);
+    GByte* bytes = const_cast<GByte*>(reinterpret_cast<const GByte*>(_parms->catalog));
+    VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), bytes, (vsi_l_offset)strlen(_parms->catalog), FALSE);
     CHECKPTR(fp);
     VSIFCloseL(fp);
 }
@@ -113,7 +114,7 @@ bool Usgs3dep1meterDemRaster::findRasters(const OGRGeometry* geo)
             const char* fname = feature->GetFieldAsString("url");
             if(fname && strlen(fname) > 0)
             {
-                std::string fileName(fname);
+                const std::string fileName(fname);
                 const size_t pos = strlen(URL_str);
 
                 raster_info_t rinfo;
@@ -133,7 +134,7 @@ bool Usgs3dep1meterDemRaster::findRasters(const OGRGeometry* geo)
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (groupList.length() > 0);
+    return (!groupList.empty());
 }
 
 
@@ -144,7 +145,7 @@ OGRErr Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
 {
     OGRErr ogrerr   = OGRERR_FAILURE;
     int northFlag   = 0;
-    int utm         = target.GetUTMZone(&northFlag);
+    const int utm   = target.GetUTMZone(&northFlag);
 
     // target.dumpReadable();
     mlog(DEBUG, "Target UTM: %d%s", utm, northFlag?"N":"S");
@@ -174,9 +175,9 @@ OGRErr Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
     OGRSpatialReference horizontal;
     OGRSpatialReference vertical;
 
-    OGRErr er1 = horizontal.importFromEPSG(epsg);
-    OGRErr er2 = vertical.importFromEPSG(NAVD88_HEIGHT_EPSG);
-    OGRErr er3 = target.SetCompoundCS("sliderule", &horizontal, &vertical);
+    const OGRErr er1 = horizontal.importFromEPSG(epsg);
+    const OGRErr er2 = vertical.importFromEPSG(NAVD88_HEIGHT_EPSG);
+    const OGRErr er3 = target.SetCompoundCS("sliderule", &horizontal, &vertical);
 
     if(((er1 == er2) == er3) == OGRERR_NONE)
     {

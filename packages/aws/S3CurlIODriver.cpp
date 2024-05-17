@@ -93,12 +93,12 @@ static void sha256hash(const void* data, size_t len, char* dst)
 /*----------------------------------------------------------------------------
  * curlWriteFixed
  *----------------------------------------------------------------------------*/
-static size_t curlWriteFixed(void *buffer, size_t size, size_t nmemb, void *userp)
+static size_t curlWriteFixed(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
-    fixed_data_t* data = (fixed_data_t*)userp;
-    size_t rsps_size = size * nmemb;
-    size_t bytes_available = data->size - data->index;
-    size_t bytes_to_copy = MIN(rsps_size, bytes_available);
+    fixed_data_t* data = static_cast<fixed_data_t*>(userp);
+    const size_t rsps_size = size * nmemb;
+    const size_t bytes_available = data->size - data->index;
+    const size_t bytes_to_copy = MIN(rsps_size, bytes_available);
     memcpy(&data->buffer[data->index], buffer, bytes_to_copy);
     data->index += bytes_to_copy;
     return bytes_to_copy;
@@ -107,7 +107,7 @@ static size_t curlWriteFixed(void *buffer, size_t size, size_t nmemb, void *user
 /*----------------------------------------------------------------------------
  * curlWriteStreaming
  *----------------------------------------------------------------------------*/
-static size_t curlWriteStreaming(void *buffer, size_t size, size_t nmemb, void *userp)
+static size_t curlWriteStreaming(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     List<streaming_data_t>* rsps_set = reinterpret_cast<List<streaming_data_t>*>(userp);
     streaming_data_t rsps;
@@ -121,11 +121,11 @@ static size_t curlWriteStreaming(void *buffer, size_t size, size_t nmemb, void *
 /*----------------------------------------------------------------------------
  * curlWriteFile
  *----------------------------------------------------------------------------*/
-static size_t curlWriteFile(void *buffer, size_t size, size_t nmemb, void *userp)
+static size_t curlWriteFile(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
-    file_data_t* data = (file_data_t*)userp;
-    size_t rsps_size = size * nmemb;
-    size_t bytes_written = fwrite(buffer, 1, rsps_size, data->fd);
+    file_data_t* data = reinterpret_cast<file_data_t*>(userp);
+    const size_t rsps_size = size * nmemb;
+    const size_t bytes_written = fwrite(buffer, 1, rsps_size, data->fd);
     if(bytes_written > 0) data->size += rsps_size;
     return bytes_written;
 }
@@ -135,10 +135,10 @@ static size_t curlWriteFile(void *buffer, size_t size, size_t nmemb, void *userp
  *----------------------------------------------------------------------------*/
 static size_t curlReadFile(void* buffer, size_t size, size_t nmemb, void *userp)
 {
-    file_data_t* data = (file_data_t*)userp;
+    file_data_t* data = reinterpret_cast<file_data_t*>(userp);
 
-    size_t buffer_size = size * nmemb;
-    size_t bytes_read = fread(buffer, 1, buffer_size, data->fd);
+    const size_t buffer_size = size * nmemb;
+    const size_t bytes_read = fread(buffer, 1, buffer_size, data->fd);
     if(bytes_read) data->size += bytes_read;
 
     return bytes_read;
@@ -153,8 +153,8 @@ static headers_t buildReadHeadersV2 (const char* bucket, const char* key, Creden
     struct curl_slist* headers = NULL;
 
     /* Build Date String and Date Header */
-    TimeLib::gmt_time_t gmt_time = TimeLib::gmttime();
-    TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
+    const TimeLib::gmt_time_t gmt_time = TimeLib::gmttime();
+    const TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
     FString date("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
     FString dateHeader("Date: %s", date.c_str());
     headers = curl_slist_append(headers, dateHeader.c_str());
@@ -169,7 +169,7 @@ static headers_t buildReadHeadersV2 (const char* bucket, const char* key, Creden
         FString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.c_str(), securityTokenHeader.c_str(), bucket, key);
         unsigned char hash[EVP_MAX_MD_SIZE];
         unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
-        HMAC(EVP_sha1(), credentials->secretAccessKey, StringLib::size(credentials->secretAccessKey), (unsigned char*)stringToSign.c_str(), stringToSign.size(), hash, &hash_size);
+        HMAC(EVP_sha1(), reinterpret_cast<const unsigned char*>(credentials->secretAccessKey), StringLib::size(credentials->secretAccessKey), reinterpret_cast<const unsigned char*>(stringToSign.c_str()), stringToSign.size(), hash, &hash_size);
         int encoded_hash_size = static_cast<int>(hash_size);
         const char* encodedHash = StringLib::b64encode(hash, &encoded_hash_size);
         FString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId, encodedHash);
@@ -192,8 +192,8 @@ static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const
     struct curl_slist* headers = NULL;
 
     /* Build Date String and Date Header */
-    TimeLib::gmt_time_t gmt_time = TimeLib::gmttime();
-    TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
+    const TimeLib::gmt_time_t gmt_time = TimeLib::gmttime();
+    const TimeLib::date_t gmt_date = TimeLib::gmt2date(gmt_time);
     FString date("%04d%02d%02dT%02d%02d%02dZ", gmt_date.year, gmt_date.month, gmt_date.day, gmt_time.hour, gmt_time.minute, gmt_time.second);
     FString dateHeader("Date: %s", date.c_str());
     headers = curl_slist_append(headers, dateHeader.c_str());
@@ -218,7 +218,7 @@ static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const
         FString stringToSign("PUT\n\n%s\n%s\n%s\n/%s/%s", contentType.c_str(), date.c_str(), securityTokenHeader.c_str(), bucket, key);
         unsigned char hash[EVP_MAX_MD_SIZE];
         unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
-        HMAC(EVP_sha1(), credentials->secretAccessKey, StringLib::size(credentials->secretAccessKey), (unsigned char*)stringToSign.c_str(), stringToSign.length(), hash, &hash_size);
+        HMAC(EVP_sha1(), reinterpret_cast<const unsigned char*>(credentials->secretAccessKey), StringLib::size(credentials->secretAccessKey), reinterpret_cast<const unsigned char*>(stringToSign.c_str()), stringToSign.length(), hash, &hash_size);
         int encoded_hash_size = static_cast<int>(hash_size);
         const char* encodedHash = StringLib::b64encode(hash, &encoded_hash_size);
         FString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId, encodedHash);
@@ -436,19 +436,19 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
         struct curl_slist* headers = buildReadHeadersV2(bucket, key_ptr, credentials);
 
         /* Build Range Header */
-        unsigned long start_byte = pos + info.index;
-        unsigned long end_byte = pos + size - info.index - 1;
+        const unsigned long start_byte = pos + info.index;
+        const unsigned long end_byte = pos + size - info.index - 1;
         FString rangeHeader("Range: bytes=%lu-%lu", start_byte, end_byte);
         headers = curl_slist_append(headers, rangeHeader.c_str());
 
         /* Initialize cURL Request */
-        CURL* curl = initializeReadRequest(url, headers, curlWriteFixed, &info);
+        CURL* curl = initializeReadRequest(url, headers, reinterpret_cast<write_cb_t>(curlWriteFixed), &info);
         if(curl)
         {
             while(!rqst_complete && (attempts-- > 0))
             {
                 /* Perform Request */
-                CURLcode res = curl_easy_perform(curl);
+                const CURLcode res = curl_easy_perform(curl);
                 if(res == CURLE_OK)
                 {
                     /* Get HTTP Code */
@@ -464,7 +464,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
                         /* Request Failed */
                         if(info.index > 0)
                         {
-                            StringLib::printify((char*)info.buffer, info.index);
+                            StringLib::printify(reinterpret_cast<char*>(info.buffer), info.index);
                             mlog(INFO, "<%s>, %s", key_ptr, info.buffer);
                         }
                         mlog(CRITICAL, "S3 get returned http error <%ld>: %s", http_code, key_ptr);
@@ -536,7 +536,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
     FString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
 
     /* Initialize cURL Request */
-    CURL* curl = initializeReadRequest(url, headers, curlWriteStreaming, &rsps_set);
+    CURL* curl = initializeReadRequest(url, headers, reinterpret_cast<write_cb_t>(curlWriteStreaming), &rsps_set);
     if(curl)
     {
         bool rqst_complete = false;
@@ -544,7 +544,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
         while(!rqst_complete && (attempts-- > 0))
         {
             /* Perform Request */
-            CURLcode res = curl_easy_perform(curl);
+            const CURLcode res = curl_easy_perform(curl);
             if(res == CURLE_OK)
             {
                 /* Get Response Size */
@@ -575,8 +575,8 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
                 else
                 {
                     /* Request Failed */
-                    StringLib::printify((char*)rsps, rsps_size + 1);
-                    mlog(INFO, "%s", (const char*)rsps);
+                    StringLib::printify(reinterpret_cast<char*>(rsps), rsps_size + 1);
+                    mlog(INFO, "%s", reinterpret_cast<const char*>(rsps));
                     delete [] *data; // clean up memory
                     *data = NULL;
                     mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
@@ -585,7 +585,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
                 /* Request Completed */
                 rqst_complete = true;
             }
-            else if(rsps_set.length() > 0)
+            else if(!rsps_set.empty())
             {
                 mlog(CRITICAL, "cURL error (%d) encountered after partial response (%d): %s", res, rsps_set.length(), key_ptr);
                 rsps_set.clear(); // try again
@@ -648,7 +648,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
         FString url("https://s3.%s.amazonaws.com/%s/%s", region, bucket, key_ptr);
 
         /* Initialize cURL Request */
-        CURL* curl = initializeReadRequest(url, headers, curlWriteFile, &data);
+        CURL* curl = initializeReadRequest(url, headers, reinterpret_cast<write_cb_t>(curlWriteFile), &data);
         if(curl)
         {
             bool rqst_complete = false;
@@ -656,7 +656,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
             while(!rqst_complete && (attempts-- > 0))
             {
                 /* Perform Request */
-                CURLcode res = curl_easy_perform(curl);
+                const CURLcode res = curl_easy_perform(curl);
                 if(res == CURLE_OK)
                 {
                     /* Get HTTP Code */
@@ -701,7 +701,8 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
     }
     else
     {
-        mlog(CRITICAL, "Failed to open destination file %s for writing: %s", filename, strerror(errno));
+        char err_buf[256];
+        mlog(CRITICAL, "Failed to open destination file %s for writing: %s", filename, strerror_r(errno, err_buf, sizeof(err_buf)));
     }
 
     /* Clean Up Headers */
@@ -736,7 +737,7 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
     {
         /* Get Size of File */
         fseek(data.fd, 0L, SEEK_END);
-        long content_length = ftell(data.fd);
+        const long content_length = ftell(data.fd);
         fseek(data.fd, 0L, SEEK_SET);
 
         /* Build Headers */
@@ -754,7 +755,7 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
             while(!rqst_complete && (attempts-- > 0))
             {
                 /* Perform Request */
-                CURLcode res = curl_easy_perform(curl);
+                const CURLcode res = curl_easy_perform(curl);
                 if(res == CURLE_OK)
                 {
                     /* Get HTTP Code */
@@ -802,7 +803,8 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
     }
     else
     {
-        mlog(CRITICAL, "Failed to open source file %s for reading: %s", filename, strerror(errno));
+        char err_buf[256];
+        mlog(CRITICAL, "Failed to open source file %s for reading: %s", filename, strerror_r(errno, err_buf, sizeof(err_buf)));
     }
 
     /* Throw Exception on Failure */
@@ -836,12 +838,12 @@ int S3CurlIODriver::luaGet(lua_State* L)
 
         /* Make Request */
         uint8_t* rsps_data = NULL;
-        int64_t rsps_size = get(&rsps_data, bucket, key, region, &credentials);
+        const int64_t rsps_size = get(&rsps_data, bucket, key, region, &credentials);
 
         /* Push Contents */
         if(rsps_data)
         {
-            lua_pushlstring(L, (char*)rsps_data, rsps_size);
+            lua_pushlstring(L, reinterpret_cast<char*>(rsps_data), rsps_size);
             delete [] rsps_data;
             status = true;
             num_rets++;
@@ -881,7 +883,7 @@ int S3CurlIODriver::luaDownload(lua_State* L)
         CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Make Request */
-        int64_t rsps_size = get(filename, bucket, key, region, &credentials);
+        const int64_t rsps_size = get(filename, bucket, key, region, &credentials);
 
         /* Push Contents */
         if(rsps_size > 0)   status = true;
@@ -910,8 +912,8 @@ int S3CurlIODriver::luaRead(lua_State* L)
         /* Get Parameters */
         const char* bucket      = LuaObject::getLuaString(L, 1);
         const char* key         = LuaObject::getLuaString(L, 2);
-        long size               = LuaObject::getLuaInteger(L, 3);
-        long pos                = LuaObject::getLuaInteger(L, 4);
+        const long size         = LuaObject::getLuaInteger(L, 3);
+        const long pos          = LuaObject::getLuaInteger(L, 4);
         const char* region      = LuaObject::getLuaString(L, 5, true, S3CurlIODriver::DEFAULT_REGION);
         const char* identity    = LuaObject::getLuaString(L, 6, true, S3CurlIODriver::DEFAULT_IDENTITY);
 
@@ -924,12 +926,12 @@ int S3CurlIODriver::luaRead(lua_State* L)
 
         /* Make Request */
         uint8_t* rsps_data = new uint8_t [size];
-        int64_t rsps_size = get(rsps_data, size, pos, bucket, key, region, &credentials);
+        const int64_t rsps_size = get(rsps_data, size, pos, bucket, key, region, &credentials);
 
         /* Push Contents */
         if(rsps_size > 0)
         {
-            lua_pushlstring(L, (char*)rsps_data, rsps_size);
+            lua_pushlstring(L, reinterpret_cast<char*>(rsps_data), rsps_size);
             delete [] rsps_data;
             status = true;
             num_rets++;
@@ -969,7 +971,7 @@ int S3CurlIODriver::luaUpload(lua_State* L)
         CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Make Request */
-        int64_t upload_size = put(filename, bucket, key, region, &credentials);
+        const int64_t upload_size = put(filename, bucket, key, region, &credentials);
 
         /* Push Contents */
         if(upload_size > 0)

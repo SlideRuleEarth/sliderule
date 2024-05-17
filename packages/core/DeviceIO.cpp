@@ -87,11 +87,9 @@ DeviceIO::DeviceIO(lua_State* L, DeviceObject* _device):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-DeviceIO::~DeviceIO(void)
-{
-    // full destruction is handled in child classes to guarantee
-    // correct order in this destructor
-}
+DeviceIO::~DeviceIO(void) = default;
+// full destruction is handled in child classes to guarantee
+// correct order in this destructor
 
 /*----------------------------------------------------------------------------
  * luaLogPktStats - :stats([<event level>])
@@ -107,7 +105,7 @@ int DeviceIO::luaLogPktStats(lua_State* L)
         DeviceIO* lua_obj = dynamic_cast<DeviceIO*>(getLuaSelf(L, 1));
 
         /* Get Event Level */
-        event_level_t lvl = (event_level_t)getLuaInteger(L, 2, true, INVALID_EVENT_LEVEL);
+        const event_level_t lvl = (event_level_t)getLuaInteger(L, 2, true, INVALID_EVENT_LEVEL);
 
         /* Create Statistics Table */
         lua_newtable(L);
@@ -148,8 +146,8 @@ int DeviceIO::luaWaitOnConnect(lua_State* L)
         DeviceIO* lua_obj = dynamic_cast<DeviceIO*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        long timeout_seconds        = getLuaInteger(L, 2, true, 5);
-        long number_of_connections  = getLuaInteger(L, 3, true, 1);
+        const long timeout_seconds        = getLuaInteger(L, 2, true, 5);
+        const long number_of_connections  = getLuaInteger(L, 3, true, 1);
 
         /* Check Device Exists */
         if(!lua_obj->device)
@@ -197,13 +195,13 @@ int DeviceIO::luaConfigBlock(lua_State* L)
         /* Get Block Value */
         if(lua_isboolean(L, 2))
         {
-            bool enable = getLuaBoolean(L, 2);
+            const bool enable = getLuaBoolean(L, 2);
             if(enable)  lua_obj->blockCfg = SYS_TIMEOUT;
             else        lua_obj->blockCfg = IO_CHECK;
         }
         else if(lua_isinteger(L, 2))
         {
-            int timeout = (int)getLuaInteger(L, 2);
+            const int timeout = (int)getLuaInteger(L, 2);
             lua_obj->blockCfg = timeout;
         }
         else
@@ -236,7 +234,7 @@ int DeviceIO::luaDieOnDisconnect(lua_State* L)
         DeviceIO* lua_obj = dynamic_cast<DeviceIO*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        bool enable = getLuaBoolean(L, 2);
+        const bool enable = getLuaBoolean(L, 2);
         lua_obj->dieOnDisconnect = enable;
 
         /* Set Success */

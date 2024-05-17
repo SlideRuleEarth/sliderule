@@ -66,7 +66,7 @@ class CumulusIODriver: S3CurlIODriver
          *--------------------------------------------------------------------*/
 
         CumulusIODriver (const Asset* _asset, const char* resource);
-        ~CumulusIODriver (void);
+        ~CumulusIODriver (void) override;
 };
 
 #endif  /* __cumulus_io_driver__ */

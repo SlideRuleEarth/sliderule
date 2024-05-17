@@ -140,7 +140,7 @@ class EventLib
         static uint32_t         grabId          (void);
 
         static bool             logMsg          (const char* file_name, unsigned int line_number, event_level_t lvl, const char* msg_fmt, ...) VARG_CHECK(printf, 4, 5);
-        static bool             alertMsg        (const char* file_name, unsigned int line_number, event_level_t lvl, int code, void* rspsq, bool* active, const char* errmsg, ...) VARG_CHECK(printf, 7, 8);
+        static bool             alertMsg        (const char* file_name, unsigned int line_number, event_level_t lvl, int code, void* rspsq, const bool* active, const char* errmsg, ...) VARG_CHECK(printf, 7, 8);
         static void             generateMetric  (event_level_t lvl, const char* name, metric_subtype_t subtype, double value);
 
     private:
@@ -149,7 +149,7 @@ class EventLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static bool             sendEvent       (event_t* event, int attr_size);
+        static bool             sendEvent       (const event_t* event, int attr_size);
 
         /*--------------------------------------------------------------------
          * Data

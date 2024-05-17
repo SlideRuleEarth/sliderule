@@ -65,6 +65,8 @@
  * H5 FUTURE CLASS
  ******************************************************************************/
 
+// NOLINTBEGIN(misc-no-recursion)
+
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
@@ -239,7 +241,7 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
         /* Check Meta Repository */
         char meta_url[MAX_META_NAME_SIZE];
         metaGetUrl(meta_url, resource, dataset);
-        uint64_t meta_key = metaGetKey(meta_url);
+        const uint64_t meta_key = metaGetKey(meta_url);
         bool meta_found = false;
         metaMutex.lock();
         {
@@ -275,7 +277,7 @@ H5FileBuffer::H5FileBuffer (info_t* info, io_context_t* context, const Asset* as
             parseDataset();
 
             /* Read Superblock */
-            uint64_t root_group_offset = readSuperblock();
+            const uint64_t root_group_offset = readSuperblock();
 
             /* Read Data Attributes (Start at Root Group) */
             readObjHdr(root_group_offset, 0);
@@ -351,7 +353,7 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
 {
     cache_entry_t entry;
     int64_t data_offset = 0;
-    uint64_t file_position = *pos;
+    const uint64_t file_position = *pos;
     bool cached = false;
     ioContext->mut.lock();
     {
@@ -456,7 +458,7 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
                 {
                     /* Replace Oldest Entry */
                     cache_entry_t oldest_entry;
-                    uint64_t oldest_pos = cache->first(&oldest_entry);
+                    const uint64_t oldest_pos = cache->first(&oldest_entry);
                     if(oldest_pos != (uint64_t)INVALID_KEY)
                     {
                         delete [] oldest_entry.data;
@@ -513,8 +515,8 @@ void H5FileBuffer::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int6
  *----------------------------------------------------------------------------*/
 bool H5FileBuffer::ioCheckCache (uint64_t pos, int64_t size, cache_t* cache, uint64_t line_mask, cache_entry_t* entry)
 {
-    uint64_t prev_line_pos = (pos & ~line_mask) - 1;
-    bool check_prev = pos > prev_line_pos; // checks for rollover
+    const uint64_t prev_line_pos = (pos & ~line_mask) - 1;
+    const bool check_prev = pos > prev_line_pos; // checks for rollover
 
     if( cache->find(pos, cache_t::MATCH_NEAREST_UNDER, entry, true) ||
         (check_prev && cache->find(prev_line_pos, cache_t::MATCH_NEAREST_UNDER, entry, true)) )
@@ -573,7 +575,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
     {
         case 8:
         {
-            value = *(uint64_t*)data_ptr;
+            value = *reinterpret_cast<uint64_t*>(data_ptr);
             #ifdef __be__
                 value = OsApi::swapll(value);
             #endif
@@ -582,7 +584,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
 
         case 4:
         {
-            value = *(uint32_t*)data_ptr;
+            value = *reinterpret_cast<uint32_t*>(data_ptr);
             #ifdef __be__
                 value = OsApi::swapl(value);
             #endif
@@ -591,7 +593,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
 
         case 2:
         {
-            value = *(uint16_t*)data_ptr;
+            value = *reinterpret_cast<uint16_t*>(data_ptr);
             #ifdef __be__
                 value = OsApi::swaps(value);
             #endif
@@ -600,7 +602,7 @@ uint64_t H5FileBuffer::readField (int64_t size, uint64_t* pos)
 
         case 1:
         {
-            value = *(uint8_t*)data_ptr;
+            value = *reinterpret_cast<uint8_t*>(data_ptr);
             break;
         }
 
@@ -637,16 +639,16 @@ void H5FileBuffer::readDataset (info_t* info)
     }
 
     /* Get Number of Rows */
-    uint64_t first_dimension = (metaData.ndims > 0) ? metaData.dimensions[0] : 1;
+    const uint64_t first_dimension = (metaData.ndims > 0) ? metaData.dimensions[0] : 1;
     datasetNumRows = (datasetNumRows == ALL_ROWS) ? first_dimension : datasetNumRows;
     if((datasetStartRow + datasetNumRows) > first_dimension)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "read exceeds number of rows: %d + %d > %d", (int)datasetStartRow, (int)datasetNumRows, (int)first_dimension);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "read exceeds number of rows: %d + %d > %d", (int)datasetStartRow, datasetNumRows, (int)first_dimension);
     }
 
     /* Allocate Data Buffer */
     uint8_t* buffer = NULL;
-    int64_t buffer_size = row_size * datasetNumRows;
+    const int64_t buffer_size = row_size * datasetNumRows;
     if(!metaOnly && buffer_size > 0)
     {
         buffer = new uint8_t [buffer_size];
@@ -704,7 +706,7 @@ void H5FileBuffer::readDataset (info_t* info)
     }
 
     /* Calculate Buffer Start */
-    uint64_t buffer_offset = row_size * datasetStartRow;
+    const uint64_t buffer_offset = row_size * datasetStartRow;
 
     /* Check if Data Address and Data Size is Valid */
     if(H5_ERROR_CHECKING)
@@ -841,7 +843,7 @@ void H5FileBuffer::readDataset (info_t* info)
                         /* Copy Into New Buffer */
                         for(uint64_t k = 0; k < cdimsizes[1]; k++)
                         {
-                            fbuf[start + k] = buffer[bi++];
+                            fbuf[start + k] = buffer[bi++];   // NOLINT(clang-analyzer-core.uninitialized.Assign)
                         }
 
                         /* Update Indices */
@@ -886,13 +888,13 @@ uint64_t H5FileBuffer::readSuperblock (void)
     uint64_t root_group_offset = 0;
 
     /* Signature and Version */
-    uint64_t signature = readField(8, &pos);
+    const uint64_t signature = readField(8, &pos);
     if(signature != H5_SIGNATURE_LE)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid h5 file signature: 0x%llX", (unsigned long long)signature);
     }
 
-    uint64_t superblock_version = readField(1, &pos);
+    const uint64_t superblock_version = readField(1, &pos);
     if((superblock_version != 0) && (superblock_version != 2))
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported h5 file superblock version: %d", (int)superblock_version);
@@ -904,13 +906,13 @@ uint64_t H5FileBuffer::readSuperblock (void)
         /* Read and Verify Superblock Info */
         if(H5_ERROR_CHECKING)
         {
-            uint64_t freespace_version = readField(1, &pos);
+            const uint64_t freespace_version = readField(1, &pos);
             if(freespace_version != 0)
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported h5 file free space version: %d", (int)freespace_version);
             }
 
-            uint64_t roottable_version = readField(1, &pos);
+            const uint64_t roottable_version = readField(1, &pos);
             if(roottable_version != 0)
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported h5 file root table version: %d", (int)roottable_version);
@@ -926,7 +928,7 @@ uint64_t H5FileBuffer::readSuperblock (void)
         if(H5_ERROR_CHECKING)
         {
             pos = 24;
-            uint64_t base_address = readField(metaData.offsetsize, &pos);
+            const uint64_t base_address = readField(metaData.offsetsize, &pos);
             if(base_address != 0)
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported h5 file base address: %lu", (unsigned long)base_address);
@@ -959,7 +961,7 @@ uint64_t H5FileBuffer::readSuperblock (void)
         if(H5_ERROR_CHECKING)
         {
             pos = 12;
-            uint64_t base_address = readField(8, &pos);
+            const uint64_t base_address = readField(8, &pos);
             if(base_address != 0)
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported h5 file base address: %lu", (unsigned long)base_address);
@@ -992,7 +994,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
 {
     static const int FRHP_CHECKSUM_DIRECT_BLOCKS = 0x02;
 
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
     if(!H5_ERROR_CHECKING)
     {
@@ -1000,13 +1002,13 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     }
     else
     {
-        uint32_t signature = (uint32_t)readField(4, &pos);
+        const uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_FRHP_SIGNATURE_LE)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid heap signature: 0x%llX", (unsigned long long)signature);
         }
 
-        uint8_t version = (uint8_t)readField(1, &pos);
+        const uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 0)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid heap version: %d", (int)version);
@@ -1021,29 +1023,29 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     }
 
     /*  Read Fractal Heap Header */
-    uint16_t    heap_obj_id_len     = (uint16_t)readField(2, &pos); // Heap ID Length
-    uint16_t    io_filter_len       = (uint16_t)readField(2, &pos); // I/O Filters' Encoded Length
-    uint8_t     flags               =  (uint8_t)readField(1, &pos); // Flags
-    uint32_t    max_size_mg_obj     = (uint32_t)readField(4, &pos); // Maximum Size of Managed Objects
-    uint64_t    next_huge_obj_id    = (uint64_t)readField(metaData.lengthsize, &pos); // Next Huge Object ID
-    uint64_t    btree_addr_huge_obj = (uint64_t)readField(metaData.offsetsize, &pos); // v2 B-tree Address of Huge Objects
-    uint64_t    free_space_mg_blks  = (uint64_t)readField(metaData.lengthsize, &pos); // Amount of Free Space in Managed Blocks
-    uint64_t    addr_free_space_mg  = (uint64_t)readField(metaData.offsetsize, &pos); // Address of Managed Block Free Space Manager
-    uint64_t    mg_space            = (uint64_t)readField(metaData.lengthsize, &pos); // Amount of Manged Space in Heap
-    uint64_t    alloc_mg_space      = (uint64_t)readField(metaData.lengthsize, &pos); // Amount of Allocated Managed Space in Heap
-    uint64_t    dblk_alloc_iter     = (uint64_t)readField(metaData.lengthsize, &pos); // Offset of Direct Block Allocation Iterator in Managed Space
-    uint64_t    mg_objs             = (uint64_t)readField(metaData.lengthsize, &pos); // Number of Managed Objects in Heap
-    uint64_t    huge_obj_size       = (uint64_t)readField(metaData.lengthsize, &pos); // Size of Huge Objects in Heap
-    uint64_t    huge_objs           = (uint64_t)readField(metaData.lengthsize, &pos); // Number of Huge Objects in Heap
-    uint64_t    tiny_obj_size       = (uint64_t)readField(metaData.lengthsize, &pos); // Size of Tiny Objects in Heap
-    uint64_t    tiny_objs           = (uint64_t)readField(metaData.lengthsize, &pos); // Number of Tiny Objects in Heap
-    uint16_t    table_width         = (uint16_t)readField(2, &pos); // Table Width
-    uint64_t    starting_blk_size   = (uint64_t)readField(metaData.lengthsize, &pos); // Starting Block Size
-    uint64_t    max_dblk_size       = (uint64_t)readField(metaData.lengthsize, &pos); // Maximum Direct Block Size
-    uint16_t    max_heap_size       = (uint16_t)readField(2, &pos); // Maximum Heap Size
-    uint16_t    start_num_rows      = (uint16_t)readField(2, &pos); // Starting # of Rows in Root Indirect Block
-    uint64_t    root_blk_addr       = (uint64_t)readField(metaData.offsetsize, &pos); // Address of Root Block
-    uint16_t    curr_num_rows       = (uint16_t)readField(2, &pos); // Current # of Rows in Root Indirect Block
+    const uint16_t    heap_obj_id_len     = (uint16_t)readField(2, &pos); // Heap ID Length
+    const uint16_t    io_filter_len       = (uint16_t)readField(2, &pos); // I/O Filters' Encoded Length
+    const uint8_t     flags               =  (uint8_t)readField(1, &pos); // Flags
+    const uint32_t    max_size_mg_obj     = (uint32_t)readField(4, &pos); // Maximum Size of Managed Objects
+    const uint64_t    next_huge_obj_id    = readField(metaData.lengthsize, &pos); // Next Huge Object ID
+    const uint64_t    btree_addr_huge_obj = readField(metaData.offsetsize, &pos); // v2 B-tree Address of Huge Objects
+    const uint64_t    free_space_mg_blks  = readField(metaData.lengthsize, &pos); // Amount of Free Space in Managed Blocks
+    const uint64_t    addr_free_space_mg  = readField(metaData.offsetsize, &pos); // Address of Managed Block Free Space Manager
+    const uint64_t    mg_space            = readField(metaData.lengthsize, &pos); // Amount of Manged Space in Heap
+    const uint64_t    alloc_mg_space      = readField(metaData.lengthsize, &pos); // Amount of Allocated Managed Space in Heap
+    const uint64_t    dblk_alloc_iter     = readField(metaData.lengthsize, &pos); // Offset of Direct Block Allocation Iterator in Managed Space
+    const uint64_t    mg_objs             = readField(metaData.lengthsize, &pos); // Number of Managed Objects in Heap
+    const uint64_t    huge_obj_size       = readField(metaData.lengthsize, &pos); // Size of Huge Objects in Heap
+    const uint64_t    huge_objs           = readField(metaData.lengthsize, &pos); // Number of Huge Objects in Heap
+    const uint64_t    tiny_obj_size       = readField(metaData.lengthsize, &pos); // Size of Tiny Objects in Heap
+    const uint64_t    tiny_objs           = readField(metaData.lengthsize, &pos); // Number of Tiny Objects in Heap
+    const uint16_t    table_width         = readField(2, &pos); // Table Width
+    const uint64_t    starting_blk_size   = readField(metaData.lengthsize, &pos); // Starting Block Size
+    const uint64_t    max_dblk_size       = readField(metaData.lengthsize, &pos); // Maximum Direct Block Size
+    const uint16_t    max_heap_size       = readField(2, &pos); // Maximum Heap Size
+    const uint16_t    start_num_rows      = readField(2, &pos); // Starting # of Rows in Root Indirect Block
+    const uint64_t    root_blk_addr       = readField(metaData.offsetsize, &pos); // Address of Root Block
+    const uint16_t    curr_num_rows       = (uint16_t)readField(2, &pos); // Current # of Rows in Root Indirect Block
     if(H5_VERBOSE)
     {
         print2term("Heap ID Length:                                                  %lu\n", (unsigned long)heap_obj_id_len);
@@ -1091,8 +1093,8 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     /* Read Filter Information */
     if(io_filter_len > 0)
     {
-        uint64_t filter_root_dblk   = (uint64_t)readField(metaData.lengthsize, &pos); // Size of Filtered Root Direct Block
-        uint32_t filter_mask        = (uint32_t)readField(4, &pos); // I/O Filter Mask
+        const uint64_t filter_root_dblk   = readField(metaData.lengthsize, &pos); // Size of Filtered Root Direct Block
+        const uint32_t filter_mask        = (uint32_t)readField(4, &pos); // I/O Filter Mask
         print2term("Size of Filtered Root Direct Block:                              %lu\n", (unsigned long)filter_root_dblk);
         print2term("I/O Filter Mask:                                                 %lu\n", (unsigned long)filter_mask);
 
@@ -1101,12 +1103,12 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     }
 
     /* Check Checksum */
-    uint64_t check_sum = readField(4, &pos);
+    const uint64_t check_sum = readField(4, &pos);
     (void)check_sum; // unused
 
 
     /* for heap len size - follow https://github.com/HDFGroup/hdf5/blob/f73da83a94f6fe563ff351603aa4d34525ef612b/src/H5HFhdr.c#L199 */
-    uint8_t min_calc = std::min((uint32_t)max_dblk_size, (uint32_t)((H5BTreeV2::log2Gen((uint64_t) max_size_mg_obj) / 8) + 1));
+    const uint8_t min_calc = std::min((uint32_t)max_dblk_size, (uint32_t)((H5BTreeV2::log2Gen((uint64_t) max_size_mg_obj) / 8) + 1));
 
     /* Build Heap Info Structure */
     heap_info_ptr->table_width        = table_width;
@@ -1130,7 +1132,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     if(heap_info_ptr->curr_num_rows == 0)
     {
         /* Direct Blocks */
-        int bytes_read = readDirectBlock(heap_info_ptr, heap_info_ptr->starting_blk_size, root_blk_addr, hdr_flags, dlvl);
+        const int bytes_read = readDirectBlock(heap_info_ptr, heap_info_ptr->starting_blk_size, root_blk_addr, hdr_flags, dlvl);
         if(H5_ERROR_CHECKING && (bytes_read > heap_info_ptr->starting_blk_size))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "direct block contianed more bytes than specified: %d > %d", bytes_read, heap_info_ptr->starting_blk_size);
@@ -1140,7 +1142,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     else
     {
         /* Indirect Blocks */
-        int bytes_read = readIndirectBlock(heap_info_ptr, 0, root_blk_addr, hdr_flags, dlvl);
+        const int bytes_read = readIndirectBlock(heap_info_ptr, 0, root_blk_addr, hdr_flags, dlvl);
         if(H5_ERROR_CHECKING && (bytes_read > heap_info_ptr->starting_blk_size))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "indirect block contianed more bytes than specified: %d > %d", bytes_read, heap_info_ptr->starting_blk_size);
@@ -1149,7 +1151,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -1158,7 +1160,7 @@ int H5FileBuffer::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hd
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
     if(!H5_ERROR_CHECKING)
     {
@@ -1166,13 +1168,13 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
     }
     else
     {
-        uint32_t signature = (uint32_t)readField(4, &pos);
+        const uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_FHDB_SIGNATURE_LE)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid direct block signature: 0x%llX", (unsigned long long)signature);
         }
 
-        uint8_t version = (uint8_t)readField(1, &pos);
+        const uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 0)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid direct block version: %d", (int)version);
@@ -1193,7 +1195,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
     }
     else
     {
-        uint64_t heap_hdr_addr = readField(metaData.offsetsize, &pos); // Heap Header Address
+        const uint64_t heap_hdr_addr = readField(metaData.offsetsize, &pos); // Heap Header Address
         const int MAX_BLOCK_OFFSET_SIZE = 8;
         uint8_t block_offset_buf[MAX_BLOCK_OFFSET_SIZE];
         if(H5_ERROR_CHECKING && (heap_info->blk_offset_size > MAX_BLOCK_OFFSET_SIZE))
@@ -1208,7 +1210,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
 
     if(heap_info->dblk_checksum)
     {
-        uint64_t check_sum = readField(4, &pos);
+        const uint64_t check_sum = readField(4, &pos);
         (void)check_sum; // unused
     }
 
@@ -1218,7 +1220,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
     {
         /* Peak if More Messages */
         uint64_t peak_addr = pos;
-        int peak_size = MIN((1 << highestBit(data_left)), 8);
+        const int peak_size = MIN((1 << highestBit(data_left)), 8);
         if(readField(peak_size, &peak_addr) == 0)
         {
             if(H5_VERBOSE)
@@ -1229,7 +1231,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
         }
 
         /* Read Message */
-        uint64_t data_read = readMessage(heap_info->msg_type, data_left, pos, hdr_flags, dlvl);
+        const uint64_t data_read = readMessage(heap_info->msg_type, data_left, pos, hdr_flags, dlvl);
         pos += data_read;
         data_left -= data_read;
 
@@ -1260,7 +1262,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
     pos += data_left;
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -1269,7 +1271,7 @@ int H5FileBuffer::readDirectBlock (heap_info_t* heap_info, int block_size, uint6
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
     if(!H5_ERROR_CHECKING)
     {
@@ -1277,13 +1279,13 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
     }
     else
     {
-        uint32_t signature = (uint32_t)readField(4, &pos);
+        const uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_FHIB_SIGNATURE_LE)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid direct block signature: 0x%llX", (unsigned long long)signature);
         }
 
-        uint8_t version = (uint8_t)readField(1, &pos);
+        const uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 0)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid direct block version: %d", (int)version);
@@ -1304,7 +1306,7 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
     }
     else
     {
-        uint64_t heap_hdr_addr = readField(metaData.offsetsize, &pos); // Heap Header Address
+        const uint64_t heap_hdr_addr = readField(metaData.offsetsize, &pos); // Heap Header Address
         const int MAX_BLOCK_OFFSET_SIZE = 8;
         uint8_t block_offset_buf[MAX_BLOCK_OFFSET_SIZE];
         if(H5_ERROR_CHECKING && (heap_info->blk_offset_size > MAX_BLOCK_OFFSET_SIZE))
@@ -1319,11 +1321,11 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
 
     /* Calculate Number of Direct and Indirect Blocks (see III.G. Disk Format: Level 1G - Fractal Heap) */
     int nrows = heap_info->curr_num_rows; // used for "root" indirect block only
-    int curr_size = heap_info->starting_blk_size * heap_info->table_width;
+    const int curr_size = heap_info->starting_blk_size * heap_info->table_width;
     if(block_size > 0) nrows = (highestBit(block_size) - highestBit(curr_size)) + 1;
-    int max_dblock_rows = (highestBit(heap_info->max_dblk_size) - highestBit(heap_info->starting_blk_size)) + 2;
-    int K = MIN(nrows, max_dblock_rows) * heap_info->table_width;
-    int N = K - (max_dblock_rows * heap_info->table_width);
+    const int max_dblock_rows = (highestBit(heap_info->max_dblk_size) - highestBit(heap_info->starting_blk_size)) + 2;
+    const int K = MIN(nrows, max_dblock_rows) * heap_info->table_width;
+    const int N = K - (max_dblock_rows * heap_info->table_width);
     if(H5_VERBOSE)
     {
         print2term("Number of Rows:                                                  %d\n", nrows);
@@ -1356,12 +1358,12 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
                 }
 
                 /* Read Direct Block Address */
-                uint64_t direct_block_addr = readField(metaData.offsetsize, &pos);
+                const uint64_t direct_block_addr = readField(metaData.offsetsize, &pos);
                 // note: filters are unsupported, but if present would be read here
                 if(!H5_INVALID(direct_block_addr) && (dlvl >= highestDataLevel))
                 {
                     /* Read Direct Block */
-                    int bytes_read = readDirectBlock(heap_info, row_block_size, direct_block_addr, hdr_flags, dlvl);
+                    const int bytes_read = readDirectBlock(heap_info, row_block_size, direct_block_addr, hdr_flags, dlvl);
                     if(H5_ERROR_CHECKING && (bytes_read > row_block_size))
                     {
                         throw RunTimeException(CRITICAL, RTE_ERROR, "direct block contained more bytes than specified: %d > %d", bytes_read, row_block_size);
@@ -1379,11 +1381,11 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
                 }
 
                 /* Read Indirect Block Address */
-                uint64_t indirect_block_addr = readField(metaData.offsetsize, &pos);
+                const uint64_t indirect_block_addr = readField(metaData.offsetsize, &pos);
                 if(!H5_INVALID(indirect_block_addr) && (dlvl >= highestDataLevel))
                 {
                     /* Read Indirect Block */
-                    int bytes_read = readIndirectBlock(heap_info, row_block_size, indirect_block_addr, hdr_flags, dlvl);
+                    const int bytes_read = readIndirectBlock(heap_info, row_block_size, indirect_block_addr, hdr_flags, dlvl);
                     if(H5_ERROR_CHECKING && (bytes_read > row_block_size))
                     {
                         throw RunTimeException(CRITICAL, RTE_ERROR, "indirect block contained more bytes than specified: %d > %d", bytes_read, row_block_size);
@@ -1394,11 +1396,11 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
     }
 
     /* Read Checksum */
-    uint64_t check_sum = readField(4, &pos);
+    const uint64_t check_sum = readField(4, &pos);
     (void)check_sum; // unused
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -1407,9 +1409,9 @@ int H5FileBuffer::readIndirectBlock (heap_info_t* heap_info, int block_size, uin
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size, uint64_t buffer_offset)
 {
-    uint64_t starting_position = pos;
-    uint64_t data_key1 = datasetStartRow;
-    uint64_t data_key2 = datasetStartRow + datasetNumRows - 1;
+    const uint64_t starting_position = pos;
+    const uint64_t data_key1 = datasetStartRow;
+    const uint64_t data_key2 = datasetStartRow + datasetNumRows - 1;
 
     /* Check Signature and Node Type */
     if(!H5_ERROR_CHECKING)
@@ -1418,13 +1420,13 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
     }
     else
     {
-        uint32_t signature = (uint32_t)readField(4, &pos);
+        const uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_TREE_SIGNATURE_LE)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid b-tree signature: 0x%llX", (unsigned long long)signature);
         }
 
-        uint8_t node_type = (uint8_t)readField(1, &pos);
+        const uint8_t node_type = (uint8_t)readField(1, &pos);
         if(node_type != 1)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "only raw data chunk b-trees supported: %d", node_type);
@@ -1432,8 +1434,8 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
     }
 
     /* Read Node Level and Number of Entries */
-    uint8_t node_level = (uint8_t)readField(1, &pos);
-    uint16_t entries_used = (uint16_t)readField(2, &pos);
+    const uint8_t node_level = (uint8_t)readField(1, &pos);
+    const uint16_t entries_used = (uint16_t)readField(2, &pos);
 
     if(H5_VERBOSE)
     {
@@ -1457,10 +1459,10 @@ int H5FileBuffer::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_si
         uint64_t child_addr = readField(metaData.offsetsize, &pos);
 
         /* Read Next Key */
-        btree_node_t next_node = readBTreeNodeV1(metaData.ndims, &pos);
+        const btree_node_t next_node = readBTreeNodeV1(metaData.ndims, &pos);
 
         /*  Get Child Keys */
-        uint64_t child_key1 = curr_node.row_key;
+        const uint64_t child_key1 = curr_node.row_key;
         uint64_t child_key2 = next_node.row_key; // there is always +1 keys
         if(next_node.chunk_size == 0 && metaData.ndims > 0)
         {
@@ -1632,7 +1634,7 @@ H5FileBuffer::btree_node_t H5FileBuffer::readBTreeNodeV1 (int ndims, uint64_t* p
     }
 
     /* Read Trailing Zero */
-    uint64_t trailing_zero = readField(8, pos);
+    const uint64_t trailing_zero = readField(8, pos);
     if(H5_ERROR_CHECKING)
     {
         if(trailing_zero % metaData.typesize != 0)
@@ -1658,7 +1660,7 @@ H5FileBuffer::btree_node_t H5FileBuffer::readBTreeNodeV1 (int ndims, uint64_t* p
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dlvl)
 {
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
     /* Check Signature and Version */
     if(!H5_ERROR_CHECKING)
@@ -1667,19 +1669,19 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
     }
     else
     {
-        uint32_t signature = (uint32_t)readField(4, &pos);
+        const uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_SNOD_SIGNATURE_LE)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid symbol table signature: 0x%llX", (unsigned long long)signature);
         }
 
-        uint8_t version = (uint8_t)readField(1, &pos);
+        const uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 1)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "incorrect version of symbole table: %d", (int)version);
         }
 
-        uint8_t reserved0 = (uint8_t)readField(1, &pos);
+        const uint8_t reserved0 = (uint8_t)readField(1, &pos);
         if(reserved0 != 0)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "incorrect reserved value: %d", (int)reserved0);
@@ -1687,13 +1689,13 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
     }
 
     /* Read Symbols */
-    uint16_t num_symbols = (uint16_t)readField(2, &pos);
+    const uint16_t num_symbols = (uint16_t)readField(2, &pos);
     for(int s = 0; s < num_symbols; s++)
     {
         /* Read Symbol Entry */
-        uint64_t link_name_offset = readField(metaData.offsetsize, &pos);
-        uint64_t obj_hdr_addr = readField(metaData.offsetsize, &pos);
-        uint32_t cache_type = (uint32_t)readField(4, &pos);
+        const uint64_t link_name_offset = readField(metaData.offsetsize, &pos);
+        const uint64_t obj_hdr_addr = readField(metaData.offsetsize, &pos);
+        const uint32_t cache_type = (uint32_t)readField(4, &pos);
         pos += 20; // reserved + scratch pad
 
         /* Read Link Name */
@@ -1707,7 +1709,7 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
                 throw RunTimeException(CRITICAL, RTE_ERROR, "link name string exceeded maximum length: %d, 0x%lx\n", i, (unsigned long)pos);
             }
 
-            uint8_t c = (uint8_t)readField(1, &link_name_addr);
+            const uint8_t c = (uint8_t)readField(1, &link_name_addr);
             link_name[i++] = c;
 
             if(c == 0)
@@ -1725,7 +1727,7 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
         /* Process Link */
         if(dlvl < static_cast<int>(datasetPath.size()))
         {
-            if(StringLib::match((const char*)link_name, datasetPath[dlvl]))
+            if(StringLib::match(reinterpret_cast<const char*>(link_name), datasetPath[dlvl]))
             {
                 if(cache_type == 2)
                 {
@@ -1739,7 +1741,7 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -1748,11 +1750,11 @@ int H5FileBuffer::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dl
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
 {
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
     /* Peek at Version / Process Version 1 */
     uint64_t peeking_position = pos;
-    uint8_t peek = readField(1, &peeking_position);
+    const uint8_t peek = readField(1, &peeking_position);
     if(peek == 1) return readObjHdrV1(starting_position, dlvl);
 
     /* Read Object Header */
@@ -1762,13 +1764,13 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
     }
     else
     {
-        uint64_t signature = readField(4, &pos);
+        const uint64_t signature = readField(4, &pos);
         if(signature != H5_OHDR_SIGNATURE_LE)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid header signature: 0x%llX", (unsigned long long)signature);
         }
 
-        uint64_t version = readField(1, &pos);
+        const uint64_t version = readField(1, &pos);
         if(version != 2)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid header version: %d", (int)version);
@@ -1776,7 +1778,7 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
     }
 
     /* Read Option Time Fields */
-    uint8_t obj_hdr_flags = (uint8_t)readField(1, &pos);
+    const uint8_t obj_hdr_flags = (uint8_t)readField(1, &pos);
     if(obj_hdr_flags & FILE_STATS_BIT)
     {
         if(!H5_VERBOSE)
@@ -1785,25 +1787,25 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
         }
         else
         {
-            uint64_t access_time         = readField(4, &pos);
-            uint64_t modification_time   = readField(4, &pos);
-            uint64_t change_time         = readField(4, &pos);
-            uint64_t birth_time          = readField(4, &pos);
+            const uint64_t access_time         = readField(4, &pos);
+            const uint64_t modification_time   = readField(4, &pos);
+            const uint64_t change_time         = readField(4, &pos);
+            const uint64_t birth_time          = readField(4, &pos);
 
             print2term("\n----------------\n");
             print2term("Object Information [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
             print2term("----------------\n");
 
-            TimeLib::gmt_time_t access_gmt = TimeLib::sys2gmttime(access_time * 1000);
+            const TimeLib::gmt_time_t access_gmt = TimeLib::sys2gmttime(access_time * 1000);
             print2term("Access Time:                                                     %d:%d:%d:%d:%d\n", access_gmt.year, access_gmt.doy, access_gmt.hour, access_gmt.minute, access_gmt.second);
 
-            TimeLib::gmt_time_t modification_gmt = TimeLib::sys2gmttime(modification_time * 1000);
+            const TimeLib::gmt_time_t modification_gmt = TimeLib::sys2gmttime(modification_time * 1000);
             print2term("Modification Time:                                               %d:%d:%d:%d:%d\n", modification_gmt.year, modification_gmt.doy, modification_gmt.hour, modification_gmt.minute, modification_gmt.second);
 
-            TimeLib::gmt_time_t change_gmt = TimeLib::sys2gmttime(change_time * 1000);
+            const TimeLib::gmt_time_t change_gmt = TimeLib::sys2gmttime(change_time * 1000);
             print2term("Change Time:                                                     %d:%d:%d:%d:%d\n", change_gmt.year, change_gmt.doy, change_gmt.hour, change_gmt.minute, change_gmt.second);
 
-            TimeLib::gmt_time_t birth_gmt = TimeLib::sys2gmttime(birth_time * 1000);
+            const TimeLib::gmt_time_t birth_gmt = TimeLib::sys2gmttime(birth_time * 1000);
             print2term("Birth Time:                                                      %d:%d:%d:%d:%d\n", birth_gmt.year, birth_gmt.doy, birth_gmt.hour, birth_gmt.minute, birth_gmt.second);
         }
     }
@@ -1817,22 +1819,22 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
         }
         else
         {
-            uint64_t max_compact_attr = readField(2, &pos); (void)max_compact_attr;
-            uint64_t max_dense_attr = readField(2, &pos); (void)max_dense_attr;
+            const uint64_t max_compact_attr = readField(2, &pos); (void)max_compact_attr;
+            const uint64_t max_dense_attr = readField(2, &pos); (void)max_dense_attr;
         }
     }
 
     /* Read Header Messages */
-    uint64_t size_of_chunk0 = readField(1 << (obj_hdr_flags & SIZE_OF_CHUNK_0_MASK), &pos);
-    uint64_t end_of_hdr = pos + size_of_chunk0;
+    const uint64_t size_of_chunk0 = readField(1 << (obj_hdr_flags & SIZE_OF_CHUNK_0_MASK), &pos);
+    const uint64_t end_of_hdr = pos + size_of_chunk0;
     pos += readMessages (pos, end_of_hdr, obj_hdr_flags, dlvl);
 
     /* Verify Checksum */
-    uint64_t check_sum = readField(4, &pos);
+    const uint64_t check_sum = readField(4, &pos);
     (void)check_sum; // unused
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -1841,22 +1843,22 @@ int H5FileBuffer::readObjHdr (uint64_t pos, int dlvl)
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl)
 {
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
     while(pos < end)
     {
         /* Read Message Info */
-        uint8_t     msg_type    = (uint8_t)readField(1, &pos);
-        uint16_t    msg_size    = (uint16_t)readField(2, &pos);
-        uint8_t     msg_flags   = (uint8_t)readField(1, &pos); (void)msg_flags;
+        const uint8_t     msg_type    = (uint8_t)readField(1, &pos);
+        const uint16_t    msg_size    = (uint16_t)readField(2, &pos);
+        const uint8_t     msg_flags   = (uint8_t)readField(1, &pos); (void)msg_flags;
 
         if(hdr_flags & ATTR_CREATION_TRACK_BIT)
         {
-            uint64_t msg_order = (uint8_t)readField(2, &pos); (void)msg_order;
+            const uint64_t msg_order = (uint8_t)readField(2, &pos); (void)msg_order;
         }
 
         /* Read Each Message */
-        int bytes_read = readMessage((msg_type_t)msg_type, msg_size, pos, hdr_flags, dlvl);
+        const int bytes_read = readMessage((msg_type_t)msg_type, msg_size, pos, hdr_flags, dlvl);
         if(H5_ERROR_CHECKING && (bytes_read != msg_size))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "header message different size than specified: %d != %d", bytes_read, msg_size);
@@ -1883,7 +1885,7 @@ int H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, i
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -1892,7 +1894,7 @@ int H5FileBuffer::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, i
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
 {
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
     /* Read Version */
     if(!H5_ERROR_CHECKING)
@@ -1901,13 +1903,13 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     }
     else
     {
-        uint8_t version = (uint8_t)readField(1, &pos);
+        const uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 1)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid header version: %d", (int)version);
         }
 
-        uint8_t reserved0 = (uint8_t)readField(1, &pos);
+        const uint8_t reserved0 = (uint8_t)readField(1, &pos);
         if(reserved0 != 0)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid reserved field: %d", (int)reserved0);
@@ -1925,7 +1927,7 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
         print2term("Object Information V1 [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
         print2term("----------------\n");
 
-        uint16_t num_hdr_msgs = (uint16_t)readField(2, &pos);
+        const uint16_t num_hdr_msgs = (uint16_t)readField(2, &pos);
         print2term("Number of Header Messages:                                       %d\n", (int)num_hdr_msgs);
     }
 
@@ -1936,13 +1938,13 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     }
     else
     {
-        uint32_t obj_ref_count = (uint32_t)readField(4, &pos);
+        const uint32_t obj_ref_count = (uint32_t)readField(4, &pos);
         print2term("Object Reference Count:                                          %d\n", (int)obj_ref_count);
     }
 
     /* Read Object Header Size */
-    uint64_t obj_hdr_size = readField(metaData.lengthsize, &pos);
-    uint64_t end_of_hdr = pos + obj_hdr_size;
+    const uint64_t obj_hdr_size = readField(metaData.lengthsize, &pos);
+    const uint64_t end_of_hdr = pos + obj_hdr_size;
     if(H5_VERBOSE)
     {
         print2term("Object Header Size:                                              %d\n", (int)obj_hdr_size);
@@ -1953,7 +1955,7 @@ int H5FileBuffer::readObjHdrV1 (uint64_t pos, int dlvl)
     pos += readMessagesV1(pos, end_of_hdr, H5CORO_CUSTOM_V1_FLAG, dlvl);
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -1964,13 +1966,13 @@ int H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags,
 {
     static const int SIZE_OF_V1_PREFIX = 8;
 
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
     while(pos < (end - SIZE_OF_V1_PREFIX))
     {
-        uint16_t    msg_type    = (uint16_t)readField(2, &pos);
-        uint16_t    msg_size    = (uint16_t)readField(2, &pos);
-        uint8_t     msg_flags   = (uint8_t)readField(1, &pos); (void)msg_flags;
+        const uint16_t    msg_type    = (uint16_t)readField(2, &pos);
+        const uint16_t    msg_size    = (uint16_t)readField(2, &pos);
+        const uint8_t     msg_flags   = (uint8_t)readField(1, &pos); (void)msg_flags;
 
         /* Reserved Bytes */
         if(!H5_ERROR_CHECKING)
@@ -1979,8 +1981,8 @@ int H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags,
         }
         else
         {
-            uint8_t  reserved1 = (uint8_t)readField(1, &pos);
-            uint16_t reserved2 = (uint16_t)readField(2, &pos);
+            const uint8_t  reserved1 = (uint8_t)readField(1, &pos);
+            const uint16_t reserved2 = (uint16_t)readField(2, &pos);
             if((reserved1 != 0) && (reserved2 != 0))
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "invalid reserved fields: %d, %d", (int)reserved1, (int)reserved2);
@@ -2021,7 +2023,7 @@ int H5FileBuffer::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags,
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -2068,11 +2070,11 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     static const int MAX_DIM_PRESENT    = 0x1;
     static const int PERM_INDEX_PRESENT = 0x2;
 
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
-    uint8_t version         = (uint8_t)readField(1, &pos);
-    uint8_t dimensionality  = (uint8_t)readField(1, &pos);
-    uint8_t flags           = (uint8_t)readField(1, &pos);
+    const uint8_t version         = (uint8_t)readField(1, &pos);
+    const uint8_t dimensionality  = (uint8_t)readField(1, &pos);
+    const uint8_t flags           = (uint8_t)readField(1, &pos);
     pos += version == 1 ? 5 : 1; // go past reserved bytes
 
     if(H5_ERROR_CHECKING)
@@ -2122,7 +2124,7 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         /* Skip Over Maximum Dimensions */
         if(flags & MAX_DIM_PRESENT)
         {
-            int skip_bytes = dimensionality * metaData.lengthsize;
+            const int skip_bytes = dimensionality * metaData.lengthsize;
             pos += skip_bytes;
         }
     }
@@ -2133,7 +2135,7 @@ int H5FileBuffer::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -2145,10 +2147,10 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     static const int MAX_CREATE_PRESENT_BIT     = 0x01;
     static const int CREATE_ORDER_PRESENT_BIT   = 0x02;
 
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
-    uint64_t version = readField(1, &pos);
-    uint64_t flags = readField(1, &pos);
+    const uint64_t version = readField(1, &pos);
+    const uint64_t flags = readField(1, &pos);
 
     if(H5_ERROR_CHECKING)
     {
@@ -2170,7 +2172,7 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     {
         if(H5_VERBOSE)
         {
-            uint64_t max_create_index = readField(8, &pos);
+            const uint64_t max_create_index = readField(8, &pos);
             print2term("Maximum Creation Index:                                          %lu\n", (unsigned long)max_create_index);
         }
         else
@@ -2180,10 +2182,10 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Read Heap and Name Offsets */
-    uint64_t heap_address = readField(metaData.offsetsize, &pos);
+    const uint64_t heap_address = readField(metaData.offsetsize, &pos);
     if(H5_VERBOSE)
     {
-        uint64_t name_index = readField(metaData.offsetsize, &pos);
+        const uint64_t name_index = readField(metaData.offsetsize, &pos);
         print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
         print2term("Name Index:                                                      %lX\n", (unsigned long)name_index);
     }
@@ -2196,7 +2198,7 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     {
         if(H5_VERBOSE)
         {
-            uint64_t create_order_index = readField(metaData.offsetsize, &pos);
+            const uint64_t create_order_index = readField(metaData.offsetsize, &pos);
             print2term("Creation Order Index:                                            %lX\n", (unsigned long)create_order_index);
         }
         else
@@ -2215,7 +2217,7 @@ int H5FileBuffer::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -2226,13 +2228,13 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     (void)hdr_flags;
 
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
     /* Read Message Info */
-    uint64_t version_class = readField(4, &pos);
+    const uint64_t version_class = readField(4, &pos);
     metaData.typesize = (int)readField(4, &pos);
-    uint64_t version = (version_class & 0xF0) >> 4;
-    uint64_t databits = version_class >> 8;
+    const uint64_t version = (version_class & 0xF0) >> 4;
+    const uint64_t databits = version_class >> 8;
 
     if(H5_ERROR_CHECKING)
     {
@@ -2267,11 +2269,11 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             }
             else
             {
-                unsigned int byte_order = databits & 0x1;
-                unsigned int pad_type   = (databits & 0x06) >> 1;
+                const unsigned int byte_order = databits & 0x1;
+                const unsigned int pad_type   = (databits & 0x06) >> 1;
 
-                uint16_t bit_offset     = (uint16_t)readField(2, &pos);
-                uint16_t bit_precision  = (uint16_t)readField(2, &pos);
+                const uint16_t bit_offset     = (uint16_t)readField(2, &pos);
+                const uint16_t bit_precision  = (uint16_t)readField(2, &pos);
 
                 print2term("Byte Order:                                                      %d\n", (int)byte_order);
                 print2term("Pading Type:                                                     %d\n", (int)pad_type);
@@ -2290,18 +2292,18 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             }
             else
             {
-                unsigned int byte_order = ((databits & 0x40) >> 5) | (databits & 0x1);
-                unsigned int pad_type = (databits & 0x0E) >> 1;
-                unsigned int mant_norm = (databits & 0x30) >> 4;
-                unsigned int sign_loc = (databits & 0xFF00) >> 8;
+                const unsigned int byte_order = ((databits & 0x40) >> 5) | (databits & 0x1);
+                const unsigned int pad_type = (databits & 0x0E) >> 1;
+                const unsigned int mant_norm = (databits & 0x30) >> 4;
+                const unsigned int sign_loc = (databits & 0xFF00) >> 8;
 
-                uint16_t bit_offset     = (uint16_t)readField(2, &pos);
-                uint16_t bit_precision  = (uint16_t)readField(2, &pos);
-                uint8_t  exp_location   =  (uint8_t)readField(1, &pos);
-                uint8_t  exp_size       =  (uint8_t)readField(1, &pos);
-                uint8_t  mant_location  =  (uint8_t)readField(1, &pos);
-                uint8_t  mant_size      =  (uint8_t)readField(1, &pos);
-                uint32_t exp_bias       = (uint32_t)readField(4, &pos);
+                const uint16_t bit_offset     = (uint16_t)readField(2, &pos);
+                const uint16_t bit_precision  = (uint16_t)readField(2, &pos);
+                const uint8_t  exp_location   =  (uint8_t)readField(1, &pos);
+                const uint8_t  exp_size       =  (uint8_t)readField(1, &pos);
+                const uint8_t  mant_location  =  (uint8_t)readField(1, &pos);
+                const uint8_t  mant_size      =  (uint8_t)readField(1, &pos);
+                const uint32_t exp_bias       = (uint32_t)readField(4, &pos);
 
                 print2term("Byte Order:                                                      %d\n", (int)byte_order);
                 print2term("Pading Type:                                                     %d\n", (int)pad_type);
@@ -2354,8 +2356,8 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             if(H5_VERBOSE)
             {
-                unsigned int padding = databits & 0x0F;
-                unsigned int charset = (databits & 0xF0) >> 4;
+                const unsigned int padding = databits & 0x0F;
+                const unsigned int charset = (databits & 0xF0) >> 4;
 
                 const char* padding_str = "unknown";
                 if(padding == 0) padding_str = "Null Terminate";
@@ -2383,7 +2385,7 @@ int H5FileBuffer::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -2394,9 +2396,9 @@ int H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     (void)hdr_flags;
 
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
-    uint64_t version = readField(1, &pos);
+    const uint64_t version = readField(1, &pos);
 
     if(H5_ERROR_CHECKING)
     {
@@ -2421,14 +2423,14 @@ int H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
         else
         {
-            uint8_t space_allocation_time = (uint8_t)readField(1, &pos);
-            uint8_t fill_value_write_time = (uint8_t)readField(1, &pos);
+            const uint8_t space_allocation_time = (uint8_t)readField(1, &pos);
+            const uint8_t fill_value_write_time = (uint8_t)readField(1, &pos);
 
             print2term("Space Allocation Time:                                           %d\n", (int)space_allocation_time);
             print2term("Fill Value Write Time:                                           %d\n", (int)fill_value_write_time);
         }
 
-        uint8_t fill_value_defined = (uint8_t)readField(1, &pos);
+        const uint8_t fill_value_defined = (uint8_t)readField(1, &pos);
         if(fill_value_defined)
         {
             metaData.fillsize = (int)readField(4, &pos);
@@ -2439,7 +2441,7 @@ int H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
             if(metaData.fillsize > 0)
             {
-                uint64_t fill_value = readField(metaData.fillsize, &pos);
+                const uint64_t fill_value = readField(metaData.fillsize, &pos);
                 metaData.fill.fill_ll = fill_value;
                 if(H5_VERBOSE)
                 {
@@ -2450,13 +2452,13 @@ int H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
     else // if(version == 3)
     {
-        uint8_t flags = (uint8_t)readField(1, &pos);
+        const uint8_t flags = (uint8_t)readField(1, &pos);
         if(H5_VERBOSE)
         {
             print2term("Fill Flags:                                                      %02X\n", flags);
         }
 
-        uint8_t fill_value_defined = flags & 0x20;
+        const uint8_t fill_value_defined = flags & 0x20;
         if(fill_value_defined)
         {
             metaData.fillsize = (int)readField(4, &pos);
@@ -2465,7 +2467,7 @@ int H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 print2term("Fill Value Size:                                                 %d\n", metaData.fillsize);
             }
 
-            uint64_t fill_value = readField(metaData.fillsize, &pos);
+            const uint64_t fill_value = readField(metaData.fillsize, &pos);
             metaData.fill.fill_ll = fill_value;
             if(H5_VERBOSE)
             {
@@ -2475,7 +2477,7 @@ int H5FileBuffer::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -2491,10 +2493,10 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     static const int LINK_TYPE_PRESENT_BIT      = 0x08;
     static const int CHAR_SET_PRESENT_BIT       = 0x10;
 
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
-    uint64_t version = readField(1, &pos);
-    uint64_t flags = readField(1, &pos);
+    const uint64_t version = readField(1, &pos);
+    const uint64_t flags = readField(1, &pos);
 
     if(H5_ERROR_CHECKING)
     {
@@ -2527,7 +2529,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     {
         if(H5_VERBOSE)
         {
-            uint64_t create_order = readField(8, &pos);
+            const uint64_t create_order = readField(8, &pos);
             print2term("Creation Order:                                                  %lX\n", (unsigned long)create_order);
         }
         else
@@ -2541,7 +2543,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     {
         if(H5_VERBOSE)
         {
-            uint8_t char_set = readField(1, &pos);
+            const uint8_t char_set = readField(1, &pos);
             print2term("Character Set:                                                   %lu\n", (unsigned long)char_set);
         }
         else
@@ -2551,13 +2553,13 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Read Link Name */
-    int link_name_len_of_len = 1 << (flags & SIZE_OF_LEN_OF_NAME_MASK);
+    const int link_name_len_of_len = 1 << (flags & SIZE_OF_LEN_OF_NAME_MASK);
     if(H5_ERROR_CHECKING && (link_name_len_of_len > 8))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link name length of length: %d", (int)link_name_len_of_len);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link name length of length: %d", link_name_len_of_len);
     }
 
-    uint64_t link_name_len = readField(link_name_len_of_len, &pos);
+    const uint64_t link_name_len = readField(link_name_len_of_len, &pos);
     if(H5_VERBOSE)
     {
         print2term("Link Name Length:                                                %lu\n", (unsigned long)link_name_len);
@@ -2574,7 +2576,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     /* Process Link Type */
     if(link_type == 0) // hard link
     {
-        uint64_t object_header_addr = readField(metaData.offsetsize, &pos);
+        const uint64_t object_header_addr = readField(metaData.offsetsize, &pos);
         if(H5_VERBOSE)
         {
             print2term("Hard Link - Object Header Address:                               0x%lx\n", object_header_addr);
@@ -2582,7 +2584,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         if(dlvl < static_cast<int>(datasetPath.size()))
         {
-            if(StringLib::match((const char*)link_name, datasetPath[dlvl]))
+            if(StringLib::match(reinterpret_cast<const char*>(link_name), datasetPath[dlvl]))
             {
                 highestDataLevel = dlvl + 1;
                 readObjHdr(object_header_addr, highestDataLevel);
@@ -2591,7 +2593,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
     else if(link_type == 1) // soft link
     {
-        uint16_t soft_link_len = readField(2, &pos);
+        const uint16_t soft_link_len = readField(2, &pos);
         uint8_t soft_link[STR_BUFF_SIZE];
         readByteArray(soft_link, soft_link_len, &pos);
         soft_link[soft_link_len] = '\0';
@@ -2602,7 +2604,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
     else if(link_type == 64) // external link
     {
-        uint16_t ext_link_len = readField(2, &pos);
+        const uint16_t ext_link_len = readField(2, &pos);
         uint8_t ext_link[STR_BUFF_SIZE];
         readByteArray(ext_link, ext_link_len, &pos);
         ext_link[ext_link_len] = '\0';
@@ -2617,7 +2619,7 @@ int H5FileBuffer::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -2628,10 +2630,10 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     (void)hdr_flags;
 
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
     /* Read Message Info */
-    uint64_t version = readField(1, &pos);
+    const uint64_t version = readField(1, &pos);
     metaData.layout = (layout_t)readField(1, &pos);
 
     if(H5_ERROR_CHECKING)
@@ -2723,7 +2725,7 @@ int H5FileBuffer::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -2734,11 +2736,11 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     (void)hdr_flags;
 
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
     /* Read Message Info */
-    uint64_t version = readField(1, &pos);
-    uint32_t num_filters = (uint32_t)readField(1, &pos);
+    const uint64_t version = readField(1, &pos);
+    const uint32_t num_filters = (uint32_t)readField(1, &pos);
 
     if(H5_ERROR_CHECKING)
     {
@@ -2767,7 +2769,7 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     for(int f = 0; f < (int)num_filters; f++)
     {
         /* Read Filter ID */
-        int filter = (int)readField(2, &pos);
+        const int filter = (int)readField(2, &pos);
 
         /* Read Filter Name Length */
         uint16_t name_len = 0;
@@ -2777,8 +2779,8 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
 
         /* Read Filter Parameters */
-        uint16_t flags              = (uint16_t)readField(2, &pos);
-        uint16_t num_parms          = (uint16_t)readField(2, &pos);
+        const uint16_t flags              = (uint16_t)readField(2, &pos);
+        const uint16_t num_parms          = (uint16_t)readField(2, &pos);
 
         /* Consistency Check Flags */
         if(H5_ERROR_CHECKING)
@@ -2794,7 +2796,7 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         if(name_len > 0)
         {
             readByteArray(filter_name, name_len, &pos);
-            int name_padding = (8 - (name_len % 8)) % 8;
+            const int name_padding = (8 - (name_len % 8)) % 8;
             pos += name_padding;
         }
         filter_name[name_len] = '\0';
@@ -2832,7 +2834,7 @@ int H5FileBuffer::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -2843,15 +2845,15 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
 {
     (void)hdr_flags;
 
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
     /* Read Message Info */
-    uint64_t version = readField(1, &pos);
+    const uint64_t version = readField(1, &pos);
 
     /* Error Check Info */
     if(H5_ERROR_CHECKING)
     {
-        uint64_t reserved0 = readField(1, &pos);
+        const uint64_t reserved0 = readField(1, &pos);
 
         if(version != 1 && version != 3)
         {
@@ -2868,14 +2870,14 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     }
 
     /* Get Sizes */
-    uint64_t name_size = readField(2, &pos);
-    uint64_t datatype_size = readField(2, &pos);
-    uint64_t dataspace_size = readField(2, &pos);
+    const uint64_t name_size = readField(2, &pos);
+    const uint64_t datatype_size = readField(2, &pos);
+    const uint64_t dataspace_size = readField(2, &pos);
 
     /* Read Attribute Name */
     if(name_size > STR_BUFF_SIZE)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "attribute name string exceeded maximum length: %lu, 0x%lx\n", (unsigned long)name_size, (unsigned long)pos);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "attribute name string exceeded maximum length: %lu, 0x%lx\n", static_cast<unsigned long>(name_size), static_cast<unsigned long>(pos));
     }
     uint8_t attr_name[STR_BUFF_SIZE];
 
@@ -2889,7 +2891,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
         readByteArray(attr_name, name_size, &pos);
     }
 
-    mlog(CRITICAL, "received attr_name: %s", (const char *) attr_name);
+    mlog(CRITICAL, "received attr_name: %s", reinterpret_cast<const char*>(attr_name));
 
     if (version == 1) {
         // name padding, align to next 8-byte boundary
@@ -2913,18 +2915,18 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
-        print2term("Attribute Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
+        print2term("Attribute Message [%d]: 0x%lx\n", dlvl, static_cast<unsigned long>(starting_position));
         print2term("----------------\n");
-        print2term("Version:                                                         %d\n", (int)version);
-        print2term("Name:                                                            %s\n", (const char*)attr_name);
-        print2term("Message Size:                                                    %d\n", (int)size);
-        print2term("Datatype Message Bytes:                                          %d\n", (int)datatype_size);
-        print2term("Dataspace Message Bytes:                                         %d\n", (int)dataspace_size);
+        print2term("Version:                                                         %d\n", static_cast<int>(version));
+        print2term("Name:                                                            %s\n", reinterpret_cast<const char*>(attr_name));
+        print2term("Message Size:                                                    %d\n", static_cast<int>(size));
+        print2term("Datatype Message Bytes:                                          %d\n", static_cast<int>(datatype_size));
+        print2term("Dataspace Message Bytes:                                         %d\n", static_cast<int>(dataspace_size));
     }
 
     /* Shortcut Out if Not Desired Attribute */
-    if( ((dlvl + 1) != static_cast<int>(datasetPath.size())) ||
-        !StringLib::match((const char*)attr_name, datasetPath[dlvl]) )
+    if (((dlvl + 1) != static_cast<int>(datasetPath.size())) ||
+        !StringLib::match(reinterpret_cast<const char*>(attr_name), datasetPath[dlvl]))
     {
         return size;
     }
@@ -2932,10 +2934,10 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     highestDataLevel = dlvl + 1;
 
     /* Read Datatype Message */
-    int datatype_bytes_read = readDatatypeMsg(pos, hdr_flags, dlvl);
-    if(H5_ERROR_CHECKING && datatype_bytes_read > (int)datatype_size)
+    const int datatype_bytes_read = readDatatypeMsg(pos, hdr_flags, dlvl);
+    if(H5_ERROR_CHECKING && datatype_bytes_read > static_cast<int>(datatype_size))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for datatype message: %d > %d\n", (int)datatype_bytes_read, (int)datatype_size);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for datatype message: %d > %d\n", datatype_bytes_read, static_cast<int>(datatype_size));
     }
 
     pos += datatype_bytes_read;
@@ -2945,10 +2947,10 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     }
 
     /* Read Dataspace Message */
-    int dataspace_bytes_read = readDataspaceMsg(pos, hdr_flags, dlvl);
-    if(H5_ERROR_CHECKING && dataspace_bytes_read > (int)dataspace_size)
+    const int dataspace_bytes_read = readDataspaceMsg(pos, hdr_flags, dlvl);
+    if(H5_ERROR_CHECKING && dataspace_bytes_read > static_cast<int>(dataspace_size))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for dataspace message: %d > %d\n", (int)dataspace_bytes_read, (int)dataspace_size);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for dataspace message: %d > %d\n", dataspace_bytes_read, static_cast<int>(dataspace_size));
     }
 
     pos += dataspace_bytes_read;
@@ -2967,7 +2969,7 @@ int H5FileBuffer::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, u
     pos += metaData.size;
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -2979,23 +2981,23 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     static const int MAX_CREATE_PRESENT_BIT     = 0x01;
     static const int CREATE_ORDER_PRESENT_BIT   = 0x02;
 
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
-    uint64_t version = readField(1, &pos);
-    uint64_t flags = readField(1, &pos);
+    const uint64_t version = readField(1, &pos);
+    const uint64_t flags = readField(1, &pos);
 
     if(H5_ERROR_CHECKING)
     {
         if(version != 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link info version: %d", (int)version);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link info version: %d", static_cast<int>(version));
         }
     }
 
     if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
-        print2term("Attribute Information Message [%d], 0x%lx\n", dlvl, (unsigned long)starting_position);
+        print2term("Attribute Information Message [%d], 0x%lx\n", dlvl, static_cast<unsigned long>(starting_position));
         print2term("----------------\n");
     }
 
@@ -3004,8 +3006,8 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     {
         if(H5_VERBOSE)
         {
-            uint16_t max_create_index = readField(2, &pos);
-            print2term("Maximum Creation Index:                                          %u\n", (unsigned short)max_create_index);
+            const uint16_t max_create_index = readField(2, &pos);
+            print2term("Maximum Creation Index:                                          %u\n", static_cast<unsigned short>(max_create_index));
         }
         else
         {
@@ -3014,21 +3016,21 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     }
 
     /* Read Heap and BTree Values */
-    uint64_t heap_address = readField(metaData.offsetsize, &pos);
-    uint64_t name_bt2_address = readField(metaData.offsetsize, &pos);
+    const uint64_t heap_address = readField(metaData.offsetsize, &pos);
+    const uint64_t name_bt2_address = readField(metaData.offsetsize, &pos);
 
     if(H5_VERBOSE)
     {
-        print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
-        print2term("Attribute Name v2 B-tree Address:                                %lX\n", (unsigned long)name_bt2_address);
+        print2term("Heap Address:                                                    %lX\n", static_cast<unsigned long>(heap_address));
+        print2term("Attribute Name v2 B-tree Address:                                %lX\n", static_cast<unsigned long>(name_bt2_address));
     }
 
     if(flags & CREATE_ORDER_PRESENT_BIT)
     {
         if(H5_VERBOSE)
         {
-            uint64_t create_order_index = readField(metaData.offsetsize, &pos);
-            print2term("Creation Order Index:                                            %lX\n", (unsigned long)create_order_index);
+            const uint64_t create_order_index = readField(metaData.offsetsize, &pos);
+            print2term("Creation Order Index:                                            %lX\n", static_cast<unsigned long>(create_order_index));
         }
         else
         {
@@ -3037,8 +3039,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     }
 
     /* Follow Heap Address if Provided */
-    uint64_t address_snapshot = metaData.address;
-    uint64_t heap_addr_snapshot = heap_address;
+    const uint64_t address_snapshot = metaData.address;
     heap_info_t heap_info_dense;
 
     /* Due to prev LinkInfo call, we can guarantee heap_address != -1 */
@@ -3047,7 +3048,8 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     /* Check if Attribute Located Non-Dense, Else Init Dense Search */
     if(address_snapshot == metaData.address && (int)name_bt2_address != -1)
     {
-        H5BTreeV2 curr_btreev2(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], &heap_info_dense, this);
+        const uint64_t heap_addr_snapshot = heap_address;
+        const H5BTreeV2 curr_btreev2(heap_addr_snapshot, name_bt2_address, datasetPath[dlvl], &heap_info_dense, this);
         if (curr_btreev2.found_attr) {
             readAttributeMsg(curr_btreev2.pos_out, curr_btreev2.hdr_flags_out, curr_btreev2.hdr_dlvl_out, curr_btreev2.msg_size_out);
         }
@@ -3058,7 +3060,7 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
     }
 
     /* Return Bytes Read */
-    uint64_t ending_position = pos;
+    const uint64_t ending_position = pos;
     return ending_position - starting_position;
 }
 
@@ -3067,26 +3069,26 @@ int H5FileBuffer::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlv
  *----------------------------------------------------------------------------*/
 int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
     /* Continuation Info */
-    uint64_t hc_offset = readField(metaData.offsetsize, &pos);
-    uint64_t hc_length = readField(metaData.lengthsize, &pos);
+    const uint64_t hc_offset = readField(metaData.offsetsize, &pos);
+    const uint64_t hc_length = readField(metaData.lengthsize, &pos);
 
     if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Header Continuation Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
         print2term("----------------\n");
-        print2term("Offset:                                                          0x%lx\n", (unsigned long)hc_offset);
-        print2term("Length:                                                          %lu\n", (unsigned long)hc_length);
+        print2term("Offset:                                                          0x%lx\n", static_cast<unsigned long>(hc_offset));
+        print2term("Length:                                                          %lu\n", static_cast<unsigned long>(hc_length));
     }
 
     /* Read Continuation Block */
     pos = hc_offset; // go to continuation block
     if(hdr_flags & H5CORO_CUSTOM_V1_FLAG)
     {
-       uint64_t end_of_chdr = hc_offset + hc_length;
+       const uint64_t end_of_chdr = hc_offset + hc_length;
        pos += readMessagesV1 (pos, end_of_chdr, hdr_flags, dlvl);
     }
     else
@@ -3094,10 +3096,10 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         /* Read Continuation Header */
         if(H5_ERROR_CHECKING)
         {
-            uint64_t signature = readField(4, &pos);
+            const uint64_t signature = readField(4, &pos);
             if(signature != H5_OCHK_SIGNATURE_LE)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid header continuation signature: 0x%llX", (unsigned long long)signature);
+                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid header continuation signature: 0x%llX", static_cast<unsigned long long>(signature));
             }
         }
         else
@@ -3106,11 +3108,11 @@ int H5FileBuffer::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
 
         /* Read Continuation Header Messages */
-        uint64_t end_of_chdr = hc_offset + hc_length - 4; // leave 4 bytes for checksum below
+        const uint64_t end_of_chdr = hc_offset + hc_length - 4; // leave 4 bytes for checksum below
         pos += readMessages (pos, end_of_chdr, hdr_flags, dlvl);
 
         /* Verify Checksum */
-        uint64_t check_sum = readField(4, &pos);
+        const uint64_t check_sum = readField(4, &pos);
         if(H5_ERROR_CHECKING)
         {
             (void)check_sum;
@@ -3128,19 +3130,19 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 {
     (void)hdr_flags;
 
-    uint64_t starting_position = pos;
+    const uint64_t starting_position = pos;
 
     /* Symbol Table Info */
-    uint64_t btree_addr = readField(metaData.offsetsize, &pos);
-    uint64_t heap_addr = readField(metaData.offsetsize, &pos);
+    const uint64_t btree_addr = readField(metaData.offsetsize, &pos);
+    const uint64_t heap_addr = readField(metaData.offsetsize, &pos);
 
     if(H5_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Symbol Table Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
         print2term("----------------\n");
-        print2term("B-Tree Address:                                                  0x%lx\n", (unsigned long)btree_addr);
-        print2term("Heap Address:                                                    0x%lx\n", (unsigned long)heap_addr);
+        print2term("B-Tree Address:                                                  0x%lx\n", static_cast<unsigned long>(btree_addr));
+        print2term("Heap Address:                                                    0x%lx\n", static_cast<unsigned long>(heap_addr));
     }
 
     /* Read Heap Info */
@@ -3151,13 +3153,13 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
     else
     {
-        uint32_t signature = (uint32_t)readField(4, &pos);
+        const uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_HEAP_SIGNATURE_LE)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid heap signature: 0x%llX", (unsigned long long)signature);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid heap signature: 0x%llX", static_cast<unsigned long long>(signature));
         }
 
-        uint8_t version = (uint8_t)readField(1, &pos);
+        const uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 0)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "incorrect version of heap: %d", version);
@@ -3165,7 +3167,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         pos += 19;
     }
-    uint64_t head_data_addr = readField(metaData.offsetsize, &pos);
+    const uint64_t head_data_addr = readField(metaData.offsetsize, &pos);
 
     /* Go to Left-Most Node */
     pos = btree_addr;
@@ -3178,13 +3180,13 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
         else
         {
-            uint32_t signature = (uint32_t)readField(4, &pos);
+            const uint32_t signature = (uint32_t)readField(4, &pos);
             if(signature != H5_TREE_SIGNATURE_LE)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid group b-tree signature: 0x%llX", (unsigned long long)signature);
+                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid group b-tree signature: 0x%llX", static_cast<unsigned long long>(signature));
             }
 
-            uint8_t node_type = (uint8_t)readField(1, &pos);
+            const uint8_t node_type = (uint8_t)readField(1, &pos);
             if(node_type != 0)
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "only group b-trees supported: %d", node_type);
@@ -3192,7 +3194,7 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
 
         /* Read Branch Info */
-        uint8_t node_level = (uint8_t)readField(1, &pos);
+        const uint8_t node_level = (uint8_t)readField(1, &pos);
         if(node_level == 0)
         {
             break;
@@ -3205,22 +3207,22 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     /* Traverse Children Left to Right */
     while(true)
     {
-        uint16_t entries_used = (uint16_t)readField(2, &pos);
-        uint64_t left_sibling = readField(metaData.offsetsize, &pos); (void)left_sibling;
-        uint64_t right_sibling = readField(metaData.offsetsize, &pos);
-        uint64_t key0 = readField(metaData.lengthsize, &pos); (void)key0;
+        const uint16_t entries_used = (uint16_t)readField(2, &pos);
+        const uint64_t left_sibling = readField(metaData.offsetsize, &pos); (void)left_sibling;
+        const uint64_t right_sibling = readField(metaData.offsetsize, &pos);
+        const uint64_t key0 = readField(metaData.lengthsize, &pos); (void)key0;
         if(H5_VERBOSE && H5_EXTRA_DEBUG)
         {
-            print2term("Entries Used:                                                    %d\n", (int)entries_used);
-            print2term("Left Sibling:                                                    0x%lx\n", (unsigned long)left_sibling);
-            print2term("Right Sibling:                                                   0x%lx\n", (unsigned long)right_sibling);
-            print2term("First Key:                                                       %lu\n", (unsigned long)key0);
+            print2term("Entries Used:                                                    %d\n", static_cast<int>(entries_used));
+            print2term("Left Sibling:                                                    0x%lx\n", static_cast<unsigned long>(left_sibling));
+            print2term("Right Sibling:                                                   0x%lx\n", static_cast<unsigned long>(right_sibling));
+            print2term("First Key:                                                       %lu\n", static_cast<unsigned long>(key0));
         }
 
         /* Loop Through Entries in Current Node */
         for(int entry = 0; entry < entries_used; entry++)
         {
-            uint64_t symbol_table_addr = readField(metaData.offsetsize, &pos);
+            const uint64_t symbol_table_addr = readField(metaData.offsetsize, &pos);
             readSymbolTable(symbol_table_addr, head_data_addr, dlvl);
             pos += metaData.lengthsize; // skip next key;
             if(highestDataLevel > dlvl) break; // dataset found
@@ -3240,19 +3242,19 @@ int H5FileBuffer::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
         else
         {
-            uint32_t signature = (uint32_t)readField(4, &pos);
+            const uint32_t signature = (uint32_t)readField(4, &pos);
             if(signature != H5_TREE_SIGNATURE_LE)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid group b-tree signature: 0x%llX", (unsigned long long)signature);
+                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid group b-tree signature: 0x%llX", static_cast<unsigned long long>(signature));
             }
 
-            uint8_t node_type = (uint8_t)readField(1, &pos);
+            const uint8_t node_type = (uint8_t)readField(1, &pos);
             if(node_type != 0)
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "only group b-trees supported: %d", node_type);
             }
 
-            uint8_t node_level = (uint8_t)readField(1, &pos);
+            const uint8_t node_level = (uint8_t)readField(1, &pos);
             if(node_level != 0)
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "traversed to non-leaf node: %d", node_level);
@@ -3405,14 +3407,14 @@ int H5FileBuffer::shuffleChunk (const uint8_t* input, uint32_t input_size, uint8
     }
 
     int64_t dst_index = 0;
-    int64_t shuffle_block_size = input_size / type_size;
-    int64_t num_elements = output_size / type_size;
-    int64_t start_element = output_offset / type_size;
+    const int64_t shuffle_block_size = input_size / type_size;
+    const int64_t num_elements = output_size / type_size;
+    const int64_t start_element = output_offset / type_size;
     for(int64_t element_index = start_element; element_index < (start_element + num_elements); element_index++)
     {
         for(int64_t val_index = 0; val_index < type_size; val_index++)
         {
-            int64_t src_index = (val_index * shuffle_block_size) + element_index;
+            const int64_t src_index = (val_index * shuffle_block_size) + element_index;
             output[dst_index++] = input[src_index];
         }
     }
@@ -3426,7 +3428,7 @@ int H5FileBuffer::shuffleChunk (const uint8_t* input, uint32_t input_size, uint8
 uint64_t H5FileBuffer::metaGetKey (const char* url)
 {
     uint64_t key_value = 0;
-    uint64_t* url_ptr = (uint64_t*)url;
+    uint64_t* url_ptr = const_cast<uint64_t*>(reinterpret_cast<const uint64_t*>(url));
     for(int i = 0; i < MAX_META_NAME_SIZE; i+=sizeof(uint64_t))
     {
         key_value += *url_ptr;
@@ -3532,10 +3534,10 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
     info_t info;
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5coro_read", "{\"asset\":\"%s\", \"resource\":\"%s\", \"dataset\":\"%s\"}", asset->getName(), resource, datasetname);
+    const uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5coro_read", "{\"asset\":\"%s\", \"resource\":\"%s\", \"dataset\":\"%s\"}", asset->getName(), resource, datasetname);
 
     /* Open Resource and Read Dataset */
-    H5FileBuffer h5file(&info, context, asset, resource, datasetname, startrow, numrows, _meta_only);
+    const H5FileBuffer h5file(&info, context, asset, resource, datasetname, startrow, numrows, _meta_only);
 
     if(info.data)
     {
@@ -3545,16 +3547,16 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
         if((info.numcols > 1) && (col != ALL_COLS))
         {
             /* Allocate Column Buffer */
-            int64_t tbuf_size = info.datasize / info.numcols;
+            const int64_t tbuf_size = info.datasize / info.numcols;
             uint8_t* tbuf = new uint8_t [tbuf_size];
 
             /* Copy Column into Buffer */
-            int64_t tbuf_row_size = info.datasize / info.numrows;
-            int64_t tbuf_col_size = tbuf_row_size / info.numcols;
+            const int64_t tbuf_row_size = info.datasize / info.numrows;
+            const int64_t tbuf_col_size = tbuf_row_size / info.numcols;
             for(int row = 0; row < info.numrows; row++)
             {
-                int64_t tbuf_offset = (row * tbuf_col_size);
-                int64_t data_offset = (row * tbuf_row_size) + (col * tbuf_col_size);
+                const int64_t tbuf_offset = (row * tbuf_col_size);
+                const int64_t data_offset = (row * tbuf_row_size) + (col * tbuf_col_size);
                 memcpy(&tbuf[tbuf_offset], &info.data[data_offset], tbuf_col_size);
             }
 
@@ -3574,45 +3576,45 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             /* Float to Int */
             if(info.datatype == RecordObject::FLOAT)
             {
-                float* dptr = (float*)info.data;
+                float* dptr = reinterpret_cast<float*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i];
+                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Double to Int */
             else if(info.datatype == RecordObject::DOUBLE)
             {
-                double* dptr = (double*)info.data;
+                double* dptr = reinterpret_cast<double*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i];
+                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Char to Int */
             else if(info.datatype == RecordObject::UINT8 || info.datatype == RecordObject::INT8)
             {
-                uint8_t* dptr = (uint8_t*)info.data;
+                char* cptr = reinterpret_cast<char*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i];
+                    tbuf[i] = static_cast<int>(cptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* String to Int - assumes ASCII encoding */
             else if(info.datatype == RecordObject::STRING)
             {
-                uint8_t* dptr = (uint8_t*)info.data;
+                uint8_t* dptr = info.data;
 
                 // NOTE this len calc is redundant, but metaData not visible to scope
                 uint8_t* len_cnt = dptr;
                 uint32_t length = 0;
-                while (*len_cnt != '\0') {
+                while (*len_cnt != '\0') {  // NOLINT(clang-analyzer-core.UndefinedBinaryOperatorResult)
                     length++;
                     len_cnt++;
                 }
                 for(uint32_t i = 0; i < length; i++)
                 {
-                    tbuf[i] = (int)dptr[i];
+                    tbuf[i] = static_cast<int>(dptr[i]);
                 }
                 info.elements = length;
             }
@@ -3620,28 +3622,28 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             /* Short to Int */
             else if(info.datatype == RecordObject::UINT16 || info.datatype == RecordObject::INT16)
             {
-                uint16_t* dptr = (uint16_t*)info.data;
+                uint16_t* dptr = reinterpret_cast<uint16_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i];
+                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Int to Int */
             else if(info.datatype == RecordObject::UINT32 || info.datatype == RecordObject::INT32)
             {
-                uint32_t* dptr = (uint32_t*)info.data;
+                int* dptr = reinterpret_cast<int*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i];
+                    tbuf[i] = dptr[i]; // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Long to Int */
             else if(info.datatype == RecordObject::UINT64 || info.datatype == RecordObject::INT64)
             {
-                uint64_t* dptr = (uint64_t*)info.data;
+                int64_t* dptr = reinterpret_cast<int64_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (int)dptr[i];
+                    tbuf[i] = static_cast<int>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             else
@@ -3651,7 +3653,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
 
             /* Switch Buffers */
             delete [] info.data;
-            info.data = (uint8_t*)tbuf;
+            info.data = reinterpret_cast<uint8_t*>(tbuf);
             info.datasize = sizeof(int) * info.elements;
         }
 
@@ -3664,55 +3666,55 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
             /* Float to Double */
             if(info.datatype == RecordObject::FLOAT)
             {
-                float* dptr = (float*)info.data;
+                float* dptr = reinterpret_cast<float*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (double)dptr[i];
+                    tbuf[i] = static_cast<double>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Double to Double */
             else if(info.datatype == RecordObject::DOUBLE)
             {
-                double* dptr = (double*)info.data;
+                double* dptr = reinterpret_cast<double*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (double)dptr[i];
+                    tbuf[i] = dptr[i]; // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Char to Double */
             else if(info.datatype == RecordObject::UINT8 || info.datatype == RecordObject::INT8)
             {
-                uint8_t* dptr = (uint8_t*)info.data;
+                uint8_t* dptr = info.data;
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (double)dptr[i];
+                    tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Short to Double */
             else if(info.datatype == RecordObject::UINT16 || info.datatype == RecordObject::INT16)
             {
-                uint16_t* dptr = (uint16_t*)info.data;
+                uint16_t* dptr = reinterpret_cast<uint16_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (double)dptr[i];
+                    tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Int to Double */
             else if(info.datatype == RecordObject::UINT32 || info.datatype == RecordObject::INT32)
             {
-                uint32_t* dptr = (uint32_t*)info.data;
+                uint32_t* dptr = reinterpret_cast<uint32_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (double)dptr[i];
+                    tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Long to Double */
             else if(info.datatype == RecordObject::UINT64 || info.datatype == RecordObject::INT64)
             {
-                uint64_t* dptr = (uint64_t*)info.data;
+                uint64_t* dptr = reinterpret_cast<uint64_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
-                    tbuf[i] = (double)dptr[i];
+                    tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             else
@@ -3722,7 +3724,7 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
 
             /* Switch Buffers */
             delete [] info.data;
-            info.data = (uint8_t*)tbuf;
+            info.data = reinterpret_cast<uint8_t*>(tbuf);
             info.datasize = sizeof(double) * info.elements;
         }
 
@@ -3757,13 +3759,13 @@ bool H5Coro::traverse (const Asset* asset, const char* resource, int max_depth, 
 {
     (void)max_depth;
 
-    bool status = true;
+    const bool status = true;
 
     try
     {
         /* Open File */
         info_t data_info;
-        H5FileBuffer h5file(&data_info, NULL, asset, resource, start_group, 0, 0);
+        const H5FileBuffer h5file(&data_info, NULL, asset, resource, start_group, 0, 0);
 
         /* Free Data */
         delete [] data_info.data;
@@ -3796,7 +3798,7 @@ H5Future* H5Coro::readp (const Asset* asset, const char* resource, const char* d
         .h5f            = new H5Future()
     };
 
-    int post_status = rqstPub->postCopy(&rqst, sizeof(read_rqst_t), IO_CHECK);
+    const int post_status = rqstPub->postCopy(&rqst, sizeof(read_rqst_t), IO_CHECK);
     if(post_status <= 0)
     {
         mlog(CRITICAL, "Failed to post read request for %s/%s: %d", resource, datasetname, post_status);
@@ -3819,7 +3821,7 @@ void* H5Coro::reader_thread (void* parm)
     while(readerActive)
     {
         read_rqst_t rqst;
-        int recv_status = rqstSub->receiveCopy(&rqst, sizeof(read_rqst_t), SYS_TIMEOUT);
+        const int recv_status = rqstSub->receiveCopy(&rqst, sizeof(read_rqst_t), SYS_TIMEOUT);
         if(recv_status > 0)
         {
             bool valid;
@@ -3850,3 +3852,5 @@ void* H5Coro::reader_thread (void* parm)
 
     return NULL;
 }
+
+// NOLINTEND(misc-no-recursion)

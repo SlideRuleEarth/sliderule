@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -85,9 +85,7 @@ UT_Table::UT_Table(CommandProcessor* cmd_proc, const char* obj_name):
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-UT_Table::~UT_Table(void)
-{
-}
+UT_Table::~UT_Table(void) = default;
 
 /*--------------------------------------------------------------------------------------
  * _ut_assert - called via ut_assert macro
@@ -113,7 +111,7 @@ bool UT_Table::_ut_assert(bool e, const char* file, int line, const char* fmt, .
         /* Chop Path in Filename */
         pathptr = StringLib::find(file, '/', false);
         if(pathptr) pathptr++;
-        else pathptr = (char*)file;
+        else pathptr = const_cast<char*>(file);
 
         /* Create Log Message */
         msglen = snprintf(log_message, UT_MAX_ASSERT, "Failure at %s:%d:%s", pathptr, line, formatted_string);
@@ -141,7 +139,7 @@ int UT_Table::testAddRemove(int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
 
     int key, data;
-    int size = 8;
+    const int size = 8;
     Table<int,int> mytable(size);
 
     failures = 0;
@@ -181,7 +179,7 @@ int UT_Table::testChaining(int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
 
     int key, data;
-    int size = 8;
+    const int size = 8;
     Table<int,int> mytable(size);
     const int test_data[8] = {0,1,2,3,8,9,10,11};
 
@@ -195,7 +193,7 @@ int UT_Table::testChaining(int argc, char argv[][MAX_CMD_SIZE])
     }
 
     /* Transverse Set */
-    for(int i = 0; i < size; i++)    
+    for(int i = 0; i < size; i++)
     {
         key = mytable.first(&data);
         ut_assert(test_data[i] == key, "Failed to get next key %d\n", key);
@@ -220,7 +218,7 @@ int UT_Table::testRemoving(int argc, char argv[][MAX_CMD_SIZE])
 
     int key;
     int data;
-    int size = 16;
+    const int size = 16;
     Table<int,int> mytable(size);
     const int test_data[16]    = {0, 16, 32,  1, 17, 33,  2, 18, 34,  3,  4,  5,  6,  7,  8,  9};
     const int remove_order[16] = {0, 16, 32, 17, 33,  1, 34, 18,  2,  3,  4,  5,  6,  7,  8,  9};
@@ -236,7 +234,7 @@ int UT_Table::testRemoving(int argc, char argv[][MAX_CMD_SIZE])
     }
 
     /* Transverse Set */
-    for(int i = 0; i < size; i++)    
+    for(int i = 0; i < size; i++)
     {
         key = mytable.first(&data);
         ut_assert(check_order[i] == key, "Failed to get next key %d != %d, %d\n", check_order[i], key, i);
@@ -260,7 +258,7 @@ int UT_Table::testDuplicates(int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
 
     int key;
-    int size = 16;
+    const int size = 16;
     Table<int,int> mytable(size);
     const int test_data[16] = {0,16,32,1,17,33,2,18,34,3,4,5,6,7,8,9};
 
@@ -320,7 +318,7 @@ int UT_Table::testFullTable(int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
 
     int key;
-    int size = 8;
+    const int size = 8;
     Table<int,int> mytable(size);
     const int test_data[8] = {0,1,2,3,4,5,6,7};
 
@@ -346,10 +344,10 @@ int UT_Table::testFullTable(int argc, char argv[][MAX_CMD_SIZE])
 
         ut_assert(mytable.add(key, key, true), "Failed to add key %d\n", key);
 
-        int new1_key = key + size;
+        const int new1_key = key + size;
         ut_assert(mytable.add(new1_key, new1_key, true) == false, "Failed to error on adding key to full table %d\n", new1_key);
 
-        int new2_key = key + size + 1;
+        const int new2_key = key + size + 1;
         ut_assert(mytable.add(new2_key, new2_key, true) == false, "Failed to error on adding key to full table %d\n", new2_key);
     }
 
@@ -361,10 +359,10 @@ int UT_Table::testFullTable(int argc, char argv[][MAX_CMD_SIZE])
 
         ut_assert(mytable.add(key, key, true) == false, "Failed to error on adding key to full table %d\n", key);
 
-        int new1_key = key + size;
+        const int new1_key = key + size;
         ut_assert(mytable.add(new1_key, new1_key, true) == false, "Failed to error on adding key to full table %d\n", new1_key);
 
-        int new2_key = key + size + 1;
+        const int new2_key = key + size + 1;
         ut_assert(mytable.add(new2_key, new2_key, true) == false, "Failed to error on adding key to full table %d\n", new2_key);
     }
 
@@ -380,7 +378,7 @@ int UT_Table::testCollisions(int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
 
     int key, data;
-    int size = 16;
+    const int size = 16;
     Table<int,int> mytable(size);
     const int test_data[16]    =  {0,16,32, 1,17,33, 2,18,34,40,50,66,48,35, 8, 9};
     const int remove_order[16] =  {0,16,32,17,33, 1,34,18, 2,40,50,66,48,35, 8, 9};
@@ -396,7 +394,7 @@ int UT_Table::testCollisions(int argc, char argv[][MAX_CMD_SIZE])
     }
 
     /* Transverse Set */
-    for(int i = 0; i < size; i++)    
+    for(int i = 0; i < size; i++)
     {
         key = mytable.first(&data);
         ut_assert(check_order[i] == key, "Failed to get next key %d != %d\n", check_order[i], key);
@@ -412,7 +410,7 @@ int UT_Table::testCollisions(int argc, char argv[][MAX_CMD_SIZE])
 }
 
 /*--------------------------------------------------------------------------------------
- * testStress 
+ * testStress
  *--------------------------------------------------------------------------------------*/
 int UT_Table::testStress(int argc, char argv[][MAX_CMD_SIZE])
 {
@@ -420,10 +418,10 @@ int UT_Table::testStress(int argc, char argv[][MAX_CMD_SIZE])
     (void)argv;
 
     int key, data = 0;
-    int size = 64;
+    const int size = 64;
     int data_order[64];
-    int test_cycles = 65536;
-    int key_range = 0xFFFFFFFF;
+    const int test_cycles = 65536;
+    const int key_range = 0xFFFFFFFF;
     Table<int,int> mytable(size);
 
     failures = 0;
@@ -440,7 +438,7 @@ int UT_Table::testStress(int argc, char argv[][MAX_CMD_SIZE])
         /* Load Hash */
         for(int i = 0; i < size; i++)
         {
-            key = rand() % key_range;
+            key = rand() % key_range; // NOLINT(concurrency-mt-unsafe)
             if(mytable.add(key, key, true))
             {
                 data_order[num_added++] = key;

@@ -86,7 +86,7 @@ class SwotParms: public NetsvcParms
          *--------------------------------------------------------------------*/
 
                             SwotParms           (lua_State* L, int index);
-                            ~SwotParms          (void);
+                            ~SwotParms          (void) override;
         void                cleanup             (void);
         static void         get_lua_string_list (lua_State* L, int index, string_list_t& string_list, bool* provided);
 };

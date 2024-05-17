@@ -115,7 +115,7 @@ class StatisticRecord: public CommandableObject, public RecordObject
          *--------------------------------------------------------------------*/
 
                         StatisticRecord  (CommandProcessor* cmd_proc, const char* cmd_name, const char* rec_name, bool automatic_post=true);
-                        ~StatisticRecord (void);
+                        ~StatisticRecord (void) override;
 
         static void*    telemetryThread     (void* parm);
         bool            stopTelemetry       (void);
@@ -307,7 +307,7 @@ void* StatisticRecord<T>::telemetryThread(void* parm)
             {
                 wait_counter = procstat->telemetryWaitSeconds;
                 procstat->prepost();
-                bool status = procstat->post();
+                const bool status = procstat->post();
                 if(status != true)
                 {
                     mlog(DEBUG, "Unable to post %s telemetry!", procstat->getName());
@@ -326,7 +326,7 @@ template <class T>
 bool StatisticRecord<T>::stopTelemetry(void)
 {
     telemetryActive = false;
-    if(telemetryPid) delete telemetryPid;
+    delete telemetryPid;
     telemetryPid = NULL;
     return true;
 }
@@ -362,7 +362,7 @@ int StatisticRecord<T>::clearCmd(int argc, char argv[][MAX_CMD_SIZE])
 {
     (void)argc;
 
-    clear_t clear = StatisticRecord<T>::str2clear(argv[0]);
+    const clear_t clear = StatisticRecord<T>::str2clear(argv[0]);
     if(clear == CLEAR_UNKNOWN)
     {
         mlog(CRITICAL, "Invalid parameter passed to clear command: %s", argv[0]);
@@ -412,7 +412,7 @@ template <class T>
 void StatisticRecord<T>::freePost(void* obj, void* parm)
 {
     (void)parm;
-    unsigned char* mem = (unsigned char*)obj;
+    unsigned char* mem = reinterpret_cast<unsigned char*>(obj);
     delete [] mem;
 }
 

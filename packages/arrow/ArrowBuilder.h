@@ -121,7 +121,7 @@ class ArrowBuilder: public LuaObject
         static void             init            (void);
         static void             deinit          (void);
 
-        const char*             getSubField     (const char* field_name);
+        static const char*      getSubField     (const char* field_name);
         const char*             getFileName     (void);
         const char*             getDataFile     (void);
         const char*             getMetadataFile (void);
@@ -129,12 +129,12 @@ class ArrowBuilder: public LuaObject
         const char*             getTimeKey      (void);
         const char*             getXKey         (void);
         const char*             getYKey         (void);
-        bool                    getAsGeo        (void);
+        bool                    getAsGeo        (void) const;
         RecordObject::field_t&  getXField       (void);
         RecordObject::field_t&  getYField       (void);
         ArrowParms*             getParms        (void);
-        bool                    hasAncFields    (void);
-        bool                    hasAncElements  (void);
+        bool                    hasAncFields    (void) const;
+        bool                    hasAncElements  (void) const;
         const char*             getParmsAsString(void);
         const char*             getEndpoint     (void);
 
@@ -183,7 +183,7 @@ class ArrowBuilder: public LuaObject
                                                  const char* outq_name, const char* inq_name,
                                                  const char* rec_type, const char* id,
                                                  const char* parms_str, const char* _endpoint);
-                        ~ArrowBuilder           (void);
+                        ~ArrowBuilder           (void) override;
         static void*    builderThread           (void* parm);
 };
 

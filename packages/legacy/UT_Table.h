@@ -73,7 +73,7 @@ class UT_Table: public CommandableObject
          *--------------------------------------------------------------------*/
 
             UT_Table            (CommandProcessor* cmd_proc, const char* obj_name);
-            ~UT_Table           (void);
+            ~UT_Table           (void) override;
 
     bool    _ut_assert          (bool e, const char* file, int line, const char* fmt, ...);
 

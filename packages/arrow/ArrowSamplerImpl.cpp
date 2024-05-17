@@ -44,7 +44,6 @@
 
 #include <parquet/arrow/schema.h>
 #include <parquet/arrow/writer.h>
-#include <parquet/arrow/schema.h>
 #include <parquet/properties.h>
 #include <arrow/util/key_value_metadata.h>
 #include <arrow/io/file.h>
@@ -180,12 +179,12 @@ void ArrowSamplerImpl::getMetadata(void)
 {
     bool foundIt = false;
 
-    std::shared_ptr<parquet::FileMetaData> file_metadata = reader->parquet_reader()->metadata();
+    const std::shared_ptr<parquet::FileMetaData> file_metadata = reader->parquet_reader()->metadata();
 
     for(int i = 0; i < file_metadata->key_value_metadata()->size(); i++)
     {
-        std::string key = file_metadata->key_value_metadata()->key(i);
-        std::string value = file_metadata->key_value_metadata()->value(i);
+        const std::string key = file_metadata->key_value_metadata()->key(i);
+        const std::string value = file_metadata->key_value_metadata()->value(i);
 
         if(key == "sliderule")
         {
@@ -240,9 +239,9 @@ void ArrowSamplerImpl::getPoints(std::vector<ArrowSampler::point_info_t*>& point
         getXYPoints(points);
 
     /* Get point's gps from time column */
-    std::vector<const char*> columnNames = {timeKey};
-    std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
-    int time_column_index = table->schema()->GetFieldIndex(timeKey);
+    const std::vector<const char*> columnNames = {timeKey};
+    const std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
+    const int time_column_index = table->schema()->GetFieldIndex(timeKey);
     if(time_column_index > -1)
     {
         auto time_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(time_column_index)->chunk(0));
@@ -260,13 +259,13 @@ void ArrowSamplerImpl::getPoints(std::vector<ArrowSampler::point_info_t*>& point
 *----------------------------------------------------------------------------*/
 void ArrowSamplerImpl::getXYPoints(std::vector<ArrowSampler::point_info_t*>& points)
 {
-    std::vector<const char*> columnNames = {xKey, yKey};
+    const std::vector<const char*> columnNames = {xKey, yKey};
 
-    std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
-    int x_column_index = table->schema()->GetFieldIndex(xKey);
+    const std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
+    const int x_column_index = table->schema()->GetFieldIndex(xKey);
     if(x_column_index == -1) throw RunTimeException(ERROR, RTE_ERROR, "X column not found.");
 
-    int y_column_index = table->schema()->GetFieldIndex(yKey);
+    const int y_column_index = table->schema()->GetFieldIndex(yKey);
     if(y_column_index == -1) throw RunTimeException(ERROR, RTE_ERROR, "Y column not found.");
 
     auto x_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(x_column_index)->chunk(0));
@@ -275,8 +274,8 @@ void ArrowSamplerImpl::getXYPoints(std::vector<ArrowSampler::point_info_t*>& poi
     /* x and y columns are the same longth */
     for(int64_t i = 0; i < x_column->length(); i++)
     {
-        double x = x_column->Value(i);
-        double y = y_column->Value(i);
+        const double x = x_column->Value(i);
+        const double y = y_column->Value(i);
 
         ArrowSampler::point_info_t* pinfo = new ArrowSampler::point_info_t({x, y, 0.0});
         points.push_back(pinfo);
@@ -289,10 +288,10 @@ void ArrowSamplerImpl::getXYPoints(std::vector<ArrowSampler::point_info_t*>& poi
 void ArrowSamplerImpl::getGeoPoints(std::vector<ArrowSampler::point_info_t*>& points)
 {
     const char* geocol  = "geometry";
-    std::vector<const char*> columnNames = {geocol};
+    const std::vector<const char*> columnNames = {geocol};
 
-    std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
-    int geometry_column_index = table->schema()->GetFieldIndex(geocol);
+    const std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
+    const int geometry_column_index = table->schema()->GetFieldIndex(geocol);
     if(geometry_column_index == -1) throw RunTimeException(ERROR, RTE_ERROR, "Geometry column not found.");
 
     auto geometry_column = std::static_pointer_cast<arrow::BinaryArray>(table->column(geometry_column_index)->chunk(0));
@@ -304,8 +303,8 @@ void ArrowSamplerImpl::getGeoPoints(std::vector<ArrowSampler::point_info_t*>& po
     /* Iterate over each item in the geometry column and extract points */
     for(int64_t i = 0; i < binary_array->length(); i++)
     {
-        std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
-        ArrowCommon::wkbpoint_t point = convertWKBToPoint(wkb_data);
+        const std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
+        const ArrowCommon::wkbpoint_t point = convertWKBToPoint(wkb_data);
         ArrowSampler::point_info_t* pinfo = new ArrowSampler::point_info_t({point.x, point.y, 0.0});
         points.push_back(pinfo);
     }
@@ -317,7 +316,7 @@ void ArrowSamplerImpl::getGeoPoints(std::vector<ArrowSampler::point_info_t*>& po
 std::shared_ptr<arrow::Table> ArrowSamplerImpl::inputFileToTable(const std::vector<const char*>& columnNames)
 {
     /* If columnNames is empty, read all columns */
-    if(columnNames.size() == 0)
+    if(columnNames.empty())
     {
         std::shared_ptr<arrow::Table> table;
         PARQUET_THROW_NOT_OK(reader->ReadTable(&table));
@@ -346,7 +345,7 @@ std::shared_ptr<arrow::Table> ArrowSamplerImpl::inputFileToTable(const std::vect
 /*----------------------------------------------------------------------------
 * addNewColumns
 *----------------------------------------------------------------------------*/
-std::shared_ptr<arrow::Table> ArrowSamplerImpl::addNewColumns(const std::shared_ptr<arrow::Table> table)
+std::shared_ptr<arrow::Table> ArrowSamplerImpl::addNewColumns(const std::shared_ptr<arrow::Table>& table)
 {
     std::vector<std::shared_ptr<arrow::Field>> fields = table->schema()->fields();
     std::vector<std::shared_ptr<arrow::ChunkedArray>> columns = table->columns();
@@ -369,7 +368,7 @@ std::shared_ptr<arrow::Table> ArrowSamplerImpl::addNewColumns(const std::shared_
     const std::string pandas_key = "pandas";
     if(metadata->Contains(pandas_key))
     {
-        int key_index = metadata->FindKey(pandas_key);
+        const int key_index = metadata->FindKey(pandas_key);
         if(key_index != -1)
         {
             PARQUET_THROW_NOT_OK(metadata->Delete(key_index));
@@ -394,43 +393,43 @@ std::shared_ptr<arrow::Table> ArrowSamplerImpl::addNewColumns(const std::shared_
 *----------------------------------------------------------------------------*/
 bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::sampler_t* sampler)
 {
-    auto pool = arrow::default_memory_pool();
+    auto* pool = arrow::default_memory_pool();
     RasterObject* robj = sampler->robj;
 
     /* Create list builders for the new columns */
     arrow::ListBuilder value_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto value_builder = static_cast<arrow::DoubleBuilder*>(value_list_builder.value_builder());
+    auto* value_builder = dynamic_cast<arrow::DoubleBuilder*>(value_list_builder.value_builder());
 
     arrow::ListBuilder time_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto time_builder = static_cast<arrow::DoubleBuilder*>(time_list_builder.value_builder());
+    auto* time_builder = dynamic_cast<arrow::DoubleBuilder*>(time_list_builder.value_builder());
 
     arrow::ListBuilder flags_list_builder(pool, std::make_shared<arrow::UInt32Builder>());
-    auto flags_builder = static_cast<arrow::UInt32Builder*>(flags_list_builder.value_builder());
+    auto* flags_builder = dynamic_cast<arrow::UInt32Builder*>(flags_list_builder.value_builder());
 
     arrow::ListBuilder fileid_list_builder(pool, std::make_shared<arrow::UInt64Builder>());
-    auto fileid_builder = static_cast<arrow::UInt64Builder*>(fileid_list_builder.value_builder());
+    auto* fileid_builder = dynamic_cast<arrow::UInt64Builder*>(fileid_list_builder.value_builder());
 
     /* Create list builders for zonal stats */
     arrow::ListBuilder count_list_builder(pool, std::make_shared<arrow::UInt32Builder>());
-    auto count_builder = static_cast<arrow::UInt32Builder*>(count_list_builder.value_builder());
+    auto* count_builder = dynamic_cast<arrow::UInt32Builder*>(count_list_builder.value_builder());
 
     arrow::ListBuilder min_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto min_builder = static_cast<arrow::DoubleBuilder*>(min_list_builder.value_builder());
+    auto* min_builder = dynamic_cast<arrow::DoubleBuilder*>(min_list_builder.value_builder());
 
     arrow::ListBuilder max_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto max_builder = static_cast<arrow::DoubleBuilder*>(max_list_builder.value_builder());
+    auto* max_builder = dynamic_cast<arrow::DoubleBuilder*>(max_list_builder.value_builder());
 
     arrow::ListBuilder mean_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto mean_builder = static_cast<arrow::DoubleBuilder*>(mean_list_builder.value_builder());
+    auto* mean_builder = dynamic_cast<arrow::DoubleBuilder*>(mean_list_builder.value_builder());
 
     arrow::ListBuilder median_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto median_builder = static_cast<arrow::DoubleBuilder*>(median_list_builder.value_builder());
+    auto* median_builder = dynamic_cast<arrow::DoubleBuilder*>(median_list_builder.value_builder());
 
     arrow::ListBuilder stdev_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto stdev_builder = static_cast<arrow::DoubleBuilder*>(stdev_list_builder.value_builder());
+    auto* stdev_builder = dynamic_cast<arrow::DoubleBuilder*>(stdev_list_builder.value_builder());
 
     arrow::ListBuilder mad_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
-    auto mad_builder = static_cast<arrow::DoubleBuilder*>(mad_list_builder.value_builder());
+    auto* mad_builder = dynamic_cast<arrow::DoubleBuilder*>(mad_list_builder.value_builder());
 
     std::shared_ptr<arrow::Array> value_list_array, time_list_array, fileid_list_array, flags_list_array;
     std::shared_ptr<arrow::Array> count_list_array, min_list_array, max_list_array, mean_list_array, median_list_array, stdev_list_array, mad_list_array;
@@ -577,7 +576,7 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::sampler_t* sampler)
 *----------------------------------------------------------------------------*/
 bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::sampler_t* sampler)
 {
-    auto pool = arrow::default_memory_pool();
+    auto* pool = arrow::default_memory_pool();
     RasterObject* robj = sampler->robj;
 
     /* Create builders for the new columns */
@@ -605,7 +604,7 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::sampler_t* sampler
     {
         RasterSample* sample;
 
-        if(slist->length() > 0)
+        if(!slist->empty())
         {
             sample = getFirstValidSample(slist);
         }
@@ -741,7 +740,7 @@ RasterSample* ArrowSamplerImpl::getFirstValidSample(ArrowSampler::sample_list_t*
 /*----------------------------------------------------------------------------
 * tableToParquet
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::tableToParquet(const std::shared_ptr<arrow::Table> table, const char* file_path)
+void ArrowSamplerImpl::tableToParquet(const std::shared_ptr<arrow::Table>& table, const char* file_path)
 {
     std::shared_ptr<arrow::io::FileOutputStream> outfile;
     PARQUET_ASSIGN_OR_THROW(outfile, arrow::io::FileOutputStream::Open(file_path));
@@ -750,7 +749,7 @@ void ArrowSamplerImpl::tableToParquet(const std::shared_ptr<arrow::Table> table,
     parquet::WriterProperties::Builder writer_props_builder;
     writer_props_builder.compression(parquet::Compression::SNAPPY);
     writer_props_builder.version(parquet::ParquetVersion::PARQUET_2_6);
-    shared_ptr<parquet::WriterProperties> writer_properties = writer_props_builder.build();
+    const shared_ptr<parquet::WriterProperties> writer_properties = writer_props_builder.build();
 
     /* Create an Arrow writer properties builder to specify that we want to store Arrow schema */
     auto arrow_properties = parquet::ArrowWriterProperties::Builder().store_schema()->build();
@@ -763,13 +762,13 @@ void ArrowSamplerImpl::tableToParquet(const std::shared_ptr<arrow::Table> table,
 /*----------------------------------------------------------------------------
 * tableToCsv
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::tableToCsv(const std::shared_ptr<arrow::Table> table, const char* file_path)
+void ArrowSamplerImpl::tableToCsv(const std::shared_ptr<arrow::Table>& table, const char* file_path)
 {
     std::shared_ptr<arrow::io::FileOutputStream> outfile;
     PARQUET_ASSIGN_OR_THROW(outfile, arrow::io::FileOutputStream::Open(file_path));
 
     /* Create a CSV writer */
-    arrow::csv::WriteOptions write_options = arrow::csv::WriteOptions::Defaults();
+    const arrow::csv::WriteOptions write_options = arrow::csv::WriteOptions::Defaults();
 
     /* Write the table to the CSV file */
     PARQUET_THROW_NOT_OK(arrow::csv::WriteCSV(*table, write_options, outfile.get()));
@@ -781,7 +780,7 @@ void ArrowSamplerImpl::tableToCsv(const std::shared_ptr<arrow::Table> table, con
 /*----------------------------------------------------------------------------
 * tableToFeather
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::tableToFeather(const std::shared_ptr<arrow::Table> table, const char* file_path)
+void ArrowSamplerImpl::tableToFeather(const std::shared_ptr<arrow::Table>& table, const char* file_path)
 {
     std::shared_ptr<arrow::io::FileOutputStream> outfile;
     PARQUET_ASSIGN_OR_THROW(outfile, arrow::io::FileOutputStream::Open(file_path));
@@ -796,9 +795,9 @@ void ArrowSamplerImpl::tableToFeather(const std::shared_ptr<arrow::Table> table,
 /*----------------------------------------------------------------------------
 * removeGeometryColumn
 *----------------------------------------------------------------------------*/
-std::shared_ptr<arrow::Table> ArrowSamplerImpl::removeGeometryColumn(const std::shared_ptr<arrow::Table> table)
+std::shared_ptr<arrow::Table> ArrowSamplerImpl::removeGeometryColumn(std::shared_ptr<arrow::Table>& table)
 {
-    int column_index = table->schema()->GetFieldIndex("geometry");
+    const int column_index = table->schema()->GetFieldIndex("geometry");
 
     if(column_index == -1)
         return table;
@@ -873,7 +872,7 @@ void ArrowSamplerImpl::printParquetMetadata(const char* file_path)
     std::unique_ptr<parquet::arrow::FileReader> _reader;
     PARQUET_THROW_NOT_OK(parquet::arrow::OpenFile(infile, arrow::default_memory_pool(), &_reader));
 
-    std::shared_ptr<parquet::FileMetaData> file_metadata = _reader->parquet_reader()->metadata();
+    const std::shared_ptr<parquet::FileMetaData> file_metadata = _reader->parquet_reader()->metadata();
     print2term("***********************************************************\n");
     print2term("***********************************************************\n");
     print2term("***********************************************************\n");
@@ -887,8 +886,8 @@ void ArrowSamplerImpl::printParquetMetadata(const char* file_path)
     print2term("  Key Value Metadata:\n");
     for(int i = 0; i < file_metadata->key_value_metadata()->size(); i++)
     {
-        std::string key = file_metadata->key_value_metadata()->key(i);
-        std::string value = file_metadata->key_value_metadata()->value(i);
+        const std::string key = file_metadata->key_value_metadata()->key(i);
+        const std::string value = file_metadata->key_value_metadata()->value(i);
 
         if(key == "ARROW:schema") continue;
         print2term("    %s:  %s\n", key.c_str(), value.c_str());
@@ -897,7 +896,7 @@ void ArrowSamplerImpl::printParquetMetadata(const char* file_path)
     print2term("  Schema:\n");
     for(int i = 0; i < file_metadata->num_columns(); i++)
     {
-        std::shared_ptr<parquet::schema::ColumnPath> path = file_metadata->schema()->Column(i)->path();
+        const std::shared_ptr<parquet::schema::ColumnPath> path = file_metadata->schema()->Column(i)->path();
         print2term("    %s\n", path->ToDotString().c_str());
     }
 }
@@ -938,7 +937,7 @@ std::string ArrowSamplerImpl::createFileMap(void)
 /*----------------------------------------------------------------------------
 * metadataToJson
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::metadataToJson(const std::shared_ptr<arrow::Table> table, const char* file_path)
+void ArrowSamplerImpl::metadataToJson(const std::shared_ptr<arrow::Table>& table, const char* file_path)
 {
     rapidjson::Document doc;
     doc.SetObject();

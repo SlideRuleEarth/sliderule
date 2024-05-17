@@ -62,9 +62,9 @@ int Monitor::luaCreate (lua_State* L)
     try
     {
         /* Get Parmeters */
-        uint8_t type_mask = (uint8_t)getLuaInteger(L, 1, true, (long)EventLib::LOG);
-        event_level_t level = (event_level_t)getLuaInteger(L, 2, true, CRITICAL);
-        format_t format = (format_t)getLuaInteger(L, 3, true, RECORD);
+        const uint8_t type_mask = (uint8_t)getLuaInteger(L, 1, true, (long)EventLib::LOG);
+        const event_level_t level = (event_level_t)getLuaInteger(L, 2, true, CRITICAL);
+        const format_t format = (format_t)getLuaInteger(L, 3, true, RECORD);
 
         /* Return Dispatch Object */
         return createLuaObject(L, new Monitor(L, type_mask, level, format));
@@ -125,10 +125,10 @@ bool Monitor::processRecord (RecordObject* record, okey_t key, recVec_t* records
 
     int event_size;
     char event_buffer[MAX_EVENT_SIZE];
-    unsigned char* event_buf_ptr = (unsigned char*)&event_buffer[0];
+    unsigned char* event_buf_ptr = reinterpret_cast<unsigned char*>(&event_buffer[0]);
 
     /* Pull Out Log Message */
-    EventLib::event_t* event = (EventLib::event_t*)record->getRecordData();
+    EventLib::event_t* event = reinterpret_cast<EventLib::event_t*>(record->getRecordData());
 
     /* Filter Events */
     if( ((event->type & eventTypeMask) == 0) ||
@@ -182,9 +182,9 @@ int Monitor::textOutput (EventLib::event_t* event, char* event_buffer)
     char* msg = event_buffer;
 
     /* Populate Prefix */
-    TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(event->systime);
-    TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
-    double seconds = (double)timeinfo.second + ((double)timeinfo.millisecond / 1000.0);
+    const TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(event->systime);
+    const TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
+    const double seconds = (double)timeinfo.second + ((double)timeinfo.millisecond / 1000.0);
     msg += StringLib::formats(msg, MAX_EVENT_SIZE, "%04d-%02d-%02dT%02d:%02d:%.03lfZ %s:%s:%s ",
         timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, seconds,
         event->ipv4, EventLib::lvl2str((event_level_t)event->level), event->name);
@@ -257,11 +257,11 @@ int Monitor::luaConfig (lua_State* L)
         Monitor* lua_obj = dynamic_cast<Monitor*>(getLuaSelf(L, 1));
 
         /* Set Type Mask */
-        uint8_t type_mask = getLuaInteger(L, 2, true, 0, &provided);
+        const uint8_t type_mask = getLuaInteger(L, 2, true, 0, &provided);
         if(provided) lua_obj->eventTypeMask = type_mask;
 
         /* Set Level */
-        event_level_t level = (event_level_t)getLuaInteger(L, 3, true, 0, &provided);
+        const event_level_t level = (event_level_t)getLuaInteger(L, 3, true, 0, &provided);
         if(provided) lua_obj->eventLevel = level;
 
         /* Set Return Values */
@@ -297,7 +297,7 @@ int Monitor::luaTail (lua_State* L)
         Monitor* lua_obj = dynamic_cast<Monitor*>(getLuaSelf(L, 1));
 
         /* Get Tail Size */
-        int tail_size = getLuaInteger(L, 2);
+        const int tail_size = getLuaInteger(L, 2);
         if(tail_size <= 0 || tail_size > MAX_TAIL_SIZE)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid tail size: %d", tail_size);
@@ -342,7 +342,7 @@ int Monitor::luaCat (lua_State* L)
         Monitor* lua_obj = dynamic_cast<Monitor*>(getLuaSelf(L, 1));
 
         /* Get Mode */
-        cat_mode_t mode = (cat_mode_t)getLuaInteger(L, 2, true, TERM);
+        const cat_mode_t mode = (cat_mode_t)getLuaInteger(L, 2, true, TERM);
 
         /* Check if Tail Exists */
         if(!lua_obj->eventTailArray)
@@ -368,11 +368,11 @@ int Monitor::luaCat (lua_State* L)
 
         /* Cat Event Messages */
         int msg_index = 0;
-        int start = lua_obj->eventTailIndex;
+        const int start = lua_obj->eventTailIndex;
         for(int i = 0; i < lua_obj->eventTailSize; i++)
         {
-            int index = (start + i) % lua_obj->eventTailSize;
-            const char* event_msg = (const char*)&lua_obj->eventTailArray[index * MAX_EVENT_SIZE];
+            const int index = (start + i) % lua_obj->eventTailSize;
+            const char* event_msg = static_cast<const char*>(&lua_obj->eventTailArray[index * MAX_EVENT_SIZE]);
             if(event_msg[0] != '\0')
             {
                 msg_index++;
@@ -387,7 +387,7 @@ int Monitor::luaCat (lua_State* L)
                 }
                 else if(mode == MSGQ)
                 {
-                    int msg_size = StringLib::nsize(event_msg, MAX_EVENT_SIZE - 1) + 1;
+                    const int msg_size = StringLib::nsize(event_msg, MAX_EVENT_SIZE - 1) + 1;
                     outq->postCopy(event_msg, msg_size, IO_CHECK);
                 }
             }

@@ -121,7 +121,7 @@ class Gedi04aReader: public FootprintReader<g04a_footprint_t>
          *--------------------------------------------------------------------*/
 
                             Gedi04aReader           (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, GediParms* _parms, bool _send_terminator=true);
-                            ~Gedi04aReader          (void);
+                            ~Gedi04aReader          (void) override;
         static void*        subsettingThread        (void* parm);
 };
 

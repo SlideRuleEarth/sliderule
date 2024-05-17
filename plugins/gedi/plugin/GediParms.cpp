@@ -330,7 +330,7 @@ void GediParms::cleanup (void)
  *----------------------------------------------------------------------------*/
 bool GediParms::set_beam(int beam)
 {
-    int index = beam2index(beam);
+    const int index = beam2index(beam);
     if(index >= 0)
     {
         beams[index] = true;
@@ -357,7 +357,7 @@ void GediParms::get_lua_beams (lua_State* L, int index, bool* provided)
         memset(beams, 0, sizeof(beams));
 
         /* Get number of entries in table */
-        int num_entries = lua_rawlen(L, index);
+        const int num_entries = lua_rawlen(L, index);
         if(num_entries > 0 && provided) *provided = true;
 
         /* Iterate through each entry in table */
@@ -369,13 +369,13 @@ void GediParms::get_lua_beams (lua_State* L, int index, bool* provided)
             /* Set beam */
             if(lua_isinteger(L, -1))
             {
-                int beam = LuaObject::getLuaInteger(L, -1);
+                const int beam = LuaObject::getLuaInteger(L, -1);
                 set_beam(beam);
             }
             else if(lua_isstring(L, -1))
             {
                 const char* group = LuaObject::getLuaString(L, -1);
-                int beam = group2beam(group);
+                const int beam = group2beam(group);
                 set_beam(beam);
             }
 
@@ -389,7 +389,7 @@ void GediParms::get_lua_beams (lua_State* L, int index, bool* provided)
         memset(beams, 0, sizeof(beams));
 
         /* Set Beam */
-        int beam = LuaObject::getLuaInteger(L, -1);
+        const int beam = LuaObject::getLuaInteger(L, -1);
         if(beam == ALL_BEAMS) // special case
         {
             for(int i = 0; i < NUM_BEAMS; i++)
@@ -410,7 +410,7 @@ void GediParms::get_lua_beams (lua_State* L, int index, bool* provided)
 
         /* Set Beam */
         const char* group = LuaObject::getLuaString(L, -1);
-        int beam = group2beam(group);
+        const int beam = group2beam(group);
         set_beam(beam);
     }
     else if(!lua_isnil(L, index))

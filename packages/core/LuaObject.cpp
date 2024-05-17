@@ -226,7 +226,7 @@ const char* LuaObject::getLuaString (lua_State* L, int parm, bool optional, cons
 LuaObject* LuaObject::getLuaObject (lua_State* L, int parm, const char* object_type, bool optional, LuaObject* dfltval)
 {
     LuaObject* lua_obj = NULL;
-    luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, parm);
+    luaUserData_t* user_data = static_cast<luaUserData_t*>(lua_touserdata(L, parm));
     if(user_data)
     {
         if(StringLib::match(object_type, user_data->luaObj->ObjectType))
@@ -261,7 +261,7 @@ int LuaObject::returnLuaStatus (lua_State* L, bool status, int num_obj_to_return
     {
         if( num_obj_to_return == 1 )
         {
-            int stack_cnt = lua_gettop(L);
+            const int stack_cnt = lua_gettop(L);
 
             /* Self object must be on stack */
             assert(stack_cnt != 0);
@@ -306,7 +306,7 @@ void LuaObject::getGlobalObjects (vector<object_info_t>& globals)
         const char* object_name = globalObjects.first(&global_object);
         while(object_name != NULL)
         {
-            object_info_t info = {
+            const object_info_t info = {
                 .objName = object_name,
                 .objType = global_object.lua_obj->getType(),
                 .refCnt = global_object.lua_obj->referenceCount
@@ -323,7 +323,7 @@ void LuaObject::getGlobalObjects (vector<object_info_t>& globals)
  *----------------------------------------------------------------------------*/
 long LuaObject::getNumObjects (void)
 {
-    long num_objects = numObjects;
+    const long num_objects = numObjects;
     return num_objects;
 }
 
@@ -426,13 +426,13 @@ int LuaObject::luaDelete (lua_State* L)
 {
     try
     {
-        luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, 1);
+        luaUserData_t* user_data = static_cast<luaUserData_t*>(lua_touserdata(L, 1));
         if(user_data)
         {
             LuaObject* lua_obj = user_data->luaObj;
             if(lua_obj)
             {
-                int count = lua_obj->referenceCount--;
+                const int count = lua_obj->referenceCount--;
                 mlog(DEBUG, "Garbage collecting object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
 
                 if(lua_obj->referenceCount == 0)
@@ -475,13 +475,13 @@ int LuaObject::luaDestroy (lua_State* L)
 {
     try
     {
-        luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, 1);
+        luaUserData_t* user_data = static_cast<luaUserData_t*>(lua_touserdata(L, 1));
         if(user_data)
         {
             LuaObject* lua_obj = user_data->luaObj;
             if(lua_obj)
             {
-                int count = lua_obj->referenceCount--;
+                const int count = lua_obj->referenceCount--;
                 mlog(DEBUG, "Destroying object %s/%s <%d>", lua_obj->getType(), lua_obj->getName(), count);
 
                 if(lua_obj->referenceCount == 0)
@@ -535,7 +535,7 @@ int LuaObject::luaName(lua_State* L)
             if(!lua_obj->ObjectName)
             {
                 /* Register Name */
-                global_object_t global_object = { .lua_obj = lua_obj };
+                const global_object_t global_object = { .lua_obj = lua_obj };
                 if(globalObjects.add(name, global_object, true))
                 {
                     /* Bump Reference Count
@@ -593,7 +593,7 @@ int LuaObject::luaWaitOn(lua_State* L)
         LuaObject* lua_obj = getLuaSelf(L, 1);
 
         /* Get Parameters */
-        int timeout = getLuaInteger(L, 2, true, IO_PEND);
+        const int timeout = getLuaInteger(L, 2, true, IO_PEND);
 
         /* Wait On Signal */
         lua_obj->objSignal.lock();
@@ -624,7 +624,7 @@ int LuaObject::lua2json(lua_State* L)
     try
     {
         /* Get Self */
-        LuaObject* lua_obj = getLuaSelf(L, 1);
+        const LuaObject* lua_obj = getLuaSelf(L, 1);
 
         /* Convert object's default parameters to JSON */
         json_str = lua_obj->tojson();
@@ -685,7 +685,7 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
 int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
 {
     /* Create Lua User Data Object */
-    lua_obj->userData = (luaUserData_t*)lua_newuserdata(L, sizeof(luaUserData_t));
+    lua_obj->userData = static_cast<luaUserData_t*>(lua_newuserdata(L, sizeof(luaUserData_t)));
     if(!lua_obj->userData)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to allocate new user data");
@@ -706,7 +706,7 @@ int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
  *----------------------------------------------------------------------------*/
 LuaObject* LuaObject::getLuaSelf (lua_State* L, int parm)
 {
-    luaUserData_t* user_data = (luaUserData_t*)lua_touserdata(L, parm);
+    luaUserData_t* user_data = static_cast<luaUserData_t*>(lua_touserdata(L, parm));
     if(user_data)
     {
         if(user_data->luaObj)

@@ -58,9 +58,9 @@ Asset::IODriver* GediIODriver::create (const Asset* _asset, const char* resource
 /*----------------------------------------------------------------------------
  * Constructor
  *
- *  Examples: 
+ *  Examples:
  *      /GEDI02_A.002/GEDI02_A_2023075201011_O24115_03_T08796_02_003_02_V002/GEDI02_A_2023075201011_O24115_03_T08796_02_003_02_V002.h5
- *      /GEDI01_B.002/GEDI01_B_2023075201011_O24115_04_T08796_02_005_02_V002/GEDI01_B_2023075201011_O24115_04_T08796_02_005_02_V002.h5    
+ *      /GEDI01_B.002/GEDI01_B_2023075201011_O24115_04_T08796_02_005_02_V002/GEDI01_B_2023075201011_O24115_04_T08796_02_005_02_V002.h5
  *----------------------------------------------------------------------------*/
 GediIODriver::GediIODriver (const Asset* _asset, const char* resource):
     S3CurlIODriver(_asset)
@@ -71,7 +71,7 @@ GediIODriver::GediIODriver (const Asset* _asset, const char* resource):
     char version_buffer[8];
     char resource_buffer[57];
 
-    int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
+    const int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
     if(num_toks < NUM_ELEMENTS) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid gedi s3 resource: %s", resource);
 
     const char* product = elements[0];
@@ -79,17 +79,17 @@ GediIODriver::GediIODriver (const Asset* _asset, const char* resource):
     StringLib::copy(version_buffer, elements[9], 8);
     version_buffer[4] = '\0';
     const char* version = &version_buffer[1];
-   
+
     StringLib::copy(resource_buffer, resource, 57);
     resource_buffer[54] = '\0';
     const char* subdirectory = resource_buffer;
-    
+
     FString resourcepath("%s/%s_%s.%s/%s/%s", asset->getPath(), product, level, version, subdirectory, resource);
 
     /*
      * Determine ioBucket and ioKey
      */
-    ioBucket = (char*)resourcepath.c_str(true);
+    ioBucket = const_cast<char*>(resourcepath.c_str(true));
 
     /*
     * Differentiate Bucket and Key
@@ -107,6 +107,4 @@ GediIODriver::GediIODriver (const Asset* _asset, const char* resource):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-GediIODriver::~GediIODriver (void)
-{
-}
+GediIODriver::~GediIODriver (void) = default;

@@ -60,7 +60,7 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
          *--------------------------------------------------------------------*/
 
                         SpatialIndex    (lua_State* L, Asset* _asset, MathLib::proj_t _projection, int _threshold);
-                        ~SpatialIndex   (void);
+                        ~SpatialIndex   (void) override;
 
         static int      luaCreate       (lua_State* L);
 
@@ -95,8 +95,8 @@ class SpatialIndex: public AssetIndex<spatialspan_t>
          * Methods
          *--------------------------------------------------------------------*/
 
-        projspan_t      project         (spatialspan_t span);
-        spatialspan_t   restore         (projspan_t proj);
+        projspan_t      project         (const spatialspan_t& span);
+        spatialspan_t   restore         (const projspan_t& proj);
 
         static int      luaProject      (lua_State* L);
         static int      luaSphere       (lua_State* L);

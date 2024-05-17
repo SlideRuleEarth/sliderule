@@ -75,10 +75,10 @@ int ContainerRecord::hdrSize (int cnt)
 /*----------------------------------------------------------------------------
  * recSize
  *----------------------------------------------------------------------------*/
-int ContainerRecord::recSize (vector<RecordObject*> rec_vec)
+int ContainerRecord::recSize (const vector<RecordObject*>& rec_vec)
 {
     int total_size = hdrSize(rec_vec.size());
-    for(RecordObject* rec: rec_vec)
+    for(const RecordObject* rec: rec_vec)
     {
         total_size += rec->getUsedMemory();
     }
@@ -101,7 +101,7 @@ ContainerRecord::ContainerRecord(int rec_cnt, int size):
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ContainerRecord::ContainerRecord(vector<RecordObject*> rec_vec):
+ContainerRecord::ContainerRecord(const vector<RecordObject*>& rec_vec):
     RecordObject(recType, recSize(rec_vec))
 {
     recsContained = 0;
@@ -115,9 +115,7 @@ ContainerRecord::ContainerRecord(vector<RecordObject*> rec_vec):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-ContainerRecord::~ContainerRecord()
-{
-}    
+ContainerRecord::~ContainerRecord() = default;
 
 /*----------------------------------------------------------------------------
  * addRecord
@@ -127,7 +125,7 @@ int ContainerRecord::addRecord(RecordObject& record, int size)
     if(recsContained < container->rec_cnt)
     {
         uint8_t* rec_buf = NULL;
-        int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE, size);
+        const int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE, size);
 
         /* populate entry */
         container->entries[recsContained].rec_offset = recsOffset;

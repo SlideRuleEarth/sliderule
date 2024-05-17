@@ -65,9 +65,7 @@ GebcoBathyRaster::GebcoBathyRaster(lua_State* L, GeoParms* _parms):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-GebcoBathyRaster::~GebcoBathyRaster(void)
-{
-}
+GebcoBathyRaster::~GebcoBathyRaster(void) = default;
 
 /*----------------------------------------------------------------------------
  * getIndexFile
@@ -137,7 +135,7 @@ bool GebcoBathyRaster::findRasters(const OGRGeometry* geo)
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (groupList.length() > 0);
+    return (!groupList.empty());
 }
 
 

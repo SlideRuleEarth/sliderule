@@ -64,17 +64,15 @@ UT_Dictionary::UT_Dictionary(CommandProcessor* cmd_proc, const char* obj_name):
     CommandableObject(cmd_proc, obj_name, TYPE)
 {
     /* Register Commands */
-    registerCommand("FUNCTIONAL_TEST", (cmdFunc_t)&UT_Dictionary::functionalUnitTestCmd, 1, "<set name>");
-    registerCommand("ITERATOR_TEST", (cmdFunc_t)&UT_Dictionary::iteratorUnitTestCmd, 1, "<set name>");
-    registerCommand("ADD_WORD_SET", (cmdFunc_t)&UT_Dictionary::addWordSetCmd, 3, "<set name> <filename> <num words in set>");
+    registerCommand("FUNCTIONAL_TEST", reinterpret_cast<cmdFunc_t>(&UT_Dictionary::functionalUnitTestCmd), 1, "<set name>");
+    registerCommand("ITERATOR_TEST", reinterpret_cast<cmdFunc_t>(&UT_Dictionary::iteratorUnitTestCmd), 1, "<set name>");
+    registerCommand("ADD_WORD_SET", reinterpret_cast<cmdFunc_t>(&UT_Dictionary::addWordSetCmd), 3, "<set name> <filename> <num words in set>");
 }
 
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-UT_Dictionary::~UT_Dictionary(void)
-{
-}
+UT_Dictionary::~UT_Dictionary(void) = default;
 
 /*----------------------------------------------------------------------------
  * functionalUnitTestCmd  -
@@ -93,7 +91,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
     bool failure=false;
 
     /* Start Timer */
-    int64_t start_time = TimeLib::gpstime();
+    const int64_t start_time = TimeLib::gpstime();
 
     /* Get Word List */
     const char* wordset_name = argv[0];
@@ -115,7 +113,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
 
     /* Get Number of Words */
     vector<string>& wordset = *wordlist_ptr;
-    int numwords = static_cast<int>(wordset.size());
+    const int numwords = static_cast<int>(wordset.size());
 
     /* Set Entries */
     for(int i = 0; i < numwords; i++)
@@ -143,7 +141,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
     {
         try
         {
-            long data = d1.get(wordset[i].c_str());
+            const long data = d1.get(wordset[i].c_str());
             if(data != i)
             {
                 print2term("[%d] ERROR: failed to read back value, %ld != %d, for word: %s\n", __LINE__, data, i, wordset[i].c_str());
@@ -172,7 +170,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
     if(numwords < 10000)
     {
         char** key_list = NULL;
-        int num_keys = d1.getKeys(&key_list);
+        const int num_keys = d1.getKeys(&key_list);
         if(num_keys != numwords)
         {
             print2term("[%d] ERROR: retrieved the wrong number of keys %d != %d\n", __LINE__, num_keys, numwords);
@@ -194,7 +192,7 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
                 {
                     if(true_list[j] != NULL)
                     {
-                        if(StringLib::match(true_list[j], key_list[i]))
+                        if(StringLib::match(true_list[j], key_list[i])) // NOLINT(clang-analyzer-core.CallAndMessage)
                         {
                             found = true;
                             true_list[j] = NULL;
@@ -208,10 +206,10 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
                     failure = true;
                 }
 
-                delete [] key_list[i];
+                delete [] key_list[i]; // NOLINT(clang-analyzer-core.CallAndMessage)
             }
         }
-        if(key_list) delete [] key_list;
+        delete [] key_list;
         delete [] true_list;
     }
 
@@ -272,8 +270,8 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
     }
 
     /* Start Timer */
-    int64_t stop_time = TimeLib::gpstime();
-    double elapsed_time = (double)(stop_time - start_time) / 1000.0;
+    const int64_t stop_time = TimeLib::gpstime();
+    const double elapsed_time = (double)(stop_time - start_time) / 1000.0;
     print2term("Time to complete: %lf seconds\n", elapsed_time);
 
     /* Return Status */
@@ -311,13 +309,13 @@ int UT_Dictionary::iteratorUnitTestCmd (int argc, const char argv[][MAX_CMD_SIZE
 
     /* Get Word Set */
     vector<string>& wordset = *wordlist_ptr;
-    int numwords = static_cast<int>(wordset.size());
+    const int numwords = static_cast<int>(wordset.size());
 
     /* Set Entries */
     long sum = 0;
     for(int i = 0; i < numwords; i++)
     {
-        long seq = i;
+        const long seq = i;
         sum += i;
         if(!d1.add(wordset[i].c_str(), seq))
         {
@@ -419,7 +417,7 @@ int UT_Dictionary::addWordSetCmd (int argc, const char argv[][MAX_CMD_SIZE])
     long size = 0;
     if(!StringLib::str2long(size_str, &size)) return -1;
 
-    int numwords = createWordSet(setname, filename);
+    const int numwords = createWordSet(setname, filename);
 
     if(numwords == size)    return 0;
     else                    return -1;
@@ -446,7 +444,7 @@ int UT_Dictionary::createWordSet (const char* name, const char* filename)
         {
             if((line[0] != '\n') && line[0] != '\0')
             {
-                string word(line);
+                const string word(line);
                 wordlist->push_back(word);
             }
         }

@@ -86,7 +86,7 @@ class HttpClient: public LuaObject
 
                         HttpClient      (lua_State* L, const char* _ip_addr, int _port);
                         HttpClient      (lua_State* L, const char* url);
-                        ~HttpClient     (void);
+                        ~HttpClient     (void) override;
 
         rsps_t          request         (EndpointObject::verb_t verb, const char* resource, const char* data, bool keep_alive, Publisher* outq, int timeout=SYS_TIMEOUT);
         const char*     getIpAddr       (void) const;

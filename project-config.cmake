@@ -3,7 +3,7 @@
 #################
 
 # Squelch a warning when building on Win32/Cygwin
-set (CMAKE_LEGACY_CYGWIN_WIN32 0) 
+set (CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 # Set a default build type if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -24,52 +24,119 @@ endif()
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
     message(STATUS "Enabling static analysis")
 
-    # clang-tidy
-    set (CLANG_TIDY_CHECKS
-        clang-analyzer-*
-        concurrency-*
-        misc-*
-        performance-*
-        portability-*
-        readability-*
-        -readability-braces-around-statements
-        -readability-implicit-bool-conversion
-        -readability-magic-numbers
-        -misc-non-private-member-variables-in-classes
-    )
-    list(JOIN CLANG_TIDY_CHECKS_PARM "," CLANG_TIDY_CHECKS)
-    set (CMAKE_CXX_CLANG_TIDY 
-        clang-tidy;
-        -header-filter=.;
-        -checks=${CLANG_TIDY_CHECKS_PARM};
-        -warnings-as-errors=*;
+### https://clang.llvm.org/extra/clang-tidy/
+
+    # clang-tidy, tested with version 18.1.3
+     set (CLANG_TIDY_CHECKS
+        "clang-analyzer-*,"
+        "portability-*,"
+        "concurrency-*,"   # Several warnings were disabled in cpp files with NOLINT
+
+        "performance-*,"
+        "-performance-enum-size,"
+
+        "readability-*,"
+        "-readability-braces-around-statements,"
+        "-readability-implicit-bool-conversion,"
+        "-readability-magic-numbers,"
+        "-readability-function-cognitive-complexity,"
+        "-readability-identifier-length,"
+        "-readability-simplify-boolean-expr,"
+        "-readability-else-after-return,"
+        "-readability-avoid-const-params-in-decls,"
+        "-readability-avoid-unconditional-preprocessor-if,"
+        "-readability-suspicious-call-argument,"
+        "-readability-isolate-declaration,"
+        "-readability-misleading-indentation,"
+
+        "misc-*,"
+        "-misc-non-private-member-variables-in-classes,"
+        "-misc-include-cleaner,"
+        "-misc-use-anonymous-namespace,"
+
+        "hicpp-*,"
+        "-hicpp-special-member-functions,"
+        "-hicpp-use-nullptr,"
+        "-hicpp-use-noexcept,"
+        "-hicpp-avoid-c-arrays,"
+        "-hicpp-member-init,"
+        "-hicpp-vararg,"
+        "-hicpp-no-array-decay,"
+        "-hicpp-braces-around-statements,"
+        "-hicpp-use-auto,"
+        "-hicpp-deprecated-headers,"
+        "-hicpp-signed-bitwise,"
+        "-hicpp-no-malloc,"
+
+        # Most are turned off but several are very useful - checks for correct c++ casting, c style stuff misc and hicpp missed
+        "cppcoreguidelines-*,"
+        "-cppcoreguidelines-avoid-c-arrays,"
+        "-cppcoreguidelines-avoid-magic-numbers,"
+        "-cppcoreguidelines-avoid-const-or-ref-data-members,"
+        "-cppcoreguidelines-macro-usage,"
+        "-cppcoreguidelines-pro-bounds-array-to-pointer-decay,"
+        "-cppcoreguidelines-pro-type-vararg,"
+        "-cppcoreguidelines-pro-bounds-constant-array-index,"
+        "-cppcoreguidelines-macro-to-enum,"
+        "-cppcoreguidelines-narrowing-conversions,"
+        "-cppcoreguidelines-special-member-functions,"
+        "-cppcoreguidelines-non-private-member-variables-in-classes,"
+        "-cppcoreguidelines-pro-bounds-pointer-arithmetic,"
+        "-cppcoreguidelines-owning-memory,"
+        "-cppcoreguidelines-pro-type-member-init,"
+        "-cppcoreguidelines-init-variables,"
+        "-cppcoreguidelines-avoid-do-while,"
+        "-cppcoreguidelines-prefer-member-initializer,"
+        "-cppcoreguidelines-pro-type-const-cast,"
+        "-cppcoreguidelines-pro-type-reinterpret-cast,"
+        "-cppcoreguidelines-virtual-class-destructor,"
+        "-cppcoreguidelines-use-default-member-init,"
+        "-cppcoreguidelines-avoid-non-const-global-variables,"
+        "-cppcoreguidelines-pro-type-union-access,"
+        "-cppcoreguidelines-interfaces-global-init,"
+        "-cppcoreguidelines-no-malloc,"
+
+        "-clang-diagnostic-unused-command-line-argument,"
     )
 
-    # cppcheck
+    # Join checks into a single string parameter
+    list(JOIN CLANG_TIDY_CHECKS "" CLANG_TIDY_CHECKS_PARM)
+
+    set (CMAKE_CXX_CLANG_TIDY
+       clang-tidy;
+       -header-filter=.;
+       -checks=${CLANG_TIDY_CHECKS_PARM};
+       -warnings-as-errors=*;
+    )
+
+    # cppcheck, tested with version 2.13.0
     find_program (CMAKE_CXX_CPPCHECK NAMES cppcheck)
-    list (APPEND CMAKE_CXX_CPPCHECK 
+    list (APPEND CMAKE_CXX_CPPCHECK
         "--quiet"
-        "--enable=all" 
-        "--suppress=unmatchedSuppression"
-        "--suppress=unusedFunction" 
+        "--enable=all"
         "--suppress=missingInclude"
+        "--suppress=missingIncludeSystem"
+        "--suppress=unmatchedSuppression"
+        "--suppress=unusedFunction"                                     # cppcheck is confused, used functions are reported 'unused'
+        "--suppress=unusedPrivateFunction"                              # cppcheck is confused
         "--suppress=noOperatorEq"
         "--suppress=noCopyConstructor"
-        "--suppress=unusedPrivateFunction"
-        "--suppress=memsetClassFloat"
-        "--suppress=useStlAlgorithm"
-        "--suppress=constParameter:*/Table.h"
-        "--suppress=constParameter:*/Ordering.h"
-        "--suppress=constParameter:*/List.h"
-        "--suppress=constParameter:*/Dictionary.h"
-        "--suppress=unreadVariable:*/TimeLib.cpp"
-        "--suppress=invalidPointerCast:*/H5Array.h"
-        "--suppress=copyCtorPointerCopying:*/MsgQ.cpp"
-        "--suppress=knownConditionTrueFalse:*/packages/legacy/UT_*"
-        "--suppress=uninitStructMember:*/plugins/icesat2/plugin/Atl06Dispatch.cpp"
+        "--suppress=useStlAlgorithm"                                    # yeah, they may be a bit faster but code is unreadable
+        "--suppress=memsetClassFloat:*/MathLib.cpp"                     # line: 80, need memset here for performance
+        "--suppress=unreadVariable:*/TimeLib.cpp"                       # line: 471, terminating '\0' detected as 'unused' but it is used/needed
+        "--suppress=invalidPointerCast:*/H5Array.h"                     # line: 166, documented in code
+        "--suppress=copyCtorPointerCopying:*/MsgQ.cpp"                  # line: 120, shallow copy which is fine in code
         "--error-exitcode=1"
-        "-DLLONG_MAX"
+
+        "--suppress=duplInheritedMember"                                # Name hiding for functions with the same name
+
+        "--suppress=memleak:*/LuaEndpoint.cpp"                          # line: 254, 'info' is freed by requestThread but ccpcheck does not 'see it'
+        "--suppress=returnDanglingLifetime:*/LuaLibraryMsg.cpp"         # line 198, code is OK
+        "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp"     # List [] const issue
+        "--suppress=constParameterPointer:*/CcsdsPayloadDispatch.cpp"   # Not trivial to fix, would have to change DispachObject class as well.
+        "--suppress=knownConditionTrueFalse:*/HttpServer.cpp"
     )
+
 endif()
 
 ###################

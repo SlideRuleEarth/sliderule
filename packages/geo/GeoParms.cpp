@@ -177,11 +177,11 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
             const char* t0_str = LuaObject::getLuaString(L, -1, true, NULL);
             if(t0_str)
             {
-                int64_t gps = TimeLib::str2gpstime(t0_str);
+                const int64_t gps = TimeLib::str2gpstime(t0_str);
                 if(gps <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to parse time supplied: %s", t0_str);
                 start_time = TimeLib::gps2gmttime(gps);
                 filter_time = true;
-                TimeLib::date_t start_date = TimeLib::gmt2date(start_time);
+                const TimeLib::date_t start_date = TimeLib::gmt2date(start_time);
                 mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", START_TIME, start_date.year, start_date.month, start_date.day, start_time.hour, start_time.minute, start_time.second);
             }
             lua_pop(L, 1);
@@ -191,11 +191,11 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
             const char* t1_str = LuaObject::getLuaString(L, -1, true, NULL);
             if(t1_str)
             {
-                int64_t gps = TimeLib::str2gpstime(t1_str);
+                const int64_t gps = TimeLib::str2gpstime(t1_str);
                 if(gps <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to parse time supplied: %s", t0_str);
                 stop_time = TimeLib::gps2gmttime(gps);
                 filter_time = true;
-                TimeLib::date_t stop_date = TimeLib::gmt2date(stop_time);
+                const TimeLib::date_t stop_date = TimeLib::gmt2date(stop_time);
                 mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", STOP_TIME, stop_date.year, stop_date.month, stop_date.day, stop_time.hour, stop_time.minute, stop_time.second);
             }
             lua_pop(L, 1);
@@ -203,16 +203,16 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
             /* Start and Stop Time Special Cases */
             if(t0_str && !t1_str) // only start time supplied
             {
-                int64_t now = TimeLib::gpstime();
+                const int64_t now = TimeLib::gpstime();
                 stop_time = TimeLib::gps2gmttime(now);
-                TimeLib::date_t stop_date = TimeLib::gmt2date(stop_time);
+                const TimeLib::date_t stop_date = TimeLib::gmt2date(stop_time);
                 mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", STOP_TIME, stop_date.year, stop_date.month, stop_date.day, stop_time.hour, stop_time.minute, stop_time.second);
             }
             else if(!t0_str && t1_str) // only stop time supplied
             {
-                int64_t gps_epoch = 0;
+                const int64_t gps_epoch = 0;
                 start_time = TimeLib::gps2gmttime(gps_epoch);
-                TimeLib::date_t start_date = TimeLib::gmt2date(start_time);
+                const TimeLib::date_t start_date = TimeLib::gmt2date(start_time);
                 mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", START_TIME, start_date.year, start_date.month, start_date.day, start_time.hour, start_time.minute, start_time.second);
             }
 
@@ -227,11 +227,11 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
             const char* closest_time_str = LuaObject::getLuaString(L, -1, true, NULL);
             if(closest_time_str)
             {
-                int64_t gps = TimeLib::str2gpstime(closest_time_str);
+                const int64_t gps = TimeLib::str2gpstime(closest_time_str);
                 if(gps <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to parse time supplied: %s", closest_time_str);
                 filter_closest_time = true;
                 closest_time = TimeLib::gps2gmttime(gps);
-                TimeLib::date_t closest_date = TimeLib::gmt2date(closest_time);
+                const TimeLib::date_t closest_date = TimeLib::gmt2date(closest_time);
                 mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", CLOSEST_TIME, closest_date.year, closest_date.month, closest_date.day, closest_time.hour, closest_time.minute, closest_time.second);
             }
             lua_pop(L, 1);
@@ -487,7 +487,7 @@ void GeoParms::getLuaBands (lua_State* L, int index, bool* provided)
     if(lua_istable(L, index))
     {
         /* Get number of bands in table */
-        int num_bands = lua_rawlen(L, index);
+        const int num_bands = lua_rawlen(L, index);
         if(num_bands > 0 && provided) *provided = true;
 
         /* Iterate through each band in table */
@@ -495,7 +495,7 @@ void GeoParms::getLuaBands (lua_State* L, int index, bool* provided)
         {
             /* Add band */
             lua_rawgeti(L, index, i+1);
-            string band_str(LuaObject::getLuaString(L, -1));
+            const string band_str(LuaObject::getLuaString(L, -1));
             bands_list.add(band_str);
             lua_pop(L, 1);
         }
@@ -505,7 +505,7 @@ void GeoParms::getLuaBands (lua_State* L, int index, bool* provided)
         if(provided) *provided = true;
 
         /* Add band */
-        string band_str(LuaObject::getLuaString(L, -1));
+        const string band_str(LuaObject::getLuaString(L, -1));
         bands_list.add(band_str);
     }
     else if(!lua_isnil(L, index))
@@ -530,7 +530,7 @@ void GeoParms::getAoiBbox (lua_State* L, int index, bool* provided)
     }
 
     /* Get Number of Points in BBOX */
-    int num_points = lua_rawlen(L, index);
+    const int num_points = lua_rawlen(L, index);
     if(num_points != 4)
     {
         mlog(ERROR, "bounding box must be supplied as four points");
@@ -605,7 +605,7 @@ int GeoParms::luaSetKeySpace (lua_State* L)
     try
     {
         GeoParms* lua_obj = dynamic_cast<GeoParms*>(getLuaSelf(L, 1));
-        uint64_t key_space = (uint64_t)getLuaInteger(L, 2);
+        const uint64_t key_space = (uint64_t)getLuaInteger(L, 2);
 
         lua_obj->key_space = key_space;
 

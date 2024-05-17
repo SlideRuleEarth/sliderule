@@ -123,7 +123,7 @@ class Atl03BathyReader: public LuaObject
             uint8_t         utm_zone;
             uint64_t        extent_id;
             uint8_t         spot;                   // 1, 2, 3, 4, 5, 6
-            uint32_t        photon_count;            
+            uint32_t        photon_count;
             photon_t        photons[];              // zero length field
         } extent_t;
 
@@ -211,7 +211,7 @@ class Atl03BathyReader: public LuaObject
             public:
 
                 explicit Atl09Class (info_t* info);
-                ~Atl09Class         (void);
+                ~Atl09Class         (void) = default;
 
                 /* Generated Data */
                 bool                valid;
@@ -263,7 +263,7 @@ class Atl03BathyReader: public LuaObject
                                                          GeoParms* _geoparms,
                                                          const char* shared_directory,
                                                          bool _send_terminator=true);
-                            ~Atl03BathyReader           (void);
+                            ~Atl03BathyReader           (void) override;
 
         static void*        subsettingThread            (void* parm);
 

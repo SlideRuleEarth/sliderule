@@ -51,9 +51,9 @@ int PublishMonitor::luaCreate (lua_State* L)
     try
     {
         /* Get Parmeters */
-        uint8_t type_mask = (uint8_t)getLuaInteger(L, 1, true, (long)EventLib::LOG);
-        event_level_t level = (event_level_t)getLuaInteger(L, 2, true, CRITICAL);
-        format_t format = (format_t)getLuaInteger(L, 3, true, RECORD);
+        const uint8_t type_mask = (uint8_t)getLuaInteger(L, 1, true, (long)EventLib::LOG);
+        const event_level_t level = (event_level_t)getLuaInteger(L, 2, true, CRITICAL);
+        const format_t format = (format_t)getLuaInteger(L, 3, true, RECORD);
         const char* outq_name = getLuaString(L, 4, true, NULL);
 
         /* Return Dispatch Object */

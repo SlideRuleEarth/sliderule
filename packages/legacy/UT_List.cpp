@@ -81,9 +81,7 @@ UT_List::UT_List(CommandProcessor* cmd_proc, const char* obj_name):
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-UT_List::~UT_List(void)
-{
-}
+UT_List::~UT_List(void) = default;
 
 /*--------------------------------------------------------------------------------------
  * _ut_assert - called via ut_assert macro
@@ -109,7 +107,7 @@ bool UT_List::_ut_assert(bool e, const char* file, int line, const char* fmt, ..
         /* Chop Path in Filename */
         pathptr = StringLib::find(file, '/', false);
         if(pathptr) pathptr++;
-        else pathptr = (char*)file;
+        else pathptr = const_cast<char*>(file);
 
         /* Create Log Message */
         msglen = snprintf(log_message, UT_MAX_ASSERT, "Failure at %s:%d:%s", pathptr, line, formatted_string);

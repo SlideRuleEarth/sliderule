@@ -36,7 +36,6 @@
 #include "PgcWkt.h"
 #include <fstream>
 #include <string>
-#include <fstream>
 #include <sstream>
 #include "OsApi.h"
 
@@ -47,7 +46,7 @@ static std::string pgcRemaWkt2;
 static void loadWKtFile(std::string& str, const std::string& wktPath)
 {
     // print2term("%s\n", wktPath.c_str());
-    std::ifstream f(wktPath);
+    const std::ifstream f(wktPath);
     if(f)
     {
         std::ostringstream ss;

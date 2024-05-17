@@ -78,8 +78,8 @@ class LuaEndpoint: public EndpointObject
                 static const char* LUA_META_NAME;
                 static const struct luaL_Reg LUA_META_TABLE[];
 
-                Authenticator(lua_State* L);
-                virtual ~Authenticator(void);
+                explicit Authenticator(lua_State* L);
+                ~Authenticator(void) override;
 
                 virtual bool isValid(const char* token) = 0;
        };
@@ -104,7 +104,7 @@ class LuaEndpoint: public EndpointObject
          *--------------------------------------------------------------------*/
 
                             LuaEndpoint     (lua_State* L, double normal_mem_thresh, double stream_mem_thresh);
-        virtual             ~LuaEndpoint    (void);
+                            ~LuaEndpoint    (void) override;
 
         static void*        requestThread   (void* parm);
 

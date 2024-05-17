@@ -91,7 +91,7 @@ int S3CacheIODriver::luaCreateCache(lua_State* L)
     {
         /* Get Parameters */
         const char* cache_root  = LuaObject::getLuaString(L, 1, true, DEFAULT_CACHE_ROOT);
-        int         max_files   = LuaObject::getLuaInteger(L, 2, true, DEFAULT_MAX_CACHE_FILES);
+        const int   max_files   = LuaObject::getLuaInteger(L, 2, true, DEFAULT_MAX_CACHE_FILES);
 
         /* Create Cache */
         createCache(cache_root, max_files);
@@ -117,11 +117,12 @@ int S3CacheIODriver::createCache (const char* cache_root, int max_files)
     cacheMut.lock();
     {
         /* Create Cache Directory (if it doesn't exist) */
-        int ret = mkdir(cache_root, 0700);
+        const int ret = mkdir(cache_root, 0700);
         if(ret == -1 && errno != EEXIST)
         {
             cacheMut.unlock();
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create cache directory %s: %s", cache_root, strerror(errno));
+            char err_buf[256];
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create cache directory %s: %s", cache_root, strerror_r(errno, err_buf, sizeof(err_buf)));
         }
 
         /* Set Cache Root */
@@ -140,7 +141,7 @@ int S3CacheIODriver::createCache (const char* cache_root, int max_files)
         if((dir = opendir(cacheRoot)) != NULL)
         {
             struct dirent *ent;
-            while((ent = readdir(dir)) != NULL)
+            while((ent = readdir(dir)) != NULL) // NOLINT(concurrency-mt-unsafe)
             {
                 if(!StringLib::match(".", ent->d_name) && !StringLib::match("..", ent->d_name))
                 {
@@ -265,7 +266,7 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
     }
 
     /* Download File */
-    int64_t bytes_read = get(cache_filepath.c_str(), bucket, key, asset->getRegion(), &latestCredentials);
+    const int64_t bytes_read = get(cache_filepath.c_str(), bucket, key, asset->getRegion(), &latestCredentials);
     if(bytes_read <= 0)
     {
         mlog(CRITICAL, "Failed to download S3 object: %ld", (long int)bytes_read);
@@ -279,7 +280,7 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
         {
             /* Get Oldest File from Cache */
             string* oldest_key = NULL;
-            okey_t index = cacheFiles.first(&oldest_key);
+            const okey_t index = cacheFiles.first(&oldest_key);
             if(oldest_key != NULL)
             {
                 /* Delete File in Local File System */

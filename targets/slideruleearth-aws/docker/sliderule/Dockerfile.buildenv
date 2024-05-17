@@ -25,15 +25,6 @@ RUN dnf update \
 # set working directory to root
 WORKDIR /
 
-# install luacheck
-# RUN wget https://luarocks.github.io/luarocks/releases/luarocks-3.11.0.tar.gz && \
-#     tar -xvzf luarocks-3.11.0.tar.gz && \
-#     cd luarocks-3.11.0/ && \
-#     ./configure --with-lua-include=/usr/include && \
-#     make && \
-#     make install && \
-#     luarocks install luacheck
-
 # install rapidjson dependency
 RUN git clone https://github.com/Tencent/rapidjson.git && \
     cd rapidjson && \
@@ -79,7 +70,7 @@ RUN git clone https://github.com/OSGeo/libgeotiff.git && \
     mkdir -p /build/geotiff && \
     cd /build/geotiff && \
     cmake /libgeotiff/libgeotiff -DCMAKE_BUILD_TYPE=Release && \
-    make -j4 && \
+    make -j8 && \
     make install && \
     ldconfig
 
@@ -120,3 +111,5 @@ RUN echo "/usr/local/lib64" > /etc/ld.so.conf.d/local.conf && ldconfig
 # support interactive mode
 WORKDIR /
 CMD ["/bin/bash"]
+
+

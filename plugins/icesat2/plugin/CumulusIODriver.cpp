@@ -68,7 +68,7 @@ CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
     const int NUM_ELEMENTS = 5;
     char elements[NUM_ELEMENTS][MAX_STR_SIZE];
 
-    int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
+    const int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
     if(num_toks < 5) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid cumulus resource: %s", resource);
 
     const char* product = elements[0];
@@ -92,7 +92,7 @@ CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
     /*
      * Determine ioBucket and ioKey
      */
-    ioBucket = (char*)resourcepath.c_str(true);
+    ioBucket = const_cast<char*>(resourcepath.c_str(true));
 
     /*
     * Differentiate Bucket and Key
@@ -110,6 +110,4 @@ CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-CumulusIODriver::~CumulusIODriver (void)
-{
-}
+CumulusIODriver::~CumulusIODriver (void) = default;

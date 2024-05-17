@@ -57,7 +57,7 @@ int CcsdsParserZFrameModule::luaCreate (lua_State* L)
     try
     {
         /* Get File Parameter */
-        bool is_file = getLuaBoolean(L, 1);
+        const bool is_file = getLuaBoolean(L, 1);
 
         /* Return Dispatch Object */
         return createLuaObject(L, new CcsdsParserZFrameModule(L, is_file));
@@ -75,7 +75,7 @@ int CcsdsParserZFrameModule::luaCreate (lua_State* L)
 int CcsdsParserZFrameModule::parseBuffer (unsigned char* buffer, int bytes, CcsdsPacket* pkt)
 {
     unsigned char*  parse_buffer = buffer;
-    int             parse_bytes = bytes;
+    const int       parse_bytes = bytes;
     int             parse_index = 0;
 
     /* Parse Buffer */
@@ -87,7 +87,7 @@ int CcsdsParserZFrameModule::parseBuffer (unsigned char* buffer, int bytes, Ccsd
         if(state == FRAME_Z)
         {
             /* Copy into Frame Buffer */
-            int cpylen = MIN(frameZBytes, bytes_left);
+            const int cpylen = MIN(frameZBytes, bytes_left);
             memcpy(&frameBuffer[frameIndex], &parse_buffer[parse_index], cpylen);
             frameZBytes -= cpylen;
             parse_index += cpylen;
@@ -191,7 +191,7 @@ int CcsdsParserZFrameModule::parseBuffer (unsigned char* buffer, int bytes, Ccsd
             }
 
             /* Call CCSDS Parser */
-            int bytes_parsed = CcsdsParserModule::parseBuffer(&parse_buffer[parse_index], bytes_left, pkt);
+            const int bytes_parsed = CcsdsParserModule::parseBuffer(&parse_buffer[parse_index], bytes_left, pkt);
             if(bytes_parsed >= 0)
             {
                 frameIndex += bytes_parsed;
@@ -276,7 +276,5 @@ CcsdsParserZFrameModule::CcsdsParserZFrameModule(lua_State* L, bool file):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-CcsdsParserZFrameModule::~CcsdsParserZFrameModule(void)
-{
-}
+CcsdsParserZFrameModule::~CcsdsParserZFrameModule(void) = default;
 

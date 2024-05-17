@@ -76,7 +76,7 @@ bool H5DArray::join(int timeout, bool throw_exception) const
 
     if(h5f)
     {
-        H5Future::rc_t rc = h5f->wait(timeout);
+        const H5Future::rc_t rc = h5f->wait(timeout);
         if(rc == H5Future::COMPLETE)
         {
             status = true;
@@ -139,8 +139,8 @@ uint64_t H5DArray::serialize (uint8_t* buffer, int32_t start_element, uint32_t n
     /* Serialize Elements of Array */
     if(h5f->info.typesize == 8)
     {
-        uint64_t* src = (uint64_t*)h5f->info.data;
-        uint64_t* dst = (uint64_t*)buffer;
+        const uint64_t* src = reinterpret_cast<const uint64_t*>(h5f->info.data);
+        uint64_t* dst = reinterpret_cast<uint64_t*>(buffer);
         for(uint32_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
         {
             *dst++ = src[i];
@@ -148,8 +148,8 @@ uint64_t H5DArray::serialize (uint8_t* buffer, int32_t start_element, uint32_t n
     }
     else if(h5f->info.typesize == 4)
     {
-        uint32_t* src = (uint32_t*)h5f->info.data;
-        uint32_t* dst = (uint32_t*)buffer;
+        const uint32_t* src = reinterpret_cast<const uint32_t*>(h5f->info.data);
+        uint32_t* dst = reinterpret_cast<uint32_t*>(buffer);
         for(uint32_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
         {
             *dst++ = src[i];
@@ -157,8 +157,8 @@ uint64_t H5DArray::serialize (uint8_t* buffer, int32_t start_element, uint32_t n
     }
     else if(h5f->info.typesize == 2)
     {
-        uint16_t* src = (uint16_t*)h5f->info.data;
-        uint16_t* dst = (uint16_t*)buffer;
+        const uint16_t* src = reinterpret_cast<const uint16_t*>(h5f->info.data);
+        uint16_t* dst = reinterpret_cast<uint16_t*>(buffer);
         for(uint32_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
         {
             *dst++ = src[i];
@@ -166,8 +166,8 @@ uint64_t H5DArray::serialize (uint8_t* buffer, int32_t start_element, uint32_t n
     }
     else if(h5f->info.typesize == 1)
     {
-        uint8_t* src = (uint8_t*)h5f->info.data;
-        uint8_t* dst = (uint8_t*)buffer;
+        const uint8_t* src = reinterpret_cast<const uint8_t*>(h5f->info.data);
+        uint8_t* dst = buffer;
         for(uint32_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
         {
             *dst++ = src[i];
@@ -179,7 +179,7 @@ uint64_t H5DArray::serialize (uint8_t* buffer, int32_t start_element, uint32_t n
     }
 
     /* Return Number of Bytes Serialized */
-    int64_t elements_available = h5f->info.elements - start_element;
-    int64_t elements_copied = MAX(MIN(elements_available, num_elements), 0);
+    const int64_t elements_available = h5f->info.elements - start_element;
+    const int64_t elements_copied = MAX(MIN(elements_available, num_elements), 0);
     return elements_copied * h5f->info.typesize;
 }

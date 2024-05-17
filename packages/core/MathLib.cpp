@@ -116,8 +116,8 @@ MathLib::point_t MathLib::coord2point (coord_t c, proj_t projection)
     point_t p;
 
     /* Convert to Radians */
-    double lonrad = c.lon * M_PI / 180.0;
-    double latrad = c.lat * M_PI / 180.0;
+    const double lonrad = c.lon * M_PI / 180.0;
+    const double latrad = c.lat * M_PI / 180.0;
 
     if(projection == NORTH_POLAR || projection == SOUTH_POLAR)
     {
@@ -127,12 +127,12 @@ MathLib::point_t MathLib::coord2point (coord_t c, proj_t projection)
         /* Calculate r */
         if(projection == NORTH_POLAR)
         {
-            double latradp = (M_PI / 4.0) - (latrad / 2.0);
+            const double latradp = (M_PI / 4.0) - (latrad / 2.0);
             r = 2 * tan(latradp);
         }
         else if(projection == SOUTH_POLAR)
         {
-            double latradp = -(M_PI / 4.0) - (latrad / 2.0);
+            const double latradp = -(M_PI / 4.0) - (latrad / 2.0);
             r = -2 * tan(latradp);
         }
 
@@ -178,7 +178,7 @@ MathLib::coord_t MathLib::point2coord (point_t p, proj_t projection)
     if(projection == NORTH_POLAR || projection == SOUTH_POLAR)
     {
         /* Calculate r */
-        double r = sqrt((p.x*p.x) + (p.y*p.y));
+        const double r = sqrt((p.x*p.x) + (p.y*p.y));
 
         /* Calculate o */
         double o = 0.0;
@@ -199,12 +199,12 @@ MathLib::coord_t MathLib::point2coord (point_t p, proj_t projection)
         /* Calculate Latitude */
         if(projection == NORTH_POLAR)
         {
-            double latradp = atan(r / 2.0);
+            const double latradp = atan(r / 2.0);
             latrad = (M_PI / 2.0) - (2.0 * latradp);
         }
         else if(projection == SOUTH_POLAR)
         {
-            double latradp = atan(r / -2.0);
+            const double latradp = atan(r / -2.0);
             latrad = (-2.0 * latradp) - (M_PI / 2.0);
         }
 
@@ -270,7 +270,7 @@ bool MathLib::inpoly (point_t* poly, int len, point_t point)
     int c = 0;
     for (int i = 0, j = len - 1; i < len; j = i++)
     {
-        double x_extent = (poly[j].x - poly[i].x) * (point.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x;
+        const double x_extent = (poly[j].x - poly[i].x) * (point.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x;
         if( ((poly[i].y > point.y) != (poly[j].y > point.y)) && (point.x < x_extent) ) c = !c;
     }
 
@@ -291,15 +291,15 @@ bool MathLib::inpoly (point_t* poly, int len, point_t point)
 std::string MathLib::b64encode(const void* data, const size_t &len)
 {
     std::string result((len + 2) / 3 * 4, '=');
-    unsigned char *p = (unsigned  char*) data;
-    char *str = &result[0];
+    const unsigned char *p = reinterpret_cast<const unsigned char*>(data);
+    char *str = result.data();
     size_t j = 0;
     size_t pad = len % 3;
     const size_t last = len - pad;
 
     for (size_t i = 0; i < last; i += 3)
     {
-        int n = int(p[i]) << 16 | int(p[i + 1]) << 8 | p[i + 2];
+        const int n = static_cast<int>(p[i]) << 16 | static_cast<int>(p[i + 1]) << 8 | p[i + 2];
         str[j++] = B64CHARS[n >> 18];
         str[j++] = B64CHARS[n >> 12 & 0x3F];
         str[j++] = B64CHARS[n >> 6 & 0x3F];
@@ -307,7 +307,7 @@ std::string MathLib::b64encode(const void* data, const size_t &len)
     }
     if (pad)  /// Set padding
     {
-        int n = --pad ? int(p[last]) << 8 | p[last + 1] : p[last];
+        const int n = (--pad ? static_cast<int>(p[last]) << 8 | p[last + 1] : p[last]);
         str[j++] = B64CHARS[pad ? n >> 10 & 0x3F : n >> 2];
         str[j++] = B64CHARS[pad ? n >> 4 & 0x03F : n << 4 & 0x3F];
         str[j++] = pad ? B64CHARS[n << 2 & 0x3F] : '=';
@@ -326,17 +326,17 @@ std::string MathLib::b64decode(const void* data, const size_t &len)
 {
     if (len == 0) return "";
 
-    unsigned char *p = (unsigned char*) data;
+    const unsigned char *p = reinterpret_cast<const unsigned char*>(data);
     size_t j = 0;
-    size_t pad1 = len % 4 || p[len - 1] == '=';
-    size_t pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
+    const size_t pad1 = len % 4 || p[len - 1] == '=';
+    const size_t pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
     const size_t last = (len - pad1) / 4 << 2;
     std::string result(last / 4 * 3 + pad1 + pad2, '\0');
-    unsigned char *str = (unsigned char*) &result[0];
+    unsigned char *str = reinterpret_cast<unsigned char*>(result.data());
 
     for (size_t i = 0; i < last; i += 4)
     {
-        int n = B64INDEX[p[i]] << 18 | B64INDEX[p[i + 1]] << 12 | B64INDEX[p[i + 2]] << 6 | B64INDEX[p[i + 3]];
+        const int n = B64INDEX[p[i]] << 18 | B64INDEX[p[i + 1]] << 12 | B64INDEX[p[i + 2]] << 6 | B64INDEX[p[i + 3]];
         str[j++] = n >> 16;
         str[j++] = n >> 8 & 0xFF;
         str[j++] = n & 0xFF;
@@ -352,6 +352,21 @@ std::string MathLib::b64decode(const void* data, const size_t &len)
         }
     }
     return result;
+}
+
+/*----------------------------------------------------------------------------
+ * proj2str
+ *----------------------------------------------------------------------------*/
+const char* MathLib::proj2str (proj_t projection)
+{
+    switch(projection)
+    {
+        case NORTH_POLAR:   return "NORTH_POLAR";
+        case SOUTH_POLAR:   return "SOUTH_POLAR";
+        case PLATE_CARREE:  return "PLATE_CARREE";
+        case AUTOMATIC:     return "AUTOMATIC";
+        default:            return "UNKNOWN";
+    }
 }
 
 /******************************************************************************
@@ -393,7 +408,7 @@ void MathLib::bitReverse(complex_t data[], unsigned long size)
     steps[0] = size / 2;
     for(s = 1; s < LOG2DATASIZE; s++)
     {
-        steps[s] = (unsigned long)(3 * size / pow(2, (s + 1)));
+        steps[s] = static_cast<unsigned long>(3 * size / pow(2, (s + 1)));
     }
 
     // Reorder Data //
@@ -440,7 +455,7 @@ void MathLib::freqCorrelation(complex_t data[], unsigned long size, int isign)
 
     for(halfperiod = 1; halfperiod < size; halfperiod *= 2)
     {
-        double theta = isign * (M_PI / halfperiod);
+        const double theta = isign * (M_PI / halfperiod);
 
         wp.r = -2.0 * pow(sin(0.5 * theta),2);
         wp.i = sin(theta);

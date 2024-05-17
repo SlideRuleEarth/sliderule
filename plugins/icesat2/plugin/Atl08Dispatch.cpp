@@ -185,7 +185,7 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     (void)key;
     (void)records;
 
-    Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
+    const Atl03Reader::extent_t* extent = reinterpret_cast<const Atl03Reader::extent_t*>(record->getRecordData());
 
     /* Check Extent */
     if(extent->photon_count == 0)
@@ -236,7 +236,7 @@ bool Atl08Dispatch::processTermination (void)
 /*----------------------------------------------------------------------------
  * geolocateResult
  *----------------------------------------------------------------------------*/
-RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent, recVec_t* records)
+RecordObject* Atl08Dispatch::buildAncillaryRecord (const Atl03Reader::extent_t* extent, recVec_t* records)
 {
     /* Check for Need */
     if(!records) return NULL;
@@ -248,11 +248,11 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
     for(size_t i = 1; i < records->size(); i++) // start at one to skip atl03rec
     {
         /* Get ATL03 Ancillary Record's Element Array */
-        AncillaryFields::element_array_t* atl03_anc_rec = (AncillaryFields::element_array_t*)records->at(i)->getRecordData();
+        AncillaryFields::element_array_t* atl03_anc_rec = reinterpret_cast<AncillaryFields::element_array_t*>(records->at(i)->getRecordData());
 
         /* Find Ancillary Field in Parameters */
-        AncillaryFields::entry_t& entry = parms->atl08_fields->get(atl03_anc_rec->field_index);
-        
+        const AncillaryFields::entry_t& entry = parms->atl08_fields->get(atl03_anc_rec->field_index);
+
         /* Initialize Field */
         AncillaryFields::field_t field;
         field.anc_type      = atl03_anc_rec->anc_type;
@@ -276,7 +276,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
                 }
                 double nearest = 0.0;
                 int nearest_count = 0;
-                for (auto itr: counts) 
+                for (auto itr: counts)
                 {
                     if(itr.second > nearest_count)
                     {
@@ -316,11 +316,11 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
                 for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
                 {
                     if(counts.count(values[j])) counts[values[j]] += 1;
-                    else counts[values[j]] = 1;                        
+                    else counts[values[j]] = 1;
                 }
                 int64_t nearest = 0.0;
                 int nearest_count = 0;
-                for (auto itr = counts.begin(); itr != counts.end(); ++itr) 
+                for (auto itr = counts.begin(); itr != counts.end(); ++itr)
                 {
                     if(itr->second > nearest_count)
                     {
@@ -357,11 +357,11 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (Atl03Reader::extent_t* extent
 /*----------------------------------------------------------------------------
  * geolocateResult
  *----------------------------------------------------------------------------*/
-void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, vegetation_t& result)
+void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegetation_t& result)
 {
     /* Get Orbit Info */
-    Icesat2Parms::sc_orient_t sc_orient = (Icesat2Parms::sc_orient_t)extent->spacecraft_orientation;
-    Icesat2Parms::track_t track = (Icesat2Parms::track_t)extent->track;
+    const Icesat2Parms::sc_orient_t sc_orient = (Icesat2Parms::sc_orient_t)extent->spacecraft_orientation;
+    const Icesat2Parms::track_t track = (Icesat2Parms::track_t)extent->track;
 
     /* Extent Attributes */
     result.extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION;
@@ -374,8 +374,8 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, vegetation_t
     result.solar_elevation = extent->solar_elevation;
 
     /* Determine Starting Photon and Number of Photons */
-    Atl03Reader::photon_t* ph = extent->photons;
-    uint32_t num_ph = extent->photon_count;
+    const Atl03Reader::photon_t* ph = extent->photons;
+    const uint32_t num_ph = extent->photon_count;
 
     /* Calculate Geolocation Fields */
     if(num_ph == 0)
@@ -438,7 +438,7 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, vegetation_t
     }
     else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_MEDIAN)
     {
-        uint32_t center_ph = num_ph / 2;
+        const uint32_t center_ph = num_ph / 2;
         if(num_ph % 2 == 1) // Odd Number of Photons
         {
             result.time_ns = ph[center_ph].time_ns;
@@ -475,7 +475,7 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, vegetation_t
         double diff_min = DBL_MAX;
         for(uint32_t i = 0; i < num_ph; i++)
         {
-            double diff = abs(ph[i].time_ns - result.time_ns);
+            const double diff = abs(ph[i].time_ns - result.time_ns);
             if(diff < diff_min)
             {
                 diff_min = diff;
@@ -490,11 +490,11 @@ void Atl08Dispatch::geolocateResult (Atl03Reader::extent_t* extent, vegetation_t
 /*----------------------------------------------------------------------------
  * phorealAlgorithm
  *----------------------------------------------------------------------------*/
-void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_t& result)
+void Atl08Dispatch::phorealAlgorithm (const Atl03Reader::extent_t* extent, vegetation_t& result)
 {
     /* Determine Starting Photon and Number of Photons */
-    Atl03Reader::photon_t* ph = extent->photons;
-    uint32_t num_ph = extent->photon_count;
+    const Atl03Reader::photon_t* ph = extent->photons;
+    const uint32_t num_ph = extent->photon_count;
 
     /* Determine Number of Ground and Vegetation Photons */
     long gnd_cnt = 0;
@@ -531,8 +531,8 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
     }
 
     /* Sort Ground and Vegetation Photon Index Arrays */
-    quicksort(gnd_index, ph, &Atl03Reader::photon_t::height, 0, gnd_cnt - 1);
-    quicksort(veg_index, ph, &Atl03Reader::photon_t::relief, 0, veg_cnt - 1);
+    quicksort(gnd_index, const_cast<Atl03Reader::photon_t*>(ph), &Atl03Reader::photon_t::height, 0, gnd_cnt - 1);
+    quicksort(veg_index, const_cast<Atl03Reader::photon_t*>(ph), &Atl03Reader::photon_t::relief, 0, veg_cnt - 1);
 
     /* Determine Min,Max,Avg Heights */
     double min_h = DBL_MAX;
@@ -566,7 +566,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
     double std_h = 0.0;
     for(long i = 0; i < veg_cnt; i++)
     {
-        double delta = (ph[veg_index[i]].relief - result.h_mean_canopy);
+        const double delta = (ph[veg_index[i]].relief - result.h_mean_canopy);
         std_h += delta * delta;
     }
     result.canopy_openness = sqrt(std_h / (double)veg_cnt);
@@ -599,9 +599,9 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
     /* Send Waveforms */
     if(parms->phoreal.send_waveform && num_bins > 0)
     {
-        int recsize = offsetof(waveform_t, waveform) + (num_bins * sizeof(float));
+        const int recsize = offsetof(waveform_t, waveform) + (num_bins * sizeof(float));
         RecordObject waverec(waveRecType, recsize, false);
-        waveform_t* data = (waveform_t*)waverec.getRecordData();
+        waveform_t* data = reinterpret_cast<waveform_t*>(waverec.getRecordData());
         data->extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION;
         data->num_bins = num_bins;
         data->binsize = parms->phoreal.binsize;
@@ -626,13 +626,13 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
     {
         if(gnd_cnt % 2 == 0) // even
         {
-            long i0 = (gnd_cnt - 1) / 2;
-            long i1 = ((gnd_cnt - 1) / 2) + 1;
+            const long i0 = (gnd_cnt - 1) / 2;
+            const long i1 = ((gnd_cnt - 1) / 2) + 1;
             h_te_median = (ph[gnd_index[i0]].height + ph[gnd_index[i1]].height) / 2.0;
         }
         else // odd
         {
-            long i0 = (gnd_cnt - 1) / 2;
+            const long i0 = (gnd_cnt - 1) / 2;
             h_te_median = ph[gnd_index[i0]].height;
         }
     }
@@ -646,7 +646,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
         {
             while(b < num_bins)
             {
-                double percentage = ((double)cbins[b] / (double)veg_cnt) * 100.0;
+                const double percentage = ((double)cbins[b] / (double)veg_cnt) * 100.0;
                 if(percentage >= PercentileInterval[p] && cbins[b] > 0)
                 {
                     result.canopy_h_metrics[p] = ph[veg_index[cbins[b] - 1]].relief;
@@ -658,7 +658,7 @@ void Atl08Dispatch::phorealAlgorithm (Atl03Reader::extent_t* extent, vegetation_
         /* Find 98th Percentile */
         while(b < num_bins)
         {
-            double percentage = ((double)cbins[b] / (double)veg_cnt) * 100.0;
+            const double percentage = ((double)cbins[b] / (double)veg_cnt) * 100.0;
             if(percentage >= 98.0 && cbins[b] > 0)
             {
                 result.h_canopy = ph[veg_index[cbins[b] - 1]].relief;
@@ -706,7 +706,7 @@ void Atl08Dispatch::postResult (const vegetation_t* result, RecordObject* ancrec
         if((!result && batchIndex > 0) || batchIndex == BATCH_SIZE)
         {
             /* Calculate ATL08 Record Size */
-            int size = batchIndex * sizeof(vegetation_t);
+            const int size = batchIndex * sizeof(vegetation_t);
             atl08Record->setUsedData(size);
 
             /* Post Record */
@@ -714,7 +714,7 @@ void Atl08Dispatch::postResult (const vegetation_t* result, RecordObject* ancrec
             {
                 /* Post Serialized Record */
                 unsigned char* buffer = NULL;
-                int bufsize = atl08Record->serialize(&buffer, RecordObject::REFERENCE);
+                const int bufsize = atl08Record->serialize(&buffer, RecordObject::REFERENCE);
                 while(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) == MsgQ::STATE_TIMEOUT);
             }
             else if(recVec.size() > 1)
@@ -722,7 +722,7 @@ void Atl08Dispatch::postResult (const vegetation_t* result, RecordObject* ancrec
                 /* Post Serialized Container Record */
                 ContainerRecord container(recVec);
                 unsigned char* buffer = NULL;
-                int bufsize = container.serialize(&buffer, RecordObject::REFERENCE);
+                const int bufsize = container.serialize(&buffer, RecordObject::REFERENCE);
                 while(outQ->postCopy(buffer, bufsize, SYS_TIMEOUT) == MsgQ::STATE_TIMEOUT);
             }
 
@@ -743,11 +743,11 @@ void Atl08Dispatch::postResult (const vegetation_t* result, RecordObject* ancrec
 /*----------------------------------------------------------------------------
  * quicksort
  *----------------------------------------------------------------------------*/
-void Atl08Dispatch::quicksort (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end)
+void Atl08Dispatch::quicksort (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end) // NOLINT(misc-no-recursion)
 {
     if(start < end)
     {
-        int partition = quicksortpartition(index_array, ph_array, field, start, end);
+        const int partition = quicksortpartition(index_array, ph_array, field, start, end);
         quicksort(index_array, ph_array, field, start, partition);
         quicksort(index_array, ph_array, field, partition + 1, end);
     }
@@ -758,17 +758,17 @@ void Atl08Dispatch::quicksort (long* index_array, Atl03Reader::photon_t* ph_arra
  *----------------------------------------------------------------------------*/
 int Atl08Dispatch::quicksortpartition (long* index_array, Atl03Reader::photon_t* ph_array, float Atl03Reader::photon_t::*field, int start, int end)
 {
-    double pivot = ph_array[index_array[(start + end) / 2]].*field;
+    const double pivot = ph_array[index_array[(start + end) / 2]].*field;
 
     start--;
     end++;
     while(true)
     {
-        while (ph_array[index_array[++start]].*field < pivot);
-        while (ph_array[index_array[--end]].*field > pivot);
+        while (ph_array[index_array[++start]].*field < pivot); // NOLINT(clang-analyzer-core.uninitialized.ArraySubscript)
+        while (ph_array[index_array[--end]].*field > pivot);   // NOLINT(clang-analyzer-core.uninitialized.ArraySubscript)
         if (start >= end) return end;
 
-        long tmp = index_array[start];
+        const long tmp = index_array[start];
         index_array[start] = index_array[end];
         index_array[end] = tmp;
     }

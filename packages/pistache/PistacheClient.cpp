@@ -33,6 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "PistacheServer.h"
 #include "PistacheClient.h"
 #include "RouteHandler.h"
 #include "core.h"
@@ -68,7 +69,7 @@ int PistacheClient::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* outq_name   = getLuaString(L, 1, true, NULL);
-        long        num_threads = getLuaInteger(L, 2, true, 1);
+        const long  num_threads = getLuaInteger(L, 2, true, 1);
 
         /* Create Lua Endpoint */
         return createLuaObject(L, new PistacheClient(L, outq_name, num_threads));
@@ -107,7 +108,7 @@ PistacheClient::PistacheClient(lua_State* L,  const char* outq_name, size_t num_
  *----------------------------------------------------------------------------*/
 PistacheClient::~PistacheClient(void)
 {
-    if(outQ) delete outQ;
+    delete outQ;
 
     mlog(CRITICAL, "Shutting down HTTP client %s", getName());
     client.shutdown();
@@ -161,7 +162,7 @@ int PistacheClient::luaRequest(lua_State* L)
 
         /* Get Timeout */
         bool timeout_provided = false;
-        int timeout = getLuaInteger(L, 5, true, SYS_TIMEOUT, &timeout_provided);
+        const int timeout = getLuaInteger(L, 5, true, SYS_TIMEOUT, &timeout_provided);
         if(timeout_provided && lua_obj->outQ)
         {
             mlog(WARNING, "Timeout ignored for asynchronous clients");
@@ -201,7 +202,7 @@ int PistacheClient::luaRequest(lua_State* L)
                                 /* Save Off and Signal Response */
                                 lua_obj->requestSignal.lock();
                                 {
-                                    lua_result += response_body.c_str();
+                                    lua_result += response_body;
                                     lua_obj->requestSignal.signal(REQUEST_SIGNAL);
                                 }
                                 lua_obj->requestSignal.unlock();
@@ -209,7 +210,7 @@ int PistacheClient::luaRequest(lua_State* L)
                         },
                         [&](std::exception_ptr exc)
                         {
-                            try { std::rethrow_exception(exc); }
+                            try { std::rethrow_exception(std::move(exc)); }
                             catch (const std::exception &e)
                             {
                                 mlog(CRITICAL, "Failed to get response on post to %s: %s", url, e.what());

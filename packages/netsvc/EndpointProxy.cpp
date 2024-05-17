@@ -39,6 +39,7 @@
 
 #include "core.h"
 #include "netsvc.h"
+#include "EndpointProxy.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -70,7 +71,7 @@ int EndpointProxy::luaCreate (lua_State* L)
         const char* _endpoint   = getLuaString(L, 1); // get endpoint
 
         /* Check Resource Table Parameter */
-        int resources_parm_index = 2;
+        const int resources_parm_index = 2;
         if(!lua_istable(L, resources_parm_index))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "must supply table for resource list");
@@ -96,15 +97,15 @@ int EndpointProxy::luaCreate (lua_State* L)
 
         /* Get Parameters Continued */
         const char* _parameters         = getLuaString(L, 3); // get request parameters
-        int         _timeout_secs       = getLuaInteger(L, 4, true, EndpointProxy::DEFAULT_TIMEOUT); // get timeout in seconds
-        int         _locks_per_node     = getLuaInteger(L, 5, true, 1); // get the number of locks per node to request 
+        const int   _timeout_secs       = getLuaInteger(L, 4, true, EndpointProxy::DEFAULT_TIMEOUT); // get timeout in seconds
+        const int   _locks_per_node     = getLuaInteger(L, 5, true, 1); // get the number of locks per node to request
         const char* _outq_name          = getLuaString(L, 6); // get output queue
-        bool        _send_terminator    = getLuaBoolean(L, 7, true, false); // get send terminator flag
-        long        _cluster_size_hint  = getLuaInteger(L, 8, true, 0);
+        const bool  _send_terminator    = getLuaBoolean(L, 7, true, false); // get send terminator flag
+        const long  _cluster_size_hint  = getLuaInteger(L, 8, true, 0);
 
         /* Return Endpoint Proxy Object */
         EndpointProxy* ep = new EndpointProxy(L, _endpoint, _resources, _num_resources, _parameters, _timeout_secs, _locks_per_node, _outq_name, _send_terminator, _cluster_size_hint);
-        int retcnt = createLuaObject(L, ep);
+        const int retcnt = createLuaObject(L, ep);
         delete [] _resources;
         return retcnt;
     }
@@ -129,7 +130,7 @@ int EndpointProxy::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** _resources, int _num_resources,
-                              const char* _parameters, int _timeout_secs, int _locks_per_node, const char* _outq_name, 
+                              const char* _parameters, int _timeout_secs, int _locks_per_node, const char* _outq_name,
                               bool _send_terminator, int _cluster_size_hint):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
@@ -142,8 +143,8 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
     locksPerNode = _locks_per_node;
     sendTerminator = _send_terminator;
 
-    /* 
-     * Set Number of Proxy Threads 
+    /*
+     * Set Number of Proxy Threads
      *  - if a hint for the size of the cluster is provided, then use it
      *  - otherwise query the orchestrator for the number of registered nodes
      *  - set the number of proxy threads to the maximum number of concurrent requests the cluster can handle
@@ -153,8 +154,8 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
     else num_nodes = OrchestratorLib::getNodes();
     if(num_nodes > 0)
     {
-        int max_possible_concurrent_requests = (NetsvcParms::MAX_LOCKS_PER_NODE / locksPerNode) * num_nodes;
-        int candidate_num_threads = MIN(max_possible_concurrent_requests, numResources);
+        const int max_possible_concurrent_requests = (NetsvcParms::MAX_LOCKS_PER_NODE / locksPerNode) * num_nodes;
+        const int candidate_num_threads = MIN(max_possible_concurrent_requests, numResources);
         numProxyThreads = MIN(candidate_num_threads, MAX_PROXY_THREADS);
     }
     else
@@ -244,12 +245,12 @@ void* EndpointProxy::collatorThread (void* parm)
     int current_resource = 0;
 
     alert(INFO, RTE_INFO, proxy->outQ, NULL, "Starting proxy for %s to process %d resource(s) with %d thread(s)", proxy->endpoint, proxy->numResources, proxy->numProxyThreads);
-    
+
     while(proxy->active && (proxy->outQ->getSubCnt() > 0) && (current_resource < proxy->numResources))
     {
         /* Get Available Nodes */
-        int resources_to_process = proxy->numResources - current_resource;
-        int num_nodes_to_request = MIN(resources_to_process, proxy->numProxyThreads);
+        const int resources_to_process = proxy->numResources - current_resource;
+        const int num_nodes_to_request = MIN(resources_to_process, proxy->numProxyThreads);
         vector<OrchestratorLib::Node*>* nodes = OrchestratorLib::lock(SERVICE, num_nodes_to_request, proxy->timeout, proxy->locksPerNode);
         if(nodes)
         {
@@ -340,7 +341,7 @@ void* EndpointProxy::proxyThread (void* parm)
     {
         /* Receive Request */
         int current_resource;
-        int recv_status = proxy->rqstSub->receiveCopy(&current_resource, sizeof(current_resource), SYS_TIMEOUT);
+        const int recv_status = proxy->rqstSub->receiveCopy(&current_resource, sizeof(current_resource), SYS_TIMEOUT);
         if(recv_status > 0)
         {
             /* Get Resource and Node */
@@ -362,7 +363,7 @@ void* EndpointProxy::proxyThread (void* parm)
                     {
                         FString url("%s/source/%s", node->member, proxy->endpoint);
                         FString data("{\"resource\": \"%s\", \"parms\": %s, \"timeout\": %d, \"shard\": %d}", resource, proxy->parameters, proxy->timeout, current_resource);
-                        long http_code = CurlLib::postAsRecord(url.c_str(), data.c_str(), proxy->outQ, false, proxy->timeout, &proxy->active);
+                        const long http_code = CurlLib::postAsRecord(url.c_str(), data.c_str(), proxy->outQ, false, proxy->timeout, &proxy->active);
                         if(http_code == EndpointObject::OK) valid = true;
                         else throw RunTimeException(CRITICAL, RTE_ERROR, "Error code returned from request to %s: %d", node->member, (int)http_code);
                     }
@@ -390,7 +391,7 @@ void* EndpointProxy::proxyThread (void* parm)
                         if(nodes)
                         {
                             /* Check Number of Nodes Returned */
-                            if(nodes->size() >= 1)
+                            if(!nodes->empty())
                             {
                                 node = nodes->at(0);
                                 need_to_free_node = true;
@@ -438,8 +439,8 @@ void* EndpointProxy::proxyThread (void* parm)
             proxy->completion.unlock();
 
             /* Post Status */
-            int code = valid ? RTE_INFO : RTE_ERROR;
-            event_level_t level = valid ? INFO : ERROR;
+            const int code = valid ? RTE_INFO : RTE_ERROR;
+            const event_level_t level = valid ? INFO : ERROR;
             alert(level, code, proxy->outQ, NULL, "%s processing resource [%d out of %d]: %s",
                                                     valid ? "Successfully completed" : "Failed to complete",
                                                     current_resource + 1, proxy->numResources, resource);

@@ -116,7 +116,7 @@ void* DeviceWriter::writerThread (void* parm)
     {
         /* Read Bytes */
         Subscriber::msgRef_t ref;
-        int status = dw->inq->receiveRef(ref, dw->blockCfg);
+        const int status = dw->inq->receiveRef(ref, dw->blockCfg);
 
         /* Process Bytes */
         if(status > 0)
@@ -137,7 +137,9 @@ void* DeviceWriter::writerThread (void* parm)
                     {
                         dw->bytesDropped += ref.size;
                         dw->packetsDropped += 1;
-                        mlog(ERROR, "Failed (%d) to write to device with error: %s", bytes_sent, strerror(errno));
+
+                        char err_buf[256];
+                        mlog(ERROR, "Failed (%d) to write to device with error: %s", bytes_sent, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
 
                         /* Handle Non-Timeout Errors */
                         if(dw->dieOnDisconnect)

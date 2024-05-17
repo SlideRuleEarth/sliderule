@@ -159,7 +159,7 @@ char* StringLib::concat(const char* str1, const char* str2, const char* str3)
     if(str2 != NULL) str2len = (int)strlen(str2);
     if(str3 != NULL) str3len = (int)strlen(str3);
 
-    int newstrlen = str1len + str2len + str3len + 1;
+    const int newstrlen = str1len + str2len + str3len + 1;
     char* newstr = new char[newstrlen];
     newstr[0] = '\0';
 
@@ -192,8 +192,8 @@ char* StringLib::format(char* dststr, int size, const char* _format, ...)
     if (dststr == NULL) return NULL;
     va_list args;
     va_start(args, _format);
-    int vlen = vsnprintf(dststr, size, _format, args);
-    int slen = MIN(vlen, size - 1);
+    const int vlen = vsnprintf(dststr, size, _format, args);
+    const int slen = MIN(vlen, size - 1);
     va_end(args);
     if (slen < 1) return NULL;
     dststr[slen] = '\0';
@@ -211,8 +211,8 @@ int StringLib::formats(char* dststr, int size, const char* _format, ...)
     if (dststr == NULL) return 0;
     va_list args;
     va_start(args, _format);
-    int vlen = vsnprintf(dststr, size - 1, _format, args);
-    int slen = MIN(vlen, size - 1);
+    const int vlen = vsnprintf(dststr, size - 1, _format, args);
+    const int slen = MIN(vlen, size - 1);
     va_end(args);
     if (slen < 1) return 0;
     dststr[slen] = '\0';
@@ -226,7 +226,7 @@ char* StringLib::copy(char* dst, const char* src, int _size)
 {
     if(dst && src && (_size > 0))
     {
-        char* nptr = (char*)memccpy(dst, src, 0, _size);
+        const char* nptr = static_cast<const char*>(memccpy(dst, src, 0, _size));
         if(!nptr) dst[_size - 1] = '\0';
     }
     else if(dst && (_size > 0))
@@ -244,8 +244,8 @@ char* StringLib::copy(char* dst, const char* src, int _size)
  *----------------------------------------------------------------------------*/
 char* StringLib::find(const char* big, const char* little)
 {
-    int little_len = strlen(little);
-    int big_len = strlen(big);
+    const int little_len = strlen(little);
+    const int big_len = strlen(big);
 
     if(little_len > 0)
     {
@@ -253,7 +253,7 @@ char* StringLib::find(const char* big, const char* little)
         {
             if((big[i] == little[0]) && StringLib::match(&big[i], little))
             {
-                return (char*)&big[i];
+                return const_cast<char*>(&big[i]);
             }
         }
     }
@@ -268,8 +268,12 @@ char* StringLib::find(const char* big, const char* little)
  *----------------------------------------------------------------------------*/
 char* StringLib::find(const char* str, char c, bool first)
 {
-    if(first) return (char*)strchr(str, c);
-    return (char*)strrchr(str, c);
+    const char* p = NULL;
+
+    if(first) p = strchr(str, c);
+    else p = strrchr(str, c);
+
+    return const_cast<char*>(p);
 }
 
 /*----------------------------------------------------------------------------
@@ -344,7 +348,7 @@ List<string*>* StringLib::split(const char* str, int len, char separator, bool s
  *----------------------------------------------------------------------------*/
 void StringLib::convertUpper(char* str1)
 {
-    int slen = (int)strlen(str1) + 1;
+    const int slen = (int)strlen(str1) + 1;
     for(int i = 0; i < slen; i++)
     {
         if(isalpha(str1[i]) && islower(str1[i]))
@@ -359,9 +363,9 @@ void StringLib::convertUpper(char* str1)
  *
  *  converts from src to dst, returns dst for c syntax convenience
  *----------------------------------------------------------------------------*/
-char* StringLib::convertUpper(char* dst, char* src)
+char* StringLib::convertUpper(char* dst, const char* src)
 {
-    int slen = (int)strlen(src) + 1;
+    const int slen = (int)strlen(src) + 1;
     for(int i = 0; i < slen; i++)
     {
         if(isalpha(src[i]) && islower(src[i]))
@@ -383,7 +387,7 @@ char* StringLib::convertUpper(char* dst, char* src)
  *----------------------------------------------------------------------------*/
 void StringLib::convertLower(char* str1)
 {
-    int slen = (int)strlen(str1) + 1;
+    const int slen = (int)strlen(str1) + 1;
     for(int i = 0; i < slen; i++)
     {
         if(isalpha(str1[i]) && isupper(str1[i]))
@@ -398,9 +402,9 @@ void StringLib::convertLower(char* str1)
  *
  *  converts from src to dst, returns dst for c syntax convenience
  *----------------------------------------------------------------------------*/
-char* StringLib::convertLower(char* dst, char* src)
+char* StringLib::convertLower(char* dst, const char* src)
 {
-    int slen = (int)strlen(src) + 1;
+    const int slen = (int)strlen(src) + 1;
     for(int i = 0; i < slen; i++)
     {
         if(isalpha(src[i]) && isupper(src[i]))
@@ -531,7 +535,7 @@ bool StringLib::str2long(const char* str, long* val, int base)
     if(str == NULL) return false;
     char *endptr;
     errno = 0;
-    long result = strtol(str, &endptr, base);
+    const long result = strtol(str, &endptr, base);
     if( (endptr == str) ||
         ((result == LONG_MAX || result == LONG_MIN) && errno == ERANGE) )
     {
@@ -549,7 +553,7 @@ bool StringLib::str2ulong(const char* str, unsigned long* val, int base)
     if(str == NULL) return false;
     char *endptr;
     errno = 0;
-    unsigned long result = strtoul(str, &endptr, base);
+    const unsigned long result = strtoul(str, &endptr, base);
     if( (endptr == str) ||
         ((result == ULONG_MAX || result == 0) && errno == ERANGE) )
     {
@@ -567,7 +571,7 @@ bool StringLib::str2llong(const char* str, long long* val, int base)
     if(str == NULL) return false;
     char *endptr;
     errno = 0;
-    long long result = strtoll(str, &endptr, base);
+    const long long result = strtoll(str, &endptr, base);
     if( (endptr == str) ||
         ((result == LLONG_MAX || result == LLONG_MIN) && errno == ERANGE))
     {
@@ -585,7 +589,7 @@ bool StringLib::str2ullong(const char* str, unsigned long long* val, int base)
     if(str == NULL) return false;
     char *endptr;
     errno = 0;
-    unsigned long long result = strtoull(str, &endptr, base);
+    const unsigned long long result = strtoull(str, &endptr, base);
     if( (endptr == str) ||
         ((result == ULLONG_MAX || result == 0) && errno == ERANGE))
     {
@@ -603,7 +607,7 @@ bool StringLib::str2double(const char* str, double* val)
     if(str == NULL) return false;
     char *endptr;
     errno = 0;
-    double result = strtod(str, &endptr);
+    const double result = strtod(str, &endptr);
     if(endptr == str)
     {
         return false;
@@ -622,7 +626,7 @@ char* StringLib::checkNullStr (const char* str)
         return NULL;
     }
 
-    return (char*)str;
+    return const_cast<char*>(str);
 }
 
 /*----------------------------------------------------------------------------
@@ -636,21 +640,21 @@ char* StringLib::b64encode(const void* data, int* size)
 {
     assert(size);
 
-    int len = *size;
-    int encoded_len = (len + 2) / 3 * 4;
+    const int len = *size;
+    const int encoded_len = (len + 2) / 3 * 4;
     char* str = new char [encoded_len + 1];
     str[encoded_len] = '\0';
     str[encoded_len - 1] = '=';
     str[encoded_len - 2] = '=';
 
-    unsigned char *p = (unsigned  char*) data;
+    unsigned char* p = reinterpret_cast<unsigned char*>(const_cast<void*>(data));
     size_t j = 0;
     size_t pad = len % 3;
     const size_t last = len - pad;
 
     for (size_t i = 0; i < last; i += 3)
     {
-        int n = int(p[i]) << 16 | int(p[i + 1]) << 8 | p[i + 2];
+        const int n = int(p[i]) << 16 | int(p[i + 1]) << 8 | p[i + 2];
         str[j++] = B64CHARS[n >> 18];
         str[j++] = B64CHARS[n >> 12 & 0x3F];
         str[j++] = B64CHARS[n >> 6 & 0x3F];
@@ -659,7 +663,7 @@ char* StringLib::b64encode(const void* data, int* size)
 
     if (pad)  /// Set padding
     {
-        int n = --pad ? int(p[last]) << 8 | p[last + 1] : p[last];
+        const int n = --pad ? int(p[last]) << 8 | p[last + 1] : p[last];
         str[j++] = B64CHARS[pad ? n >> 10 & 0x3F : n >> 2];
         str[j++] = B64CHARS[pad ? n >> 4 & 0x03F : n << 4 & 0x3F];
         str[j++] = pad ? B64CHARS[n << 2 & 0x3F] : '=';
@@ -680,23 +684,23 @@ unsigned char* StringLib::b64decode(const void* data, int* size)
 {
     assert(size);
 
-    int len = *size;
-    if (len == 0) return (unsigned char*)"";
+    const int len = *size;
+    if (len == 0) return reinterpret_cast<unsigned char*>(const_cast<char*>(""));
 
-    unsigned char *p = (unsigned char*) data;
+    const unsigned char* p = reinterpret_cast<const unsigned char*>(data);
     size_t j = 0;
-    size_t pad1 = len % 4 || p[len - 1] == '=';
-    size_t pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
+    const size_t pad1 = len % 4 || p[len - 1] == '=';
+    const size_t pad2 = pad1 && (len % 4 > 2 || p[len - 2] != '=');
     const size_t last = (len - pad1) / 4 << 2;
 
-    int decoded_len = last / 4 * 3 + pad1 + pad2;
+    const int decoded_len = last / 4 * 3 + pad1 + pad2;
     unsigned char* str = new unsigned char [decoded_len];
     str[decoded_len - 1] = '\0';
     str[decoded_len - 2] = '\0';
 
     for (size_t i = 0; i < last; i += 4)
     {
-        int n = B64INDEX[p[i]] << 18 | B64INDEX[p[i + 1]] << 12 | B64INDEX[p[i + 2]] << 6 | B64INDEX[p[i + 3]];
+        const int n = B64INDEX[p[i]] << 18 | B64INDEX[p[i + 1]] << 12 | B64INDEX[p[i + 2]] << 6 | B64INDEX[p[i + 3]];
         str[j++] = n >> 16;
         str[j++] = n >> 8 & 0xFF;
         str[j++] = n & 0xFF;
@@ -732,12 +736,12 @@ char* StringLib::b16encode(const void* data, int size, bool lower_case, char* ds
     if(lower_case) digits = lower_digits;
     else digits = upper_digits;
 
-    int encoded_len = size * 2;
+    const int encoded_len = size * 2;
     char* str = dst;
     if(!str) str = new char [encoded_len + 1];
     str[encoded_len] = '\0';
 
-    uint8_t* data_ptr = (uint8_t*)data;
+    const uint8_t* data_ptr = reinterpret_cast<const uint8_t*>(data);
     for(int i = 0, j = 0; i < size; i++)
     {
         str[j++] = digits[data_ptr[i] >> 4];
@@ -774,7 +778,7 @@ int StringLib::printify (char* buffer, int size)
 int StringLib::replace(char* str, char oldchar, char newchar)
 {
     int num_replacements = 0;
-    int len = strlen(str);
+    const int len = strlen(str);
     for(int i = 0; i < len; i++)
     {
         if(str[i] == oldchar)
@@ -809,7 +813,7 @@ char* StringLib::replace (const char* str, const char* oldtxt[], const char* new
     char* new_str = NULL;
 
     /* Get Size of String */
-    int bytes = (int)strlen(str) + 1;
+    const int bytes = (int)strlen(str) + 1;
 
     /* Check Number of Replacements */
     if(num_replacements > MAX_NUM_REPLACEMENTS)
@@ -860,7 +864,7 @@ char* StringLib::replace (const char* str, const char* oldtxt[], const char* new
     }
 
     /* Set New Size */
-    int new_size = bytes + total_size_delta;
+    const int new_size = bytes + total_size_delta;
 
     /* Check if String is Empty */
     if(new_size == 0)
@@ -931,8 +935,8 @@ char* StringLib::replace (const char* str, const char* oldtxt[], const char* new
 char* StringLib::urlize(const char* str)
 {
     /* Get Size of Strings */
-    int bytes = strlen(str) + 1;
-    int new_size = bytes * 3;
+    const int bytes = strlen(str) + 1;
+    const int new_size = bytes * 3;
 
     /* Setup pointers to new and old strings */
     char* alloc_str = new char [new_size];

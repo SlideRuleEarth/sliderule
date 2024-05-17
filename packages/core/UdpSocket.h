@@ -54,7 +54,7 @@ class UdpSocket: public DeviceObject
         static int      luaCreate           (lua_State* L);
 
                         UdpSocket           (lua_State* L, const char* _ip_addr, int _port, bool _server, const char* _multicast_group);
-        virtual         ~UdpSocket          (void);
+                        ~UdpSocket          (void) override;
 
         bool            isConnected         (int num_connections = 0) override;
         void            closeConnection     (void) override;

@@ -366,7 +366,7 @@ const char* Icesat2Parms::tojson (void) const
     if(atl03_geo_fields)
     {
         rapidjson::Value var_array(rapidjson::kArrayType);
-        List<AncillaryFields::entry_t>::Iterator iter(*atl03_geo_fields);
+        const List<AncillaryFields::entry_t>::Iterator iter(*atl03_geo_fields);
         for(int i = 0; i < atl03_geo_fields->length(); i++)
         {
             rapidjson::Value _entry(rapidjson::kObjectType);
@@ -382,7 +382,7 @@ const char* Icesat2Parms::tojson (void) const
     if(atl03_ph_fields)
     {
         rapidjson::Value var_array(rapidjson::kArrayType);
-        List<AncillaryFields::entry_t>::Iterator iter(*atl03_ph_fields);
+        const List<AncillaryFields::entry_t>::Iterator iter(*atl03_ph_fields);
         for(int i = 0; i < atl03_ph_fields->length(); i++)
         {
             rapidjson::Value _entry(rapidjson::kObjectType);
@@ -399,7 +399,7 @@ const char* Icesat2Parms::tojson (void) const
     if(atl06_fields)
     {
         rapidjson::Value var_array(rapidjson::kArrayType);
-        List<AncillaryFields::entry_t>::Iterator iter(*atl06_fields);
+        const List<AncillaryFields::entry_t>::Iterator iter(*atl06_fields);
         for(int i = 0; i < atl06_fields->length(); i++)
         {
             rapidjson::Value _entry(rapidjson::kObjectType);
@@ -415,7 +415,7 @@ const char* Icesat2Parms::tojson (void) const
     if(atl08_fields)
     {
         rapidjson::Value var_array(rapidjson::kArrayType);
-        List<AncillaryFields::entry_t>::Iterator iter(*atl08_fields);
+        const List<AncillaryFields::entry_t>::Iterator iter(*atl08_fields);
         for(int i = 0; i < atl08_fields->length(); i++)
         {
             rapidjson::Value _entry(rapidjson::kObjectType);
@@ -690,7 +690,7 @@ void Icesat2Parms::get_lua_atl03_cnf (lua_State* L, int index, bool* provided)
         memset(atl03_cnf, 0, sizeof(atl03_cnf));
 
         /* Get number of classifications in table */
-        int num_cnf = lua_rawlen(L, index);
+        const int num_cnf = lua_rawlen(L, index);
         if(num_cnf > 0 && provided) *provided = true;
 
         /* Iterate through each classification in table */
@@ -702,7 +702,7 @@ void Icesat2Parms::get_lua_atl03_cnf (lua_State* L, int index, bool* provided)
             /* Set confidence */
             if(lua_isinteger(L, -1))
             {
-                int confidence = LuaObject::getLuaInteger(L, -1);
+                const int confidence = LuaObject::getLuaInteger(L, -1);
                 if(confidence >= CNF_POSSIBLE_TEP && confidence <= CNF_SURFACE_HIGH)
                 {
                     atl03_cnf[confidence + SIGNAL_CONF_OFFSET] = true;
@@ -716,7 +716,7 @@ void Icesat2Parms::get_lua_atl03_cnf (lua_State* L, int index, bool* provided)
             else if(lua_isstring(L, -1))
             {
                 const char* confidence_str = LuaObject::getLuaString(L, -1);
-                signal_conf_t confidence = str2atl03cnf(confidence_str);
+                const signal_conf_t confidence = str2atl03cnf(confidence_str);
                 if(confidence != ATL03_INVALID_CONFIDENCE)
                 {
                     atl03_cnf[confidence + SIGNAL_CONF_OFFSET] = true;
@@ -738,7 +738,7 @@ void Icesat2Parms::get_lua_atl03_cnf (lua_State* L, int index, bool* provided)
         memset(atl03_cnf, 0, sizeof(atl03_cnf));
 
         /* Set Confidences */
-        int confidence = LuaObject::getLuaInteger(L, index);
+        const int confidence = LuaObject::getLuaInteger(L, index);
         if(confidence >= CNF_POSSIBLE_TEP && confidence <= CNF_SURFACE_HIGH)
         {
             if(provided) *provided = true;
@@ -760,7 +760,7 @@ void Icesat2Parms::get_lua_atl03_cnf (lua_State* L, int index, bool* provided)
 
         /* Set Confidences */
         const char* confidence_str = LuaObject::getLuaString(L, index);
-        signal_conf_t confidence = str2atl03cnf(confidence_str);
+        const signal_conf_t confidence = str2atl03cnf(confidence_str);
         if(confidence != ATL03_INVALID_CONFIDENCE)
         {
             if(provided) *provided = true;
@@ -796,7 +796,7 @@ void Icesat2Parms::get_lua_atl03_quality (lua_State* L, int index, bool* provide
         memset(quality_ph, 0, sizeof(quality_ph));
 
         /* Get number of photon quality level in table */
-        int num_quality = lua_rawlen(L, index);
+        const int num_quality = lua_rawlen(L, index);
         if(num_quality > 0 && provided) *provided = true;
 
         /* Iterate through each photon quality level in table */
@@ -808,7 +808,7 @@ void Icesat2Parms::get_lua_atl03_quality (lua_State* L, int index, bool* provide
             /* Set photon quality */
             if(lua_isinteger(L, -1))
             {
-                int quality = LuaObject::getLuaInteger(L, -1);
+                const int quality = LuaObject::getLuaInteger(L, -1);
                 if(quality >= QUALITY_NOMINAL && quality <= QUALITY_POSSIBLE_TEP)
                 {
                     quality_ph[quality] = true;
@@ -822,7 +822,7 @@ void Icesat2Parms::get_lua_atl03_quality (lua_State* L, int index, bool* provide
             else if(lua_isstring(L, -1))
             {
                 const char* quality_ph_str = LuaObject::getLuaString(L, -1);
-                quality_ph_t quality = str2atl03quality(quality_ph_str);
+                const quality_ph_t quality = str2atl03quality(quality_ph_str);
                 if(quality != ATL03_INVALID_QUALITY)
                 {
                     quality_ph[quality] = true;
@@ -844,7 +844,7 @@ void Icesat2Parms::get_lua_atl03_quality (lua_State* L, int index, bool* provide
         memset(quality_ph, 0, sizeof(quality_ph));
 
         /* Set Photon Quality Level */
-        int quality = LuaObject::getLuaInteger(L, index);
+        const int quality = LuaObject::getLuaInteger(L, index);
         if(quality >= QUALITY_NOMINAL && quality <= QUALITY_POSSIBLE_TEP)
         {
             if(provided) *provided = true;
@@ -866,7 +866,7 @@ void Icesat2Parms::get_lua_atl03_quality (lua_State* L, int index, bool* provide
 
         /* Set Photon Quality Level */
         const char* quality_ph_str = LuaObject::getLuaString(L, index);
-        quality_ph_t quality = str2atl03quality(quality_ph_str);
+        const quality_ph_t quality = str2atl03quality(quality_ph_str);
         if(quality != ATL03_INVALID_QUALITY)
         {
             if(provided) *provided = true;
@@ -902,7 +902,7 @@ void Icesat2Parms::get_lua_atl08_class (lua_State* L, int index, bool* provided)
         memset(atl08_class, 0, sizeof(atl08_class));
 
         /* Get number of classifications in table */
-        int num_classes = lua_rawlen(L, index);
+        const int num_classes = lua_rawlen(L, index);
         if(num_classes > 0 && provided) *provided = true;
 
         /* Iterate through each classification in table */
@@ -914,7 +914,7 @@ void Icesat2Parms::get_lua_atl08_class (lua_State* L, int index, bool* provided)
             /* Set classification */
             if(lua_isinteger(L, -1))
             {
-                int classification = LuaObject::getLuaInteger(L, -1);
+                const int classification = LuaObject::getLuaInteger(L, -1);
                 if(classification >= 0 && classification < NUM_ATL08_CLASSES)
                 {
                     atl08_class[classification] = true;
@@ -928,7 +928,7 @@ void Icesat2Parms::get_lua_atl08_class (lua_State* L, int index, bool* provided)
             else if(lua_isstring(L, -1))
             {
                 const char* classifiction_str = LuaObject::getLuaString(L, -1);
-                atl08_classification_t atl08class = str2atl08class(classifiction_str);
+                const atl08_classification_t atl08class = str2atl08class(classifiction_str);
                 if(atl08class != ATL08_INVALID_CLASSIFICATION)
                 {
                     atl08_class[atl08class] = true;
@@ -950,7 +950,7 @@ void Icesat2Parms::get_lua_atl08_class (lua_State* L, int index, bool* provided)
         memset(atl08_class, 0, sizeof(atl08_class));
 
         /* Set classification */
-        int classification = LuaObject::getLuaInteger(L, -1);
+        const int classification = LuaObject::getLuaInteger(L, -1);
         if(classification >= 0 && classification < NUM_ATL08_CLASSES)
         {
             if(provided) *provided = true;
@@ -969,7 +969,7 @@ void Icesat2Parms::get_lua_atl08_class (lua_State* L, int index, bool* provided)
 
         /* Set classification */
         const char* classifiction_str = LuaObject::getLuaString(L, index);
-        atl08_classification_t atl08class = str2atl08class(classifiction_str);
+        const atl08_classification_t atl08class = str2atl08class(classifiction_str);
         if(atl08class != ATL08_INVALID_CLASSIFICATION)
         {
             if(provided) *provided = true;
@@ -1003,7 +1003,7 @@ void Icesat2Parms::get_lua_beams (lua_State* L, int index, bool* provided)
         if(provided) *provided = true;
 
         /* Iterate through each beam in table */
-        int num_beams = lua_rawlen(L, index);
+        const int num_beams = lua_rawlen(L, index);
         for(int i = 0; i < num_beams; i++)
         {
             /* Get beam */
@@ -1012,7 +1012,7 @@ void Icesat2Parms::get_lua_beams (lua_State* L, int index, bool* provided)
             /* Set beam */
             if(lua_isinteger(L, -1))
             {
-                int beam = LuaObject::getLuaInteger(L, -1);
+                const int beam = LuaObject::getLuaInteger(L, -1);
                 switch(beam)
                 {
                     case GT1L:  beams[gt2index(GT1L)] = true; mlog(DEBUG, "Selecting beam %d", beam); break;
@@ -1028,8 +1028,8 @@ void Icesat2Parms::get_lua_beams (lua_State* L, int index, bool* provided)
             else if(lua_isstring(L, -1))
             {
                 const char* beam_str = LuaObject::getLuaString(L, -1);
-                gt_t gt = str2gt(beam_str);
-                int gt_index = gt2index(static_cast<int>(gt));
+                const gt_t gt = str2gt(beam_str);
+                const int gt_index = gt2index(static_cast<int>(gt));
                 if(gt_index != INVALID_GT)
                 {
                     beams[gt_index] = true;
@@ -1051,7 +1051,7 @@ void Icesat2Parms::get_lua_beams (lua_State* L, int index, bool* provided)
         memset(beams, 0, sizeof(beams));
 
         /* Set beam */
-        int beam = LuaObject::getLuaInteger(L, -1);
+        const int beam = LuaObject::getLuaInteger(L, -1);
         switch(beam)
         {
             case GT1L:  beams[gt2index(GT1L)] = true; mlog(DEBUG, "Selecting beam %d", beam); break;
@@ -1070,8 +1070,8 @@ void Icesat2Parms::get_lua_beams (lua_State* L, int index, bool* provided)
 
         /* Set beam */
         const char* beam_str = LuaObject::getLuaString(L, -1);
-        gt_t gt = str2gt(beam_str);
-        int gt_index = gt2index(static_cast<int>(gt));
+        const gt_t gt = str2gt(beam_str);
+        const int gt_index = gt2index(static_cast<int>(gt));
         if(gt_index != INVALID_GT)
         {
             beams[gt_index] = true;
@@ -1147,7 +1147,7 @@ void Icesat2Parms::get_lua_field_list (lua_State* L, int index, AncillaryFields:
     if(lua_istable(L, index))
     {
         /* Get number of item in table */
-        int num_strings = lua_rawlen(L, index);
+        const int num_strings = lua_rawlen(L, index);
         if(num_strings > 0 && provided)
         {
             /* Allocate string list */
@@ -1221,7 +1221,7 @@ void Icesat2Parms::get_lua_phoreal (lua_State* L, int index, bool* provided)
         const char* geoloc_str = LuaObject::getLuaString(L, -1, true, NULL, &field_provided);
         if(field_provided)
         {
-            phoreal_geoloc_t geoloc = str2geoloc(geoloc_str);
+            const phoreal_geoloc_t geoloc = str2geoloc(geoloc_str);
             if(geoloc != PHOREAL_UNSUPPORTED)
             {
                 phoreal.geoloc = geoloc;

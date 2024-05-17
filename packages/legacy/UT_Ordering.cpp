@@ -89,9 +89,7 @@ UT_Ordering::UT_Ordering(CommandProcessor* cmd_proc, const char* obj_name):
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-UT_Ordering::~UT_Ordering(void)
-{
-}
+UT_Ordering::~UT_Ordering(void) = default;
 
 /*--------------------------------------------------------------------------------------
  * _ut_assert - called via ut_assert macro
@@ -117,7 +115,7 @@ bool UT_Ordering::_ut_assert(bool e, const char* file, int line, const char* fmt
         /* Chop Path in Filename */
         pathptr = StringLib::find(file, '/', false);
         if(pathptr) pathptr++;
-        else pathptr = (char*)file;
+        else pathptr = const_cast<char*>(file);
 
         /* Create Log Message */
         msglen = snprintf(log_message, UT_MAX_ASSERT, "Failure at %s:%d:%s", pathptr, line, formatted_string);
@@ -239,7 +237,7 @@ int UT_Ordering::testSort(int argc, char argv[][MAX_CMD_SIZE])
     Ordering<int,int> mylist2;
     for(int i = 0; i < 20; i++)
     {
-        int d = 20 - i;
+        const int d = 20 - i;
         mylist2.add(20 - i, d);
     }
     for(int i = 1; i <= 20; i++) ut_assert(mylist2[i] == i, "failed to sort %d\n", i);
@@ -286,11 +284,11 @@ int UT_Ordering::testIterator(int argc, char argv[][MAX_CMD_SIZE])
 
     for(int i = 0; i < 20; i++)
     {
-        int d = 20 - i;
+        const int d = 20 - i;
         mylist.add(20 - i, d);
     }
 
-    Ordering<int,int>::Iterator iterator(mylist);
+    const Ordering<int,int>::Iterator iterator(mylist);
     for(int i = 0; i < 20; i++)
     {
         ut_assert(iterator[i].key == (i + 1), "failed to iterate key %d\n", i + 1);

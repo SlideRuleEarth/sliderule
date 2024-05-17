@@ -88,7 +88,7 @@ class Monitor: public DispatchObject
 
         virtual void processEvent   (const unsigned char* event_buf_ptr, int event_size);
                      Monitor        (lua_State* L, uint8_t type_mask, event_level_t level, format_t format);
-                     ~Monitor       (void);
+                     ~Monitor       (void) override;
 
     private:
 

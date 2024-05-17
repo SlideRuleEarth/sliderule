@@ -55,7 +55,7 @@ Mutex CcsdsRecord::pktMut;
  *         is because CcsdsRecords do not prepend the record type string but start
  *         immediately with the CCSDS packet data.
  *----------------------------------------------------------------------------*/
-CcsdsRecord::CcsdsRecord(const char* rec_type): RecordObject()
+CcsdsRecord::CcsdsRecord(const char* rec_type)
 {
     assert(rec_type);
 
@@ -96,7 +96,7 @@ CcsdsRecord::CcsdsRecord(const char* rec_type): RecordObject()
  *  Notes:  The buffer here (UNLIKE the base class RecordObject) only contains the
  *          binary packet and does not include the type string.
  *----------------------------------------------------------------------------*/
-CcsdsRecord::CcsdsRecord(unsigned char* buffer, int size): RecordObject()
+CcsdsRecord::CcsdsRecord(const unsigned char* buffer, int size)
 {
     pktDef_t* pkt_def = getPacketDefinition(buffer, size);
     if(pkt_def)
@@ -126,7 +126,7 @@ CcsdsRecord::CcsdsRecord(unsigned char* buffer, int size): RecordObject()
 bool CcsdsRecord::deserialize (unsigned char* buffer, int size)
 {
     /* Get Record Definition */
-    pktDef_t* pkt_def = getPacketDefinition(buffer, size);
+    const pktDef_t* pkt_def = getPacketDefinition(buffer, size);
 
     /* Definition Checks  */
     if(pkt_def == NULL)                                 return false;   // could not find definition
@@ -155,7 +155,7 @@ int CcsdsRecord::serialize (unsigned char** buffer, serialMode_t mode, int size)
     }
     else
     {
-        *buffer = (unsigned char*)recordData;
+        *buffer = recordData;
     }
 
     return recordDefinition->data_size;
@@ -207,7 +207,7 @@ void CcsdsRecord::initCcsdsRecord(void)
 /*----------------------------------------------------------------------------
  * defineCommand
  *----------------------------------------------------------------------------*/
-RecordObject::recordDefErr_t CcsdsRecord::defineCommand(const char* rec_type, const char* id_field, uint16_t _apid, uint8_t _fc, int _size, fieldDef_t* fields, int num_fields, int max_fields)
+RecordObject::recordDefErr_t CcsdsRecord::defineCommand(const char* rec_type, const char* id_field, uint16_t _apid, uint8_t _fc, int _size, const fieldDef_t* fields, int num_fields, int max_fields)
 {
     definition_t* rec_def;
     recordDefErr_t status;
@@ -241,7 +241,7 @@ RecordObject::recordDefErr_t CcsdsRecord::defineCommand(const char* rec_type, co
                 pktDefs.add(rec_type, pkt_def);
 
                 /* Register New Packet Definition */
-                unsigned int index = (pkt_def->subtype << 11) | pkt_def->apid;
+                const unsigned int index = (pkt_def->subtype << 11) | pkt_def->apid;
                 pktCrossRefs[index] = pkt_def;
             }
         }
@@ -254,7 +254,7 @@ RecordObject::recordDefErr_t CcsdsRecord::defineCommand(const char* rec_type, co
 /*----------------------------------------------------------------------------
  * defineTelemetry
  *----------------------------------------------------------------------------*/
-RecordObject::recordDefErr_t CcsdsRecord::defineTelemetry(const char* rec_type, const char* id_field, uint16_t _apid, int _size, fieldDef_t* fields, int num_fields, int max_fields)
+RecordObject::recordDefErr_t CcsdsRecord::defineTelemetry(const char* rec_type, const char* id_field, uint16_t _apid, int _size, const fieldDef_t* fields, int num_fields, int max_fields)
 {
     definition_t* rec_def;
     recordDefErr_t status;
@@ -288,7 +288,7 @@ RecordObject::recordDefErr_t CcsdsRecord::defineTelemetry(const char* rec_type, 
                 pktDefs.add(rec_type, pkt_def);
 
                 /* Register New Packet Definition */
-                unsigned int index = (pkt_def->subtype << 11) | pkt_def->apid;
+                const unsigned int index = (pkt_def->subtype << 11) | pkt_def->apid;
                 pktCrossRefs[index] = pkt_def;
             }
         }
@@ -305,7 +305,7 @@ RecordObject::recordDefErr_t CcsdsRecord::defineTelemetry(const char* rec_type, 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CcsdsRecord::CcsdsRecord(void): RecordObject()
+CcsdsRecord::CcsdsRecord(void)
 {
     pktDef = NULL;
 }
@@ -337,15 +337,15 @@ CcsdsRecord::pktDef_t* CcsdsRecord::getPacketDefinition(const unsigned char* buf
 {
     if(size < 6) return NULL;
 
-    int len = CCSDS_GET_LEN(buffer);
+    const int len = CCSDS_GET_LEN(buffer);
     if(len > size) return NULL;
 
-    unsigned int apid = CCSDS_GET_APID(buffer);
+    const unsigned int apid = CCSDS_GET_APID(buffer);
 
     unsigned int subtype = 0;
     if(CCSDS_IS_CMD(buffer)) subtype = CCSDS_GET_FC(buffer);
 
-    unsigned int index = (subtype << 11) | apid;
+    const unsigned int index = (subtype << 11) | apid;
     return pktCrossRefs[index];
 }
 
@@ -356,7 +356,7 @@ CcsdsRecord::pktDef_t* CcsdsRecord::getPacketDefinition(const unsigned char* buf
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CcsdsRecordInterface::CcsdsRecordInterface(unsigned char* buffer, int size): CcsdsRecord()
+CcsdsRecordInterface::CcsdsRecordInterface(unsigned char* buffer, int size)
 {
     pktDef_t* pkt_def = getPacketDefinition(buffer, size);
     if(pkt_def)
@@ -375,7 +375,4 @@ CcsdsRecordInterface::CcsdsRecordInterface(unsigned char* buffer, int size): Ccs
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-CcsdsRecordInterface::~CcsdsRecordInterface(void)
-{
-
-}
+CcsdsRecordInterface::~CcsdsRecordInterface(void) = default;

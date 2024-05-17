@@ -112,9 +112,7 @@ CcsdsRecordFileWriter::CcsdsRecordFileWriter(CommandProcessor* cmd_proc, const c
 /*----------------------------------------------------------------------------
  * Destructor  -
  *----------------------------------------------------------------------------*/
-CcsdsRecordFileWriter::~CcsdsRecordFileWriter(void)
-{
-}
+CcsdsRecordFileWriter::~CcsdsRecordFileWriter(void) = default;
 
 /*----------------------------------------------------------------------------
  * writeMsg -
@@ -127,7 +125,7 @@ int CcsdsRecordFileWriter::writeMsg(void* msg, int size, bool with_header)
     RecordObject* record = NULL;
     try
     {
-        record = createRecord((unsigned char*)msg, size);
+        record = createRecord(reinterpret_cast<unsigned char*>(msg), size);
     }
     catch (const RunTimeException& e)
     {
@@ -138,10 +136,10 @@ int CcsdsRecordFileWriter::writeMsg(void* msg, int size, bool with_header)
     /* Get Fields */
     char** field_names = NULL;
     int num_fields = 0;
-    if(boundFields)
+    if (boundFields)
     {
         num_fields = numBoundFields;
-        field_names = (char**)boundFields;
+        field_names = const_cast<char**>(boundFields);
     }
     else
     {
@@ -156,7 +154,7 @@ int CcsdsRecordFileWriter::writeMsg(void* msg, int size, bool with_header)
             for(int i = 0; i < num_fields ; i++)
             {
                 /* Output Prepended String */
-                const char* prepend = createPrependStr((unsigned char*)msg, size);
+                const char* prepend = createPrependStr(reinterpret_cast<unsigned char*>(msg), size);
                 if(prepend)
                 {
                     cnt += fprintf(outfp, "%s,", prepend);
@@ -167,7 +165,7 @@ int CcsdsRecordFileWriter::writeMsg(void* msg, int size, bool with_header)
                 cnt += fprintf(outfp, "%s,", field_names[i]);
 
                 /* Output Value */
-                RecordObject::field_t field = record->getField(field_names[i]);
+                const RecordObject::field_t field = record->getField(field_names[i]);
                 char valbuf[RecordObject::MAX_VAL_STR_SIZE];
                 cnt += fprintf(outfp, "%s\n", record->getValueText(field, valbuf));
             }
@@ -194,7 +192,7 @@ int CcsdsRecordFileWriter::writeMsg(void* msg, int size, bool with_header)
             }
 
             /* Write Fields */
-            const char* prepend = createPrependStr((unsigned char*)msg, size);
+            const char* prepend = createPrependStr(reinterpret_cast<unsigned char*>(msg), size);
             if(prepend)
             {
                 cnt += fprintf(outfp, "%s,", prepend);
@@ -202,11 +200,11 @@ int CcsdsRecordFileWriter::writeMsg(void* msg, int size, bool with_header)
             }
             for(int i = 0; i < num_fields - 1; i++)
             {
-                RecordObject::field_t field = record->getField(field_names[i]);
+                const RecordObject::field_t field = record->getField(field_names[i]);
                 char valbuf[RecordObject::MAX_VAL_STR_SIZE];
                 cnt += fprintf(outfp, "%s,", record->getValueText(field, valbuf));
             }
-            RecordObject::field_t field = record->getField(field_names[num_fields - 1]);
+            const RecordObject::field_t field = record->getField(field_names[num_fields - 1]);
             char valbuf[RecordObject::MAX_VAL_STR_SIZE];
             cnt += fprintf(outfp, "%s\n", record->getValueText(field, valbuf));
         }
@@ -257,14 +255,14 @@ const char* CcsdsRecordFileWriter::createPrependStr (unsigned char* buffer, int 
             StringLib::format(timestr, MAX_STR_SIZE, "%ld,%02d:%03d:%02d:%02d:%02d,%d", (long)(unix_time * 1000000.0), gmt_time.year, gmt_time.doy, gmt_time.hour, gmt_time.minute, gmt_time.second, 0);
             return StringLib::duplicate(timestr);
 #else
-            CcsdsSpacePacket ccsdspkt(buffer, size);
-            CcsdsSpacePacket::pkt_time_t gmt_time = ccsdspkt.getCdsTimeAsGmt();
+            const CcsdsSpacePacket ccsdspkt(buffer, size);
+            const CcsdsSpacePacket::pkt_time_t gmt_time = ccsdspkt.getCdsTimeAsGmt();
             char gmtstr[MAX_STR_SIZE];
             StringLib::format(gmtstr, MAX_STR_SIZE, "%02d:%03d:%02d:%02d:%02d", gmt_time.year, gmt_time.doy, gmt_time.hour, gmt_time.minute, gmt_time.second);
             return StringLib::duplicate(gmtstr);
 #endif
         }
-        catch(RunTimeException& e)
+        catch(const RunTimeException& e)
         {
             (void)e;
             return "::::";

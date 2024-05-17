@@ -40,12 +40,12 @@
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 #include <limits.h>
 #include <assert.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/types.h>
-#include <sys/time.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -94,10 +94,10 @@ void OsApi::sleep(double secs)
 {
     struct timespec waittime;
 
-    waittime.tv_sec  = (time_t)secs;
-    waittime.tv_nsec = (long)((secs - (long)secs) * 1000000000L);
+    waittime.tv_sec  = static_cast<time_t>(secs);
+    waittime.tv_nsec = static_cast<long>((secs - static_cast<long>(secs)) * 1000000000L);
 
-    while( nanosleep(&waittime, &waittime) == -1 ) continue;
+    while(nanosleep(&waittime, &waittime) == -1 && errno == EINTR);
 }
 
 /*----------------------------------------------------------------------------
@@ -109,7 +109,7 @@ void OsApi::dupstr (const char** dst, const char* src)
     assert(src);
     int len = 0;
     while(src[len] != '\0') len++;
-    char* buf = new char[len + 1]; 
+    char* buf = new char[len + 1];
     for(int k = 0; k < len; k++) buf[k] = src[k];
     buf[len] = '\0';
     *dst = buf;
@@ -123,7 +123,7 @@ void OsApi::dupstr (const char** dst, const char* src)
 *-----------------------------------------------------------------------------*/
 int64_t OsApi::time(int clkid)
 {
-    struct timespec now;
+    struct timespec now = {0, 0};
 
     if (clkid == SYS_CLK)
     {
@@ -138,7 +138,7 @@ int64_t OsApi::time(int clkid)
         return 0;
     }
 
-    return ((int64_t)now.tv_sec * 1000000) + (now.tv_nsec / 1000);
+    return (static_cast<int64_t>(now.tv_sec) * 1000000) + (now.tv_nsec / 1000);
 }
 
 /*----------------------------------------------------------------------------
@@ -152,7 +152,7 @@ int64_t OsApi::timeres(int clkid)
     {
         return 1000000; // microseconds
     }
-    
+
     if (clkid == CPU_CLK)
     {
         return 1000000; // microseconds
@@ -190,10 +190,18 @@ uint64_t OsApi::swapll(uint64_t val)
  *----------------------------------------------------------------------------*/
 float OsApi::swapf(float val)
 {
-    float rtrndata = 0.0;
-    uint8_t* dataptr = (uint8_t*)&rtrndata;
-    uint32_t* tempf = (uint32_t*)(char*)&val;
-    *(uint32_t*)(dataptr) = bswap_32(*tempf);
+    float rtrndata = 0.0F;
+    uint32_t tempf = 0;
+
+    // Copy the float into a uint32_t
+    memcpy(&tempf, &val, sizeof(float));
+
+    // Swap the bytes
+    tempf = bswap_32(tempf);
+
+    // Copy the swapped uint32_t back into a float
+    memcpy(&rtrndata, &tempf, sizeof(float));
+
     return rtrndata;
 }
 
@@ -203,9 +211,17 @@ float OsApi::swapf(float val)
 double OsApi::swaplf(double val)
 {
     double rtrndata = 0.0;
-    uint8_t* dataptr = (uint8_t*)&rtrndata;
-    uint64_t* tempd = (uint64_t*)(char*)&val;
-    *(uint64_t*)(dataptr) = bswap_64(*tempd);
+    uint64_t tempd = 0;
+
+    // Copy the double into a uint64_t
+    memcpy(&tempd, &val, sizeof(double));
+
+    // Swap the bytes
+    tempd = bswap_64(tempd);
+
+    // Copy the swapped uint64_t back into a double
+    memcpy(&rtrndata, &tempd, sizeof(double));
+
     return rtrndata;
 }
 
@@ -231,7 +247,7 @@ double OsApi::memusage (void)
     if(memfd)
     {
         lseek(memfd, 0, SEEK_SET);
-        int bytes_read = read(memfd, buffer, BUFSIZE - 1);
+        const int bytes_read = read(memfd, buffer, BUFSIZE - 1);
         if(bytes_read > 0)
         {
             buffer[bytes_read] = '\0';
@@ -255,7 +271,7 @@ double OsApi::memusage (void)
 
             /* Convert MemTotal */
             errno = 0;
-            long mem_total = strtol(mem_total_ptr, &endptr, 10);
+            const long mem_total = strtol(mem_total_ptr, &endptr, 10);
             if( (endptr == mem_total_ptr) ||
                 (errno == ERANGE && (mem_total == LONG_MAX || mem_total == LONG_MIN)) )
             {
@@ -264,7 +280,7 @@ double OsApi::memusage (void)
 
             /* Convert MemAvailable */
             errno = 0;
-            long mem_available = strtol(mem_available_ptr, &endptr, 10);
+            const long mem_available = strtol(mem_available_ptr, &endptr, 10);
             if( (endptr == mem_available_ptr) ||
                 (errno == ERANGE && (mem_available == LONG_MAX || mem_available == LONG_MIN)) )
             {
@@ -280,7 +296,7 @@ double OsApi::memusage (void)
             /* Calculate Memory Usage */
             return 1.0 - ((double)mem_available / (double)mem_total);
         }
-        
+
         return 0.0;
     }
 

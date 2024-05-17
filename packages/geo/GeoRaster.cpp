@@ -72,9 +72,7 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms, const std::string& _fileNam
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-GeoRaster::~GeoRaster(void)
-{
-}
+GeoRaster::~GeoRaster(void) = default;
 
 
 /*----------------------------------------------------------------------------
@@ -228,7 +226,7 @@ int GeoRaster::luaBoundingBox(lua_State *L)
         GeoRaster *lua_obj = dynamic_cast<GeoRaster*>(getLuaSelf(L, 1));
 
         /* Set Return Values */
-        GdalRaster::bbox_t bbox = lua_obj->raster.getBbox();
+        const GdalRaster::bbox_t bbox = lua_obj->raster.getBbox();
         lua_pushnumber(L, bbox.lon_min);
         lua_pushnumber(L, bbox.lat_min);
         lua_pushnumber(L, bbox.lon_max);

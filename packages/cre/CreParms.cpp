@@ -111,7 +111,7 @@ CreParms::CreParms (lua_State* L, int index):
                 string s(image);
                 for (auto c_iter = s.begin(); c_iter < s.end(); ++c_iter)
                 {
-                    int c = *c_iter;
+                    const int c = *c_iter;
                     if(!isalnum(c) && (c != '/') && (c != '.') && (c != ':') && (c != '-'))
                     {
                         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid character found in image name: %c", c);
@@ -198,7 +198,7 @@ int CreParms::luaImage (lua_State* L)
 {
     try
     {
-        CreParms* lua_obj = dynamic_cast<CreParms*>(getLuaSelf(L, 1));
+        const CreParms* lua_obj = dynamic_cast<CreParms*>(getLuaSelf(L, 1));
         if(lua_obj->image) lua_pushstring(L, lua_obj->image);
         else lua_pushnil(L);
         return 1;

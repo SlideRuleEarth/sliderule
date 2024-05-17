@@ -13,37 +13,37 @@
  * access to either file, you may request a copy from help@hdfgroup.org.     *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* MODIFICATIONS 
+/* MODIFICATIONS
  *
  * This code adapts the HDF5 H5A__dense_open reading mechanism into C++.
- * 
+ *
  * SUPPORTED SEARCH / STRUCTURES:
  * - ONLY Type 8 Records - "Attribute Name for Indexed Attributes"
  * - ONLY Managed objects in the Fractal Heap
- * 
- * RELEVANT HD5 DOCUMENTATION: 
+ *
+ * RELEVANT HD5 DOCUMENTATION:
  * https://docs.hdfgroup.org/hdf5/v1_10/_f_m_t3.html#Btrees:~:text=III.A.2.%20Disk%20Format%3A%20Level%201A2%20%2D%20Version%202%20B%2Dtrees
- * 
+ *
  * RELEVANT HDF5 SRC LIBRARY
  * https://github.com/HDFGroup/hdf5/blob/45ac12e6b660edfb312110d4e3b4c6970ff0585a/src/H5Adense.c#L322
- * 
+ *
  * CONTROL FLOW:
  * Externally, if regular attribute message reading fails in H5coro to locate the object,
  * H5Dense generates a temporary H5BTreeV2 object representing a Version 2 B-Tree.
- * V2 B-Tree contains a root node, which links to Internal Nodes (points to child nodes) 
- * and Leaf Nodes (contains Records). Nodes are organized under a Binary Search Tree (BST) 
- * style; the value used for the search is the "Hash of Name" in the Type 8 record. 
+ * V2 B-Tree contains a root node, which links to Internal Nodes (points to child nodes)
+ * and Leaf Nodes (contains Records). Nodes are organized under a Binary Search Tree (BST)
+ * style; the value used for the search is the "Hash of Name" in the Type 8 record.
  * Once a matching "Hash of Name" is found for the desired attribute name, the Heap ID
- * is extracted from the record to search the fractal heap for the actual attribute message. 
+ * is extracted from the record to search the fractal heap for the actual attribute message.
  * An object in the fractal heap is identified by means of a heap ID.
- * 
+ *
  * The fractal heap stores an object in one of three ways, depending on the object’s size:
  * Managed, Tiny, Huge. Managed (Supported) uses a Doubling Table structure which uses the heap ID
  * to identify at what offset the object is located at.
- * 
+ *
  * Finally, the H5Dense returns control flow to the H5Coro program via the H5BTreeV2 structure
  * On success, the structure provides the address of the Attribute Message.
- * 
+ *
  */
 
 /******************************************************************************
@@ -64,17 +64,17 @@
 H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_name,  H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file)
 {
     /* Stack */
-    vector<btree2_node_info_t> _node_info;
-    vector<size_t> _nat_off;
+    const vector<btree2_node_info_t> _node_info;
+    const vector<size_t> _nat_off;
     vector<uint64_t> row_block_size;
     vector<uint64_t> row_block_off;
     vector<uint64_t> row_tot_dblock_free;
     vector<uint64_t> row_max_dblock_free;
 
     /* Init outputs */
-    pos_out = 0; 
-    hdr_flags_out = 0; 
-    hdr_dlvl_out = 0; 
+    pos_out = 0;
+    hdr_flags_out = 0;
+    hdr_dlvl_out = 0;
     msg_size_out = 0;
     found_attr = false;
 
@@ -95,28 +95,30 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
     node_size = 0;
     rrec_size = 0;
     depth = 0;
-    split_percent = 0; 
+    split_percent = 0;
     merge_percent = 0;
     // root = NULL;
     check_sum = 0;
     node_info = _node_info;
     nat_off = _nat_off;
-    
+
     /* BEGIN DENSE ATTRIBUTE READ */
-    
+
     /* NOT IMPLEMENTED: SHARED ATTR SUPPORT */
     print2term("WARNING: isTypeSharedAttrs is NOT implemented for dense attr reading \n");
+#if 0
     bool shared_attributes = isTypeSharedAttrs(H5FileBuffer::ATTRIBUTE_MSG);
-    if (shared_attributes)
+    if(shared_attributes)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "sharedAttribute reading is not implemented");
     }
+#endif
 
     /*** INIT BTREE HDR ***/
 
     /* Populate header */
     uint64_t pos = addr;
-    uint32_t signature = (uint32_t)h5filePtr_->readField(4, &pos);
+    const uint32_t signature = (uint32_t)h5filePtr_->readField(4, &pos);
 
     /* Signature check */
     if(signature != H5FileBuffer::H5_V2TREE_SIGNATURE_LE)
@@ -124,7 +126,7 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header signature: 0x%llX", (unsigned long long)signature);
     }
     /* Version check */
-    uint8_t version = (uint8_t) h5filePtr_->readField(1, &pos);
+    const uint8_t version = (uint8_t) h5filePtr_->readField(1, &pos);
     if(version != 0)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header version: %hhu", version);
@@ -165,7 +167,7 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
     node_info.resize(depth + 1);
 
     /* Leaf node info */
-    sz_max_nrec = (((node_size) - H5B2_METADATA_PREFIX_SIZE) / (rrec_size));  
+    sz_max_nrec = (((node_size) - H5B2_METADATA_PREFIX_SIZE) / (rrec_size));
 
     safeAssigned(node_info[0].max_nrec, sz_max_nrec);
     node_info[0].max_nrec = (uint32_t) sz_max_nrec;
@@ -176,7 +178,7 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
 
     /* alloc array of pointers to internal node native keys */
     nat_off.resize(node_info[0].max_nrec);
-    
+
     /* Initialize offsets in native key block */
     if (node_info[0].max_nrec != 0 ){
         for (uint32_t u = 0; u < node_info[0].max_nrec; u++) {
@@ -224,7 +226,7 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
     uint64_t acc_block_off = (uint64_t) fheap_info->starting_blk_size * fheap_info->table_width;
     dtable.row_block_size[0] = (uint64_t) fheap_info->starting_blk_size;
     dtable.row_block_off[0] = 0;
-    
+
     for (size_t j = 1; j < dtable.max_root_rows; j++) {
         dtable.row_block_size[j] = tmp_block_size;
         dtable.row_block_off[j] = acc_block_off;
@@ -285,7 +287,7 @@ uint32_t H5BTreeV2::log2Gen(uint64_t n) {
     else if ((tt = (uint32_t)(n >> 16)))
         r = (t = (uint32_t)(n >> 24)) ? 24 + (uint32_t)LogTable256[t] : 16 + (uint32_t)LogTable256[tt & 0xFF];
     else
-        // added 'uint8_t' cast to pacify PGCC compiler 
+        // added 'uint8_t' cast to pacify PGCC compiler
         r = (t = (uint32_t)(n >> 8)) ? 8 + (uint32_t)LogTable256[t] : (uint32_t)LogTable256[(uint8_t)n];
 
     return (r);
@@ -322,7 +324,6 @@ uint16_t H5BTreeV2::sizeOffsetBits(uint16_t b) {
 uint16_t H5BTreeV2::sizeOffsetLen(int32_t l) {
     /* Offset Len spinning off bit size - taken from h5 macro */
     return sizeOffsetBits((uint16_t) log2Of2((uint32_t) l));
-
 }
 
 /*----------------------------------------------------------------------------
@@ -337,23 +338,23 @@ uint32_t H5BTreeV2::lookup3Rot(uint32_t x, uint32_t k) {
  * lookup3Mix
  *----------------------------------------------------------------------------*/
 void H5BTreeV2::lookup3Mix(uint32_t& a,uint32_t& b, uint32_t& c) {
-    a -= c;                                                                                              
-    a ^= lookup3Rot(c, 4);                                                                           
-    c += b;                                                                                              
-    b -= a;                                                                                              
-    b ^= lookup3Rot(a, 6);                                                                           
-    a += c;                                                                                              
-    c -= b;                                                                                              
-    c ^= lookup3Rot(b, 8);                                                                           
-    b += a;                                                                                              
-    a -= c;                                                                                              
-    a ^= lookup3Rot(c, 16);                                                                          
-    c += b;                                                                                              
-    b -= a;                                                                                              
-    b ^= lookup3Rot(a, 19);                                                                          
-    a += c;                                                                                              
-    c -= b;                                                                                              
-    c ^= lookup3Rot(b, 4);                                                                           
+    a -= c;
+    a ^= lookup3Rot(c, 4);
+    c += b;
+    b -= a;
+    b ^= lookup3Rot(a, 6);
+    a += c;
+    c -= b;
+    c ^= lookup3Rot(b, 8);
+    b += a;
+    a -= c;
+    a ^= lookup3Rot(c, 16);
+    c += b;
+    b -= a;
+    b ^= lookup3Rot(a, 19);
+    a += c;
+    c -= b;
+    c ^= lookup3Rot(b, 4);
     b += a;
 }
 
@@ -361,19 +362,19 @@ void H5BTreeV2::lookup3Mix(uint32_t& a,uint32_t& b, uint32_t& c) {
  * lookup3Final
  *----------------------------------------------------------------------------*/
 void H5BTreeV2::lookup3Final(uint32_t& a, uint32_t& b, uint32_t& c) {
-    c ^= b;                                                                                              
-    c -= lookup3Rot(b, 14);                                                                          
-    a ^= c;                                                                                              
-    a -= lookup3Rot(c, 11);                                                                          
-    b ^= a;                                                                                              
-    b -= lookup3Rot(a, 25);                                                                          
-    c ^= b;                                                                                              
-    c -= lookup3Rot(b, 16);                                                                          
-    a ^= c;                                                                                              
-    a -= lookup3Rot(c, 4);                                                                           
-    b ^= a;                                                                                              
-    b -= lookup3Rot(a, 14);                                                                          
-    c ^= b;                                                                                              
+    c ^= b;
+    c -= lookup3Rot(b, 14);
+    a ^= c;
+    a -= lookup3Rot(c, 11);
+    b ^= a;
+    b -= lookup3Rot(a, 25);
+    c ^= b;
+    c -= lookup3Rot(b, 16);
+    a ^= c;
+    a -= lookup3Rot(c, 4);
+    b ^= a;
+    b -= lookup3Rot(a, 14);
+    c ^= b;
     c -= lookup3Rot(b, 24);
 
 }
@@ -386,8 +387,8 @@ uint32_t H5BTreeV2::checksumLookup3(const void *key, size_t length, uint32_t ini
     /* Source: https://github.com/HDFGroup/hdf5/blob/develop/src/H5checksum.c#L365 */
 
     /* Initialize set up */
-    const uint8_t *k = (const uint8_t *)key;
-    uint32_t a, b, c = 0; 
+    const uint8_t *k = reinterpret_cast<const uint8_t *>(key);
+    uint32_t a, b, c = 0;
 
     /* Set up the internal state */
     a = b = c = 0xdeadbeef + ((uint32_t)length) + initval;
@@ -526,7 +527,7 @@ void H5BTreeV2::varDecode(uint8_t* p, int32_t n, uint8_t l) {
     /* ARG TYPES TAKEN FROM REFERENCE HERE: https://github.com/HDFGroup/hdf5/blob/49cce9173f6e43ffda2924648d863dcb4d636993/src/H5B2cache.c#L668 */
     /* Decode a variable-sized buffer */
     /* (Assumes that the high bits of the integer will be zero) */
-    
+
     size_t _i;
     n = 0;
     (*p) += l; // (p) += l;
@@ -544,8 +545,8 @@ void H5BTreeV2::decodeType5Record(const uint8_t *raw, void *_nrecord) {
     // https://github.com/HDFGroup/hdf5/blob/49cce9173f6e43ffda2924648d863dcb4d636993/src/H5Gbtree2.c#L286
 
     /* TODO: fix reading fields, DO NOT USE DECODE MACRO */
-    btree2_type5_densename_rec_t *nrecord = (btree2_type5_densename_rec_t *)_nrecord;
-    size_t H5G_DENSE_FHEAP_ID_LEN = 7;
+    btree2_type5_densename_rec_t *nrecord = reinterpret_cast<btree2_type5_densename_rec_t *>(_nrecord);
+    const size_t H5G_DENSE_FHEAP_ID_LEN = 7;
     // TODO FIX
     raw += 4;
     memcpy(nrecord->id, raw, H5G_DENSE_FHEAP_ID_LEN);
@@ -559,8 +560,8 @@ uint64_t H5BTreeV2::decodeType8Record(uint64_t internal_pos, void *_nrecord) {
     /* See HDF5 official documentation: https://docs.hdfgroup.org/hdf5/v1_10/_f_m_t3.html#DatatypeMessage:~:text=Layout%3A%20Version%202%20B%2Dtree%2C%20Type%208%20Record%20Layout%20%2D%20Attribute%20Name%20for%20Indexed%20Attributes */
 
     uint32_t u = 0;
-    btree2_type8_densename_rec_t *nrecord = (btree2_type8_densename_rec_t *)_nrecord;
-    
+    btree2_type8_densename_rec_t *nrecord = reinterpret_cast<btree2_type8_densename_rec_t *>(_nrecord);
+
     for (u = 0; u < H5O_FHEAP_ID_LEN; u++ ) {
         nrecord->id.id[u] = (uint8_t) h5filePtr_->readField(1, &internal_pos);
     }
@@ -570,7 +571,7 @@ uint64_t H5BTreeV2::decodeType8Record(uint64_t internal_pos, void *_nrecord) {
     nrecord->hash = (uint32_t) h5filePtr_->readField(4, &internal_pos);
 
     return internal_pos;
-    
+
 }
 
 /*----------------------------------------------------------------------------
@@ -579,8 +580,8 @@ uint64_t H5BTreeV2::decodeType8Record(uint64_t internal_pos, void *_nrecord) {
 void H5BTreeV2::fheapLocate(const void * _id) {
 
     /* Dispatcher for heap ID types - currently only supporting manual type */
-    uint8_t* id = (uint8_t*)_id;
-    uint8_t id_flags = 0; // heap ID flag bits 
+    uint8_t* id = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(_id));
+    uint8_t id_flags = 0; // heap ID flag bits
     id_flags = *id;
 
     if ((id_flags & H5HF_ID_VERS_MASK) != H5HF_ID_VERS_CURR) {
@@ -591,15 +592,15 @@ void H5BTreeV2::fheapLocate(const void * _id) {
     if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_MAN) {
         /* Operate on object from managed heap blocks */
         fheapLocateManaged(id);
-    } 
+    }
     else if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_HUGE) {
         /* NOT IMPLEMENTED - Operate on 'huge' object from file */
         throw RunTimeException(CRITICAL, RTE_ERROR, "Huge heap ID reading not supported");
-    } 
+    }
     else if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_TINY) {
         /* NOT IMPLEMENTED - Operate on 'tiny' object from file */
         throw RunTimeException(CRITICAL, RTE_ERROR, "Tiny heap ID reading not supported");
-    } 
+    }
     else {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unsupported Heap ID");
     }
@@ -621,14 +622,14 @@ void H5BTreeV2::dtableLookup(uint64_t off, uint32_t *row, uint32_t *col) {
         *col = (uint32_t) (off / fheap_info->starting_blk_size);
     }
     else {
-        uint32_t high_bit = log2Gen(off); // determine the high bit in the offset
-        uint64_t off_mask = ((uint64_t)1) << high_bit; // compute mask for determining column
+        const uint32_t high_bit = log2Gen(off); // determine the high bit in the offset
+        const uint64_t off_mask = ((uint64_t)1) << high_bit; // compute mask for determining column
 
         *row = (high_bit - dtable.first_row_bits) + 1;
         eval = ((off - off_mask) / dtable.row_block_size[*row]);
         safeAssigned(*col, eval);
         *col = ((off - off_mask) / dtable.row_block_size[*row]);
-    } 
+    }
 
 }
 
@@ -639,7 +640,7 @@ uint64_t H5BTreeV2::buildEntriesIndirect(int32_t nrows, uint64_t pos, uint64_t* 
     /* Build array of addresses (ent) for this indirect block - follow H5HF__cache_iblock_deserialize x readIndirectBlock */
     uint32_t idx = 0;       // track indx in ents
     uint64_t block_off = 0; // iblock->block_off for moving offset
-    
+
     pos += 5;                               // signature and version
     pos += h5filePtr_->metaData.offsetsize; // skip block header
 
@@ -656,7 +657,7 @@ uint64_t H5BTreeV2::buildEntriesIndirect(int32_t nrows, uint64_t pos, uint64_t* 
         if (row == 0) {
             row_block_size = fheap_info->starting_blk_size;
         }
-        else if (row == 1) { 
+        else if (row == 1) {
             row_block_size = fheap_info->starting_blk_size;
         }
         else {
@@ -670,15 +671,15 @@ uint64_t H5BTreeV2::buildEntriesIndirect(int32_t nrows, uint64_t pos, uint64_t* 
             if(row_block_size <= fheap_info->max_dblk_size)
             {
                 /* Read Direct Block Address and Assign */
-                uint64_t direct_block_addr = h5filePtr_->readField(h5filePtr_->metaData.offsetsize, &pos);
+                const uint64_t direct_block_addr = h5filePtr_->readField(h5filePtr_->metaData.offsetsize, &pos);
                 ents[idx] = direct_block_addr;
                 idx++;
-                
+
             }
             else /* Indirect Block Entry and Assign */
             {
                 /* Read Indirect Block Address */
-                uint64_t indirect_block_addr = h5filePtr_->readField(h5filePtr_->metaData.offsetsize, &pos);
+                const uint64_t indirect_block_addr = h5filePtr_->readField(h5filePtr_->metaData.offsetsize, &pos);
                 ents[idx] = indirect_block_addr;
                 idx++;
             }
@@ -696,7 +697,7 @@ void H5BTreeV2::manualDblockLocate(uint64_t obj_off, uint64_t* ents, uint32_t *r
     /* Mock implementation of H5HF__man_dblock_locate */
     // iblock->ents <-- ents derived from where H5HF_indirect_t **ret_iblock passed
 
-    uint64_t iblock_addr = 0; 
+    uint64_t iblock_addr = 0;
     uint32_t row = 0, col = 0;
     uint64_t block_off = 0;
 
@@ -705,7 +706,7 @@ void H5BTreeV2::manualDblockLocate(uint64_t obj_off, uint64_t* ents, uint32_t *r
 
     /* Set indirect */
     iblock_addr = dtable.table_addr;
-    
+
     /* Read indirect - set up ents array */
     int32_t nrows = fheap_info->curr_num_rows;
     block_off = buildEntriesIndirect(nrows, iblock_addr, ents);
@@ -727,7 +728,6 @@ void H5BTreeV2::manualDblockLocate(uint64_t obj_off, uint64_t* ents, uint32_t *r
 
     /* populate entry pointer using derived info */
     *ret_entry = (row * (uint32_t) fheap_info->table_width) + col;
-
 }
 
 /*----------------------------------------------------------------------------
@@ -738,10 +738,10 @@ void H5BTreeV2::fheapLocateManaged(uint8_t* id){
 
     uint64_t dblock_addr = 0; // found direct block to apply offset on
     uint64_t dblock_block_off = 0; // dblock block offset, extracted from top of dir block header
-    uint64_t obj_off = 0; // offset of object in heap 
+    uint64_t obj_off = 0; // offset of object in heap
     size_t obj_len = 0; // len of object in heap
-    size_t blk_off = 0; // offset of object in block 
-    
+    size_t blk_off = 0; // offset of object in block
+
     id++; // skip due to flag reading
     memcpy(&obj_off, id, (size_t)(fheap_info->heap_off_size));
     id += fheap_info->heap_off_size;
@@ -756,18 +756,21 @@ void H5BTreeV2::fheapLocateManaged(uint8_t* id){
     else
     {
         /* Indirect Block Navigation */
-        uint64_t ents[(size_t)fheap_info->curr_num_rows * fheap_info->table_width]; // mimic H5HF_indirect_ent_t of the H5HF_indirect_t struct
+        const size_t num_elements = static_cast<size_t>(fheap_info->curr_num_rows) * fheap_info->table_width;
+        uint64_t* ents = new uint64_t[num_elements](); // mimic H5HF_indirect_ent_t of the H5HF_indirect_t struct
         uint32_t entry; // entry of block
-        
+
         /* Search for direct block using double table and offset */
-        manualDblockLocate(obj_off, ents, &entry); 
+        manualDblockLocate(obj_off, ents, &entry);
         dblock_addr = ents[entry];
 
+        /* Free allocated memory */
+        delete[] ents;
     }
 
     /* read direct block to access message */
     uint64_t pos = dblock_addr;
-    pos += 5; // skip signature and version of object 
+    pos += 5; // skip signature and version of object
     pos += h5filePtr_->metaData.offsetsize; // skip heap hdr addr
 
     /* Unpack block offset */
@@ -776,13 +779,13 @@ void H5BTreeV2::fheapLocateManaged(uint8_t* id){
     h5filePtr_->readByteArray(new_block_offset_buf, fheap_info->blk_offset_size, &pos);
     memcpy(&dblock_block_off, new_block_offset_buf, sizeof(uint64_t));
 
-    /* Checksum */ 
+    /* Checksum */
     // TODO (only present if flags 1 see spec)
 
     /* position pointer inside of dblock to read object */
     blk_off = (size_t)(obj_off - dblock_block_off);
     pos = dblock_addr + (uint64_t) blk_off;
-    uint64_t msg_size = (uint64_t) obj_len;
+    const uint64_t msg_size = (uint64_t) obj_len;
 
     /* read object switch on mssg type */
     switch(type) {
@@ -802,13 +805,14 @@ void H5BTreeV2::fheapLocateManaged(uint8_t* id){
 /*----------------------------------------------------------------------------
  * fheapNameCmp
  *----------------------------------------------------------------------------*/
-void H5BTreeV2::fheapNameCmp(const void *obj, size_t obj_len, void *op_data){
+void H5BTreeV2::fheapNameCmp(const void *obj, size_t obj_len, const void *op_data){
 
     // temp satisfy print
-    print2term("fheapNameCmp args: %lu, %lu, %lu", (uintptr_t) obj, (uintptr_t) obj_len, (uintptr_t) op_data);
+    print2term("fheapNameCmp args: %lu, %lu, %lu",
+                static_cast<unsigned long>(reinterpret_cast<uintptr_t>(obj)),
+                static_cast<unsigned long>(obj_len),
+                static_cast<unsigned long>(reinterpret_cast<uintptr_t>(op_data)));
     // TODO
-    return;
-
 }
 
  /*----------------------------------------------------------------------------
@@ -819,7 +823,7 @@ void H5BTreeV2::compareType8Record(const void *_bt2_rec, int32_t *result)
     /* Implementation of H5A__dense_btree2_name_compare with type 8 - H5B2_GRP_DENSE_NAME_ID*/
     /* See: https://github.com/HDFGroup/hdf5/blob/0ee99a66560422fc20864236a83bdcd0103d8f64/src/H5Abtree2.c#L220 */
 
-    const btree2_type8_densename_rec_t *bt2_rec   = (const btree2_type8_densename_rec_t *)_bt2_rec;
+    const btree2_type8_densename_rec_t *bt2_rec = static_cast<const btree2_type8_densename_rec_t *>(_bt2_rec);
 
     /* Check hash value - influence btree search direction */
     if (name_hash < bt2_rec->hash)
@@ -840,15 +844,15 @@ void H5BTreeV2::compareType8Record(const void *_bt2_rec, int32_t *result)
         /* Locate object in fractal heap */
         fheapLocate(&bt2_rec->id);
         *result = 0;
-        
-    } 
+
+    }
 }
 
  /*----------------------------------------------------------------------------
  * locateRecordBTreeV2
  *----------------------------------------------------------------------------*/
-void H5BTreeV2::locateRecordBTreeV2(uint32_t nrec, size_t *rec_off, const uint8_t *native, uint32_t *idx, int32_t *cmp) {
-    /* Performs a binary search to locate a record in a sorted array of records 
+void H5BTreeV2::locateRecordBTreeV2(uint32_t nrec, const size_t *rec_off, const uint8_t *native, uint32_t *idx, int32_t *cmp) {
+    /* Performs a binary search to locate a record in a sorted array of records
     sets *idx to location of record greater than or equal to record to locate */
     /* hdf5 ref implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2int.c#L89 */
 
@@ -880,27 +884,27 @@ void H5BTreeV2::locateRecordBTreeV2(uint32_t nrec, size_t *rec_off, const uint8_
  /*----------------------------------------------------------------------------
  * openInternalNode
  *----------------------------------------------------------------------------*/
-void H5BTreeV2::openInternalNode(btree2_internal_t *internal, uint64_t internal_pos, btree2_node_ptr_t* curr_node_ptr) {
+void H5BTreeV2::openInternalNode(btree2_internal_t *internal, uint64_t internal_pos, const btree2_node_ptr_t* curr_node_ptr) {
     /* Set up internal node structure from given addr start: internal_pos */
 
-    uint8_t *native = NULL;  
+    uint8_t *native = NULL;
     uint32_t u = 0;
     int32_t node_nrec = 0;
 
     /* Signature sanity check */
-    uint32_t signature = (uint32_t) h5filePtr_->readField(4, &internal_pos);
+    const uint32_t signature = (uint32_t) h5filePtr_->readField(4, &internal_pos);
     if (signature != H5FileBuffer::H5_V2TREE_INTERNAL_SIGNATURE_LE) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match internal node: %u", signature);
     }
 
     /* Version check */
-    uint8_t version = (uint8_t) h5filePtr_->readField(1, &internal_pos);
+    const uint8_t version = (uint8_t) h5filePtr_->readField(1, &internal_pos);
     if (version != 0) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid version for internal node: %u", version);
     }
 
     /* B-tree Type check */
-    uint8_t _type = (uint8_t) h5filePtr_->readField(1, &internal_pos);
+    const uint8_t _type = (uint8_t) h5filePtr_->readField(1, &internal_pos);
     if ((btree2_subid_t)_type != type) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid type for internal node: %u, expected from hdr: %u", _type, type);
     }
@@ -926,22 +930,22 @@ void H5BTreeV2::openInternalNode(btree2_internal_t *internal, uint64_t internal_
         /* Move to next record */
         native += nrec_size;
 
-    } 
-    
+    }
+
     /* Deserialize node pointers for internal node */
     btree2_node_ptr_t *int_node_ptr = internal->node_ptrs.data();
     for (u = 0; u < (uint32_t)(internal->nrec + 1); u++) {
         /* Decode node address -- see H5F_addr_decode */
-        size_t addr_size = (size_t) h5filePtr_->metaData.offsetsize; // as defined by hdf spec
+        const size_t addr_size = (size_t) h5filePtr_->metaData.offsetsize; // as defined by hdf spec
 
-        addrDecode(addr_size, (const uint8_t **)&internal_pos, &(int_node_ptr->addr)); // internal pos value should change
-        varDecode((uint8_t *)internal_pos, node_nrec, max_nrec_size);
+        addrDecode(addr_size, reinterpret_cast<const uint8_t **>(&internal_pos), &(int_node_ptr->addr)); // internal pos value should change
+        varDecode(reinterpret_cast<uint8_t *>(internal_pos), node_nrec, max_nrec_size); // NOLINT(performance-no-int-to-ptr)
 
         safeAssigned(int_node_ptr->node_nrec, node_nrec);
         int_node_ptr->node_nrec = (uint16_t) node_nrec;
 
         if (internal->depth > 1) {
-            varDecode((uint8_t *)internal_pos, int_node_ptr->all_nrec, node_info[internal->depth - 1].cum_max_nrec_size);
+            varDecode(reinterpret_cast<uint8_t *>(internal_pos), int_node_ptr->all_nrec, node_info[internal->depth - 1].cum_max_nrec_size); // NOLINT(performance-no-int-to-ptr)
         }
         else {
             int_node_ptr->all_nrec = int_node_ptr->node_nrec;
@@ -956,40 +960,39 @@ void H5BTreeV2::openInternalNode(btree2_internal_t *internal, uint64_t internal_
     // TODO
 
     /* Return structure inside of internal */
-    return;
 }
 
 /*----------------------------------------------------------------------------
  * openLeafNode
  *----------------------------------------------------------------------------*/
-uint64_t H5BTreeV2::openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos) {
+uint64_t H5BTreeV2::openLeafNode(const btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t *leaf, uint64_t internal_pos) {
     /* given pointer to lead node, set *leaf struct and deserialize the records contained at the node */
     /* hdf5 ref implementation: https://github.com/HDFGroup/hdf5/blob/cc50a78000a7dc536ecff0f62b7206708987bc7d/src/H5B2cache.c#L988 */
 
-    uint8_t *native = NULL;  
-    uint32_t u = 0; 
+    uint8_t *native = NULL;
+    uint32_t u = 0;
 
     /* Signature Check*/
-    uint32_t signature = (uint32_t) h5filePtr_->readField(4, &internal_pos);
+    const uint32_t signature = (uint32_t) h5filePtr_->readField(4, &internal_pos);
     if (signature != H5FileBuffer::H5_V2TREE_LEAF_SIGNATURE_LE) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match leaf node: %u", signature);
     }
 
     /* Version check */
-    uint8_t version = (uint8_t) h5filePtr_->readField(1, &internal_pos);
+    const uint8_t version = (uint8_t) h5filePtr_->readField(1, &internal_pos);
     if (version != 0) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Version does not match leaf node: %u", version);
     }
 
     /* Type check */
-    uint8_t _type = (uint8_t) h5filePtr_->readField(1, &internal_pos);
+    const uint8_t _type = (uint8_t) h5filePtr_->readField(1, &internal_pos);
     if ((btree2_subid_t) _type != type) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Type of leaf node: %u, does not match header type: %u", _type, type);
     }
 
     /* Allocate space for the native keys in memory & set num records */
     leaf->nrec = curr_node_ptr->node_nrec;
-    
+
     /* Deserialize records*/
     native = leaf->leaf_native.data();
     for (u = 0; u < leaf->nrec; u++) {
@@ -998,7 +1001,7 @@ uint64_t H5BTreeV2::openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t
             case H5B2_ATTR_DENSE_NAME_ID:
                 internal_pos = decodeType8Record(internal_pos, native);
                 break;
-            
+
             default:
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented type for decode: %d", type);
         }
@@ -1042,7 +1045,7 @@ uint64_t H5BTreeV2::openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t
     /* Walk down B-tree to find record or leaf node where record is located */
     cmp = -1;
     curr_pos = H5B2_POS_ROOT;
-     
+
     /* Init internal */
     btree2_node_ptr_t next_node_ptr;
     btree2_internal_t internal;
@@ -1053,7 +1056,7 @@ uint64_t H5BTreeV2::openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t
         for (uint32_t u = 1; u < (uint32_t)(_depth + 1); u++) {
             print2term("WARNING: UNTESTED IMPLEMENTATION FOR INTERNAL NODE \n");
 
-            uint32_t b2_int_ptr_size = (uint32_t)(h5filePtr_->metaData.offsetsize) + max_nrec_size + (node_info[(u)-1]).cum_max_nrec_size; // = H5B2_INT_POINTER_SIZE(h, u) 
+            const uint32_t b2_int_ptr_size = (uint32_t)(h5filePtr_->metaData.offsetsize) + max_nrec_size + (node_info[(u)-1]).cum_max_nrec_size; // = H5B2_INT_POINTER_SIZE(h, u)
             sz_max_nrec = ((node_size - (H5B2_METADATA_PREFIX_SIZE + b2_int_ptr_size)) / (rrec_size + b2_int_ptr_size)); // = H5B2_NUM_INT_REC(hdr, u);
             safeAssigned(node_info[u].max_nrec, sz_max_nrec);
             node_info[u].max_nrec = sz_max_nrec;
@@ -1062,11 +1065,11 @@ uint64_t H5BTreeV2::openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t
             node_info[u].split_nrec = (node_info[u].max_nrec * split_percent) / 100;
             node_info[u].merge_nrec = (node_info[u].max_nrec * merge_percent) / 100;
             node_info[u].cum_max_nrec = ((node_info[u].max_nrec + 1) * node_info[u - 1].cum_max_nrec) + node_info[u].max_nrec;
-            u_max_nrec_size = (log2Gen((uint64_t)node_info[u].cum_max_nrec) / 8) + 1;
+            u_max_nrec_size = (log2Gen(node_info[u].cum_max_nrec) / 8) + 1;
 
             safeAssigned(node_info[u].cum_max_nrec_size, u_max_nrec_size);
             node_info[u].cum_max_nrec_size= (uint8_t) u_max_nrec_size;
-        
+
         }
 
     }
@@ -1076,7 +1079,7 @@ uint64_t H5BTreeV2::openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t
         print2term("WARNING: UNTESTED IMPLEMENTATION FOR INTERNAL NODE \n");
 
         /* INTERNAL NODE SET UP - Write into internal */
-        uint64_t internal_pos = curr_node_ptr->addr; // snapshot internal addr start
+        const uint64_t internal_pos = curr_node_ptr->addr; // snapshot internal addr start
         openInternalNode(&internal, internal_pos, curr_node_ptr); // internal set with all info for locate record
 
         /* LOCATE RECORD - via type compare method */
@@ -1086,7 +1089,7 @@ uint64_t H5BTreeV2::openLeafNode(btree2_node_ptr_t *curr_node_ptr, btree2_leaf_t
             idx++;
         }
         if (cmp != 0) {
-            
+
             next_node_ptr = internal.node_ptrs[idx];
 
             /* Set the position of the next node */

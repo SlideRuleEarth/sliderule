@@ -218,7 +218,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     result.photons = NULL;
 
     /* Get Input */
-    Atl03Reader::extent_t* extent = (Atl03Reader::extent_t*)record->getRecordData();
+    Atl03Reader::extent_t* extent = reinterpret_cast<Atl03Reader::extent_t*>(record->getRecordData());
 
     /* Build Ancillary Inputs */
     if(records)
@@ -226,9 +226,9 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
         for(size_t i = 1; i < records->size(); i++) // start at one to skip atl03rec
         {
             RecordObject* rec = records->at(i);
-            AncillaryFields::element_array_t* anc_rec = (AncillaryFields::element_array_t*)rec->getRecordData();
+            AncillaryFields::element_array_t* anc_rec = reinterpret_cast<AncillaryFields::element_array_t*>(rec->getRecordData());
 
-            /* Build Array of Values 
+            /* Build Array of Values
                 * to be used by iterativeFitStage..lsf */
             double* values = AncillaryFields::extractAsDoubles(anc_rec); // `new` memory allocated here
             result.anc_values.push_back(values);
@@ -275,7 +275,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     postResult(&result);
 
     /* Delete Ancillary Value Arrays */
-    for(auto& values: result.anc_values)
+    for(const auto& values: result.anc_values)
     {
         delete [] values;
     }
@@ -332,22 +332,22 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t& 
     int iteration = 0;
 
     /* Initial Per Track Calculations */
-    double pulses_in_extent     = (extent->extent_length * PULSE_REPITITION_FREQUENCY) / extent->spacecraft_velocity; // N_seg_pulses, section 5.4, procedure 1d
-    double background_density   = pulses_in_extent * extent->background_rate / (SPEED_OF_LIGHT / 2.0); // BG_density, section 5.7, procedure 1c
+    const double pulses_in_extent     = (extent->extent_length * PULSE_REPITITION_FREQUENCY) / extent->spacecraft_velocity; // N_seg_pulses, section 5.4, procedure 1d
+    const double background_density   = pulses_in_extent * extent->background_rate / (SPEED_OF_LIGHT / 2.0); // BG_density, section 5.7, procedure 1c
 
     /* Iterate Processing of Photons */
     while(!done)
     {
-        int num_photons = result.elevation.photon_count;
+        const int num_photons = result.elevation.photon_count;
 
         /* Calculate Least Squares Fit */
-        lsf_t fit = lsf(extent, result, false);
+        const lsf_t fit = lsf(extent, result, false);
 
         /* Calculate Residuals */
         for(int p = 0; p < num_photons; p++)
         {
-            double x = extent->photons[result.photons[p].p].x_atc;
-            double y = extent->photons[result.photons[p].p].height;
+            const double x = extent->photons[result.photons[p].p].x_atc;
+            const double y = extent->photons[result.photons[p].p].height;
             result.photons[p].r = y - (fit.height + (x * fit.slope));
         }
 
@@ -372,9 +372,9 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t& 
         }
 
         /* Continued Inputs to Robust Dispersion Estimate */
-        double background_rate  = background_count / (window_upper_bound - window_lower_bound); // bckgrd, section 5.9, procedure 1a
-        double signal_count     = num_photons - background_count; // N_sig, section 5.9, procedure 1b
-        double sigma_r          = 0.0; // sigma_r
+        const double background_rate  = background_count / (window_upper_bound - window_lower_bound); // bckgrd, section 5.9, procedure 1a
+        const double signal_count     = num_photons - background_count; // N_sig, section 5.9, procedure 1b
+        double sigma_r                = 0.0; // sigma_r
 
         /* Calculate Robust Dispersion Estimate */
         if(signal_count <= 1)
@@ -387,7 +387,7 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t& 
             int32_t i0 = 0;
             while(i0 < num_photons)
             {
-                double spp = (0.25 * signal_count) + ((result.photons[i0].r - window_lower_bound) * background_rate); // section 5.9, procedure 4a
+                const double spp = (0.25 * signal_count) + ((result.photons[i0].r - window_lower_bound) * background_rate); // section 5.9, procedure 4a
                 if( (((double)i0) + 1.0 - 0.5 + 1.0) < spp )    i0++;   // +1 adjusts for 0 vs 1 based indices, -.5 rounds, +1 looks ahead
                 else                                            break;
             }
@@ -396,7 +396,7 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t& 
             int32_t i1 = num_photons - 1;
             while(i1 >= 0)
             {
-                double spp = (0.75 * signal_count) + ((result.photons[i1].r - window_lower_bound) * background_rate); // section 5.9, procedure 4a
+                const double spp = (0.75 * signal_count) + ((result.photons[i1].r - window_lower_bound) * background_rate); // section 5.9, procedure 4a
                 if( (((double)i1) + 1.0 - 0.5 - 1.0) > spp )    i1--;   // +1 adjusts for 0 vs 1 based indices, -.5 rounds, +1 looks ahead
                 else                                            break;
             }
@@ -405,11 +405,11 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t& 
             if(i1 < i0)
             {
                 /* Find Spread of Central Values (0) */
-                double spp0 = (num_photons / 2.0) - (signal_count / 4.0); // section 5.9, procedure 5a
+                const double spp0 = (num_photons / 2.0) - (signal_count / 4.0); // section 5.9, procedure 5a
                 i0 = (int32_t)(spp0 + 0.5) - 1;
 
                 /* Find Spread of Central Values (1) */
-                double spp1 = (num_photons / 2.0) + (signal_count / 4.0); // section 5.9, procedure 5b
+                const double spp1 = (num_photons / 2.0) + (signal_count / 4.0); // section 5.9, procedure 5b
                 i1 = (int32_t)(spp1 + 0.5);
             }
 
@@ -428,15 +428,15 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t& 
         }
 
         /* Calculate Sigma Expected */
-        double se1 = pow((SPEED_OF_LIGHT / 2.0) * SIGMA_XMIT, 2);
-        double se2 = pow(SIGMA_BEAM, 2) * pow(result.elevation.dh_fit_dx, 2);
-        double sigma_expected = sqrt(se1 + se2); // sigma_expected, section 5.5, procedure 4d
+        const double se1 = pow((SPEED_OF_LIGHT / 2.0) * SIGMA_XMIT, 2);
+        const double se2 = pow(SIGMA_BEAM, 2) * pow(result.elevation.dh_fit_dx, 2);
+        const double sigma_expected = sqrt(se1 + se2); // sigma_expected, section 5.5, procedure 4d
 
         /* Calculate Window Height */
         if(sigma_r > parms->maximum_robust_dispersion) sigma_r = parms->maximum_robust_dispersion;
-        double new_window_height = MAX(MAX(parms->minimum_window, 6.0 * sigma_expected), 6.0 * sigma_r); // H_win, section 5.5, procedure 4e
+        const double new_window_height = MAX(MAX(parms->minimum_window, 6.0 * sigma_expected), 6.0 * sigma_r); // H_win, section 5.5, procedure 4e
         result.elevation.window_height = MAX(new_window_height, 0.75 * result.elevation.window_height); // section 5.7, procedure 2e
-        double window_spread = result.elevation.window_height / 2.0;
+        const double window_spread = result.elevation.window_height / 2.0;
 
         /* Precalculate Next Iteration's Conditions (section 5.7, procedure 2h) */
         int32_t next_num_photons = 0;
@@ -447,7 +447,7 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t& 
             if(abs(result.photons[p].r) < window_spread)
             {
                 next_num_photons++;
-                double x = extent->photons[result.photons[p].p].x_atc;
+                const double x = extent->photons[result.photons[p].p].x_atc;
                 if(x < x_min) x_min = x;
                 if(x > x_max) x_max = x;
             }
@@ -552,7 +552,7 @@ void Atl06Dispatch::postResult (result_t* result)
         if((!result && elevationIndex > 0) || elevationIndex == BATCH_SIZE)
         {
             /* Adjust Size of Elevation Record */
-            int elevation_rec_size = elevationIndex * sizeof(elevation_t);
+            const int elevation_rec_size = elevationIndex * sizeof(elevation_t);
             elevationRecord.setUsedData(elevation_rec_size);
 
             /* Serialize Record(s) */
@@ -618,7 +618,7 @@ int Atl06Dispatch::luaStats (lua_State* L)
         Atl06Dispatch* lua_obj = dynamic_cast<Atl06Dispatch*>(getLuaSelf(L, 1));
 
         /* Get Clear Parameter */
-        bool with_clear = getLuaBoolean(L, 2, true, false);
+        const bool with_clear = getLuaBoolean(L, 2, true, false);
 
         /* Create Statistics Table */
         lua_newtable(L);
@@ -680,7 +680,7 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
 {
     lsf_t fit;
     point_t* array = result.photons;
-    int size = result.elevation.photon_count;
+    const int size = result.elevation.photon_count;
 
     /* Initialize Fit */
     fit.height = 0.0;
@@ -688,12 +688,12 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
     fit.y_sigma = 0.0;
 
     /* Calculate G^T*G and GT*h*/
-    double gtg_11 = size;
-    double gtg_12_21 = 0.0;
-    double gtg_22 = 0.0;
+    const double gtg_11 = size;
+    double       gtg_12_21 = 0.0;
+    double       gtg_22 = 0.0;
     for(int p = 0; p < size; p++)
     {
-        double x = extent->photons[array[p].p].x_atc;
+        const double x = extent->photons[array[p].p].x_atc;
 
         /* Perform Matrix Operation */
         gtg_12_21 += x;
@@ -701,23 +701,23 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
     }
 
     /* Calculate (G^T*G)^-1 */
-    double det = 1.0 / ((gtg_11 * gtg_22) - (gtg_12_21 * gtg_12_21));
-    double igtg_11 = gtg_22 * det;
-    double igtg_12_21 = -1 * gtg_12_21 * det;
-    double igtg_22 = gtg_11 * det;
+    const double det = 1.0 / ((gtg_11 * gtg_22) - (gtg_12_21 * gtg_12_21));
+    const double igtg_11 = gtg_22 * det;
+    const double igtg_12_21 = -1 * gtg_12_21 * det;
+    const double igtg_22 = gtg_11 * det;
 
     if(!final) /* Height */
     {
         /* Calculate G^-g and m */
         for(int p = 0; p < size; p++)
         {
-            Atl03Reader::photon_t* ph = &extent->photons[array[p].p];
-            double x = ph->x_atc;
-            double y = ph->height;
+            const Atl03Reader::photon_t* ph = &extent->photons[array[p].p];
+            const double x = ph->x_atc;
+            const double y = ph->height;
 
             /* Perform Matrix Operation */
-            double gig_1 = igtg_11 + (igtg_12_21 * x);   // G^-g row 1 element
-            double gig_2 = igtg_12_21 + (igtg_22 * x);   // G^-g row 2 element
+            const double gig_1 = igtg_11 + (igtg_12_21 * x);   // G^-g row 1 element
+            const double gig_2 = igtg_12_21 + (igtg_22 * x);   // G^-g row 2 element
 
             /* Calculate m */
             fit.height += gig_1 * y;
@@ -743,12 +743,12 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
             double longitude = 0.0;
             double time_ns = 0.0;
             double y_atc = 0.0;
-            
+
             /* Check Need to Shift Longitudes
                assumes that there isn't a set of photons with
                longitudes that extend for more than 30 degrees */
             bool shift_lon = false;
-            double first_lon = extent->photons[array[0].p].longitude;
+            const double first_lon = extent->photons[array[0].p].longitude;
             if(first_lon < -150.0 || first_lon > 150.0)
             {
                 shift_lon = true;
@@ -757,14 +757,14 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
             /* Fixed Fields - Calculate G^-g and m */
             for(int p = 0; p < size; p++)
             {
-                Atl03Reader::photon_t* ph = &extent->photons[array[p].p];
+                const Atl03Reader::photon_t* ph = &extent->photons[array[p].p];
                 double ph_longitude = ph->longitude;
 
                 /* Shift Longitudes */
                 if(shift_lon) ph_longitude = fmod((ph_longitude + 360.0), 360.0);
 
                 /* Perform Matrix Operation */
-                double gig_1 = igtg_11 + (igtg_12_21 * ph->x_atc);   // G^-g row 1 element
+                const double gig_1 = igtg_11 + (igtg_12_21 * ph->x_atc);   // G^-g row 1 element
 
                 /* Calculate m */
                 latitude += gig_1 * ph->latitude;
@@ -785,12 +785,12 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
             /* Ancillary Fields - Calculate G^-g and m */
             for(size_t a = 0; a < result.anc_values.size(); a++)
             {
-                double* values = result.anc_values[a];
+                const double* values = result.anc_values[a];
                 double value = 0;
                 for(int p = 0; p < size; p++)
                 {
-                    Atl03Reader::photon_t* ph = &extent->photons[array[p].p];
-                    double gig_1 = igtg_11 + (igtg_12_21 * ph->x_atc);   // G^-g row 1 element
+                    const Atl03Reader::photon_t* ph = &extent->photons[array[p].p];
+                    const double gig_1 = igtg_11 + (igtg_12_21 * ph->x_atc);   // G^-g row 1 element
                     value += gig_1 * values[p];
                 }
                 AncillaryFields::setValueAsDouble(&result.anc_fields[a], value);
@@ -805,11 +805,11 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
 /*----------------------------------------------------------------------------
  * quicksort
  *----------------------------------------------------------------------------*/
-void Atl06Dispatch::quicksort(point_t* array, int start, int end)
+void Atl06Dispatch::quicksort(point_t* array, int start, int end) // NOLINT(misc-no-recursion)
 {
     if(start < end)
     {
-        int partition = quicksortpartition(array, start, end);
+        const int partition = quicksortpartition(array, start, end);
         quicksort(array, start, partition);
         quicksort(array, partition + 1, end);
     }
@@ -820,7 +820,7 @@ void Atl06Dispatch::quicksort(point_t* array, int start, int end)
  *----------------------------------------------------------------------------*/
 int Atl06Dispatch::quicksortpartition(point_t* array, int start, int end)
 {
-    double pivot = array[(start + end) / 2].r;
+    const double pivot = array[(start + end) / 2].r;
 
     start--;
     end++;
@@ -830,7 +830,7 @@ int Atl06Dispatch::quicksortpartition(point_t* array, int start, int end)
         while (array[--end].r > pivot);
         if (start >= end) return end;
 
-        point_t tmp = array[start];
+        const point_t tmp = array[start];
         array[start] = array[end];
         array[end] = tmp;
     }

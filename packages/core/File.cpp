@@ -74,11 +74,11 @@ int File::luaCreate(lua_State* L)
     try
     {
         /* Get Parameters */
-        int         role      = (int)getLuaInteger(L, 1);
-        int         format    = (int)getLuaInteger(L, 2);
-        const char* file_str  = getLuaString(L, 3);
-        File::io_t  file_io   = (File::io_t)getLuaInteger(L, 4, true, File::FLUSHED);
-        long        max_file  = getLuaInteger(L, 5, true, File::DEFAULT_FILE_MAX_SIZE);
+        const int         role      = (int)getLuaInteger(L, 1);
+        const int         format    = (int)getLuaInteger(L, 2);
+        const char*       file_str  = getLuaString(L, 3);
+        const File::io_t  file_io   = (File::io_t)getLuaInteger(L, 4, true, File::FLUSHED);
+        const long        max_file  = getLuaInteger(L, 5, true, File::DEFAULT_FILE_MAX_SIZE);
 
         /* Check Access Type */
         if(role != File::READER && role != File::WRITER)
@@ -87,7 +87,7 @@ int File::luaCreate(lua_State* L)
         }
 
         /* Return File Device Object */
-        return createLuaObject(L, new File(L, file_str, (File::type_t)format, (File::role_t)role, (File::io_t)file_io, max_file));
+        return createLuaObject(L, new File(L, file_str, (File::type_t)format, (File::role_t)role, file_io, max_file));
     }
     catch(const RunTimeException& e)
     {
@@ -125,7 +125,7 @@ File::File (lua_State* L, const char* _filename, type_t _type, role_t _role, io_
     currFile = 0;
     if(role == READER)
     {
-        int num_files = createFileListForReading(filename, NULL);
+        const int num_files = createFileListForReading(filename, NULL);
         if(num_files > 0)
         {
             fileList = new char* [num_files];
@@ -142,7 +142,7 @@ File::File (lua_State* L, const char* _filename, type_t _type, role_t _role, io_
     }
 
     /* Set Configuration */
-    int cfglen = snprintf(NULL, 0, "%s (%s, %s, %s)", filename, type2str(type), role == READER ? "READER" : "WRITER", io2str(io)) + 1;
+    const int cfglen = snprintf(NULL, 0, "%s (%s, %s, %s)", filename, type2str(type), role == READER ? "READER" : "WRITER", io2str(io)) + 1;
     config = new char[cfglen];
     sprintf(config, "%s (%s, %s, %s)", filename, type2str(type), role == READER ? "READER" : "WRITER", io2str(io));
 }
@@ -218,7 +218,7 @@ int File::writeBuffer (const void* buf, int len, int timeout)
         }
 
         /* Write File Header */
-        int hdr_bytes = writeFileHeader();
+        const int hdr_bytes = writeFileHeader();
         if(hdr_bytes < 0)
         {
             return hdr_bytes;
@@ -236,7 +236,7 @@ int File::writeBuffer (const void* buf, int len, int timeout)
     else if(type == ASCII)
     {
         /* Write Converted Binary Values */
-        unsigned char* pkt_buffer = (unsigned char*)buf;
+        const unsigned char* pkt_buffer = reinterpret_cast<const unsigned char*>(buf);
         int  ret = 0;
         for(int i = 0; i < len; i++)
         {
@@ -266,7 +266,7 @@ int File::writeBuffer (const void* buf, int len, int timeout)
     else if(type == TEXT)
     {
         /* Write String Data */
-        bytes_written = fprintf(fp, "%s", (const char*)buf);
+        bytes_written = fprintf(fp, "%s", static_cast<const char*>(buf));
     }
 
     /* IO Flushing/Caching Check */
@@ -280,7 +280,8 @@ int File::writeBuffer (const void* buf, int len, int timeout)
     }
     else
     {
-        mlog(CRITICAL, "Fatal error, unable to write file %s with error: %s", activeFile, strerror(errno));
+        char err_buf[256];
+        mlog(CRITICAL, "Fatal error, unable to write file %s with error: %s", activeFile, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
     }
 
     return bytes_written;
@@ -298,7 +299,7 @@ int File::readBuffer (void* buf, int len, int timeout)
     {
         return ACC_ERR_RC;
     }
-    
+
     if(currFile >= numFiles)
     {
         return SHUTDOWN_RC;
@@ -321,7 +322,8 @@ int File::readBuffer (void* buf, int len, int timeout)
         /* Check Error */
         if(fp == NULL)
         {
-            mlog(CRITICAL, "Unable to open file %s: %s", fileList[currFile], strerror(errno));
+            char err_buf[256];
+            mlog(CRITICAL, "Unable to open file %s: %s", fileList[currFile], strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
             return INVALID_RC;
         }
 
@@ -344,17 +346,17 @@ int File::readBuffer (void* buf, int len, int timeout)
     else if(type == ASCII)
     {
         /* Read Next Packet */
-        unsigned char* pkt_buffer = (unsigned char*)buf;
+        unsigned char* pkt_buffer = static_cast<unsigned char*>(buf);
         char b[5] = {'0', 'x', '\0', '\0', '\0'};
         int n = 0;
         while(recv_bytes < len)
         {
-            int ch = getc(fp);
+            const int ch = getc(fp);
             if(ch == '\n')
             {
                 break;
             }
-            
+
             if(ch == EOF)
             {
                 currFile++;
@@ -363,12 +365,12 @@ int File::readBuffer (void* buf, int len, int timeout)
                 break;
             }
 
-            b[2 + (n++ % 2)] = (char)ch;
+            b[2 + (n++ % 2)] = static_cast<char>(ch);
             if(n % 2 == 0)
             {
                 char *endptr;
                 errno = 0;
-                unsigned long result = strtoul(b, &endptr, 0);
+                const unsigned long result = strtoul(b, &endptr, 0);
                 if( (endptr == b) ||
                     ((result == ULONG_MAX || result == 0) && errno == ERANGE) )
                 {
@@ -491,7 +493,7 @@ bool File::openNewFileForWriting(void)
         fp = stdout;
         return true;
     }
-    
+
     if(StringLib::match(filename, "STDERR") || StringLib::match(filename, "stderr"))
     {
         fp = stderr;
@@ -516,7 +518,8 @@ bool File::openNewFileForWriting(void)
     /* Check for Errors */
     if(fp == NULL)
     {
-    	mlog(CRITICAL, "Error opening file: %s, err: %s", activeFile, strerror(errno));
+        char err_buf[256];
+    	mlog(CRITICAL, "Error opening file: %s, err: %s", activeFile, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         return false;
     }
 
@@ -547,7 +550,7 @@ int File::createFileListForReading (char* input_string, char** file_list)
             // Treat it as a regular expression
             char* regex = new_buf;
             glob_t glob_buffer;
-            glob(regex, 0, NULL, &glob_buffer);
+            glob(regex, 0, NULL, &glob_buffer);  // NOLINT concurrency-mt-unsafe
             for (unsigned int m = 0; m < glob_buffer.gl_pathc; m++)
             {
                 const char* new_file = glob_buffer.gl_pathv[m];

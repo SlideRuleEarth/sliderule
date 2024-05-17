@@ -120,7 +120,7 @@ H5File::~H5File (void)
  *----------------------------------------------------------------------------*/
 void* H5File::readThread (void* parm)
 {
-    dataset_info_t* info = (dataset_info_t*)parm;
+    dataset_info_t* info = static_cast<dataset_info_t*>(parm);
 
     /* Declare and Initialize Results */
     H5Coro::info_t results;
@@ -144,7 +144,7 @@ void* H5File::readThread (void* parm)
 
         /* Create Record Object */
         RecordObject rec_obj(recType);
-        h5file_t* rec_data = (h5file_t*)rec_obj.getRecordData();
+        h5file_t* rec_data = reinterpret_cast<h5file_t*>(rec_obj.getRecordData());
         StringLib::copy(rec_data->dataset, info->dataset, MAX_NAME_STR);
         rec_data->datatype = (uint32_t)results.datatype;
         rec_data->elements = results.elements;
@@ -152,8 +152,8 @@ void* H5File::readThread (void* parm)
 
         /* Post Record */
         unsigned char* rec_buf;
-        int rec_size = rec_obj.serialize(&rec_buf, RecordObject::REFERENCE, sizeof(h5file_t) + results.datasize);
-        int status = outq.postCopy(rec_buf, rec_size - results.datasize, results.data, results.datasize, SYS_TIMEOUT);
+        const int rec_size = rec_obj.serialize(&rec_buf, RecordObject::REFERENCE, sizeof(h5file_t) + results.datasize);
+        const int status = outq.postCopy(rec_buf, rec_size - results.datasize, results.data, results.datasize, SYS_TIMEOUT);
         if(status <= 0)
         {
             mlog(CRITICAL, "Failed (%d) to post h5 dataset: %s/%s", status, info->h5file->asset->getName(), info->dataset);
@@ -183,9 +183,9 @@ int H5File::luaRead (lua_State* L)
 
     try
     {
-        int self_index = 1;
-        int tbl_index = 2;
-        int outq_index = 3;
+        const int self_index = 1;
+        const int tbl_index  = 2;
+        const int outq_index = 3;
 
         /* Get Self */
         lua_obj = dynamic_cast<H5File*>(getLuaSelf(L, self_index));
@@ -194,7 +194,7 @@ int H5File::luaRead (lua_State* L)
         outq_name = getLuaString(L, outq_index);
 
         /* Process Table of Datasets */
-        int num_datasets = lua_rawlen(L, tbl_index);
+        const int num_datasets = lua_rawlen(L, tbl_index);
         if(lua_istable(L, tbl_index) && num_datasets > 0)
         {
             /* Allocate List of Threads
@@ -288,10 +288,10 @@ int H5File::luaTraverse (lua_State* L)
     try
     {
         /* Get Self */
-        H5File* lua_obj = dynamic_cast<H5File*>(getLuaSelf(L, 1));
+        const H5File* lua_obj = dynamic_cast<H5File*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        uint32_t max_depth = getLuaInteger(L, 2, true, 32);
+        const uint32_t max_depth = getLuaInteger(L, 2, true, 32);
         const char* group_path = getLuaString(L, 3, true, NULL);
 
         /* Traverse File */
@@ -316,7 +316,7 @@ int H5File::luaInspect (lua_State* L)
     try
     {
         /* Get Self */
-        H5File* lua_obj = dynamic_cast<H5File*>(getLuaSelf(L, 1));
+        const H5File* lua_obj = dynamic_cast<H5File*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
         const char* dataset_name = getLuaString(L, 2);
@@ -325,37 +325,37 @@ int H5File::luaInspect (lua_State* L)
         /* Open Dataset */
         if(StringLib::match("double", datatype_name))
         {
-            H5Array<double> values(lua_obj->asset, lua_obj->resource, dataset_name);
+            const H5Array<double> values(lua_obj->asset, lua_obj->resource, dataset_name);
             for(int i = 0; i < values.size; i++) print2term("%lf\n", values[i]);
         }
         else if(StringLib::match("float", datatype_name))
         {
-            H5Array<float> values(lua_obj->asset, lua_obj->resource, dataset_name);
+            const H5Array<float> values(lua_obj->asset, lua_obj->resource, dataset_name);
             for(int i = 0; i < values.size; i++) print2term("%f\n", values[i]);
         }
         else if(StringLib::match("long", datatype_name))
         {
-            H5Array<long> values(lua_obj->asset, lua_obj->resource, dataset_name);
+            const H5Array<long> values(lua_obj->asset, lua_obj->resource, dataset_name);
             for(int i = 0; i < values.size; i++) print2term("%ld\n", values[i]);
         }
         else if(StringLib::match("int", datatype_name))
         {
-            H5Array<int> values(lua_obj->asset, lua_obj->resource, dataset_name);
+            const H5Array<int> values(lua_obj->asset, lua_obj->resource, dataset_name);
             for(int i = 0; i < values.size; i++) print2term("%d\n", values[i]);
         }
         else if(StringLib::match("short", datatype_name))
         {
-            H5Array<short> values(lua_obj->asset, lua_obj->resource, dataset_name);
+            const H5Array<short> values(lua_obj->asset, lua_obj->resource, dataset_name);
             for(int i = 0; i < values.size; i++) print2term("%d\n", values[i]);
         }
         else if(StringLib::match("char", datatype_name))
         {
-            H5Array<char> values(lua_obj->asset, lua_obj->resource, dataset_name);
+            const H5Array<char> values(lua_obj->asset, lua_obj->resource, dataset_name);
             for(int i = 0; i < values.size; i++) print2term("%c\n", values[i]);
         }
         else if(StringLib::match("byte", datatype_name))
         {
-            H5Array<unsigned char> values(lua_obj->asset, lua_obj->resource, dataset_name);
+            const H5Array<unsigned char> values(lua_obj->asset, lua_obj->resource, dataset_name);
             for(int i = 0; i < values.size; i++) print2term("%02X\n", values[i]);
         }
     }

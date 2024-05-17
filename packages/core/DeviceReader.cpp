@@ -110,14 +110,14 @@ void* DeviceReader::readerThread (void* parm)
 {
     assert(parm != NULL);
     DeviceReader* dr = static_cast<DeviceReader*>(parm);
-    int io_maxsize = OsApi::getIOMaxsize();
+    const int io_maxsize = OsApi::getIOMaxsize();
     unsigned char* buf = new unsigned char [io_maxsize];
 
     /* Read Loop */
     while(dr->ioActive)
     {
         /* Read Device */
-        int bytes = dr->device->readBuffer(buf, io_maxsize);
+        const int bytes = dr->device->readBuffer(buf, io_maxsize);
         if(bytes > 0)
         {
             /* Post Message */
@@ -161,7 +161,7 @@ void* DeviceReader::readerThread (void* parm)
     delete [] buf;
     dr->device->closeConnection();
     dr->signalComplete();
-    int rc = dr->outq->postCopy("", 0, SYS_TIMEOUT); // send terminator
+    const int rc = dr->outq->postCopy("", 0, SYS_TIMEOUT); // send terminator
     if(rc <= 0) mlog(ERROR, "Device reader failed to post terminator %s: %d", dr->outq->getName(), rc);
     return NULL;
 }

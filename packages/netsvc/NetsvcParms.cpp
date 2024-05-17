@@ -108,19 +108,14 @@ const char* NetsvcParms::tojson(void) const
     doc.AddMember("read_timeout", rapidjson::Value(read_timeout), allocator);
     doc.AddMember("cluster_size_hint", rapidjson::Value(cluster_size_hint), allocator);
 
-    const char* proj_name = projection == MathLib::AUTOMATIC   ? "AUTOMATIC" :
-                            projection == MathLib::NORTH_POLAR ? "NORTH_POLAR" :
-                            projection == MathLib::SOUTH_POLAR ? "SOUTH_POLAR" :
-                            "PLATE_CARREE";
-
-    doc.AddMember("projection", rapidjson::Value(proj_name, allocator), allocator);
+    doc.AddMember("projection", rapidjson::Value(MathLib::proj2str(projection), allocator), allocator);
 
     /* Polygon is a list of coordinates */
     doc.AddMember("points_in_poly", rapidjson::Value(points_in_poly), allocator);
     if(points_in_poly > 0)
     {
         rapidjson::Value _poly(rapidjson::kArrayType);
-        List<MathLib::coord_t>::Iterator poly_iterator(polygon);
+        const List<MathLib::coord_t>::Iterator poly_iterator(polygon);
         for(int i = 0; i < points_in_poly; i++)
         {
             rapidjson::Value _coord(rapidjson::kObjectType);
@@ -183,7 +178,7 @@ NetsvcParms::NetsvcParms(lua_State* L, int index):
 
         /* Global Timeout */
         lua_getfield(L, index, NetsvcParms::GLOBAL_TIMEOUT);
-        int global_timeout = LuaObject::getLuaInteger(L, -1, true, 0, &provided);
+        const int global_timeout = LuaObject::getLuaInteger(L, -1, true, 0, &provided);
         if(provided)
         {
             rqst_timeout = global_timeout;
@@ -232,7 +227,7 @@ NetsvcParms::NetsvcParms(lua_State* L, int index):
             }
 
             /* Project Polygon */
-            List<MathLib::coord_t>::Iterator poly_iterator(polygon);
+            const List<MathLib::coord_t>::Iterator poly_iterator(polygon);
             projected_poly = new MathLib::point_t [points_in_poly];
             for(int i = 0; i < points_in_poly; i++)
             {
@@ -276,7 +271,7 @@ void NetsvcParms::get_lua_polygon (lua_State* L, int index, bool* provided)
     if(lua_istable(L, index))
     {
         /* Get Number of Points in Polygon */
-        int num_points = lua_rawlen(L, index);
+        const int num_points = lua_rawlen(L, index);
 
         /* Iterate through each coordinate */
         for(int i = 0; i < num_points; i++)

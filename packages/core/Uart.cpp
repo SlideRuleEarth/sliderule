@@ -54,8 +54,8 @@ int Uart::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* dev_name  = getLuaString(L, 1);
-        int         baud_rate = (int)getLuaInteger(L, 2);
-        int         parity    = (int)getLuaInteger(L, 3);
+        const int   baud_rate = (int)getLuaInteger(L, 2);
+        const int   parity    = (int)getLuaInteger(L, 3);
 
         /* Return File Device Object */
         return createLuaObject(L, new Uart(L, dev_name, baud_rate, (Uart::parity_t)parity));
@@ -77,7 +77,7 @@ Uart::Uart (lua_State* L, const char* _device, int _baud, parity_t _parity):
     fd = TTYLib::ttyopen(_device, _baud, _parity);
 
     /* Set Configuration */
-    int cfglen = snprintf(NULL, 0, "%s:%d:8%c1", _device, _baud, _parity) + 1;
+    const int cfglen = snprintf(NULL, 0, "%s:%d:8%c1", _device, _baud, _parity) + 1;
     config = new char[cfglen];
     sprintf(config, "%s:%d:8%c1", _device, _baud, _parity);
 }
@@ -118,7 +118,7 @@ void Uart::closeConnection (void)
 int Uart::writeBuffer (const void* buf, int len, int timeout)
 {
     if(buf == NULL || len <= 0) return PARM_ERR_RC;
-    int ret = TTYLib::ttywrite(fd, buf, len, timeout);
+    const int ret = TTYLib::ttywrite(fd, buf, len, timeout);
     if(ret < 0) closeConnection();
     return ret;
 
@@ -130,7 +130,7 @@ int Uart::writeBuffer (const void* buf, int len, int timeout)
 int Uart::readBuffer (void* buf, int len, int timeout)
 {
     if(buf == NULL || len <= 0) return PARM_ERR_RC;
-    int ret = TTYLib::ttyread(fd, buf, len, timeout);
+    const int ret = TTYLib::ttyread(fd, buf, len, timeout);
     if(ret < 0) closeConnection();
     return ret;
 }

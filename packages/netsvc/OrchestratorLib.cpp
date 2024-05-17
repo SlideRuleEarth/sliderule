@@ -85,7 +85,7 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
     bool status = true;
 
     FString rqst("{\"service\":\"%s\", \"lifetime\": %d, \"address\": \"%s\"}", service, lifetime, address);
-    rsps_t rsps = request(EndpointObject::POST, "/discovery/register", rqst.c_str());
+    const rsps_t rsps = request(EndpointObject::POST, "/discovery/register", rqst.c_str());
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -96,12 +96,12 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
                 json.Parse(rsps.response);
 
                 const char* membership = json[address][0].GetString();
-                double expiration = json[address][1].GetDouble();
+                const double expiration = json[address][1].GetDouble();
 
-                int64_t exp_unix_us = (expiration * 1000000);
-                int64_t exp_gps_ms = TimeLib::sys2gpstime(exp_unix_us);
-                TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(exp_gps_ms);
-                TimeLib::date_t date = TimeLib::gmt2date(gmt);
+                const int64_t exp_unix_us = (expiration * 1000000);
+                const int64_t exp_gps_ms = TimeLib::sys2gpstime(exp_unix_us);
+                const TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(exp_gps_ms);
+                const TimeLib::date_t date = TimeLib::gmt2date(gmt);
                 mlog(INFO, "Registered to <%s> until %d/%d/%d %02d:%02d:%02d\n", membership, date.month, date.day, date.year, gmt.hour, gmt.minute, gmt.second);
             }
         }
@@ -130,7 +130,7 @@ vector<OrchestratorLib::Node*>* OrchestratorLib::lock (const char* service, int 
     vector<Node*>* nodes = NULL;
 
     FString rqst("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d, \"locksPerNode\": %d}", service, nodes_needed, timeout_secs, locks_per_node);
-    rsps_t rsps = request(EndpointObject::POST, "/discovery/lock", rqst.c_str());
+    const rsps_t rsps = request(EndpointObject::POST, "/discovery/lock", rqst.c_str());
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -138,15 +138,15 @@ vector<OrchestratorLib::Node*>* OrchestratorLib::lock (const char* service, int 
             rapidjson::Document json;
             json.Parse(rsps.response);
 
-            unsigned int num_members = json["members"].Size();
-            unsigned int num_transactions = json["transactions"].Size();
+            const unsigned int num_members = json["members"].Size();
+            const unsigned int num_transactions = json["transactions"].Size();
             if(num_members == num_transactions)
             {
                 nodes = new vector<Node*>; // allocate node list to be returned
                 for(rapidjson::SizeType i = 0; i < num_members; i++)
                 {
                     const char* name = json["members"][i].GetString();
-                    double transaction = json["transactions"][i].GetDouble();
+                    const double transaction = json["transactions"][i].GetDouble();
                     Node* node = new Node(name, transaction);
                     nodes->push_back(node);
                 }
@@ -203,7 +203,7 @@ bool OrchestratorLib::unlock (long transactions[], int num_transactions, bool ve
     for(int t = 1; t < num_transactions; t++) rqst += StringLib::format(strbuf, 64, ",%ld", transactions[t]);
     rqst += "]}";
 
-    rsps_t rsps = request(EndpointObject::POST, "/discovery/unlock", rqst.c_str());
+    const rsps_t rsps = request(EndpointObject::POST, "/discovery/unlock", rqst.c_str());
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -213,8 +213,8 @@ bool OrchestratorLib::unlock (long transactions[], int num_transactions, bool ve
                 rapidjson::Document json;
                 json.Parse(rsps.response);
 
-                int completed = json["complete"].GetInt();
-                int failed = json["fail"].GetInt();
+                const int completed = json["complete"].GetInt();
+                const int failed = json["fail"].GetInt();
 
                 mlog(INFO, "Completed %d transactions%s", completed, failed ? " with failures" : " successfully");
             }
@@ -242,7 +242,7 @@ bool OrchestratorLib::health (void)
 {
     bool status = false;
 
-    rsps_t rsps = request(EndpointObject::GET, "/discovery/health", NULL);
+    const rsps_t rsps = request(EndpointObject::GET, "/discovery/health", NULL);
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -250,7 +250,7 @@ bool OrchestratorLib::health (void)
             rapidjson::Document json;
             json.Parse(rsps.response);
 
-            rapidjson::Value& s = json["health"];
+            const rapidjson::Value& s = json["health"];
             status = s.GetBool();
         }
         catch(const std::exception& e)
@@ -273,7 +273,7 @@ bool OrchestratorLib::metric (const unsigned char* metric_buf, int buf_size)
 
     bool status = false;
 
-    rsps_t rsps = request(EndpointObject::POST, "/discovery/metric", reinterpret_cast<const char*>(metric_buf));
+    const rsps_t rsps = request(EndpointObject::POST, "/discovery/metric", reinterpret_cast<const char*>(metric_buf));
     if(rsps.code == EndpointObject::OK)
     {
         status = true;
@@ -292,7 +292,7 @@ int OrchestratorLib::getNodes (void)
     int num_nodes = 0;
 
     const char* data = "{\"service\":\"sliderule\"}";
-    rsps_t rsps = request(EndpointObject::GET, "/discovery/status", data);
+    const rsps_t rsps = request(EndpointObject::GET, "/discovery/status", data);
     if(rsps.code == EndpointObject::OK)
     {
         try
@@ -300,7 +300,7 @@ int OrchestratorLib::getNodes (void)
             rapidjson::Document json;
             json.Parse(rsps.response);
 
-            rapidjson::Value& s = json["nodes"];
+            const rapidjson::Value& s = json["nodes"];
             num_nodes = s.GetInt();
         }
         catch(const std::exception& e)
@@ -351,9 +351,9 @@ int OrchestratorLib::luaRegisterService(lua_State* L)
     try
     {
         const char* service = LuaObject::getLuaString(L, 1);
-        int lifetime        = LuaObject::getLuaInteger(L, 2);
+        const int lifetime  = LuaObject::getLuaInteger(L, 2);
         const char* address = LuaObject::getLuaString(L, 3);
-        bool verbose        = LuaObject::getLuaBoolean(L, 4, true, false);
+        const bool verbose  = LuaObject::getLuaBoolean(L, 4, true, false);
 
         status = registerService(service, lifetime, address, verbose);
     }
@@ -374,10 +374,10 @@ int OrchestratorLib::luaLock(lua_State* L)
     vector<Node*>* nodes = NULL;
     try
     {
-        const char* service = LuaObject::getLuaString(L, 1);
-        int nodes_needed    = LuaObject::getLuaInteger(L, 2);
-        int timeout_secs    = LuaObject::getLuaInteger(L, 3);
-        bool verbose        = LuaObject::getLuaBoolean(L, 4, true, false);
+        const char* service    = LuaObject::getLuaString(L, 1);
+        const int nodes_needed = LuaObject::getLuaInteger(L, 2);
+        const int timeout_secs = LuaObject::getLuaInteger(L, 3);
+        const bool verbose     = LuaObject::getLuaBoolean(L, 4, true, false);
 
         nodes = lock(service, nodes_needed, timeout_secs, verbose);
 
@@ -407,25 +407,25 @@ int OrchestratorLib::luaUnlock(lua_State* L)
 {
     try
     {
-        bool verbose = LuaObject::getLuaBoolean(L, 2, true, false);
+        const bool verbose = LuaObject::getLuaBoolean(L, 2, true, false);
 
         if(!lua_istable(L, 1))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "must supply table for parameter #1");
         }
 
-        int num_transactions = lua_rawlen(L, 1);
+        const int num_transactions = lua_rawlen(L, 1);
         if(num_transactions > 0)
         {
             long* transactions = new long [num_transactions];
             for(int t = 0; t < num_transactions; t++)
             {
                 lua_rawgeti(L, 1, t+1);
-                transactions[t] = (long)LuaObject::getLuaInteger(L, -1);
+                transactions[t] = LuaObject::getLuaInteger(L, -1);
                 lua_pop(L, 1);
             }
 
-            bool status = unlock(transactions, num_transactions, verbose);
+            const bool status = unlock(transactions, num_transactions, verbose);
             lua_pushboolean(L, status);
 
             delete [] transactions;

@@ -62,11 +62,11 @@ int ClusterSocket::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        int         role      = (int)getLuaInteger(L, 1);
-        int         protocol  = (int)getLuaInteger(L, 2);
+        const int   role      = (int)getLuaInteger(L, 1);
+        const int   protocol  = (int)getLuaInteger(L, 2);
         const char* ip_addr   = getLuaString(L, 3);
-        int         port      = (int)getLuaInteger(L, 4);
-        bool        is_server = getLuaBoolean(L, 5);
+        const int   port      = (int)getLuaInteger(L, 4);
+        const bool  is_server = getLuaBoolean(L, 5);
         const char* q_name    = getLuaString(L, 6);
 
         /* Get Server Parameter */
@@ -198,7 +198,7 @@ int ClusterSocket::writeBuffer(const void *buf, int len, int timeout)
 
     if(len <= MAX_MSG_SIZE)
     {
-        int status = pubsockq->postCopy(buf, len, timeout);
+        const int status = pubsockq->postCopy(buf, len, timeout);
         if(status > 0)                             return status;
         if(status == MsgQ::STATE_NO_SUBSCRIBERS)   return len;
         if(status == MsgQ::STATE_TIMEOUT)          return TIMEOUT_RC;
@@ -218,7 +218,7 @@ int ClusterSocket::readBuffer(void *buf, int len, int timeout)
     assert(role == READER);
     if(buf && subsockq)
     {
-        int bytes = subsockq->receiveCopy(buf, len, timeout);
+        const int bytes = subsockq->receiveCopy(buf, len, timeout);
         if(bytes > 0)                      return bytes;
         if(bytes == MsgQ::STATE_TIMEOUT)   return TIMEOUT_RC;
         return SOCK_ERR_RC;
@@ -235,8 +235,8 @@ void* ClusterSocket::connectionThread(void* parm)
 
     int status = 0;
 
-    if(s->is_server) status = SockLib::startserver (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->connecting, (void*)s);
-    else             status = SockLib::startclient (s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->connecting, (void*)s);
+    if(s->is_server) status = SockLib::startserver(s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->connecting, static_cast<void*>(s));
+    else             status = SockLib::startclient(s->getIpAddr(), s->getPort(), MAX_NUM_CONNECTIONS, pollHandler, activeHandler, &s->connecting, static_cast<void*>(s));
 
     if(status < 0)   mlog(CRITICAL, "Failed to establish cluster %s socket on %s:%d (%d)", s->is_server ? "server" : "client", s->getIpAddr(), s->getPort(), status);
 
@@ -320,10 +320,10 @@ int ClusterSocket::onRead(int fd)
             }
 
             /* Read More Data */
-            int bytes_left = MSG_BUFFER_SIZE - connection->buffer_size;
+            const int bytes_left = MSG_BUFFER_SIZE - connection->buffer_size;
             if(bytes_left > MIN_BUFFER_SIZE)
             {
-                int bytes = SockLib::sockrecv(fd, &connection->buffer[connection->buffer_size], bytes_left, IO_CHECK);
+                const int bytes = SockLib::sockrecv(fd, &connection->buffer[connection->buffer_size], bytes_left, IO_CHECK);
                 if(bytes > 0)
                 {
                     connection->buffer_size += bytes;
@@ -377,10 +377,10 @@ int ClusterSocket::onWrite(int fd)
                 if(connection->payload_left > 0)
                 {
                     /* Populate Buffer */
-                    uint32_t bytes_left = MSG_BUFFER_SIZE - connection->buffer_index;
-                    uint32_t cpylen = connection->payload_left < bytes_left ? connection->payload_left : bytes_left;
-                    int payload_index = connection->payload_ref.size - connection->payload_left;
-                    uint8_t* payload_buffer = (uint8_t*)connection->payload_ref.data;
+                    const uint32_t bytes_left = MSG_BUFFER_SIZE - connection->buffer_index;
+                    const uint32_t cpylen = connection->payload_left < bytes_left ? connection->payload_left : bytes_left;
+                    const int payload_index = connection->payload_ref.size - connection->payload_left;
+                    const uint8_t* payload_buffer = reinterpret_cast<const uint8_t*>(connection->payload_ref.data);
                     memcpy(&connection->buffer[connection->buffer_index], &payload_buffer[payload_index], cpylen);
                     connection->buffer_index += cpylen;
                     connection->payload_left -= cpylen;
@@ -390,7 +390,7 @@ int ClusterSocket::onWrite(int fd)
                 if((connection->payload_left == 0) &&
                    (connection->buffer_index < (MSG_BUFFER_SIZE - MSG_HDR_SIZE)))
                 {
-                    int status = connection->subconnq->receiveRef(connection->payload_ref, IO_CHECK);
+                    const int status = connection->subconnq->receiveRef(connection->payload_ref, IO_CHECK);
                     if(status > 0)
                     {
                         /* Populate Header */
@@ -400,8 +400,8 @@ int ClusterSocket::onWrite(int fd)
                         connection->buffer[connection->buffer_index++] = (uint8_t)(connection->payload_ref.size >>  0);
 
                         /* Populate Rest of Buffer */
-                        int bytes_left = MSG_BUFFER_SIZE - connection->buffer_index;
-                        int cpylen = connection->payload_ref.size < bytes_left ? connection->payload_ref.size : bytes_left;
+                        const int bytes_left = MSG_BUFFER_SIZE - connection->buffer_index;
+                        const int cpylen = connection->payload_ref.size < bytes_left ? connection->payload_ref.size : bytes_left;
                         memcpy(&connection->buffer[connection->buffer_index], connection->payload_ref.data, cpylen);
                         connection->buffer_index += cpylen;
 
@@ -427,8 +427,8 @@ int ClusterSocket::onWrite(int fd)
             /* Send Data */
             while(connection->bytes_processed < connection->buffer_index)
             {
-                int bytes_left = connection->buffer_index - connection->bytes_processed;
-                int bytes = SockLib::socksend(fd, &connection->buffer[connection->bytes_processed], bytes_left, IO_CHECK);
+                const int bytes_left = connection->buffer_index - connection->bytes_processed;
+                const int bytes = SockLib::socksend(fd, &connection->buffer[connection->bytes_processed], bytes_left, IO_CHECK);
                 if(bytes > 0)
                 {
                     connection->bytes_processed += bytes;
@@ -452,9 +452,9 @@ int ClusterSocket::onWrite(int fd)
                 /* Optimization - Send Unbuffered Payload Data */
                 while(connection->payload_left > 0)
                 {
-                    int payload_index = connection->payload_ref.size - connection->payload_left;
-                    uint8_t* byte_buffer = (uint8_t*)connection->payload_ref.data;
-                    int bytes = SockLib::socksend(fd, &byte_buffer[payload_index], connection->payload_left, IO_CHECK);
+                    const int payload_index = connection->payload_ref.size - connection->payload_left;
+                    uint8_t* byte_buffer = reinterpret_cast<uint8_t*>(connection->payload_ref.data);
+                    const int bytes = SockLib::socksend(fd, &byte_buffer[payload_index], connection->payload_left, IO_CHECK);
                     if(bytes > 0)
                     {
                         connection->payload_left -= bytes;
@@ -500,7 +500,7 @@ int ClusterSocket::onAlive(int fd)
             read_connection_t* connection = read_connections[fd];
 
             /* Send Meter */
-            int64_t now = TimeLib::gpstime();
+            const int64_t now = TimeLib::gpstime();
             if((now - connection->prev) > METER_PERIOD_MS)
             {
                 uint8_t meter = 0;
@@ -514,8 +514,8 @@ int ClusterSocket::onAlive(int fd)
                 /* Process Header */
                 if(connection->payload_index < 0)
                 {
-                    int shift = 24 - ((connection->payload_index++ + MSG_HDR_SIZE) * 8);
-                    uint32_t value = connection->buffer[connection->buffer_index++];
+                    const int shift = 24 - ((connection->payload_index++ + MSG_HDR_SIZE) * 8);
+                    const uint32_t value = connection->buffer[connection->buffer_index++];
                     connection->payload_size |= value << shift;
 
                     /* Header Complete */
@@ -536,9 +536,9 @@ int ClusterSocket::onAlive(int fd)
                 /* Process Payload */
                 else if (connection->payload_index <= connection->payload_size)
                 {
-                    int bytes_left = connection->buffer_size - connection->buffer_index;
-                    int pay_bytes_left = connection->payload_size - connection->payload_index;
-                    int cpylen = MIN(pay_bytes_left, bytes_left);
+                    const int bytes_left = connection->buffer_size - connection->buffer_index;
+                    const int pay_bytes_left = connection->payload_size - connection->payload_index;
+                    const int cpylen = MIN(pay_bytes_left, bytes_left);
                     memcpy(&connection->payload[connection->payload_index], &connection->buffer[connection->buffer_index], cpylen);
                     connection->buffer_index += cpylen;
                     connection->payload_index += cpylen;
@@ -547,7 +547,7 @@ int ClusterSocket::onAlive(int fd)
                     if(connection->payload_index >= connection->payload_size)
                     {
                         /* Publisher queue is single exit point for a cluster socket... block is appropriate below */
-                        int status = pubsockq->postCopy(connection->payload, connection->payload_size, SYS_TIMEOUT);
+                        const int status = pubsockq->postCopy(connection->payload, connection->payload_size, SYS_TIMEOUT);
                         if(status > 0 || is_blind)
                         {
                             delete [] connection->payload;
@@ -673,7 +673,7 @@ int ClusterSocket::onDisconnect(int fd)
  *----------------------------------------------------------------------------*/
 uint8_t ClusterSocket::qMeter(void)
 {
-    int depth = pubsockq->getDepth();
+    const int depth = pubsockq->getDepth();
     if(depth) return (uint8_t)((pubsockq->getCount() * 255) / depth);
     return 0;
 }

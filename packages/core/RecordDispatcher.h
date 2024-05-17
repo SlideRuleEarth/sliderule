@@ -107,7 +107,7 @@ class RecordDispatcher: public LuaObject
                                 RecordDispatcher    (lua_State* L, const char* inputq_name,
                                                      keyMode_t key_mode, const char* key_field, calcFunc_f key_func,
                                                      int num_threads, MsgQ::subscriber_type_t type);
-        virtual                 ~RecordDispatcher   (void);
+                                ~RecordDispatcher   (void) override;
         virtual RecordObject*   createRecord        (unsigned char* buffer, int size);
 
         static int              luaRun              (lua_State* L);

@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -48,6 +48,8 @@
 /******************************************************************************
  * ASSET INDEX CLASS
  ******************************************************************************/
+
+// NOLINTBEGIN(misc-no-recursion)
 
 template <class T>
 class AssetIndex: public LuaObject
@@ -91,7 +93,7 @@ class AssetIndex: public LuaObject
          *--------------------------------------------------------------------*/
 
                                 AssetIndex      (lua_State* L, Asset& _asset, const char* meta_name, const struct luaL_Reg meta_table[], int _threshold=DEFAULT_THRESHOLD);
-        virtual                 ~AssetIndex     (void);
+                                ~AssetIndex     (void) override;
 
         virtual void            build           (void);
         virtual T               get             (int index);
@@ -107,7 +109,7 @@ class AssetIndex: public LuaObject
         virtual T               attr2span       (Dictionary<double>* attr, bool* provided=NULL) = 0;
         virtual T               luatable2span   (lua_State* L, int parm) = 0;
         virtual void            displayspan     (const T& span) = 0;
-        
+
         static int              luaAdd          (lua_State* L);
         static int              luaQuery        (lua_State* L);
         static int              luaDisplay      (lua_State* L);
@@ -185,7 +187,7 @@ void AssetIndex<T>::build (void)
         if(provided)
         {
             /* Add to Global Resource List */
-            int index = spans.add(span);
+            const int index = spans.add(span);
 
             /* Create Tree Node */
             if(tree == NULL) tree = newnode(span);
@@ -214,7 +216,7 @@ T AssetIndex<T>::get (int index)
 
 /*----------------------------------------------------------------------------
  * add - MUST BE COORDINATED w/ ASSET
- * 
+ *
  *  Note:   the call to add the span to the spans list relies upon the
  *          assumption that the index the span sits at within the list
  *          matches the index the originating resource sits at within the
@@ -224,7 +226,7 @@ template <class T>
 bool AssetIndex<T>::add (const T& span)
 {
     int maxdepth = 0;
-    int index = spans.add(span);
+    const int index = spans.add(span);
     updatenode(index, &tree, &maxdepth);
     balancenode(&tree);
     return true;
@@ -359,9 +361,9 @@ void AssetIndex<T>::buildtree (node_t* root, int* maxdepth)
 {
     /* Check Root */
     if(!root || !root->ril) return;
-    
+
     /* Split Current Leaf Node */
-    int root_size = root->ril->length();
+    const int root_size = root->ril->length();
     if(root_size >= threshold)
     {
         /* Split Node */
@@ -370,22 +372,22 @@ void AssetIndex<T>::buildtree (node_t* root, int* maxdepth)
         split(root, lspan, rspan);
         node_t* lnode = newnode(lspan);
         node_t* rnode = newnode(rspan);
-        
+
         /* Split Resources on Both Leaves */
         int lcnt = 0;
         int rcnt = 0;
         for(int j = 0; j < root_size; j++)
         {
-            int resource_index = root->ril->get(j);
+            const int resource_index = root->ril->get(j);
             T& resource_span = spans[resource_index];
-            
+
             if(intersect(lspan, resource_span))
             {
                 lcnt++;
                 lnode->span = combine(lnode->span, resource_span);
                 lnode->ril->add(resource_index);
             }
-            
+
             if(intersect(rspan, resource_span))
             {
                 rcnt++;
@@ -397,7 +399,7 @@ void AssetIndex<T>::buildtree (node_t* root, int* maxdepth)
         /* Check if Makes Sense to Split */
         if(lcnt > 0 && rcnt > 0 && lcnt != root_size && rcnt != root_size)
         {
-            /* Split Root */            
+            /* Split Root */
             delete root->ril;
             root->ril = NULL;
             root->left = lnode;
@@ -452,20 +454,20 @@ void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth)
         curr->ril->add(i);
 
         /* Split Current Leaf Node */
-        int node_size = curr->ril->length();
+        const int node_size = curr->ril->length();
         if(node_size >= threshold)
         {
             /* Split Node */
             T lspan;
             T rspan;
             split(curr, lspan, rspan);
-            
+
             /* Preview Split Resources on Both Leaves */
             int lcnt = 0;
             int rcnt = 0;
             for(int j = 0; j < node_size; j++)
             {
-                int resource_index = curr->ril->get(j);
+                const int resource_index = curr->ril->get(j);
                 T& resource_span = spans[resource_index];
                 if(intersect(lspan, resource_span)) lcnt++;
                 if(intersect(rspan, resource_span)) rcnt++;
@@ -477,7 +479,7 @@ void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth)
                 /* Split Node */
                 for(int j = 0; j < node_size; j++)
                 {
-                    int resource_index = curr->ril->get(j);
+                    const int resource_index = curr->ril->get(j);
                     T& resource_span = spans[resource_index];
                     if(intersect(lspan, resource_span)) updatenode(resource_index, &curr->left, maxdepth);
                     if(intersect(rspan, resource_span)) updatenode(resource_index, &curr->right, maxdepth);
@@ -492,7 +494,7 @@ void AssetIndex<T>::updatenode (int i, node_t** node, int* maxdepth)
             }
         }
     }
-    else 
+    else
     {
         /* Update Branches */
         if(isleft(curr, span))  updatenode(i, &curr->left, maxdepth);
@@ -603,21 +605,21 @@ void AssetIndex<T>::balancenode (node_t** root)
  * querynode
  *----------------------------------------------------------------------------*/
 template <class T>
-void AssetIndex<T>::querynode (const T& span, node_t* curr, Ordering<int>* list)
+void AssetIndex<T>::querynode (const T& span, node_t* curr, Ordering<int>* list) // NOLINT(misc-no-recursion)
 {
     /* Return on Null Path */
     if(curr == NULL) return;
 
     /* Return if no Intersection with Tree */
     if(!intersect(span, curr->span)) return;
-    
+
     /* If Leaf Node */
     if(curr->ril)
     {
         /* Populate with Current Node */
         for(int i = 0; i < curr->ril->length(); i++)
         {
-            int resource_index = curr->ril->get(i);
+            const int resource_index = curr->ril->get(i);
             if(intersect(span, spans[resource_index]))
             {
                 list->add(resource_index, resource_index, true);
@@ -653,7 +655,7 @@ typename AssetIndex<T>::node_t* AssetIndex<T>::newnode (const T& span)
  * displaynode
  *----------------------------------------------------------------------------*/
 template <class T>
-void AssetIndex<T>::deletenode (node_t* node)
+void AssetIndex<T>::deletenode (node_t* node) // NOLINT(misc-no-recursion)
 {
     /* Stop */
     if(node == NULL) return;
@@ -661,7 +663,7 @@ void AssetIndex<T>::deletenode (node_t* node)
     /* Save Off Branches */
     node_t* left = node->left;
     node_t* right = node->right;
-    
+
     /* Delete Node */
     delete node->ril;
     delete node;
@@ -689,10 +691,10 @@ bool AssetIndex<T>::prunenode (node_t* node)
         int matches = 0;
         for(int i = 0; i < left->ril->length(); i++)
         {
-            int ri = left->ril->get(i);
+            const int ri = left->ril->get(i);
             for(int j = 0; j < right->ril->length(); j++)
             {
-                int rj = right->ril->get(j);
+                const int rj = right->ril->get(j);
                 if (ri == rj)
                 {
                     matches++;
@@ -719,7 +721,7 @@ bool AssetIndex<T>::prunenode (node_t* node)
             node->ril = new List<int>;
             for(int i = 0; i < prune->ril->length(); i++)
             {
-                int ri = prune->ril->get(i);
+                const int ri = prune->ril->get(i);
                 node->ril->add(ri);
             }
 
@@ -743,7 +745,7 @@ bool AssetIndex<T>::prunenode (node_t* node)
  * displaynode
  *----------------------------------------------------------------------------*/
 template <class T>
-void AssetIndex<T>::displaynode (node_t* curr)
+void AssetIndex<T>::displaynode (node_t* curr) // NOLINT(misc-no-recursion)
 {
     /* Stop */
     if(curr == NULL) return;
@@ -755,7 +757,7 @@ void AssetIndex<T>::displaynode (node_t* curr)
     {
         for(int i = 0; i < curr->ril->length(); i++)
         {
-            int resource_index = curr->ril->get(i);
+            const int resource_index = curr->ril->get(i);
             print2term("%s ", asset[resource_index].name);
         }
     }
@@ -767,10 +769,12 @@ void AssetIndex<T>::displaynode (node_t* curr)
         if(curr->right) displayspan(curr->right->span);
     }
     print2term("\n\n");
-    
+
     /* Recurse */
     displaynode(curr->left);
     displaynode(curr->right);
 }
+
+// NOLINTEND(misc-no-recursion)
 
 #endif  /* __asset_index__ */

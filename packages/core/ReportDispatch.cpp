@@ -81,10 +81,10 @@ int ReportDispatch::luaCreate (lua_State* L)
     {
         const char* format_str      = getLuaString(L, 1);
         const char* out_file_str    = getLuaString(L, 2);
-        long        buffer_size     = getLuaInteger(L, 3, true, 0);
+        const long  buffer_size     = getLuaInteger(L, 3, true, 0);
 
         /* Parse Metric Format */
-        format_t file_format = str2format(format_str);
+        const format_t file_format = str2format(format_str);
         if(file_format == INVALID_FORMAT)
         {
             mlog(CRITICAL, "Invalid file format provided: %s", format_str);
@@ -99,7 +99,7 @@ int ReportDispatch::luaCreate (lua_State* L)
         }
 
         /* Parse Header Columns */
-        int num_columns = lua_rawlen(L,4);
+        const int num_columns = lua_rawlen(L,4);
         if(lua_istable(L, 4) && num_columns > 0)
         {
             columns = new const char* [num_columns];
@@ -206,7 +206,7 @@ int ReportDispatch::ReportFile::writeFileHeader (void)
 
         /* Write Header String */
         headerInProgress = true;
-        int status = File::writeBuffer(header.c_str(), header.length());
+        const int status = File::writeBuffer(header.c_str(), header.length());
         headerInProgress = false;
         return status;
     }
@@ -229,7 +229,7 @@ int ReportDispatch::ReportFile::writeFileData (void)
         }
         else if(indexDisplay == ReportDispatch::GMT_DISPLAY)
         {
-            TimeLib::gmt_time_t index_time = TimeLib::gps2gmttime(index);
+            const TimeLib::gmt_time_t index_time = TimeLib::gps2gmttime(index);
             StringLib::format(index_str, MAX_INDEX_STR_SIZE, "%d:%d:%d:%d:%d:%d", index_time.year, index_time.doy, index_time.hour, index_time.minute, index_time.second, index_time.millisecond);
         }
         else
@@ -255,7 +255,7 @@ int ReportDispatch::ReportFile::writeFileData (void)
         /* Write Row String */
         return File::writeBuffer(row.c_str(), row.length());
     }
-    
+
     if(format == JSON)
     {
         /* Build JSON String */
@@ -333,8 +333,6 @@ ReportDispatch::~ReportDispatch (void)
 bool ReportDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* records)
 {
     (void)records;
-    
-    okey_t index = key;
 
     /* Sanity Check */
     if(!StringLib::match(record->getRecordType(), MetricRecord::rec_type))
@@ -364,6 +362,7 @@ bool ReportDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* 
     bool status = true;
     reportMut.lock();
     {
+        const okey_t index = key;
         entry_t* entry = new entry_t(index, name, value);
         if(entries) status = entries->add(index, entry);
         else        status = (ReportDispatch::postEntry(&entry, sizeof(entry_t*), this) > 0);
@@ -383,9 +382,9 @@ bool ReportDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* 
 int ReportDispatch::postEntry(void* data, int size, void* parm)
 {
     ReportDispatch* dispatch = static_cast<ReportDispatch*>(parm);
-    int status = size;
-    entry_t* entry = *(entry_t**)data;
-    okey_t index = entry->index;
+    const int status = size;
+    entry_t* entry = *(reinterpret_cast<entry_t**>(data));
+    const okey_t index = entry->index;
     const char* name = entry->name;
     string* value = new string(entry->value);
 
@@ -410,7 +409,7 @@ int ReportDispatch::postEntry(void* data, int size, void* parm)
     }
     else // dynamic header
     {
-        int prev_num_values = dispatch->report.values.length();
+        const int prev_num_values = dispatch->report.values.length();
         value_added = dispatch->report.values.add(name, value);
         if(dispatch->report.values.length() != prev_num_values)
         {
@@ -440,7 +439,7 @@ bool ReportDispatch::flushRow(void)
     if(writeHeader)
     {
         writeHeader = false;
-        int hdr_written = report.writeFileHeader();
+        const int hdr_written = report.writeFileHeader();
         if(hdr_written < 0)
         {
             if(reportError) mlog(CRITICAL, "%s failed to write file header", ObjectType);
@@ -450,7 +449,7 @@ bool ReportDispatch::flushRow(void)
     }
 
     /* Write Data */
-    int row_written = report.writeFileData();
+    const int row_written = report.writeFileData();
     if(row_written < 0)
     {
         if(reportError) mlog(CRITICAL, "%s failed to write file data", ObjectType);
@@ -478,7 +477,7 @@ int ReportDispatch::luaSetIndexDisplay(lua_State* L)
         const char* display_str = getLuaString(L, 2);
 
         /* Convert String to Display Type */
-        indexDisplay_t display = str2display(display_str);
+        const indexDisplay_t display = str2display(display_str);
         if(display == INVALID_DISPLAY)
         {
             mlog(CRITICAL, "Invalid index display selected: %s", display_str);

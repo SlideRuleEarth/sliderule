@@ -66,7 +66,7 @@ class GediIODriver: S3CurlIODriver
          *--------------------------------------------------------------------*/
 
         GediIODriver (const Asset* _asset, const char* resource);
-        ~GediIODriver (void);
+        ~GediIODriver (void) override;
 };
 
 #endif  /* __gedi_io_driver__ */

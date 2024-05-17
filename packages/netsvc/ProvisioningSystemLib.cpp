@@ -119,7 +119,7 @@ const char* ProvisioningSystemLib::login (const char* username, const char* pass
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
             /* Perform the request, res will get the return code */
-            CURLcode res = curl_easy_perform(curl);
+            const CURLcode res = curl_easy_perform(curl);
 
             /* Check for Success */
             if(res == CURLE_OK)
@@ -204,7 +204,7 @@ bool ProvisioningSystemLib::validate (const char* access_token, bool verbose)
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
             /* Perform the request, res will get the return code */
-            CURLcode res = curl_easy_perform(curl);
+            const CURLcode res = curl_easy_perform(curl);
 
             /* Check for Success */
             if(res == CURLE_OK)
@@ -300,7 +300,7 @@ int ProvisioningSystemLib::luaLogin(lua_State* L)
         const char* username        = LuaObject::getLuaString(L, 1);
         const char* password        = LuaObject::getLuaString(L, 2);
         const char* organization    = LuaObject::getLuaString(L, 3);
-        bool verbose                = LuaObject::getLuaBoolean(L, 4, true, false);
+        const bool verbose          = LuaObject::getLuaBoolean(L, 4, true, false);
 
         const char* rsps = login(username, password, organization, verbose);
         lua_pushstring(L, rsps);
@@ -324,7 +324,7 @@ int ProvisioningSystemLib::luaValidate(lua_State* L)
     {
         /* Get Parameters */
         const char* token   = LuaObject::getLuaString(L, 1);
-        bool verbose        = LuaObject::getLuaBoolean(L, 2, true, false);
+        const bool verbose  = LuaObject::getLuaBoolean(L, 2, true, false);
 
         lua_pushboolean(L, validate(token, verbose));
     }
@@ -368,9 +368,7 @@ ProvisioningSystemLib::Authenticator::Authenticator (lua_State* L):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-ProvisioningSystemLib::Authenticator::~Authenticator (void)
-{
-}
+ProvisioningSystemLib::Authenticator::~Authenticator (void) = default;
 
 /*----------------------------------------------------------------------------
  * isValid
@@ -381,19 +379,19 @@ bool ProvisioningSystemLib::Authenticator::isValid (const char* token)
     {
         return true; // no authentication used for default organization name
     }
-    
+
     if(token != NULL)
     {
         return ProvisioningSystemLib::validate(token);
     }
-    
+
     return false;
 }
 
 /*----------------------------------------------------------------------------
  * writeData
  *----------------------------------------------------------------------------*/
-size_t ProvisioningSystemLib::writeData(void *buffer, size_t size, size_t nmemb, void *userp)
+size_t ProvisioningSystemLib::writeData(const void *buffer, size_t size, size_t nmemb, void *userp)
 {
     List<data_t>* rsps_set = reinterpret_cast<List<data_t>*>(userp);
 

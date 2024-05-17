@@ -73,9 +73,7 @@ CfsInterface::PktStats::PktStats(CommandProcessor* cmd_proc, const char* stat_na
     cmdProc->registerObject(stat_name, this);
 }
 
-CfsInterface::PktStats::~PktStats(void)
-{
-}
+CfsInterface::PktStats::~PktStats(void) = default;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -194,14 +192,14 @@ CfsInterface::CfsInterface(CommandProcessor* cmd_proc, const char* obj_name, con
 CfsInterface::~CfsInterface(void)
 {
     interfaceActive = false;
-    if(telemetryPid) delete telemetryPid;
-    if(commandPid) delete commandPid;
+    delete telemetryPid;
+    delete commandPid;
 
-    if(tlmSock) delete tlmSock;
-    if(cmdSock) delete cmdSock;
+    delete tlmSock;
+    delete cmdSock;
 
-    if(tlmQ) delete tlmQ;
-    if(cmdQ) delete cmdQ;
+    delete tlmQ;
+    delete cmdQ;
 
     // PktStats (apidStats[]) do not need to be explicitly
     // deleted here; that is handled as a part of the
@@ -220,18 +218,18 @@ void* CfsInterface::telemetryThread (void* parm)
     while(interface->interfaceActive)
     {
         /* Read Packet */
-        int bytes = interface->tlmSock->readBuffer(buffer, CCSDS_MAX_SPACE_PACKET_SIZE);
+        const int bytes = interface->tlmSock->readBuffer(buffer, CCSDS_MAX_SPACE_PACKET_SIZE);
         if(bytes > CCSDS_SPACE_HEADER_SIZE)
         {
             /* Create Packet Statistic (If Necessary) */
-            int apid = CCSDS_GET_APID(buffer);
+            const int apid = CCSDS_GET_APID(buffer);
             if(interface->apidStats[apid] == NULL) // TODO: Needs to be mutexed... not safe with commandThread
             {
                 interface->apidStats[apid] = interface->createPktStat(apid); // TODO: put mutex inside the createPktStat function
             }
 
             /* Validate Packet */
-            bool valid = interface->validatePkt(buffer, bytes);
+            const bool valid = interface->validatePkt(buffer, bytes);
             if(valid)
             {
                 interface->apidStats[apid]->rec->segs_read++;
@@ -290,18 +288,18 @@ void* CfsInterface::commandThread (void* parm)
     while(interface->interfaceActive)
     {
         /* ReceivePacket */
-        int bytes = interface->cmdQ->receiveCopy(buffer, CCSDS_MAX_SPACE_PACKET_SIZE, SYS_TIMEOUT);
+        const int bytes = interface->cmdQ->receiveCopy(buffer, CCSDS_MAX_SPACE_PACKET_SIZE, SYS_TIMEOUT);
         if(bytes > CCSDS_SPACE_HEADER_SIZE)
         {
             /* Create Packet Statistic (If Necessary) */
-            int apid = CCSDS_GET_APID(buffer);
+            const int apid = CCSDS_GET_APID(buffer);
             if(interface->apidStats[apid] == NULL) // TODO: Needs to be mutexed... not safe with telemetryThread
             {
                 interface->apidStats[apid] = interface->createPktStat(apid);
             }
 
             /* Validate Packet */
-            bool valid = interface->validatePkt(buffer, bytes);
+            const bool valid = interface->validatePkt(buffer, bytes);
             if(valid)
             {
                 interface->apidStats[apid]->rec->segs_read++;
@@ -317,7 +315,7 @@ void* CfsInterface::commandThread (void* parm)
             /* Attempt to Send Packet */
             if(valid || !interface->dropInvalidPkts)
             {
-                int bytes_sent = interface->cmdSock->writeBuffer(buffer, bytes);
+                const int bytes_sent = interface->cmdSock->writeBuffer(buffer, bytes);
                 if(bytes_sent == bytes)
                 {
                     interface->measurePkt(buffer, bytes);
@@ -455,14 +453,14 @@ bool CfsInterface::validatePkt (unsigned char* pktbuf, int bytes)
     try
     {
         /* Create Ccsds Packet */
-        CcsdsSpacePacket pkt(pktbuf, bytes);
+        const CcsdsSpacePacket pkt(pktbuf, bytes);
 
         /* Get Primary Header Fields */
-        unsigned int apid = pkt.getAPID();
-        unsigned int seq = pkt.getSEQ();
-        unsigned int len = pkt.getLEN();
-        seg_t        seg = pkt.getSEQFLG();
-        bool         cmd = pkt.isCMD();
+        const unsigned int apid = pkt.getAPID();
+        const unsigned int seq = pkt.getSEQ();
+        const unsigned int len = pkt.getLEN();
+        const seg_t        seg = pkt.getSEQFLG();
+        const bool         cmd = pkt.isCMD();
 
         /* Get Statistics */
         pktStats_t*  stat = apidStats[apid]->rec;
@@ -552,10 +550,10 @@ void CfsInterface::measurePkt (const unsigned char* pktbuf, int bytes)
 {
     if(pktbuf == NULL || bytes < 6) return;
 
-    unsigned int apid = CCSDS_GET_APID(pktbuf);
-    int64_t        now  = TimeLib::gpstime();
-    bool         cmd  = CCSDS_IS_CMD(pktbuf);
-    unsigned int seg  = CCSDS_GET_SEQFLG(pktbuf);
+    const unsigned int apid = CCSDS_GET_APID(pktbuf);
+    const int64_t      now  = TimeLib::gpstime();
+    const bool         cmd  = CCSDS_IS_CMD(pktbuf);
+    const unsigned int seg  = CCSDS_GET_SEQFLG(pktbuf);
 
     /* Get Statistics */
     pktStats_t*  stat = apidStats[apid]->rec;

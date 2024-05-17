@@ -102,7 +102,7 @@ const char* SwotParms::tojson (void) const
 
     /* Serialize variables */
     rapidjson::Value var_array(rapidjson::kArrayType);
-    List<string>::Iterator iter(variables);
+    const List<string>::Iterator iter(variables);
     for(int i = 0; i < variables.length(); i++)
     {
         rapidjson::Value var_str(iter[i].c_str(), allocator);
@@ -171,7 +171,7 @@ void SwotParms::get_lua_string_list (lua_State* L, int index, string_list_t& str
     if(lua_istable(L, index))
     {
         /* Get number of item in table */
-        int num_strings = lua_rawlen(L, index);
+        const int num_strings = lua_rawlen(L, index);
         if(num_strings > 0 && provided)
         {
             *provided = true;
@@ -186,7 +186,7 @@ void SwotParms::get_lua_string_list (lua_State* L, int index, string_list_t& str
             if(lua_isstring(L, -1))
             {
                 const char* item_str = LuaObject::getLuaString(L, -1);
-                string item(item_str);
+                const string item(item_str);
                 string_list.add(item);
                 mlog(DEBUG, "Adding %s to list of strings", item_str);
             }

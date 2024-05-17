@@ -73,7 +73,7 @@ class UT_String: public CommandableObject
          *--------------------------------------------------------------------*/
 
             UT_String           (CommandProcessor* cmd_proc, const char* obj_name);
-            ~UT_String          (void);
+            ~UT_String          (void) override;
 
     bool    _ut_assert          (bool e, const char* file, int line, const char* fmt, ...);
 

@@ -102,7 +102,7 @@ class H5File: public LuaObject
          *--------------------------------------------------------------------*/
 
                             H5File              (lua_State* L, Asset* _asset, const char* _resource);
-        virtual             ~H5File             (void);
+                            ~H5File             (void) override;
 
         static void*        readThread          (void* parm);
 

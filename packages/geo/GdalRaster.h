@@ -174,7 +174,7 @@ class GdalRaster
         void        map2pixel            (const OGRPoint* poi, int& x, int& y) { map2pixel(poi->getX(), poi->getY(), x, y); }
         void        pixel2map            (int x, int y, double& mapx, double& mapy);
 
-        static bool s3sleep              (void) {std::this_thread::sleep_for(std::chrono::milliseconds(50)); return true; }
+        static void s3sleep              (void) {std::this_thread::sleep_for(std::chrono::milliseconds(50));}
 };
 
 #endif  /* __gdal_raster__ */

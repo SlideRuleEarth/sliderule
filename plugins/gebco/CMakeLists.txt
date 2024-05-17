@@ -1,7 +1,7 @@
 # gebco SlideRule Plugin top-level CMake build script
 
-project (GEBCO LANGUAGES CXX)
 cmake_minimum_required (VERSION 3.13.0) # The minimum CMake version is chosen to enable policy CMP0079
+project (GEBCO LANGUAGES CXX)
 include(${CMAKE_SOURCE_DIR}/../../project-config.cmake)
 
 ####################

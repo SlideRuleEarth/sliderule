@@ -94,7 +94,7 @@ MeritRaster::MeritRaster(lua_State *L, GeoParms* _parms):
     asset(NULL)
 {
     /* Initialize Time */
-    TimeLib::gmt_time_t gmt_date = {
+    const TimeLib::gmt_time_t gmt_date = {
         .year = 2020,
         .doy = 169,
         .hour = 0,
@@ -122,8 +122,8 @@ uint32_t MeritRaster::getSamples (const MathLib::point_3d_t& point, int64_t gps,
     int upper_lat = ((int)ceil(point.y / 5.0)) * 5;
 
     /* Calculate Pixel Location */
-    int x_offset = (int)(((double)point.x - left_lon) / X_SCALE);
-    int y_offset = (int)(((double)point.y - upper_lat) / Y_SCALE);
+    const int x_offset = (int)(((double)point.x - left_lon) / X_SCALE);
+    const int y_offset = (int)(((double)point.y - upper_lat) / Y_SCALE);
 
     /* Check Pixel Location */
     if( x_offset < 0 || x_offset >= X_MAX ||
@@ -142,7 +142,7 @@ uint32_t MeritRaster::getSamples (const MathLib::point_3d_t& point, int64_t gps,
     }
 
     /* Handle Negative Latitudes */
-    char char4lat = 'n';
+    const char char4lat = 'n';
     if(upper_lat < 0)
     {
         char4lon = 's';
@@ -172,9 +172,9 @@ uint32_t MeritRaster::getSamples (const MathLib::point_3d_t& point, int64_t gps,
         if(!value_cached)
         {
             H5Coro::context_t context;
-            H5Coro::info_t info = H5Coro::read(asset, RESOURCE_NAME, dataset.c_str(), RecordObject::DYNAMIC, H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS, &context, false, traceId);
+            const H5Coro::info_t info = H5Coro::read(asset, RESOURCE_NAME, dataset.c_str(), RecordObject::DYNAMIC, H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS, &context, false, traceId);
             assert(info.datasize == (X_MAX * Y_MAX * sizeof(int32_t)));
-            int32_t* tile = (int32_t*)info.data;
+            int32_t* tile = reinterpret_cast<int32_t*>(info.data);
 
             /* Update Cache */
             cacheMut.lock();
@@ -191,7 +191,7 @@ uint32_t MeritRaster::getSamples (const MathLib::point_3d_t& point, int64_t gps,
         }
 
         /* Build Sample */
-        RasterSample* sample = new RasterSample(((double)gpsTime / (double)1000.0), 0);
+        RasterSample* sample = new RasterSample(((double)gpsTime / 1000.0), 0);
         sample->value = value;
 
         /* Return Sample */

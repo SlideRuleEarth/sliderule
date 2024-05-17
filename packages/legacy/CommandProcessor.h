@@ -72,7 +72,7 @@ class CommandProcessor: public CommandableObject
          *--------------------------------------------------------------------*/
 
         explicit            CommandProcessor        (const char* cmdq_name);
-                            ~CommandProcessor       (void);
+                            ~CommandProcessor       (void) override;
 
         bool                postCommand             (const char* cmdstr, ...) VARG_CHECK(printf, 2, 3); // "this" is 1
         bool                postPriority            (const char* cmdstr, ...) VARG_CHECK(printf, 2, 3); // "this" is 1
@@ -108,8 +108,8 @@ class CommandProcessor: public CommandableObject
                   perm = _perm; }
 
             ~handle_entry_t(void)
-                { if(name) delete [] name;
-                  if(desc) delete [] desc; }
+                { delete [] name;
+                  delete [] desc; }
         };
 
         // Current Value Table Entry //
@@ -118,13 +118,13 @@ class CommandProcessor: public CommandableObject
             void*   data;
             int     size;
 
-            cvt_entry_t(void* _data, int _size)
+            cvt_entry_t(const void* _data, int _size)
                 { data = new unsigned char [_size];
                   memcpy(data, _data, _size);
                   size = _size; }
 
             ~cvt_entry_t(void)
-                { delete [] (unsigned char*)data; }
+                { delete [] static_cast<unsigned char*>(data); }
         };
 
         // Object Entry //
@@ -133,8 +133,7 @@ class CommandProcessor: public CommandableObject
             CommandableObject*  obj;
             bool                permanent;
 
-            obj_entry_t(void) { } // uninitialized entry
-
+            obj_entry_t(void): obj(NULL), permanent(false) { }
             obj_entry_t(CommandableObject* _obj, bool _permanent)
                 { obj = _obj;
                   permanent = _permanent; }

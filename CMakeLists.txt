@@ -1,7 +1,7 @@
 # SlideRule top-level CMake build script
 
-project (SLIDERULE LANGUAGES CXX)
 cmake_minimum_required (VERSION 3.13.0) # The minimum CMake version is chosen to enable policy CMP0079
+project (SLIDERULE LANGUAGES CXX)
 include(${CMAKE_CURRENT_SOURCE_DIR}/project-config.cmake)
 
 #####################

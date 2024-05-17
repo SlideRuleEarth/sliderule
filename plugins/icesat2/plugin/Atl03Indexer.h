@@ -54,7 +54,7 @@ class Atl03Indexer: public LuaObject
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef struct {
+        typedef struct index {
             char    name[Asset::RESOURCE_NAME_LENGTH];
             double  t0;
             double  t1;
@@ -64,6 +64,21 @@ class Atl03Indexer: public LuaObject
             double  lon1;
             int     cycle;
             int     rgt;
+
+            index (void) {clear();}
+
+            void clear(void)
+            {
+                t0 = 0;
+                t1 = 0;
+                lat0 = 0;
+                lon0 = 0;
+                lat1 = 0;
+                lon1 = 0;
+                cycle = 0;
+                rgt = 0;
+                memset(name, 0, sizeof(name));
+            }
         } index_t;
 
         /*--------------------------------------------------------------------
@@ -112,7 +127,7 @@ class Atl03Indexer: public LuaObject
          *--------------------------------------------------------------------*/
 
                             Atl03Indexer        (lua_State* L, Asset* _asset, List<string>* _resources, const char* outq_name, int num_threads);
-                            ~Atl03Indexer       (void);
+                            ~Atl03Indexer       (void) override;
 
         static void*        indexerThread       (void* parm);
 

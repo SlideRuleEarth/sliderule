@@ -57,7 +57,7 @@ int MetricRecord::rec_elem = sizeof(MetricRecord::rec_def) / sizeof(RecordObject
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-MetricRecord::MetricRecord(okey_t _index, double _value, const char* _text, const char* _name, void* _src, int _src_size):
+MetricRecord::MetricRecord(okey_t _index, double _value, const char* _text, const char* _name, const void* _src, int _src_size):
     RecordObject(rec_type, calcRecordSize(_text, _name, _src_size))
 {
     /* Populate Initial Metric */
@@ -80,7 +80,7 @@ MetricRecord::MetricRecord(okey_t _index, double _value, const char* _text, cons
     if(_text)
     {
         metric->text_offset = sizeof(metric_t);
-        text = (char*)(recordData + metric->text_offset);
+        text = reinterpret_cast<char*>(recordData + metric->text_offset);
         text_size = StringLib::size(_text) + 1;
         StringLib::copy(text, _text, text_size);
     }
@@ -90,7 +90,7 @@ MetricRecord::MetricRecord(okey_t _index, double _value, const char* _text, cons
     if(_name)
     {
         metric->name_offset = metric->text_offset + text_size;
-        name = (char*)(recordData + metric->name_offset);
+        name = reinterpret_cast<char*>(recordData + metric->name_offset);
         name_size = StringLib::size(_name) + 1;
         StringLib::copy(name, _name, name_size);
     }
@@ -107,9 +107,7 @@ MetricRecord::MetricRecord(okey_t _index, double _value, const char* _text, cons
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-MetricRecord::~MetricRecord()
-{
-}
+MetricRecord::~MetricRecord() = default;
 
 /*----------------------------------------------------------------------------
  * calcRecordSize
@@ -118,7 +116,7 @@ MetricRecord::~MetricRecord()
  *----------------------------------------------------------------------------*/
 int MetricRecord::calcRecordSize (const char* _text, const char* _name, int _src_size)
 {
-    int text_len = StringLib::size(_text) + 1;
-    int name_len = StringLib::size(_name) + 1;
+    const int text_len = StringLib::size(_text) + 1;
+    const int name_len = StringLib::size(_name) + 1;
     return (sizeof(metric_t) + text_len + name_len + _src_size);
 }

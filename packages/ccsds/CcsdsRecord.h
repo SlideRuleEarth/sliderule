@@ -71,7 +71,7 @@ class CcsdsRecord: public RecordObject
          *--------------------------------------------------------------------*/
 
         explicit                CcsdsRecord         (const char* rec_type);
-                                CcsdsRecord         (unsigned char* buffer, int size);
+                                CcsdsRecord         (const unsigned char* buffer, int size);
 
         /* Overloaded Methods */
         bool                    deserialize         (unsigned char* buffer, int size) override;
@@ -85,8 +85,8 @@ class CcsdsRecord: public RecordObject
 
         /* Definition Methods */
         static void             initCcsdsRecord     (void);
-        static recordDefErr_t   defineCommand       (const char* rec_type, const char* id_field, uint16_t _apid, uint8_t _fc, int _size, fieldDef_t* fields, int num_fields, int max_fields=CALC_MAX_FIELDS);
-        static recordDefErr_t   defineTelemetry     (const char* rec_type, const char* id_field, uint16_t _apid, int _size, fieldDef_t* fields, int num_fields, int max_fields=CALC_MAX_FIELDS);
+        static recordDefErr_t   defineCommand       (const char* rec_type, const char* id_field, uint16_t _apid, uint8_t _fc, int _size, const fieldDef_t* fields, int num_fields, int max_fields=CALC_MAX_FIELDS);
+        static recordDefErr_t   defineTelemetry     (const char* rec_type, const char* id_field, uint16_t _apid, int _size, const fieldDef_t* fields, int num_fields, int max_fields=CALC_MAX_FIELDS);
 
     protected:
 
@@ -118,9 +118,9 @@ class CcsdsRecord: public RecordObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                    CcsdsRecord         (void);
-        void        populateHeader      (void);
-        pktDef_t*   getPacketDefinition (const unsigned char* buffer, int size); // overloaded RecordObject method
+                         CcsdsRecord         (void);
+        void             populateHeader      (void);
+        static pktDef_t* getPacketDefinition (const unsigned char* buffer, int size); // overloaded RecordObject method
 };
 
 /******************************************************************************
@@ -131,7 +131,7 @@ class CcsdsRecordInterface: public CcsdsRecord
 {
     public:
                 CcsdsRecordInterface     (unsigned char* buffer, int size);
-        virtual ~CcsdsRecordInterface    (void);
+                ~CcsdsRecordInterface    (void) override;
 };
 
 #endif  /* __ccsds_record__ */

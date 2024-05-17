@@ -94,7 +94,8 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
         throw RunTimeException(ERROR, RTE_ERROR, "Empty BANDS array received");
 
     /* Create in memory index file (geojson) */
-    VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), (GByte*)_parms->catalog, (vsi_l_offset)strlen(_parms->catalog), FALSE);
+    GByte* bytes = const_cast<GByte*>(reinterpret_cast<const GByte*>(_parms->catalog));
+    VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), bytes, (vsi_l_offset)strlen(_parms->catalog), FALSE);
     CHECKPTR(fp);
     VSIFCloseL(fp);
 
@@ -198,7 +199,7 @@ bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
                 const char* fname = feature->GetFieldAsString(bandName);
                 if(fname && strlen(fname) > 0)
                 {
-                    std::string fileName(fname);
+                    const std::string fileName(fname);
                     const size_t pos = strlen(URL_str);
 
                     raster_info_t rinfo;
@@ -231,7 +232,7 @@ bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (groupList.length() > 0);
+    return (!groupList.empty());
 }
 
 
@@ -254,7 +255,7 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, List<Rast
     if(!isL8 && !isS2)
         throw RunTimeException(DEBUG, RTE_ERROR, "Could not find valid Landsat8/Sentinel2 groupId");
 
-    double invalid = -999999.0;
+    const double invalid = -999999.0;
     double green;
     double red;
     double nir08;
@@ -303,8 +304,8 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, List<Rast
         }
     }
 
-    double groupTime = rgroup->gpsTime / 1000;
-    std::string groupName = rgroup->id + " {\"algo\": \"";
+    const double groupTime = rgroup->gpsTime / 1000;
+    const std::string groupName = rgroup->id + " {\"algo\": \"";
 
     /* Calculate algos - make sure that all the necessary bands were read */
     if(ndsi)

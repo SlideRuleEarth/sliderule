@@ -41,7 +41,6 @@
 #include "RecordObject.h"
 #include "DispatchObject.h"
 #include "OsApi.h"
-#include "MsgQ.h"
 
 #include "Atl03Reader.h"
 #include "Icesat2Parms.h"
@@ -99,7 +98,7 @@ class Atl06Dispatch: public DispatchObject
             uint16_t            pflags;                 // processing flags
             uint16_t            rgt;                    // reference ground track
             uint8_t             cycle;                  // granule cycle number
-            uint8_t             region;                 // granule region number            
+            uint8_t             region;                 // granule region number
             uint8_t             spot;                   // 1 through 6, or 0 if unknown
             uint8_t             gt;                     // gt1l, gt1r, gt2l, gt2r, gt3l, gt3r
             int64_t             time_ns;                // nanoseconds from GPS epoch
@@ -174,7 +173,7 @@ class Atl06Dispatch: public DispatchObject
          *--------------------------------------------------------------------*/
 
                         Atl06Dispatch                   (lua_State* L, const char* outq_name, Icesat2Parms* _parms);
-                        ~Atl06Dispatch                  (void);
+                        ~Atl06Dispatch                  (void) override;
 
         bool            processRecord                   (RecordObject* record, okey_t key, recVec_t* records) override;
         bool            processTimeout                  (void) override;

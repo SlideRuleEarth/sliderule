@@ -64,7 +64,7 @@ class GTDArray
         virtual     ~GTDArray       (void);
 
         bool        join            (int timeout, bool throw_exception);
-        uint64_t    serialize       (uint8_t* buffer, int32_t* start_element, uint32_t* num_elements);
+        uint64_t    serialize       (uint8_t* buffer, const int32_t* start_element, const uint32_t* num_elements);
 
         /*--------------------------------------------------------------------
          * Data

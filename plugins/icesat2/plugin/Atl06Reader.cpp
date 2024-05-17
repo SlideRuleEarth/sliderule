@@ -112,7 +112,7 @@ int Atl06Reader::luaCreate (lua_State* L)
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
         parms = dynamic_cast<Icesat2Parms*>(getLuaObject(L, 4, Icesat2Parms::OBJECT_TYPE));
-        bool send_terminator = getLuaBoolean(L, 5, true, true);
+        const bool send_terminator = getLuaBoolean(L, 5, true, true);
 
         /* Return Reader Object */
         return createLuaObject(L, new Atl06Reader(L, asset, resource, outq_name, parms, send_terminator));
@@ -318,8 +318,8 @@ void Atl06Reader::Region::polyregion (info_t* info)
         bool inclusion = false;
 
         /* Project Segment Coordinate */
-        MathLib::coord_t segment_coord = {longitude[segment], latitude[segment]};
-        MathLib::point_t segment_point = MathLib::coord2point(segment_coord, info->reader->parms->projection);
+        const MathLib::coord_t segment_coord = {longitude[segment], latitude[segment]};
+        const MathLib::point_t segment_point = MathLib::coord2point(segment_coord, info->reader->parms->projection);
 
         /* Test Inclusion */
         if(MathLib::inpoly(info->reader->parms->projected_poly, info->reader->parms->points_in_poly, segment_point))
@@ -375,7 +375,7 @@ void Atl06Reader::Region::rasterregion (info_t* info)
     while(segment < latitude.size)
     {
         /* Check Inclusion */
-        bool inclusion = info->reader->parms->raster->includes(longitude[segment], latitude[segment]);
+        const bool inclusion = info->reader->parms->raster->includes(longitude[segment], latitude[segment]);
         inclusion_mask[segment] = inclusion;
 
         /* Check For First Segment */
@@ -439,7 +439,7 @@ Atl06Reader::Atl06Data::Atl06Data (info_t* info, const Region& region):
             const char* field_name = (*anc_fields)[i].field.c_str();
             FString dataset_name("%s/land_ice_segments/%s", info->prefix, field_name);
             H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, dataset_name.c_str(), &info->reader->context, 0, region.first_segment, region.num_segments);
-            bool status = anc_data.add(field_name, array);
+            const bool status = anc_data.add(field_name, array);
             if(!status) delete array;
             assert(status); // the dictionary add should never fail
         }
@@ -479,35 +479,28 @@ Atl06Reader::Atl06Data::Atl06Data (info_t* info, const Region& region):
 }
 
 /*----------------------------------------------------------------------------
- * Atl03Data::Destructor
- *----------------------------------------------------------------------------*/
-Atl06Reader::Atl06Data::~Atl06Data (void)
-{
-}
-
-/*----------------------------------------------------------------------------
  * subsettingThread
  *----------------------------------------------------------------------------*/
 void* Atl06Reader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = (info_t*)parm;
+    info_t* info = static_cast<info_t*>(parm);
     Atl06Reader* reader = info->reader;
     Icesat2Parms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     vector<RecordObject*> rec_vec;
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(INFO, reader->traceId, "atl06_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl06_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
     {
         /* Subset to Region of Interest */
-        Region region(info);
+        const Region region(info);
 
         /* Read ATL06 Datasets */
-        Atl06Data atl06(info, region);
+        const Atl06Data atl06(info, region);
 
         /* Increment Read Statistics */
         local_stats.segments_read = region.num_segments;
@@ -554,7 +547,7 @@ void* Atl06Reader::subsettingThread (void* parm)
             entry->w_surface_window_final   = atl06.w_surface_window_final[segment] != numeric_limits<float>::max()   ? atl06.w_surface_window_final[segment]   : numeric_limits<float>::quiet_NaN();
             entry->bsnow_h                  = atl06.bsnow_h[segment]                != numeric_limits<float>::max()   ? atl06.bsnow_h[segment]                  : numeric_limits<float>::quiet_NaN();
             entry->r_eff                    = atl06.r_eff[segment]                  != numeric_limits<float>::max()   ? atl06.r_eff[segment]                    : numeric_limits<float>::quiet_NaN();
-            entry->tide_ocean               = atl06.tide_ocean[segment]             != numeric_limits<float>::max()   ? atl06.tide_ocean[segment]               : numeric_limits<float>::quiet_NaN(); 
+            entry->tide_ocean               = atl06.tide_ocean[segment]             != numeric_limits<float>::max()   ? atl06.tide_ocean[segment]               : numeric_limits<float>::quiet_NaN();
 
             /* Populate Ancillary Data */
             if(parms->atl06_fields)
@@ -587,7 +580,7 @@ void* Atl06Reader::subsettingThread (void* parm)
                 int bufsize = 0;
 
                 /* Calculate Batch Record Size */
-                int recsize = batch_index * sizeof(elevation_t);
+                const int recsize = batch_index * sizeof(elevation_t);
                 batch_record->setUsedData(recsize);
 
                 if(rec_vec.size() > 1) // elevation and ancillary field records
@@ -780,7 +773,7 @@ int Atl06Reader::luaStats (lua_State* L)
     try
     {
         /* Get Clear Parameter */
-        bool with_clear = getLuaBoolean(L, 2, true, false);
+        const bool with_clear = getLuaBoolean(L, 2, true, false);
 
         /* Create Statistics Table */
         lua_newtable(L);

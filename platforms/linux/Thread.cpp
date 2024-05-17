@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "Thread.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -60,16 +61,17 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Thread::Thread(thread_func_t function, void* parm, bool _join)
+Thread::Thread(thread_func_t function, void* parm, bool _join):
+    join(_join)
 {
-    join = _join;
     pthread_attr_t pthread_attr;
     pthread_attr_init(&pthread_attr);
     if(!join) pthread_attr_setdetachstate(&pthread_attr, PTHREAD_CREATE_DETACHED);
-    int ret = pthread_create(&threadId, &pthread_attr, function, parm);
+    const int ret = pthread_create(&threadId, &pthread_attr, function, parm);
     if(ret != 0)
     {
-        dlog("Failed to create thread (%d): %s", ret, strerror(ret));
+        char error_buf[256];
+        dlog("Failed to create thread (%d): %s", ret, strerror_r(ret, error_buf, sizeof(error_buf)));  // Thread-safe error message
         throw RunTimeException(CRITICAL, RTE_ERROR, "pthread_create failed");
     }
 }
@@ -81,8 +83,12 @@ Thread::~Thread()
 {
     if(join)
     {
-        int ret = pthread_join(threadId, NULL);
-        if(ret != 0) dlog("Failed to join thread (%d): %s", ret, strerror(ret));
+        const int ret = pthread_join(threadId, NULL);
+        if(ret != 0)
+        {
+            char error_buf[256];
+            dlog("Failed to join thread (%d): %s", ret, strerror_r(ret, error_buf, sizeof(error_buf)));  // Thread-safe error message
+        }
     }
 }
 
@@ -91,7 +97,7 @@ Thread::~Thread()
  *----------------------------------------------------------------------------*/
 long Thread::getId(void)
 {
-    pid_t pid = gettid();
+    const pid_t pid = gettid();
     return (long)pid;
 }
 

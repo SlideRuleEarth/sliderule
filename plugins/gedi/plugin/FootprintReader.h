@@ -148,7 +148,7 @@ class FootprintReader: public LuaObject
                                                      const char* outq_name, GediParms* _parms, bool _send_terminator,
                                                      const char* batch_rec_type, const char* lat_name, const char* lon_name,
                                                      subset_func_t subsetter);
-                            ~FootprintReader        (void);
+                            ~FootprintReader        (void) override;
         void                postRecordBatch         (stats_t* local_stats);
         static int          luaStats                (lua_State* L);
 };
@@ -210,7 +210,7 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, Asset* _asset, con
 
     /* Initialize Batch Record Processing */
     batchIndex = 0;
-    batchData = (batch_t*)batchRecord.getRecordData();
+    batchData = reinterpret_cast<batch_t*>(batchRecord.getRecordData());
 
     /* Initialize Readers */
     active = true;
@@ -373,8 +373,8 @@ void FootprintReader<footprint_t>::Region::polyregion (info_t* info)
         bool inclusion = false;
 
         /* Project Segment Coordinate */
-        MathLib::coord_t footprint_coord = {lon[footprint], lat[footprint]};
-        MathLib::point_t footprint_point = MathLib::coord2point(footprint_coord, info->reader->parms->projection);
+        const MathLib::coord_t footprint_coord = {lon[footprint], lat[footprint]};
+        const MathLib::point_t footprint_point = MathLib::coord2point(footprint_coord, info->reader->parms->projection);
 
         /* Test Inclusion */
         if(MathLib::inpoly(info->reader->parms->projected_poly, info->reader->parms->points_in_poly, footprint_point))
@@ -423,7 +423,7 @@ void FootprintReader<footprint_t>::Region::rasterregion (info_t* info)
     while(footprint < lat.size)
     {
         /* Check Inclusion */
-        bool inclusion = info->reader->parms->raster->includes(lon[footprint], lat[footprint]);
+        const bool inclusion = info->reader->parms->raster->includes(lon[footprint], lat[footprint]);
         inclusion_mask[footprint] = inclusion;
 
         /* If Coordinate Is In Raster */
@@ -462,8 +462,8 @@ template <class footprint_t>
 void FootprintReader<footprint_t>::postRecordBatch (stats_t* local_stats)
 {
     uint8_t* rec_buf = NULL;
-    int size = batchIndex * sizeof(footprint_t);
-    int rec_bytes = batchRecord.serialize(&rec_buf, RecordObject::REFERENCE, size);
+    const int size = batchIndex * sizeof(footprint_t);
+    const int rec_bytes = batchRecord.serialize(&rec_buf, RecordObject::REFERENCE, size);
     int post_status = MsgQ::STATE_TIMEOUT;
     while( active && ((post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT) );
     if(post_status > 0)
@@ -500,7 +500,7 @@ int FootprintReader<footprint_t>::luaStats (lua_State* L)
     try
     {
         /* Get Clear Parameter */
-        bool with_clear = getLuaBoolean(L, 2, true, false);
+        const bool with_clear = getLuaBoolean(L, 2, true, false);
 
         /* Create Statistics Table */
         lua_newtable(L);

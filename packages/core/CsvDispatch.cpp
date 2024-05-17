@@ -60,12 +60,12 @@ int CsvDispatch::luaCreate (lua_State* L)
     try
     {
         /* Get Output Queue Name */
-        int tblindex = 1;
+        const int tblindex = 1;
         const char* outq_name = getLuaString(L, 2);
 
         /* Parse Header Columns */
         const char** _columns = NULL;
-        int _num_columns = lua_rawlen(L, tblindex);
+        const int _num_columns = lua_rawlen(L, tblindex);
         if(lua_istable(L, tblindex) && _num_columns > 0)
         {
             _columns = new const char* [_num_columns];
@@ -125,8 +125,8 @@ CsvDispatch::CsvDispatch (lua_State* L, const char* outq_name, const char** _col
     }
 
     /* Send Out Header Row */
-    int len = StringLib::size(hdrrow) + 1;
-    int rc = outQ->postCopy(hdrrow, len, SYS_TIMEOUT);
+    const int len = StringLib::size(hdrrow) + 1;
+    const int rc = outQ->postCopy(hdrrow, len, SYS_TIMEOUT);
     if(rc <= 0) mlog(CRITICAL, "Failed (%d) to post terminator to %s", rc, outQ->getName());
 }
 
@@ -162,7 +162,7 @@ bool CsvDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* rec
         if(i == (num_columns - 1)) fmtstr = "%s\n";
 
         char valstr[RecordObject::MAX_VAL_STR_SIZE];
-        RecordObject::field_t field = record->getField(columns[i]);
+        const RecordObject::field_t field = record->getField(columns[i]);
 
         if(record->getValueText(field, valstr))
         {
@@ -173,8 +173,8 @@ bool CsvDispatch::processRecord (RecordObject* record, okey_t key, recVec_t* rec
     }
 
     /* Send Out Row */
-    int len = StringLib::size(valrow) + 1;
-    int rc = outQ->postCopy(valrow, len, SYS_TIMEOUT);
+    const int len = StringLib::size(valrow) + 1;
+    const int rc = outQ->postCopy(valrow, len, SYS_TIMEOUT);
     if(rc <= 0) mlog(CRITICAL, "Failed (%d) to post terminator to %s", rc, outQ->getName());
 
     /* Check and Return Status */

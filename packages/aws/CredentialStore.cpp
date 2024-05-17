@@ -132,7 +132,7 @@ int CredentialStore::luaGet(lua_State* L)
         const char* host = LuaObject::getLuaString(L, 1);
 
         /* Get Credentials */
-        Credential credential = CredentialStore::get(host);
+        const Credential credential = CredentialStore::get(host);
 
         /* Return Credentials */
         if(credential.provided)

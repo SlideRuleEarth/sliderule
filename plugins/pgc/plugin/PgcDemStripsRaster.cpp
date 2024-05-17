@@ -47,7 +47,7 @@ PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const cha
     demName(dem_name),
     path2geocells(_parms->asset->getPath() + std::string(geo_suffix))
 {
-    std::size_t pos = path2geocells.find(demName);
+    const std::size_t pos = path2geocells.find(demName);
     if (pos == std::string::npos)
         throw RunTimeException(DEBUG, RTE_ERROR, "Invalid path to geocells: %s", path2geocells.c_str());
 
@@ -57,9 +57,7 @@ PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const cha
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-PgcDemStripsRaster::~PgcDemStripsRaster(void)
-{
-}
+PgcDemStripsRaster::~PgcDemStripsRaster(void) = default;
 
 /*----------------------------------------------------------------------------
  * openGeoIndex
@@ -79,10 +77,10 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
     OGREnvelope env;
     poly->getEnvelope(&env);
 
-    double minx = floor(env.MinX);
-    double miny = floor(env.MinY);
-    double maxx = ceil(env.MaxX);
-    double maxy = ceil(env.MaxY);
+    const double minx = floor(env.MinX);
+    const double miny = floor(env.MinY);
+    const double maxx = ceil(env.MaxX);
+    const double maxy = ceil(env.MaxY);
 
     /* Create poly geometry for all index files */
     geoIndexPoly = GdalRaster::makeRectangle(minx, miny, maxx, maxy);
@@ -100,7 +98,7 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
             try
             {
                 /* Open new vector data set*/
-                dset = (GDALDataset*)GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+                dset = static_cast<GDALDataset*>(GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL));
                 if(dset == NULL)
                 {
                     /* If index file for this ix, iy does not exist, continue */
@@ -152,7 +150,7 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
     if(GdalRaster::ispoint(geo))
     {
         const OGRPoint* poi = geo->toPoint();
-        return _getIndexFile(poi->getX(), poi->getY(), file);
+        _getIndexFile(poi->getX(), poi->getY(), file);
     }
 }
 
@@ -173,7 +171,7 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
      * the two images can be up to 30 days apart.
      *
      */
-    std::vector<const char*> dates = {"start_datetime", "end_datetime"};
+    const std::vector<const char*> dates = {"start_datetime", "end_datetime"};
     try
     {
         for(unsigned i = 0; i < featuresList.size(); i++)
@@ -221,14 +219,14 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
                     flagsRinfo.tag = FLAGS_TAG;
                     flagsRinfo.fileName = fileName;
 
-                    if(flagsRinfo.fileName.length() > 0)
+                    if(!flagsRinfo.fileName.empty())
                     {
                         rgroup->infovect.push_back(flagsRinfo);
                     }
                 }
 
                 double gps = 0;
-                for(auto& s: dates)
+                for(const auto& s: dates)
                 {
                     TimeLib::gmt_time_t gmt;
                     gps += getGmtDate(feature, s, gmt);
@@ -249,7 +247,7 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (groupList.length() > 0);
+    return (!groupList.empty());
 }
 
 
@@ -279,8 +277,8 @@ void PgcDemStripsRaster::_getIndexFile(double lon, double lat, std::string& file
      */
 
     /* Round to geocell location */
-    int _lon = static_cast<int>(floor(lon));
-    int _lat = static_cast<int>(floor(lat));
+    const int _lon = static_cast<int>(floor(lon));
+    const int _lat = static_cast<int>(floor(lat));
 
     char lonBuf[32];
     char latBuf[32];
@@ -288,8 +286,8 @@ void PgcDemStripsRaster::_getIndexFile(double lon, double lat, std::string& file
     sprintf(lonBuf, "%03d", abs(_lon));
     sprintf(latBuf, "%02d", abs(_lat));
 
-    std::string lonStr(lonBuf);
-    std::string latStr(latBuf);
+    const std::string lonStr(lonBuf);
+    const std::string latStr(latBuf);
 
     file = path2geocells +
            latStr +

@@ -65,7 +65,7 @@ int RecordDispatcher::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* qname           = getLuaString(L, 1);
-        long        num_threads     = getLuaInteger(L, 2, true, OsApi::nproc());
+        const long  num_threads     = getLuaInteger(L, 2, true, OsApi::nproc());
         const char* key_mode_str    = getLuaString(L, 3, true, "RECEIPT_KEY");
 
         /* Check Number of Threads */
@@ -75,14 +75,14 @@ int RecordDispatcher::luaCreate (lua_State* L)
         }
 
         /* Set Key Mode */
-        keyMode_t key_mode = str2mode(key_mode_str);
+        const keyMode_t key_mode = str2mode(key_mode_str);
         const char* key_field = NULL;
         calcFunc_f  key_func = NULL;
         if(key_mode == INVALID_KEY_MODE)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid key mode specified: %s", key_mode_str);
         }
-        
+
         if(key_mode == FIELD_KEY_MODE)
         {
             key_field = getLuaString(L, 4);
@@ -94,7 +94,7 @@ int RecordDispatcher::luaCreate (lua_State* L)
         }
 
         /* Set Subscriber Type */
-        MsgQ::subscriber_type_t type = (MsgQ::subscriber_type_t)getLuaInteger(L, 5, true, MsgQ::SUBSCRIBER_OF_CONFIDENCE);
+        const MsgQ::subscriber_type_t type = (MsgQ::subscriber_type_t)getLuaInteger(L, 5, true, MsgQ::SUBSCRIBER_OF_CONFIDENCE);
 
         /* Create Record Dispatcher */
         return createLuaObject(L, new RecordDispatcher(L, qname, key_mode, key_field, key_func, num_threads, type));
@@ -136,7 +136,7 @@ const char* RecordDispatcher::mode2str(keyMode_t mode)
  *----------------------------------------------------------------------------*/
 bool RecordDispatcher::addKeyCalcFunc(const char* calc_name, calcFunc_f calc_func)
 {
-    calcFunc_t calc = { .calc = calc_func };
+    const calcFunc_t calc = { .calc = calc_func };
     return keyCalcFunctions.add(calc_name, calc);
 }
 
@@ -255,7 +255,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
         RecordDispatcher* lua_obj = dynamic_cast<RecordDispatcher*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        int             num_parms   = getLuaNumParms(L);
+        const int       num_parms   = getLuaNumParms(L);
         DispatchObject* dispatch    = dynamic_cast<DispatchObject*>(getLuaObject(L, 2, DispatchObject::OBJECT_TYPE));
 
         /* Check if Active */
@@ -274,7 +274,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
 
             try
             {
-                dispatch_t& old_dispatch = lua_obj->dispatchTable[rec_type];
+                const dispatch_t& old_dispatch = lua_obj->dispatchTable[rec_type];
                 if(old_dispatch.list)
                 {
                     /* Check List Doesn't Already Contain Dispatch */
@@ -296,7 +296,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
                     delete [] old_dispatch.list;
                 }
             }
-            catch(RunTimeException& e)
+            catch(const RunTimeException& e)
             {
                 (void)e;
             }
@@ -432,11 +432,11 @@ void* RecordDispatcher::dispatcherThread(void* parm)
     {
         /* Receive Message */
         Subscriber::msgRef_t ref;
-        int recv_status = dispatcher->inQ->receiveRef(ref, SYS_TIMEOUT);
+        const int recv_status = dispatcher->inQ->receiveRef(ref, SYS_TIMEOUT);
         if(recv_status > 0)
         {
-            unsigned char* msg = (unsigned char*)ref.data;
-            int len = ref.size;
+            unsigned char* msg = reinterpret_cast<unsigned char*>(ref.data);
+            const int len = ref.size;
 
             /* Dispatch Record */
             if(len > 0)
@@ -452,7 +452,7 @@ void* RecordDispatcher::dispatcherThread(void* parm)
                 {
                     if(!dispatcher->recError)
                     {
-                        int num_newlines = len / 16 + 3;
+                        const int num_newlines = len / 16 + 3;
                         char* msg_str = new char[len * 2 + num_newlines + 1];
                         mlog(e.level(), "%s unable to create record from message: %s", dispatcher->ObjectType, e.what());
                         int msg_index = 0;
@@ -483,7 +483,7 @@ void* RecordDispatcher::dispatcherThread(void* parm)
         else if(recv_status == MsgQ::STATE_TIMEOUT)
         {
             /* Signal Timeout to Dispatches */
-            int num_dispatches = dispatcher->dispatchList.size();
+            const int num_dispatches = dispatcher->dispatchList.size();
             for(int d = 0; d < num_dispatches; d++)
             {
                 DispatchObject* dis = dispatcher->dispatchList[d];
@@ -538,7 +538,7 @@ void* RecordDispatcher::dispatcherThread(void* parm)
 /*----------------------------------------------------------------------------
  * dispatchRecord
  *----------------------------------------------------------------------------*/
-void RecordDispatcher::dispatchRecord (RecordObject* record, DispatchObject::recVec_t* records)
+void RecordDispatcher::dispatchRecord (RecordObject* record, DispatchObject::recVec_t* records) // NOLINT(misc-no-recursion)
 {
     /* Dispatch Dispatches */
     try
@@ -546,21 +546,21 @@ void RecordDispatcher::dispatchRecord (RecordObject* record, DispatchObject::rec
         const char* rec_type = record->getRecordType();
         if(StringLib::match(rec_type, ContainerRecord::recType))
         {
-            ContainerRecord::rec_t* container = (ContainerRecord::rec_t*)record->getRecordData();
-            
+            ContainerRecord::rec_t* container = reinterpret_cast<ContainerRecord::rec_t*>(record->getRecordData());
+
             /* Build List of Records */
             DispatchObject::recVec_t rec_list;
             rec_list.reserve(container->rec_cnt);
             for(uint32_t i = 0; i < container->rec_cnt; i++)
             {
-                uint8_t* buffer = (uint8_t*)container + container->entries[i].rec_offset;
-                int size = container->entries[i].rec_size;
+                uint8_t* buffer = reinterpret_cast<uint8_t*>(container) + container->entries[i].rec_offset;
+                const int size = container->entries[i].rec_size;
                 RecordObject* subrec = createRecord(buffer, size);
                 rec_list.push_back(subrec);
             }
 
             /* Dispatch Each Record */
-            for(auto& rec: rec_list)
+            for(const auto& rec: rec_list)
             {
                 dispatchRecord(rec, &rec_list);
                 delete rec;
@@ -568,13 +568,13 @@ void RecordDispatcher::dispatchRecord (RecordObject* record, DispatchObject::rec
         }
 
         /* Get Record Type */
-        dispatch_t& dis = dispatchTable[rec_type];
+        const dispatch_t& dis = dispatchTable[rec_type];
 
         /* Get Key */
         okey_t key = 0;
         if(keyMode == FIELD_KEY_MODE)
         {
-            RecordObject::field_t key_field = record->getField(keyField);
+            const RecordObject::field_t key_field = record->getField(keyField);
             key = (okey_t)record->getValueInteger(key_field);
         }
         else if(keyMode == RECEIPT_KEY_MODE)
@@ -596,7 +596,7 @@ void RecordDispatcher::dispatchRecord (RecordObject* record, DispatchObject::rec
             dis.list[i]->processRecord(record, key, records);
         }
     }
-    catch(RunTimeException& e)
+    catch(const RunTimeException& e)
     {
         (void)e;
     }

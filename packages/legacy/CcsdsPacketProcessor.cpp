@@ -143,9 +143,9 @@ CcsdsPacketProcessor::CcsdsPacketProcessor(CommandProcessor* cmd_proc, const cha
     }
 
     /* Register Current Values */
-    cmdProc->setCurrentValue(getName(), autoFlushKey,       (void*)&autoFlush,      sizeof(autoFlush));
-    cmdProc->setCurrentValue(getName(), autoFlushCntKey,    (void*)&autoFlushCnt,   sizeof(autoFlushCnt));
-    cmdProc->setCurrentValue(getName(), latencyKey,         (void*)&latency,        sizeof(latency));
+    cmdProc->setCurrentValue(getName(), autoFlushKey,       static_cast<void*>(&autoFlush),      sizeof(autoFlush));
+    cmdProc->setCurrentValue(getName(), autoFlushCntKey,    static_cast<void*>(&autoFlushCnt),   sizeof(autoFlushCnt));
+    cmdProc->setCurrentValue(getName(), latencyKey,         static_cast<void*>(&latency),        sizeof(latency));
 
     /* Register Commands */
     registerCommand("SET_AUTO_FLUSH", (cmdFunc_t)&CcsdsPacketProcessor::setAutoFlushCmd,    1, "<ENABLE|DISABLE>");
@@ -192,7 +192,7 @@ int CcsdsPacketProcessor::setAutoFlushCmd (int argc, char argv[][MAX_CMD_SIZE])
     if(!StringLib::str2bool(argv[0], &enable)) return -1;
 
     autoFlush = enable;
-    cmdProc->setCurrentValue(getName(), autoFlushKey, (void*)&enable, sizeof(enable));
+    cmdProc->setCurrentValue(getName(), autoFlushKey, static_cast<void*>(&enable), sizeof(enable));
 
     return 0;
 }
@@ -396,7 +396,7 @@ int CcsdsPacketProcessor::regApidProcCmd(int argc, char argv[][MAX_CMD_SIZE])
  *----------------------------------------------------------------------------*/
 void* CcsdsPacketProcessor::workerThread (void* parm)
 {
-    workerThread_t* worker = (workerThread_t*)parm;
+    workerThread_t* worker = static_cast<workerThread_t*>(parm);
 
     while(worker->msgproc->workersActive)
     {
@@ -413,8 +413,8 @@ void* CcsdsPacketProcessor::workerThread (void* parm)
                 for(int s = 0; s < worker->segments->length(); s++)
                 {
                     CcsdsPacket* seg = worker->segments->get(s);
-                    int seglen = seg->getLEN();
-                    unsigned char* segbuf = seg->getBuffer();
+                    const int seglen = seg->getLEN();
+                    const unsigned char* segbuf = seg->getBuffer();
                     print2term("[%d]: ", seglen);
                     for(int i = 0; i < seglen; i++) print2term("%02X", segbuf[i]);
                     print2term("\n");
@@ -427,7 +427,7 @@ void* CcsdsPacketProcessor::workerThread (void* parm)
         worker->segments = NULL; // informs resetProcessing() that segments has been freed
 
         /* Make Available Again */
-        int status = worker->availq->postRef(worker, sizeof(workerThread_t));
+        const int status = worker->availq->postRef(worker, sizeof(workerThread_t));
         if(status <= 0)
         {
             mlog(CRITICAL, "Failed to post available worker ...exiting thread!");
@@ -468,9 +468,9 @@ bool CcsdsPacketProcessor::processMsg (unsigned char* msg, int bytes)
     }
 
     /* Pull Out CCSDS Header Parameters */
-    uint16_t apid = pkt->getAPID();
-    uint16_t len  = pkt->getLEN();
-    CcsdsSpacePacket::seg_flags_t seg = pkt->getSEQFLG();
+    const uint16_t apid = pkt->getAPID();
+    const uint16_t len  = pkt->getLEN();
+    const CcsdsSpacePacket::seg_flags_t seg = pkt->getSEQFLG();
 
     /* Check if Enabled */
     if(pktProcessor[apid].enable)
@@ -501,19 +501,19 @@ bool CcsdsPacketProcessor::processMsg (unsigned char* msg, int bytes)
                 /* Pull Out Time */
                 if(measureLatency)
                 {
-                    int64_t nowt = TimeLib::gpstime();
-                    int64_t pktt = TimeLib::gmt2gpstime(TimeLib::cds2gmttime(CCSDS_GET_CDS_DAYS(msg), CCSDS_GET_CDS_MSECS(msg)));
+                    const int64_t nowt = TimeLib::gpstime();
+                    const int64_t pktt = TimeLib::gmt2gpstime(TimeLib::cds2gmttime(CCSDS_GET_CDS_DAYS(msg), CCSDS_GET_CDS_MSECS(msg)));
                     latency = nowt - pktt;
-                    cmdProc->setCurrentValue(getName(), latencyKey, (void*)&latency, sizeof(latency));
+                    cmdProc->setCurrentValue(getName(), latencyKey, static_cast<void*>(&latency), sizeof(latency));
                 }
 
                 /* Grab Available Worker */
                 Subscriber::msgRef_t ref;
-                int status = subAvailQ->receiveRef(ref, 5000); // wait for five seconds
+                const int status = subAvailQ->receiveRef(ref, 5000); // wait for five seconds
                 if(status > 0)
                 {
                     subAvailQ->dereference(ref, false); // free up memory in message queue, but don't delete the worker
-                    workerThread_t* worker = (workerThread_t*)ref.data;
+                    workerThread_t* worker = static_cast<workerThread_t*>(ref.data);
 
                     /* Configure Worker */
                     worker->processor   = pktProcessor[apid].processor;
@@ -551,7 +551,7 @@ bool CcsdsPacketProcessor::handleTimeout (void)
     if((autoFlush && isFull()) || cmdFlush)
     {
         autoFlushCnt++;
-        cmdProc->setCurrentValue(getName(), autoFlushCntKey, (void*)&autoFlushCnt, sizeof(autoFlushCnt));
+        cmdProc->setCurrentValue(getName(), autoFlushCntKey, static_cast<void*>(&autoFlushCnt), sizeof(autoFlushCnt));
         resetProcessing(); // no check of return status because returning false is fatal to message processor parent class
     }
 
@@ -600,7 +600,7 @@ bool CcsdsPacketProcessor::resetProcessing (void)
 void CcsdsPacketProcessor::freeWorker (void* obj, void* parm)
 {
     (void)parm;
-    workerThread_t* worker = (workerThread_t*)obj;
+    workerThread_t* worker = static_cast<workerThread_t*>(obj);
 
     // -- DO NOT DELETE ... this memory is deallocated in the delete [] of workerThreadPool
     (void) worker;

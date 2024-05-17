@@ -63,10 +63,10 @@ class RasterSubset
         RasterSubset(uint64_t _size, const std::string& vsiFile);
         ~RasterSubset(void);
 
-        const uint8_t* getData    (void) const {return data;}
-        uint64_t       getSize    (void) const {return size;}
-        uint64_t       getPoolSize(void) const {return poolsize;}
-        void           releaseData(void);
+        const uint8_t*  getData    (void) const {return data;}
+        uint64_t        getSize    (void) const {return size;}
+        static uint64_t getPoolSize(void) {return poolsize;}
+        void            releaseData(void);
 
         RasterObject*               robj;
         const std::string           rasterName;

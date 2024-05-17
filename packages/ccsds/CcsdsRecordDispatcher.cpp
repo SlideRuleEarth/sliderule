@@ -50,7 +50,7 @@ int CcsdsRecordDispatcher::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* qname           = getLuaString(L, 1);
-        long        num_threads     = getLuaInteger(L, 2, true, OsApi::nproc());
+        const long  num_threads     = getLuaInteger(L, 2, true, OsApi::nproc());
         const char* key_mode_str    = getLuaString(L, 3, true, "RECEIPT_KEY");
 
         /* Check Number of Threads */
@@ -60,7 +60,7 @@ int CcsdsRecordDispatcher::luaCreate (lua_State* L)
         }
 
         /* Set Key Mode */
-        keyMode_t key_mode = str2mode(key_mode_str);
+        const keyMode_t key_mode = str2mode(key_mode_str);
         const char* key_field = NULL;
         calcFunc_f  key_func = NULL;
         if(key_mode == INVALID_KEY_MODE)
@@ -102,9 +102,7 @@ CcsdsRecordDispatcher::CcsdsRecordDispatcher(lua_State* L, const char* inputq_na
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-CcsdsRecordDispatcher::~CcsdsRecordDispatcher(void)
-{
-}
+CcsdsRecordDispatcher::~CcsdsRecordDispatcher(void) = default;
 
 /*----------------------------------------------------------------------------
  * createRecord

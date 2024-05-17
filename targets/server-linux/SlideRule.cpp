@@ -165,15 +165,16 @@ static void console_quick_exit(int parm)
  */
 static void* signal_thread (void* parm)
 {
-    sigset_t* signal_set = (sigset_t*)parm;
+    sigset_t* signal_set = static_cast<sigset_t*>(parm);
 
     while(true)
     {
         int sig = 0;
-        int status = sigwait(signal_set, &sig);
+        const int status = sigwait(signal_set, &sig);
         if (status != 0)
         {
-            print2term("Fatal error (%d) ...failed to wait for signal: %s\n", status, strerror(errno));
+            char err_buf[256];
+            print2term("Fatal error (%d) ...failed to wait for signal: %s\n", status, strerror_r(status, err_buf, sizeof(err_buf)));
             signal(SIGINT, console_quick_exit);
             break;
         }
@@ -202,8 +203,8 @@ static void ldplugins(void)
     DIR *dir;
     if((dir = opendir(CONFDIR)) != NULL)
     {
-        struct dirent *ent;
-        while((ent = readdir(dir)) != NULL)
+        const struct dirent *ent;
+        while((ent = readdir(dir)) != NULL)  // NOLINT(concurrency-mt-unsafe)
         {
             /* Build Plugin Name */
             char plugin_name[MAX_STR_SIZE];
@@ -219,14 +220,14 @@ static void ldplugins(void)
             curr_plugin->plugin = dlopen(plugin_path, RTLD_NOW);
             if(!curr_plugin->plugin)
             {
-                print2term("cannot load %s: %s\n", plugin_name, dlerror());
+                print2term("cannot load %s: %s\n", plugin_name, dlerror());  // NOLINT(concurrency-mt-unsafe)
                 continue;
             }
 
             /* Initialize Plugin */
             StringLib::format(curr_plugin->init_func_name, MAX_STR_SIZE, "init%s", plugin_name);
-            plugin_f init = (plugin_f)dlsym(curr_plugin->plugin, curr_plugin->init_func_name);
-            if(!init) print2term("cannot find initialization function %s: %s\n", curr_plugin->init_func_name, dlerror());
+            plugin_f init = reinterpret_cast<plugin_f>(dlsym(curr_plugin->plugin, curr_plugin->init_func_name));
+            if(!init) print2term("cannot find initialization function %s: %s\n", curr_plugin->init_func_name, dlerror());  // NOLINT(concurrency-mt-unsafe)
             else init();
 
             /* Save Off Deinit Function Name */
@@ -250,8 +251,8 @@ static void ulplugins(void)
     while(curr_plugin->next != NULL)
     {
         /* Deinitialize */
-        plugin_f deinit = (plugin_f)dlsym(curr_plugin->plugin, curr_plugin->deinit_func_name);
-        if(!deinit) print2term("cannot find deinitialization function %s: %s\n", curr_plugin->deinit_func_name, dlerror());
+        plugin_f deinit = reinterpret_cast<plugin_f>(dlsym(curr_plugin->plugin, curr_plugin->deinit_func_name));
+        if(!deinit) print2term("cannot find deinitialization function %s: %s\n", curr_plugin->deinit_func_name, dlerror());  // NOLINT(concurrency-mt-unsafe)
         else deinit();
 
         #ifndef __no_unload__
@@ -291,7 +292,7 @@ int main (int argc, char* argv[])
     pthread_attr_t pthread_attr;
     pthread_attr_init(&pthread_attr);
     pthread_attr_setdetachstate(&pthread_attr, PTHREAD_CREATE_DETACHED);
-    pthread_create(&signal_pid, &pthread_attr, &signal_thread, (void *) &signal_set);
+    pthread_create(&signal_pid, &pthread_attr, &signal_thread, reinterpret_cast<void*>(&signal_set));
 
     /* Initialize Built-In Packages */
     initcore();
@@ -336,7 +337,7 @@ int main (int argc, char* argv[])
     ldplugins();
 
     /* Get Interpreter Arguments */
-    int lua_argc = argc; // "-i" is plus one, executable is minus one
+    const int lua_argc = argc; // "-i" is plus one, executable is minus one
     char(*lua_argv)[LuaEngine::MAX_LUA_ARG] = new char[lua_argc][LuaEngine::MAX_LUA_ARG];
     StringLib::copy(lua_argv[0], "-i", LuaEngine::MAX_LUA_ARG);
     for(int i = 1; i < argc; i++) StringLib::copy(lua_argv[i], argv[i], LuaEngine::MAX_LUA_ARG);
@@ -404,7 +405,7 @@ int main (int argc, char* argv[])
         deinitarrow();
     #endif
 
-    int errors = geterrors();
+    const int errors = geterrors();
     deinitcore();
 
     /* Exit Thread Managing Signals */

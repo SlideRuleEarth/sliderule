@@ -287,7 +287,7 @@ int ArrowParms::luaIsNative (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
+        const ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         return returnLuaStatus(L, lua_obj->format == NATIVE);
     }
     catch(const RunTimeException& e)
@@ -303,7 +303,7 @@ int ArrowParms::luaIsFeather (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
+        const ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         return returnLuaStatus(L, lua_obj->format == FEATHER);
     }
     catch(const RunTimeException& e)
@@ -319,7 +319,7 @@ int ArrowParms::luaIsParquet (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
+        const ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         return returnLuaStatus(L, lua_obj->format == PARQUET);
     }
     catch(const RunTimeException& e)
@@ -335,7 +335,7 @@ int ArrowParms::luaIsCSV (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
+        const ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         return returnLuaStatus(L, lua_obj->format == CSV);
     }
     catch(const RunTimeException& e)
@@ -351,7 +351,7 @@ int ArrowParms::luaIsArrow (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
+        const ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         return returnLuaStatus(L, (lua_obj->format == PARQUET) ||
                                   (lua_obj->format == CSV) ||
                                   (lua_obj->format == FEATHER));
@@ -369,7 +369,7 @@ int ArrowParms::luaPath (lua_State* L)
 {
     try
     {
-        ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
+        const ArrowParms* lua_obj = dynamic_cast<ArrowParms*>(getLuaSelf(L, 1));
         if(lua_obj->path) lua_pushstring(L, lua_obj->path);
         else lua_pushnil(L);
         return 1;
@@ -392,7 +392,7 @@ void ArrowParms::luaGetAncillary (lua_State* L, int index, bool* provided)
     if(lua_istable(L, index))
     {
         /* Get number of fields in table */
-        int num_fields = lua_rawlen(L, index);
+        const int num_fields = lua_rawlen(L, index);
         if(num_fields > 0 && provided) *provided = true;
 
         /* Iterate through each field in table */
@@ -405,7 +405,7 @@ void ArrowParms::luaGetAncillary (lua_State* L, int index, bool* provided)
             if(lua_isstring(L, -1))
             {
                 const char* field_str = LuaObject::getLuaString(L, -1);
-                string field_name(field_str);
+                const string field_name(field_str);
                 ancillary_fields.push_back(field_name);
             }
 
@@ -422,7 +422,7 @@ void ArrowParms::luaGetAncillary (lua_State* L, int index, bool* provided)
 /*----------------------------------------------------------------------------
  * format2str
  *----------------------------------------------------------------------------*/
-const char* ArrowParms::format2str (format_t fmt) const
+const char* ArrowParms::format2str (format_t fmt)
 {
     switch(fmt)
     {

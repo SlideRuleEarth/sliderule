@@ -89,7 +89,7 @@ class CcsdsPacketizer: public MsgProcessor
          *--------------------------------------------------------------------*/
 
                         CcsdsPacketizer     (lua_State* L, const char* inq_name, const char* outq_name, int _pkttype, uint16_t _apid, uint8_t _fc, uint16_t _len=DEFAULT_MAX_PACKET_SIZE);
-                        ~CcsdsPacketizer    (void);
+                        ~CcsdsPacketizer    (void) override;
 
         bool            processMsg          (unsigned char* msg, int bytes) override;
 };

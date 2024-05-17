@@ -45,7 +45,6 @@
 
 #include <parquet/arrow/schema.h>
 #include <parquet/arrow/writer.h>
-#include <parquet/arrow/schema.h>
 #include <parquet/properties.h>
 #include <arrow/table.h>
 #include <arrow/util/key_value_metadata.h>
@@ -85,9 +84,7 @@ ArrowBuilderImpl::ArrowBuilderImpl (ArrowBuilder* _builder):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-ArrowBuilderImpl::~ArrowBuilderImpl (void)
-{
-}
+ArrowBuilderImpl::~ArrowBuilderImpl (void) = default;
 
 /*----------------------------------------------------------------------------
  * processRecordBatch
@@ -97,8 +94,8 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     bool status = false;
 
     /* Start Trace */
-    uint32_t parent_trace_id = EventLib::grabId();
-    uint32_t trace_id = start_trace(INFO, parent_trace_id, "process_batch", "{\"num_rows\": %d}", num_rows);
+    const uint32_t parent_trace_id = EventLib::grabId();
+    const uint32_t trace_id = start_trace(INFO, parent_trace_id, "process_batch", "{\"num_rows\": %d}", num_rows);
 
     /* Allocate Columns for this Batch */
     vector<shared_ptr<arrow::Array>> columns;
@@ -106,7 +103,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     /* Loop Through Fields in Primary Record */
     for(int i = 0; i < fieldList.length(); i++)
     {
-        uint32_t field_trace_id = start_trace(INFO, trace_id, "append_field", "{\"field\": %d}", i);
+        const uint32_t field_trace_id = start_trace(INFO, trace_id, "append_field", "{\"field\": %d}", i);
         RecordObject::field_t& field = fieldList[i];
 
         /* Build Column */
@@ -122,7 +119,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     /* Add Geometry Column (if GeoParquet) */
     if(arrowBuilder->getAsGeo())
     {
-        uint32_t geo_trace_id = start_trace(INFO, trace_id, "geo_column", "%s", "{}");
+        const uint32_t geo_trace_id = start_trace(INFO, trace_id, "geo_column", "%s", "{}");
         shared_ptr<arrow::Array> column;
         processGeometry(arrowBuilder->getXField(), arrowBuilder->getYField(), &column, record_batch, num_rows, batch_row_size_bits);
         columns.push_back(column);
@@ -143,9 +140,9 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     if(writerFormat == ArrowParms::PARQUET)
     {
         /* Build and Write Table */
-        uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
-        shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
-        arrow::Status s = parquetWriter->WriteTable(*table, num_rows);
+        const uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
+        const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
+        const arrow::Status s = parquetWriter->WriteTable(*table, num_rows);
         if(s.ok()) status = true;
         else mlog(CRITICAL, "Failed to write parquet table: %s", s.CodeAsString().c_str());
         stop_trace(INFO, write_trace_id);
@@ -159,9 +156,9 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     else if(writerFormat == ArrowParms::FEATHER)
     {
         /* Write the Table to a FEATHER file */
-        uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
-        shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
-        arrow::Status s = arrow::ipc::feather::WriteTable(*table, featherWriter.get());
+        const uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
+        const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
+        const arrow::Status s = arrow::ipc::feather::WriteTable(*table, featherWriter.get());
         if(s.ok()) status = true;
         else mlog(CRITICAL, "Failed to write feather table: %s", s.CodeAsString().c_str());
         stop_trace(INFO, write_trace_id);
@@ -175,15 +172,15 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     else if(writerFormat == ArrowParms::CSV)
     {
         /* Write the Table to a CSV file */
-        shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
-        arrow::Status s = arrow::csv::WriteCSV(*table, arrow::csv::WriteOptions::Defaults(), csvWriter.get());
+        const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
+        const arrow::Status s = arrow::csv::WriteCSV(*table, arrow::csv::WriteOptions::Defaults(), csvWriter.get());
         if(s.ok()) status = true;
         else mlog(CRITICAL, "Failed to write CSV table: %s", s.CodeAsString().c_str());
 
         /* Close Parquet Writer */
         if(file_finished)
         {
-            (void)csvWriter.get()->Close();
+            (void)csvWriter->Close();
         }
     }
 
@@ -216,7 +213,7 @@ void ArrowBuilderImpl::createSchema (void)
         parquet::WriterProperties::Builder writer_props_builder;
         writer_props_builder.compression(parquet::Compression::SNAPPY);
         writer_props_builder.version(parquet::ParquetVersion::PARQUET_2_6);
-        shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
+        const shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
 
         /* Set Arrow Writer Properties */
         auto arrow_writer_props = parquet::ArrowWriterProperties::Builder().store_schema()->build();
@@ -281,14 +278,14 @@ void ArrowBuilderImpl::createSchema (void)
 /*----------------------------------------------------------------------------
 * buildFieldList
 *----------------------------------------------------------------------------*/
-bool ArrowBuilderImpl::buildFieldList (const char* rec_type, int offset, int flags)
+bool ArrowBuilderImpl::buildFieldList (const char* rec_type, int offset, int flags)  // NOLINT(misc-no-recursion)
 {
     /* Loop Through Fields in Record */
     Dictionary<RecordObject::field_t>* fields = RecordObject::getRecordFields(rec_type);
     Dictionary<RecordObject::field_t>::Iterator field_iter(*fields);
     for(int i = 0; i < field_iter.length; i++)
     {
-        Dictionary<RecordObject::field_t>::kv_t kv = field_iter[i];
+        const Dictionary<RecordObject::field_t>::kv_t kv = field_iter[i];
         const char* field_name = kv.key;
         const RecordObject::field_t& field = kv.value;
         bool add_field_to_list = true;
@@ -431,7 +428,7 @@ void ArrowBuilderImpl::appendGeoMetaData (const std::shared_ptr<arrow::KeyValueM
     geostr = std::regex_replace(geostr, std::regex("\n"), " ");
 
     /* Append Meta String */
-    metadata->Append("geo", geostr.c_str());
+    metadata->Append("geo", geostr);
 }
 
 /*----------------------------------------------------------------------------
@@ -440,13 +437,13 @@ void ArrowBuilderImpl::appendGeoMetaData (const std::shared_ptr<arrow::KeyValueM
 void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
 {
     /* Build Launch Time String */
-    int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
-    TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
-    TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
+    const int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
+    const TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
+    const TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
     FString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
 
     /* Build Duration String */
-    int64_t duration = TimeLib::gpstime() - launch_time_gps;
+    const int64_t duration = TimeLib::gpstime() - launch_time_gps;
     FString durationstr("%ld", duration);
 
     /* Build Package String */
@@ -506,7 +503,7 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
     metastr = std::regex_replace(metastr, std::regex("\n"), " ");
 
     /* Append Meta String */
-    metadata->Append("sliderule", metastr.c_str());
+    metadata->Append("sliderule", metastr);
 }
 
 /*----------------------------------------------------------------------------
@@ -534,7 +531,7 @@ void ArrowBuilderImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyVal
     /* Build Columns String */
     string columns;
     int column_index = 0;
-    int num_columns = schema->fields().size();
+    const int num_columns = schema->fields().size();
     for(const shared_ptr<arrow::Field>& field: schema->fields())
     {
         const string& field_name = field->name();
@@ -542,8 +539,8 @@ void ArrowBuilderImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyVal
 
         /* Initialize Column String */
         string columnstr(R"json({"name": "_NAME_", "field_name": "_NAME_", "pandas_type": "_PTYPE_", "numpy_type": "_NTYPE_", "metadata": null})json");
-        const char* pandas_type = "";
-        const char* numpy_type = "";
+        const char* pandas_type = NULL;
+        const char* numpy_type = NULL;
         bool is_last_entry = false;
 
         if      (field_type->Equals(arrow::float64()))      { pandas_type = "float64";    numpy_type = "float64";           }
@@ -590,7 +587,7 @@ void ArrowBuilderImpl::appendPandasMetaData (const std::shared_ptr<arrow::KeyVal
     pandasstr = std::regex_replace(pandasstr, std::regex("_COLUMNS_"), columns.c_str());
 
     /* Append Meta String */
-    metadata->Append("pandas", pandasstr.c_str());
+    metadata->Append("pandas", pandasstr);
 }
 
 /*----------------------------------------------------------------------------
@@ -645,17 +642,17 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 ArrowBuilder::batch_t* batch = record_batch[i];
                 if(field.flags & RecordObject::BATCH)
                 {
-                    int32_t starting_offset = field.offset;
+                    const int32_t starting_offset = field.offset;
                     for(int row = 0; row < batch->rows; row++)
                     {
-                        builder.UnsafeAppend((double)batch->pri_record->getValueReal(field));
+                        builder.UnsafeAppend(batch->pri_record->getValueReal(field));
                         field.offset += batch_row_size_bits;
                     }
                     field.offset = starting_offset;
                 }
                 else // non-batch field
                 {
-                    double value = (double)batch->pri_record->getValueReal(field);
+                    const double value = batch->pri_record->getValueReal(field);
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend(value);
@@ -675,7 +672,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 ArrowBuilder::batch_t* batch = record_batch[i];
                 if(field.flags & RecordObject::BATCH)
                 {
-                    int32_t starting_offset = field.offset;
+                    const int32_t starting_offset = field.offset;
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend((float)batch->pri_record->getValueReal(field));
@@ -685,7 +682,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 }
                 else // non-batch field
                 {
-                    float value = (float)batch->pri_record->getValueReal(field);
+                    const float value = (float)batch->pri_record->getValueReal(field);
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend(value);
@@ -705,7 +702,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 ArrowBuilder::batch_t* batch = record_batch[i];
                 if(field.flags & RecordObject::BATCH)
                 {
-                    int32_t starting_offset = field.offset;
+                    const int32_t starting_offset = field.offset;
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend((int8_t)batch->pri_record->getValueInteger(field));
@@ -715,7 +712,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 }
                 else // non-batch field
                 {
-                    int8_t value = (int8_t)batch->pri_record->getValueInteger(field);
+                    const int8_t value = (int8_t)batch->pri_record->getValueInteger(field);
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend(value);
@@ -735,7 +732,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 ArrowBuilder::batch_t* batch = record_batch[i];
                 if(field.flags & RecordObject::BATCH)
                 {
-                    int32_t starting_offset = field.offset;
+                    const int32_t starting_offset = field.offset;
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend((int16_t)batch->pri_record->getValueInteger(field));
@@ -745,7 +742,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 }
                 else // non-batch field
                 {
-                    int16_t value = (int16_t)batch->pri_record->getValueInteger(field);
+                    const int16_t value = (int16_t)batch->pri_record->getValueInteger(field);
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend(value);
@@ -765,7 +762,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 ArrowBuilder::batch_t* batch = record_batch[i];
                 if(field.flags & RecordObject::BATCH)
                 {
-                    int32_t starting_offset = field.offset;
+                    const int32_t starting_offset = field.offset;
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend((int32_t)batch->pri_record->getValueInteger(field));
@@ -775,7 +772,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 }
                 else // non-batch field
                 {
-                    int32_t value = (int32_t)batch->pri_record->getValueInteger(field);
+                    const int32_t value = (int32_t)batch->pri_record->getValueInteger(field);
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend(value);
@@ -795,7 +792,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 ArrowBuilder::batch_t* batch = record_batch[i];
                 if(field.flags & RecordObject::BATCH)
                 {
-                    int32_t starting_offset = field.offset;
+                    const int32_t starting_offset = field.offset;
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend((int64_t)batch->pri_record->getValueInteger(field));
@@ -805,7 +802,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 }
                 else // non-batch field
                 {
-                    int64_t value = (int64_t)batch->pri_record->getValueInteger(field);
+                    const int64_t value = (int64_t)batch->pri_record->getValueInteger(field);
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend(value);
@@ -825,7 +822,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 ArrowBuilder::batch_t* batch = record_batch[i];
                 if(field.flags & RecordObject::BATCH)
                 {
-                    int32_t starting_offset = field.offset;
+                    const int32_t starting_offset = field.offset;
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend((uint8_t)batch->pri_record->getValueInteger(field));
@@ -835,7 +832,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 }
                 else // non-batch field
                 {
-                    uint8_t value = (uint8_t)batch->pri_record->getValueInteger(field);
+                    const uint8_t value = (uint8_t)batch->pri_record->getValueInteger(field);
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend(value);
@@ -855,7 +852,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 ArrowBuilder::batch_t* batch = record_batch[i];
                 if(field.flags & RecordObject::BATCH)
                 {
-                    int32_t starting_offset = field.offset;
+                    const int32_t starting_offset = field.offset;
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend((uint16_t)batch->pri_record->getValueInteger(field));
@@ -865,7 +862,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 }
                 else // non-batch field
                 {
-                    uint16_t value = (uint16_t)batch->pri_record->getValueInteger(field);
+                    const uint16_t value = (uint16_t)batch->pri_record->getValueInteger(field);
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend(value);
@@ -885,7 +882,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 ArrowBuilder::batch_t* batch = record_batch[i];
                 if(field.flags & RecordObject::BATCH)
                 {
-                    int32_t starting_offset = field.offset;
+                    const int32_t starting_offset = field.offset;
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend((uint32_t)batch->pri_record->getValueInteger(field));
@@ -895,7 +892,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 }
                 else // non-batch field
                 {
-                    uint32_t value = (uint32_t)batch->pri_record->getValueInteger(field);
+                    const uint32_t value = (uint32_t)batch->pri_record->getValueInteger(field);
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend(value);
@@ -915,7 +912,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 ArrowBuilder::batch_t* batch = record_batch[i];
                 if(field.flags & RecordObject::BATCH)
                 {
-                    int32_t starting_offset = field.offset;
+                    const int32_t starting_offset = field.offset;
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend((uint64_t)batch->pri_record->getValueInteger(field));
@@ -925,7 +922,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 }
                 else // non-batch field
                 {
-                    uint64_t value = (uint64_t)batch->pri_record->getValueInteger(field);
+                    const uint64_t value = (uint64_t)batch->pri_record->getValueInteger(field);
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend(value);
@@ -945,7 +942,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 ArrowBuilder::batch_t* batch = record_batch[i];
                 if(field.flags & RecordObject::BATCH)
                 {
-                    int32_t starting_offset = field.offset;
+                    const int32_t starting_offset = field.offset;
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend((int64_t)batch->pri_record->getValueInteger(field));
@@ -955,7 +952,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 }
                 else // non-batch field
                 {
-                    int64_t value = (int64_t)batch->pri_record->getValueInteger(field);
+                    const int64_t value = (int64_t)batch->pri_record->getValueInteger(field);
                     for(int row = 0; row < batch->rows; row++)
                     {
                         builder.UnsafeAppend(value);
@@ -975,7 +972,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
                 ArrowBuilder::batch_t* batch = record_batch[i];
                 if(field.flags & RecordObject::BATCH)
                 {
-                    int32_t starting_offset = field.offset;
+                    const int32_t starting_offset = field.offset;
                     for(int row = 0; row < batch->rows; row++)
                     {
                         const char* str = batch->pri_record->getValueText(field);
@@ -1023,13 +1020,13 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch[i];
-                int32_t starting_offset = field.offset;
+                const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
                     (void)list_builder.Append();
                     for(int element = 0; element < field.elements; element++)
                     {
-                        (void)builder->Append((double)batch->pri_record->getValueReal(field, element));
+                        (void)builder->Append(batch->pri_record->getValueReal(field, element));
                     }
                     field.offset += batch_row_size_bits;
                 }
@@ -1046,7 +1043,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch[i];
-                int32_t starting_offset = field.offset;
+                const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
                     (void)list_builder.Append();
@@ -1069,7 +1066,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch[i];
-                int32_t starting_offset = field.offset;
+                const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
                     (void)list_builder.Append();
@@ -1092,7 +1089,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch[i];
-                int32_t starting_offset = field.offset;
+                const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
                     (void)list_builder.Append();
@@ -1115,7 +1112,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch[i];
-                int32_t starting_offset = field.offset;
+                const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
                     (void)list_builder.Append();
@@ -1138,7 +1135,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch[i];
-                int32_t starting_offset = field.offset;
+                const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
                     (void)list_builder.Append();
@@ -1161,7 +1158,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch[i];
-                int32_t starting_offset = field.offset;
+                const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
                     (void)list_builder.Append();
@@ -1184,7 +1181,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch[i];
-                int32_t starting_offset = field.offset;
+                const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
                     (void)list_builder.Append();
@@ -1207,7 +1204,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch[i];
-                int32_t starting_offset = field.offset;
+                const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
                     (void)list_builder.Append();
@@ -1230,7 +1227,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch[i];
-                int32_t starting_offset = field.offset;
+                const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
                     (void)list_builder.Append();
@@ -1253,7 +1250,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch[i];
-                int32_t starting_offset = field.offset;
+                const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
                     (void)list_builder.Append();
@@ -1276,7 +1273,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             for(int i = 0; i < record_batch.length(); i++)
             {
                 ArrowBuilder::batch_t* batch = record_batch[i];
-                int32_t starting_offset = field.offset;
+                const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
                     (void)list_builder.Append();
@@ -1311,8 +1308,8 @@ void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordOb
     for(int i = 0; i < record_batch.length(); i++)
     {
         ArrowBuilder::batch_t* batch = record_batch[i];
-        int32_t starting_x_offset = x_field.offset;
-        int32_t starting_y_offset = y_field.offset;
+        const int32_t starting_x_offset = x_field.offset;
+        const int32_t starting_y_offset = y_field.offset;
         for(int row = 0; row < batch->rows; row++)
         {
             ArrowCommon::wkbpoint_t point = {
@@ -1325,7 +1322,7 @@ void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordOb
                 .x = batch->pri_record->getValueReal(x_field),
                 .y = batch->pri_record->getValueReal(y_field)
             };
-            (void)builder.UnsafeAppend((uint8_t*)&point, sizeof(ArrowCommon::wkbpoint_t));
+            builder.UnsafeAppend(reinterpret_cast<uint8_t*>(&point), sizeof(ArrowCommon::wkbpoint_t));
             if(x_field.flags & RecordObject::BATCH) x_field.offset += batch_row_size_bits;
             if(y_field.flags & RecordObject::BATCH) y_field.offset += batch_row_size_bits;
         }
@@ -1348,7 +1345,7 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
     for(size_t i = 0; i < ancillary_fields.size(); i++)
     {
         const char* name = ancillary_fields[i].c_str();
-        vector<AncillaryFields::field_t*> field_vec;
+        const vector<AncillaryFields::field_t*> field_vec;
         field_table.add(name, field_vec);
     }
 
@@ -1365,7 +1362,7 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
             {
                 /* Get Name */
                 const char* name = NULL;
-                uint8_t field_index = field_array->fields[k].field_index;
+                const uint8_t field_index = field_array->fields[k].field_index;
                 if(field_index < ancillary_fields.size()) name = ancillary_fields[field_index].c_str();
                 else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid field index: %d", field_index);
 
@@ -1381,8 +1378,8 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
     {
         const char* name = ancillary_fields[i].c_str();
         vector<AncillaryFields::field_t*>& field_vec = field_table[name];
-        RecordObject::fieldType_t type = field_type_table[name];
-        int num_rows = field_vec.size();
+        const RecordObject::fieldType_t type = field_type_table[name];
+        const int num_rows = field_vec.size();
 
         /* Populate Schema */
         if(firstTime)
@@ -1416,7 +1413,7 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
                 {
                     AncillaryFields::field_t* field = field_vec[j];
                     double* val_ptr = AncillaryFields::getValueAsDouble(field->value);
-                    builder.UnsafeAppend((double)*val_ptr);
+                    builder.UnsafeAppend(*val_ptr);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -1430,7 +1427,7 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
                 {
                     AncillaryFields::field_t* field = field_vec[j];
                     float* val_ptr = AncillaryFields::getValueAsFloat(field->value);
-                    builder.UnsafeAppend((float)*val_ptr);
+                    builder.UnsafeAppend(*val_ptr);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -1486,7 +1483,7 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
                 {
                     AncillaryFields::field_t* field = field_vec[j];
                     int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
-                    builder.UnsafeAppend((int64_t)*val_ptr);
+                    builder.UnsafeAppend(*val_ptr);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -1556,7 +1553,7 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
                 {
                     AncillaryFields::field_t* field = field_vec[j];
                     int64_t* val_ptr = AncillaryFields::getValueAsInteger(field->value);
-                    builder.UnsafeAppend((int64_t)*val_ptr);
+                    builder.UnsafeAppend(*val_ptr);
                 }
                 (void)builder.Finish(&column);
                 break;
@@ -1587,7 +1584,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
     for(size_t i = 0; i < ancillary_fields.size(); i++)
     {
         const char* name = ancillary_fields[i].c_str();
-        vector<AncillaryFields::element_array_t*> element_vec;
+        const vector<AncillaryFields::element_array_t*> element_vec;
         element_table.add(name, element_vec);
     }
 
@@ -1618,7 +1615,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
     {
         const char* name = ancillary_fields[i].c_str();
         vector<AncillaryFields::element_array_t*>& element_vec = element_table[name];
-        RecordObject::fieldType_t type = element_type_table[name];
+        const RecordObject::fieldType_t type = element_type_table[name];
 
         /* Populate Schema */
         if(firstTime)
@@ -1685,7 +1682,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    int8_t* src = (int8_t*)&element_array->data[0];
+                    int8_t* src = reinterpret_cast<int8_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);
@@ -1702,7 +1699,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    int16_t* src = (int16_t*)&element_array->data[0];
+                    int16_t* src = reinterpret_cast<int16_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);
@@ -1719,7 +1716,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    int32_t* src = (int32_t*)&element_array->data[0];
+                    int32_t* src = reinterpret_cast<int32_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);
@@ -1736,7 +1733,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    int64_t* src = (int64_t*)&element_array->data[0];
+                    int64_t* src = reinterpret_cast<int64_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);
@@ -1753,7 +1750,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    uint8_t* src = (uint8_t*)&element_array->data[0];
+                    uint8_t* src = &element_array->data[0];
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);
@@ -1770,7 +1767,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    uint16_t* src = (uint16_t*)&element_array->data[0];
+                    uint16_t* src = reinterpret_cast<uint16_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);
@@ -1787,7 +1784,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    uint32_t* src = (uint32_t*)&element_array->data[0];
+                    uint32_t* src = reinterpret_cast<uint32_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);
@@ -1804,7 +1801,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    uint64_t* src = (uint64_t*)&element_array->data[0];
+                    uint64_t* src = reinterpret_cast<uint64_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);
@@ -1821,7 +1818,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
                 for(size_t j = 0; j < element_vec.size(); j++)
                 {
                     AncillaryFields::element_array_t* element_array = element_vec[j];
-                    int64_t* src = (int64_t*)&element_array->data[0];
+                    int64_t* src = reinterpret_cast<int64_t*>(&element_array->data[0]);
                     for(uint32_t k = 0; k < element_array->num_elements; k++)
                     {
                         builder.UnsafeAppend(src[k]);

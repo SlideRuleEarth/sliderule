@@ -91,9 +91,7 @@ EndpointObject::EndpointObject (lua_State* L, const char* meta_name, const struc
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-EndpointObject::~EndpointObject (void)
-{
-}
+EndpointObject::~EndpointObject (void) = default;
 
 /*----------------------------------------------------------------------------
  * str2verb

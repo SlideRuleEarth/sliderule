@@ -50,9 +50,9 @@ int TcpSocket::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         const char* ip_addr   = getLuaString(L, 1);
-        int         port      = (int)getLuaInteger(L, 2);
-        bool        is_server = getLuaBoolean(L, 3);
-        bool        die       = getLuaBoolean(L, 4, true, false);
+        const int   port      = (int)getLuaInteger(L, 2);
+        const bool  is_server = getLuaBoolean(L, 3);
+        const bool  die       = getLuaBoolean(L, 4, true, false);
 
         /* Get Server Parameter */
         if(is_server)
@@ -76,7 +76,7 @@ int TcpSocket::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-TcpSocket::TcpSocket(lua_State* L, const char* _ip_addr, int _port, bool _server, bool* block, bool _die_on_disconnect):
+TcpSocket::TcpSocket(lua_State* L, const char* _ip_addr, int _port, bool _server, const bool* block, bool _die_on_disconnect):
     DeviceObject(L, DUPLEX)
 {
     /* Initial Socket Parameters */
@@ -91,7 +91,7 @@ TcpSocket::TcpSocket(lua_State* L, const char* _ip_addr, int _port, bool _server
     }
 
     /* Set Configuration */
-    int cfglen = snprintf(NULL, 0, "%s:%d", ip_addr == NULL ? "0.0.0.0" : ip_addr, port) + 1;
+    const int cfglen = snprintf(NULL, 0, "%s:%d", ip_addr == NULL ? "0.0.0.0" : ip_addr, port) + 1;
     config = new char[cfglen];
     sprintf(config, "%s:%d", ip_addr == NULL ? "0.0.0.0" : ip_addr, port);
 
@@ -141,7 +141,7 @@ TcpSocket::TcpSocket(lua_State* L, int _sock, const char* _ip_addr, int _port, r
     }
 
     /* Set Configuration */
-    int cfglen = snprintf(NULL, 0, "%s:%d", ip_addr == NULL ? "0.0.0.0" : ip_addr, port) + 1;
+    const int cfglen = snprintf(NULL, 0, "%s:%d", ip_addr == NULL ? "0.0.0.0" : ip_addr, port) + 1;
     config = new char[cfglen];
     sprintf(config, "%s:%d", ip_addr == NULL ? "0.0.0.0" : ip_addr, port);
 
@@ -196,7 +196,7 @@ void TcpSocket::closeConnection(void)
  *----------------------------------------------------------------------------*/
 int TcpSocket::writeBuffer(const void* buf, int len, int timeout)
 {
-    unsigned char* cbuf = (unsigned char*)buf;
+    const unsigned char* cbuf = reinterpret_cast<const unsigned char*>(buf);
 
     /* Check Parameters */
     if(buf == NULL || len <= 0) return PARM_ERR_RC;
@@ -212,7 +212,7 @@ int TcpSocket::writeBuffer(const void* buf, int len, int timeout)
     int c = 0;
     while(c < len && alive)
     {
-        int ret = SockLib::socksend(sock, &cbuf[c], len - c, timeout);
+        const int ret = SockLib::socksend(sock, &cbuf[c], len - c, timeout);
         if(ret > 0)
         {
             c += ret;
@@ -246,7 +246,7 @@ int TcpSocket::readBuffer(void* buf, int len, int timeout)
     }
 
     /* Receive Data */
-    int ret = SockLib::sockrecv(sock, buf, len, timeout);
+    const int ret = SockLib::sockrecv(sock, buf, len, timeout);
     if(ret < 0)
     {
         closeConnection();

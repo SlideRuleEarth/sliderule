@@ -109,7 +109,7 @@ int RasterSampler::luaCreate (lua_State* L)
         const char* raster_key  = getLuaString(L, 2);
         const char* outq_name   = getLuaString(L, 3);
         const char* rec_type    = getLuaString(L, 4);
-        bool        use_time    = getLuaBoolean(L, 5, true, false);
+        const bool  use_time    = getLuaBoolean(L, 5, true, false);
 
         /* Create Dispatch */
         return createLuaObject(L, new RasterSampler(L, _raster, raster_key, outq_name, rec_type, use_time));
@@ -160,7 +160,7 @@ RasterSampler::RasterSampler (lua_State* L, RasterObject* _raster, const char* r
     if(rec_meta == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get meta data for %s", rec_type);
 
     /* Determine Record Batch Size */
-    RecordObject::field_t batch_rec_field = RecordObject::getDefinedField(rec_type, rec_meta->batch_field);
+    const RecordObject::field_t batch_rec_field = RecordObject::getDefinedField(rec_type, rec_meta->batch_field);
     if(batch_rec_field.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get batch size <%s> for %s", rec_meta->batch_field, rec_type);
     batchRecordSizeBytes = RecordObject::getRecordDataSize(batch_rec_field.exttype);
 
@@ -224,13 +224,13 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
     bool status = true;
 
     /* Determine Number of Rows in Record */
-    int record_size_bytes = record->getAllocatedDataSize();
-    int batch_size_bytes = record_size_bytes - (recordSizeBytes - batchRecordSizeBytes);
+    const int record_size_bytes = record->getAllocatedDataSize();
+    const int batch_size_bytes = record_size_bytes - (recordSizeBytes - batchRecordSizeBytes);
     int num_batches = 1;
     if(batch_size_bytes > 0)
     {
         num_batches = batch_size_bytes / batchRecordSizeBytes;
-        int left_over = batch_size_bytes % batchRecordSizeBytes;
+        const int left_over = batch_size_bytes % batchRecordSizeBytes;
         if(left_over > 0)
         {
             mlog(ERROR, "Invalid record size received for %s: %d %% %d != 0", record->getRecordType(), batch_size_bytes, batchRecordSizeBytes);
@@ -249,22 +249,22 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
     for(int batch = 0; batch < num_batches; batch++)
     {
         /* Get Index (e.g. Extent Id) */
-        uint64_t index = (uint64_t)record->getValueInteger(index_field);
+        const uint64_t index = (uint64_t)record->getValueInteger(index_field);
         index_field.offset += (batchRecordSizeBytes * 8);
 
         /* Get Longitude */
-        double lon_val = record->getValueReal(lon_field);
+        const double lon_val = record->getValueReal(lon_field);
         lon_field.offset += (batchRecordSizeBytes * 8);
 
         /* Get Latitude */
-        double lat_val = record->getValueReal(lat_field);
+        const double lat_val = record->getValueReal(lat_field);
         lat_field.offset += (batchRecordSizeBytes * 8);
 
         /* Get Time */
         long gps = 0;
         if(time_field.type != RecordObject::INVALID_FIELD)
         {
-            long time_val = record->getValueInteger(time_field);
+            const long time_val = record->getValueInteger(time_field);
             time_field.offset += (batchRecordSizeBytes * 8);
             gps = TimeLib::sysex2gpstime(time_val);
         }
@@ -279,9 +279,9 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
 
         /* Sample Raster */
         List<RasterSample*> slist;
-        MathLib::point_3d_t point = {lon_val, lat_val, height_val};
-        uint32_t err = raster->getSamples(point, gps, slist);
-        int num_samples = slist.length();
+        const MathLib::point_3d_t point = {lon_val, lat_val, height_val};
+        const uint32_t err = raster->getSamples(point, gps, slist);
+        const int num_samples = slist.length();
 
         /* Generate Error Messages */
         if(err & SS_THREADS_LIMIT_ERROR)
@@ -294,9 +294,9 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
         if(raster->hasZonalStats())
         {
             /* Create and Post Sample Record */
-            int size_of_record = offsetof(zs_geo_t, samples) + (sizeof(RasterSample) * num_samples);
+            const int size_of_record = offsetof(zs_geo_t, samples) + (sizeof(RasterSample) * num_samples);
             RecordObject stats_rec(zsGeoRecType, size_of_record);
-            zs_geo_t* data = (zs_geo_t*)stats_rec.getRecordData();
+            zs_geo_t* data = reinterpret_cast<zs_geo_t*>(stats_rec.getRecordData());
             data->index = index;
             StringLib::copy(data->raster_key, rasterKey, RASTER_KEY_MAX_LEN);
             data->num_samples = num_samples;
@@ -316,9 +316,9 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
         else
         {
             /* Create and Post Sample Record */
-            int size_of_record = offsetof(rs_geo_t, samples) + (sizeof(sample_t) * num_samples);
+            const int size_of_record = offsetof(rs_geo_t, samples) + (sizeof(sample_t) * num_samples);
             RecordObject sample_rec(rsGeoRecType, size_of_record);
-            rs_geo_t* data = (rs_geo_t*)sample_rec.getRecordData();
+            rs_geo_t* data = reinterpret_cast<rs_geo_t*>(sample_rec.getRecordData());
             data->index = index;
             StringLib::copy(data->raster_key, rasterKey, RASTER_KEY_MAX_LEN);
             data->num_samples = num_samples;
@@ -359,10 +359,10 @@ bool RasterSampler::processTermination (void)
     for(int i = 0; i < iterator.length; i++)
     {
         /* Send File Directory Entry Record for each File in Raster Dictionary */
-        int file_name_len = StringLib::size(iterator[i].key) + 1;
-        int size = offsetof(file_directory_entry_t, file_name) + file_name_len;
+        const int file_name_len = StringLib::size(iterator[i].key) + 1;
+        const int size = offsetof(file_directory_entry_t, file_name) + file_name_len;
         RecordObject record(fileIdRecType, size);
-        file_directory_entry_t* entry = (file_directory_entry_t*)record.getRecordData();
+        file_directory_entry_t* entry = reinterpret_cast<file_directory_entry_t*>(record.getRecordData());
         entry->file_id = iterator[i].value;
         StringLib::copy(entry->file_name, iterator[i].key, file_name_len);
         record.post(outQ);

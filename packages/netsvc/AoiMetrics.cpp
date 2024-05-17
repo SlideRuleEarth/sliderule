@@ -267,7 +267,7 @@ AoiMetrics::region_t unknown_region = {
  *----------------------------------------------------------------------------*/
 bool AoiMetrics::init (void)
 {
-    bool status = true;
+    const bool status = true;
 
     /* Loop Through All Regions */
     for(int r = 0; r < NUM_REGIONS; r++)
@@ -291,9 +291,9 @@ bool AoiMetrics::init (void)
 AoiMetrics::regions_t AoiMetrics::getRegion (NetsvcParms* parms)
 {
     regions_t region_found = REGION_UNKNOWN;
-    if(parms->polygon.length() > 0)
+    if(!parms->polygon.empty())
     {
-        MathLib::coord_t coord = parms->polygon[0];
+        const MathLib::coord_t coord = parms->polygon[0];
         if(coord.lat > -60)
         {
             /* Check Non-Antartica Regions */
@@ -346,6 +346,6 @@ AoiMetrics::region_t* AoiMetrics::region2struct (regions_t region)
 bool AoiMetrics::checkRegion (MathLib::coord_t coord, regions_t r)
 {
     region_t* region = region2struct(r);
-    MathLib::point_t point = MathLib::coord2point(coord, region->proj);
+    const MathLib::point_t point = MathLib::coord2point(coord, region->proj);
     return MathLib::inpoly(region->points, region->num_points, point);
 }

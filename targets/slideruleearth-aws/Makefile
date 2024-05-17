@@ -164,25 +164,25 @@ config-release: prep ## configure server to run a release version locally
 	cd $(SWOT_BUILD_DIR)      && cmake $(RELEASE_CFG) $(ROOT)/plugins/swot
 
 sliderule: ## build the server using the local configuration
-	make -j4 -C $(SLIDERULE_BUILD_DIR)
+	make -j8 -C $(SLIDERULE_BUILD_DIR)
 	make -C $(SLIDERULE_BUILD_DIR) install
-	make -j4 -C $(TARGET_BUILD_DIR)
+	make -j8 -C $(TARGET_BUILD_DIR)
 	make -C $(TARGET_BUILD_DIR) install
-	make -j4 -C $(ICESAT2_BUILD_DIR)
+	make -j8 -C $(ICESAT2_BUILD_DIR)
 	make -C $(ICESAT2_BUILD_DIR) install
-	make -j4 -C $(PGC_BUILD_DIR)
+	make -j8 -C $(PGC_BUILD_DIR)
 	make -C $(PGC_BUILD_DIR) install
-	make -j4 -C $(LANDSAT_BUILD_DIR)
+	make -j8 -C $(LANDSAT_BUILD_DIR)
 	make -C $(LANDSAT_BUILD_DIR) install
-	make -j4 -C $(GEDI_BUILD_DIR)
+	make -j8 -C $(GEDI_BUILD_DIR)
 	make -C $(GEDI_BUILD_DIR) install
-	make -j4 -C $(USGS3DEP_BUILD_DIR)
+	make -j8 -C $(USGS3DEP_BUILD_DIR)
 	make -C $(USGS3DEP_BUILD_DIR) install
-	make -j4 -C $(OPENDATA_BUILD_DIR)
+	make -j8 -C $(OPENDATA_BUILD_DIR)
 	make -C $(OPENDATA_BUILD_DIR) install
-	make -j4 -C $(GEBCO_BUILD_DIR)
+	make -j8 -C $(GEBCO_BUILD_DIR)
 	make -C $(GEBCO_BUILD_DIR) install
-	make -j4 -C $(SWOT_BUILD_DIR)
+	make -j8 -C $(SWOT_BUILD_DIR)
 	make -C $(SWOT_BUILD_DIR) install
 
 run: ## run the server locally
@@ -217,7 +217,7 @@ openoceans-container-docker: ## create the container runtime environment base py
 	cd $(OPENOCEANS_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(OPENOCEANS_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/$(OPENOCEANS_CONTAINER_NAME):latest $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(VERSION)
 	docker tag $(ECR)/$(OPENOCEANS_CONTAINER_NAME):latest $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(MAJOR_VERSION)
-	
+
 openoceans-container-run: ## run the build environment docker container
 	docker run -it --rm -v /data:/data --name $(OPENOCEANS_CONTAINER_NAME) $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/oceaneyes.py /data/AppServer.2/bathy_beam_1.csv /data/AppServer.2/bathy_beam_1.json /data/AppServer.2/openoceans_1.csv
 
@@ -234,7 +234,7 @@ bathywriter-container-docker: ## create the container runtime environment base p
 	cd $(BATHYWRITER_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(BATHYWRITER_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/$(BATHYWRITER_CONTAINER_NAME):latest $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(VERSION)
 	docker tag $(ECR)/$(BATHYWRITER_CONTAINER_NAME):latest $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(MAJOR_VERSION)
-	
+
 bathywriter-container-run: ## run the build environment docker container
 	cp $(BATHYWRITER_CONTAINER_DIR)/*.json /data
 	docker run -it --rm -v /data:/data --name $(BATHYWRITER_CONTAINER_NAME) $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/writer.py data/test.json

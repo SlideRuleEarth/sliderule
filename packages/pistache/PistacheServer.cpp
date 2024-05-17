@@ -66,12 +66,12 @@ int PistacheServer::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        long port_number = getLuaInteger(L, 1);
-        long num_threads = getLuaInteger(L, 2, true, 1);
+        const long port_number = getLuaInteger(L, 1);
+        const long num_threads = getLuaInteger(L, 2, true, 1);
 
         /* Get Address */
-        Port port(port_number);
-        Address addr(Ipv4::any(), port);
+        const Port port(port_number);
+        const Address addr(Ipv4::any(), port);
 
         /* Create Lua Endpoint */
         return createLuaObject(L, new PistacheServer(L, addr, num_threads));
@@ -114,7 +114,7 @@ const char* PistacheServer::sanitize (const char* filename)
 long PistacheServer::getUniqueId (char id_str[REQUEST_ID_LEN])
 {
     if(numThreads > 1) idMut.lock();
-    long id = requestId++;
+    const long id = requestId++;
     if(numThreads > 1) idMut.unlock();
 
     StringLib::format(id_str, REQUEST_ID_LEN, "%s.%ld", getName(), id);
@@ -174,7 +174,7 @@ void PistacheServer::echoHandler (const Rest::Request& request, Http::ResponseWr
     getUniqueId(id_str);
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(CRITICAL, traceId, "echo_handler", "{\"rqst_id\":\"%s\"}", id_str);
+    const uint32_t trace_id = start_trace(CRITICAL, traceId, "echo_handler", "{\"rqst_id\":\"%s\"}", id_str);
 
     /* Log Request */
     mlog(DEBUG, "request: %s at %s", id_str, request.resource().c_str());
@@ -184,7 +184,7 @@ void PistacheServer::echoHandler (const Rest::Request& request, Http::ResponseWr
     response.headers().add<Http::Header::ContentType>(MIME(Text, Plain));
 
     /* Send Response */
-    response.send(Http::Code::Ok, request.body().c_str());
+    response.send(Http::Code::Ok, request.body());
 
     /* Stop Trace */
     stop_trace(CRITICAL, trace_id);
@@ -199,7 +199,7 @@ void PistacheServer::infoHandler (const Rest::Request& request, Http::ResponseWr
     getUniqueId(id_str);
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(CRITICAL, traceId, "info_handler", "{\"rqst_id\":\"%s\"}", id_str);
+    const uint32_t trace_id = start_trace(CRITICAL, traceId, "info_handler", "{\"rqst_id\":\"%s\"}", id_str);
 
     /* Log Request */
     mlog(DEBUG, "request: %s at %s", id_str, request.resource().c_str());
@@ -227,10 +227,10 @@ void PistacheServer::sourceHandler (const Rest::Request& request, Http::Response
     getUniqueId(id_str);
 
     /* Get Request Parmeters */
-    std::string script_name = request.param(":name").as<std::string>();
+    const std::string script_name = request.param(":name").as<std::string>();
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(CRITICAL, traceId, "source_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name.c_str());
+    const uint32_t trace_id = start_trace(CRITICAL, traceId, "source_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name.c_str());
 
     /* Log Request */
     mlog(DEBUG, "request: %s at %s", id_str, request.resource().c_str());
@@ -242,7 +242,7 @@ void PistacheServer::sourceHandler (const Rest::Request& request, Http::Response
     /* Launch Engine */
     const char* script_pathname = sanitize(script_name.c_str());
     LuaEngine* engine = new LuaEngine(script_pathname, request.body().c_str(), trace_id, NULL, true);
-    bool status = engine->executeEngine(MAX_RESPONSE_TIME_MS);
+    const bool status = engine->executeEngine(MAX_RESPONSE_TIME_MS);
 
     /* Send Response */
     if(status)
@@ -279,10 +279,10 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
     getUniqueId(id_str);
 
     /* Get Request Parmeters */
-    std::string script_name = request.param(":name").as<std::string>();
+    const std::string script_name = request.param(":name").as<std::string>();
 
     /* Start Trace */
-    uint32_t trace_id = start_trace(CRITICAL, traceId, "engine_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name.c_str());
+    const uint32_t trace_id = start_trace(CRITICAL, traceId, "engine_handler", "{\"rqst_id\":\"%s\", \"script\":\"%s\"}", id_str, script_name.c_str());
 
     /* Log Request */
     mlog(DEBUG, "request: %s at %s", id_str, request.resource().c_str());
@@ -318,7 +318,7 @@ void PistacheServer::engineHandler (const Rest::Request& request, Http::Response
         if(status == MsgQ::STATE_OKAY)
         {
             bool done = false;
-            if(ref.size > 0) stream.write((const char*)ref.data, ref.size);
+            if(ref.size > 0) stream.write(reinterpret_cast<const char*>(ref.data), ref.size);
             else done = true;
             rspq.dereference(ref);
             if(done) break;

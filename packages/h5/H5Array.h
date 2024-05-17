@@ -150,7 +150,7 @@ bool H5Array<T>::join(int timeout, bool throw_exception)
 
     if(h5f)
     {
-        H5Future::rc_t rc = h5f->wait(timeout);
+        const H5Future::rc_t rc = h5f->wait(timeout);
         if(rc == H5Future::COMPLETE)
         {
             status = true;
@@ -160,9 +160,9 @@ bool H5Array<T>::join(int timeout, bool throw_exception)
              * below works because our target architectures are x86_64 and aarch64.
              * The data pointed to by info.data is new'ed and therefore guaranteed
              * to be aligned to a 16 byte boundary.  The calling code is responsible
-             * for knowing what the data being read out of the h5 file is and 
+             * for knowing what the data being read out of the h5 file is and
              * providing the correct type to the template.
-             */ 
+             */
             data = reinterpret_cast<T*>(h5f->info.data);
             pointer = data;
         }

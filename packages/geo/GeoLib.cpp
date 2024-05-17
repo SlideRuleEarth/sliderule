@@ -104,12 +104,12 @@ GeoLib::point_t GeoLib::UTMTransform::calculateCoordinates(double latitude, doub
     /* Pull Out Transformation */
     ogr_trans_t* ogr_trans = reinterpret_cast<ogr_trans_t*>(transform);
 
-    /* Perform Transformation 
+    /* Perform Transformation
      *  TODO: why is the x and y flipped?
      *        it only gives the correct answer when in this order */
     double x = latitude;
     double y = longitude;
-    if(OCTTransform(ogr_trans->transform, 1, &x, &y, NULL) == TRUE) 
+    if(OCTTransform(ogr_trans->transform, 1, &x, &y, NULL) == TRUE)
     {
         coord.x = x;
         coord.y = y;
@@ -166,13 +166,13 @@ GeoLib::TIFFImage::TIFFImage(lua_State* L, const char* filename):
     size = width * length;
     raster = new uint32_t[size];
 
-    if(!TIFFReadRGBAImage(tif, width, length, raster, 0)) 
+    if(!TIFFReadRGBAImage(tif, width, length, raster, 0))
     {
         delete [] raster;
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read tiff file: %s", filename);
     }
 
-    TIFFClose(tif);    
+    TIFFClose(tif);
 }
 
 /*----------------------------------------------------------------------------
@@ -188,7 +188,7 @@ GeoLib::TIFFImage::~TIFFImage(void)
  *----------------------------------------------------------------------------*/
 uint32_t GeoLib::TIFFImage::getPixel(uint32_t x, uint32_t y)
 {
-    uint32_t offset = (y * width) + x;
+    const uint32_t offset = (y * width) + x;
     if(offset < size) return raster[offset];
     return INVALID_PIXEL;
 }
@@ -196,7 +196,7 @@ uint32_t GeoLib::TIFFImage::getPixel(uint32_t x, uint32_t y)
 /*----------------------------------------------------------------------------
  * getWidth
  *----------------------------------------------------------------------------*/
-uint32_t GeoLib::TIFFImage::getWidth(void)
+uint32_t GeoLib::TIFFImage::getWidth(void) const
 {
     return width;
 }
@@ -204,7 +204,7 @@ uint32_t GeoLib::TIFFImage::getWidth(void)
 /*----------------------------------------------------------------------------
  * getLength
  *----------------------------------------------------------------------------*/
-uint32_t GeoLib::TIFFImage::getLength()
+uint32_t GeoLib::TIFFImage::getLength() const
 {
     return length;
 }
@@ -236,8 +236,8 @@ int GeoLib::TIFFImage::luaPixel (lua_State* L)
     try
     {
         GeoLib::TIFFImage* lua_obj = dynamic_cast<GeoLib::TIFFImage*>(getLuaSelf(L, 1));
-        int x = getLuaInteger(L, 2);
-        int y = getLuaInteger(L, 3);
+        const int x = getLuaInteger(L, 2);
+        const int y = getLuaInteger(L, 3);
         if(x < 0 || x >= (int)lua_obj->width || y < 0 || y >= (int)lua_obj->length)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "out of bounds (%d, %d) ^ (%d, %d)", x, y, lua_obj->width, lua_obj->length);
@@ -261,7 +261,7 @@ int GeoLib::TIFFImage::luaConvertToBMP (lua_State* L)
     bool status = false;
     try
     {
-        GeoLib::TIFFImage* lua_obj = dynamic_cast<GeoLib::TIFFImage*>(getLuaSelf(L, 1));
+        const GeoLib::TIFFImage* lua_obj = dynamic_cast<GeoLib::TIFFImage*>(getLuaSelf(L, 1));
         const char* bmp_filename = getLuaString(L, 2);
         status = GeoLib::writeBMP(lua_obj->raster, lua_obj->width, lua_obj->length, bmp_filename);
     }
@@ -280,7 +280,8 @@ int GeoLib::TIFFImage::luaConvertToBMP (lua_State* L)
  * init
  *----------------------------------------------------------------------------*/
 
-void customTIFFErrorHandler(const char* , const char* , va_list ) {
+void customTIFFErrorHandler(const char* , const char* , va_list ) // NOLINT [readability-named-parameter]
+{
     // Ignore or suppress error messages here
 }
 void GeoLib::init (void)
@@ -297,7 +298,7 @@ int GeoLib::luaCalcUTM (lua_State* L)
     double latitude;
     double longitude;
 
-    try 
+    try
     {
         latitude = LuaObject::getLuaFloat(L, 1);
         longitude = LuaObject::getLuaFloat(L, 2);
@@ -309,7 +310,7 @@ int GeoLib::luaCalcUTM (lua_State* L)
     }
 
     UTMTransform transform(latitude, longitude);
-    point_t coord = transform.calculateCoordinates(latitude, longitude);
+    const point_t coord = transform.calculateCoordinates(latitude, longitude);
     if(!transform.in_error)
     {
         lua_pushinteger(L, transform.zone);
@@ -327,21 +328,22 @@ int GeoLib::luaCalcUTM (lua_State* L)
 /*----------------------------------------------------------------------------
  * writeBMP
  *----------------------------------------------------------------------------*/
-bool GeoLib::writeBMP (uint32_t* data, int width, int height, const char* filename)
+bool GeoLib::writeBMP (const uint32_t* data, int width, int height, const char* filename)
 {
     /* open file */
     FILE* bmp_file = fopen(filename, "w");
     if(!bmp_file)
     {
-        mlog(CRITICAL, "Failed to open file %s: %s", filename, strerror(errno));
+        char errbuf[256];
+        mlog(CRITICAL, "Failed to open file %s: %s", filename, strerror_r(errno, errbuf, sizeof(errbuf)));
         return false;
     }
 
     /* populate attributes */
-    uint32_t palette_size = 1024; // 2^(pixelsize) * 4
-	uint32_t image_size	= height * modup(width, 4);
-	uint32_t data_offset  = 0x36 + palette_size; // header plus palette
-	uint32_t file_size	= data_offset + image_size;
+    const uint32_t palette_size = 1024; // 2^(pixelsize) * 4
+	const uint32_t image_size	= height * modup(width, 4);
+	const uint32_t data_offset  = 0x36 + palette_size; // header plus palette
+	const uint32_t file_size	= data_offset + image_size;
 
     /* populate header */
     bmp_hdr_t bmp_hdr = {
@@ -366,7 +368,7 @@ bool GeoLib::writeBMP (uint32_t* data, int width, int height, const char* filena
     fwrite("B", 1, 1, bmp_file); // magic numbers written first to avoid alignment issues
     fwrite("M", 1, 1, bmp_file); // "
     fwrite(&bmp_hdr, sizeof(bmp_hdr_t), 1, bmp_file);
-    
+
     /* write color palette */
     for(int i = 0; i < 256; i++)
     {
@@ -386,8 +388,8 @@ bool GeoLib::writeBMP (uint32_t* data, int width, int height, const char* filena
     {
         for(int x = 0; x < width; x++)
         {
-            int offset = (y * width) + x;
-            double normalized_pixel = (static_cast<double>(data[offset]) / static_cast<double>(0xFFFFFFFF)) * 256.0;
+            const int offset = (y * width) + x;
+            const double normalized_pixel = (static_cast<double>(data[offset]) / static_cast<double>(0xFFFFFFFF)) * 256.0;
             uint8_t scaled_pixel = static_cast<uint8_t>(normalized_pixel);
             fwrite(&scaled_pixel, 1, 1, bmp_file);
         }

@@ -63,13 +63,13 @@ class CurlLib
         static void         init            (void);
         static void         deinit          (void);
 
-        static long         request         (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size, 
+        static long         request         (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size,
                                              bool verify_peer=false, bool verify_hostname=false, int timeout=DATA_TIMEOUT,
-                                             List<string*>* headers=NULL, 
+                                             List<string*>* headers=NULL,
                                              const char* unix_socket=NULL,
                                              List<string*>* rsps_headers=NULL);
         static long         postAsStream    (const char* url, const char* data, Publisher* outq, bool with_terminator);
-        static long         postAsRecord    (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, bool* active=NULL);
+        static long         postAsRecord    (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, const bool* active=NULL);
         static int          getHeaders      (lua_State* L, int index, List<string*>& header_list);
         static int          luaGet          (lua_State* L);
         static int          luaPut          (lua_State* L);
@@ -104,7 +104,7 @@ class CurlLib
             uint8_t*    rec_buf;
             Publisher*  outq;
             const char* url;
-            bool*       active;
+            const bool* active;
         } parser_t;
 
         /*--------------------------------------------------------------------
@@ -112,11 +112,11 @@ class CurlLib
          *--------------------------------------------------------------------*/
 
         static void     combineResponse (List<data_t>* rsps_set, const char** response, int* size);
-        static size_t   postRecords     (void *buffer, size_t size, size_t nmemb, void *userp);
-        static size_t   postData        (void *buffer, size_t size, size_t nmemb, void *userp);
-        static size_t   writeData       (void *buffer, size_t size, size_t nmemb, void *userp);
+        static size_t   postRecords     (const void *buffer, size_t size, size_t nmemb, void *userp);
+        static size_t   postData        (const void *buffer, size_t size, size_t nmemb, void *userp);
+        static size_t   writeData       (const void *buffer, size_t size, size_t nmemb, void *userp);
         static size_t   readData        (void* buffer, size_t size, size_t nmemb, void *userp);
-        static size_t   writerHeader    (void* buffer, size_t size, size_t nmemb, void *userp);
+        static size_t   writerHeader    (const void* buffer, size_t size, size_t nmemb, void *userp);
 
 };
 

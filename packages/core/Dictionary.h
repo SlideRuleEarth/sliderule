@@ -65,7 +65,7 @@ class Dictionary
 
         typedef struct kv {
             kv(const char* _key, const T& _value): key(_key), value(_value) {};
-            ~kv(void) {};
+            ~kv(void) = default;
             const char* key;
             const T&    value;
         } kv_t;
@@ -87,7 +87,7 @@ class Dictionary
          * Methods
          *--------------------------------------------------------------------*/
 
-                    Dictionary      (int hash_size=DEFAULT_HASH_TABLE_SIZE, double hash_load=DEFAULT_HASH_TABLE_LOAD);
+        explicit    Dictionary      (int hash_size=DEFAULT_HASH_TABLE_SIZE, double hash_load=DEFAULT_HASH_TABLE_LOAD);
                     ~Dictionary     (void);
 
         bool        add             (const char* key, const T& data, bool unique=false);
@@ -165,9 +165,7 @@ Dictionary<T>::Iterator::Iterator(const Dictionary& d):
  * Destructor
  *----------------------------------------------------------------------------*/
 template <class T>
-Dictionary<T>::Iterator::~Iterator(void)
-{
-}
+Dictionary<T>::Iterator::~Iterator(void) = default;
 
 /*----------------------------------------------------------------------------
  * []
@@ -262,16 +260,16 @@ bool Dictionary<T>::add(const char* key, const T& data, bool unique)
     bool status = true;
 
     /* Insert Entry into Dictionary */
-    unsigned int index = getNode(key);
+    const unsigned int index = getNode(key);
     if(index == NULL_INDEX)
     {
         /* Check for Rehash Needed */
         if(numEntries > (hashSize * hashLoad))
         {
-            unsigned int old_hash_size = hashSize;
+            const unsigned int old_hash_size = hashSize;
             hash_node_t* old_hash_table = hashTable;
 
-            unsigned int new_hash_size = hashSize * 2;              // double size of hash table
+            const unsigned int new_hash_size = hashSize * 2;              // double size of hash table
             if(new_hash_size > 0 && new_hash_size > hashSize)
             {
                 hashSize = new_hash_size;
@@ -333,7 +331,7 @@ bool Dictionary<T>::add(const char* key, const T& data, bool unique)
 template <class T>
 T& Dictionary<T>::get(const char* key) const
 {
-    unsigned int index = getNode(key);
+    const unsigned int index = getNode(key);
     if(index != NULL_INDEX) return hashTable[index].data;
     throw RunTimeException(CRITICAL, RTE_ERROR, "key <%s> not found", key);
 }
@@ -350,7 +348,7 @@ bool Dictionary<T>::find(const char* key, T* data) const
 
     if(key != NULL)
     {
-        unsigned int index = getNode(key);
+        const unsigned int index = getNode(key);
         if(index != NULL_INDEX)
         {
             found = true;
@@ -370,7 +368,7 @@ bool Dictionary<T>::remove(const char* key)
     bool status = true;
 
     /* Check Pointers */
-    unsigned int index = getNode(key);
+    const unsigned int index = getNode(key);
     if(index != NULL_INDEX)
     {
         /* Delete Node */
@@ -378,8 +376,8 @@ bool Dictionary<T>::remove(const char* key)
         freeNode(index);
 
         /* Get List Indices */
-        unsigned int next_index = hashTable[index].next;
-        unsigned int prev_index = hashTable[index].prev;
+        unsigned int       next_index = hashTable[index].next;
+        const unsigned int prev_index = hashTable[index].prev;
 
         if((hashTable[index].chain == 1) && (next_index != NULL_INDEX))
         {
@@ -467,7 +465,7 @@ int Dictionary<T>::getKeys (char*** keys) const
         {
             const char* new_key = NULL;
             OsApi::dupstr(&new_key, hashTable[i].key);
-            (*keys)[j++] = (char*)new_key;
+            (*keys)[j++] = const_cast<char*>(new_key);
         }
     }
 
@@ -594,7 +592,7 @@ Dictionary<T>& Dictionary<T>::operator=(const Dictionary& other)
 {
     /* Check Self Assignment */
     if(this == &other) return *this;
-    
+
     /* Clear Hash */
     clear();
 
@@ -690,7 +688,7 @@ unsigned int Dictionary<T>::getNode(const char* key) const
             while(hashTable[index].key[i] == key[i])
             {
                 /* If there is no difference AND key is at null, return match */
-                if(key[i] == '\0') 
+                if(key[i] == '\0')
                 {
                     return index;
                 }
@@ -716,7 +714,7 @@ void Dictionary<T>::addNode (const char* key, const T& data, unsigned int hash, 
     assert(hashSize);
 
     /* Constrain the Hash */
-    unsigned int curr_index = hash % hashSize;
+    const unsigned int curr_index = hash % hashSize;
 
     /* Optimize Creation of New Key */
     const char* new_key = NULL;

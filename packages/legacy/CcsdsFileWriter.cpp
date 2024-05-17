@@ -54,7 +54,7 @@ const char* CcsdsFileWriter::TYPE = "CcsdsFileWriter";
  *----------------------------------------------------------------------------*/
 CommandableObject* CcsdsFileWriter::createObject(CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE])
 {
-    fmt_t       format = str2fmt(argv[0]);
+    const fmt_t format = str2fmt(argv[0]);
     const char* prefix = StringLib::checkNullStr(argv[1]);
     const char* stream = StringLib::checkNullStr(argv[2]);
     const char* maxstr = NULL; // argv[3]
@@ -129,7 +129,7 @@ CcsdsFileWriter::CcsdsFileWriter(CommandProcessor* cmd_proc, const char* obj_nam
 
     fmt = _fmt;
 
-    int len = (int)StringLib::size(_prefix) + 1;
+    const int len = StringLib::size(_prefix) + 1;
     prefix = new char[len];
     StringLib::copy(prefix, _prefix, len);
 
@@ -191,11 +191,13 @@ bool CcsdsFileWriter::openNewFile(void)
     /* Open New File */
     if(outfp != NULL) fclose(outfp);
     StringLib::format(filename, FILENAME_MAX_CHARS, "%s_%ld.out", prefix, fileCount);
-    if(isBinary())  outfp = fopen((const char*)filename, "wb");
-    else            outfp = fopen((const char*)filename, "w");
+    if(isBinary())  outfp = fopen(static_cast<const char*>(filename), "wb");
+    else            outfp = fopen(static_cast<const char*>(filename), "w");
     if(outfp == NULL)
     {
-    	mlog(CRITICAL, "Error opening file: %s, err: %s", filename, strerror(errno));
+        char err_buf[256];
+        (void)strerror_r(errno, err_buf, sizeof(err_buf));
+    	mlog(CRITICAL, "Error opening file: %s, err: %s", filename, err_buf);
         return false;
     }
 
@@ -221,7 +223,7 @@ int CcsdsFileWriter::writeMsg(void* msg, int size, bool with_header)
     /* RAW ASCII */
     else if(fmt == RAW_ASCII)
     {
-        unsigned char* pkt_buffer = (unsigned char*)msg;
+        const unsigned char* pkt_buffer = reinterpret_cast<unsigned char*>(msg);
         int bytes = 0, ret = 0;
         for(int i = 0; i < size; i++)
         {
@@ -237,7 +239,7 @@ int CcsdsFileWriter::writeMsg(void* msg, int size, bool with_header)
     /* TEXT */
     else if(fmt == TEXT)
     {
-        int bytes = fprintf(outfp, "%s", (const char*)msg);
+        const int bytes = fprintf(outfp, "%s", reinterpret_cast<const char*>(msg));
         fflush(outfp); // no need to worry about performance
         return bytes;
     }
@@ -284,12 +286,14 @@ bool CcsdsFileWriter::processMsg (unsigned char* msg, int bytes)
     }
 
     /* Write Record */
-    int bytes_written = writeMsg(msg, bytes, write_header);
+    const int bytes_written = writeMsg(msg, bytes, write_header);
 
     /* Error Checking */
     if(bytes_written < 0)
     {
-        mlog(CRITICAL, "Fatal error, unable to write file %s with error: %s... killing writer!", filename, strerror(errno));
+        char err_buf[256];
+        (void)strerror_r(errno, err_buf, sizeof(err_buf));
+        mlog(CRITICAL, "Fatal error, unable to write file %s with error: %s... killing writer!", filename, err_buf);
         return false;
     }
     else

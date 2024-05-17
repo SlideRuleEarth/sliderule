@@ -91,7 +91,7 @@ class UT_RasterSubset: public LuaObject
          *--------------------------------------------------------------------*/
 
         explicit         UT_RasterSubset (lua_State* L, RasterObject* _raster);
-                        ~UT_RasterSubset (void);
+                        ~UT_RasterSubset (void) override;
 
         static int         luaSubsetTest (lua_State* L);
         static const char* getRasterName (RasterObject* robj, uint64_t fileId);
