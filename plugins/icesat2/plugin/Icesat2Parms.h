@@ -132,6 +132,7 @@ class Icesat2Parms: public NetsvcParms
 
         /* Spots */
         typedef enum {
+            INVALID_SPOT = 0,
             SPOT_1 = 1,
             SPOT_2 = 2,
             SPOT_3 = 3,
@@ -243,8 +244,6 @@ class Icesat2Parms: public NetsvcParms
          *--------------------------------------------------------------------*/
 
         static int                      luaCreate               (lua_State* L);
-        static uint8_t                  getSpotNumber           (sc_orient_t sc_orient, track_t track, int pair);
-        static uint8_t                  getGroundTrack          (sc_orient_t sc_orient, track_t track, int pair);
         static signal_conf_t            str2atl03cnf            (const char* confidence_str);
         static quality_ph_t             str2atl03quality        (const char* quality_ph_str);
         static atl08_classification_t   str2atl08class          (const char* classifiction_str);
@@ -277,6 +276,62 @@ class Icesat2Parms: public NetsvcParms
             if(EXTENT_ID_PHOTONS) extent_id |= EXTENT_ID_PHOTONS;
 
             return extent_id;
+        }
+
+        // returns spot number 1 to 6
+        static uint8_t getSpotNumber (sc_orient_t sc_orient, track_t track, int pair)
+        {
+            static const int num_combinations = 18; // 3(number of s/c orientations) * 3(number of tracks) * 2(number of pairs)
+            static const spot_t lookup_table [num_combinations] = {
+                SPOT_1, // SC_BACKWARD, RPT_1, RPT_L
+                SPOT_2, // SC_BACKWARD, RPT_1, RPT_R
+                SPOT_3, // SC_BACKWARD, RPT_2, RPT_L
+                SPOT_4, // SC_BACKWARD, RPT_2, RPT_R
+                SPOT_5, // SC_BACKWARD, RPT_3, RPT_L
+                SPOT_6, // SC_BACKWARD, RPT_3, RPT_R
+                SPOT_6, // SC_FORWARD, RPT_1, RPT_L
+                SPOT_5, // SC_FORWARD, RPT_1, RPT_R
+                SPOT_4, // SC_FORWARD, RPT_2, RPT_L
+                SPOT_3, // SC_FORWARD, RPT_2, RPT_R
+                SPOT_2, // SC_FORWARD, RPT_3, RPT_L
+                SPOT_1, // SC_FORWARD, RPT_3, RPT_R
+                INVALID_SPOT, // SC_TRANSITION, RPT_1, RPT_L
+                INVALID_SPOT, // SC_TRANSITION, RPT_1, RPT_R
+                INVALID_SPOT, // SC_TRANSITION, RPT_2, RPT_L
+                INVALID_SPOT, // SC_TRANSITION, RPT_2, RPT_R
+                INVALID_SPOT, // SC_TRANSITION, RPT_3, RPT_L
+                INVALID_SPOT, // SC_TRANSITION, RPT_3, RPT_R
+            };
+            int index = (sc_orient * 6) + ((track-1) * 2) + pair;
+            return static_cast<uint8_t>(lookup_table[index]);
+        }
+
+        // returns ground track number 10 - 60
+        static uint8_t getGroundTrack (sc_orient_t sc_orient, track_t track, int pair)
+        {
+            static const int num_combinations = 18; // 3(number of s/c orientations) * 3(number of tracks) * 2(number of pairs)
+            static const gt_t lookup_table [num_combinations] = {
+                GT1L, // SC_BACKWARD, RPT_1, RPT_L
+                GT1R, // SC_BACKWARD, RPT_1, RPT_R
+                GT2L, // SC_BACKWARD, RPT_2, RPT_L
+                GT2R, // SC_BACKWARD, RPT_2, RPT_R
+                GT3L, // SC_BACKWARD, RPT_3, RPT_L
+                GT3R, // SC_BACKWARD, RPT_3, RPT_R
+                GT1L, // SC_FORWARD, RPT_1, RPT_L
+                GT1R, // SC_FORWARD, RPT_1, RPT_R
+                GT2L, // SC_FORWARD, RPT_2, RPT_L
+                GT2R, // SC_FORWARD, RPT_2, RPT_R
+                GT3L, // SC_FORWARD, RPT_3, RPT_L
+                GT3R, // SC_FORWARD, RPT_3, RPT_R
+                INVALID_GT, // SC_TRANSITION, RPT_1, RPT_L
+                INVALID_GT, // SC_TRANSITION, RPT_1, RPT_R
+                INVALID_GT, // SC_TRANSITION, RPT_2, RPT_L
+                INVALID_GT, // SC_TRANSITION, RPT_2, RPT_R
+                INVALID_GT, // SC_TRANSITION, RPT_3, RPT_L
+                INVALID_GT, // SC_TRANSITION, RPT_3, RPT_R
+            };
+            int index = (sc_orient * 6) + ((track-1) * 2) + pair;
+            return static_cast<uint8_t>(lookup_table[index]);
         }
 
         /*--------------------------------------------------------------------

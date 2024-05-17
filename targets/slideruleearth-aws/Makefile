@@ -72,6 +72,10 @@ OPENOCEANS_CONTAINER_NAME ?= openoceans
 BATHYWRITER_CONTAINER_STAGE_DIR = $(STAGE)/bathywriter
 BATHYWRITER_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/bathywriter
 BATHYWRITER_CONTAINER_NAME ?= bathywriter
+COASTNET_CONTAINER_SOURCE_DIR = $(ROOT)/../coastnet
+COASTNET_CONTAINER_STAGE_DIR = $(STAGE)/coastnet
+COASTNET_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/coastnet
+COASTNET_CONTAINER_NAME ?= coastnet
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -204,11 +208,11 @@ manager-destroy: ## destroy manager using terraform; needs DOMAIN
 	cd terraform/manager && terraform workspace select $(DOMAIN)-manager|| terraform workspace new $(DOMAIN)-manager
 	cd terraform/manager && terraform destroy
 
-openoceans-container-lock: ## create the lock file for the container runtime environment base python image
+openoceans-container-lock: ## create the lock file for the openoceans container image
 	cd $(OPENOCEANS_CONTAINER_DIR) && conda-lock -p linux-aarch64 -f environment.yml
 	cd $(OPENOCEANS_CONTAINER_DIR) && conda-lock render -p linux-aarch64
 
-openoceans-container-docker: ## create the container runtime environment base python image
+openoceans-container-docker: ## create the copenoceans container image
 	-rm -Rf $(OPENOCEANS_CONTAINER_STAGE_DIR)
 	mkdir -p $(OPENOCEANS_CONTAINER_STAGE_DIR)
 	cp $(OPENOCEANS_CONTAINER_DIR)/Dockerfile $(OPENOCEANS_CONTAINER_STAGE_DIR)
@@ -217,15 +221,15 @@ openoceans-container-docker: ## create the container runtime environment base py
 	cd $(OPENOCEANS_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(OPENOCEANS_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/$(OPENOCEANS_CONTAINER_NAME):latest $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(VERSION)
 	docker tag $(ECR)/$(OPENOCEANS_CONTAINER_NAME):latest $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(MAJOR_VERSION)
-
-openoceans-container-run: ## run the build environment docker container
+	
+openoceans-container-run: ## run the openoceans container
 	docker run -it --rm -v /data:/data --name $(OPENOCEANS_CONTAINER_NAME) $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/oceaneyes.py /data/AppServer.2/bathy_beam_1.csv /data/AppServer.2/bathy_beam_1.json /data/AppServer.2/openoceans_1.csv
 
-bathywriter-container-lock: ## create the lock file for the container runtime environment base python image
+bathywriter-container-lock: ## create the lock file for the bathywriter container image
 	cd $(BATHYWRITER_CONTAINER_DIR) && conda-lock -p linux-aarch64 -f environment.yml
 	cd $(BATHYWRITER_CONTAINER_DIR) && conda-lock render -p linux-aarch64
 
-bathywriter-container-docker: ## create the container runtime environment base python image
+bathywriter-container-docker: ## create the bathywriter container image
 	-rm -Rf $(BATHYWRITER_CONTAINER_STAGE_DIR)
 	mkdir -p $(BATHYWRITER_CONTAINER_STAGE_DIR)
 	cp $(BATHYWRITER_CONTAINER_DIR)/Dockerfile $(BATHYWRITER_CONTAINER_STAGE_DIR)
@@ -234,10 +238,28 @@ bathywriter-container-docker: ## create the container runtime environment base p
 	cd $(BATHYWRITER_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(BATHYWRITER_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/$(BATHYWRITER_CONTAINER_NAME):latest $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(VERSION)
 	docker tag $(ECR)/$(BATHYWRITER_CONTAINER_NAME):latest $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(MAJOR_VERSION)
-
-bathywriter-container-run: ## run the build environment docker container
+	
+bathywriter-container-run: ## run the bathywriter docker container
 	cp $(BATHYWRITER_CONTAINER_DIR)/*.json /data
 	docker run -it --rm -v /data:/data --name $(BATHYWRITER_CONTAINER_NAME) $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/writer.py data/test.json
+
+coastnet-container-docker: ## create the coastnet container image
+	-rm -Rf $(COASTNET_CONTAINER_STAGE_DIR)
+	mkdir -p $(COASTNET_CONTAINER_STAGE_DIR)
+	rsync -a $(COASTNET_CONTAINER_SOURCE_DIR) $(COASTNET_CONTAINER_STAGE_DIR)/coastnet --exclude build --exclude .git
+	cp $(COASTNET_CONTAINER_DIR)/Dockerfile $(COASTNET_CONTAINER_STAGE_DIR)
+	cp $(COASTNET_CONTAINER_DIR)/*.sh $(COASTNET_CONTAINER_STAGE_DIR)
+	cp $(COASTNET_CONTAINER_DIR)/CMakeLists.txt $(COASTNET_CONTAINER_STAGE_DIR)
+	cp $(COASTNET_CONTAINER_DIR)/Makefile $(COASTNET_CONTAINER_STAGE_DIR)
+	cd $(COASTNET_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(COASTNET_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/$(COASTNET_CONTAINER_NAME):latest $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION)
+	docker tag $(ECR)/$(COASTNET_CONTAINER_NAME):latest $(ECR)/$(COASTNET_CONTAINER_NAME):$(MAJOR_VERSION)
+	
+coastnet-surface-container-run: ## run the coastnet surface docker container
+	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash surface.sh /data/AppServer.2/bathy_spot_3.csv /coastnet/models/coastnet-surface.pt /data/AppServer.2/coastnet.csv
+
+coastnet-bathy-container-run: ## run the coastnet bathy docker container
+	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) /bin/bash /bathy.sh
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
