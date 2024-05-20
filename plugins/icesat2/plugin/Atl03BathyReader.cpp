@@ -53,6 +53,8 @@ const char* Atl03BathyReader::OUTPUT_FILE_PREFIX = "bathy_spot";
 const char* Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_FILE_PATH = "/data/ATL24_Mask_v5_Raster.tif";
 const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_MAX_LAT = 84.25;
 const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_MIN_LAT = -79.0;
+const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_MAX_LON = 180.0;
+const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_MIN_LON = -180.0;
 const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE = 0.25;
 const uint32_t Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_OFF_VALUE = 0xFFFFFFFF;
 
@@ -644,15 +646,15 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                 /* Check Global Bathymetry Mask */
                 if(builder->bathyMask)
                 {
-                    const double degrees_of_latitude = GLOBAL_BATHYMETRY_MASK_MAX_LAT - region.segment_lat[current_segment];
+                    const double degrees_of_latitude = region.segment_lat[current_segment] - GLOBAL_BATHYMETRY_MASK_MIN_LAT;
                     const double latitude_pixels = degrees_of_latitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
                     const uint32_t y = static_cast<uint32_t>(latitude_pixels);
 
-                    const double degrees_of_longitude = 180 + region.segment_lon[current_segment];
+                    const double degrees_of_longitude =  region.segment_lon[current_segment] - GLOBAL_BATHYMETRY_MASK_MIN_LON;
                     const double longitude_pixels = degrees_of_longitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
                     const uint32_t x = static_cast<uint32_t>(longitude_pixels);
-
-                    if(builder->bathyMask->getPixel(x, y) == GLOBAL_BATHYMETRY_MASK_OFF_VALUE)
+                    uint32_t pixel = builder->bathyMask->getPixel(x, y);
+                    if(pixel == GLOBAL_BATHYMETRY_MASK_OFF_VALUE)
                     {
                         break;
                     }

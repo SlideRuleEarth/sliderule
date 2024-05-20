@@ -25,7 +25,7 @@ WORKDIR /
 RUN python3.9 -m venv venv \
     && source ./venv/bin/activate \
     && python -m pip install --upgrade pip \
-    && pip install torch numpy
+    && pip install torch numpy pandas
 
 COPY coastnet /
 COPY CMakeLists.txt /coastnet/
@@ -36,9 +36,8 @@ RUN source /venv/bin/activate \
 
 COPY surface.sh /
 COPY bathy.sh /
+COPY *.py /usr/local/etc/
 
-# Set the SHELL to Bash
 SHELL ["/bin/bash", "-c"]
 
-# Default command when the container starts
 CMD ["/bin/bash"]

@@ -7,6 +7,9 @@ local georesource   = require("georesource")
 local earthdata     = require("earth_data_query")
 local runner        = require("container_runtime")
 
+
+local prettyprint = require("prettyprint")
+
 -- get inputs 
 local rqst          = json.decode(arg[1])
 local resource      = rqst["resource"]
@@ -46,6 +49,8 @@ local rgps      = time.gmt2gps(rdate)
 local rdelta    = 5 * 24 * 60 * 60 * 1000 -- 5 days * (24 hours/day * 60 minutes/hour * 60 seconds/minute * 1000 milliseconds/second)
 local t0        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps - rdelta))
 local t1        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps + rdelta))
+
+-- build hls raster object
 local hls_parms = {
     asset       = "landsat-hls",
     t0          = t0,
@@ -54,14 +59,27 @@ local hls_parms = {
     bands       = {"NDWI"},
     poly        = hls_poly
 }
-
--- build hls raster object
 local geo_parms = nil
-local rc, rsps = earthdata.stac(hls_parms)
-if rc == earthdata.SUCCESS then
-    hls_parms["catalog"] = json.encode(rsps)
+local rc1, rsps1 = earthdata.stac(hls_parms)
+if rc1 == earthdata.SUCCESS then
+    hls_parms["catalog"] = json.encode(rsps1)
     geo_parms = geo.parms(hls_parms)
 end
+
+-- get ATL09 resources
+local original_asset = parms["asset"]
+local original_t0 = parms["t0"]
+local original_t1 = parms["t1"]
+parms["asset"] = "icesat2-atl09"
+parms["t0"] = t0
+parms["t1"] = t1
+local rc2, rsps2 = earthdata.search(parms)
+if rc2 == earthdata.SUCCESS then
+    parms["resources09"] = rsps2
+end
+parms["asset"] = original_asset
+parms["t0"] = original_t0
+parms["t1"] = original_t1
 
 -- initialize container runtime environment
 local crenv = runner.setup()
@@ -76,7 +94,28 @@ local status        = georesource.waiton(resource, parms, nil, reader, nil, proc
 
 -- function: generate input filenames
 local function genfilenames(dir, i, prefix)
+    -- <settings-json>   <spot-input-json>   <spot-input-csv>   <spot-output-csv>
     return string.format("%s/%s.json %s/%s_%d.json %s/%s_%d.csv %s/%s_%s_%d.csv", dir, prefix, dir, icesat2.BATHY_PREFIX, i, dir, icesat2.BATHY_PREFIX, i, dir, prefix, icesat2.BATHY_PREFIX, i)
+end
+
+-- function: run coastnet
+local function runcoastnet(_bathy_parms, container_timeout)
+    local container_list = {}
+    for i = 1,icesat2.NUM_SPOTS do
+        if _bathy_parms:spoton(i) then
+            local container_parms = {
+                image =  "coastnet",
+                command = "bash /surface.sh " .. genfilenames(crenv.container_shared_directory, i, "coastnet"),
+                timeout = container_timeout,
+                parms = { ["coastnet.json"] = parms["coastnet"] }
+            }
+            local container = runner.execute(crenv, container_parms, rspq)
+            table.insert(container_list, container)
+        end
+    end
+    for _,container in ipairs(container_list) do
+        runner.wait(container, container_timeout)        
+    end
 end
 
 -- function: run openoceans
@@ -99,8 +138,11 @@ while true do
     -- abort if failed to generate atl03 bathy inputs
     if not status then break end
 
+    -- execute coastnet surface
+    runcoastnet(bathy_parms, timeout)
+
     -- execute openoceans
-    runopenoceans(bathy_parms, timeout)
+--    runopenoceans(bathy_parms, timeout)
 
     -- exit loop
     break
@@ -117,23 +159,23 @@ local output_parms = parms[arrow.PARMS] or {
 -- build final output
 local spot_csv_files = {}
 local spot_json_files = {}
-local openoceans_csv_files = {}
+local ensemble_csv_files = {}
 for i = 1,icesat2.NUM_SPOTS do
     if bathy_parms:spoton(i) then
         table.insert(spot_csv_files, string.format("%s/%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
         table.insert(spot_json_files, string.format("%s/%s_%d.json", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
-        table.insert(openoceans_csv_files, string.format("%s/openoceans_%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
+        table.insert(ensemble_csv_files, string.format("%s/ensemble_csv_files_%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
     end
 end
 local writer_parms = {
     image =  "bathywriter",
-    command = "/env/bin/python /usr/local/etc/writer.py /data/settings.json",
+    command = "/env/bin/python /usr/local/etc/writer.py /data/writer_settings.json",
     timeout = timeout,
     parms = { 
-        ["settings.json"] = {
+        ["writer_settings.json"] = {
             spot_csv_files = spot_csv_files,
             spot_json_files = spot_json_files,
-            openoceans_csv_files = openoceans_csv_files,
+            ensemble_csv_files = ensemble_csv_files,
             output = output_parms,
             output_filename = crenv.container_shared_directory.."/"..atl24_granule_filename
         }

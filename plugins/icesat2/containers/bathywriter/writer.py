@@ -42,14 +42,14 @@ ATLAS_GPS_EPOCH = 1198800018
 
 # check command line parameters
 if len(sys.argv) <= 1:
-    print("Not enough parameters: python bathywriter.py <control json file>")
+    print("Not enough parameters: python writer.py <control json file>")
     sys.exit()
 
 # read control json
 #   {
 #       "spot_csv_files": [<spot 1 file>, <spot 2 file>, ...],
 #       "spot_json_files": [<spot 1 file>, <spot 2 file>, ...],
-#       "openoceans_csv_files": [<spot 1 file>, <spot 2 file>, ...],
+#       "ensemble_csv_files": [<spot 1 file>, <spot 2 file>, ...],
 #       "output_filename": <local output file>,
 #       "output":
 #       {
@@ -63,12 +63,12 @@ with open(control_json, 'r') as json_file:
 # read in data
 spot_dfs = [pd.read_csv(spot_csv_file) for spot_csv_file in control["spot_csv_files"]]
 spot_dicts = [json.load(open(spot_json_file, 'r')) for spot_json_file in control["spot_json_files"]]
-openoceans_dfs = [pd.read_csv(openocean_csv_file) for openocean_csv_file in control["openoceans_csv_files"]]
+ensemble_dfs = [pd.read_csv(ensemble_csv_file) for ensemble_csv_file in control["ensemble_csv_files"]]
 print("Read all inputs into data frames")
 
 # merge dataframes
 for i in range(len(spot_dfs)):
-    spot_dfs[i] = pd.merge(spot_dfs[i], openoceans_dfs[i], on='index_ph', how='left')
+    spot_dfs[i] = pd.merge(spot_dfs[i], ensemble_dfs[i], on='index_ph', how='left')
 print("Created merged spot data frames")
 
 # get granule level info
@@ -94,7 +94,7 @@ if "output" not in control or control["output"]["format"] != "hdf5":
 
     # write output
     if "output" not in control or control["output"]["format"] == "csv":
-        df.to_csv(control["output_filename"])
+        df.to_csv(control["output_filename"], index=False)
         print("CSV file written: " + control["output_filename"])
     elif control["output"]["format"] == "parquet":
         if control["output"]["as_geo"]:

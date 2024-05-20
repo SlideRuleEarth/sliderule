@@ -69,6 +69,8 @@ class Atl03BathyReader: public LuaObject
         static const char* GLOBAL_BATHYMETRY_MASK_FILE_PATH;
         static const double GLOBAL_BATHYMETRY_MASK_MAX_LAT;
         static const double GLOBAL_BATHYMETRY_MASK_MIN_LAT;
+        static const double GLOBAL_BATHYMETRY_MASK_MAX_LON;
+        static const double GLOBAL_BATHYMETRY_MASK_MIN_LON;
         static const double GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
         static const uint32_t GLOBAL_BATHYMETRY_MASK_OFF_VALUE;
 

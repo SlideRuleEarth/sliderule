@@ -4,8 +4,8 @@ import os
 
 # Command Line Arguments
 parser = argparse.ArgumentParser(description="""ATL24""")
-parser.add_argument('--granule',        '-g',   type=str,               default="ATL03_20190604044922_10220307_006_02.h5")
-parser.add_argument('--aoi',            '-a',   type=str,               default="tests/data/tarawa.geojson")
+parser.add_argument('--granule',        '-g',   type=str,               default="ATL03_20230213042035_08341807_006_02.h5") # ATL03_20190604044922_10220307_006_02.h5
+parser.add_argument('--aoi',            '-a',   type=str,               default=None) # "tests/data/tarawa.geojson"
 parser.add_argument('--track',          '-t',   type=int,               default=1)
 parser.add_argument('--spots',          '-e',   type=int, nargs='+',    choices=range(1,7), default=[1,2,3,4,5,6])
 parser.add_argument('--domain',         '-d',   type=str,               default="slideruleearth.io")
@@ -32,12 +32,8 @@ if args.organization == "None":
 # Initialize SlideRule Client
 sliderule.init(args.domain, verbose=args.verbose, loglevel=args.loglvl, organization=args.organization, desired_nodes=args.desired_nodes, time_to_live=args.time_to_live)
 
-# Generate Region Polygon
-region = sliderule.toregion(args.aoi)
-
 # Set Parameters
 parms = { 
-    "poly": region['poly'],
     "srt": icesat2.SRT_DYNAMIC,
     "cnf": "atl03_not_considered",
     "pass_invalid": True,
@@ -63,6 +59,10 @@ if args.send_to_client:
         "open_on_complete": False, 
         "as_geo": False 
     }
+# Generate Region Polygon
+if args.aoi:
+    region = sliderule.toregion(args.aoi)
+    parms["poly"] = region['poly']
 
 # Make ATL24G Processing Request
 gdf = icesat2.atl24gp(parms, resources=[args.granule], keep_id=True)

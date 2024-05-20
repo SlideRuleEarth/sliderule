@@ -245,7 +245,7 @@ void BathyParms::get_atl09_list (lua_State* L, int index, bool* provided)
                 const string name(str);
                 if(!alt09_index.add(key, name, true))
                 {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "Duplicate ATL09 key detected: %s", str);
+                    mlog(CRITICAL, "Duplicate ATL09 key detected: %s", str);
                 }
                 mlog(DEBUG, "Adding %s to ATL09 index with key: %s", str, key);
             }

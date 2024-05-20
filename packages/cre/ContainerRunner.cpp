@@ -413,7 +413,7 @@ void* ContainerRunner::controlThread (void* parm)
                     }
                     else
                     {
-                        alert(ERROR, RTE_ERROR, cr->outQ, NULL, "Container <%s> has is in an unexpected state: %s", container_name_str.c_str(), container_status);
+                        alert(ERROR, RTE_ERROR, cr->outQ, NULL, "Container <%s> is in an unexpected state: %s", container_name_str.c_str(), container_status);
                         done = true;
                         in_error = true;
                     }
