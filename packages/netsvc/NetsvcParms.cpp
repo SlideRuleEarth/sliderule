@@ -100,8 +100,10 @@ const char* NetsvcParms::tojson(void) const
     rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
     rapidjson::Value nullval(rapidjson::kNullType);
 
-    if(raster) doc.AddMember("raster", rapidjson::Value(raster->getJsonString(), allocator), allocator);
+#ifdef __geo__
+    if(raster._raster) doc.AddMember("raster", rapidjson::Value(raster._raster->getJsonString(), allocator), allocator);
     else       doc.AddMember("raster", nullval, allocator);
+#endif
 
     doc.AddMember("rqst_timeout", rapidjson::Value(rqst_timeout), allocator);
     doc.AddMember("node_timeout", rapidjson::Value(node_timeout), allocator);
@@ -136,6 +138,26 @@ const char* NetsvcParms::tojson(void) const
     return StringLib::duplicate(buffer.GetString());
 }
 
+/*----------------------------------------------------------------------------
+ * includes
+ *----------------------------------------------------------------------------*/
+bool NetsvcParms::RasterImpl::includes(double lon, double lat) const  // NOLINT(readability-convert-member-functions-to-static)
+{
+    /*
+     * This function must be defined in the source file to ensure that
+     * the correct behavior is preserved in plugins. Plugins do not have
+     * the __geo__ define, and inlining this function in the header file would
+     * result in false being returned.
+     */
+#ifdef __geo__
+    return _raster->includes(lon, lat);
+#else
+    (void)lon;
+    (void)lat;
+    return false;
+#endif
+}
+
 /******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
@@ -145,7 +167,6 @@ const char* NetsvcParms::tojson(void) const
  *----------------------------------------------------------------------------*/
 NetsvcParms::NetsvcParms(lua_State* L, int index):
     LuaObject                   (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    raster                      (NULL),
     rqst_timeout                (DEFAULT_RQST_TIMEOUT),
     node_timeout                (DEFAULT_NODE_TIMEOUT),
     read_timeout                (DEFAULT_READ_TIMEOUT),
@@ -161,7 +182,7 @@ NetsvcParms::NetsvcParms(lua_State* L, int index):
         /* Polygon */
         lua_getfield(L, index, NetsvcParms::POLYGON);
         get_lua_polygon(L, -1, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d points", NetsvcParms::POLYGON, (int)polygon.length());
+        if(provided) mlog(DEBUG, "Setting %s to %d points", NetsvcParms::POLYGON, polygon.length());
         lua_pop(L, 1);
 
         /* Raster */
@@ -255,7 +276,6 @@ NetsvcParms::~NetsvcParms (void)
  *----------------------------------------------------------------------------*/
 void NetsvcParms::cleanup (void) const
 {
-    delete raster;
     delete [] projected_poly;
 }
 
@@ -315,11 +335,12 @@ void NetsvcParms::get_lua_raster (lua_State* L, int index, bool* provided)
      *      cellsize = <cellsize>
      * }
      */
+#ifdef __geo__
     if(lua_istable(L, index))
     {
         try
         {
-            raster = GeoJsonRaster::create(L, index);
+            raster._raster = GeoJsonRaster::create(L, index);
             *provided = true;
         }
         catch(const RunTimeException& e)
@@ -327,6 +348,7 @@ void NetsvcParms::get_lua_raster (lua_State* L, int index, bool* provided)
             mlog(e.level(), "Error creating GeoJsonRaster file: %s", e.what());
         }
     }
+#endif
 }
 
 /*----------------------------------------------------------------------------

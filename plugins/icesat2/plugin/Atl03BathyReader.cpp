@@ -302,7 +302,7 @@ Atl03BathyReader::Region::Region (info_t* info):
         num_photons = H5Coro::ALL_ROWS;
 
         /* Determine Spatial Extent */
-        if(info->builder->parms->raster != NULL)
+        if(info->builder->parms->raster.valid())
         {
             rasterregion(info);
         }
@@ -441,7 +441,7 @@ void Atl03BathyReader::Region::rasterregion (info_t* info)
         if(segment_ph_cnt[segment] != 0)
         {
             /* Check Inclusion */
-            const bool inclusion = info->builder->parms->raster->includes(segment_lon[segment], segment_lat[segment]);
+            const bool inclusion = info->builder->parms->raster.includes(segment_lon[segment], segment_lat[segment]);
             inclusion_mask[segment] = inclusion;
 
             /* Check For First Segment */

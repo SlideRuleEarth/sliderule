@@ -40,7 +40,10 @@
 #include "LuaObject.h"
 #include "List.h"
 #include "MathLib.h"
+
+#ifdef __geo__
 #include "GeoJsonRaster.h"
+#endif
 
 /******************************************************************************
  * GEDI PARAMETERS
@@ -78,6 +81,26 @@ class NetsvcParms: public LuaObject
         static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        struct RasterImpl
+        {
+#ifdef __geo__
+            GeoJsonRaster*  _raster;
+#else
+            uint8_t*        _raster;
+#endif
+
+           RasterImpl   (void): _raster(NULL) {}
+           ~RasterImpl  (void) {delete _raster;}
+           bool valid   (void) const {return _raster != NULL;}
+
+           /* Cannot be inlined here, must be implemented in cpp file */
+           bool includes(double lon, double lat) const;
+        };
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -89,7 +112,7 @@ class NetsvcParms: public LuaObject
          *--------------------------------------------------------------------*/
 
         List<MathLib::coord_t>  polygon;                        // polygon of region of interest
-        GeoJsonRaster*          raster;                         // raster of region of interest, created from geojson file
+        RasterImpl              raster;                         // raster of region of interest, created from geojson file
         int                     rqst_timeout;                   // total time in seconds for request to be processed
         int                     node_timeout;                   // time in seconds for a single node to work on a distributed request (used for proxied requests)
         int                     read_timeout;                   // time in seconds for a single read of an asset to take
