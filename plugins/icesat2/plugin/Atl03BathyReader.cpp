@@ -786,7 +786,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     .x_atc = atl03.segment_dist_x[current_segment] + atl03.dist_ph_along[current_photon],
                     .y_atc = atl03.dist_ph_across[current_photon],
                     .background_rate = calculateBackground(current_segment, bckgrd_index, atl03),
-                    .geoid_corr_h = atl03.h_ph[current_photon] + atl03.geoid[current_segment],
+                    .geoid_corr_h = atl03.h_ph[current_photon] - atl03.geoid[current_segment],
                     .dem_h = atl03.dem_h[current_segment],
                     .sigma_along = atl03.sigma_along[current_segment],
                     .sigma_across = atl03.sigma_across[current_segment],
