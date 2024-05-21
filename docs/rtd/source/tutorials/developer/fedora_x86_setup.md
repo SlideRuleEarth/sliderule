@@ -1,19 +1,22 @@
-# Setting Up RHEL8 Development Environment
+# Setting Up Fedora39 Development Environment
 
-2024-5-13
+2024-5-21
 
 ## Overview
 
-These steps setup a development environment for CoastNet.  The target platform is GPU enabled x86 based processor running RHEL8 in AWS.
+These steps setup a development environment for SlideRule on a GPU enabled x86 based processor running Fedora39 in AWS.
 
 ## Steps
 
 ### 1. Logging in the first time
 
 ```bash
-ssh -i .ssh/<mykey>.pem ec2-user@<ip address>
-sudo subscription-manager register
+ssh -i .ssh/<mykey>.pem fedora@<ip address>
 sudo dnf upgrade --refresh
+```
+
+```bash
+sudo hostnamectl set-hostname --static <new hostname>
 ```
 
 ### 2. Creating Users
@@ -55,7 +58,8 @@ ulimit -c unlimited
 ### 6. Install and Configure Git
 
 ```bash
-sudo dnf install git
+sudo dnf install git gh git-lfs
+git lfs install
 ```
 
 Create the local file `~/.gitconfig` in the user's home directory with the following contents:
@@ -94,20 +98,14 @@ Create the local file `~/.gitconfig` in the user's home directory with the follo
 	helper = !/usr/bin/gh auth git-credential
 ```
 
-Install Large File System for Git
-```bash
-sudo dnf install wget
-wget --content-disposition "https://packagecloud.io/github/git-lfs/packages/el/8/git-lfs-3.5.1-1.el8.x86_64.rpm/download.rpm?distro_version_id=205"
-sudo rpm -i git-lfs-3.5.1-1.el8.x86_64.rpm
-git lfs install
-```
-
 ### 7. Clone Projects
 
 ```bash
 mkdir meta
 cd meta
 git clone https://github.com/jeffsp/coastnet
+git clone git@github.com:SlideRuleEarth/sliderule.git
+git clone git@github.com:ICESat2-SlideRule/openoceans-dev.git
 ```
 
 ### 8. Install Dependencies for Local Build
@@ -142,6 +140,11 @@ Install the NVIDIA drivers:
 dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
 dnf -y install cuda libcudnn8 libcudnn8-devel
 ```
+
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.repo | sudo tee /etc/yum.repos.d/nvidia-docker.repo
+sudo yum install -y nvidia-container-toolkit
+sudo systemctl restart docker
 
 Setup the Python environment for the build
 ```bash

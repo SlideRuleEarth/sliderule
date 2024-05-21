@@ -222,7 +222,7 @@ openoceans-container-docker: ## create the copenoceans container image
 	docker tag $(ECR)/$(OPENOCEANS_CONTAINER_NAME):latest $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(VERSION)
 	docker tag $(ECR)/$(OPENOCEANS_CONTAINER_NAME):latest $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(MAJOR_VERSION)
 	
-openoceans-container-run: ## run the openoceans container
+openoceans-container-test: ## run the openoceans container
 	docker run -it --rm -v /data:/data --name $(OPENOCEANS_CONTAINER_NAME) $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/oceaneyes.py /data/AppServer.2/bathy_beam_1.csv /data/AppServer.2/bathy_beam_1.json /data/AppServer.2/openoceans_1.csv
 
 bathywriter-container-lock: ## create the lock file for the bathywriter container image
@@ -239,7 +239,7 @@ bathywriter-container-docker: ## create the bathywriter container image
 	docker tag $(ECR)/$(BATHYWRITER_CONTAINER_NAME):latest $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(VERSION)
 	docker tag $(ECR)/$(BATHYWRITER_CONTAINER_NAME):latest $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(MAJOR_VERSION)
 	
-bathywriter-container-run: ## run the bathywriter docker container
+bathywriter-container-test: ## run the bathywriter docker container
 	cp $(BATHYWRITER_CONTAINER_DIR)/*.json /data
 	docker run -it --rm -v /data:/data --name $(BATHYWRITER_CONTAINER_NAME) $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/writer.py data/test.json
 
@@ -256,12 +256,11 @@ coastnet-container-docker: ## create the coastnet container image
 	docker tag $(ECR)/$(COASTNET_CONTAINER_NAME):latest $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION)
 	docker tag $(ECR)/$(COASTNET_CONTAINER_NAME):latest $(ECR)/$(COASTNET_CONTAINER_NAME):$(MAJOR_VERSION)
 	
-coastnet-surface-container-run: ## run the coastnet surface docker container
-#	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash surface.sh nil nil /data/AppServer.2/bathy_spot_3.csv /data/AppServer.2/coastnet.csv
-	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION)
+coastnet-container-surface-test: ## run the coastnet surface docker container
+	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash surface.sh nil nil /data/AppServer.2/bathy_spot_3.csv /data/AppServer.2/coastnet.csv
 
-coastnet-bathy-container-run: ## run the coastnet bathy docker container
-	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) /bin/bash /bathy.sh
+coastnet-container-bathy-test: ## run the coastnet bathy docker container
+	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash bathy.sh nil nil /data/AppServer.2/bathy_spot_3.csv /data/AppServer.2/coastnet.csv
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)

@@ -95,19 +95,19 @@ local status        = georesource.waiton(resource, parms, nil, reader, nil, proc
 -- function: generate input filenames
 local function genfilenames(dir, i, prefix)
     -- <settings-json>   <spot-input-json>   <spot-input-csv>   <spot-output-csv>
-    return string.format("%s/%s.json %s/%s_%d.json %s/%s_%d.csv %s/%s_%s_%d.csv", dir, prefix, dir, icesat2.BATHY_PREFIX, i, dir, icesat2.BATHY_PREFIX, i, dir, prefix, icesat2.BATHY_PREFIX, i)
+    return string.format(" %s/%s.json %s/%s_%d.json %s/%s_%d.csv %s/%s_%s_%d.csv", dir, prefix, dir, icesat2.BATHY_PREFIX, i, dir, icesat2.BATHY_PREFIX, i, dir, prefix, icesat2.BATHY_PREFIX, i)
 end
 
--- function: run coastnet
-local function runcoastnet(_bathy_parms, container_timeout)
+-- function: run container
+local function runcontainer(_bathy_parms, container_timeout, container_name, container_command)
     local container_list = {}
     for i = 1,icesat2.NUM_SPOTS do
         if _bathy_parms:spoton(i) then
             local container_parms = {
-                image =  "coastnet",
-                command = "bash /surface.sh " .. genfilenames(crenv.container_shared_directory, i, "coastnet"),
+                image =  container_name,
+                command = container_command .. genfilenames(crenv.container_shared_directory, i, container_name),
                 timeout = container_timeout,
-                parms = { ["coastnet.json"] = parms["coastnet"] }
+                parms = { [container_name..".json"] = parms[container_name] }
             }
             local container = runner.execute(crenv, container_parms, rspq)
             table.insert(container_list, container)
@@ -118,31 +118,15 @@ local function runcoastnet(_bathy_parms, container_timeout)
     end
 end
 
--- function: run openoceans
-local function runopenoceans(_bathy_parms, container_timeout)
-    for i = 1,icesat2.NUM_SPOTS do
-        if _bathy_parms:spoton(i) then
-            local container_parms = {
-                image =  "openoceans",
-                command = "/env/bin/python /usr/local/etc/oceaneyes.py " .. genfilenames(crenv.container_shared_directory, i, "openoceans"),
-                timeout = container_timeout,
-                parms = { ["openoceans.json"] = parms["openoceans"] }
-            }
-            local container = runner.execute(crenv, container_parms, rspq)
-            runner.wait(container, container_timeout)
-        end
-    end
-end
-
 while true do
     -- abort if failed to generate atl03 bathy inputs
     if not status then break end
 
     -- execute coastnet surface
-    runcoastnet(bathy_parms, timeout)
+    runcontainer(bathy_parms, timeout, "coastnet", "bash /surface.sh")
 
     -- execute openoceans
---    runopenoceans(bathy_parms, timeout)
+    runcontainer(bathy_parms, timeout, "openoceans", "/env/bin/python /usr/local/etc/oceaneyes.py")
 
     -- exit loop
     break
