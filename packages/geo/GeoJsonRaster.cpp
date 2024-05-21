@@ -100,7 +100,7 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 bool GeoJsonRaster::includes(double lon, double lat, double height)
 {
-    std::ignore = height;
+    static_cast<void>(height);
     bool pixel_on = false;
 
     /*

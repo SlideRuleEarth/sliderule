@@ -106,7 +106,7 @@ void GeoIndexedRaster::deinit (void)
  *----------------------------------------------------------------------------*/
 uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param)
 {
-    std::ignore = param;
+    static_cast<void>(param);
 
     samplingMutex.lock();
     try
@@ -165,7 +165,7 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
  *----------------------------------------------------------------------------*/
 uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, List<RasterSubset*>& slist, void* param)
 {
-    std::ignore = param;
+    static_cast<void>(param);
 
     samplingMutex.lock();
     try

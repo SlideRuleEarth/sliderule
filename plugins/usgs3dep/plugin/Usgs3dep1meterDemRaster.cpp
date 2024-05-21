@@ -85,7 +85,7 @@ Usgs3dep1meterDemRaster::~Usgs3dep1meterDemRaster(void)
  *----------------------------------------------------------------------------*/
 void Usgs3dep1meterDemRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
 {
-    std::ignore = geo;
+    static_cast<void>(geo);
     file = indexFile;
     mlog(DEBUG, "Using %s", file.c_str());
 }

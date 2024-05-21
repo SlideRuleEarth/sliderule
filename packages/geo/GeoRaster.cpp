@@ -80,8 +80,8 @@ GeoRaster::~GeoRaster(void) = default;
  *----------------------------------------------------------------------------*/
 uint32_t GeoRaster::getSamples(const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param)
 {
-    std::ignore = gps;
-    std::ignore = param;
+    static_cast<void>(gps);
+    static_cast<void>(param);
 
     samplingMutex.lock();
     try
@@ -104,8 +104,8 @@ uint32_t GeoRaster::getSamples(const MathLib::point_3d_t& point, int64_t gps, Li
  *----------------------------------------------------------------------------*/
 uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, List<RasterSubset*>& slist, void* param)
 {
-    std::ignore = gps;
-    std::ignore = param;
+    static_cast<void>(gps);
+    static_cast<void>(param);
 
     samplingMutex.lock();
 
@@ -156,7 +156,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
  *----------------------------------------------------------------------------*/
 uint8_t* GeoRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, void* param)
 {
-    std::ignore = param;
+    static_cast<void>(param);
     uint8_t* data = NULL;
 
     samplingMutex.lock();

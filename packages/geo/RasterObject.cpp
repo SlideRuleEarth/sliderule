@@ -174,12 +174,11 @@ bool RasterObject::registerRaster (const char* _name, factory_f create)
  *----------------------------------------------------------------------------*/
 uint8_t* RasterObject::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, void* param)
 {
-    std::ignore = ulx;
-    std::ignore = uly;
-    std::ignore = xsize;
-    std::ignore = ysize;
-    std::ignore = param;
-
+    static_cast<void>(ulx);
+    static_cast<void>(uly);
+    static_cast<void>(xsize);
+    static_cast<void>(ysize);
+    static_cast<void>(param);
     return NULL;
 }
 

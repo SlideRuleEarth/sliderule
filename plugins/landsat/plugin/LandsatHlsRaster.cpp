@@ -157,7 +157,7 @@ LandsatHlsRaster::~LandsatHlsRaster(void)
  *----------------------------------------------------------------------------*/
 void LandsatHlsRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
 {
-    std::ignore = geo;
+    static_cast<void>(geo);
     file = indexFile;
     mlog(DEBUG, "Using %s", file.c_str());
 }

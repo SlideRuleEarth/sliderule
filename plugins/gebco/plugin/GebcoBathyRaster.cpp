@@ -72,7 +72,7 @@ GebcoBathyRaster::~GebcoBathyRaster(void) = default;
  *----------------------------------------------------------------------------*/
 void GebcoBathyRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
 {
-    std::ignore = geo;
+    static_cast<void>(geo);
     file = filePath + "/" + indexFile;
     mlog(DEBUG, "Using %s", file.c_str());
 }

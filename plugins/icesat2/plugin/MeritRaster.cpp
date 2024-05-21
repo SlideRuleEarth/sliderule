@@ -210,10 +210,10 @@ uint32_t MeritRaster::getSamples (const MathLib::point_3d_t& point, int64_t gps,
  *----------------------------------------------------------------------------*/
 uint32_t MeritRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, List<RasterSubset*>& slist, void* param)
 {
-    std::ignore = extent;
-    std::ignore = gps;
-    std::ignore = slist;
-    std::ignore = param;
+    static_cast<void>(extent);
+    static_cast<void>(gps);
+    static_cast<void>(slist);
+    static_cast<void>(param);
     return SS_NO_ERRORS;
 }
 
