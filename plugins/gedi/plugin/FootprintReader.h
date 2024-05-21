@@ -316,7 +316,7 @@ FootprintReader<footprint_t>::Region::Region (info_t* info):
     num_footprints = H5Coro::ALL_ROWS;
 
     /* Determine Spatial Extent */
-    if(info->reader->parms->raster != NULL)
+    if(info->reader->parms->raster.valid())
     {
         rasterregion(info);
     }
@@ -423,7 +423,7 @@ void FootprintReader<footprint_t>::Region::rasterregion (info_t* info)
     while(footprint < lat.size)
     {
         /* Check Inclusion */
-        const bool inclusion = info->reader->parms->raster->includes(lon[footprint], lat[footprint]);
+        const bool inclusion = info->reader->parms->raster.includes(lon[footprint], lat[footprint]);
         inclusion_mask[footprint] = inclusion;
 
         /* If Coordinate Is In Raster */

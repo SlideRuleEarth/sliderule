@@ -257,7 +257,7 @@ Atl06Reader::Region::Region (info_t* info):
         num_segments = H5Coro::ALL_ROWS;
 
         /* Determine Spatial Extent */
-        if(info->reader->parms->raster != NULL)
+        if(info->reader->parms->raster.valid())
         {
             rasterregion(info);
         }
@@ -375,7 +375,7 @@ void Atl06Reader::Region::rasterregion (info_t* info)
     while(segment < latitude.size)
     {
         /* Check Inclusion */
-        const bool inclusion = info->reader->parms->raster->includes(longitude[segment], latitude[segment]);
+        const bool inclusion = info->reader->parms->raster.includes(longitude[segment], latitude[segment]);
         inclusion_mask[segment] = inclusion;
 
         /* Check For First Segment */

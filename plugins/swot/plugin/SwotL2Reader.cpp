@@ -226,7 +226,7 @@ SwotL2Reader::Region::Region (Asset* asset, const char* resource, SwotParms* _pa
     num_lines = H5Coro::ALL_ROWS;
 
     /* Determine Spatial Extent */
-    if(_parms->raster != NULL)
+    if(_parms->raster.valid())
     {
         rasterregion(_parms);
     }
@@ -324,7 +324,7 @@ void SwotL2Reader::Region::rasterregion (SwotParms* _parms)
     while(line < lat.size)
     {
         /* Check Inclusion */
-        const bool inclusion = _parms->raster->includes(CONVERT_LON(lon[line]), CONVERT_LAT(lat[line]));
+        const bool inclusion = _parms->raster.includes(CONVERT_LON(lon[line]), CONVERT_LAT(lat[line]));
         inclusion_mask[line] = inclusion;
 
         /* If Coordinate Is In Raster */
