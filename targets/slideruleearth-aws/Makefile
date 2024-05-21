@@ -258,7 +258,8 @@ coastnet-container-docker: ## create the coastnet container image
 	
 coastnet-container-surface-test: ## run the coastnet surface docker container
 	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash surface.sh nil nil /data/AppServer.2/bathy_spot_3.csv /data/AppServer.2/coastnet.csv
-
+#	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) 
+	
 coastnet-container-bathy-test: ## run the coastnet bathy docker container
 	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash bathy.sh nil nil /data/AppServer.2/bathy_spot_3.csv /data/AppServer.2/coastnet.csv
 

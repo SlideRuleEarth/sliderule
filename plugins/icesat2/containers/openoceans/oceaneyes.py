@@ -97,6 +97,7 @@ with open(settings_json, 'r') as json_file:
     photon_bins     = settings.get('photon_bins', False)
     parallel        = settings.get('parallel', True)
     use_ndwi        = settings.get('use_ndwi', False)
+    chunk_size      = settings.get('chunk_size', 10000) # number of photons to process at one time
 
 # read info json
 with open(info_json, 'r') as json_file:
@@ -173,10 +174,9 @@ class Profile:
 ################
 
 model_outputs = []
-num_rows_to_chunk = 10000
-for start_row in range(0, len(ph_data), num_rows_to_chunk):
-    print(f'Processing rows {start_row} to {start_row + num_rows_to_chunk} out of {len(ph_data)}')
-    p_sr = Profile(data=ph_data.iloc[start_row:start_row+num_rows_to_chunk], info=ph_info)
+for start_row in range(0, len(ph_data), chunk_size):
+    print(f'Processing rows {start_row} to {start_row + chunk_size} out of {len(ph_data)}')
+    p_sr = Profile(data=ph_data.iloc[start_row:start_row+chunk_size], info=ph_info)
     mmp = ModelMakerP(res_along_track=res_along_track, res_z=res_z, window_size=window_size, range_z=range_z, verbose=verbose, photon_bins=photon_bins, parallel=parallel)
     m = mmp.process(p_sr, n_cpu_cores=8)
     model_outputs.append(m.profile.data)

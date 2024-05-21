@@ -5,14 +5,15 @@ RUN  dnf update -y \
   && dnf install -y \
          make \
          automake \
-         gcc \
-         gcc-c++ \
+         clang \
+         llvm \
          cmake \
          cppcheck \
          opencv-devel \
          python3.9  \
          parallel \
          gmp-devel \
+         libomp-devel \
          mlpack-devel \
          mlpack-bin \
          gdal-devel \
@@ -32,7 +33,7 @@ COPY CMakeLists.txt /coastnet/
 COPY Makefile /coastnet/
 RUN source /venv/bin/activate \
     && cd /coastnet \
-    && make
+    && CC=clang CXX=clang++ make
 
 COPY surface.sh /
 COPY bathy.sh /

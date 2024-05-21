@@ -100,7 +100,7 @@ end
 
 -- function: run container
 local function runcontainer(_bathy_parms, container_timeout, container_name, container_command)
-    local container_list = {}
+--    local container_list = {}
     for i = 1,icesat2.NUM_SPOTS do
         if _bathy_parms:spoton(i) then
             local container_parms = {
@@ -110,23 +110,27 @@ local function runcontainer(_bathy_parms, container_timeout, container_name, con
                 parms = { [container_name..".json"] = parms[container_name] }
             }
             local container = runner.execute(crenv, container_parms, rspq)
-            table.insert(container_list, container)
+--            table.insert(container_list, container)
+            runner.wait(container, container_timeout)
         end
     end
-    for _,container in ipairs(container_list) do
-        runner.wait(container, container_timeout)        
-    end
+--    for _,container in ipairs(container_list) do
+--        runner.wait(container, container_timeout)
+--    end
 end
 
 while true do
     -- abort if failed to generate atl03 bathy inputs
     if not status then break end
 
-    -- execute coastnet surface
+    -- execute coastnet surface (MUST BE RUN FIRST - to supply surface classifications)
     runcontainer(bathy_parms, timeout, "coastnet", "bash /surface.sh")
 
     -- execute openoceans
     runcontainer(bathy_parms, timeout, "openoceans", "/env/bin/python /usr/local/etc/oceaneyes.py")
+
+    -- execute coastnet bathy
+    runcontainer(bathy_parms, timeout, "coastnet", "bash /bathy.sh")
 
     -- exit loop
     break
