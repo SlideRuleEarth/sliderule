@@ -78,7 +78,7 @@ NO_VALUE = -9999
 ##############
 
 if len(sys.argv) <= 4:
-    print("Not enough parameters: python oceaneyes.py <settings json> <input json beam file> <input csv beam file> <output csv beam file>")
+    print("Not enough parameters: python oceaneyes.py <settings json> <input json spot file> <input csv spot file> <output csv spot file>")
     sys.exit()
 
 settings_json   = sys.argv[1]
@@ -161,30 +161,34 @@ class Profile:
             "surface": 41,
             "column": 45,
             "bathymetry": 40,
-            "background": 0,
-            "unclassified": -1,
-            "none": -9999,
+            "background": 1,
+            "unclassified": 0,
+            "none": 0,
         }
     def label_help(self, user_input=None):
         return self.class_labels[user_input]
-
-p_sr = Profile(data=ph_data, info=ph_info)
 
 ################
 # EXECUTE MODEL
 ################
 
-mmp = ModelMakerP(res_along_track=res_along_track, res_z=res_z, window_size=window_size, range_z=range_z, verbose=verbose, photon_bins=photon_bins, parallel=parallel)
-m = mmp.process(p_sr, n_cpu_cores=10)
-print(m.profile.data)
+model_outputs = []
+num_rows_to_chunk = 10000
+for start_row in range(0, len(ph_data), num_rows_to_chunk):
+    print(f'Processing rows {start_row} to {start_row + num_rows_to_chunk} out of {len(ph_data)}')
+    p_sr = Profile(data=ph_data.iloc[start_row:start_row+num_rows_to_chunk], info=ph_info)
+    mmp = ModelMakerP(res_along_track=res_along_track, res_z=res_z, window_size=window_size, range_z=range_z, verbose=verbose, photon_bins=photon_bins, parallel=parallel)
+    m = mmp.process(p_sr, n_cpu_cores=8)
+    model_outputs.append(m.profile.data)
 
 ################
 # WRITE OUTPUTS
 ################
 
-ph_out = pd.DataFrame()
+results = pd.concat(model_outputs, ignore_index=True)
 
-ph_out["index_ph"] = m.profile.data.photon_index
-ph_out["class_ph"] = m.profile.data.classification
+ph_out = pd.DataFrame()
+ph_out["index_ph"] = results.photon_index
+ph_out["class_ph"] = results.classification
 
 ph_out.to_csv(output_csv, index=False, columns=["index_ph", "class_ph"])
