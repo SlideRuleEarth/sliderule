@@ -76,6 +76,10 @@ COASTNET_CONTAINER_SOURCE_DIR = $(ROOT)/../coastnet
 COASTNET_CONTAINER_STAGE_DIR = $(STAGE)/coastnet
 COASTNET_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/coastnet
 COASTNET_CONTAINER_NAME ?= coastnet
+POINTNET2_CONTAINER_SOURCE_DIR = $(ROOT)/../pointnet2
+POINTNET2_CONTAINER_STAGE_DIR = $(STAGE)/pointnet2
+POINTNET2_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/pointnet2
+POINTNET2_CONTAINER_NAME ?= pointnet2
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -209,8 +213,8 @@ manager-destroy: ## destroy manager using terraform; needs DOMAIN
 	cd terraform/manager && terraform destroy
 
 openoceans-container-lock: ## create the lock file for the openoceans container image
-	cd $(OPENOCEANS_CONTAINER_DIR) && conda-lock -p linux-aarch64 -f environment.yml
-	cd $(OPENOCEANS_CONTAINER_DIR) && conda-lock render -p linux-aarch64
+	cd $(OPENOCEANS_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd $(OPENOCEANS_CONTAINER_DIR) && conda-lock render -p linux-$(ARCH)
 
 openoceans-container-docker: ## create the copenoceans container image
 	-rm -Rf $(OPENOCEANS_CONTAINER_STAGE_DIR)
@@ -223,11 +227,11 @@ openoceans-container-docker: ## create the copenoceans container image
 	docker tag $(ECR)/$(OPENOCEANS_CONTAINER_NAME):latest $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(MAJOR_VERSION)
 	
 openoceans-container-test: ## run the openoceans container
-	docker run -it --rm -v /data:/data --name $(OPENOCEANS_CONTAINER_NAME) $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/oceaneyes.py /data/AppServer.2/bathy_beam_1.csv /data/AppServer.2/bathy_beam_1.json /data/AppServer.2/openoceans_1.csv
+	docker run -it --rm -v /data:/data --name $(OPENOCEANS_CONTAINER_NAME) $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/oceaneyes.py /data/openoceans.json /data/AppServer.2/bathy_spot_3.json /data/AppServer.2/bathy_spot_3.csv /data/AppServer.2/openoceans_3.csv
 
 bathywriter-container-lock: ## create the lock file for the bathywriter container image
-	cd $(BATHYWRITER_CONTAINER_DIR) && conda-lock -p linux-aarch64 -f environment.yml
-	cd $(BATHYWRITER_CONTAINER_DIR) && conda-lock render -p linux-aarch64
+	cd $(BATHYWRITER_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd $(BATHYWRITER_CONTAINER_DIR) && conda-lock render -p linux-$(ARCH)
 
 bathywriter-container-docker: ## create the bathywriter container image
 	-rm -Rf $(BATHYWRITER_CONTAINER_STAGE_DIR)
@@ -258,10 +262,27 @@ coastnet-container-docker: ## create the coastnet container image
 	
 coastnet-container-surface-test: ## run the coastnet surface docker container
 	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash surface.sh nil nil /data/AppServer.2/bathy_spot_3.csv /data/AppServer.2/coastnet.csv
-#	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) 
 	
 coastnet-container-bathy-test: ## run the coastnet bathy docker container
 	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash bathy.sh nil nil /data/AppServer.2/bathy_spot_3.csv /data/AppServer.2/coastnet.csv
+
+pointnet2-container-lock: ## create the lock file for the pointnet2 container image
+	cd $(POINTNET2_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd $(POINTNET2_CONTAINER_DIR) && conda-lock render -p linux-$(ARCH)
+
+pointnet2-container-docker: ## create the copenoceans container image
+	-rm -Rf $(POINTNET2_CONTAINER_STAGE_DIR)
+	mkdir -p $(POINTNET2_CONTAINER_STAGE_DIR)
+	rsync -a $(POINTNET2_CONTAINER_SOURCE_DIR) $(POINTNET2_CONTAINER_STAGE_DIR)/pointnet2 --exclude build --exclude .git
+	cp $(POINTNET2_CONTAINER_DIR)/Dockerfile $(POINTNET2_CONTAINER_STAGE_DIR)
+	cp $(POINTNET2_CONTAINER_DIR)/conda-* $(POINTNET2_CONTAINER_STAGE_DIR)
+	cp $(POINTNET2_CONTAINER_DIR)/*.py $(POINTNET2_CONTAINER_STAGE_DIR)
+	cd $(POINTNET2_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(POINTNET2_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/$(POINTNET2_CONTAINER_NAME):latest $(ECR)/$(POINTNET2_CONTAINER_NAME):$(VERSION)
+	docker tag $(ECR)/$(POINTNET2_CONTAINER_NAME):latest $(ECR)/$(POINTNET2_CONTAINER_NAME):$(MAJOR_VERSION)
+	
+pointnet2-container-test: ## run the pointnet2 container
+	docker run -it --rm -v /data:/data --name $(POINTNET2_CONTAINER_NAME) $(ECR)/$(POINTNET2_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/runner.py /data/AppServer.2/bathy_spot_3.json /data/AppServer.2/bathy_spot_3.csv
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)

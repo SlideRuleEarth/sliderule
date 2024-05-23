@@ -1,0 +1,8 @@
+name: pointnet2
+channels:
+  - conda-forge
+dependencies:
+  - numpy
+  - pandas
+  - tqdm
+  - pip
