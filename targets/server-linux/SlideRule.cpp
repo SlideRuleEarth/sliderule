@@ -291,7 +291,6 @@ int main (int argc, char* argv[])
     pthread_t signal_pid;
     pthread_attr_t pthread_attr;
     pthread_attr_init(&pthread_attr);
-    pthread_attr_setdetachstate(&pthread_attr, PTHREAD_CREATE_DETACHED);
     pthread_create(&signal_pid, &pthread_attr, &signal_thread, reinterpret_cast<void*>(&signal_set));
 
     /* Initialize Built-In Packages */
