@@ -7,9 +7,6 @@ local georesource   = require("georesource")
 local earthdata     = require("earth_data_query")
 local runner        = require("container_runtime")
 
-
-local prettyprint = require("prettyprint")
-
 -- get inputs 
 local rqst          = json.decode(arg[1])
 local resource      = rqst["resource"]
@@ -99,8 +96,8 @@ local function genfilenames(dir, i, prefix)
 end
 
 -- function: run container
-local function runcontainer(_bathy_parms, container_timeout, container_name, container_command)
---    local container_list = {}
+local function runcontainer(_bathy_parms, container_timeout, container_name, container_command, in_parallel)
+    local container_list = {}
     for i = 1,icesat2.NUM_SPOTS do
         if _bathy_parms:spoton(i) then
             local container_parms = {
@@ -110,13 +107,17 @@ local function runcontainer(_bathy_parms, container_timeout, container_name, con
                 parms = { [container_name..".json"] = parms[container_name] }
             }
             local container = runner.execute(crenv, container_parms, rspq)
---            table.insert(container_list, container)
+            table.insert(container_list, container)
+            if not in_parallel then
+                runner.wait(container, container_timeout)
+            end
+        end
+    end
+    if in_parallel then
+        for _,container in ipairs(container_list) do
             runner.wait(container, container_timeout)
         end
     end
---    for _,container in ipairs(container_list) do
---        runner.wait(container, container_timeout)
---    end
 end
 
 while true do
@@ -124,13 +125,19 @@ while true do
     if not status then break end
 
     -- execute coastnet surface (MUST BE RUN FIRST - to supply surface classifications)
-    runcontainer(bathy_parms, timeout, "coastnet", "bash /surface.sh")
+    runcontainer(bathy_parms, timeout, "coastnet", "bash /surface.sh", false)
 
     -- execute openoceans
-    runcontainer(bathy_parms, timeout, "openoceans", "/env/bin/python /usr/local/etc/oceaneyes.py")
+    runcontainer(bathy_parms, timeout, "openoceans", "/env/bin/python /usr/local/etc/oceaneyes.py", false)
+
+    -- execute medialfilter bathy
+    runcontainer(bathy_parms, timeout, "medialfilter", "/env/bin/python /usr/local/etc/runner.py", true)
+
+    -- execute pointnet2 bathy
+    runcontainer(bathy_parms, timeout, "pointnet2", "/env/bin/python /usr/local/etc/runner.py", false)
 
     -- execute coastnet bathy
-    runcontainer(bathy_parms, timeout, "coastnet", "bash /bathy.sh")
+    runcontainer(bathy_parms, timeout, "coastnet", "bash /bathy.sh", false)
 
     -- exit loop
     break
@@ -152,7 +159,7 @@ for i = 1,icesat2.NUM_SPOTS do
     if bathy_parms:spoton(i) then
         table.insert(spot_csv_files, string.format("%s/%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
         table.insert(spot_json_files, string.format("%s/%s_%d.json", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
-        table.insert(ensemble_csv_files, string.format("%s/ensemble_csv_files_%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
+        table.insert(ensemble_csv_files, string.format("%s/ensemble_%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
     end
 end
 local writer_parms = {

@@ -84,6 +84,10 @@ MEDIANFILTER_CONTAINER_SOURCE_DIR = $(ROOT)/../medianfilter
 MEDIANFILTER_CONTAINER_STAGE_DIR = $(STAGE)/medianfilter
 MEDIANFILTER_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/medianfilter
 MEDIANFILTER_CONTAINER_NAME ?= medianfilter
+CSHELPH_CONTAINER_SOURCE_DIR = $(ROOT)/../cshelph
+CSHELPH_CONTAINER_STAGE_DIR = $(STAGE)/cshelph
+CSHELPH_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/cshelph
+CSHELPH_CONTAINER_NAME ?= cshelph
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -305,6 +309,24 @@ medianfilter-container-docker: ## create the medianfilter container image
 	
 medianfilter-container-test: ## run the medianfilter container
 	docker run -it --rm -v /data:/data --name $(MEDIANFILTER_CONTAINER_NAME) $(ECR)/$(MEDIANFILTER_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/runner.py /data/AppServer.2/bathy_spot_3.json /data/AppServer.2/bathy_spot_3.csv
+
+cshelph-container-lock: ## create the lock file for the cshelph container image
+	cd $(CSHELPH_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd $(CSHELPH_CONTAINER_DIR) && conda-lock render -p linux-$(ARCH)
+
+cshelph-container-docker: ## create the cshelph container image
+	-rm -Rf $(CSHELPH_CONTAINER_STAGE_DIR)
+	mkdir -p $(CSHELPH_CONTAINER_STAGE_DIR)
+	rsync -a $(CSHELPH_CONTAINER_SOURCE_DIR) $(CSHELPH_CONTAINER_STAGE_DIR)/cshelph --exclude build --exclude .git
+	cp $(CSHELPH_CONTAINER_DIR)/Dockerfile $(CSHELPH_CONTAINER_STAGE_DIR)
+	cp $(CSHELPH_CONTAINER_DIR)/conda-* $(CSHELPH_CONTAINER_STAGE_DIR)
+	cp $(CSHELPH_CONTAINER_DIR)/*.py $(CSHELPH_CONTAINER_STAGE_DIR)
+	cd $(CSHELPH_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(CSHELPH_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/$(CSHELPH_CONTAINER_NAME):latest $(ECR)/$(CSHELPH_CONTAINER_NAME):$(VERSION)
+	docker tag $(ECR)/$(CSHELPH_CONTAINER_NAME):latest $(ECR)/$(CSHELPH_CONTAINER_NAME):$(MAJOR_VERSION)
+	
+cshelph-container-test: ## run the cshelph container
+	docker run -it --rm -v /data:/data --name $(CSHELPH_CONTAINER_NAME) $(ECR)/$(CSHELPH_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/runner.py /data/AppServer.2/bathy_spot_3.json /data/AppServer.2/bathy_spot_3.csv
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
