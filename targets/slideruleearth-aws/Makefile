@@ -80,6 +80,10 @@ POINTNET2_CONTAINER_SOURCE_DIR = $(ROOT)/../pointnet2
 POINTNET2_CONTAINER_STAGE_DIR = $(STAGE)/pointnet2
 POINTNET2_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/pointnet2
 POINTNET2_CONTAINER_NAME ?= pointnet2
+MEDIANFILTER_CONTAINER_SOURCE_DIR = $(ROOT)/../medianfilter
+MEDIANFILTER_CONTAINER_STAGE_DIR = $(STAGE)/medianfilter
+MEDIANFILTER_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/medianfilter
+MEDIANFILTER_CONTAINER_NAME ?= medianfilter
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -270,7 +274,7 @@ pointnet2-container-lock: ## create the lock file for the pointnet2 container im
 	cd $(POINTNET2_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
 	cd $(POINTNET2_CONTAINER_DIR) && conda-lock render -p linux-$(ARCH)
 
-pointnet2-container-docker: ## create the copenoceans container image
+pointnet2-container-docker: ## create the pointnet2 container image
 	-rm -Rf $(POINTNET2_CONTAINER_STAGE_DIR)
 	mkdir -p $(POINTNET2_CONTAINER_STAGE_DIR)
 	rsync -a $(POINTNET2_CONTAINER_SOURCE_DIR) $(POINTNET2_CONTAINER_STAGE_DIR)/pointnet2 --exclude build --exclude .git
@@ -283,6 +287,24 @@ pointnet2-container-docker: ## create the copenoceans container image
 	
 pointnet2-container-test: ## run the pointnet2 container
 	docker run -it --rm -v /data:/data --name $(POINTNET2_CONTAINER_NAME) $(ECR)/$(POINTNET2_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/runner.py /data/AppServer.2/bathy_spot_3.json /data/AppServer.2/bathy_spot_3.csv
+
+medianfilter-container-lock: ## create the lock file for the medianfilter container image
+	cd $(MEDIANFILTER_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd $(MEDIANFILTER_CONTAINER_DIR) && conda-lock render -p linux-$(ARCH)
+
+medianfilter-container-docker: ## create the medianfilter container image
+	-rm -Rf $(MEDIANFILTER_CONTAINER_STAGE_DIR)
+	mkdir -p $(MEDIANFILTER_CONTAINER_STAGE_DIR)
+	rsync -a $(MEDIANFILTER_CONTAINER_SOURCE_DIR) $(MEDIANFILTER_CONTAINER_STAGE_DIR)/medianfilter --exclude build --exclude .git
+	cp $(MEDIANFILTER_CONTAINER_DIR)/Dockerfile $(MEDIANFILTER_CONTAINER_STAGE_DIR)
+	cp $(MEDIANFILTER_CONTAINER_DIR)/conda-* $(MEDIANFILTER_CONTAINER_STAGE_DIR)
+	cp $(MEDIANFILTER_CONTAINER_DIR)/*.py $(MEDIANFILTER_CONTAINER_STAGE_DIR)
+	cd $(MEDIANFILTER_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(MEDIANFILTER_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/$(MEDIANFILTER_CONTAINER_NAME):latest $(ECR)/$(MEDIANFILTER_CONTAINER_NAME):$(VERSION)
+	docker tag $(ECR)/$(MEDIANFILTER_CONTAINER_NAME):latest $(ECR)/$(MEDIANFILTER_CONTAINER_NAME):$(MAJOR_VERSION)
+	
+medianfilter-container-test: ## run the medianfilter container
+	docker run -it --rm -v /data:/data --name $(MEDIANFILTER_CONTAINER_NAME) $(ECR)/$(MEDIANFILTER_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/runner.py /data/AppServer.2/bathy_spot_3.json /data/AppServer.2/bathy_spot_3.csv
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
