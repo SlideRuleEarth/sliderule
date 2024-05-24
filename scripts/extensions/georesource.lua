@@ -24,7 +24,7 @@
 local function initialize(resource, parms, algo, args)
 
     -- User Status --
-    local userlog = msg.publish(rspq)
+    local userlog = args.userlog or msg.publish(rspq)
 
     -- Get Asset --
     local asset_name = parms["asset"] or args.default_asset

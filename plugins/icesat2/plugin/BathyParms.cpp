@@ -47,6 +47,7 @@ const char* BathyParms::PH_IN_EXTENT = "ph_in_extent";
 const char* BathyParms::GENERATE_NDWI = "generate_ndwi";
 const char* BathyParms::USE_BATHY_MASK = "use_bathy_mask";
 const char* BathyParms::RETURN_INPUTS = "return_inputs";
+const char* BathyParms::CLASSIFIERS = "classifiers";
 const char* BathyParms::SPOTS = "spots";
 const char* BathyParms::ATL09_RESOURCES = "resources09";
 
@@ -123,6 +124,50 @@ int BathyParms::luaSpotEnabled (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * luaClassifierEnabled - :classifieron(<spot>) --> true|false
+ *----------------------------------------------------------------------------*/
+int BathyParms::luaClassifierEnabled (lua_State* L)
+{
+    bool status = false;
+    BathyParms* lua_obj = NULL;
+
+    try
+    {
+        lua_obj = dynamic_cast<BathyParms*>(getLuaSelf(L, 1));
+        const char* classifier_str = getLuaString(L, 2);
+        classifier_t classifier = str2classifier(classifier_str);
+        if(classifier != INVALID_CLASSIFIER)
+        {
+            int index = static_cast<int>(classifier);
+            status = lua_obj->classifiers[index];
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error retrieving classifier status: %s", e.what());
+    }
+
+    lua_pushboolean(L, status);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * str2classifier
+ *----------------------------------------------------------------------------*/
+BathyParms::classifier_t BathyParms::str2classifier (const char* str)
+{
+    if(StringLib::match(str, "coastnet"))           return COASTNET;
+    if(StringLib::match(str, "openoceans"))         return OPENOCEANS;
+    if(StringLib::match(str, "medianfilter"))       return MEDIANFILTER;
+    if(StringLib::match(str, "cshelph"))            return CSHELPH;
+    if(StringLib::match(str, "bathy_pathfinder"))   return BATHY_PATHFINDER;
+    if(StringLib::match(str, "pointnet2"))          return POINTNET2;
+    if(StringLib::match(str, "local_constrast"))    return LOCAL_CONTRAST;
+    if(StringLib::match(str, "ensemble"))           return ENSEMBLE;
+    return INVALID_CLASSIFIER;
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 BathyParms::BathyParms(lua_State* L, int index):
@@ -132,6 +177,7 @@ BathyParms::BathyParms(lua_State* L, int index):
     ph_in_extent (DEFAULT_PH_IN_EXTENT),
     generate_ndwi(true),
     use_bathy_mask(true),
+    classifiers{true, true, true, true, true, true, true, true},
     return_inputs(false),
     spots{true, true, true, true, true, true}
 {
@@ -140,6 +186,7 @@ BathyParms::BathyParms(lua_State* L, int index):
     /* Set Meta Table Functions */
     luaL_getmetatable(L, LUA_META_NAME);
     LuaEngine::setAttrFunc(L, "spoton", luaSpotEnabled);
+    LuaEngine::setAttrFunc(L, "classifieron", luaClassifierEnabled);
     lua_pop(L, 1);
 
     try
@@ -174,6 +221,11 @@ BathyParms::BathyParms(lua_State* L, int index):
         if(provided) mlog(DEBUG, "Setting %s to %d", BathyParms::USE_BATHY_MASK, use_bathy_mask);
         lua_pop(L, 1);
 
+        /* classifiers */
+        lua_getfield(L, index, BathyParms::CLASSIFIERS);
+        get_classifiers(L, -1, &provided);
+        lua_pop(L, 1);
+
         /* return inputs */
         lua_getfield(L, index, BathyParms::RETURN_INPUTS);
         return_inputs = LuaObject::getLuaBoolean(L, -1, true, return_inputs, &provided);
@@ -183,13 +235,11 @@ BathyParms::BathyParms(lua_State* L, int index):
         /* atl09 resources */
         lua_getfield(L, index, BathyParms::ATL09_RESOURCES);
         get_atl09_list(L, -1, &provided);
-        if(provided) mlog(DEBUG, "ATL09 resources set");
         lua_pop(L, 1);
 
         /* spot selection */
         lua_getfield(L, index, BathyParms::SPOTS);
         get_spot_list(L, -1, &provided);
-        if(provided) mlog(DEBUG, "Spots selected");
         lua_pop(L, 1);
     }
     catch(const RunTimeException& e)
@@ -325,5 +375,105 @@ void BathyParms::get_spot_list (lua_State* L, int index, bool* provided)
     else if(!lua_isnil(L, index))
     {
         mlog(ERROR, "Spot selection must be provided as a table or integer");
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * get_classifiers
+ *----------------------------------------------------------------------------*/
+void BathyParms::get_classifiers (lua_State* L, int index, bool* provided)
+{
+    /* Reset Provided */
+    if(provided) *provided = false;
+
+    /* Must be table of classifiers or a single classifier as a string */
+    if(lua_istable(L, index))
+    {
+        /* Clear classifier table (sets all to false) */
+        memset(classifiers, 0, sizeof(classifiers));
+
+        /* Get number of classifiers in table */
+        const int num_classifiers = lua_rawlen(L, index);
+        if(num_classifiers > 0 && provided) *provided = true;
+
+        /* Iterate through each classifier in table */
+        for(int i = 0; i < num_classifiers; i++)
+        {
+            /* Get classifier */
+            lua_rawgeti(L, index, i+1);
+
+            /* Set classifier */
+            if(lua_isinteger(L, -1))
+            {
+                const int classifier = LuaObject::getLuaInteger(L, -1);
+                if(classifier >= 0 && classifier < NUM_CLASSIFIERS)
+                {
+                    classifiers[classifier] = true;
+                    mlog(DEBUG, "Selecting classifier %d", classifier);
+                }
+                else
+                {
+                    mlog(ERROR, "Invalid classifier: %d", classifier);
+                }
+            }
+            else if(lua_isstring(L, -1))
+            {
+                const char* classifier_str = LuaObject::getLuaString(L, -1);
+                const classifier_t classifier = str2classifier(classifier_str);
+                if(classifier != INVALID_CLASSIFIER)
+                {
+                    classifiers[static_cast<int>(classifier)] = true;
+                    mlog(DEBUG, "Selecting %s classifier", classifier_str);
+                }
+                else
+                {
+                    mlog(ERROR, "Invalid classifier: %s", classifier_str);
+                }
+            }
+
+            /* Clean up stack */
+            lua_pop(L, 1);
+        }
+    }
+    else if(lua_isinteger(L, index))
+    {
+        /* Clear classifier table (sets all to false) */
+        memset(classifiers, 0, sizeof(classifiers));
+
+        /* Set classifier */
+        const int classifier = LuaObject::getLuaInteger(L, -1);
+        if(classifier >= 0 && classifier < NUM_CLASSIFIERS)
+        {
+            if(provided) *provided = true;
+            classifiers[classifier] = true;
+            mlog(DEBUG, "Selecting classifier %d", classifier);
+        }
+        else
+        {
+            mlog(ERROR, "Invalid classifier: %d", classifier);
+        }
+    }
+    else if(lua_isstring(L, index))
+    {
+        /* Clear classifiers table (sets all to false) */
+        memset(classifiers, 0, sizeof(classifiers));
+
+        /* Set classifier */
+        const char* classifier_str = LuaObject::getLuaString(L, index);
+        const classifier_t classifier = str2classifier(classifier_str);
+        if(classifier != INVALID_CLASSIFIER)
+        {
+            if(provided) *provided = true;
+            classifiers[static_cast<int>(classifier)] = true;
+            mlog(DEBUG, "Selecting %s classifier", classifier_str);
+        }
+        else
+        {
+            mlog(ERROR, "Invalid classifier: %s", classifier_str);
+        }
+    }
+    else if(!lua_isnil(L, index))
+    {
+        mlog(ERROR, "ATL24 classifiers must be provided as a table, integer, or string");
     }
 }
