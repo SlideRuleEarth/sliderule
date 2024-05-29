@@ -88,6 +88,10 @@ CSHELPH_CONTAINER_SOURCE_DIR = $(ROOT)/../cshelph
 CSHELPH_CONTAINER_STAGE_DIR = $(STAGE)/cshelph
 CSHELPH_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/cshelph
 CSHELPH_CONTAINER_NAME ?= cshelph
+BATHYPATHFINDER_CONTAINER_SOURCE_DIR = $(ROOT)/../bathypathfinder
+BATHYPATHFINDER_CONTAINER_STAGE_DIR = $(STAGE)/bathypathfinder
+BATHYPATHFINDER_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/bathypathfinder
+BATHYPATHFINDER_CONTAINER_NAME ?= bathypathfinder
 ATL24_TEST_DATA_DIR ?= /data/AppServer.1
 
 VERSION ?= latest
@@ -328,6 +332,23 @@ cshelph-container-docker: ## create the cshelph container image
 	
 cshelph-container-test: ## run the cshelph container
 	docker run -it --rm -v /data:/data --name $(CSHELPH_CONTAINER_NAME) $(ECR)/$(CSHELPH_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv
+
+bathypathfinder-container-lock: ## create the lock file for the bathypathfinder container image
+	cd $(BATHYPATHFINDER_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd $(BATHYPATHFINDER_CONTAINER_DIR) && conda-lock render -p linux-$(ARCH)
+
+bathypathfinder-container-docker: ## create the bathypathfinder container image
+	-rm -Rf $(BATHYPATHFINDER_CONTAINER_STAGE_DIR)
+	mkdir -p $(BATHYPATHFINDER_CONTAINER_STAGE_DIR)
+	cp $(BATHYPATHFINDER_CONTAINER_DIR)/Dockerfile $(BATHYPATHFINDER_CONTAINER_STAGE_DIR)
+	cp $(BATHYPATHFINDER_CONTAINER_DIR)/conda-* $(BATHYPATHFINDER_CONTAINER_STAGE_DIR)
+#	cp $(BATHYPATHFINDER_CONTAINER_DIR)/*.py $(BATHYPATHFINDER_CONTAINER_STAGE_DIR)
+	cd $(BATHYPATHFINDER_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(BATHYPATHFINDER_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/$(BATHYPATHFINDER_CONTAINER_NAME):latest $(ECR)/$(BATHYPATHFINDER_CONTAINER_NAME):$(VERSION)
+	docker tag $(ECR)/$(BATHYPATHFINDER_CONTAINER_NAME):latest $(ECR)/$(BATHYPATHFINDER_CONTAINER_NAME):$(MAJOR_VERSION)
+	
+bathypathfinder-container-test: ## run the bathypathfinder container
+	docker run -it --rm -v /data:/data --name $(BATHYPATHFINDER_CONTAINER_NAME) $(ECR)/$(BATHYPATHFINDER_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)

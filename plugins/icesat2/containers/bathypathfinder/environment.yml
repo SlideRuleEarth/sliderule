@@ -1,0 +1,9 @@
+name: bathypathfinder
+channels:
+  - conda-forge
+dependencies:
+  - numpy
+  - pandas
+  - networkx
+  - scikit-learn
+  - pip
