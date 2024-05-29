@@ -413,7 +413,7 @@ void* ContainerRunner::controlThread (void* parm)
                     }
                     else
                     {
-                        alert(ERROR, RTE_ERROR, cr->outQ, NULL, "Container <%s> has is in an unexpected state: %s", container_name_str.c_str(), container_status);
+                        alert(ERROR, RTE_ERROR, cr->outQ, NULL, "Container <%s> is in an unexpected state: %s", container_name_str.c_str(), container_status);
                         done = true;
                         in_error = true;
                     }
@@ -440,13 +440,6 @@ void* ContainerRunner::controlThread (void* parm)
         if(remove_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to delete container <%s>: %ld - %s", cr->parms->image, remove_http_code, remove_response);
         else mlog(INFO, "Removed container <%s> with Id %s", cr->parms->image, container_id);
         delete [] remove_response;
-
-        /* Get Result */
-        if(cr->outQ)
-        {
-            // read files from output directory (provided to container)
-            // stream files back to user (or to S3??? like ParquetBuilder; maybe need generic library for that)
-        }
     }
 
     /* Clean Up */

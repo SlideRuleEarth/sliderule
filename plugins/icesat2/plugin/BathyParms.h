@@ -58,6 +58,7 @@ class BathyParms: public Icesat2Parms
         static const char* GENERATE_NDWI;
         static const char* USE_BATHY_MASK;
         static const char* RETURN_INPUTS;
+        static const char* CLASSIFIERS;
         static const char* SPOTS;
         static const char* ATL09_RESOURCES;
 
@@ -69,12 +70,31 @@ class BathyParms: public Icesat2Parms
         static const int DEFAULT_PH_IN_EXTENT = 8192;
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef enum {
+            INVALID_CLASSIFIER  = -1,
+            COASTNET            = 0,
+            OPENOCEANS          = 1,
+            MEDIANFILTER        = 2,
+            CSHELPH             = 3,
+            BATHY_PATHFINDER    = 4,
+            POINTNET2           = 5,
+            LOCAL_CONTRAST      = 6,
+            ENSEMBLE            = 7,
+            NUM_CLASSIFIERS     = 8
+        } classifier_t;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate       (lua_State* L);
-        static void getATL09Key     (char* key, const char* name);
-        static int  luaSpotEnabled  (lua_State* L);
+        static int          luaCreate               (lua_State* L);
+        static void         getATL09Key             (char* key, const char* name);
+        static int          luaSpotEnabled          (lua_State* L);
+        static int          luaClassifierEnabled    (lua_State* L);
+        static classifier_t str2classifier          (const char* str);
 
         /*--------------------------------------------------------------------
          * Data
@@ -85,8 +105,9 @@ class BathyParms: public Icesat2Parms
         int         ph_in_extent;
         bool        generate_ndwi;
         bool        use_bathy_mask;
+        bool        classifiers[NUM_CLASSIFIERS];
         bool        return_inputs; // return the atl03 bathy records back to client
-        bool        spots[NUM_SPOTS];
+        bool        spots[NUM_SPOTS]; // only used by downstream algorithms
         Dictionary<string> alt09_index;
 
         /*--------------------------------------------------------------------
@@ -99,6 +120,7 @@ class BathyParms: public Icesat2Parms
         void        cleanup         (void) const;
         void        get_atl09_list  (lua_State* L, int index, bool* provided);
         void        get_spot_list   (lua_State* L, int index, bool* provided);
+        void        get_classifiers (lua_State* L, int index, bool* provided);
 };
 
 #endif  /* __bathy_parms__ */

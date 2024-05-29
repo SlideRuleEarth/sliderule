@@ -119,12 +119,6 @@ ArrowParms::ArrowParms (lua_State* L, int index):
             if(field_provided) mlog(DEBUG, "Setting %s to %s", PATH, path);
             lua_pop(L, 1);
 
-            /* Output Format */
-            lua_getfield(L, index, FORMAT);
-            format = str2outputformat(LuaObject::getLuaString(L, -1, true, NULL, &field_provided));
-            if(field_provided) mlog(DEBUG, "Setting %s to %d", FORMAT, (int)format);
-            lua_pop(L, 1);
-
             /* Output Open on Complete */
             lua_getfield(L, index, OPEN_ON_COMPLETE);
             open_on_complete = LuaObject::getLuaBoolean(L, -1, true, open_on_complete, &field_provided);
@@ -135,6 +129,21 @@ ArrowParms::ArrowParms (lua_State* L, int index):
             lua_getfield(L, index, AS_GEO);
             as_geo = LuaObject::getLuaBoolean(L, -1, true, as_geo, &field_provided);
             if(field_provided) mlog(DEBUG, "Setting %s to %d", AS_GEO, (int)as_geo);
+            lua_pop(L, 1);
+
+            /* Output Format */
+            lua_getfield(L, index, FORMAT);
+            const char* output_format = LuaObject::getLuaString(L, -1, true, NULL, &field_provided);
+            format = str2outputformat(output_format);
+            if(field_provided)
+            {
+                mlog(DEBUG, "Setting %s to %d", FORMAT, (int)format);
+                if((format == PARQUET) && StringLib::match(output_format, "geoparquet"))
+                {
+                    /* Special Case: override as_geo when geoparquet format specified */
+                    as_geo = true;
+                }
+            }
             lua_pop(L, 1);
 
             /* Ancillary */
@@ -276,6 +285,7 @@ ArrowParms::format_t ArrowParms::str2outputformat (const char* fmt_str)
     if(StringLib::match(fmt_str, "native"))     return NATIVE;
     if(StringLib::match(fmt_str, "feather"))    return FEATHER;
     if(StringLib::match(fmt_str, "parquet"))    return PARQUET;
+    if(StringLib::match(fmt_str, "geoparquet")) return PARQUET;
     if(StringLib::match(fmt_str, "csv"))        return CSV;
     return UNSUPPORTED;
 }

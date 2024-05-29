@@ -1,0 +1,7 @@
+name: cshelph
+channels:
+  - conda-forge
+dependencies:
+  - numpy
+  - pandas
+  - pip

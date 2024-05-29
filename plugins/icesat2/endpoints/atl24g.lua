@@ -13,17 +13,37 @@ local resource      = rqst["resource"]
 local parms         = rqst["parms"]
 local timeout       = parms["node-timeout"] or parms["timeout"] or netsvc.NODE_TIMEOUT
 
+-- create user log publisher (alerts)
+local userlog = msg.publish(rspq)
+
+-- populate resource via CMR request (ONLY IF NOT SUPPLIED)
+if not resource then
+    local rc, rsps = earthdata.cmr(parms)
+    if rc == earthdata.SUCCESS then
+        local resources = rsps
+        if #resources ~= 1 then
+            userlog:alert(core.INFO, core.RTE_ERROR, string.format("proxy request <%s> failed to retrieved single resource from CMR <%d>", rspq, #resources))
+            return
+        end
+    else
+        userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("proxy request <%s> failed to make CMR request <%d>: %s", rspq, rc, rsps))
+        return
+    end
+end
+
 -- intialize processing environment
 local args = {
     shard           = rqst["shard"] or 0, -- key space
     default_asset   = "icesat2",
     result_q        = parms[geo.PARMS] and "result." .. resource .. "." .. rspq or rspq,
     result_rec      = "bathyrec",
+    userlog         = userlog
 }
 local proc = georesource.initialize(resource, parms, nil, args)
-
--- abort if failed to initialize
-if not proc then return end
+if not proc then
+    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to initialize processing of %s", resource))
+    return
+end
 
 -- build hls polygon
 local hls_poly = parms["poly"]
@@ -46,6 +66,8 @@ local rgps      = time.gmt2gps(rdate)
 local rdelta    = 5 * 24 * 60 * 60 * 1000 -- 5 days * (24 hours/day * 60 minutes/hour * 60 seconds/minute * 1000 milliseconds/second)
 local t0        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps - rdelta))
 local t1        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps + rdelta))
+
+-- build hls raster object
 local hls_parms = {
     asset       = "landsat-hls",
     t0          = t0,
@@ -54,88 +76,156 @@ local hls_parms = {
     bands       = {"NDWI"},
     poly        = hls_poly
 }
-
--- build hls raster object
 local geo_parms = nil
-local rc, rsps = earthdata.stac(hls_parms)
-if rc == earthdata.SUCCESS then
-    hls_parms["catalog"] = json.encode(rsps)
+local rc1, rsps1 = earthdata.stac(hls_parms)
+if rc1 == earthdata.SUCCESS then
+    hls_parms["catalog"] = json.encode(rsps1)
     geo_parms = geo.parms(hls_parms)
 end
 
+-- get ATL09 resources
+local original_asset = parms["asset"]
+local original_t0 = parms["t0"]
+local original_t1 = parms["t1"]
+parms["asset"] = "icesat2-atl09"
+parms["t0"] = t0
+parms["t1"] = t1
+local rc2, rsps2 = earthdata.search(parms)
+if rc2 == earthdata.SUCCESS then
+    parms["resources09"] = rsps2
+end
+parms["asset"] = original_asset
+parms["t0"] = original_t0
+parms["t1"] = original_t1
+
 -- initialize container runtime environment
 local crenv = runner.setup()
-
--- abort if container runtime environment failed to initialize
-if not crenv.host_shared_directory then return end
+if not crenv.host_shared_directory then
+    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to initialize container runtime for %s", resource))
+    return
+end
 
 -- read ICESat-2 inputs
 local bathy_parms   = icesat2.bathyparms(parms)
 local reader        = icesat2.atl03bathy(proc.asset, resource, args.result_q, bathy_parms, geo_parms, crenv.host_shared_directory, false)
 local status        = georesource.waiton(resource, parms, nil, reader, nil, proc.sampler_disp, proc.userlog, false)
-
--- function: generate input filenames
-local function genfilenames(dir, i, prefix)
-    return string.format("%s/%s.json %s/%s_%d.json %s/%s_%d.csv %s/%s_%s_%d.csv", dir, prefix, dir, icesat2.BATHY_PREFIX, i, dir, icesat2.BATHY_PREFIX, i, dir, prefix, icesat2.BATHY_PREFIX, i)
+if not status then
+    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to generate ATL03 bathy inputs for %s", resource))
+    runner.cleanup(crenv)
 end
 
--- function: run openoceans
-local function runopenoceans(_bathy_parms, container_timeout)
+-- table of files being processed
+--  {
+--      "spot_photons": {
+--          [1]: "/data/bathy_spot_1.csv",
+--          [2]: "/data/bathy_spot_2.csv",
+--          ...
+--      }   
+--      "spot_granule": {
+--          [1]: "/data/bathy_spot_1.json",
+--          [2]: "/data/bathy_spot_2.json",
+--          ...
+--      }
+--      "classifiers": {
+--          "openoceans": {
+--              [1]: "/data/openoceans_1.json",
+--              [2]: "/data/openoceans_2.json",
+--              ...
+--          }   
+--          "medianfilter": {
+--              [1]: "/data/medianfilter_1.json",
+--              [2]: "/data/medianfilter_2.json",
+--              ...
+--          }   
+--          ...
+--          "ensemble": {
+--              [1]: "/data/ensemble_1.json",
+--              [2]: "/data/ensemble_2.json",
+--              ...
+--          }
+--      }
+--  }
+local output_files  = {}
+output_files["spot_photons"] = {}
+output_files["spot_granule"] = {}
+output_files["classifiers"] = {}
+
+-- function: run container
+local function runcontainer(output_table, _bathy_parms, container_timeout, container_name, container_command, in_parallel)
+    if not _bathy_parms:classifieron(container_name) then
+        return
+    end
+    output_table["classifiers"][container_name] = {}
+    local container_list = {}
     for i = 1,icesat2.NUM_SPOTS do
         if _bathy_parms:spoton(i) then
+            local settings_filename = string.format("%s/%s.json", crenv.container_shared_directory, container_name)                 -- e.g. /data/openoceans.json
+            local parameters_filename = string.format("%s/%s_%d.json", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i)   -- e.g. /data/bathy_spot_3.json
+            local input_filename = string.format("%s/%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i)         -- e.g. /data/bathy_spot_3.csv
+            local output_filename = string.format("%s/%s_%d.csv", crenv.container_shared_directory, container_name, i)              -- e.g. /data/openoceans_3.csv
             local container_parms = {
-                image =  "openoceans",
-                command = "/env/bin/python /usr/local/etc/oceaneyes.py " .. genfilenames(crenv.container_shared_directory, i, "openoceans"),
+                image =  container_name,
+                command = string.format("%s %s %s %s %s", container_command, settings_filename, parameters_filename, input_filename, output_filename),
                 timeout = container_timeout,
-                parms = { ["openoceans.json"] = parms["openoceans"] }
+                parms = { [container_name..".json"] = parms[container_name] or {void=true} }
             }
             local container = runner.execute(crenv, container_parms, rspq)
+            table.insert(container_list, container)
+            output_table["spot_photons"][i] = input_filename
+            output_table["spot_granule"][i] = parameters_filename
+            output_table["classifiers"][container_name][i] = output_filename
+            if not in_parallel then
+                runner.wait(container, container_timeout)
+            end
+        end
+    end
+    if in_parallel then
+        for _,container in ipairs(container_list) do
             runner.wait(container, container_timeout)
         end
     end
 end
 
+-- run classification algorithms
 while true do
-    -- abort if failed to generate atl03 bathy inputs
-    if not status then break end
+    -- execute coastnet surface (MUST BE RUN FIRST - to supply surface classifications)
+    runcontainer(output_files, bathy_parms, timeout, "coastnet", "bash /surface.sh", false)
+
+    -- execute medialfilter bathy
+    runcontainer(output_files, bathy_parms, timeout, "medialfilter", "/env/bin/python /usr/local/etc/runner.py", true)
+
+    -- execute cshelph bathy
+    runcontainer(output_files, bathy_parms, timeout, "cshelph", "/env/bin/python /usr/local/etc/runner.py", true)
 
     -- execute openoceans
-    runopenoceans(bathy_parms, timeout)
+    runcontainer(output_files, bathy_parms, timeout, "openoceans", "/env/bin/python /usr/local/etc/oceaneyes.py", false)
+
+    -- execute pointnet2 bathy
+    runcontainer(output_files, bathy_parms, timeout, "pointnet2", "/env/bin/python /usr/local/etc/runner.py", false)
+
+    -- execute coastnet bathy
+    runcontainer(output_files, bathy_parms, timeout, "coastnet", "bash /bathy.sh", false)
 
     -- exit loop
     break
 end
 
--- get output parms
+-- build final output
 local atl24_granule_filename = string.gsub(resource, "ATL03", "ATL24")
 local output_parms = parms[arrow.PARMS] or {
-    path = "/tmp/"..atl24_granule_filename,
+    path = atl24_granule_filename,
     format = "hdf5",
     as_geo = false
 }
-
--- build final output
-local spot_csv_files = {}
-local spot_json_files = {}
-local openoceans_csv_files = {}
-for i = 1,icesat2.NUM_SPOTS do
-    if bathy_parms:spoton(i) then
-        table.insert(spot_csv_files, string.format("%s/%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
-        table.insert(spot_json_files, string.format("%s/%s_%d.json", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
-        table.insert(openoceans_csv_files, string.format("%s/openoceans_%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i))
-    end
-end
 local writer_parms = {
     image =  "bathywriter",
-    command = "/env/bin/python /usr/local/etc/writer.py /data/settings.json",
+    command = "/env/bin/python /usr/local/etc/writer.py /data/writer_settings.json",
     timeout = timeout,
     parms = { 
-        ["settings.json"] = {
-            spot_csv_files = spot_csv_files,
-            spot_json_files = spot_json_files,
-            openoceans_csv_files = openoceans_csv_files,
+        ["writer_settings.json"] = {
+            output_files = output_files,
             output = output_parms,
-            output_filename = crenv.container_shared_directory.."/"..atl24_granule_filename
+            atl24_filename = crenv.container_shared_directory.."/"..atl24_granule_filename
         }
     }
 }

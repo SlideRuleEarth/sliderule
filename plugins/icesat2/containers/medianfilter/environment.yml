@@ -1,0 +1,7 @@
+name: medianfilter
+channels:
+  - conda-forge
+dependencies:
+  - numpy
+  - pandas
+  - pip

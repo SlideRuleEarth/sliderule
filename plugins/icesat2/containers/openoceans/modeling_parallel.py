@@ -301,7 +301,6 @@ class ModelMakerP:
         step_at = self.step_along_track
 
         # programmatically create string to concatenate self attributes res_along_track, res_z, range_z, window_size, step_along_track
-        precision = 2
         model_id = f'{res_at:.0f}_\
 {res_z:.2f}_{range_z_0:.0f}_\
 {range_z_1:.0f}_{win:.0f}_\
