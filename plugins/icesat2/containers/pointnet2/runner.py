@@ -141,18 +141,20 @@ beam_df['class'] = np.full((len(beam_df)), 3)
 # If beam_df.class_ph == 41 (sea surface), then set the class for beam_df at that same photon index to 5 (sea surface for PointNet)
 beam_df.loc[beam_df.class_ph == 41, 'class'] = 5
 
-# Get the subset of the sea_surface_df where class_ph == 41 (sea surface)
-sea_surface_df = beam_df[beam_df.class_ph == 41]
+# Get the subset of the sea_surface_df where class_ph is sea surface
+sea_surface_df = beam_df[beam_df['class'] == 5]
 # Take the average of the geoid corrected height of the sea surface photons.
-# Only keep the photons that are lower than average water surface level to decrease data volume.
-beam_df = beam_df[beam_df['geoid_corr_h'] < sea_surface_df['geoid_corr_h'].mean()]
-
+average_sea_surface_level = sea_surface_df['geoid_corr_h'].mean()
+# Only keep the photons that are lower than average sea surface level to decrease data volume.
+beam_df = beam_df[beam_df['geoid_corr_h'] < average_sea_surface_level]
 # Keep photons where the max_signal_conf is greater than a minimum threshold.
 beam_df = beam_df[beam_df['max_signal_conf'] >= minSignalConf]
 
 # Remove irrelevant photons (deeper than 50m, higher than 10m)
 beam_df = beam_df[(beam_df["geoid_corr_h"] > minElev) & (beam_df["geoid_corr_h"] < maxElev)]
     
+beam_df = beam_df[(beam_df["dem_h"] - beam_df["geoid_corr_h"] < 50)]
+
 # Remove photons where the NDWI value is greater than a minimum threshold.
 if useNWDI:
     beam_df = beam_df[beam_df["ndwi"] >= minNWDI]
@@ -167,6 +169,9 @@ data_df['lat'] = beam_df['latitude']
 data_df['elev'] = beam_df['geoid_corr_h']
 data_df['signal_conf_ph'] = beam_df['max_signal_conf']
 data_df['class'] = beam_df['class']
+
+# Normalize signal confidence
+data_df['signal_conf_ph'] = data_df['signal_conf_ph'] - 2
 
 # Create the 2d numpy array used by pointnet
 data = data_df.to_numpy().astype(np.float64)
@@ -228,6 +233,7 @@ class PartNormalDataset(Dataset):
             pad_point_bool = np.full(self.npoints - length, False, dtype=bool)
             point_set_normalized_bool = np.full(length, True, dtype=bool)
             point_set_normalized_mask = np.concatenate((point_set_normalized_bool, pad_point_bool))
+
         return point_set_normalized, cls, point_set_normalized_mask, pc_min, pc_max, (r0,r1)
 
     def __len__(self):
@@ -276,42 +282,34 @@ with torch.no_grad():
         cur_pred_val = np.zeros((cur_batch_size, NUM_POINT)).astype(np.int32)
         cur_pred_prob = np.zeros((cur_batch_size, NUM_POINT)).astype(np.float64)
         point_set_normalized_mask = point_set_normalized_mask.numpy()
-        cur_pred_val_mask = []
-        cur_pred_prob_mask = []
 
-        for i in range(cur_batch_size):
-            prob = np.exp(cur_pred[i, :, :])
-            cur_pred_prob[i, :] = prob[:, 1]  # the probability of belonging to seafloor class
-            cur_pred_val[i, :] = np.where(prob[:, 1] < threshold, 0, 1)
-            cur_mask = point_set_normalized_mask[i, :]
-            cur_pred_prob_mask.append(cur_pred_prob[i, cur_mask])
-            cur_pred_val_mask.append(cur_pred_val[i, cur_mask])
+        prob = np.exp(cur_pred[0, :, :])
+        cur_pred_prob[0, :] = prob[:, 1]  # the probability of belonging to seafloor class
+        cur_pred_val[0, :] = np.where(prob[:, 1] < threshold, 0, 1)
+        cur_mask = point_set_normalized_mask[0, :]
+        cur_pred_prob_mask = cur_pred_prob[0, cur_mask]
+        cur_pred_val_mask = cur_pred_val[0, cur_mask]
 
-        # reshape points and put it back to cpu
-        points = points.transpose(2, 1)
-        points = points.cpu().numpy()
 
-        pc_min = pc_min.numpy()
-        pc_max = pc_max.numpy()
+        index_ph = data[row_slice[0]:row_slice[1], 0]
+        class_ph = data[row_slice[0]:row_slice[1], 7]
+        columns = {'index_ph': index_ph, 'class_ph': class_ph}            
+        output_df = pd.DataFrame(columns)
+        output_df.loc[output_df['class_ph'] == 3, 'class_ph'] = 1   # other
+        output_df.loc[output_df['class_ph'] == 5, 'class_ph'] = 41  # sea surface
+        output_df.loc[cur_pred_val_mask == 1, 'class_ph'] = 40   # bathymetry
 
-        for i in range(cur_batch_size):
-            # mask out padded points
-            cur_points = points[i, :, :]
-            cur_mask = point_set_normalized_mask[i, :]
-            cur_points = cur_points[cur_mask, :]
-            # create a new point cloud array
-            output_points = np.zeros((cur_points.shape[0], 2)).astype(np.float64)
-            output_points[:, 0:1] = data[row_slice[0]:row_slice[1], [0]] # index_ph
-            output_points[:, 1] = cur_pred_val_mask[i]
-            # output file
-            if batch_id == 0:
-                mode = 'w'
-                header = 'index_ph,class_ph'
-            else:
-                mode = 'a'
-                header = ''
-            if output_csv != None:
-                with open(output_csv, mode) as f:
-                    np.savetxt(f, output_points, delimiter=',', header=header, fmt='%d', comments='')
-            else:
-                np.savetxt(sys.stdout, output_points, delimiter=',', header=header, fmt='%d', comments='')
+        output_data = output_df.to_numpy().astype(np.int32)
+
+        # output file
+        if batch_id == 0:
+            mode = 'w'
+            header = 'index_ph,class_ph'
+        else:
+            mode = 'a'
+            header = ''
+        if output_csv != None:
+            with open(output_csv, mode) as f:
+                np.savetxt(f, output_data, delimiter=',', header=header, fmt='%d', comments='')
+        else:
+            np.savetxt(sys.stdout, output_data, delimiter=',', header=header, fmt='%d', comments='')

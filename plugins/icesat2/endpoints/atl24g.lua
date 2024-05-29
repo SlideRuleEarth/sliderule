@@ -155,7 +155,7 @@ local function runcontainer(output_table, _bathy_parms, container_timeout, conta
     if not _bathy_parms:classifieron(container_name) then
         return
     end
-    output_table[container_name] = {}
+    output_table["classifiers"][container_name] = {}
     local container_list = {}
     for i = 1,icesat2.NUM_SPOTS do
         if _bathy_parms:spoton(i) then
@@ -167,7 +167,7 @@ local function runcontainer(output_table, _bathy_parms, container_timeout, conta
                 image =  container_name,
                 command = string.format("%s %s %s %s %s", container_command, settings_filename, parameters_filename, input_filename, output_filename),
                 timeout = container_timeout,
-                parms = { [container_name..".json"] = parms[container_name] }
+                parms = { [container_name..".json"] = parms[container_name] or {void=true} }
             }
             local container = runner.execute(crenv, container_parms, rspq)
             table.insert(container_list, container)

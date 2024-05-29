@@ -88,6 +88,7 @@ CSHELPH_CONTAINER_SOURCE_DIR = $(ROOT)/../cshelph
 CSHELPH_CONTAINER_STAGE_DIR = $(STAGE)/cshelph
 CSHELPH_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/cshelph
 CSHELPH_CONTAINER_NAME ?= cshelph
+ATL24_TEST_DATA_DIR ?= /data/AppServer.1
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -235,7 +236,7 @@ openoceans-container-docker: ## create the copenoceans container image
 	docker tag $(ECR)/$(OPENOCEANS_CONTAINER_NAME):latest $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(MAJOR_VERSION)
 	
 openoceans-container-test: ## run the openoceans container
-	docker run -it --rm -v /data:/data --name $(OPENOCEANS_CONTAINER_NAME) $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/oceaneyes.py /data/openoceans.json /data/AppServer.2/bathy_spot_3.json /data/AppServer.2/bathy_spot_3.csv /data/AppServer.2/openoceans_3.csv
+	docker run -it --rm -v /data:/data --name $(OPENOCEANS_CONTAINER_NAME) $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/oceaneyes.py /data/openoceans.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/openoceans_3.csv
 
 bathywriter-container-lock: ## create the lock file for the bathywriter container image
 	cd $(BATHYWRITER_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
@@ -269,10 +270,10 @@ coastnet-container-docker: ## create the coastnet container image
 	docker tag $(ECR)/$(COASTNET_CONTAINER_NAME):latest $(ECR)/$(COASTNET_CONTAINER_NAME):$(MAJOR_VERSION)
 	
 coastnet-container-surface-test: ## run the coastnet surface docker container
-	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash surface.sh nil nil /data/AppServer.2/bathy_spot_3.csv /data/AppServer.2/coastnet.csv
+	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash surface.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/coastnet.csv
 	
 coastnet-container-bathy-test: ## run the coastnet bathy docker container
-	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash bathy.sh nil nil /data/AppServer.2/bathy_spot_3.csv /data/AppServer.2/coastnet.csv
+	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash bathy.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/coastnet.csv
 
 pointnet2-container-lock: ## create the lock file for the pointnet2 container image
 	cd $(POINTNET2_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
@@ -290,7 +291,7 @@ pointnet2-container-docker: ## create the pointnet2 container image
 	docker tag $(ECR)/$(POINTNET2_CONTAINER_NAME):latest $(ECR)/$(POINTNET2_CONTAINER_NAME):$(MAJOR_VERSION)
 	
 pointnet2-container-test: ## run the pointnet2 container
-	docker run -it --rm -v /data:/data --name $(POINTNET2_CONTAINER_NAME) $(ECR)/$(POINTNET2_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/runner.py /data/AppServer.2/bathy_spot_3.json /data/AppServer.2/bathy_spot_3.csv
+	docker run -it --rm -v /data:/data --name $(POINTNET2_CONTAINER_NAME) $(ECR)/$(POINTNET2_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/pointnet2_3.csv
 
 medianfilter-container-lock: ## create the lock file for the medianfilter container image
 	cd $(MEDIANFILTER_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
@@ -308,7 +309,7 @@ medianfilter-container-docker: ## create the medianfilter container image
 	docker tag $(ECR)/$(MEDIANFILTER_CONTAINER_NAME):latest $(ECR)/$(MEDIANFILTER_CONTAINER_NAME):$(MAJOR_VERSION)
 	
 medianfilter-container-test: ## run the medianfilter container
-	docker run -it --rm -v /data:/data --name $(MEDIANFILTER_CONTAINER_NAME) $(ECR)/$(MEDIANFILTER_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/runner.py /data/AppServer.2/bathy_spot_3.json /data/AppServer.2/bathy_spot_3.csv
+	docker run -it --rm -v /data:/data --name $(MEDIANFILTER_CONTAINER_NAME) $(ECR)/$(MEDIANFILTER_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv
 
 cshelph-container-lock: ## create the lock file for the cshelph container image
 	cd $(CSHELPH_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
@@ -326,7 +327,7 @@ cshelph-container-docker: ## create the cshelph container image
 	docker tag $(ECR)/$(CSHELPH_CONTAINER_NAME):latest $(ECR)/$(CSHELPH_CONTAINER_NAME):$(MAJOR_VERSION)
 	
 cshelph-container-test: ## run the cshelph container
-	docker run -it --rm -v /data:/data --name $(CSHELPH_CONTAINER_NAME) $(ECR)/$(CSHELPH_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/runner.py /data/AppServer.2/bathy_spot_3.json /data/AppServer.2/bathy_spot_3.csv
+	docker run -it --rm -v /data:/data --name $(CSHELPH_CONTAINER_NAME) $(ECR)/$(CSHELPH_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)

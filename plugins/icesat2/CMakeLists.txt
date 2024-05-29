@@ -80,7 +80,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl13s.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl13sp.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl24g.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl24gp.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/indexer.lua
     DESTINATION
         ${CONFDIR}/api

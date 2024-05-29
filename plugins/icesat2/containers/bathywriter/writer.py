@@ -95,8 +95,8 @@ if "output" not in control or control["output"]["format"] != "hdf5":
     if "output" not in control or control["output"]["format"] == "csv":
         df.to_csv(control["atl24_filename"], index=False)
         print("CSV file written: " + control["atl24_filename"])
-    elif control["output"]["format"] == "parquet":
-        if control["output"]["as_geo"]:
+    elif control["output"]["format"] == "parquet" or control["output"]["format"] == "geoparquet":
+        if control["output"]["as_geo"] or control["output"]["format"] == "geoparquet":
             df['time'] = df['time'].astype('datetime64[ns]')
             geometry = gpd.points_from_xy('longitude', 'latitude', 'geoid_corr_h')
             df.drop(columns=['longitude', 'latitude'], inplace=True)
