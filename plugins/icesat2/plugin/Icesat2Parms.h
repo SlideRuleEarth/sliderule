@@ -302,7 +302,7 @@ class Icesat2Parms: public NetsvcParms
                 INVALID_SPOT, // SC_TRANSITION, RPT_3, RPT_L
                 INVALID_SPOT, // SC_TRANSITION, RPT_3, RPT_R
             };
-            int index = (sc_orient * 6) + ((track-1) * 2) + pair;
+            const int index = (sc_orient * 6) + ((track-1) * 2) + pair;
             return static_cast<uint8_t>(lookup_table[index]);
         }
 
@@ -330,7 +330,7 @@ class Icesat2Parms: public NetsvcParms
                 INVALID_GT, // SC_TRANSITION, RPT_3, RPT_L
                 INVALID_GT, // SC_TRANSITION, RPT_3, RPT_R
             };
-            int index = (sc_orient * 6) + ((track-1) * 2) + pair;
+            const int index = (sc_orient * 6) + ((track-1) * 2) + pair;
             return static_cast<uint8_t>(lookup_table[index]);
         }
 

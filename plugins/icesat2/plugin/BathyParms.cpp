@@ -135,10 +135,10 @@ int BathyParms::luaClassifierEnabled (lua_State* L)
     {
         lua_obj = dynamic_cast<BathyParms*>(getLuaSelf(L, 1));
         const char* classifier_str = getLuaString(L, 2);
-        classifier_t classifier = str2classifier(classifier_str);
+        const classifier_t classifier = str2classifier(classifier_str);
         if(classifier != INVALID_CLASSIFIER)
         {
-            int index = static_cast<int>(classifier);
+            const int index = static_cast<int>(classifier);
             status = lua_obj->classifiers[index];
         }
     }

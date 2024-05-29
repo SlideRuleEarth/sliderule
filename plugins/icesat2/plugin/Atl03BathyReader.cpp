@@ -653,7 +653,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     const double degrees_of_longitude =  region.segment_lon[current_segment] - GLOBAL_BATHYMETRY_MASK_MIN_LON;
                     const double longitude_pixels = degrees_of_longitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
                     const uint32_t x = static_cast<uint32_t>(longitude_pixels);
-                    uint32_t pixel = builder->bathyMask->getPixel(x, y);
+                    const uint32_t pixel = builder->bathyMask->getPixel(x, y);
                     if(pixel == GLOBAL_BATHYMETRY_MASK_OFF_VALUE)
                     {
                         break;
