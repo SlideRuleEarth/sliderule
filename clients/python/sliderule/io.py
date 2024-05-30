@@ -482,8 +482,10 @@ def to_parquet(gdf, filename, **kwargs):
     )
     # output metadata
     output = {}
+    # remove request polygon from output parameters
+    if 'poly' in kwargs['parameters']:
+        kwargs['parameters'].pop('poly')
     # for each adjustable sliderule parameter
-    [kwargs['parameters'].pop(p) for p in ['poly']]
     for p,val in kwargs['parameters'].items():
         # try to convert the parameter if available
         try:

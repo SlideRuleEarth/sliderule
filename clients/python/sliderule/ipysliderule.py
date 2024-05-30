@@ -2977,7 +2977,8 @@ class ICESat2:
         elif (kwargs['kind'] == 'scatter'):
             # extract orbital cycle parameters
             cycle = int(kwargs['cycle'])
-            if (kwargs['data_type'] == 'atl03'):
+            data_type = kwargs['data_type']
+            if (data_type == 'atl03'):
                 # reduce entered data frame to RGT, ground track and cycle
                 atl03 = self._gdf[(self._gdf['rgt'] == RGT) &
                     (self._gdf['track'] == self.PT(GT)) &
@@ -2987,11 +2988,11 @@ class ICESat2:
                 atl03['segment_dist'] += atl03['x_atc']
                 atl03['segment_dist'] -= kwargs['x_offset']
                 atl03.set_index('segment_dist', inplace=True)
-            if (kwargs['data_type'] == 'atl03') and (kwargs['classification'] == 'atl08'):
+            if (data_type == 'atl03') and (kwargs['classification'] == 'atl08'):
                 # noise, ground, canopy, top of canopy, unclassified
                 colormap = np.array(['c','b','limegreen','g','y'])
                 classes = ['noise','ground','canopy','top of canopy','unclassified']
-                sc = ax.scatter(atl03.index.values, atl03["height"].values,
+                sc = ax.scatter(atl03.index.values, atl03[column].values,
                     c=colormap[atl03["atl08_class"].values.astype('i')],
                     s=1.5, rasterized=True)
                 # append handles to legend
@@ -2999,20 +3000,20 @@ class ICESat2:
                     handle = matplotlib.lines.Line2D([0], [0],
                         color=colormap[i], lw=6, label=lab)
                     legend_handles.append(handle)
-            elif (kwargs['data_type'] == 'atl03') and (kwargs['classification'] == 'yapc'):
+            elif (data_type == 'atl03') and (kwargs['classification'] == 'yapc'):
                 sc = ax.scatter(atl03.index.values,
-                    atl03["height"].values,
+                    atl03[column].values,
                     c=atl03["yapc_score"],
                     cmap=kwargs['cmap'],
                     s=1.5, rasterized=True)
                 plt.colorbar(sc)
-            elif (kwargs['data_type'] == 'atl03') and (kwargs['classification'] == 'atl03'):
+            elif (data_type == 'atl03') and (kwargs['classification'] == 'atl03'):
                 # background, buffer, low, medium, high
                 colormap = np.array(['y','c','b','g','m'])
                 confidences = ['background','buffer','low','medium','high']
                 # reduce data frame to photon classified for surface
                 atl03 = atl03[atl03["atl03_cnf"] >= 0]
-                sc = ax.scatter(atl03.index.values, atl03["height"].values,
+                sc = ax.scatter(atl03.index.values, atl03[column].values,
                     c=colormap[atl03["atl03_cnf"].values.astype('i')],
                     s=1.5, rasterized=True)
                 # append handles to legend
@@ -3020,16 +3021,16 @@ class ICESat2:
                     handle = matplotlib.lines.Line2D([0], [0],
                         color=colormap[i], lw=6, label=lab)
                     legend_handles.append(handle)
-            elif (kwargs['data_type'] == 'atl03'):
+            elif (data_type == 'atl03'):
                 # plot all available ATL03 points as gray
-                sc = ax.scatter(atl03.index.values, atl03["height"].values,
+                sc = ax.scatter(atl03.index.values, atl03[column].values,
                     c='0.4', s=0.5, rasterized=True)
                 # append handle to legend
                 handle = matplotlib.lines.Line2D([0], [0],
                     color='0.4', lw=6, label='ATL03')
                 legend_handles.append(handle)
-            # plot ATL06-SR segments for cycle and track
-            if (kwargs['data_type'] == 'atl06'):
+            # plot ATL06-SR or ATL08-SR segments for cycle and track
+            if data_type in ('atl06','atl08'):
                 atl06 = self._gdf[
                     (self._gdf['rgt'] == RGT) &
                     (self._gdf['gt'] == GT) &
@@ -3039,14 +3040,14 @@ class ICESat2:
                 atl06.set_index('x_atc', inplace=True)
                 # plot reduced data frame
                 sc = ax.scatter(atl06.index.values,
-                    atl06["h_mean"].values,
+                    atl06[column].values,
                     c='red', s=2.5, rasterized=True)
                 handle = matplotlib.lines.Line2D([0], [0],
-                    color='red', lw=6, label='ATL06-SR')
+                    color='red', lw=6, label=f'{data_type.upper()}-SR')
                 legend_handles.append(handle)
             # add axes labels
             ax.set_xlabel('Along-Track Distance [m]')
-            ax.set_ylabel('Height (m)')
+            ax.set_ylabel(f'SlideRule {column}')
         # add title
         if kwargs['title']:
             ax.set_title(kwargs['title'])
