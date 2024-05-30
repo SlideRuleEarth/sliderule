@@ -197,6 +197,9 @@ while true do
     -- execute cshelph bathy
     runcontainer(output_files, bathy_parms, timeout, "cshelph", "/env/bin/python /usr/local/etc/runner.py", true)
 
+    -- execute bathypathfinder bathy
+    runcontainer(output_files, bathy_parms, timeout, "bathypathfinder", "/env/bin/python /usr/local/etc/runner.py", true)
+
     -- execute openoceans
     runcontainer(output_files, bathy_parms, timeout, "openoceans", "/env/bin/python /usr/local/etc/oceaneyes.py", false)
 
