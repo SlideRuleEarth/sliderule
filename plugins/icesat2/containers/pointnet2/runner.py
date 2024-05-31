@@ -123,7 +123,7 @@ threshold       = settings.get('threshold', 0.5)
 
 # read info json
 with open(info_json, 'r') as json_file:
-    beam_info = json.load(json_file)
+    spot_info = json.load(json_file)
 
 ##################
 # BUILD DATAFRAME
@@ -132,39 +132,39 @@ with open(info_json, 'r') as json_file:
 print(f'Preprocessing {input_csv}...')
 
 # read input csv and store into a dataframe
-beam_df = pd.read_csv(input_csv)
+spot_df = pd.read_csv(input_csv)
 
 # Add a pointnet specific class column
-beam_df['class'] = np.full((len(beam_df)), 3)                               # initialize everything to 3 (pointnet noise)
-beam_df.loc[beam_df.class_ph == 41, 'class'] = 5                            # change sea surface (41) to 5 (pointnet sea surface)
+spot_df['class'] = np.full((len(spot_df)), 3)                               # initialize everything to 3 (pointnet noise)
+spot_df.loc[spot_df.class_ph == 41, 'class'] = 5                            # change sea surface (41) to 5 (pointnet sea surface)
 
 # Remove photons above sea surfaace
-sea_surface_df = beam_df[beam_df['class'] == 5]                             # get the subset of the sea_surface_df where class_ph is sea surface
+sea_surface_df = spot_df[spot_df['class'] == 5]                             # get the subset of the sea_surface_df where class_ph is sea surface
 average_sea_surface_level = sea_surface_df['geoid_corr_h'].mean()           # take the average of the geoid corrected height of the sea surface photons
-beam_df = beam_df[beam_df['geoid_corr_h'] < average_sea_surface_level]
+spot_df = spot_df[spot_df['geoid_corr_h'] < average_sea_surface_level]
 
 # Remove photons where the max_signal_conf doesn't meet minimum threshold
-beam_df = beam_df[beam_df['max_signal_conf'] >= minSignalConf]
+spot_df = spot_df[spot_df['max_signal_conf'] >= minSignalConf]
 
 # Remove photons outside of height range
-beam_df = beam_df[(beam_df["geoid_corr_h"] > minElev) & \
-                  (beam_df["geoid_corr_h"] < maxElev)]                      # if geoid height is outside absolute range
-beam_df = beam_df[(beam_df["dem_h"] - beam_df["geoid_corr_h"] < demBuffer)] # if geoid height is outside relative range to DEM
+spot_df = spot_df[(spot_df["geoid_corr_h"] > minElev) & \
+                  (spot_df["geoid_corr_h"] < maxElev)]                      # if geoid height is outside absolute range
+spot_df = spot_df[(spot_df["dem_h"] - spot_df["geoid_corr_h"] < demBuffer)] # if geoid height is outside relative range to DEM
 
 # Remove photons where the NDWI value is greater than a minimum threshold
 if useNWDI:
-    beam_df = beam_df[beam_df["ndwi"] >= minNWDI]
+    spot_df = spot_df[spot_df["ndwi"] >= minNWDI]
 
 # Create dataframe with the columns and order expected by the rest of pointnet
 data_df = pd.DataFrame()
-data_df['index_ph'] = beam_df['index_ph']
-data_df['x'] = beam_df['x_ph']
-data_df['y'] = beam_df['y_ph']
-data_df['lon'] = beam_df['longitude']
-data_df['lat'] = beam_df['latitude']
-data_df['elev'] = beam_df['geoid_corr_h']
-data_df['signal_conf_ph'] = beam_df['max_signal_conf']
-data_df['class'] = beam_df['class']
+data_df['index_ph'] = spot_df['index_ph']
+data_df['x'] = spot_df['x_ph']
+data_df['y'] = spot_df['y_ph']
+data_df['lon'] = spot_df['longitude']
+data_df['lat'] = spot_df['latitude']
+data_df['elev'] = spot_df['geoid_corr_h']
+data_df['signal_conf_ph'] = spot_df['max_signal_conf']
+data_df['class'] = spot_df['class']
 
 # Normalize signal confidence
 data_df['signal_conf_ph'] = data_df['signal_conf_ph'] - 2

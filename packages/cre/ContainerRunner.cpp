@@ -315,7 +315,7 @@ void* ContainerRunner::controlThread (void* parm)
     const char* create_response = NULL;
     const long create_http_code = CurlLib::request(EndpointObject::POST, create_url.c_str(), data.c_str(), &create_response, NULL, false, false, cr->parms->timeout, &headers, unix_socket);
     if(create_http_code != EndpointObject::Created) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to create container <%s>: %ld - %s", cr->parms->image, create_http_code, create_response);
-    else mlog(INFO, "Created container <%s> with parameters: %s", cr->parms->image, data.c_str());
+    else alert(INFO, RTE_INFO, cr->outQ, NULL, "Created container <%s> with parameters: %s", cr->parms->image, data.c_str());
 
     /* Run Container */
     if(create_http_code == EndpointObject::Created)
@@ -338,7 +338,7 @@ void* ContainerRunner::controlThread (void* parm)
         const char* start_response = NULL;
         const long start_http_code = CurlLib::request(EndpointObject::POST, start_url.c_str(), NULL, &start_response, NULL, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
         if(start_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to start container <%s>: %ld - %s", container_name_str.c_str(), start_http_code, start_response);
-        else mlog(INFO, "Started container <%s>", container_name_str.c_str());
+        else alert(INFO, RTE_INFO, cr->outQ, NULL, "Started container <%s>", container_name_str.c_str());
         delete [] start_response;
 
         /* Wait Until Container Has Completed */
@@ -351,7 +351,7 @@ void* ContainerRunner::controlThread (void* parm)
             time_left -= WAIT_TIMEOUT;
             if(time_left <= 0)
             {
-                mlog(ERROR, "Timeout reached for container <%s> after %d seconds", container_name_str.c_str(), cr->parms->timeout);
+                alert(ERROR, RTE_ERROR, cr->outQ, NULL, "Timeout reached for container <%s> after %d seconds", container_name_str.c_str(), cr->parms->timeout);
                 done = true;
                 in_error = true;
             }
@@ -362,7 +362,7 @@ void* ContainerRunner::controlThread (void* parm)
             const long wait_http_code = CurlLib::request(EndpointObject::POST, wait_url.c_str(), NULL, &wait_response, NULL, false, false, WAIT_TIMEOUT, NULL, unix_socket);
             if(wait_http_code == EndpointObject::OK)
             {
-                mlog(INFO, "Container <%s> completed", cr->parms->image);
+                alert(INFO, RTE_INFO, cr->outQ, NULL, "Container <%s> completed", cr->parms->image);
                 done = true;
             }
             else if(wait_http_code != EndpointObject::Service_Unavailable) // curl timed out which is normal if container is still running
@@ -429,7 +429,7 @@ void* ContainerRunner::controlThread (void* parm)
             const char* stop_response = NULL;
             const long stop_http_code = CurlLib::request(EndpointObject::POST, stop_url.c_str(), NULL, &stop_response, NULL, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
             if(stop_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to force stop container <%s>: %ld - %s", cr->parms->image, stop_http_code, stop_response);
-            else mlog(INFO, "Force stopped container <%s> with Id %s", cr->parms->image, container_id);
+            else alert(INFO, RTE_INFO, cr->outQ, NULL, "Force stopped container <%s> with Id %s", cr->parms->image, container_id);
             delete [] stop_response;
         }
 
@@ -438,7 +438,7 @@ void* ContainerRunner::controlThread (void* parm)
         const char* remove_response = NULL;
         const long remove_http_code = CurlLib::request(EndpointObject::DELETE, remove_url.c_str(), NULL, &remove_response, NULL, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
         if(remove_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to delete container <%s>: %ld - %s", cr->parms->image, remove_http_code, remove_response);
-        else mlog(INFO, "Removed container <%s> with Id %s", cr->parms->image, container_id);
+        else alert(INFO, RTE_INFO, cr->outQ, NULL, "Removed container <%s> with Id %s", cr->parms->image, container_id);
         delete [] remove_response;
     }
 

@@ -41,7 +41,6 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* BathyParms::MAX_ALONG_TRACK_SPREAD = "max_along_track_spread";
 const char* BathyParms::MAX_DEM_DELTA = "max_dem_delta";
 const char* BathyParms::PH_IN_EXTENT = "ph_in_extent";
 const char* BathyParms::GENERATE_NDWI = "generate_ndwi";
@@ -51,7 +50,6 @@ const char* BathyParms::CLASSIFIERS = "classifiers";
 const char* BathyParms::SPOTS = "spots";
 const char* BathyParms::ATL09_RESOURCES = "resources09";
 
-const double BathyParms::DEFAULT_MAX_ALONG_TRACK_SPREAD = 10000.0;
 const double BathyParms::DEFAULT_MAX_DEM_DELTA = 10000.0;
 
 /******************************************************************************
@@ -160,9 +158,9 @@ BathyParms::classifier_t BathyParms::str2classifier (const char* str)
     if(StringLib::match(str, "openoceans"))         return OPENOCEANS;
     if(StringLib::match(str, "medianfilter"))       return MEDIANFILTER;
     if(StringLib::match(str, "cshelph"))            return CSHELPH;
-    if(StringLib::match(str, "bathy_pathfinder"))   return BATHY_PATHFINDER;
+    if(StringLib::match(str, "bathypathfinder"))    return BATHY_PATHFINDER;
     if(StringLib::match(str, "pointnet2"))          return POINTNET2;
-    if(StringLib::match(str, "local_constrast"))    return LOCAL_CONTRAST;
+    if(StringLib::match(str, "localcontrast"))      return LOCAL_CONTRAST;
     if(StringLib::match(str, "ensemble"))           return ENSEMBLE;
     return INVALID_CLASSIFIER;
 }
@@ -172,7 +170,6 @@ BathyParms::classifier_t BathyParms::str2classifier (const char* str)
  *----------------------------------------------------------------------------*/
 BathyParms::BathyParms(lua_State* L, int index):
     Icesat2Parms (L, index),
-    max_along_track_spread (DEFAULT_MAX_ALONG_TRACK_SPREAD),
     max_dem_delta (DEFAULT_MAX_DEM_DELTA),
     ph_in_extent (DEFAULT_PH_IN_EXTENT),
     generate_ndwi(true),
@@ -191,12 +188,6 @@ BathyParms::BathyParms(lua_State* L, int index):
 
     try
     {
-        /* maximum along track spread */
-        lua_getfield(L, index, BathyParms::MAX_ALONG_TRACK_SPREAD);
-        max_along_track_spread = LuaObject::getLuaFloat(L, -1, true, max_along_track_spread, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::MAX_ALONG_TRACK_SPREAD, max_along_track_spread);
-        lua_pop(L, 1);
-
         /* maximum DEM delta */
         lua_getfield(L, index, BathyParms::MAX_DEM_DELTA);
         max_dem_delta = LuaObject::getLuaFloat(L, -1, true, max_dem_delta, &provided);

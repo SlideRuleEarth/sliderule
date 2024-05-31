@@ -52,7 +52,6 @@ class BathyParms: public Icesat2Parms
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* MAX_ALONG_TRACK_SPREAD;
         static const char* MAX_DEM_DELTA;
         static const char* PH_IN_EXTENT;
         static const char* GENERATE_NDWI;
@@ -65,9 +64,8 @@ class BathyParms: public Icesat2Parms
         static const int ATL09_RESOURCE_NAME_LEN = 39;
         static const int ATL09_RESOURCE_KEY_LEN = 6;
 
-        static const double DEFAULT_MAX_ALONG_TRACK_SPREAD;
         static const double DEFAULT_MAX_DEM_DELTA;
-        static const int DEFAULT_PH_IN_EXTENT = 8192;
+        static const int DEFAULT_PH_IN_EXTENT = 8192; // 16384;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -86,6 +84,14 @@ class BathyParms: public Icesat2Parms
             NUM_CLASSIFIERS     = 8
         } classifier_t;
 
+        typedef enum {
+            UNCLASSIFIED = 0,
+            OTHER = 1,
+            BATHYMETRY = 40,
+            SEA_SURFACE = 41,
+            WATER_COLUMN = 45
+        } bathy_class_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -100,14 +106,13 @@ class BathyParms: public Icesat2Parms
          * Data
          *--------------------------------------------------------------------*/
 
-        double      max_along_track_spread;
-        double      max_dem_delta;
-        int         ph_in_extent;
-        bool        generate_ndwi;
-        bool        use_bathy_mask;
-        bool        classifiers[NUM_CLASSIFIERS];
-        bool        return_inputs; // return the atl03 bathy records back to client
-        bool        spots[NUM_SPOTS]; // only used by downstream algorithms
+        double      max_dem_delta;                  // initial filter of heights against DEM (For removing things like clouds)
+        int         ph_in_extent;                   // number of photons in each extent
+        bool        generate_ndwi;                  // use HLS data to generate NDWI for each segment lat,lon
+        bool        use_bathy_mask;                 // global bathymetry mask downloaded in atl24 init lua routine
+        bool        classifiers[NUM_CLASSIFIERS];   // which bathymetry classifiers to run
+        bool        return_inputs;                  // return the atl03 bathy records back to client
+        bool        spots[NUM_SPOTS];               // only used by downstream algorithms
         Dictionary<string> alt09_index;
 
         /*--------------------------------------------------------------------

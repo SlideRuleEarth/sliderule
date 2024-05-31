@@ -112,6 +112,7 @@ class Atl03BathyReader: public LuaObject
             uint8_t         yapc_score;
             int8_t          max_signal_conf;        // maximum value in the atl03 confidence table
             int8_t          quality_ph;
+            int8_t          class_ph;               // photon classification
         } photon_t;
 
         /* Extent Record */
@@ -119,12 +120,12 @@ class Atl03BathyReader: public LuaObject
             uint8_t         region;
             uint8_t         track;                  // 1, 2, or 3
             uint8_t         pair;                   // 0 (l), 1 (r)
-            uint8_t         spacecraft_orientation; // sc_orient_t
+            uint8_t         spot;                   // 1, 2, 3, 4, 5, 6
             uint16_t        reference_ground_track;
             uint8_t         cycle;
             uint8_t         utm_zone;
             uint64_t        extent_id;
-            uint8_t         spot;                   // 1, 2, 3, 4, 5, 6
+            float           surface_height;         // orthometric (in meters)            
             uint32_t        photon_count;
             photon_t        photons[];              // zero length field
         } extent_t;
@@ -144,7 +145,7 @@ class Atl03BathyReader: public LuaObject
 
 
         typedef struct Info {
-            Atl03BathyReader*   builder;
+            Atl03BathyReader*   reader;
             char                prefix[7];
             int                 track;
             int                 pair;
@@ -269,6 +270,7 @@ class Atl03BathyReader: public LuaObject
 
         static void*        subsettingThread            (void* parm);
 
+        void                findSeaSurface              (extent_t* extent);
         static double       calculateBackground         (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03);
         static void         parseResource               (const char* resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region);
 };

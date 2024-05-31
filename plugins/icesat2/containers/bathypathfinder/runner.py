@@ -91,5 +91,5 @@ spot_df.loc[bps.bathy_photons.index, 'class_ph'] = 40
 if output_csv != None:
     spot_df.to_csv(output_csv, index=False, columns=["index_ph", "class_ph"])
 else:
-#    print(spot_df.to_string(index=False, header=True, columns=['index_ph', 'class_ph']))
-    print(spot_df.class_ph.value_counts())
+    print(spot_df.to_string(index=False, header=True, columns=['index_ph', 'class_ph']))
+    

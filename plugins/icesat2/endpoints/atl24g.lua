@@ -155,6 +155,7 @@ local function runcontainer(output_table, _bathy_parms, container_timeout, conta
     if not _bathy_parms:classifieron(container_name) then
         return
     end
+    local start_time = time.gps()
     output_table["classifiers"][container_name] = {}
     local container_list = {}
     for i = 1,icesat2.NUM_SPOTS do
@@ -184,6 +185,8 @@ local function runcontainer(output_table, _bathy_parms, container_timeout, conta
             runner.wait(container, container_timeout)
         end
     end
+    local stop_time = time.gps()
+    userlog:alert(core.INFO, core.RTE_INFO, string.format("%s executed in %f seconds", container_name, (stop_time - start_time) / 1000.0))
 end
 
 -- run classification algorithms
@@ -192,7 +195,7 @@ while true do
     runcontainer(output_files, bathy_parms, timeout, "coastnet", "bash /surface.sh", false)
 
     -- execute medialfilter bathy
-    runcontainer(output_files, bathy_parms, timeout, "medialfilter", "/env/bin/python /usr/local/etc/runner.py", true)
+    runcontainer(output_files, bathy_parms, timeout, "medianfilter", "/env/bin/python /usr/local/etc/runner.py", true)
 
     -- execute cshelph bathy
     runcontainer(output_files, bathy_parms, timeout, "cshelph", "/env/bin/python /usr/local/etc/runner.py", true)
