@@ -411,6 +411,11 @@ void* ContainerRunner::controlThread (void* parm)
                         alert(INFO, RTE_INFO, cr->outQ, NULL, "Container <%s> has stopped", container_name_str.c_str());
                         done = true;
                     }
+                    else if(StringLib::match(container_status, "exited"))
+                    {
+                        alert(INFO, RTE_INFO, cr->outQ, NULL, "Container <%s> has exited", container_name_str.c_str());
+                        done = true;
+                    }
                     else
                     {
                         alert(ERROR, RTE_ERROR, cr->outQ, NULL, "Container <%s> is in an unexpected state: %s", container_name_str.c_str(), container_status);

@@ -264,6 +264,7 @@ bool send2Client (const char* fileName, const char* outPath, Publisher* outQ)
             if(!meta_record.post(outQ))
             {
                 status = false;
+                mlog(CRITICAL, "Failed to post meta record for file %s", fileName);
                 break; // early exit on error
             }
 
@@ -278,6 +279,7 @@ bool send2Client (const char* fileName, const char* outPath, Publisher* outQ)
                 if(!data_record.post(outQ, offsetof(arrow_file_data_t, data) + bytes_read))
                 {
                     status = false;
+                    mlog(CRITICAL, "Incomplete transfer: failed to post data record for file %s", fileName);
                     break; // early exit on error
                 }
                 offset += bytes_read;

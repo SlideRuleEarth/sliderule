@@ -83,7 +83,6 @@ first_key = list(spot_table.keys())[0]
 representative_info = spot_table[first_key]["info"]
 granule_info = {
     "rgt": representative_info["rgt"],
-    "sc_orient": representative_info["sc_orient"],
     "region": representative_info["region"],
     "cycle": representative_info["cycle"]
 }
@@ -143,7 +142,6 @@ else:
         # orbit info        
         orbit_group = hf.create_group("orbit_info")
         orbit_group.create_dataset("rgt", data=granule_info["rgt"])
-        orbit_group.create_dataset("sc_orient", data={"forward": 1, "backward": 0}[granule_info["sc_orient"]])
         orbit_group.create_dataset("cycle_number", data=granule_info["cycle"])
 
     print("HDF5 file written: " + atl24_filename)
