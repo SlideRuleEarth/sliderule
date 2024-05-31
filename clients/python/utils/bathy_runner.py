@@ -1,3 +1,5 @@
+# example: python utils/bathy_runner.py --domain <domain> --organization <org> --verbose --timeout 60000 --output_format parquet --classifiers medianfilter --plot 3
+
 from sliderule import sliderule, icesat2
 import argparse
 import os
@@ -21,6 +23,7 @@ parser.add_argument('--cleanup',            '-u',   action='store_true',    defa
 parser.add_argument('--generate_ndwi',      '-w',   action='store_true',    default=False)
 parser.add_argument('--ignore_bathy_mask',  '-b',   action='store_true',    default=False)
 parser.add_argument('--classifiers',        '-c',   type=str, nargs='+',    default=["coastnet", "openoceans", "medianfilter", "cshelph", "bathypathfinder", "pointnet2", "ensemble"])
+parser.add_argument('--plot',               '-p',   type=int, nargs='+',    choices=range(1,7), default=[])
 args,_ = parser.parse_known_args()
 
 # Initialize Organization
@@ -65,7 +68,22 @@ if args.aoi:
     parms["poly"] = region['poly']
 
 # Make ATL24G Processing Request
-gdf = icesat2.atl24g(parms, resource=args.granule)
+df = icesat2.atl24g(parms, resource=args.granule)
+
+# Plot Results
+if len(args.plot):
+    import matplotlib.pyplot as plt
+    import numpy as np
+    spots_to_plot = [int(s) for s in args.plot]
+    pdf = df[df["spot"].isin(spots_to_plot)]
+    plt.figure(figsize=[8,6])
+    colors={41:['blue', 'surface'], 40:['red','bathy'], 0:['gray','other']}
+    d0 = np.min(pdf["x_atc"])
+    for class_val, color_name in colors.items():
+        ii = pdf["class_ph"]==class_val
+        plt.plot(pdf['x_atc'][ii]-d0, pdf['geoid_corr_h'][ii],'o',markersize=1, color=color_name[0], label=color_name[1])
+    hl=plt.legend(loc=3, frameon=False, markerscale=5)
+    plt.show()
 
 # Clean Up Temporary Files
 if args.cleanup:
