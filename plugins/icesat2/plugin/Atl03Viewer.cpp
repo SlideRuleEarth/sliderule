@@ -76,7 +76,7 @@ const struct luaL_Reg Atl03Viewer::LUA_META_TABLE[] = {
 };
 
 /******************************************************************************
- * ATL03 READER CLASS
+ * ATL03 VIEWER CLASS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -96,7 +96,7 @@ int Atl03Viewer::luaCreate (lua_State* L)
         parms = dynamic_cast<Icesat2Parms*>(getLuaObject(L, 4, Icesat2Parms::OBJECT_TYPE));
         const bool send_terminator = getLuaBoolean(L, 5, true, true);
 
-        /* Return Reader Object */
+        /* Return Viewer Object */
         return createLuaObject(L, new Atl03Viewer(L, asset, resource, outq_name, parms, send_terminator));
     }
     catch(const RunTimeException& e)
