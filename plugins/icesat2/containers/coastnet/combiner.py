@@ -47,6 +47,10 @@ spot_df = pd.read_csv(spot_csv_file)
 coastnet_df = pd.read_csv(coastnet_csv_file)
 print("Read all inputs into data frames")
 
+# remove classification column (if present)
+if "class_ph" in spot_df:
+    del spot_df["class_ph"]
+
 # merge dataframes
 coastnet_df.rename(columns={'ph_index': 'index_ph', 'prediction': 'class_ph'}, inplace=True)
 del coastnet_df["along_track_dist"]
@@ -55,5 +59,7 @@ del coastnet_df["manual_label"]
 del coastnet_df["sea_surface_h"]
 del coastnet_df["bathy_h"]
 spot_df = pd.merge(spot_df, coastnet_df, on='index_ph', how='left')
-spot_df.to_csv(spot_csv_file, index=False)
 print("Merged CSV file written: " + spot_csv_file)
+
+# write out new data
+spot_df.to_csv(spot_csv_file, index=False)

@@ -2,6 +2,8 @@
 -- ENDPOINT:    /source/atl24g
 --
 
+local endpoint_start_time = time.gps()
+
 local json          = require("json")
 local georesource   = require("georesource")
 local earthdata     = require("earth_data_query")
@@ -18,6 +20,7 @@ local userlog = msg.publish(rspq)
 
 -- populate resource via CMR request (ONLY IF NOT SUPPLIED)
 if not resource then
+    local atl03_cmr_start_time = time.gps()
     local rc, rsps = earthdata.cmr(parms)
     if rc == earthdata.SUCCESS then
         local resources = rsps
@@ -29,6 +32,7 @@ if not resource then
         userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("proxy request <%s> failed to make CMR request <%d>: %s", rspq, rc, rsps))
         return
     end
+    userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL03 CMR search executed in %f seconds", (time.gps() - atl03_cmr_start_time) / 1000.0))
 end
 
 -- intialize processing environment
@@ -46,6 +50,7 @@ if not proc then
 end
 
 -- build hls polygon
+local atl09_polygon_cmr_start_time = time.gps()
 local hls_poly = parms["poly"]
 if not hls_poly then
     local original_name_filter = parms["name_filter"]
@@ -56,6 +61,7 @@ if not hls_poly then
     end
     parms["name_filter"] = original_name_filter
 end
+userlog:alert(core.INFO, core.RTE_INFO, string.format("HLS polygon CMR search executed in %f seconds", (time.gps() - atl09_polygon_cmr_start_time) / 1000.0))
 
 -- build hls parameters
 local year      = resource:sub(7,10)
@@ -68,6 +74,7 @@ local t0        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(
 local t1        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps + rdelta))
 
 -- build hls raster object
+local stac_start_time = time.gps()
 local hls_parms = {
     asset       = "landsat-hls",
     t0          = t0,
@@ -82,8 +89,10 @@ if rc1 == earthdata.SUCCESS then
     hls_parms["catalog"] = json.encode(rsps1)
     geo_parms = geo.parms(hls_parms)
 end
+userlog:alert(core.INFO, core.RTE_INFO, string.format("HLS STAC search executed in %f seconds", (time.gps() - stac_start_time) / 1000.0))
 
 -- get ATL09 resources
+local atl09_cmr_start_time = time.gps()
 local original_asset = parms["asset"]
 local original_t0 = parms["t0"]
 local original_t1 = parms["t1"]
@@ -97,6 +106,7 @@ end
 parms["asset"] = original_asset
 parms["t0"] = original_t0
 parms["t1"] = original_t1
+userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL09 CMR search executed in %f seconds", (time.gps() - atl09_cmr_start_time) / 1000.0))
 
 -- initialize container runtime environment
 local crenv = runner.setup()
@@ -190,30 +200,26 @@ local function runcontainer(output_table, _bathy_parms, container_timeout, conta
     userlog:alert(core.INFO, core.RTE_INFO, string.format("%s executed in %f seconds", container_name, (stop_time - start_time) / 1000.0))
 end
 
--- run classification algorithms
-while true do
+-- capture setup time
+userlog:alert(core.INFO, core.RTE_INFO, string.format("sliderule setup executed in %f seconds", (time.gps() - endpoint_start_time) / 1000.0))
 
-    -- execute medialfilter bathy
-    runcontainer(output_files, bathy_parms, timeout, "medianfilter", "/env/bin/python /usr/local/etc/runner.py", true)
+-- execute medialfilter bathy
+runcontainer(output_files, bathy_parms, timeout, "medianfilter", "/env/bin/python /usr/local/etc/runner.py", true)
 
-    -- execute cshelph bathy
-    runcontainer(output_files, bathy_parms, timeout, "cshelph", "/env/bin/python /usr/local/etc/runner.py", true)
+-- execute cshelph bathy
+runcontainer(output_files, bathy_parms, timeout, "cshelph", "/env/bin/python /usr/local/etc/runner.py", true)
 
-    -- execute bathypathfinder bathy
-    runcontainer(output_files, bathy_parms, timeout, "bathypathfinder", "/env/bin/python /usr/local/etc/runner.py", true)
+-- execute bathypathfinder bathy
+runcontainer(output_files, bathy_parms, timeout, "bathypathfinder", "/env/bin/python /usr/local/etc/runner.py", true)
 
-    -- execute openoceans
-    runcontainer(output_files, bathy_parms, timeout, "openoceans", "/env/bin/python /usr/local/etc/oceaneyes.py", false)
+-- execute openoceans
+runcontainer(output_files, bathy_parms, timeout, "openoceans", "/env/bin/python /usr/local/etc/oceaneyes.py", false)
 
-    -- execute pointnet2 bathy
-    runcontainer(output_files, bathy_parms, timeout, "pointnet2", "/env/bin/python /usr/local/etc/runner.py", false)
+-- execute pointnet2 bathy
+runcontainer(output_files, bathy_parms, timeout, "pointnet2", "/env/bin/python /usr/local/etc/runner.py", false)
 
-    -- execute coastnet bathy
-    runcontainer(output_files, bathy_parms, timeout, "coastnet", "bash /bathy.sh", false)
-
-    -- exit loop
-    break
-end
+-- execute coastnet bathy
+runcontainer(output_files, bathy_parms, timeout, "coastnet", "bash /bathy.sh", false)
 
 -- build final output
 local output_parms = parms[arrow.PARMS] or {

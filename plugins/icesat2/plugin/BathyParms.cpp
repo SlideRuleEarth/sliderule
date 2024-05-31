@@ -49,8 +49,16 @@ const char* BathyParms::RETURN_INPUTS = "return_inputs";
 const char* BathyParms::CLASSIFIERS = "classifiers";
 const char* BathyParms::SPOTS = "spots";
 const char* BathyParms::ATL09_RESOURCES = "resources09";
-
-const double BathyParms::DEFAULT_MAX_DEM_DELTA = 10000.0;
+const char* BathyParms::SURFACE_FINDER = "surface_finder";
+const char* BathyParms::DEM_BUFFER = "dem_buffer";
+const char* BathyParms::BIN_SIZE = "bin_size";
+const char* BathyParms::MAX_RANGE = "max_range";
+const char* BathyParms::MAX_BINS = "max_bins";
+const char* BathyParms::SIGNAL_THRESHOLD_SIGMAS = "signal_threshold_sigmas";
+const char* BathyParms::MIN_PEAK_SEPARATION = "min_peak_separation";
+const char* BathyParms::HIGHEST_PEAK_RATIO = "highest_peak_ratio";
+const char* BathyParms::SURFACE_WIDTH_SIGMAS = "surface_width_sigmas";
+const char* BathyParms::MODEL_AS_POISSON = "model_as_poisson";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -170,13 +178,24 @@ BathyParms::classifier_t BathyParms::str2classifier (const char* str)
  *----------------------------------------------------------------------------*/
 BathyParms::BathyParms(lua_State* L, int index):
     Icesat2Parms (L, index),
-    max_dem_delta (DEFAULT_MAX_DEM_DELTA),
-    ph_in_extent (DEFAULT_PH_IN_EXTENT),
-    generate_ndwi(true),
-    use_bathy_mask(true),
-    classifiers{true, true, true, true, true, true, true, true},
-    return_inputs(false),
-    spots{true, true, true, true, true, true}
+    max_dem_delta (10000.0),
+    ph_in_extent (8192),
+    generate_ndwi (true),
+    use_bathy_mask (true),
+    classifiers {true, true, true, true, true, true, true, true},
+    return_inputs (false),
+    spots {true, true, true, true, true, true},
+    surface_finder {
+        .dem_buffer = 50.0,
+        .bin_size = 0.5,
+        .max_range = 1000.0,
+        .max_bins = 10000,
+        .signal_threshold_sigmas = 3.0,
+        .min_peak_separation = 0.5,
+        .highest_peak_ratio = 1.2,
+        .surface_width_sigmas = 3.0,
+        .model_as_poisson = true
+    }
 {
     bool provided = false;
 
@@ -231,6 +250,66 @@ BathyParms::BathyParms(lua_State* L, int index):
         /* spot selection */
         lua_getfield(L, index, BathyParms::SPOTS);
         get_spot_list(L, -1, &provided);
+        lua_pop(L, 1);
+
+        /* surface finder */
+        lua_getfield(L, index, BathyParms::SURFACE_FINDER);
+        if(lua_istable(L, index))
+        {
+            /* dem buffer */
+            lua_getfield(L, index, BathyParms::DEM_BUFFER);
+            surface_finder.dem_buffer = LuaObject::getLuaFloat(L, -1, true, surface_finder.dem_buffer, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::DEM_BUFFER, surface_finder.dem_buffer);
+            lua_pop(L, 1);
+
+            /* bin size */
+            lua_getfield(L, index, BathyParms::BIN_SIZE);
+            surface_finder.bin_size = LuaObject::getLuaFloat(L, -1, true, surface_finder.bin_size, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::BIN_SIZE, surface_finder.bin_size);
+            lua_pop(L, 1);
+
+            /* max range */
+            lua_getfield(L, index, BathyParms::MAX_RANGE);
+            surface_finder.max_range = LuaObject::getLuaFloat(L, -1, true, surface_finder.max_range, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::MAX_RANGE, surface_finder.max_range);
+            lua_pop(L, 1);
+
+            /* max bins */
+            lua_getfield(L, index, BathyParms::MAX_BINS);
+            surface_finder.max_bins = LuaObject::getLuaInteger(L, -1, true, surface_finder.max_bins, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %ld", BathyParms::MAX_BINS, surface_finder.max_bins);
+            lua_pop(L, 1);
+
+            /* signal threshold sigmas */
+            lua_getfield(L, index, BathyParms::SIGNAL_THRESHOLD_SIGMAS);
+            surface_finder.signal_threshold_sigmas = LuaObject::getLuaFloat(L, -1, true, surface_finder.signal_threshold_sigmas, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::SIGNAL_THRESHOLD_SIGMAS, surface_finder.signal_threshold_sigmas);
+            lua_pop(L, 1);
+
+            /* min peak separation */
+            lua_getfield(L, index, BathyParms::MIN_PEAK_SEPARATION);
+            surface_finder.min_peak_separation = LuaObject::getLuaFloat(L, -1, true, surface_finder.min_peak_separation, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::MIN_PEAK_SEPARATION, surface_finder.min_peak_separation);
+            lua_pop(L, 1);
+
+            /* highest peak ratio */
+            lua_getfield(L, index, BathyParms::HIGHEST_PEAK_RATIO);
+            surface_finder.highest_peak_ratio = LuaObject::getLuaFloat(L, -1, true, surface_finder.highest_peak_ratio, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::HIGHEST_PEAK_RATIO, surface_finder.highest_peak_ratio);
+            lua_pop(L, 1);
+
+            /* surface width sigmas */
+            lua_getfield(L, index, BathyParms::SURFACE_WIDTH_SIGMAS);
+            surface_finder.surface_width_sigmas = LuaObject::getLuaFloat(L, -1, true, surface_finder.surface_width_sigmas, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::SURFACE_WIDTH_SIGMAS, surface_finder.surface_width_sigmas);
+            lua_pop(L, 1);
+
+            /* model as poisson */
+            lua_getfield(L, index, BathyParms::MODEL_AS_POISSON);
+            surface_finder.model_as_poisson = LuaObject::getLuaBoolean(L, -1, true, surface_finder.model_as_poisson, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %d", BathyParms::MODEL_AS_POISSON, surface_finder.model_as_poisson);
+            lua_pop(L, 1);
+        }
         lua_pop(L, 1);
     }
     catch(const RunTimeException& e)

@@ -60,13 +60,20 @@ class BathyParms: public Icesat2Parms
         static const char* CLASSIFIERS;
         static const char* SPOTS;
         static const char* ATL09_RESOURCES;
+        static const char* SURFACE_FINDER;
+        static const char* DEM_BUFFER;
+        static const char* BIN_SIZE;
+        static const char* MAX_RANGE;
+        static const char* MAX_BINS;
+        static const char* SIGNAL_THRESHOLD_SIGMAS;
+        static const char* MIN_PEAK_SEPARATION;
+        static const char* HIGHEST_PEAK_RATIO;
+        static const char* SURFACE_WIDTH_SIGMAS;
+        static const char* MODEL_AS_POISSON;
 
         static const int ATL09_RESOURCE_NAME_LEN = 39;
         static const int ATL09_RESOURCE_KEY_LEN = 6;
-
-        static const double DEFAULT_MAX_DEM_DELTA;
-        static const int DEFAULT_PH_IN_EXTENT = 8192; // 16384;
-
+        
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
@@ -92,6 +99,18 @@ class BathyParms: public Icesat2Parms
             WATER_COLUMN = 45
         } bathy_class_t;
 
+        typedef struct {
+            double dem_buffer; // meters
+            double bin_size; // meters
+            double max_range; // meters
+            long max_bins; // bins
+            double signal_threshold_sigmas; // standard deviations
+            double min_peak_separation; // meters
+            double highest_peak_ratio;
+            double surface_width_sigmas; // standard deviations
+            bool model_as_poisson;
+        } surface_finder_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -113,6 +132,7 @@ class BathyParms: public Icesat2Parms
         bool        classifiers[NUM_CLASSIFIERS];   // which bathymetry classifiers to run
         bool        return_inputs;                  // return the atl03 bathy records back to client
         bool        spots[NUM_SPOTS];               // only used by downstream algorithms
+        surface_finder_t surface_finder;            // surface finder parameters
         Dictionary<string> alt09_index;
 
         /*--------------------------------------------------------------------
