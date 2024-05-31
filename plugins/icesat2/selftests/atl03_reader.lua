@@ -67,7 +67,7 @@ runner.check(p1_3.cnf[icesat2.CNF_SURFACE_LOW], "Failed to set _low_")
 runner.check(p1_3.cnf[icesat2.CNF_SURFACE_MEDIUM], "Failed to set _medium_")
 runner.check(p1_3.cnf[icesat2.CNF_SURFACE_HIGH], "Failed to set _high_")
 
-print('\n------------------\nTest02: Atl03 Extent Record\n------------------')
+print('\n------------------\nTest02: Atl03 Reader Extent Record\n------------------')
 
 local recq = msg.subscribe("atl03-reader-recq")
 local tstart = time.latch()
@@ -85,7 +85,7 @@ if extentrec then
     runner.check(t2.segment_id == extentrec:getvalue("segment_id"))
 end
 
-print('\n------------------\nTest03: Atl03 Extent Definition\n------------------')
+print('\n------------------\nTest03: Atl03 Reader Extent Definition\n------------------')
 
 local def = msg.definition("atl03rec")
 print("atl03rec", json.encode(def))
@@ -93,10 +93,10 @@ print("atl03rec", json.encode(def))
 -- Clean Up --
 
 recq:destroy()
-f1_0:destroy() 
-f1_1:destroy() 
-f1_2:destroy() 
-f1_3:destroy() 
+f1_0:destroy()
+f1_1:destroy()
+f1_2:destroy()
+f1_3:destroy()
 f2:destroy()
 
 -- Report Results --

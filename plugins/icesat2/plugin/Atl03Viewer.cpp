@@ -50,9 +50,9 @@ const RecordObject::fieldDef_t Atl03Viewer::segRecDef[] = {
     {"time",            RecordObject::TIME8,    offsetof(segment_t, time_ns),        1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
     {"latitude",        RecordObject::DOUBLE,   offsetof(segment_t, latitude),       1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
     {"longitude",       RecordObject::DOUBLE,   offsetof(segment_t, longitude),      1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
-    {"dist_x",          RecordObject::FLOAT,    offsetof(segment_t, dist_x),         1,  NULL, NATIVE_FLAGS},
-    {"id",              RecordObject::UINT32,   offsetof(segment_t, id),             1,  NULL, NATIVE_FLAGS},
-    {"ph_cnt",          RecordObject::UINT32,   offsetof(segment_t, ph_cnt),         1,  NULL, NATIVE_FLAGS}
+    {"segment_dist_x",  RecordObject::FLOAT,    offsetof(segment_t, dist_x),         1,  NULL, NATIVE_FLAGS},
+    {"segment_id",      RecordObject::UINT32,   offsetof(segment_t, id),             1,  NULL, NATIVE_FLAGS},
+    {"segment_ph_cnt",  RecordObject::UINT32,   offsetof(segment_t, ph_cnt),         1,  NULL, NATIVE_FLAGS}
 };
 
 const char* Atl03Viewer::exRecType = "atl03vrec";
@@ -64,6 +64,7 @@ const RecordObject::fieldDef_t Atl03Viewer::exRecDef[] = {
     {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
+    {"segment_cnt",     RecordObject::UINT64,   offsetof(extent_t, segment_cnt),            1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"segments",        RecordObject::USER,     offsetof(extent_t, segments),               0,  segRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
 };
 
@@ -113,7 +114,7 @@ int Atl03Viewer::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void Atl03Viewer::init (void)
 {
-    RECDEF(segRecType,      segRecDef,      sizeof(segment_t),       NULL);
+    RECDEF(segRecType,      segRecDef,      sizeof(segment_t),      NULL);
     RECDEF(exRecType,       exRecDef,       sizeof(extent_t),       NULL /* "extent_id" */);
 }
 
@@ -146,10 +147,6 @@ Atl03Viewer::Atl03Viewer (lua_State* L, Asset* _asset, const char* _resource, co
     {
         signalConfColIndex = static_cast<int>(parms->surface_type);
     }
-
-    /* Generate ATL08 Resource Name */
-    resource08 = StringLib::duplicate(resource);
-    resource08[4] = '8';
 
     /* Create Publisher */
     outQ = new Publisher(outq_name);
@@ -228,7 +225,6 @@ Atl03Viewer::~Atl03Viewer (void)
     parms->releaseLuaObject();
 
     delete [] resource;
-    delete [] resource08;
 
     asset->releaseLuaObject();
 }
@@ -503,7 +499,6 @@ void* Atl03Viewer::subsettingThread (void* parm)
 
         /* Initialize Extent Counter */
         uint32_t extent_counter = 0;
-        bool create_extent_record = false;
 
         List<segment_t> segments;
 
@@ -523,13 +518,9 @@ void* Atl03Viewer::subsettingThread (void* parm)
             /* Check for Termination */
             if(!reader->active) break;
 
-            if(((s+1) % max_segments_per_extent) == 0)
-                create_extent_record = true;
+            const bool last_segment = (s == local_stats.segments_read - 1);
 
-            if(s == local_stats.segments_read - 1)
-                create_extent_record = true;
-
-            if(create_extent_record)
+            if(segments.length() % max_segments_per_extent == 0 || last_segment)
             {
                 /* Generate Extent ID */
                 const uint64_t extent_id = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, extent_counter);
@@ -567,14 +558,13 @@ void* Atl03Viewer::subsettingThread (void* parm)
                 {
                     delete rec;
                 }
+
+                /* Bump Extent Counter */
+                extent_counter++;
+
+                /* Reset Segment List */
+                segments.clear();
             }
-
-            /* Bump Extent Counter */
-            extent_counter++;
-
-            /* Reset Segment List */
-            create_extent_record = false;
-            segments.clear();
         }
     }
     catch(const RunTimeException& e)
@@ -647,7 +637,7 @@ void Atl03Viewer::generateExtentRecord (uint64_t extent_id, const info_t* info, 
     extent->spacecraft_orientation  = atl03.sc_orient[0];
     extent->reference_ground_track  = start_rgt;
     extent->cycle                   = start_cycle;
-    extent->segment_count           = num_segments;
+    extent->segment_cnt             = num_segments;
 
     /* Populate Segments */
     for(int32_t i = 0; i < num_segments; i++)
@@ -721,7 +711,7 @@ void Atl03Viewer::parseResource (const char* _resource, uint16_t& rgt, uint8_t& 
     rgt_str[4] = '\0';
     if(StringLib::str2long(rgt_str, &val, 10))
     {
-        rgt = (uint16_t)val;
+        rgt = static_cast<uint16_t>(val);
     }
     else
     {
@@ -734,7 +724,7 @@ void Atl03Viewer::parseResource (const char* _resource, uint16_t& rgt, uint8_t& 
     cycle_str[2] = '\0';
     if(StringLib::str2long(cycle_str, &val, 10))
     {
-        cycle = (uint8_t)val;
+        cycle = static_cast<uint8_t>(val);
     }
     else
     {
@@ -747,7 +737,7 @@ void Atl03Viewer::parseResource (const char* _resource, uint16_t& rgt, uint8_t& 
     region_str[2] = '\0';
     if(StringLib::str2long(region_str, &val, 10))
     {
-        region = (uint8_t)val;
+        region = static_cast<uint8_t>(val);
     }
     else
     {

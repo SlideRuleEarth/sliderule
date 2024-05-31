@@ -65,6 +65,7 @@ int icesat2_open (lua_State *L)
         {"parms",               Icesat2Parms::luaCreate},
         {"bathyparms",          BathyParms::luaCreate},
         {"atl03s",              Atl03Reader::luaCreate},
+        {"atl03v",              Atl03Viewer::luaCreate},
         {"atl03indexer",        Atl03Indexer::luaCreate},
         {"atl03bathy",          Atl03BathyReader::luaCreate},
         {"atl06",               Atl06Dispatch::luaCreate},

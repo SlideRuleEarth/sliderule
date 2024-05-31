@@ -97,7 +97,7 @@ class Atl03Viewer: public LuaObject
             uint16_t        reference_ground_track;
             uint8_t         cycle;
             uint64_t        extent_id;
-            uint64_t        segment_count;
+            uint64_t        segment_cnt;
             segment_t       segments[]; // zero length field
         } extent_t;
 
@@ -185,7 +185,6 @@ class Atl03Viewer: public LuaObject
         int                 numComplete;
         Asset*              asset;
         const char*         resource;
-        char*               resource08;
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
