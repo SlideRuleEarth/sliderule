@@ -240,7 +240,7 @@ openoceans-container-docker: ## create the copenoceans container image
 	docker tag $(ECR)/$(OPENOCEANS_CONTAINER_NAME):latest $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(MAJOR_VERSION)
 	
 openoceans-container-test: ## run the openoceans container
-	docker run -it --rm -v /data:/data --name $(OPENOCEANS_CONTAINER_NAME) $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/oceaneyes.py /data/openoceans.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/openoceans_3.csv
+	docker run -it --rm -v /data:/data --name $(OPENOCEANS_CONTAINER_NAME) $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/oceaneyes.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv
 
 bathywriter-container-lock: ## create the lock file for the bathywriter container image
 	cd $(BATHYWRITER_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
@@ -257,8 +257,7 @@ bathywriter-container-docker: ## create the bathywriter container image
 	docker tag $(ECR)/$(BATHYWRITER_CONTAINER_NAME):latest $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(MAJOR_VERSION)
 	
 bathywriter-container-test: ## run the bathywriter docker container
-	cp $(BATHYWRITER_CONTAINER_DIR)/*.json /data
-	docker run -it --rm -v /data:/data --name $(BATHYWRITER_CONTAINER_NAME) $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/writer.py data/test.json
+	docker run -it --rm -v $(ATL24_TEST_DATA_DIR):/data --name $(BATHYWRITER_CONTAINER_NAME) $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/writer.py /data/writer_settings.json
 
 coastnet-container-docker: ## create the coastnet container image
 	-rm -Rf $(COASTNET_CONTAINER_STAGE_DIR)
@@ -274,10 +273,10 @@ coastnet-container-docker: ## create the coastnet container image
 	docker tag $(ECR)/$(COASTNET_CONTAINER_NAME):latest $(ECR)/$(COASTNET_CONTAINER_NAME):$(MAJOR_VERSION)
 	
 coastnet-container-surface-test: ## run the coastnet surface docker container
-	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash surface.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/coastnet.csv
+	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash surface.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/coastnet_3.csv
 	
 coastnet-container-bathy-test: ## run the coastnet bathy docker container
-	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash bathy.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/coastnet.csv
+	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash bathy.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/coastnet_3.csv
 
 pointnet2-container-lock: ## create the lock file for the pointnet2 container image
 	cd $(POINTNET2_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
@@ -295,7 +294,7 @@ pointnet2-container-docker: ## create the pointnet2 container image
 	docker tag $(ECR)/$(POINTNET2_CONTAINER_NAME):latest $(ECR)/$(POINTNET2_CONTAINER_NAME):$(MAJOR_VERSION)
 	
 pointnet2-container-test: ## run the pointnet2 container
-	docker run -it --rm -v /data:/data --name $(POINTNET2_CONTAINER_NAME) $(ECR)/$(POINTNET2_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/pointnet2_3.csv
+	docker run -it --rm -v /data:/data --name $(POINTNET2_CONTAINER_NAME) $(ECR)/$(POINTNET2_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv
 
 medianfilter-container-lock: ## create the lock file for the medianfilter container image
 	cd $(MEDIANFILTER_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml

@@ -50,32 +50,37 @@ control_json = sys.argv[1]
 with open(control_json, 'r') as json_file:
     control = json.load(json_file)
 
+# get inputs from control
+input_files = control["input_files"]
+output_parms = control["output_parms"]
+atl24_filename = control["atl24_filename"]
+
 # read in data
 spot_table = {}
 # read in photons as dataframe from csv file
-for spot in control["spot_photons"]:
+for spot in input_files["spot_photons"]:
     if spot not in spot_table:
         spot_table[spot] = {}
-    spot_table[spot]["df"] = pd.read_csv(control["spot_photons"][spot])
+    spot_table[spot]["df"] = pd.read_csv(input_files["spot_photons"][spot])
 print("Read photon data into dataframes")
 # read in granule info as dictionary from json file and add to dataframes
-for spot in control["spot_granule"]:
-    spot_table[spot]["info"] = json.load(open(control["spot_granule"][spot], 'r'))
+for spot in input_files["spot_granule"]:
+    spot_table[spot]["info"] = json.load(open(input_files["spot_granule"][spot], 'r'))
     for key in spot_table[spot]["info"]:
         spot_table[spot]["df"][key] = spot_table[spot]["info"][key]
 print("Added metadata columns to dataframes")
 # read in photon classifications as dataframe from csv file and merge into dataframes
-for classifier in control["classifiers"]:
-    for spot in control["classifiers"][classifier]:
-        classifier_df = pd.read_csv(control["classifiers"][classifier][spot])
+for classifier in input_files["classifiers"]:
+    for spot in input_files["classifiers"][classifier]:
+        classifier_df = pd.read_csv(input_files["classifiers"][classifier][spot])
         classifier_df.rename(columns={'class_ph': classifier}, inplace=True)
         spot_table[spot]["df"] = pd.merge(spot_table[spot]["df"], classifier_df, on='index_ph', how='left')
 print("Added photon classifications to dataframes")
 
 # get granule level info from first json file in the table of spot granule files
 # the data being pulled out of the file is (should be) consistent across all the granule files
-first_key = spot_table.keys()[0]
-representative_info = spot_table[first_key]["spot_granule"]
+first_key = list(spot_table.keys())[0]
+representative_info = spot_table[first_key]["info"]
 granule_info = {
     "rgt": representative_info["rgt"],
     "sc_orient": representative_info["sc_orient"],
@@ -84,7 +89,7 @@ granule_info = {
 }
 
 # Non-HDF5 Outputs
-if "output" not in control or control["output"]["format"] != "hdf5":
+if output_parms["format"] != "hdf5":
 
     # concatenate (vertically) all dataframes
     spot_dfs = [spot_table[spot]["df"] for spot in spot_table]
@@ -92,27 +97,27 @@ if "output" not in control or control["output"]["format"] != "hdf5":
     print("Concatenated data frames into a single data frame")
 
     # write output
-    if "output" not in control or control["output"]["format"] == "csv":
-        df.to_csv(control["atl24_filename"], index=False)
-        print("CSV file written: " + control["atl24_filename"])
-    elif control["output"]["format"] == "parquet" or control["output"]["format"] == "geoparquet":
-        if control["output"]["as_geo"] or control["output"]["format"] == "geoparquet":
+    if output_parms["format"] == "csv":
+        df.to_csv(atl24_filename, index=False)
+        print("CSV file written: " + atl24_filename)
+    elif output_parms["format"] == "parquet" or output_parms["format"] == "geoparquet":
+        if output_parms["as_geo"] or output_parms["format"] == "geoparquet":
             df['time'] = df['time'].astype('datetime64[ns]')
             geometry = gpd.points_from_xy('longitude', 'latitude', 'geoid_corr_h')
             df.drop(columns=['longitude', 'latitude'], inplace=True)
             gdf = gpd.GeoDataFrame(df, geometry=geometry, crs="EPSG:7912")
             gdf.set_index('time', inplace=True)
             gdf.sort_index(inplace=True)
-            gdf.to_parquet(control["atl24_filename"], index=None)
-            print("GeoParquet file written: " + control["atl24_filename"])
+            gdf.to_parquet(atl24_filename, index=None)
+            print("GeoParquet file written: " + atl24_filename)
         else:
-            df.to_parquet(control["atl24_filename"], index=None)
-            print("Parquet file written: " + control["atl24_filename"])
+            df.to_parquet(atl24_filename, index=None)
+            print("Parquet file written: " + atl24_filename)
 
 # HDF5 Output
 else:
 
-    with h5py.File(control["atl24_filename"], 'w') as hf:
+    with h5py.File(atl24_filename, 'w') as hf:
 
         # ancillary data
         ancillary_group = hf.create_group("ancillary_data")
@@ -132,7 +137,7 @@ else:
             beam_group.create_dataset("lon_corr", data=spot_df["longitude"])
             if "ensemble" in spot_df:
                 beam_group.create_dataset("class_ph", data=spot_df["ensemble"].astype(np.int16))
-            for classifier in control["classifiers"]:
+            for classifier in input_files["classifiers"]:
                 beam_group.create_dataset(classifier, data=spot_df[classifier].astype(np.int16))
 
         # orbit info        
@@ -141,4 +146,4 @@ else:
         orbit_group.create_dataset("sc_orient", data={"forward": 1, "backward": 0}[granule_info["sc_orient"]])
         orbit_group.create_dataset("cycle_number", data=granule_info["cycle"])
 
-    print("HDF5 file written: " + control["atl24_filename"])
+    print("HDF5 file written: " + atl24_filename)

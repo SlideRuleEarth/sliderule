@@ -107,12 +107,12 @@ end
 
 -- read ICESat-2 inputs
 local bathy_parms   = icesat2.bathyparms(parms)
-local reader        = icesat2.atl03bathy(proc.asset, resource, args.result_q, bathy_parms, geo_parms, crenv.host_shared_directory, false)
-local status        = georesource.waiton(resource, parms, nil, reader, nil, proc.sampler_disp, proc.userlog, false)
-if not status then
-    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to generate ATL03 bathy inputs for %s", resource))
-    runner.cleanup(crenv)
-end
+--local reader        = icesat2.atl03bathy(proc.asset, resource, args.result_q, bathy_parms, geo_parms, crenv.host_shared_directory, false)
+--local status        = georesource.waiton(resource, parms, nil, reader, nil, proc.sampler_disp, proc.userlog, false)
+--if not status then
+--    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to generate ATL03 bathy inputs for %s", resource))
+--    runner.cleanup(crenv)
+--end
 
 -- table of files being processed
 --  {
@@ -172,9 +172,10 @@ local function runcontainer(output_table, _bathy_parms, container_timeout, conta
             }
             local container = runner.execute(crenv, container_parms, rspq)
             table.insert(container_list, container)
-            output_table["spot_photons"][i] = input_filename
-            output_table["spot_granule"][i] = parameters_filename
-            output_table["classifiers"][container_name][i] = output_filename
+            spot_key = string.format("spot_%d", i)
+            output_table["spot_photons"][spot_key] = input_filename
+            output_table["spot_granule"][spot_key] = parameters_filename
+            output_table["classifiers"][container_name][spot_key] = output_filename
             if not in_parallel then
                 runner.wait(container, container_timeout)
             end
@@ -192,7 +193,7 @@ end
 -- run classification algorithms
 while true do
     -- execute coastnet surface (MUST BE RUN FIRST - to supply surface classifications)
-    runcontainer(output_files, bathy_parms, timeout, "coastnet", "bash /surface.sh", false)
+--    runcontainer(output_files, bathy_parms, timeout, "coastnet", "bash /surface.sh", false)
 
     -- execute medialfilter bathy
     runcontainer(output_files, bathy_parms, timeout, "medianfilter", "/env/bin/python /usr/local/etc/runner.py", true)
@@ -204,13 +205,13 @@ while true do
     runcontainer(output_files, bathy_parms, timeout, "bathypathfinder", "/env/bin/python /usr/local/etc/runner.py", true)
 
     -- execute openoceans
-    runcontainer(output_files, bathy_parms, timeout, "openoceans", "/env/bin/python /usr/local/etc/oceaneyes.py", false)
+--    runcontainer(output_files, bathy_parms, timeout, "openoceans", "/env/bin/python /usr/local/etc/oceaneyes.py", false)
 
     -- execute pointnet2 bathy
-    runcontainer(output_files, bathy_parms, timeout, "pointnet2", "/env/bin/python /usr/local/etc/runner.py", false)
+ --   runcontainer(output_files, bathy_parms, timeout, "pointnet2", "/env/bin/python /usr/local/etc/runner.py", false)
 
     -- execute coastnet bathy
-    runcontainer(output_files, bathy_parms, timeout, "coastnet", "bash /bathy.sh", false)
+--    runcontainer(output_files, bathy_parms, timeout, "coastnet", "bash /bathy.sh", false)
 
     -- exit loop
     break
@@ -229,8 +230,8 @@ local writer_parms = {
     timeout = timeout,
     parms = { 
         ["writer_settings.json"] = {
-            output_files = output_files,
-            output = output_parms,
+            input_files = output_files,
+            output_parms = output_parms,
             atl24_filename = crenv.container_shared_directory.."/"..atl24_granule_filename
         }
     }
