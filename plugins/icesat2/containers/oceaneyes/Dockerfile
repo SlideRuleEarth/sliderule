@@ -8,9 +8,9 @@ RUN /env/bin/pip install torch fast_histogram
 
 RUN echo "source activate /env" > ~/.bashrc
 
-COPY atl24writer /
-COPY bathypathfinder /
-COPY cshelph /
-COPY medianfilter /
-COPY openoceans /
-COPY pointnet2 /
+COPY atl24writer /atl24writer
+COPY bathypathfinder /bathypathfinder
+COPY cshelph /cshelph
+COPY medianfilter /medianfilter
+COPY openoceans /openoceans
+COPY pointnet2 /pointnet2

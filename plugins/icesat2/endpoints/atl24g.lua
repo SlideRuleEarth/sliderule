@@ -230,7 +230,7 @@ local output_parms = parms[arrow.PARMS] or {
 }
 local writer_parms = {
     image =  "bathywriter",
-    command = "/env/bin/python /usr/local/etc/writer.py /data/writer_settings.json",
+    command = "/env/bin/python /atl24writer/runner.py /data/writer_settings.json",
     timeout = timeout,
     parms = { 
         ["writer_settings.json"] = {
