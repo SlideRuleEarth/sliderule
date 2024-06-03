@@ -1015,8 +1015,8 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     vector<double> heights;
     for(long i = 0; i < extent->photon_count; i++)
     {
-        double height = extent->photons[i].geoid_corr_h;
-        double time_secs = static_cast<double>(extent->photons[i].time_ns) / 1000000000.0;
+        const double height = extent->photons[i].geoid_corr_h;
+        const double time_secs = static_cast<double>(extent->photons[i].time_ns) / 1000000000.0;
 
         /* filter distance from DEM height 
          *  TODO: does the DEM height need to be corrected by GEOID */
@@ -1047,7 +1047,7 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     }
 
     /* calculate and check range */
-    double range_h = max_h - min_h;
+    const double range_h = max_h - min_h;
     if(range_h <= 0 || range_h > sfparms.max_range)
     {
         mlog(ERROR, "Invalid range <%lf> when determining sea surface for %s", range_h, resource);
@@ -1057,7 +1057,7 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     /* calculate and check number of bins in histogram 
      *  - the number of bins is increased by 1 in case the ceiling and the floor
      *    of the max range is both the same number */
-    long num_bins = static_cast<long>(std::ceil(range_h / sfparms.bin_size)) + 1;
+    const long num_bins = static_cast<long>(std::ceil(range_h / sfparms.bin_size)) + 1;
     if(num_bins <= 0 || num_bins > sfparms.max_bins)
     {
         mlog(ERROR, "Invalid combination of range <%lf> and bin size <%lf> produced out of range histogram size <%ld> for %s", 
@@ -1071,7 +1071,7 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     /* build histogram of photon heights */
     vector<long> histogram(num_bins);
     std::for_each (std::begin(heights), std::end(heights), [&](const double h) {
-        long bin = static_cast<long>(std::floor((h - min_h) / sfparms.bin_size));
+        const long bin = static_cast<long>(std::floor((h - min_h) / sfparms.bin_size));
         histogram[bin]++;
     });
     
@@ -1080,15 +1080,15 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     double stddev = 0.0;
     if(sfparms.model_as_poisson)
     {
-        long num_shots = std::round((max_t - min_t) / 0.0001);
-        double bin_t = sfparms.bin_size * 0.00000002 / 3.0; // bin size from meters to seconds
-        double bin_pe = bin_t * num_shots * avg_bckgnd; // expected value
+        const long num_shots = std::round((max_t - min_t) / 0.0001);
+        const double bin_t = sfparms.bin_size * 0.00000002 / 3.0; // bin size from meters to seconds
+        const double bin_pe = bin_t * num_shots * avg_bckgnd; // expected value
         bckgnd = bin_pe;
         stddev = sqrt(bin_pe);
     }
     else
     {
-        double bin_avg = static_cast<double>(heights.size()) / static_cast<double>(num_bins);
+        const double bin_avg = static_cast<double>(heights.size()) / static_cast<double>(num_bins);
         double accum = 0.0;
         std::for_each (std::begin(histogram), std::end(histogram), [&](const double h) {
             accum += (h - bin_avg) * (h - bin_avg);
@@ -1098,15 +1098,15 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     }
 
     /* build guassian kernel (from -k to k)*/
-    double kernel_size = 6.0 * stddev + 1.0;
-    long k = (static_cast<long>(std::ceil(kernel_size / sfparms.bin_size)) & ~0x1) / 2;
-    long kernel_bins = 2 * k + 1;
+    const double kernel_size = 6.0 * stddev + 1.0;
+    const long k = (static_cast<long>(std::ceil(kernel_size / sfparms.bin_size)) & ~0x1) / 2;
+    const long kernel_bins = 2 * k + 1;
     double kernel_sum = 0.0;
     vector<double> kernel(kernel_bins);
     for(long x = -k; x <= k; x++)
     {
-        long i = x + k;
-        double r = x / stddev;
+        const long i = x + k;
+        const double r = x / stddev;
         kernel[i] = exp(-0.5 * r * r);
         kernel_sum += kernel[i];
     }
@@ -1123,7 +1123,7 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
         long num_samples = 0;
         for(long j = -k; j <= k; j++)
         {
-            long index = i + k;
+            const long index = i + k;
             if(index >= 0 && index < num_bins)
             {
                 output += kernel[j + k] * static_cast<double>(histogram[index]);
@@ -1146,7 +1146,7 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     }
 
     /* find second highest peak */
-    long peak_separation_in_bins = static_cast<long>(std::ceil(sfparms.min_peak_separation / sfparms.bin_size));
+    const long peak_separation_in_bins = static_cast<long>(std::ceil(sfparms.min_peak_separation / sfparms.bin_size));
     long second_peak_bin = -1; // invalid
     double second_peak = std::numeric_limits<double>::min();
     for(int i = 0; i < num_bins; i++)
@@ -1174,7 +1174,7 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     }
 
     /* check if sea surface signal is significant */
-    double signal_threshold = bckgnd + (stddev * sfparms.signal_threshold_sigmas);
+    const double signal_threshold = bckgnd + (stddev * sfparms.signal_threshold_sigmas);
     if(highest_peak < signal_threshold)
     {
         mlog(WARNING, "Unable to determine sea surface (%lf < %lf) for %s", highest_peak, signal_threshold, resource);
@@ -1182,8 +1182,8 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     }
 
     /* calculate width of highest peak */
-    double peak_above_bckgnd = smoothed_histogram[highest_peak_bin] - bckgnd;
-    double peak_half_max = (peak_above_bckgnd * 0.4) + bckgnd;
+    const double peak_above_bckgnd = smoothed_histogram[highest_peak_bin] - bckgnd;
+    const double peak_half_max = (peak_above_bckgnd * 0.4) + bckgnd;
     long peak_width = 1;
     for(long i = highest_peak_bin + 1; i < num_bins; i++)
     {
@@ -1195,12 +1195,12 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
         if(smoothed_histogram[i] > peak_half_max) peak_width++;
         else break;
     }
-    double peak_stddev = (peak_width * sfparms.bin_size) / 2.35;
+    const double peak_stddev = (peak_width * sfparms.bin_size) / 2.35;
 
     /* calculate sea surface height and label sea surface photons */
     extent->surface_height = min_h + (highest_peak_bin * sfparms.bin_size) + (sfparms.bin_size / 2.0);
-    double min_surface_h = extent->surface_height - (peak_stddev * sfparms.surface_width_sigmas);
-    double max_surface_h = extent->surface_height + (peak_stddev * sfparms.surface_width_sigmas);
+    const double min_surface_h = extent->surface_height - (peak_stddev * sfparms.surface_width_sigmas);
+    const double max_surface_h = extent->surface_height + (peak_stddev * sfparms.surface_width_sigmas);
     for(long i = 0; i < extent->photon_count; i++)
     {
         if( extent->photons[i].geoid_corr_h >= min_surface_h && 
