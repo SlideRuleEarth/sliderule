@@ -161,7 +161,7 @@ output_files["spot_granule"] = {}
 output_files["classifiers"] = {}
 
 -- function: run container
-local function runcontainer(output_table, _bathy_parms, container_timeout, container_name, in_parallel, command_override)
+local function runcontainer(output_table, _bathy_parms, container_timeout, container_name, in_parallel, container_override, command_override)
     if not _bathy_parms:classifieron(container_name) then
         return
     end
@@ -176,7 +176,7 @@ local function runcontainer(output_table, _bathy_parms, container_timeout, conta
             local output_filename = string.format("%s/%s_%d.csv", crenv.container_shared_directory, container_name, i)              -- e.g. /data/openoceans_3.csv
             local container_command = command_override or string.format("/env/bin/python /%s/runner.py", container_name)
             local container_parms = {
-                image =  container_name,
+                image =  container_override or "oceaneyes",
                 command = string.format("%s %s %s %s %s", container_command, settings_filename, parameters_filename, input_filename, output_filename),
                 timeout = container_timeout,
                 parms = { [container_name..".json"] = parms[container_name] or {void=true} }
@@ -220,7 +220,7 @@ runcontainer(output_files, bathy_parms, timeout, "openoceans", false)
 runcontainer(output_files, bathy_parms, timeout, "pointnet2", false)
 
 -- execute coastnet bathy
-runcontainer(output_files, bathy_parms, timeout, "coastnet", false, "bash /bathy.sh")
+runcontainer(output_files, bathy_parms, timeout, "coastnet", false, "coastnet", "bash /bathy.sh")
 
 -- build final output
 local output_parms = parms[arrow.PARMS] or {
@@ -229,7 +229,7 @@ local output_parms = parms[arrow.PARMS] or {
     as_geo = false
 }
 local writer_parms = {
-    image =  "bathywriter",
+    image =  "oceaneyes",
     command = "/env/bin/python /atl24writer/runner.py /data/writer_settings.json",
     timeout = timeout,
     parms = { 

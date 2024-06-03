@@ -9,7 +9,7 @@ local bathy_mask_complete = false
 local uncertainty_lut_complete = true -- logic below needs it to be seeded to true
 local pointnet2_model_complete = false
 
-while sys.alive() and (not bathy_mask_complete) and (not uncertainty_lut_complete) and (not pointnet2_model_complete) do
+while sys.alive() and ((not bathy_mask_complete) or (not uncertainty_lut_complete) or (not pointnet2_model_complete)) do
 
     sys.log(core.INFO, "Initializing ATL24 processing environment...")
 
