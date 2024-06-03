@@ -226,6 +226,9 @@ oceaneyes-container-docker: ## create the coceaneyes container image
 	cp -R $(OCEANEYES_CONTAINER_DIR)/openoceans $(OCEANEYES_CONTAINER_STAGE_DIR)
 	cp -R $(OCEANEYES_CONTAINER_DIR)/pointnet2 $(OCEANEYES_CONTAINER_STAGE_DIR)
 	#
+	rsync -a $(COASTNET_CONTAINER_SOURCE_DIR) $(OCEANEYES_CONTAINER_STAGE_DIR) --exclude build --exclude .git
+	cp $(OCEANEYES_CONTAINER_DIR)/coastnet/* $(OCEANEYES_CONTAINER_STAGE_DIR)/coastnet
+	#
 	cp $(BATHYPATHFINDER_CONTAINER_SOURCE) $(OCEANEYES_CONTAINER_STAGE_DIR)/bathypathfinder
 	cp $(CSHELPH_CONTAINER_SOURCE) $(OCEANEYES_CONTAINER_STAGE_DIR)/cshelph
 	cp $(MEDIANFILTER_CONTAINER_SOURCE) $(OCEANEYES_CONTAINER_STAGE_DIR)/medianfilter
@@ -235,23 +238,10 @@ oceaneyes-container-docker: ## create the coceaneyes container image
 	docker tag $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(MAJOR_VERSION)
 	
 oceaneyes-container-test: ## run the oceaneyes container
-	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) /bin/bash #/env/bin/python /$(ATL24_ALGORITHM)/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv
-
-coastnet-container-docker: ## create the coastnet container image
-	-rm -Rf $(COASTNET_CONTAINER_STAGE_DIR)
-	mkdir -p $(COASTNET_CONTAINER_STAGE_DIR)
-	rsync -a $(COASTNET_CONTAINER_SOURCE_DIR) $(COASTNET_CONTAINER_STAGE_DIR)/coastnet --exclude build --exclude .git
-	cp $(COASTNET_CONTAINER_DIR)/Dockerfile $(COASTNET_CONTAINER_STAGE_DIR)
-	cp $(COASTNET_CONTAINER_DIR)/*.sh $(COASTNET_CONTAINER_STAGE_DIR)
-	cp $(COASTNET_CONTAINER_DIR)/*.py $(COASTNET_CONTAINER_STAGE_DIR)
-	cp $(COASTNET_CONTAINER_DIR)/CMakeLists.txt $(COASTNET_CONTAINER_STAGE_DIR)
-	cp $(COASTNET_CONTAINER_DIR)/Makefile $(COASTNET_CONTAINER_STAGE_DIR)
-	cd $(COASTNET_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(COASTNET_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/$(COASTNET_CONTAINER_NAME):latest $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION)
-	docker tag $(ECR)/$(COASTNET_CONTAINER_NAME):latest $(ECR)/$(COASTNET_CONTAINER_NAME):$(MAJOR_VERSION)
+	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) /env/bin/python /$(ATL24_ALGORITHM)/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv
 	
 coastnet-container-test: ## run the coastnet bathy docker container
-	docker run -it --rm -v /data:/data --name $(COASTNET_CONTAINER_NAME) $(ECR)/$(COASTNET_CONTAINER_NAME):$(VERSION) bash /coastnet/bathy.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/coastnet_3.csv
+	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) bash /coastnet/bathy.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/coastnet_3.csv
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
