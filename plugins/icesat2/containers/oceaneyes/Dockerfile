@@ -79,11 +79,12 @@ RUN /root/miniforge3/bin/mamba create --copy -p /env --file conda-linux-aarch64.
 RUN /env/bin/pip install torch fast_histogram
 
 # install applications
+COPY atl24refraction /atl24refraction
+COPY atl24writer /atl24writer
+COPY bathypathfinder /bathypathfinder
 COPY coastnet/surface.sh /coastnet
 COPY coastnet/bathy.sh /coastnet
 COPY coastnet/*.py /coastnet
-COPY atl24writer /atl24writer
-COPY bathypathfinder /bathypathfinder
 COPY cshelph /cshelph
 COPY medianfilter /medianfilter
 COPY openoceans /openoceans

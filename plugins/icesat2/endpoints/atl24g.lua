@@ -160,33 +160,33 @@ output_files["spot_photons"] = {}
 output_files["spot_granule"] = {}
 output_files["classifiers"] = {}
 
--- function: run container
-local function runcontainer(output_table, _bathy_parms, container_timeout, container_name, in_parallel, command_override)
-    if not _bathy_parms:classifieron(container_name) then
+-- function: run classifier
+local function runclassifier(output_table, _bathy_parms, container_timeout, name, in_parallel, command_override)
+    if not _bathy_parms:classifieron(name) then
         return
     end
     local start_time = time.gps()
-    output_table["classifiers"][container_name] = {}
+    output_table["classifiers"][name] = {}
     local container_list = {}
     for i = 1,icesat2.NUM_SPOTS do
         if _bathy_parms:spoton(i) then
-            local settings_filename = string.format("%s/%s.json", crenv.container_shared_directory, container_name)                 -- e.g. /data/openoceans.json
+            local settings_filename = string.format("%s/%s.json", crenv.container_shared_directory, name)                           -- e.g. /data/openoceans.json
             local parameters_filename = string.format("%s/%s_%d.json", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i)   -- e.g. /data/bathy_spot_3.json
             local input_filename = string.format("%s/%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i)         -- e.g. /data/bathy_spot_3.csv
-            local output_filename = string.format("%s/%s_%d.csv", crenv.container_shared_directory, container_name, i)              -- e.g. /data/openoceans_3.csv
-            local container_command = command_override or string.format("/env/bin/python /%s/runner.py", container_name)
+            local output_filename = string.format("%s/%s_%d.csv", crenv.container_shared_directory, name, i)                        -- e.g. /data/openoceans_3.csv
+            local container_command = command_override or string.format("/env/bin/python /%s/runner.py", name)
             local container_parms = {
                 image =  "oceaneyes",
                 command = string.format("%s %s %s %s %s", container_command, settings_filename, parameters_filename, input_filename, output_filename),
                 timeout = container_timeout,
-                parms = { [container_name..".json"] = parms[container_name] or {void=true} }
+                parms = { [name..".json"] = parms[name] or {void=true} }
             }
             local container = runner.execute(crenv, container_parms, rspq)
             table.insert(container_list, container)
             local spot_key = string.format("spot_%d", i)
             output_table["spot_photons"][spot_key] = input_filename
             output_table["spot_granule"][spot_key] = parameters_filename
-            output_table["classifiers"][container_name][spot_key] = output_filename
+            output_table["classifiers"][name][spot_key] = output_filename
             if not in_parallel then
                 runner.wait(container, container_timeout)
             end
@@ -198,29 +198,65 @@ local function runcontainer(output_table, _bathy_parms, container_timeout, conta
         end
     end
     local stop_time = time.gps()
-    userlog:alert(core.INFO, core.RTE_INFO, string.format("%s executed in %f seconds", container_name, (stop_time - start_time) / 1000.0))
+    userlog:alert(core.INFO, core.RTE_INFO, string.format("%s executed in %f seconds", name, (stop_time - start_time) / 1000.0))
+end
+
+-- function: run refraction correction
+local function runrefcorr(_bathy_parms, container_timeout, name, in_parallel, command_override)
+    local start_time = time.gps()
+    local container_list = {}
+    for i = 1,icesat2.NUM_SPOTS do
+        if _bathy_parms:spoton(i) then
+            local settings_filename = string.format("%s/%s.json", crenv.container_shared_directory, name)                           -- e.g. /data/openoceans.json
+            local parameters_filename = string.format("%s/%s_%d.json", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i)   -- e.g. /data/bathy_spot_3.json
+            local input_filename = string.format("%s/%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i)         -- e.g. /data/bathy_spot_3.csv
+            local output_filename = input_filename -- overwrite input with new values
+            local container_command = command_override or string.format("/env/bin/python /%s/runner.py", name)
+            local container_parms = {
+                image =  "oceaneyes",
+                command = string.format("%s %s %s %s %s", container_command, settings_filename, parameters_filename, input_filename, output_filename),
+                timeout = container_timeout,
+                parms = { [name..".json"] = parms[name] or {void=true} }
+            }
+            local container = runner.execute(crenv, container_parms, rspq)
+            table.insert(container_list, container)
+            if not in_parallel then
+                runner.wait(container, container_timeout)
+            end
+        end
+    end
+    if in_parallel then
+        for _,container in ipairs(container_list) do
+            runner.wait(container, container_timeout)
+        end
+    end
+    local stop_time = time.gps()
+    userlog:alert(core.INFO, core.RTE_INFO, string.format("%s executed in %f seconds", name, (stop_time - start_time) / 1000.0))
 end
 
 -- capture setup time
 userlog:alert(core.INFO, core.RTE_INFO, string.format("sliderule setup executed in %f seconds", (time.gps() - endpoint_start_time) / 1000.0))
 
 -- execute medialfilter bathy
-runcontainer(output_files, bathy_parms, timeout, "medianfilter", true)
+runclassifier(output_files, bathy_parms, timeout, "medianfilter", true)
 
 -- execute cshelph bathy
-runcontainer(output_files, bathy_parms, timeout, "cshelph",true)
+runclassifier(output_files, bathy_parms, timeout, "cshelph",true)
 
 -- execute bathypathfinder bathy
-runcontainer(output_files, bathy_parms, timeout, "bathypathfinder", true)
+runclassifier(output_files, bathy_parms, timeout, "bathypathfinder", true)
 
 -- execute openoceans
-runcontainer(output_files, bathy_parms, timeout, "openoceans", false)
+runclassifier(output_files, bathy_parms, timeout, "openoceans", false)
 
 -- execute pointnet2 bathy
-runcontainer(output_files, bathy_parms, timeout, "pointnet2", false)
+runclassifier(output_files, bathy_parms, timeout, "pointnet2", false)
 
 -- execute coastnet bathy
-runcontainer(output_files, bathy_parms, timeout, "coastnet", false, "bash /coastnet/bathy.sh")
+runclassifier(output_files, bathy_parms, timeout, "coastnet", false, "bash /coastnet/bathy.sh")
+
+-- perform refraction correction
+runrefcorr(bathy_parms, timeout, "atl24refraction", true)
 
 -- build final output
 local output_parms = parms[arrow.PARMS] or {

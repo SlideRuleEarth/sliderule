@@ -60,18 +60,15 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import pandas as pd
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
-from modeling_parallel import ModelMakerP # classes for modeling bathymetry from the profile
+
+from photon_refraction import photon_refraction
+
+import pandas as pd
+import numpy as np
 import sys
 import json
-
-############
-# CONSTANTS
-############
-
-NO_VALUE = -9999
 
 ##############
 # READ INPUTS
@@ -105,109 +102,54 @@ else:
     settings = {}
 
 # set configuration
-res_along_track = settings.get('res_along_track', 10) 
-res_z           = settings.get('res_z', 0.2)
-window_size     = settings.get('window_size', 11) # 3x overlap is not enough to filter bad daytime noise
-range_z         = settings.get('range_z', [-50, 30]) # include at least a few meters more than 5m above the surface for noise estimation, key for daytime case noise filtering
-verbose         = settings.get('verbose', False) # not really fully integrated, it's still going to print some recent debugging statements
-photon_bins     = settings.get('photon_bins', False)
-parallel        = settings.get('parallel', True)
-use_ndwi        = settings.get('use_ndwi', False)
-chunk_size      = settings.get('chunk_size', 65536) # number of photons to process at one time
+n1 = settings.get('n1', 1.00029) 
+n2 = settings.get('n2', 1.34116)
 
 # read info json
 with open(info_json, 'r') as json_file:
-    ph_info_all = json.load(json_file)
+    info = json.load(json_file)
 
 # read input csv
-ph_data_all = pd.read_csv(input_csv)
+data = pd.read_csv(input_csv)
 
-##################
-# BUILD DATAFRAME
-##################
+# calculation refraction corrections
+dE, dN, dZ = photon_refraction(data["surface_h"], data["geoid_corr_h"], data["ref_az"], data["ref_el"], n1, n2)
 
-ph_data = pd.DataFrame()
+# apply corrections
+data["dE"] = dE
+data["dN"] = dN
+data["dZ"] = dZ
+subaqueous = data["geoid_corr_h"] < data["surface_h"]
+data.loc[subaqueous, 'x_ph'] += data.loc[subaqueous, 'dE']
+data.loc[subaqueous, 'y_ph'] += data.loc[subaqueous, 'dN']
+data.loc[subaqueous, 'geoid_corr_h'] += data.loc[subaqueous, 'dZ']
 
-ph_data["photon_index"] = ph_data_all["index_ph"] # integer position of photon within the h5 file
-ph_data["x_ph"] = ph_data_all["x_atc"] - min(ph_data_all["x_atc"]) # total along track distance, normalized to the minimum value
-ph_data["z_ph"] = ph_data_all["geoid_corr_h"] # geoid-corrected photon height
-
-ph_data["quality_ph"] = ph_data_all["quality_ph"] # modelling_parallel.py needs thiss
-
-ph_data["classification"] = NO_VALUE
-ph_data["conf_background"] = NO_VALUE
-ph_data["conf_surface"] = NO_VALUE
-ph_data["conf_column"] = NO_VALUE
-ph_data["conf_bathymetry"] = NO_VALUE
-ph_data["subsurface_flag"] = NO_VALUE
-ph_data["weight_surface"] = NO_VALUE
-ph_data["weight_bathymetry"] = NO_VALUE
-
-# if ndwi is available, filter out land
-if use_ndwi and 'ndwi' in ph_data_all:
-    ph_data = ph_data[ph_data_all.ndwi > 0]
-
-print(ph_data)
-
-########################
-# BUILD INFO DICTIONARY
-########################
-
-beam_strength = {
-    1: "strong",
-    2: "weak",
-    3: "strong", 
-    4: "weak",
-    5: "strong",
-    6: "weak"
+# capture statistics
+data_corr = data[data["geoid_corr_h"] < data["surface_h"]]
+info["refraction"] = {
+    "dE": {
+        "min": data_corr["dE"].min(),
+        "max": data_corr["dE"].max(),
+        "avg": data_corr["dE"].mean()
+    },
+    "dN": {
+        "min": data_corr["dN"].min(),
+        "max": data_corr["dN"].max(),
+        "avg": data_corr["dN"].mean()
+    },
+    "dZ": {
+        "min": data_corr["dZ"].min(),
+        "max": data_corr["dZ"].max(),
+        "avg": data_corr["dZ"].mean()
+    },
+    "total_photons": len(data),
+    "subaqueous_photons": len(data_corr)
 }
+with open(info_json, 'w') as json_file:
+    json_file.write(json.dumps(info))
 
-ph_info = {'beam_strength': beam_strength[ph_info_all["spot"]]}
-print(ph_info)
-
-################
-# PROFILE CLASS
-################
-
-class Profile:
-    def __init__(self, data=None, info=None):
-        self.info = info
-        self.data = data
-        self.signal_finding = False
-        self.class_labels = {
-            "surface": 41,
-            "column": 45,
-            "bathymetry": 40,
-            "background": 1,
-            "unclassified": 0,
-            "none": 0,
-        }
-    def label_help(self, user_input=None):
-        return self.class_labels[user_input]
-
-################
-# EXECUTE MODEL
-################
-
-model_outputs = []
-for start_row in range(0, len(ph_data), chunk_size):
-    print(f'Processing rows {start_row} to {start_row + chunk_size} out of {len(ph_data)}')
-    p_sr = Profile(data=ph_data.iloc[start_row:start_row+chunk_size], info=ph_info)
-    mmp = ModelMakerP(res_along_track=res_along_track, res_z=res_z, window_size=window_size, range_z=range_z, verbose=verbose, photon_bins=photon_bins, parallel=parallel)
-    m = mmp.process(p_sr, n_cpu_cores=8)
-    model_outputs.append(m.profile.data)
-
-################
-# WRITE OUTPUTS
-################
-
-results = pd.concat(model_outputs, ignore_index=True)
-
-ph_out = pd.DataFrame()
-ph_out["index_ph"] = results.photon_index
-ph_out["class_ph"] = results.classification
-
+# output results
 if output_csv != None:
-    ph_out.to_csv(output_csv, index=False, columns=["index_ph", "class_ph"])
+    data.to_csv(output_csv, index=False)
 else:
-    print(ph_out.to_string(index=False, header=True, columns=['index_ph', 'class_ph']))
+    print(json.dumps(info, indent=4))

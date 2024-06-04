@@ -92,7 +92,7 @@ const RecordObject::fieldDef_t Atl03BathyReader::exRecDef[] = {
     {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS},
     {"utm_zone",        RecordObject::UINT8,    offsetof(extent_t, utm_zone),               1,  NULL, NATIVE_FLAGS},
     {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS},
-    {"surface_height",  RecordObject::FLOAT,    offsetof(extent_t, surface_height),         1,  NULL, NATIVE_FLAGS},
+    {"surface_h",       RecordObject::FLOAT,    offsetof(extent_t, surface_h),              1,  NULL, NATIVE_FLAGS},
     {"photons",         RecordObject::USER,     offsetof(extent_t, photons),                0,  phRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
 };
 
@@ -510,6 +510,7 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     solar_elevation     (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/solar_elevation").c_str(), &info->reader->context, 0, region.first_segment, region.num_segments),
     sigma_along         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/sigma_along").c_str(),     &info->reader->context, 0, region.first_segment, region.num_segments),
     sigma_across        (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/sigma_across").c_str(),    &info->reader->context, 0, region.first_segment, region.num_segments),
+    ref_azimuth         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/ref_azimuth").c_str(),     &info->reader->context, 0, region.first_segment, region.num_segments),
     ref_elev            (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/ref_elev").c_str(),        &info->reader->context, 0, region.first_segment, region.num_segments),
     geoid               (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geophys_corr/geoid").c_str(),          &info->reader->context, 0, region.first_segment, region.num_segments),
     dem_h               (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geophys_corr/dem_h").c_str(),          &info->reader->context, 0, region.first_segment, region.num_segments),
@@ -532,6 +533,7 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     solar_elevation.join(info->reader->read_timeout_ms, true);
     sigma_along.join(info->reader->read_timeout_ms, true);
     sigma_across.join(info->reader->read_timeout_ms, true);
+    ref_azimuth.join(info->reader->read_timeout_ms, true);
     ref_elev.join(info->reader->read_timeout_ms, true);
     geoid.join(info->reader->read_timeout_ms, true);
     dem_h.join(info->reader->read_timeout_ms, true);
@@ -792,10 +794,12 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     .y_atc = atl03.dist_ph_across[current_photon],
                     .background_rate = calculateBackground(current_segment, bckgrd_index, atl03),
                     .geoid_corr_h = atl03.h_ph[current_photon] - atl03.geoid[current_segment],
-                    .dem_h = atl03.dem_h[current_segment],
+                    .dem_h = atl03.dem_h[current_segment] - atl03.geoid[current_segment],
                     .sigma_along = atl03.sigma_along[current_segment],
                     .sigma_across = atl03.sigma_across[current_segment],
                     .solar_elevation = atl03.solar_elevation[current_segment],
+                    .ref_az = atl03.ref_azimuth[current_segment],
+                    .ref_el = atl03.ref_elev[current_segment],
                     .wind_v = wind_v,
                     .pointing_angle = pointing_angle,
                     .ndwi = ndwi,
@@ -906,7 +910,7 @@ extent->utm_zone);
                         }
 
                         /* Write Header */
-                        fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,background_rate,geoid_corr_h,dem_h,sigma_along,sigma_across,solar_elevation,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph,class_ph\n");
+                        fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,background_rate,surface_h,geoid_corr_h,dem_h,sigma_along,sigma_across,solar_elevation,ref_az,ref_el,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph,class_ph\n");
                     }
 
                     /* Write Data */
@@ -921,11 +925,14 @@ extent->utm_zone);
                         fprintf(out_file, "%lf,", extent->photons[i].x_atc);
                         fprintf(out_file, "%lf,", extent->photons[i].y_atc);
                         fprintf(out_file, "%lf,", extent->photons[i].background_rate);
+                        fprintf(out_file, "%f,", extent->surface_h);
                         fprintf(out_file, "%f,", extent->photons[i].geoid_corr_h);
                         fprintf(out_file, "%f,", extent->photons[i].dem_h);
                         fprintf(out_file, "%f,", extent->photons[i].sigma_along);
                         fprintf(out_file, "%f,", extent->photons[i].sigma_across);
                         fprintf(out_file, "%f,", extent->photons[i].solar_elevation);
+                        fprintf(out_file, "%f,", extent->photons[i].ref_az);
+                        fprintf(out_file, "%f,", extent->photons[i].ref_el);
                         fprintf(out_file, "%f,", extent->photons[i].wind_v);
                         fprintf(out_file, "%f,", extent->photons[i].pointing_angle);
                         fprintf(out_file, "%f,", extent->photons[i].ndwi);
@@ -1198,9 +1205,9 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     const double peak_stddev = (peak_width * sfparms.bin_size) / 2.35;
 
     /* calculate sea surface height and label sea surface photons */
-    extent->surface_height = min_h + (highest_peak_bin * sfparms.bin_size) + (sfparms.bin_size / 2.0);
-    const double min_surface_h = extent->surface_height - (peak_stddev * sfparms.surface_width_sigmas);
-    const double max_surface_h = extent->surface_height + (peak_stddev * sfparms.surface_width_sigmas);
+    extent->surface_h = min_h + (highest_peak_bin * sfparms.bin_size) + (sfparms.bin_size / 2.0);
+    const double min_surface_h = extent->surface_h - (peak_stddev * sfparms.surface_width_sigmas);
+    const double max_surface_h = extent->surface_h + (peak_stddev * sfparms.surface_width_sigmas);
     for(long i = 0; i < extent->photon_count; i++)
     {
         if( extent->photons[i].geoid_corr_h >= min_surface_h && 
