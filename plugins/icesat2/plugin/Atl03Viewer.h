@@ -167,6 +167,10 @@ class Atl03Viewer: public LuaObject
                 H5Array<double>     segment_delta_time;
                 H5Array<int32_t>    segment_id;
                 H5Array<double>     segment_dist_x;
+
+                H5Array<double>     ref_segment_lat;
+                H5Array<double>     ref_segment_lon;
+                H5Array<int32_t>    segment_ph_cnt;
         };
 
         /*--------------------------------------------------------------------

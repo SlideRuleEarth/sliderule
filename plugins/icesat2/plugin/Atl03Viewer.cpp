@@ -452,16 +452,30 @@ void Atl03Viewer::Region::rasterregion (info_t* info)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Viewer::Atl03Data::Atl03Data (info_t* info, const Region& region):
-    sc_orient           (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",                &info->reader->context),
-    segment_delta_time  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_id          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_id").c_str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_dist_x      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),  &info->reader->context, 0, region.first_segment, region.num_segments)
+    sc_orient           (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",                     &info->reader->context),
+    segment_delta_time  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),           &info->reader->context, 0, region.first_segment, region.num_segments),
+    segment_id          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_id").c_str(),           &info->reader->context, 0, region.first_segment, region.num_segments),
+    segment_dist_x      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),       &info->reader->context, 0, region.first_segment, region.num_segments),
+    ref_segment_lat     (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context, 0, region.first_segment, region.num_segments),
+    ref_segment_lon     (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context, 0, region.first_segment, region.num_segments),
+    segment_ph_cnt      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(),       &info->reader->context, 0, region.first_segment, region.num_segments)
 {
     /* Join Hardcoded Reads */
     sc_orient.join(info->reader->read_timeout_ms, true);
     segment_delta_time.join(info->reader->read_timeout_ms, true);
     segment_id.join(info->reader->read_timeout_ms, true);
     segment_dist_x.join(info->reader->read_timeout_ms, true);
+    ref_segment_lat.join(info->reader->read_timeout_ms, true);
+    ref_segment_lon.join(info->reader->read_timeout_ms, true);
+    segment_ph_cnt.join(info->reader->read_timeout_ms, true);
+
+    /* Sanity check for size of returned value arrays */
+    assert(region.num_segments == segment_delta_time.size);
+    assert(region.num_segments == ref_segment_lat.size);
+    assert(region.num_segments == ref_segment_lon.size);
+    assert(region.num_segments == segment_dist_x.size);
+    assert(region.num_segments == segment_id.size);
+    assert(region.num_segments == segment_ph_cnt.size);
 }
 
 /*----------------------------------------------------------------------------
@@ -479,7 +493,6 @@ void* Atl03Viewer::subsettingThread (void* parm)
     Atl03Viewer* reader = info->reader;
     stats_t local_stats = {0, 0, 0, 0};
 
-
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_viewsubsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
@@ -493,30 +506,30 @@ void* Atl03Viewer::subsettingThread (void* parm)
         const Atl03Data atl03(info, region);
 
         /* Increment Read Statistics */
-        local_stats.segments_read = region.segment_ph_cnt.size;
-
-        const uint32_t max_segments_per_extent = 256;
+        local_stats.segments_read = region.num_segments;
 
         /* Initialize Extent Counter */
         uint32_t extent_counter = 0;
 
         List<segment_t> segments;
 
+        const uint32_t max_segments_per_extent = 256;
+
         /* Traverse All Segments in Dataset */
         for(uint32_t s = 0; s < local_stats.segments_read; s++)
         {
+            /* Check for Termination */
+            if(!reader->active) break;
+
             const segment_t segment = {
                 .time_ns   = Icesat2Parms::deltatime2timestamp(atl03.segment_delta_time[s]),
-                .latitude  = region.segment_lat[s],
-                .longitude = region.segment_lon[s],
+                .latitude  = atl03.ref_segment_lat[s],
+                .longitude = atl03.ref_segment_lon[s],
                 .dist_x    = atl03.segment_dist_x[s],
                 .id        = static_cast<uint32_t>(atl03.segment_id[s]),
                 .ph_cnt    = static_cast<uint32_t>(region.segment_ph_cnt[s])
             };
             segments.add(segment);
-
-            /* Check for Termination */
-            if(!reader->active) break;
 
             const bool last_segment = (s == local_stats.segments_read - 1);
 
