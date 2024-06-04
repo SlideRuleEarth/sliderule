@@ -220,7 +220,7 @@ runcontainer(output_files, bathy_parms, timeout, "openoceans", false)
 runcontainer(output_files, bathy_parms, timeout, "pointnet2", false)
 
 -- execute coastnet bathy
-runcontainer(output_files, bathy_parms, timeout, "coastnet", false, "bash /bathy.sh")
+runcontainer(output_files, bathy_parms, timeout, "coastnet", false, "bash /coastnet/bathy.sh")
 
 -- build final output
 local output_parms = parms[arrow.PARMS] or {

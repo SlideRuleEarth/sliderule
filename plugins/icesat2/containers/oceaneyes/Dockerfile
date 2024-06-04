@@ -76,7 +76,8 @@ RUN wget https://github.com/conda-forge/miniforge/releases/latest/download/Minif
 COPY conda-linux-aarch64.lock .
 RUN /root/miniforge3/bin/mamba create --copy -p /env --file conda-linux-aarch64.lock \
     && /root/miniforge3/bin/conda clean -afy
-    
+RUN /env/bin/pip install torch fast_histogram
+
 # install applications
 COPY coastnet/surface.sh /coastnet
 COPY coastnet/bathy.sh /coastnet
