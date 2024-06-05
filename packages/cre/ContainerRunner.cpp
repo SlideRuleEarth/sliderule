@@ -55,7 +55,9 @@ const struct luaL_Reg ContainerRunner::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const char* ContainerRunner::SHARED_DIRECTORY = "/data";
+const char* ContainerRunner::SANDBOX_MOUNT = "/share";
+const char* ContainerRunner::HOST_MOUNT = "/data";
+const char* ContainerRunner::HOST_DIRECTORY = "/data";
 
 const char* ContainerRunner::REGISTRY = NULL;
 
@@ -139,15 +141,6 @@ int ContainerRunner::luaList (lua_State* L)
 
     /* Return */
     return returnLuaStatus(L, true, 4);
-}
-
-/*----------------------------------------------------------------------------
- * luaSettings - settings() -> shared directory
- *----------------------------------------------------------------------------*/
-int ContainerRunner::luaSettings (lua_State* L)
-{
-    lua_pushstring(L, SHARED_DIRECTORY);
-    return returnLuaStatus(L, true, 2);
 }
 
 /*----------------------------------------------------------------------------
@@ -246,7 +239,7 @@ int ContainerRunner::luaSetRegistry (lua_State* L)
 ContainerRunner::ContainerRunner (lua_State* L, CreParms* _parms, const char* host_shared_directory, const char* outq_name):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     outQ(NULL),
-    hostSharedDirectory(StringLib::duplicate(host_shared_directory))
+    hostSandboxDirectory(StringLib::duplicate(host_shared_directory))
 {
     assert(_parms);
     assert(host_shared_directory);
@@ -265,7 +258,7 @@ ContainerRunner::~ContainerRunner (void)
     active = false;
     delete controlPid;
     delete outQ;
-    delete [] hostSharedDirectory;
+    delete [] hostSandboxDirectory;
     parms->releaseLuaObject();
 }
 
@@ -307,7 +300,7 @@ void* ContainerRunner::controlThread (void* parm)
 
     /* Build Container Parameters */
     FString image("\"Image\": \"%s/%s\"", REGISTRY, cr->parms->image);
-    FString host_config("\"HostConfig\": {\"Binds\": [\"%s:%s\"]}", cr->hostSharedDirectory, SHARED_DIRECTORY);
+    FString host_config("\"HostConfig\": {\"Binds\": [\"%s:%s\", \"/data:/data\"]}", cr->hostSandboxDirectory, SANDBOX_MOUNT);
     FString data("{%s, %s, %s}", image.c_str(), host_config.c_str(), cmd.c_str());
 
     /* Create Container */

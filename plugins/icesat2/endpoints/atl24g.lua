@@ -110,14 +110,14 @@ userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL09 CMR search executed
 
 -- initialize container runtime environment
 local crenv = runner.setup()
-if not crenv.host_shared_directory then
+if not crenv.host_sandbox_directory then
     userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to initialize container runtime for %s", resource))
     return
 end
 
 -- read ICESat-2 inputs
 local bathy_parms   = icesat2.bathyparms(parms)
-local reader        = icesat2.atl03bathy(proc.asset, resource, args.result_q, bathy_parms, geo_parms, crenv.host_shared_directory, false)
+local reader        = icesat2.atl03bathy(proc.asset, resource, args.result_q, bathy_parms, geo_parms, crenv.host_sandbox_directory, false)
 local status        = georesource.waiton(resource, parms, nil, reader, nil, proc.sampler_disp, proc.userlog, false)
 if not status then
     userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to generate ATL03 bathy inputs for %s", resource))
@@ -127,30 +127,30 @@ end
 -- table of files being processed
 --  {
 --      "spot_photons": {
---          [1]: "/data/bathy_spot_1.csv",
---          [2]: "/data/bathy_spot_2.csv",
+--          [1]: "/share/bathy_spot_1.csv",
+--          [2]: "/share/bathy_spot_2.csv",
 --          ...
 --      }   
 --      "spot_granule": {
---          [1]: "/data/bathy_spot_1.json",
---          [2]: "/data/bathy_spot_2.json",
+--          [1]: "/share/bathy_spot_1.json",
+--          [2]: "/share/bathy_spot_2.json",
 --          ...
 --      }
 --      "classifiers": {
 --          "openoceans": {
---              [1]: "/data/openoceans_1.json",
---              [2]: "/data/openoceans_2.json",
+--              [1]: "/share/openoceans_1.json",
+--              [2]: "/share/openoceans_2.json",
 --              ...
 --          }   
 --          "medianfilter": {
---              [1]: "/data/medianfilter_1.json",
---              [2]: "/data/medianfilter_2.json",
+--              [1]: "/share/medianfilter_1.json",
+--              [2]: "/share/medianfilter_2.json",
 --              ...
 --          }   
 --          ...
 --          "ensemble": {
---              [1]: "/data/ensemble_1.json",
---              [2]: "/data/ensemble_2.json",
+--              [1]: "/share/ensemble_1.json",
+--              [2]: "/share/ensemble_2.json",
 --              ...
 --          }
 --      }
@@ -170,10 +170,10 @@ local function runclassifier(output_table, _bathy_parms, container_timeout, name
     local container_list = {}
     for i = 1,icesat2.NUM_SPOTS do
         if _bathy_parms:spoton(i) then
-            local settings_filename = string.format("%s/%s.json", crenv.container_shared_directory, name)                           -- e.g. /data/openoceans.json
-            local parameters_filename = string.format("%s/%s_%d.json", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i)   -- e.g. /data/bathy_spot_3.json
-            local input_filename = string.format("%s/%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i)         -- e.g. /data/bathy_spot_3.csv
-            local output_filename = string.format("%s/%s_%d.csv", crenv.container_shared_directory, name, i)                        -- e.g. /data/openoceans_3.csv
+            local settings_filename = string.format("%s/%s.json", crenv.container_sandbox_mount, name)                           -- e.g. /share/openoceans.json
+            local parameters_filename = string.format("%s/%s_%d.json", crenv.container_sandbox_mount, icesat2.BATHY_PREFIX, i)   -- e.g. /share/bathy_spot_3.json
+            local input_filename = string.format("%s/%s_%d.csv", crenv.container_sandbox_mount, icesat2.BATHY_PREFIX, i)         -- e.g. /share/bathy_spot_3.csv
+            local output_filename = string.format("%s/%s_%d.csv", crenv.container_sandbox_mount, name, i)                        -- e.g. /share/openoceans_3.csv
             local container_command = command_override or string.format("/env/bin/python /%s/runner.py", name)
             local container_parms = {
                 image =  "oceaneyes",
@@ -207,9 +207,9 @@ local function runrefcorr(_bathy_parms, container_timeout, name, in_parallel, co
     local container_list = {}
     for i = 1,icesat2.NUM_SPOTS do
         if _bathy_parms:spoton(i) then
-            local settings_filename = string.format("%s/%s.json", crenv.container_shared_directory, name)                           -- e.g. /data/openoceans.json
-            local parameters_filename = string.format("%s/%s_%d.json", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i)   -- e.g. /data/bathy_spot_3.json
-            local input_filename = string.format("%s/%s_%d.csv", crenv.container_shared_directory, icesat2.BATHY_PREFIX, i)         -- e.g. /data/bathy_spot_3.csv
+            local settings_filename = string.format("%s/%s.json", crenv.container_sandbox_mount, name)                           -- e.g. /share/openoceans.json
+            local parameters_filename = string.format("%s/%s_%d.json", crenv.container_sandbox_mount, icesat2.BATHY_PREFIX, i)   -- e.g. /share/bathy_spot_3.json
+            local input_filename = string.format("%s/%s_%d.csv", crenv.container_sandbox_mount, icesat2.BATHY_PREFIX, i)         -- e.g. /share/bathy_spot_3.csv
             local output_filename = input_filename -- overwrite input with new values
             local container_command = command_override or string.format("/env/bin/python /%s/runner.py", name)
             local container_parms = {
@@ -246,11 +246,11 @@ runclassifier(output_files, bathy_parms, timeout, "cshelph",true)
 -- execute bathypathfinder bathy
 runclassifier(output_files, bathy_parms, timeout, "bathypathfinder", true)
 
--- execute openoceans
-runclassifier(output_files, bathy_parms, timeout, "openoceans", false)
-
 -- execute pointnet2 bathy
 runclassifier(output_files, bathy_parms, timeout, "pointnet2", false)
+
+-- execute openoceans
+runclassifier(output_files, bathy_parms, timeout, "openoceans", false)
 
 -- execute coastnet bathy
 runclassifier(output_files, bathy_parms, timeout, "coastnet", false, "bash /coastnet/bathy.sh")
@@ -266,13 +266,13 @@ local output_parms = parms[arrow.PARMS] or {
 }
 local writer_parms = {
     image =  "oceaneyes",
-    command = "/env/bin/python /atl24writer/runner.py /data/writer_settings.json",
+    command = string.format("/env/bin/python /atl24writer/runner.py %s/writer_settings.json",  crenv.container_sandbox_mount),
     timeout = timeout,
     parms = { 
         ["writer_settings.json"] = {
             input_files = output_files,
             output_parms = output_parms,
-            atl24_filename = crenv.container_shared_directory.."/atl24.bin"
+            atl24_filename = crenv.container_sandbox_mount.."/atl24.bin"
         }
     }
 }
@@ -280,7 +280,7 @@ local container = runner.execute(crenv, writer_parms, rspq)
 runner.wait(container, timeout)
 
 -- send final output to user
-arrow.send2user(crenv.host_shared_directory.."/atl24.bin", arrow.parms(output_parms), rspq)
+arrow.send2user(crenv.host_sandbox_directory.."/atl24.bin", arrow.parms(output_parms), rspq)
 
 -- cleanup container runtime environment
 --runner.cleanup(crenv)

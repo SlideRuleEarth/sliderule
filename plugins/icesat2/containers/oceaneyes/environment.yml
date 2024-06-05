@@ -7,6 +7,8 @@ dependencies:
   - geopandas
   - pyarrow
   - h5py
+  - rasterio
+  - requests
   - networkx
   - scikit-learn
   - numba
