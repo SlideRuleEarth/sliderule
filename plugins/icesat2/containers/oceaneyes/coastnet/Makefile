@@ -1,4 +1,3 @@
-VIRTUAL_ENV = $(shell echo $$VIRTUAL_ENV)
 cmake_prefix_path=$(shell python -c 'import torch;print(torch.utils.cmake_prefix_path)')
 
 default:

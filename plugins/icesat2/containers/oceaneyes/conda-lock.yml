@@ -630,6 +630,18 @@ package:
     sha256: a7a998faf6b9ed71d8c5c67f996e7faa52a7b9b02ed2d2f2ab6cfa1db8e5aca4
   category: main
   optional: false
+- name: filelock
+  version: 3.14.0
+  manager: conda
+  platform: linux-aarch64
+  dependencies:
+    python: '>=3.7'
+  url: https://conda.anaconda.org/conda-forge/noarch/filelock-3.14.0-pyhd8ed1ab_0.conda
+  hash:
+    md5: 831d85ae0acfba31b8efd0f0d07da736
+    sha256: 6031be667e1b0cc0dee713f1cbca887cdee4daafa8bac478da33096f3147d38b
+  category: main
+  optional: false
 - name: fiona
   version: 1.9.6
   manager: conda
@@ -817,6 +829,18 @@ package:
     sha256: d1c1b82336de80f6b2045654ec980419520e32db9d54e75a41feb6180ab26c8a
   category: main
   optional: false
+- name: fsspec
+  version: 2024.6.0
+  manager: conda
+  platform: linux-aarch64
+  dependencies:
+    python: '>=3.8'
+  url: https://conda.anaconda.org/conda-forge/noarch/fsspec-2024.6.0-pyhff2d567_0.conda
+  hash:
+    md5: ad6af3f92e71b1579ac2362b6cf29105
+    sha256: 0c5a476ea0e82f9f7a1a0dbdb118eef2300addc0e25f6c1d1329d36e65002d5c
+  category: main
+  optional: false
 - name: gdal
   version: 3.8.5
   manager: conda
@@ -940,6 +964,36 @@ package:
   hash:
     md5: 70e70f34821c33530baeefd3ad1229bd
     sha256: 5b03faf3e29d277f03db2609399408182a2ee1af10986eed5a334e0d98f4e526
+  category: main
+  optional: false
+- name: gmp
+  version: 6.3.0
+  manager: conda
+  platform: linux-aarch64
+  dependencies:
+    libgcc-ng: '>=12'
+    libstdcxx-ng: '>=12'
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/gmp-6.3.0-h2f0025b_1.conda
+  hash:
+    md5: 0fdc64cdb43430acdca4d54fdfc64317
+    sha256: a839590a28ea9938e01e4a7fcf6d240611ef9a645c7b4cb6767c7b1397d06f22
+  category: main
+  optional: false
+- name: gmpy2
+  version: 2.1.5
+  manager: conda
+  platform: linux-aarch64
+  dependencies:
+    gmp: '>=6.3.0,<7.0a0'
+    libgcc-ng: '>=12'
+    mpc: '>=1.3.1,<2.0a0'
+    mpfr: '>=4.2.1,<5.0a0'
+    python: '>=3.12,<3.13.0a0'
+    python_abi: 3.12.*
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/gmpy2-2.1.5-py312h67287d2_1.conda
+  hash:
+    md5: f0dec8897b98a0b8040ea234675ea32b
+    sha256: f4b22a94d10e1899b4fdac767cc6398f322797b9e09c85dc2b765b806f7b7573
   category: main
   optional: false
 - name: h5py
@@ -1957,6 +2011,26 @@ package:
     sha256: 8f578c4e5acf94479b698aea284b2ebfeb32dc3ae99a60c7ef5e07c7003d98cc
   category: main
   optional: false
+- name: libtorch
+  version: 2.3.0
+  manager: conda
+  platform: linux-aarch64
+  dependencies:
+    _openmp_mutex: '>=4.5'
+    libabseil: '>=20240116.2,<20240117.0a0'
+    libcblas: '>=3.9.0,<4.0a0'
+    libgcc-ng: '>=12'
+    liblapack: '>=3.9.0,<4.0a0'
+    libprotobuf: '>=4.25.3,<4.25.4.0a0'
+    libstdcxx-ng: '>=12'
+    libuv: '>=1.48.0,<2.0a0'
+    sleef: '>=3.5.1,<4.0a0'
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libtorch-2.3.0-cpu_generic_had9af4b_1.conda
+  hash:
+    md5: b2e81e2dae6365ad9643aca99f52e8dd
+    sha256: 02551249bbd9a4aa624566c882e98b4710f8e5e460a7a1abe9d9d5afe32a78ad
+  category: main
+  optional: false
 - name: libutf8proc
   version: 2.8.0
   manager: conda
@@ -1979,6 +2053,18 @@ package:
   hash:
     md5: 000e30b09db0b7c775b21695dff30969
     sha256: 616277b0c5f7616c2cdf36f6c316ea3f9aa5bb35f2d4476a349ab58b9b91675f
+  category: main
+  optional: false
+- name: libuv
+  version: 1.48.0
+  manager: conda
+  platform: linux-aarch64
+  dependencies:
+    libgcc-ng: '>=12'
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libuv-1.48.0-h31becfc_0.conda
+  hash:
+    md5: 97f754b22f63a943345bd807e1d51e01
+    sha256: 8be03c6a43e17fdf574e2c29f1f8b917ba2842b5f4662b51d577960a3083fc2c
   category: main
   optional: false
 - name: libwebp-base
@@ -2182,6 +2268,45 @@ package:
     sha256: fff2dbb7712365b584433ad752afabff70d1617e51db03f0935fadd8273642ea
   category: main
   optional: false
+- name: mpc
+  version: 1.3.1
+  manager: conda
+  platform: linux-aarch64
+  dependencies:
+    gmp: '>=6.2.1,<7.0a0'
+    libgcc-ng: '>=12'
+    mpfr: '>=4.1.0,<5.0a0'
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/mpc-1.3.1-hf4c8f4c_0.conda
+  hash:
+    md5: 12c6ffaf337910c2d5743530baa313ab
+    sha256: 970e7e4a0b9e027189ba83f5829f4e062ec473c5fc47759b6d412429a2fa78b0
+  category: main
+  optional: false
+- name: mpfr
+  version: 4.2.1
+  manager: conda
+  platform: linux-aarch64
+  dependencies:
+    gmp: '>=6.3.0,<7.0a0'
+    libgcc-ng: '>=12'
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/mpfr-4.2.1-ha2d0fc4_1.conda
+  hash:
+    md5: c32a22a0daa21b7c4bc919a51c824d91
+    sha256: 0d94d90405fd8d07d8d0e9a6d8d9e0eb1264dcd07c1820f0d061bf9e6bff296b
+  category: main
+  optional: false
+- name: mpmath
+  version: 1.3.0
+  manager: conda
+  platform: linux-aarch64
+  dependencies:
+    python: '>=3.6'
+  url: https://conda.anaconda.org/conda-forge/noarch/mpmath-1.3.0-pyhd8ed1ab_0.conda
+  hash:
+    md5: dbf6e2d89137da32fa6670f3bffc024e
+    sha256: a4f025c712ec1502a55c471b56a640eaeebfce38dd497d5a1a33729014cac47a
+  category: main
+  optional: false
 - name: multiprocess
   version: 0.70.16
   manager: conda
@@ -2231,6 +2356,17 @@ package:
   hash:
     md5: d335fd5704b46f4efb89a6774e81aef0
     sha256: cbd8a6de87ad842e7665df38dcec719873fe74698bc761de5431047b8fada41a
+  category: main
+  optional: false
+- name: nomkl
+  version: '1.0'
+  manager: conda
+  platform: linux-aarch64
+  dependencies: {}
+  url: https://conda.anaconda.org/conda-forge/noarch/nomkl-1.0-h5ca1d4c_0.tar.bz2
+  hash:
+    md5: 9a66894dfd07c4510beb6b3f9672ccc0
+    sha256: d38542a151a90417065c1a234866f97fd1ea82a81de75ecb725955ab78f88b4b
   category: main
   optional: false
 - name: nspr
@@ -2712,6 +2848,37 @@ package:
     sha256: 4f4c3389b722cac9bf39183221332ab69e468351030ec5359042b50c5d975a15
   category: main
   optional: false
+- name: pytorch
+  version: 2.3.0
+  manager: conda
+  platform: linux-aarch64
+  dependencies:
+    _openmp_mutex: '>=4.5'
+    filelock: ''
+    fsspec: ''
+    jinja2: ''
+    libabseil: '>=20240116.2,<20240117.0a0'
+    libcblas: '>=3.9.0,<4.0a0'
+    libgcc-ng: '>=12'
+    liblapack: '>=3.9.0,<4.0a0'
+    libprotobuf: '>=4.25.3,<4.25.4.0a0'
+    libstdcxx-ng: '>=12'
+    libtorch: 2.3.0.*
+    libuv: '>=1.48.0,<2.0a0'
+    networkx: ''
+    nomkl: ''
+    numpy: '>=1.19,<3'
+    python: '>=3.12,<3.13.0a0'
+    python_abi: 3.12.*
+    sleef: '>=3.5.1,<4.0a0'
+    sympy: ''
+    typing_extensions: ''
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/pytorch-2.3.0-cpu_generic_py312haafecf0_1.conda
+  hash:
+    md5: 32706423b7c10fffbe250b34d2df5363
+    sha256: c42c3ec5346591b0e33ff387f9ed8cc6ef64651bb2dfafb70973dff96cda578d
+  category: main
+  optional: false
 - name: pytz
   version: '2024.1'
   manager: conda
@@ -2899,6 +3066,19 @@ package:
     sha256: a85c38227b446f42c5b90d9b642f2c0567880c15d72492d8da074a59c8f91dd6
   category: main
   optional: false
+- name: sleef
+  version: 3.5.1
+  manager: conda
+  platform: linux-aarch64
+  dependencies:
+    _openmp_mutex: '>=4.5'
+    libgcc-ng: '>=9.4.0'
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/sleef-3.5.1-h4f30969_2.tar.bz2
+  hash:
+    md5: 5e648d917d1affccfddbc0de0f807caa
+    sha256: c38431df3701927d4abb3bdcd27e21b200af68621b14cfdcf2b9324c31d2dcfa
+  category: main
+  optional: false
 - name: snappy
   version: 1.2.0
   manager: conda
@@ -2954,6 +3134,21 @@ package:
   hash:
     md5: 8350deffea73c5f0dfcf9b70a903331d
     sha256: d2d2a39dd8c6122e4b7755bcdd94ab2e9b0fb98cd165c996e7312f449127bc76
+  category: main
+  optional: false
+- name: sympy
+  version: '1.12'
+  manager: conda
+  platform: linux-aarch64
+  dependencies:
+    __unix: ''
+    gmpy2: '>=2.0.8'
+    mpmath: '>=0.19'
+    python: '>=3.8'
+  url: https://conda.anaconda.org/conda-forge/noarch/sympy-1.12-pypyh9d50eac_103.conda
+  hash:
+    md5: 2f7d6347d7acf6edf1ac7f2189f44c8f
+    sha256: 0025dd4e6411423903bf478d1b9fbff0cbbbe546f51c9375dfd6729ef2e1a1ac
   category: main
   optional: false
 - name: threadpoolctl
@@ -3023,6 +3218,18 @@ package:
   hash:
     md5: e74cd796e70a4261f86699ee0a3a7a24
     sha256: 75342f40a69e434a1a23003c3e254a95dca695fb14955bc32f1819cd503964b2
+  category: main
+  optional: false
+- name: typing_extensions
+  version: 4.12.1
+  manager: conda
+  platform: linux-aarch64
+  dependencies:
+    python: '>=3.8'
+  url: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.12.1-pyha770c72_0.conda
+  hash:
+    md5: 26d7ee34132362115093717c706c384c
+    sha256: c50d61fe29cd2752943358037ee1107a60b44b8d32c464d18308d668b6494573
   category: main
   optional: false
 - name: tzcode

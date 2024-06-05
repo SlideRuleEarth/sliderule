@@ -8,6 +8,7 @@ dependencies:
   - pyarrow
   - h5py
   - rasterio
+  - pytorch
   - requests
   - networkx
   - scikit-learn

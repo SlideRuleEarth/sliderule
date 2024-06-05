@@ -32,13 +32,14 @@ WORKDIR /
 RUN python3.9 -m venv venv \
     && source ./venv/bin/activate \
     && python -m pip install --upgrade pip \
-    && pip install torch numpy pandas
+    && pip install torch
 
 # build coastnet
+# -- added LD_LIBRARY_PATH; needed on 6/5/24, not sure why cmake doesnt set this properly
 COPY coastnet /coastnet
 RUN source /venv/bin/activate \
     && cd /coastnet \
-    && CC=clang CXX=clang++ make
+    && LD_LIBRARY_PATH=/venv/lib64/python3.9/site-packages/torch.libs CC=clang CXX=clang++ make
 
 #
 # RUNTIME
@@ -76,7 +77,7 @@ RUN wget https://github.com/conda-forge/miniforge/releases/latest/download/Minif
 COPY conda-linux-aarch64.lock .
 RUN /root/miniforge3/bin/mamba create --copy -p /env --file conda-linux-aarch64.lock \
     && /root/miniforge3/bin/conda clean -afy
-RUN /env/bin/pip install torch fast_histogram
+RUN /env/bin/pip install fast_histogram
 
 # install applications
 COPY atl24refraction /atl24refraction
@@ -91,6 +92,5 @@ COPY openoceans /openoceans
 COPY pointnet2 /pointnet2
 
 # container defaults
-RUN echo "source activate /env" > ~/.bashrc
 SHELL ["/bin/bash", "-c"]
 CMD ["/bin/bash"]
