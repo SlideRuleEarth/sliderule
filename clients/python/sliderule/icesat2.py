@@ -385,7 +385,7 @@ def atl06p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
         logger.critical(e)
         if rethrow_exceptions:
             raise
-    
+
     # Error Case
     return sliderule.emptyframe()
 
@@ -466,7 +466,7 @@ def atl06sp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fa
         logger.critical(e)
         if rethrow_exceptions:
             raise
-    
+
     # Error Case
     return sliderule.emptyframe()
 
@@ -541,7 +541,7 @@ def atl13sp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fa
         logger.critical(e)
         if rethrow_exceptions:
             raise
-    
+
     # Error Case
     return sliderule.emptyframe()
 
@@ -709,6 +709,137 @@ def atl03sp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
     return sliderule.emptyframe()
 
 #
+#  Viewer ATL03
+#
+def atl03v (parm, resource):
+    '''
+    Subsets ATL03 data given the polygon and time range provided and returns counts of photons in segments
+
+    Parameters
+    ----------
+        parms:      dict
+                    parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
+        resource:   str
+                    ATL03 HDF5 filename
+
+    Returns
+    -------
+    GeoDataFrame
+        ATL03 extents (see `Photon Segments </web/rtd/user_guide/ICESat-2.html#segmented-photon-data>`_)
+    '''
+    return atl03vp(parm, resources=[resource])
+
+#
+#  Parallel Viewer ATL03
+#
+def atl03vp(parm, callbacks={}, resources=None):
+    '''
+    Performs ATL03 subsetting in parallel on ATL03 data and returns counts of photons in segments.  Unlike the `atl03v <#atl03v>`_ function,
+    this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
+    is used to fetch all available resources from the CMR system automatically.
+
+    Warnings
+    --------
+        Note, it is often the case that the list of resources (i.e. granules) returned by the CMR system includes granules that come close, but
+        do not actually intersect the region of interest.  This is due to geolocation margin added to all CMR ICESat-2 resources in order to account
+        for the spacecraft off-pointing.  The consequence is that SlideRule will return no data for some of the resources and issue a warning statement to that effect; this can be ignored and indicates no issue with the data processing.
+
+    Parameters
+    ----------
+        parms:          dict
+                        parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
+        callbacks:      dictionary
+                        a callback function that is called for each result record
+        resources:      list
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_005_01.h5", ...])
+    Returns
+    -------
+    GeoDataFrame
+        ATL03 segments (see `Photon Segments </web/rtd/user_guide/ICESat-2.html#photon-segments>`_)
+    '''
+    try:
+        tstart = time.perf_counter()
+
+        # Build Request
+        rqst = __build_request(parm, resources)
+
+        # Make Request
+        rsps = sliderule.source("atl03vp", rqst, stream=True, callbacks=callbacks)
+
+        # Check for Output Options
+        if "output" in parm:
+            profiles[atl03vp.__name__] = time.perf_counter() - tstart
+            return sliderule.procoutputfile(parm, rsps)
+        else: # Native Output
+            # Flatten Responses
+            tstart_flatten = time.perf_counter()
+            columns = {}
+            sample_segment_record = None
+            extent_records = []
+            num_segments = 0
+            segment_dictionary = {}
+            if len(rsps) > 0:
+                # Sort Records
+                for rsp in rsps:
+                    if 'atl03vrec' in rsp['__rectype']:
+                        extent_records += rsp,
+                        num_segments += len(rsp['segments'])
+                        if sample_segment_record == None and len(rsp['segments']) > 0:
+                            sample_segment_record = rsp
+                # Build Segments Columns
+                if num_segments > 0:
+                    # Initialize Columns
+                    for field in sample_segment_record.keys():
+                        fielddef = sliderule.get_definition("atl03vrec", field)
+                        if len(fielddef) > 0 and field != "segments":
+                            columns[field] = numpy.empty(num_segments, fielddef["nptype"])
+                    for field in sample_segment_record["segments"][0].keys():
+                        fielddef = sliderule.get_definition("atl03vrec.segments", field)
+                        if len(fielddef) > 0:
+                            columns[field] = numpy.empty(num_segments, fielddef["nptype"])
+                    # Populate Columns
+                    seg_cnt = 0
+                    for record in extent_records:
+                        # For Each Segment in Extent
+                        for segment in record["segments"]:
+                            # Add per Extent Fields
+                            for field in record.keys():
+                                if field in columns:
+                                    columns[field][seg_cnt] = record[field]
+                            # Add per Segments Fields
+                            for field in segment.keys():
+                                if field in columns:
+                                    columns[field][seg_cnt] = segment[field]
+                            # Goto Next Segment
+                            seg_cnt += 1
+
+                    # Capture Time to Flatten
+                    profiles["flatten"] = time.perf_counter() - tstart_flatten
+
+                    # Create DataFrame
+                    gdf = sliderule.todataframe(columns)
+
+                    # Calculate Spot Column
+                    gdf['spot'] = __calcspot(gdf)
+
+                    # Return Response
+                    profiles[atl03vp.__name__] = time.perf_counter() - tstart
+                    return gdf
+                else:
+                    logger.debug("No segment counts returned")
+            else:
+                logger.debug("No response returned")
+
+    # Handle Runtime Errors
+    except RuntimeError as e:
+        logger.critical(e)
+        if rethrow_exceptions:
+            raise
+
+    # Error Case
+    return sliderule.emptyframe()
+
+#
 #  ATL08
 #
 def atl08 (parm, resource):
@@ -786,7 +917,7 @@ def atl08p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
         logger.critical(e)
         if rethrow_exceptions:
             raise
-    
+
     # Error Case
     return sliderule.emptyframe()
 

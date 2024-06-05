@@ -63,8 +63,6 @@ const RecordObject::fieldDef_t Atl03Viewer::exRecDef[] = {
     {"sc_orient",       RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
-    {"segment_cnt",     RecordObject::UINT64,   offsetof(extent_t, segment_cnt),            1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"segments",        RecordObject::USER,     offsetof(extent_t, segments),               0,  segRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
 };
 
@@ -115,7 +113,7 @@ int Atl03Viewer::luaCreate (lua_State* L)
 void Atl03Viewer::init (void)
 {
     RECDEF(segRecType,      segRecDef,      sizeof(segment_t),      NULL);
-    RECDEF(exRecType,       exRecDef,       sizeof(extent_t),       NULL /* "extent_id" */);
+    RECDEF(exRecType,       exRecDef,       sizeof(extent_t),       NULL);
 }
 
 /*----------------------------------------------------------------------------
@@ -154,7 +152,7 @@ Atl03Viewer::Atl03Viewer (lua_State* L, Asset* _asset, const char* _resource, co
 
     /* Clear Statistics */
     stats.segments_read     = 0;
-    stats.extents_sent      = 0;
+    stats.extents_filtered  = 0;
     stats.extents_dropped   = 0;
     stats.extents_retried   = 0;
 
@@ -491,7 +489,7 @@ void* Atl03Viewer::subsettingThread (void* parm)
     /* Get Thread Info */
     info_t* info = static_cast<info_t*>(parm);
     Atl03Viewer* reader = info->reader;
-    stats_t local_stats = {0, 0, 0, 0};
+    stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_viewsubsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
@@ -507,9 +505,6 @@ void* Atl03Viewer::subsettingThread (void* parm)
 
         /* Increment Read Statistics */
         local_stats.segments_read = region.num_segments;
-
-        /* Initialize Extent Counter */
-        uint32_t extent_counter = 0;
 
         List<segment_t> segments;
 
@@ -535,15 +530,12 @@ void* Atl03Viewer::subsettingThread (void* parm)
 
             if(segments.length() % max_segments_per_extent == 0 || last_segment)
             {
-                /* Generate Extent ID */
-                const uint64_t extent_id = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, extent_counter);
-
                 /* Build Extent Record */
                 vector<RecordObject*> rec_list;
                 try
                 {
                     int rec_total_size = 0;
-                    reader->generateExtentRecord(extent_id, info, segments, atl03, rec_list, rec_total_size);
+                    reader->generateExtentRecord(info, segments, atl03, rec_list, rec_total_size);
 
                     /* Send Records */
                     if(rec_list.size() == 1)
@@ -572,9 +564,6 @@ void* Atl03Viewer::subsettingThread (void* parm)
                     delete rec;
                 }
 
-                /* Bump Extent Counter */
-                extent_counter++;
-
                 /* Reset Segment List */
                 segments.clear();
             }
@@ -590,7 +579,10 @@ void* Atl03Viewer::subsettingThread (void* parm)
     {
         /* Update Statistics */
         reader->stats.segments_read += local_stats.segments_read;
+        reader->stats.extents_filtered += local_stats.extents_filtered;
         reader->stats.extents_sent += local_stats.extents_sent;
+        reader->stats.extents_dropped += local_stats.extents_dropped;
+        reader->stats.extents_retried += local_stats.extents_retried;
 
         /* Count Completion */
         reader->numComplete++;
@@ -634,7 +626,7 @@ void* Atl03Viewer::subsettingThread (void* parm)
 /*----------------------------------------------------------------------------
  * generateExtentRecord
  *----------------------------------------------------------------------------*/
-void Atl03Viewer::generateExtentRecord (uint64_t extent_id, const info_t* info,  List<segment_t>& segments, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size) const
+void Atl03Viewer::generateExtentRecord (const info_t* info,  List<segment_t>& segments, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size) const
 {
     /* Calculate Extent Record Size */
     const int num_segments = segments.length();
@@ -643,14 +635,12 @@ void Atl03Viewer::generateExtentRecord (uint64_t extent_id, const info_t* info, 
     /* Allocate and Initialize Extent Record */
     RecordObject* record            = new RecordObject(exRecType, extent_bytes);
     extent_t* extent                = reinterpret_cast<extent_t*>(record->getRecordData());
-    extent->extent_id               = extent_id;
     extent->region                  = start_region;
     extent->track                   = info->track;
     extent->pair                    = info->pair;
     extent->spacecraft_orientation  = atl03.sc_orient[0];
     extent->reference_ground_track  = start_rgt;
     extent->cycle                   = start_cycle;
-    extent->segment_cnt             = num_segments;
 
     /* Populate Segments */
     for(int32_t i = 0; i < num_segments; i++)
@@ -661,6 +651,8 @@ void Atl03Viewer::generateExtentRecord (uint64_t extent_id, const info_t* info, 
     /* Add Extent Record */
     total_size += record->getAllocatedMemory();
     rec_list.push_back(record);
+
+    // mlog(DEBUG, "Generated extent record for %s track %d.%d: %d segments", resource, info->track, info->pair, num_segments);
 }
 
 
@@ -835,10 +827,10 @@ int Atl03Viewer::luaStats (lua_State* L)
         /* Create Statistics Table */
         lua_newtable(L);
         LuaEngine::setAttrInt(L, "read",        lua_obj->stats.segments_read);
+        LuaEngine::setAttrInt(L, "filtered",    lua_obj->stats.extents_filtered);
         LuaEngine::setAttrInt(L, "sent",        lua_obj->stats.extents_sent);
         LuaEngine::setAttrInt(L, "dropped",     lua_obj->stats.extents_dropped);
         LuaEngine::setAttrInt(L, "retried",     lua_obj->stats.extents_retried);
-
         /* Clear if Requested */
         if(with_clear) memset(&lua_obj->stats, 0, sizeof(lua_obj->stats));
 

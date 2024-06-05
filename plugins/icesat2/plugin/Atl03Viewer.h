@@ -104,6 +104,7 @@ class Atl03Viewer: public LuaObject
         /* Statistics */
         typedef struct {
             uint32_t        segments_read;
+            uint32_t        extents_filtered;
             uint32_t        extents_sent;
             uint32_t        extents_dropped;
             uint32_t        extents_retried;
@@ -211,7 +212,7 @@ class Atl03Viewer: public LuaObject
 
         static void*        subsettingThread            (void* parm);
 
-        void                generateExtentRecord        (uint64_t extent_id, const info_t* info, List<segment_t>& segments, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size) const;
+        void                generateExtentRecord        (const info_t* info, List<segment_t>& segments, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size) const;
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
         static void         parseResource               (const char* resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region);
 
