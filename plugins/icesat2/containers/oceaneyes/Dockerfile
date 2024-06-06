@@ -81,6 +81,7 @@ RUN /env/bin/pip install fast_histogram
 
 # install applications
 COPY atl24refraction /atl24refraction
+COPY atl24uncertainty /atl24uncertainty
 COPY atl24writer /atl24writer
 COPY bathypathfinder /bathypathfinder
 COPY coastnet/surface.sh /coastnet

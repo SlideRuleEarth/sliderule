@@ -114,7 +114,8 @@ info["refraction"] = {
         "avg": data_corr["dZ"].mean()
     },
     "total_photons": len(data),
-    "subaqueous_photons": len(data_corr)
+    "subaqueous_photons": len(data_corr),
+    "maximum_depth": data_corr["depth"].max()
 }
 with open(info_json, 'w') as json_file:
     json_file.write(json.dumps(info))

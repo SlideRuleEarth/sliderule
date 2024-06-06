@@ -66,9 +66,7 @@ print("Read photon data into dataframes")
 # read in granule info as dictionary from json file and add to dataframes
 for spot in input_files["spot_granule"]:
     spot_table[spot]["info"] = json.load(open(input_files["spot_granule"][spot], 'r'))
-    for key in spot_table[spot]["info"]:
-        spot_table[spot]["df"][key] = spot_table[spot]["info"][key]
-print("Added metadata columns to dataframes")
+    print(json.dumps(spot_table[spot]["info"], indent=4))
 # read in photon classifications as dataframe from csv file and merge into dataframes
 for classifier in input_files["classifiers"]:
     for spot in input_files["classifiers"][classifier]:
@@ -128,12 +126,17 @@ else:
             spot_df = spot_table[spot]["df"]
             beam_group = hf.create_group(spot_info["beam"]) # e.g. gt1r, gt2l, etc.
             beam_group.create_dataset("index_ph", data=spot_df["index_ph"])            
+            beam_group.create_dataset("index_seg", data=spot_df["index_seg"])            
             spot_df["delta_time"] = (spot_df["time"] / 1000000000.0) - ATLAS_GPS_EPOCH
             beam_group.create_dataset("delta_time", data=spot_df["delta_time"])
-            beam_group.create_dataset("x_atc_corr", data=spot_df["x_atc"])
-            beam_group.create_dataset("y_atc_corr", data=spot_df["y_atc"])
-            beam_group.create_dataset("lat_corr", data=spot_df["latitude"])
-            beam_group.create_dataset("lon_corr", data=spot_df["longitude"])
+            beam_group.create_dataset("lat", data=spot_df["latitude"])
+            beam_group.create_dataset("lon", data=spot_df["longitude"])
+            beam_group.create_dataset("x_atc", data=spot_df["x_atc"])
+            beam_group.create_dataset("y_atc", data=spot_df["y_atc"])
+            beam_group.create_dataset("ortho_h", data=spot_df["geoid_corr_h"])
+            beam_group.create_dataset("depth", data=spot_df["depth"])
+            beam_group.create_dataset("sigma_thu", data=spot_df["sigma_thu"])
+            beam_group.create_dataset("sigma_tvu", data=spot_df["sigma_tvu"])
             if "ensemble" in spot_df:
                 beam_group.create_dataset("class_ph", data=spot_df["ensemble"].astype(np.int16))
             for classifier in input_files["classifiers"]:

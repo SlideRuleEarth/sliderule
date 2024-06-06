@@ -920,7 +920,7 @@ extent->utm_zone);
                         }
 
                         /* Write Header */
-                        fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,background_rate,surface_h,geoid_corr_h,dem_h,sigma_h,sigma_along,sigma_across,solar_elevation,ref_az,ref_el,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph,class_ph\n");
+                        fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,index_seg,background_rate,surface_h,geoid_corr_h,dem_h,sigma_h,sigma_along,sigma_across,solar_elevation,ref_az,ref_el,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph,class_ph\n");
                     }
 
                     /* Write Data */
@@ -934,6 +934,7 @@ extent->utm_zone);
                         fprintf(out_file, "%lf,", extent->photons[i].y_ph);
                         fprintf(out_file, "%lf,", extent->photons[i].x_atc);
                         fprintf(out_file, "%lf,", extent->photons[i].y_atc);
+                        fprintf(out_file, "%d,", extent->photons[i].index_seg);
                         fprintf(out_file, "%lf,", extent->photons[i].background_rate);
                         fprintf(out_file, "%f,", extent->surface_h);
                         fprintf(out_file, "%f,", extent->photons[i].geoid_corr_h);

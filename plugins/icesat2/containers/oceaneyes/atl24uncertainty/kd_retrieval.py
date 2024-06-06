@@ -61,6 +61,7 @@ import pandas as pd
 import warnings
 from datetime import datetime as dt
 import requests
+import os
 
 warnings.filterwarnings("ignore")
      
@@ -131,9 +132,13 @@ def get_kd_values(date, outpath = 'c:/temp', keep=False):
     else:
         file_out = kd_out + "/kd_490_temp.nc"
 
+    # quick check to see if file already exists
+    if os.path.exists(file_out):
+        return (file_out, True)
+
     # submit download request, if OK (no errors) wrtie the file out
     #   if no file, kill everything
-    
+
     r = requests.get(oc_file)
 
     if r.ok:

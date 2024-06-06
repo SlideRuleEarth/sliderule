@@ -201,8 +201,8 @@ local function runclassifier(output_table, _bathy_parms, container_timeout, name
     userlog:alert(core.INFO, core.RTE_INFO, string.format("%s executed in %f seconds", name, (stop_time - start_time) / 1000.0))
 end
 
--- function: run refraction correction
-local function runrefcorr(_bathy_parms, container_timeout, name, in_parallel, command_override)
+-- function: run processor (overwrites input csv file)
+local function runprocessor(_bathy_parms, container_timeout, name, in_parallel, command_override)
     local start_time = time.gps()
     local container_list = {}
     for i = 1,icesat2.NUM_SPOTS do
@@ -256,7 +256,10 @@ runclassifier(output_files, bathy_parms, timeout, "openoceans", false)
 runclassifier(output_files, bathy_parms, timeout, "coastnet", false, "bash /coastnet/bathy.sh")
 
 -- perform refraction correction
-runrefcorr(bathy_parms, timeout, "atl24refraction", true)
+runprocessor(bathy_parms, timeout, "atl24refraction", true)
+
+-- perform uncertainty calculations
+runprocessor(bathy_parms, timeout, "atl24uncertainty", true)
 
 -- build final output
 local output_parms = parms[arrow.PARMS] or {
