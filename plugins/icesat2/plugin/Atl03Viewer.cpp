@@ -521,39 +521,27 @@ void* Atl03Viewer::subsettingThread (void* parm)
 
             if(segments.length() % max_segments_per_extent == 0 || last_segment)
             {
-                /* Build Extent Record */
-                vector<RecordObject*> rec_list;
-                try
-                {
-                    int rec_total_size = 0;
-                    reader->generateExtentRecord(info, segments, atl03, rec_list, rec_total_size);
+                /* Calculate Extent Record Size */
+                const int batch_bytes = offsetof(extent_t, segments) + (sizeof(segment_t) * segments.length());
 
-                    /* Send Records */
-                    if(rec_list.size() == 1)
-                    {
-                        reader->postRecord(*(rec_list[0]), local_stats);
-                    }
-                    else if(rec_list.size() > 1)
-                    {
-                        /* Send Container Record */
-                        ContainerRecord container(rec_list.size(), rec_total_size);
-                        for(size_t i = 0; i < rec_list.size(); i++)
-                        {
-                            container.addRecord(*(rec_list[i]));
-                        }
-                        reader->postRecord(container, local_stats);
-                    }
-                }
-                catch(const RunTimeException& e)
+                /* Initialize Extent Record */
+                RecordObject record (batchRecType, batch_bytes);
+                extent_t* extent = reinterpret_cast<extent_t*>(record.getRecordData());
+                extent->region = reader->start_region;
+                extent->track = info->track;
+                extent->pair = info->pair;
+                extent->spot = Icesat2Parms::getSpotNumber(static_cast<Icesat2Parms::sc_orient_t>(atl03.sc_orient[0]),
+                                                           static_cast<Icesat2Parms::track_t>(info->track), info->pair);
+                extent->reference_ground_track = reader->start_rgt;
+                extent->cycle = reader->start_cycle;
+
+                /* Populate Segments */
+                for(int32_t i = 0; i < segments.length(); i++)
                 {
-                    alert(e.level(), e.code(), reader->outQ, &reader->active, "Error generating results for resource %s track %d.%d: %s", info->reader->resource, info->track, info->pair, e.what());
+                    extent->segments[i] = segments[i];
                 }
 
-                /* Clean Up Records */
-                for(const auto& rec : rec_list)
-                {
-                    delete rec;
-                }
+                reader->postRecord(record, local_stats);
 
                 /* Reset Segment List */
                 segments.clear();
@@ -613,40 +601,6 @@ void* Atl03Viewer::subsettingThread (void* parm)
     /* Return */
     return NULL;
 }
-
-/*----------------------------------------------------------------------------
- * generateExtentRecord
- *----------------------------------------------------------------------------*/
-void Atl03Viewer::generateExtentRecord (const info_t* info,  List<segment_t>& segments, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size) const
-{
-    /* Calculate Extent Record Size */
-    const int num_segments = segments.length();
-    const int extent_bytes = offsetof(extent_t, segments) + (sizeof(segment_t) * num_segments);
-
-    /* Allocate and Initialize Extent Record */
-    RecordObject* record            = new RecordObject(batchRecType, extent_bytes);
-    extent_t* extent                = reinterpret_cast<extent_t*>(record->getRecordData());
-    extent->region                  = start_region;
-    extent->track                   = info->track;
-    extent->pair                    = info->pair;
-    extent->spot                    = Icesat2Parms::getSpotNumber(static_cast<Icesat2Parms::sc_orient_t>(atl03.sc_orient[0]),
-                                                                  static_cast<Icesat2Parms::track_t>(info->track), info->pair);
-    extent->reference_ground_track  = start_rgt;
-    extent->cycle                   = start_cycle;
-
-    /* Populate Segments */
-    for(int32_t i = 0; i < num_segments; i++)
-    {
-        extent->segments[i] = segments[i];
-    }
-
-    /* Add Extent Record */
-    total_size += record->getAllocatedMemory();
-    rec_list.push_back(record);
-
-    // mlog(DEBUG, "Generated extent record for %s track %d.%d: %d segments", resource, info->track, info->pair, num_segments);
-}
-
 
 /*----------------------------------------------------------------------------
  * postRecord
