@@ -66,8 +66,8 @@ class Atl03Viewer: public LuaObject
         static const char* segRecType;
         static const RecordObject::fieldDef_t segRecDef[];
 
-        static const char* exRecType;
-        static const RecordObject::fieldDef_t exRecDef[];
+        static const char* batchRecType;
+        static const RecordObject::fieldDef_t batchRecDef[];
 
         static const char* OBJECT_TYPE;
 

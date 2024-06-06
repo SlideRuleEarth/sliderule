@@ -55,8 +55,8 @@ const RecordObject::fieldDef_t Atl03Viewer::segRecDef[] = {
     {"segment_ph_cnt",  RecordObject::UINT32,   offsetof(segment_t, ph_cnt),         1,  NULL, NATIVE_FLAGS}
 };
 
-const char* Atl03Viewer::exRecType = "atl03vrec";
-const RecordObject::fieldDef_t Atl03Viewer::exRecDef[] = {
+const char* Atl03Viewer::batchRecType = "atl03vrec";
+const RecordObject::fieldDef_t Atl03Viewer::batchRecDef[] = {
     {"region",          RecordObject::UINT8,    offsetof(extent_t, region),                 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"track",           RecordObject::UINT8,    offsetof(extent_t, track),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"pair",            RecordObject::UINT8,    offsetof(extent_t, pair),                   1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
@@ -113,7 +113,7 @@ int Atl03Viewer::luaCreate (lua_State* L)
 void Atl03Viewer::init (void)
 {
     RECDEF(segRecType,      segRecDef,      sizeof(segment_t),      NULL);
-    RECDEF(exRecType,       exRecDef,       sizeof(extent_t),       NULL);
+    RECDEF(batchRecType,    batchRecDef,    sizeof(extent_t),       NULL);
 }
 
 /*----------------------------------------------------------------------------
@@ -624,7 +624,7 @@ void Atl03Viewer::generateExtentRecord (const info_t* info,  List<segment_t>& se
     const int extent_bytes = offsetof(extent_t, segments) + (sizeof(segment_t) * num_segments);
 
     /* Allocate and Initialize Extent Record */
-    RecordObject* record            = new RecordObject(exRecType, extent_bytes);
+    RecordObject* record            = new RecordObject(batchRecType, extent_bytes);
     extent_t* extent                = reinterpret_cast<extent_t*>(record->getRecordData());
     extent->region                  = start_region;
     extent->track                   = info->track;
