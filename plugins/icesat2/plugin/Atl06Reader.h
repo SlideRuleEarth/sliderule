@@ -230,7 +230,6 @@ class Atl06Reader: public LuaObject
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
         static void         parseResource               (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
 
-        static int          luaParms                    (lua_State* L);
         static int          luaStats                    (lua_State* L);
 };
 

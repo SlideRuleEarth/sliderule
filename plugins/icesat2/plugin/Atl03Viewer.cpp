@@ -70,7 +70,6 @@ const RecordObject::fieldDef_t Atl03Viewer::batchRecDef[] = {
 const char* Atl03Viewer::OBJECT_TYPE = "Atl03Viewer";
 const char* Atl03Viewer::LUA_META_NAME = "Atl03Viewer";
 const struct luaL_Reg Atl03Viewer::LUA_META_TABLE[] = {
-    {"parms",       luaParms},
     {"stats",       luaStats},
     {NULL,          NULL}
 };
@@ -704,56 +703,6 @@ void Atl03Viewer::parseResource (const char* _resource, uint16_t& rgt, uint8_t& 
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Region from resource %s: %s", _resource, region_str);
     }
-}
-
-/*----------------------------------------------------------------------------
- * luaParms - :parms() --> {<key>=<value>, ...} containing parameters
- *----------------------------------------------------------------------------*/
-int Atl03Viewer::luaParms (lua_State* L)
-{
-    bool status = false;
-    int num_obj_to_return = 1;
-    Atl03Viewer* lua_obj = NULL;
-
-    try
-    {
-        /* Get Self */
-        lua_obj = dynamic_cast<Atl03Viewer*>(getLuaSelf(L, 1));
-    }
-    catch(const RunTimeException& e)
-    {
-        return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
-    }
-
-    try
-    {
-        /* Create Parameter Table */
-        lua_newtable(L);
-        LuaEngine::setAttrInt(L, Icesat2Parms::SURFACE_TYPE,         lua_obj->parms->surface_type);
-        LuaEngine::setAttrNum(L, Icesat2Parms::ALONG_TRACK_SPREAD,   lua_obj->parms->along_track_spread);
-        LuaEngine::setAttrInt(L, Icesat2Parms::MIN_PHOTON_COUNT,     lua_obj->parms->minimum_photon_count);
-        LuaEngine::setAttrNum(L, Icesat2Parms::EXTENT_LENGTH,        lua_obj->parms->extent_length);
-        LuaEngine::setAttrNum(L, Icesat2Parms::EXTENT_STEP,          lua_obj->parms->extent_step);
-        lua_pushstring(L, Icesat2Parms::ATL03_CNF);
-        lua_newtable(L);
-        for(int i = Icesat2Parms::CNF_POSSIBLE_TEP; i <= Icesat2Parms::CNF_SURFACE_HIGH; i++)
-        {
-            lua_pushboolean(L, lua_obj->parms->atl03_cnf[i + Icesat2Parms::SIGNAL_CONF_OFFSET]);
-            lua_rawseti(L, -2, i);
-        }
-        lua_settable(L, -3);
-
-        /* Set Success */
-        status = true;
-        num_obj_to_return = 2;
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error returning parameters %s: %s", lua_obj->getName(), e.what());
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status, num_obj_to_return);
 }
 
 /*----------------------------------------------------------------------------
