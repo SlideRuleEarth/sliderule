@@ -91,6 +91,10 @@ data.loc[subaqueous, 'x_ph'] += data.loc[subaqueous, 'dE']
 data.loc[subaqueous, 'y_ph'] += data.loc[subaqueous, 'dN']
 data.loc[subaqueous, 'geoid_corr_h'] += data.loc[subaqueous, 'dZ']
 
+# calculate subaqueous depth
+data["depth"] = 0.0
+data.loc[subaqueous, 'depth'] = data.loc[subaqueous, 'surface_h'] - data.loc[subaqueous, 'geoid_corr_h']
+
 # capture statistics
 data_corr = data[data["geoid_corr_h"] < data["surface_h"]]
 info["refraction"] = {
@@ -114,6 +118,11 @@ info["refraction"] = {
 }
 with open(info_json, 'w') as json_file:
     json_file.write(json.dumps(info))
+
+# remove intermediate columns
+del data["dE"]
+del data["dN"]
+del data["dZ"]
 
 # output results
 if output_csv != None:

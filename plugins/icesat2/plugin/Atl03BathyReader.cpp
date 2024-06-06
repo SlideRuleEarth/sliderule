@@ -71,6 +71,7 @@ const RecordObject::fieldDef_t Atl03BathyReader::phRecDef[] = {
     {"background_rate", RecordObject::DOUBLE,   offsetof(photon_t, background_rate),1,  NULL, NATIVE_FLAGS},
     {"geoid_corr_h",    RecordObject::FLOAT,    offsetof(photon_t, geoid_corr_h),   1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"dem_h",           RecordObject::FLOAT,    offsetof(photon_t, dem_h),          1,  NULL, NATIVE_FLAGS},
+    {"sigma_h",         RecordObject::FLOAT,    offsetof(photon_t, sigma_h),        1,  NULL, NATIVE_FLAGS},
     {"sigma_along",     RecordObject::FLOAT,    offsetof(photon_t, sigma_along),    1,  NULL, NATIVE_FLAGS},
     {"sigma_across",    RecordObject::FLOAT,    offsetof(photon_t, sigma_across),   1,  NULL, NATIVE_FLAGS},
     {"solar_elevation", RecordObject::FLOAT,    offsetof(photon_t, solar_elevation),1,  NULL, NATIVE_FLAGS},
@@ -218,7 +219,7 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
     try
     {
         /* Parse Globals (throws) */
-        parseResource(resource, start_rgt, start_cycle, start_region);
+        parseResource(resource, granule_date, start_rgt, start_cycle, start_region);
 
         /* Create Readers */
         for(int track = 1; track <= Icesat2Parms::NUM_TRACKS; track++)
@@ -508,6 +509,7 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     segment_delta_time  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
     segment_dist_x      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),  &info->reader->context, 0, region.first_segment, region.num_segments),
     solar_elevation     (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/solar_elevation").c_str(), &info->reader->context, 0, region.first_segment, region.num_segments),
+    sigma_h             (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/sigma_h").c_str(),         &info->reader->context, 0, region.first_segment, region.num_segments),
     sigma_along         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/sigma_along").c_str(),     &info->reader->context, 0, region.first_segment, region.num_segments),
     sigma_across        (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/sigma_across").c_str(),    &info->reader->context, 0, region.first_segment, region.num_segments),
     ref_azimuth         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/ref_azimuth").c_str(),     &info->reader->context, 0, region.first_segment, region.num_segments),
@@ -531,6 +533,7 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     segment_delta_time.join(info->reader->read_timeout_ms, true);
     segment_dist_x.join(info->reader->read_timeout_ms, true);
     solar_elevation.join(info->reader->read_timeout_ms, true);
+    sigma_h.join(info->reader->read_timeout_ms, true);
     sigma_along.join(info->reader->read_timeout_ms, true);
     sigma_across.join(info->reader->read_timeout_ms, true);
     ref_azimuth.join(info->reader->read_timeout_ms, true);
@@ -795,6 +798,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     .background_rate = calculateBackground(current_segment, bckgrd_index, atl03),
                     .geoid_corr_h = atl03.h_ph[current_photon] - atl03.geoid[current_segment],
                     .dem_h = atl03.dem_h[current_segment] - atl03.geoid[current_segment],
+                    .sigma_h = atl03.sigma_h[current_segment],
                     .sigma_along = atl03.sigma_along[current_segment],
                     .sigma_across = atl03.sigma_across[current_segment],
                     .solar_elevation = atl03.solar_elevation[current_segment],
@@ -882,18 +886,24 @@ FString json_contents(R"json({
 "pair": %d,
 "beam": "gt%d%c",
 "spot": %d,
-"region": %d,
+"year": %d,
+"month": %d,
+"day": %d,
 "rgt": %d,
 "cycle": %d,
+"region": %d,
 "utm_zone": %d
 })json",
 extent->track,
 extent->pair,
 extent->track, extent->pair == 0 ? 'l' : 'r',
 extent->spot,
-extent->region,
+reader->granule_date.year,
+reader->granule_date.month,
+reader->granule_date.day,
 extent->reference_ground_track,
 extent->cycle,
+extent->region,
 extent->utm_zone);
 
                         /* Write and Close JSON File */
@@ -910,7 +920,7 @@ extent->utm_zone);
                         }
 
                         /* Write Header */
-                        fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,background_rate,surface_h,geoid_corr_h,dem_h,sigma_along,sigma_across,solar_elevation,ref_az,ref_el,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph,class_ph\n");
+                        fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,background_rate,surface_h,geoid_corr_h,dem_h,sigma_h,sigma_along,sigma_across,solar_elevation,ref_az,ref_el,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph,class_ph\n");
                     }
 
                     /* Write Data */
@@ -928,6 +938,7 @@ extent->utm_zone);
                         fprintf(out_file, "%f,", extent->surface_h);
                         fprintf(out_file, "%f,", extent->photons[i].geoid_corr_h);
                         fprintf(out_file, "%f,", extent->photons[i].dem_h);
+                        fprintf(out_file, "%f,", extent->photons[i].sigma_h);
                         fprintf(out_file, "%f,", extent->photons[i].sigma_along);
                         fprintf(out_file, "%f,", extent->photons[i].sigma_across);
                         fprintf(out_file, "%f,", extent->photons[i].solar_elevation);
@@ -1273,17 +1284,66 @@ double Atl03BathyReader::calculateBackground (int32_t current_segment, int32_t& 
  *      vvv     - version
  *      ee      - revision
  *----------------------------------------------------------------------------*/
-void Atl03BathyReader::parseResource (const char* _resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region)
+void Atl03BathyReader::parseResource (const char* _resource, TimeLib::date_t& date, uint16_t& rgt, uint8_t& cycle, uint8_t& region)
 {
+    long val;
+
     if(StringLib::size(_resource) < 29)
     {
         rgt = 0;
         cycle = 0;
         region = 0;
+        date.year = 0;
+        date.month = 0;
+        date.day = 0;
         return; // early exit on error
     }
 
-    long val;
+    /* get year */
+    char year_str[5];
+    year_str[0] = _resource[6];
+    year_str[1] = _resource[7];
+    year_str[2] = _resource[8];
+    year_str[3] = _resource[9];
+    year_str[4] = '\0';
+    if(StringLib::str2long(year_str, &val, 10))
+    {
+        date.year = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse year from resource %s: %s", _resource, year_str);
+    }
+
+    /* get month */
+    char month_str[3];
+    month_str[0] = _resource[10];
+    month_str[1] = _resource[11];
+    month_str[2] = '\0';
+    if(StringLib::str2long(month_str, &val, 10))
+    {
+        date.month = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse month from resource %s: %s", _resource, month_str);
+    }
+
+    /* get month */
+    char day_str[3];
+    day_str[0] = _resource[12];
+    day_str[1] = _resource[13];
+    day_str[2] = '\0';
+    if(StringLib::str2long(day_str, &val, 10))
+    {
+        date.day = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse day from resource %s: %s", _resource, day_str);
+    }
+
+    /* get RGT */
     char rgt_str[5];
     rgt_str[0] = _resource[21];
     rgt_str[1] = _resource[22];
@@ -1299,6 +1359,7 @@ void Atl03BathyReader::parseResource (const char* _resource, uint16_t& rgt, uint
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse RGT from resource %s: %s", _resource, rgt_str);
     }
 
+    /* get cycle */
     char cycle_str[3];
     cycle_str[0] = _resource[25];
     cycle_str[1] = _resource[26];
@@ -1312,6 +1373,7 @@ void Atl03BathyReader::parseResource (const char* _resource, uint16_t& rgt, uint
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Cycle from resource %s: %s", _resource, cycle_str);
     }
 
+    /* get region */
     char region_str[3];
     region_str[0] = _resource[27];
     region_str[1] = _resource[28];
