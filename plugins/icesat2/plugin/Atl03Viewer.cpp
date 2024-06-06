@@ -60,7 +60,7 @@ const RecordObject::fieldDef_t Atl03Viewer::exRecDef[] = {
     {"region",          RecordObject::UINT8,    offsetof(extent_t, region),                 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"track",           RecordObject::UINT8,    offsetof(extent_t, track),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"pair",            RecordObject::UINT8,    offsetof(extent_t, pair),                   1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"sc_orient",       RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"spot",            RecordObject::UINT8,    offsetof(extent_t, spot),                   1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"segments",        RecordObject::USER,     offsetof(extent_t, segments),               0,  segRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
@@ -135,16 +135,6 @@ Atl03Viewer::Atl03Viewer (lua_State* L, Asset* _asset, const char* _resource, co
     asset = _asset;
     resource = StringLib::duplicate(_resource);
     parms = _parms;
-
-    /* Set Signal Confidence Index */
-    if(parms->surface_type == Icesat2Parms::SRT_DYNAMIC)
-    {
-        signalConfColIndex = H5Coro::ALL_COLS;
-    }
-    else
-    {
-        signalConfColIndex = static_cast<int>(parms->surface_type);
-    }
 
     /* Create Publisher */
     outQ = new Publisher(outq_name);
@@ -467,13 +457,14 @@ Atl03Viewer::Atl03Data::Atl03Data (info_t* info, const Region& region):
     ref_segment_lon.join(info->reader->read_timeout_ms, true);
     segment_ph_cnt.join(info->reader->read_timeout_ms, true);
 
-    /* Sanity check for size of returned value arrays */
-    assert(region.num_segments == segment_delta_time.size);
-    assert(region.num_segments == ref_segment_lat.size);
-    assert(region.num_segments == ref_segment_lon.size);
-    assert(region.num_segments == segment_dist_x.size);
-    assert(region.num_segments == segment_id.size);
-    assert(region.num_segments == segment_ph_cnt.size);
+    /* Sanity check for size of all returned value arrays */
+    const long scnt = region.num_segments != -1 ? region.num_segments : segment_delta_time.size;
+    assert(scnt == segment_delta_time.size);
+    assert(scnt == ref_segment_lat.size);
+    assert(scnt == ref_segment_lon.size);
+    assert(scnt == segment_dist_x.size);
+    assert(scnt == segment_id.size);
+    assert(scnt == segment_ph_cnt.size);
 }
 
 /*----------------------------------------------------------------------------
@@ -638,7 +629,8 @@ void Atl03Viewer::generateExtentRecord (const info_t* info,  List<segment_t>& se
     extent->region                  = start_region;
     extent->track                   = info->track;
     extent->pair                    = info->pair;
-    extent->spacecraft_orientation  = atl03.sc_orient[0];
+    extent->spot                    = Icesat2Parms::getSpotNumber(static_cast<Icesat2Parms::sc_orient_t>(atl03.sc_orient[0]),
+                                                                  static_cast<Icesat2Parms::track_t>(info->track), info->pair);
     extent->reference_ground_track  = start_rgt;
     extent->cycle                   = start_cycle;
 

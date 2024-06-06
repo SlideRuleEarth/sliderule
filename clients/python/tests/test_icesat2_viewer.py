@@ -12,10 +12,12 @@ region = [ { "lat": -80.75, "lon": -70.00 },
            { "lat": -80.75, "lon": -65.00 },
            { "lat": -80.75, "lon": -70.00 } ]
 
+parms = { "poly": region,
+          "track": 1 }
+
 def assert_gdf(gdf):
     assert min(gdf["pair"]) == 0
     assert min(gdf["region"]) == 11
-    assert min(gdf["sc_orient"]) == 1
     assert min(gdf["cycle"]) == 1
     assert min(gdf["track"]) == 1
     assert min(gdf["rgt"]) == 315
@@ -30,15 +32,6 @@ def assert_gdf(gdf):
 @pytest.mark.network
 class TestAlgorithm:
     def test_atl03v(self, init, performance):
-        parms = { "poly": region,
-                  "track": 1,
-                  "cnf": 0,
-                  "pass_invalid": True,
-                  "ats": 10.0,
-                  "cnt": 5,
-                  "len": 20.0,
-                  "res": 20.0,
-                  "maxi": 1 }
         perf_start = time.perf_counter()
         gdf = icesat2.atl03v(parms, resource)
         assert init
@@ -46,8 +39,6 @@ class TestAlgorithm:
         assert not performance or (time.perf_counter() - perf_start) < 40
 
     def test_atl03vp(self, init, performance):
-        parms = { "poly": region,
-                  "track": 1 }
         perf_start = time.perf_counter()
         gdf = icesat2.atl03vp(parms, resources=[resource])
         assert init

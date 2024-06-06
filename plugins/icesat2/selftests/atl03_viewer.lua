@@ -25,15 +25,15 @@ print('\n------------------\nTest01: Atl03 Viewer Extent Record\n---------------
 
 local recq = msg.subscribe("atl03-reader-recq")
 local tstart = time.latch()
-local f1 = icesat2.atl03v(nsidc_s3, "ATL03_20200304065203_10470605_005_01.h5", "atl03-reader-recq", icesat2.parms({cnf=4, track=icesat2.RPT_1}))
+local f1 = icesat2.atl03v(nsidc_s3, "ATL03_20200304065203_10470605_005_01.h5", "atl03-reader-recq", icesat2.parms({track=icesat2.RPT_1}))
 local extentrec = recq:recvrecord(15000)
 print("Time to execute: "..tostring(time.latch() - tstart))
 
 runner.check(extentrec, "Failed to read an extent record")
 
+
 if extentrec then
     runner.check(extentrec:getvalue("track") == 1, extentrec:getvalue("track"))
-    runner.check(extentrec:getvalue("segment_cnt") == 256, extentrec:getvalue("segment_cnt"))
     runner.check(extentrec:getvalue("segments[0].segment_id") == 555764, extentrec:getvalue("segments[0].segment_id"))
 
     -- NOTE: there is a bug in LuaLibraryMsg.cpp::getvalue() that does not handle array indices
@@ -42,11 +42,6 @@ if extentrec then
     print("segment   0", extentrec:getvalue("segments[0].segment_id"))
     print("segment  10", extentrec:getvalue("segments[10].segment_id"))
     print("segment 100", extentrec:getvalue("segments[100].segment_id"))
-
-    local t1 = extentrec:tabulate()
-    runner.check(t1.track == 1, extentrec:getvalue("track"))
-    runner.check(t1.segment_cnt == 256, extentrec:getvalue("segment_cnt"))
-    -- runner.check(t1.segments[1].segment_id == extentrec:getvalue("segments[0].segment_id"))
 end
 
 print('\n------------------\nTest02: Atl03 Viewer Extent Definition\n------------------')

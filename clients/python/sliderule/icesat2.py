@@ -819,9 +819,6 @@ def atl03vp(parm, callbacks={}, resources=None):
                     # Create DataFrame
                     gdf = sliderule.todataframe(columns)
 
-                    # Calculate Spot Column
-                    gdf['spot'] = __calcspot(gdf)
-
                     # Return Response
                     profiles[atl03vp.__name__] = time.perf_counter() - tstart
                     return gdf

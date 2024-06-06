@@ -93,11 +93,10 @@ class Atl03Viewer: public LuaObject
             uint8_t         region;
             uint8_t         track; // 1, 2, or 3
             uint8_t         pair; // 0 (l), 1 (r)
-            uint8_t         spacecraft_orientation; // sc_orient_t
+            uint8_t         spot; // 1 to 6
             uint16_t        reference_ground_track;
             uint8_t         cycle;
             uint64_t        extent_id;
-            uint64_t        segment_cnt;
             segment_t       segments[]; // zero length field
         } extent_t;
 
@@ -194,7 +193,6 @@ class Atl03Viewer: public LuaObject
         const int           read_timeout_ms;
         Publisher*          outQ;
         Icesat2Parms*       parms;
-        int                 signalConfColIndex;
         stats_t             stats;
 
         H5Coro::context_t   context; // for ATL03 file
