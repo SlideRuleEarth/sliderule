@@ -63,6 +63,7 @@ const RecordObject::fieldDef_t Atl03Viewer::batchRecDef[] = {
     {"spot",            RecordObject::UINT8,    offsetof(extent_t, spot),                   1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
     {"segments",        RecordObject::USER,     offsetof(extent_t, segments),               0,  segRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
 };
 
@@ -501,6 +502,9 @@ void* Atl03Viewer::subsettingThread (void* parm)
 
         const uint32_t max_segments_per_extent = 256;
 
+        /* Initialize Extent Counter */
+        uint32_t extent_counter = 0;
+
         /* Traverse All Segments in Dataset */
         for(uint32_t s = 0; s < local_stats.segments_read; s++)
         {
@@ -521,6 +525,8 @@ void* Atl03Viewer::subsettingThread (void* parm)
 
             if(segments.length() % max_segments_per_extent == 0 || last_segment)
             {
+                /* Generate Extent ID */
+
                 /* Calculate Extent Record Size */
                 const int batch_bytes = offsetof(extent_t, segments) + (sizeof(segment_t) * segments.length());
 
@@ -534,6 +540,7 @@ void* Atl03Viewer::subsettingThread (void* parm)
                                                            static_cast<Icesat2Parms::track_t>(info->track), info->pair);
                 extent->reference_ground_track = reader->start_rgt;
                 extent->cycle = reader->start_cycle;
+                extent->extent_id = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, extent_counter);
 
                 /* Populate Segments */
                 for(int32_t i = 0; i < segments.length(); i++)
@@ -545,6 +552,9 @@ void* Atl03Viewer::subsettingThread (void* parm)
 
                 /* Reset Segment List */
                 segments.clear();
+
+                /* Bump Extent Counter */
+                extent_counter++;
             }
         }
     }
