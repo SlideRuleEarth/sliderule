@@ -71,6 +71,7 @@ const RecordObject::fieldDef_t Atl03BathyReader::phRecDef[] = {
     {"background_rate", RecordObject::DOUBLE,   offsetof(photon_t, background_rate),1,  NULL, NATIVE_FLAGS},
     {"geoid_corr_h",    RecordObject::FLOAT,    offsetof(photon_t, geoid_corr_h),   1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"dem_h",           RecordObject::FLOAT,    offsetof(photon_t, dem_h),          1,  NULL, NATIVE_FLAGS},
+    {"sigma_h",         RecordObject::FLOAT,    offsetof(photon_t, sigma_h),        1,  NULL, NATIVE_FLAGS},
     {"sigma_along",     RecordObject::FLOAT,    offsetof(photon_t, sigma_along),    1,  NULL, NATIVE_FLAGS},
     {"sigma_across",    RecordObject::FLOAT,    offsetof(photon_t, sigma_across),   1,  NULL, NATIVE_FLAGS},
     {"solar_elevation", RecordObject::FLOAT,    offsetof(photon_t, solar_elevation),1,  NULL, NATIVE_FLAGS},
@@ -92,7 +93,7 @@ const RecordObject::fieldDef_t Atl03BathyReader::exRecDef[] = {
     {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS},
     {"utm_zone",        RecordObject::UINT8,    offsetof(extent_t, utm_zone),               1,  NULL, NATIVE_FLAGS},
     {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS},
-    {"surface_height",  RecordObject::FLOAT,    offsetof(extent_t, surface_height),         1,  NULL, NATIVE_FLAGS},
+    {"surface_h",       RecordObject::FLOAT,    offsetof(extent_t, surface_h),              1,  NULL, NATIVE_FLAGS},
     {"photons",         RecordObject::USER,     offsetof(extent_t, photons),                0,  phRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
 };
 
@@ -218,7 +219,7 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
     try
     {
         /* Parse Globals (throws) */
-        parseResource(resource, start_rgt, start_cycle, start_region);
+        parseResource(resource, granule_date, start_rgt, start_cycle, start_region);
 
         /* Create Readers */
         for(int track = 1; track <= Icesat2Parms::NUM_TRACKS; track++)
@@ -508,8 +509,10 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     segment_delta_time  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
     segment_dist_x      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),  &info->reader->context, 0, region.first_segment, region.num_segments),
     solar_elevation     (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/solar_elevation").c_str(), &info->reader->context, 0, region.first_segment, region.num_segments),
+    sigma_h             (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/sigma_h").c_str(),         &info->reader->context, 0, region.first_segment, region.num_segments),
     sigma_along         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/sigma_along").c_str(),     &info->reader->context, 0, region.first_segment, region.num_segments),
     sigma_across        (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/sigma_across").c_str(),    &info->reader->context, 0, region.first_segment, region.num_segments),
+    ref_azimuth         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/ref_azimuth").c_str(),     &info->reader->context, 0, region.first_segment, region.num_segments),
     ref_elev            (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/ref_elev").c_str(),        &info->reader->context, 0, region.first_segment, region.num_segments),
     geoid               (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geophys_corr/geoid").c_str(),          &info->reader->context, 0, region.first_segment, region.num_segments),
     dem_h               (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geophys_corr/dem_h").c_str(),          &info->reader->context, 0, region.first_segment, region.num_segments),
@@ -530,8 +533,10 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     segment_delta_time.join(info->reader->read_timeout_ms, true);
     segment_dist_x.join(info->reader->read_timeout_ms, true);
     solar_elevation.join(info->reader->read_timeout_ms, true);
+    sigma_h.join(info->reader->read_timeout_ms, true);
     sigma_along.join(info->reader->read_timeout_ms, true);
     sigma_across.join(info->reader->read_timeout_ms, true);
+    ref_azimuth.join(info->reader->read_timeout_ms, true);
     ref_elev.join(info->reader->read_timeout_ms, true);
     geoid.join(info->reader->read_timeout_ms, true);
     dem_h.join(info->reader->read_timeout_ms, true);
@@ -792,10 +797,13 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     .y_atc = atl03.dist_ph_across[current_photon],
                     .background_rate = calculateBackground(current_segment, bckgrd_index, atl03),
                     .geoid_corr_h = atl03.h_ph[current_photon] - atl03.geoid[current_segment],
-                    .dem_h = atl03.dem_h[current_segment],
+                    .dem_h = atl03.dem_h[current_segment] - atl03.geoid[current_segment],
+                    .sigma_h = atl03.sigma_h[current_segment],
                     .sigma_along = atl03.sigma_along[current_segment],
                     .sigma_across = atl03.sigma_across[current_segment],
                     .solar_elevation = atl03.solar_elevation[current_segment],
+                    .ref_az = atl03.ref_azimuth[current_segment],
+                    .ref_el = atl03.ref_elev[current_segment],
                     .wind_v = wind_v,
                     .pointing_angle = pointing_angle,
                     .ndwi = ndwi,
@@ -878,18 +886,24 @@ FString json_contents(R"json({
 "pair": %d,
 "beam": "gt%d%c",
 "spot": %d,
-"region": %d,
+"year": %d,
+"month": %d,
+"day": %d,
 "rgt": %d,
 "cycle": %d,
+"region": %d,
 "utm_zone": %d
 })json",
 extent->track,
 extent->pair,
 extent->track, extent->pair == 0 ? 'l' : 'r',
 extent->spot,
-extent->region,
+reader->granule_date.year,
+reader->granule_date.month,
+reader->granule_date.day,
 extent->reference_ground_track,
 extent->cycle,
+extent->region,
 extent->utm_zone);
 
                         /* Write and Close JSON File */
@@ -906,7 +920,7 @@ extent->utm_zone);
                         }
 
                         /* Write Header */
-                        fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,background_rate,geoid_corr_h,dem_h,sigma_along,sigma_across,solar_elevation,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph,class_ph\n");
+                        fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,index_seg,background_rate,surface_h,geoid_corr_h,dem_h,sigma_h,sigma_along,sigma_across,solar_elevation,ref_az,ref_el,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph,class_ph\n");
                     }
 
                     /* Write Data */
@@ -920,12 +934,17 @@ extent->utm_zone);
                         fprintf(out_file, "%lf,", extent->photons[i].y_ph);
                         fprintf(out_file, "%lf,", extent->photons[i].x_atc);
                         fprintf(out_file, "%lf,", extent->photons[i].y_atc);
+                        fprintf(out_file, "%d,", extent->photons[i].index_seg);
                         fprintf(out_file, "%lf,", extent->photons[i].background_rate);
+                        fprintf(out_file, "%f,", extent->surface_h);
                         fprintf(out_file, "%f,", extent->photons[i].geoid_corr_h);
                         fprintf(out_file, "%f,", extent->photons[i].dem_h);
+                        fprintf(out_file, "%f,", extent->photons[i].sigma_h);
                         fprintf(out_file, "%f,", extent->photons[i].sigma_along);
                         fprintf(out_file, "%f,", extent->photons[i].sigma_across);
                         fprintf(out_file, "%f,", extent->photons[i].solar_elevation);
+                        fprintf(out_file, "%f,", extent->photons[i].ref_az);
+                        fprintf(out_file, "%f,", extent->photons[i].ref_el);
                         fprintf(out_file, "%f,", extent->photons[i].wind_v);
                         fprintf(out_file, "%f,", extent->photons[i].pointing_angle);
                         fprintf(out_file, "%f,", extent->photons[i].ndwi);
@@ -1015,8 +1034,8 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     vector<double> heights;
     for(long i = 0; i < extent->photon_count; i++)
     {
-        double height = extent->photons[i].geoid_corr_h;
-        double time_secs = static_cast<double>(extent->photons[i].time_ns) / 1000000000.0;
+        const double height = extent->photons[i].geoid_corr_h;
+        const double time_secs = static_cast<double>(extent->photons[i].time_ns) / 1000000000.0;
 
         /* filter distance from DEM height 
          *  TODO: does the DEM height need to be corrected by GEOID */
@@ -1047,7 +1066,7 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     }
 
     /* calculate and check range */
-    double range_h = max_h - min_h;
+    const double range_h = max_h - min_h;
     if(range_h <= 0 || range_h > sfparms.max_range)
     {
         mlog(ERROR, "Invalid range <%lf> when determining sea surface for %s", range_h, resource);
@@ -1057,7 +1076,7 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     /* calculate and check number of bins in histogram 
      *  - the number of bins is increased by 1 in case the ceiling and the floor
      *    of the max range is both the same number */
-    long num_bins = static_cast<long>(std::ceil(range_h / sfparms.bin_size)) + 1;
+    const long num_bins = static_cast<long>(std::ceil(range_h / sfparms.bin_size)) + 1;
     if(num_bins <= 0 || num_bins > sfparms.max_bins)
     {
         mlog(ERROR, "Invalid combination of range <%lf> and bin size <%lf> produced out of range histogram size <%ld> for %s", 
@@ -1071,7 +1090,7 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     /* build histogram of photon heights */
     vector<long> histogram(num_bins);
     std::for_each (std::begin(heights), std::end(heights), [&](const double h) {
-        long bin = static_cast<long>(std::floor((h - min_h) / sfparms.bin_size));
+        const long bin = static_cast<long>(std::floor((h - min_h) / sfparms.bin_size));
         histogram[bin]++;
     });
     
@@ -1080,15 +1099,15 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     double stddev = 0.0;
     if(sfparms.model_as_poisson)
     {
-        long num_shots = std::round((max_t - min_t) / 0.0001);
-        double bin_t = sfparms.bin_size * 0.00000002 / 3.0; // bin size from meters to seconds
-        double bin_pe = bin_t * num_shots * avg_bckgnd; // expected value
+        const long num_shots = std::round((max_t - min_t) / 0.0001);
+        const double bin_t = sfparms.bin_size * 0.00000002 / 3.0; // bin size from meters to seconds
+        const double bin_pe = bin_t * num_shots * avg_bckgnd; // expected value
         bckgnd = bin_pe;
         stddev = sqrt(bin_pe);
     }
     else
     {
-        double bin_avg = static_cast<double>(heights.size()) / static_cast<double>(num_bins);
+        const double bin_avg = static_cast<double>(heights.size()) / static_cast<double>(num_bins);
         double accum = 0.0;
         std::for_each (std::begin(histogram), std::end(histogram), [&](const double h) {
             accum += (h - bin_avg) * (h - bin_avg);
@@ -1098,15 +1117,15 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     }
 
     /* build guassian kernel (from -k to k)*/
-    double kernel_size = 6.0 * stddev + 1.0;
-    long k = (static_cast<long>(std::ceil(kernel_size / sfparms.bin_size)) & ~0x1) / 2;
-    long kernel_bins = 2 * k + 1;
+    const double kernel_size = 6.0 * stddev + 1.0;
+    const long k = (static_cast<long>(std::ceil(kernel_size / sfparms.bin_size)) & ~0x1) / 2;
+    const long kernel_bins = 2 * k + 1;
     double kernel_sum = 0.0;
     vector<double> kernel(kernel_bins);
     for(long x = -k; x <= k; x++)
     {
-        long i = x + k;
-        double r = x / stddev;
+        const long i = x + k;
+        const double r = x / stddev;
         kernel[i] = exp(-0.5 * r * r);
         kernel_sum += kernel[i];
     }
@@ -1123,7 +1142,7 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
         long num_samples = 0;
         for(long j = -k; j <= k; j++)
         {
-            long index = i + k;
+            const long index = i + k;
             if(index >= 0 && index < num_bins)
             {
                 output += kernel[j + k] * static_cast<double>(histogram[index]);
@@ -1146,7 +1165,7 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     }
 
     /* find second highest peak */
-    long peak_separation_in_bins = static_cast<long>(std::ceil(sfparms.min_peak_separation / sfparms.bin_size));
+    const long peak_separation_in_bins = static_cast<long>(std::ceil(sfparms.min_peak_separation / sfparms.bin_size));
     long second_peak_bin = -1; // invalid
     double second_peak = std::numeric_limits<double>::min();
     for(int i = 0; i < num_bins; i++)
@@ -1174,7 +1193,7 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     }
 
     /* check if sea surface signal is significant */
-    double signal_threshold = bckgnd + (stddev * sfparms.signal_threshold_sigmas);
+    const double signal_threshold = bckgnd + (stddev * sfparms.signal_threshold_sigmas);
     if(highest_peak < signal_threshold)
     {
         mlog(WARNING, "Unable to determine sea surface (%lf < %lf) for %s", highest_peak, signal_threshold, resource);
@@ -1182,8 +1201,8 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     }
 
     /* calculate width of highest peak */
-    double peak_above_bckgnd = smoothed_histogram[highest_peak_bin] - bckgnd;
-    double peak_half_max = (peak_above_bckgnd * 0.4) + bckgnd;
+    const double peak_above_bckgnd = smoothed_histogram[highest_peak_bin] - bckgnd;
+    const double peak_half_max = (peak_above_bckgnd * 0.4) + bckgnd;
     long peak_width = 1;
     for(long i = highest_peak_bin + 1; i < num_bins; i++)
     {
@@ -1195,12 +1214,12 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
         if(smoothed_histogram[i] > peak_half_max) peak_width++;
         else break;
     }
-    double peak_stddev = (peak_width * sfparms.bin_size) / 2.35;
+    const double peak_stddev = (peak_width * sfparms.bin_size) / 2.35;
 
     /* calculate sea surface height and label sea surface photons */
-    extent->surface_height = min_h + (highest_peak_bin * sfparms.bin_size) + (sfparms.bin_size / 2.0);
-    double min_surface_h = extent->surface_height - (peak_stddev * sfparms.surface_width_sigmas);
-    double max_surface_h = extent->surface_height + (peak_stddev * sfparms.surface_width_sigmas);
+    extent->surface_h = min_h + (highest_peak_bin * sfparms.bin_size) + (sfparms.bin_size / 2.0);
+    const double min_surface_h = extent->surface_h - (peak_stddev * sfparms.surface_width_sigmas);
+    const double max_surface_h = extent->surface_h + (peak_stddev * sfparms.surface_width_sigmas);
     for(long i = 0; i < extent->photon_count; i++)
     {
         if( extent->photons[i].geoid_corr_h >= min_surface_h && 
@@ -1266,17 +1285,66 @@ double Atl03BathyReader::calculateBackground (int32_t current_segment, int32_t& 
  *      vvv     - version
  *      ee      - revision
  *----------------------------------------------------------------------------*/
-void Atl03BathyReader::parseResource (const char* _resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region)
+void Atl03BathyReader::parseResource (const char* _resource, TimeLib::date_t& date, uint16_t& rgt, uint8_t& cycle, uint8_t& region)
 {
+    long val;
+
     if(StringLib::size(_resource) < 29)
     {
         rgt = 0;
         cycle = 0;
         region = 0;
+        date.year = 0;
+        date.month = 0;
+        date.day = 0;
         return; // early exit on error
     }
 
-    long val;
+    /* get year */
+    char year_str[5];
+    year_str[0] = _resource[6];
+    year_str[1] = _resource[7];
+    year_str[2] = _resource[8];
+    year_str[3] = _resource[9];
+    year_str[4] = '\0';
+    if(StringLib::str2long(year_str, &val, 10))
+    {
+        date.year = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse year from resource %s: %s", _resource, year_str);
+    }
+
+    /* get month */
+    char month_str[3];
+    month_str[0] = _resource[10];
+    month_str[1] = _resource[11];
+    month_str[2] = '\0';
+    if(StringLib::str2long(month_str, &val, 10))
+    {
+        date.month = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse month from resource %s: %s", _resource, month_str);
+    }
+
+    /* get month */
+    char day_str[3];
+    day_str[0] = _resource[12];
+    day_str[1] = _resource[13];
+    day_str[2] = '\0';
+    if(StringLib::str2long(day_str, &val, 10))
+    {
+        date.day = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse day from resource %s: %s", _resource, day_str);
+    }
+
+    /* get RGT */
     char rgt_str[5];
     rgt_str[0] = _resource[21];
     rgt_str[1] = _resource[22];
@@ -1292,6 +1360,7 @@ void Atl03BathyReader::parseResource (const char* _resource, uint16_t& rgt, uint
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse RGT from resource %s: %s", _resource, rgt_str);
     }
 
+    /* get cycle */
     char cycle_str[3];
     cycle_str[0] = _resource[25];
     cycle_str[1] = _resource[26];
@@ -1305,6 +1374,7 @@ void Atl03BathyReader::parseResource (const char* _resource, uint16_t& rgt, uint
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Cycle from resource %s: %s", _resource, cycle_str);
     }
 
+    /* get region */
     char region_str[3];
     region_str[0] = _resource[27];
     region_str[1] = _resource[28];

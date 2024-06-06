@@ -60,7 +60,9 @@ class ContainerRunner: public LuaObject
         static const int RESULT_SIGNAL = 0;
         static const int WAIT_TIMEOUT = 30;
 
-        static const char* SHARED_DIRECTORY;
+        static const char* SANDBOX_MOUNT;
+        static const char* HOST_MOUNT;
+        static const char* HOST_DIRECTORY;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -87,7 +89,7 @@ class ContainerRunner: public LuaObject
         bool            active;
         Thread*         controlPid;
         Publisher*      outQ;
-        const char*     hostSharedDirectory;
+        const char*     hostSandboxDirectory;
         Cond            resultLock;
         CreParms*       parms;
 

@@ -102,10 +102,13 @@ class Atl03BathyReader: public LuaObject
             double          y_atc;                  // dist_ph_across
             double          background_rate;        // PE per second
             float           geoid_corr_h;           // geoid corrected height of photon, calculated from h_ph and geoid
-            float           dem_h;                  // best available dem height
+            float           dem_h;                  // best available dem height, geoid corrected
+            float           sigma_h;                // height aerial uncertainty
             float           sigma_along;            // along track aerial uncertainty
             float           sigma_across;           // across track aerial uncertainty
             float           solar_elevation;
+            float           ref_az;                 // reference azimuth
+            float           ref_el;                 // reference elevation
             float           wind_v;                 // the wind speed at the center photon of the subsetted granule; calculated from met_u10m and met_v10m
             float           pointing_angle;         // angle of beam as measured from nadir (TBD - how to get this)
             float           ndwi;                   // normalized difference water index using HLS data
@@ -125,7 +128,7 @@ class Atl03BathyReader: public LuaObject
             uint8_t         cycle;
             uint8_t         utm_zone;
             uint64_t        extent_id;
-            float           surface_height;         // orthometric (in meters)            
+            float           surface_h;              // orthometric (in meters)            
             uint32_t        photon_count;
             photon_t        photons[];              // zero length field
         } extent_t;
@@ -190,8 +193,10 @@ class Atl03BathyReader: public LuaObject
                 H5Array<double>     segment_delta_time;
                 H5Array<double>     segment_dist_x;
                 H5Array<float>      solar_elevation;
+                H5Array<float>      sigma_h;
                 H5Array<float>      sigma_along;
                 H5Array<float>      sigma_across;
+                H5Array<float>      ref_azimuth;
                 H5Array<float>      ref_elev;
                 H5Array<float>      geoid;
                 H5Array<float>      dem_h;
@@ -249,6 +254,8 @@ class Atl03BathyReader: public LuaObject
         H5Coro::context_t   context; // for ATL03 file
         H5Coro::context_t   context09; // for ATL08 file
 
+        TimeLib::date_t     granule_date;
+
         uint16_t            start_rgt;
         uint8_t             start_cycle;
         uint8_t             start_region;
@@ -272,7 +279,7 @@ class Atl03BathyReader: public LuaObject
 
         void                findSeaSurface              (extent_t* extent);
         static double       calculateBackground         (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03);
-        static void         parseResource               (const char* resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region);
+        static void         parseResource               (const char* resource, TimeLib::date_t& date, uint16_t& rgt, uint8_t& cycle, uint8_t& region);
 };
 
 #endif  /* __atl03_table_builder__ */

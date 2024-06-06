@@ -55,7 +55,6 @@ int cre_open (lua_State* L)
         {"container",   ContainerRunner::luaCreate},
         {"list",        ContainerRunner::luaList},
         {"setregistry", ContainerRunner::luaSetRegistry},
-        {"settings",    ContainerRunner::luaSettings},
         {"createunique",ContainerRunner::luaCreateUnique},
         {"deleteunique",ContainerRunner::luaDeleteUnique},
         {"parms",       CreParms::luaCreate},
@@ -67,6 +66,8 @@ int cre_open (lua_State* L)
 
     /* Set Globals */
     LuaEngine::setAttrStr(L, "PARMS", CreParms::PARMS);
+    LuaEngine::setAttrStr(L, "SANDBOX_MOUNT", ContainerRunner::SANDBOX_MOUNT);
+    LuaEngine::setAttrStr(L, "HOST_DIRECTORY", ContainerRunner::HOST_DIRECTORY);
 
     return 1;
 }
