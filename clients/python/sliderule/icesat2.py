@@ -732,7 +732,7 @@ def atl03v (parm, resource):
 #
 #  Parallel Viewer ATL03
 #
-def atl03vp(parm, callbacks={}, resources=None):
+def atl03vp(parm, callbacks={}, resources=None, keep_id=False):
     '''
     Performs ATL03 subsetting in parallel on ATL03 data and returns counts of photons in segments.  Unlike the `atl03v <#atl03v>`_ function,
     this function does not take a resource as a parameter; instead it is expected that the **parm** argument includes a polygon which
@@ -752,6 +752,9 @@ def atl03vp(parm, callbacks={}, resources=None):
                         a callback function that is called for each result record
         resources:      list
                         a list of granules to process (e.g. ["ATL03_20181019065445_03150111_005_01.h5", ...])
+        keep_id:        bool
+                        whether to retain the "extent_id" column in the GeoDataFrame for future merges
+
     Returns
     -------
     GeoDataFrame
@@ -812,6 +815,10 @@ def atl03vp(parm, callbacks={}, resources=None):
                                     columns[field][seg_cnt] = segment[field]
                             # Goto Next Segment
                             seg_cnt += 1
+
+                    # Delete Extent ID Column
+                    if "extent_id" in columns and not keep_id:
+                        del columns["extent_id"]
 
                     # Capture Time to Flatten
                     profiles["flatten"] = time.perf_counter() - tstart_flatten
@@ -942,7 +949,7 @@ def atl24g (parm, resource):
 #
 #  Parallel ATL24 Gold Standard
 #
-def atl24gp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
+def atl24gp(parm, callbacks={}, resources=None, keep_id=False):
     '''
     Performs ATL24 gold standard generation in parallel on ATL03 data.
 
@@ -956,9 +963,6 @@ def atl24gp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
                         a list of granules to process (e.g. ["ATL03_20181019065445_03150111_005_01.h5", ...])
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
-        height_key:     str
-                        identifies the name of the column provided for the 3D CRS transformation
-
     Returns
     -------
     GeoDataFrame
