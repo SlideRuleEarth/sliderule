@@ -2,7 +2,7 @@
   "name": "@sliderule/sliderule",
   "type": "module",
   "description": "client for the SlideRule on-demand science data processing service",
-  "version": "4.4.0",
+  "version": "4.5.0",
   "keywords": [
     "sliderule"
   ],
