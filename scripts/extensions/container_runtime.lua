@@ -5,12 +5,11 @@ local json  = require("json")
 --
 local function setup ()
 
-    local shared_directory = cre.settings()
-    local host_shared_directory = string.format("%s/%s", shared_directory, rqstid)
-    if not cre.createunique(host_shared_directory) then
-        sys.log(core.WARNING, "Overwriting existing unique shared directory "..host_shared_directory)
+    local host_sandbox_directory = string.format("%s/%s", cre.HOST_DIRECTORY, rqstid)
+    if not cre.createunique(host_sandbox_directory) then
+        sys.log(core.WARNING, "Overwriting existing unique shared directory "..host_sandbox_directory)
     end
-    return {host_shared_directory=host_shared_directory, container_shared_directory=shared_directory}
+    return {host_sandbox_directory=host_sandbox_directory, container_sandbox_mount=cre.SANDBOX_MOUNT}
 end
 
 --
@@ -21,7 +20,7 @@ local function execute (crenv, parms, response_queue)
     -- write input parameter files
     if parms["parms"] then
         for filename,contents in pairs(parms["parms"]) do
-            local unique_filename = string.format("%s/%s", crenv.host_shared_directory, filename)
+            local unique_filename = string.format("%s/%s", crenv.host_sandbox_directory, filename)
             local input_file, msg = io.open(unique_filename, "w")
             if not input_file then 
                 sys.log(core.CRITICAL, string.format("Failed to create input file %s: %s", unique_filename, msg))
@@ -34,7 +33,7 @@ local function execute (crenv, parms, response_queue)
 
     -- create container runner (automatically executes container)
     local cre_parms = cre.parms(parms)
-    local cre_runner = cre.container(cre_parms, crenv.host_shared_directory, response_queue)
+    local cre_runner = cre.container(cre_parms, crenv.host_sandbox_directory, response_queue)
 
     -- return container runner
     return cre_runner
@@ -55,7 +54,7 @@ end
 --
 local function cleanup (crenv)
 
-    cre.deleteunique(crenv.host_shared_directory)
+    cre.deleteunique(crenv.host_sandbox_directory)
 
 end
 

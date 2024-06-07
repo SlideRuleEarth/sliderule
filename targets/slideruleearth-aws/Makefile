@@ -66,12 +66,17 @@ STATIC_WEB_STAGE_DIR = $(STAGE)/website
 STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
 INSTALL_DIR ?= $(SERVER_STAGE_DIR)
 
-OPENOCEANS_CONTAINER_STAGE_DIR = $(STAGE)/openoceans
-OPENOCEANS_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/openoceans
-OPENOCEANS_CONTAINER_NAME ?= openoceans
-BATHYWRITER_CONTAINER_STAGE_DIR = $(STAGE)/bathywriter
-BATHYWRITER_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/bathywriter
-BATHYWRITER_CONTAINER_NAME ?= bathywriter
+OCEANEYES_CONTAINER_STAGE_DIR = $(STAGE)/oceaneyes
+OCEANEYES_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/oceaneyes
+OCEANEYES_CONTAINER_NAME ?= oceaneyes
+COASTNET_CONTAINER_STAGE_DIR = $(STAGE)/coastnet
+COASTNET_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/coastnet
+COASTNET_CONTAINER_NAME ?= coastnet
+ATL24_TEST_DATA_DIR ?= /data/AppServer.1
+ATL24_ALGORITHM ?= cshelph
+COASTNET_CONTAINER_SOURCE_DIR = $(ROOT)/../coastnet
+CSHELPH_CONTAINER_SOURCE = $(ROOT)/../cshelph/c_shelph.py
+MEDIANFILTER_CONTAINER_SOURCE = $(ROOT)/../medianfilter/medianmodel.py
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -204,40 +209,39 @@ manager-destroy: ## destroy manager using terraform; needs DOMAIN
 	cd terraform/manager && terraform workspace select $(DOMAIN)-manager|| terraform workspace new $(DOMAIN)-manager
 	cd terraform/manager && terraform destroy
 
-openoceans-container-lock: ## create the lock file for the container runtime environment base python image
-	cd $(OPENOCEANS_CONTAINER_DIR) && conda-lock -p linux-aarch64 -f environment.yml
-	cd $(OPENOCEANS_CONTAINER_DIR) && conda-lock render -p linux-aarch64
+oceaneyes-container-lock: ## create the lock file for the oceaneyes container image
+	cd $(OCEANEYES_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd $(OCEANEYES_CONTAINER_DIR) && conda-lock render -p linux-$(ARCH)
 
-openoceans-container-docker: ## create the container runtime environment base python image
-	-rm -Rf $(OPENOCEANS_CONTAINER_STAGE_DIR)
-	mkdir -p $(OPENOCEANS_CONTAINER_STAGE_DIR)
-	cp $(OPENOCEANS_CONTAINER_DIR)/Dockerfile $(OPENOCEANS_CONTAINER_STAGE_DIR)
-	cp $(OPENOCEANS_CONTAINER_DIR)/conda-* $(OPENOCEANS_CONTAINER_STAGE_DIR)
-	cp $(OPENOCEANS_CONTAINER_DIR)/*.py $(OPENOCEANS_CONTAINER_STAGE_DIR)
-	cd $(OPENOCEANS_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(OPENOCEANS_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/$(OPENOCEANS_CONTAINER_NAME):latest $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(VERSION)
-	docker tag $(ECR)/$(OPENOCEANS_CONTAINER_NAME):latest $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(MAJOR_VERSION)
-
-openoceans-container-run: ## run the build environment docker container
-	docker run -it --rm -v /data:/data --name $(OPENOCEANS_CONTAINER_NAME) $(ECR)/$(OPENOCEANS_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/oceaneyes.py /data/AppServer.2/bathy_beam_1.csv /data/AppServer.2/bathy_beam_1.json /data/AppServer.2/openoceans_1.csv
-
-bathywriter-container-lock: ## create the lock file for the container runtime environment base python image
-	cd $(BATHYWRITER_CONTAINER_DIR) && conda-lock -p linux-aarch64 -f environment.yml
-	cd $(BATHYWRITER_CONTAINER_DIR) && conda-lock render -p linux-aarch64
-
-bathywriter-container-docker: ## create the container runtime environment base python image
-	-rm -Rf $(BATHYWRITER_CONTAINER_STAGE_DIR)
-	mkdir -p $(BATHYWRITER_CONTAINER_STAGE_DIR)
-	cp $(BATHYWRITER_CONTAINER_DIR)/Dockerfile $(BATHYWRITER_CONTAINER_STAGE_DIR)
-	cp $(BATHYWRITER_CONTAINER_DIR)/conda-* $(BATHYWRITER_CONTAINER_STAGE_DIR)
-	cp $(BATHYWRITER_CONTAINER_DIR)/*.py $(BATHYWRITER_CONTAINER_STAGE_DIR)
-	cd $(BATHYWRITER_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(BATHYWRITER_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/$(BATHYWRITER_CONTAINER_NAME):latest $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(VERSION)
-	docker tag $(ECR)/$(BATHYWRITER_CONTAINER_NAME):latest $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(MAJOR_VERSION)
-
-bathywriter-container-run: ## run the build environment docker container
-	cp $(BATHYWRITER_CONTAINER_DIR)/*.json /data
-	docker run -it --rm -v /data:/data --name $(BATHYWRITER_CONTAINER_NAME) $(ECR)/$(BATHYWRITER_CONTAINER_NAME):$(VERSION) /env/bin/python /usr/local/etc/writer.py data/test.json
+oceaneyes-container-docker: ## create the coceaneyes container image
+	-rm -Rf $(OCEANEYES_CONTAINER_STAGE_DIR)
+	mkdir -p $(OCEANEYES_CONTAINER_STAGE_DIR)
+	cp $(OCEANEYES_CONTAINER_DIR)/Dockerfile $(OCEANEYES_CONTAINER_STAGE_DIR)
+	cp $(OCEANEYES_CONTAINER_DIR)/conda-* $(OCEANEYES_CONTAINER_STAGE_DIR)
+	cp -R $(OCEANEYES_CONTAINER_DIR)/atl24refraction $(OCEANEYES_CONTAINER_STAGE_DIR)
+	cp -R $(OCEANEYES_CONTAINER_DIR)/atl24uncertainty $(OCEANEYES_CONTAINER_STAGE_DIR)
+	cp -R $(OCEANEYES_CONTAINER_DIR)/atl24writer $(OCEANEYES_CONTAINER_STAGE_DIR)
+	cp -R $(OCEANEYES_CONTAINER_DIR)/bathypathfinder $(OCEANEYES_CONTAINER_STAGE_DIR)
+	cp -R $(OCEANEYES_CONTAINER_DIR)/cshelph $(OCEANEYES_CONTAINER_STAGE_DIR)
+	cp -R $(OCEANEYES_CONTAINER_DIR)/medianfilter $(OCEANEYES_CONTAINER_STAGE_DIR)
+	cp -R $(OCEANEYES_CONTAINER_DIR)/openoceans $(OCEANEYES_CONTAINER_STAGE_DIR)
+	cp -R $(OCEANEYES_CONTAINER_DIR)/pointnet2 $(OCEANEYES_CONTAINER_STAGE_DIR)
+	#
+	rsync -a $(COASTNET_CONTAINER_SOURCE_DIR) $(OCEANEYES_CONTAINER_STAGE_DIR) --exclude build --exclude .git
+	cp $(OCEANEYES_CONTAINER_DIR)/coastnet/* $(OCEANEYES_CONTAINER_STAGE_DIR)/coastnet
+	#
+	cp $(CSHELPH_CONTAINER_SOURCE) $(OCEANEYES_CONTAINER_STAGE_DIR)/cshelph
+	cp $(MEDIANFILTER_CONTAINER_SOURCE) $(OCEANEYES_CONTAINER_STAGE_DIR)/medianfilter
+	#
+	cd $(OCEANEYES_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION)
+	docker tag $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(MAJOR_VERSION)
+	
+oceaneyes-container-test: ## run the oceaneyes container
+	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) #/env/bin/python /$(ATL24_ALGORITHM)/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv
+	
+coastnet-container-test: ## run the coastnet bathy docker container
+	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) bash /coastnet/bathy.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/coastnet_3.csv
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)

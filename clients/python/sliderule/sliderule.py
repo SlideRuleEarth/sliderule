@@ -478,7 +478,8 @@ def __arrowrec(rec):
         filename = rec["filename"]
         if rec["__rectype"] == 'arrowrec.meta':
             if filename in arrow_file_table:
-                raise FatalError("file transfer already in progress")
+                raise FatalError(f'File transfer already in progress for {filename}')
+            logger.info(f'Writing arrow file: {filename}')
             arrow_file_table[filename] = { "fp": open(filename, "wb"), "size": rec["size"], "progress": 0 }
         else: # rec["__rectype"] == 'arrowrec.data'
             data = rec['data']
@@ -487,9 +488,10 @@ def __arrowrec(rec):
             file["progress"] += len(data)
             if file["progress"] >= file["size"]:
                 file["fp"].close()
+                logger.info(f'Closing arrow file: {filename}')
                 del arrow_file_table[filename]
     except Exception as e:
-        raise FatalError("Failed to process arrow file: {}".format(e))
+        raise FatalError(f'Failed to process arrow file: {e}')
 
 #
 #  Globals
@@ -581,6 +583,9 @@ def procoutputfile(parm, rsps):
             else:
                 # Return GeoParquet File as GeoDataFrame
                 return geopandas.read_parquet(path)
+        elif output["format"] == "geoparquet":
+            # Return Parquet File as DataFrame
+            return geopandas.pd.read_parquet(path)
         elif output["format"] == "feather":
             # Return Feather File as DataFrame
             return geopandas.pd.read_feather(path)

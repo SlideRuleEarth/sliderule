@@ -926,32 +926,11 @@ def atl08p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
     return sliderule.emptyframe()
 
 #
-# ATL24 Gold Standard
+#  ATL24 Gold Standard
 #
-def atl24g (parm, resource):
+def atl24g(parm, callbacks={}, resource=None, keep_id=False, height_key=None):
     '''
-    Produces gold standard bathymetry photon classification of ATL03 data
-
-    Parameters
-    ----------
-        parms:      dict
-                    parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
-        resource:   str
-                    ATL03 HDF5 filename
-
-    Returns
-    -------
-    GeoDataFrame
-        ATL03 extents (see `Photon Segments </web/rtd/user_guide/ICESat-2.html#segmented-photon-data>`_)
-    '''
-    return atl24gp(parm, resources=[resource])
-
-#
-#  Parallel ATL24 Gold Standard
-#
-def atl24gp(parm, callbacks={}, resources=None, keep_id=False):
-    '''
-    Performs ATL24 gold standard generation in parallel on ATL03 data.
+    Performs ATL24 gold standard generation on ATL03 data.
 
     Parameters
     ----------
@@ -959,27 +938,34 @@ def atl24gp(parm, callbacks={}, resources=None, keep_id=False):
                         parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
         callbacks:      dictionary
                         a callback function that is called for each result record
-        resources:      list
-                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_005_01.h5", ...])
+        resource:       str
+                        a granule to process (e.g. "ATL03_20181019065445_03150111_005_01.h5")
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
     Returns
     -------
     GeoDataFrame
-        ATL03 segments (see `Photon Segments </web/rtd/user_guide/ICESat-2.html#photon-segments>`_)
+        Classified ATL03 photons
     '''
     try:
         tstart = time.perf_counter()
 
+        # Default the Asset
+        if "asset" not in parm:
+            parm["asset"] = "icesat2"
+
         # Build Request
-        rqst = __build_request(parm, resources)
+        rqst = {
+            "resource": resource,
+            "parms": parm
+        }
 
         # Make Request
-        rsps = sliderule.source("atl24gp", rqst, stream=True, callbacks=callbacks)
+        rsps = sliderule.source("atl24g", rqst, stream=True, callbacks=callbacks)
 
         # Check for Output Options
         if "output" in parm:
-            profiles[atl24gp.__name__] = time.perf_counter() - tstart
+            profiles[atl24g.__name__] = time.perf_counter() - tstart
             return sliderule.procoutputfile(parm, rsps)
         else: # Native Output
             # Flatten Responses
@@ -1037,7 +1023,7 @@ def atl24gp(parm, callbacks={}, resources=None, keep_id=False):
                     gdf['spot'] = __calcspot(gdf)
 
                     # Return Response
-                    profiles[atl24gp.__name__] = time.perf_counter() - tstart
+                    profiles[atl24g.__name__] = time.perf_counter() - tstart
                     return gdf
                 else:
                     logger.debug("No photons returned")

@@ -107,7 +107,10 @@ int Icesat2Parms::luaCreate (lua_State* L)
         return returnLuaStatus(L, false);
     }
 }
-
+#if 0
+/*
+ * THESE FUNCTIONS HAVE BEEN IMPLEMENTED AS OPTIMIZED INLINE CALLS IN THE HEADER
+ */
 /*----------------------------------------------------------------------------
  * getSpotNumber
  *----------------------------------------------------------------------------*/
@@ -197,7 +200,7 @@ uint8_t Icesat2Parms::getGroundTrack (sc_orient_t sc_orient, track_t track, int 
 
     return 0;
 }
-
+#endif
 /*----------------------------------------------------------------------------
  * str2atl03cnf
  *----------------------------------------------------------------------------*/

@@ -33,10 +33,9 @@
  * INCLUDES
  ******************************************************************************/
 
-#define _USE_MATH_DEFINES
-
-#include <math.h>
-#include <float.h>
+#include <cmath>
+#include <numeric>
+#include <algorithm>
 #include <stdarg.h>
 
 #include "core.h"
@@ -53,6 +52,8 @@ const char* Atl03BathyReader::OUTPUT_FILE_PREFIX = "bathy_spot";
 const char* Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_FILE_PATH = "/data/ATL24_Mask_v5_Raster.tif";
 const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_MAX_LAT = 84.25;
 const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_MIN_LAT = -79.0;
+const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_MAX_LON = 180.0;
+const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_MIN_LON = -180.0;
 const double Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE = 0.25;
 const uint32_t Atl03BathyReader::GLOBAL_BATHYMETRY_MASK_OFF_VALUE = 0xFFFFFFFF;
 
@@ -70,6 +71,7 @@ const RecordObject::fieldDef_t Atl03BathyReader::phRecDef[] = {
     {"background_rate", RecordObject::DOUBLE,   offsetof(photon_t, background_rate),1,  NULL, NATIVE_FLAGS},
     {"geoid_corr_h",    RecordObject::FLOAT,    offsetof(photon_t, geoid_corr_h),   1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"dem_h",           RecordObject::FLOAT,    offsetof(photon_t, dem_h),          1,  NULL, NATIVE_FLAGS},
+    {"sigma_h",         RecordObject::FLOAT,    offsetof(photon_t, sigma_h),        1,  NULL, NATIVE_FLAGS},
     {"sigma_along",     RecordObject::FLOAT,    offsetof(photon_t, sigma_along),    1,  NULL, NATIVE_FLAGS},
     {"sigma_across",    RecordObject::FLOAT,    offsetof(photon_t, sigma_across),   1,  NULL, NATIVE_FLAGS},
     {"solar_elevation", RecordObject::FLOAT,    offsetof(photon_t, solar_elevation),1,  NULL, NATIVE_FLAGS},
@@ -86,11 +88,12 @@ const RecordObject::fieldDef_t Atl03BathyReader::exRecDef[] = {
     {"region",          RecordObject::UINT8,    offsetof(extent_t, region),                 1,  NULL, NATIVE_FLAGS},
     {"track",           RecordObject::UINT8,    offsetof(extent_t, track),                  1,  NULL, NATIVE_FLAGS},
     {"pair",            RecordObject::UINT8,    offsetof(extent_t, pair),                   1,  NULL, NATIVE_FLAGS},
-    {"sc_orient",       RecordObject::UINT8,    offsetof(extent_t, spacecraft_orientation), 1,  NULL, NATIVE_FLAGS},
+    {"spot",            RecordObject::UINT8,    offsetof(extent_t, spot),                   1,  NULL, NATIVE_FLAGS},
     {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS},
     {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS},
     {"utm_zone",        RecordObject::UINT8,    offsetof(extent_t, utm_zone),               1,  NULL, NATIVE_FLAGS},
     {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS},
+    {"surface_h",       RecordObject::FLOAT,    offsetof(extent_t, surface_h),              1,  NULL, NATIVE_FLAGS},
     {"photons",         RecordObject::USER,     offsetof(extent_t, photons),                0,  phRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
 };
 
@@ -216,7 +219,7 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
     try
     {
         /* Parse Globals (throws) */
-        parseResource(resource, start_rgt, start_cycle, start_region);
+        parseResource(resource, granule_date, start_rgt, start_cycle, start_region);
 
         /* Create Readers */
         for(int track = 1; track <= Icesat2Parms::NUM_TRACKS; track++)
@@ -227,7 +230,7 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
                 if(parms->beams[gt_index] && (parms->track == Icesat2Parms::ALL_TRACKS || track == parms->track))
                 {
                     info_t* info = new info_t;
-                    info->builder = this;
+                    info->reader = this;
                     info->track = track;
                     info->pair = pair;
                     StringLib::format(info->prefix, 7, "/gt%d%c", info->track, info->pair == 0 ? 'l' : 'r');
@@ -282,18 +285,18 @@ Atl03BathyReader::~Atl03BathyReader (void)
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 Atl03BathyReader::Region::Region (info_t* info):
-    segment_lat    (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->builder->context),
-    segment_lon    (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->builder->context),
-    segment_ph_cnt (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(), &info->builder->context),
+    segment_lat    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context),
+    segment_lon    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context),
+    segment_ph_cnt (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(), &info->reader->context),
     inclusion_mask {NULL},
     inclusion_ptr  {NULL}
 {
     try
     {
         /* Join Reads */
-        segment_lat.join(info->builder->read_timeout_ms, true);
-        segment_lon.join(info->builder->read_timeout_ms, true);
-        segment_ph_cnt.join(info->builder->read_timeout_ms, true);
+        segment_lat.join(info->reader->read_timeout_ms, true);
+        segment_lon.join(info->reader->read_timeout_ms, true);
+        segment_ph_cnt.join(info->reader->read_timeout_ms, true);
 
         /* Initialize Region */
         first_segment = 0;
@@ -302,11 +305,11 @@ Atl03BathyReader::Region::Region (info_t* info):
         num_photons = H5Coro::ALL_ROWS;
 
         /* Determine Spatial Extent */
-        if(info->builder->parms->raster.valid())
+        if(info->reader->parms->raster.valid())
         {
             rasterregion(info);
         }
-        else if(info->builder->parms->points_in_poly > 0)
+        else if(info->reader->parms->points_in_poly > 0)
         {
             polyregion(info);
         }
@@ -364,10 +367,10 @@ void Atl03BathyReader::Region::polyregion (info_t* info)
 
         /* Project Segment Coordinate */
         const MathLib::coord_t segment_coord = {segment_lon[segment], segment_lat[segment]};
-        const MathLib::point_t segment_point = MathLib::coord2point(segment_coord, info->builder->parms->projection);
+        const MathLib::point_t segment_point = MathLib::coord2point(segment_coord, info->reader->parms->projection);
 
         /* Test Inclusion */
-        if(MathLib::inpoly(info->builder->parms->projected_poly, info->builder->parms->points_in_poly, segment_point))
+        if(MathLib::inpoly(info->reader->parms->projected_poly, info->reader->parms->points_in_poly, segment_point))
         {
             inclusion = true;
         }
@@ -441,7 +444,7 @@ void Atl03BathyReader::Region::rasterregion (info_t* info)
         if(segment_ph_cnt[segment] != 0)
         {
             /* Check Inclusion */
-            const bool inclusion = info->builder->parms->raster.includes(segment_lon[segment], segment_lat[segment]);
+            const bool inclusion = info->reader->parms->raster.includes(segment_lon[segment], segment_lat[segment]);
             inclusion_mask[segment] = inclusion;
 
             /* Check For First Segment */
@@ -501,49 +504,53 @@ void Atl03BathyReader::Region::rasterregion (info_t* info)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
-    sc_orient           (info->builder->asset, info->builder->resource,                                "/orbit_info/sc_orient",                &info->builder->context),
-    velocity_sc         (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),     &info->builder->context, H5Coro::ALL_COLS, region.first_segment, region.num_segments),
-    segment_delta_time  (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),      &info->builder->context, 0, region.first_segment, region.num_segments),
-    segment_dist_x      (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),  &info->builder->context, 0, region.first_segment, region.num_segments),
-    solar_elevation     (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/solar_elevation").c_str(), &info->builder->context, 0, region.first_segment, region.num_segments),
-    sigma_along         (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/sigma_along").c_str(),     &info->builder->context, 0, region.first_segment, region.num_segments),
-    sigma_across        (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/sigma_across").c_str(),    &info->builder->context, 0, region.first_segment, region.num_segments),
-    ref_elev            (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geolocation/ref_elev").c_str(),        &info->builder->context, 0, region.first_segment, region.num_segments),
-    geoid               (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geophys_corr/geoid").c_str(),          &info->builder->context, 0, region.first_segment, region.num_segments),
-    dem_h               (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "geophys_corr/dem_h").c_str(),          &info->builder->context, 0, region.first_segment, region.num_segments),
-    dist_ph_along       (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/dist_ph_along").c_str(),       &info->builder->context, 0, region.first_photon,  region.num_photons),
-    dist_ph_across      (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/dist_ph_across").c_str(),      &info->builder->context, 0, region.first_photon,  region.num_photons),
-    h_ph                (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/h_ph").c_str(),                &info->builder->context, 0, region.first_photon,  region.num_photons),
-    signal_conf_ph      (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),      &info->builder->context, info->builder->signalConfColIndex, region.first_photon,  region.num_photons),
-    quality_ph          (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/quality_ph").c_str(),          &info->builder->context, 0, region.first_photon,  region.num_photons),
-    weight_ph           (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/weight_ph").c_str(),           &info->builder->context, 0, region.first_photon,  region.num_photons),
-    lat_ph              (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/lat_ph").c_str(),              &info->builder->context, 0, region.first_photon,  region.num_photons),
-    lon_ph              (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/lon_ph").c_str(),              &info->builder->context, 0, region.first_photon,  region.num_photons),
-    delta_time          (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "heights/delta_time").c_str(),          &info->builder->context, 0, region.first_photon,  region.num_photons),
-    bckgrd_delta_time   (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "bckgrd_atlas/delta_time").c_str(),     &info->builder->context),
-    bckgrd_rate         (info->builder->asset, info->builder->resource, FString("%s/%s", info->prefix, "bckgrd_atlas/bckgrd_rate").c_str(),    &info->builder->context)
+    sc_orient           (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",                &info->reader->context),
+    velocity_sc         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),     &info->reader->context, H5Coro::ALL_COLS, region.first_segment, region.num_segments),
+    segment_delta_time  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
+    segment_dist_x      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),  &info->reader->context, 0, region.first_segment, region.num_segments),
+    solar_elevation     (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/solar_elevation").c_str(), &info->reader->context, 0, region.first_segment, region.num_segments),
+    sigma_h             (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/sigma_h").c_str(),         &info->reader->context, 0, region.first_segment, region.num_segments),
+    sigma_along         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/sigma_along").c_str(),     &info->reader->context, 0, region.first_segment, region.num_segments),
+    sigma_across        (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/sigma_across").c_str(),    &info->reader->context, 0, region.first_segment, region.num_segments),
+    ref_azimuth         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/ref_azimuth").c_str(),     &info->reader->context, 0, region.first_segment, region.num_segments),
+    ref_elev            (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/ref_elev").c_str(),        &info->reader->context, 0, region.first_segment, region.num_segments),
+    geoid               (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geophys_corr/geoid").c_str(),          &info->reader->context, 0, region.first_segment, region.num_segments),
+    dem_h               (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geophys_corr/dem_h").c_str(),          &info->reader->context, 0, region.first_segment, region.num_segments),
+    dist_ph_along       (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/dist_ph_along").c_str(),       &info->reader->context, 0, region.first_photon,  region.num_photons),
+    dist_ph_across      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/dist_ph_across").c_str(),      &info->reader->context, 0, region.first_photon,  region.num_photons),
+    h_ph                (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/h_ph").c_str(),                &info->reader->context, 0, region.first_photon,  region.num_photons),
+    signal_conf_ph      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),      &info->reader->context, info->reader->signalConfColIndex, region.first_photon,  region.num_photons),
+    quality_ph          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/quality_ph").c_str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
+    weight_ph           (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/weight_ph").c_str(),           &info->reader->context, 0, region.first_photon,  region.num_photons),
+    lat_ph              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/lat_ph").c_str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
+    lon_ph              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/lon_ph").c_str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
+    delta_time          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/delta_time").c_str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
+    bckgrd_delta_time   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "bckgrd_atlas/delta_time").c_str(),     &info->reader->context),
+    bckgrd_rate         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "bckgrd_atlas/bckgrd_rate").c_str(),    &info->reader->context)
 {
-    sc_orient.join(info->builder->read_timeout_ms, true);
-    velocity_sc.join(info->builder->read_timeout_ms, true);
-    segment_delta_time.join(info->builder->read_timeout_ms, true);
-    segment_dist_x.join(info->builder->read_timeout_ms, true);
-    solar_elevation.join(info->builder->read_timeout_ms, true);
-    sigma_along.join(info->builder->read_timeout_ms, true);
-    sigma_across.join(info->builder->read_timeout_ms, true);
-    ref_elev.join(info->builder->read_timeout_ms, true);
-    geoid.join(info->builder->read_timeout_ms, true);
-    dem_h.join(info->builder->read_timeout_ms, true);
-    dist_ph_along.join(info->builder->read_timeout_ms, true);
-    dist_ph_across.join(info->builder->read_timeout_ms, true);
-    h_ph.join(info->builder->read_timeout_ms, true);
-    signal_conf_ph.join(info->builder->read_timeout_ms, true);
-    quality_ph.join(info->builder->read_timeout_ms, true);
-    weight_ph.join(info->builder->read_timeout_ms, true);
-    lat_ph.join(info->builder->read_timeout_ms, true);
-    lon_ph.join(info->builder->read_timeout_ms, true);
-    delta_time.join(info->builder->read_timeout_ms, true);
-    bckgrd_delta_time.join(info->builder->read_timeout_ms, true);
-    bckgrd_rate.join(info->builder->read_timeout_ms, true);
+    sc_orient.join(info->reader->read_timeout_ms, true);
+    velocity_sc.join(info->reader->read_timeout_ms, true);
+    segment_delta_time.join(info->reader->read_timeout_ms, true);
+    segment_dist_x.join(info->reader->read_timeout_ms, true);
+    solar_elevation.join(info->reader->read_timeout_ms, true);
+    sigma_h.join(info->reader->read_timeout_ms, true);
+    sigma_along.join(info->reader->read_timeout_ms, true);
+    sigma_across.join(info->reader->read_timeout_ms, true);
+    ref_azimuth.join(info->reader->read_timeout_ms, true);
+    ref_elev.join(info->reader->read_timeout_ms, true);
+    geoid.join(info->reader->read_timeout_ms, true);
+    dem_h.join(info->reader->read_timeout_ms, true);
+    dist_ph_along.join(info->reader->read_timeout_ms, true);
+    dist_ph_across.join(info->reader->read_timeout_ms, true);
+    h_ph.join(info->reader->read_timeout_ms, true);
+    signal_conf_ph.join(info->reader->read_timeout_ms, true);
+    quality_ph.join(info->reader->read_timeout_ms, true);
+    weight_ph.join(info->reader->read_timeout_ms, true);
+    lat_ph.join(info->reader->read_timeout_ms, true);
+    lon_ph.join(info->reader->read_timeout_ms, true);
+    delta_time.join(info->reader->read_timeout_ms, true);
+    bckgrd_delta_time.join(info->reader->read_timeout_ms, true);
+    bckgrd_rate.join(info->reader->read_timeout_ms, true);
 }
 
 /*----------------------------------------------------------------------------
@@ -556,20 +563,20 @@ Atl03BathyReader::Atl03Data::~Atl03Data (void) = default;
  *----------------------------------------------------------------------------*/
 Atl03BathyReader::Atl09Class::Atl09Class (info_t* info):
     valid       (false),
-    met_u10m    (info->builder->missing09 ? NULL : info->builder->asset, info->builder->resource09.c_str(), FString("profile_%d/low_rate/met_u10m", info->track).c_str(), &info->builder->context09),
-    met_v10m    (info->builder->missing09 ? NULL : info->builder->asset, info->builder->resource09.c_str(), FString("profile_%d/low_rate/met_v10m", info->track).c_str(), &info->builder->context09),
-    delta_time  (info->builder->missing09 ? NULL : info->builder->asset, info->builder->resource09.c_str(), FString("profile_%d/low_rate/delta_time", info->track).c_str(), &info->builder->context09)
+    met_u10m    (info->reader->missing09 ? NULL : info->reader->asset, info->reader->resource09.c_str(), FString("profile_%d/low_rate/met_u10m", info->track).c_str(), &info->reader->context09),
+    met_v10m    (info->reader->missing09 ? NULL : info->reader->asset, info->reader->resource09.c_str(), FString("profile_%d/low_rate/met_v10m", info->track).c_str(), &info->reader->context09),
+    delta_time  (info->reader->missing09 ? NULL : info->reader->asset, info->reader->resource09.c_str(), FString("profile_%d/low_rate/delta_time", info->track).c_str(), &info->reader->context09)
 {
     try
     {
-        met_u10m.join(info->builder->read_timeout_ms, true);
-        met_v10m.join(info->builder->read_timeout_ms, true);
-        delta_time.join(info->builder->read_timeout_ms, true);
+        met_u10m.join(info->reader->read_timeout_ms, true);
+        met_v10m.join(info->reader->read_timeout_ms, true);
+        delta_time.join(info->reader->read_timeout_ms, true);
         valid = true;
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "ATL09 data unavailable <%s>", info->builder->resource09.c_str());
+        mlog(CRITICAL, "ATL09 data unavailable <%s>", info->reader->resource09.c_str());
     }
 }
 
@@ -580,15 +587,15 @@ void* Atl03BathyReader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     info_t* info = static_cast<info_t*>(parm);
-    Atl03BathyReader* builder = info->builder;
-    BathyParms* parms = builder->parms;
-    RasterObject* ndwiRaster = RasterObject::cppCreate(builder->geoparms);
+    Atl03BathyReader* reader = info->reader;
+    BathyParms* parms = reader->parms;
+    RasterObject* ndwiRaster = RasterObject::cppCreate(reader->geoparms);
 
     /* Thread Variables */
     fileptr_t out_file = NULL;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, builder->traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", builder->asset->getName(), builder->resource, info->track);
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", reader->asset->getName(), reader->resource, info->track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -607,9 +614,9 @@ void* Atl03BathyReader::subsettingThread (void* parm)
         int32_t current_segment = 0; // index into the segment rate variables
         int32_t previous_segment = -1; // previous index used to determine when segment has changed (and segment level variables need to be changed)
         int32_t photon_in_segment = 0; // the photon number in the current segment
-        int32_t photon_in_extent = 0; // the photon index in the current extent
         int32_t bckgrd_index = 0; // background 50Hz group
         int32_t low_rate_index = 0; // ATL09 low rate group
+        bool terminate_extent_on_boundary = false; // terminate the extent when a spatial subsetting boundary is encountered
 
         /* Initialize Segment Level Fields */
         float wind_v = 0.0;
@@ -621,7 +628,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
         const uint8_t spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)atl03.sc_orient[0], (Icesat2Parms::track_t)info->track, info->pair);
 
         /* Traverse All Photons In Dataset */
-        while(builder->active && (current_photon < atl03.dist_ph_along.size))
+        while(reader->active && (current_photon < atl03.dist_ph_along.size))
         {
             /* Go to Photon's Segment */
             photon_in_segment++;
@@ -635,25 +642,29 @@ void* Atl03BathyReader::subsettingThread (void* parm)
             /* Check Current Segment */
             if(current_segment >= atl03.segment_dist_x.size)
             {
-                mlog(ERROR, "Photons with no segments are detected in %s/%d (%d %ld %ld)!", builder->resource, info->track, current_segment, atl03.segment_dist_x.size, region.num_segments);
+                mlog(ERROR, "Photons with no segments are detected in %s/%d (%d %ld %ld)!", reader->resource, info->track, current_segment, atl03.segment_dist_x.size, region.num_segments);
                 break;
             }
 
             do
             {
+                /* Reset Boundary Termination */
+                terminate_extent_on_boundary = false;
+
                 /* Check Global Bathymetry Mask */
-                if(builder->bathyMask)
+                if(reader->bathyMask)
                 {
-                    const double degrees_of_latitude = GLOBAL_BATHYMETRY_MASK_MAX_LAT - region.segment_lat[current_segment];
+                    const double degrees_of_latitude = region.segment_lat[current_segment] - GLOBAL_BATHYMETRY_MASK_MIN_LAT;
                     const double latitude_pixels = degrees_of_latitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
                     const uint32_t y = static_cast<uint32_t>(latitude_pixels);
 
-                    const double degrees_of_longitude = 180 + region.segment_lon[current_segment];
+                    const double degrees_of_longitude =  region.segment_lon[current_segment] - GLOBAL_BATHYMETRY_MASK_MIN_LON;
                     const double longitude_pixels = degrees_of_longitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
                     const uint32_t x = static_cast<uint32_t>(longitude_pixels);
-
-                    if(builder->bathyMask->getPixel(x, y) == GLOBAL_BATHYMETRY_MASK_OFF_VALUE)
+                    const uint32_t pixel = reader->bathyMask->getPixel(x, y);
+                    if(pixel == GLOBAL_BATHYMETRY_MASK_OFF_VALUE)
                     {
+                        terminate_extent_on_boundary = true;
                         break;
                     }
                 }
@@ -663,6 +674,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                 {
                     if(!region.inclusion_ptr[current_segment])
                     {
+                        terminate_extent_on_boundary = true;
                         break;
                     }
                 }
@@ -768,7 +780,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                         List<RasterSample*> slist(1);
                         const uint32_t err = ndwiRaster->getSamples(point, gps, slist);
                         if(!slist.empty()) ndwi = static_cast<float>(slist[0]->value);
-                        else mlog(WARNING, "Unable to calculate NDWI for %s at %lf, %lf: %u", builder->resource, point.y, point.x, err);
+                        else mlog(WARNING, "Unable to calculate NDWI for %s at %lf, %lf: %u", reader->resource, point.y, point.x, err);
                     }
                 }
 
@@ -784,183 +796,175 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     .x_atc = atl03.segment_dist_x[current_segment] + atl03.dist_ph_along[current_photon],
                     .y_atc = atl03.dist_ph_across[current_photon],
                     .background_rate = calculateBackground(current_segment, bckgrd_index, atl03),
-                    .geoid_corr_h = atl03.h_ph[current_photon] + atl03.geoid[current_segment],
-                    .dem_h = atl03.dem_h[current_segment],
+                    .geoid_corr_h = atl03.h_ph[current_photon] - atl03.geoid[current_segment],
+                    .dem_h = atl03.dem_h[current_segment] - atl03.geoid[current_segment],
+                    .sigma_h = atl03.sigma_h[current_segment],
                     .sigma_along = atl03.sigma_along[current_segment],
                     .sigma_across = atl03.sigma_across[current_segment],
                     .solar_elevation = atl03.solar_elevation[current_segment],
+                    .ref_az = atl03.ref_azimuth[current_segment],
+                    .ref_el = atl03.ref_elev[current_segment],
                     .wind_v = wind_v,
                     .pointing_angle = pointing_angle,
                     .ndwi = ndwi,
                     .yapc_score = yapc_score,
                     .max_signal_conf = atl03_cnf,
                     .quality_ph = quality_ph,
+                    .class_ph = static_cast<uint8_t>(BathyParms::UNCLASSIFIED),
                 };
                 extent_photons.add(ph);
             } while(false);
 
             /* Go to Next Photon */
             current_photon++;
-            photon_in_extent++;
 
-            if((photon_in_extent >= parms->ph_in_extent) ||
-               (current_photon >= atl03.dist_ph_along.size))
+            if((extent_photons.length() >= parms->ph_in_extent) ||
+               (current_photon >= atl03.dist_ph_along.size) || 
+               (extent_photons.length() > 0 && terminate_extent_on_boundary))
             {
-                bool extent_valid = true;
+                /* Generate Extent ID */
+                const uint64_t extent_id = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, extent_counter);
 
-                /* Check Photon Count */
-                if(extent_photons.length() < parms->minimum_photon_count)
+                /* Calculate Extent Record Size */
+                const int num_photons = extent_photons.length();
+                const int extent_bytes = offsetof(extent_t, photons) + (sizeof(photon_t) * num_photons);
+
+                /* Allocate and Initialize Extent Record */
+                RecordObject record(exRecType, extent_bytes);
+                extent_t* extent                = reinterpret_cast<extent_t*>(record.getRecordData());
+                extent->region                  = reader->start_region;
+                extent->track                   = info->track;
+                extent->pair                    = info->pair;
+                extent->spot                    = spot;
+                extent->reference_ground_track  = reader->start_rgt;
+                extent->cycle                   = reader->start_cycle;
+                extent->utm_zone                = utm_transform.zone;
+                extent->photon_count            = extent_photons.length();
+                extent->extent_id               = extent_id;
+
+                /* Populate Photons and Statistics */
+                for(int32_t p = 0; p < extent_photons.length(); p++)
                 {
-                    extent_valid = false;
+                    extent->photons[p] = extent_photons[p];
                 }
 
-                /* Check Along Track Spread */
-                if(extent_photons.length() > 1)
+                /* Find Sea Surface */
+                reader->findSeaSurface(extent);
+
+                /* Export Data */
+                if(parms->return_inputs)
                 {
-                    const int32_t last = extent_photons.length() - 1;
-                    const double along_track_spread = extent_photons[last].x_atc - extent_photons[0].x_atc;
-                    if(along_track_spread >= parms->max_along_track_spread)
+                    /* Post Record */
+                    uint8_t* rec_buf = NULL;
+                    const int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
+                    int post_status = MsgQ::STATE_TIMEOUT;
+                    while(reader->active && (post_status = reader->outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
+                    if(post_status <= 0)
                     {
-                        extent_valid = false;
+                        mlog(ERROR, "Atl03 bathy reader failed to post %s to stream %s: %d", record.getRecordType(), reader->outQ->getName(), post_status);
                     }
                 }
-
-                /* Post Extent Record */
-                if(extent_valid || parms->pass_invalid)
+                else
                 {
-                    /* Generate Extent ID */
-                    const uint64_t extent_id = Icesat2Parms::generateExtentId(builder->start_rgt, builder->start_cycle, builder->start_region, info->track, info->pair, extent_counter);
-
-                    /* Calculate Extent Record Size */
-                    const int num_photons = extent_photons.length();
-                    const int extent_bytes = offsetof(extent_t, photons) + (sizeof(photon_t) * num_photons);
-
-                    /* Allocate and Initialize Extent Record */
-                    RecordObject record(exRecType, extent_bytes);
-                    extent_t* extent                = reinterpret_cast<extent_t*>(record.getRecordData());
-                    extent->region                  = builder->start_region;
-                    extent->track                   = info->track;
-                    extent->pair                    = info->pair;
-                    extent->spacecraft_orientation  = atl03.sc_orient[0];
-                    extent->spot                    = spot;
-                    extent->reference_ground_track  = builder->start_rgt;
-                    extent->cycle                   = builder->start_cycle;
-                    extent->utm_zone                = utm_transform.zone;
-                    extent->photon_count            = extent_photons.length();
-                    extent->extent_id               = extent_id;
-
-                    /* Populate Photons */
-                    for(int32_t p = 0; p < extent_photons.length(); p++)
+                    if(out_file == NULL)
                     {
-                        extent->photons[p] = extent_photons[p];
-                    }
-
-                    /* Export Data */
-                    if(parms->return_inputs)
-                    {
-                        /* Post Record */
-                        uint8_t* rec_buf = NULL;
-                        const int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
-                        int post_status = MsgQ::STATE_TIMEOUT;
-                        while(builder->active && (post_status = builder->outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
-                        if(post_status <= 0)
+                        /* Open JSON File */
+                        FString json_filename("%s/%s_%d.json", reader->sharedDirectory, OUTPUT_FILE_PREFIX, spot);
+                        fileptr_t json_file = fopen(json_filename.c_str(), "w");
+                        if(json_file == NULL)
                         {
-                            mlog(ERROR, "Atl03 bathy reader failed to post %s to stream %s: %d", record.getRecordType(), builder->outQ->getName(), post_status);
+                            char err_buf[256];
+                            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output json file %s: %s", json_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
                         }
-                    }
-                    else
-                    {
-                        if(out_file == NULL)
-                        {
-                            /* Open JSON File */
-                            FString json_filename("%s/%s_%d.json", builder->sharedDirectory, OUTPUT_FILE_PREFIX, spot);
-                            fileptr_t json_file = fopen(json_filename.c_str(), "w");
-                            if(json_file == NULL)
-                            {
-                                char err_buf[256];
-                                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output json file %s: %s", json_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
-                            }
 
 /*
- * Build JSON File
- *  block indentation to preserve tabs in destination file
- */
+* Build JSON File
+*  block indentation to preserve tabs in destination file
+*/
 FString json_contents(R"json({
-    "track": %d,
-    "pair": %d,
-    "beam": "gt%d%c",
-    "spot": %d,
-    "sc_orient": "%s",
-    "region": %d,
-    "rgt": %d,
-    "cycle": %d,
-    "utm_zone": %d
+"track": %d,
+"pair": %d,
+"beam": "gt%d%c",
+"spot": %d,
+"year": %d,
+"month": %d,
+"day": %d,
+"rgt": %d,
+"cycle": %d,
+"region": %d,
+"utm_zone": %d
 })json",
-    extent->track,
-    extent->pair,
-    extent->track, extent->pair == 0 ? 'l' : 'r',
-    extent->spot,
-    extent->spacecraft_orientation == Icesat2Parms::SC_BACKWARD ? "backward" : "forward",
-    extent->region,
-    extent->reference_ground_track,
-    extent->cycle,
-    extent->utm_zone);
+extent->track,
+extent->pair,
+extent->track, extent->pair == 0 ? 'l' : 'r',
+extent->spot,
+reader->granule_date.year,
+reader->granule_date.month,
+reader->granule_date.day,
+extent->reference_ground_track,
+extent->cycle,
+extent->region,
+extent->utm_zone);
 
-                            /* Write and Close JSON File */
-                            fprintf(json_file, "%s", json_contents.c_str());
-                            fclose(json_file);
+                        /* Write and Close JSON File */
+                        fprintf(json_file, "%s", json_contents.c_str());
+                        fclose(json_file);
 
-                            /* Open Data File */
-                            FString filename("%s/%s_%d.csv", builder->sharedDirectory, OUTPUT_FILE_PREFIX, spot);
-                            out_file = fopen(filename.c_str(), "w");
-                            if(out_file == NULL)
-                            {
-                                char err_buf[256];
-                                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output daata file %s: %s", filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
-                            }
-
-                            /* Write Header */
-                            fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,background_rate,geoid_corr_h,dem_h,sigma_along,sigma_across,solar_elevation,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph\n");
-                        }
-
-                        /* Write Data */
-                        for(unsigned i = 0; i < extent->photon_count; i++)
+                        /* Open Data File */
+                        FString filename("%s/%s_%d.csv", reader->sharedDirectory, OUTPUT_FILE_PREFIX, spot);
+                        out_file = fopen(filename.c_str(), "w");
+                        if(out_file == NULL)
                         {
-                            fprintf(out_file, "%d,", extent->photons[i].index_ph);
-                            fprintf(out_file, "%ld,", extent->photons[i].time_ns);
-                            fprintf(out_file, "%lf,", extent->photons[i].latitude);
-                            fprintf(out_file, "%lf,", extent->photons[i].longitude);
-                            fprintf(out_file, "%lf,", extent->photons[i].x_ph);
-                            fprintf(out_file, "%lf,", extent->photons[i].y_ph);
-                            fprintf(out_file, "%lf,", extent->photons[i].x_atc);
-                            fprintf(out_file, "%lf,", extent->photons[i].y_atc);
-                            fprintf(out_file, "%lf,", extent->photons[i].background_rate);
-                            fprintf(out_file, "%f,", extent->photons[i].geoid_corr_h);
-                            fprintf(out_file, "%f,", extent->photons[i].dem_h);
-                            fprintf(out_file, "%f,", extent->photons[i].sigma_along);
-                            fprintf(out_file, "%f,", extent->photons[i].sigma_across);
-                            fprintf(out_file, "%f,", extent->photons[i].solar_elevation);
-                            fprintf(out_file, "%f,", extent->photons[i].wind_v);
-                            fprintf(out_file, "%f,", extent->photons[i].pointing_angle);
-                            fprintf(out_file, "%f,", extent->photons[i].ndwi);
-                            fprintf(out_file, "%d,", extent->photons[i].yapc_score);
-                            fprintf(out_file, "%d,", extent->photons[i].max_signal_conf);
-                            fprintf(out_file, "%d", extent->photons[i].quality_ph);
-                            fprintf(out_file, "\n");
+                            char err_buf[256];
+                            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output daata file %s: %s", filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
                         }
+
+                        /* Write Header */
+                        fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,index_seg,background_rate,surface_h,geoid_corr_h,dem_h,sigma_h,sigma_along,sigma_across,solar_elevation,ref_az,ref_el,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph,class_ph\n");
+                    }
+
+                    /* Write Data */
+                    for(unsigned i = 0; i < extent->photon_count; i++)
+                    {
+                        fprintf(out_file, "%d,", extent->photons[i].index_ph);
+                        fprintf(out_file, "%ld,", extent->photons[i].time_ns);
+                        fprintf(out_file, "%lf,", extent->photons[i].latitude);
+                        fprintf(out_file, "%lf,", extent->photons[i].longitude);
+                        fprintf(out_file, "%lf,", extent->photons[i].x_ph);
+                        fprintf(out_file, "%lf,", extent->photons[i].y_ph);
+                        fprintf(out_file, "%lf,", extent->photons[i].x_atc);
+                        fprintf(out_file, "%lf,", extent->photons[i].y_atc);
+                        fprintf(out_file, "%d,", extent->photons[i].index_seg);
+                        fprintf(out_file, "%lf,", extent->photons[i].background_rate);
+                        fprintf(out_file, "%f,", extent->surface_h);
+                        fprintf(out_file, "%f,", extent->photons[i].geoid_corr_h);
+                        fprintf(out_file, "%f,", extent->photons[i].dem_h);
+                        fprintf(out_file, "%f,", extent->photons[i].sigma_h);
+                        fprintf(out_file, "%f,", extent->photons[i].sigma_along);
+                        fprintf(out_file, "%f,", extent->photons[i].sigma_across);
+                        fprintf(out_file, "%f,", extent->photons[i].solar_elevation);
+                        fprintf(out_file, "%f,", extent->photons[i].ref_az);
+                        fprintf(out_file, "%f,", extent->photons[i].ref_el);
+                        fprintf(out_file, "%f,", extent->photons[i].wind_v);
+                        fprintf(out_file, "%f,", extent->photons[i].pointing_angle);
+                        fprintf(out_file, "%f,", extent->photons[i].ndwi);
+                        fprintf(out_file, "%d,", extent->photons[i].yapc_score);
+                        fprintf(out_file, "%d,", extent->photons[i].max_signal_conf);
+                        fprintf(out_file, "%d,", extent->photons[i].quality_ph);
+                        fprintf(out_file, "%d", extent->photons[i].class_ph);
+                        fprintf(out_file, "\n");
                     }
                 }
 
                 /* Update Extent Counters */
                 extent_counter++;
-                photon_in_extent = 0;
                 extent_photons.clear();
             }
         }
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), builder->outQ, &builder->active, "Failure on resource %s track %d: %s", builder->resource, info->track, e.what());
+        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d: %s", reader->resource, info->track, e.what());
     }
 
     /* Close Output File (if open) */
@@ -970,36 +974,36 @@ FString json_contents(R"json({
     }
 
     /* Handle Global Reader Updates */
-    builder->threadMut.lock();
+    reader->threadMut.lock();
     {
         /* Count Completion */
-        builder->numComplete++;
-        if(builder->numComplete == builder->threadCount)
+        reader->numComplete++;
+        if(reader->numComplete == reader->threadCount)
         {
-            mlog(INFO, "Completed processing resource %s", builder->resource);
+            mlog(INFO, "Completed processing resource %s", reader->resource);
 
             /* Indicate End of Data */
-            if(builder->sendTerminator)
+            if(reader->sendTerminator)
             {
                 int status = MsgQ::STATE_TIMEOUT;
-                while(builder->active && (status == MsgQ::STATE_TIMEOUT))
+                while(reader->active && (status == MsgQ::STATE_TIMEOUT))
                 {
-                    status = builder->outQ->postCopy("", 0, SYS_TIMEOUT);
+                    status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
                     if(status < 0)
                     {
-                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, builder->resource);
+                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, reader->resource);
                         break;
                     }
                     else if(status == MsgQ::STATE_TIMEOUT)
                     {
-                        mlog(INFO, "Timeout posting terminator for %s ... trying again", builder->resource);
+                        mlog(INFO, "Timeout posting terminator for %s ... trying again", reader->resource);
                     }
                 }
             }
-            builder->signalComplete();
+            reader->signalComplete();
         }
     }
-    builder->threadMut.unlock();
+    reader->threadMut.unlock();
 
     /* Clean Up */
     delete info;
@@ -1010,6 +1014,220 @@ FString json_contents(R"json({
 
     /* Return */
     return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * findSeaSurface
+ *----------------------------------------------------------------------------*/
+void Atl03BathyReader::findSeaSurface (extent_t* extent)
+{
+    const BathyParms::surface_finder_t& sfparms = parms->surface_finder;
+
+    /* initialize stats on photons */
+    double min_h = std::numeric_limits<double>::max();
+    double max_h = std::numeric_limits<double>::min();
+    double min_t = std::numeric_limits<double>::max();
+    double max_t = std::numeric_limits<double>::min();
+    double avg_bckgnd = 0.0;
+
+    /* build list photon heights */
+    vector<double> heights;
+    for(long i = 0; i < extent->photon_count; i++)
+    {
+        const double height = extent->photons[i].geoid_corr_h;
+        const double time_secs = static_cast<double>(extent->photons[i].time_ns) / 1000000000.0;
+
+        /* filter distance from DEM height 
+         *  TODO: does the DEM height need to be corrected by GEOID */
+        if( (height > (extent->photons[i].dem_h + sfparms.dem_buffer)) || 
+            (height < (extent->photons[i].dem_h - sfparms.dem_buffer)) )
+            continue;
+
+        /* get min and max height */
+        if(height < min_h) min_h = height;
+        if(height > max_h) max_h = height;
+
+        /* get min and max time */
+        if(time_secs < min_t) min_t = time_secs;
+        if(time_secs > max_t) max_t = time_secs;
+
+        /* accumulate background (divided out below) */
+        avg_bckgnd = extent->photons[i].background_rate;
+
+        /* add to list of photons to process */
+        heights.push_back(height);
+    }
+
+    /* check if photons are left to process */
+    if(heights.empty())
+    {
+        mlog(DEBUG, "No valid photons when determining sea surface for %s", resource);
+        return;
+    }
+
+    /* calculate and check range */
+    const double range_h = max_h - min_h;
+    if(range_h <= 0 || range_h > sfparms.max_range)
+    {
+        mlog(ERROR, "Invalid range <%lf> when determining sea surface for %s", range_h, resource);
+        return;
+    }
+
+    /* calculate and check number of bins in histogram 
+     *  - the number of bins is increased by 1 in case the ceiling and the floor
+     *    of the max range is both the same number */
+    const long num_bins = static_cast<long>(std::ceil(range_h / sfparms.bin_size)) + 1;
+    if(num_bins <= 0 || num_bins > sfparms.max_bins)
+    {
+        mlog(ERROR, "Invalid combination of range <%lf> and bin size <%lf> produced out of range histogram size <%ld> for %s", 
+                    range_h, sfparms.bin_size, num_bins, resource);
+        return;
+    }
+
+    /* calculate average background */
+    avg_bckgnd /= heights.size();
+
+    /* build histogram of photon heights */
+    vector<long> histogram(num_bins);
+    std::for_each (std::begin(heights), std::end(heights), [&](const double h) {
+        const long bin = static_cast<long>(std::floor((h - min_h) / sfparms.bin_size));
+        histogram[bin]++;
+    });
+    
+    /* calculate mean and standard deviation of histogram */
+    double bckgnd = 0.0;
+    double stddev = 0.0;
+    if(sfparms.model_as_poisson)
+    {
+        const long num_shots = std::round((max_t - min_t) / 0.0001);
+        const double bin_t = sfparms.bin_size * 0.00000002 / 3.0; // bin size from meters to seconds
+        const double bin_pe = bin_t * num_shots * avg_bckgnd; // expected value
+        bckgnd = bin_pe;
+        stddev = sqrt(bin_pe);
+    }
+    else
+    {
+        const double bin_avg = static_cast<double>(heights.size()) / static_cast<double>(num_bins);
+        double accum = 0.0;
+        std::for_each (std::begin(histogram), std::end(histogram), [&](const double h) {
+            accum += (h - bin_avg) * (h - bin_avg);
+        });
+        bckgnd = bin_avg;
+        stddev = sqrt(accum / heights.size());
+    }
+
+    /* build guassian kernel (from -k to k)*/
+    const double kernel_size = 6.0 * stddev + 1.0;
+    const long k = (static_cast<long>(std::ceil(kernel_size / sfparms.bin_size)) & ~0x1) / 2;
+    const long kernel_bins = 2 * k + 1;
+    double kernel_sum = 0.0;
+    vector<double> kernel(kernel_bins);
+    for(long x = -k; x <= k; x++)
+    {
+        const long i = x + k;
+        const double r = x / stddev;
+        kernel[i] = exp(-0.5 * r * r);
+        kernel_sum += kernel[i];
+    }
+    for(int i = 0; i < kernel_bins; i++)
+    {
+        kernel[i] /= kernel_sum;
+    }
+
+    /* build filtered histogram */
+    vector<double> smoothed_histogram(num_bins);
+    for(long i = 0; i < num_bins; i++)
+    {
+        double output = 0.0;
+        long num_samples = 0;
+        for(long j = -k; j <= k; j++)
+        {
+            const long index = i + k;
+            if(index >= 0 && index < num_bins)
+            {
+                output += kernel[j + k] * static_cast<double>(histogram[index]);
+                num_samples++;
+            }
+        }
+        smoothed_histogram[i] = output * static_cast<double>(kernel_bins) / static_cast<double>(num_samples);
+    }
+
+    /* find highest peak */
+    long highest_peak_bin = 0;
+    double highest_peak = smoothed_histogram[0];
+    for(int i = 1; i < num_bins; i++)
+    {
+        if(smoothed_histogram[i] > highest_peak)
+        {
+            highest_peak = smoothed_histogram[i];
+            highest_peak_bin = i;
+        }
+    }
+
+    /* find second highest peak */
+    const long peak_separation_in_bins = static_cast<long>(std::ceil(sfparms.min_peak_separation / sfparms.bin_size));
+    long second_peak_bin = -1; // invalid
+    double second_peak = std::numeric_limits<double>::min();
+    for(int i = 0; i < num_bins; i++)
+    {
+        if(std::abs(i - highest_peak_bin) > peak_separation_in_bins)
+        {
+            if(smoothed_histogram[i] > second_peak)
+            {
+                second_peak = smoothed_histogram[i];
+                second_peak_bin = i;
+            }
+        }
+    }
+
+    /* determine which peak is sea surface */
+    if( (second_peak_bin != -1) && 
+        (second_peak * sfparms.highest_peak_ratio >= highest_peak) ) // second peak is close in size to highest peak  
+    {
+        /* select peak that is highest in elevation */
+        if(highest_peak_bin < second_peak_bin)
+        {
+            highest_peak = second_peak;
+            highest_peak_bin = second_peak_bin;
+        }
+    }
+
+    /* check if sea surface signal is significant */
+    const double signal_threshold = bckgnd + (stddev * sfparms.signal_threshold_sigmas);
+    if(highest_peak < signal_threshold)
+    {
+        mlog(WARNING, "Unable to determine sea surface (%lf < %lf) for %s", highest_peak, signal_threshold, resource);
+        return;
+    }
+
+    /* calculate width of highest peak */
+    const double peak_above_bckgnd = smoothed_histogram[highest_peak_bin] - bckgnd;
+    const double peak_half_max = (peak_above_bckgnd * 0.4) + bckgnd;
+    long peak_width = 1;
+    for(long i = highest_peak_bin + 1; i < num_bins; i++)
+    {
+        if(smoothed_histogram[i] > peak_half_max) peak_width++;
+        else break;
+    }
+    for(long i = highest_peak_bin - 1; i >= 0; i--)
+    {
+        if(smoothed_histogram[i] > peak_half_max) peak_width++;
+        else break;
+    }
+    const double peak_stddev = (peak_width * sfparms.bin_size) / 2.35;
+
+    /* calculate sea surface height and label sea surface photons */
+    extent->surface_h = min_h + (highest_peak_bin * sfparms.bin_size) + (sfparms.bin_size / 2.0);
+    const double min_surface_h = extent->surface_h - (peak_stddev * sfparms.surface_width_sigmas);
+    const double max_surface_h = extent->surface_h + (peak_stddev * sfparms.surface_width_sigmas);
+    for(long i = 0; i < extent->photon_count; i++)
+    {
+        if( extent->photons[i].geoid_corr_h >= min_surface_h && 
+            extent->photons[i].geoid_corr_h <= max_surface_h )
+        {
+            extent->photons[i].class_ph = BathyParms::SEA_SURFACE;
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -1067,17 +1285,66 @@ double Atl03BathyReader::calculateBackground (int32_t current_segment, int32_t& 
  *      vvv     - version
  *      ee      - revision
  *----------------------------------------------------------------------------*/
-void Atl03BathyReader::parseResource (const char* _resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region)
+void Atl03BathyReader::parseResource (const char* _resource, TimeLib::date_t& date, uint16_t& rgt, uint8_t& cycle, uint8_t& region)
 {
+    long val;
+
     if(StringLib::size(_resource) < 29)
     {
         rgt = 0;
         cycle = 0;
         region = 0;
+        date.year = 0;
+        date.month = 0;
+        date.day = 0;
         return; // early exit on error
     }
 
-    long val;
+    /* get year */
+    char year_str[5];
+    year_str[0] = _resource[6];
+    year_str[1] = _resource[7];
+    year_str[2] = _resource[8];
+    year_str[3] = _resource[9];
+    year_str[4] = '\0';
+    if(StringLib::str2long(year_str, &val, 10))
+    {
+        date.year = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse year from resource %s: %s", _resource, year_str);
+    }
+
+    /* get month */
+    char month_str[3];
+    month_str[0] = _resource[10];
+    month_str[1] = _resource[11];
+    month_str[2] = '\0';
+    if(StringLib::str2long(month_str, &val, 10))
+    {
+        date.month = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse month from resource %s: %s", _resource, month_str);
+    }
+
+    /* get month */
+    char day_str[3];
+    day_str[0] = _resource[12];
+    day_str[1] = _resource[13];
+    day_str[2] = '\0';
+    if(StringLib::str2long(day_str, &val, 10))
+    {
+        date.day = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse day from resource %s: %s", _resource, day_str);
+    }
+
+    /* get RGT */
     char rgt_str[5];
     rgt_str[0] = _resource[21];
     rgt_str[1] = _resource[22];
@@ -1093,6 +1360,7 @@ void Atl03BathyReader::parseResource (const char* _resource, uint16_t& rgt, uint
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse RGT from resource %s: %s", _resource, rgt_str);
     }
 
+    /* get cycle */
     char cycle_str[3];
     cycle_str[0] = _resource[25];
     cycle_str[1] = _resource[26];
@@ -1106,6 +1374,7 @@ void Atl03BathyReader::parseResource (const char* _resource, uint16_t& rgt, uint
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Cycle from resource %s: %s", _resource, cycle_str);
     }
 
+    /* get region */
     char region_str[3];
     region_str[0] = _resource[27];
     region_str[1] = _resource[28];

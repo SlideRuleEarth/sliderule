@@ -41,17 +41,24 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* BathyParms::MAX_ALONG_TRACK_SPREAD = "max_along_track_spread";
 const char* BathyParms::MAX_DEM_DELTA = "max_dem_delta";
 const char* BathyParms::PH_IN_EXTENT = "ph_in_extent";
 const char* BathyParms::GENERATE_NDWI = "generate_ndwi";
 const char* BathyParms::USE_BATHY_MASK = "use_bathy_mask";
 const char* BathyParms::RETURN_INPUTS = "return_inputs";
+const char* BathyParms::CLASSIFIERS = "classifiers";
 const char* BathyParms::SPOTS = "spots";
 const char* BathyParms::ATL09_RESOURCES = "resources09";
-
-const double BathyParms::DEFAULT_MAX_ALONG_TRACK_SPREAD = 10000.0;
-const double BathyParms::DEFAULT_MAX_DEM_DELTA = 10000.0;
+const char* BathyParms::SURFACE_FINDER = "surface_finder";
+const char* BathyParms::DEM_BUFFER = "dem_buffer";
+const char* BathyParms::BIN_SIZE = "bin_size";
+const char* BathyParms::MAX_RANGE = "max_range";
+const char* BathyParms::MAX_BINS = "max_bins";
+const char* BathyParms::SIGNAL_THRESHOLD_SIGMAS = "signal_threshold_sigmas";
+const char* BathyParms::MIN_PEAK_SEPARATION = "min_peak_separation";
+const char* BathyParms::HIGHEST_PEAK_RATIO = "highest_peak_ratio";
+const char* BathyParms::SURFACE_WIDTH_SIGMAS = "surface_width_sigmas";
+const char* BathyParms::MODEL_AS_POISSON = "model_as_poisson";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -123,33 +130,83 @@ int BathyParms::luaSpotEnabled (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * luaClassifierEnabled - :classifieron(<spot>) --> true|false
+ *----------------------------------------------------------------------------*/
+int BathyParms::luaClassifierEnabled (lua_State* L)
+{
+    bool status = false;
+    BathyParms* lua_obj = NULL;
+
+    try
+    {
+        lua_obj = dynamic_cast<BathyParms*>(getLuaSelf(L, 1));
+        const char* classifier_str = getLuaString(L, 2);
+        const classifier_t classifier = str2classifier(classifier_str);
+        if(classifier != INVALID_CLASSIFIER)
+        {
+            const int index = static_cast<int>(classifier);
+            status = lua_obj->classifiers[index];
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error retrieving classifier status: %s", e.what());
+    }
+
+    lua_pushboolean(L, status);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * str2classifier
+ *----------------------------------------------------------------------------*/
+BathyParms::classifier_t BathyParms::str2classifier (const char* str)
+{
+    if(StringLib::match(str, "coastnet"))           return COASTNET;
+    if(StringLib::match(str, "openoceans"))         return OPENOCEANS;
+    if(StringLib::match(str, "medianfilter"))       return MEDIANFILTER;
+    if(StringLib::match(str, "cshelph"))            return CSHELPH;
+    if(StringLib::match(str, "bathypathfinder"))    return BATHY_PATHFINDER;
+    if(StringLib::match(str, "pointnet2"))          return POINTNET2;
+    if(StringLib::match(str, "localcontrast"))      return LOCAL_CONTRAST;
+    if(StringLib::match(str, "ensemble"))           return ENSEMBLE;
+    return INVALID_CLASSIFIER;
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 BathyParms::BathyParms(lua_State* L, int index):
     Icesat2Parms (L, index),
-    max_along_track_spread (DEFAULT_MAX_ALONG_TRACK_SPREAD),
-    max_dem_delta (DEFAULT_MAX_DEM_DELTA),
-    ph_in_extent (DEFAULT_PH_IN_EXTENT),
-    generate_ndwi(true),
-    use_bathy_mask(true),
-    return_inputs(false),
-    spots{true, true, true, true, true, true}
+    max_dem_delta (10000.0),
+    ph_in_extent (8192),
+    generate_ndwi (true),
+    use_bathy_mask (true),
+    classifiers {true, true, true, true, true, true, true, true},
+    return_inputs (false),
+    spots {true, true, true, true, true, true},
+    surface_finder {
+        .dem_buffer = 50.0,
+        .bin_size = 0.5,
+        .max_range = 1000.0,
+        .max_bins = 10000,
+        .signal_threshold_sigmas = 3.0,
+        .min_peak_separation = 0.5,
+        .highest_peak_ratio = 1.2,
+        .surface_width_sigmas = 3.0,
+        .model_as_poisson = true
+    }
 {
     bool provided = false;
 
     /* Set Meta Table Functions */
     luaL_getmetatable(L, LUA_META_NAME);
     LuaEngine::setAttrFunc(L, "spoton", luaSpotEnabled);
+    LuaEngine::setAttrFunc(L, "classifieron", luaClassifierEnabled);
     lua_pop(L, 1);
 
     try
     {
-        /* maximum along track spread */
-        lua_getfield(L, index, BathyParms::MAX_ALONG_TRACK_SPREAD);
-        max_along_track_spread = LuaObject::getLuaFloat(L, -1, true, max_along_track_spread, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::MAX_ALONG_TRACK_SPREAD, max_along_track_spread);
-        lua_pop(L, 1);
-
         /* maximum DEM delta */
         lua_getfield(L, index, BathyParms::MAX_DEM_DELTA);
         max_dem_delta = LuaObject::getLuaFloat(L, -1, true, max_dem_delta, &provided);
@@ -174,6 +231,11 @@ BathyParms::BathyParms(lua_State* L, int index):
         if(provided) mlog(DEBUG, "Setting %s to %d", BathyParms::USE_BATHY_MASK, use_bathy_mask);
         lua_pop(L, 1);
 
+        /* classifiers */
+        lua_getfield(L, index, BathyParms::CLASSIFIERS);
+        get_classifiers(L, -1, &provided);
+        lua_pop(L, 1);
+
         /* return inputs */
         lua_getfield(L, index, BathyParms::RETURN_INPUTS);
         return_inputs = LuaObject::getLuaBoolean(L, -1, true, return_inputs, &provided);
@@ -183,13 +245,71 @@ BathyParms::BathyParms(lua_State* L, int index):
         /* atl09 resources */
         lua_getfield(L, index, BathyParms::ATL09_RESOURCES);
         get_atl09_list(L, -1, &provided);
-        if(provided) mlog(DEBUG, "ATL09 resources set");
         lua_pop(L, 1);
 
         /* spot selection */
         lua_getfield(L, index, BathyParms::SPOTS);
         get_spot_list(L, -1, &provided);
-        if(provided) mlog(DEBUG, "Spots selected");
+        lua_pop(L, 1);
+
+        /* surface finder */
+        lua_getfield(L, index, BathyParms::SURFACE_FINDER);
+        if(lua_istable(L, index))
+        {
+            /* dem buffer */
+            lua_getfield(L, index, BathyParms::DEM_BUFFER);
+            surface_finder.dem_buffer = LuaObject::getLuaFloat(L, -1, true, surface_finder.dem_buffer, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::DEM_BUFFER, surface_finder.dem_buffer);
+            lua_pop(L, 1);
+
+            /* bin size */
+            lua_getfield(L, index, BathyParms::BIN_SIZE);
+            surface_finder.bin_size = LuaObject::getLuaFloat(L, -1, true, surface_finder.bin_size, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::BIN_SIZE, surface_finder.bin_size);
+            lua_pop(L, 1);
+
+            /* max range */
+            lua_getfield(L, index, BathyParms::MAX_RANGE);
+            surface_finder.max_range = LuaObject::getLuaFloat(L, -1, true, surface_finder.max_range, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::MAX_RANGE, surface_finder.max_range);
+            lua_pop(L, 1);
+
+            /* max bins */
+            lua_getfield(L, index, BathyParms::MAX_BINS);
+            surface_finder.max_bins = LuaObject::getLuaInteger(L, -1, true, surface_finder.max_bins, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %ld", BathyParms::MAX_BINS, surface_finder.max_bins);
+            lua_pop(L, 1);
+
+            /* signal threshold sigmas */
+            lua_getfield(L, index, BathyParms::SIGNAL_THRESHOLD_SIGMAS);
+            surface_finder.signal_threshold_sigmas = LuaObject::getLuaFloat(L, -1, true, surface_finder.signal_threshold_sigmas, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::SIGNAL_THRESHOLD_SIGMAS, surface_finder.signal_threshold_sigmas);
+            lua_pop(L, 1);
+
+            /* min peak separation */
+            lua_getfield(L, index, BathyParms::MIN_PEAK_SEPARATION);
+            surface_finder.min_peak_separation = LuaObject::getLuaFloat(L, -1, true, surface_finder.min_peak_separation, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::MIN_PEAK_SEPARATION, surface_finder.min_peak_separation);
+            lua_pop(L, 1);
+
+            /* highest peak ratio */
+            lua_getfield(L, index, BathyParms::HIGHEST_PEAK_RATIO);
+            surface_finder.highest_peak_ratio = LuaObject::getLuaFloat(L, -1, true, surface_finder.highest_peak_ratio, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::HIGHEST_PEAK_RATIO, surface_finder.highest_peak_ratio);
+            lua_pop(L, 1);
+
+            /* surface width sigmas */
+            lua_getfield(L, index, BathyParms::SURFACE_WIDTH_SIGMAS);
+            surface_finder.surface_width_sigmas = LuaObject::getLuaFloat(L, -1, true, surface_finder.surface_width_sigmas, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %lf", BathyParms::SURFACE_WIDTH_SIGMAS, surface_finder.surface_width_sigmas);
+            lua_pop(L, 1);
+
+            /* model as poisson */
+            lua_getfield(L, index, BathyParms::MODEL_AS_POISSON);
+            surface_finder.model_as_poisson = LuaObject::getLuaBoolean(L, -1, true, surface_finder.model_as_poisson, &provided);
+            if(provided) mlog(DEBUG, "Setting %s to %d", BathyParms::MODEL_AS_POISSON, surface_finder.model_as_poisson);
+            lua_pop(L, 1);
+        }
         lua_pop(L, 1);
     }
     catch(const RunTimeException& e)
@@ -245,7 +365,7 @@ void BathyParms::get_atl09_list (lua_State* L, int index, bool* provided)
                 const string name(str);
                 if(!alt09_index.add(key, name, true))
                 {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "Duplicate ATL09 key detected: %s", str);
+                    mlog(CRITICAL, "Duplicate ATL09 key detected: %s", str);
                 }
                 mlog(DEBUG, "Adding %s to ATL09 index with key: %s", str, key);
             }
@@ -325,5 +445,105 @@ void BathyParms::get_spot_list (lua_State* L, int index, bool* provided)
     else if(!lua_isnil(L, index))
     {
         mlog(ERROR, "Spot selection must be provided as a table or integer");
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * get_classifiers
+ *----------------------------------------------------------------------------*/
+void BathyParms::get_classifiers (lua_State* L, int index, bool* provided)
+{
+    /* Reset Provided */
+    if(provided) *provided = false;
+
+    /* Must be table of classifiers or a single classifier as a string */
+    if(lua_istable(L, index))
+    {
+        /* Clear classifier table (sets all to false) */
+        memset(classifiers, 0, sizeof(classifiers));
+
+        /* Get number of classifiers in table */
+        const int num_classifiers = lua_rawlen(L, index);
+        if(num_classifiers > 0 && provided) *provided = true;
+
+        /* Iterate through each classifier in table */
+        for(int i = 0; i < num_classifiers; i++)
+        {
+            /* Get classifier */
+            lua_rawgeti(L, index, i+1);
+
+            /* Set classifier */
+            if(lua_isinteger(L, -1))
+            {
+                const int classifier = LuaObject::getLuaInteger(L, -1);
+                if(classifier >= 0 && classifier < NUM_CLASSIFIERS)
+                {
+                    classifiers[classifier] = true;
+                    mlog(DEBUG, "Selecting classifier %d", classifier);
+                }
+                else
+                {
+                    mlog(ERROR, "Invalid classifier: %d", classifier);
+                }
+            }
+            else if(lua_isstring(L, -1))
+            {
+                const char* classifier_str = LuaObject::getLuaString(L, -1);
+                const classifier_t classifier = str2classifier(classifier_str);
+                if(classifier != INVALID_CLASSIFIER)
+                {
+                    classifiers[static_cast<int>(classifier)] = true;
+                    mlog(DEBUG, "Selecting %s classifier", classifier_str);
+                }
+                else
+                {
+                    mlog(ERROR, "Invalid classifier: %s", classifier_str);
+                }
+            }
+
+            /* Clean up stack */
+            lua_pop(L, 1);
+        }
+    }
+    else if(lua_isinteger(L, index))
+    {
+        /* Clear classifier table (sets all to false) */
+        memset(classifiers, 0, sizeof(classifiers));
+
+        /* Set classifier */
+        const int classifier = LuaObject::getLuaInteger(L, -1);
+        if(classifier >= 0 && classifier < NUM_CLASSIFIERS)
+        {
+            if(provided) *provided = true;
+            classifiers[classifier] = true;
+            mlog(DEBUG, "Selecting classifier %d", classifier);
+        }
+        else
+        {
+            mlog(ERROR, "Invalid classifier: %d", classifier);
+        }
+    }
+    else if(lua_isstring(L, index))
+    {
+        /* Clear classifiers table (sets all to false) */
+        memset(classifiers, 0, sizeof(classifiers));
+
+        /* Set classifier */
+        const char* classifier_str = LuaObject::getLuaString(L, index);
+        const classifier_t classifier = str2classifier(classifier_str);
+        if(classifier != INVALID_CLASSIFIER)
+        {
+            if(provided) *provided = true;
+            classifiers[static_cast<int>(classifier)] = true;
+            mlog(DEBUG, "Selecting %s classifier", classifier_str);
+        }
+        else
+        {
+            mlog(ERROR, "Invalid classifier: %s", classifier_str);
+        }
+    }
+    else if(!lua_isnil(L, index))
+    {
+        mlog(ERROR, "ATL24 classifiers must be provided as a table, integer, or string");
     }
 }

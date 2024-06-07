@@ -77,26 +77,43 @@ NO_VALUE = -9999
 # READ INPUTS
 ##############
 
-if len(sys.argv) <= 4:
-    print("Not enough parameters: python oceaneyes.py <settings json> <input json beam file> <input csv beam file> <output csv beam file>")
+# process command line
+if len(sys.argv) == 5:
+    settings_json   = sys.argv[1]
+    info_json       = sys.argv[2]
+    input_csv       = sys.argv[3]
+    output_csv      = sys.argv[4]
+elif len(sys.argv) == 4:
+    settings_json   = None
+    info_json       = sys.argv[1]
+    input_csv       = sys.argv[2]
+    output_csv      = sys.argv[3]
+elif len(sys.argv) == 3:
+    settings_json   = None
+    info_json       = sys.argv[1]
+    input_csv       = sys.argv[2]
+    output_csv      = None
+else:
+    print("Incorrect parameters supplied: python runner.py [<settings json>] <input json spot file> <input csv spot file> [<output csv spot file>]")
     sys.exit()
 
-settings_json   = sys.argv[1]
-info_json       = sys.argv[2]
-input_csv       = sys.argv[3]
-output_csv      = sys.argv[4]
-
 # read settings json
-with open(settings_json, 'r') as json_file:
-    settings        = json.load(json_file)
-    res_along_track = settings.get('res_along_track', 10) 
-    res_z           = settings.get('res_z', 0.2)
-    window_size     = settings.get('window_size', 11) # 3x overlap is not enough to filter bad daytime noise
-    range_z         = settings.get('range_z', [-50, 30]) # include at least a few meters more than 5m above the surface for noise estimation, key for daytime case noise filtering
-    verbose         = settings.get('verbose', False) # not really fully integrated, it's still going to print some recent debugging statements
-    photon_bins     = settings.get('photon_bins', False)
-    parallel        = settings.get('parallel', True)
-    use_ndwi        = settings.get('use_ndwi', False)
+if settings_json != None:
+    with open(settings_json, 'r') as json_file:
+        settings = json.load(json_file)
+else:
+    settings = {}
+
+# set configuration
+res_along_track = settings.get('res_along_track', 10) 
+res_z           = settings.get('res_z', 0.2)
+window_size     = settings.get('window_size', 11) # 3x overlap is not enough to filter bad daytime noise
+range_z         = settings.get('range_z', [-50, 30]) # include at least a few meters more than 5m above the surface for noise estimation, key for daytime case noise filtering
+verbose         = settings.get('verbose', False) # not really fully integrated, it's still going to print some recent debugging statements
+photon_bins     = settings.get('photon_bins', False)
+parallel        = settings.get('parallel', True)
+use_ndwi        = settings.get('use_ndwi', False)
+chunk_size      = settings.get('chunk_size', 65536) # number of photons to process at one time
 
 # read info json
 with open(info_json, 'r') as json_file:
@@ -161,30 +178,36 @@ class Profile:
             "surface": 41,
             "column": 45,
             "bathymetry": 40,
-            "background": 0,
-            "unclassified": -1,
-            "none": -9999,
+            "background": 1,
+            "unclassified": 0,
+            "none": 0,
         }
     def label_help(self, user_input=None):
         return self.class_labels[user_input]
-
-p_sr = Profile(data=ph_data, info=ph_info)
 
 ################
 # EXECUTE MODEL
 ################
 
-mmp = ModelMakerP(res_along_track=res_along_track, res_z=res_z, window_size=window_size, range_z=range_z, verbose=verbose, photon_bins=photon_bins, parallel=parallel)
-m = mmp.process(p_sr, n_cpu_cores=10)
-print(m.profile.data)
+model_outputs = []
+for start_row in range(0, len(ph_data), chunk_size):
+    print(f'Processing rows {start_row} to {start_row + chunk_size} out of {len(ph_data)}')
+    p_sr = Profile(data=ph_data.iloc[start_row:start_row+chunk_size], info=ph_info)
+    mmp = ModelMakerP(res_along_track=res_along_track, res_z=res_z, window_size=window_size, range_z=range_z, verbose=verbose, photon_bins=photon_bins, parallel=parallel)
+    m = mmp.process(p_sr, n_cpu_cores=8)
+    model_outputs.append(m.profile.data)
 
 ################
 # WRITE OUTPUTS
 ################
 
+results = pd.concat(model_outputs, ignore_index=True)
+
 ph_out = pd.DataFrame()
+ph_out["index_ph"] = results.photon_index
+ph_out["class_ph"] = results.classification
 
-ph_out["index_ph"] = m.profile.data.photon_index
-ph_out["class_ph"] = m.profile.data.classification
-
-ph_out.to_csv(output_csv, index=False, columns=["index_ph", "class_ph"])
+if output_csv != None:
+    ph_out.to_csv(output_csv, index=False, columns=["index_ph", "class_ph"])
+else:
+    print(ph_out.to_string(index=False, header=True, columns=['index_ph', 'class_ph']))
