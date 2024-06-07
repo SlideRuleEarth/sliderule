@@ -31,7 +31,7 @@ import numpy as np
 def photon_refraction(W, Z, ref_az, ref_el,
                       n1=1.00029, n2=1.34116):
     '''
-    ICESat-2 refraction correction implented as outlined in Parrish, et al. 
+    ICESat-2 refraction correction implemented as outlined in Parrish, et al. 
     2019 for correcting photon depth data.
 
     Highly recommended to reference elevations to geoid datum to remove sea

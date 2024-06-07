@@ -51,7 +51,7 @@ Dev ToDo:       1)
 
 AUTHOR:         James T. Dietrich
 ORGANIZATION:   University of Texas @ Austin
-                3D Geospatial Labratory
+                3D Geospatial Laboratory
                 Center for Space Research
 Contact:        james.dietrich@austin.utexas.edu
 """
@@ -89,7 +89,7 @@ def get_kd_values(date, outpath = 'c:/temp', keep=False):
     out : file path
         file path for output of the KD images. The default is 'c:/temp'.
     keep : boolean, optional
-        True = files will be kept and stored with their orignal filename.
+        True = files will be kept and stored with their original filename.
         False = files will be overwritten with the filename kd_490.nc
         The default is False.
 
@@ -136,7 +136,7 @@ def get_kd_values(date, outpath = 'c:/temp', keep=False):
     if os.path.exists(file_out):
         return (file_out, True)
 
-    # submit download request, if OK (no errors) wrtie the file out
+    # submit download request, if OK (no errors) write the file out
     #   if no file, kill everything
 
     r = requests.get(oc_file)
