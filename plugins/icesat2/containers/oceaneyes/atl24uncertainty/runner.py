@@ -37,7 +37,6 @@ import pandas as pd
 import numpy as np
 import sys
 import json
-import os
 
 ######################
 # READ ICESAT2 INPUTS
@@ -132,12 +131,8 @@ print("Retrieving Kd values")
 # get date of granule in form: "%Y-%m-%d_%H%MZ"
 profile_date = f'{info["year"]}-{info["month"]}-{info["day"]}_0000Z'
 
-# set output path to the directory holding the inputs
-pathlist = input_csv.split(os.path.sep)
-outpath = os.path.sep.join(pathlist[:-1])
-
 # read KD from VIIRS
-kd_out, req_ok = get_kd_values(profile_date, outpath=outpath, keep=False)
+kd_out, req_ok = get_kd_values(profile_date, outpath="/tmp", keep=False)
 
 # sample KD values at each coordinate
 coord_list = [(x, y) for x, y in zip(data.longitude, data.latitude)]

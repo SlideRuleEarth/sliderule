@@ -22,6 +22,7 @@ parser.add_argument('--verbose',            '-v',   action='store_true',    defa
 parser.add_argument('--cleanup',            '-u',   action='store_true',    default=False)
 parser.add_argument('--generate_ndwi',      '-w',   action='store_true',    default=False)
 parser.add_argument('--ignore_bathy_mask',  '-b',   action='store_true',    default=False)
+parser.add_argument('--print_metadata',     '-i',   action='store_true',    default=False) # only available if [geo]parquet file format chosen
 parser.add_argument('--classifiers',        '-c',   type=str, nargs='+',    default=["coastnet", "openoceans", "medianfilter", "cshelph", "bathypathfinder", "pointnet2", "ensemble"])
 parser.add_argument('--plot',               '-p',   type=int, nargs='+',    choices=range(1,7), default=[])
 args,_ = parser.parse_known_args()
@@ -88,3 +89,13 @@ if len(args.plot):
 # Clean Up Temporary Files
 if args.cleanup:
     os.remove(output_filename)
+
+# Display Metadata
+if args.print_metadata:
+    import pyarrow.parquet as pq
+    import json
+    parquet_file = pq.ParquetFile(output_filename)
+    metadata = parquet_file.metadata
+    metadata = metadata.metadata[b'sliderule'].decode('utf-8')
+    metadata = json.loads(metadata)
+    print(json.dumps(metadata, indent=4))

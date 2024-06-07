@@ -75,7 +75,7 @@ def path_fix(folder):
         
     return folder
 
-def get_kd_values(date, outpath = 'c:/temp', keep=False):
+def get_kd_values(date, outpath, keep=False):
     '''
     Downloads an 8-day NOAA20 VIIRS Kd490 image from NASA OceanColor
 

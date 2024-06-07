@@ -12,6 +12,7 @@ dependencies:
   - requests
   - networkx
   - scikit-learn
+  - pyproj
   - numba
   - pathos
   - tqdm

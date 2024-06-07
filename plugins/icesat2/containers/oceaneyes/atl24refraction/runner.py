@@ -33,7 +33,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 from photon_refraction import photon_refraction
 
 import pandas as pd
-import numpy as np
+from pyproj import Transformer
 import sys
 import json
 
@@ -91,6 +91,12 @@ data.loc[subaqueous, 'x_ph'] += data.loc[subaqueous, 'dE']
 data.loc[subaqueous, 'y_ph'] += data.loc[subaqueous, 'dN']
 data.loc[subaqueous, 'geoid_corr_h'] += data.loc[subaqueous, 'dZ']
 
+# correct latitude and longitude
+transformer = Transformer.from_crs(f"EPSG:326{info['utm_zone']}", "EPSG:7912", always_xy=True)
+data["geoloc_corr"] = data.apply(lambda row: transformer.transform(row['x_ph'], row['y_ph']), axis=1)
+data["longitude"] = data.apply(lambda row: row['geoloc_corr'][0], axis=1)
+data["latitude"] = data.apply(lambda row: row['geoloc_corr'][1], axis=1)
+
 # calculate subaqueous depth
 data["depth"] = 0.0
 data.loc[subaqueous, 'depth'] = data.loc[subaqueous, 'surface_h'] - data.loc[subaqueous, 'geoid_corr_h']
@@ -124,6 +130,7 @@ with open(info_json, 'w') as json_file:
 del data["dE"]
 del data["dN"]
 del data["dZ"]
+del data["geoloc_corr"]
 
 # output results
 if output_csv != None:

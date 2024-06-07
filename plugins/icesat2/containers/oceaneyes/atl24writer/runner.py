@@ -57,16 +57,19 @@ atl24_filename = control["atl24_filename"]
 
 # read in data
 spot_table = {}
+
 # read in photons as dataframe from csv file
 for spot in input_files["spot_photons"]:
     if spot not in spot_table:
         spot_table[spot] = {}
     spot_table[spot]["df"] = pd.read_csv(input_files["spot_photons"][spot])
 print("Read photon data into dataframes")
+
 # read in granule info as dictionary from json file and add to dataframes
 for spot in input_files["spot_granule"]:
     spot_table[spot]["info"] = json.load(open(input_files["spot_granule"][spot], 'r'))
     print(json.dumps(spot_table[spot]["info"], indent=4))
+
 # read in photon classifications as dataframe from csv file and merge into dataframes
 for classifier in input_files["classifiers"]:
     for spot in input_files["classifiers"][classifier]:
@@ -95,10 +98,19 @@ if output_parms["format"] != "hdf5":
 
     # write output
     if output_parms["format"] == "csv":
+        
+        # CSV
         df.to_csv(atl24_filename, index=False)
         print("CSV file written: " + atl24_filename)
+    
     elif output_parms["format"] == "parquet" or output_parms["format"] == "geoparquet":
+        from geopandas.io.arrow import _geopandas_to_arrow
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+
         if output_parms["as_geo"] or output_parms["format"] == "geoparquet":
+    
+            # GeoParquet
             df['time'] = df['time'].astype('datetime64[ns]')
             geometry = gpd.points_from_xy('longitude', 'latitude', 'geoid_corr_h')
             df.drop(columns=['longitude', 'latitude'], inplace=True)
@@ -106,10 +118,20 @@ if output_parms["format"] != "hdf5":
             gdf.set_index('time', inplace=True)
             gdf.sort_index(inplace=True)
             gdf.to_parquet(atl24_filename, index=None)
-            print("GeoParquet file written: " + atl24_filename)
+            table = _geopandas_to_arrow(gdf)
+            print("Writing GeoParquet file: " + atl24_filename)
+
         else:
-            df.to_parquet(atl24_filename, index=None)
-            print("Parquet file written: " + atl24_filename)
+
+            # Parquet
+            table = pa.Table.from_pandas(df)
+            print("Writing Parquet file: " + atl24_filename)
+
+        # add metadata and write file
+        metadata = {spot: spot_table[spot]["info"] for spot in spot_table}
+        schema = table.schema.with_metadata({"sliderule": json.dumps(metadata)})
+        table = table.replace_schema_metadata(schema.metadata)
+        pq.write_table(table, atl24_filename)
 
 # HDF5 Output
 else:
