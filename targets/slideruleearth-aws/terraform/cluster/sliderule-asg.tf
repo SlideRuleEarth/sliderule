@@ -42,7 +42,7 @@ resource "aws_launch_configuration" "sliderule-instance" {
   instance_type               = "t4g.2xlarge"
   root_block_device {
     volume_type               = "gp2"
-    volume_size               = 8
+    volume_size               = 16
     delete_on_termination     = true
   }
   key_name                    = var.key_pair_name
@@ -58,8 +58,9 @@ resource "aws_launch_configuration" "sliderule-instance" {
       export SLIDERULE_IMAGE=${var.container_repo}/sliderule:${var.cluster_version}
       export PROVISIONING_SYSTEM="https://ps.${var.domain}"
       export CONTAINER_REGISTRY=${var.container_repo}
-      aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
+      aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${var.container_repo}
       aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-sliderule.yml ./docker-compose.yml
+      docker pull ${var.container_repo}/oceaneyes
       docker-compose -p cluster up --detach
   EOF
 }

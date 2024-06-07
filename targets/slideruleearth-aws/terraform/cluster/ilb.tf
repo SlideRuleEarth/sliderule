@@ -21,7 +21,7 @@ resource "aws_instance" "ilb" {
     }
     user_data = <<-EOF
       #!/bin/bash
-      aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
+      aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${var.container_repo}
       export OAUTH_HMAC_SECRET='${local.secrets.jwt_secret_key}'
       export IS_PUBLIC=${var.is_public}
       export CLUSTER=${var.cluster_name}
