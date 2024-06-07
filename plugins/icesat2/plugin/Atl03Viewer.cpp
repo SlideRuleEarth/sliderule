@@ -48,6 +48,7 @@
 const char* Atl03Viewer::segRecType = "atl03vrec.segments";
 const RecordObject::fieldDef_t Atl03Viewer::segRecDef[] = {
     {"time",            RecordObject::TIME8,    offsetof(segment_t, time_ns),        1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
+    {"extent_id",       RecordObject::UINT64,   offsetof(segment_t, extent_id),      1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
     {"latitude",        RecordObject::DOUBLE,   offsetof(segment_t, latitude),       1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
     {"longitude",       RecordObject::DOUBLE,   offsetof(segment_t, longitude),      1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
     {"segment_dist_x",  RecordObject::FLOAT,    offsetof(segment_t, dist_x),         1,  NULL, NATIVE_FLAGS},
@@ -63,7 +64,6 @@ const RecordObject::fieldDef_t Atl03Viewer::batchRecDef[] = {
     {"spot",            RecordObject::UINT8,    offsetof(extent_t, spot),                   1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
     {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
-    {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
     {"segments",        RecordObject::USER,     offsetof(extent_t, segments),               0,  segRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
 };
 
@@ -443,28 +443,13 @@ Atl03Viewer::Atl03Data::Atl03Data (info_t* info, const Region& region):
     sc_orient           (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",                     &info->reader->context),
     segment_delta_time  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),           &info->reader->context, 0, region.first_segment, region.num_segments),
     segment_id          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_id").c_str(),           &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_dist_x      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),       &info->reader->context, 0, region.first_segment, region.num_segments),
-    ref_segment_lat     (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context, 0, region.first_segment, region.num_segments),
-    ref_segment_lon     (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_ph_cnt      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(),       &info->reader->context, 0, region.first_segment, region.num_segments)
+    segment_dist_x      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),       &info->reader->context, 0, region.first_segment, region.num_segments)
 {
     /* Join Hardcoded Reads */
     sc_orient.join(info->reader->read_timeout_ms, true);
     segment_delta_time.join(info->reader->read_timeout_ms, true);
     segment_id.join(info->reader->read_timeout_ms, true);
     segment_dist_x.join(info->reader->read_timeout_ms, true);
-    ref_segment_lat.join(info->reader->read_timeout_ms, true);
-    ref_segment_lon.join(info->reader->read_timeout_ms, true);
-    segment_ph_cnt.join(info->reader->read_timeout_ms, true);
-
-    /* Sanity check for size of all returned value arrays */
-    const long scnt = region.num_segments != -1 ? region.num_segments : segment_delta_time.size;
-    assert(scnt == segment_delta_time.size);
-    assert(scnt == ref_segment_lat.size);
-    assert(scnt == ref_segment_lon.size);
-    assert(scnt == segment_dist_x.size);
-    assert(scnt == segment_id.size);
-    assert(scnt == segment_ph_cnt.size);
 }
 
 /*----------------------------------------------------------------------------
@@ -501,9 +486,6 @@ void* Atl03Viewer::subsettingThread (void* parm)
 
         const uint32_t max_segments_per_extent = 256;
 
-        /* Initialize Extent Counter */
-        uint32_t extent_counter = 0;
-
         /* Traverse All Segments in Dataset */
         for(uint32_t s = 0; s < local_stats.segments_read; s++)
         {
@@ -512,8 +494,9 @@ void* Atl03Viewer::subsettingThread (void* parm)
 
             const segment_t segment = {
                 .time_ns   = Icesat2Parms::deltatime2timestamp(atl03.segment_delta_time[s]),
-                .latitude  = atl03.ref_segment_lat[s],
-                .longitude = atl03.ref_segment_lon[s],
+                .extent_id = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, s),
+                .latitude  = region.segment_lat[s],
+                .longitude = region.segment_lon[s],
                 .dist_x    = atl03.segment_dist_x[s],
                 .id        = static_cast<uint32_t>(atl03.segment_id[s]),
                 .ph_cnt    = static_cast<uint32_t>(region.segment_ph_cnt[s])
@@ -524,8 +507,6 @@ void* Atl03Viewer::subsettingThread (void* parm)
 
             if(segments.length() % max_segments_per_extent == 0 || last_segment)
             {
-                /* Generate Extent ID */
-
                 /* Calculate Extent Record Size */
                 const int batch_bytes = offsetof(extent_t, segments) + (sizeof(segment_t) * segments.length());
 
@@ -539,7 +520,6 @@ void* Atl03Viewer::subsettingThread (void* parm)
                                                            static_cast<Icesat2Parms::track_t>(info->track), info->pair);
                 extent->reference_ground_track = reader->start_rgt;
                 extent->cycle = reader->start_cycle;
-                extent->extent_id = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, extent_counter);
 
                 /* Populate Segments */
                 for(int32_t i = 0; i < segments.length(); i++)
@@ -551,9 +531,6 @@ void* Atl03Viewer::subsettingThread (void* parm)
 
                 /* Reset Segment List */
                 segments.clear();
-
-                /* Bump Extent Counter */
-                extent_counter++;
             }
         }
     }

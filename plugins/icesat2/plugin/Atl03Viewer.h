@@ -81,6 +81,7 @@ class Atl03Viewer: public LuaObject
         /* Segment Fields */
         typedef struct {
             int64_t         time_ns;        // nanoseconds since GPS epoch
+            uint64_t        extent_id;
             double          latitude;
             double          longitude;
             double          dist_x;         // segment_dist_x
@@ -96,7 +97,6 @@ class Atl03Viewer: public LuaObject
             uint8_t         spot; // 1 to 6
             uint16_t        reference_ground_track;
             uint8_t         cycle;
-            uint64_t        extent_id;
             segment_t       segments[]; // zero length field
         } extent_t;
 
@@ -167,10 +167,6 @@ class Atl03Viewer: public LuaObject
                 H5Array<double>     segment_delta_time;
                 H5Array<int32_t>    segment_id;
                 H5Array<double>     segment_dist_x;
-
-                H5Array<double>     ref_segment_lat;
-                H5Array<double>     ref_segment_lon;
-                H5Array<int32_t>    segment_ph_cnt;
         };
 
         /*--------------------------------------------------------------------
