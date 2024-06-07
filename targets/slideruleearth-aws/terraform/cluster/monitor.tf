@@ -26,7 +26,7 @@ resource "aws_instance" "monitor" {
       chmod +x ./export_logs.sh
       aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-cronjob.txt ./cronjob.txt
       crontab ./cronjob.txt
-      aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
+      aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${var.container_repo}
       export CLIENT_ID='${local.secrets.client_id}'
       export CLIENT_SECRET='${local.secrets.client_secret}'
       export DOMAIN=${var.domain}
