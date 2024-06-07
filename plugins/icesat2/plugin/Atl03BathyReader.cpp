@@ -819,8 +819,8 @@ void* Atl03BathyReader::subsettingThread (void* parm)
             current_photon++;
 
             if((extent_photons.length() >= parms->ph_in_extent) ||
-               (current_photon >= atl03.dist_ph_along.size) || 
-               (extent_photons.length() > 0 && terminate_extent_on_boundary))
+               (current_photon >= atl03.dist_ph_along.size) ||
+               (!extent_photons.empty() && terminate_extent_on_boundary))
             {
                 /* Generate Extent ID */
                 const uint64_t extent_id = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, extent_counter);
@@ -1037,9 +1037,9 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
         const double height = extent->photons[i].geoid_corr_h;
         const double time_secs = static_cast<double>(extent->photons[i].time_ns) / 1000000000.0;
 
-        /* filter distance from DEM height 
+        /* filter distance from DEM height
          *  TODO: does the DEM height need to be corrected by GEOID */
-        if( (height > (extent->photons[i].dem_h + sfparms.dem_buffer)) || 
+        if( (height > (extent->photons[i].dem_h + sfparms.dem_buffer)) ||
             (height < (extent->photons[i].dem_h - sfparms.dem_buffer)) )
             continue;
 
@@ -1073,13 +1073,13 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
         return;
     }
 
-    /* calculate and check number of bins in histogram 
+    /* calculate and check number of bins in histogram
      *  - the number of bins is increased by 1 in case the ceiling and the floor
      *    of the max range is both the same number */
     const long num_bins = static_cast<long>(std::ceil(range_h / sfparms.bin_size)) + 1;
     if(num_bins <= 0 || num_bins > sfparms.max_bins)
     {
-        mlog(ERROR, "Invalid combination of range <%lf> and bin size <%lf> produced out of range histogram size <%ld> for %s", 
+        mlog(ERROR, "Invalid combination of range <%lf> and bin size <%lf> produced out of range histogram size <%ld> for %s",
                     range_h, sfparms.bin_size, num_bins, resource);
         return;
     }
@@ -1093,7 +1093,7 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
         const long bin = static_cast<long>(std::floor((h - min_h) / sfparms.bin_size));
         histogram[bin]++;
     });
-    
+
     /* calculate mean and standard deviation of histogram */
     double bckgnd = 0.0;
     double stddev = 0.0;
@@ -1181,8 +1181,8 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     }
 
     /* determine which peak is sea surface */
-    if( (second_peak_bin != -1) && 
-        (second_peak * sfparms.highest_peak_ratio >= highest_peak) ) // second peak is close in size to highest peak  
+    if( (second_peak_bin != -1) &&
+        (second_peak * sfparms.highest_peak_ratio >= highest_peak) ) // second peak is close in size to highest peak
     {
         /* select peak that is highest in elevation */
         if(highest_peak_bin < second_peak_bin)
@@ -1222,7 +1222,7 @@ void Atl03BathyReader::findSeaSurface (extent_t* extent)
     const double max_surface_h = extent->surface_h + (peak_stddev * sfparms.surface_width_sigmas);
     for(long i = 0; i < extent->photon_count; i++)
     {
-        if( extent->photons[i].geoid_corr_h >= min_surface_h && 
+        if( extent->photons[i].geoid_corr_h >= min_surface_h &&
             extent->photons[i].geoid_corr_h <= max_surface_h )
         {
             extent->photons[i].class_ph = BathyParms::SEA_SURFACE;
