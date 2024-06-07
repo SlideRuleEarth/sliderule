@@ -72,8 +72,6 @@ OCEANEYES_CONTAINER_NAME ?= oceaneyes
 COASTNET_CONTAINER_STAGE_DIR = $(STAGE)/coastnet
 COASTNET_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/coastnet
 COASTNET_CONTAINER_NAME ?= coastnet
-ATL24_TEST_DATA_DIR ?= /data/AppServer.1
-ATL24_ALGORITHM ?= cshelph
 COASTNET_CONTAINER_SOURCE_DIR = $(ROOT)/../coastnet
 CSHELPH_CONTAINER_SOURCE = $(ROOT)/../cshelph/c_shelph.py
 MEDIANFILTER_CONTAINER_SOURCE = $(ROOT)/../medianfilter/medianmodel.py
@@ -209,11 +207,11 @@ manager-destroy: ## destroy manager using terraform; needs DOMAIN
 	cd terraform/manager && terraform workspace select $(DOMAIN)-manager|| terraform workspace new $(DOMAIN)-manager
 	cd terraform/manager && terraform destroy
 
-oceaneyes-container-lock: ## create the lock file for the oceaneyes container image
+oceaneyes-lock: ## create the lock file for the oceaneyes container image
 	cd $(OCEANEYES_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
 	cd $(OCEANEYES_CONTAINER_DIR) && conda-lock render -p linux-$(ARCH)
 
-oceaneyes-container-docker: ## create the coceaneyes container image
+oceaneyes-docker: ## create the coceaneyes container image
 	-rm -Rf $(OCEANEYES_CONTAINER_STAGE_DIR)
 	mkdir -p $(OCEANEYES_CONTAINER_STAGE_DIR)
 	cp $(OCEANEYES_CONTAINER_DIR)/Dockerfile $(OCEANEYES_CONTAINER_STAGE_DIR)
@@ -236,12 +234,6 @@ oceaneyes-container-docker: ## create the coceaneyes container image
 	cd $(OCEANEYES_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION)
 	docker tag $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(MAJOR_VERSION)
-	
-oceaneyes-container-test: ## run the oceaneyes container
-	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) #/env/bin/python /$(ATL24_ALGORITHM)/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv
-	
-coastnet-container-test: ## run the coastnet bathy docker container
-	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) bash /coastnet/bathy.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/coastnet_3.csv
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
@@ -416,6 +408,8 @@ TEST ?= $(ROOT)/scripts/selftests/test_runner.lua cloud
 MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/plugins/pgc/systests/arcticdem_mosaic_perf.lua
 STRIPS_PERFORMANCE_TEST ?=  $(ROOT)/plugins/pgc/systests/arcticdem_strips_perf.lua
 SUBSET_PERFORMANCE_TEST ?=  $(ROOT)/scripts/systests/subset_perf_test.lua
+ATL24_TEST_DATA_DIR ?= /data/AppServer.1
+ATL24_ALGORITHM ?= cshelph
 
 selftest: ## run the self test on the server code
 	$(SERVER_STAGE_DIR)/bin/sliderule $(TEST)
@@ -428,6 +422,12 @@ perfstest: ## run strips performance test on the server code
 
 perfsubsetest: ## run subset performance test
 	$(SERVER_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
+
+oceaneyes-test: ## run the oceaneyes container
+	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) /env/bin/python /$(ATL24_ALGORITHM)/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv
+	
+coastnet-test: ## run the coastnet bathy docker container
+	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) bash /coastnet/bathy.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/coastnet_3.csv
 
 ########################
 # Help Target

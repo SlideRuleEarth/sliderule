@@ -124,7 +124,7 @@ if output_parms["format"] != "hdf5":
         else:
 
             # Parquet
-            table = pa.Table.from_pandas(df)
+            table = pa.Table.from_pandas(df, preserve_index=False)
             print("Writing Parquet file: " + atl24_filename)
 
         # add metadata and write file
