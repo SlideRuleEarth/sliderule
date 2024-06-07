@@ -42,6 +42,7 @@ target_sources(icesat2
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/plugin/icesat2.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Reader.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Viewer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Indexer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03BathyReader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Dispatch.cpp
@@ -71,6 +72,8 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl03s.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl03sp.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl03v.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl03vp.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06p.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl06s.lua
@@ -100,6 +103,7 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/plugin/icesat2.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Reader.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Viewer.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Indexer.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03BathyReader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl06Dispatch.h

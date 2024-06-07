@@ -69,6 +69,7 @@ if __icesat2__ and incloud then
     local icesat2_td = td .. "../../plugins/icesat2/selftests/"
     runner.script(icesat2_td .. "plugin_unittest.lua")
     runner.script(icesat2_td .. "atl03_reader.lua")
+    runner.script(icesat2_td .. "atl03_viewer.lua")
     runner.script(icesat2_td .. "atl03_indexer.lua")
     runner.script(icesat2_td .. "atl03_ancillary.lua")
     runner.script(icesat2_td .. "atl06_ancillary.lua")
