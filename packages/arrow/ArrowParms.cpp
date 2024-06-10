@@ -49,6 +49,7 @@ const char* ArrowParms::PATH                = "path";
 const char* ArrowParms::FORMAT              = "format";
 const char* ArrowParms::OPEN_ON_COMPLETE    = "open_on_complete";
 const char* ArrowParms::AS_GEO              = "as_geo";
+const char* ArrowParms::WITH_CHECKSUM       = "with_checksum";
 const char* ArrowParms::ANCILLARY           = "ancillary";
 const char* ArrowParms::ASSET               = "asset";
 const char* ArrowParms::REGION              = "region";
@@ -102,6 +103,7 @@ ArrowParms::ArrowParms (lua_State* L, int index):
     format              (NATIVE),
     open_on_complete    (false),
     as_geo              (true),
+    with_checksum       (false),
     asset_name          (NULL),
     region              (NULL)
 {
@@ -129,6 +131,12 @@ ArrowParms::ArrowParms (lua_State* L, int index):
             lua_getfield(L, index, AS_GEO);
             as_geo = LuaObject::getLuaBoolean(L, -1, true, as_geo, &field_provided);
             if(field_provided) mlog(DEBUG, "Setting %s to %d", AS_GEO, (int)as_geo);
+            lua_pop(L, 1);
+
+            /* With Checksum */
+            lua_getfield(L, index, WITH_CHECKSUM);
+            with_checksum = LuaObject::getLuaBoolean(L, -1, true, with_checksum, &field_provided);
+            if(field_provided) mlog(DEBUG, "Setting %s to %d", WITH_CHECKSUM, (int)with_checksum);
             lua_pop(L, 1);
 
             /* Output Format */

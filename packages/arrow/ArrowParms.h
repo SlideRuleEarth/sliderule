@@ -80,6 +80,7 @@ class ArrowParms: public LuaObject
         static const char* FORMAT;
         static const char* OPEN_ON_COMPLETE;
         static const char* AS_GEO;
+        static const char* WITH_CHECKSUM;
         static const char* ANCILLARY;
         static const char* ASSET;
         static const char* REGION;
@@ -97,6 +98,7 @@ class ArrowParms: public LuaObject
         format_t        format;                         // format of the file
         bool            open_on_complete;               // flag to client to open file on completion
         bool            as_geo;                         // whether to create a standard geo-based formatted file
+        bool            with_checksum;                  // whether to perform checksum on file and send EOF record
         const char*     asset_name;
         const char*     region;
         vector<string>  ancillary_fields;

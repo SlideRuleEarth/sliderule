@@ -481,6 +481,8 @@ def __arrowrec(rec):
                 raise FatalError(f'File transfer already in progress for {filename}')
             logger.info(f'Writing arrow file: {filename}')
             arrow_file_table[filename] = { "fp": open(filename, "wb"), "size": rec["size"], "progress": 0 }
+        elif rec["__rectype"] == 'arrowrec.eof':
+            logger.info(f'Checksum of arrow file: {rec["checksum"]}')
         else: # rec["__rectype"] == 'arrowrec.data'
             data = rec['data']
             file = arrow_file_table[filename]
@@ -496,7 +498,7 @@ def __arrowrec(rec):
 #
 #  Globals
 #
-__callbacks = {'eventrec': __logeventrec, 'exceptrec': __exceptrec, 'arrowrec.meta': __arrowrec, 'arrowrec.data': __arrowrec }
+__callbacks = {'eventrec': __logeventrec, 'exceptrec': __exceptrec, 'arrowrec.meta': __arrowrec, 'arrowrec.data': __arrowrec, 'arrowrec.eof': __arrowrec}
 
 
 ###############################################################################

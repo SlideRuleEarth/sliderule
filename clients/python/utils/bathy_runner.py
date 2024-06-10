@@ -9,21 +9,22 @@ parser = argparse.ArgumentParser(description="""ATL24""")
 parser.add_argument('--granule',            '-g',   type=str,               default="ATL03_20230213042035_08341807_006_02.h5") # ATL03_20190604044922_10220307_006_02.h5
 parser.add_argument('--aoi',                '-a',   type=str,               default=None) # "tests/data/tarawa.geojson"
 parser.add_argument('--track',              '-t',   type=int,               default=1)
-parser.add_argument('--spots',              '-e',   type=int, nargs='+',    choices=range(1,7), default=[1,2,3,4,5,6])
+parser.add_argument('--spots',                      type=int, nargs='+',    choices=range(1,7), default=[1,2,3,4,5,6])
 parser.add_argument('--domain',             '-d',   type=str,               default="slideruleearth.io")
 parser.add_argument('--organization',       '-o',   type=str,               default="bathy")
 parser.add_argument('--desired_nodes',      '-n',   type=int,               default=None)
 parser.add_argument('--time_to_live',       '-m',   type=int,               default=120)
-parser.add_argument('--timeout',            '-x',   type=int,               default=800)
+parser.add_argument('--timeout',                    type=int,               default=800)
 parser.add_argument('--loglvl',             '-l',   type=str,               default="INFO")
 parser.add_argument('--output_file',        '-f',   type=str,               default="/tmp/ATL24_20190604044922_10220307_006_02")
-parser.add_argument('--output_format',      '-r',   type=str,               default="hdf5")
+parser.add_argument('--output_format',              type=str,               default="hdf5")
 parser.add_argument('--verbose',            '-v',   action='store_true',    default=False)
-parser.add_argument('--cleanup',            '-u',   action='store_true',    default=False)
-parser.add_argument('--generate_ndwi',      '-w',   action='store_true',    default=False)
-parser.add_argument('--ignore_bathy_mask',  '-b',   action='store_true',    default=False)
-parser.add_argument('--print_metadata',     '-i',   action='store_true',    default=False) # only available if [geo]parquet file format chosen
-parser.add_argument('--classifiers',        '-c',   type=str, nargs='+',    default=["coastnet", "openoceans", "medianfilter", "cshelph", "bathypathfinder", "pointnet2", "ensemble"])
+parser.add_argument('--cleanup',                    action='store_true',    default=False)
+parser.add_argument('--generate_ndwi',              action='store_true',    default=False)
+parser.add_argument('--ignore_bathy_mask',          action='store_true',    default=False)
+parser.add_argument('--print_metadata',             action='store_true',    default=False) # only available if [geo]parquet file format chosen
+parser.add_argument('--with_checksum',              action='store_true',    default=False)
+parser.add_argument('--classifiers',                type=str, nargs='+',    default=["coastnet", "openoceans", "medianfilter", "cshelph", "bathypathfinder", "pointnet2", "ensemble"])
 parser.add_argument('--plot',               '-p',   type=int, nargs='+',    choices=range(1,7), default=[])
 args,_ = parser.parse_known_args()
 
@@ -59,7 +60,8 @@ parms = {
         "path": output_filename, 
         "format": args.output_format, 
         "open_on_complete": args.output_format == "parquet" or args.output_format == "geoparquet", 
-        "as_geo": args.output_format == "geoparquet" 
+        "as_geo": args.output_format == "geoparquet",
+        "with_checksum": args.with_checksum
     }
 }
 
