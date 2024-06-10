@@ -221,24 +221,20 @@ Atl03Viewer::~Atl03Viewer (void)
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Viewer::Region::Region (info_t* info):
-    segment_lat    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context),
-    segment_lon    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context),
-    segment_ph_cnt (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(), &info->reader->context),
+    latitude    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context),
+    longitude   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context),
     inclusion_mask {NULL},
     inclusion_ptr  {NULL}
 {
     try
     {
         /* Join Reads */
-        segment_lat.join(info->reader->read_timeout_ms, true);
-        segment_lon.join(info->reader->read_timeout_ms, true);
-        segment_ph_cnt.join(info->reader->read_timeout_ms, true);
+        latitude.join(info->reader->read_timeout_ms, true);
+        longitude.join(info->reader->read_timeout_ms, true);
 
         /* Initialize Region */
         first_segment = 0;
         num_segments = H5Coro::ALL_ROWS;
-        first_photon = 0;
-        num_photons = H5Coro::ALL_ROWS;
 
         /* Determine Spatial Extent */
         if(info->reader->parms->raster.valid())
@@ -255,15 +251,14 @@ Atl03Viewer::Region::Region (info_t* info):
         }
 
         /* Check If Anything to Process */
-        if(num_photons <= 0)
+        if(num_segments <= 0)
         {
             throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region");
         }
 
         /* Trim Geospatial Extent Datasets Read from HDF5 File */
-        segment_lat.trim(first_segment);
-        segment_lon.trim(first_segment);
-        segment_ph_cnt.trim(first_segment);
+        latitude.trim(first_segment);
+        longitude.trim(first_segment);
     }
     catch(const RunTimeException& e)
     {
@@ -297,12 +292,12 @@ void Atl03Viewer::Region::polyregion (info_t* info)
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
     int segment = 0;
-    while(segment < segment_ph_cnt.size)
+    while(segment < latitude.size)
     {
         bool inclusion = false;
 
         /* Project Segment Coordinate */
-        const MathLib::coord_t segment_coord = {segment_lon[segment], segment_lat[segment]};
+        const MathLib::coord_t segment_coord = {longitude[segment], latitude[segment]};
         const MathLib::point_t segment_point = MathLib::coord2point(segment_coord, info->reader->parms->projection);
 
         /* Test Inclusion */
@@ -312,34 +307,16 @@ void Atl03Viewer::Region::polyregion (info_t* info)
         }
 
         /* Check First Segment */
-        if(!first_segment_found)
+        if(!first_segment_found && inclusion)
         {
             /* If Coordinate Is In Polygon */
-            if(inclusion && segment_ph_cnt[segment] != 0)
-            {
-                /* Set First Segment */
-                first_segment_found = true;
-                first_segment = segment;
-
-                /* Include Photons From First Segment */
-                num_photons = segment_ph_cnt[segment];
-            }
-            else
-            {
-                /* Update Photon Index */
-                first_photon += segment_ph_cnt[segment];
-            }
+            first_segment_found = true;
+            first_segment = segment;
         }
-        else
+        else if(first_segment_found && !inclusion)
         {
             /* If Coordinate Is NOT In Polygon */
-            if(!inclusion && segment_ph_cnt[segment] != 0)
-            {
-                break; // full extent found!
-            }
-
-            /* Update Photon Index */
-            num_photons += segment_ph_cnt[segment];
+            break; // full extent found!
         }
 
         /* Bump Segment */
@@ -362,64 +339,36 @@ void Atl03Viewer::Region::rasterregion (info_t* info)
     bool first_segment_found = false;
 
     /* Check Size */
-    if(segment_ph_cnt.size <= 0)
+    if(latitude.size <= 0)
     {
         return;
     }
 
     /* Allocate Inclusion Mask */
-    inclusion_mask = new bool [segment_ph_cnt.size];
+    inclusion_mask = new bool [latitude.size];
     inclusion_ptr = inclusion_mask;
 
     /* Loop Throuh Segments */
-    long curr_num_photons = 0;
     long last_segment = 0;
     int segment = 0;
-    while(segment < segment_ph_cnt.size)
+    while(segment < latitude.size)
     {
-        if(segment_ph_cnt[segment] != 0)
+        /* Check Inclusion */
+        const bool inclusion = info->reader->parms->raster.includes(longitude[segment], latitude[segment]);
+        inclusion_mask[segment] = inclusion;
+
+        /* Check For First Segment */
+        if(!first_segment_found && inclusion)
         {
-            /* Check Inclusion */
-            const bool inclusion = info->reader->parms->raster.includes(segment_lon[segment], segment_lat[segment]);
-            inclusion_mask[segment] = inclusion;
-
-            /* Check For First Segment */
-            if(!first_segment_found)
-            {
-                /* If Coordinate Is In Raster */
-                if(inclusion)
-                {
-                    first_segment_found = true;
-
-                    /* Set First Segment */
-                    first_segment = segment;
-                    last_segment = segment;
-
-                    /* Include Photons From First Segment */
-                    curr_num_photons = segment_ph_cnt[segment];
-                    num_photons = curr_num_photons;
-                }
-                else
-                {
-                    /* Update Photon Index */
-                    first_photon += segment_ph_cnt[segment];
-                }
-            }
-            else
-            {
-                /* Update Photon Count and Segment */
-                curr_num_photons += segment_ph_cnt[segment];
-
-                /* If Coordinate Is In Raster */
-                if(inclusion)
-                {
-                    /* Update Number of Photons to Current Count */
-                    num_photons = curr_num_photons;
-
-                    /* Update Number of Segments to Current Segment Count */
-                    last_segment = segment;
-                }
-            }
+            /* If Coordinate Is In Raster */
+            first_segment_found = true;
+            first_segment = segment;
+            last_segment = segment;
+        }
+        else if(first_segment_found && !inclusion)
+        {
+            /* Update Number of Segments to Current Segment Count */
+            last_segment = segment;
         }
 
         /* Bump Segment */
@@ -443,13 +392,15 @@ Atl03Viewer::Atl03Data::Atl03Data (info_t* info, const Region& region):
     sc_orient           (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",                     &info->reader->context),
     segment_delta_time  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),           &info->reader->context, 0, region.first_segment, region.num_segments),
     segment_id          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_id").c_str(),           &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_dist_x      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),       &info->reader->context, 0, region.first_segment, region.num_segments)
+    segment_dist_x      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),       &info->reader->context, 0, region.first_segment, region.num_segments),
+    segment_ph_cnt      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(),       &info->reader->context, 0, region.first_segment, region.num_segments)
 {
     /* Join Hardcoded Reads */
     sc_orient.join(info->reader->read_timeout_ms, true);
     segment_delta_time.join(info->reader->read_timeout_ms, true);
     segment_id.join(info->reader->read_timeout_ms, true);
     segment_dist_x.join(info->reader->read_timeout_ms, true);
+    segment_ph_cnt.join(info->reader->read_timeout_ms, true);
 }
 
 /*----------------------------------------------------------------------------
@@ -479,27 +430,27 @@ void* Atl03Viewer::subsettingThread (void* parm)
         /* Read ATL03 Datasets */
         const Atl03Data atl03(info, region);
 
+        /* Get Number of Segments */
+        const long num_segments = region.num_segments != H5Coro::ALL_ROWS ? region.num_segments : atl03.segment_ph_cnt.size;
+
         /* Increment Read Statistics */
-        local_stats.segments_read = region.num_segments;
+        local_stats.segments_read = num_segments;
 
         List<segment_t> segments;
 
         const uint32_t max_segments_per_extent = 256;
 
-        /* Traverse All Segments in Dataset */
-        for(uint32_t s = 0; s < local_stats.segments_read; s++)
+        /* Loop Through Each Segment */
+        for(long s = 0; reader->active && s < num_segments; s++)
         {
-            /* Check for Termination */
-            if(!reader->active) break;
-
             const segment_t segment = {
                 .time_ns   = Icesat2Parms::deltatime2timestamp(atl03.segment_delta_time[s]),
                 .extent_id = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, s),
-                .latitude  = region.segment_lat[s],
-                .longitude = region.segment_lon[s],
+                .latitude  = region.latitude[s],
+                .longitude = region.longitude[s],
                 .dist_x    = atl03.segment_dist_x[s],
                 .id        = static_cast<uint32_t>(atl03.segment_id[s]),
-                .ph_cnt    = static_cast<uint32_t>(region.segment_ph_cnt[s])
+                .ph_cnt    = static_cast<uint32_t>(atl03.segment_ph_cnt[s])
             };
             segments.add(segment);
 

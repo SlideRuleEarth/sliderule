@@ -141,17 +141,14 @@ class Atl03Viewer: public LuaObject
                 void polyregion     (info_t* info);
                 void rasterregion   (info_t* info);
 
-                H5Array<double>     segment_lat;
-                H5Array<double>     segment_lon;
-                H5Array<int32_t>    segment_ph_cnt;
+                H5Array<double>     latitude;
+                H5Array<double>     longitude;
 
                 bool*               inclusion_mask;
                 bool*               inclusion_ptr;
 
                 long                first_segment;
                 long                num_segments;
-                long                first_photon;
-                long                num_photons;
         };
 
         /* Atl03 Data Subclass */
@@ -167,6 +164,7 @@ class Atl03Viewer: public LuaObject
                 H5Array<double>     segment_delta_time;
                 H5Array<int32_t>    segment_id;
                 H5Array<double>     segment_dist_x;
+                H5Array<int32_t>    segment_ph_cnt;
         };
 
         /*--------------------------------------------------------------------
