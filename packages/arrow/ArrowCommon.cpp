@@ -52,18 +52,23 @@ static const int FILE_NAME_MAX_LEN = 128;
 static const int FILE_BUFFER_RSPS_SIZE = 0x2000000; // 32MB
 
 typedef struct {
-    char    filename[FILE_NAME_MAX_LEN];
-    long    size;
+    char        filename[FILE_NAME_MAX_LEN];
+    long        size;
 } arrow_file_meta_t;
 
 typedef struct {
-    char    filename[FILE_NAME_MAX_LEN];
-    uint8_t data[FILE_BUFFER_RSPS_SIZE];
+    char        filename[FILE_NAME_MAX_LEN];
+    uint8_t     data[FILE_BUFFER_RSPS_SIZE];
 } arrow_file_data_t;
 
 typedef struct {
-    char    url[URL_MAX_LEN];
-    long    size;
+    char        filename[FILE_NAME_MAX_LEN];
+    uint64_t    checksum;
+} arrow_file_eof_t;
+
+typedef struct {
+    char        url[URL_MAX_LEN];
+    long        size;
 } arrow_file_remote_t;
 
 
@@ -73,6 +78,7 @@ typedef struct {
 
 static const char* metaRecType   = "arrowrec.meta";
 static const char* dataRecType   = "arrowrec.data";
+static const char* eofRecType    = "arrowrec.eof";
 static const char* remoteRecType = "arrowrec.remote";
 
 static const RecordObject::fieldDef_t metaRecDef[] = {
@@ -83,6 +89,11 @@ static const RecordObject::fieldDef_t metaRecDef[] = {
 static const RecordObject::fieldDef_t dataRecDef[] = {
     {"filename",   RecordObject::STRING,   offsetof(arrow_file_data_t, filename),  FILE_NAME_MAX_LEN,  NULL, NATIVE_FLAGS},
     {"data",       RecordObject::UINT8,    offsetof(arrow_file_data_t, data),                      0,  NULL, NATIVE_FLAGS} // variable length
+};
+
+static const RecordObject::fieldDef_t eofRecDef[] = {
+    {"filename",   RecordObject::STRING,   offsetof(arrow_file_eof_t, filename),   FILE_NAME_MAX_LEN,  NULL, NATIVE_FLAGS},
+    {"checksum",   RecordObject::UINT64,   offsetof(arrow_file_eof_t, checksum),                   1,  NULL, NATIVE_FLAGS}
 };
 
 static const RecordObject::fieldDef_t remoteRecDef[] = {
@@ -111,6 +122,7 @@ void init(void)
     initialized = true;
     RECDEF(metaRecType, metaRecDef, sizeof(arrow_file_meta_t), NULL);
     RECDEF(dataRecType, dataRecDef, sizeof(arrow_file_data_t), NULL);
+    RECDEF(eofRecType, eofRecDef, sizeof(arrow_file_eof_t), NULL);
     RECDEF(remoteRecType, remoteRecDef, sizeof(arrow_file_remote_t), NULL);
 }
 
@@ -152,7 +164,7 @@ bool send2User (const char* fileName, const char* outputPath,
     else
     {
         /* Stream File Back to Client */
-        status = send2Client(fileName, outputPath, outQ);
+        status = send2Client(fileName, outputPath, parms, outQ);
     }
 
     /* Delete File Locally */
@@ -238,7 +250,7 @@ bool send2S3 (const char* fileName, const char* s3dst, const char* outputPath,
 /*----------------------------------------------------------------------------
  * send2Client
  *----------------------------------------------------------------------------*/
-bool send2Client (const char* fileName, const char* outPath, Publisher* outQ)
+bool send2Client (const char* fileName, const char* outPath, ArrowParms* parms, Publisher* outQ)
 {
     bool status = true;
 
@@ -256,6 +268,8 @@ bool send2Client (const char* fileName, const char* outPath, Publisher* outQ)
 
         do
         {
+            uint64_t checksum = 0;
+
             /* Send Meta Record */
             RecordObject meta_record(metaRecType);
             arrow_file_meta_t* meta = reinterpret_cast<arrow_file_meta_t*>(meta_record.getRecordData());
@@ -283,6 +297,29 @@ bool send2Client (const char* fileName, const char* outPath, Publisher* outQ)
                     break; // early exit on error
                 }
                 offset += bytes_read;
+
+                /* Calculate Checksum */
+                if(parms->with_checksum)
+                {
+                    for(size_t i = 0; i < bytes_read; i++)
+                    {
+                        checksum += data->data[i];
+                    }
+                }
+            }
+
+            /* Send EOF Record */
+            if(parms->with_checksum)
+            {
+                RecordObject eof_record(eofRecType);
+                arrow_file_eof_t* eof = reinterpret_cast<arrow_file_eof_t*>(eof_record.getRecordData());
+                StringLib::copy(&eof->filename[0], outPath, FILE_NAME_MAX_LEN);
+                eof->checksum = checksum;
+                if(!eof_record.post(outQ))
+                {
+                    status = false;
+                    mlog(CRITICAL, "Failed to post eof record for file %s", fileName);
+                }
             }
         } while(false);
 

@@ -67,7 +67,8 @@ namespace ArrowCommon
                             uint32_t traceId, ArrowParms* parms, Publisher* outQ);
     bool        send2S3    (const char* fileName, const char* s3dst, const char* outputPath,
                             ArrowParms* parms, Publisher* outQ);
-    bool        send2Client(const char* fileName, const char* outPath, Publisher* outQ);
+    bool        send2Client(const char* fileName, const char* outPath, 
+                            ArrowParms* parms, Publisher* outQ);
 
     const char* getOutputPath(ArrowParms* parms);
     const char* getUniqueFileName(const char* id = NULL);
