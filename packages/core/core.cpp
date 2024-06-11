@@ -150,13 +150,26 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "RTE_RESOURCE_DOES_NOT_EXIST",  RTE_RESOURCE_DOES_NOT_EXIST);
     LuaEngine::setAttrInt   (L, "RTE_EMPTY_SUBSET",         RTE_EMPTY_SUBSET);
     LuaEngine::setAttrInt   (L, "RTE_SIMPLIFY",             RTE_SIMPLIFY);
+    LuaEngine::setAttrInt   (L, "INT8",                     RecordObject::INT8);
+    LuaEngine::setAttrInt   (L, "INT16",                    RecordObject::INT16);
+    LuaEngine::setAttrInt   (L, "INT32",                    RecordObject::INT32);
+    LuaEngine::setAttrInt   (L, "INT64",                    RecordObject::INT64);
+    LuaEngine::setAttrInt   (L, "UINT8",                    RecordObject::UINT8);
+    LuaEngine::setAttrInt   (L, "UINT16",                   RecordObject::UINT16);
+    LuaEngine::setAttrInt   (L, "UINT32",                   RecordObject::UINT32);
+    LuaEngine::setAttrInt   (L, "UINT64",                   RecordObject::UINT64);
+    LuaEngine::setAttrInt   (L, "BITFIELD",                 RecordObject::BITFIELD);
+    LuaEngine::setAttrInt   (L, "FLOAT",                    RecordObject::FLOAT);
+    LuaEngine::setAttrInt   (L, "DOUBLE",                   RecordObject::DOUBLE);
+    LuaEngine::setAttrInt   (L, "TIME8",                    RecordObject::TIME8);
+    LuaEngine::setAttrInt   (L, "STRING",                   RecordObject::STRING);
+    LuaEngine::setAttrInt   (L, "USER",                     RecordObject::USER);
 
     #ifdef __unittesting__
     LuaEngine::setAttrBool(L, "UNITTEST",                   true);
     #else
     LuaEngine::setAttrBool(L, "UNITTEST",                   false);
     #endif
-
 
     return 1;
 }

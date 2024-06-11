@@ -46,10 +46,10 @@
  ******************************************************************************/
 
 template <class T>
-void setDataIfPointer(const T& t, const uint8_t* buffer) { (void)t; (void)buffer; }
+void setDataIfPointer(const T* t, const uint8_t* buffer) { (void)t; (void)buffer; }
 
 template <class T>
-void setDataIfPointer(T* t, const uint8_t* buffer) { t = reinterpret_cast<T*>(buffer); }
+void setDataIfPointer(T** t, const uint8_t* buffer) { *t = reinterpret_cast<T*>(buffer); }
 
 /******************************************************************************
  * H5Element TEMPLATE
@@ -87,10 +87,9 @@ class H5Element
 template <class T>
 H5Element<T>::H5Element(const Asset* asset, const char* resource, const char* variable, H5Coro::context_t* context)
 {
+    memset(&value, 0, sizeof(T));
     if(asset)   h5f = H5Coro::readp(asset, resource, variable, RecordObject::DYNAMIC, 0, 0, H5Coro::ALL_ROWS, context);
     else        h5f = NULL;
-
-    memset(&value, 0, sizeof(T));
 }
 
 /*----------------------------------------------------------------------------
@@ -125,7 +124,7 @@ bool H5Element<T>::join(int timeout, bool throw_exception)
                  * admittedly very unsafe. It is the responsibility of the calling code 
                  * to know that the element being read is a string. 
                  */
-                setDataIfPointer(value, h5f->info.data);
+                setDataIfPointer(&value, h5f->info.data);
             }
             else
             {

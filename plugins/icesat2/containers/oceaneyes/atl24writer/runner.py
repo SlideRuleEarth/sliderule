@@ -337,7 +337,7 @@ else:
             spot_info = spot_table[spot]["info"]
             spot_df = spot_table[spot]["df"]
             spot_df["delta_time"] = (spot_df["time"] / 1000000000.0) - ATLAS_GPS_EPOCH
-            spot_df["ellipse_h"] = spot_df["ortho_h"] + spot_df["geoid"]
+            spot_df["ellipse_h"] = spot_df["geoid_corr_h"] + spot_df["geoid"]
 
             beam_group = hf.create_group(spot_info["beam"]) # e.g. gt1r, gt2l, etc.
             add_variable(beam_group, "index_ph",   spot_df["index_ph"],     'float32',
@@ -414,8 +414,19 @@ else:
                          'units':''})
 
             if "ensemble" in spot_df:
-                add_variable(beam_group, "class_ph", spot_df["ensemble"].astype(np.int16), 'int16')
+                add_variable(beam_group, "class_ph", spot_df["ensemble"].astype(np.int16), 'int16',
+                            {'contentType':'physicalMeasurement', 
+                             'description':'', 
+                             'long_name':'', 
+                             'source':'ATL24G', 
+                             'units':''})
             for classifier in input_files["classifiers"]:
-                add_variable(beam_group, classifier, spot_df[classifier].astype(np.int16), 'int16')
+                add_variable(beam_group, classifier, spot_df[classifier].astype(np.int16), 'int16',
+                            {'contentType':'physicalMeasurement', 
+                             'description':'', 
+                             'long_name':'', 
+                             'source':'ATL24G', 
+                             'units':''})
+
 
     print("HDF5 file written: " + atl24_filename)

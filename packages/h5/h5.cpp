@@ -51,6 +51,125 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * h5_read(asset, resource, variable, dtype)
+ *----------------------------------------------------------------------------*/
+int h5_read (lua_State* L)
+{
+    Asset* asset = NULL;
+
+    try
+    {
+        /* Get Parameters */
+        asset = dynamic_cast<Asset*>(LuaObject::getLuaObject(L, 1, Asset::OBJECT_TYPE));
+        const char* resource = LuaObject::getLuaString(L, 2);
+        const char* variable = LuaObject::getLuaString(L, 3);
+        const RecordObject::fieldType_t dtype = static_cast<RecordObject::fieldType_t>(LuaObject::getLuaInteger(L, 4));
+        const int timeout = LuaObject::getLuaInteger(L, 5, true, 600 * 1000); // milliseconds
+
+        /* Perform Read */
+        switch(dtype)
+        {
+            case RecordObject::INT8:    
+            {
+                H5Element<int8_t> element(asset, resource, variable, NULL);
+                element.join(timeout, true);
+                lua_pushinteger(L, element.value);
+                break;
+            }
+            case RecordObject::INT16: 
+            {
+                H5Element<int16_t> element(asset, resource, variable, NULL);
+                element.join(timeout, true);
+                lua_pushinteger(L, element.value);
+                break;
+            }            
+            case RecordObject::INT32: 
+            {
+                H5Element<int32_t> element(asset, resource, variable, NULL);
+                element.join(timeout, true);
+                lua_pushinteger(L, element.value);
+                break;
+            }
+            case RecordObject::INT64: 
+            {
+                H5Element<int64_t> element(asset, resource, variable, NULL);
+                element.join(timeout, true);
+                lua_pushinteger(L, element.value);
+                break;
+            }
+            case RecordObject::UINT8: 
+            {
+                H5Element<uint8_t> element(asset, resource, variable, NULL);
+                element.join(timeout, true);
+                lua_pushinteger(L, element.value);
+                break;
+            }
+            case RecordObject::UINT16:
+            {
+                H5Element<uint16_t> element(asset, resource, variable, NULL);
+                element.join(timeout, true);
+                lua_pushinteger(L, element.value);
+                break;
+            }
+            case RecordObject::UINT32:
+            {
+                H5Element<uint32_t> element(asset, resource, variable, NULL);
+                element.join(timeout, true);
+                lua_pushinteger(L, element.value);
+                break;
+            }
+            case RecordObject::UINT64:
+            {
+                H5Element<uint64_t> element(asset, resource, variable, NULL);
+                element.join(timeout, true);
+                lua_pushinteger(L, element.value);
+                break;
+            }
+            case RecordObject::FLOAT: 
+            {
+                H5Element<float> element(asset, resource, variable, NULL);
+                element.join(timeout, true);
+                lua_pushnumber(L, element.value);
+                break;
+            }
+            case RecordObject::DOUBLE:
+            {
+                H5Element<double> element(asset, resource, variable, NULL);
+                element.join(timeout, true);
+                lua_pushnumber(L, element.value);
+                break;
+            }
+            case RecordObject::TIME8:     
+            {
+                H5Element<int64_t> element(asset, resource, variable, NULL);
+                element.join(timeout, true);
+                lua_pushinteger(L, element.value);
+                break;
+            }
+            case RecordObject::STRING:
+            {
+                H5Element<const char*> element(asset, resource, variable, NULL);
+                element.join(timeout, true);
+                lua_pushstring(L, element.value);
+                break;
+            }
+            default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid data type specified <%d>", static_cast<int>(dtype));
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Failed to read resource: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    /* Release Asset */
+    if(asset) asset->releaseLuaObject();
+
+    /* Return */
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * h5_open
  *----------------------------------------------------------------------------*/
 int h5_open (lua_State *L)
@@ -58,6 +177,7 @@ int h5_open (lua_State *L)
     static const struct luaL_Reg h5_functions[] = {
         {"file",        H5File::luaCreate},
         {"dataset",     H5DatasetDevice::luaCreate},
+        {"read",        h5_read},
         {NULL,          NULL}
     };
 

@@ -24,6 +24,7 @@ parser.add_argument('--generate_ndwi',              action='store_true',    defa
 parser.add_argument('--ignore_bathy_mask',          action='store_true',    default=False)
 parser.add_argument('--print_metadata',             action='store_true',    default=False) # only available if [geo]parquet file format chosen
 parser.add_argument('--with_checksum',              action='store_true',    default=False)
+parser.add_argument('--output_as_sdp',              action='store_true',    default=False)
 parser.add_argument('--classifiers',                type=str, nargs='+',    default=["coastnet", "openoceans", "medianfilter", "cshelph", "bathypathfinder", "pointnet2", "ensemble"])
 parser.add_argument('--plot',               '-p',   type=int, nargs='+',    choices=range(1,7), default=[])
 args,_ = parser.parse_known_args()
@@ -49,6 +50,7 @@ parms = {
     "use_bathy_mask": not args.ignore_bathy_mask,
     "timeout": args.timeout,
     "spots": args.spots,
+    "output_as_sdp": args.output_as_sdp,
     "classifiers": args.classifiers,
     "surfacefinder": {
 

@@ -3538,11 +3538,9 @@ H5Coro::info_t H5Coro::read (const Asset* asset, const char* resource, const cha
 
     /* Open Resource and Read Dataset */
     const H5FileBuffer h5file(&info, context, asset, resource, datasetname, startrow, numrows, _meta_only);
-
     if(info.data)
     {
         bool data_valid = true;
-
         /* Perform Column Translation */
         if((info.numcols > 1) && (col != ALL_COLS))
         {

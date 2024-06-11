@@ -212,7 +212,7 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
     if(parms->output_as_sdp)
     {
         /* Write Ancillary Data */
-        FString ancillary_filename("%s/%s_ancillary.json", sharedDirectory, OUTPUT_FILE_PREFIX);
+        FString ancillary_filename("%s/writer_ancillary.json", sharedDirectory);
         fileptr_t ancillary_file = fopen(ancillary_filename.c_str(), "w");
         if(ancillary_file == NULL)
         {
@@ -226,12 +226,12 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
         delete [] ancillary_json;
 
         /* Write Orbit Info */
-        FString orbit_filename("%s/%s_orbit.json", sharedDirectory, OUTPUT_FILE_PREFIX);
+        FString orbit_filename("%s/writer_orbit.json", sharedDirectory);
         fileptr_t orbit_file = fopen(orbit_filename.c_str(), "w");
         if(orbit_file == NULL)
         {
             char err_buf[256];
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create ancillary json file %s: %s", orbit_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create orbit json file %s: %s", orbit_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
         }
         const OrbitInfo orbit_info(asset, resource, &context, read_timeout_ms);
         const char* orbit_json = orbit_info.tojson();
@@ -666,31 +666,31 @@ Atl03BathyReader::AncillaryData::AncillaryData (const Asset* asset, const char* 
  *----------------------------------------------------------------------------*/
 const char* Atl03BathyReader::AncillaryData::tojson (void) const
 {
-    FString json_contents(R"json({"
-    R""atlas_sdp_gps_epoch": %lf,"
-    R""data_end_utc": %s,"
-    R""data_start_utc": "%s","
-    R""end_cycle": %d,"
-    R""end_delta_time": %lf,"
-    R""end_geoseg": %d,"
-    R""end_gpssow": %lf,"
-    R""end_gpsweek": %d,"
-    R""end_orbit": %d,
-    R""end_region": %d,
-    R""end_rgt": %d"
-    R""release": %s"
-    R""granule_end_utc": %s"
-    R""granule_start_utc": %s"
-    R""start_cycle": %d"
-    R""start_delta_time": %lf"
-    R""start_geoseg": %d"
-    R""start_gpssow": %lf"
-    R""start_gpsweek": %d"
-    R""start_orbit": %d"
-    R""start_region": %d,
-    R""start_rgt": %d"
-    R""version": %s"
-    R"})json",
+    FString json_contents(R"({)"
+    R"("atlas_sdp_gps_epoch":%lf,)"
+    R"("data_end_utc":"%s",)"
+    R"("data_start_utc":"%s",)"
+    R"("end_cycle":%d,)"
+    R"("end_delta_time":%lf,)"
+    R"("end_geoseg":%d,)"
+    R"("end_gpssow":%lf,)"
+    R"("end_gpsweek":%d,)"
+    R"("end_orbit":%d,)"
+    R"("end_region":%d,)"
+    R"("end_rgt":%d,)"
+    R"("release":"%s",)"
+    R"("granule_end_utc":"%s",)"
+    R"("granule_start_utc":"%s",)"
+    R"("start_cycle":%d,)"
+    R"("start_delta_time":%lf,)"
+    R"("start_geoseg":%d,)"
+    R"("start_gpssow":%lf,)"
+    R"("start_gpsweek":%d,)"
+    R"("start_orbit":%d,)"
+    R"("start_region":%d,)"
+    R"("start_rgt":%d,)"
+    R"("version":"%s")"
+    R"(})",
     atlas_sdp_gps_epoch.value,
     data_end_utc.value,
     data_start_utc.value,
@@ -744,15 +744,15 @@ Atl03BathyReader::OrbitInfo::OrbitInfo (const Asset* asset, const char* resource
  *----------------------------------------------------------------------------*/
 const char* Atl03BathyReader::OrbitInfo::tojson (void) const
 {    
-    FString json_contents(R"json({"
-    R""crossing_time": "%lf","
-    R""cycle_number": %d,"
-    R""lan": %lf,"
-    R""orbit_number": %d,"
-    R""rgt": %d,"
-    R""sc_orient": %d,"
-    R""sc_orient_time": %lf,
-    R"})json",
+    FString json_contents(R"({)"
+    R"("crossing_time":%lf,)"
+    R"("cycle_number":%d,)"
+    R"("lan":%lf,)"
+    R"("orbit_number":%d,)"
+    R"("rgt":%d,)"
+    R"("sc_orient":%d,)"
+    R"("sc_orient_time":%lf)"
+    R"(})",
     crossing_time.value,
     cycle_number.value,
     lan.value,
@@ -1065,19 +1065,19 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                         /*
                         * Build JSON File
                         */
-                        FString json_contents(R"json({"
-                        R""track": %d,"
-                        R""pair": %d,"
-                        R""beam": "gt%d%c","
-                        R""spot": %d,"
-                        R""year": %d,"
-                        R""month": %d,"
-                        R""day": %d,"
-                        R""rgt": %d,"
-                        R""cycle": %d,
-                        R""region": %d,
-                        R""utm_zone": %d"
-                        R"})json",
+                        FString json_contents(R"({)"
+                        R"("track":%d,)"
+                        R"("pair":%d,)"
+                        R"("beam":"gt%d%c",)"
+                        R"("spot":%d,)"
+                        R"("year":%d,)"
+                        R"("month":%d,)"
+                        R"("day":%d,)"
+                        R"("rgt":%d,)"
+                        R"("cycle":%d,)"
+                        R"("region":%d,)"
+                        R"("utm_zone":%d)"
+                        R"(})",
                         extent->track,
                         extent->pair,
                         extent->track, extent->pair == 0 ? 'l' : 'r',

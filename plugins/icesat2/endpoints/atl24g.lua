@@ -269,7 +269,7 @@ local output_parms = parms[arrow.PARMS] or {
 }
 local writer_parms = {
     image =  "oceaneyes",
-    command = string.format("/env/bin/python /atl24writer/runner.py %s/writer_settings.json",  crenv.container_sandbox_mount),
+    command = string.format("/env/bin/python /atl24writer/runner.py %s/writer_settings.json %s/writer_ancillary.json %s/writer_orbit.json", crenv.container_sandbox_mount, crenv.container_sandbox_mount, crenv.container_sandbox_mount),
     timeout = timeout,
     parms = { 
         ["writer_settings.json"] = {
@@ -286,4 +286,4 @@ runner.wait(container, timeout)
 arrow.send2user(crenv.host_sandbox_directory.."/atl24.bin", arrow.parms(output_parms), rspq)
 
 -- cleanup container runtime environment
-runner.cleanup(crenv)
+--runner.cleanup(crenv)
