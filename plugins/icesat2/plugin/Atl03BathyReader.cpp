@@ -722,8 +722,6 @@ const char* Atl03BathyReader::AncillaryData::tojson (void) const
  * OrbitInfo::Constructor
  *----------------------------------------------------------------------------*/
 Atl03BathyReader::OrbitInfo::OrbitInfo (const Asset* asset, const char* resource, H5Coro::context_t* context, int timeout):
-    bounding_polygon_lat1   (asset, resource, "/orbit_info/bounding_polygon_lat1",  context),
-    bounding_polygon_lon1   (asset, resource, "/orbit_info/bounding_polygon_lon1",  context),
     crossing_time           (asset, resource, "/orbit_info/crossing_time",          context),
     cycle_number            (asset, resource, "/orbit_info/cycle_number",           context),
     lan                     (asset, resource, "/orbit_info/lan",                    context),
@@ -732,8 +730,6 @@ Atl03BathyReader::OrbitInfo::OrbitInfo (const Asset* asset, const char* resource
     sc_orient               (asset, resource, "/orbit_info/sc_orient",              context),
     sc_orient_time          (asset, resource, "/orbit_info/sc_orient_time",         context)
 {
-    bounding_polygon_lat1.join(timeout, true);
-    bounding_polygon_lon1.join(timeout, true);
     crossing_time.join(timeout, true);
     cycle_number.join(timeout, true);
     lan.join(timeout, true);
@@ -747,23 +743,8 @@ Atl03BathyReader::OrbitInfo::OrbitInfo (const Asset* asset, const char* resource
  * OrbitInfo::tojson
  *----------------------------------------------------------------------------*/
 const char* Atl03BathyReader::OrbitInfo::tojson (void) const
-{
-    vector<string> lat1s;
-    vector<string> lon1s;
-    const long num_coords = bounding_polygon_lat1.size;
-    if(num_coords > 0)
-    {
-        for(int i = 0; i < num_coords - 1; i++) lat1s.emplace_back(FString("%lf,", bounding_polygon_lat1[i]).c_str());
-        lat1s.emplace_back(FString("%lf", bounding_polygon_lat1[num_coords - 1]).c_str());
-        for(int i = 0; i < num_coords - 1; i++) lat1s.emplace_back(FString("%lf,", bounding_polygon_lon1[i]).c_str());
-        lon1s.emplace_back(FString("%lf", bounding_polygon_lon1[num_coords - 1]).c_str());
-    }
-    const string lat1_list = std::accumulate(lat1s.begin(), lat1s.end(), string());
-    const string lon1_list = std::accumulate(lon1s.begin(), lon1s.end(), string());
-    
+{    
     FString json_contents(R"json({"
-    R""bounding_polygon_lat1": [%s],"
-    R""bounding_polygon_lon1": [%s],"
     R""crossing_time": "%lf","
     R""cycle_number": %d,"
     R""lan": %lf,"
@@ -772,8 +753,6 @@ const char* Atl03BathyReader::OrbitInfo::tojson (void) const
     R""sc_orient": %d,"
     R""sc_orient_time": %lf,
     R"})json",
-    lat1_list.c_str(),
-    lon1_list.c_str(),
     crossing_time.value,
     cycle_number.value,
     lan.value,

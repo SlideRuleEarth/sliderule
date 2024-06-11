@@ -128,13 +128,8 @@ else:
 
     def add_variable(group, name, data, dtype, attrs):
         dataset = group.create_dataset(name, data=data, dtype=dtype)
-        dataset.attrs['contentType'] = attrs['contentType']
-        dataset.attrs['description'] = attrs['description']
-        dataset.attrs['long_name'] = attrs['long_name']
-        dataset.attrs['source'] = attrs['source']
-        dataset.attrs['units'] = attrs['units']
-        if 'standard_name' in attrs:
-            dataset.attrs['standard_name'] = attrs['standard_name']
+        for key in attrs:
+            dataset.attrs[key] = attrs[key]
 
     with h5py.File(atl24_filename, 'w') as hf:
 
@@ -290,15 +285,52 @@ else:
             with open(orbit_json, 'r') as json_file:
                 orbit = json.load(json_file)
             orbit_group = hf.create_group("orbit_info")
-            add_variable(orbit_group, "bounding_polygon_lat1", orbit["bounding_polygon_lat1"], 'float64')
-            add_variable(orbit_group, "bounding_polygon_lon1", orbit["bounding_polygon_lon1"], 'float64')
-            add_variable(orbit_group, "crossing_time",         orbit["crossing_time"],         'float64')
-            add_variable(orbit_group, "cycle_number",          orbit["cycle_number"],          'int8')
-            add_variable(orbit_group, "lan",                   orbit["lan"],                   'float64')
-            add_variable(orbit_group, "orbit_number",          orbit["orbit_number"],          'int16')
-            add_variable(orbit_group, "rgt",                   orbit["rgt"],                   'int16')
-            add_variable(orbit_group, "sc_orient",             orbit["sc_orient"],             'int8')
-            add_variable(orbit_group, "sc_orient_time",        orbit["sc_orient_time"],        'float64')
+            add_variable(orbit_group, "crossing_time",         orbit["crossing_time"],         'float64',
+                        {'contentType':'referenceInformation', 
+                         'description':'The time, in seconds since the ATLAS SDP GPS Epoch, at which the ascending node crosses the equator. The ATLAS Standard Data Products (SDP) epoch offset is defined within /ancillary_data/atlas_sdp_gps_epoch as the number of GPS seconds between the GPS epoch (1980-01-06T00:00:00.000000Z UTC) and the ATLAS SDP epoch. By adding the offset contained within atlas_sdp_gps_epoch to delta time parameters, the time in gps_seconds relative to the GPS epoch can be computed.', 
+                         'long_name':'Ascending Node Crossing Time', 
+                         'source':'POD/PPD', 
+                         'units':'seconds since 2018-01-01',
+                         'standard_name': 'time'})
+            add_variable(orbit_group, "cycle_number",          orbit["cycle_number"],          'int8',
+                        {'contentType':'referenceInformation', 
+                         'description':'Tracks the number of 91-day cycles in the mission, beginning with 01.  A unique orbit number can be determined by subtracting 1 from the cycle_number, multiplying by 1387 and adding the rgt value.', 
+                         'long_name':'Cycle Number', 
+                         'source':'POD/PPD', 
+                         'units':'counts'})
+            add_variable(orbit_group, "lan",                   orbit["lan"],                   'float64',
+                        {'contentType':'referenceInformation', 
+                         'description':'Longitude at the ascending node crossing.', 
+                         'long_name':'Ascending Node Longitude', 
+                         'source':'POD/PPD', 
+                         'units':'degrees_east'})
+            add_variable(orbit_group, "orbit_number",          orbit["orbit_number"],          'int16',
+                        {'contentType':'referenceInformation', 
+                         'description':'Unique identifying number for each planned ICESat-2 orbit.', 
+                         'long_name':'Orbit Number', 
+                         'source':'Operations', 
+                         'units':'1'})
+            add_variable(orbit_group, "rgt",                   orbit["rgt"],                   'int16',
+                        {'contentType':'referenceInformation', 
+                         'description':'The reference ground track (RGT) is the track on the earth at which a specified unit vector within the observatory is pointed. Under nominal operating conditions, there will be no data collected along the RGT, as the RGT is spanned by GT2L and GT2R.  During slews or off-pointing, it is possible that ground tracks may intersect the RGT. The ICESat-2 mission has 1387 RGTs.', 
+                         'long_name':'Reference Ground Track', 
+                         'source':'POD/PPD', 
+                         'units':'counts'})
+            add_variable(orbit_group, "sc_orient",             orbit["sc_orient"],             'int8',
+                        {'contentType':'referenceInformation', 
+                         'description':'This parameter tracks the spacecraft orientation between forward, backward and transitional flight modes. ICESat-2 is considered to be flying forward when the weak beams are leading the strong beams; and backward when the strong beams are leading the weak beams. ICESat-2 is considered to be in transition while it is maneuvering between the two orientations. Science quality is potentially degraded while in transition mode.', 
+                         'long_name':'Spacecraft Orientation', 
+                         'source':'POD/PPD', 
+                         'units':'1',
+                         'flag_meanings':'backward forward transition', 
+                         'flag_values': [0, 1, 2]})
+            add_variable(orbit_group, "sc_orient_time",        orbit["sc_orient_time"],        'float64',
+                        {'contentType':'referenceInformation', 
+                         'description':'The time of the last spacecraft orientation change between forward, backward and transitional flight modes, expressed in seconds since the ATLAS SDP GPS Epoch. ICESat-2 is considered to be flying forward when the weak beams are leading the strong beams; and backward when the strong beams are leading the weak beams. ICESat-2 is considered to be in transition while it is maneuvering between the two orientations. Science quality is potentially degraded while in transition mode. The ATLAS Standard Data Products (SDP) epoch offset is defined within /ancillary_data/atlas_sdp_gps_epoch as the number of GPS seconds between the GPS epoch (1980-01-06T00:00:00.000000Z UTC) and the ATLAS SDP epoch. By adding the offset contained within atlas_sdp_gps_epoch to delta time parameters, the time in gps_seconds relative to the GPS epoch can be computed.', 
+                         'long_name':'Time of Last Spacecraft Orientation Change', 
+                         'source':'POD/PPD', 
+                         'units':'seconds since 2018-01-01',
+                         'standard_name':'time'})
 
         # spots
         for spot in spot_table:
@@ -308,18 +340,78 @@ else:
             spot_df["ellipse_h"] = spot_df["ortho_h"] + spot_df["geoid"]
 
             beam_group = hf.create_group(spot_info["beam"]) # e.g. gt1r, gt2l, etc.
-            add_variable(beam_group, "index_ph",   spot_df["index_ph"],     'float32')            
-            add_variable(beam_group, "index_seg",  spot_df["index_seg"],    'int32')            
-            add_variable(beam_group, "delta_time", spot_df["delta_time"],   'float64')
-            add_variable(beam_group, "latitude",   spot_df["latitude"],     'float64')
-            add_variable(beam_group, "longitude",  spot_df["longitude"],    'float64')
-            add_variable(beam_group, "x_atc",      spot_df["x_atc"],        'float32')
-            add_variable(beam_group, "y_atc",      spot_df["y_atc"],        'float32')
-            add_variable(beam_group, "ellipse_h",  spot_df["ellipse_h"],    'float32')
-            add_variable(beam_group, "ortho_h",    spot_df["geoid_corr_h"], 'float32')
-            add_variable(beam_group, "depth",      spot_df["depth"],        'float32')
-            add_variable(beam_group, "sigma_thu",  spot_df["sigma_thu"],    'float32')
-            add_variable(beam_group, "sigma_tvu",  spot_df["sigma_tvu"],    'float32')
+            add_variable(beam_group, "index_ph",   spot_df["index_ph"],     'float32',
+                        {'contentType':'physicalMeasurement', 
+                         'description':'', 
+                         'long_name':'', 
+                         'source':'ATL24G', 
+                         'units':''})
+            add_variable(beam_group, "index_seg",  spot_df["index_seg"],    'int32',
+                        {'contentType':'physicalMeasurement', 
+                         'description':'', 
+                         'long_name':'', 
+                         'source':'ATL24G', 
+                         'units':''})
+            add_variable(beam_group, "delta_time", spot_df["delta_time"],   'float64',
+                        {'contentType':'physicalMeasurement', 
+                         'description':'', 
+                         'long_name':'', 
+                         'source':'ATL24G', 
+                         'units':''})
+            add_variable(beam_group, "latitude",   spot_df["latitude"],     'float64',
+                        {'contentType':'physicalMeasurement', 
+                         'description':'', 
+                         'long_name':'', 
+                         'source':'ATL24G', 
+                         'units':''})
+            add_variable(beam_group, "longitude",  spot_df["longitude"],    'float64',
+                        {'contentType':'physicalMeasurement', 
+                         'description':'', 
+                         'long_name':'', 
+                         'source':'ATL24G', 
+                         'units':''})
+            add_variable(beam_group, "x_atc",      spot_df["x_atc"],        'float32',
+                        {'contentType':'physicalMeasurement', 
+                         'description':'', 
+                         'long_name':'', 
+                         'source':'ATL24G', 
+                         'units':''})
+            add_variable(beam_group, "y_atc",      spot_df["y_atc"],        'float32',
+                        {'contentType':'physicalMeasurement', 
+                         'description':'', 
+                         'long_name':'', 
+                         'source':'ATL24G', 
+                         'units':''})
+            add_variable(beam_group, "ellipse_h",  spot_df["ellipse_h"],    'float32',
+                        {'contentType':'physicalMeasurement', 
+                         'description':'', 
+                         'long_name':'', 
+                         'source':'ATL24G', 
+                         'units':''})
+            add_variable(beam_group, "ortho_h",    spot_df["geoid_corr_h"], 'float32',
+                        {'contentType':'physicalMeasurement', 
+                         'description':'', 
+                         'long_name':'', 
+                         'source':'ATL24G', 
+                         'units':''})
+            add_variable(beam_group, "depth",      spot_df["depth"],        'float32',
+                        {'contentType':'physicalMeasurement', 
+                         'description':'', 
+                         'long_name':'', 
+                         'source':'ATL24G', 
+                         'units':''})
+            add_variable(beam_group, "sigma_thu",  spot_df["sigma_thu"],    'float32',
+                        {'contentType':'physicalMeasurement', 
+                         'description':'', 
+                         'long_name':'', 
+                         'source':'ATL24G', 
+                         'units':''})
+            add_variable(beam_group, "sigma_tvu",  spot_df["sigma_tvu"],    'float32',
+                        {'contentType':'physicalMeasurement', 
+                         'description':'', 
+                         'long_name':'', 
+                         'source':'ATL24G', 
+                         'units':''})
 
             if "ensemble" in spot_df:
                 add_variable(beam_group, "class_ph", spot_df["ensemble"].astype(np.int16), 'int16')

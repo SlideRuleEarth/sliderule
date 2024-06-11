@@ -275,8 +275,6 @@ class Atl03BathyReader: public LuaObject
                 ~OrbitInfo          (void) = default;
                 const char* tojson  (void) const;
 
-                H5Array<double>     bounding_polygon_lat1;
-                H5Array<double>     bounding_polygon_lon1;
                 H5Element<double>   crossing_time;
                 H5Element<int8_t>   cycle_number;
                 H5Element<double>   lan;
