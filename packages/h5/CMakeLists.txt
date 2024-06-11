@@ -33,6 +33,7 @@ if (ZLIB_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/H5Dense.h
             ${CMAKE_CURRENT_LIST_DIR}/H5DArray.h
             ${CMAKE_CURRENT_LIST_DIR}/H5DatasetDevice.h
+            ${CMAKE_CURRENT_LIST_DIR}/H5Element.h
             ${CMAKE_CURRENT_LIST_DIR}/H5File.h
         DESTINATION
             ${INCDIR}

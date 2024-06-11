@@ -42,7 +42,7 @@ ATLAS_GPS_EPOCH = 1198800018
 
 # check command line parameters
 if len(sys.argv) <= 1:
-    print("Not enough parameters: python runner.py <control json file>")
+    print("Not enough parameters: python runner.py <control json file> [<ancillary json file> <orbit json file>]")
     sys.exit()
 
 # read control json
@@ -77,16 +77,6 @@ for classifier in input_files["classifiers"]:
         classifier_df.rename(columns={'class_ph': classifier}, inplace=True)
         spot_table[spot]["df"] = pd.merge(spot_table[spot]["df"], classifier_df, on='index_ph', how='left')
 print("Added photon classifications to dataframes")
-
-# get granule level info from first json file in the table of spot granule files
-# the data being pulled out of the file is (should be) consistent across all the granule files
-first_key = list(spot_table.keys())[0]
-representative_info = spot_table[first_key]["info"]
-granule_info = {
-    "rgt": representative_info["rgt"],
-    "region": representative_info["region"],
-    "cycle": representative_info["cycle"]
-}
 
 # Non-HDF5 Outputs
 if output_parms["format"] != "hdf5":
@@ -136,37 +126,204 @@ if output_parms["format"] != "hdf5":
 # HDF5 Output
 else:
 
+    def add_variable(group, name, data, dtype, attrs):
+        dataset = group.create_dataset(name, data=data, dtype=dtype)
+        dataset.attrs['contentType'] = attrs['contentType']
+        dataset.attrs['description'] = attrs['description']
+        dataset.attrs['long_name'] = attrs['long_name']
+        dataset.attrs['source'] = attrs['source']
+        dataset.attrs['units'] = attrs['units']
+        if 'standard_name' in attrs:
+            dataset.attrs['standard_name'] = attrs['standard_name']
+
     with h5py.File(atl24_filename, 'w') as hf:
 
-        # ancillary data
-        ancillary_group = hf.create_group("ancillary_data")
-        ancillary_group.create_dataset("atlas_sdp_gps_epoch", data=ATLAS_GPS_EPOCH)
+        if len(sys.argv) > 3:
+
+            # ancillary data
+            ancillary_json = sys.argv[2]
+            with open(ancillary_json, 'r') as json_file:
+                ancillary = json.load(json_file)
+            ancillary_group = hf.create_group("ancillary_data")
+            add_variable(ancillary_group, "atlas_sdp_gps_epoch", ancillary["atlas_sdp_gps_epoch"], 'float64',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'Number of GPS seconds between the GPS epoch (1980-01-06T00:00:00.000000Z UTC) and the ATLAS Standard Data Product (SDP) epoch (2018-01-01:T00.00.00.000000 UTC). Add this value to delta time parameters to compute full gps_seconds (relative to the GPS epoch) for each data point.', 
+                         'long_name':'ATLAS Epoch Offset', 
+                         'source':'Operations', 
+                         'units':'seconds since 1980-01-06T00:00:00.000000Z'})
+            add_variable(ancillary_group, "data_end_utc",        ancillary["data_end_utc"],        h5py.string_dtype(encoding='utf-8'),
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'UTC (in CCSDS-A format) of the last data point within the granule.', 
+                         'long_name':'End UTC Time of Granule (CCSDS-A, Actual)', 
+                         'source':'Derived', 
+                         'units':'1'})
+            add_variable(ancillary_group, "data_start_utc",      ancillary["data_start_utc"],      h5py.string_dtype(encoding='utf-8'),
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'UTC (in CCSDS-A format) of the first data point within the granule.', 
+                         'long_name':'Start UTC Time of Granule (CCSDS-A, Actual)', 
+                         'source':'Derived', 
+                         'units':'1'})
+            add_variable(ancillary_group, "end_cycle",           ancillary["end_cycle"],           'int32',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'The ending cycle number associated with the data contained within this granule. The cycle number is the counter of the number of 91-day repeat cycles completed by the mission.', 
+                         'long_name':'Ending Cycle', 
+                         'source':'Derived', 
+                         'units':'1'})
+            add_variable(ancillary_group, "end_delta_time",      ancillary["end_delta_time"],      'float64',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'Number of GPS seconds since the ATLAS SDP epoch at the last data point in the file. The ATLAS Standard Data Products (SDP) epoch offset is defined within /ancillary_data/atlas_sdp_gps_epoch as the number of GPS seconds between the GPS epoch (1980-01-06T00:00:00.000000Z UTC) and the ATLAS SDP epoch. By adding the offset contained within atlas_sdp_gps_epoch to delta time parameters, the time in gps_seconds relative to the GPS epoch can be computed.', 
+                         'long_name':'ATLAS End Time (Actual)', 
+                         'source':'Derived', 
+                         'units':'seconds since 2018-01-01',
+                         'standard_name': 'time'})
+            add_variable(ancillary_group, "end_geoseg",          ancillary["end_geoseg"],          'int32',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'The ending geolocation segment number associated with the data contained within this granule. ICESat granule geographic regions are further refined by geolocation segments. During the geolocation process, a geolocation segment is created approximately every 20m from the start of the orbit to the end.  The geolocation segments help align the ATLAS strong a weak beams and provide a common segment length for the L2 and higher products. The geolocation segment indices differ slightly from orbit-to-orbit because of the irregular shape of the Earth. The geolocation segment indices on ATL01 and ATL02 are only approximate because beams have not been aligned at the time of their creation.', 
+                         'long_name':'Ending Geolocation Segment', 
+                         'source':'Derived', 
+                         'units':'1'})
+            add_variable(ancillary_group, "end_gpssow",          ancillary["end_gpssow"],          'float64',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'GPS seconds-of-week of the last data point in the granule.', 
+                         'long_name':'Ending GPS SOW of Granule (Actual)', 
+                         'source':'Derived', 
+                         'units':'seconds'})
+            add_variable(ancillary_group, "end_gpsweek",         ancillary["end_gpsweek"],         'int32',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'GPS week number of the last data point in the granule.', 
+                         'long_name':'Ending GPSWeek of Granule (Actual)', 
+                         'source':'Derived', 
+                         'units':'weeks from 1980-01-06'})
+            add_variable(ancillary_group, "end_orbit",           ancillary["end_orbit"],           'int32',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'The ending orbit number associated with the data contained within this granule. The orbit number increments each time the spacecraft completes a full orbit of the Earth.', 
+                         'long_name':'Ending Orbit Number', 
+                         'source':'Derived', 
+                         'units':'1'})
+            add_variable(ancillary_group, "end_region",          ancillary["end_region"],          'int32',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'The ending product-specific region number associated with the data contained within this granule. ICESat-2 data products are separated by geographic regions. The data contained within a specific region are the same for ATL01 and ATL02. ATL03 regions differ slightly because of different geolocation segment locations caused by the irregular shape of the Earth. The region indices for other products are completely independent.', 
+                         'long_name':'Ending Region',
+                         'source':'Derived',
+                         'units':'1'})
+            add_variable(ancillary_group, "end_rgt",             ancillary["end_rgt"],             'int32',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'The ending reference groundtrack (RGT) number associated with the data contained within this granule. There are 1387 reference groundtrack in the ICESat-2 repeat orbit. The reference groundtrack increments each time the spacecraft completes a full orbit of the Earth and resets to 1 each time the spacecraft completes a full cycle.', 
+                         'long_name':'Ending Reference Groundtrack', 
+                         'source':'Derived', 
+                         'units':'1'})
+            add_variable(ancillary_group, "granule_end_utc",     ancillary["granule_end_utc"],     h5py.string_dtype(encoding='utf-8'),
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'Requested end time (in UTC CCSDS-A) of this granule.', 
+                         'long_name':'End UTC Time of Granule (CCSDS-A, Requested)', 
+                         'source':'Derived', 
+                         'units':'1'})
+            add_variable(ancillary_group, "granule_start_utc",   ancillary["granule_start_utc"],   h5py.string_dtype(encoding='utf-8'),
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'Requested start time (in UTC CCSDS-A) of this granule.', 
+                         'long_name':'Start UTC Time of Granule (CCSDS-A, Requested)', 
+                         'source':'Derived', 
+                         'units':'1'})
+            add_variable(ancillary_group, "release",             ancillary["release"],             h5py.string_dtype(encoding='utf-8'),
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'Release number of the granule. The release number is incremented when the software or ancillary data used to create the granule has been changed.', 
+                         'long_name':'Release Number', 
+                         'source':'Operations', 
+                         'units':'1'})
+            add_variable(ancillary_group, "start_cycle",         ancillary["start_cycle"],         'int32',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'The starting cycle number associated with the data contained within this granule. The cycle number is the counter of the number of 91-day repeat cycles completed by the mission.', 
+                         'long_name':'Starting Cycle', 
+                         'source':'Derived', 
+                         'units':'1'})
+            add_variable(ancillary_group, "start_delta_time",    ancillary["start_delta_time"],    'float64',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'Number of GPS seconds since the ATLAS SDP epoch at the first data point in the file. The ATLAS Standard Data Products (SDP) epoch offset is defined within /ancillary_data/atlas_sdp_gps_epoch as the number of GPS seconds between the GPS epoch (1980-01-06T00:00:00.000000Z UTC) and the ATLAS SDP epoch. By adding the offset contained within atlas_sdp_gps_epoch to delta time parameters, the time in gps_seconds relative to the GPS epoch can be computed.', 
+                         'long_name':'ATLAS Start Time (Actual)',
+                         'source':'Derived', 
+                         'units':'seconds since 2018-01-01'})
+            add_variable(ancillary_group, "start_geoseg",        ancillary["start_geoseg"],        'int32',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'The starting geolocation segment number associated with the data contained within this granule. ICESat granule geographic regions are further refined by geolocation segments. During the geolocation process, a geolocation segment is created approximately every 20m from the start of the orbit to the end.  The geolocation segments help align the ATLAS strong a weak beams and provide a common segment length for the L2 and higher products. The geolocation segment indices differ slightly from orbit-to-orbit because of the irregular shape of the Earth. The geolocation segment indices on ATL01 and ATL02 are only approximate because beams have not been aligned at the time of their creation.', 
+                         'long_name':'Starting Geolocation Segment', 
+                         'source':'Derived', 
+                         'units':'1'})
+            add_variable(ancillary_group, "start_gpssow",        ancillary["start_gpssow"],        'float64',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'GPS seconds-of-week of the first data point in the granule.', 
+                         'long_name':'Start GPS SOW of Granule (Actual)', 
+                         'source':'Derived', 
+                         'units':'seconds'})
+            add_variable(ancillary_group, "start_gpsweek",       ancillary["start_gpsweek"],       'int32',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'GPS week number of the first data point in the granule.', 
+                         'long_name':'Start GPSWeek of Granule (Actual)', 
+                         'source':'Derived', 
+                         'units':'weeks from 1980-01-06'})
+            add_variable(ancillary_group, "start_orbit",         ancillary["start_orbit"],         'int32',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'The starting orbit number associated with the data contained within this granule. The orbit number increments each time the spacecraft completes a full orbit of the Earth.', 
+                         'long_name':'Starting Orbit Number', 
+                         'source':'Derived', 
+                         'units':'1'})
+            add_variable(ancillary_group, "start_region",         ancillary["start_region"],       'int32',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'The starting product-specific region number associated with the data contained within this granule. ICESat-2 data products are separated by geographic regions. The data contained within a specific region are the same for ATL01 and ATL02. ATL03 regions differ slightly because of different geolocation segment locations caused by the irregular shape of the Earth. The region indices for other products are completely independent.', 
+                         'long_name':'Starting Region', 
+                         'source':'Derived', 
+                         'units':'1'})
+            add_variable(ancillary_group, "start_rgt",         ancillary["start_rgt"],             'int32',
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'The starting reference groundtrack (RGT) number associated with the data contained within this granule. There are 1387 reference groundtrack in the ICESat-2 repeat orbit. The reference groundtrack increments each time the spacecraft completes a full orbit of the Earth and resets to 1 each time the spacecraft completes a full cycle.', 
+                         'long_name':'Starting Reference Groundtrack', 
+                         'source':'Derived', 
+                         'units':'1'})
+            add_variable(ancillary_group, "version",             ancillary["version"],             h5py.string_dtype(encoding='utf-8'),
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'Version number of this granule within the release. It is a sequential number corresponding to the number of times the granule has been reprocessed for the current release.', 
+                         'long_name':'Version', 
+                         'source':'Operations', 
+                         'units':'1'})
+
+            # orbit info
+            orbit_json = sys.argv[3]
+            with open(orbit_json, 'r') as json_file:
+                orbit = json.load(json_file)
+            orbit_group = hf.create_group("orbit_info")
+            add_variable(orbit_group, "bounding_polygon_lat1", orbit["bounding_polygon_lat1"], 'float64')
+            add_variable(orbit_group, "bounding_polygon_lon1", orbit["bounding_polygon_lon1"], 'float64')
+            add_variable(orbit_group, "crossing_time",         orbit["crossing_time"],         'float64')
+            add_variable(orbit_group, "cycle_number",          orbit["cycle_number"],          'int8')
+            add_variable(orbit_group, "lan",                   orbit["lan"],                   'float64')
+            add_variable(orbit_group, "orbit_number",          orbit["orbit_number"],          'int16')
+            add_variable(orbit_group, "rgt",                   orbit["rgt"],                   'int16')
+            add_variable(orbit_group, "sc_orient",             orbit["sc_orient"],             'int8')
+            add_variable(orbit_group, "sc_orient_time",        orbit["sc_orient_time"],        'float64')
 
         # spots
         for spot in spot_table:
             spot_info = spot_table[spot]["info"]
             spot_df = spot_table[spot]["df"]
-            beam_group = hf.create_group(spot_info["beam"]) # e.g. gt1r, gt2l, etc.
-            beam_group.create_dataset("index_ph", data=spot_df["index_ph"])            
-            beam_group.create_dataset("index_seg", data=spot_df["index_seg"])            
             spot_df["delta_time"] = (spot_df["time"] / 1000000000.0) - ATLAS_GPS_EPOCH
-            beam_group.create_dataset("delta_time", data=spot_df["delta_time"])
-            beam_group.create_dataset("lat", data=spot_df["latitude"])
-            beam_group.create_dataset("lon", data=spot_df["longitude"])
-            beam_group.create_dataset("x_atc", data=spot_df["x_atc"])
-            beam_group.create_dataset("y_atc", data=spot_df["y_atc"])
-            beam_group.create_dataset("ortho_h", data=spot_df["geoid_corr_h"])
-            beam_group.create_dataset("depth", data=spot_df["depth"])
-            beam_group.create_dataset("sigma_thu", data=spot_df["sigma_thu"])
-            beam_group.create_dataset("sigma_tvu", data=spot_df["sigma_tvu"])
-            if "ensemble" in spot_df:
-                beam_group.create_dataset("class_ph", data=spot_df["ensemble"].astype(np.int16))
-            for classifier in input_files["classifiers"]:
-                beam_group.create_dataset(classifier, data=spot_df[classifier].astype(np.int16))
+            spot_df["ellipse_h"] = spot_df["ortho_h"] + spot_df["geoid"]
 
-        # orbit info        
-        orbit_group = hf.create_group("orbit_info")
-        orbit_group.create_dataset("rgt", data=granule_info["rgt"])
-        orbit_group.create_dataset("cycle_number", data=granule_info["cycle"])
+            beam_group = hf.create_group(spot_info["beam"]) # e.g. gt1r, gt2l, etc.
+            add_variable(beam_group, "index_ph",   spot_df["index_ph"],     'float32')            
+            add_variable(beam_group, "index_seg",  spot_df["index_seg"],    'int32')            
+            add_variable(beam_group, "delta_time", spot_df["delta_time"],   'float64')
+            add_variable(beam_group, "latitude",   spot_df["latitude"],     'float64')
+            add_variable(beam_group, "longitude",  spot_df["longitude"],    'float64')
+            add_variable(beam_group, "x_atc",      spot_df["x_atc"],        'float32')
+            add_variable(beam_group, "y_atc",      spot_df["y_atc"],        'float32')
+            add_variable(beam_group, "ellipse_h",  spot_df["ellipse_h"],    'float32')
+            add_variable(beam_group, "ortho_h",    spot_df["geoid_corr_h"], 'float32')
+            add_variable(beam_group, "depth",      spot_df["depth"],        'float32')
+            add_variable(beam_group, "sigma_thu",  spot_df["sigma_thu"],    'float32')
+            add_variable(beam_group, "sigma_tvu",  spot_df["sigma_tvu"],    'float32')
+
+            if "ensemble" in spot_df:
+                add_variable(beam_group, "class_ph", spot_df["ensemble"].astype(np.int16), 'int16')
+            for classifier in input_files["classifiers"]:
+                add_variable(beam_group, classifier, spot_df[classifier].astype(np.int16), 'int16')
 
     print("HDF5 file written: " + atl24_filename)

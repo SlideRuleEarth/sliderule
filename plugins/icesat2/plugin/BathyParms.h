@@ -70,6 +70,7 @@ class BathyParms: public Icesat2Parms
         static const char* HIGHEST_PEAK_RATIO;
         static const char* SURFACE_WIDTH_SIGMAS;
         static const char* MODEL_AS_POISSON;
+        static const char* OUTPUT_AS_SDP;
 
         static const int ATL09_RESOURCE_NAME_LEN = 39;
         static const int ATL09_RESOURCE_KEY_LEN = 6;
@@ -132,6 +133,7 @@ class BathyParms: public Icesat2Parms
         bool        classifiers[NUM_CLASSIFIERS];   // which bathymetry classifiers to run
         bool        return_inputs;                  // return the atl03 bathy records back to client
         bool        spots[NUM_SPOTS];               // only used by downstream algorithms
+        bool        output_as_sdp;                  // include all the necessary ancillary data for the standard data product
         surface_finder_t surface_finder;            // surface finder parameters
         Dictionary<string> alt09_index;
 

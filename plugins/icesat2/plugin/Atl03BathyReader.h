@@ -46,6 +46,7 @@
 #include "StringLib.h"
 #include "RasterObject.h"
 #include "H5Array.h"
+#include "H5Element.h"
 #include "GeoLib.h"
 #include "Icesat2Parms.h"
 #include "BathyParms.h"
@@ -101,6 +102,7 @@ class Atl03BathyReader: public LuaObject
             double          x_atc;                  // along track distance calculated from segment_dist_x and dist_ph_along
             double          y_atc;                  // dist_ph_across
             double          background_rate;        // PE per second
+            float           geoid;                  // geoid correction
             float           geoid_corr_h;           // geoid corrected height of photon, calculated from h_ph and geoid
             float           dem_h;                  // best available dem height, geoid corrected
             float           sigma_h;                // height aerial uncertainty
@@ -185,7 +187,7 @@ class Atl03BathyReader: public LuaObject
             public:
 
                 Atl03Data           (info_t* info, const Region& region);
-                ~Atl03Data          (void);
+                ~Atl03Data          (void) = default;
 
                 /* Read Data */
                 H5Array<int8_t>     sc_orient;
@@ -228,6 +230,60 @@ class Atl03BathyReader: public LuaObject
                 H5Array<float>      met_u10m;
                 H5Array<float>      met_v10m;
                 H5Array<double>     delta_time;
+        };
+
+        /* AncillaryData SubClass */
+        class AncillaryData 
+        {
+            public:
+
+                explicit AncillaryData  (const Asset* asset, const char* resource, H5Coro::context_t* context, int timeout);
+                ~AncillaryData          (void) = default;
+                const char* tojson      (void) const;
+
+                H5Element<double>       atlas_sdp_gps_epoch;
+                H5Element<const char*>  data_end_utc;
+                H5Element<const char*>  data_start_utc;
+                H5Element<int32_t>      end_cycle;
+                H5Element<double>       end_delta_time;
+                H5Element<int32_t>      end_geoseg;
+                H5Element<double>       end_gpssow;
+                H5Element<int32_t>      end_gpsweek;
+                H5Element<int32_t>      end_orbit;
+                H5Element<int32_t>      end_region;
+                H5Element<int32_t>      end_rgt;
+                H5Element<const char*>  release;
+                H5Element<const char*>  granule_end_utc;
+                H5Element<const char*>  granule_start_utc;
+                H5Element<int32_t>      start_cycle;
+                H5Element<double>       start_delta_time;
+                H5Element<int32_t>      start_geoseg;
+                H5Element<double>       start_gpssow;
+                H5Element<int32_t>      start_gpsweek;
+                H5Element<int32_t>      start_orbit;
+                H5Element<int32_t>      start_region;
+                H5Element<int32_t>      start_rgt;
+                H5Element<const char*>  version;
+        };
+
+        /* OrbitInfo SubClass */
+        class OrbitInfo 
+        {
+            public:
+
+                explicit OrbitInfo  (const Asset* asset, const char* resource, H5Coro::context_t* context, int timeout);
+                ~OrbitInfo          (void) = default;
+                const char* tojson  (void) const;
+
+                H5Array<double>     bounding_polygon_lat1;
+                H5Array<double>     bounding_polygon_lon1;
+                H5Element<double>   crossing_time;
+                H5Element<int8_t>   cycle_number;
+                H5Element<double>   lan;
+                H5Element<int16_t>  orbit_number;
+                H5Element<int16_t>  rgt;
+                H5Element<int8_t>   sc_orient;
+                H5Element<double>   sc_orient_time;
         };
 
         /*--------------------------------------------------------------------

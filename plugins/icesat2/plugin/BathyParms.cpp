@@ -59,6 +59,7 @@ const char* BathyParms::MIN_PEAK_SEPARATION = "min_peak_separation";
 const char* BathyParms::HIGHEST_PEAK_RATIO = "highest_peak_ratio";
 const char* BathyParms::SURFACE_WIDTH_SIGMAS = "surface_width_sigmas";
 const char* BathyParms::MODEL_AS_POISSON = "model_as_poisson";
+const char* BathyParms::OUTPUT_AS_SDP = "output_as_sdp";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -185,6 +186,7 @@ BathyParms::BathyParms(lua_State* L, int index):
     classifiers {true, true, true, true, true, true, true, true},
     return_inputs (false),
     spots {true, true, true, true, true, true},
+    output_as_sdp (false),
     surface_finder {
         .dem_buffer = 50.0,
         .bin_size = 0.5,
@@ -240,6 +242,12 @@ BathyParms::BathyParms(lua_State* L, int index):
         lua_getfield(L, index, BathyParms::RETURN_INPUTS);
         return_inputs = LuaObject::getLuaBoolean(L, -1, true, return_inputs, &provided);
         if(provided) mlog(DEBUG, "Setting %s to %d", BathyParms::RETURN_INPUTS, return_inputs);
+        lua_pop(L, 1);
+
+        /* output as sdp */
+        lua_getfield(L, index, BathyParms::OUTPUT_AS_SDP);
+        output_as_sdp = LuaObject::getLuaBoolean(L, -1, true, output_as_sdp, &provided);
+        if(provided) mlog(DEBUG, "Setting %s to %d", BathyParms::OUTPUT_AS_SDP, output_as_sdp);
         lua_pop(L, 1);
 
         /* atl09 resources */

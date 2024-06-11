@@ -40,6 +40,7 @@
 #include "H5Array.h"
 #include "H5DArray.h"
 #include "H5DatasetDevice.h"
+#include "H5Element.h"
 #include "H5File.h"
 
 /******************************************************************************

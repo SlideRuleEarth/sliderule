@@ -69,6 +69,7 @@ const RecordObject::fieldDef_t Atl03BathyReader::phRecDef[] = {
     {"x_atc",           RecordObject::DOUBLE,   offsetof(photon_t, x_atc),          1,  NULL, NATIVE_FLAGS},
     {"y_atc",           RecordObject::DOUBLE,   offsetof(photon_t, y_atc),          1,  NULL, NATIVE_FLAGS},
     {"background_rate", RecordObject::DOUBLE,   offsetof(photon_t, background_rate),1,  NULL, NATIVE_FLAGS},
+    {"geoid",           RecordObject::FLOAT,    offsetof(photon_t, geoid),          1,  NULL, NATIVE_FLAGS},
     {"geoid_corr_h",    RecordObject::FLOAT,    offsetof(photon_t, geoid_corr_h),   1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"dem_h",           RecordObject::FLOAT,    offsetof(photon_t, dem_h),          1,  NULL, NATIVE_FLAGS},
     {"sigma_h",         RecordObject::FLOAT,    offsetof(photon_t, sigma_h),        1,  NULL, NATIVE_FLAGS},
@@ -205,6 +206,38 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
     if(parms->use_bathy_mask)
     {
         bathyMask = new GeoLib::TIFFImage(NULL, GLOBAL_BATHYMETRY_MASK_FILE_PATH);
+    }
+
+    /* Standard Data Product Variables */
+    if(parms->output_as_sdp)
+    {
+        /* Write Ancillary Data */
+        FString ancillary_filename("%s/%s_ancillary.json", sharedDirectory, OUTPUT_FILE_PREFIX);
+        fileptr_t ancillary_file = fopen(ancillary_filename.c_str(), "w");
+        if(ancillary_file == NULL)
+        {
+            char err_buf[256];
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create ancillary json file %s: %s", ancillary_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
+        }
+        const AncillaryData ancillary_data(asset, resource, &context, read_timeout_ms);
+        const char* ancillary_json = ancillary_data.tojson();
+        fprintf(ancillary_file, "%s", ancillary_json);
+        fclose(ancillary_file);
+        delete [] ancillary_json;
+
+        /* Write Orbit Info */
+        FString orbit_filename("%s/%s_orbit.json", sharedDirectory, OUTPUT_FILE_PREFIX);
+        fileptr_t orbit_file = fopen(orbit_filename.c_str(), "w");
+        if(orbit_file == NULL)
+        {
+            char err_buf[256];
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create ancillary json file %s: %s", orbit_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
+        }
+        const OrbitInfo orbit_info(asset, resource, &context, read_timeout_ms);
+        const char* orbit_json = orbit_info.tojson();
+        fprintf(orbit_file, "%s", orbit_json);
+        fclose(orbit_file);
+        delete [] orbit_json;
     }
 
     /* Initialize Readers */
@@ -554,11 +587,6 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
 }
 
 /*----------------------------------------------------------------------------
- * Atl03Data::Destructor
- *----------------------------------------------------------------------------*/
-Atl03BathyReader::Atl03Data::~Atl03Data (void) = default;
-
-/*----------------------------------------------------------------------------
  * Atl09Class::Constructor
  *----------------------------------------------------------------------------*/
 Atl03BathyReader::Atl09Class::Atl09Class (info_t* info):
@@ -578,6 +606,183 @@ Atl03BathyReader::Atl09Class::Atl09Class (info_t* info):
     {
         mlog(CRITICAL, "ATL09 data unavailable <%s>", info->reader->resource09.c_str());
     }
+}
+
+/*----------------------------------------------------------------------------
+ * AncillaryData::Constructor
+ *----------------------------------------------------------------------------*/
+Atl03BathyReader::AncillaryData::AncillaryData (const Asset* asset, const char* resource, H5Coro::context_t* context, int timeout):
+    atlas_sdp_gps_epoch (asset, resource, "/ancillary_data/atlas_sdp_gps_epoch",    context),
+    data_end_utc        (asset, resource, "/ancillary_data/data_end_utc",           context),
+    data_start_utc      (asset, resource, "/ancillary_data/data_start_utc",         context),
+    end_cycle           (asset, resource, "/ancillary_data/end_cycle",              context),
+    end_delta_time      (asset, resource, "/ancillary_data/end_delta_time",         context),
+    end_geoseg          (asset, resource, "/ancillary_data/end_geoseg",             context),
+    end_gpssow          (asset, resource, "/ancillary_data/end_gpssow",             context),
+    end_gpsweek         (asset, resource, "/ancillary_data/end_gpsweek",            context),
+    end_orbit           (asset, resource, "/ancillary_data/end_orbit",              context),
+    end_region          (asset, resource, "/ancillary_data/end_region",             context),
+    end_rgt             (asset, resource, "/ancillary_data/end_rgt",                context),
+    release             (asset, resource, "/ancillary_data/release",                context),
+    granule_end_utc     (asset, resource, "/ancillary_data/granule_end_utc",        context),
+    granule_start_utc   (asset, resource, "/ancillary_data/granule_start_utc",      context),
+    start_cycle         (asset, resource, "/ancillary_data/start_cycle",            context),
+    start_delta_time    (asset, resource, "/ancillary_data/start_delta_time",       context),
+    start_geoseg        (asset, resource, "/ancillary_data/start_geoseg",           context),
+    start_gpssow        (asset, resource, "/ancillary_data/start_gpssow",           context),
+    start_gpsweek       (asset, resource, "/ancillary_data/start_gpsweek",          context),
+    start_orbit         (asset, resource, "/ancillary_data/start_orbit",            context),
+    start_region        (asset, resource, "/ancillary_data/start_region",           context),
+    start_rgt           (asset, resource, "/ancillary_data/start_rgt",              context),
+    version             (asset, resource, "/ancillary_data/version",                context)
+{
+    atlas_sdp_gps_epoch.join(timeout, true);
+    data_end_utc.join(timeout, true);
+    data_start_utc.join(timeout, true);
+    end_cycle.join(timeout, true);
+    end_delta_time.join(timeout, true);
+    end_geoseg.join(timeout, true);
+    end_gpssow.join(timeout, true);
+    end_gpsweek.join(timeout, true);
+    end_orbit.join(timeout, true);
+    end_region.join(timeout, true);
+    end_rgt.join(timeout, true);
+    release.join(timeout, true);
+    granule_end_utc.join(timeout, true);
+    granule_start_utc.join(timeout, true);
+    start_cycle.join(timeout, true);
+    start_delta_time.join(timeout, true);
+    start_geoseg.join(timeout, true);
+    start_gpssow.join(timeout, true);
+    start_gpsweek.join(timeout, true);
+    start_orbit.join(timeout, true);
+    start_region.join(timeout, true);
+    start_rgt.join(timeout, true);
+    version.join(timeout, true);
+}
+
+/*----------------------------------------------------------------------------
+ * AncillaryData::tojson
+ *----------------------------------------------------------------------------*/
+const char* Atl03BathyReader::AncillaryData::tojson (void) const
+{
+    FString json_contents(R"json({"
+    R""atlas_sdp_gps_epoch": %lf,"
+    R""data_end_utc": %s,"
+    R""data_start_utc": "%s","
+    R""end_cycle": %d,"
+    R""end_delta_time": %lf,"
+    R""end_geoseg": %d,"
+    R""end_gpssow": %lf,"
+    R""end_gpsweek": %d,"
+    R""end_orbit": %d,
+    R""end_region": %d,
+    R""end_rgt": %d"
+    R""release": %s"
+    R""granule_end_utc": %s"
+    R""granule_start_utc": %s"
+    R""start_cycle": %d"
+    R""start_delta_time": %lf"
+    R""start_geoseg": %d"
+    R""start_gpssow": %lf"
+    R""start_gpsweek": %d"
+    R""start_orbit": %d"
+    R""start_region": %d,
+    R""start_rgt": %d"
+    R""version": %s"
+    R"})json",
+    atlas_sdp_gps_epoch.value,
+    data_end_utc.value,
+    data_start_utc.value,
+    end_cycle.value,
+    end_delta_time.value,
+    end_geoseg.value,
+    end_gpssow.value,
+    end_gpsweek.value,
+    end_orbit.value,
+    end_region.value,
+    end_rgt.value,
+    release.value,
+    granule_end_utc.value,
+    granule_start_utc.value,
+    start_cycle.value,
+    start_delta_time.value,
+    start_geoseg.value,
+    start_gpssow.value,
+    start_gpsweek.value,
+    start_orbit.value,
+    start_region.value,
+    start_rgt.value,
+    version.value);
+
+    return json_contents.c_str(true);
+}
+
+/*----------------------------------------------------------------------------
+ * OrbitInfo::Constructor
+ *----------------------------------------------------------------------------*/
+Atl03BathyReader::OrbitInfo::OrbitInfo (const Asset* asset, const char* resource, H5Coro::context_t* context, int timeout):
+    bounding_polygon_lat1   (asset, resource, "/orbit_info/bounding_polygon_lat1",  context),
+    bounding_polygon_lon1   (asset, resource, "/orbit_info/bounding_polygon_lon1",  context),
+    crossing_time           (asset, resource, "/orbit_info/crossing_time",          context),
+    cycle_number            (asset, resource, "/orbit_info/cycle_number",           context),
+    lan                     (asset, resource, "/orbit_info/lan",                    context),
+    orbit_number            (asset, resource, "/orbit_info/orbit_number",           context),
+    rgt                     (asset, resource, "/orbit_info/rgt",                    context),
+    sc_orient               (asset, resource, "/orbit_info/sc_orient",              context),
+    sc_orient_time          (asset, resource, "/orbit_info/sc_orient_time",         context)
+{
+    bounding_polygon_lat1.join(timeout, true);
+    bounding_polygon_lon1.join(timeout, true);
+    crossing_time.join(timeout, true);
+    cycle_number.join(timeout, true);
+    lan.join(timeout, true);
+    orbit_number.join(timeout, true);
+    rgt.join(timeout, true);
+    sc_orient.join(timeout, true);
+    sc_orient_time.join(timeout, true);
+}
+
+/*----------------------------------------------------------------------------
+ * OrbitInfo::tojson
+ *----------------------------------------------------------------------------*/
+const char* Atl03BathyReader::OrbitInfo::tojson (void) const
+{
+    vector<string> lat1s;
+    vector<string> lon1s;
+    const long num_coords = bounding_polygon_lat1.size;
+    if(num_coords > 0)
+    {
+        for(int i = 0; i < num_coords - 1; i++) lat1s.emplace_back(FString("%lf,", bounding_polygon_lat1[i]).c_str());
+        lat1s.emplace_back(FString("%lf", bounding_polygon_lat1[num_coords - 1]).c_str());
+        for(int i = 0; i < num_coords - 1; i++) lat1s.emplace_back(FString("%lf,", bounding_polygon_lon1[i]).c_str());
+        lon1s.emplace_back(FString("%lf", bounding_polygon_lon1[num_coords - 1]).c_str());
+    }
+    const string lat1_list = std::accumulate(lat1s.begin(), lat1s.end(), string());
+    const string lon1_list = std::accumulate(lon1s.begin(), lon1s.end(), string());
+    
+    FString json_contents(R"json({"
+    R""bounding_polygon_lat1": [%s],"
+    R""bounding_polygon_lon1": [%s],"
+    R""crossing_time": "%lf","
+    R""cycle_number": %d,"
+    R""lan": %lf,"
+    R""orbit_number": %d,"
+    R""rgt": %d,"
+    R""sc_orient": %d,"
+    R""sc_orient_time": %lf,
+    R"})json",
+    lat1_list.c_str(),
+    lon1_list.c_str(),
+    crossing_time.value,
+    cycle_number.value,
+    lan.value,
+    orbit_number.value,
+    rgt.value,
+    sc_orient.value,
+    sc_orient_time.value);
+
+    return json_contents.c_str(true);
 }
 
 /*----------------------------------------------------------------------------
@@ -796,6 +1001,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                     .x_atc = atl03.segment_dist_x[current_segment] + atl03.dist_ph_along[current_photon],
                     .y_atc = atl03.dist_ph_across[current_photon],
                     .background_rate = calculateBackground(current_segment, bckgrd_index, atl03),
+                    .geoid = atl03.geoid[current_segment],
                     .geoid_corr_h = atl03.h_ph[current_photon] - atl03.geoid[current_segment],
                     .dem_h = atl03.dem_h[current_segment] - atl03.geoid[current_segment],
                     .sigma_h = atl03.sigma_h[current_segment],
@@ -877,34 +1083,33 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                             throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output json file %s: %s", json_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
                         }
 
-/*
-* Build JSON File
-*  block indentation to preserve tabs in destination file
-*/
-FString json_contents(R"json({
-"track": %d,
-"pair": %d,
-"beam": "gt%d%c",
-"spot": %d,
-"year": %d,
-"month": %d,
-"day": %d,
-"rgt": %d,
-"cycle": %d,
-"region": %d,
-"utm_zone": %d
-})json",
-extent->track,
-extent->pair,
-extent->track, extent->pair == 0 ? 'l' : 'r',
-extent->spot,
-reader->granule_date.year,
-reader->granule_date.month,
-reader->granule_date.day,
-extent->reference_ground_track,
-extent->cycle,
-extent->region,
-extent->utm_zone);
+                        /*
+                        * Build JSON File
+                        */
+                        FString json_contents(R"json({"
+                        R""track": %d,"
+                        R""pair": %d,"
+                        R""beam": "gt%d%c","
+                        R""spot": %d,"
+                        R""year": %d,"
+                        R""month": %d,"
+                        R""day": %d,"
+                        R""rgt": %d,"
+                        R""cycle": %d,
+                        R""region": %d,
+                        R""utm_zone": %d"
+                        R"})json",
+                        extent->track,
+                        extent->pair,
+                        extent->track, extent->pair == 0 ? 'l' : 'r',
+                        extent->spot,
+                        reader->granule_date.year,
+                        reader->granule_date.month,
+                        reader->granule_date.day,
+                        extent->reference_ground_track,
+                        extent->cycle,
+                        extent->region,
+                        extent->utm_zone);
 
                         /* Write and Close JSON File */
                         fprintf(json_file, "%s", json_contents.c_str());
@@ -920,7 +1125,7 @@ extent->utm_zone);
                         }
 
                         /* Write Header */
-                        fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,index_seg,background_rate,surface_h,geoid_corr_h,dem_h,sigma_h,sigma_along,sigma_across,solar_elevation,ref_az,ref_el,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph,class_ph\n");
+                        fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,index_seg,background_rate,geoid,surface_h,geoid_corr_h,dem_h,sigma_h,sigma_along,sigma_across,solar_elevation,ref_az,ref_el,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph,class_ph\n");
                     }
 
                     /* Write Data */
@@ -936,6 +1141,7 @@ extent->utm_zone);
                         fprintf(out_file, "%lf,", extent->photons[i].y_atc);
                         fprintf(out_file, "%d,", extent->photons[i].index_seg);
                         fprintf(out_file, "%lf,", extent->photons[i].background_rate);
+                        fprintf(out_file, "%f,", extent->photons[i].geoid);
                         fprintf(out_file, "%f,", extent->surface_h);
                         fprintf(out_file, "%f,", extent->photons[i].geoid_corr_h);
                         fprintf(out_file, "%f,", extent->photons[i].dem_h);
