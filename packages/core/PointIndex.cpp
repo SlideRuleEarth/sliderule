@@ -60,10 +60,11 @@ const struct luaL_Reg PointIndex::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int PointIndex::luaCreate (lua_State* L)
 {
+    Asset* _asset = NULL;
     try
     {
         /* Get Asset Directory */
-        Asset*      _asset      = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
+        _asset                  = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         const char* _fieldname  = getLuaString(L, 2);
         const int   _threshold  = getLuaInteger(L, 3, true, DEFAULT_THRESHOLD);
 
@@ -72,6 +73,7 @@ int PointIndex::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
+        if(_asset) _asset->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }

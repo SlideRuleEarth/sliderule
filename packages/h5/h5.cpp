@@ -150,7 +150,7 @@ int h5_read (lua_State* L)
             {
                 H5Element<const char*> element(asset, resource, variable, NULL);
                 element.join(timeout, true);
-                lua_pushstring(L, element.value);
+                lua_pushlstring(L, element.value, element.size);
                 break;
             }
             default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid data type specified <%d>", static_cast<int>(dtype));

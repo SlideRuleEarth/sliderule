@@ -367,6 +367,7 @@ void* PistacheServer::serverThread (void* parm)
 int PistacheServer::luaRoute(lua_State* L)
 {
     bool status = false;
+    RouteHandler* handler = NULL;
 
     try
     {
@@ -395,7 +396,7 @@ int PistacheServer::luaRoute(lua_State* L)
         const char* url = getLuaString(L, 3);
 
         /* Get Route Handler */
-        RouteHandler* handler = dynamic_cast<RouteHandler*>(getLuaObject(L, 4, RouteHandler::OBJECT_TYPE));
+        handler = dynamic_cast<RouteHandler*>(getLuaObject(L, 4, RouteHandler::OBJECT_TYPE));
 
         /* Set Route */
         if(action == GET)
@@ -416,6 +417,7 @@ int PistacheServer::luaRoute(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
+        if(handler) handler->releaseLuaObject();
         mlog(e.level(), "Error binding route: %s", e.what());
     }
 

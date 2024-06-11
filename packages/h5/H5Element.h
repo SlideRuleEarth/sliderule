@@ -75,6 +75,7 @@ class H5Element
 
         H5Future*           h5f;
         T                   value;
+        int                 size; // in bytes
 };
 
 /******************************************************************************
@@ -88,6 +89,7 @@ template <class T>
 H5Element<T>::H5Element(const Asset* asset, const char* resource, const char* variable, H5Coro::context_t* context)
 {
     memset(&value, 0, sizeof(T));
+    size = 0;
     if(asset)   h5f = H5Coro::readp(asset, resource, variable, RecordObject::DYNAMIC, 0, 0, H5Coro::ALL_ROWS, context);
     else        h5f = NULL;
 }
@@ -139,6 +141,7 @@ bool H5Element<T>::join(int timeout, bool throw_exception)
                 T* value_ptr = reinterpret_cast<T*>(h5f->info.data);
                 value = *value_ptr;
             }
+            size = h5f->info.datasize;
         }
         else
         {

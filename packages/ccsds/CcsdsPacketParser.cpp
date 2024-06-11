@@ -64,14 +64,15 @@ const struct luaL_Reg CcsdsPacketParser::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int CcsdsPacketParser::luaCreate (lua_State* L)
 {
+    CcsdsParserModule* _parser = NULL;
     try
     {
         /* Get Parameters */
-        CcsdsParserModule*  _parser     = dynamic_cast<CcsdsParserModule*>(getLuaObject(L, 1, CcsdsParserModule::OBJECT_TYPE));
-        const char*         type_str    = getLuaString(L, 2);
-        const char*         inq_name    = getLuaString(L, 3);
-        const char*         outq_name   = getLuaString(L, 4, true, NULL);
-        const char*         statq_name  = getLuaString(L, 5, true, NULL);
+        _parser                 = dynamic_cast<CcsdsParserModule*>(getLuaObject(L, 1, CcsdsParserModule::OBJECT_TYPE));
+        const char* type_str    = getLuaString(L, 2);
+        const char* inq_name    = getLuaString(L, 3);
+        const char* outq_name   = getLuaString(L, 4, true, NULL);
+        const char* statq_name  = getLuaString(L, 5, true, NULL);
 
         /* Get Packet Type */
         const CcsdsPacket::type_t pkt_type = str2pkttype(type_str);
@@ -85,6 +86,7 @@ int CcsdsPacketParser::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
+        if(_parser) _parser->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }

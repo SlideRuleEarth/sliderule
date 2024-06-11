@@ -759,6 +759,7 @@ int HttpServer::onDisconnect(int fd)
 int HttpServer::luaAttach (lua_State* L)
 {
     bool status = false;
+    EndpointObject* endpoint = NULL;
 
     try
     {
@@ -766,7 +767,7 @@ int HttpServer::luaAttach (lua_State* L)
         HttpServer* lua_obj = dynamic_cast<HttpServer*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        EndpointObject* endpoint = dynamic_cast<EndpointObject*>(getLuaObject(L, 2, EndpointObject::OBJECT_TYPE));
+        endpoint = dynamic_cast<EndpointObject*>(getLuaObject(L, 2, EndpointObject::OBJECT_TYPE));
         const char* url = getLuaString(L, 3);
 
         /* Add Route to Table */
@@ -776,6 +777,7 @@ int HttpServer::luaAttach (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
+        if(endpoint) endpoint->releaseLuaObject();
         mlog(e.level(), "Error attaching handler: %s", e.what());
     }
 

@@ -353,6 +353,7 @@ void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publ
 int LuaEndpoint::luaAuth (lua_State* L)
 {
     bool status = false;
+    Authenticator* auth = NULL;
 
     try
     {
@@ -360,7 +361,7 @@ int LuaEndpoint::luaAuth (lua_State* L)
         LuaEndpoint* lua_obj = dynamic_cast<LuaEndpoint*>(getLuaSelf(L, 1));
 
         /* Get Authenticator */
-        Authenticator* auth = dynamic_cast<Authenticator*>(getLuaObject(L, 2, LuaEndpoint::Authenticator::OBJECT_TYPE));
+        auth = dynamic_cast<Authenticator*>(getLuaObject(L, 2, LuaEndpoint::Authenticator::OBJECT_TYPE));
 
         /* Set Authenticator */
         lua_obj->authenticator = auth;
@@ -370,6 +371,7 @@ int LuaEndpoint::luaAuth (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
+        if(auth) auth->releaseLuaObject();
         mlog(e.level(), "Error setting authenticator: %s", e.what());
     }
 

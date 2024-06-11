@@ -60,10 +60,11 @@ const struct luaL_Reg IntervalIndex::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int IntervalIndex::luaCreate (lua_State* L)
 {
+    Asset* _asset = NULL;
     try
     {
         /* Get Asset Directory */
-        Asset*      _asset      = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
+        _asset                  = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         const char* _fieldname0 = getLuaString(L, 2);
         const char* _fieldname1 = getLuaString(L, 3);
         const int   _threshold  = getLuaInteger(L, 4, true, DEFAULT_THRESHOLD);
@@ -73,6 +74,7 @@ int IntervalIndex::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
+        if(_asset) _asset->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }

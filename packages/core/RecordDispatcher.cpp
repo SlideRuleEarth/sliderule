@@ -248,6 +248,7 @@ int RecordDispatcher::luaRun(lua_State* L)
 int RecordDispatcher::luaAttachDispatch(lua_State* L)
 {
     bool status = false;
+    DispatchObject* dispatch = NULL;
 
     try
     {
@@ -255,8 +256,8 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
         RecordDispatcher* lua_obj = dynamic_cast<RecordDispatcher*>(getLuaSelf(L, 1));
 
         /* Get Parameters */
-        const int       num_parms   = getLuaNumParms(L);
-        DispatchObject* dispatch    = dynamic_cast<DispatchObject*>(getLuaObject(L, 2, DispatchObject::OBJECT_TYPE));
+        const int num_parms = getLuaNumParms(L);
+        dispatch            = dynamic_cast<DispatchObject*>(getLuaObject(L, 2, DispatchObject::OBJECT_TYPE));
 
         /* Check if Active */
         if(lua_obj->dispatcherActive)
@@ -328,6 +329,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
+        if(dispatch) dispatch->releaseLuaObject();
         mlog(e.level(), "Error attaching dispatch: %s", e.what());
     }
 
