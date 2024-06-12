@@ -221,16 +221,18 @@ Atl03Viewer::~Atl03Viewer (void)
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Viewer::Region::Region (info_t* info):
-    latitude    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context),
-    longitude   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context),
+    segment_lat    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context),
+    segment_lon    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context),
+    segment_ph_cnt (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(),       &info->reader->context),
     inclusion_mask {NULL},
     inclusion_ptr  {NULL}
 {
     try
     {
         /* Join Reads */
-        latitude.join(info->reader->read_timeout_ms, true);
-        longitude.join(info->reader->read_timeout_ms, true);
+        segment_lat.join(info->reader->read_timeout_ms, true);
+        segment_lon.join(info->reader->read_timeout_ms, true);
+        segment_ph_cnt.join(info->reader->read_timeout_ms, true);
 
         /* Initialize Region */
         first_segment = 0;
@@ -257,8 +259,9 @@ Atl03Viewer::Region::Region (info_t* info):
         }
 
         /* Trim Geospatial Extent Datasets Read from HDF5 File */
-        latitude.trim(first_segment);
-        longitude.trim(first_segment);
+        segment_lat.trim(first_segment);
+        segment_lon.trim(first_segment);
+        segment_ph_cnt.trim(first_segment);
     }
     catch(const RunTimeException& e)
     {
@@ -292,12 +295,12 @@ void Atl03Viewer::Region::polyregion (info_t* info)
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
     int segment = 0;
-    while(segment < latitude.size)
+    while(segment < segment_lat.size)
     {
         bool inclusion = false;
 
         /* Project Segment Coordinate */
-        const MathLib::coord_t segment_coord = {longitude[segment], latitude[segment]};
+        const MathLib::coord_t segment_coord = {segment_lon[segment], segment_lat[segment]};
         const MathLib::point_t segment_point = MathLib::coord2point(segment_coord, info->reader->parms->projection);
 
         /* Test Inclusion */
@@ -306,17 +309,27 @@ void Atl03Viewer::Region::polyregion (info_t* info)
             inclusion = true;
         }
 
+        /* Segments with zero photon count may contain invalid coordinates,
+          making them unsuitable for inclusion in polygon tests. */
+
         /* Check First Segment */
-        if(!first_segment_found && inclusion)
+        if(!first_segment_found)
         {
             /* If Coordinate Is In Polygon */
-            first_segment_found = true;
-            first_segment = segment;
+            if(inclusion && segment_ph_cnt[segment] > 0)
+            {
+                /* Set First Segment */
+                first_segment_found = true;
+                first_segment = segment;
+            }
         }
-        else if(first_segment_found && !inclusion)
+        else
         {
             /* If Coordinate Is NOT In Polygon */
-            break; // full extent found!
+            if(!inclusion && segment_ph_cnt[segment] > 0)
+            {
+                break; // full extent found!
+            }
         }
 
         /* Bump Segment */
@@ -339,22 +352,22 @@ void Atl03Viewer::Region::rasterregion (info_t* info)
     bool first_segment_found = false;
 
     /* Check Size */
-    if(latitude.size <= 0)
+    if(segment_lat.size <= 0)
     {
         return;
     }
 
     /* Allocate Inclusion Mask */
-    inclusion_mask = new bool [latitude.size];
+    inclusion_mask = new bool [segment_lat.size];
     inclusion_ptr = inclusion_mask;
 
     /* Loop Throuh Segments */
     long last_segment = 0;
     int segment = 0;
-    while(segment < latitude.size)
+    while(segment < segment_lat.size)
     {
         /* Check Inclusion */
-        const bool inclusion = info->reader->parms->raster.includes(longitude[segment], latitude[segment]);
+        const bool inclusion = info->reader->parms->raster.includes(segment_lon[segment], segment_lat[segment]);
         inclusion_mask[segment] = inclusion;
 
         /* Check For First Segment */
@@ -392,15 +405,13 @@ Atl03Viewer::Atl03Data::Atl03Data (info_t* info, const Region& region):
     sc_orient           (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",                     &info->reader->context),
     segment_delta_time  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),           &info->reader->context, 0, region.first_segment, region.num_segments),
     segment_id          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_id").c_str(),           &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_dist_x      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),       &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_ph_cnt      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(),       &info->reader->context, 0, region.first_segment, region.num_segments)
+    segment_dist_x      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),       &info->reader->context, 0, region.first_segment, region.num_segments)
 {
     /* Join Hardcoded Reads */
     sc_orient.join(info->reader->read_timeout_ms, true);
     segment_delta_time.join(info->reader->read_timeout_ms, true);
     segment_id.join(info->reader->read_timeout_ms, true);
     segment_dist_x.join(info->reader->read_timeout_ms, true);
-    segment_ph_cnt.join(info->reader->read_timeout_ms, true);
 }
 
 /*----------------------------------------------------------------------------
@@ -431,7 +442,7 @@ void* Atl03Viewer::subsettingThread (void* parm)
         const Atl03Data atl03(info, region);
 
         /* Get Number of Segments */
-        const long num_segments = region.num_segments != H5Coro::ALL_ROWS ? region.num_segments : atl03.segment_ph_cnt.size;
+        const long num_segments = region.num_segments != H5Coro::ALL_ROWS ? region.num_segments : atl03.segment_delta_time.size;
 
         /* Increment Read Statistics */
         local_stats.segments_read = num_segments;
@@ -443,14 +454,17 @@ void* Atl03Viewer::subsettingThread (void* parm)
         /* Loop Through Each Segment */
         for(long s = 0; reader->active && s < num_segments; s++)
         {
+            /* Skip segments with zero photon count */
+            if(region.segment_ph_cnt[s] == 0) continue;
+
             const segment_t segment = {
                 .time_ns   = Icesat2Parms::deltatime2timestamp(atl03.segment_delta_time[s]),
                 .extent_id = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, s),
-                .latitude  = region.latitude[s],
-                .longitude = region.longitude[s],
+                .latitude  = region.segment_lat[s],
+                .longitude = region.segment_lon[s],
                 .dist_x    = atl03.segment_dist_x[s],
                 .id        = static_cast<uint32_t>(atl03.segment_id[s]),
-                .ph_cnt    = static_cast<uint32_t>(atl03.segment_ph_cnt[s])
+                .ph_cnt    = static_cast<uint32_t>(region.segment_ph_cnt[s])
             };
             segments.add(segment);
 
