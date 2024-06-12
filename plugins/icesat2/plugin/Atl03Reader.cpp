@@ -341,6 +341,9 @@ void Atl03Reader::Region::polyregion (info_t* info)
             inclusion = true;
         }
 
+        /* Segments with zero photon count may contain invalid coordinates,
+           making them unsuitable for inclusion in polygon tests. */
+
         /* Check First Segment */
         if(!first_segment_found)
         {

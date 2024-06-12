@@ -181,21 +181,24 @@ void* Gedi01bReader::subsettingThread (void* parm)
         /* Read GEDI Datasets */
         const Gedi01b gedi01b(info, region);
 
+        /* Get Number of Footprints */
+        const long num_footprints = region.num_footprints != H5Coro::ALL_ROWS ? region.num_footprints : gedi01b.delta_time.size;
+
         /* Read Waveforms */
         const long tx0 = gedi01b.tx_start_index[0] - 1;
-        const long txN = gedi01b.tx_start_index[region.num_footprints - 1] - 1 + gedi01b.tx_sample_count[region.num_footprints - 1] - tx0;
+        const long txN = gedi01b.tx_start_index[num_footprints - 1] - 1 + gedi01b.tx_sample_count[num_footprints - 1] - tx0;
         const long rx0 = gedi01b.rx_start_index[0] - 1;
-        const long rxN = gedi01b.rx_start_index[region.num_footprints - 1] - 1 + gedi01b.rx_sample_count[region.num_footprints - 1] - rx0;
+        const long rxN = gedi01b.rx_start_index[num_footprints - 1] - 1 + gedi01b.rx_sample_count[num_footprints - 1] - rx0;
         H5Array<float> txwaveform(info->reader->asset, info->reader->resource, FString("%s/txwaveform", GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, tx0, txN);
         H5Array<float> rxwaveform(info->reader->asset, info->reader->resource, FString("%s/rxwaveform", GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, rx0, rxN);
         txwaveform.join(info->reader->read_timeout_ms, true);
         rxwaveform.join(info->reader->read_timeout_ms, true);
 
         /* Increment Read Statistics */
-        local_stats.footprints_read = region.num_footprints;
+        local_stats.footprints_read = num_footprints;
 
         /* Traverse All Footprints In Dataset */
-        for(long footprint = 0; reader->active && footprint < region.num_footprints; footprint++)
+        for(long footprint = 0; reader->active && footprint < num_footprints; footprint++)
         {
             /* Check Degrade Filter */
             if(parms->degrade_filter != GediParms::DEGRADE_UNFILTERED)

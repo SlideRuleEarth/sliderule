@@ -482,8 +482,11 @@ void* Atl13Reader::subsettingThread (void* parm)
         /* Read ATL06 Datasets */
         const Atl13Data atl13(info, region);
 
+        /* Get Number of Segments */
+        const long num_segments = region.num_segments != H5Coro::ALL_ROWS ? region.num_segments : atl13.delta_time.size;
+
         /* Increment Read Statistics */
-        local_stats.segments_read = region.num_segments;
+        local_stats.segments_read = num_segments;
 
         /* Initialize Loop Variables */
         RecordObject* batch_record = NULL;
@@ -492,7 +495,7 @@ void* Atl13Reader::subsettingThread (void* parm)
         int batch_index = 0;
 
         /* Loop Through Each Segment */
-        for(long segment = 0; reader->active && segment < region.num_segments; segment++)
+        for(long segment = 0; reader->active && segment < num_segments; segment++)
         {
             /* Create Elevation Batch Record */
             if(!batch_record)
@@ -518,7 +521,7 @@ void* Atl13Reader::subsettingThread (void* parm)
             entry->longitude                = region.longitude[segment];
             entry->snow_ice_atl09           = atl13.snow_ice_atl09[segment];
             entry->cloud_flag_asr_atl09     = atl13.cloud_flag_asr_atl09[segment];
-            entry->ht_ortho                 = atl13.ht_ortho[segment]               != numeric_limits<float>::max() ? atl13.ht_ortho[segment]                   : numeric_limits<float>::quiet_NaN();
+            entry->ht_ortho                 = atl13.ht_ortho[segment]               != numeric_limits<float>::max()   ? atl13.ht_ortho[segment]                 : numeric_limits<float>::quiet_NaN();
             entry->ht_water_surf            = atl13.ht_water_surf[segment]          != numeric_limits<float>::max()   ? atl13.ht_water_surf[segment]            : numeric_limits<float>::quiet_NaN();
             entry->segment_azimuth          = atl13.segment_azimuth[segment]        != numeric_limits<float>::max()   ? atl13.segment_azimuth[segment]          : numeric_limits<float>::quiet_NaN();
             entry->segment_quality          = nomial_segment_quality                != numeric_limits<int32_t>::max() ? atl13.segment_quality[segment]          : 0;

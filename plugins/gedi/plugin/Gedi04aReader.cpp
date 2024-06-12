@@ -180,11 +180,14 @@ void* Gedi04aReader::subsettingThread (void* parm)
         /* Read GEDI Datasets */
         const Gedi04a gedi04a(info, region);
 
+        /* Get Number of Footprints */
+        const long num_footprints = region.num_footprints != H5Coro::ALL_ROWS ? region.num_footprints : gedi04a.delta_time.size;
+
         /* Increment Read Statistics */
-        local_stats.footprints_read = region.num_footprints;
+        local_stats.footprints_read = num_footprints;
 
         /* Traverse All Footprints In Dataset */
-        for(long footprint = 0; reader->active && footprint < region.num_footprints; footprint++)
+        for(long footprint = 0; reader->active && footprint < num_footprints; footprint++)
         {
             /* Check Degrade Filter */
             if(parms->degrade_filter != GediParms::DEGRADE_UNFILTERED)

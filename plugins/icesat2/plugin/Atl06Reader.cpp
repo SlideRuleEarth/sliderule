@@ -502,8 +502,11 @@ void* Atl06Reader::subsettingThread (void* parm)
         /* Read ATL06 Datasets */
         const Atl06Data atl06(info, region);
 
+        /* Get Number of Segments */
+        const long num_segments = region.num_segments != H5Coro::ALL_ROWS ? region.num_segments : atl06.delta_time.size;
+
         /* Increment Read Statistics */
-        local_stats.segments_read = region.num_segments;
+        local_stats.segments_read = num_segments;
 
         /* Initialize Loop Variables */
         RecordObject* batch_record = NULL;
@@ -512,7 +515,7 @@ void* Atl06Reader::subsettingThread (void* parm)
         int batch_index = 0;
 
         /* Loop Through Each Segment */
-        for(long segment = 0; reader->active && segment < region.num_segments; segment++)
+        for(long segment = 0; reader->active && segment < num_segments; segment++)
         {
             /* Create Elevation Batch Record */
             if(!batch_record)

@@ -310,7 +310,7 @@ void Atl03Viewer::Region::polyregion (info_t* info)
         }
 
         /* Segments with zero photon count may contain invalid coordinates,
-          making them unsuitable for inclusion in polygon tests. */
+           making them unsuitable for inclusion in polygon tests. */
 
         /* Check First Segment */
         if(!first_segment_found)
