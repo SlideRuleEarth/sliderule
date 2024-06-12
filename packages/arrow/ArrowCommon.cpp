@@ -250,7 +250,7 @@ bool send2S3 (const char* fileName, const char* s3dst, const char* outputPath,
 /*----------------------------------------------------------------------------
  * send2Client
  *----------------------------------------------------------------------------*/
-bool send2Client (const char* fileName, const char* outPath, ArrowParms* parms, Publisher* outQ)
+bool send2Client (const char* fileName, const char* outPath, const ArrowParms* parms, Publisher* outQ)
 {
     bool status = true;
 

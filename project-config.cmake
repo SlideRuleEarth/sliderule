@@ -125,6 +125,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=memsetClassFloat:*/MathLib.cpp"                     # line: 80, need memset here for performance
         "--suppress=unreadVariable:*/TimeLib.cpp"                       # line: 471, terminating '\0' detected as 'unused' but it is used/needed
         "--suppress=invalidPointerCast:*/H5Array.h"                     # line: 166, documented in code
+        "--suppress=invalidPointerCast:*/H5Element.h"                   # line: 141, documented in code
         "--suppress=copyCtorPointerCopying:*/MsgQ.cpp"                  # line: 120, shallow copy which is fine in code
         "--error-exitcode=1"
 

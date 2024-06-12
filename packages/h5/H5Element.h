@@ -119,12 +119,12 @@ bool H5Element<T>::join(int timeout, bool throw_exception)
             status = true;
             if(h5f->info.datatype == RecordObject::STRING)
             {
-                /* 
+                /*
                  * T is here assumed to be `const char*` or something analogous.
-                 * Casting the raw data blindly to a C-like string is provided as a 
-                 * convenience for working directly with HDF5 data in C/C++ but is 
-                 * admittedly very unsafe. It is the responsibility of the calling code 
-                 * to know that the element being read is a string. 
+                 * Casting the raw data blindly to a C-like string is provided as a
+                 * convenience for working directly with HDF5 data in C/C++ but is
+                 * admittedly very unsafe. It is the responsibility of the calling code
+                 * to know that the element being read is a string.
                  */
                 setDataIfPointer(&value, h5f->info.data);
             }
@@ -138,7 +138,7 @@ bool H5Element<T>::join(int timeout, bool throw_exception)
                 * for knowing what the data being read out of the h5 file is and
                 * providing the correct type to the template.
                 */
-                T* value_ptr = reinterpret_cast<T*>(h5f->info.data);
+                const T* value_ptr = reinterpret_cast<T*>(h5f->info.data);
                 value = *value_ptr;
             }
             size = h5f->info.datasize;
