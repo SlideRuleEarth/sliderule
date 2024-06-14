@@ -348,7 +348,15 @@ Atl03BathyReader::Region::Region (info_t* info):
         }
         else
         {
-            return; // early exit since no subsetting required
+            num_segments = segment_ph_cnt.size;
+            if(num_segments > 0)
+            {
+                num_photons = 0;
+                for(int i = 0; i < num_segments; i++)
+                {
+                    num_photons += segment_ph_cnt[i];
+                }
+            }
         }
 
         /* Check If Anything to Process */
@@ -743,7 +751,7 @@ Atl03BathyReader::OrbitInfo::OrbitInfo (const Asset* asset, const char* resource
  * OrbitInfo::tojson
  *----------------------------------------------------------------------------*/
 const char* Atl03BathyReader::OrbitInfo::tojson (void) const
-{    
+{
     FString json_contents(R"({)"
     R"("crossing_time":%lf,)"
     R"("cycle_number":%d,)"
