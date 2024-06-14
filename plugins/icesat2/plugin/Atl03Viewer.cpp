@@ -249,7 +249,7 @@ Atl03Viewer::Region::Region (info_t* info):
         }
         else
         {
-            return; // early exit since no subsetting required
+            num_segments = segment_ph_cnt.size;
         }
 
         /* Check If Anything to Process */
@@ -441,18 +441,15 @@ void* Atl03Viewer::subsettingThread (void* parm)
         /* Read ATL03 Datasets */
         const Atl03Data atl03(info, region);
 
-        /* Get Number of Segments */
-        const long num_segments = region.num_segments != H5Coro::ALL_ROWS ? region.num_segments : atl03.segment_delta_time.size;
-
         /* Increment Read Statistics */
-        local_stats.segments_read = num_segments;
+        local_stats.segments_read = region.num_segments;
 
         List<segment_t> segments;
 
         const uint32_t max_segments_per_extent = 256;
 
         /* Loop Through Each Segment */
-        for(long s = 0; reader->active && s < num_segments; s++)
+        for(long s = 0; reader->active && s < region.num_segments; s++)
         {
             /* Skip segments with zero photon count */
             if(region.segment_ph_cnt[s] == 0) continue;
