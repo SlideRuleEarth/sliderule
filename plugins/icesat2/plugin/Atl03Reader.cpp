@@ -280,7 +280,21 @@ Atl03Reader::Region::Region (info_t* info):
         }
         else
         {
-            return; // early exit since no subsetting required
+#if 0
+            return; // early exit since no subetting required
+#else
+
+            num_segments = segment_ph_cnt.size;
+            if(num_segments > 0)
+            {
+                num_photons = 0;
+                for(int i = 0; i < num_segments; i++)
+                {
+                    num_photons += segment_ph_cnt[i];
+                }
+            }
+            print2term("[%s] No spatial region specified, processing entire dataset, num_segments: %ld, num_photons: %ld\n", info->prefix, num_segments, num_photons);
+#endif
         }
 
         /* Check If Anything to Process */
@@ -299,7 +313,6 @@ Atl03Reader::Region::Region (info_t* info):
         cleanup();
         throw;
     }
-
 }
 
 /*----------------------------------------------------------------------------
@@ -574,7 +587,44 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, const Region& region):
             dataset_name = anc_ph_data->next(&array);
         }
     }
+
+    print2term("[%s] Reading %ld segments and %ld photons\n", info->prefix, region.num_segments, region.num_photons);
+    print2term("[%s] Reading %ld segments and %ld photons\n", info->prefix, region.num_segments, dist_ph_along.size);
+
+    print2term("sc_orient:          %s, size: %ld\n", info->prefix, sc_orient.size);
+    print2term("velocity_sc:        %s, size: %ld\n", info->prefix, velocity_sc.size);
+    print2term("segment_delta_time: %s, size: %ld\n", info->prefix, segment_delta_time.size);
+    print2term("segment_id:         %s, size: %ld\n", info->prefix, segment_id.size);
+    print2term("segment_dist_x:     %s, size: %ld\n", info->prefix, segment_dist_x.size);
+    print2term("solar_elevation:    %s, size: %ld\n", info->prefix, solar_elevation.size);
+    print2term("dist_ph_along:      %s, size: %ld\n", info->prefix, dist_ph_along.size);
+    print2term("dist_ph_across:     %s, size: %ld\n", info->prefix, dist_ph_across.size);
+    print2term("h_ph:               %s, size: %ld\n", info->prefix, h_ph.size);
+    print2term("signal_conf_ph:     %s, size: %ld\n", info->prefix, signal_conf_ph.size);
+    print2term("quality_ph:         %s, size: %ld\n", info->prefix, quality_ph.size);
+    print2term("lat_ph:             %s, size: %ld\n", info->prefix, lat_ph.size);
+    print2term("lon_ph:             %s, size: %ld\n", info->prefix, lon_ph.size);
+    print2term("delta_time:         %s, size: %ld\n", info->prefix, delta_time.size);
+    print2term("bckgrd_delta_time:  %s, size: %ld\n", info->prefix, bckgrd_delta_time.size);
+    print2term("bckgrd_rate:        %s, size: %ld\n", info->prefix, bckgrd_rate.size);
+    if (anc_geo_data) {
+        H5DArray* array = NULL;
+        const char* dataset_name = anc_geo_data->first(&array);
+        while (dataset_name != NULL) {
+            print2term("%s:    %s, size: %d\n", dataset_name, info->prefix, array->numElements());
+            dataset_name = anc_geo_data->next(&array);
+        }
+    }
+    if (anc_ph_data) {
+        H5DArray* array = NULL;
+        const char* dataset_name = anc_ph_data->first(&array);
+        while (dataset_name != NULL) {
+            print2term("%s:    %s, size: %d\n", dataset_name, info->prefix, array->numElements());
+            dataset_name = anc_ph_data->next(&array);
+        }
+    }
 }
+
 
 /*----------------------------------------------------------------------------
  * Atl03Data::Destructor
@@ -805,7 +855,8 @@ void Atl03Reader::Atl08Class::classify (const info_t* info, const Region& region
  *----------------------------------------------------------------------------*/
 uint8_t Atl03Reader::Atl08Class::operator[] (int index) const
 {
-    return classification[index];
+    // return classification[index];
+    return classification[index];  // NOLINT(clang-analyzer-core.uninitialized.UndefReturn)
 }
 
 /*----------------------------------------------------------------------------
