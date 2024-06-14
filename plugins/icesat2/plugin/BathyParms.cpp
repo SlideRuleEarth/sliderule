@@ -163,6 +163,7 @@ int BathyParms::luaClassifierEnabled (lua_State* L)
  *----------------------------------------------------------------------------*/
 BathyParms::classifier_t BathyParms::str2classifier (const char* str)
 {
+    if(StringLib::match(str, "qtrees"))             return QTREES;
     if(StringLib::match(str, "coastnet"))           return COASTNET;
     if(StringLib::match(str, "openoceans"))         return OPENOCEANS;
     if(StringLib::match(str, "medianfilter"))       return MEDIANFILTER;
@@ -183,7 +184,7 @@ BathyParms::BathyParms(lua_State* L, int index):
     ph_in_extent (8192),
     generate_ndwi (true),
     use_bathy_mask (true),
-    classifiers {true, true, true, true, true, true, true, true},
+    classifiers {true, true, true, true, true, true, true, true, true},
     return_inputs (false),
     spots {true, true, true, true, true, true},
     output_as_sdp (false),

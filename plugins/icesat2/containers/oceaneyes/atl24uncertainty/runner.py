@@ -235,7 +235,7 @@ with open(info_json, 'w') as json_file:
     json_file.write(json.dumps(info))
 
 # remove intermediate columns
-del data["kd_490"]
+# del data["kd_490"] - keep this column for CSV and Parquet-based outputs (diagnostic)
 del data["pointing_index"]
 del data["wind_index"]
 del data["kd_range_index"]

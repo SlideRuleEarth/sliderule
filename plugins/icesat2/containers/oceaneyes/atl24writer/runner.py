@@ -65,10 +65,10 @@ for spot in input_files["spot_photons"]:
     spot_table[spot]["df"] = pd.read_csv(input_files["spot_photons"][spot])
 print("Read photon data into dataframes")
 
-# read in granule info as dictionary from json file and add to dataframes
+# read in granule info as dictionary from json file and add as necessary to dataframes
 for spot in input_files["spot_granule"]:
     spot_table[spot]["info"] = json.load(open(input_files["spot_granule"][spot], 'r'))
-    print(json.dumps(spot_table[spot]["info"], indent=4))
+    spot_table[spot]["df"]["spot"] = spot_table[spot]["info"]["spot"] # add spot info to dataframe
 
 # read in photon classifications as dataframe from csv file and merge into dataframes
 for classifier in input_files["classifiers"]:
@@ -78,13 +78,25 @@ for classifier in input_files["classifiers"]:
         spot_table[spot]["df"] = pd.merge(spot_table[spot]["df"], classifier_df, on='index_ph', how='left')
 print("Added photon classifications to dataframes")
 
-# Non-HDF5 Outputs
-if output_parms["format"] != "hdf5":
+# concatenate (vertically) all dataframes
+spot_dfs = [spot_table[spot]["df"] for spot in spot_table]
+df = pd.concat(spot_dfs)
+print("Concatenated data frames into a single data frame")
 
-    # concatenate (vertically) all dataframes
-    spot_dfs = [spot_table[spot]["df"] for spot in spot_table]
-    df = pd.concat(spot_dfs)
-    print("Concatenated data frames into a single data frame")
+# Metadata Output 
+metadata = {spot: spot_table[spot]["info"] for spot in spot_table}
+metadata["profile"] = control["profile"]
+metadata["granule"] = {
+    "total_photons": len(df),
+    "sea_surface_photons": len(df[df["class_ph"] == 41]),
+    "bathy_photons": len(df[df["class_ph"] == 40]),
+    "subaqueous_photons": len(df[df["geoid_corr_h"] < df["surface_h"]])
+}
+with open(atl24_filename + ".json", "w") as file:
+    file.write(json.dumps(metadata, indent=2))
+
+# Photon Output (Non-HDF5)
+if output_parms["format"] != "hdf5":
 
     # write output
     if output_parms["format"] == "csv":
@@ -118,12 +130,11 @@ if output_parms["format"] != "hdf5":
             print("Writing Parquet file: " + atl24_filename)
 
         # add metadata and write file
-        metadata = {spot: spot_table[spot]["info"] for spot in spot_table}
         schema = table.schema.with_metadata({"sliderule": json.dumps(metadata)})
         table = table.replace_schema_metadata(schema.metadata)
         pq.write_table(table, atl24_filename)
 
-# HDF5 Output
+# Photon Output (HDF5)
 else:
 
     def add_variable(group, name, data, dtype, attrs):

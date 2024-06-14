@@ -18,6 +18,9 @@ local timeout       = parms["node-timeout"] or parms["timeout"] or netsvc.NODE_T
 -- create user log publisher (alerts)
 local userlog = msg.publish(rspq)
 
+-- initialize timing profiling table
+local profile = {}
+
 -- populate resource via CMR request (ONLY IF NOT SUPPLIED)
 if not resource then
     local atl03_cmr_start_time = time.gps()
@@ -32,7 +35,8 @@ if not resource then
         userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("proxy request <%s> failed to make CMR request <%d>: %s", rspq, rc, rsps))
         return
     end
-    userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL03 CMR search executed in %f seconds", (time.gps() - atl03_cmr_start_time) / 1000.0))
+    profile["atl03_cmr"] = (time.gps() - atl03_cmr_start_time) / 1000.0
+    userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL03 CMR search executed in %f seconds", profile["atl03_cmr"]))
 end
 
 -- intialize processing environment
@@ -61,7 +65,8 @@ if not hls_poly then
     end
     parms["name_filter"] = original_name_filter
 end
-userlog:alert(core.INFO, core.RTE_INFO, string.format("HLS polygon CMR search executed in %f seconds", (time.gps() - atl09_polygon_cmr_start_time) / 1000.0))
+profile["atl09_polygon_cmr"] = (time.gps() - atl09_polygon_cmr_start_time) / 1000.0
+userlog:alert(core.INFO, core.RTE_INFO, string.format("HLS polygon CMR search executed in %f seconds", profile["atl09_polygon_cmr"]))
 
 -- build hls parameters
 local year      = resource:sub(7,10)
@@ -89,7 +94,8 @@ if rc1 == earthdata.SUCCESS then
     hls_parms["catalog"] = json.encode(rsps1)
     geo_parms = geo.parms(hls_parms)
 end
-userlog:alert(core.INFO, core.RTE_INFO, string.format("HLS STAC search executed in %f seconds", (time.gps() - stac_start_time) / 1000.0))
+profile["hls_stac"] = (time.gps() - stac_start_time) / 1000.0
+userlog:alert(core.INFO, core.RTE_INFO, string.format("HLS STAC search executed in %f seconds", profile["hls_stac"]))
 
 -- get ATL09 resources
 local atl09_cmr_start_time = time.gps()
@@ -106,7 +112,8 @@ end
 parms["asset"] = original_asset
 parms["t0"] = original_t0
 parms["t1"] = original_t1
-userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL09 CMR search executed in %f seconds", (time.gps() - atl09_cmr_start_time) / 1000.0))
+profile["atl09_cmr"] = (time.gps() - atl09_cmr_start_time) / 1000.0
+userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL09 CMR search executed in %f seconds", profile["atl09_cmr"]))
 
 -- initialize container runtime environment
 local crenv = runner.setup()
@@ -123,6 +130,10 @@ if not status then
     userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to generate ATL03 bathy inputs for %s", resource))
     runner.cleanup(crenv)
 end
+
+-- capture setup time
+profile["total_input_generation"] = (time.gps() - endpoint_start_time) / 1000.0
+userlog:alert(core.INFO, core.RTE_INFO, string.format("sliderule setup executed in %f seconds", profile["total_input_generation"]))
 
 -- table of files being processed
 --  {
@@ -198,7 +209,8 @@ local function runclassifier(output_table, _bathy_parms, container_timeout, name
         end
     end
     local stop_time = time.gps()
-    userlog:alert(core.INFO, core.RTE_INFO, string.format("%s executed in %f seconds", name, (stop_time - start_time) / 1000.0))
+    profile[name] = (stop_time - start_time) / 1000.0
+    userlog:alert(core.INFO, core.RTE_INFO, string.format("%s executed in %f seconds", name, profile[name]))
 end
 
 -- function: run processor (overwrites input csv file)
@@ -231,11 +243,14 @@ local function runprocessor(_bathy_parms, container_timeout, name, in_parallel, 
         end
     end
     local stop_time = time.gps()
-    userlog:alert(core.INFO, core.RTE_INFO, string.format("%s executed in %f seconds", name, (stop_time - start_time) / 1000.0))
+    profile[name] = (stop_time - start_time) / 1000.0
+    userlog:alert(core.INFO, core.RTE_INFO, string.format("%s executed in %f seconds", name, profile[name]))
 end
 
--- capture setup time
-userlog:alert(core.INFO, core.RTE_INFO, string.format("sliderule setup executed in %f seconds", (time.gps() - endpoint_start_time) / 1000.0))
+-- execute qtrees surface finding algorithm
+if bathy_parms:classifieron("qtrees") then
+    runprocessor(bathy_parms, timeout, "qtrees", true, "bash /qtrees/runner.sh")
+end
 
 -- execute medialfilter bathy
 runclassifier(output_files, bathy_parms, timeout, "medianfilter", true)
@@ -275,7 +290,8 @@ local writer_parms = {
         ["writer_settings.json"] = {
             input_files = output_files,
             output_parms = output_parms,
-            atl24_filename = crenv.container_sandbox_mount.."/atl24.bin"
+            atl24_filename = crenv.container_sandbox_mount.."/atl24.bin",
+            profile = profile
         }
     }
 }
@@ -284,6 +300,10 @@ runner.wait(container, timeout)
 
 -- send final output to user
 arrow.send2user(crenv.host_sandbox_directory.."/atl24.bin", arrow.parms(output_parms), rspq)
+
+-- send metadata output to user
+output_parms["path"] = output_parms["path"]..".json"
+arrow.send2user(crenv.host_sandbox_directory.."/atl24.bin.json", arrow.parms(output_parms), rspq)
 
 -- cleanup container runtime environment
 --runner.cleanup(crenv)

@@ -81,15 +81,16 @@ class BathyParms: public Icesat2Parms
 
         typedef enum {
             INVALID_CLASSIFIER  = -1,
-            COASTNET            = 0,
-            OPENOCEANS          = 1,
-            MEDIANFILTER        = 2,
-            CSHELPH             = 3,
-            BATHY_PATHFINDER    = 4,
-            POINTNET2           = 5,
-            LOCAL_CONTRAST      = 6,
-            ENSEMBLE            = 7,
-            NUM_CLASSIFIERS     = 8
+            QTREES              = 0,
+            COASTNET            = 1,
+            OPENOCEANS          = 2,
+            MEDIANFILTER        = 3,
+            CSHELPH             = 4,
+            BATHY_PATHFINDER    = 5,
+            POINTNET2           = 6,
+            LOCAL_CONTRAST      = 7,
+            ENSEMBLE            = 8,
+            NUM_CLASSIFIERS     = 9
         } classifier_t;
 
         typedef enum {
