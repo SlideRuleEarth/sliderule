@@ -320,7 +320,7 @@ FootprintReader<footprint_t>::Region::Region (info_t* info):
     {
         rasterregion(info);
     }
-    else if(info->reader->parms->polygon.length() > 0)
+    else if(!info->reader->parms->polygon.empty())
     {
         polyregion(info);
     }
