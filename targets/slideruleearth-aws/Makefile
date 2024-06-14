@@ -69,12 +69,10 @@ INSTALL_DIR ?= $(SERVER_STAGE_DIR)
 OCEANEYES_CONTAINER_STAGE_DIR = $(STAGE)/oceaneyes
 OCEANEYES_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/oceaneyes
 OCEANEYES_CONTAINER_NAME ?= oceaneyes
-COASTNET_CONTAINER_STAGE_DIR = $(STAGE)/coastnet
-COASTNET_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/coastnet
-COASTNET_CONTAINER_NAME ?= coastnet
 COASTNET_CONTAINER_SOURCE_DIR = $(ROOT)/../coastnet
 CSHELPH_CONTAINER_SOURCE = $(ROOT)/../cshelph/c_shelph.py
 MEDIANFILTER_CONTAINER_SOURCE = $(ROOT)/../medianfilter/medianmodel.py
+QTREES_CONTAINER_SOURCE_DIR = $(ROOT)/../qtrees
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -228,7 +226,11 @@ oceaneyes-docker: ## create the coceaneyes container image
 	rsync -a $(COASTNET_CONTAINER_SOURCE_DIR) $(OCEANEYES_CONTAINER_STAGE_DIR) --exclude build --exclude .git
 	cp $(OCEANEYES_CONTAINER_DIR)/coastnet/* $(OCEANEYES_CONTAINER_STAGE_DIR)/coastnet
 	#
+	rsync -a $(QTREES_CONTAINER_SOURCE_DIR) $(OCEANEYES_CONTAINER_STAGE_DIR) --exclude build --exclude .git
+	cp $(OCEANEYES_CONTAINER_DIR)/qtrees/* $(OCEANEYES_CONTAINER_STAGE_DIR)/qtrees
+	#
 	cp $(CSHELPH_CONTAINER_SOURCE) $(OCEANEYES_CONTAINER_STAGE_DIR)/cshelph
+	#
 	cp $(MEDIANFILTER_CONTAINER_SOURCE) $(OCEANEYES_CONTAINER_STAGE_DIR)/medianfilter
 	#
 	cd $(OCEANEYES_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
@@ -424,10 +426,13 @@ perfsubsetest: ## run subset performance test
 	$(SERVER_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
 
 oceaneyes-test: ## run the oceaneyes container
-	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) /env/bin/python /$(ATL24_ALGORITHM)/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv
+	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) #/env/bin/python /$(ATL24_ALGORITHM)/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv
 	
 coastnet-test: ## run the coastnet bathy docker container
 	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) bash /coastnet/bathy.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/coastnet_3.csv
+
+qtrees-test: ## run the qtrees docker container
+	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) bash /qtrees/runner.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/qtrees_3.csv
 
 ########################
 # Help Target

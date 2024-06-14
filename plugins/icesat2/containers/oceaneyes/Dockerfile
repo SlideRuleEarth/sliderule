@@ -41,6 +41,21 @@ RUN source /venv/bin/activate \
     && cd /coastnet \
     && LD_LIBRARY_PATH=/venv/lib64/python3.9/site-packages/torch.libs CC=clang CXX=clang++ make
 
+RUN git clone --recursive https://github.com/dmlc/xgboost \
+    && cd xgboost \
+    && mkdir build \
+    && cd build \
+    && cmake .. \
+    && make -j8 \
+    && make install \
+    && ldconfig
+
+# build qtrees
+COPY qtrees /qtrees
+RUN source /venv/bin/activate \
+    && cd /qtrees \
+    && CC=clang CXX=clang++ make -j8
+
 #
 # RUNTIME
 #
@@ -68,6 +83,10 @@ RUN python3.9 -m venv venv && \
 
 # install coastnet binaries (from build environment above)
 COPY --from=buildenv /coastnet /coastnet
+
+# install qtrees binaries (from build environment above)
+COPY --from=buildenv /qtrees /qtrees
+COPY --from=buildenv /usr/local /usr/local
 
 # install mamba for python based algorithms
 RUN wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-aarch64.sh \
