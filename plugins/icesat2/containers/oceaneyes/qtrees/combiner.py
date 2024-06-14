@@ -39,19 +39,23 @@ if len(sys.argv) <= 2:
     sys.exit()
 
 # set command line arguments
-spot_csv_file = sys.argv[2]
+spot_csv_file = sys.argv[1]
 qtrees_csv_file = sys.argv[2]
 
 # read in data
 qtrees_df = pd.read_csv(qtrees_csv_file)
 print("Read all into data frame")
 
-# rework dataframe
+# write out new qtrees file
+new_qtrees_df = pd.DataFrame()
+new_qtrees_df["index_ph"] = qtrees_df["index_ph"]
+new_qtrees_df["class_ph"] = qtrees_df["prediction"]
+new_qtrees_df.to_csv(qtrees_csv_file, index=False)
+
+# write out new spot file
 qtrees_df["class_ph"] = qtrees_df["prediction"]
 qtrees_df["surface_h"] = qtrees_df["sea_surface_h"]
 del qtrees_df["prediction"]
 del qtrees_df["sea_surface_h"]
 del qtrees_df["bathy_h"]
-
-# write out new data
 qtrees_df.to_csv(spot_csv_file, index=False)

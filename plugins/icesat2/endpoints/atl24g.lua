@@ -248,9 +248,7 @@ local function runprocessor(_bathy_parms, container_timeout, name, in_parallel, 
 end
 
 -- execute qtrees surface finding algorithm
-if bathy_parms:classifieron("qtrees") then
-    runprocessor(bathy_parms, timeout, "qtrees", true, "bash /qtrees/runner.sh")
-end
+runclassifier(output_files, bathy_parms, timeout, "qtrees", true, "bash /qtrees/runner.sh")
 
 -- execute medialfilter bathy
 runclassifier(output_files, bathy_parms, timeout, "medianfilter", true)
@@ -275,6 +273,10 @@ runprocessor(bathy_parms, timeout, "atl24refraction", true)
 
 -- perform uncertainty calculations
 runprocessor(bathy_parms, timeout, "atl24uncertainty", true)
+
+-- capture endpoint timing
+profile["atl24_endpoint"] = (time.gps() - endpoint_start_time) / 1000.0
+userlog:alert(core.INFO, core.RTE_INFO, string.format("atl24 endpoint executed in %f seconds", profile[name]))
 
 -- build final output
 local output_parms = parms[arrow.PARMS] or {
