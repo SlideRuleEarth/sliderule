@@ -276,7 +276,7 @@ runprocessor(bathy_parms, timeout, "atl24uncertainty", true)
 
 -- capture endpoint timing
 profile["atl24_endpoint"] = (time.gps() - endpoint_start_time) / 1000.0
-userlog:alert(core.INFO, core.RTE_INFO, string.format("atl24 endpoint executed in %f seconds", profile[name]))
+userlog:alert(core.INFO, core.RTE_INFO, string.format("atl24 endpoint executed in %f seconds", profile["atl24_endpoint"]))
 
 -- build final output
 local output_parms = parms[arrow.PARMS] or {
