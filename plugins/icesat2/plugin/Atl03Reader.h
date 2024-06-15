@@ -150,12 +150,12 @@ class Atl03Reader: public LuaObject
         {
             public:
 
-                explicit Region     (info_t* info);
+                explicit Region     (const info_t* info);
                 ~Region             (void);
 
                 void cleanup        (void);
-                void polyregion     (info_t* info);
-                void rasterregion   (info_t* info);
+                void polyregion     (const info_t* info);
+                void rasterregion   (const info_t* info);
 
                 H5Array<double>     segment_lat;
                 H5Array<double>     segment_lon;
@@ -175,7 +175,7 @@ class Atl03Reader: public LuaObject
         {
             public:
 
-                Atl03Data           (info_t* info, const Region& region);
+                Atl03Data           (const info_t* info, const Region& region);
                 ~Atl03Data          (void);
 
                 /* Read Data */
@@ -210,7 +210,7 @@ class Atl03Reader: public LuaObject
                 static const uint8_t INVALID_FLAG = 0xFF;
 
                 /* Methods */
-                explicit Atl08Class (const info_t* info);
+                explicit Atl08Class (const info_t* info, const Atl03Data& atl03);
                 ~Atl08Class         (void);
                 void classify       (const info_t* info, const Region& region, const Atl03Data& atl03);
                 uint8_t operator[]  (int index) const;
@@ -219,12 +219,13 @@ class Atl03Reader: public LuaObject
                 bool                enabled;
                 bool                phoreal;
                 bool                ancillary;
+                long                num_photons;
 
                 /* Generated Data */
                 uint8_t*            classification; // [num_photons]
-                float*              relief; // [num_photons]
-                uint8_t*            landcover; // [num_photons]
-                uint8_t*            snowcover; // [num_photons]
+                float*              relief;         // [num_photons]
+                uint8_t*            landcover;      // [num_photons]
+                uint8_t*            snowcover;      // [num_photons]
 
                 /* Read Data */
                 H5Array<int32_t>    atl08_segment_id;
@@ -247,11 +248,11 @@ class Atl03Reader: public LuaObject
         {
             public:
 
-                YapcScore           (info_t* info, const Region& region, const Atl03Data& atl03);
+                YapcScore           (const info_t* info, const Region& region, const Atl03Data& atl03);
                 ~YapcScore          (void);
 
-                void yapcV2         (info_t* info, const Region& region, const Atl03Data& atl03);
-                void yapcV3         (info_t* info, const Region& region, const Atl03Data& atl03);
+                void yapcV2         (const info_t* info, const Region& region, const Atl03Data& atl03);
+                void yapcV3         (const info_t* info, const Region& region, const Atl03Data& atl03);
 
                 uint8_t operator[]  (int index) const;
 

@@ -147,12 +147,12 @@ class Atl06Reader: public LuaObject
         {
             public:
 
-                explicit Region     (info_t* info);
+                explicit Region     (const info_t* info);
                 ~Region             (void);
 
                 void cleanup        (void);
-                void polyregion     (info_t* info);
-                void rasterregion   (info_t* info);
+                void polyregion     (const info_t* info);
+                void rasterregion   (const info_t* info);
 
                 H5Array<double>     latitude;
                 H5Array<double>     longitude;
@@ -169,7 +169,7 @@ class Atl06Reader: public LuaObject
         {
             public:
 
-                Atl06Data           (info_t* info, const Region& region);
+                Atl06Data           (const info_t* info, const Region& region);
                 ~Atl06Data          (void) = default;
 
                 /* Read Data */

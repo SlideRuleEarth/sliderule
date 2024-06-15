@@ -134,12 +134,12 @@ class Atl03Viewer: public LuaObject
         {
             public:
 
-                explicit Region     (info_t* info);
+                explicit Region     (const info_t* info);
                 ~Region             (void);
 
                 void cleanup        (void);
-                void polyregion     (info_t* info);
-                void rasterregion   (info_t* info);
+                void polyregion     (const info_t* info);
+                void rasterregion   (const info_t* info);
 
                 H5Array<double>     segment_lat;
                 H5Array<double>     segment_lon;
@@ -157,7 +157,7 @@ class Atl03Viewer: public LuaObject
         {
             public:
 
-                Atl03Data           (info_t* info, const Region& region);
+                Atl03Data           (const info_t* info, const Region& region);
                 ~Atl03Data          (void);
 
                 /* Read Data */

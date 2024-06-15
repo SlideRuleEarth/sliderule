@@ -125,7 +125,7 @@ Gedi02aReader::~Gedi02aReader (void) = default;
 /*----------------------------------------------------------------------------
  * Gedi02a::Constructor
  *----------------------------------------------------------------------------*/
-Gedi02aReader::Gedi02a::Gedi02a (info_t* info, Region& region):
+Gedi02aReader::Gedi02a::Gedi02a (const info_t* info, const Region& region):
     shot_number     (info->reader->asset, info->reader->resource, FString("%s/shot_number",      GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
     delta_time      (info->reader->asset, info->reader->resource, FString("%s/delta_time",       GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
     elev_lowestmode (info->reader->asset, info->reader->resource, FString("%s/elev_lowestmode",  GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
@@ -160,7 +160,7 @@ Gedi02aReader::Gedi02a::~Gedi02a (void) = default;
 void* Gedi02aReader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = static_cast<info_t*>(parm);
+    const info_t* info = static_cast<info_t*>(parm);
     Gedi02aReader* reader = reinterpret_cast<Gedi02aReader*>(info->reader); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
     const GediParms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
@@ -172,7 +172,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
     try
     {
         /* Subset to Region of Interest */
-        Region region(info);
+        const Region region(info);
 
         /* Read GEDI Datasets */
         const Gedi02a gedi02a(info, region);

@@ -106,7 +106,7 @@ class Gedi01bReader: public FootprintReader<g01b_footprint_t>
         {
             public:
 
-                Gedi01b             (info_t* info, Region& region);
+                Gedi01b             (const info_t* info, const Region& region);
                 ~Gedi01b            (void);
 
                 H5Array<uint64_t>   shot_number;

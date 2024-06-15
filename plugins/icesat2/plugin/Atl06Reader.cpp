@@ -240,7 +240,7 @@ Atl06Reader::~Atl06Reader (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-Atl06Reader::Region::Region (info_t* info):
+Atl06Reader::Region::Region (const info_t* info):
     latitude        (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/latitude").c_str(),  &info->reader->context),
     longitude       (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/longitude").c_str(), &info->reader->context),
     inclusion_mask  {NULL},
@@ -308,7 +308,7 @@ void Atl06Reader::Region::cleanup (void)
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void Atl06Reader::Region::polyregion (info_t* info)
+void Atl06Reader::Region::polyregion (const info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -354,7 +354,7 @@ void Atl06Reader::Region::polyregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Region::rasterregion
  *----------------------------------------------------------------------------*/
-void Atl06Reader::Region::rasterregion (info_t* info)
+void Atl06Reader::Region::rasterregion (const info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -409,7 +409,7 @@ void Atl06Reader::Region::rasterregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Atl06Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl06Reader::Atl06Data::Atl06Data (info_t* info, const Region& region):
+Atl06Reader::Atl06Data::Atl06Data (const info_t* info, const Region& region):
     sc_orient               (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",                                           &info->reader->context),
     delta_time              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/delta_time").c_str(),                           &info->reader->context, 0, region.first_segment, region.num_segments),
     h_li                    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/h_li").c_str(),                                 &info->reader->context, 0, region.first_segment, region.num_segments),
@@ -484,9 +484,9 @@ Atl06Reader::Atl06Data::Atl06Data (info_t* info, const Region& region):
 void* Atl06Reader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = static_cast<info_t*>(parm);
+    const info_t* info = static_cast<info_t*>(parm);
     Atl06Reader* reader = info->reader;
-    Icesat2Parms* parms = reader->parms;
+    const Icesat2Parms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     vector<RecordObject*> rec_vec;
 

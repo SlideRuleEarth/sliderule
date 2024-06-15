@@ -229,7 +229,7 @@ Atl13Reader::~Atl13Reader (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-Atl13Reader::Region::Region (info_t* info):
+Atl13Reader::Region::Region (const info_t* info):
     latitude        (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "segment_lat").c_str(), &info->reader->context),
     longitude       (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "segment_lon").c_str(), &info->reader->context),
     inclusion_mask  {NULL},
@@ -297,7 +297,7 @@ void Atl13Reader::Region::cleanup (void)
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void Atl13Reader::Region::polyregion (info_t* info)
+void Atl13Reader::Region::polyregion (const info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -343,7 +343,7 @@ void Atl13Reader::Region::polyregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Region::rasterregion
  *----------------------------------------------------------------------------*/
-void Atl13Reader::Region::rasterregion (info_t* info)
+void Atl13Reader::Region::rasterregion (const info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -398,7 +398,7 @@ void Atl13Reader::Region::rasterregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Atl13Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl13Reader::Atl13Data::Atl13Data (info_t* info, const Region& region):
+Atl13Reader::Atl13Data::Atl13Data (const info_t* info, const Region& region):
     sc_orient               (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",           &info->reader->context),
     delta_time              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "delta_time").c_str(),             &info->reader->context, 0, region.first_segment, region.num_segments),
     segment_id_beg          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "segment_id_beg").c_str(),         &info->reader->context, 0, region.first_segment, region.num_segments),
@@ -464,9 +464,9 @@ Atl13Reader::Atl13Data::~Atl13Data (void) = default;
 void* Atl13Reader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = static_cast<info_t*>(parm);
+    const info_t* info = static_cast<info_t*>(parm);
     Atl13Reader* reader = info->reader;
-    Icesat2Parms* parms = reader->parms;
+    const Icesat2Parms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     vector<RecordObject*> rec_vec;
 

@@ -249,7 +249,7 @@ Atl03Reader::~Atl03Reader (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Region::Region (info_t* info):
+Atl03Reader::Region::Region (const info_t* info):
     segment_lat    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context),
     segment_lon    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context),
     segment_ph_cnt (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(), &info->reader->context),
@@ -280,10 +280,6 @@ Atl03Reader::Region::Region (info_t* info):
         }
         else
         {
-#if 0
-            return; // early exit since no subetting required
-#else
-
             num_segments = segment_ph_cnt.size;
             if(num_segments > 0)
             {
@@ -293,8 +289,6 @@ Atl03Reader::Region::Region (info_t* info):
                     num_photons += segment_ph_cnt[i];
                 }
             }
-            print2term("[%s] No spatial region specified, processing entire dataset, num_segments: %ld, num_photons: %ld\n", info->prefix, num_segments, num_photons);
-#endif
         }
 
         /* Check If Anything to Process */
@@ -335,7 +329,7 @@ void Atl03Reader::Region::cleanup (void)
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void Atl03Reader::Region::polyregion (info_t* info)
+void Atl03Reader::Region::polyregion (const info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -402,7 +396,7 @@ void Atl03Reader::Region::polyregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Region::rasterregion
  *----------------------------------------------------------------------------*/
-void Atl03Reader::Region::rasterregion (info_t* info)
+void Atl03Reader::Region::rasterregion (const info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -485,7 +479,7 @@ void Atl03Reader::Region::rasterregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl03Data::Atl03Data (info_t* info, const Region& region):
+Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
     sc_orient           (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",                &info->reader->context),
     velocity_sc         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),     &info->reader->context, H5Coro::ALL_COLS, region.first_segment, region.num_segments),
     segment_delta_time  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
@@ -588,8 +582,9 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, const Region& region):
         }
     }
 
-    print2term("[%s] Reading %ld segments and %ld photons\n", info->prefix, region.num_segments, region.num_photons);
-    print2term("[%s] Reading %ld segments and %ld photons\n", info->prefix, region.num_segments, dist_ph_along.size);
+#if 0
+    print2term("[%s] Reading %ld segments and %ld region.photons\n", info->prefix, region.num_segments, region.num_photons);
+    print2term("[%s] Reading %ld segments and %ld atl03data photons\n", info->prefix, region.num_segments, dist_ph_along.size);
 
     print2term("sc_orient:          %s, size: %ld\n", info->prefix, sc_orient.size);
     print2term("velocity_sc:        %s, size: %ld\n", info->prefix, velocity_sc.size);
@@ -623,6 +618,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, const Region& region):
             dataset_name = anc_ph_data->next(&array);
         }
     }
+#endif
 }
 
 
@@ -638,10 +634,11 @@ Atl03Reader::Atl03Data::~Atl03Data (void)
 /*----------------------------------------------------------------------------
  * Atl08Class::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl08Class::Atl08Class (const info_t* info):
+Atl03Reader::Atl08Class::Atl08Class (const info_t* info, const Atl03Data& atl03):
     enabled             (info->reader->parms->stages[Icesat2Parms::STAGE_ATL08]),
     phoreal             (info->reader->parms->stages[Icesat2Parms::STAGE_PHOREAL]),
     ancillary           (info->reader->parms->atl08_fields != NULL),
+    num_photons         (atl03.dist_ph_along.size),
     classification      {NULL},
     relief              {NULL},
     landcover           {NULL},
@@ -711,7 +708,7 @@ Atl03Reader::Atl08Class::~Atl08Class (void)
 void Atl03Reader::Atl08Class::classify (const info_t* info, const Region& region, const Atl03Data& atl03)
 {
     /* Do Nothing If Not Enabled */
-    if(!info->reader->parms->stages[Icesat2Parms::STAGE_ATL08])
+    if(!enabled)
     {
         return;
     }
@@ -732,7 +729,6 @@ void Atl03Reader::Atl08Class::classify (const info_t* info, const Region& region
     }
 
     /* Allocate ATL08 Classification Array */
-    const int num_photons = atl03.dist_ph_along.size;
     classification = new uint8_t [num_photons];
 
     /* Allocate PhoREAL Arrays */
@@ -855,14 +851,13 @@ void Atl03Reader::Atl08Class::classify (const info_t* info, const Region& region
  *----------------------------------------------------------------------------*/
 uint8_t Atl03Reader::Atl08Class::operator[] (int index) const
 {
-    // return classification[index];
-    return classification[index];  // NOLINT(clang-analyzer-core.uninitialized.UndefReturn)
+    return classification[index];
 }
 
 /*----------------------------------------------------------------------------
  * YapcScore::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::YapcScore::YapcScore (info_t* info, const Region& region, const Atl03Data& atl03):
+Atl03Reader::YapcScore::YapcScore (const info_t* info, const Region& region, const Atl03Data& atl03):
     score {NULL}
 {
     /* Do Nothing If Not Enabled */
@@ -897,7 +892,7 @@ Atl03Reader::YapcScore::~YapcScore (void)
 /*----------------------------------------------------------------------------
  * yapcV2
  *----------------------------------------------------------------------------*/
-void Atl03Reader::YapcScore::yapcV2 (info_t* info, const Region& region, const Atl03Data& atl03)
+void Atl03Reader::YapcScore::yapcV2 (const info_t* info, const Region& region, const Atl03Data& atl03)
 {
     /* YAPC Hard-Coded Parameters */
     const double MAXIMUM_HSPREAD = 15000.0; // meters
@@ -1068,7 +1063,7 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, const Region& region, const A
 /*----------------------------------------------------------------------------
  * yapcV3
  *----------------------------------------------------------------------------*/
-void Atl03Reader::YapcScore::yapcV3 (info_t* info, const Region& region, const Atl03Data& atl03)
+void Atl03Reader::YapcScore::yapcV3 (const info_t* info, const Region& region, const Atl03Data& atl03)
 {
     /* YAPC Parameters */
     Icesat2Parms::yapc_t* settings = &info->reader->parms->yapc;
@@ -1233,9 +1228,9 @@ Atl03Reader::TrackState::~TrackState (void) = default;
 void* Atl03Reader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = static_cast<info_t*>(parm);
+    const info_t* info = static_cast<info_t*>(parm);
     Atl03Reader* reader = info->reader;
-    Icesat2Parms* parms = reader->parms;
+    const Icesat2Parms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     List<int32_t>* segment_indices = NULL;    // used for ancillary data
     List<int32_t>* photon_indices = NULL;     // used for ancillary data
@@ -1247,14 +1242,14 @@ void* Atl03Reader::subsettingThread (void* parm)
 
     try
     {
-        /* Start Reading ATL08 Data */
-        Atl08Class atl08(info);
-
         /* Subset to Region of Interest */
         const Region region(info);
 
         /* Read ATL03 Datasets */
         const Atl03Data atl03(info, region);
+
+        /* Start Reading ATL08 Data */
+        Atl08Class atl08(info, atl03);
 
         /* Perform YAPC Scoring (if requested) */
         const YapcScore yapc(info, region, atl03);
