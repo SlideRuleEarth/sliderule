@@ -858,10 +858,11 @@ uint8_t Atl03Reader::Atl08Class::operator[] (int index) const
  * YapcScore::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::YapcScore::YapcScore (const info_t* info, const Region& region, const Atl03Data& atl03):
+    enabled {info->reader->parms->stages[Icesat2Parms::STAGE_YAPC]},
     score {NULL}
 {
     /* Do Nothing If Not Enabled */
-    if(!info->reader->parms->stages[Icesat2Parms::STAGE_YAPC])
+    if(!enabled)
     {
         return;
     }

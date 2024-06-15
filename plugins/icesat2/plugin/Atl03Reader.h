@@ -256,6 +256,9 @@ class Atl03Reader: public LuaObject
 
                 uint8_t operator[]  (int index) const;
 
+                /* Class Data */
+                bool                enabled;
+
                 /* Generated Data */
                 uint8_t*            score; // [num_photons]
         };
