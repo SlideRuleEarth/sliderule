@@ -267,7 +267,7 @@ Atl06Reader::Region::Region (const info_t* info):
         }
         else
         {
-            num_segments = MIN(latitude.size, longitude.size);
+            num_segments = latitude.size;
         }
 
         /* Check If Anything to Process */
