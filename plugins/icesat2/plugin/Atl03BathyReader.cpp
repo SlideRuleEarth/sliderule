@@ -114,6 +114,7 @@ const struct luaL_Reg Atl03BathyReader::LUA_META_TABLE[] = {
 int Atl03BathyReader::luaCreate (lua_State* L)
 {
     Asset* asset = NULL;
+    Asset* atl09_asset = NULL;
     BathyParms* parms = NULL;
     GeoParms* geoparms = NULL;
 
@@ -127,15 +128,17 @@ int Atl03BathyReader::luaCreate (lua_State* L)
         geoparms = dynamic_cast<GeoParms*>(getLuaObject(L, 5, GeoParms::OBJECT_TYPE, true, NULL));
         const char* shared_directory = getLuaString(L, 6);
         const bool send_terminator = getLuaBoolean(L, 7, true, true);
+        atl09_asset = dynamic_cast<Asset*>(getLuaObject(L, 8, Asset::OBJECT_TYPE));
 
         /* Return Reader Object */
-        return createLuaObject(L, new Atl03BathyReader(L, asset, resource, outq_name, parms, geoparms, shared_directory, send_terminator));
+        return createLuaObject(L, new Atl03BathyReader(L, asset, resource, outq_name, parms, geoparms, shared_directory, send_terminator, atl09_asset));
     }
     catch(const RunTimeException& e)
     {
         if(asset) asset->releaseLuaObject();
         if(parms) parms->releaseLuaObject();
         if(geoparms) geoparms->releaseLuaObject();
+        if(atl09_asset) atl09_asset->releaseLuaObject();
         mlog(e.level(), "Error creating Atl03BathyReader: %s", e.what());
         return returnLuaStatus(L, false);
     }
@@ -153,7 +156,9 @@ void Atl03BathyReader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, BathyParms* _parms, GeoParms* _geoparms, const char* shared_directory, bool _send_terminator):
+Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _resource, 
+                                    const char* outq_name, BathyParms* _parms, GeoParms* _geoparms, 
+                                    const char* shared_directory, bool _send_terminator, Asset* _atl09_asset):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     missing09(false),
     read_timeout_ms(_parms->read_timeout * 1000),
@@ -164,6 +169,7 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
     assert(outq_name);
     assert(_parms);
     assert(_geoparms);
+    assert(_atl09_asset);
 
     /* Initialize Thread Count */
     threadCount = 0;
@@ -174,6 +180,7 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
     parms = _parms;
     geoparms = _geoparms;
     sharedDirectory = StringLib::duplicate(shared_directory);
+    asset09 = _atl09_asset;
 
     /* Set Signal Confidence Index */
     if(parms->surface_type == Icesat2Parms::SRT_DYNAMIC)
@@ -312,6 +319,7 @@ Atl03BathyReader::~Atl03BathyReader (void)
     delete [] resource;
 
     asset->releaseLuaObject();
+    asset09->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -554,7 +562,7 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     h_ph                (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/h_ph").c_str(),                &info->reader->context, 0, region.first_photon,  region.num_photons),
     signal_conf_ph      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),      &info->reader->context, info->reader->signalConfColIndex, region.first_photon,  region.num_photons),
     quality_ph          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/quality_ph").c_str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
-    weight_ph           (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/weight_ph").c_str(),           &info->reader->context, 0, region.first_photon,  region.num_photons),
+//    weight_ph           (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/weight_ph").c_str(),           &info->reader->context, 0, region.first_photon,  region.num_photons),
     lat_ph              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/lat_ph").c_str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
     lon_ph              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/lon_ph").c_str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
     delta_time          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/delta_time").c_str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
@@ -578,7 +586,7 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     h_ph.join(info->reader->read_timeout_ms, true);
     signal_conf_ph.join(info->reader->read_timeout_ms, true);
     quality_ph.join(info->reader->read_timeout_ms, true);
-    weight_ph.join(info->reader->read_timeout_ms, true);
+//    weight_ph.join(info->reader->read_timeout_ms, true);
     lat_ph.join(info->reader->read_timeout_ms, true);
     lon_ph.join(info->reader->read_timeout_ms, true);
     delta_time.join(info->reader->read_timeout_ms, true);
@@ -591,9 +599,9 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
  *----------------------------------------------------------------------------*/
 Atl03BathyReader::Atl09Class::Atl09Class (info_t* info):
     valid       (false),
-    met_u10m    (info->reader->missing09 ? NULL : info->reader->asset, info->reader->resource09.c_str(), FString("profile_%d/low_rate/met_u10m", info->track).c_str(), &info->reader->context09),
-    met_v10m    (info->reader->missing09 ? NULL : info->reader->asset, info->reader->resource09.c_str(), FString("profile_%d/low_rate/met_v10m", info->track).c_str(), &info->reader->context09),
-    delta_time  (info->reader->missing09 ? NULL : info->reader->asset, info->reader->resource09.c_str(), FString("profile_%d/low_rate/delta_time", info->track).c_str(), &info->reader->context09)
+    met_u10m    (info->reader->missing09 ? NULL : info->reader->asset09, info->reader->resource09.c_str(), FString("profile_%d/low_rate/met_u10m", info->track).c_str(), &info->reader->context09),
+    met_v10m    (info->reader->missing09 ? NULL : info->reader->asset09, info->reader->resource09.c_str(), FString("profile_%d/low_rate/met_v10m", info->track).c_str(), &info->reader->context09),
+    delta_time  (info->reader->missing09 ? NULL : info->reader->asset09, info->reader->resource09.c_str(), FString("profile_%d/low_rate/delta_time", info->track).c_str(), &info->reader->context09)
 {
     try
     {
@@ -907,11 +915,12 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                 }
 
                 /* Set and Check YAPC Score */
-                const uint8_t yapc_score = atl03.weight_ph[current_photon];
-                if(yapc_score < parms->yapc.score)
-                {
-                    break;
-                }
+                const uint8_t yapc_score = 0;
+//                const uint8_t yapc_score = atl03.weight_ph[current_photon];
+//                if(yapc_score < parms->yapc.score)
+//                {
+//                    break;
+//                }
 
                 /* Check Maximum DEM Delta */
                 const double dem_delta = abs(atl03.dem_h[current_segment] - atl03.h_ph[current_photon]);

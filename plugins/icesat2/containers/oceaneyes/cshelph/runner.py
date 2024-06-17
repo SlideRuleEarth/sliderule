@@ -106,7 +106,7 @@ results = MODEL.c_shelph_classification(copy.deepcopy(point_cloud),
                                         bathymetry_label=40)
 
 df = pd.DataFrame()
-df["index_ph"] = results['index_ph']
+df["index_ph"] = point_cloud['index_ph']
 df["class_ph"] = results['classification']
 
 if output_csv != None:

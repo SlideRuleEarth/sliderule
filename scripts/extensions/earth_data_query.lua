@@ -54,6 +54,7 @@ ASSETS_TO_DATASETS = {
     ["icesat2-atl09"] = "ATL09",
     ["icesat2-atl13"] = "ATL13",
     ["atlas-local"] = "ATL03",
+    ["atlas-s3"] = "ATL03",
     ["nsidc-s3"] = "ATL03"
 }
 

@@ -355,7 +355,7 @@ void* ContainerRunner::controlThread (void* parm)
             const long wait_http_code = CurlLib::request(EndpointObject::POST, wait_url.c_str(), NULL, &wait_response, NULL, false, false, WAIT_TIMEOUT, NULL, unix_socket);
             if(wait_http_code == EndpointObject::OK)
             {
-                alert(INFO, RTE_INFO, cr->outQ, NULL, "Container <%s> completed", cr->parms->image);
+                alert(INFO, RTE_INFO, cr->outQ, NULL, "Container <%s> completed", container_name_str.c_str());
                 done = true;
             }
             else if(wait_http_code != EndpointObject::Service_Unavailable) // curl timed out which is normal if container is still running
@@ -427,7 +427,7 @@ void* ContainerRunner::controlThread (void* parm)
             const char* stop_response = NULL;
             const long stop_http_code = CurlLib::request(EndpointObject::POST, stop_url.c_str(), NULL, &stop_response, NULL, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
             if(stop_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to force stop container <%s>: %ld - %s", cr->parms->image, stop_http_code, stop_response);
-            else alert(INFO, RTE_INFO, cr->outQ, NULL, "Force stopped container <%s> with Id %s", cr->parms->image, container_id);
+            else alert(INFO, RTE_INFO, cr->outQ, NULL, "Force stopped container <%s>", container_name_str.c_str());
             delete [] stop_response;
         }
 
@@ -436,7 +436,7 @@ void* ContainerRunner::controlThread (void* parm)
         const char* remove_response = NULL;
         const long remove_http_code = CurlLib::request(EndpointObject::DELETE, remove_url.c_str(), NULL, &remove_response, NULL, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
         if(remove_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to delete container <%s>: %ld - %s", cr->parms->image, remove_http_code, remove_response);
-        else alert(INFO, RTE_INFO, cr->outQ, NULL, "Removed container <%s> with Id %s", cr->parms->image, container_id);
+        else alert(INFO, RTE_INFO, cr->outQ, NULL, "Removed container <%s>", container_name_str.c_str());
         delete [] remove_response;
     }
 

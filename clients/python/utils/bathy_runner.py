@@ -21,6 +21,8 @@ parser.add_argument('--output_file',        '-f',   type=str,               defa
 parser.add_argument('--output_format',              type=str,               default="hdf5")
 parser.add_argument('--verbose',            '-v',   action='store_true',    default=False)
 parser.add_argument('--cleanup',                    action='store_true',    default=False)
+parser.add_argument('--asset',                      type=str,               default="icesat2")
+parser.add_argument('--asset09',                    type=str,               default="icesat2")
 parser.add_argument('--generate_ndwi',              action='store_true',    default=False)
 parser.add_argument('--ignore_bathy_mask',          action='store_true',    default=False)
 parser.add_argument('--print_metadata',             action='store_true',    default=False) # only available if [geo]parquet file format chosen
@@ -57,6 +59,8 @@ elif args.output_file == "stage":
 
 # Set Parameters
 parms = { 
+    "asset": args.asset,
+    "atl09_asset": args.asset09,
     "srt": icesat2.SRT_DYNAMIC,
     "cnf": "atl03_not_considered",
     "pass_invalid": True,
@@ -66,9 +70,6 @@ parms = {
     "spots": args.spots,
     "output_as_sdp": args.output_as_sdp,
     "classifiers": args.classifiers,
-    "surfacefinder": {
-
-    },
     "openoceans": {
         "use_ndwi": args.generate_ndwi
     },

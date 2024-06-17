@@ -115,6 +115,14 @@ parms["t1"] = original_t1
 profile["atl09_cmr"] = (time.gps() - atl09_cmr_start_time) / 1000.0
 userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL09 CMR search executed in %f seconds", profile["atl09_cmr"]))
 
+-- get ATL09 asset
+local atl09_asset_name = parms["atl09_asset"] or parms["asset"] or args.default_asset
+local atl09_asset = core.getbyname(atl09_asset_name)
+if not atl09_asset then
+    userlog:alert(core.INFO, core.RTE_ERROR, string.format("invalid asset specified for ATL09: %s", atl09_asset_name))
+    return
+end
+
 -- initialize container runtime environment
 local crenv = runner.setup()
 if not crenv.host_sandbox_directory then
@@ -124,7 +132,7 @@ end
 
 -- read ICESat-2 inputs
 local bathy_parms   = icesat2.bathyparms(parms)
-local reader        = icesat2.atl03bathy(proc.asset, resource, args.result_q, bathy_parms, geo_parms, crenv.host_sandbox_directory, false)
+local reader        = icesat2.atl03bathy(proc.asset, resource, args.result_q, bathy_parms, geo_parms, crenv.host_sandbox_directory, false, atl09_asset)
 local status        = georesource.waiton(resource, parms, nil, reader, nil, proc.sampler_disp, proc.userlog, false)
 if not status then
     userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to generate ATL03 bathy inputs for %s", resource))

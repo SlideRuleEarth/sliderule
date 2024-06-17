@@ -207,7 +207,7 @@ class Atl03BathyReader: public LuaObject
                 H5Array<float>      h_ph;
                 H5Array<int8_t>     signal_conf_ph;
                 H5Array<int8_t>     quality_ph;
-                H5Array<uint8_t>    weight_ph; // yapc
+//                H5Array<uint8_t>    weight_ph; // yapc
                 H5Array<double>     lat_ph;
                 H5Array<double>     lon_ph;
                 H5Array<double>     delta_time;
@@ -294,6 +294,7 @@ class Atl03BathyReader: public LuaObject
         int                 threadCount;
         int                 numComplete;
         Asset*              asset;
+        Asset*              asset09;
         const char*         resource;
         string              resource09;
         bool                missing09;
@@ -326,7 +327,8 @@ class Atl03BathyReader: public LuaObject
                                                          BathyParms* _parms,
                                                          GeoParms* _geoparms,
                                                          const char* shared_directory,
-                                                         bool _send_terminator=true);
+                                                         bool _send_terminator,
+                                                         Asset* _atl09_asset);
                             ~Atl03BathyReader           (void) override;
 
         static void*        subsettingThread            (void* parm);

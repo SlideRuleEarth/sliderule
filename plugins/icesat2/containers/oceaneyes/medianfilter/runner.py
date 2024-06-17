@@ -105,7 +105,7 @@ results = MODEL.rolling_median_bathy_classification(point_cloud=point_cloud,
                                                     compress_heights=compress_heights,
                                                     compress_lats=compress_lats)
 df = pd.DataFrame()
-df["index_ph"] = results['index_ph']
+df["index_ph"] = point_cloud['index_ph']
 df["class_ph"] = results['classification']
 
 if output_csv != None:
