@@ -236,7 +236,7 @@ SwotL2Reader::Region::Region (Asset* asset, const char* resource, const SwotParm
     }
     else
     {
-        num_lines = MIN(lat.size, lon.size);
+        num_lines = lat.size;
     }
 
     /* Trim Geospatial Datasets Read from File */

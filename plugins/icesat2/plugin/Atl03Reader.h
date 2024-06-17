@@ -210,7 +210,7 @@ class Atl03Reader: public LuaObject
                 static const uint8_t INVALID_FLAG = 0xFF;
 
                 /* Methods */
-                explicit Atl08Class (const info_t* info, const Atl03Data& atl03);
+                explicit Atl08Class (const info_t* info);
                 ~Atl08Class         (void);
                 void classify       (const info_t* info, const Region& region, const Atl03Data& atl03);
                 uint8_t operator[]  (int index) const;
@@ -219,7 +219,6 @@ class Atl03Reader: public LuaObject
                 bool                enabled;
                 bool                phoreal;
                 bool                ancillary;
-                long                num_photons;
 
                 /* Generated Data */
                 uint8_t*            classification; // [num_photons]

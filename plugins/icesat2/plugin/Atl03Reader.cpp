@@ -581,44 +581,6 @@ Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
             dataset_name = anc_ph_data->next(&array);
         }
     }
-
-#if 0
-    print2term("[%s] Reading %ld segments and %ld region.photons\n", info->prefix, region.num_segments, region.num_photons);
-    print2term("[%s] Reading %ld segments and %ld atl03data photons\n", info->prefix, region.num_segments, dist_ph_along.size);
-
-    print2term("sc_orient:          %s, size: %ld\n", info->prefix, sc_orient.size);
-    print2term("velocity_sc:        %s, size: %ld\n", info->prefix, velocity_sc.size);
-    print2term("segment_delta_time: %s, size: %ld\n", info->prefix, segment_delta_time.size);
-    print2term("segment_id:         %s, size: %ld\n", info->prefix, segment_id.size);
-    print2term("segment_dist_x:     %s, size: %ld\n", info->prefix, segment_dist_x.size);
-    print2term("solar_elevation:    %s, size: %ld\n", info->prefix, solar_elevation.size);
-    print2term("dist_ph_along:      %s, size: %ld\n", info->prefix, dist_ph_along.size);
-    print2term("dist_ph_across:     %s, size: %ld\n", info->prefix, dist_ph_across.size);
-    print2term("h_ph:               %s, size: %ld\n", info->prefix, h_ph.size);
-    print2term("signal_conf_ph:     %s, size: %ld\n", info->prefix, signal_conf_ph.size);
-    print2term("quality_ph:         %s, size: %ld\n", info->prefix, quality_ph.size);
-    print2term("lat_ph:             %s, size: %ld\n", info->prefix, lat_ph.size);
-    print2term("lon_ph:             %s, size: %ld\n", info->prefix, lon_ph.size);
-    print2term("delta_time:         %s, size: %ld\n", info->prefix, delta_time.size);
-    print2term("bckgrd_delta_time:  %s, size: %ld\n", info->prefix, bckgrd_delta_time.size);
-    print2term("bckgrd_rate:        %s, size: %ld\n", info->prefix, bckgrd_rate.size);
-    if (anc_geo_data) {
-        H5DArray* array = NULL;
-        const char* dataset_name = anc_geo_data->first(&array);
-        while (dataset_name != NULL) {
-            print2term("%s:    %s, size: %d\n", dataset_name, info->prefix, array->numElements());
-            dataset_name = anc_geo_data->next(&array);
-        }
-    }
-    if (anc_ph_data) {
-        H5DArray* array = NULL;
-        const char* dataset_name = anc_ph_data->first(&array);
-        while (dataset_name != NULL) {
-            print2term("%s:    %s, size: %d\n", dataset_name, info->prefix, array->numElements());
-            dataset_name = anc_ph_data->next(&array);
-        }
-    }
-#endif
 }
 
 
@@ -634,11 +596,10 @@ Atl03Reader::Atl03Data::~Atl03Data (void)
 /*----------------------------------------------------------------------------
  * Atl08Class::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl08Class::Atl08Class (const info_t* info, const Atl03Data& atl03):
+Atl03Reader::Atl08Class::Atl08Class (const info_t* info):
     enabled             (info->reader->parms->stages[Icesat2Parms::STAGE_ATL08]),
     phoreal             (info->reader->parms->stages[Icesat2Parms::STAGE_PHOREAL]),
     ancillary           (info->reader->parms->atl08_fields != NULL),
-    num_photons         (atl03.dist_ph_along.size),
     classification      {NULL},
     relief              {NULL},
     landcover           {NULL},
@@ -729,6 +690,7 @@ void Atl03Reader::Atl08Class::classify (const info_t* info, const Region& region
     }
 
     /* Allocate ATL08 Classification Array */
+    const long num_photons = atl03.dist_ph_along.size;
     classification = new uint8_t [num_photons];
 
     /* Allocate PhoREAL Arrays */
@@ -851,6 +813,11 @@ void Atl03Reader::Atl08Class::classify (const info_t* info, const Region& region
  *----------------------------------------------------------------------------*/
 uint8_t Atl03Reader::Atl08Class::operator[] (int index) const
 {
+    // This operator is called only after the classification array has been fully populated.
+    // clang-tidy is not able to determine that the array is always populated.
+    // We disable the related warning to avoid false positives.
+
+    // NOLINTNEXTLINE(clang-analyzer-core.uninitialized.UndefReturn)
     return classification[index];
 }
 
@@ -909,7 +876,7 @@ void Atl03Reader::YapcScore::yapcV2 (const info_t* info, const Region& region, c
      *   CANNOT THROW BELOW THIS POINT
      */
 
-    /* Allocate ATL08 Classification Array */
+    /* Allocate Yapc Score Array */
     const int32_t num_photons = atl03.dist_ph_along.size;
     score = new uint8_t [num_photons];
     memset(score, 0, num_photons);
@@ -1243,14 +1210,14 @@ void* Atl03Reader::subsettingThread (void* parm)
 
     try
     {
+        /* Start Reading ATL08 Data */
+        Atl08Class atl08(info);
+
         /* Subset to Region of Interest */
         const Region region(info);
 
         /* Read ATL03 Datasets */
         const Atl03Data atl03(info, region);
-
-        /* Start Reading ATL08 Data */
-        Atl08Class atl08(info, atl03);
 
         /* Perform YAPC Scoring (if requested) */
         const YapcScore yapc(info, region, atl03);

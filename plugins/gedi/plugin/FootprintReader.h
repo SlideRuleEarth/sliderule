@@ -326,7 +326,7 @@ FootprintReader<footprint_t>::Region::Region (const info_t* info):
     }
     else
     {
-        num_footprints = MIN(lat.size, lon.size);
+        num_footprints = lat.size;
     }
 
     /* Check If Anything to Process */
