@@ -308,4 +308,4 @@ output_parms["path"] = output_parms["path"]..".json"
 arrow.send2user(crenv.host_sandbox_directory.."/atl24.bin.json", arrow.parms(output_parms), rspq)
 
 -- cleanup container runtime environment
---runner.cleanup(crenv)
+runner.cleanup(crenv)

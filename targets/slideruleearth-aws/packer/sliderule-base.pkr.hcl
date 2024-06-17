@@ -21,7 +21,7 @@ source "amazon-ebs" "base-image" {
   region                = var.region
   source_ami_filter {
     filters = {
-      name                = "al2023-ami-2023.3*-arm64"
+      name                = "al2023-ami-2023.*-arm64"
       root-device-type    = "ebs"
       virtualization-type = "hvm"
     }
