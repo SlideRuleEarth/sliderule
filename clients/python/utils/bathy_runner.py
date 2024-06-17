@@ -41,9 +41,10 @@ sliderule.init(args.domain, verbose=args.verbose, loglevel=args.loglvl, organiza
 
 # Build Output File Path (and credentials if necessary)
 if args.output_file == None:
-    output_filename         = "/tmp/" + args.granule.replace("ATL03", "ATL24").replace(".h5", args.output_format)
+    output_filename         = "/tmp/" + args.granule.replace("ATL03", "ATL24").replace(".h5", "." + args.output_format)
+    credentials             = None
 elif args.output_file == "stage":
-    output_filename         = "s3://sliderule/data/ATL24/" + args.granule.replace("ATL03", "ATL24").replace(".h5", args.output_format)
+    output_filename         = "s3://sliderule/data/ATL24/" + args.granule.replace("ATL03", "ATL24").replace(".h5", "." + args.output_format)
     home_directory          = os.path.expanduser('~')
     aws_credential_file     = os.path.join(home_directory, '.aws', 'credentials')
     config                  = configparser.RawConfigParser()

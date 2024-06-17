@@ -215,7 +215,7 @@ data["sigma_tvu"] = np.sqrt(np.square(data["sigma_vsu"]) + np.square(data["sigma
 print("Calculating processing flags")
 data["max_sensor_depth"] = 1.8 / data["kd_490"]
 data["flags"] = 0
-data.loc[subaqueous & (data["kd_490"] > 0) & (data["depth"] > data["max_sensor_depth"])] = 1
+data.loc[subaqueous & (data["kd_490"] > 0) & (data["depth"] > data["max_sensor_depth"]), "flags"] = 1
 
 ################
 # WRITE OUTPUTS

@@ -104,9 +104,12 @@ results = MODEL.c_shelph_classification(copy.deepcopy(point_cloud),
                                         min_buffer=min_buffer, max_buffer=max_buffer,
                                         sea_surface_label=41,
                                         bathymetry_label=40)
-point_cloud['class_ph'] = results['classification']
+
+df = pd.DataFrame()
+df["index_ph"] = results['index_ph']
+df["class_ph"] = results['classification']
 
 if output_csv != None:
-    point_cloud.to_csv(output_csv, index=False, columns=["index_ph", "class_ph"])
+    df.to_csv(output_csv, index=False, columns=["index_ph", "class_ph"])
 else:
-    print(point_cloud.to_string(index=False, header=True, columns=['index_ph', 'class_ph']))
+    print(df.to_string(index=False, header=True, columns=['index_ph', 'class_ph']))

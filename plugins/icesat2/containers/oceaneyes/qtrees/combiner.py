@@ -43,19 +43,20 @@ spot_csv_file = sys.argv[1]
 qtrees_csv_file = sys.argv[2]
 
 # read in data
+spot_df = pd.read_csv(spot_csv_file)
 qtrees_df = pd.read_csv(qtrees_csv_file)
 print("Read all into data frame")
 
+# merge qtrees predictions into spot dataframe
+trimmed_qtrees_df = pd.DataFrame()
+trimmed_qtrees_df["index_ph"] = qtrees_df["index_ph"]
+trimmed_qtrees_df["prediction"] = qtrees_df["prediction"]
+spot_df = pd.merge(spot_df, trimmed_qtrees_df, on="index_ph", how='left')
+del spot_df["prediction"]
+spot_df.rename(columns={"prediction": "class_ph"}, inplace=True)
+
 # write out new qtrees file
-new_qtrees_df = pd.DataFrame()
-new_qtrees_df["index_ph"] = qtrees_df["index_ph"]
-new_qtrees_df["class_ph"] = qtrees_df["prediction"]
-new_qtrees_df.to_csv(qtrees_csv_file, index=False)
+trimmed_qtrees_df.to_csv(qtrees_csv_file, index=False)
 
 # write out new spot file
-qtrees_df["class_ph"] = qtrees_df["prediction"]
-qtrees_df["surface_h"] = qtrees_df["sea_surface_h"]
-del qtrees_df["prediction"]
-del qtrees_df["sea_surface_h"]
-del qtrees_df["bathy_h"]
-qtrees_df.to_csv(spot_csv_file, index=False)
+spot_df.to_csv(spot_csv_file, index=False)
