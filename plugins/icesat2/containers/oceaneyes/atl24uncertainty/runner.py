@@ -208,9 +208,9 @@ data.loc[subaqueous, "sigma_vsu"] = data.loc[subaqueous].apply(lambda row: (row[
 # calculate total vertical uncertainty (tvu) - sigma_h comes from ATL03 and is the height uncertainty
 data["sigma_tvu"] = np.sqrt(np.square(data["sigma_vsu"]) + np.square(data["sigma_h"]))
 
-############################
-# CALCULATE PROCESING FLAGS
-############################
+#############################
+# CALCULATE PROCESSING FLAGS
+#############################
 
 print("Calculating processing flags")
 data["max_sensor_depth"] = 1.8 / data["kd_490"]

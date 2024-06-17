@@ -1,12 +1,13 @@
-# example: python utils/bathy_runner.py --domain <domain> --organization <org> --verbose --timeout 60000 --output_format parquet --classifiers medianfilter --plot 3
+# example: python utils/bathy_runner.py --domain <domain> --organization <org> --verbose --timeout 60000 --output_format hdf5 --output_as_sdp --output_file stage
 
 from sliderule import sliderule, icesat2
+import configparser
 import argparse
 import os
 
 # Command Line Arguments
 parser = argparse.ArgumentParser(description="""ATL24""")
-parser.add_argument('--granule',            '-g',   type=str,               default="ATL03_20230213042035_08341807_006_02.h5") # ATL03_20190604044922_10220307_006_02.h5
+parser.add_argument('--granule',            '-g',   type=str,               default="ATL03_20230213042035_08341807_006_02.h5")
 parser.add_argument('--aoi',                '-a',   type=str,               default=None) # "tests/data/tarawa.geojson"
 parser.add_argument('--track',              '-t',   type=int,               default=1)
 parser.add_argument('--spots',                      type=int, nargs='+',    choices=range(1,7), default=[1,2,3,4,5,6])
@@ -16,7 +17,7 @@ parser.add_argument('--desired_nodes',      '-n',   type=int,               defa
 parser.add_argument('--time_to_live',       '-m',   type=int,               default=120)
 parser.add_argument('--timeout',                    type=int,               default=800)
 parser.add_argument('--loglvl',             '-l',   type=str,               default="INFO")
-parser.add_argument('--output_file',        '-f',   type=str,               default="/tmp/ATL24_20190604044922_10220307_006_02")
+parser.add_argument('--output_file',        '-f',   type=str,               default=None) # default to "/tmp/ATL24_<rest_of_input_granule>.<format>"
 parser.add_argument('--output_format',              type=str,               default="hdf5")
 parser.add_argument('--verbose',            '-v',   action='store_true',    default=False)
 parser.add_argument('--cleanup',                    action='store_true',    default=False)
@@ -25,7 +26,7 @@ parser.add_argument('--ignore_bathy_mask',          action='store_true',    defa
 parser.add_argument('--print_metadata',             action='store_true',    default=False) # only available if [geo]parquet file format chosen
 parser.add_argument('--with_checksum',              action='store_true',    default=False)
 parser.add_argument('--output_as_sdp',              action='store_true',    default=False)
-parser.add_argument('--classifiers',                type=str, nargs='+',    default=["coastnet", "openoceans", "medianfilter", "cshelph", "bathypathfinder", "pointnet2", "ensemble"])
+parser.add_argument('--classifiers',                type=str, nargs='+',    default=["qtrees", "coastnet", "openoceans", "medianfilter", "cshelph", "bathypathfinder", "pointnet2", "ensemble"])
 parser.add_argument('--plot',               '-p',   type=int, nargs='+',    choices=range(1,7), default=[])
 args,_ = parser.parse_known_args()
 
@@ -38,8 +39,20 @@ if args.organization == "None":
 # Initialize SlideRule Client
 sliderule.init(args.domain, verbose=args.verbose, loglevel=args.loglvl, organization=args.organization, desired_nodes=args.desired_nodes, time_to_live=args.time_to_live)
 
-# Build Output Filename
-output_filename = args.output_file + "." + args.output_format
+# Build Output File Path (and credentials if necessary)
+if args.output_file == None:
+    output_filename         = "/tmp/" + args.granule.replace("ATL03", "ATL24").replace(".h5", args.output_format)
+elif args.output_file == "stage":
+    output_filename         = "s3://sliderule/data/ATL24/" + args.granule.replace("ATL03", "ATL24").replace(".h5", args.output_format)
+    home_directory          = os.path.expanduser('~')
+    aws_credential_file     = os.path.join(home_directory, '.aws', 'credentials')
+    config                  = configparser.RawConfigParser()
+    config.read(aws_credential_file)
+    credentials = {
+        "aws_access_key_id": config.get('default', 'aws_access_key_id'),
+        "aws_secret_access_key": config.get('default', 'aws_secret_access_key'),
+        "aws_session_token": config.get('default', 'aws_session_token')
+    }
 
 # Set Parameters
 parms = { 
@@ -63,7 +76,9 @@ parms = {
         "format": args.output_format, 
         "open_on_complete": args.output_format == "parquet" or args.output_format == "geoparquet", 
         "as_geo": args.output_format == "geoparquet",
-        "with_checksum": args.with_checksum
+        "with_checksum": args.with_checksum,
+        "region": "us-west-2",
+        "credentials": credentials
     }
 }
 

@@ -431,13 +431,20 @@ else:
                              'long_name':'', 
                              'source':'ATL24G', 
                              'units':''})
-            for classifier in input_files["classifiers"]:
-                add_variable(beam_group, classifier, spot_df[classifier].astype(np.int16), 'int16',
+            else:
+                add_variable(beam_group, "class_ph", spot_df["class_ph"].astype(np.int16), 'int16',
                             {'contentType':'physicalMeasurement', 
                              'description':'', 
                              'long_name':'', 
                              'source':'ATL24G', 
                              'units':''})
+                for classifier in input_files["classifiers"]:
+                    add_variable(beam_group, classifier, spot_df[classifier].astype(np.int16), 'int16',
+                                {'contentType':'physicalMeasurement', 
+                                'description':'', 
+                                'long_name':'', 
+                                'source':'ATL24G', 
+                                'units':''})
 
 
     print("HDF5 file written: " + atl24_filename)
