@@ -58,15 +58,16 @@ const struct luaL_Reg ArrowSampler::LUA_META_TABLE[] = {
 int ArrowSampler::luaCreate(lua_State* L)
 {
     ArrowParms* _parms = NULL;
+    const char* input_file = NULL;
+    const char* outq_name =  NULL;
+    std::vector<raster_info_t> rasters;
 
+    /* Get Parameters */
     try
     {
-        /* Get Parameters */
-        _parms                  = dynamic_cast<ArrowParms*>(getLuaObject(L, 1, ArrowParms::OBJECT_TYPE));
-        const char* input_file  = getLuaString(L, 2);
-        const char* outq_name   = getLuaString(L, 3);
-
-        std::vector<raster_info_t> rasters;
+        _parms      = dynamic_cast<ArrowParms*>(getLuaObject(L, 1, ArrowParms::OBJECT_TYPE));
+        input_file  = getLuaString(L, 2);
+        outq_name   = getLuaString(L, 3);
 
         /* Check if the parameter is a table */
         luaL_checktype(L, 4, LUA_TTABLE);
@@ -78,17 +79,37 @@ int ArrowSampler::luaCreate(lua_State* L)
         {
             const char*   rkey = getLuaString(L, -2);
             RasterObject* robj = dynamic_cast<RasterObject*>(getLuaObject(L, -1, RasterObject::OBJECT_TYPE));
+
+            if(!rkey) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid raster key");
+            if(!robj) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid raster object");
+
             rasters.push_back({rkey, robj});
 
             /* Pop value */
             lua_pop(L, 1);
         }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
 
-        /* Create Dispatch */
+        /* Release Lua Parameters Objects */
+        if(_parms) _parms->releaseLuaObject();
+        for(raster_info_t& raster : rasters)
+        {
+            raster.robj->releaseLuaObject();
+        }
+        return returnLuaStatus(L, false);
+    }
+
+    /* Create Dispatch */
+    try
+    {
         return createLuaObject(L, new ArrowSampler(L, _parms, input_file, outq_name, rasters));
     }
     catch(const RunTimeException& e)
     {
+        /* Constructor releases all Lua parameters objects on error */
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
@@ -256,38 +277,41 @@ ArrowSampler::ArrowSampler(lua_State* L, ArrowParms* _parms, const char* input_f
                            const char* outq_name, const std::vector<raster_info_t>& rasters):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
+    outQ(NULL),
+    impl(NULL),
+    dataFile(NULL),
     metadataFile(NULL),
+    outputPath(NULL),
+    outputMetadataPath(NULL),
     alreadySampled(false)
 {
     /* Add Lua sample function */
     LuaEngine::setAttrFunc(L, "sample", luaSample);
 
-    if (parms == NULL)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid ArrowParms object");
-
-    if((parms->path == NULL) || (parms->path[0] == '\0'))
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid output file path");
-
-    if ((input_file == NULL) || (input_file[0] == '\0'))
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid input file path");
-
-    if ((outq_name == NULL) || (outq_name[0] == '\0'))
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid input queue name");
-
     try
     {
+        /* Copy raster objects, create samplers */
         for(std::size_t i = 0; i < rasters.size(); i++)
         {
             const raster_info_t& raster = rasters[i];
             const char* rkey = raster.rkey;
             RasterObject* robj = raster.robj;
-
-            if(!rkey) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid raster key");
-            if(!robj) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid raster object");
-
             sampler_t* sampler = new sampler_t(rkey, robj, this);
             samplers.push_back(sampler);
         }
+
+        /* Validate Parameters */
+        if(parms == NULL)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid ArrowParms object");
+
+        if((parms->path == NULL) || (parms->path[0] == '\0'))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid output file path");
+
+        if((input_file == NULL) || (input_file[0] == '\0'))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid input file path");
+
+        if((outq_name == NULL) || (outq_name[0] == '\0'))
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid input queue name");
 
         /* Allocate Implementation */
         impl = new ArrowSamplerImpl(this);
