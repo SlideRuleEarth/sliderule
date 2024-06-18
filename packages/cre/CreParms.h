@@ -54,6 +54,7 @@ class CreParms: public LuaObject
         static const char* SELF;
         static const char* PARMS;
         static const char* IMAGE;
+        static const char* NAME;
         static const char* COMMAND;
         static const char* TIMEOUT;
 
@@ -68,8 +69,9 @@ class CreParms: public LuaObject
         *--------------------------------------------------------------------*/
 
         const char* image; // container image
+        const char* name; // container name
         const char* command; // container command
-        int timeout;
+        int timeout; // on requests to docker daemon
 
         /*--------------------------------------------------------------------
         * Methods

@@ -308,7 +308,7 @@ void* ContainerRunner::controlThread (void* parm)
     const char* create_response = NULL;
     const long create_http_code = CurlLib::request(EndpointObject::POST, create_url.c_str(), data.c_str(), &create_response, NULL, false, false, cr->parms->timeout, &headers, unix_socket);
     if(create_http_code != EndpointObject::Created) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to create container <%s>: %ld - %s", cr->parms->image, create_http_code, create_response);
-    else alert(INFO, RTE_INFO, cr->outQ, NULL, "Created container <%s> with parameters: %s", cr->parms->image, data.c_str());
+    else alert(INFO, RTE_INFO, cr->outQ, NULL, "Created container <%s/%s> with parameters: %s", cr->parms->image, cr->parms->name, data.c_str());
 
     /* Run Container */
     if(create_http_code == EndpointObject::Created)
@@ -321,7 +321,7 @@ void* ContainerRunner::controlThread (void* parm)
         /* Build Container Name String */
         char subid[8];
         StringLib::copy(subid, container_id, 8);
-        FString container_name_str("%s:%s", cr->parms->image, subid);
+        FString container_name_str("%s:%s/%s", cr->parms->image, subid, cr->parms->name);
 
         /* Latch Start Time */
         int64_t logs_since = TimeLib::gps2systime(TimeLib::gpstime()) / 1000000;

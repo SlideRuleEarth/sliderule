@@ -189,6 +189,7 @@ local function runclassifier(output_table, _bathy_parms, container_timeout, name
     local container_list = {}
     for i = 1,icesat2.NUM_SPOTS do
         if _bathy_parms:spoton(i) then
+            local spot_key = string.format("spot_%d", i)
             local settings_filename = string.format("%s/%s.json", crenv.container_sandbox_mount, name)                           -- e.g. /share/openoceans.json
             local parameters_filename = string.format("%s/%s_%d.json", crenv.container_sandbox_mount, icesat2.BATHY_PREFIX, i)   -- e.g. /share/bathy_spot_3.json
             local input_filename = string.format("%s/%s_%d.csv", crenv.container_sandbox_mount, icesat2.BATHY_PREFIX, i)         -- e.g. /share/bathy_spot_3.csv
@@ -196,13 +197,13 @@ local function runclassifier(output_table, _bathy_parms, container_timeout, name
             local container_command = command_override or string.format("/env/bin/python /%s/runner.py", name)
             local container_parms = {
                 image =  "oceaneyes",
+                name = name.."_"..spot_key,
                 command = string.format("%s %s %s %s %s", container_command, settings_filename, parameters_filename, input_filename, output_filename),
                 timeout = container_timeout,
                 parms = { [name..".json"] = parms[name] or {void=true} }
             }
             local container = runner.execute(crenv, container_parms, rspq)
             table.insert(container_list, container)
-            local spot_key = string.format("spot_%d", i)
             output_table["spot_photons"][spot_key] = input_filename
             output_table["spot_granule"][spot_key] = parameters_filename
             output_table["classifiers"][name][spot_key] = output_filename
@@ -294,6 +295,7 @@ local output_parms = parms[arrow.PARMS] or {
 }
 local writer_parms = {
     image =  "oceaneyes",
+    name = "writer",
     command = string.format("/env/bin/python /atl24writer/runner.py %s/writer_settings.json %s/writer_ancillary.json %s/writer_orbit.json", crenv.container_sandbox_mount, crenv.container_sandbox_mount, crenv.container_sandbox_mount),
     timeout = timeout,
     parms = { 
