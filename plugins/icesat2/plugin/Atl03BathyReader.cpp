@@ -349,13 +349,10 @@ Atl03BathyReader::Region::Region (const info_t* info):
         else
         {
             num_segments = segment_ph_cnt.size;
-            if(num_segments > 0)
+            num_photons  = 0;
+            for(int i = 0; i < num_segments; i++)
             {
-                num_photons = 0;
-                for(int i = 0; i < num_segments; i++)
-                {
-                    num_photons += segment_ph_cnt[i];
-                }
+                num_photons += segment_ph_cnt[i];
             }
         }
 
