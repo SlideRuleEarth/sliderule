@@ -211,7 +211,7 @@ SwotL2Reader::~SwotL2Reader (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-SwotL2Reader::Region::Region (Asset* asset, const char* resource, SwotParms* _parms, H5Coro::context_t* context):
+SwotL2Reader::Region::Region (Asset* asset, const char* resource, const SwotParms* _parms, H5Coro::context_t* context):
     lat             (asset, resource, "latitude_nadir", context),
     lon             (asset, resource, "longitude_nadir", context),
     inclusion_mask  (NULL),
@@ -236,7 +236,7 @@ SwotL2Reader::Region::Region (Asset* asset, const char* resource, SwotParms* _pa
     }
     else
     {
-        num_lines = MIN(lat.size, lon.size);
+        num_lines = lat.size;
     }
 
     /* Trim Geospatial Datasets Read from File */
@@ -263,7 +263,7 @@ void SwotL2Reader::Region::cleanup (void) const
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void SwotL2Reader::Region::polyregion (SwotParms* _parms)
+void SwotL2Reader::Region::polyregion (const SwotParms* _parms)
 {
     /* Find First and Last Lines in Polygon */
     bool first_line_found = false;
@@ -310,7 +310,7 @@ void SwotL2Reader::Region::polyregion (SwotParms* _parms)
 /*----------------------------------------------------------------------------
  * Region::rasterregion
  *----------------------------------------------------------------------------*/
-void SwotL2Reader::Region::rasterregion (SwotParms* _parms)
+void SwotL2Reader::Region::rasterregion (const SwotParms* _parms)
 {
     /* Allocate Inclusion Mask */
     if(lat.size <= 0) return;

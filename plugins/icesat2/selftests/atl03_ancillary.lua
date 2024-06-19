@@ -35,8 +35,8 @@ while true do
     runner.check(rec:getvalue("count") == 2, rec:getvalue("count"))
 end
 
-runner.check(cnt >= 16697, "failed to read sufficient number of contaner records")
-
+local expected_cnt = 21748
+runner.check(cnt == expected_cnt, string.format('failed to read sufficient number of container records, expected: %d, got: %d', expected_cnt, cnt))
 -- Clean Up --
 
 recq:destroy()

@@ -325,7 +325,7 @@ Atl03BathyReader::~Atl03BathyReader (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-Atl03BathyReader::Region::Region (info_t* info):
+Atl03BathyReader::Region::Region (const info_t* info):
     segment_lat    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context),
     segment_lon    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context),
     segment_ph_cnt (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(), &info->reader->context),
@@ -356,7 +356,12 @@ Atl03BathyReader::Region::Region (info_t* info):
         }
         else
         {
-            return; // early exit since no subsetting required
+            num_segments = segment_ph_cnt.size;
+            num_photons  = 0;
+            for(int i = 0; i < num_segments; i++)
+            {
+                num_photons += segment_ph_cnt[i];
+            }
         }
 
         /* Check If Anything to Process */
@@ -397,7 +402,7 @@ void Atl03BathyReader::Region::cleanup (void)
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void Atl03BathyReader::Region::polyregion (info_t* info)
+void Atl03BathyReader::Region::polyregion (const info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -461,7 +466,7 @@ void Atl03BathyReader::Region::polyregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Region::rasterregion
  *----------------------------------------------------------------------------*/
-void Atl03BathyReader::Region::rasterregion (info_t* info)
+void Atl03BathyReader::Region::rasterregion (const info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -544,7 +549,7 @@ void Atl03BathyReader::Region::rasterregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
+Atl03BathyReader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
     sc_orient           (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",                &info->reader->context),
     velocity_sc         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),     &info->reader->context, H5Coro::ALL_COLS, region.first_segment, region.num_segments),
     segment_delta_time  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
@@ -597,7 +602,7 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
 /*----------------------------------------------------------------------------
  * Atl09Class::Constructor
  *----------------------------------------------------------------------------*/
-Atl03BathyReader::Atl09Class::Atl09Class (info_t* info):
+Atl03BathyReader::Atl09Class::Atl09Class (const info_t* info):
     valid       (false),
     met_u10m    (info->reader->missing09 ? NULL : info->reader->asset09, info->reader->resource09.c_str(), FString("profile_%d/low_rate/met_u10m", info->track).c_str(), &info->reader->context09),
     met_v10m    (info->reader->missing09 ? NULL : info->reader->asset09, info->reader->resource09.c_str(), FString("profile_%d/low_rate/met_v10m", info->track).c_str(), &info->reader->context09),
@@ -751,7 +756,7 @@ Atl03BathyReader::OrbitInfo::OrbitInfo (const Asset* asset, const char* resource
  * OrbitInfo::tojson
  *----------------------------------------------------------------------------*/
 const char* Atl03BathyReader::OrbitInfo::tojson (void) const
-{    
+{
     FString json_contents(R"({)"
     R"("crossing_time":%lf,)"
     R"("cycle_number":%d,)"
@@ -778,9 +783,9 @@ const char* Atl03BathyReader::OrbitInfo::tojson (void) const
 void* Atl03BathyReader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = static_cast<info_t*>(parm);
+    const info_t* info = static_cast<info_t*>(parm);
     Atl03BathyReader* reader = info->reader;
-    BathyParms* parms = reader->parms;
+    const BathyParms* parms = reader->parms;
     RasterObject* ndwiRaster = RasterObject::cppCreate(reader->geoparms);
 
     /* Thread Variables */

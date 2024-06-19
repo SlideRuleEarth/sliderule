@@ -100,12 +100,12 @@ class FootprintReader: public LuaObject
         {
             public:
 
-                explicit Region     (info_t* info);
+                explicit Region     (const info_t* info);
                 ~Region             (void);
 
                 void cleanup        (void);
-                void polyregion     (info_t* info);
-                void rasterregion   (info_t* info);
+                void polyregion     (const info_t* info);
+                void rasterregion   (const info_t* info);
 
                 H5Array<double>     lat;
                 H5Array<double>     lon;
@@ -301,7 +301,7 @@ FootprintReader<footprint_t>::~FootprintReader (void)
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 template <class footprint_t>
-FootprintReader<footprint_t>::Region::Region (info_t* info):
+FootprintReader<footprint_t>::Region::Region (const info_t* info):
     lat             (info->reader->asset, info->reader->resource, FString("%s/%s", GediParms::beam2group(info->beam), info->reader->latName).c_str(), &info->reader->context),
     lon             (info->reader->asset, info->reader->resource, FString("%s/%s", GediParms::beam2group(info->beam), info->reader->lonName).c_str(), &info->reader->context),
     inclusion_mask  (NULL),
@@ -320,13 +320,13 @@ FootprintReader<footprint_t>::Region::Region (info_t* info):
     {
         rasterregion(info);
     }
-    else if(info->reader->parms->polygon.length() > 0)
+    else if(!info->reader->parms->polygon.empty())
     {
         polyregion(info);
     }
     else
     {
-        num_footprints = MIN(lat.size, lon.size);
+        num_footprints = lat.size;
     }
 
     /* Check If Anything to Process */
@@ -363,7 +363,7 @@ void FootprintReader<footprint_t>::Region::cleanup (void)
  * Region::polyregion
  *----------------------------------------------------------------------------*/
 template <class footprint_t>
-void FootprintReader<footprint_t>::Region::polyregion (info_t* info)
+void FootprintReader<footprint_t>::Region::polyregion (const info_t* info)
 {
     /* Find First and Last Footprints in Polygon */
     bool first_footprint_found = false;
@@ -409,7 +409,7 @@ void FootprintReader<footprint_t>::Region::polyregion (info_t* info)
  * Region::rasterregion
  *----------------------------------------------------------------------------*/
 template <class footprint_t>
-void FootprintReader<footprint_t>::Region::rasterregion (info_t* info)
+void FootprintReader<footprint_t>::Region::rasterregion (const info_t* info)
 {
     /* Allocate Inclusion Mask */
     if(lat.size <= 0) return;

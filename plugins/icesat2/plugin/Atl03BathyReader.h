@@ -130,7 +130,7 @@ class Atl03BathyReader: public LuaObject
             uint8_t         cycle;
             uint8_t         utm_zone;
             uint64_t        extent_id;
-            float           surface_h;              // orthometric (in meters)            
+            float           surface_h;              // orthometric (in meters)
             uint32_t        photon_count;
             photon_t        photons[];              // zero length field
         } extent_t;
@@ -161,12 +161,12 @@ class Atl03BathyReader: public LuaObject
         {
             public:
 
-                explicit Region     (info_t* info);
+                explicit Region     (const info_t* info);
                 ~Region             (void);
 
                 void cleanup        (void);
-                void polyregion     (info_t* info);
-                void rasterregion   (info_t* info);
+                void polyregion     (const info_t* info);
+                void rasterregion   (const info_t* info);
 
                 H5Array<double>     segment_lat;
                 H5Array<double>     segment_lon;
@@ -186,7 +186,7 @@ class Atl03BathyReader: public LuaObject
         {
             public:
 
-                Atl03Data           (info_t* info, const Region& region);
+                Atl03Data           (const info_t* info, const Region& region);
                 ~Atl03Data          (void) = default;
 
                 /* Read Data */
@@ -220,7 +220,7 @@ class Atl03BathyReader: public LuaObject
         {
             public:
 
-                explicit Atl09Class (info_t* info);
+                explicit Atl09Class (const info_t* info);
                 ~Atl09Class         (void) = default;
 
                 /* Generated Data */
@@ -233,7 +233,7 @@ class Atl03BathyReader: public LuaObject
         };
 
         /* AncillaryData SubClass */
-        class AncillaryData 
+        class AncillaryData
         {
             public:
 
@@ -267,7 +267,7 @@ class Atl03BathyReader: public LuaObject
         };
 
         /* OrbitInfo SubClass */
-        class OrbitInfo 
+        class OrbitInfo
         {
             public:
 

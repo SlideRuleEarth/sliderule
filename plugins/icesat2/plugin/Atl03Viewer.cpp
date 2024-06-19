@@ -220,7 +220,7 @@ Atl03Viewer::~Atl03Viewer (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Viewer::Region::Region (info_t* info):
+Atl03Viewer::Region::Region (const info_t* info):
     segment_lat    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context),
     segment_lon    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context),
     segment_ph_cnt (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(),       &info->reader->context),
@@ -249,7 +249,7 @@ Atl03Viewer::Region::Region (info_t* info):
         }
         else
         {
-            return; // early exit since no subsetting required
+            num_segments = segment_ph_cnt.size;
         }
 
         /* Check If Anything to Process */
@@ -290,7 +290,7 @@ void Atl03Viewer::Region::cleanup (void)
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void Atl03Viewer::Region::polyregion (info_t* info)
+void Atl03Viewer::Region::polyregion (const info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -310,7 +310,7 @@ void Atl03Viewer::Region::polyregion (info_t* info)
         }
 
         /* Segments with zero photon count may contain invalid coordinates,
-          making them unsuitable for inclusion in polygon tests. */
+           making them unsuitable for inclusion in polygon tests. */
 
         /* Check First Segment */
         if(!first_segment_found)
@@ -346,7 +346,7 @@ void Atl03Viewer::Region::polyregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Region::rasterregion
  *----------------------------------------------------------------------------*/
-void Atl03Viewer::Region::rasterregion (info_t* info)
+void Atl03Viewer::Region::rasterregion (const info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -401,7 +401,7 @@ void Atl03Viewer::Region::rasterregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Viewer::Atl03Data::Atl03Data (info_t* info, const Region& region):
+Atl03Viewer::Atl03Data::Atl03Data (const info_t* info, const Region& region):
     sc_orient           (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",                     &info->reader->context),
     segment_delta_time  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),           &info->reader->context, 0, region.first_segment, region.num_segments),
     segment_id          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_id").c_str(),           &info->reader->context, 0, region.first_segment, region.num_segments),
@@ -425,7 +425,7 @@ Atl03Viewer::Atl03Data::~Atl03Data (void) = default;
 void* Atl03Viewer::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = static_cast<info_t*>(parm);
+    const info_t* info = static_cast<info_t*>(parm);
     Atl03Viewer* reader = info->reader;
     stats_t local_stats = {0, 0, 0, 0, 0};
 
@@ -441,18 +441,15 @@ void* Atl03Viewer::subsettingThread (void* parm)
         /* Read ATL03 Datasets */
         const Atl03Data atl03(info, region);
 
-        /* Get Number of Segments */
-        const long num_segments = region.num_segments != H5Coro::ALL_ROWS ? region.num_segments : atl03.segment_delta_time.size;
-
         /* Increment Read Statistics */
-        local_stats.segments_read = num_segments;
+        local_stats.segments_read = region.num_segments;
 
         List<segment_t> segments;
 
         const uint32_t max_segments_per_extent = 256;
 
         /* Loop Through Each Segment */
-        for(long s = 0; reader->active && s < num_segments; s++)
+        for(long s = 0; reader->active && s < region.num_segments; s++)
         {
             /* Skip segments with zero photon count */
             if(region.segment_ph_cnt[s] == 0) continue;

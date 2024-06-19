@@ -249,7 +249,7 @@ Atl03Reader::~Atl03Reader (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Region::Region (info_t* info):
+Atl03Reader::Region::Region (const info_t* info):
     segment_lat    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context),
     segment_lon    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context),
     segment_ph_cnt (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(), &info->reader->context),
@@ -280,7 +280,12 @@ Atl03Reader::Region::Region (info_t* info):
         }
         else
         {
-            return; // early exit since no subsetting required
+            num_segments = segment_ph_cnt.size;
+            num_photons  = 0;
+            for(int i = 0; i < num_segments; i++)
+            {
+                num_photons += segment_ph_cnt[i];
+            }
         }
 
         /* Check If Anything to Process */
@@ -299,7 +304,6 @@ Atl03Reader::Region::Region (info_t* info):
         cleanup();
         throw;
     }
-
 }
 
 /*----------------------------------------------------------------------------
@@ -322,7 +326,7 @@ void Atl03Reader::Region::cleanup (void)
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void Atl03Reader::Region::polyregion (info_t* info)
+void Atl03Reader::Region::polyregion (const info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -340,6 +344,9 @@ void Atl03Reader::Region::polyregion (info_t* info)
         {
             inclusion = true;
         }
+
+        /* Segments with zero photon count may contain invalid coordinates,
+           making them unsuitable for inclusion in polygon tests. */
 
         /* Check First Segment */
         if(!first_segment_found)
@@ -386,7 +393,7 @@ void Atl03Reader::Region::polyregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Region::rasterregion
  *----------------------------------------------------------------------------*/
-void Atl03Reader::Region::rasterregion (info_t* info)
+void Atl03Reader::Region::rasterregion (const info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -469,7 +476,7 @@ void Atl03Reader::Region::rasterregion (info_t* info)
 /*----------------------------------------------------------------------------
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl03Data::Atl03Data (info_t* info, const Region& region):
+Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
     sc_orient           (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",                &info->reader->context),
     velocity_sc         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),     &info->reader->context, H5Coro::ALL_COLS, region.first_segment, region.num_segments),
     segment_delta_time  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
@@ -573,6 +580,7 @@ Atl03Reader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     }
 }
 
+
 /*----------------------------------------------------------------------------
  * Atl03Data::Destructor
  *----------------------------------------------------------------------------*/
@@ -658,7 +666,7 @@ Atl03Reader::Atl08Class::~Atl08Class (void)
 void Atl03Reader::Atl08Class::classify (const info_t* info, const Region& region, const Atl03Data& atl03)
 {
     /* Do Nothing If Not Enabled */
-    if(!info->reader->parms->stages[Icesat2Parms::STAGE_ATL08])
+    if(!enabled)
     {
         return;
     }
@@ -679,7 +687,7 @@ void Atl03Reader::Atl08Class::classify (const info_t* info, const Region& region
     }
 
     /* Allocate ATL08 Classification Array */
-    const int num_photons = atl03.dist_ph_along.size;
+    const long num_photons = atl03.dist_ph_along.size;
     classification = new uint8_t [num_photons];
 
     /* Allocate PhoREAL Arrays */
@@ -802,17 +810,23 @@ void Atl03Reader::Atl08Class::classify (const info_t* info, const Region& region
  *----------------------------------------------------------------------------*/
 uint8_t Atl03Reader::Atl08Class::operator[] (int index) const
 {
+    // This operator is called only after the classification array has been fully populated.
+    // clang-tidy is not able to determine that the array is always populated.
+    // We disable the related warning to avoid false positives.
+
+    // NOLINTNEXTLINE(clang-analyzer-core.uninitialized.UndefReturn)
     return classification[index];
 }
 
 /*----------------------------------------------------------------------------
  * YapcScore::Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::YapcScore::YapcScore (info_t* info, const Region& region, const Atl03Data& atl03):
+Atl03Reader::YapcScore::YapcScore (const info_t* info, const Region& region, const Atl03Data& atl03):
+    enabled {info->reader->parms->stages[Icesat2Parms::STAGE_YAPC]},
     score {NULL}
 {
     /* Do Nothing If Not Enabled */
-    if(!info->reader->parms->stages[Icesat2Parms::STAGE_YAPC])
+    if(!enabled)
     {
         return;
     }
@@ -843,7 +857,7 @@ Atl03Reader::YapcScore::~YapcScore (void)
 /*----------------------------------------------------------------------------
  * yapcV2
  *----------------------------------------------------------------------------*/
-void Atl03Reader::YapcScore::yapcV2 (info_t* info, const Region& region, const Atl03Data& atl03)
+void Atl03Reader::YapcScore::yapcV2 (const info_t* info, const Region& region, const Atl03Data& atl03)
 {
     /* YAPC Hard-Coded Parameters */
     const double MAXIMUM_HSPREAD = 15000.0; // meters
@@ -859,7 +873,7 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, const Region& region, const A
      *   CANNOT THROW BELOW THIS POINT
      */
 
-    /* Allocate ATL08 Classification Array */
+    /* Allocate Yapc Score Array */
     const int32_t num_photons = atl03.dist_ph_along.size;
     score = new uint8_t [num_photons];
     memset(score, 0, num_photons);
@@ -1014,7 +1028,7 @@ void Atl03Reader::YapcScore::yapcV2 (info_t* info, const Region& region, const A
 /*----------------------------------------------------------------------------
  * yapcV3
  *----------------------------------------------------------------------------*/
-void Atl03Reader::YapcScore::yapcV3 (info_t* info, const Region& region, const Atl03Data& atl03)
+void Atl03Reader::YapcScore::yapcV3 (const info_t* info, const Region& region, const Atl03Data& atl03)
 {
     /* YAPC Parameters */
     Icesat2Parms::yapc_t* settings = &info->reader->parms->yapc;
@@ -1179,9 +1193,9 @@ Atl03Reader::TrackState::~TrackState (void) = default;
 void* Atl03Reader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = static_cast<info_t*>(parm);
+    const info_t* info = static_cast<info_t*>(parm);
     Atl03Reader* reader = info->reader;
-    Icesat2Parms* parms = reader->parms;
+    const Icesat2Parms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     List<int32_t>* segment_indices = NULL;    // used for ancillary data
     List<int32_t>* photon_indices = NULL;     // used for ancillary data

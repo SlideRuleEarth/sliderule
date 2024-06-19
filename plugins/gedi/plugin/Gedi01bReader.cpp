@@ -128,7 +128,7 @@ Gedi01bReader::~Gedi01bReader (void) = default;
 /*----------------------------------------------------------------------------
  * Gedi01b::Constructor
  *----------------------------------------------------------------------------*/
-Gedi01bReader::Gedi01b::Gedi01b (info_t* info, Region& region):
+Gedi01bReader::Gedi01b::Gedi01b (const info_t* info, const Region& region):
     shot_number     (info->reader->asset, info->reader->resource, FString("%s/shot_number",                  GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
     delta_time      (info->reader->asset, info->reader->resource, FString("%s/geolocation/delta_time",       GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
     elev_bin0       (info->reader->asset, info->reader->resource, FString("%s/geolocation/elevation_bin0",   GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
@@ -164,7 +164,7 @@ Gedi01bReader::Gedi01b::~Gedi01b (void) = default;
 void* Gedi01bReader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = static_cast<info_t*>(parm);
+    const info_t* info = static_cast<info_t*>(parm);
     Gedi01bReader* reader = reinterpret_cast<Gedi01bReader*>(info->reader);
     const GediParms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
@@ -176,7 +176,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
     try
     {
         /* Subset to Region of Interest */
-        Region region(info);
+        const Region region(info);
 
         /* Read GEDI Datasets */
         const Gedi01b gedi01b(info, region);

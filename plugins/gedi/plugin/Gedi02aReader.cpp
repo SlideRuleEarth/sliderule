@@ -125,7 +125,7 @@ Gedi02aReader::~Gedi02aReader (void) = default;
 /*----------------------------------------------------------------------------
  * Gedi02a::Constructor
  *----------------------------------------------------------------------------*/
-Gedi02aReader::Gedi02a::Gedi02a (info_t* info, Region& region):
+Gedi02aReader::Gedi02a::Gedi02a (const info_t* info, const Region& region):
     shot_number     (info->reader->asset, info->reader->resource, FString("%s/shot_number",      GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
     delta_time      (info->reader->asset, info->reader->resource, FString("%s/delta_time",       GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
     elev_lowestmode (info->reader->asset, info->reader->resource, FString("%s/elev_lowestmode",  GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
@@ -160,7 +160,7 @@ Gedi02aReader::Gedi02a::~Gedi02a (void) = default;
 void* Gedi02aReader::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    info_t* info = static_cast<info_t*>(parm);
+    const info_t* info = static_cast<info_t*>(parm);
     Gedi02aReader* reader = reinterpret_cast<Gedi02aReader*>(info->reader); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
     const GediParms* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
@@ -172,10 +172,10 @@ void* Gedi02aReader::subsettingThread (void* parm)
     try
     {
         /* Subset to Region of Interest */
-        Region region(info);
+        const Region region(info);
 
         /* Read GEDI Datasets */
-        const Gedi02a Gedi02a(info, region);
+        const Gedi02a gedi02a(info, region);
 
         /* Increment Read Statistics */
         local_stats.footprints_read = region.num_footprints;
@@ -186,7 +186,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
             /* Check Degrade Filter */
             if(parms->degrade_filter != GediParms::DEGRADE_UNFILTERED)
             {
-                if(Gedi02a.degrade_flag[footprint] != parms->degrade_filter)
+                if(gedi02a.degrade_flag[footprint] != parms->degrade_filter)
                 {
                     local_stats.footprints_filtered++;
                     continue;
@@ -196,7 +196,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
             /* Check L2 Quality Filter */
             if(parms->l2_quality_filter != GediParms::L2QLTY_UNFILTERED)
             {
-                if(Gedi02a.quality_flag[footprint] != parms->l2_quality_filter)
+                if(gedi02a.quality_flag[footprint] != parms->l2_quality_filter)
                 {
                     local_stats.footprints_filtered++;
                     continue;
@@ -206,7 +206,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
             /* Check Surface Filter */
             if(parms->surface_filter != GediParms::SURFACE_UNFILTERED)
             {
-                if(Gedi02a.surface_flag[footprint] != parms->surface_filter)
+                if(gedi02a.surface_flag[footprint] != parms->surface_filter)
                 {
                     local_stats.footprints_filtered++;
                     continue;
@@ -226,19 +226,19 @@ void* Gedi02aReader::subsettingThread (void* parm)
             {
                 /* Populate Entry in Batch Structure */
                 g02a_footprint_t* fp = &reader->batchData->footprint[reader->batchIndex];
-                fp->shot_number             = Gedi02a.shot_number[footprint];
-                fp->time_ns                 = GediParms::deltatime2timestamp(Gedi02a.delta_time[footprint]);
+                fp->shot_number             = gedi02a.shot_number[footprint];
+                fp->time_ns                 = GediParms::deltatime2timestamp(gedi02a.delta_time[footprint]);
                 fp->latitude                = region.lat[footprint];
                 fp->longitude               = region.lon[footprint];
-                fp->elevation_lowestmode    = Gedi02a.elev_lowestmode[footprint];
-                fp->elevation_highestreturn = Gedi02a.elev_highestreturn[footprint];
-                fp->solar_elevation         = Gedi02a.solar_elevation[footprint];
-                fp->sensitivity             = Gedi02a.sensitivity[footprint];
+                fp->elevation_lowestmode    = gedi02a.elev_lowestmode[footprint];
+                fp->elevation_highestreturn = gedi02a.elev_highestreturn[footprint];
+                fp->solar_elevation         = gedi02a.solar_elevation[footprint];
+                fp->sensitivity             = gedi02a.sensitivity[footprint];
                 fp->beam                    = info->beam;
                 fp->flags                   = 0;
-                if(Gedi02a.degrade_flag[footprint]) fp->flags |= GediParms::DEGRADE_FLAG_MASK;
-                if(Gedi02a.quality_flag[footprint]) fp->flags |= GediParms::L2_QUALITY_FLAG_MASK;
-                if(Gedi02a.surface_flag[footprint]) fp->flags |= GediParms::SURFACE_FLAG_MASK;
+                if(gedi02a.degrade_flag[footprint]) fp->flags |= GediParms::DEGRADE_FLAG_MASK;
+                if(gedi02a.quality_flag[footprint]) fp->flags |= GediParms::L2_QUALITY_FLAG_MASK;
+                if(gedi02a.surface_flag[footprint]) fp->flags |= GediParms::SURFACE_FLAG_MASK;
 
                 /* Send Record */
                 reader->batchIndex++;
