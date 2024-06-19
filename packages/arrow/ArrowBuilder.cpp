@@ -80,7 +80,7 @@ int ArrowBuilder::luaCreate (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        /* Constructor releases _parms */
+        if(_parms) _parms->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
@@ -249,126 +249,94 @@ ArrowBuilder::ArrowBuilder (lua_State* L, ArrowParms* _parms,
                             const char* rec_type, const char* id,
                             const char* parms_str, const char* _endpoint):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    builderPid(NULL),
     parms(_parms),
-    active(false),
-    inQ(NULL),
-    recType(NULL),
-    timeKey(NULL),
-    xKey(NULL),
-    yKey(NULL),
     hasAncillaryFields(false),
-    hasAncillaryElements(false),
-    outQ(NULL),
-    dataFile(NULL),
-    metadataFile(NULL),
-    outputPath(NULL),
-    outputMetadataPath(NULL),
-    parmsAsString(NULL),
-    endpoint(NULL),
-    impl(NULL)
+    hasAncillaryElements(false)
 {
-    try
+    assert(_parms);
+    assert(outq_name);
+    assert(inq_name);
+    assert(rec_type);
+    assert(id);
+    assert(parms_str);
+    assert(_endpoint);
+
+    /* Get Record Meta Data */
+    RecordObject::meta_t* rec_meta = RecordObject::getRecordMetaFields(rec_type);
+    if(rec_meta == NULL)
     {
-        /* Validate Parameters */
-        if(parms == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid ArrowParms object");
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get meta data for %s", rec_type);
+    }
 
-        if(outq_name == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid output queue name");
-
-        if(inq_name == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid input queue name");
-
-        if(rec_type == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid record type");
-
-        if(id == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid id");
-
-        if(parms_str == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid parameters");
-
-        if(_endpoint == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid endpoint");
-
-        /* Save Parameters */
-        parmsAsString = StringLib::duplicate(parms_str);
-        endpoint = StringLib::duplicate(_endpoint);
-
-        /* Get Record Meta Data */
-        RecordObject::meta_t* rec_meta = RecordObject::getRecordMetaFields(rec_type);
-        if(rec_meta == NULL)
+    /* Build Geometry Fields */
+    geoData.as_geo = parms->as_geo;
+    if(geoData.as_geo)
+    {
+        /* Check if Record has Geospatial Fields */
+        if((rec_meta->x_field == NULL) || (rec_meta->y_field == NULL))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get meta data for %s", rec_type);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get x and y coordinates for %s", rec_type);
         }
 
-        /* Build Geometry Fields */
-        geoData.as_geo = parms->as_geo;
-        if(geoData.as_geo)
+        /* Get X Field */
+        geoData.x_field = RecordObject::getDefinedField(rec_type, rec_meta->x_field);
+        if(geoData.x_field.type == RecordObject::INVALID_FIELD)
         {
-            /* Check if Record has Geospatial Fields */
-            if((rec_meta->x_field == NULL) || (rec_meta->y_field == NULL))
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get x and y coordinates for %s", rec_type);
-            }
-
-            /* Get X Field */
-            geoData.x_field = RecordObject::getDefinedField(rec_type, rec_meta->x_field);
-            if(geoData.x_field.type == RecordObject::INVALID_FIELD)
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract x field [%s] from record type <%s>", rec_meta->x_field, rec_type);
-            }
-
-            /* Get Y Field */
-            geoData.y_field = RecordObject::getDefinedField(rec_type, rec_meta->y_field);
-            if(geoData.y_field.type == RecordObject::INVALID_FIELD)
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract y field [%s] from record type <%s>", rec_meta->y_field, rec_type);
-            }
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract x field [%s] from record type <%s>", rec_meta->x_field, rec_type);
         }
 
-        /* Get Paths */
-        outputPath = ArrowCommon::getOutputPath(parms);
-        outputMetadataPath = ArrowCommon::createMetadataFileName(outputPath);
-
-        /* Create Unique Temporary Filenames */
-        dataFile = ArrowCommon::getUniqueFileName(id);
-        metadataFile = ArrowCommon::createMetadataFileName(dataFile);
-
-         /* Set Record Type */
-        recType = StringLib::duplicate(rec_type);
-
-        /* Save Keys */
-        timeKey = StringLib::duplicate(getSubField(rec_meta->time_field));
-        xKey = StringLib::duplicate(getSubField(rec_meta->x_field));
-        yKey = StringLib::duplicate(getSubField(rec_meta->y_field));
-
-        /* Get Row Size */
-        const RecordObject::field_t batch_rec_field = RecordObject::getDefinedField(recType, rec_meta->batch_field);
-        if(batch_rec_field.type == RecordObject::INVALID_FIELD) batchRowSizeBytes = 0;
-        else batchRowSizeBytes = RecordObject::getRecordDataSize(batch_rec_field.exttype);
-        rowSizeBytes = RecordObject::getRecordDataSize(recType) + batchRowSizeBytes;
-        maxRowsInGroup = ROW_GROUP_SIZE / rowSizeBytes;
-
-        /* Initialize Queues */
-        const int qdepth = maxRowsInGroup * QUEUE_BUFFER_FACTOR;
-        outQ = new Publisher(outq_name, Publisher::defaultFree, qdepth);
-        inQ = new Subscriber(inq_name, MsgQ::SUBSCRIBER_OF_CONFIDENCE, qdepth);
-
-        /* Allocate Implementation */
-        impl = new ArrowBuilderImpl(this);
-
-        /* Start Builder Thread */
-        active = true;
-        builderPid = new Thread(builderThread, this);
+        /* Get Y Field */
+        geoData.y_field = RecordObject::getDefinedField(rec_type, rec_meta->y_field);
+        if(geoData.y_field.type == RecordObject::INVALID_FIELD)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract y field [%s] from record type <%s>", rec_meta->y_field, rec_type);
+        }
     }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating ArrowSampler: %s", e.what());
-        Delete();
-        throw;
-    }
+
+    /* Get Paths */
+    outputPath = ArrowCommon::getOutputPath(parms);  // throws
+
+    /*
+     * NO THROWING BEYOND THIS POINT
+     */
+
+    /* Get Paths */
+    outputMetadataPath = ArrowCommon::createMetadataFileName(outputPath);
+
+    /* Save Parameters */
+    parmsAsString = StringLib::duplicate(parms_str);
+    endpoint      = StringLib::duplicate(_endpoint);
+
+    /* Create Unique Temporary Filenames */
+    dataFile = ArrowCommon::getUniqueFileName(id);
+    metadataFile = ArrowCommon::createMetadataFileName(dataFile);
+
+    /* Set Record Type */
+    recType = StringLib::duplicate(rec_type);
+
+    /* Save Keys */
+    timeKey = StringLib::duplicate(getSubField(rec_meta->time_field));
+    xKey = StringLib::duplicate(getSubField(rec_meta->x_field));
+    yKey = StringLib::duplicate(getSubField(rec_meta->y_field));
+
+    /* Get Row Size */
+    const RecordObject::field_t batch_rec_field = RecordObject::getDefinedField(recType, rec_meta->batch_field);
+    if(batch_rec_field.type == RecordObject::INVALID_FIELD) batchRowSizeBytes = 0;
+    else batchRowSizeBytes = RecordObject::getRecordDataSize(batch_rec_field.exttype);
+    rowSizeBytes = RecordObject::getRecordDataSize(recType) + batchRowSizeBytes;
+    maxRowsInGroup = ROW_GROUP_SIZE / rowSizeBytes;
+
+    /* Initialize Queues */
+    const int qdepth = maxRowsInGroup * QUEUE_BUFFER_FACTOR;
+    outQ = new Publisher(outq_name, Publisher::defaultFree, qdepth);
+    inQ = new Subscriber(inq_name, MsgQ::SUBSCRIBER_OF_CONFIDENCE, qdepth);
+
+    /* Allocate Implementation */
+    impl = new ArrowBuilderImpl(this);
+
+    /* Start Builder Thread */
+    active = true;
+    builderPid = new Thread(builderThread, this);
 }
 
 /*----------------------------------------------------------------------------
@@ -376,27 +344,19 @@ ArrowBuilder::ArrowBuilder (lua_State* L, ArrowParms* _parms,
  *----------------------------------------------------------------------------*/
 ArrowBuilder::~ArrowBuilder(void)
 {
-    Delete();
-}
-
-/*----------------------------------------------------------------------------
- * Delete -
- *----------------------------------------------------------------------------*/
-void ArrowBuilder::Delete(void)
-{
     active = false;
     delete builderPid;
     parms->releaseLuaObject();
-    delete [] dataFile;
-    delete [] metadataFile;
-    delete [] outputPath;
-    delete [] outputMetadataPath;
-    delete [] parmsAsString;
-    delete [] endpoint;
-    delete [] recType;
-    delete [] timeKey;
-    delete [] xKey;
-    delete [] yKey;
+    delete[] dataFile;
+    delete[] metadataFile;
+    delete[] outputPath;
+    delete[] outputMetadataPath;
+    delete[] parmsAsString;
+    delete[] endpoint;
+    delete[] recType;
+    delete[] timeKey;
+    delete[] xKey;
+    delete[] yKey;
     delete outQ;
     delete inQ;
     delete impl;

@@ -150,14 +150,23 @@ out_file_size = getFileSize(_out_geoparquet);
 print("Output geoparquet file size: " .. out_file_size .. " bytes")
 runner.check(out_file_size > in_file_size, "Output file size is not greater than input file size: ")
 
+-- Negative tests
+
 print('\n--------------------------------------\nTest08: failed luaCreate bad arrow parms\n--------------------------------------\n')
 parquet_sampler = arrow.sampler(arrow.parms(), in_geoparquet, outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.check(parquet_sampler == nil)
 
-print('\n--------------------------------------\nTest09: failed constructor bad paths\n--------------------------------------\n')
-parquet_sampler = arrow.sampler(arrow.parms({path=out_geoparquet, format="parquet"}), "", "", {["mosaic"] = dem1, ["strips"] = dem2})
+print('\n--------------------------------------\nTest09: failed constructor empty input file\n--------------------------------------\n')
+parquet_sampler = arrow.sampler(arrow.parms({path=out_geoparquet, format="parquet"}), "", outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.check(parquet_sampler == nil)
 
+print('\n--------------------------------------\nTest10: failed constructor nil input file\n--------------------------------------\n')
+parquet_sampler = arrow.sampler(arrow.parms({path=out_geoparquet, format="parquet"}), nil, outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
+runner.check(parquet_sampler == nil)
+
+print('\n--------------------------------------\nTest10: failed constructor nil output queue\n--------------------------------------\n')
+parquet_sampler = arrow.sampler(arrow.parms({path=out_geoparquet, format="parquet"}), in_geoparquet, nil, {["mosaic"] = dem1, ["strips"] = dem2})
+runner.check(parquet_sampler == nil)
 
 -- There is no easy way to read parquet file in Lua, check the size of the output files
 -- the files were tested with python scripts

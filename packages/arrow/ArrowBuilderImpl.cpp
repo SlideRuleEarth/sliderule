@@ -207,7 +207,15 @@ void ArrowBuilderImpl::createSchema (void)
     {
         /* Set Arrow Output Stream */
         shared_ptr<arrow::io::FileOutputStream> file_output_stream;
-        PARQUET_ASSIGN_OR_THROW(file_output_stream, arrow::io::FileOutputStream::Open(arrowBuilder->getDataFile()));
+        auto _result = arrow::io::FileOutputStream::Open(arrowBuilder->getDataFile());
+        if(_result.ok())
+        {
+            file_output_stream = _result.ValueOrDie();
+        }
+        else
+        {
+            mlog(CRITICAL, "Failed to open file output stream: %s", _result.status().ToString().c_str());
+        }
 
         /* Set Writer Properties */
         parquet::WriterProperties::Builder writer_props_builder;

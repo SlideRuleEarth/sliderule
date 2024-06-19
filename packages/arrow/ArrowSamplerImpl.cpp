@@ -89,9 +89,17 @@ ArrowSamplerImpl::~ArrowSamplerImpl (void)
 *----------------------------------------------------------------------------*/
 void ArrowSamplerImpl::processInputFile(const char* file_path, std::vector<ArrowSampler::point_info_t*>& points)
 {
-    /* Open the input file */
-    PARQUET_ASSIGN_OR_THROW(inputFile, arrow::io::ReadableFile::Open(file_path, arrow::default_memory_pool()));
-    PARQUET_THROW_NOT_OK(parquet::arrow::OpenFile(inputFile, arrow::default_memory_pool(), &reader));
+    try
+    {
+        /* Open the input file */
+        PARQUET_ASSIGN_OR_THROW(inputFile, arrow::io::ReadableFile::Open(file_path, arrow::default_memory_pool()));
+        PARQUET_THROW_NOT_OK(parquet::arrow::OpenFile(inputFile, arrow::default_memory_pool(), &reader));
+    }
+    catch(const parquet::ParquetStatusException& e)
+    {
+        /* Rethrow as a runtime exception */
+        throw RunTimeException(CRITICAL, RTE_ERROR, "%s", e.what());
+    }
 
     getMetadata();
     getPoints(points);
@@ -116,14 +124,18 @@ bool ArrowSamplerImpl::processSamples(ArrowSampler::sampler_t* sampler)
             /* Arrow csv writer cannot handle columns with lists of samples */
             status = makeColumnsWithOneSample(sampler);
         }
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "Unsupported file format");
+        else mlog(CRITICAL, "Unsupported file format");
     }
-    catch(const RunTimeException& e)
+    catch(const parquet::ParquetStatusException& e)
+    {
+        mlog(CRITICAL, "Error processing samples: %s", e.what());
+    }
+
+    if(!status)
     {
         /* No columns will be added */
         newFields.clear();
         newColumns.clear();
-        mlog(e.level(), "Error processing samples: %s", e.what());
     }
 
     return status;
@@ -137,12 +149,14 @@ void ArrowSamplerImpl::createOutpuFiles(void)
     const ArrowParms* parms = arrowSampler->getParms();
     const char* dataFile = arrowSampler->getDataFile();
 
-    auto table = inputFileToTable();
-    auto updated_table = addNewColumns(table);
-    table = nullptr;
-
-    switch (parms->format)
+    try
     {
+        auto table = inputFileToTable();
+        auto updated_table = addNewColumns(table);
+        table = nullptr;
+
+        switch(parms->format)
+        {
         case ArrowParms::PARQUET:
             tableToParquet(updated_table, dataFile);
             break;
@@ -159,12 +173,18 @@ void ArrowSamplerImpl::createOutpuFiles(void)
 
         default:
             throw RunTimeException(CRITICAL, RTE_ERROR, "Unsupported file format");
-    }
+        }
 
-    /* Generate metadata file since csv/feather writers ignore it */
-    if(parms->format == ArrowParms::CSV || parms->format == ArrowParms::FEATHER)
+        /* Generate metadata file since csv/feather writers ignore it */
+        if(parms->format == ArrowParms::CSV || parms->format == ArrowParms::FEATHER)
+        {
+            metadataToJson(updated_table, arrowSampler->getMetadataFile());
+        }
+    }
+    catch(const parquet::ParquetStatusException& e)
     {
-        metadataToJson(updated_table, arrowSampler->getMetadataFile());
+        /* Rethrow as a runtime exception */
+        throw RunTimeException(CRITICAL, RTE_ERROR, "%s", e.what());
     }
 }
 

@@ -109,7 +109,7 @@ int ArrowSampler::luaCreate(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        /* Constructor releases all Lua parameters objects on error */
+        /* Constructor releases all Lua objects */
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
@@ -288,6 +288,11 @@ ArrowSampler::ArrowSampler(lua_State* L, ArrowParms* _parms, const char* input_f
     /* Add Lua sample function */
     LuaEngine::setAttrFunc(L, "sample", luaSample);
 
+    /* Validate Parameters */
+    assert(parms);
+    assert(input_file);
+    assert(outq_name);
+
     try
     {
         /* Copy raster objects, create samplers */
@@ -299,19 +304,6 @@ ArrowSampler::ArrowSampler(lua_State* L, ArrowParms* _parms, const char* input_f
             sampler_t* sampler = new sampler_t(rkey, robj, this);
             samplers.push_back(sampler);
         }
-
-        /* Validate Parameters */
-        if(parms == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid ArrowParms object");
-
-        if((parms->path == NULL) || (parms->path[0] == '\0'))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid output file path");
-
-        if((input_file == NULL) || (input_file[0] == '\0'))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid input file path");
-
-        if((outq_name == NULL) || (outq_name[0] == '\0'))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid input queue name");
 
         /* Allocate Implementation */
         impl = new ArrowSamplerImpl(this);
@@ -333,7 +325,6 @@ ArrowSampler::ArrowSampler(lua_State* L, ArrowParms* _parms, const char* input_f
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating ArrowSampler: %s", e.what());
         Delete();
         throw;
     }
