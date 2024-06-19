@@ -47,6 +47,13 @@ class OrchestratorLib
     public:
 
         /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const long INVALID_TX_ID = -1;
+        static const int MAX_LOCKS_PER_NODE = 3; // must match value in intelligent load balancer
+
+        /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
 
@@ -81,14 +88,16 @@ class OrchestratorLib
         static rsps_t           request             (EndpointObject::verb_t verb, const char* resource, const char* data);
 
         static bool             registerService     (const char* service, int lifetime, const char* address, bool verbose=false);
+        static long             selflock            (const char* service, int timeout_secs, int locks_per_node, bool verbose);
         static vector<Node*>*   lock                (const char* service, int nodes_needed, int timeout_secs, int locks_per_node, bool verbose=false);
         static bool             unlock              (long transactions[], int num_transactions, bool verbose=false);
         static bool             health              (void);
         static bool             metric              (const unsigned char* metric_buf, int buf_size);
-        static int              getNodes           (void);
+        static int              getNodes            (void);
 
         static int              luaUrl              (lua_State* L);
         static int              luaRegisterService  (lua_State* L);
+        static int              luaSelfLock         (lua_State* L);
         static int              luaLock             (lua_State* L);
         static int              luaUnlock           (lua_State* L);
         static int              luaHealth           (lua_State* L);

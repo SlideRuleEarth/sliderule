@@ -16,7 +16,7 @@ runner.check(reg_status, "failed to register")
 --
 -- API: lock
 --
-local m = netsvc.orchlock("test", 1, 5, true)
+local m = netsvc.orchlock("test", 1, 5, 1, true)
 local first_tx_id = nil
 for k,v in pairs(m) do
     first_tx_id = k

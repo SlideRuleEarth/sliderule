@@ -21,6 +21,13 @@ local userlog = msg.publish(rspq)
 -- initialize timing profiling table
 local profile = {}
 
+-- acquire lock for processing granule
+local transaction_id = netsvc.orchselflock("sliderule", timeout, 3)
+if transaction_id == netsvc.INVALID_TX_ID then
+    userlog:alert(core.INFO, core.RTE_ERROR, string.format("request <%s> failed to acquire lock", rspq))
+    return
+end
+
 -- populate resource via CMR request (ONLY IF NOT SUPPLIED)
 if not resource then
     local atl03_cmr_start_time = time.gps()
@@ -28,11 +35,11 @@ if not resource then
     if rc == earthdata.SUCCESS then
         local resources = rsps
         if #resources ~= 1 then
-            userlog:alert(core.INFO, core.RTE_ERROR, string.format("proxy request <%s> failed to retrieved single resource from CMR <%d>", rspq, #resources))
+            userlog:alert(core.INFO, core.RTE_ERROR, string.format("request <%s> failed to retrieved single resource from CMR <%d>", rspq, #resources))
             return
         end
     else
-        userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("proxy request <%s> failed to make CMR request <%d>: %s", rspq, rc, rsps))
+        userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("request <%s> failed to make CMR request <%d>: %s", rspq, rc, rsps))
         return
     end
     profile["atl03_cmr"] = (time.gps() - atl03_cmr_start_time) / 1000.0
@@ -235,6 +242,7 @@ local function runprocessor(_bathy_parms, container_timeout, name, in_parallel, 
             local container_command = command_override or string.format("/env/bin/python /%s/runner.py", name)
             local container_parms = {
                 image =  "oceaneyes",
+                name = name,
                 command = string.format("%s %s %s %s %s", container_command, settings_filename, parameters_filename, input_filename, output_filename),
                 timeout = container_timeout,
                 parms = { [name..".json"] = parms[name] or {void=true} }
@@ -319,3 +327,7 @@ arrow.send2user(crenv.host_sandbox_directory.."/atl24.bin.json", arrow.parms(out
 
 -- cleanup container runtime environment
 runner.cleanup(crenv)
+
+-- unlock transaction
+netsvc.orchunlock({transaction_id})
+

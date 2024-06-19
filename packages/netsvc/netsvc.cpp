@@ -58,6 +58,7 @@ int netsvc_open (lua_State* L)
         {"proxy",       EndpointProxy::luaCreate},
         {"orchurl",     OrchestratorLib::luaUrl},
         {"orchreg",     OrchestratorLib::luaRegisterService},
+        {"orchselflock",OrchestratorLib::luaSelfLock},
         {"orchlock",    OrchestratorLib::luaLock},
         {"orchunlock",  OrchestratorLib::luaUnlock},
         {"orchhealth",  OrchestratorLib::luaHealth},
@@ -76,12 +77,13 @@ int netsvc_open (lua_State* L)
     luaL_newlib(L, netsvc_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrStr(L, "PARMS",         NetsvcParms::SELF);
-    LuaEngine::setAttrInt(L, "RQST_TIMEOUT",  NetsvcParms::DEFAULT_RQST_TIMEOUT);
-    LuaEngine::setAttrInt(L, "NODE_TIMEOUT",  NetsvcParms::DEFAULT_NODE_TIMEOUT);
-    LuaEngine::setAttrInt(L, "READ_TIMEOUT",  NetsvcParms::DEFAULT_READ_TIMEOUT);
-    LuaEngine::setAttrInt(L, "CLUSTER_SIZE_HINT",  NetsvcParms::DEFAULT_CLUSTER_SIZE_HINT);
-    LuaEngine::setAttrInt(L, "MAX_LOCKS_PER_NODE",  NetsvcParms::MAX_LOCKS_PER_NODE);
+    LuaEngine::setAttrStr(L, "PARMS",               NetsvcParms::SELF);
+    LuaEngine::setAttrInt(L, "RQST_TIMEOUT",        NetsvcParms::DEFAULT_RQST_TIMEOUT);
+    LuaEngine::setAttrInt(L, "NODE_TIMEOUT",        NetsvcParms::DEFAULT_NODE_TIMEOUT);
+    LuaEngine::setAttrInt(L, "READ_TIMEOUT",        NetsvcParms::DEFAULT_READ_TIMEOUT);
+    LuaEngine::setAttrInt(L, "CLUSTER_SIZE_HINT",   NetsvcParms::DEFAULT_CLUSTER_SIZE_HINT);
+    LuaEngine::setAttrInt(L, "MAX_LOCKS_PER_NODE",  OrchestratorLib::MAX_LOCKS_PER_NODE);
+    LuaEngine::setAttrInt(L, "INVALID_TX_ID",       OrchestratorLib::INVALID_TX_ID);
 
     return 1;
 }

@@ -61,7 +61,6 @@ package.path = package.path .. ';/usr/local/etc/haproxy/?.lua'
 -- Imports
 --
 local json = require("json")
-local prettyprint = require("prettyprint")
 
 --
 -- Local Functions
@@ -152,7 +151,7 @@ StatData = {
 --
 MaxLocksPerNode = 3 -- must be coordinated with proxy.lua extension
 ScrubInterval = 1 -- second(s)
-MaxTimeout = 600 -- second(s)
+MaxTimeout = 60000 -- second(s) # effectively there is no maximum due to atl24g
 
 --
 -- API: /discovery/register
@@ -208,6 +207,89 @@ local function api_register(applet)
 end
 
 --
+-- API: /discovery/selflock
+--
+--  Nofity orchestrator that the sending node needs the requested number of locks
+--
+--  INPUT:
+--  {
+--      "service": "<service>",
+--      "address": "<ip address of self>",
+--      "locksPerNode": <number>,
+--      "timeout": <seconds>
+--  }
+--
+--  OUTPUT:
+--  {
+--      "transaction": tx1
+--  }
+--
+local function api_selflock(applet)
+
+    -- process request
+    local body = applet:receive()
+    local request = json.decode(body)
+    local service = request["service"]
+    local address = request["address"]
+    local timeout = request["timeout"] < MaxTimeout and request["timeout"] or MaxTimeout
+    local locksPerNode = request["locksPerNode"]
+    local expiration = os.time() + timeout
+
+    -- initialize local variables
+    local error_count = 0
+
+    -- loop through service registry and return addresses with least locks
+    local service_registry = ServiceCatalog[service]
+    if service_registry ~= nil then
+        local member = service_registry[address]
+        if member ~= nil then
+            -- check if number of locks exceeds max
+            if (member["locks"] + locksPerNode) <= MaxLocksPerNode then
+                -- create transaction
+                local transaction = {
+                    service_registry,
+                    address,
+                    expiration,
+                    locksPerNode
+                }
+                -- lock member
+                member["locks"] = member["locks"] + locksPerNode -- add new locks to member
+                local transaction_id = TransactionId -- transaction id that get returned
+                TransactionTable[TransactionId] = transaction -- register transaction
+                TransactionId = TransactionId + 1
+                -- send response
+                local response = string.format([[{"transaction": %d}]], transaction_id)
+                applet:set_status(200)
+                applet:add_header("content-length", string.len(response))
+                applet:add_header("content-type", "application/json")
+                applet:start_response()
+                applet:send(response)
+            else
+                core.log(core.err, string.format("Address %s in registry %s exceeded lock limit: %d", address, service, member["locks"]))
+                error_count = error_count + 1
+                applet:set_status(503)
+                applet:start_response()
+            end
+        else
+            core.log(core.err, string.format("Address %s not found in registry %s", address, service))
+            error_count = error_count + 1
+            applet:set_status(400)
+            applet:start_response()
+        end
+    else
+        core.log(core.err, string.format("Service %s not found", service))
+        error_count = error_count + 1
+        applet:set_status(400)
+        applet:start_response()
+    end
+
+    -- update statistics
+    StatData["numRequests"] = StatData["numRequests"] + 1
+    StatData["numFailures"] = StatData["numFailures"] + error_count
+
+end
+
+--
 -- API: /discovery/lock
 --
 --  Returns up to requested number of nodes for processing a request
@@ -216,6 +298,7 @@ end
 --  {
 --      "service": "<service>",
 --      "nodesNeeded": <number>,
+--      "locksPerNode": <number>,
 --      "timeout": <seconds>
 --  }
 --
@@ -665,6 +748,7 @@ end
 -- Register with HAProxy
 --
 core.register_service("orchestrator_register", "http", api_register)
+core.register_service("orchestrator_selflock", "http", api_selflock)
 core.register_service("orchestrator_lock", "http", api_lock)
 core.register_service("orchestrator_unlock", "http", api_unlock)
 core.register_service("orchestrator_prometheus", "http", api_prometheus)

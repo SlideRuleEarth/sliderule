@@ -123,6 +123,42 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
 }
 
 /*----------------------------------------------------------------------------
+ * selflock
+ *----------------------------------------------------------------------------*/
+long OrchestratorLib::selflock (const char* service, int timeout_secs, int locks_per_node, bool verbose)
+{
+    long transaction = INVALID_TX_ID;
+    FString rqst("{\"service\":\"%s\", \"address\": \"http://%s:9081\", \"timeout\": %d, \"locksPerNode\": %d}", service, SockLib::sockipv4(), timeout_secs, locks_per_node);
+    const rsps_t rsps = request(EndpointObject::POST, "/discovery/selflock", rqst.c_str());
+    if(rsps.code == EndpointObject::OK)
+    {
+        try
+        {
+            rapidjson::Document json;
+            json.Parse(rsps.response);
+
+            transaction = json["transaction"].GetDouble();
+            if(verbose)
+            {
+                mlog(INFO, "Locked Self <%ld>", transaction);
+            }
+        }
+        catch(const std::exception& e)
+        {
+            mlog(CRITICAL, "Failed process response to lock self: %s", rsps.response);
+        }
+    }
+    else
+    {
+        mlog(CRITICAL, "Encountered HTTP error <%ld> when locking self on %s", rsps.code, service);
+    }
+
+    delete [] rsps.response;
+
+    return transaction;
+}
+
+/*----------------------------------------------------------------------------
  * lock
  *----------------------------------------------------------------------------*/
 vector<OrchestratorLib::Node*>* OrchestratorLib::lock (const char* service, int nodes_needed, int timeout_secs, int locks_per_node, bool verbose)
@@ -367,19 +403,44 @@ int OrchestratorLib::luaRegisterService(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaLock - orchlock(<host>)
+ * luaSelfLock - orchselflock(<service>, <timeout>, [<locks_per_node>])
+ *----------------------------------------------------------------------------*/
+int OrchestratorLib::luaSelfLock(lua_State* L)
+{
+    try
+    {
+        const char* service         = LuaObject::getLuaString(L, 1);
+        const int timeout_secs      = LuaObject::getLuaInteger(L, 2);
+        const int locks_per_node    = LuaObject::getLuaInteger(L, 3, true, 1);
+        const bool verbose          = LuaObject::getLuaBoolean(L, 4, true, false);
+
+        const long tx_id = selflock(service, timeout_secs, locks_per_node, verbose);
+        lua_pushinteger(L, tx_id);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error locking members: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaLock - orchlock(<service>, <nodes_needed>, <timeout>, [<locks_per_node>])
  *----------------------------------------------------------------------------*/
 int OrchestratorLib::luaLock(lua_State* L)
 {
     vector<Node*>* nodes = NULL;
     try
     {
-        const char* service    = LuaObject::getLuaString(L, 1);
-        const int nodes_needed = LuaObject::getLuaInteger(L, 2);
-        const int timeout_secs = LuaObject::getLuaInteger(L, 3);
-        const bool verbose     = LuaObject::getLuaBoolean(L, 4, true, false);
+        const char* service         = LuaObject::getLuaString(L, 1);
+        const int nodes_needed      = LuaObject::getLuaInteger(L, 2);
+        const int timeout_secs      = LuaObject::getLuaInteger(L, 3);
+        const int locks_per_node    = LuaObject::getLuaInteger(L, 4, true, 1);
+        const bool verbose          = LuaObject::getLuaBoolean(L, 5, true, false);
 
-        nodes = lock(service, nodes_needed, timeout_secs, verbose);
+        nodes = lock(service, nodes_needed, timeout_secs, locks_per_node, verbose);
 
         lua_newtable(L);
         for(unsigned i = 0; i < nodes->size(); i++)

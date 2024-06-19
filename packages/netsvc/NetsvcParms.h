@@ -74,7 +74,6 @@ class NetsvcParms: public LuaObject
         static const int DEFAULT_READ_TIMEOUT       = 600; // seconds
 
         static const int DEFAULT_CLUSTER_SIZE_HINT  = 0; // dynamic
-        static const int MAX_LOCKS_PER_NODE         = 3; // must match value in intelligent load balancer
 
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
