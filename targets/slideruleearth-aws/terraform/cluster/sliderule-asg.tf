@@ -39,7 +39,7 @@ resource "aws_autoscaling_group" "sliderule-cluster" {
 
 resource "aws_launch_configuration" "sliderule-instance" {
   image_id                    = data.aws_ami.sliderule_cluster_ami.id
-  instance_type               = "t4g.2xlarge"
+  instance_type               = var.cluster_instance_type
   root_block_device {
     volume_type               = "gp2"
     volume_size               = 32

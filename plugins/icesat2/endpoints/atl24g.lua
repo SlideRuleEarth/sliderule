@@ -61,7 +61,7 @@ if not proc then
 end
 
 -- build hls polygon
-local atl09_polygon_cmr_start_time = time.gps()
+local hls_polygon_cmr_start_time = time.gps()
 local hls_poly = parms["poly"]
 if not hls_poly then
     local original_name_filter = parms["name_filter"]
@@ -72,8 +72,8 @@ if not hls_poly then
     end
     parms["name_filter"] = original_name_filter
 end
-profile["atl09_polygon_cmr"] = (time.gps() - atl09_polygon_cmr_start_time) / 1000.0
-userlog:alert(core.INFO, core.RTE_INFO, string.format("HLS polygon CMR search executed in %f seconds", profile["atl09_polygon_cmr"]))
+profile["hls_polygon_cmr"] = (time.gps() - hls_polygon_cmr_start_time) / 1000.0
+userlog:alert(core.INFO, core.RTE_INFO, string.format("HLS polygon CMR search executed in %f seconds", profile["hls_polygon_cmr"]))
 
 -- build hls parameters
 local year      = resource:sub(7,10)
@@ -267,7 +267,13 @@ end
 -- execute qtrees surface finding algorithm
 runclassifier(output_files, bathy_parms, timeout, "qtrees", true, "bash /qtrees/runner.sh")
 
--- execute medialfilter bathy
+-- perform refraction correction
+runprocessor(bathy_parms, timeout, "atl24refraction", true)
+
+-- perform uncertainty calculations
+runprocessor(bathy_parms, timeout, "atl24uncertainty", true)
+
+-- execute medianfilter bathy
 runclassifier(output_files, bathy_parms, timeout, "medianfilter", true)
 
 -- execute cshelph bathy
@@ -284,12 +290,6 @@ runclassifier(output_files, bathy_parms, timeout, "openoceans", false)
 
 -- execute coastnet bathy
 runclassifier(output_files, bathy_parms, timeout, "coastnet", false, "bash /coastnet/bathy.sh")
-
--- perform refraction correction
-runprocessor(bathy_parms, timeout, "atl24refraction", true)
-
--- perform uncertainty calculations
-runprocessor(bathy_parms, timeout, "atl24uncertainty", true)
 
 -- capture endpoint timing
 profile["atl24_endpoint"] = (time.gps() - endpoint_start_time) / 1000.0

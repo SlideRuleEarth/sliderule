@@ -33,7 +33,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 from photon_refraction import photon_refraction
 
 import pandas as pd
-from pyproj import Transformer
+from pyproj import Proj, transform, Transformer
 import sys
 import json
 
@@ -92,7 +92,11 @@ data.loc[subaqueous, 'y_ph'] += data.loc[subaqueous, 'dN']
 data.loc[subaqueous, 'geoid_corr_h'] += data.loc[subaqueous, 'dZ']
 
 # correct latitude and longitude
-transformer = Transformer.from_crs(f"EPSG:326{info['utm_zone']}", "EPSG:7912", always_xy=True)
+if info["region"] < 8:
+    epsg_prefix = "EPSG:326" # northern hemisphere
+else:
+    epsg_prefix = "EPSG:327"# southern hemisphere
+transformer = Transformer.from_crs(f"{epsg_prefix}{info['utm_zone']}", "EPSG:7912", always_xy=True)
 data["geoloc_corr"] = data.apply(lambda row: transformer.transform(row['x_ph'], row['y_ph']), axis=1)
 data["longitude"] = data.apply(lambda row: row['geoloc_corr'][0], axis=1)
 data["latitude"] = data.apply(lambda row: row['geoloc_corr'][1], axis=1)
