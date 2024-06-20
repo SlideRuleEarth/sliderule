@@ -263,6 +263,12 @@ int RasterObject::luaSamples(lua_State *L)
             mlog(CRITICAL, "Too many rasters to sample, max allowed: %d, limit your AOI/temporal range or use filters", GeoIndexedRaster::MAX_READER_THREADS);
         }
 
+        if(err & SS_RESOURCE_LIMIT_ERROR)
+        {
+            listvalid = false;
+            mlog(CRITICAL, "System resource limit reached, could not sample rasters");
+        }
+
         /* Create return table */
         lua_createtable(L, slist.length(), 0);
         num_ret++;
@@ -392,6 +398,12 @@ int RasterObject::slist2table(const List<RasterSubset*>& slist, uint32_t errors,
     {
         listvalid = false;
         mlog(CRITICAL, "Some rasters could not be subset, requested memory size > max allowed: %ld MB", RasterSubset::MAX_SIZE / (1024 * 1024));
+    }
+
+    if(errors & SS_RESOURCE_LIMIT_ERROR)
+    {
+        listvalid = false;
+        mlog(CRITICAL, "System resource limit reached, could not subset rasters");
     }
 
     /* Create return table */
