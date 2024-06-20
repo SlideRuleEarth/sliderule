@@ -172,7 +172,7 @@ class GeoIndexedRaster: public RasterObject
 
         static void*    readingThread   (void *param);
 
-        void            createThreads   (void);
+        bool            createThreads   (void);
         bool            updateCache     (void);
         bool            filterRasters   (int64_t gps);
 };

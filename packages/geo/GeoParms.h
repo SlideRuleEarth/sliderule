@@ -58,6 +58,7 @@
 #define SS_WRITE_ERROR            (1 << 4)
 #define SS_SUBRASTER_ERROR        (1 << 5)
 #define SS_INDEX_FILE_ERROR       (1 << 6)
+#define SS_RESOURCE_LIMIT_ERROR   (1 << 7)
 
 
 /******************************************************************************

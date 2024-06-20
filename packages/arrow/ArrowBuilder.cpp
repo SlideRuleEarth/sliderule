@@ -261,10 +261,6 @@ ArrowBuilder::ArrowBuilder (lua_State* L, ArrowParms* _parms,
     assert(parms_str);
     assert(_endpoint);
 
-    /* Save Parameters */
-    parmsAsString = StringLib::duplicate(parms_str);
-    endpoint      = StringLib::duplicate(_endpoint);
-
     /* Get Record Meta Data */
     RecordObject::meta_t* rec_meta = RecordObject::getRecordMetaFields(rec_type);
     if(rec_meta == NULL)
@@ -298,16 +294,22 @@ ArrowBuilder::ArrowBuilder (lua_State* L, ArrowParms* _parms,
     }
 
     /* Get Paths */
-    outputPath = ArrowCommon::getOutputPath(parms);
-    outputMetadataPath = ArrowCommon::createMetadataFileName(outputPath);
-
-    /* Create Unique Temporary Filenames */
-    dataFile = ArrowCommon::getUniqueFileName(id);
-    metadataFile = ArrowCommon::createMetadataFileName(dataFile);
+    outputPath = ArrowCommon::getOutputPath(parms);  // throws
 
     /*
      * NO THROWING BEYOND THIS POINT
      */
+
+    /* Get Paths */
+    outputMetadataPath = ArrowCommon::createMetadataFileName(outputPath);
+
+    /* Save Parameters */
+    parmsAsString = StringLib::duplicate(parms_str);
+    endpoint      = StringLib::duplicate(_endpoint);
+
+    /* Create Unique Temporary Filenames */
+    dataFile = ArrowCommon::getUniqueFileName(id);
+    metadataFile = ArrowCommon::createMetadataFileName(dataFile);
 
     /* Set Record Type */
     recType = StringLib::duplicate(rec_type);
@@ -345,16 +347,16 @@ ArrowBuilder::~ArrowBuilder(void)
     active = false;
     delete builderPid;
     parms->releaseLuaObject();
-    delete [] dataFile;
-    delete [] metadataFile;
-    delete [] outputPath;
-    delete [] outputMetadataPath;
-    delete [] parmsAsString;
-    delete [] endpoint;
-    delete [] recType;
-    delete [] timeKey;
-    delete [] xKey;
-    delete [] yKey;
+    delete[] dataFile;
+    delete[] metadataFile;
+    delete[] outputPath;
+    delete[] outputMetadataPath;
+    delete[] parmsAsString;
+    delete[] endpoint;
+    delete[] recType;
+    delete[] timeKey;
+    delete[] xKey;
+    delete[] yKey;
     delete outQ;
     delete inQ;
     delete impl;
