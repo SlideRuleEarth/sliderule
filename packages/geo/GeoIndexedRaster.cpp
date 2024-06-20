@@ -439,9 +439,6 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
 {
-    /* Create additional reader threads if needed */
-    createThreads();
-
     /* For each raster which is marked to be sampled, give it to the reader thread */
     int signaledReaders = 0;
     int i = 0;
@@ -496,8 +493,13 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
 
     if(findRasters(geo) && filterRasters(gps) && updateCache())
     {
-        sampleRasters(geo);
-        status = true;
+        /* Create additional reader threads if needed */
+        status = createThreads();
+        if(status)
+        {
+            sampleRasters(geo);
+            status = true;
+        }
     }
 
     return status;
@@ -677,21 +679,30 @@ void* GeoIndexedRaster::readingThread(void *param)
 /*----------------------------------------------------------------------------
  * createThreads
  *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::createThreads(void)
+bool GeoIndexedRaster::createThreads(void)
 {
     const int threadsNeeded = cache.length();
     const int threadsNow    = readers.length();
     const int newThreadsCnt = threadsNeeded - threadsNow;
 
     if(threadsNeeded <= threadsNow)
-        return;
+        return true;
 
-    for(int i = 0; i < newThreadsCnt; i++)
+    try
     {
-        Reader* r = new Reader(this);
-        readers.add(r);
+        for(int i = 0; i < newThreadsCnt; i++)
+        {
+            Reader* r = new Reader(this);
+            readers.add(r);
+        }
     }
-    assert(readers.length() == threadsNeeded);
+    catch (const RunTimeException &e)
+    {
+        ssError |= SS_RESOURCE_LIMIT_ERROR;
+        mlog(CRITICAL, "Failed to create reader threads, needed: %d, created: %d", newThreadsCnt, readers.length() - threadsNow);
+    }
+
+    return readers.length() == threadsNeeded;
 }
 
 /*----------------------------------------------------------------------------
