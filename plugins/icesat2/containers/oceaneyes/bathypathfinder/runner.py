@@ -84,7 +84,7 @@ spot_df = pd.read_csv(input_csv)
 # keep only photons below sea surface
 bathy_df = spot_df
 if not find_surface:
-    spot_df = spot_df.loc[spot_df['geoid_corr_h'] < spot_df['surface_h']]
+    bathy_df = spot_df.loc[spot_df['geoid_corr_h'] < spot_df['surface_h']]
 
 # run bathy pathfinder
 bps = BathyPathSearch(tau, k, n)
