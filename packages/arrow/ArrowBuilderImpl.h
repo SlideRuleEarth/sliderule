@@ -103,7 +103,7 @@ class ArrowBuilderImpl
          * Methods
          *--------------------------------------------------------------------*/
 
-        void createSchema           (void);
+        bool createSchema           (void);
         bool buildFieldList         (const char* rec_type, int offset, int flags);
         static void appendGeoMetaData(const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
         void appendServerMetaData   (const std::shared_ptr<arrow::KeyValueMetadata>& metadata);
