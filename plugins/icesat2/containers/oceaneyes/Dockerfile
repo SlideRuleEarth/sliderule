@@ -110,6 +110,7 @@ COPY cshelph /cshelph
 COPY medianfilter /medianfilter
 COPY openoceans /openoceans
 COPY pointnet2 /pointnet2
+COPY utils /utils
 
 # container defaults
 SHELL ["/bin/bash", "-c"]

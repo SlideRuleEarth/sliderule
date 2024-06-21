@@ -39,7 +39,6 @@
 #
 
 import sys
-import json
 import copy
 import importlib
 import pandas as pd
@@ -55,31 +54,9 @@ MODEL = importlib.import_module('c_shelph')
 ##############
 
 # process command line
-if len(sys.argv) == 5:
-    settings_json   = sys.argv[1]
-    info_json       = sys.argv[2]
-    input_csv       = sys.argv[3]
-    output_csv      = sys.argv[4]
-elif len(sys.argv) == 4:
-    settings_json   = None
-    info_json       = sys.argv[1]
-    input_csv       = sys.argv[2]
-    output_csv      = sys.argv[3]
-elif len(sys.argv) == 3:
-    settings_json   = None
-    info_json       = sys.argv[1]
-    input_csv       = sys.argv[2]
-    output_csv      = None
-else:
-    print("Incorrect parameters supplied: python runner.py [<settings json>] <input json spot file> <input csv spot file> [<output csv spot file>]")
-    sys.exit()
-
-# read settings json
-if settings_json != None:
-    with open(settings_json, 'r') as json_file:
-        settings = json.load(json_file)
-else:
-    settings = {}
+sys.path.append('../utils')
+from command_line_processor import process_command_line
+settings, beam_info, point_cloud, output_csv, info_json = process_command_line(sys.argv)
 
 # set configuration
 surface_buffer  = settings.get('surface_buffer', -0.5) 
@@ -89,21 +66,20 @@ thresh          = settings.get('thresh', 0.5)
 min_buffer      = settings.get('min_buffer', -80)
 max_buffer      = settings.get('max_buffer', 5)
 
-# read info json
-with open(info_json, 'r') as json_file:
-    beam_info = json.load(json_file)
-
 ##################
 # RUN MODEL
 ##################
 
-point_cloud = pd.read_csv(input_csv)
 results = MODEL.c_shelph_classification(copy.deepcopy(point_cloud), 
                                         surface_buffer=surface_buffer,
                                         h_res=h_res, lat_res=lat_res, thresh=thresh,
                                         min_buffer=min_buffer, max_buffer=max_buffer,
                                         sea_surface_label=41,
                                         bathymetry_label=40)
+
+################
+# WRITE OUTPUTS
+################
 
 df = pd.DataFrame()
 df["index_ph"] = point_cloud['index_ph']

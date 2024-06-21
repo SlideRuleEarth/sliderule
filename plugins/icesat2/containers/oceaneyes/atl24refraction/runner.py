@@ -42,42 +42,17 @@ import json
 ##############
 
 # process command line
-if len(sys.argv) == 5:
-    settings_json   = sys.argv[1]
-    info_json       = sys.argv[2]
-    input_csv       = sys.argv[3]
-    output_csv      = sys.argv[4]
-elif len(sys.argv) == 4:
-    settings_json   = None
-    info_json       = sys.argv[1]
-    input_csv       = sys.argv[2]
-    output_csv      = sys.argv[3]
-elif len(sys.argv) == 3:
-    settings_json   = None
-    info_json       = sys.argv[1]
-    input_csv       = sys.argv[2]
-    output_csv      = None
-else:
-    print("Incorrect parameters supplied: python runner.py [<settings json>] <input json spot file> <input csv spot file> [<output csv spot file>]")
-    sys.exit()
-
-# read settings json
-if settings_json != None:
-    with open(settings_json, 'r') as json_file:
-        settings = json.load(json_file)
-else:
-    settings = {}
+sys.path.append('../utils')
+from command_line_processor import process_command_line
+settings, info, data, output_csv, info_json = process_command_line(sys.argv)
 
 # set configuration
 n1 = settings.get('n1', 1.00029) 
 n2 = settings.get('n2', 1.34116)
 
-# read info json
-with open(info_json, 'r') as json_file:
-    info = json.load(json_file)
-
-# read input csv
-data = pd.read_csv(input_csv)
+#########################
+# REFRACTION CORRECTIONS
+#########################
 
 # calculation refraction corrections
 dE, dN, dZ = photon_refraction(data["surface_h"], data["geoid_corr_h"], data["ref_az"], data["ref_el"], n1, n2)
@@ -104,6 +79,10 @@ data["latitude"] = data.apply(lambda row: row['geoloc_corr'][1], axis=1)
 # calculate subaqueous depth
 data["depth"] = 0.0
 data.loc[subaqueous, 'depth'] = data.loc[subaqueous, 'surface_h'] - data.loc[subaqueous, 'geoid_corr_h']
+
+################
+# WRITE OUTPUTS
+################
 
 # capture statistics
 data_corr = data[data["geoid_corr_h"] < data["surface_h"]]

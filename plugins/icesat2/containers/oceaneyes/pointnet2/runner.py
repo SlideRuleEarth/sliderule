@@ -83,31 +83,9 @@ import os
 ##############
 
 # process command line
-if len(sys.argv) == 5:
-    settings_json   = sys.argv[1]
-    info_json       = sys.argv[2]
-    input_csv       = sys.argv[3]
-    output_csv      = sys.argv[4]
-elif len(sys.argv) == 4:
-    settings_json   = None
-    info_json       = sys.argv[1]
-    input_csv       = sys.argv[2]
-    output_csv      = sys.argv[3]
-elif len(sys.argv) == 3:
-    settings_json   = None
-    info_json       = sys.argv[1]
-    input_csv       = sys.argv[2]
-    output_csv      = None
-else:
-    print("Incorrect parameters supplied: python runner.py [<settings json>] <input json spot file> <input csv spot file> [<output csv spot file>]")
-    sys.exit()
-
-# read settings json
-if settings_json != None:
-    with open(settings_json, 'r') as json_file:
-        settings = json.load(json_file)
-else:
-    settings = {}
+sys.path.append('../utils')
+from command_line_processor import process_command_line
+settings, spot_info, spot_df, output_csv, info_json = process_command_line(sys.argv)
 
 # set configuration
 maxElev         = settings.get('maxElev', 10) 
@@ -122,18 +100,9 @@ num_votes       = settings.get('num_votes', 10)
 threshold       = settings.get('threshold', 0.5)
 model_seed      = settings.get('model_seed', 24)
 
-# read info json
-with open(info_json, 'r') as json_file:
-    spot_info = json.load(json_file)
-
 ##################
 # BUILD DATAFRAME
 ##################
-
-print(f'Preprocessing {input_csv}...')
-
-# read input csv and store into a dataframe
-spot_df = pd.read_csv(input_csv)
 
 # Add a pointnet specific class column
 spot_df['class'] = np.full((len(spot_df)), 3)                               # initialize everything to 3 (pointnet noise)

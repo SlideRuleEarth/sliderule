@@ -33,36 +33,19 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
+import os
 import sys
-
-from BathyPathFinder import BathyPathSearch
+import json
 
 # process command line
 sys.path.append('../utils')
 from command_line_processor import process_command_line
 settings, spot_info, spot_df, output_csv, info_json = process_command_line(sys.argv)
 
-# set configuration
-tau             = settings.get('tau', 0.5) 
-k               = settings.get('k', 15)
-n               = settings.get('n', 99)
-find_surface    = settings.get('find_surface', True)
+# write new inputs
+spot = settings["spot"]
+input_filename = info_json.split(".")[0] + f'_{spot}.csv'
+spot_df.to_csv(input_filename, index=False)
 
-# keep only photons below sea surface
-bathy_df = spot_df
-if not find_surface:
-    bathy_df = spot_df.loc[spot_df['geoid_corr_h'] < spot_df['surface_h']]
-
-# run bathy pathfinder
-bps = BathyPathSearch(tau, k, n)
-bps.fit(bathy_df['x_atc'], bathy_df['geoid_corr_h'], find_surface)
-
-# write bathy classifications to spot df
-spot_df.loc[bps.bathy_photons.index, 'class_ph'] = 40
-
-# write (or print) output
-if output_csv != None:
-    spot_df.to_csv(output_csv, index=False, columns=["index_ph", "class_ph"])
-else:
-    print(spot_df.to_string(index=False, header=True, columns=['index_ph', 'class_ph']))
-    
+# execute coastnet on new inputs
+os.system(f'bash /coastnet/bathy.sh nil nil {input_filename} {output_csv}')
