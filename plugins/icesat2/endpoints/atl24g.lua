@@ -22,10 +22,19 @@ local userlog = msg.publish(rspq)
 local profile = {}
 
 -- acquire lock for processing granule
-local transaction_id = netsvc.orchselflock("sliderule", timeout, 3)
-if transaction_id == netsvc.INVALID_TX_ID then
-    userlog:alert(core.INFO, core.RTE_ERROR, string.format("request <%s> failed to acquire lock", rspq))
-    return
+local transaction_id = netsvc.INVALID_TX_ID
+while transaction_id == netsvc.INVALID_TX_ID do
+    transaction_id = netsvc.orchselflock("sliderule", timeout, 3)
+    if transaction_id == netsvc.INVALID_TX_ID then
+        local lock_retry_wait_time = (time.gps() - endpoint_start_time) / 1000.0
+        if lock_retry_wait_time >= timeout then
+            userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> failed to acquire lock... exiting", rspq))
+            return
+        else
+            userlog:alert(core.INFO, core.RTE_TIMEOUT, string.format("request <%s> failed to acquire lock... retrying with %f seconds left", rspq, timeout - lock_retry_wait_time))
+            sys.wait(30) -- seconds
+        end
+    end
 end
 
 -- populate resource via CMR request (ONLY IF NOT SUPPLIED)

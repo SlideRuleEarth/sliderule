@@ -80,11 +80,11 @@ OrchestratorLib::rsps_t OrchestratorLib::request (EndpointObject::verb_t verb, c
 /*----------------------------------------------------------------------------
  * registerService
  *----------------------------------------------------------------------------*/
-bool OrchestratorLib::registerService (const char* service, int lifetime, const char* address, bool verbose)
+bool OrchestratorLib::registerService (const char* service, int lifetime, const char* address, bool initial_registration, bool verbose)
 {
     bool status = true;
 
-    FString rqst("{\"service\":\"%s\", \"lifetime\": %d, \"address\": \"%s\"}", service, lifetime, address);
+    FString rqst("{\"service\":\"%s\", \"lifetime\": %d, \"address\": \"%s\", \"reset\": %s}", service, lifetime, address, initial_registration ? "true" : "false");
     const rsps_t rsps = request(EndpointObject::POST, "/discovery/register", rqst.c_str());
     if(rsps.code == EndpointObject::OK)
     {
@@ -379,19 +379,20 @@ int OrchestratorLib::luaUrl(lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaRegisterService - orchreg(<service>, <lifetime>, <address>)
+ * luaRegisterService - orchreg(<service>, <lifetime>, <address>, <initial_registration>)
  *----------------------------------------------------------------------------*/
 int OrchestratorLib::luaRegisterService(lua_State* L)
 {
     bool status = false;
     try
     {
-        const char* service = LuaObject::getLuaString(L, 1);
-        const int lifetime  = LuaObject::getLuaInteger(L, 2);
-        const char* address = LuaObject::getLuaString(L, 3);
-        const bool verbose  = LuaObject::getLuaBoolean(L, 4, true, false);
+        const char* service             = LuaObject::getLuaString(L, 1);
+        const int lifetime              = LuaObject::getLuaInteger(L, 2);
+        const char* address             = LuaObject::getLuaString(L, 3);
+        const bool initial_registration = LuaObject::getLuaBoolean(L, 4);
+        const bool verbose              = LuaObject::getLuaBoolean(L, 5, true, false);
 
-        status = registerService(service, lifetime, address, verbose);
+        status = registerService(service, lifetime, address, initial_registration, verbose);
     }
     catch(const RunTimeException& e)
     {

@@ -10,7 +10,7 @@ runner.check(h, "orchestrator unhealthy")
 --
 -- API: register
 --
-local reg_status = netsvc.orchreg('test', 5, 'bob', true)
+local reg_status = netsvc.orchreg('test', 5, 'bob', true, true)
 runner.check(reg_status, "failed to register")
 
 --

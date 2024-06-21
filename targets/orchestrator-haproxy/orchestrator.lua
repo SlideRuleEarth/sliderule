@@ -140,6 +140,7 @@ StatData = {
     numComplete = 0,
     numFailures = 0,
     numTimeouts = 0,
+    numStartups = 0,
     numActiveLocks = 0,
     memberCounts = {},
     gaugeAppMetrics = {},
@@ -163,6 +164,7 @@ MaxTimeout = 60000 -- second(s) # effectively there is no maximum due to atl24g
 --      "service": "<service to join>",
 --      "lifetime": <duration that registry lasts in seconds>
 --      "address": "<public hostname or ip address of member>",
+--      "reset": true|false (used for initial registration to reset any pending transactions)
 --  }
 --
 --  OUTPUT:
@@ -178,6 +180,7 @@ local function api_register(applet)
     local service = request["service"]
     local lifetime = request["lifetime"]
     local address = request["address"]
+    local reset = request["reset"] or false
 
     -- build service member table
     local member = {
@@ -187,14 +190,41 @@ local function api_register(applet)
         locks = 0
     }
 
-    -- update service catalog
-    local service_registry = ServiceCatalog[service]
-    if service_registry == nil then                             -- if first time service is registered
+    -- create service in catalog (if necessary)
+    if ServiceCatalog[service] == nil then                      -- if first time service is registered
         ServiceCatalog[service] = {}                            -- register service by adding it to catalog
-    elseif service_registry[address] ~= nil then                -- if service already registered
-        member["locks"] = service_registry[address]["locks"]    -- preserve number of locks for member
     end
+
+    -- update member locks if already registered
+    local log_registration = false
+    local service_registry = ServiceCatalog[service]
+    if service_registry[address] ~= nil then 
+        member["locks"] = service_registry[address]["locks"]    -- preserve number of locks for member
+    else
+        log_registration = true
+    end
+
+    -- reset member locks if this is a reset (initial registration after startup)
+    if reset then
+        StatData["numStartups"] = StatData["numStartups"] + 1
+        log_registration = true
+        local transactions_to_clear = {}
+        for txid,transaction in pairs(TransactionTable) do
+            if transaction[2] == address then                   -- look for any outstanding transactions for member
+                table.insert(transactions_to_clear, txid)       -- save off to be removed later (so table is not edited while being traversed)
+            end
+        end
+        for _,txid in pairs(transactions_to_clear) do
+            TransactionTable[txid] = nil                        -- remove transaction
+        end
+        member["locks"] = 0                                     -- clear all locks
+    end
+
+    -- register member to service
     ServiceCatalog[service][address] = member
+    if log_registration then
+        core.log(core.info, string.format("Address %s (locks=%d, reset=%s) registered to %s", address, member["locks"], reset and "true" or "false", service))
+    end
 
     -- send response
     local response = string.format([[{"%s": ["%s", %d]}]], address, service, member["expiration"])
@@ -209,7 +239,7 @@ end
 --
 -- API: /discovery/selflock
 --
---  Nofity orchestrator that the sending node needs the requested number of locks
+--  Notify orchestrator that the sending node needs the requested number of locks
 --
 --  INPUT:
 --  {
@@ -514,13 +544,17 @@ num_failures %d
 # TYPE num_timeouts counter
 num_timeouts %d
 
+# TYPE num_startups counter
+num_startups %d
+
 # TYPE num_active_locks counter
 num_active_locks %d
 %s%s%s
-]], StatData["numRequests"], 
-    StatData["numComplete"], 
-    StatData["numFailures"], 
-    StatData["numTimeouts"], 
+]], StatData["numRequests"],
+    StatData["numComplete"],
+    StatData["numFailures"],
+    StatData["numTimeouts"],
+    StatData["numStartups"],
     StatData["numActiveLocks"],
     member_count_metric,
     application_count_metric,
@@ -669,6 +703,7 @@ local function backgroud_scrubber()
             local service_registry = transaction[1]
             local address = transaction[2]
             local expiration = transaction[3]
+            local locksPerNode = transaction[4]
             local member = service_registry[address]
             if expiration <= now then
                 -- add id to list of transactions to delete (time-out)
@@ -677,7 +712,7 @@ local function backgroud_scrubber()
                 -- decrement associated lock
                 if member ~= nil then
                     if member["locks"] > 0 then
-                        member["locks"] = member["locks"] - 1
+                        member["locks"] = member["locks"] - locksPerNode
                     else
                         core.log(core.err, string.format("Transaction %d timed-out on %s with no locks", id, address))
                     end
