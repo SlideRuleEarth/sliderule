@@ -22,7 +22,7 @@
   "fiscalYearStartMonth": 0,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 3,
+  "id": 5,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -454,7 +454,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "fixed"
+            "mode": "palette-classic"
           },
           "custom": {
             "axisLabel": "",
@@ -507,7 +507,7 @@
         "x": 12,
         "y": 15
       },
-      "id": 12,
+      "id": 13,
       "options": {
         "legend": {
           "calcs": [],
@@ -521,13 +521,13 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "up{job=\"orchestrator_app\"}",
+          "expr": "num_startups{job=\"orchestrator_app\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Alive",
+      "title": "Member Startups",
       "type": "timeseries"
     }
   ],
@@ -539,7 +539,7 @@
     "list": []
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {},
