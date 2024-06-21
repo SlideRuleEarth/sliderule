@@ -86,3 +86,8 @@ variable "cluster_instance_type" {
   type        = string
   default     = "r7g.2xlarge" # "t4g.2xlarge"
 }
+variable "cluster_volume_size" {
+  description = "EC2 instance disk space in GBs"
+  type        = number
+  default     = 64
+}

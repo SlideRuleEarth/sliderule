@@ -363,10 +363,10 @@ const char* getOutputPath(ArrowParms* parms)
         const char* path_prefix = StringLib::match(asset->getDriver(), "s3") ? "s3://" : "";
         const char* path_suffix = "bin";
         if(parms->format == ArrowParms::PARQUET) path_suffix = parms->as_geo ? ".geoparquet" : ".parquet";
-        if(parms->format == ArrowParms::CSV) path_suffix = "csv";
-        FString path_name("%s.%016lX", OsApi::getCluster(), OsApi::time(OsApi::CPU_CLK));
+        else if(parms->format == ArrowParms::CSV) path_suffix = ".csv";
+        FString path_name("%s.%016lX%s", OsApi::getCluster(), OsApi::time(OsApi::CPU_CLK), path_suffix);
         const bool use_provided_path = ((parms->path != NULL) && (parms->path[0] != '\0'));
-        FString path_str("%s%s/%s%s", path_prefix, asset->getPath(), use_provided_path ? parms->path : path_name.c_str(), path_suffix);
+        FString path_str("%s%s/%s", path_prefix, asset->getPath(), use_provided_path ? parms->path : path_name.c_str());
         asset->releaseLuaObject();
 
         /* Set Output Path */

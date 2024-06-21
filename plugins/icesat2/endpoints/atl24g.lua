@@ -265,22 +265,22 @@ local function runprocessor(_bathy_parms, container_timeout, name, in_parallel, 
 end
 
 -- execute qtrees surface finding algorithm
-runclassifier(output_files, bathy_parms, timeout, "qtrees", true, "bash /qtrees/runner.sh")
+runclassifier(output_files, bathy_parms, timeout, "qtrees", false, "bash /qtrees/runner.sh")
 
 -- perform refraction correction
-runprocessor(bathy_parms, timeout, "atl24refraction", true)
+runprocessor(bathy_parms, timeout, "atl24refraction", false)
 
 -- perform uncertainty calculations
-runprocessor(bathy_parms, timeout, "atl24uncertainty", true)
+runprocessor(bathy_parms, timeout, "atl24uncertainty", false)
 
 -- execute medianfilter bathy
-runclassifier(output_files, bathy_parms, timeout, "medianfilter", true)
+runclassifier(output_files, bathy_parms, timeout, "medianfilter", false)
 
 -- execute cshelph bathy
-runclassifier(output_files, bathy_parms, timeout, "cshelph",true)
+runclassifier(output_files, bathy_parms, timeout, "cshelph",false)
 
 -- execute bathypathfinder bathy
-runclassifier(output_files, bathy_parms, timeout, "bathypathfinder", true)
+runclassifier(output_files, bathy_parms, timeout, "bathypathfinder", false)
 
 -- execute pointnet2 bathy
 runclassifier(output_files, bathy_parms, timeout, "pointnet2", false)

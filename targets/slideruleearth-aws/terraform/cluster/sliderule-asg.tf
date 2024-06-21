@@ -42,7 +42,7 @@ resource "aws_launch_configuration" "sliderule-instance" {
   instance_type               = var.cluster_instance_type
   root_block_device {
     volume_type               = "gp2"
-    volume_size               = 32
+    volume_size               = var.cluster_volume_size
     delete_on_termination     = true
   }
   key_name                    = var.key_pair_name
