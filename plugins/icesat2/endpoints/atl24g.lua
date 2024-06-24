@@ -8,6 +8,7 @@ local json          = require("json")
 local georesource   = require("georesource")
 local earthdata     = require("earth_data_query")
 local runner        = require("container_runtime")
+local prettyprint   = require("prettyprint")
 
 -- get inputs 
 local rqst          = json.decode(arg[1])
@@ -124,6 +125,10 @@ parms["t1"] = t1
 local rc2, rsps2 = earthdata.search(parms)
 if rc2 == earthdata.SUCCESS then
     parms["resources09"] = rsps2
+else
+    prettyprint.display(parms)
+    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to make ATL09 CMR request <%d>: %s", rspq, rc2, rsps2))
+    return
 end
 parms["asset"] = original_asset
 parms["t0"] = original_t0

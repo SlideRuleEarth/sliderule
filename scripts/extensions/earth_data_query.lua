@@ -194,7 +194,7 @@ local function cmr (parms, poly, with_meta)
         -- issue http request
         local rsps, hdrs, status = netsvc.get(cmr_query_url, nil, headers, false, false, true)
         if not status then
-            return RC_RQST_FAILED, "http request to CMR failed"
+            return RC_RQST_FAILED, string.format("http request to CMR failed - %s", rsps)
         end
 
         -- add scroll id for future page requests

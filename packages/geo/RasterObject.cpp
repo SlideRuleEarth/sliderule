@@ -120,6 +120,9 @@ int RasterObject::luaCreate( lua_State* L )
  *----------------------------------------------------------------------------*/
 RasterObject* RasterObject::cppCreate(GeoParms* _parms)
 {
+    /* Check Parameters */
+    if(!_parms) return NULL;
+    
     /* Get Factory */
     factory_t factory;
     bool found = false;

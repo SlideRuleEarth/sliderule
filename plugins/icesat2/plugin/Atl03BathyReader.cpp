@@ -168,7 +168,6 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
     assert(_resource);
     assert(outq_name);
     assert(_parms);
-    assert(_geoparms);
     assert(_atl09_asset);
 
     /* Initialize Thread Count */
