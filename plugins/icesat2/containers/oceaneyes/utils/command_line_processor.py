@@ -83,6 +83,7 @@ def process_command_line(argv):
     # filter on spot (if necessary)
     if "spot" in data and "spot" in settings:
         data = data[data["spot"] == settings["spot"]]
+        info = info["spot_"+settings["spot"]]
         print(f'Dataframe for spot {settings["spot"]} read from {input_csv}')
     else:
         print(f'Dataframe read from {input_csv}')
