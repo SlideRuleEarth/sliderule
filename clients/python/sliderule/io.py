@@ -494,7 +494,7 @@ def to_parquet(gdf, filename, **kwargs):
             pass
     # save CRS to JSON
     crs = pyproj.CRS.from_string(kwargs['crs'])
-    output['crs'] = crs.to_string()
+    output['crs'] = crs.to_json_dict()
     # save each region following GeoJSON specification
     output['type'] = 'FeatureCollection'
     output['features'] = []
