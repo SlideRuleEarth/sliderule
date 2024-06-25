@@ -2026,17 +2026,17 @@ class leaflet:
             # keep track of cursor position
             self.map.on_interaction(self.handle_interaction)
         # add control for drawing polygons or bounding boxes
-        draw_control = ipyleaflet.DrawControl(polyline={},circlemarker={},
+        self.draw_control = ipyleaflet.DrawControl(polyline={},circlemarker={},
             edit=False)
         shapeOptions = {'color':kwargs['color'],'fill_color':kwargs['color']}
-        draw_control.rectangle = dict(shapeOptions=shapeOptions,
+        self.draw_control.rectangle = dict(shapeOptions=shapeOptions,
             metric=['km','m'])
-        draw_control.polygon = dict(shapeOptions=shapeOptions,
+        self.draw_control.polygon = dict(shapeOptions=shapeOptions,
             allowIntersection=False, showArea=True, metric=['km','m'])
         # create regions
         self.regions = []
-        draw_control.on_draw(self.handle_draw)
-        self.map.add(draw_control)
+        self.draw_control.on_draw(self.handle_draw)
+        self.map.add(self.draw_control)
         # initialize data and colorbars
         self.geojson = None
         self.tooltip = None
