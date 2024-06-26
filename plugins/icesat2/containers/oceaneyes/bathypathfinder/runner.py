@@ -40,7 +40,7 @@ from BathyPathFinder import BathyPathSearch
 # process command line
 sys.path.append('../utils')
 from command_line_processor import process_command_line
-settings, spot_info, spot_df, output_csv, info_json = process_command_line(sys.argv)
+settings, spot_info, spot_df, output_csv, info_json = process_command_line(sys.argv, columns=["x_atc", "geoid_corr_h", "surface_h", "index_ph", "class_ph"])
 
 # set configuration
 tau             = settings.get('tau', 0.5) 
@@ -51,7 +51,7 @@ find_surface    = settings.get('find_surface', True)
 # keep only photons below sea surface
 bathy_df = spot_df
 if not find_surface:
-    bathy_df = spot_df.loc[spot_df['geoid_corr_h'] < spot_df['surface_h']]
+    bathy_df = spot_df.loc[(spot_df['geoid_corr_h'] < spot_df['surface_h']) & (spot_df['class_ph'] != 41)]
 
 # run bathy pathfinder
 bps = BathyPathSearch(tau, k, n)

@@ -52,7 +52,7 @@ MODEL = importlib.import_module('medianmodel')
 # process command line
 sys.path.append('../utils')
 from command_line_processor import process_command_line
-settings, beam_info, point_cloud, output_csv, info_json = process_command_line(sys.argv)
+settings, beam_info, point_cloud, output_csv, info_json = process_command_line(sys.argv, columns=["latitude", "longitude", "geoid_corr_h", "index_ph", "class_ph"])
 
 # set configuration
 window_sizes        = settings.get('window_sizes', [51, 30, 7]) 

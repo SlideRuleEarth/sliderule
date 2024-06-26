@@ -50,12 +50,14 @@ print("Read all into data frame")
 # merge qtrees predictions into spot dataframe
 trimmed_qtrees_df = pd.DataFrame()
 trimmed_qtrees_df["index_ph"] = qtrees_df["index_ph"]
-trimmed_qtrees_df["prediction"] = qtrees_df["prediction"]
+trimmed_qtrees_df["class_ph"] = qtrees_df["prediction"]
+trimmed_qtrees_df["surface_h"] = qtrees_df["surface_h"]
+del spot_df["class_ph"]
+del spot_df["surface_h"]
 spot_df = pd.merge(spot_df, trimmed_qtrees_df, on="index_ph", how='left')
-del spot_df["prediction"]
-spot_df.rename(columns={"prediction": "class_ph"}, inplace=True)
 
 # write out new qtrees file
+del trimmed_qtrees_df['surface_h']
 trimmed_qtrees_df.to_csv(qtrees_csv_file, index=False)
 
 # write out new spot file

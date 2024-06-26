@@ -225,6 +225,7 @@ del data["sigma_hau"]
 del data["coef_vsu"]
 del data["sigma_vsu"]
 del data['table_index']
+del data['max_sensor_depth']
 
 # output results
 if output_csv != None:

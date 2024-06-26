@@ -33,7 +33,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import sys
 import json
 
-def process_command_line(argv):
+def process_command_line(argv, columns=None):
 
     # process command line
     if len(argv) == 5:
@@ -71,12 +71,12 @@ def process_command_line(argv):
 
     # read input
     if input_csv.endswith(".csv"):
-        data = pd.read_csv(input_csv)
+        data = pd.read_csv(input_csv, usecols=columns)
     elif input_csv.endswith(".parquet"):
-        data = pd.read_parquet(input_csv)
+        data = pd.read_parquet(input_csv, columns=columns)
     elif input_csv.endswith(".geoparquet"):
         import geopandas as gpd
-        data = gpd.read_parquet(input_csv)
+        data = gpd.read_parquet(input_csv, columns=columns)
     else:
         data = pd.DataFrame()
     

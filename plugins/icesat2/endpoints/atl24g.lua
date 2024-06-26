@@ -282,19 +282,19 @@ end
 runclassifier(output_files, bathy_parms, timeout, "qtrees", false, "bash /qtrees/runner.sh")
 
 -- perform refraction correction
-runprocessor(bathy_parms, timeout, "atl24refraction", false)
+runprocessor(bathy_parms, timeout, "atl24refraction", true)
 
 -- perform uncertainty calculations
-runprocessor(bathy_parms, timeout, "atl24uncertainty", false)
+runprocessor(bathy_parms, timeout, "atl24uncertainty", true)
 
 -- execute medianfilter bathy
-runclassifier(output_files, bathy_parms, timeout, "medianfilter", false)
+runclassifier(output_files, bathy_parms, timeout, "medianfilter", true)
 
 -- execute cshelph bathy
-runclassifier(output_files, bathy_parms, timeout, "cshelph",false)
+runclassifier(output_files, bathy_parms, timeout, "cshelph",true)
 
 -- execute bathypathfinder bathy
-runclassifier(output_files, bathy_parms, timeout, "bathypathfinder", false)
+runclassifier(output_files, bathy_parms, timeout, "bathypathfinder", true)
 
 -- execute pointnet2 bathy
 runclassifier(output_files, bathy_parms, timeout, "pointnet2", false)
