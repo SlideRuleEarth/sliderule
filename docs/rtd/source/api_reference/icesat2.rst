@@ -65,7 +65,3 @@ atl08p
 .. autofunction:: sliderule.icesat2.atl08p
 
 """"""""""""""""
-
-atl24g
--------
-.. autofunction:: sliderule.icesat2.atl24g
