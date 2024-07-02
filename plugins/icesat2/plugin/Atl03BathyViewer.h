@@ -125,7 +125,10 @@ class Atl03BathyViewer: public LuaObject
 
         GeoLib::TIFFImage*  bathyMask;
 
+        long                totalPhotons;
         long                totalPhotonsInMask;
+        long                totalSegments;
+        long                totalSegmentsInMask;
 
         /*--------------------------------------------------------------------
          * Methods

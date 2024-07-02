@@ -82,7 +82,7 @@ int Atl03BathyViewer::luaCreate (lua_State* L)
         /* Get Parameters */
         asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         const char* resource = getLuaString(L, 2);
-        parms = dynamic_cast<BathyParms*>(getLuaObject(L, 4, BathyParms::OBJECT_TYPE));
+        parms = dynamic_cast<BathyParms*>(getLuaObject(L, 3, BathyParms::OBJECT_TYPE));
 
         /* Return Reader Object */
         return createLuaObject(L, new Atl03BathyViewer(L, asset, resource, parms));
@@ -110,7 +110,10 @@ Atl03BathyViewer::Atl03BathyViewer (lua_State* L, Asset* _asset, const char* _re
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->read_timeout * 1000),
     bathyMask(NULL),
-    totalPhotonsInMask(0)
+    totalPhotons(0),
+    totalPhotonsInMask(0),
+    totalSegments(0),
+    totalSegmentsInMask(0)
 {
     assert(_asset);
     assert(_resource);
@@ -133,7 +136,27 @@ Atl03BathyViewer::Atl03BathyViewer (lua_State* L, Asset* _asset, const char* _re
     /* Read Global Resource Information */
     try
     {
+        /* Count Threads */
+        for(int track = 1; track <= Icesat2Parms::NUM_TRACKS; track++)
+        {
+            for(int pair = 0; pair < Icesat2Parms::NUM_PAIR_TRACKS; pair++)
+            {
+                const int gt_index = (2 * (track - 1)) + pair;
+                if(parms->beams[gt_index] && (parms->track == Icesat2Parms::ALL_TRACKS || track == parms->track))
+                {
+                    threadCount++;
+                }
+            }
+        }
+
+        /* Check if Readers Created */
+        if(threadCount == 0)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "No reader threads were created, invalid track specified: %d\n", parms->track);
+        }
+
         /* Create Readers */
+        int pid_cnt = 0;
         for(int track = 1; track <= Icesat2Parms::NUM_TRACKS; track++)
         {
             for(int pair = 0; pair < Icesat2Parms::NUM_PAIR_TRACKS; pair++)
@@ -146,15 +169,9 @@ Atl03BathyViewer::Atl03BathyViewer (lua_State* L, Asset* _asset, const char* _re
                     info->track = track;
                     info->pair = pair;
                     StringLib::format(info->prefix, 7, "/gt%d%c", info->track, info->pair == 0 ? 'l' : 'r');
-                    readerPid[threadCount++] = new Thread(subsettingThread, info);
+                    readerPid[pid_cnt++] = new Thread(subsettingThread, info);
                 }
             }
-        }
-
-        /* Check if Readers Created */
-        if(threadCount == 0)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "No reader threads were created, invalid track specified: %d\n", parms->track);
         }
     }
     catch(const RunTimeException& e)
@@ -219,12 +236,18 @@ void* Atl03BathyViewer::subsettingThread (void* parm)
     Atl03BathyViewer* reader = info->reader;
 
     /* Initialize Count of Photons */
+    long total_photons = 0;
     long photons_in_mask = 0;
+    long total_segments = 0;
+    long segments_in_mask = 0;
 
     try
     {
         /* Region of Interest */
         const Region region(info);
+
+        /* Count Total Segments */
+        total_segments = region.segment_ph_cnt.size;
 
         /* Traverse All Segments In Dataset */
         int32_t current_segment = 0; // index into the segment rate variables
@@ -240,32 +263,43 @@ void* Atl03BathyViewer::subsettingThread (void* parm)
             const double longitude_pixels = degrees_of_longitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
             const uint32_t x = static_cast<uint32_t>(longitude_pixels);
         
-            /* Get Pixel and Count Photons */
+            /* Count Photons in Mask*/
             const uint32_t pixel = reader->bathyMask->getPixel(x, y);
-            if(pixel == GLOBAL_BATHYMETRY_MASK_OFF_VALUE)
+            if(pixel != GLOBAL_BATHYMETRY_MASK_OFF_VALUE)
             {
                 photons_in_mask += region.segment_ph_cnt[current_segment];
+                segments_in_mask++;
             }
+
+            /* Count Total Photons */
+            total_photons += region.segment_ph_cnt[current_segment];
+
+            /* Goto Next Segment */
+            current_segment++;
         }
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Failure on resource %s track %d: %s", reader->resource, info->track, e.what());
+        mlog(e.level(), "Failure on resource %s track %d.%d: %s", reader->resource, info->track, info->pair, e.what());
     }
+
+    mlog(INFO, "Read %ld photons from %s track %d.%d", photons_in_mask, reader->resource, info->track, info->pair);
 
     /* Handle Global Reader Updates */
     reader->threadMut.lock();
     {
+        /* Sum Total */
+        reader->totalPhotons += total_photons;
+        reader->totalPhotonsInMask += photons_in_mask;
+        reader->totalSegments += total_segments;
+        reader->totalSegmentsInMask += segments_in_mask;
+
         /* Count Completion */
         reader->numComplete++;
         if(reader->numComplete == reader->threadCount)
         {
-            mlog(INFO, "Completed processing resource %s", reader->resource);
-
-            /* Sum Total */
-            reader->totalPhotonsInMask += photons_in_mask;
-
             /* Indicate End of Data */
+            mlog(INFO, "Completed processing resource %s", reader->resource);
             reader->signalComplete();
         }
     }
@@ -294,7 +328,10 @@ int Atl03BathyViewer::luaCounts (lua_State* L)
 
         /* Create Statistics Table */
         lua_newtable(L);
+        LuaEngine::setAttrInt(L, "total_photons", lua_obj->totalPhotons);
         LuaEngine::setAttrInt(L, "photons_in_mask", lua_obj->totalPhotonsInMask);
+        LuaEngine::setAttrInt(L, "total_segments", lua_obj->totalSegments);
+        LuaEngine::setAttrInt(L, "segments_in_mask", lua_obj->totalSegmentsInMask);
 
         /* Set Success */
         status = true;

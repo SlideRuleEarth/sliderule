@@ -1038,3 +1038,29 @@ def atl24g(parm, callbacks={}, resource=None, keep_id=False, height_key=None):
 
     # Error Case
     return sliderule.emptyframe()
+
+#
+#  ATL24 Photon Viewer
+#
+def atl24v(parm, resource):
+    '''
+    Provides statistics for the number of photons within a granule
+    '''
+    tstart = time.perf_counter()
+
+    # Default the Asset
+    if "asset" not in parm:
+        parm["asset"] = "icesat2"
+
+    # Build Request
+    rqst = {
+        "resource": resource,
+        "parms": parm
+    }
+
+    # Make Request
+    rsps = sliderule.source("atl24v", rqst, stream=False)
+
+    # Return Response
+    profiles[atl24v.__name__] = time.perf_counter() - tstart
+    return rsps
