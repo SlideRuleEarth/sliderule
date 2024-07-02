@@ -85,7 +85,7 @@ import os
 # process command line
 sys.path.append('../utils')
 from command_line_processor import process_command_line
-settings, spot_info, spot_df, output_csv, info_json = process_command_line(sys.argv)
+settings, spot_info, spot_df, output_csv, info_json = process_command_line(sys.argv, columns=['index_ph', 'class_ph', 'x_ph', 'y_ph', 'longitude', 'latitude', 'geoid_corr_h', 'max_signal_conf', 'dem_h', 'surface_h', 'ndwi'])
 
 # set configuration
 maxElev         = settings.get('maxElev', 10) 
@@ -99,6 +99,7 @@ num_point       = settings.get('num_point', 8192)
 num_votes       = settings.get('num_votes', 10)
 threshold       = settings.get('threshold', 0.5)
 model_seed      = settings.get('model_seed', 24)
+trust_class41   = settings.get('trust_class41', False)
 
 ##################
 # BUILD DATAFRAME
@@ -218,6 +219,7 @@ model_state_dict = {k.replace('module.', ''): v for k, v in trained_model['model
 classifier.load_state_dict(model_state_dict)
 
 # run classifier
+output_dfs = []
 with torch.no_grad():
     classifier = classifier.eval()
     for batch_id, (points, label, point_set_normalized_mask, pc_min, pc_max, row_slice) in \
@@ -244,26 +246,30 @@ with torch.no_grad():
         cur_pred_val_mask = cur_pred_val[0, cur_mask]
 
         # build dataframe of index and classification
-        index_ph = data[row_slice[0]:row_slice[1], 0]
+        index_ph = data[row_slice[0]:row_slice[1], 0].astype(np.int32)
         class_ph = data[row_slice[0]:row_slice[1], 7]
         columns = {'index_ph': index_ph, 'class_ph': class_ph}            
-        output_df = pd.DataFrame(columns)
-        output_df.loc[output_df['class_ph'] == 3, 'class_ph'] = 1   # other
-        output_df.loc[output_df['class_ph'] == 5, 'class_ph'] = 41  # sea surface
-        output_df.loc[cur_pred_val_mask == 1, 'class_ph'] = 40      # bathymetry
-
-        # convert dataframe to 2d numpy array for writing to csv
-        output_data = output_df.to_numpy().astype(np.int32)
-
-        # output file
-        if batch_id == 0:
-            mode = 'w'
-            header = 'index_ph,class_ph'
+        batch_df = pd.DataFrame(columns)
+        if trust_class41:
+            # only keep bathymetry photons (prediction == 1) when original didn't have sea surface
+            # class 5 in pointnet is class 41 in atl24
+            batch_df = batch_df.loc[(cur_pred_val_mask == 1) & (batch_df['class_ph'] != 5)] 
         else:
-            mode = 'a'
-            header = ''
-        if output_csv != None:
-            with open(output_csv, mode) as f:
-                np.savetxt(f, output_data, delimiter=',', header=header, fmt='%d', comments='')
-        else:
-            np.savetxt(sys.stdout, output_data, delimiter=',', header=header, fmt='%d', comments='')
+            # only keep bathymetry photons (prediction == 1)
+            batch_df = batch_df.loc[cur_pred_val_mask == 1] 
+        batch_df['class_ph'] = 40 # set class to atl24 bathymetry class
+        output_dfs.append(batch_df)
+
+################
+# WRITE OUTPUTS
+################
+
+output_df = pd.concat(output_dfs)
+output_df.set_index('index_ph')
+spot_df.set_index('index_ph')
+output_df = output_df.combine_first(spot_df).reset_index()
+
+if output_csv != None:
+    output_df.to_csv(output_csv, index=False, columns=["index_ph", "class_ph"])
+else:
+    print(output_df.to_string(index=False, header=True, columns=['index_ph', 'class_ph']))

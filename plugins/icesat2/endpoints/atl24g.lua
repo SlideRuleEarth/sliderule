@@ -164,6 +164,9 @@ end
 profile["total_input_generation"] = (time.gps() - endpoint_start_time) / 1000.0
 userlog:alert(core.INFO, core.RTE_INFO, string.format("sliderule setup executed in %f seconds", profile["total_input_generation"]))
 
+-- free reader to save on memory usage (safe since all data is now written out)
+reader:destroy()
+
 -- table of files being processed
 --  {
 --      "spot_photons": {
@@ -278,23 +281,29 @@ local function runprocessor(_bathy_parms, container_timeout, name, in_parallel, 
     userlog:alert(core.INFO, core.RTE_INFO, string.format("%s executed in %f seconds", name, profile[name]))
 end
 
+-- determine parallelism
+local in_parallel = true
+
 -- execute qtrees surface finding algorithm
-runclassifier(output_files, bathy_parms, timeout, "qtrees", false, "bash /qtrees/runner.sh")
+runclassifier(output_files, bathy_parms, timeout, "qtrees", in_parallel, "bash /qtrees/runner.sh")
 
 -- perform refraction correction
-runprocessor(bathy_parms, timeout, "atl24refraction", true)
+runprocessor(bathy_parms, timeout, "atl24refraction", in_parallel)
 
 -- perform uncertainty calculations
-runprocessor(bathy_parms, timeout, "atl24uncertainty", true)
+runprocessor(bathy_parms, timeout, "atl24uncertainty", in_parallel)
 
 -- execute medianfilter bathy
-runclassifier(output_files, bathy_parms, timeout, "medianfilter", true)
+runclassifier(output_files, bathy_parms, timeout, "medianfilter", in_parallel)
 
 -- execute cshelph bathy
-runclassifier(output_files, bathy_parms, timeout, "cshelph",true)
+runclassifier(output_files, bathy_parms, timeout, "cshelph", in_parallel)
 
 -- execute bathypathfinder bathy
-runclassifier(output_files, bathy_parms, timeout, "bathypathfinder", true)
+runclassifier(output_files, bathy_parms, timeout, "bathypathfinder", in_parallel)
+
+-- execute coastnet bathy
+runclassifier(output_files, bathy_parms, timeout, "coastnet", false, "bash /coastnet/runner.sh")
 
 -- execute pointnet2 bathy
 runclassifier(output_files, bathy_parms, timeout, "pointnet2", false)
@@ -302,8 +311,6 @@ runclassifier(output_files, bathy_parms, timeout, "pointnet2", false)
 -- execute openoceans
 runclassifier(output_files, bathy_parms, timeout, "openoceans", false)
 
--- execute coastnet bathy
-runclassifier(output_files, bathy_parms, timeout, "coastnet", false, "bash /coastnet/bathy.sh")
 
 -- capture endpoint timing
 profile["atl24_endpoint"] = (time.gps() - endpoint_start_time) / 1000.0
@@ -340,7 +347,7 @@ output_parms["path"] = output_parms["path"]..".json"
 arrow.send2user(crenv.host_sandbox_directory.."/atl24.bin.json", arrow.parms(output_parms), rspq)
 
 -- cleanup container runtime environment
-runner.cleanup(crenv)
+--runner.cleanup(crenv)
 
 -- unlock transaction
 netsvc.orchunlock({transaction_id})
