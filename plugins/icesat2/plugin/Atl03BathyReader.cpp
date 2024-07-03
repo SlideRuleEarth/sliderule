@@ -833,7 +833,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
             /* Check Current Segment */
             if(current_segment >= atl03.segment_dist_x.size)
             {
-                mlog(ERROR, "Photons with no segments are detected in %s/%d (%d %ld %ld)!", reader->resource, info->track, current_segment, atl03.segment_dist_x.size, region.num_segments);
+                mlog(ERROR, "Photons with no segments are detected in %s/%d (%d %ld %ld)!", reader->resource, spot, current_segment, atl03.segment_dist_x.size, region.num_segments);
                 break;
             }
 
@@ -1158,7 +1158,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d: %s", reader->resource, info->track, e.what());
+        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s spot %d: %s", reader->resource, spot, e.what());
     }
 
     /* Close Output File (if open) */

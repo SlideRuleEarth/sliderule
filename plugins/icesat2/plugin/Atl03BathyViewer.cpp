@@ -283,8 +283,6 @@ void* Atl03BathyViewer::subsettingThread (void* parm)
         mlog(e.level(), "Failure on resource %s track %d.%d: %s", reader->resource, info->track, info->pair, e.what());
     }
 
-    mlog(INFO, "Read %ld photons from %s track %d.%d", photons_in_mask, reader->resource, info->track, info->pair);
-
     /* Handle Global Reader Updates */
     reader->threadMut.lock();
     {
@@ -299,7 +297,7 @@ void* Atl03BathyViewer::subsettingThread (void* parm)
         if(reader->numComplete == reader->threadCount)
         {
             /* Indicate End of Data */
-            mlog(INFO, "Completed processing resource %s", reader->resource);
+            mlog(INFO, "Completed processing resource %s: %ld photons", reader->resource, reader->totalPhotons);
             reader->signalComplete();
         }
     }
