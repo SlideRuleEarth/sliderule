@@ -148,7 +148,6 @@ class Atl03BathyReader: public LuaObject
          * Types
          *--------------------------------------------------------------------*/
 
-
         typedef struct Info {
             Atl03BathyReader*   reader;
             char                prefix[7];
@@ -207,7 +206,7 @@ class Atl03BathyReader: public LuaObject
                 H5Array<float>      h_ph;
                 H5Array<int8_t>     signal_conf_ph;
                 H5Array<int8_t>     quality_ph;
-//                H5Array<uint8_t>    weight_ph; // yapc
+                H5Array<uint8_t>    weight_ph; // yapc
                 H5Array<double>     lat_ph;
                 H5Array<double>     lon_ph;
                 H5Array<double>     delta_time;
@@ -314,6 +313,7 @@ class Atl03BathyReader: public LuaObject
         uint16_t            start_rgt;
         uint8_t             start_cycle;
         uint8_t             start_region;
+        uint8_t             sdp_version;
 
         GeoLib::TIFFImage*  bathyMask;
 
@@ -335,7 +335,7 @@ class Atl03BathyReader: public LuaObject
 
         void                findSeaSurface              (extent_t* extent);
         static double       calculateBackground         (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03);
-        static void         parseResource               (const char* resource, TimeLib::date_t& date, uint16_t& rgt, uint8_t& cycle, uint8_t& region);
+        static void         parseResource               (const char* resource, TimeLib::date_t& date, uint16_t& rgt, uint8_t& cycle, uint8_t& region, uint8_t& version);
 };
 
 #endif  /* __atl03_table_builder__ */

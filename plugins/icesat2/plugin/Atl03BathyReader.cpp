@@ -258,7 +258,7 @@ Atl03BathyReader::Atl03BathyReader (lua_State* L, Asset* _asset, const char* _re
     try
     {
         /* Parse Globals (throws) */
-        parseResource(resource, granule_date, start_rgt, start_cycle, start_region);
+        parseResource(resource, granule_date, start_rgt, start_cycle, start_region, sdp_version);
 
         /* Create Readers */
         for(int track = 1; track <= Icesat2Parms::NUM_TRACKS; track++)
@@ -561,7 +561,7 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     h_ph                (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/h_ph").c_str(),                &info->reader->context, 0, region.first_photon,  region.num_photons),
     signal_conf_ph      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),      &info->reader->context, info->reader->signalConfColIndex, region.first_photon,  region.num_photons),
     quality_ph          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/quality_ph").c_str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
-//    weight_ph           (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/weight_ph").c_str(),           &info->reader->context, 0, region.first_photon,  region.num_photons),
+    weight_ph           (info->reader->sdp_version >= 6 ? info->reader->asset : NULL, info->reader->resource, FString("%s/%s", info->prefix, "heights/weight_ph").c_str(), &info->reader->context, 0, region.first_photon,  region.num_photons),
     lat_ph              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/lat_ph").c_str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
     lon_ph              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/lon_ph").c_str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
     delta_time          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/delta_time").c_str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
@@ -585,7 +585,7 @@ Atl03BathyReader::Atl03Data::Atl03Data (info_t* info, const Region& region):
     h_ph.join(info->reader->read_timeout_ms, true);
     signal_conf_ph.join(info->reader->read_timeout_ms, true);
     quality_ph.join(info->reader->read_timeout_ms, true);
-//    weight_ph.join(info->reader->read_timeout_ms, true);
+    if(info->reader->sdp_version >= 6) weight_ph.join(info->reader->read_timeout_ms, true);
     lat_ph.join(info->reader->read_timeout_ms, true);
     lon_ph.join(info->reader->read_timeout_ms, true);
     delta_time.join(info->reader->read_timeout_ms, true);
@@ -915,12 +915,15 @@ void* Atl03BathyReader::subsettingThread (void* parm)
                 }
 
                 /* Set and Check YAPC Score */
-                const uint8_t yapc_score = 0;
-//                const uint8_t yapc_score = atl03.weight_ph[current_photon];
-//                if(yapc_score < parms->yapc.score)
-//                {
-//                    break;
-//                }
+                uint8_t yapc_score = 0;
+                if(reader->sdp_version >= 6)
+                {
+                    yapc_score = atl03.weight_ph[current_photon];
+                    if(yapc_score < parms->yapc.score)
+                    {
+                        break;
+                    }
+                }
 
                 /* Check Maximum DEM Delta */
                 const double dem_delta = abs(atl03.dem_h[current_segment] - atl03.h_ph[current_photon]);
@@ -1158,7 +1161,7 @@ void* Atl03BathyReader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s spot %d: %s", reader->resource, spot, e.what());
+        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d.%d: %s", reader->resource, info->track, info->pair, e.what());
     }
 
     /* Close Output File (if open) */
@@ -1479,7 +1482,7 @@ double Atl03BathyReader::calculateBackground (int32_t current_segment, int32_t& 
  *      vvv     - version
  *      ee      - revision
  *----------------------------------------------------------------------------*/
-void Atl03BathyReader::parseResource (const char* _resource, TimeLib::date_t& date, uint16_t& rgt, uint8_t& cycle, uint8_t& region)
+void Atl03BathyReader::parseResource (const char* _resource, TimeLib::date_t& date, uint16_t& rgt, uint8_t& cycle, uint8_t& region, uint8_t& version)
 {
     long val;
 
@@ -1547,7 +1550,7 @@ void Atl03BathyReader::parseResource (const char* _resource, TimeLib::date_t& da
     rgt_str[4] = '\0';
     if(StringLib::str2long(rgt_str, &val, 10))
     {
-        rgt = (uint16_t)val;
+        rgt = static_cast<uint16_t>(val);
     }
     else
     {
@@ -1561,11 +1564,11 @@ void Atl03BathyReader::parseResource (const char* _resource, TimeLib::date_t& da
     cycle_str[2] = '\0';
     if(StringLib::str2long(cycle_str, &val, 10))
     {
-        cycle = (uint8_t)val;
+        cycle = static_cast<uint8_t>(val);
     }
     else
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Cycle from resource %s: %s", _resource, cycle_str);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse cycle from resource %s: %s", _resource, cycle_str);
     }
 
     /* get region */
@@ -1575,10 +1578,25 @@ void Atl03BathyReader::parseResource (const char* _resource, TimeLib::date_t& da
     region_str[2] = '\0';
     if(StringLib::str2long(region_str, &val, 10))
     {
-        region = (uint8_t)val;
+        region = static_cast<uint8_t>(val);
     }
     else
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Region from resource %s: %s", _resource, region_str);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse region from resource %s: %s", _resource, region_str);
+    }
+
+    /* get version */
+    char version_str[4];
+    version_str[0] = _resource[30];
+    version_str[1] = _resource[31];
+    version_str[2] = _resource[32];
+    version_str[3] = '\0';
+    if(StringLib::str2long(version_str, &val, 10))
+    {
+        version = static_cast<uint8_t>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse version from resource %s: %s", _resource, version_str);
     }
 }

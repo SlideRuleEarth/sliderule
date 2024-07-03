@@ -19,6 +19,12 @@ local timeout       = parms["node-timeout"] or parms["timeout"] or netsvc.NODE_T
 -- create user log publisher (alerts)
 local userlog = msg.publish(rspq)
 
+-- verify on a private cluster
+if sys.ispublic() then
+    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> forbidden on public cluster... exiting", rspq))
+    return
+end
+
 -- initialize timing profiling table
 local profile = {}
 
