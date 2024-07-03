@@ -113,7 +113,8 @@ Atl03BathyViewer::Atl03BathyViewer (lua_State* L, Asset* _asset, const char* _re
     totalPhotons(0),
     totalPhotonsInMask(0),
     totalSegments(0),
-    totalSegmentsInMask(0)
+    totalSegmentsInMask(0),
+    totalErrors(0)
 {
     assert(_asset);
     assert(_resource);
@@ -236,10 +237,11 @@ void* Atl03BathyViewer::subsettingThread (void* parm)
     Atl03BathyViewer* reader = info->reader;
 
     /* Initialize Count of Photons */
-    long total_photons = 0;
-    long photons_in_mask = 0;
-    long total_segments = 0;
-    long segments_in_mask = 0;
+    int64_t total_photons = 0;
+    int64_t photons_in_mask = 0;
+    int64_t total_segments = 0;
+    int64_t segments_in_mask = 0;
+    int64_t total_errors = 0;
 
     try
     {
@@ -262,17 +264,25 @@ void* Atl03BathyViewer::subsettingThread (void* parm)
             const double degrees_of_longitude =  region.segment_lon[current_segment] - GLOBAL_BATHYMETRY_MASK_MIN_LON;
             const double longitude_pixels = degrees_of_longitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
             const uint32_t x = static_cast<uint32_t>(longitude_pixels);
-        
+
+            /* Get Photons in Segment */
+            int32_t photons_in_segment = region.segment_ph_cnt[current_segment];
+            if(photons_in_segment < MIN_PH_IN_SEG || photons_in_segment > MAX_PH_IN_SEG)
+            {
+                photons_in_segment = 0; // zero out count since it is out of bounds
+                total_errors++;
+            }
+
             /* Count Photons in Mask*/
             const uint32_t pixel = reader->bathyMask->getPixel(x, y);
             if(pixel != GLOBAL_BATHYMETRY_MASK_OFF_VALUE)
             {
-                photons_in_mask += region.segment_ph_cnt[current_segment];
+                photons_in_mask += photons_in_segment;
                 segments_in_mask++;
             }
 
             /* Count Total Photons */
-            total_photons += region.segment_ph_cnt[current_segment];
+            total_photons += photons_in_segment;
 
             /* Goto Next Segment */
             current_segment++;
@@ -330,6 +340,7 @@ int Atl03BathyViewer::luaCounts (lua_State* L)
         LuaEngine::setAttrInt(L, "photons_in_mask", lua_obj->totalPhotonsInMask);
         LuaEngine::setAttrInt(L, "total_segments", lua_obj->totalSegments);
         LuaEngine::setAttrInt(L, "segments_in_mask", lua_obj->totalSegmentsInMask);
+        LuaEngine::setAttrInt(L, "total_errors", lua_obj->totalErrors);
 
         /* Set Success */
         status = true;

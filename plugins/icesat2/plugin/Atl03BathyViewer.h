@@ -67,6 +67,9 @@ class Atl03BathyViewer: public LuaObject
         static const double GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
         static const uint32_t GLOBAL_BATHYMETRY_MASK_OFF_VALUE;
 
+        static const int32_t MAX_PH_IN_SEG = 100000;
+        static const int32_t MIN_PH_IN_SEG = 0;
+
         static const char* OBJECT_TYPE;
 
         static const char* LUA_META_NAME;
@@ -125,10 +128,11 @@ class Atl03BathyViewer: public LuaObject
 
         GeoLib::TIFFImage*  bathyMask;
 
-        long                totalPhotons;
-        long                totalPhotonsInMask;
-        long                totalSegments;
-        long                totalSegmentsInMask;
+        int64_t             totalPhotons;
+        int64_t             totalPhotonsInMask;
+        int64_t             totalSegments;
+        int64_t             totalSegmentsInMask;
+        int64_t             totalErrors;
 
         /*--------------------------------------------------------------------
          * Methods
