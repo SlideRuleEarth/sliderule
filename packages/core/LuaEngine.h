@@ -97,7 +97,7 @@ class LuaEngine
         static mode_t       str2mode        (const char* str);
         static const char*  mode2str        (mode_t _mode);
         static void         setAttrBool     (lua_State* l, const char* name, bool val);
-        static void         setAttrInt      (lua_State* l, const char* name, long val);
+        static void         setAttrInt      (lua_State* l, const char* name, long long val);
         static void         setAttrNum      (lua_State* l, const char* name, double val);
         static void         setAttrStr      (lua_State* l, const char* name, const char* val, int size=0);
         static void         setAttrFunc     (lua_State* l, const char* name, lua_CFunction val);

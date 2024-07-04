@@ -61,7 +61,6 @@ package.path = package.path .. ';/usr/local/etc/haproxy/?.lua'
 -- Imports
 --
 local json = require("json")
-local prettyprint = require("prettyprint")
 
 --
 -- Local Functions
@@ -141,6 +140,7 @@ StatData = {
     numComplete = 0,
     numFailures = 0,
     numTimeouts = 0,
+    numStartups = 0,
     numActiveLocks = 0,
     memberCounts = {},
     gaugeAppMetrics = {},
@@ -152,7 +152,7 @@ StatData = {
 --
 MaxLocksPerNode = 3 -- must be coordinated with proxy.lua extension
 ScrubInterval = 1 -- second(s)
-MaxTimeout = 600 -- second(s)
+MaxTimeout = 60000 -- second(s) # effectively there is no maximum due to atl24g
 
 --
 -- API: /discovery/register
@@ -164,6 +164,7 @@ MaxTimeout = 600 -- second(s)
 --      "service": "<service to join>",
 --      "lifetime": <duration that registry lasts in seconds>
 --      "address": "<public hostname or ip address of member>",
+--      "reset": true|false (used for initial registration to reset any pending transactions)
 --  }
 --
 --  OUTPUT:
@@ -179,6 +180,7 @@ local function api_register(applet)
     local service = request["service"]
     local lifetime = request["lifetime"]
     local address = request["address"]
+    local reset = request["reset"] or false
 
     -- build service member table
     local member = {
@@ -188,14 +190,41 @@ local function api_register(applet)
         locks = 0
     }
 
-    -- update service catalog
-    local service_registry = ServiceCatalog[service]
-    if service_registry == nil then                             -- if first time service is registered
+    -- create service in catalog (if necessary)
+    if ServiceCatalog[service] == nil then                      -- if first time service is registered
         ServiceCatalog[service] = {}                            -- register service by adding it to catalog
-    elseif service_registry[address] ~= nil then                -- if service already registered
-        member["locks"] = service_registry[address]["locks"]    -- preserve number of locks for member
     end
+
+    -- update member locks if already registered
+    local log_registration = false
+    local service_registry = ServiceCatalog[service]
+    if service_registry[address] ~= nil then 
+        member["locks"] = service_registry[address]["locks"]    -- preserve number of locks for member
+    else
+        log_registration = true
+    end
+
+    -- reset member locks if this is a reset (initial registration after startup)
+    if reset then
+        StatData["numStartups"] = StatData["numStartups"] + 1
+        log_registration = true
+        local transactions_to_clear = {}
+        for txid,transaction in pairs(TransactionTable) do
+            if transaction[2] == address then                   -- look for any outstanding transactions for member
+                table.insert(transactions_to_clear, txid)       -- save off to be removed later (so table is not edited while being traversed)
+            end
+        end
+        for _,txid in pairs(transactions_to_clear) do
+            TransactionTable[txid] = nil                        -- remove transaction
+        end
+        member["locks"] = 0                                     -- clear all locks
+    end
+
+    -- register member to service
     ServiceCatalog[service][address] = member
+    if log_registration then
+        core.log(core.info, string.format("Address %s (locks=%d, reset=%s) registered to %s", address, member["locks"], reset and "true" or "false", service))
+    end
 
     -- send response
     local response = string.format([[{"%s": ["%s", %d]}]], address, service, member["expiration"])
@@ -208,6 +237,89 @@ local function api_register(applet)
 end
 
 --
+-- API: /discovery/selflock
+--
+--  Notify orchestrator that the sending node needs the requested number of locks
+--
+--  INPUT:
+--  {
+--      "service": "<service>",
+--      "address": "<ip address of self>",
+--      "locksPerNode": <number>,
+--      "timeout": <seconds>
+--  }
+--
+--  OUTPUT:
+--  {
+--      "transaction": tx1
+--  }
+--
+local function api_selflock(applet)
+
+    -- process request
+    local body = applet:receive()
+    local request = json.decode(body)
+    local service = request["service"]
+    local address = request["address"]
+    local timeout = request["timeout"] < MaxTimeout and request["timeout"] or MaxTimeout
+    local locksPerNode = request["locksPerNode"]
+    local expiration = os.time() + timeout
+
+    -- initialize local variables
+    local error_count = 0
+
+    -- loop through service registry and return addresses with least locks
+    local service_registry = ServiceCatalog[service]
+    if service_registry ~= nil then
+        local member = service_registry[address]
+        if member ~= nil then
+            -- check if number of locks exceeds max
+            if (member["locks"] + locksPerNode) <= MaxLocksPerNode then
+                -- create transaction
+                local transaction = {
+                    service_registry,
+                    address,
+                    expiration,
+                    locksPerNode
+                }
+                -- lock member
+                member["locks"] = member["locks"] + locksPerNode -- add new locks to member
+                local transaction_id = TransactionId -- transaction id that get returned
+                TransactionTable[TransactionId] = transaction -- register transaction
+                TransactionId = TransactionId + 1
+                -- send response
+                local response = string.format([[{"transaction": %d}]], transaction_id)
+                applet:set_status(200)
+                applet:add_header("content-length", string.len(response))
+                applet:add_header("content-type", "application/json")
+                applet:start_response()
+                applet:send(response)
+            else
+                core.log(core.err, string.format("Address %s in registry %s exceeded lock limit: %d", address, service, member["locks"]))
+                error_count = error_count + 1
+                applet:set_status(503)
+                applet:start_response()
+            end
+        else
+            core.log(core.err, string.format("Address %s not found in registry %s", address, service))
+            error_count = error_count + 1
+            applet:set_status(400)
+            applet:start_response()
+        end
+    else
+        core.log(core.err, string.format("Service %s not found", service))
+        error_count = error_count + 1
+        applet:set_status(400)
+        applet:start_response()
+    end
+
+    -- update statistics
+    StatData["numRequests"] = StatData["numRequests"] + 1
+    StatData["numFailures"] = StatData["numFailures"] + error_count
+
+end
+
+--
 -- API: /discovery/lock
 --
 --  Returns up to requested number of nodes for processing a request
@@ -216,6 +328,7 @@ end
 --  {
 --      "service": "<service>",
 --      "nodesNeeded": <number>,
+--      "locksPerNode": <number>,
 --      "timeout": <seconds>
 --  }
 --
@@ -431,13 +544,17 @@ num_failures %d
 # TYPE num_timeouts counter
 num_timeouts %d
 
+# TYPE num_startups counter
+num_startups %d
+
 # TYPE num_active_locks counter
 num_active_locks %d
 %s%s%s
-]], StatData["numRequests"], 
-    StatData["numComplete"], 
-    StatData["numFailures"], 
-    StatData["numTimeouts"], 
+]], StatData["numRequests"],
+    StatData["numComplete"],
+    StatData["numFailures"],
+    StatData["numTimeouts"],
+    StatData["numStartups"],
     StatData["numActiveLocks"],
     member_count_metric,
     application_count_metric,
@@ -586,6 +703,7 @@ local function backgroud_scrubber()
             local service_registry = transaction[1]
             local address = transaction[2]
             local expiration = transaction[3]
+            local locksPerNode = transaction[4]
             local member = service_registry[address]
             if expiration <= now then
                 -- add id to list of transactions to delete (time-out)
@@ -594,7 +712,7 @@ local function backgroud_scrubber()
                 -- decrement associated lock
                 if member ~= nil then
                     if member["locks"] > 0 then
-                        member["locks"] = member["locks"] - 1
+                        member["locks"] = member["locks"] - locksPerNode
                     else
                         core.log(core.err, string.format("Transaction %d timed-out on %s with no locks", id, address))
                     end
@@ -665,6 +783,7 @@ end
 -- Register with HAProxy
 --
 core.register_service("orchestrator_register", "http", api_register)
+core.register_service("orchestrator_selflock", "http", api_selflock)
 core.register_service("orchestrator_lock", "http", api_lock)
 core.register_service("orchestrator_unlock", "http", api_unlock)
 core.register_service("orchestrator_prometheus", "http", api_prometheus)

@@ -114,25 +114,23 @@ if output_parms["format"] != "hdf5":
     
             # GeoParquet
             df['time'] = df['time'].astype('datetime64[ns]')
-            geometry = gpd.points_from_xy('longitude', 'latitude', 'geoid_corr_h')
+            geometry = gpd.points_from_xy(df['longitude'], df['latitude'])
+#            geometry = gpd.points_from_xy(df['longitude'], df['latitude'], df['geoid_corr_h'])
             df.drop(columns=['longitude', 'latitude'], inplace=True)
             gdf = gpd.GeoDataFrame(df, geometry=geometry, crs="EPSG:7912")
             gdf.set_index('time', inplace=True)
             gdf.sort_index(inplace=True)
             gdf.to_parquet(atl24_filename, index=None)
-            table = _geopandas_to_arrow(gdf)
             print("Writing GeoParquet file: " + atl24_filename)
 
         else:
 
             # Parquet
             table = pa.Table.from_pandas(df, preserve_index=False)
+            schema = table.schema.with_metadata({"sliderule": json.dumps(metadata)})
+            table = table.replace_schema_metadata(schema.metadata)
+            pq.write_table(table, atl24_filename)
             print("Writing Parquet file: " + atl24_filename)
-
-        # add metadata and write file
-        schema = table.schema.with_metadata({"sliderule": json.dumps(metadata)})
-        table = table.replace_schema_metadata(schema.metadata)
-        pq.write_table(table, atl24_filename)
 
 # Photon Output (HDF5)
 else:

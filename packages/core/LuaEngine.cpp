@@ -286,7 +286,7 @@ void LuaEngine::setAttrBool (lua_State* l, const char* name, bool val)
 /*----------------------------------------------------------------------------
  * setAttrInt
  *----------------------------------------------------------------------------*/
-void LuaEngine::setAttrInt (lua_State* l, const char* name, long val)
+void LuaEngine::setAttrInt (lua_State* l, const char* name, long long val)
 {
     if(l == NULL) return;
     lua_pushstring(l, name);

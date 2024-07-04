@@ -73,6 +73,9 @@ parms = {
     "openoceans": {
         "use_ndwi": args.generate_ndwi
     },
+    "bathypathfinder": {
+        "find_surface": False
+    },
     "output": {
         "path": output_filename, 
         "format": args.output_format, 

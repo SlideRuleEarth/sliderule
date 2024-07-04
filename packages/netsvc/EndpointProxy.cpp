@@ -154,7 +154,7 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
     else num_nodes = OrchestratorLib::getNodes();
     if(num_nodes > 0)
     {
-        const int max_possible_concurrent_requests = (NetsvcParms::MAX_LOCKS_PER_NODE / locksPerNode) * num_nodes;
+        const int max_possible_concurrent_requests = (OrchestratorLib::MAX_LOCKS_PER_NODE / locksPerNode) * num_nodes;
         const int candidate_num_threads = MIN(max_possible_concurrent_requests, numResources);
         numProxyThreads = MIN(candidate_num_threads, MAX_PROXY_THREADS);
     }

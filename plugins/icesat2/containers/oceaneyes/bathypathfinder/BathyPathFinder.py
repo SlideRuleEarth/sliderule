@@ -83,7 +83,7 @@ class BathyPathSearch:
         self.G = nx.Graph()
         self.S = []
         
-    def fit(self, distance, height):
+    def fit(self, distance, height, find_sea_surface=True):
         """
         Fit the model to a set of photons.
         
@@ -96,27 +96,23 @@ class BathyPathSearch:
         
         """
         
-        self._sea_surface(distance, height)
+        # Organize input photons into pandas dictionary
+        self.df["along_track_dist" ], self.df["height"] =  distance, height
+
+        # Find and remove sea surface
+        if find_sea_surface:
+            self._sea_surface()
+        
+        # Find bathymetry
         self._build_graph()
         self._prune_edges()
         self._find_path()
         
         
-    def _sea_surface(self, distance, height):
+    def _sea_surface(self):
         """
         Fit RANSAC to the sea surface and classify inliers.
-        
-        Parameters:
-        -----------
-        
-        distance (List[float]) :: The along-track-distances of the photons.
-        
-        height (List[float])   :: The orthometric heights of photons.
-        
         """
-        # Organize input photons into pandas dictionary
-        self.df["along_track_dist" ], self.df["height"] =  distance, height
-
         # Init RANSAC with tau ~= half wave height
         ransac = RANSACRegressor(residual_threshold=self.tau)
 

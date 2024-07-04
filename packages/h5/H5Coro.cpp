@@ -651,7 +651,17 @@ void H5FileBuffer::readDataset (info_t* info)
     const int64_t buffer_size = row_size * datasetNumRows;
     if(!metaOnly && buffer_size > 0)
     {
-        buffer = new uint8_t [buffer_size];
+        /* Add Space for Terminator for Strings */
+        const int64_t extra_space_for_terminator = (metaData.type == STRING_TYPE);
+
+        /* Allocate */
+        buffer = new uint8_t [buffer_size + extra_space_for_terminator];
+
+        /* Gaurantee Termination of String */
+        if(metaData.type == STRING_TYPE)
+        {
+            buffer[buffer_size] = '\0'; 
+        }
 
         /* Fill Buffer with Fill Value (if provided) */
         #if 0

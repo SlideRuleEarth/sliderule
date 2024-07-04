@@ -65,7 +65,6 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 from modeling_parallel import ModelMakerP # classes for modeling bathymetry from the profile
 import sys
-import json
 
 ############
 # CONSTANTS
@@ -78,31 +77,9 @@ NO_VALUE = -9999
 ##############
 
 # process command line
-if len(sys.argv) == 5:
-    settings_json   = sys.argv[1]
-    info_json       = sys.argv[2]
-    input_csv       = sys.argv[3]
-    output_csv      = sys.argv[4]
-elif len(sys.argv) == 4:
-    settings_json   = None
-    info_json       = sys.argv[1]
-    input_csv       = sys.argv[2]
-    output_csv      = sys.argv[3]
-elif len(sys.argv) == 3:
-    settings_json   = None
-    info_json       = sys.argv[1]
-    input_csv       = sys.argv[2]
-    output_csv      = None
-else:
-    print("Incorrect parameters supplied: python runner.py [<settings json>] <input json spot file> <input csv spot file> [<output csv spot file>]")
-    sys.exit()
-
-# read settings json
-if settings_json != None:
-    with open(settings_json, 'r') as json_file:
-        settings = json.load(json_file)
-else:
-    settings = {}
+sys.path.append('../utils')
+from command_line_processor import process_command_line
+settings, ph_info_all, ph_data_all, output_csv, info_json = process_command_line(sys.argv)
 
 # set configuration
 res_along_track = settings.get('res_along_track', 10) 
@@ -114,13 +91,6 @@ photon_bins     = settings.get('photon_bins', False)
 parallel        = settings.get('parallel', True)
 use_ndwi        = settings.get('use_ndwi', False)
 chunk_size      = settings.get('chunk_size', 65536) # number of photons to process at one time
-
-# read info json
-with open(info_json, 'r') as json_file:
-    ph_info_all = json.load(json_file)
-
-# read input csv
-ph_data_all = pd.read_csv(input_csv)
 
 ##################
 # BUILD DATAFRAME

@@ -39,7 +39,6 @@
 #
 
 import sys
-import json
 import importlib
 import pandas as pd
 
@@ -51,31 +50,9 @@ MODEL = importlib.import_module('medianmodel')
 ##############
 
 # process command line
-if len(sys.argv) == 5:
-    settings_json   = sys.argv[1]
-    info_json       = sys.argv[2]
-    input_csv       = sys.argv[3]
-    output_csv      = sys.argv[4]
-elif len(sys.argv) == 4:
-    settings_json   = None
-    info_json       = sys.argv[1]
-    input_csv       = sys.argv[2]
-    output_csv      = sys.argv[3]
-elif len(sys.argv) == 3:
-    settings_json   = None
-    info_json       = sys.argv[1]
-    input_csv       = sys.argv[2]
-    output_csv      = None
-else:
-    print("Incorrect parameters supplied: python runner.py [<settings json>] <input json spot file> <input csv spot file> [<output csv spot file>]")
-    sys.exit()
-
-# read settings json
-if settings_json != None:
-    with open(settings_json, 'r') as json_file:
-        settings = json.load(json_file)
-else:
-    settings = {}
+sys.path.append('../utils')
+from command_line_processor import process_command_line
+settings, beam_info, point_cloud, output_csv, info_json = process_command_line(sys.argv, columns=["latitude", "longitude", "geoid_corr_h", "index_ph", "class_ph"])
 
 # set configuration
 window_sizes        = settings.get('window_sizes', [51, 30, 7]) 
@@ -87,15 +64,11 @@ segment_length      = settings.get('segment_length', 0.001)
 compress_heights    = settings.get('compress_heights', None)
 compress_lats       = settings.get('compress_lats', None)
 
-# read info json
-with open(info_json, 'r') as json_file:
-    beam_info = json.load(json_file)
 
 ##################
 # RUN MODEL
 ##################
 
-point_cloud = pd.read_csv(input_csv)
 results = MODEL.rolling_median_bathy_classification(point_cloud=point_cloud,
                                                     window_sizes=window_sizes,
                                                     kdiff=kdiff, kstd=kstd,
@@ -104,6 +77,11 @@ results = MODEL.rolling_median_bathy_classification(point_cloud=point_cloud,
                                                     segment_length=segment_length,
                                                     compress_heights=compress_heights,
                                                     compress_lats=compress_lats)
+
+################
+# WRITE OUTPUTS
+################
+
 df = pd.DataFrame()
 df["index_ph"] = point_cloud['index_ph']
 df["class_ph"] = results['classification']

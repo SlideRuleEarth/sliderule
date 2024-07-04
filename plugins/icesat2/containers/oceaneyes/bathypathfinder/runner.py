@@ -33,56 +33,30 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
-import pandas as pd
-import numpy as np
 import sys
-import json
 
 from BathyPathFinder import BathyPathSearch
 
 # process command line
-if len(sys.argv) == 5:
-    settings_json   = sys.argv[1]
-    info_json       = sys.argv[2]
-    input_csv       = sys.argv[3]
-    output_csv      = sys.argv[4]
-elif len(sys.argv) == 4:
-    settings_json   = None
-    info_json       = sys.argv[1]
-    input_csv       = sys.argv[2]
-    output_csv      = sys.argv[3]
-elif len(sys.argv) == 3:
-    settings_json   = None
-    info_json       = sys.argv[1]
-    input_csv       = sys.argv[2]
-    output_csv      = None
-else:
-    print("Incorrect parameters supplied: python runner.py [<settings json>] <input json spot file> <input csv spot file> [<output csv spot file>]")
-    sys.exit()
-
-# read settings json
-if settings_json != None:
-    with open(settings_json, 'r') as json_file:
-        settings = json.load(json_file)
-else:
-    settings = {}
+sys.path.append('../utils')
+from command_line_processor import process_command_line
+settings, spot_info, spot_df, output_csv, info_json = process_command_line(sys.argv, columns=["x_atc", "geoid_corr_h", "surface_h", "index_ph", "class_ph"])
 
 # set configuration
-tau     = settings.get('tau', 0.5) 
-k       = settings.get('k', 15)
-n       = settings.get('n', 99)
+tau             = settings.get('tau', 0.5) 
+k               = settings.get('k', 15)
+n               = settings.get('n', 99)
+find_surface    = settings.get('find_surface', False)
 
-# read info json
-with open(info_json, 'r') as json_file:
-    spot_info = json.load(json_file)
-
-# read input data into dataframe
-print(f'Processing {input_csv}...')
-spot_df = pd.read_csv(input_csv)
+# keep only photons below sea surface
+bathy_df = spot_df
+if not find_surface:
+    bathy_df = spot_df.loc[spot_df['class_ph'] != 41] # remove sea surface photons
+    bathy_df = spot_df.loc[spot_df['geoid_corr_h'] < spot_df['surface_h']] # remove photons above sea surface
 
 # run bathy pathfinder
 bps = BathyPathSearch(tau, k, n)
-bps.fit(spot_df['x_atc'], spot_df['geoid_corr_h'])
+bps.fit(bathy_df['x_atc'], bathy_df['geoid_corr_h'], find_surface)
 
 # write bathy classifications to spot df
 spot_df.loc[bps.bathy_photons.index, 'class_ph'] = 40

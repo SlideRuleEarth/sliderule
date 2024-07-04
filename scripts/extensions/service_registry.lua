@@ -3,12 +3,14 @@ local name = arg[1] or default_name
 local service = "sliderule"
 local lifetime = 120 -- seconds
 local registration_state = false
+local initial_registration = true
 
 while sys.alive() do
     if sys.healthy() then
         sys.log(core.DEBUG, "Registering "..name.." to service <"..service.."> for "..tostring(lifetime))
-        local status = netsvc.orchreg(service, lifetime, name, false)
+        local status = netsvc.orchreg(service, lifetime, name, initial_registration, false)
         if status then
+            initial_registration = false
             if registration_state then Lvl = core.DEBUG
             else Lvl = core.INFO end
             sys.log(Lvl, "Successfully registered to <"..service..">")

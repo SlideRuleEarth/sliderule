@@ -68,6 +68,7 @@ int icesat2_open (lua_State *L)
         {"atl03v",              Atl03Viewer::luaCreate},
         {"atl03indexer",        Atl03Indexer::luaCreate},
         {"atl03bathy",          Atl03BathyReader::luaCreate},
+        {"atl03bathyviewer",    Atl03BathyViewer::luaCreate},
         {"atl06",               Atl06Dispatch::luaCreate},
         {"atl06s",              Atl06Reader::luaCreate},
         {"atl08",               Atl08Dispatch::luaCreate},
@@ -129,6 +130,7 @@ void initicesat2 (void)
     Atl03Viewer::init();
     Atl03Indexer::init();
     Atl03BathyReader::init();
+    Atl03BathyViewer::init();
     Atl06Dispatch::init();
     Atl06Reader::init();
     Atl08Dispatch::init();

@@ -56,6 +56,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"lsmsgq",      LuaLibrarySys::lsys_lsmsgq},
     {"setenvver",   LuaLibrarySys::lsys_setenvver},
     {"setispublic", LuaLibrarySys::lsys_setispublic},
+    {"ispublic",    LuaLibrarySys::lsys_getispublic},
     {"setcluster",  LuaLibrarySys::lsys_setcluster},
     {"type",        LuaLibrarySys::lsys_type},
     {"setstddepth", LuaLibrarySys::lsys_setstddepth},
@@ -327,6 +328,15 @@ int LuaLibrarySys::lsys_setispublic (lua_State* L)
     }
 
     lua_pushboolean(L, status);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_getispublic
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_getispublic (lua_State* L)
+{
+    lua_pushboolean(L, OsApi::getIsPublic());
     return 1;
 }
 

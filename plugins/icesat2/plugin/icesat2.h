@@ -40,6 +40,7 @@
 #include "Atl03Viewer.h"
 #include "Atl03Indexer.h"
 #include "Atl03BathyReader.h"
+#include "Atl03BathyViewer.h"
 #include "Atl06Dispatch.h"
 #include "Atl06Reader.h"
 #include "Atl08Dispatch.h"

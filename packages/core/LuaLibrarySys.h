@@ -80,6 +80,7 @@ class LuaLibrarySys
         static int      lsys_lsmsgq         (lua_State* L);
         static int      lsys_setenvver      (lua_State* L);
         static int      lsys_setispublic    (lua_State* L);
+        static int      lsys_getispublic    (lua_State* L);
         static int      lsys_setcluster     (lua_State* L);
         static int      lsys_type           (lua_State* L);
         static int      lsys_setstddepth    (lua_State* L);

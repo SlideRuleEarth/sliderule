@@ -282,12 +282,12 @@ TimeLib::gmt_time_t TimeLib::cds2gmttime(int days, int msecs)
             const int gps_days_at_start_of_this_year = GpsDaysToStartOfYear[year_index];
             const int gps_days_at_start_of_prev_year = GpsDaysToStartOfYear[year_index-1];
 
-            if( gps_days >=  gps_days_at_start_of_next_year )
+            if( gps_days >  gps_days_at_start_of_next_year )
             {
                 years = year_index + 1 + 1980;
                 year_days = gps_days - gps_days_at_start_of_next_year;
             }
-            else if( gps_days >=  gps_days_at_start_of_this_year )
+            else if( gps_days >  gps_days_at_start_of_this_year )
             {
                 years = year_index + 1980;
                 year_days = gps_days - gps_days_at_start_of_this_year;
