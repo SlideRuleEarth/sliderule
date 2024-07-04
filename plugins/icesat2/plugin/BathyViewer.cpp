@@ -44,23 +44,23 @@
 #include "GeoLib.h"
 #include "RasterObject.h"
 
-#include "Atl03BathyViewer.h"
+#include "BathyViewer.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* Atl03BathyViewer::GLOBAL_BATHYMETRY_MASK_FILE_PATH = "/data/ATL24_Mask_v5_Raster.tif";
-const double Atl03BathyViewer::GLOBAL_BATHYMETRY_MASK_MAX_LAT = 84.25;
-const double Atl03BathyViewer::GLOBAL_BATHYMETRY_MASK_MIN_LAT = -79.0;
-const double Atl03BathyViewer::GLOBAL_BATHYMETRY_MASK_MAX_LON = 180.0;
-const double Atl03BathyViewer::GLOBAL_BATHYMETRY_MASK_MIN_LON = -180.0;
-const double Atl03BathyViewer::GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE = 0.25;
-const uint32_t Atl03BathyViewer::GLOBAL_BATHYMETRY_MASK_OFF_VALUE = 0xFFFFFFFF;
+const char* BathyViewer::GLOBAL_BATHYMETRY_MASK_FILE_PATH = "/data/ATL24_Mask_v5_Raster.tif";
+const double BathyViewer::GLOBAL_BATHYMETRY_MASK_MAX_LAT = 84.25;
+const double BathyViewer::GLOBAL_BATHYMETRY_MASK_MIN_LAT = -79.0;
+const double BathyViewer::GLOBAL_BATHYMETRY_MASK_MAX_LON = 180.0;
+const double BathyViewer::GLOBAL_BATHYMETRY_MASK_MIN_LON = -180.0;
+const double BathyViewer::GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE = 0.25;
+const uint32_t BathyViewer::GLOBAL_BATHYMETRY_MASK_OFF_VALUE = 0xFFFFFFFF;
 
-const char* Atl03BathyViewer::OBJECT_TYPE = "Atl03BathyViewer";
-const char* Atl03BathyViewer::LUA_META_NAME = "Atl03BathyViewer";
-const struct luaL_Reg Atl03BathyViewer::LUA_META_TABLE[] = {
+const char* BathyViewer::OBJECT_TYPE = "BathyViewer";
+const char* BathyViewer::LUA_META_NAME = "BathyViewer";
+const struct luaL_Reg BathyViewer::LUA_META_TABLE[] = {
     {"counts",      luaCounts},
     {NULL,          NULL}
 };
@@ -72,7 +72,7 @@ const struct luaL_Reg Atl03BathyViewer::LUA_META_TABLE[] = {
 /*----------------------------------------------------------------------------
  * luaCreate - create(<asset>, <resource>, <parms>)
  *----------------------------------------------------------------------------*/
-int Atl03BathyViewer::luaCreate (lua_State* L)
+int BathyViewer::luaCreate (lua_State* L)
 {
     Asset* asset = NULL;
     BathyParms* parms = NULL;
@@ -85,13 +85,13 @@ int Atl03BathyViewer::luaCreate (lua_State* L)
         parms = dynamic_cast<BathyParms*>(getLuaObject(L, 3, BathyParms::OBJECT_TYPE));
 
         /* Return Reader Object */
-        return createLuaObject(L, new Atl03BathyViewer(L, asset, resource, parms));
+        return createLuaObject(L, new BathyViewer(L, asset, resource, parms));
     }
     catch(const RunTimeException& e)
     {
         if(asset) asset->releaseLuaObject();
         if(parms) parms->releaseLuaObject();
-        mlog(e.level(), "Error creating Atl03BathyViewer: %s", e.what());
+        mlog(e.level(), "Error creating BathyViewer: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -99,14 +99,14 @@ int Atl03BathyViewer::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void Atl03BathyViewer::init (void)
+void BathyViewer::init (void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03BathyViewer::Atl03BathyViewer (lua_State* L, Asset* _asset, const char* _resource, BathyParms* _parms):
+BathyViewer::BathyViewer (lua_State* L, Asset* _asset, const char* _resource, BathyParms* _parms):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->read_timeout * 1000),
     bathyMask(NULL),
@@ -188,7 +188,7 @@ Atl03BathyViewer::Atl03BathyViewer (lua_State* L, Asset* _asset, const char* _re
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-Atl03BathyViewer::~Atl03BathyViewer (void)
+BathyViewer::~BathyViewer (void)
 {
     active = false;
 
@@ -209,7 +209,7 @@ Atl03BathyViewer::~Atl03BathyViewer (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-Atl03BathyViewer::Region::Region (info_t* info):
+BathyViewer::Region::Region (info_t* info):
     segment_lat    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context),
     segment_lon    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context),
     segment_ph_cnt (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(), &info->reader->context)
@@ -223,18 +223,18 @@ Atl03BathyViewer::Region::Region (info_t* info):
 /*----------------------------------------------------------------------------
  * Region::Destructor
  *----------------------------------------------------------------------------*/
-Atl03BathyViewer::Region::~Region (void)
+BathyViewer::Region::~Region (void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * subsettingThread
  *----------------------------------------------------------------------------*/
-void* Atl03BathyViewer::subsettingThread (void* parm)
+void* BathyViewer::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     info_t* info = static_cast<info_t*>(parm);
-    Atl03BathyViewer* reader = info->reader;
+    BathyViewer* reader = info->reader;
 
     /* Initialize Count of Photons */
     int64_t total_photons = 0;
@@ -323,16 +323,16 @@ void* Atl03BathyViewer::subsettingThread (void* parm)
 /*----------------------------------------------------------------------------
  * luaCounts - :counts()
  *----------------------------------------------------------------------------*/
-int Atl03BathyViewer::luaCounts (lua_State* L)
+int BathyViewer::luaCounts (lua_State* L)
 {
     bool status = false;
     int num_obj_to_return = 1;
-    Atl03BathyViewer* lua_obj = NULL;
+    BathyViewer* lua_obj = NULL;
 
     try
     {
         /* Get Self */
-        lua_obj = dynamic_cast<Atl03BathyViewer*>(getLuaSelf(L, 1));
+        lua_obj = dynamic_cast<BathyViewer*>(getLuaSelf(L, 1));
 
         /* Create Statistics Table */
         lua_newtable(L);

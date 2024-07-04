@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __atl03_bathy_viewer__
-#define __atl03_bathy_viewer__
+#ifndef __bathy_viewer__
+#define __bathy_viewer__
 
 /******************************************************************************
  * INCLUDES
@@ -51,7 +51,7 @@
  * ATL03 TABLE BUILDER
  ******************************************************************************/
 
-class Atl03BathyViewer: public LuaObject
+class BathyViewer: public LuaObject
 {
     public:
 
@@ -90,7 +90,7 @@ class Atl03BathyViewer: public LuaObject
 
 
         typedef struct Info {
-            Atl03BathyViewer*   reader;
+            BathyViewer*   reader;
             char                prefix[7];
             int                 track;
             int                 pair;
@@ -138,11 +138,11 @@ class Atl03BathyViewer: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03BathyViewer            (lua_State* L, Asset* _asset, const char* _resource, BathyParms* _parms);
-                            ~Atl03BathyViewer           (void) override;
+                            BathyViewer            (lua_State* L, Asset* _asset, const char* _resource, BathyParms* _parms);
+                            ~BathyViewer           (void) override;
 
         static void*        subsettingThread            (void* parm);
         static int          luaCounts                   (lua_State* L);
 };
 
-#endif  /* __atl03_bathy_viewer__ */
+#endif  /* __bathy_viewer__ */

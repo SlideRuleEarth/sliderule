@@ -67,8 +67,8 @@ int icesat2_open (lua_State *L)
         {"atl03s",              Atl03Reader::luaCreate},
         {"atl03v",              Atl03Viewer::luaCreate},
         {"atl03indexer",        Atl03Indexer::luaCreate},
-        {"atl03bathy",          Atl03BathyReader::luaCreate},
-        {"atl03bathyviewer",    Atl03BathyViewer::luaCreate},
+        {"atl03bathy",          BathyReader::luaCreate},
+        {"atl03bathyviewer",    BathyViewer::luaCreate},
         {"atl06",               Atl06Dispatch::luaCreate},
         {"atl06s",              Atl06Reader::luaCreate},
         {"atl08",               Atl08Dispatch::luaCreate},
@@ -113,7 +113,7 @@ int icesat2_open (lua_State *L)
     LuaEngine::setAttrInt(L, "ATL08_CANOPY",                Icesat2Parms::ATL08_CANOPY);
     LuaEngine::setAttrInt(L, "ATL08_TOP_OF_CANOPY",         Icesat2Parms::ATL08_TOP_OF_CANOPY);
     LuaEngine::setAttrInt(L, "ATL08_UNCLASSIFIED",          Icesat2Parms::ATL08_UNCLASSIFIED);
-    LuaEngine::setAttrStr(L, "BATHY_PREFIX",                Atl03BathyReader::OUTPUT_FILE_PREFIX);
+    LuaEngine::setAttrStr(L, "BATHY_PREFIX",                BathyReader::OUTPUT_FILE_PREFIX);
 
     return 1;
 }
@@ -129,8 +129,8 @@ void initicesat2 (void)
     Atl03Reader::init();
     Atl03Viewer::init();
     Atl03Indexer::init();
-    Atl03BathyReader::init();
-    Atl03BathyViewer::init();
+    BathyReader::init();
+    BathyViewer::init();
     Atl06Dispatch::init();
     Atl06Reader::init();
     Atl08Dispatch::init();

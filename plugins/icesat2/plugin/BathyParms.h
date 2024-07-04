@@ -39,6 +39,11 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "Icesat2Parms.h"
+#include "BathyFields.h"
+#include "BathyOpenOceans.h"
+
+using BathyFields::classifier_t;
+using BathyFields::NUM_CLASSIFIERS;
 
 /******************************************************************************
  * REQUEST PARAMETERS
@@ -60,7 +65,9 @@ class BathyParms: public Icesat2Parms
         static const char* CLASSIFIERS;
         static const char* SPOTS;
         static const char* ATL09_RESOURCES;
-        static const char* SURFACE_FINDER;
+        static const char* OUTPUT_AS_SDP;
+
+        static const char* OPENOCEANS;
         static const char* DEM_BUFFER;
         static const char* BIN_SIZE;
         static const char* MAX_RANGE;
@@ -70,49 +77,10 @@ class BathyParms: public Icesat2Parms
         static const char* HIGHEST_PEAK_RATIO;
         static const char* SURFACE_WIDTH_SIGMAS;
         static const char* MODEL_AS_POISSON;
-        static const char* OUTPUT_AS_SDP;
 
         static const int ATL09_RESOURCE_NAME_LEN = 39;
         static const int ATL09_RESOURCE_KEY_LEN = 6;
         
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef enum {
-            INVALID_CLASSIFIER  = -1,
-            QTREES              = 0,
-            COASTNET            = 1,
-            OPENOCEANS          = 2,
-            MEDIANFILTER        = 3,
-            CSHELPH             = 4,
-            BATHY_PATHFINDER    = 5,
-            POINTNET2           = 6,
-            LOCAL_CONTRAST      = 7,
-            ENSEMBLE            = 8,
-            NUM_CLASSIFIERS     = 9
-        } classifier_t;
-
-        typedef enum {
-            UNCLASSIFIED = 0,
-            OTHER = 1,
-            BATHYMETRY = 40,
-            SEA_SURFACE = 41,
-            WATER_COLUMN = 45
-        } bathy_class_t;
-
-        typedef struct {
-            double dem_buffer; // meters
-            double bin_size; // meters
-            double max_range; // meters
-            long max_bins; // bins
-            double signal_threshold_sigmas; // standard deviations
-            double min_peak_separation; // meters
-            double highest_peak_ratio;
-            double surface_width_sigmas; // standard deviations
-            bool model_as_poisson;
-        } surface_finder_t;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -127,16 +95,18 @@ class BathyParms: public Icesat2Parms
          * Data
          *--------------------------------------------------------------------*/
 
-        double      max_dem_delta;                  // initial filter of heights against DEM (For removing things like clouds)
-        int         ph_in_extent;                   // number of photons in each extent
-        bool        generate_ndwi;                  // use HLS data to generate NDWI for each segment lat,lon
-        bool        use_bathy_mask;                 // global bathymetry mask downloaded in atl24 init lua routine
-        bool        classifiers[NUM_CLASSIFIERS];   // which bathymetry classifiers to run
-        bool        return_inputs;                  // return the atl03 bathy records back to client
-        bool        spots[NUM_SPOTS];               // only used by downstream algorithms
-        bool        output_as_sdp;                  // include all the necessary ancillary data for the standard data product
-        surface_finder_t surface_finder;            // surface finder parameters
-        Dictionary<string> alt09_index;
+        double              max_dem_delta;                  // initial filter of heights against DEM (For removing things like clouds)
+        int                 ph_in_extent;                   // number of photons in each extent
+        bool                generate_ndwi;                  // use HLS data to generate NDWI for each segment lat,lon
+        bool                use_bathy_mask;                 // global bathymetry mask downloaded in atl24 init lua routine
+        bool                classifiers[NUM_CLASSIFIERS];   // which bathymetry classifiers to run
+        bool                return_inputs;                  // return the atl03 bathy records back to client
+        bool                spots[NUM_SPOTS];               // only used by downstream algorithms
+        bool                output_as_sdp;                  // include all the necessary ancillary data for the standard data product
+        Dictionary<string>  alt09_index;                    // dictionary of ATL09 granules
+
+        BathyOpenOceans::parms_t openoceans_parms;          // openoceans parameters
+        
 
         /*--------------------------------------------------------------------
          * Methods

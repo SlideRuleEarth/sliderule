@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, University of Washington
+ * Copyright (c) 2023, University of Texas
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,14 +12,14 @@
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
  *
- * 3. Neither the name of the University of Washington nor the names of its
+ * 3. Neither the name of the University of Texas nor the names of its
  *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
+ * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF TEXAS AND CONTRIBUTORS
  * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF TEXAS OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
@@ -29,45 +29,31 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __icesat2_plugin__
-#define __icesat2_plugin__
+#ifndef __bathy_open_oceans__
+#define __bathy_open_oceans__
 
-/******************************************************************************
- * INCLUDES
- ******************************************************************************/
-
-#include "Atl03Reader.h"
-#include "Atl03Viewer.h"
-#include "Atl03Indexer.h"
-#include "Atl06Dispatch.h"
-#include "Atl06Reader.h"
-#include "Atl08Dispatch.h"
-#include "Atl13IODriver.h"
-#include "Atl13Reader.h"
+#include "OsApi.h"
 #include "BathyFields.h"
 #include "BathyParms.h"
-#include "BathyReader.h"
-#include "BathyViewer.h"
-#include "CumulusIODriver.h"
-#include "GTArray.h"
-#include "GTDArray.h"
-#include "Icesat2Parms.h"
-#include "MeritRaster.h"
 
-#ifdef __unittesting__
-#include "UT_Atl03Reader.h"
-#include "UT_Atl06Dispatch.h"
-#endif
+using BathyFields::extent_t;
 
-/******************************************************************************
- * PROTOTYPES
- ******************************************************************************/
+namespace BathyOpenOceans
+{
+    /* Parameters */
+    typedef struct {
+        double  dem_buffer; // meters
+        double  bin_size; // meters
+        double  max_range; // meters
+        long    max_bins; // bins
+        double  signal_threshold_sigmas; // standard deviations
+        double  min_peak_separation; // meters
+        double  highest_peak_ratio;
+        double  surface_width_sigmas; // standard deviations
+        bool    model_as_poisson;
+    } parms_t;
 
-extern "C" {
-void initicesat2 (void);
-void deiniticesat2 (void);
+    void findSeaSurface (extent_t* extent, const parms_t& parms);
 }
 
-#endif  /* __icesat2_plugin__ */
-
-
+#endif
