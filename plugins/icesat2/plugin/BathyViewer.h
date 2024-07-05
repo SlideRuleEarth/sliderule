@@ -102,7 +102,7 @@ class BathyViewer: public LuaObject
             public:
 
                 explicit Region     (info_t* info);
-                ~Region             (void);
+                ~Region             (void) = default;
 
                 H5Array<double>     segment_lat;
                 H5Array<double>     segment_lon;

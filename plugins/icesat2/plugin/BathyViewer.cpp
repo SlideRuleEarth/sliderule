@@ -221,13 +221,6 @@ BathyViewer::Region::Region (info_t* info):
 }
 
 /*----------------------------------------------------------------------------
- * Region::Destructor
- *----------------------------------------------------------------------------*/
-BathyViewer::Region::~Region (void)
-{
-}
-
-/*----------------------------------------------------------------------------
  * subsettingThread
  *----------------------------------------------------------------------------*/
 void* BathyViewer::subsettingThread (void* parm)
@@ -301,6 +294,7 @@ void* BathyViewer::subsettingThread (void* parm)
         reader->totalPhotonsInMask += photons_in_mask;
         reader->totalSegments += total_segments;
         reader->totalSegmentsInMask += segments_in_mask;
+        reader->totalErrors += total_errors;
 
         /* Count Completion */
         reader->numComplete++;
