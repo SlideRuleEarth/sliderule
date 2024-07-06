@@ -45,6 +45,7 @@
 #include "Atl13IODriver.h"
 #include "Atl13Reader.h"
 #include "BathyFields.h"
+#include "BathyOpenOceans.h"
 #include "BathyParms.h"
 #include "BathyReader.h"
 #include "BathyViewer.h"

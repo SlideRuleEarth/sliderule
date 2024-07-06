@@ -80,6 +80,24 @@ GeoLib::UTMTransform::UTMTransform(double initial_latitude, double initial_longi
 }
 
 /*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+GeoLib::UTMTransform::UTMTransform(int _zone, bool _is_north, const char* output_crs):
+    zone(_zone),
+    is_north(_is_north),
+    in_error(false)
+{
+    ogr_trans_t* ogr_trans = new ogr_trans_t;
+    ogr_trans->srs_in = OSRNewSpatialReference(NULL);
+    ogr_trans->srs_out = OSRNewSpatialReference(NULL);
+    OSRSetProjCS(ogr_trans->srs_in, "UTM");
+    OSRSetUTM(ogr_trans->srs_in, zone, is_north);
+    OSRSetFromUserInput(ogr_trans->srs_out, output_crs);
+    ogr_trans->transform = OCTNewCoordinateTransformation(ogr_trans->srs_in, ogr_trans->srs_out);
+    transform = reinterpret_cast<utm_transform_t>(ogr_trans); // set private member
+}
+
+/*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
 GeoLib::UTMTransform::~UTMTransform(void)
@@ -93,8 +111,10 @@ GeoLib::UTMTransform::~UTMTransform(void)
 
 /*----------------------------------------------------------------------------
  * Destructor
+ *  TODO: why is the x and y flipped?
+ *        it only gives the correct answer when in this order
  *----------------------------------------------------------------------------*/
-GeoLib::point_t GeoLib::UTMTransform::calculateCoordinates(double latitude, double longitude)
+GeoLib::point_t GeoLib::UTMTransform::calculateCoordinates(double x, double y)
 {
     point_t coord;
 
@@ -104,11 +124,7 @@ GeoLib::point_t GeoLib::UTMTransform::calculateCoordinates(double latitude, doub
     /* Pull Out Transformation */
     ogr_trans_t* ogr_trans = reinterpret_cast<ogr_trans_t*>(transform);
 
-    /* Perform Transformation
-     *  TODO: why is the x and y flipped?
-     *        it only gives the correct answer when in this order */
-    double x = latitude;
-    double y = longitude;
+    /* Perform Transformation */
     if(OCTTransform(ogr_trans->transform, 1, &x, &y, NULL) == TRUE)
     {
         coord.x = x;

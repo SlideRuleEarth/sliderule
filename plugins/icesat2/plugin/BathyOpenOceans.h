@@ -29,17 +29,20 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __bathy_open_oceans__
-#define __bathy_open_oceans__
+#ifndef __bathy_openoceans__
+#define __bathy_openoceans__
 
 #include "OsApi.h"
 #include "BathyFields.h"
-#include "BathyParms.h"
 
 using BathyFields::extent_t;
 
 namespace BathyOpenOceans
 {
+    /* Constants */
+    const double DEFAULT_RI_AIR = 1.00029;
+    const double DEFAULT_RI_WATER = 1.34116;
+
     /* Parameters */
     typedef struct {
         double  dem_buffer; // meters
@@ -53,7 +56,9 @@ namespace BathyOpenOceans
         bool    model_as_poisson;
     } parms_t;
 
+    /* Functions */
     void findSeaSurface (extent_t* extent, const parms_t& parms);
+    void photon_refraction(extent_t& extent, double n1=DEFAULT_RI_AIR, double n2=DEFAULT_RI_WATER);
 }
 
 #endif

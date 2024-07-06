@@ -54,8 +54,9 @@ class GeoLib: public MathLib
         {
             public:
                 UTMTransform(double initial_latitude, double initial_longitude, const char* input_crs=DEFAULT_CRS);
+                UTMTransform(int _zone, bool _is_north, const char* output_crs=DEFAULT_CRS);
                 ~UTMTransform(void);
-                point_t calculateCoordinates(double latitude, double longitude);
+                point_t calculateCoordinates(double x, double y);
                 int zone;
                 bool is_north;
                 bool in_error;
