@@ -85,7 +85,8 @@ int icesat2_open (lua_State *L)
     luaL_newlib(L, icesat2_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrStr(L, "PARMS",                       Icesat2Parms::_SELF);
+    LuaEngine::setAttrStr(L, "PARMS",                       Icesat2Parms::ICESAT2_PARMS);
+    LuaEngine::setAttrStr(L, "BATHY_PARMS",                 BathyReader::BATHY_PARMS);
     LuaEngine::setAttrInt(L, "CNF_POSSIBLE_TEP",            Icesat2Parms::CNF_POSSIBLE_TEP);
     LuaEngine::setAttrInt(L, "CNF_NOT_CONSIDERED",          Icesat2Parms::CNF_NOT_CONSIDERED);
     LuaEngine::setAttrInt(L, "CNF_BACKGROUND",              Icesat2Parms::CNF_BACKGROUND);

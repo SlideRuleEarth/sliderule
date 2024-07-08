@@ -45,7 +45,6 @@
 #include "H5Element.h"
 #include "GeoLib.h"
 #include "Icesat2Parms.h"
-#include "BathyParms.h"
 
 /******************************************************************************
  * ATL03 TABLE BUILDER
@@ -91,9 +90,9 @@ class BathyViewer: public LuaObject
 
         typedef struct Info {
             BathyViewer*   reader;
-            char                prefix[7];
-            int                 track;
-            int                 pair;
+            char           prefix[7];
+            int            track;
+            int            pair;
         } info_t;
 
         /* Region Subclass */
@@ -122,7 +121,7 @@ class BathyViewer: public LuaObject
         Asset*              asset;
         const char*         resource;
         const int           read_timeout_ms;
-        BathyParms*         parms;
+        Icesat2Parms*       parms;
 
         H5Coro::context_t   context; // for ATL03 file
 
@@ -138,7 +137,7 @@ class BathyViewer: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            BathyViewer            (lua_State* L, Asset* _asset, const char* _resource, BathyParms* _parms);
+                            BathyViewer            (lua_State* L, Asset* _asset, const char* _resource, Icesat2Parms* _parms);
                             ~BathyViewer           (void) override;
 
         static void*        subsettingThread            (void* parm);

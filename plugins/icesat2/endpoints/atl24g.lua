@@ -76,22 +76,7 @@ if not proc then
     return
 end
 
--- build hls polygon
-local hls_polygon_cmr_start_time = time.gps()
-local hls_poly = parms["poly"]
-if not hls_poly then
-    local original_name_filter = parms["name_filter"]
-    parms["name_filter"] = "*" .. resource
-    local rc, rsps = earthdata.cmr(parms, nil, true)
-    if rc == earthdata.SUCCESS then
-        hls_poly = rsps[resource] and rsps[resource]["poly"]
-    end
-    parms["name_filter"] = original_name_filter
-end
-profile["hls_polygon_cmr"] = (time.gps() - hls_polygon_cmr_start_time) / 1000.0
-userlog:alert(core.INFO, core.RTE_INFO, string.format("HLS polygon CMR search executed in %f seconds", profile["hls_polygon_cmr"]))
-
--- build hls parameters
+-- get time range of data
 local year      = resource:sub(7,10)
 local month     = resource:sub(11,12)
 local day       = resource:sub(13,14)
@@ -101,24 +86,63 @@ local rdelta    = 5 * 24 * 60 * 60 * 1000 -- 5 days * (24 hours/day * 60 minutes
 local t0        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps - rdelta))
 local t1        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps + rdelta))
 
--- build hls raster object
-local stac_start_time = time.gps()
-local hls_parms = {
-    asset       = "landsat-hls",
-    t0          = t0,
-    t1          = t1,
-    use_poi_time = true,
-    bands       = {"NDWI"},
-    poly        = hls_poly
-}
-local geo_parms = nil
-local rc1, rsps1 = earthdata.stac(hls_parms)
-if rc1 == earthdata.SUCCESS then
-    hls_parms["catalog"] = json.encode(rsps1)
-    geo_parms = geo.parms(hls_parms)
+-- support Kd
+-- support Kd
+
+local _,doy     = time.gps2gmt(rgps)
+local doy_8d_start  = ((doy - 1) & ~7) + 1
+local doy_8d_stop   = doy_8d_start + 7
+local gps_start     = time.gmt2gps(string.format("%04d:%03d:00:00:00", year, doy_8d_start))
+local gps_stop      = time.gmt2gps(string.format("%04d:%03d:00:00:00", year, doy_8d_stop))
+local year_start, month_start, day_start = time.gps2date(gps_start)
+local year_stop,  month_stop,  day_stop  = time.gps2date(gps_stop)
+if year_start ~= year_stop then
+    year_stop = year_start
+    month_stop = 12
+    day_stop = 31
 end
-profile["hls_stac"] = (time.gps() - stac_start_time) / 1000.0
-userlog:alert(core.INFO, core.RTE_INFO, string.format("HLS STAC search executed in %f seconds", profile["hls_stac"]))
+local viirs_filename = string.format("http://oceandata.sci.gsfc.nasa.gov/opendap/VIIRSJ1/L3SMI/%04d/%02d%02d/JPSS1_VIIRS.%04d%02d%02d_%04d%02d%02d.L3m.8D.KD.Kd_490.4km.nc.dap.nc4",
+    year_start, month_start, day_start,
+    year_start, month_start, day_start,
+    year_stop, month_stop, day_stop
+)
+
+-- support NDWI
+local geo_parms = nil
+if parms["generate_ndwi"] then
+    -- build hls polygon
+    local hls_polygon_cmr_start_time = time.gps()
+    local hls_poly = parms["poly"]
+    if not hls_poly then
+        local original_name_filter = parms["name_filter"]
+        parms["name_filter"] = "*" .. resource
+        local rc, rsps = earthdata.cmr(parms, nil, true)
+        if rc == earthdata.SUCCESS then
+            hls_poly = rsps[resource] and rsps[resource]["poly"]
+        end
+        parms["name_filter"] = original_name_filter
+    end
+    profile["hls_polygon_cmr"] = (time.gps() - hls_polygon_cmr_start_time) / 1000.0
+    userlog:alert(core.INFO, core.RTE_INFO, string.format("HLS polygon CMR search executed in %f seconds", profile["hls_polygon_cmr"]))
+
+    -- build hls raster object
+    local stac_start_time = time.gps()
+    local hls_parms = {
+        asset       = "landsat-hls",
+        t0          = t0,
+        t1          = t1,
+        use_poi_time = true,
+        bands       = {"NDWI"},
+        poly        = hls_poly
+    }
+    local rc1, rsps1 = earthdata.stac(hls_parms)
+    if rc1 == earthdata.SUCCESS then
+        hls_parms["catalog"] = json.encode(rsps1)
+        geo_parms = geo.parms(hls_parms)
+    end
+    profile["hls_stac"] = (time.gps() - stac_start_time) / 1000.0
+    userlog:alert(core.INFO, core.RTE_INFO, string.format("HLS STAC search executed in %f seconds", profile["hls_stac"]))
+end
 
 -- get ATL09 resources
 local atl09_cmr_start_time = time.gps()
@@ -160,7 +184,7 @@ end
 -- read ICESat-2 inputs
 local bathy_parms   = icesat2.bathyparms(parms)
 local reader        = icesat2.atl03bathy(proc.asset, resource, args.result_q, bathy_parms, geo_parms, crenv.host_sandbox_directory, false, atl09_asset)
-local status        = georesource.waiton(resource, parms, nil, reader, nil, proc.sampler_disp, proc.userlog, false)
+local status        = georesource.waiton(resource, parms, nil, reader, nil, nil, userlog, false)
 if not status then
     userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to generate ATL03 bathy inputs for %s", resource))
     runner.cleanup(crenv)
@@ -316,7 +340,6 @@ runclassifier(output_files, bathy_parms, timeout, "pointnet2", false)
 
 -- execute openoceans
 runclassifier(output_files, bathy_parms, timeout, "openoceans", false)
-
 
 -- capture endpoint timing
 profile["atl24_endpoint"] = (time.gps() - endpoint_start_time) / 1000.0

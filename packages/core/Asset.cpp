@@ -144,38 +144,6 @@ int Asset::luaCreate (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * public assetFactory
- *----------------------------------------------------------------------------*/
-const Asset* Asset::assetFactory(lua_State* L, const std::vector<const char*>& attrs) {
-
-    // force rebuild
-    attributes_t _attributes;
-
-    _attributes.name       = attrs[0];
-    _attributes.identity   = attrs[1];
-    _attributes.driver     = attrs[2];
-    _attributes.path       = attrs[3];
-    _attributes.index      = attrs[4];
-    _attributes.region     = attrs[5];
-    _attributes.endpoint   = attrs[6];
-
-    io_driver_t _driver;
-    bool found = false;
-    ioDriverMut.lock();
-    {
-        found = ioDrivers.find(_attributes.driver, &_driver);
-    }
-    ioDriverMut.unlock();
-
-    if(!found)
-    {
-        _driver.factory = Asset::IODriver::create; // set it to the default
-    }
-
-    return new Asset(L, _attributes, _driver);
-}
-
-/*----------------------------------------------------------------------------
  * registerDriver
  *----------------------------------------------------------------------------*/
 bool Asset::registerDriver (const char* _format, io_driver_f factory)

@@ -57,7 +57,7 @@ class Icesat2Parms: public NetsvcParms
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* _SELF;
+        static const char* ICESAT2_PARMS;
         static const char* SURFACE_TYPE;
         static const char* ATL03_CNF;
         static const char* YAPC;

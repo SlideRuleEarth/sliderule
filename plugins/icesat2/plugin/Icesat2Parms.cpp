@@ -45,7 +45,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* Icesat2Parms::_SELF                        = "icesat2";
+const char* Icesat2Parms::ICESAT2_PARMS                = "icesat2";
 const char* Icesat2Parms::SURFACE_TYPE                 = "srt";
 const char* Icesat2Parms::ATL03_CNF                    = "cnf";
 const char* Icesat2Parms::YAPC                         = "yapc";

@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2023, University of Texas
  * All rights reserved.
@@ -53,11 +54,11 @@ namespace BathyFields
 
     /* Photon Classifications */
     typedef enum {
-        UNCLASSIFIED = 0,
-        OTHER = 1,
-        BATHYMETRY = 40,
-        SEA_SURFACE = 41,
-        WATER_COLUMN = 45
+        UNCLASSIFIED        = 0,
+        OTHER               = 1,
+        BATHYMETRY          = 40,
+        SEA_SURFACE         = 41,
+        WATER_COLUMN        = 45
     } bathy_class_t;
 
     /* Photon Fields */

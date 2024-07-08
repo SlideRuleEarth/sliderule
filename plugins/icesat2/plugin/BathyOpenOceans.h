@@ -33,32 +33,87 @@
 #define __bathy_openoceans__
 
 #include "OsApi.h"
+#include "BathyReader.h"
 #include "BathyFields.h"
 
 using BathyFields::extent_t;
 
-namespace BathyOpenOceans
+/******************************************************************************
+ * BATHY OPENOCEANS
+ ******************************************************************************/
+
+class BathyOpenOceans: public LuaObject
 {
-    /* Constants */
-    const double DEFAULT_RI_AIR = 1.00029;
-    const double DEFAULT_RI_WATER = 1.34116;
+    public:
 
-    /* Parameters */
-    typedef struct {
-        double  dem_buffer; // meters
-        double  bin_size; // meters
-        double  max_range; // meters
-        long    max_bins; // bins
-        double  signal_threshold_sigmas; // standard deviations
-        double  min_peak_separation; // meters
-        double  highest_peak_ratio;
-        double  surface_width_sigmas; // standard deviations
-        bool    model_as_poisson;
-    } parms_t;
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
-    /* Functions */
-    void findSeaSurface (extent_t* extent, const parms_t& parms);
-    void photon_refraction(extent_t& extent, double n1=DEFAULT_RI_AIR, double n2=DEFAULT_RI_WATER);
-}
+        static const char* OBJECT_TYPE;
+
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        /* Parameters */
+        struct parms_t {
+            double  ri_air;
+            double  ri_water;
+            double  dem_buffer; // meters
+            double  bin_size; // meters
+            double  max_range; // meters
+            long    max_bins; // bins
+            double  signal_threshold; // standard deviations
+            double  min_peak_separation; // meters
+            double  highest_peak_ratio;
+            double  surface_width; // standard deviations
+            bool    model_as_poisson;
+
+            parms_t():
+                ri_air(1.00029),
+                ri_water(1.34116),
+                dem_buffer(50.0),
+                bin_size(0.5),
+                max_range(1000.0),
+                max_bins(10000),
+                signal_threshold(3.0),
+                min_peak_separation(0.5),
+                highest_peak_ratio(1.2),
+                surface_width(3.0),
+                model_as_poisson(true) {};
+            
+            ~parms_t() = default;
+        };
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static int  luaCreate   (lua_State* L);
+        static void init        (void);
+
+        void findSeaSurface       (extent_t& extent);
+        void refractionCorrection (extent_t& extent);
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        const parms_t*      parms;
+        H5Coro::context_t   contextVIIRSJ1;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        BathyOpenOceans (lua_State* L, const parms_t* _parms);
+        ~BathyOpenOceans (void) override;
+};
 
 #endif
