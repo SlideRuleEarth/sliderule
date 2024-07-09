@@ -168,36 +168,30 @@ end
 -- build bathy reader parms
 -------------------------------------------------------
 local openoceans_parms = parms["openoceans"] or {}
-local bathy_parms = {
-    asset = parms["asset"] or "icesat2",
-    asset09 = parms["asset09"] or "icesat2",
-    hls = geo_parms,
-    icesat2 = icesat2.parms(parms),
-    openoceans = {
-        resource_kd = viirs_filename,
-        assetKd = openoceans_parms["assetKd"] or "viirsj1-s3"
-    }
-}
+parms["hls"] = geo_parms
+parms["icesat2"] = icesat2.parms(parms)
+parms["openoceans"]["resource_kd"] = viirs_filename
+parms["openoceans"]["assetKd"] = openoceans_parms["assetKd"] or "viirsj1-s3"
 
 -------------------------------------------------------
 -- read ICESat-2 inputs
 -------------------------------------------------------
-local reader = icesat2.bathyreader(bathy_parms, resource, rspq, crenv.host_sandbox_directory, false)
-local spot_mask = {}
+local reader = icesat2.bathyreader(parms, resource, rspq, crenv.host_sandbox_directory, false)
+local spot_mask = {} -- build spot mask using defaults/parsing from bathyreader (because reader will be destroyed)
 for spot = 1,icesat2.NUM_SPOTS do
     spot_mask[spot] = reader:spoton(spot)
 end
-local classifier_mask = {}
+local classifier_mask = {}  -- build classifier mask using defaults/parsing from bathyreader (because reader will be destroyed)
 for _,classifier in ipairs({"qtrees", "coastnet", "openoceans", "medianfilter", "cshelph", "bathypathfinder", "pointnet2", "ensemble"}) do
     classifier_mask[classifier] = reader:classifieron(classifier)
 end
-local duration = 0
+local duration = 0 -- wait for bathyreader to finish
 while (userlog:numsubs() > 0) and not reader:waiton(interval * 1000) do
     duration = duration + interval
     if timeout >= 0 and duration >= timeout then -- check for timeout
         userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> for %s timed-out after %d seconds", rspq, resource, duration))
         runner.cleanup(crenv)
-        do return false end
+        return
     end
     userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ... continuing to read %s (after %d seconds)", rspq, resource, duration))
 end
