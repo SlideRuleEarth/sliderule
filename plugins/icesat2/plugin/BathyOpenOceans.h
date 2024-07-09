@@ -33,7 +33,7 @@
 #define __bathy_openoceans__
 
 #include "OsApi.h"
-#include "BathyReader.h"
+#include "H5Coro.h"
 #include "BathyFields.h"
 
 using BathyFields::extent_t;
@@ -42,7 +42,7 @@ using BathyFields::extent_t;
  * BATHY OPENOCEANS
  ******************************************************************************/
 
-class BathyOpenOceans: public LuaObject
+class BathyOpenOceans
 {
     public:
 
@@ -50,16 +50,12 @@ class BathyOpenOceans: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* OBJECT_TYPE;
-
-        static const char* LUA_META_NAME;
-        static const struct luaL_Reg LUA_META_TABLE[];
+        static const char* OPENOCEANS_PARMS;
 
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        /* Parameters */
         struct parms_t {
             double  ri_air;
             double  ri_water;
@@ -93,11 +89,10 @@ class BathyOpenOceans: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate   (lua_State* L);
-        static void init        (void);
-
-        void findSeaSurface       (extent_t& extent);
-        void refractionCorrection (extent_t& extent);
+                BathyOpenOceans         (lua_State* L, int index);
+                ~BathyOpenOceans        (void) = default;
+        void    findSeaSurface          (extent_t& extent);
+        void    refractionCorrection    (extent_t& extent);
 
     private:
 
@@ -105,15 +100,8 @@ class BathyOpenOceans: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        const parms_t*      parms;
+        parms_t             parms;
         H5Coro::context_t   contextVIIRSJ1;
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        BathyOpenOceans (lua_State* L, const parms_t* _parms);
-        ~BathyOpenOceans (void) override;
 };
 
 #endif

@@ -48,6 +48,9 @@
 #include "GeoLib.h"
 #include "Icesat2Parms.h"
 #include "BathyFields.h"
+#include "BathyOpenOceans.h"
+
+using BathyFields::classifier_t;
 
 /******************************************************************************
  * BATHY READER
@@ -96,8 +99,9 @@ class BathyReader: public LuaObject
         struct parms_t {
             Asset*              asset;                          // asset for ATL03 resources
             Asset*              asset09;                        // asset for ATL09 resources
-            GeoParms*           hls;                            // geo-package parms for sampling HLS for NDWI
             Icesat2Parms*       icesat2;                        // global icesat2 parameters
+            GeoParms*           hls;                            // geo-package parms for sampling HLS for NDWI
+            BathyOpenOceans*    openoceans;                     // OpenOceans classifier
             Dictionary<string>  alt09_index;                    // dictionary of ATL09 granules
             double              max_dem_delta;                  // initial filter of heights against DEM (For removing things like clouds)
             int                 ph_in_extent;                   // number of photons in each extent
@@ -113,6 +117,7 @@ class BathyReader: public LuaObject
                 asset09         (NULL),
                 icesat2         (NULL),
                 hls             (NULL),
+                openoceans      (NULL),
                 max_dem_delta   (10000.0),
                 ph_in_extent    (8192),
                 generate_ndwi   (true),
@@ -127,6 +132,7 @@ class BathyReader: public LuaObject
                 if(asset09) asset09->releaseLuaObject();
                 if(icesat2) icesat2->releaseLuaObject();
                 if(hls) hls->releaseLuaObject();
+                if(openoceans) delete openoceans;
             }
         };
 
@@ -308,6 +314,7 @@ class BathyReader: public LuaObject
         uint8_t             sdpVersion;
 
         GeoLib::TIFFImage*  bathyMask;
+        BathyOpenOceans*    openoceans;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -331,8 +338,8 @@ class BathyReader: public LuaObject
         static void         getATL09Key                 (char* key, const char* name);
         static classifier_t str2classifier              (const char* str);
         static void         getAtl09List                (lua_State* L, int index, bool* provided, Dictionary<string>& alt09_index);
-        static void         getSpotList                 (lua_State* L, int index, bool* provided, bool* spots);
-        static void         getClassifiers              (lua_State* L, int index, bool* provided, bool* classifiers);
+        static void         getSpotList                 (lua_State* L, int index, bool* provided, bool* spots, int size=Icesat2Parms::NUM_SPOTS);
+        static void         getClassifiers              (lua_State* L, int index, bool* provided, bool* classifiers, int size=BathyFields::NUM_CLASSIFIERS);
         static int          luaSpotEnabled              (lua_State* L);
         static int          luaClassifierEnabled        (lua_State* L);
 

@@ -75,14 +75,14 @@ const struct luaL_Reg BathyViewer::LUA_META_TABLE[] = {
 int BathyViewer::luaCreate (lua_State* L)
 {
     Asset* asset = NULL;
-    BathyParms* parms = NULL;
+    Icesat2Parms* parms = NULL;
 
     try
     {
         /* Get Parameters */
         asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         const char* resource = getLuaString(L, 2);
-        parms = dynamic_cast<BathyParms*>(getLuaObject(L, 3, BathyParms::OBJECT_TYPE));
+        parms = dynamic_cast<Icesat2Parms*>(getLuaObject(L, 3, Icesat2Parms::OBJECT_TYPE));
 
         /* Return Reader Object */
         return createLuaObject(L, new BathyViewer(L, asset, resource, parms));
@@ -106,7 +106,7 @@ void BathyViewer::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyViewer::BathyViewer (lua_State* L, Asset* _asset, const char* _resource, BathyParms* _parms):
+BathyViewer::BathyViewer (lua_State* L, Asset* _asset, const char* _resource, Icesat2Parms* _parms):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->read_timeout * 1000),
     bathyMask(NULL),

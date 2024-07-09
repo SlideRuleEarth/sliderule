@@ -53,16 +53,11 @@ using BathyFields::bathy_class_t;
 /*----------------------------------------------------------------------------
  * static data
  *----------------------------------------------------------------------------*/
-const char* BathyOpenOceans::OBJECT_TYPE = "BathyOpenOceans";
-const char* BathyOpenOceans::LUA_META_NAME = "BathyOpenOceans";
-const struct luaL_Reg BathyOpenOceans::LUA_META_TABLE[] = {
-    {NULL,          NULL}
-};
+const char* BathyOpenOceans::OPENOCEANS_PARMS = "openoceans";
 
 /*----------------------------------------------------------------------------
  * parameters names
  *----------------------------------------------------------------------------*/
-static const char*  OPENOCEANS_PARMS                        = "openoceans";
 static const char*  OPENOCEANS_PARMS_RI_AIR                 = "ri_air";
 static const char*  OPENOCEANS_PARMS_RI_WATER               = "ri_water";
 static const char*  OPENOCEANS_PARMS_DEM_BUFFER             = "dem_buffer";
@@ -76,95 +71,68 @@ static const char*  OPENOCEANS_PARMS_SURFACE_WIDTH          = "surface_width"; /
 static const char*  OPENOCEANS_PARMS_MODEL_AS_POISSON       = "model_as_poisson"; // sigmas
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<parms>)
+ * Constructor
  *----------------------------------------------------------------------------*/
-int BathyOpenOceans::luaCreate (lua_State* L)
+BathyOpenOceans::BathyOpenOceans (lua_State* L, int index)
 {
-    parms_t* parms = new parms_t;
-
-    try
+    /* Get Algorithm Parameters */
+    if(lua_istable(L, index))
     {
-        /* Get Parameters */
-        int parms_index = 1;
+        /* refraction index of air */
+        lua_getfield(L, index, OPENOCEANS_PARMS_RI_AIR);
+        parms.ri_air = LuaObject::getLuaFloat(L, -1, true, parms.ri_air, NULL);
+        lua_pop(L, 1);
 
-        /* Get Algorithm Parameters */
-        if(lua_istable(L, parms_index))
-        {
-            /* refraction index of air */
-            lua_getfield(L, parms_index, OPENOCEANS_PARMS_RI_AIR);
-            parms->ri_air = LuaObject::getLuaFloat(L, -1, true, parms->ri_air, NULL);
-            lua_pop(L, 1);
+        /* prefraction index of water */
+        lua_getfield(L, index, OPENOCEANS_PARMS_RI_WATER);
+        parms.ri_water = LuaObject::getLuaFloat(L, -1, true, parms.ri_water, NULL);
+        lua_pop(L, 1);
 
-            /* prefraction index of water */
-            lua_getfield(L, parms_index, OPENOCEANS_PARMS_RI_WATER);
-            parms->ri_water = LuaObject::getLuaFloat(L, -1, true, parms->ri_water, NULL);
-            lua_pop(L, 1);
+        /* DEM buffer */
+        lua_getfield(L, index, OPENOCEANS_PARMS_DEM_BUFFER);
+        parms.dem_buffer = LuaObject::getLuaFloat(L, -1, true, parms.dem_buffer, NULL);
+        lua_pop(L, 1);
 
-            /* DEM buffer */
-            lua_getfield(L, parms_index, OPENOCEANS_PARMS_DEM_BUFFER);
-            parms->dem_buffer = LuaObject::getLuaFloat(L, -1, true, parms->dem_buffer, NULL);
-            lua_pop(L, 1);
+        /* bin size */
+        lua_getfield(L, index, OPENOCEANS_PARMS_BIN_SIZE);
+        parms.bin_size = LuaObject::getLuaFloat(L, -1, true, parms.bin_size, NULL);
+        lua_pop(L, 1);
 
-            /* bin size */
-            lua_getfield(L, parms_index, OPENOCEANS_PARMS_BIN_SIZE);
-            parms->bin_size = LuaObject::getLuaFloat(L, -1, true, parms->bin_size, NULL);
-            lua_pop(L, 1);
+        /* max range */
+        lua_getfield(L, index, OPENOCEANS_PARMS_MAX_RANGE);
+        parms.max_range = LuaObject::getLuaFloat(L, -1, true, parms.max_range, NULL);
+        lua_pop(L, 1);
 
-            /* max range */
-            lua_getfield(L, parms_index, OPENOCEANS_PARMS_MAX_RANGE);
-            parms->max_range = LuaObject::getLuaFloat(L, -1, true, parms->max_range, NULL);
-            lua_pop(L, 1);
+        /* max bins */
+        lua_getfield(L, index, OPENOCEANS_PARMS_MAX_BINS);
+        parms.max_bins = LuaObject::getLuaInteger(L, -1, true, parms.max_bins, NULL);
+        lua_pop(L, 1);
 
-            /* max bins */
-            lua_getfield(L, parms_index, OPENOCEANS_PARMS_MAX_BINS);
-            parms->max_bins = LuaObject::getLuaInteger(L, -1, true, parms->max_bins, NULL);
-            lua_pop(L, 1);
+        /* signal threshold */
+        lua_getfield(L, index, OPENOCEANS_PARMS_SIGNAL_THRESHOLD);
+        parms.signal_threshold = LuaObject::getLuaFloat(L, -1, true, parms.signal_threshold, NULL);
+        lua_pop(L, 1);
 
-            /* signal threshold */
-            lua_getfield(L, parms_index, OPENOCEANS_PARMS_SIGNAL_THRESHOLD);
-            parms->signal_threshold = LuaObject::getLuaFloat(L, -1, true, parms->signal_threshold, NULL);
-            lua_pop(L, 1);
+        /* minimum peak separation */
+        lua_getfield(L, index, OPENOCEANS_PARMS_MIN_PEAK_SEPARATION);
+        parms.min_peak_separation = LuaObject::getLuaFloat(L, -1, true, parms.min_peak_separation, NULL);
+        lua_pop(L, 1);
 
-            /* minimum peak separation */
-            lua_getfield(L, parms_index, OPENOCEANS_PARMS_MIN_PEAK_SEPARATION);
-            parms->min_peak_separation = LuaObject::getLuaFloat(L, -1, true, parms->min_peak_separation, NULL);
-            lua_pop(L, 1);
+        /* highest peak ratio */
+        lua_getfield(L, index, OPENOCEANS_PARMS_HIGHEST_PEAK_RATIO);
+        parms.highest_peak_ratio = LuaObject::getLuaFloat(L, -1, true, parms.highest_peak_ratio, NULL);
+        lua_pop(L, 1);
 
-            /* highest peak ratio */
-            lua_getfield(L, parms_index, OPENOCEANS_PARMS_HIGHEST_PEAK_RATIO);
-            parms->highest_peak_ratio = LuaObject::getLuaFloat(L, -1, true, parms->highest_peak_ratio, NULL);
-            lua_pop(L, 1);
+        /* surface width */
+        lua_getfield(L, index, OPENOCEANS_PARMS_SURFACE_WIDTH);
+        parms.surface_width = LuaObject::getLuaFloat(L, -1, true, parms.surface_width, NULL);
+        lua_pop(L, 1);
 
-            /* surface width */
-            lua_getfield(L, parms_index, OPENOCEANS_PARMS_SURFACE_WIDTH);
-            parms->surface_width = LuaObject::getLuaFloat(L, -1, true, parms->surface_width, NULL);
-            lua_pop(L, 1);
-
-            /* model as poisson */
-            lua_getfield(L, parms_index, OPENOCEANS_PARMS_MODEL_AS_POISSON);
-            parms->model_as_poisson = LuaObject::getLuaBoolean(L, -1, true, parms->model_as_poisson, NULL);
-            lua_pop(L, 1);        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "OpenOceans parameters must be supplied as a lua table");
-        }
-
-        /* Return Reader Object */
-        return createLuaObject(L, new BathyOpenOceans(L, parms));
+        /* model as poisson */
+        lua_getfield(L, index, OPENOCEANS_PARMS_MODEL_AS_POISSON);
+        parms.model_as_poisson = LuaObject::getLuaBoolean(L, -1, true, parms.model_as_poisson, NULL);
+        lua_pop(L, 1);        
     }
-    catch(const RunTimeException& e)
-    {
-        delete parms;
-        mlog(e.level(), "Error creating BathyOpenOceans: %s", e.what());
-        return returnLuaStatus(L, false);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * init
- *----------------------------------------------------------------------------*/
-void BathyOpenOceans::init (void)
-{
 }
 
 /*----------------------------------------------------------------------------
@@ -188,8 +156,8 @@ void BathyOpenOceans::findSeaSurface (extent_t& extent)
 
         /* filter distance from DEM height
          *  TODO: does the DEM height need to be corrected by GEOID */
-        if( (height > (extent.photons[i].dem_h + parms->dem_buffer)) ||
-            (height < (extent.photons[i].dem_h - parms->dem_buffer)) )
+        if( (height > (extent.photons[i].dem_h + parms.dem_buffer)) ||
+            (height < (extent.photons[i].dem_h - parms.dem_buffer)) )
             continue;
 
         /* get min and max height */
@@ -215,7 +183,7 @@ void BathyOpenOceans::findSeaSurface (extent_t& extent)
 
     /* calculate and check range */
     const double range_h = max_h - min_h;
-    if(range_h <= 0 || range_h > parms->max_range)
+    if(range_h <= 0 || range_h > parms.max_range)
     {
         throw RunTimeException(ERROR, RTE_ERROR, "Invalid range <%lf> when determining sea surface", range_h);
     }
@@ -223,10 +191,10 @@ void BathyOpenOceans::findSeaSurface (extent_t& extent)
     /* calculate and check number of bins in histogram
      *  - the number of bins is increased by 1 in case the ceiling and the floor
      *    of the max range is both the same number */
-    const long num_bins = static_cast<long>(std::ceil(range_h / parms->bin_size)) + 1;
-    if(num_bins <= 0 || num_bins > parms->max_bins)
+    const long num_bins = static_cast<long>(std::ceil(range_h / parms.bin_size)) + 1;
+    if(num_bins <= 0 || num_bins > parms.max_bins)
     {
-        throw RunTimeException(ERROR, RTE_ERROR, "Invalid combination of range <%lf> and bin size <%lf> produced out of range histogram size <%ld>", range_h, parms->bin_size, num_bins);
+        throw RunTimeException(ERROR, RTE_ERROR, "Invalid combination of range <%lf> and bin size <%lf> produced out of range histogram size <%ld>", range_h, parms.bin_size, num_bins);
     }
 
     /* calculate average background */
@@ -235,17 +203,17 @@ void BathyOpenOceans::findSeaSurface (extent_t& extent)
     /* build histogram of photon heights */
     vector<long> histogram(num_bins);
     std::for_each (std::begin(heights), std::end(heights), [&](const double h) {
-        const long bin = static_cast<long>(std::floor((h - min_h) / parms->bin_size));
+        const long bin = static_cast<long>(std::floor((h - min_h) / parms.bin_size));
         histogram[bin]++;
     });
 
     /* calculate mean and standard deviation of histogram */
     double bckgnd = 0.0;
     double stddev = 0.0;
-    if(parms->model_as_poisson)
+    if(parms.model_as_poisson)
     {
         const long num_shots = std::round((max_t - min_t) / 0.0001);
-        const double bin_t = parms->bin_size * 0.00000002 / 3.0; // bin size from meters to seconds
+        const double bin_t = parms.bin_size * 0.00000002 / 3.0; // bin size from meters to seconds
         const double bin_pe = bin_t * num_shots * avg_bckgnd; // expected value
         bckgnd = bin_pe;
         stddev = sqrt(bin_pe);
@@ -263,7 +231,7 @@ void BathyOpenOceans::findSeaSurface (extent_t& extent)
 
     /* build guassian kernel (from -k to k)*/
     const double kernel_size = 6.0 * stddev + 1.0;
-    const long k = (static_cast<long>(std::ceil(kernel_size / parms->bin_size)) & ~0x1) / 2;
+    const long k = (static_cast<long>(std::ceil(kernel_size / parms.bin_size)) & ~0x1) / 2;
     const long kernel_bins = 2 * k + 1;
     double kernel_sum = 0.0;
     vector<double> kernel(kernel_bins);
@@ -310,7 +278,7 @@ void BathyOpenOceans::findSeaSurface (extent_t& extent)
     }
 
     /* find second highest peak */
-    const long peak_separation_in_bins = static_cast<long>(std::ceil(parms->min_peak_separation / parms->bin_size));
+    const long peak_separation_in_bins = static_cast<long>(std::ceil(parms.min_peak_separation / parms.bin_size));
     long second_peak_bin = -1; // invalid
     double second_peak = std::numeric_limits<double>::min();
     for(int i = 0; i < num_bins; i++)
@@ -327,7 +295,7 @@ void BathyOpenOceans::findSeaSurface (extent_t& extent)
 
     /* determine which peak is sea surface */
     if( (second_peak_bin != -1) &&
-        (second_peak * parms->highest_peak_ratio >= highest_peak) ) // second peak is close in size to highest peak
+        (second_peak * parms.highest_peak_ratio >= highest_peak) ) // second peak is close in size to highest peak
     {
         /* select peak that is highest in elevation */
         if(highest_peak_bin < second_peak_bin)
@@ -338,7 +306,7 @@ void BathyOpenOceans::findSeaSurface (extent_t& extent)
     }
 
     /* check if sea surface signal is significant */
-    const double signal_threshold = bckgnd + (stddev * parms->signal_threshold);
+    const double signal_threshold = bckgnd + (stddev * parms.signal_threshold);
     if(highest_peak < signal_threshold)
     {
         throw RunTimeException(WARNING, RTE_INFO, "Unable to determine sea surface (%lf < %lf)", highest_peak, signal_threshold);
@@ -358,12 +326,12 @@ void BathyOpenOceans::findSeaSurface (extent_t& extent)
         if(smoothed_histogram[i] > peak_half_max) peak_width++;
         else break;
     }
-    const double peak_stddev = (peak_width * parms->bin_size) / 2.35;
+    const double peak_stddev = (peak_width * parms.bin_size) / 2.35;
 
     /* calculate sea surface height and label sea surface photons */
-    extent.surface_h = min_h + (highest_peak_bin * parms->bin_size) + (parms->bin_size / 2.0);
-    const double min_surface_h = extent.surface_h - (peak_stddev * parms->surface_width);
-    const double max_surface_h = extent.surface_h + (peak_stddev * parms->surface_width);
+    extent.surface_h = min_h + (highest_peak_bin * parms.bin_size) + (parms.bin_size / 2.0);
+    const double min_surface_h = extent.surface_h - (peak_stddev * parms.surface_width);
+    const double max_surface_h = extent.surface_h + (peak_stddev * parms.surface_width);
     for(long i = 0; i < extent.photon_count; i++)
     {
         if( extent.photons[i].geoid_corr_h >= min_surface_h &&
@@ -372,6 +340,7 @@ void BathyOpenOceans::findSeaSurface (extent_t& extent)
             extent.photons[i].class_ph = BathyFields::SEA_SURFACE;
         }
     }
+}
 
 /*----------------------------------------------------------------------------
  * photon_refraction - 
@@ -420,14 +389,14 @@ void BathyOpenOceans::refractionCorrection(extent_t& extent)
     GeoLib::UTMTransform transform(extent.utm_zone, extent.region < 8);
 
     photon_t* photons = extent.photons;
-    for(int i = 0; i < extent.photon_count; i++)
+    for(uint32_t i = 0; i < extent.photon_count; i++)
     {
         double depth = extent.surface_h - photons[i].geoid_corr_h;      // compute un-refraction-corrected depths
         if(depth > 0)
         {
             /* Calculate Refraction Corrections */
-            double n1 = parms->ri_air;
-            double n2 = parms->ri_water;
+            double n1 = parms.ri_air;
+            double n2 = parms.ri_water;
             double theta_1 = (M_PI / 2.0) - photons[i].ref_el;          // angle of incidence (without Earth curvature)
             double theta_2 = asin(n1 * sin(theta_1) / n2);              // angle of refraction
             double phi = theta_1 - theta_2;
@@ -454,21 +423,4 @@ void BathyOpenOceans::refractionCorrection(extent_t& extent)
             photons[i].longitude = point.x;
         }
     }
-}
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-BathyOpenOceans::BathyOpenOceans (lua_State* L, const parms_t* _parms):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    parms(_parms)
-{
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-BathyOpenOceans::~BathyOpenOceans (void)
-{
-    delete parms;
 }

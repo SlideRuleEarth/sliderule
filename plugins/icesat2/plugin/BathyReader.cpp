@@ -171,12 +171,17 @@ int BathyReader::luaCreate (lua_State* L)
 
             /* ICESat-2 parameters (Icesat2Parms) */
             lua_getfield(L, bathy_parms_index, Icesat2Parms::ICESAT2_PARMS);
-            parms->icesat2 = dynamic_cast<Icesat2Parms*>(getLuaObject(L, 4, Icesat2Parms::OBJECT_TYPE));
+            parms->icesat2 = dynamic_cast<Icesat2Parms*>(getLuaObject(L, -1, Icesat2Parms::OBJECT_TYPE));
             lua_pop(L, 1);
 
             /* HLS parameters (GeoParms) */
             lua_getfield(L, bathy_parms_index, BATHY_PARMS_HLS_PARMS);
             parms->hls = new GeoParms(L, -1);
+            lua_pop(L, 1);
+
+            /* OpenOceans parameters (BathyOpenOceans) */
+            lua_getfield(L, bathy_parms_index, BathyOpenOceans::OPENOCEANS_PARMS);
+            parms->openoceans = new BathyOpenOceans(L, -1);
             lua_pop(L, 1);
 
             /* maximum DEM delta */
@@ -1129,8 +1134,8 @@ void* BathyReader::subsettingThread (void* parm)
                 /* Find Sea Surface */
                 if(parms->classifiers[BathyFields::OPENOCEANS])
                 {
-                    openoceans->findSeaSurface(*extent);
-                    openoceans->refractionCorrection(*extent);
+                    parms->openoceans->findSeaSurface(*extent);
+                    parms->openoceans->refractionCorrection(*extent);
                 }
 
                 /* Export Data */
@@ -1558,7 +1563,7 @@ void BathyReader::getAtl09List (lua_State* L, int index, bool* provided, Diction
 /*----------------------------------------------------------------------------
  * getSpotList
  *----------------------------------------------------------------------------*/
-void BathyReader::getSpotList (lua_State* L, int index, bool* provided, bool* spots)
+void BathyReader::getSpotList (lua_State* L, int index, bool* provided, bool* spots, int size)
 {
     /* Reset Provided */
     if(provided) *provided = false;
@@ -1567,7 +1572,7 @@ void BathyReader::getSpotList (lua_State* L, int index, bool* provided, bool* sp
     if(lua_istable(L, index))
     {
         /* Clear spot table (sets all to false) */
-        memset(spots, 0, sizeof(spots));
+        memset(spots, 0, sizeof(bool) * size);
         if(provided) *provided = true;
 
         /* Iterate through each spot in table */
@@ -1598,7 +1603,7 @@ void BathyReader::getSpotList (lua_State* L, int index, bool* provided, bool* sp
     else if(lua_isinteger(L, index))
     {
         /* Clear spot table (sets all to false) */
-        memset(spots, 0, sizeof(spots));
+        memset(spots, 0, sizeof(bool) * size);
 
         /* Set spot */
         const int spot = LuaObject::getLuaInteger(L, -1);
@@ -1620,7 +1625,7 @@ void BathyReader::getSpotList (lua_State* L, int index, bool* provided, bool* sp
 /*----------------------------------------------------------------------------
  * getClassifiers
  *----------------------------------------------------------------------------*/
-void BathyReader::getClassifiers (lua_State* L, int index, bool* provided, bool* classifiers)
+void BathyReader::getClassifiers (lua_State* L, int index, bool* provided, bool* classifiers, int size)
 {
     /* Reset Provided */
     if(provided) *provided = false;
@@ -1629,7 +1634,7 @@ void BathyReader::getClassifiers (lua_State* L, int index, bool* provided, bool*
     if(lua_istable(L, index))
     {
         /* Clear classifier table (sets all to false) */
-        memset(classifiers, 0, sizeof(classifiers));
+        memset(classifiers, 0, sizeof(bool) * size);
 
         /* Get number of classifiers in table */
         const int num_classifiers = lua_rawlen(L, index);
@@ -1676,7 +1681,7 @@ void BathyReader::getClassifiers (lua_State* L, int index, bool* provided, bool*
     else if(lua_isinteger(L, index))
     {
         /* Clear classifier table (sets all to false) */
-        memset(classifiers, 0, sizeof(classifiers));
+        memset(classifiers, 0, sizeof(bool) * size);
 
         /* Set classifier */
         const int classifier = LuaObject::getLuaInteger(L, -1);
@@ -1693,7 +1698,7 @@ void BathyReader::getClassifiers (lua_State* L, int index, bool* provided, bool*
     else if(lua_isstring(L, index))
     {
         /* Clear classifiers table (sets all to false) */
-        memset(classifiers, 0, sizeof(classifiers));
+        memset(classifiers, 0, sizeof(bool) * size);
 
         /* Set classifier */
         const char* classifier_str = LuaObject::getLuaString(L, index);
