@@ -58,6 +58,9 @@ const char* BathyOpenOceans::OPENOCEANS_PARMS = "openoceans";
 /*----------------------------------------------------------------------------
  * parameters names
  *----------------------------------------------------------------------------*/
+static const char*  OPENOCEANS_PARMS_ASSETKD                = "assetKd";
+static const char*  OPENOCEANS_PARMS_DEFAULT_ASSETKD        = "viirsj1-s3";
+static const char*  OPENOCEANS_PARMS_RESOURCE_KD            = "kd_resource";
 static const char*  OPENOCEANS_PARMS_RI_AIR                 = "ri_air";
 static const char*  OPENOCEANS_PARMS_RI_WATER               = "ri_water";
 static const char*  OPENOCEANS_PARMS_DEM_BUFFER             = "dem_buffer";
@@ -78,6 +81,18 @@ BathyOpenOceans::BathyOpenOceans (lua_State* L, int index)
     /* Get Algorithm Parameters */
     if(lua_istable(L, index))
     {
+        /* assetKd */
+        lua_getfield(L, index, OPENOCEANS_PARMS_ASSETKD);
+        const char* assetkd_name = LuaObject::getLuaString(L, -1, true, OPENOCEANS_PARMS_DEFAULT_ASSETKD);
+        parms.assetKd = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(assetkd_name, Asset::OBJECT_TYPE));
+        if(!parms.assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to find asset %s", assetkd_name);
+        lua_pop(L, 1);
+
+        /* resource Kd */
+        lua_getfield(L, index, OPENOCEANS_PARMS_RESOURCE_KD);
+        parms.resourceKd = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, parms.resourceKd, NULL));
+        lua_pop(L, 1);
+
         /* refraction index of air */
         lua_getfield(L, index, OPENOCEANS_PARMS_RI_AIR);
         parms.ri_air = LuaObject::getLuaFloat(L, -1, true, parms.ri_air, NULL);
@@ -138,7 +153,7 @@ BathyOpenOceans::BathyOpenOceans (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * findSeaSurface
  *----------------------------------------------------------------------------*/
-void BathyOpenOceans::findSeaSurface (extent_t& extent)
+void BathyOpenOceans::findSeaSurface (extent_t& extent) const
 {
     /* initialize stats on photons */
     double min_h = std::numeric_limits<double>::max();
@@ -384,7 +399,7 @@ void BathyOpenOceans::findSeaSurface (extent_t& extent)
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *----------------------------------------------------------------------------*/
-void BathyOpenOceans::refractionCorrection(extent_t& extent)
+void BathyOpenOceans::refractionCorrection(extent_t& extent) const
 {
     GeoLib::UTMTransform transform(extent.utm_zone, extent.region < 8);
 
@@ -395,30 +410,30 @@ void BathyOpenOceans::refractionCorrection(extent_t& extent)
         if(depth > 0)
         {
             /* Calculate Refraction Corrections */
-            double n1 = parms.ri_air;
-            double n2 = parms.ri_water;
-            double theta_1 = (M_PI / 2.0) - photons[i].ref_el;          // angle of incidence (without Earth curvature)
-            double theta_2 = asin(n1 * sin(theta_1) / n2);              // angle of refraction
-            double phi = theta_1 - theta_2;
-            double s = depth / cos(theta_1);                            // uncorrected slant range to the uncorrected seabed photon location
-            double r = s * n1 / n2;                                     // corrected slant range
-            double p = sqrt((r*r) + (s*s) - (2*r*s*cos(theta_1 - theta_2)));
-            double gamma = (M_PI / 2.0) - theta_1;
-            double alpha = asin(r * sin(phi) / p);
-            double beta = gamma - alpha;
-            double dZ = p * sin(beta);                                  // vertical offset
-            double dY = p * cos(beta);                                  // cross-track offset
-            double dE = dY * sin(photons[i].ref_az);                    // UTM offsets
-            double dN = dY * cos(photons[i].ref_az); 
+            const double n1 = parms.ri_air;
+            const double n2 = parms.ri_water;
+            const double theta_1 = (M_PI / 2.0) - photons[i].ref_el;    // angle of incidence (without Earth curvature)
+            const double theta_2 = asin(n1 * sin(theta_1) / n2);        // angle of refraction
+            const double phi = theta_1 - theta_2;
+            const double s = depth / cos(theta_1);                      // uncorrected slant range to the uncorrected seabed photon location
+            const double r = s * n1 / n2;                               // corrected slant range
+            const double p = sqrt((r*r) + (s*s) - (2*r*s*cos(theta_1 - theta_2)));
+            const double gamma = (M_PI / 2.0) - theta_1;
+            const double alpha = asin(r * sin(phi) / p);
+            const double beta = gamma - alpha;
+            const double dZ = p * sin(beta);                            // vertical offset
+            const double dY = p * cos(beta);                            // cross-track offset
+            const double dE = dY * sin(static_cast<double>(photons[i].ref_az));              // UTM offsets
+            const double dN = dY * cos(static_cast<double>(photons[i].ref_az)); 
 
             /* Apply Refraction Corrections */
             photons[i].x_ph += dE;
             photons[i].y_ph += dN;
             photons[i].geoid_corr_h += dZ;
-            depth -= dZ;
+            depth -= dZ; (void)depth;
 
             /* Correct Latitude and Longitude */
-            GeoLib::point_t point = transform.calculateCoordinates(photons[i].x_ph, photons[i].y_ph);
+            const GeoLib::point_t point = transform.calculateCoordinates(photons[i].x_ph, photons[i].y_ph);
             photons[i].latitude = point.y;
             photons[i].longitude = point.x;
         }

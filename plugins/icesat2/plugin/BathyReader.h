@@ -132,7 +132,7 @@ class BathyReader: public LuaObject
                 if(asset09) asset09->releaseLuaObject();
                 if(icesat2) icesat2->releaseLuaObject();
                 if(hls) hls->releaseLuaObject();
-                if(openoceans) delete openoceans;
+                delete openoceans;
             }
         };
 
@@ -314,7 +314,6 @@ class BathyReader: public LuaObject
         uint8_t             sdpVersion;
 
         GeoLib::TIFFImage*  bathyMask;
-        BathyOpenOceans*    openoceans;
 
         /*--------------------------------------------------------------------
          * Methods

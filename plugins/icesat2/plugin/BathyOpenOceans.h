@@ -57,32 +57,39 @@ class BathyOpenOceans
          *--------------------------------------------------------------------*/
 
         struct parms_t {
-            double  ri_air;
-            double  ri_water;
-            double  dem_buffer; // meters
-            double  bin_size; // meters
-            double  max_range; // meters
-            long    max_bins; // bins
-            double  signal_threshold; // standard deviations
-            double  min_peak_separation; // meters
-            double  highest_peak_ratio;
-            double  surface_width; // standard deviations
-            bool    model_as_poisson;
+            Asset*          assetKd;                // asset for reading Kd resources
+            const char*     resourceKd;             // filename for Kd (uncertainty calculation)
+            double          ri_air;
+            double          ri_water;
+            double          dem_buffer;             // meters
+            double          bin_size;               // meters
+            double          max_range;              // meters
+            long            max_bins;               // bins
+            double          signal_threshold;       // standard deviations
+            double          min_peak_separation;    // meters
+            double          highest_peak_ratio;
+            double          surface_width;          // standard deviations
+            bool            model_as_poisson;
 
             parms_t():
-                ri_air(1.00029),
-                ri_water(1.34116),
-                dem_buffer(50.0),
-                bin_size(0.5),
-                max_range(1000.0),
-                max_bins(10000),
-                signal_threshold(3.0),
-                min_peak_separation(0.5),
-                highest_peak_ratio(1.2),
-                surface_width(3.0),
-                model_as_poisson(true) {};
+                assetKd             (NULL),
+                resourceKd          (NULL),
+                ri_air              (1.00029),
+                ri_water            (1.34116),
+                dem_buffer          (50.0),
+                bin_size            (0.5),
+                max_range           (1000.0),
+                max_bins            (10000),
+                signal_threshold    (3.0),
+                min_peak_separation (0.5),
+                highest_peak_ratio  (1.2),
+                surface_width       (3.0),
+                model_as_poisson    (true) {};
             
-            ~parms_t() = default;
+            ~parms_t() {
+                if(assetKd) assetKd->releaseLuaObject();
+                delete [] resourceKd;
+            };
         };
 
         /*--------------------------------------------------------------------
@@ -91,8 +98,8 @@ class BathyOpenOceans
 
                 BathyOpenOceans         (lua_State* L, int index);
                 ~BathyOpenOceans        (void) = default;
-        void    findSeaSurface          (extent_t& extent);
-        void    refractionCorrection    (extent_t& extent);
+        void    findSeaSurface          (extent_t& extent) const;
+        void    refractionCorrection    (extent_t& extent) const;
 
     private:
 

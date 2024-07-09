@@ -66,8 +66,8 @@ int icesat2_open (lua_State *L)
         {"atl03s",              Atl03Reader::luaCreate},
         {"atl03v",              Atl03Viewer::luaCreate},
         {"atl03indexer",        Atl03Indexer::luaCreate},
-        {"atl03bathy",          BathyReader::luaCreate},
-        {"atl03bathyviewer",    BathyViewer::luaCreate},
+        {"bathyreader",         BathyReader::luaCreate},
+        {"bathyviewer",         BathyViewer::luaCreate},
         {"atl06",               Atl06Dispatch::luaCreate},
         {"atl06s",              Atl06Reader::luaCreate},
         {"atl08",               Atl08Dispatch::luaCreate},
@@ -84,8 +84,6 @@ int icesat2_open (lua_State *L)
     luaL_newlib(L, icesat2_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrStr(L, "PARMS",                       Icesat2Parms::ICESAT2_PARMS);
-    LuaEngine::setAttrStr(L, "BATHY_PARMS",                 BathyReader::BATHY_PARMS);
     LuaEngine::setAttrStr(L, "BATHY_OPENOCEANS_PARMS",      BathyOpenOceans::OPENOCEANS_PARMS);
     LuaEngine::setAttrInt(L, "CNF_POSSIBLE_TEP",            Icesat2Parms::CNF_POSSIBLE_TEP);
     LuaEngine::setAttrInt(L, "CNF_NOT_CONSIDERED",          Icesat2Parms::CNF_NOT_CONSIDERED);

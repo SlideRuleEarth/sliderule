@@ -79,7 +79,7 @@ local hls_parms_obj = geo.parms(hls_parms)
 -- create bathy reader
 local starttime = time.latch();
 local bathy_parms = icesat2.bathyparms(parms)
-local reader = icesat2.atl03bathy(nsidc_s3, resource, "resultq", bathy_parms, hls_parms_obj, false)
+local reader = icesat2.bathyreader(nsidc_s3, resource, "resultq", bathy_parms, hls_parms_obj, false)
 
 -- wait until bathy reader completes
 local timeout = parms["node-timeout"] or parms["timeout"] or netsvc.NODE_TIMEOUT

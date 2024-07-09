@@ -63,7 +63,6 @@ const double BathyReader::GLOBAL_BATHYMETRY_MASK_MAX_LON = 180.0;
 const double BathyReader::GLOBAL_BATHYMETRY_MASK_MIN_LON = -180.0;
 const double BathyReader::GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE = 0.25;
 const uint32_t BathyReader::GLOBAL_BATHYMETRY_MASK_OFF_VALUE = 0xFFFFFFFF;
-const char* BathyReader::BATHY_PARMS = "bathy";
 
 const char* BathyReader::phRecType = "bathyrec.photons";
 const RecordObject::fieldDef_t BathyReader::phRecDef[] = {
@@ -114,9 +113,9 @@ const struct luaL_Reg BathyReader::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
+const char* BathyReader::BATHY_PARMS = "bathy";
+
 /* Parameter Names */
-static const int    ATL09_RESOURCE_NAME_LEN     = 39;
-static const int    ATL09_RESOURCE_KEY_LEN      = 6;
 static const char*  BATHY_PARMS_ASSET           = "asset";
 static const char*  BATHY_PARMS_DEFAULT_ASSET   = "icesat2";
 static const char*  BATHY_PARMS_ASSET09         = "asset09";
@@ -146,7 +145,7 @@ int BathyReader::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        int bathy_parms_index = 1;
+        const int bathy_parms_index = 1;
         const char* resource = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
         const char* shared_directory = getLuaString(L, 4);

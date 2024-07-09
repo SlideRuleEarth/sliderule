@@ -18,7 +18,7 @@ end
 
 -- run bathy viewer
 local bathy_parms   = icesat2.bathyparms(parms)
-local reader        = icesat2.atl03bathyviewer(asset, resource, bathy_parms)
+local reader        = icesat2.bathyviewer(asset, resource, bathy_parms)
 local timeout       = parms["node-timeout"] or parms["timeout"] or netsvc.NODE_TIMEOUT
 local status        = reader:waiton(timeout * 1000)
 

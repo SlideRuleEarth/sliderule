@@ -2,33 +2,29 @@
 -- ENDPOINT:    /source/atl24g
 --
 
-local endpoint_start_time = time.gps()
-
 local json          = require("json")
-local georesource   = require("georesource")
 local earthdata     = require("earth_data_query")
 local runner        = require("container_runtime")
-local prettyprint   = require("prettyprint")
-
--- get inputs 
 local rqst          = json.decode(arg[1])
 local resource      = rqst["resource"]
 local parms         = rqst["parms"]
 local timeout       = parms["node-timeout"] or parms["timeout"] or netsvc.NODE_TIMEOUT
+local interval      = 10 < timeout and 10 or timeout -- seconds
 
--- create user log publisher (alerts)
-local userlog = msg.publish(rspq)
-
--- verify on a private cluster
-if sys.ispublic() then
+-------------------------------------------------------
+-- setup
+-------------------------------------------------------
+local endpoint_start_time = time.gps()
+local profile = {} -- initialize timing profiling table
+local userlog = msg.publish(rspq) -- create user log publisher (alerts)
+if sys.ispublic() then -- verify on a private cluster
     userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> forbidden on public cluster... exiting", rspq))
     return
 end
 
--- initialize timing profiling table
-local profile = {}
-
--- acquire lock for processing granule
+-------------------------------------------------------
+-- acquire lock for processing granule (because this is not proxied)
+-------------------------------------------------------
 local transaction_id = netsvc.INVALID_TX_ID
 while transaction_id == netsvc.INVALID_TX_ID do
     transaction_id = netsvc.orchselflock("sliderule", timeout, 3)
@@ -44,7 +40,9 @@ while transaction_id == netsvc.INVALID_TX_ID do
     end
 end
 
+-------------------------------------------------------
 -- populate resource via CMR request (ONLY IF NOT SUPPLIED)
+-------------------------------------------------------
 if not resource then
     local atl03_cmr_start_time = time.gps()
     local rc, rsps = earthdata.cmr(parms)
@@ -62,21 +60,9 @@ if not resource then
     userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL03 CMR search executed in %f seconds", profile["atl03_cmr"]))
 end
 
--- intialize processing environment
-local args = {
-    shard           = rqst["shard"] or 0, -- key space
-    default_asset   = "icesat2",
-    result_q        = parms[geo.PARMS] and "result." .. resource .. "." .. rspq or rspq,
-    result_rec      = "bathyrec",
-    userlog         = userlog
-}
-local proc = georesource.initialize(resource, parms, nil, args)
-if not proc then
-    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to initialize processing of %s", resource))
-    return
-end
-
+-------------------------------------------------------
 -- get time range of data
+-------------------------------------------------------
 local year      = resource:sub(7,10)
 local month     = resource:sub(11,12)
 local day       = resource:sub(13,14)
@@ -86,10 +72,10 @@ local rdelta    = 5 * 24 * 60 * 60 * 1000 -- 5 days * (24 hours/day * 60 minutes
 local t0        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps - rdelta))
 local t1        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps + rdelta))
 
--- support Kd
--- support Kd
-
-local _,doy     = time.gps2gmt(rgps)
+-------------------------------------------------------
+-- get Kd resource filename
+-------------------------------------------------------
+local _,doy         = time.gps2gmt(rgps)
 local doy_8d_start  = ((doy - 1) & ~7) + 1
 local doy_8d_stop   = doy_8d_start + 7
 local gps_start     = time.gmt2gps(string.format("%04d:%03d:00:00:00", year, doy_8d_start))
@@ -107,7 +93,9 @@ local viirs_filename = string.format("http://oceandata.sci.gsfc.nasa.gov/opendap
     year_stop, month_stop, day_stop
 )
 
--- support NDWI
+-------------------------------------------------------
+-- get geoparms for NDWI (if requested)
+-------------------------------------------------------
 local geo_parms = nil
 if parms["generate_ndwi"] then
     -- build hls polygon
@@ -144,7 +132,9 @@ if parms["generate_ndwi"] then
     userlog:alert(core.INFO, core.RTE_INFO, string.format("HLS STAC search executed in %f seconds", profile["hls_stac"]))
 end
 
+-------------------------------------------------------
 -- get ATL09 resources
+-------------------------------------------------------
 local atl09_cmr_start_time = time.gps()
 local original_asset = parms["asset"]
 local original_t0 = parms["t0"]
@@ -156,7 +146,6 @@ local rc2, rsps2 = earthdata.search(parms)
 if rc2 == earthdata.SUCCESS then
     parms["resources09"] = rsps2
 else
-    prettyprint.display(parms)
     userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to make ATL09 CMR request <%d>: %s", rspq, rc2, rsps2))
     return
 end
@@ -166,37 +155,57 @@ parms["t1"] = original_t1
 profile["atl09_cmr"] = (time.gps() - atl09_cmr_start_time) / 1000.0
 userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL09 CMR search executed in %f seconds", profile["atl09_cmr"]))
 
--- get ATL09 asset
-local atl09_asset_name = parms["atl09_asset"] or parms["asset"] or args.default_asset
-local atl09_asset = core.getbyname(atl09_asset_name)
-if not atl09_asset then
-    userlog:alert(core.INFO, core.RTE_ERROR, string.format("invalid asset specified for ATL09: %s", atl09_asset_name))
-    return
-end
-
+-------------------------------------------------------
 -- initialize container runtime environment
+-------------------------------------------------------
 local crenv = runner.setup()
 if not crenv.host_sandbox_directory then
     userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to initialize container runtime for %s", resource))
     return
 end
 
--- read ICESat-2 inputs
-local bathy_parms   = icesat2.bathyparms(parms)
-local reader        = icesat2.atl03bathy(proc.asset, resource, args.result_q, bathy_parms, geo_parms, crenv.host_sandbox_directory, false, atl09_asset)
-local status        = georesource.waiton(resource, parms, nil, reader, nil, nil, userlog, false)
-if not status then
-    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to generate ATL03 bathy inputs for %s", resource))
-    runner.cleanup(crenv)
-end
+-------------------------------------------------------
+-- build bathy reader parms
+-------------------------------------------------------
+local openoceans_parms = parms["openoceans"] or {}
+local bathy_parms = {
+    asset = parms["asset"] or "icesat2",
+    asset09 = parms["asset09"] or "icesat2",
+    hls = geo_parms,
+    icesat2 = icesat2.parms(parms),
+    openoceans = {
+        resource_kd = viirs_filename,
+        assetKd = openoceans_parms["assetKd"] or "viirsj1-s3"
+    }
+}
 
--- capture setup time
-profile["total_input_generation"] = (time.gps() - endpoint_start_time) / 1000.0
+-------------------------------------------------------
+-- read ICESat-2 inputs
+-------------------------------------------------------
+local reader = icesat2.bathyreader(bathy_parms, resource, rspq, crenv.host_sandbox_directory, false)
+local spot_mask = {}
+for spot = 1,icesat2.NUM_SPOTS do
+    spot_mask[spot] = reader:spoton(spot)
+end
+local classifier_mask = {}
+for _,classifier in ipairs({"qtrees", "coastnet", "openoceans", "medianfilter", "cshelph", "bathypathfinder", "pointnet2", "ensemble"}) do
+    classifier_mask[classifier] = reader:classifieron(classifier)
+end
+local duration = 0
+while (userlog:numsubs() > 0) and not reader:waiton(interval * 1000) do
+    duration = duration + interval
+    if timeout >= 0 and duration >= timeout then -- check for timeout
+        userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> for %s timed-out after %d seconds", rspq, resource, duration))
+        runner.cleanup(crenv)
+        do return false end
+    end
+    userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ... continuing to read %s (after %d seconds)", rspq, resource, duration))
+end
+reader:destroy() -- free reader to save on memory usage (safe since all data is now written out)
+profile["total_input_generation"] = (time.gps() - endpoint_start_time) / 1000.0 -- capture setup time
 userlog:alert(core.INFO, core.RTE_INFO, string.format("sliderule setup executed in %f seconds", profile["total_input_generation"]))
 
--- free reader to save on memory usage (safe since all data is now written out)
-reader:destroy()
-
+-------------------------------------------------------
 -- table of files being processed
 --  {
 --      "spot_photons": {
@@ -228,21 +237,24 @@ reader:destroy()
 --          }
 --      }
 --  }
+-------------------------------------------------------
 local output_files  = {}
 output_files["spot_photons"] = {}
 output_files["spot_granule"] = {}
 output_files["classifiers"] = {}
 
+-------------------------------------------------------
 -- function: run classifier
-local function runclassifier(output_table, _bathy_parms, container_timeout, name, in_parallel, command_override)
-    if not _bathy_parms:classifieron(name) then
+-------------------------------------------------------
+local function runclassifier(output_table, container_timeout, name, in_parallel, command_override)
+    if not classifier_mask[name] then
         return
     end
     local start_time = time.gps()
     output_table["classifiers"][name] = {}
     local container_list = {}
     for i = 1,icesat2.NUM_SPOTS do
-        if _bathy_parms:spoton(i) then
+        if spot_mask[i] then
             local spot_key = string.format("spot_%d", i)
             local settings_filename = string.format("%s/%s.json", crenv.container_sandbox_mount, name)                           -- e.g. /share/openoceans.json
             local parameters_filename = string.format("%s/%s_%d.json", crenv.container_sandbox_mount, icesat2.BATHY_PREFIX, i)   -- e.g. /share/bathy_spot_3.json
@@ -276,12 +288,14 @@ local function runclassifier(output_table, _bathy_parms, container_timeout, name
     userlog:alert(core.INFO, core.RTE_INFO, string.format("%s executed in %f seconds", name, profile[name]))
 end
 
+-------------------------------------------------------
 -- function: run processor (overwrites input csv file)
-local function runprocessor(_bathy_parms, container_timeout, name, in_parallel, command_override)
+-------------------------------------------------------
+local function runprocessor(container_timeout, name, in_parallel, command_override)
     local start_time = time.gps()
     local container_list = {}
     for i = 1,icesat2.NUM_SPOTS do
-        if _bathy_parms:spoton(i) then
+        if spot_mask[i] then
             local settings_filename = string.format("%s/%s.json", crenv.container_sandbox_mount, name)                           -- e.g. /share/openoceans.json
             local parameters_filename = string.format("%s/%s_%d.json", crenv.container_sandbox_mount, icesat2.BATHY_PREFIX, i)   -- e.g. /share/bathy_spot_3.json
             local input_filename = string.format("%s/%s_%d.csv", crenv.container_sandbox_mount, icesat2.BATHY_PREFIX, i)         -- e.g. /share/bathy_spot_3.csv
@@ -311,41 +325,25 @@ local function runprocessor(_bathy_parms, container_timeout, name, in_parallel, 
     userlog:alert(core.INFO, core.RTE_INFO, string.format("%s executed in %f seconds", name, profile[name]))
 end
 
--- determine parallelism
+-------------------------------------------------------
+-- execute classifiers
+-------------------------------------------------------
 local in_parallel = true
-
--- execute qtrees surface finding algorithm
-runclassifier(output_files, bathy_parms, timeout, "qtrees", in_parallel, "bash /qtrees/runner.sh")
-
--- perform refraction correction
-runprocessor(bathy_parms, timeout, "atl24refraction", in_parallel)
-
--- perform uncertainty calculations
-runprocessor(bathy_parms, timeout, "atl24uncertainty", in_parallel)
-
--- execute medianfilter bathy
-runclassifier(output_files, bathy_parms, timeout, "medianfilter", in_parallel)
-
--- execute cshelph bathy
-runclassifier(output_files, bathy_parms, timeout, "cshelph", in_parallel)
-
--- execute bathypathfinder bathy
-runclassifier(output_files, bathy_parms, timeout, "bathypathfinder", in_parallel)
-
--- execute coastnet bathy
-runclassifier(output_files, bathy_parms, timeout, "coastnet", false, "bash /coastnet/runner.sh")
-
--- execute pointnet2 bathy
-runclassifier(output_files, bathy_parms, timeout, "pointnet2", false)
-
--- execute openoceans
-runclassifier(output_files, bathy_parms, timeout, "openoceans", false)
-
--- capture endpoint timing
-profile["atl24_endpoint"] = (time.gps() - endpoint_start_time) / 1000.0
+runclassifier(output_files, timeout, "qtrees", in_parallel, "bash /qtrees/runner.sh")
+runprocessor(timeout, "atl24refraction", in_parallel)
+runprocessor(timeout, "atl24uncertainty", in_parallel)
+runclassifier(output_files, timeout, "medianfilter", in_parallel)
+runclassifier(output_files, timeout, "cshelph", in_parallel)
+runclassifier(output_files, timeout, "bathypathfinder", in_parallel)
+runclassifier(output_files, timeout, "coastnet", false, "bash /coastnet/runner.sh")
+runclassifier(output_files, timeout, "pointnet2", false)
+runclassifier(output_files, timeout, "openoceans", false)
+profile["atl24_endpoint"] = (time.gps() - endpoint_start_time) / 1000.0 -- capture endpoint timing
 userlog:alert(core.INFO, core.RTE_INFO, string.format("atl24 endpoint executed in %f seconds", profile["atl24_endpoint"]))
 
+-------------------------------------------------------
 -- build final output
+-------------------------------------------------------
 local output_parms = parms[arrow.PARMS] or {
     path = string.gsub(resource, "ATL03", "ATL24"),
     format = "hdf5",
@@ -368,16 +366,16 @@ local writer_parms = {
 local container = runner.execute(crenv, writer_parms, rspq)
 runner.wait(container, timeout)
 
+-------------------------------------------------------
 -- send final output to user
+-------------------------------------------------------
 arrow.send2user(crenv.host_sandbox_directory.."/atl24.bin", arrow.parms(output_parms), rspq)
-
--- send metadata output to user
 output_parms["path"] = output_parms["path"]..".json"
 arrow.send2user(crenv.host_sandbox_directory.."/atl24.bin.json", arrow.parms(output_parms), rspq)
 
--- cleanup container runtime environment
-runner.cleanup(crenv)
-
--- unlock transaction
-netsvc.orchunlock({transaction_id})
+-------------------------------------------------------
+-- cleanup 
+-------------------------------------------------------
+runner.cleanup(crenv) -- container runtime environment
+netsvc.orchunlock({transaction_id}) -- unlock transaction
 
