@@ -87,8 +87,7 @@ if year_start ~= year_stop then
     month_stop = 12
     day_stop = 31
 end
-local viirs_filename = string.format("http://oceandata.sci.gsfc.nasa.gov/opendap/VIIRSJ1/L3SMI/%04d/%02d%02d/JPSS1_VIIRS.%04d%02d%02d_%04d%02d%02d.L3m.8D.KD.Kd_490.4km.nc.dap.nc4",
-    year_start, month_start, day_start,
+local viirs_filename = string.format("JPSS1_VIIRS.%04d%02d%02d_%04d%02d%02d.L3m.8D.KD.Kd_490.4km.nc.dap.nc4",
     year_start, month_start, day_start,
     year_stop, month_stop, day_stop
 )
@@ -136,15 +135,18 @@ end
 -- get ATL09 resources
 -------------------------------------------------------
 local atl09_cmr_start_time = time.gps()
+local rgt = resource:sub(22,25)
 local original_asset = parms["asset"]
 local original_t0 = parms["t0"]
 local original_t1 = parms["t1"]
+local original_name_filter = parms["name_filter"]
 parms["asset"] = "icesat2-atl09"
 parms["t0"] = t0
 parms["t1"] = t1
+parms["name_filter"] = '*_'..rgt..'????_*'
 local rc2, rsps2 = earthdata.search(parms)
-if rc2 == earthdata.SUCCESS then
-    parms["resources09"] = rsps2
+if rc2 == earthdata.SUCCESS and #rsps2 == 1 then
+    parms["resource09"] = rsps2[1]
 else
     userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to make ATL09 CMR request <%d>: %s", rspq, rc2, rsps2))
     return
@@ -152,6 +154,7 @@ end
 parms["asset"] = original_asset
 parms["t0"] = original_t0
 parms["t1"] = original_t1
+parms["name_filter"] = original_name_filter
 profile["atl09_cmr"] = (time.gps() - atl09_cmr_start_time) / 1000.0
 userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL09 CMR search executed in %f seconds", profile["atl09_cmr"]))
 
@@ -167,11 +170,11 @@ end
 -------------------------------------------------------
 -- build bathy reader parms
 -------------------------------------------------------
-local openoceans_parms = parms["openoceans"] or {}
 parms["hls"] = geo_parms
 parms["icesat2"] = icesat2.parms(parms)
+parms["openoceans"] = parms["openoceans"] or {}
 parms["openoceans"]["resource_kd"] = viirs_filename
-parms["openoceans"]["assetKd"] = openoceans_parms["assetKd"] or "viirsj1-s3"
+parms["openoceans"]["assetKd"] = parms["openoceans"]["assetKd"] or "viirsj1-s3"
 
 -------------------------------------------------------
 -- read ICESat-2 inputs
@@ -194,6 +197,11 @@ while (userlog:numsubs() > 0) and not reader:waiton(interval * 1000) do
         return
     end
     userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ... continuing to read %s (after %d seconds)", rspq, resource, duration))
+end
+local bathy_stats = reader:stats()
+if bathy_stats["photon_count"] <= 0 then
+    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> was not able to read any photons from %s ... aborting!", rspq, resource))
+    return
 end
 reader:destroy() -- free reader to save on memory usage (safe since all data is now written out)
 profile["total_input_generation"] = (time.gps() - endpoint_start_time) / 1000.0 -- capture setup time

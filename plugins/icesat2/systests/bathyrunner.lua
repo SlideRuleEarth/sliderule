@@ -53,7 +53,7 @@ end
 
 -- atl09 granules
 local rc, rsps = earthdata.search({ poly = poly, asset = "icesat2-atl09" })
-if rc == earthdata.SUCCESS then parms["resources09"] = rsps end
+if rc == earthdata.SUCCESS then parms["resource09"] = rsps end
 
 -- build hls raster object
 local year      = resource:sub(7,10)

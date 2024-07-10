@@ -110,6 +110,7 @@ const char* BathyReader::LUA_META_NAME = "BathyReader";
 const struct luaL_Reg BathyReader::LUA_META_TABLE[] = {
     {"spoton",      luaSpotEnabled},
     {"classifieron",luaClassifierEnabled},
+    {"stats",       luaStats},
     {NULL,          NULL}
 };
 
@@ -120,7 +121,7 @@ static const char*  BATHY_PARMS_ASSET           = "asset";
 static const char*  BATHY_PARMS_DEFAULT_ASSET   = "icesat2";
 static const char*  BATHY_PARMS_ASSET09         = "asset09";
 static const char*  BATHY_PARMS_DEFAULT_ASSET09 = "icesat2";
-static const char*  BATHY_PARMS_HLS_PARMS       = "hls_parms";
+static const char*  BATHY_PARMS_HLS_PARMS       = "hls";
 static const char*  BATHY_PARMS_MAX_DEM_DELTA   = "max_dem_delta";
 static const char*  BATHY_PARMS_PH_IN_EXTENT    = "ph_in_extent";
 static const char*  BATHY_PARMS_GENERATE_NDWI   = "generate_ndwi";
@@ -128,7 +129,7 @@ static const char*  BATHY_PARMS_USE_BATHY_MASK  = "use_bathy_mask";
 static const char*  BATHY_PARMS_CLASSIFIERS     = "classifiers";
 static const char*  BATHY_PARMS_RETURN_INPUTS   = "return_inputs";
 static const char*  BATHY_PARMS_OUTPUT_AS_SDP   = "output_as_sdp";
-static const char*  BATHY_PARMS_ATL09_RESOURCES = "atl09_resources";
+static const char*  BATHY_PARMS_ATL09_RESOURCE  = "resource09";
 static const char*  BATHY_PARMS_SPOTS           = "spots";
 
 /******************************************************************************
@@ -175,7 +176,7 @@ int BathyReader::luaCreate (lua_State* L)
 
             /* HLS parameters (GeoParms) */
             lua_getfield(L, bathy_parms_index, BATHY_PARMS_HLS_PARMS);
-            parms->hls = new GeoParms(L, -1);
+            if(lua_istable(L, -1)) parms->hls = new GeoParms(L, -1);
             lua_pop(L, 1);
 
             /* OpenOceans parameters (BathyOpenOceans) */
@@ -219,8 +220,8 @@ int BathyReader::luaCreate (lua_State* L)
             lua_pop(L, 1);
 
             /* atl09 resources */
-            lua_getfield(L, bathy_parms_index, BATHY_PARMS_ATL09_RESOURCES);
-            getAtl09List(L, -1, NULL, parms->alt09_index);
+            lua_getfield(L, bathy_parms_index, BATHY_PARMS_ATL09_RESOURCE);
+            parms->resource09 = StringLib::duplicate(LuaObject::getLuaString(L, -1));
             lua_pop(L, 1);
 
             /* spot selection */
@@ -284,11 +285,6 @@ BathyReader::BathyReader (lua_State* L, const parms_t* _parms, const char* _reso
         signalConfColIndex = static_cast<int>(parms->icesat2->surface_type);
     }
 
-    /* Generate ATL09 Resource Name (throws) */
-    char atl09_key[BathyReader::ATL09_RESOURCE_KEY_LEN + 1];
-    BathyReader::getATL09Key(atl09_key, resource);
-    resource09 = parms->alt09_index[atl09_key];
-
     /* Create Publisher and File Pointer */
     outQ = new Publisher(outq_name);
     sendTerminator = _send_terminator;
@@ -330,6 +326,9 @@ BathyReader::BathyReader (lua_State* L, const parms_t* _parms, const char* _reso
         fclose(orbit_file);
         delete [] orbit_json;
     }
+
+    /* Initialize Stats */
+    memset(&stats, 0, sizeof(stats));
 
     /* Initialize Readers */
     active = true;
@@ -683,9 +682,9 @@ BathyReader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
  *----------------------------------------------------------------------------*/
 BathyReader::Atl09Class::Atl09Class (const info_t* info):
     valid       (false),
-    met_u10m    (info->parms->asset09, info->reader->resource09.c_str(), FString("profile_%d/low_rate/met_u10m", info->track).c_str(), &info->reader->context09),
-    met_v10m    (info->parms->asset09, info->reader->resource09.c_str(), FString("profile_%d/low_rate/met_v10m", info->track).c_str(), &info->reader->context09),
-    delta_time  (info->parms->asset09, info->reader->resource09.c_str(), FString("profile_%d/low_rate/delta_time", info->track).c_str(), &info->reader->context09)
+    met_u10m    (info->parms->asset09, info->parms->resource09, FString("profile_%d/low_rate/met_u10m", info->track).c_str(), &info->reader->context09),
+    met_v10m    (info->parms->asset09, info->parms->resource09, FString("profile_%d/low_rate/met_v10m", info->track).c_str(), &info->reader->context09),
+    delta_time  (info->parms->asset09, info->parms->resource09, FString("profile_%d/low_rate/delta_time", info->track).c_str(), &info->reader->context09)
 {
     try
     {
@@ -696,7 +695,7 @@ BathyReader::Atl09Class::Atl09Class (const info_t* info):
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "ATL09 data unavailable <%s>", info->reader->resource09.c_str());
+        mlog(CRITICAL, "ATL09 data unavailable <%s>", info->parms->resource09);
     }
 }
 
@@ -869,6 +868,9 @@ void* BathyReader::subsettingThread (void* parm)
 
     /* Thread Variables */
     fileptr_t out_file = NULL;
+    stats_t local_stats = {
+        .photon_count = 0
+    };
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms->asset->getName(), reader->resource, info->track);
@@ -1127,20 +1129,20 @@ void* BathyReader::subsettingThread (void* parm)
                 extent->photon_count            = extent_photons.length();
                 extent->extent_id               = extent_id;
 
-                /* Populate Photons and Statistics */
+                /* Populate Photons */
                 for(int32_t p = 0; p < extent_photons.length(); p++)
                 {
                     extent->photons[p] = extent_photons[p];
                 }
 
-                /* Find Sea Surface */
-                if(parms->classifiers[BathyFields::OPENOCEANS])
-                {
-                    parms->openoceans->findSeaSurface(*extent);
-                    parms->openoceans->correctRefraction(*extent);
-                    parms->openoceans->calculateUncertainty(*extent);
-                }
+                /* Run OpenOceans */
+                parms->openoceans->findSeaSurface(*extent);
+                parms->openoceans->correctRefraction(*extent);
+                parms->openoceans->calculateUncertainty(*extent);
 
+                /* Update Statistics */
+                local_stats.photon_count += extent->photon_count;
+                
                 /* Export Data */
                 if(parms->return_inputs)
                 {
@@ -1274,6 +1276,9 @@ void* BathyReader::subsettingThread (void* parm)
         if(reader->numComplete == reader->threadCount)
         {
             mlog(INFO, "Completed processing resource %s", reader->resource);
+
+            /* Update Statistics */
+            reader->stats.photon_count += local_stats.photon_count;
 
             /* Indicate End of Data */
             if(reader->sendTerminator)
@@ -1484,22 +1489,6 @@ void BathyReader::parseResource (const char* _resource, TimeLib::date_t& date, u
 }
 
 /*----------------------------------------------------------------------------
- * getATL09Key
- *----------------------------------------------------------------------------*/
-void BathyReader::getATL09Key (char* key, const char* name)
-{
-    // Example
-    //  Name: ATL09_20230601012940_10951901_006_01.h5
-    //  Key:                       10951901
-    if(StringLib::size(name) != ATL09_RESOURCE_NAME_LEN)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to process ATL09 resource name: %s", name);
-    }
-    StringLib::copy(key, &name[21], ATL09_RESOURCE_KEY_LEN + 1);
-    key[ATL09_RESOURCE_KEY_LEN] = '\0';
-}
-
-/*----------------------------------------------------------------------------
  * str2classifier
  *----------------------------------------------------------------------------*/
 classifier_t BathyReader::str2classifier (const char* str)
@@ -1514,56 +1503,6 @@ classifier_t BathyReader::str2classifier (const char* str)
     if(StringLib::match(str, "localcontrast"))      return BathyFields::LOCAL_CONTRAST;
     if(StringLib::match(str, "ensemble"))           return BathyFields::ENSEMBLE;
     return BathyFields::INVALID_CLASSIFIER;
-}
-
-/*----------------------------------------------------------------------------
- * getAtl09List
- *----------------------------------------------------------------------------*/
-void BathyReader::getAtl09List (lua_State* L, int index, bool* provided, Dictionary<string>& alt09_index)
-{
-    /* Reset provided */
-    if(provided) *provided = false;
-
-    /* Must be table of strings */
-    if(lua_istable(L, index))
-    {
-        /* Get number of item in table */
-        const int num_strings = lua_rawlen(L, index);
-        if(num_strings > 0 && provided) *provided = true;
-
-        /* Iterate through each item in table */
-        for(int i = 0; i < num_strings; i++)
-        {
-            /* Get item */
-            lua_rawgeti(L, index, i+1);
-            if(lua_isstring(L, -1))
-            {
-                // Example
-                //  Name: ATL09_20230601012940_10951901_006_01.h5
-                //  Key:                       10951901
-                const char* str = LuaObject::getLuaString(L, -1);
-                char key[ATL09_RESOURCE_KEY_LEN + 1];
-                getATL09Key(key, str); // throws on error
-                const string name(str);
-                if(!alt09_index.add(key, name, true))
-                {
-                    mlog(CRITICAL, "Duplicate ATL09 key detected: %s", str);
-                }
-                mlog(DEBUG, "Adding %s to ATL09 index with key: %s", str, key);
-            }
-            else
-            {
-                mlog(ERROR, "Invalid ATL09 item specified - must be a string");
-            }
-
-            /* Clean up stack */
-            lua_pop(L, 1);
-        }
-    }
-    else if(!lua_isnil(L, index))
-    {
-        mlog(ERROR, "ATL09 lists must be provided as a table");
-    }
 }
 
 /*----------------------------------------------------------------------------
@@ -1777,4 +1716,48 @@ int BathyReader::luaClassifierEnabled (lua_State* L)
 
     lua_pushboolean(L, status);
     return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaStats - :stats(<with_clear>) --> {<key>=<value>, ...} containing statistics
+ *----------------------------------------------------------------------------*/
+int BathyReader::luaStats (lua_State* L)
+{
+    bool status = false;
+    int num_obj_to_return = 1;
+    BathyReader* lua_obj = NULL;
+
+    try
+    {
+        /* Get Self */
+        lua_obj = dynamic_cast<BathyReader*>(getLuaSelf(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
+    }
+
+    try
+    {
+        /* Get Clear Parameter */
+        const bool with_clear = getLuaBoolean(L, 2, true, false);
+
+        /* Create Statistics Table */
+        lua_newtable(L);
+        LuaEngine::setAttrInt(L, "photon_count", lua_obj->stats.photon_count);
+
+        /* Clear if Requested */
+        if(with_clear) memset(&lua_obj->stats, 0, sizeof(lua_obj->stats));
+
+        /* Set Success */
+        status = true;
+        num_obj_to_return = 2;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error returning stats %s: %s", lua_obj->getName(), e.what());
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status, num_obj_to_return);
 }

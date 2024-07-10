@@ -65,8 +65,6 @@ class BathyReader: public LuaObject
          *--------------------------------------------------------------------*/
 
         static const int32_t INVALID_INDICE = -1;
-        static const int ATL09_RESOURCE_NAME_LEN = 39;
-        static const int ATL09_RESOURCE_KEY_LEN = 6;
 
         static const char* OUTPUT_FILE_PREFIX;
 
@@ -102,7 +100,7 @@ class BathyReader: public LuaObject
             Icesat2Parms*       icesat2;                        // global icesat2 parameters
             GeoParms*           hls;                            // geo-package parms for sampling HLS for NDWI
             BathyOpenOceans*    openoceans;                     // OpenOceans classifier
-            Dictionary<string>  alt09_index;                    // dictionary of ATL09 granules
+            const char*         resource09;                     // ATL09 granule
             double              max_dem_delta;                  // initial filter of heights against DEM (For removing things like clouds)
             int                 ph_in_extent;                   // number of photons in each extent
             bool                generate_ndwi;                  // use HLS data to generate NDWI for each segment lat,lon
@@ -118,6 +116,7 @@ class BathyReader: public LuaObject
                 icesat2         (NULL),
                 hls             (NULL),
                 openoceans      (NULL),
+                resource09      (NULL),
                 max_dem_delta   (10000.0),
                 ph_in_extent    (8192),
                 generate_ndwi   (true),
@@ -133,8 +132,14 @@ class BathyReader: public LuaObject
                 if(icesat2) icesat2->releaseLuaObject();
                 if(hls) hls->releaseLuaObject();
                 delete openoceans;
+                delete [] resource09;
             }
         };
+
+        /* Statitics */
+        typedef struct {
+            uint64_t photon_count;
+        } stats_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -296,12 +301,12 @@ class BathyReader: public LuaObject
         int                 numComplete;
         const parms_t*      parms;
         const char*         resource;
-        string              resource09;
         bool                sendTerminator;
         Publisher*          outQ;
         int                 signalConfColIndex;
         const char*         sharedDirectory;
         int                 readTimeoutMs;
+        stats_t             stats;
 
         H5Coro::context_t   context; // for ATL03 file
         H5Coro::context_t   context09; // for ATL08 file
@@ -334,13 +339,12 @@ class BathyReader: public LuaObject
                                                          uint16_t& rgt, uint8_t& cycle, uint8_t& region, 
                                                          uint8_t& version);
 
-        static void         getATL09Key                 (char* key, const char* name);
         static classifier_t str2classifier              (const char* str);
-        static void         getAtl09List                (lua_State* L, int index, bool* provided, Dictionary<string>& alt09_index);
         static void         getSpotList                 (lua_State* L, int index, bool* provided, bool* spots, int size=Icesat2Parms::NUM_SPOTS);
         static void         getClassifiers              (lua_State* L, int index, bool* provided, bool* classifiers, int size=BathyFields::NUM_CLASSIFIERS);
         static int          luaSpotEnabled              (lua_State* L);
         static int          luaClassifierEnabled        (lua_State* L);
+        static int          luaStats                    (lua_State* L);
 
 };
 

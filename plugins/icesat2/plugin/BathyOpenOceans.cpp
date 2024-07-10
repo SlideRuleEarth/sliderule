@@ -56,7 +56,7 @@ using BathyFields::bathy_class_t;
  *----------------------------------------------------------------------------*/
 static const char*  OPENOCEANS_PARMS_ASSETKD                = "assetKd";
 static const char*  OPENOCEANS_PARMS_DEFAULT_ASSETKD        = "viirsj1-s3";
-static const char*  OPENOCEANS_PARMS_RESOURCE_KD            = "kd_resource";
+static const char*  OPENOCEANS_PARMS_RESOURCE_KD            = "resource_kd";
 static const char*  OPENOCEANS_PARMS_RI_AIR                 = "ri_air";
 static const char*  OPENOCEANS_PARMS_RI_WATER               = "ri_water";
 static const char*  OPENOCEANS_PARMS_DEM_BUFFER             = "dem_buffer";
@@ -98,6 +98,8 @@ const double BathyOpenOceans::KD_RANGES[NUM_KD_RANGES][2] = {
 //     clear     clear-moderate   moderate    moderate-high    high
     {0.06, 0.10}, {0.11, 0.17}, {0.18, 0.25}, {0.26, 0.32}, {0.33, 0.36}
 };
+
+BathyOpenOceans::uncertainty_coeff_t BathyOpenOceans::UNCERTAINTY_COEFF_MAP[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES][NUM_WIND_SPEEDS][NUM_KD_RANGES];
 
 /*----------------------------------------------------------------------------
  * init
@@ -268,7 +270,8 @@ BathyOpenOceans::BathyOpenOceans (lua_State* L, int index):
 
     /* Open Kd Resource */
     if(!parms.assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no asset provided");
-    Kd_490 = new H5Array<int16_t>(parms.assetKd, parms.resourceKd, "/Kd_490", &contextKd, H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS);
+    else if(!parms.resourceKd) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no filename provided");
+    Kd_490 = new H5Array<int16_t>(parms.assetKd, parms.resourceKd, "Kd_490", &contextKd, H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS);
 }
 
 /*----------------------------------------------------------------------------
