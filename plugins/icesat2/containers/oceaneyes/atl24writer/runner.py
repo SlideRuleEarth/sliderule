@@ -90,7 +90,7 @@ metadata["granule"] = {
     "total_photons": len(df),
     "sea_surface_photons": len(df[df["class_ph"] == 41]),
     "bathy_photons": len(df[df["class_ph"] == 40]),
-    "subaqueous_photons": len(df[df["geoid_corr_h"] < df["surface_h"]])
+    "subaqueous_photons": len(df[df["ortho_h"] < df["surface_h"]])
 }
 with open(atl24_filename + ".json", "w") as file:
     file.write(json.dumps(metadata, indent=2))
@@ -115,7 +115,7 @@ if output_parms["format"] != "hdf5":
             # GeoParquet
             df['time'] = df['time'].astype('datetime64[ns]')
             geometry = gpd.points_from_xy(df['longitude'], df['latitude'])
-#            geometry = gpd.points_from_xy(df['longitude'], df['latitude'], df['geoid_corr_h'])
+#            geometry = gpd.points_from_xy(df['longitude'], df['latitude'], df['ortho_h'])
             df.drop(columns=['longitude', 'latitude'], inplace=True)
             gdf = gpd.GeoDataFrame(df, geometry=geometry, crs="EPSG:7912")
             gdf.set_index('time', inplace=True)
@@ -346,7 +346,7 @@ else:
             spot_info = spot_table[spot]["info"]
             spot_df = spot_table[spot]["df"]
             spot_df["delta_time"] = (spot_df["time"] / 1000000000.0) - ATLAS_GPS_EPOCH
-            spot_df["ellipse_h"] = spot_df["geoid_corr_h"] + spot_df["geoid"]
+            spot_df["ellipse_h"] = spot_df["ortho_h"] + spot_df["geoid"]
 
             beam_group = hf.create_group(spot_info["beam"]) # e.g. gt1r, gt2l, etc.
             add_variable(beam_group, "index_ph",   spot_df["index_ph"],     'float32',
@@ -397,7 +397,7 @@ else:
                          'long_name':'', 
                          'source':'ATL24G', 
                          'units':''})
-            add_variable(beam_group, "ortho_h",    spot_df["geoid_corr_h"], 'float32',
+            add_variable(beam_group, "ortho_h",    spot_df["ortho_h"], 'float32',
                         {'contentType':'physicalMeasurement', 
                          'description':'', 
                          'long_name':'', 
@@ -416,6 +416,12 @@ else:
                          'source':'ATL24G', 
                          'units':''})
             add_variable(beam_group, "sigma_tvu",  spot_df["sigma_tvu"],    'float32',
+                        {'contentType':'physicalMeasurement', 
+                         'description':'', 
+                         'long_name':'', 
+                         'source':'ATL24G', 
+                         'units':''})
+            add_variable(beam_group, "flags",       spot_df["flags"],       'int32',
                         {'contentType':'physicalMeasurement', 
                          'description':'', 
                          'long_name':'', 

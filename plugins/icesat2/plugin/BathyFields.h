@@ -61,6 +61,11 @@ namespace BathyFields
         WATER_COLUMN        = 45
     } bathy_class_t;
 
+    /* Processing Flags */
+    typedef enum {
+        EXCEEDS_MAX_SENSOR_DEPTH = 0x01
+    } flags_t;
+
     /* Photon Fields */
     typedef struct {
         int64_t         time_ns;                // nanoseconds since GPS epoch
@@ -74,21 +79,24 @@ namespace BathyFields
         double          y_atc;                  // dist_ph_across
         double          background_rate;        // PE per second
         float           geoid;                  // geoid correction
-        float           geoid_corr_h;           // geoid corrected height of photon, calculated from h_ph and geoid
+        float           ortho_h;                // geoid corrected height of photon, calculated from h_ph and geoid
         float           dem_h;                  // best available dem height, geoid corrected
         float           sigma_h;                // height aerial uncertainty
         float           sigma_along;            // along track aerial uncertainty
         float           sigma_across;           // across track aerial uncertainty
         float           solar_elevation;
+        float           sigma_thu;              // total horizontal uncertainty
+        float           sigma_tvu;              // total vertical uncertainty
         float           ref_az;                 // reference azimuth
         float           ref_el;                 // reference elevation
         float           wind_v;                 // the wind speed at the center photon of the subsetted granule; calculated from met_u10m and met_v10m
-        float           pointing_angle;         // angle of beam as measured from nadir (TBD - how to get this)
+        float           pointing_angle;         // angle of beam as measured from nadir
         float           ndwi;                   // normalized difference water index using HLS data
+        uint32_t        processing_flags;
         uint8_t         yapc_score;
         int8_t          max_signal_conf;        // maximum value in the atl03 confidence table
         int8_t          quality_ph;
-        int8_t          class_ph;               // photon classification
+        int8_t          class_ph;               // photon classification        
     } photon_t;
 
     /* Extent Record */

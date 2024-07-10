@@ -85,7 +85,7 @@ import os
 # process command line
 sys.path.append('../utils')
 from command_line_processor import process_command_line
-settings, spot_info, spot_df, output_csv, info_json = process_command_line(sys.argv, columns=['index_ph', 'class_ph', 'x_ph', 'y_ph', 'longitude', 'latitude', 'geoid_corr_h', 'max_signal_conf', 'dem_h', 'surface_h', 'ndwi'])
+settings, spot_info, spot_df, output_csv, info_json = process_command_line(sys.argv, columns=['index_ph', 'class_ph', 'x_ph', 'y_ph', 'longitude', 'latitude', 'ortho_h', 'max_signal_conf', 'dem_h', 'surface_h', 'ndwi'])
 
 # set configuration
 maxElev         = settings.get('maxElev', 10) 
@@ -111,16 +111,16 @@ spot_df.loc[spot_df.class_ph == 41, 'class'] = 5                            # ch
 
 # Remove photons above sea surfaace
 sea_surface_df = spot_df[spot_df['class'] == 5]                             # get the subset of the sea_surface_df where class_ph is sea surface
-average_sea_surface_level = sea_surface_df['geoid_corr_h'].mean()           # take the average of the geoid corrected height of the sea surface photons
-spot_df = spot_df[spot_df['geoid_corr_h'] < average_sea_surface_level]
+average_sea_surface_level = sea_surface_df['ortho_h'].mean()           # take the average of the geoid corrected height of the sea surface photons
+spot_df = spot_df[spot_df['ortho_h'] < average_sea_surface_level]
 
 # Remove photons where the max_signal_conf doesn't meet minimum threshold
 spot_df = spot_df[spot_df['max_signal_conf'] >= minSignalConf]
 
 # Remove photons outside of height range
-spot_df = spot_df[(spot_df["geoid_corr_h"] > minElev) & \
-                  (spot_df["geoid_corr_h"] < maxElev)]                      # if geoid height is outside absolute range
-spot_df = spot_df[(spot_df["dem_h"] - spot_df["geoid_corr_h"] < demBuffer)] # if geoid height is outside relative range to DEM
+spot_df = spot_df[(spot_df["ortho_h"] > minElev) & \
+                  (spot_df["ortho_h"] < maxElev)]                      # if geoid height is outside absolute range
+spot_df = spot_df[(spot_df["dem_h"] - spot_df["ortho_h"] < demBuffer)] # if geoid height is outside relative range to DEM
 
 # Remove photons where the NDWI value is greater than a minimum threshold
 if useNWDI:
@@ -133,7 +133,7 @@ data_df['x'] = spot_df['x_ph']
 data_df['y'] = spot_df['y_ph']
 data_df['lon'] = spot_df['longitude']
 data_df['lat'] = spot_df['latitude']
-data_df['elev'] = spot_df['geoid_corr_h']
+data_df['elev'] = spot_df['ortho_h']
 data_df['signal_conf_ph'] = spot_df['max_signal_conf']
 data_df['class'] = spot_df['class']
 

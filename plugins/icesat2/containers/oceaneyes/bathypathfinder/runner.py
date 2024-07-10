@@ -40,7 +40,7 @@ from BathyPathFinder import BathyPathSearch
 # process command line
 sys.path.append('../utils')
 from command_line_processor import process_command_line
-settings, spot_info, spot_df, output_csv, info_json = process_command_line(sys.argv, columns=["x_atc", "geoid_corr_h", "surface_h", "index_ph", "class_ph"])
+settings, spot_info, spot_df, output_csv, info_json = process_command_line(sys.argv, columns=["x_atc", "ortho_h", "surface_h", "index_ph", "class_ph"])
 
 # set configuration
 tau             = settings.get('tau', 0.5) 
@@ -52,11 +52,11 @@ find_surface    = settings.get('find_surface', False)
 bathy_df = spot_df
 if not find_surface:
     bathy_df = spot_df.loc[spot_df['class_ph'] != 41] # remove sea surface photons
-    bathy_df = spot_df.loc[spot_df['geoid_corr_h'] < spot_df['surface_h']] # remove photons above sea surface
+    bathy_df = spot_df.loc[spot_df['ortho_h'] < spot_df['surface_h']] # remove photons above sea surface
 
 # run bathy pathfinder
 bps = BathyPathSearch(tau, k, n)
-bps.fit(bathy_df['x_atc'], bathy_df['geoid_corr_h'], find_surface)
+bps.fit(bathy_df['x_atc'], bathy_df['ortho_h'], find_surface)
 
 # write bathy classifications to spot df
 spot_df.loc[bps.bathy_photons.index, 'class_ph'] = 40

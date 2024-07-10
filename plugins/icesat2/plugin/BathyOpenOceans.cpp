@@ -37,6 +37,7 @@
 #include <numeric>
 #include <algorithm>
 
+#include "OsApi.h"
 #include "GeoLib.h"
 #include "BathyOpenOceans.h"
 #include "BathyFields.h"
@@ -49,11 +50,6 @@ using BathyFields::bathy_class_t;
 /******************************************************************************
  * OPENOCEANS
  ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * static data
- *----------------------------------------------------------------------------*/
-const char* BathyOpenOceans::OPENOCEANS_PARMS = "openoceans";
 
 /*----------------------------------------------------------------------------
  * parameters names
@@ -74,9 +70,130 @@ static const char*  OPENOCEANS_PARMS_SURFACE_WIDTH          = "surface_width"; /
 static const char*  OPENOCEANS_PARMS_MODEL_AS_POISSON       = "model_as_poisson"; // sigmas
 
 /*----------------------------------------------------------------------------
+ * static data
+ *----------------------------------------------------------------------------*/
+const char* BathyOpenOceans::OPENOCEANS_PARMS = "openoceans";
+
+const char* BathyOpenOceans::TU_FILENAMES[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES] = {
+   {"/data/ICESat2_0deg_500000_AGL_0.022_mrad_THU.csv",
+    "/data/ICESat2_1deg_500000_AGL_0.022_mrad_THU.csv",
+    "/data/ICESat2_2deg_500000_AGL_0.022_mrad_THU.csv",
+    "/data/ICESat2_3deg_500000_AGL_0.022_mrad_THU.csv",
+    "/data/ICESat2_4deg_500000_AGL_0.022_mrad_THU.csv",
+    "/data/ICESat2_5deg_500000_AGL_0.022_mrad_THU.csv"},
+   {"/data/ICESat2_0deg_500000_AGL_0.022_mrad_TVU.csv",
+    "/data/ICESat2_1deg_500000_AGL_0.022_mrad_TVU.csv",
+    "/data/ICESat2_2deg_500000_AGL_0.022_mrad_TVU.csv",
+    "/data/ICESat2_3deg_500000_AGL_0.022_mrad_TVU.csv",
+    "/data/ICESat2_4deg_500000_AGL_0.022_mrad_TVU.csv",
+    "/data/ICESat2_5deg_500000_AGL_0.022_mrad_TVU.csv"}
+};
+
+const int BathyOpenOceans::POINTING_ANGLES[NUM_POINTING_ANGLES] = {0, 1, 2, 3, 4, 5};
+
+const int BathyOpenOceans::WIND_SPEEDS[NUM_WIND_SPEEDS] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+const double BathyOpenOceans::KD_RANGES[NUM_KD_RANGES][2] = {
+//       0             1             2             3            4
+//     clear     clear-moderate   moderate    moderate-high    high
+    {0.06, 0.10}, {0.11, 0.17}, {0.18, 0.25}, {0.26, 0.32}, {0.33, 0.36}
+};
+
+/*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void BathyOpenOceans::init (void)
+{
+    /*************************/
+    /* UNCERTAINTY_COEFF_MAP */
+    /*************************/
+
+    /* for each dimension */
+    for(int tu_dimension_index = 0; tu_dimension_index < NUM_UNCERTAINTY_DIMENSIONS; tu_dimension_index++)
+    {
+        /* for each pointing angle */
+        for(int pointing_angle_index = 0; pointing_angle_index < NUM_POINTING_ANGLES; pointing_angle_index++)
+        {
+            /* get uncertainty filename */
+            const char* uncertainty_filename = TU_FILENAMES[tu_dimension_index][pointing_angle_index];
+            
+            /* open csv file */
+            fileptr_t file = fopen(uncertainty_filename, "r");
+            if(!file)
+            {
+                char err_buf[256];
+                mlog(CRITICAL, "Failed to open file %s with error: %s", uncertainty_filename, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
+                return;
+            }
+
+            /* read header line */
+            char columns[5][10];
+            if(fscanf(file, "%9s,%9s,%9s,%9s,%9s\n", columns[0], columns[1], columns[2], columns[3], columns[4]) != 5)
+            {
+                mlog(CRITICAL, "Failed to read header from uncertainty file: %s", uncertainty_filename);
+                return;
+            }
+
+            /* read all rows */
+            vector<uncertainty_entry_t> tu(INITIAL_UNCERTAINTY_ROWS);
+            uncertainty_entry_t entry;
+            while(fscanf(file, "%d,%lf,%lf,%lf,%lf\n", &entry.Wind, &entry.Kd, &entry.a, &entry.b, &entry.c) == 5)
+            {
+                tu.push_back(entry);
+            }
+
+            /* close file */
+            fclose(file);
+
+            /* for each wind speed */
+            for(int wind_speed_index = 0; wind_speed_index < NUM_WIND_SPEEDS; wind_speed_index++)
+            {
+                /* for each kd range */
+                for(int kd_range_index = 0; kd_range_index < NUM_KD_RANGES; kd_range_index++)
+                {
+                    /* sum coefficients for each entry in table */
+                    uncertainty_coeff_t coeff_sum = {
+                        .a = 0.0,
+                        .b = 0.0,
+                        .c = 0.0
+                    };
+                    double count = 0;
+                    for(size_t i = 0; i < tu.size(); i++)
+                    {
+                        if( (tu[i].Wind == WIND_SPEEDS[wind_speed_index]) &&
+                            (tu[i].Kd >= KD_RANGES[kd_range_index][0]) &&
+                            (tu[i].Kd <= KD_RANGES[kd_range_index][1]) )
+                        {
+                            coeff_sum.a += tu[i].a;
+                            coeff_sum.b += tu[i].b;
+                            coeff_sum.c += tu[i].c;
+                            count += 1.0;
+                        } 
+                    }
+                    
+                    /* check count */
+                    if(count <= 0)
+                    {
+                        mlog(CRITICAL, "Failed to average coefficients from uncertainty file: %s", uncertainty_filename);
+                        return;
+                    }
+
+                    /* set average coefficients */
+                    uncertainty_coeff_t& coeff = UNCERTAINTY_COEFF_MAP[tu_dimension_index][pointing_angle_index][wind_speed_index][kd_range_index];
+                    coeff.a = coeff_sum.a / count;
+                    coeff.b = coeff_sum.b / count;
+                    coeff.c = coeff_sum.c / count;
+                }
+            }
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyOpenOceans::BathyOpenOceans (lua_State* L, int index)
+BathyOpenOceans::BathyOpenOceans (lua_State* L, int index):
+    Kd_490(NULL)
 {
     /* Get Algorithm Parameters */
     if(lua_istable(L, index))
@@ -148,6 +265,18 @@ BathyOpenOceans::BathyOpenOceans (lua_State* L, int index)
         parms.model_as_poisson = LuaObject::getLuaBoolean(L, -1, true, parms.model_as_poisson, NULL);
         lua_pop(L, 1);        
     }
+
+    /* Open Kd Resource */
+    if(!parms.assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no asset provided");
+    Kd_490 = new H5Array<int16_t>(parms.assetKd, parms.resourceKd, "/Kd_490", &contextKd, H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS);
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+BathyOpenOceans::~BathyOpenOceans (void)
+{
+    delete Kd_490;
 }
 
 /*----------------------------------------------------------------------------
@@ -166,7 +295,7 @@ void BathyOpenOceans::findSeaSurface (extent_t& extent) const
     vector<double> heights;
     for(long i = 0; i < extent.photon_count; i++)
     {
-        const double height = extent.photons[i].geoid_corr_h;
+        const double height = extent.photons[i].ortho_h;
         const double time_secs = static_cast<double>(extent.photons[i].time_ns) / 1000000000.0;
 
         /* filter distance from DEM height
@@ -349,8 +478,8 @@ void BathyOpenOceans::findSeaSurface (extent_t& extent) const
     const double max_surface_h = extent.surface_h + (peak_stddev * parms.surface_width);
     for(long i = 0; i < extent.photon_count; i++)
     {
-        if( extent.photons[i].geoid_corr_h >= min_surface_h &&
-            extent.photons[i].geoid_corr_h <= max_surface_h )
+        if( extent.photons[i].ortho_h >= min_surface_h &&
+            extent.photons[i].ortho_h <= max_surface_h )
         {
             extent.photons[i].class_ph = BathyFields::SEA_SURFACE;
         }
@@ -399,14 +528,14 @@ void BathyOpenOceans::findSeaSurface (extent_t& extent) const
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *----------------------------------------------------------------------------*/
-void BathyOpenOceans::refractionCorrection(extent_t& extent) const
+void BathyOpenOceans::correctRefraction(extent_t& extent) const
 {
     GeoLib::UTMTransform transform(extent.utm_zone, extent.region < 8);
 
     photon_t* photons = extent.photons;
     for(uint32_t i = 0; i < extent.photon_count; i++)
     {
-        double depth = extent.surface_h - photons[i].geoid_corr_h;      // compute un-refraction-corrected depths
+        const double depth = extent.surface_h - photons[i].ortho_h;      // compute un-refraction-corrected depths
         if(depth > 0)
         {
             /* Calculate Refraction Corrections */
@@ -429,13 +558,95 @@ void BathyOpenOceans::refractionCorrection(extent_t& extent) const
             /* Apply Refraction Corrections */
             photons[i].x_ph += dE;
             photons[i].y_ph += dN;
-            photons[i].geoid_corr_h += dZ;
-            depth -= dZ; (void)depth;
+            photons[i].ortho_h += dZ;
 
             /* Correct Latitude and Longitude */
             const GeoLib::point_t point = transform.calculateCoordinates(photons[i].x_ph, photons[i].y_ph);
             photons[i].latitude = point.y;
             photons[i].longitude = point.x;
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * uncertainty calculation
+ *----------------------------------------------------------------------------*/
+void BathyOpenOceans::calculateUncertainty (extent_t& extent) const
+{
+    if(extent.photon_count <= 0) return; // nothing to do
+
+    /* join kd resource read */
+    const bool kd_status = Kd_490->join(parms.read_timeout_ms, false);
+    if(!kd_status) throw RunTimeException(CRITICAL, RTE_ERROR, "Timed-out reading kd");
+
+    /* get y offset */
+    const double degrees_of_latitude = extent.photons[0].latitude + 90.0;
+    const double latitude_pixels = degrees_of_latitude / 24.0;
+    const uint32_t y = static_cast<uint32_t>(latitude_pixels);
+
+    /* get x offset */
+    const double degrees_of_longitude =  extent.photons[0].longitude + 180.0;
+    const double longitude_pixels = degrees_of_longitude / 24.0;
+    const uint32_t x = static_cast<uint32_t>(longitude_pixels);
+
+    /* calculate total offset */
+    if(x < 0 || x >= 4320 || y < 0 || y >= 8640)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid Kd coordinates: %d, %d", x, y);
+    }
+    const long offset = (x * 4320) + y;
+    const double kd = static_cast<double>((*Kd_490)[offset]) * 0.0002;
+
+    /* for each photon in extent */
+    photon_t* photons = extent.photons;
+    for(uint32_t i = 0; i < extent.photon_count; i++)
+    {
+        /* initialize total uncertainty to aerial uncertainty */
+        photons[i].sigma_thu = sqrtf((photons[i].sigma_across * photons[i].sigma_across) + (photons[i].sigma_along * photons[i].sigma_along));
+        photons[i].sigma_tvu = photons[i].sigma_h;
+        
+        /* calculate subaqueous uncertainty */
+        const double depth = extent.surface_h - photons[i].ortho_h;
+        if(depth > 0.0)
+        {
+            /* get pointing angle index */
+            int pointing_angle_index = static_cast<int>(roundf(photons[i].pointing_angle));
+            if(pointing_angle_index < 0) pointing_angle_index = 0;
+            else if(pointing_angle_index >= NUM_POINTING_ANGLES) pointing_angle_index = NUM_POINTING_ANGLES - 1;
+            
+            /* get wind speed index */
+            int wind_speed_index = static_cast<int>(roundf(photons[i].wind_v)) - 1;
+            if(wind_speed_index < 0) wind_speed_index = 0;
+            else if(wind_speed_index >= NUM_WIND_SPEEDS) wind_speed_index = NUM_WIND_SPEEDS - 1;
+
+            /* get kd range index */
+            int kd_range_index = 0;
+            while(kd_range_index < NUM_KD_RANGES && KD_RANGES[kd_range_index][1] < kd)
+            {
+                kd_range_index++;
+            }
+
+            /* uncertainty coefficients */
+            const uncertainty_coeff_t horizontal_coeff = UNCERTAINTY_COEFF_MAP[THU][pointing_angle_index][wind_speed_index][kd_range_index];
+            const uncertainty_coeff_t vertical_coeff = UNCERTAINTY_COEFF_MAP[TVU][pointing_angle_index][wind_speed_index][kd_range_index];
+
+            /* subaqueous uncertainties */
+            const double subaqueous_horizontal_uncertainty = (horizontal_coeff.a * depth * depth) + (horizontal_coeff.b * depth) + horizontal_coeff.c;
+            const double subaqueous_vertical_uncertainty = (vertical_coeff.a * depth * depth) + (vertical_coeff.b * depth) + vertical_coeff.c;
+
+            /* add subaqueous uncertainties to total uncertainties */
+            photons[i].sigma_thu += subaqueous_horizontal_uncertainty;
+            photons[i].sigma_tvu += subaqueous_vertical_uncertainty;
+            
+            /* set maximum sensor depth processing flag */
+            if(kd > 0)
+            {
+                const double max_sensor_depth = 1.8 / kd;
+                if(depth > max_sensor_depth)
+                {
+                    photons[i].processing_flags |= BathyFields::EXCEEDS_MAX_SENSOR_DEPTH;
+                }
+            }
         }
     }
 }

@@ -55,16 +55,16 @@ n2 = settings.get('n2', 1.34116)
 #########################
 
 # calculation refraction corrections
-dE, dN, dZ = photon_refraction(data["surface_h"], data["geoid_corr_h"], data["ref_az"], data["ref_el"], n1, n2)
+dE, dN, dZ = photon_refraction(data["surface_h"], data["ortho_h"], data["ref_az"], data["ref_el"], n1, n2)
 
 # apply corrections
 data["dE"] = dE
 data["dN"] = dN
 data["dZ"] = dZ
-subaqueous = data["geoid_corr_h"] < data["surface_h"]
+subaqueous = data["ortho_h"] < data["surface_h"]
 data.loc[subaqueous, 'x_ph'] += data.loc[subaqueous, 'dE']
 data.loc[subaqueous, 'y_ph'] += data.loc[subaqueous, 'dN']
-data.loc[subaqueous, 'geoid_corr_h'] += data.loc[subaqueous, 'dZ']
+data.loc[subaqueous, 'ortho_h'] += data.loc[subaqueous, 'dZ']
 
 # correct latitude and longitude
 if info["region"] < 8:
@@ -78,14 +78,14 @@ data["latitude"] = data.apply(lambda row: row['geoloc_corr'][1], axis=1)
 
 # calculate subaqueous depth
 data["depth"] = 0.0
-data.loc[subaqueous, 'depth'] = data.loc[subaqueous, 'surface_h'] - data.loc[subaqueous, 'geoid_corr_h']
+data.loc[subaqueous, 'depth'] = data.loc[subaqueous, 'surface_h'] - data.loc[subaqueous, 'ortho_h']
 
 ################
 # WRITE OUTPUTS
 ################
 
 # capture statistics
-data_corr = data[data["geoid_corr_h"] < data["surface_h"]]
+data_corr = data[data["ortho_h"] < data["surface_h"]]
 info["refraction"] = {
     "dE": {
         "min": data_corr["dE"].min(),

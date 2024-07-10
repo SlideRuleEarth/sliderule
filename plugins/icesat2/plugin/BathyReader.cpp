@@ -77,7 +77,7 @@ const RecordObject::fieldDef_t BathyReader::phRecDef[] = {
     {"y_atc",           RecordObject::DOUBLE,   offsetof(photon_t, y_atc),          1,  NULL, NATIVE_FLAGS},
     {"background_rate", RecordObject::DOUBLE,   offsetof(photon_t, background_rate),1,  NULL, NATIVE_FLAGS},
     {"geoid",           RecordObject::FLOAT,    offsetof(photon_t, geoid),          1,  NULL, NATIVE_FLAGS},
-    {"geoid_corr_h",    RecordObject::FLOAT,    offsetof(photon_t, geoid_corr_h),   1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
+    {"ortho_h",    RecordObject::FLOAT,    offsetof(photon_t, ortho_h),   1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"dem_h",           RecordObject::FLOAT,    offsetof(photon_t, dem_h),          1,  NULL, NATIVE_FLAGS},
     {"sigma_h",         RecordObject::FLOAT,    offsetof(photon_t, sigma_h),        1,  NULL, NATIVE_FLAGS},
     {"sigma_along",     RecordObject::FLOAT,    offsetof(photon_t, sigma_along),    1,  NULL, NATIVE_FLAGS},
@@ -1078,17 +1078,20 @@ void* BathyReader::subsettingThread (void* parm)
                     .y_atc = atl03.dist_ph_across[current_photon],
                     .background_rate = calculateBackground(current_segment, bckgrd_index, atl03),
                     .geoid = atl03.geoid[current_segment],
-                    .geoid_corr_h = atl03.h_ph[current_photon] - atl03.geoid[current_segment],
+                    .ortho_h = atl03.h_ph[current_photon] - atl03.geoid[current_segment],
                     .dem_h = atl03.dem_h[current_segment] - atl03.geoid[current_segment],
                     .sigma_h = atl03.sigma_h[current_segment],
                     .sigma_along = atl03.sigma_along[current_segment],
                     .sigma_across = atl03.sigma_across[current_segment],
                     .solar_elevation = atl03.solar_elevation[current_segment],
+                    .sigma_thu = 0.0,
+                    .sigma_tvu = 0.0,
                     .ref_az = atl03.ref_azimuth[current_segment],
                     .ref_el = atl03.ref_elev[current_segment],
                     .wind_v = wind_v,
                     .pointing_angle = pointing_angle,
                     .ndwi = ndwi,
+                    .processing_flags = 0x0,
                     .yapc_score = yapc_score,
                     .max_signal_conf = atl03_cnf,
                     .quality_ph = quality_ph,
@@ -1134,7 +1137,8 @@ void* BathyReader::subsettingThread (void* parm)
                 if(parms->classifiers[BathyFields::OPENOCEANS])
                 {
                     parms->openoceans->findSeaSurface(*extent);
-                    parms->openoceans->refractionCorrection(*extent);
+                    parms->openoceans->correctRefraction(*extent);
+                    parms->openoceans->calculateUncertainty(*extent);
                 }
 
                 /* Export Data */
@@ -1205,7 +1209,7 @@ void* BathyReader::subsettingThread (void* parm)
                         }
 
                         /* Write Header */
-                        fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,index_seg,background_rate,geoid,surface_h,geoid_corr_h,dem_h,sigma_h,sigma_along,sigma_across,solar_elevation,ref_az,ref_el,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph,class_ph\n");
+                        fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,index_seg,background_rate,geoid,surface_h,ortho_h,dem_h,sigma_h,sigma_along,sigma_across,sigma_thu,sigma_tvu,solar_elevation,ref_az,ref_el,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph,flags,class_ph\n");
                     }
 
                     /* Write Data */
@@ -1223,11 +1227,13 @@ void* BathyReader::subsettingThread (void* parm)
                         fprintf(out_file, "%lf,", extent->photons[i].background_rate);
                         fprintf(out_file, "%f,", extent->photons[i].geoid);
                         fprintf(out_file, "%f,", extent->surface_h);
-                        fprintf(out_file, "%f,", extent->photons[i].geoid_corr_h);
+                        fprintf(out_file, "%f,", extent->photons[i].ortho_h);
                         fprintf(out_file, "%f,", extent->photons[i].dem_h);
                         fprintf(out_file, "%f,", extent->photons[i].sigma_h);
                         fprintf(out_file, "%f,", extent->photons[i].sigma_along);
                         fprintf(out_file, "%f,", extent->photons[i].sigma_across);
+                        fprintf(out_file, "%f,", extent->photons[i].sigma_thu);
+                        fprintf(out_file, "%f,", extent->photons[i].sigma_tvu);
                         fprintf(out_file, "%f,", extent->photons[i].solar_elevation);
                         fprintf(out_file, "%f,", extent->photons[i].ref_az);
                         fprintf(out_file, "%f,", extent->photons[i].ref_el);
@@ -1237,6 +1243,7 @@ void* BathyReader::subsettingThread (void* parm)
                         fprintf(out_file, "%d,", extent->photons[i].yapc_score);
                         fprintf(out_file, "%d,", extent->photons[i].max_signal_conf);
                         fprintf(out_file, "%d,", extent->photons[i].quality_ph);
+                        fprintf(out_file, "%d,", extent->photons[i].processing_flags);
                         fprintf(out_file, "%d", extent->photons[i].class_ph);
                         fprintf(out_file, "\n");
                     }

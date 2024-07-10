@@ -31,4 +31,5 @@ swot-local,                 nil,            file,       /data/SWOT,             
 atlas-s3,                   iam-role,       s3,         sliderule/data/ATLAS,                                                   nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
 nsidc-s3,                   nsidc-cloud,    cumulus,    nsidc-cumulus-prod-protected,                                           nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
 swot-s3,                    iam-role,       s3,         sliderule/data/SWOT,                                                    nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
+viirsj1-s3,                 iam-role,       s3,         sliderule/data/VIIRSJ1,                                                 nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
 sliderule-stage,            iam-role,       s3,         sliderule-public,                                                       nil,                us-west-2,      https://s3.us-west-2.amazonaws.com

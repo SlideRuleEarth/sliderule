@@ -140,7 +140,7 @@ def find_kd_range(kd_490):
 data['kd_range_index'] = data['kd_490'].apply(find_kd_range)
 
 # get index of photons below sea surface
-subaqueous = data["geoid_corr_h"] < data["surface_h"]
+subaqueous = data["ortho_h"] < data["surface_h"]
 
 ###################################
 # CALCULATE HORIZONTAL UNCERTAINTY

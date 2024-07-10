@@ -106,7 +106,7 @@ if len(args.plot):
     d0 = np.min(pdf["x_atc"])
     for class_val, color_name in colors.items():
         ii = pdf["class_ph"]==class_val
-        plt.plot(pdf['x_atc'][ii]-d0, pdf['geoid_corr_h'][ii],'o',markersize=1, color=color_name[0], label=color_name[1])
+        plt.plot(pdf['x_atc'][ii]-d0, pdf['ortho_h'][ii],'o',markersize=1, color=color_name[0], label=color_name[1])
     hl=plt.legend(loc=3, frameon=False, markerscale=5)
     plt.show()
 

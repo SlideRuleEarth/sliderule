@@ -100,7 +100,7 @@ ph_data = pd.DataFrame()
 
 ph_data["photon_index"] = ph_data_all["index_ph"] # integer position of photon within the h5 file
 ph_data["x_ph"] = ph_data_all["x_atc"] - min(ph_data_all["x_atc"]) # total along track distance, normalized to the minimum value
-ph_data["z_ph"] = ph_data_all["geoid_corr_h"] # geoid-corrected photon height
+ph_data["z_ph"] = ph_data_all["ortho_h"] # geoid-corrected photon height
 
 ph_data["quality_ph"] = ph_data_all["quality_ph"] # modelling_parallel.py needs thiss
 

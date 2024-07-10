@@ -17,7 +17,7 @@ set(CMAKE_CXX_FLAGS "-Wall -Werror ${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
 set(PI_NAME "index_ph")
 set(X_NAME "x_atc")
-set(Z_NAME "geoid_corr_h")
+set(Z_NAME "ortho_h")
 
 add_definitions(-DPI_NAME=\"${PI_NAME}\")
 add_definitions(-DX_NAME=\"${X_NAME}\")
