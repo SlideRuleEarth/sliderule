@@ -612,7 +612,7 @@ void H5Dataset::readDataset (info_t* info)
         }
     }
 
-    /* Populate Shape in Info */
+    /* Initialize and Populate Shape in Info */
     uint64_t num_elements = 1;
     for(int d = 1; d < metaData.ndims; d++)
     {
