@@ -14,7 +14,7 @@ class H5BTreeV2
         uint8_t  hdr_flags_out;
         bool     found_attr;
 
-        H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_name, H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file);
+        H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_name, H5Dataset::heap_info_t* heap_info_ptr, H5Dataset* h5file);
 
         static uint32_t log2Gen(uint64_t n);
         static uint16_t sizeOffsetBits(uint16_t b);
@@ -170,8 +170,8 @@ class H5BTreeV2
     private:
 
         /* H5FILEBUFFER POINTER*/
-        /* NOTE: external instance H5FileBuffer is incomplete in construction */
-        H5FileBuffer* h5filePtr_;
+        /* NOTE: external instance H5Dataset is incomplete in construction */
+        H5Dataset* h5filePtr_;
 
         /* B-TREE V2 HEADER */
         /* Removed: hdr_size, node_refc, file_refc, sizeof_size, sizeof_addr */
@@ -200,7 +200,7 @@ class H5BTreeV2
         /* UDATA */
         /* Removed: flags (attr storage location) and corder (creation order) */
         uint64_t                fheap_addr;
-        H5FileBuffer::heap_info_t *fheap_info; // fractalH pointer
+        H5Dataset::heap_info_t *fheap_info; // fractalH pointer
         const char              *name;         // attr name we are searching for
         uint32_t                name_hash;     // hash of attr name
 

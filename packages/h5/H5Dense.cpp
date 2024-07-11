@@ -61,7 +61,7 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_name,  H5FileBuffer::heap_info_t* heap_info_ptr, H5FileBuffer* h5file)
+H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_name,  H5Dataset::heap_info_t* heap_info_ptr, H5Dataset* h5file)
 {
     /* Stack */
     const vector<btree2_node_info_t> _node_info;
@@ -107,7 +107,7 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
     /* NOT IMPLEMENTED: SHARED ATTR SUPPORT */
     print2term("WARNING: isTypeSharedAttrs is NOT implemented for dense attr reading \n");
 #if 0
-    bool shared_attributes = isTypeSharedAttrs(H5FileBuffer::ATTRIBUTE_MSG);
+    bool shared_attributes = isTypeSharedAttrs(H5Dataset::ATTRIBUTE_MSG);
     if(shared_attributes)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "sharedAttribute reading is not implemented");
@@ -121,7 +121,7 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
     const uint32_t signature = (uint32_t)h5filePtr_->readField(4, &pos);
 
     /* Signature check */
-    if(signature != H5FileBuffer::H5_V2TREE_SIGNATURE_LE)
+    if(signature != H5Dataset::H5_V2TREE_SIGNATURE_LE)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header signature: 0x%llX", (unsigned long long)signature);
     }
@@ -893,7 +893,7 @@ void H5BTreeV2::openInternalNode(btree2_internal_t *internal, uint64_t internal_
 
     /* Signature sanity check */
     const uint32_t signature = (uint32_t) h5filePtr_->readField(4, &internal_pos);
-    if (signature != H5FileBuffer::H5_V2TREE_INTERNAL_SIGNATURE_LE) {
+    if (signature != H5Dataset::H5_V2TREE_INTERNAL_SIGNATURE_LE) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match internal node: %u", signature);
     }
 
@@ -974,7 +974,7 @@ uint64_t H5BTreeV2::openLeafNode(const btree2_node_ptr_t *curr_node_ptr, btree2_
 
     /* Signature Check*/
     const uint32_t signature = (uint32_t) h5filePtr_->readField(4, &internal_pos);
-    if (signature != H5FileBuffer::H5_V2TREE_LEAF_SIGNATURE_LE) {
+    if (signature != H5Dataset::H5_V2TREE_LEAF_SIGNATURE_LE) {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match leaf node: %u", signature);
     }
 

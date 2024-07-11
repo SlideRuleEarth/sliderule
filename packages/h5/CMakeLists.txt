@@ -15,8 +15,10 @@ if (ZLIB_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/H5Coro.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5Dense.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5DArray.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/H5Dataset.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5DatasetDevice.cpp
             ${CMAKE_CURRENT_LIST_DIR}/H5File.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/H5Future.cpp
     )
 
     target_include_directories (slideruleLib
@@ -32,9 +34,11 @@ if (ZLIB_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/H5Coro.h
             ${CMAKE_CURRENT_LIST_DIR}/H5Dense.h
             ${CMAKE_CURRENT_LIST_DIR}/H5DArray.h
+            ${CMAKE_CURRENT_LIST_DIR}/H5Dataset.h
             ${CMAKE_CURRENT_LIST_DIR}/H5DatasetDevice.h
             ${CMAKE_CURRENT_LIST_DIR}/H5Element.h
             ${CMAKE_CURRENT_LIST_DIR}/H5File.h
+            ${CMAKE_CURRENT_LIST_DIR}/H5Future.h
         DESTINATION
             ${INCDIR}
     )

@@ -29,31 +29,77 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __h5pkg__
-#define __h5pkg__
-
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "H5Coro.h"
-#include "H5Array.h"
-#include "H5DArray.h"
-#include "H5Dataset.h"
-#include "H5DatasetDevice.h"
-#include "H5Element.h"
-#include "H5File.h"
 #include "H5Future.h"
+#include "RecordObject.h"
+#include "OsApi.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * METHODS
  ******************************************************************************/
 
-extern "C" {
-void inith5 (void);
-void deinith5 (void);
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+H5Future::H5Future (void)
+{
+    info.elements   = 0;
+    info.typesize   = 0;
+    info.datasize   = 0;
+    info.data       = NULL;
+    info.datatype   = RecordObject::INVALID_FIELD;
+    info.numcols    = 0;
+    info.numrows    = 0;
+
+    complete        = false;
+    valid           = false;
 }
 
-#endif  /* __h5pkg__ */
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+H5Future::~H5Future (void)
+{
+    wait(IO_PEND);
+    delete [] info.data;
+}
 
+/*----------------------------------------------------------------------------
+ * wait
+ *----------------------------------------------------------------------------*/
+H5Future::rc_t H5Future::wait (int timeout)
+{
+    rc_t rc;
 
+    sync.lock();
+    {
+        if(!complete)
+        {
+            sync.wait(0, timeout);
+        }
+
+        if      (!valid)    rc = INVALID;
+        else if (!complete) rc = TIMEOUT;
+        else                rc = COMPLETE;
+    }
+    sync.unlock();
+
+    return rc;
+}
+
+/*----------------------------------------------------------------------------
+ * finish
+ *----------------------------------------------------------------------------*/
+ void H5Future::finish (bool _valid)
+ {
+    sync.lock();
+    {
+        valid = _valid;
+        complete = true;
+        sync.signal();
+    }
+    sync.unlock();
+ }

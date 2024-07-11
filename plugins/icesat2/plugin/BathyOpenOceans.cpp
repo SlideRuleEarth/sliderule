@@ -585,12 +585,12 @@ void BathyOpenOceans::calculateUncertainty (extent_t& extent) const
     /* get y offset */
     const double degrees_of_latitude = extent.photons[0].latitude + 90.0;
     const double latitude_pixels = degrees_of_latitude / 24.0;
-    const uint32_t y = static_cast<uint32_t>(latitude_pixels);
+    const int32_t y = static_cast<int32_t>(latitude_pixels);
 
     /* get x offset */
     const double degrees_of_longitude =  extent.photons[0].longitude + 180.0;
     const double longitude_pixels = degrees_of_longitude / 24.0;
-    const uint32_t x = static_cast<uint32_t>(longitude_pixels);
+    const int32_t x = static_cast<int32_t>(longitude_pixels);
 
     /* calculate total offset */
     if(x < 0 || x >= 4320 || y < 0 || y >= 8640)
