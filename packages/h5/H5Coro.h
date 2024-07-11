@@ -41,6 +41,7 @@
 #include "Table.h"
 #include "Asset.h"
 #include "MsgQ.h"
+#include "OsApi.h"
 #include "H5Dataset.h"
 #include "H5Future.h"
 
@@ -51,27 +52,19 @@
 struct H5Coro
 {
     /*--------------------------------------------------------------------
-     * Constants
-     *--------------------------------------------------------------------*/
-
-    static const long ALL_ROWS = H5Dataset::ALL_ROWS;
-    static const long ALL_COLS = -1L;
-
-    /*--------------------------------------------------------------------
      * Typedefs
      *--------------------------------------------------------------------*/
 
     typedef H5Future::info_t info_t;
-    typedef H5Dataset::io_context_t context_t;
+    typedef H5Dataset::context_t context_t;
+    typedef H5Dataset::range_t range_t;
 
     typedef struct {
         const Asset*            asset;
         const char*             resource;
         const char*             datasetname;
         RecordObject::valType_t valtype;
-        long                    col;
-        long                    startrow;
-        long                    numrows;
+        vector<range_t>         slice;
         context_t*              context;
         uint32_t                traceid;
         H5Future*               h5f;
@@ -83,10 +76,9 @@ struct H5Coro
 
     static void         init            (int num_threads);
     static void         deinit          (void);
-    static info_t       read            (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL, bool _meta_only=false, uint32_t parent_trace_id=ORIGIN);
     static bool         traverse        (const Asset* asset, const char* resource, int max_depth, const char* start_group);
-
-    static H5Future*    readp           (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows, context_t* context=NULL);
+    static info_t       read            (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, const vector<range_t>& slice, context_t* context=NULL, bool _meta_only=false, uint32_t parent_trace_id=ORIGIN);
+    static H5Future*    readp           (const Asset* asset, const char* resource, const char* datasetname, RecordObject::valType_t valtype, const vector<range_t>& slice, context_t* context=NULL);
     static void*        reader_thread   (void* parm);
 
     /*--------------------------------------------------------------------

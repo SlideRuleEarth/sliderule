@@ -59,9 +59,8 @@ class H5Dataset
         * Constants
         *--------------------------------------------------------------------*/
 
-        static const long ALL_ROWS      = -1;
-        static const int MAX_NDIMS      = 2;
-        static const int FLAT_NDIMS     = 3;
+        static const int MAX_NDIMS = H5Future::MAX_NDIMS;
+        static const long EOR = -1L; // end of range - read rest of the span of a dimension
 
         /*--------------------------------------------------------------------
         * Typedefs
@@ -69,76 +68,81 @@ class H5Dataset
 
         typedef H5Future::info_t info_t;
 
+        typedef enum {
+            DATASPACE_MSG       = 0x1,
+            LINK_INFO_MSG       = 0x2,
+            DATATYPE_MSG        = 0x3,
+            FILL_VALUE_MSG      = 0x5,
+            LINK_MSG            = 0x6,
+            DATA_LAYOUT_MSG     = 0x8,
+            FILTER_MSG          = 0xB,
+            ATTRIBUTE_MSG       = 0xC,
+            HEADER_CONT_MSG     = 0x10,
+            SYMBOL_TABLE_MSG    = 0x11,
+            ATTRIBUTE_INFO_MSG  = 0x15
+        } msg_type_t;
+
+        typedef struct {
+            int             table_width;
+            int             curr_num_rows;
+            int             starting_blk_size;
+            int             max_dblk_size;
+            int             blk_offset_size;  // size in bytes of block offset field
+            bool            dblk_checksum;
+            msg_type_t      msg_type;
+            int             num_objects;
+            int             cur_objects; // mutable
+            uint64_t        root_blk_addr;
+            uint32_t        max_size_mg_obj;
+            uint16_t        max_heap_size;
+            uint8_t         hdr_flags;
+            uint8_t         heap_off_size; // uint32_t Size of heap offsets (in bytes)
+            uint8_t         heap_len_size; // size of heap ID lengths (in bytes)
+            int             dlvl; // pass down to found message for dense
+        } heap_info_t;
+
+        typedef struct {        // [r0, r1)
+            int64_t         r0; // start of slice
+            int64_t         r1; // end of slice
+        } range_t;
+
         /*--------------------------------------------------------------------
         * I/O Context (subclass)
         *--------------------------------------------------------------------*/
 
         typedef struct {
-            uint8_t*                data;
-            int64_t                 size;
-            uint64_t                pos;
+            uint8_t*        data;
+            int64_t         size;
+            uint64_t        pos;
         } cache_entry_t;
 
         typedef Table<cache_entry_t, uint64_t> cache_t;
 
-        struct io_context_t
+        struct context_t
         {
-            cache_t     l1; // level 1 cache
-            cache_t     l2; // level 2 cache
-            Mutex       mut; // cache mutex
-            long        pre_prefetch_request;
-            long        post_prefetch_request;
-            long        cache_miss;
-            long        l1_cache_replace;
-            long        l2_cache_replace;
-            long        bytes_read;
+            cache_t         l1; // level 1 cache
+            cache_t         l2; // level 2 cache
+            Mutex           mut; // cache mutex
+            long            pre_prefetch_request;
+            long            post_prefetch_request;
+            long            cache_miss;
+            long            l1_cache_replace;
+            long            l2_cache_replace;
+            long            bytes_read;
 
-            io_context_t    (void);
-            ~io_context_t   (void);
+            context_t       (void);
+            ~context_t      (void);
         };
 
         /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
 
-                            H5Dataset        (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _meta_only=false);
-        virtual             ~H5Dataset       (void);
-
-        typedef enum {
-            DATASPACE_MSG           = 0x1,
-            LINK_INFO_MSG           = 0x2,
-            DATATYPE_MSG            = 0x3,
-            FILL_VALUE_MSG          = 0x5,
-            LINK_MSG                = 0x6,
-            DATA_LAYOUT_MSG         = 0x8,
-            FILTER_MSG              = 0xB,
-            ATTRIBUTE_MSG           = 0xC,
-            HEADER_CONT_MSG         = 0x10,
-            SYMBOL_TABLE_MSG        = 0x11,
-            ATTRIBUTE_INFO_MSG      = 0x15
-        } msg_type_t;
-
-        typedef struct {
-            int                     table_width;
-            int                     curr_num_rows;
-            int                     starting_blk_size;
-            int                     max_dblk_size;
-            int                     blk_offset_size;  // size in bytes of block offset field
-            bool                    dblk_checksum;
-            msg_type_t              msg_type;
-            int                     num_objects;
-            int                     cur_objects; // mutable
-            uint64_t                root_blk_addr;
-            uint32_t                max_size_mg_obj;
-            uint16_t                max_heap_size;
-            uint8_t                 hdr_flags;
-            
-            uint8_t                 heap_off_size; // uint32_t Size of heap offsets (in bytes)
-            uint8_t                 heap_len_size; // size of heap ID lengths (in bytes)
-
-            int                     dlvl; // pass down to found message for dense
-
-        } heap_info_t;
+                H5Dataset   (info_t* info, context_t* context, 
+                             const Asset* asset, const char* resource, 
+                             const char* dataset, const vector<range_t>& slice, 
+                             bool _meta_only=false);
+        virtual ~H5Dataset  (void);
 
     protected:
 
@@ -241,7 +245,6 @@ class H5Dataset
             uint32_t                chunk_size;
             uint32_t                filter_mask;
             uint64_t                slice[MAX_NDIMS];
-            uint64_t                row_key;
         } btree_node_t;
 
         typedef union {
@@ -294,7 +297,7 @@ class H5Dataset
         int                 readFractalHeap       (msg_type_t type, uint64_t pos, uint8_t hdr_flags, int dlvl, heap_info_t* heap_info_ptr);
         int                 readDirectBlock       (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readIndirectBlock     (heap_info_t* heap_info, int block_size, uint64_t pos, uint8_t hdr_flags, int dlvl);
-        int                 readBTreeV1           (uint64_t pos, uint8_t* buffer, uint64_t buffer_size, uint64_t buffer_offset);
+        int                 readBTreeV1           (uint64_t pos, uint8_t* buffer, uint64_t buffer_size);
         btree_node_t        readBTreeNodeV1       (int ndims, uint64_t* pos);
         int                 readSymbolTable       (uint64_t pos, uint64_t heap_data_addr, int dlvl);
 
@@ -317,6 +320,10 @@ class H5Dataset
         int                 readAttributeInfoMsg  (uint64_t pos, uint8_t hdr_flags, int dlvl);
 
         void                parseDataset          (void);
+        bool                hypersliceIntersection(const range_t* node_slice, const uint8_t node_level);
+        void                readSlice             (uint8_t* output_buffer, const uint64_t* output_dimensions, const range_t* output_slice, 
+                                                   const uint8_t* input_buffer, const uint64_t* input_dimensions, const range_t* input_slice);
+
         static const char*  type2str              (data_type_t datatype);
         static const char*  layout2str            (layout_t layout);
         static int          highestBit            (uint64_t value);
@@ -338,17 +345,15 @@ class H5Dataset
         const char*         datasetName;            // holds buffer of dataset name that datasetPath points back into
         const char*         datasetPrint;           // holds untouched dataset name string used for displaying the name
         vector<const char*> datasetPath;
-        uint64_t            datasetStartRow;
-        int                 datasetNumRows;
-        bool                errorChecking;
-        bool                verbose;
+        range_t             hyperslice[MAX_NDIMS];
+        uint64_t            shape[MAX_NDIMS];
         bool                metaOnly;
 
         /* I/O Management */
         Asset::IODriver*    ioDriver;
         char*               ioBucket;               // s3 driver
         char*               ioKey;                  // s3 driver
-        io_context_t*       ioContext;
+        context_t*          ioContext;
         bool                ioContextLocal;
         bool                ioPostPrefetch;
 
@@ -358,6 +363,10 @@ class H5Dataset
         int64_t             dataChunkBufferSize;    // dataChunkElements * dataInfo->typesize
         int                 highestDataLevel;       // high water mark for traversing dataset path
         int64_t             dataSizeHint;
+        uint64_t            dimensionsInChunks[MAX_NDIMS];
+        uint64_t            chunkStepSize[MAX_NDIMS];
+        uint64_t            hypersliceChunkStart;
+        uint64_t            hypersliceChunkEnd;
 
         /* Meta Info */
         meta_entry_t        metaData;

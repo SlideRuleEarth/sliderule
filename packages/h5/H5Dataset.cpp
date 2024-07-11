@@ -49,16 +49,20 @@
  * DEFINES
  ******************************************************************************/
 
-#ifndef H5_VERBOSE
-#define H5_VERBOSE false
+#ifndef H5CORO_VERBOSE
+#define H5CORO_VERBOSE false
 #endif
 
-#ifndef H5_EXTRA_DEBUG
-#define H5_EXTRA_DEBUG false
+#ifndef H5CORO_EXTRA_DEBUG
+#define H5CORO_EXTRA_DEBUG false
 #endif
 
-#ifndef H5_ERROR_CHECKING
-#define H5_ERROR_CHECKING true
+#ifndef H5CORO_ERROR_CHECKING
+#define H5CORO_ERROR_CHECKING true
+#endif
+
+#ifndef H5CORO_ENABLE_FILL
+#define H5CORO_ENABLE_FILL false
 #endif
 
 /******************************************************************************
@@ -81,7 +85,7 @@ Mutex H5Dataset::metaMutex;
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5Dataset::io_context_t::io_context_t (void):
+H5Dataset::context_t::context_t (void):
     l1(IO_CACHE_L1_ENTRIES, ioHashL1),
     l2(IO_CACHE_L2_ENTRIES, ioHashL2)
 {
@@ -96,7 +100,7 @@ H5Dataset::io_context_t::io_context_t (void):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-H5Dataset::io_context_t::~io_context_t (void)
+H5Dataset::context_t::~context_t (void)
 {
     /* Empty L1 Cache */
     {
@@ -126,37 +130,48 @@ H5Dataset::io_context_t::~io_context_t (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5Dataset::H5Dataset (info_t* info, io_context_t* context, const Asset* asset, const char* resource, const char* dataset, long startrow, long numrows, bool _meta_only)
+H5Dataset::H5Dataset (info_t* info, context_t* context, 
+                      const Asset* asset, const char* resource, 
+                      const char* dataset, const vector<range_t>& slice, 
+                      bool _meta_only):
+    datasetName (StringLib::duplicate(dataset)),
+    datasetPrint (StringLib::duplicate(dataset)),
+    metaOnly (_meta_only),
+    ioDriver (NULL),
+    ioBucket (NULL),
+    ioKey (NULL),
+    ioContext (NULL),
+    ioContextLocal (true),
+    ioPostPrefetch (false),
+    dataChunkBuffer (NULL),
+    dataChunkFilterBuffer (NULL),
+    dataChunkBufferSize (0),
+    highestDataLevel (0),
+    dataSizeHint (0)
 {
     assert(asset);
     assert(resource);
     assert(dataset);
-
-    /* Initialize Class Data */
-    ioDriver                = NULL;
-    ioContextLocal          = true;
-    ioContext               = NULL;
-    ioBucket                = NULL;
-    ioPostPrefetch          = false;
-    dataChunkBuffer         = NULL;
-    dataChunkFilterBuffer   = NULL;
-    datasetName             = StringLib::duplicate(dataset);
-    datasetPrint            = StringLib::duplicate(dataset);
-    datasetStartRow         = startrow;
-    datasetNumRows          = numrows;
-    metaOnly                = _meta_only;
-    ioKey                   = NULL;
-    dataChunkBufferSize     = 0;
-    highestDataLevel        = 0;
-    dataSizeHint            = 0;
 
     /* Initialize Info */
     info->elements = 0;
     info->datasize = 0;
     info->data     = NULL;
     info->datatype = RecordObject::INVALID_FIELD;
-    info->numrows  = 0;
-    info->numcols  = 0;
+
+    /* Initialize HyperSlice */
+    for(int d = 0; d < MAX_NDIMS; d++)
+    {
+        if(d < slice.size())
+        {
+            hyperslice[d] = slice[d];
+        }
+        else
+        {
+            hyperslice[d].r0 = 0;
+            hyperslice[d].r1 = EOR;
+        }
+    }
 
     /* Process File */
     try
@@ -172,7 +187,7 @@ H5Dataset::H5Dataset (info_t* info, io_context_t* context, const Asset* asset, c
         }
         else
         {
-            ioContext = new io_context_t;
+            ioContext = new context_t;
             ioContextLocal = true;
         }
 
@@ -208,7 +223,7 @@ H5Dataset::H5Dataset (info_t* info, io_context_t* context, const Asset* asset, c
             metaData.size           = 0;
             for(int f = 0; f < NUM_FILTERS; f++)
             {
-                metaData.filter[f]  = INVALID_FILTER;
+                metaData.filter[f] = false;
             }
 
             /* Get Dataset Path */
@@ -556,9 +571,6 @@ uint64_t H5Dataset::readField (int64_t size, uint64_t* pos)
  *----------------------------------------------------------------------------*/
 void H5Dataset::readDataset (info_t* info)
 {
-    /* Populate Type Size */
-    info->typesize = metaData.typesize;
-
     /* Sanity Check Data Attributes */
     if(metaData.typesize <= 0)
     {
@@ -569,24 +581,50 @@ void H5Dataset::readDataset (info_t* info)
         throw RunTimeException(CRITICAL, RTE_ERROR, "missing data dimension information");
     }
 
-    /* Calculate Size of Data Row (note dimension starts at 1) */
-    uint64_t row_size = metaData.typesize;
+    /* Massage Hyperslice */
     for(int d = 1; d < metaData.ndims; d++)
     {
-        row_size *= metaData.dimensions[d];
+        if(d < hyperslice.size())
+        {
+            if(hyperslice[d].r1 == EOF)
+            {
+                hyperslice[d].r1 = metaData.dimensions[d];
+            }
+        }
+        else
+        {
+            range_t range = {
+                .r0 = 0,
+                .r1 = metaData.dimensions[d]
+            };
+            hyperslice.push_back(range);
+        }
     }
 
-    /* Get Number of Rows */
-    const uint64_t first_dimension = (metaData.ndims > 0) ? metaData.dimensions[0] : 1;
-    datasetNumRows = (datasetNumRows == ALL_ROWS) ? first_dimension : datasetNumRows;
-    if((datasetStartRow + datasetNumRows) > first_dimension)
+    /* Check for Valid Hyperslice */
+    for(int d = 1; d < metaData.ndims; d++)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "read exceeds number of rows: %d + %d > %d", (int)datasetStartRow, datasetNumRows, (int)first_dimension);
+        if( (hyperslice[d].r1 < hyperslice[d].r0) ||
+            (hyperslice[d].r1 > metaData.dimensions[d]) ||
+            (hyperslice[d].r0 < 0) )
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid hyperslice at dimension %d [%ld]: [%ld, %ld)", d, metaData.dimensions[d], hyperslice[d].r0, hyperslice[d].r1);            
+        }
+    }
+
+    /* Populate Shape in Info */
+    uint64_t num_elements = 1;
+    for(int d = 1; d < metaData.ndims; d++)
+    {
+        uint64_t elements_in_dimension = hyperslice[d].r1 - hyperslice[d].r0;
+        if(elements_in_dimension > 0) num_elements *= elements_in_dimension;
+        shape[d] = elements_in_dimension;
+        info->shape[d] = shape[d];
     }
 
     /* Allocate Data Buffer */
     uint8_t* buffer = NULL;
-    const int64_t buffer_size = row_size * datasetNumRows;
+    const int64_t buffer_size = num_elements * metaData.typesize;
     if(!metaOnly && buffer_size > 0)
     {
         /* Add Space for Terminator for Strings */
@@ -602,27 +640,22 @@ void H5Dataset::readDataset (info_t* info)
         }
 
         /* Fill Buffer with Fill Value (if provided) */
-        #if 0
-        if(metaData.fillsize > 0)
+        if(H5CORO_ENABLE_FILL && metaData.fillsize > 0)
         {
             for(int64_t i = 0; i < buffer_size; i += metaData.fillsize)
             {
                 memcpy(&buffer[i], &metaData.fill.fill_ll, metaData.fillsize);
             }
         }
-        #endif
     }
 
-    /* Populate Rest of Info Struct */
-    info->elements = buffer_size / metaData.typesize;
+    /* Populate Attributes in Info */
+    info->typesize = metaData.typesize;
+    info->elements = num_elements;
     info->datasize = buffer_size;
     info->data     = buffer;
-    info->numrows  = datasetNumRows;
 
-    if      (metaData.ndims == 0)   info->numcols = 0;
-    else if (metaData.ndims == 1)   info->numcols = 1;
-    else if (metaData.ndims >= 2)   info->numcols = metaData.dimensions[1];
-
+    /* Populate Data Type Attribute in Info */
     if(metaData.type == FIXED_POINT_TYPE)
     {
         if(metaData.signedval)
@@ -653,11 +686,8 @@ void H5Dataset::readDataset (info_t* info)
         info->datatype = RecordObject::STRING;
     }
 
-    /* Calculate Buffer Start */
-    const uint64_t buffer_offset = row_size * datasetStartRow;
-
     /* Check if Data Address and Data Size is Valid */
-    if(H5_ERROR_CHECKING)
+    if(H5CORO_ERROR_CHECKING)
     {
         if(H5_INVALID(metaData.address))
         {
@@ -681,15 +711,37 @@ void H5Dataset::readDataset (info_t* info)
             case COMPACT_LAYOUT:
             case CONTIGUOUS_LAYOUT:
             {
-                uint64_t data_addr = metaData.address + buffer_offset;
-                ioRequest(&data_addr, buffer_size, buffer, 0, false);
+                if(metaData.ndims == 0)
+                {
+                    uint64_t data_addr = metaData.address;
+                    ioRequest(&data_addr, buffer_size, buffer, 0, false);
+                }
+                else if(metaData.ndims == 1)
+                {
+                    uint64_t buffer_offset = hyperslice[0].r0 * metaData.typesize;
+                    uint64_t data_addr = metaData.address + buffer_offset;
+                    ioRequest(&data_addr, buffer_size, buffer, 0, false);
+                }
+                else
+                {
+                    uint64_t compact_buffer_size = metaData.typesize;
+                    for(int d = 0; d < metaData.ndims; d++)
+                    {
+                        compact_buffer_size *= metaData.dimensions[d];
+                    }
+                    uint8_t* compact_buffer = new uint8_t [compact_buffer_size];
+                    uint64_t data_addr = metaData.address;
+                    ioRequest(&data_addr, buffer_size, buffer, 0, false);
+                    readSlice(buffer, info->shape, hyperslice, compact_buffer, metaData.dimensions, hyperslice);
+                    delete [] compact_buffer;
+                }
                 break;
             }
 
             case CHUNKED_LAYOUT:
             {
                 /* Chunk Layout Specific Error Checks */
-                if(H5_ERROR_CHECKING)
+                if(H5CORO_ERROR_CHECKING)
                 {
                     if(metaData.elementsize != metaData.typesize)
                     {
@@ -713,112 +765,56 @@ void H5Dataset::readDataset (info_t* info)
                  *  overall data that would be read, then prefetch the entire block from the
                  *  beginning and set the size hint to the L1 cache line size.
                  */
-                ioPostPrefetch = true;
-                if(buffer_offset < (uint64_t)buffer_size)
+                if(metaData.ndims <= 1)
                 {
-                    ioRequest(&metaData.address, 0, NULL, buffer_offset + buffer_size, true);
-                    dataSizeHint = IO_CACHE_L1_LINESIZE;
+                    uint64_t buffer_offset = hyperslice[0].r0 * metaData.typesize;
+                    ioPostPrefetch = true;
+                    if(buffer_offset < (uint64_t)buffer_size)
+                    {
+                        ioRequest(&metaData.address, 0, NULL, buffer_offset + buffer_size, true);
+                        dataSizeHint = IO_CACHE_L1_LINESIZE;
+                    }
+                    else
+                    {
+                        dataSizeHint = buffer_size;
+                    }
                 }
-                else
+
+                /* Calculate step size of each dimension in chunks
+                 * ... for example a 12x12x12 cube of unsigned chars
+                 * ... with a chunk size of 3x3x3 would be have 4x4x4 chunks
+                 * ... the step size in chunks is then 16x4x1 */
+                memset(dimensionsInChunks, 0, sizeof(dimensionsInChunks));
+                for(int d = 0; d < metaData.ndims; d++)
                 {
-                    dataSizeHint = buffer_size;
+                    dimensionsInChunks[d] = metaData.dimensions[d] / metaData.chunkdims[d];
+                    chunkStepSize[d] = 1;
+                }
+                for(int d = metaData.ndims - 1; d > 0; d--)
+                {
+                    chunkStepSize[d - 1] = dimensionsInChunks[d] * chunkStepSize[d];
+                }            
+            
+                /* Calculate position of first and last element in hyperslice */
+                hypersliceChunkStart = 0;
+                hypersliceChunkEnd = 0;
+                range_t hyperslice_in_chunks[MAX_NDIMS];
+                for(int d = metaData.ndims - 1; d > 0; d--)
+                {
+                    hyperslice_in_chunks[d].r0 = hyperslice[d].r0 / metaData.chunkdims[d];
+                    hyperslice_in_chunks[d].r1 = hyperslice[d].r1 / metaData.chunkdims[d];
+                    hypersliceChunkStart += hyperslice_in_chunks[d].r0 * chunkStepSize[d];
+                    hypersliceChunkEnd += hyperslice_in_chunks[d].r1 * chunkStepSize[d];
                 }
 
                 /* Read B-Tree */
-                readBTreeV1(metaData.address, buffer, buffer_size, buffer_offset);
-
-                /* Check Need to Flatten Chunks */
-                bool flatten = false;
-                for(int d = 1; d < metaData.ndims; d++)
-                {
-                    if(metaData.chunkdims[d] != metaData.dimensions[d])
-                    {
-                        flatten = true;
-                        break;
-                    }
-                }
-
-                /* Flatten Chunks - Place Dataset in Row Order*/
-                if(flatten)
-                {
-                    /* New Flattened Buffer */
-                    uint8_t* fbuf = new uint8_t[buffer_size];
-                    uint64_t bi = 0; // index into source buffer
-
-                    /* Build Number of Each Chunk per Dimension */
-                    uint64_t cdimnum[MAX_NDIMS * 2] = {0};
-                    for(int i = 0; i < metaData.ndims; i++)
-                    {
-                        cdimnum[i] = metaData.dimensions[i] / metaData.chunkdims[i];
-                        cdimnum[i + metaData.ndims] = metaData.chunkdims[i];
-                    }
-
-                    /* Build Size of Each Chunk per Flattened Dimension */
-                    uint64_t cdimsizes[FLAT_NDIMS];
-                    cdimsizes[0] = metaData.chunkdims[0] * metaData.typesize; // number of chunk rows
-                    for(int i = 1; i < metaData.ndims; i++)
-                    {
-                        cdimsizes[0] *= cdimnum[i]; // number of columns of chunks
-                        cdimsizes[0] *= metaData.chunkdims[i]; // number of columns in chunks
-                    }
-                    cdimsizes[1] = metaData.typesize;
-                    for(int i = 1; i < metaData.ndims; i++)
-                    {
-                        cdimsizes[1] *= metaData.chunkdims[i]; // number of columns in chunks
-                    }
-                    cdimsizes[2] = metaData.typesize;
-                    for(int i = 1; i < metaData.ndims; i++)
-                    {
-                        cdimsizes[2] *= cdimnum[i]; // number of columns of chunks
-                        cdimsizes[2] *= metaData.chunkdims[i]; // number of columns in chunks
-                    }
-
-                    /* Initialize Loop Variables */
-                    int ci = FLAT_NDIMS - 1; // chunk dimension index
-                    uint64_t dimi[MAX_NDIMS * 2]; // chunk dimension indices
-                    memset(dimi, 0, sizeof(dimi));
-
-                    /* Loop Through Each Chunk */
-                    while(true)
-                    {
-                        /* Calculate Start Position */
-                        uint64_t start = 0;
-                        for(int i = 0; i < FLAT_NDIMS; i++)
-                        {
-                            start += dimi[i] * cdimsizes[i];
-                        }
-
-                        /* Copy Into New Buffer */
-                        for(uint64_t k = 0; k < cdimsizes[1]; k++)
-                        {
-                            fbuf[start + k] = buffer[bi++];   // NOLINT(clang-analyzer-core.uninitialized.Assign)
-                        }
-
-                        /* Update Indices */
-                        dimi[ci]++;
-                        while(dimi[ci] == cdimnum[ci])
-                        {
-                            dimi[ci--] = 0;
-                            if(ci < 0) break;
-                            dimi[ci]++;
-                        }
-
-                        /* Check Exit Condition */
-                        if(ci < 0) break;
-                        ci = FLAT_NDIMS - 1;
-                    }
-
-                    /* Replace Buffer */
-                    delete [] buffer;
-                    info->data = fbuf;
-                }
-
+                readBTreeV1(metaData.address, buffer, buffer_size);
                 break;
             }
 
             default:
             {
-                if(H5_ERROR_CHECKING)
+                if(H5CORO_ERROR_CHECKING)
                 {
                     throw RunTimeException(CRITICAL, RTE_ERROR, "invalid data layout: %d", (int)metaData.layout);
                 }
@@ -852,7 +848,7 @@ uint64_t H5Dataset::readSuperblock (void)
     if(superblock_version == 0)
     {
         /* Read and Verify Superblock Info */
-        if(H5_ERROR_CHECKING)
+        if(H5CORO_ERROR_CHECKING)
         {
             const uint64_t freespace_version = readField(1, &pos);
             if(freespace_version != 0)
@@ -873,7 +869,7 @@ uint64_t H5Dataset::readSuperblock (void)
         metaData.lengthsize = readField(1, &pos);
 
         /* Read Base Address */
-        if(H5_ERROR_CHECKING)
+        if(H5CORO_ERROR_CHECKING)
         {
             pos = 24;
             const uint64_t base_address = readField(metaData.offsetsize, &pos);
@@ -887,7 +883,7 @@ uint64_t H5Dataset::readSuperblock (void)
         pos = 24 + (5 * metaData.offsetsize);
         root_group_offset = readField(metaData.offsetsize, &pos);
 
-        if(H5_VERBOSE)
+        if(H5CORO_VERBOSE)
         {
             print2term("\n----------------\n");
             print2term("File Information\n");
@@ -906,7 +902,7 @@ uint64_t H5Dataset::readSuperblock (void)
         metaData.lengthsize = readField(1, &pos);
 
         /* Read Base Address */
-        if(H5_ERROR_CHECKING)
+        if(H5CORO_ERROR_CHECKING)
         {
             pos = 12;
             const uint64_t base_address = readField(8, &pos);
@@ -920,7 +916,7 @@ uint64_t H5Dataset::readSuperblock (void)
         pos = 12 + (3 * metaData.offsetsize);
         root_group_offset = readField(metaData.offsetsize, &pos);
 
-        if(H5_VERBOSE)
+        if(H5CORO_VERBOSE)
         {
             print2term("\n----------------\n");
             print2term("File Information\n");
@@ -944,7 +940,7 @@ int H5Dataset::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_f
 
     const uint64_t starting_position = pos;
 
-    if(!H5_ERROR_CHECKING)
+    if(!H5CORO_ERROR_CHECKING)
     {
         pos += 5;
     }
@@ -963,7 +959,7 @@ int H5Dataset::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_f
         }
     }
 
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Fractal Heap [%d]: %d, 0x%lx\n", dlvl, (int)msg_type, starting_position);
@@ -994,7 +990,7 @@ int H5Dataset::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_f
     const uint16_t    start_num_rows      = readField(2, &pos); // Starting # of Rows in Root Indirect Block
     const uint64_t    root_blk_addr       = readField(metaData.offsetsize, &pos); // Address of Root Block
     const uint16_t    curr_num_rows       = (uint16_t)readField(2, &pos); // Current # of Rows in Root Indirect Block
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("Heap ID Length:                                                  %lu\n", (unsigned long)heap_obj_id_len);
         print2term("I/O Filters' Encoded Length:                                     %lu\n", (unsigned long)io_filter_len);
@@ -1081,7 +1077,7 @@ int H5Dataset::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_f
     {
         /* Direct Blocks */
         const int bytes_read = readDirectBlock(heap_info_ptr, heap_info_ptr->starting_blk_size, root_blk_addr, hdr_flags, dlvl);
-        if(H5_ERROR_CHECKING && (bytes_read > heap_info_ptr->starting_blk_size))
+        if(H5CORO_ERROR_CHECKING && (bytes_read > heap_info_ptr->starting_blk_size))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "direct block contianed more bytes than specified: %d > %d", bytes_read, heap_info_ptr->starting_blk_size);
         }
@@ -1091,7 +1087,7 @@ int H5Dataset::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_f
     {
         /* Indirect Blocks */
         const int bytes_read = readIndirectBlock(heap_info_ptr, 0, root_blk_addr, hdr_flags, dlvl);
-        if(H5_ERROR_CHECKING && (bytes_read > heap_info_ptr->starting_blk_size))
+        if(H5CORO_ERROR_CHECKING && (bytes_read > heap_info_ptr->starting_blk_size))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "indirect block contianed more bytes than specified: %d > %d", bytes_read, heap_info_ptr->starting_blk_size);
         }
@@ -1110,7 +1106,7 @@ int H5Dataset::readDirectBlock (heap_info_t* heap_info, int block_size, uint64_t
 {
     const uint64_t starting_position = pos;
 
-    if(!H5_ERROR_CHECKING)
+    if(!H5CORO_ERROR_CHECKING)
     {
         pos += 5;
     }
@@ -1129,7 +1125,7 @@ int H5Dataset::readDirectBlock (heap_info_t* heap_info, int block_size, uint64_t
         }
     }
 
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Direct Block [%d,%d,%d]: 0x%lx\n", dlvl, (int)heap_info->msg_type, block_size, (unsigned long)starting_position);
@@ -1137,7 +1133,7 @@ int H5Dataset::readDirectBlock (heap_info_t* heap_info, int block_size, uint64_t
     }
 
     /* Read Block Header */
-    if(!H5_VERBOSE)
+    if(!H5CORO_VERBOSE)
     {
         pos += metaData.offsetsize + heap_info->blk_offset_size;
     }
@@ -1146,7 +1142,7 @@ int H5Dataset::readDirectBlock (heap_info_t* heap_info, int block_size, uint64_t
         const uint64_t heap_hdr_addr = readField(metaData.offsetsize, &pos); // Heap Header Address
         const int MAX_BLOCK_OFFSET_SIZE = 8;
         uint8_t block_offset_buf[MAX_BLOCK_OFFSET_SIZE];
-        if(H5_ERROR_CHECKING && (heap_info->blk_offset_size > MAX_BLOCK_OFFSET_SIZE))
+        if(H5CORO_ERROR_CHECKING && (heap_info->blk_offset_size > MAX_BLOCK_OFFSET_SIZE))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "block offset size too large: %d", heap_info->blk_offset_size);
         }
@@ -1171,7 +1167,7 @@ int H5Dataset::readDirectBlock (heap_info_t* heap_info, int block_size, uint64_t
         const int peak_size = MIN((1 << highestBit(data_left)), 8);
         if(readField(peak_size, &peak_addr) == 0)
         {
-            if(H5_VERBOSE)
+            if(H5CORO_VERBOSE)
             {
                 print2term("\nExiting direct block 0x%lx early at 0x%lx\n", starting_position, pos);
             }
@@ -1191,7 +1187,7 @@ int H5Dataset::readDirectBlock (heap_info_t* heap_info, int block_size, uint64_t
         heap_info->cur_objects++;
 
         /* Check Reading Past Block */
-        if(H5_ERROR_CHECKING)
+        if(H5CORO_ERROR_CHECKING)
         {
             if(data_left < 0)
             {
@@ -1221,7 +1217,7 @@ int H5Dataset::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64
 {
     const uint64_t starting_position = pos;
 
-    if(!H5_ERROR_CHECKING)
+    if(!H5CORO_ERROR_CHECKING)
     {
         pos += 5;
     }
@@ -1240,7 +1236,7 @@ int H5Dataset::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64
         }
     }
 
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Indirect Block [%d,%d]: 0x%lx\n", dlvl, (int)heap_info->msg_type, (unsigned long)starting_position);
@@ -1248,7 +1244,7 @@ int H5Dataset::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64
     }
 
     /* Read Block Header */
-    if(!H5_VERBOSE)
+    if(!H5CORO_VERBOSE)
     {
         pos += metaData.offsetsize + heap_info->blk_offset_size;
     }
@@ -1257,7 +1253,7 @@ int H5Dataset::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64
         const uint64_t heap_hdr_addr = readField(metaData.offsetsize, &pos); // Heap Header Address
         const int MAX_BLOCK_OFFSET_SIZE = 8;
         uint8_t block_offset_buf[MAX_BLOCK_OFFSET_SIZE];
-        if(H5_ERROR_CHECKING && (heap_info->blk_offset_size > MAX_BLOCK_OFFSET_SIZE))
+        if(H5CORO_ERROR_CHECKING && (heap_info->blk_offset_size > MAX_BLOCK_OFFSET_SIZE))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "block offset size too large: %d", heap_info->blk_offset_size);
         }
@@ -1274,7 +1270,7 @@ int H5Dataset::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64
     const int max_dblock_rows = (highestBit(heap_info->max_dblk_size) - highestBit(heap_info->starting_blk_size)) + 2;
     const int K = MIN(nrows, max_dblock_rows) * heap_info->table_width;
     const int N = K - (max_dblock_rows * heap_info->table_width);
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("Number of Rows:                                                  %d\n", nrows);
         print2term("Maximum Direct Block Rows:                                       %d\n", max_dblock_rows);
@@ -1297,7 +1293,7 @@ int H5Dataset::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64
             /* Direct Block Entry */
             if(row_block_size <= heap_info->max_dblk_size)
             {
-                if(H5_ERROR_CHECKING)
+                if(H5CORO_ERROR_CHECKING)
                 {
                     if(row >= K)
                     {
@@ -1312,7 +1308,7 @@ int H5Dataset::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64
                 {
                     /* Read Direct Block */
                     const int bytes_read = readDirectBlock(heap_info, row_block_size, direct_block_addr, hdr_flags, dlvl);
-                    if(H5_ERROR_CHECKING && (bytes_read > row_block_size))
+                    if(H5CORO_ERROR_CHECKING && (bytes_read > row_block_size))
                     {
                         throw RunTimeException(CRITICAL, RTE_ERROR, "direct block contained more bytes than specified: %d > %d", bytes_read, row_block_size);
                     }
@@ -1320,7 +1316,7 @@ int H5Dataset::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64
             }
             else /* Indirect Block Entry */
             {
-                if(H5_ERROR_CHECKING)
+                if(H5CORO_ERROR_CHECKING)
                 {
                     if(row < K || row >= N)
                     {
@@ -1334,7 +1330,7 @@ int H5Dataset::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64
                 {
                     /* Read Indirect Block */
                     const int bytes_read = readIndirectBlock(heap_info, row_block_size, indirect_block_addr, hdr_flags, dlvl);
-                    if(H5_ERROR_CHECKING && (bytes_read > row_block_size))
+                    if(H5CORO_ERROR_CHECKING && (bytes_read > row_block_size))
                     {
                         throw RunTimeException(CRITICAL, RTE_ERROR, "indirect block contained more bytes than specified: %d > %d", bytes_read, row_block_size);
                     }
@@ -1355,14 +1351,12 @@ int H5Dataset::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64
 /*----------------------------------------------------------------------------
  * readBTreeV1
  *----------------------------------------------------------------------------*/
-int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size, uint64_t buffer_offset)
+int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
 {
     const uint64_t starting_position = pos;
-    const uint64_t data_key1 = datasetStartRow;
-    const uint64_t data_key2 = datasetStartRow + datasetNumRows - 1;
 
     /* Check Signature and Node Type */
-    if(!H5_ERROR_CHECKING)
+    if(!H5CORO_ERROR_CHECKING)
     {
         pos += 5;
     }
@@ -1385,7 +1379,7 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size,
     const uint8_t node_level = (uint8_t)readField(1, &pos);
     const uint16_t entries_used = (uint16_t)readField(2, &pos);
 
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("B-Tree Node: 0x%lx\n", (unsigned long)starting_position);
@@ -1403,47 +1397,66 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size,
     /* Read Children */
     for(int e = 0; e < entries_used; e++)
     {
-        /* Read Child Address */
         uint64_t child_addr = readField(metaData.offsetsize, &pos);
-
-        /* Read Next Key */
         const btree_node_t next_node = readBTreeNodeV1(metaData.ndims, &pos);
 
-        /*  Get Child Keys */
-        const uint64_t child_key1 = curr_node.row_key;
-        uint64_t child_key2 = next_node.row_key; // there is always +1 keys
-        if(next_node.chunk_size == 0 && metaData.ndims > 0)
+        /* Construct Node Slice */
+        range_t node_slice[MAX_NDIMS];
+        if(node_level > 0)
         {
-            child_key2 = metaData.dimensions[0];
+            for(int d = 0; d < metaData.ndims; d++)
+            {
+                node_slice[d].r0 = curr_node.slice[d];
+                node_slice[d].r1 = next_node.slice[d];
+            }
+        }
+        else
+        {
+            for(int d = 0; d < metaData.ndims; d++)
+            {
+                node_slice[d].r0 = curr_node.slice[d];
+                node_slice[d].r1 = MIN((curr_node.slice[d] + metaData.chunkdims[d]), metaData.dimensions[d]);
+            }
         }
 
         /* Display */
-        if(H5_VERBOSE && H5_EXTRA_DEBUG)
+        if(H5CORO_VERBOSE && H5CORO_EXTRA_DEBUG)
         {
             print2term("\nEntry:                                                           %d[%d]\n", (int)node_level, e);
             print2term("Chunk Size:                                                      %u | %u\n", (unsigned int)curr_node.chunk_size, (unsigned int)next_node.chunk_size);
             print2term("Filter Mask:                                                     0x%x | 0x%x\n", (unsigned int)curr_node.filter_mask, (unsigned int)next_node.filter_mask);
-            print2term("Chunk Key:                                                       %lu | %lu\n", (unsigned long)child_key1, (unsigned long)child_key2);
-            print2term("Data Key:                                                        %lu | %lu\n", (unsigned long)data_key1, (unsigned long)data_key2);
-            print2term("Slice:                                                           ");
+            print2term("Node Slice:                                                      ");
             for(int s = 0; s < metaData.ndims; s++) print2term("%lu ", (unsigned long)curr_node.slice[s]);
+            print2term("| ");
+            for(int s = 0; s < metaData.ndims; s++) print2term("%lu ", (unsigned long)next_node.slice[s]);
             print2term("\n");
             print2term("Child Address:                                                   0x%lx\n", (unsigned long)child_addr);
         }
 
+        /* Check for Short-Cutting */
+        if(metaData.ndims <= 1 && hyperslice[0].r1 < node_slice[0].r0)
+        {
+            break;
+        }
+
         /* Check Inclusion */
-        if ((data_key1  >= child_key1 && data_key1  <  child_key2) ||
-            (data_key2  >= child_key1 && data_key2  <  child_key2) ||
-            (child_key1 >= data_key1  && child_key1 <= data_key2)  ||
-            (child_key2 >  data_key1  && child_key2 <  data_key2))
+        if(hypersliceIntersection(node_slice, node_level))
         {
             /* Process Child Entry */
             if(node_level > 0)
             {
-                readBTreeV1(child_addr, buffer, buffer_size, buffer_offset);
+                readBTreeV1(child_addr, buffer, buffer_size);
             }
-            else
+            else if(metaData.ndims == 0)
             {
+                mlog(WARNING, "Unexpected chunked read of a zero dimensional dataset");
+                // not sure what to do here - is a chunked read of a 0 dimensional dataset possible?
+            }
+            else if(metaData.ndims == 1)
+            {
+                /* Calculate Buffer Offset */
+                const uint64_t buffer_offset = metaData.typesize * hyperslice[0].r0;
+
                 /* Calculate Chunk Location */
                 uint64_t chunk_offset = 0;
                 for(int i = 0; i < metaData.ndims; i++)
@@ -1494,7 +1507,7 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size,
                 }
 
                 /* Display Info */
-                if(H5_VERBOSE && H5_EXTRA_DEBUG)
+                if(H5CORO_VERBOSE && H5CORO_EXTRA_DEBUG)
                 {
                     print2term("Chunk Offset:                                                    %lu (%lu)\n", (unsigned long)chunk_offset, (unsigned long)(chunk_offset/metaData.typesize));
                     print2term("Buffer Index:                                                    %lu (%lu)\n", (unsigned long)buffer_index, (unsigned long)(buffer_index/metaData.typesize));
@@ -1534,12 +1547,12 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size,
                         }
                     }
 
-                    /* Handle Caching */
+                    // handle caching
                     dataSizeHint = IO_CACHE_L1_LINESIZE;
                 }
-                else /* no supported filters */
+                else // no supported filters
                 {
-                    if(H5_ERROR_CHECKING)
+                    if(H5CORO_ERROR_CHECKING)
                     {
                         if(metaData.filter[SHUFFLE_FILTER])
                         {
@@ -1551,15 +1564,76 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size,
                         }
                     }
 
-                    /* Read Data into Data Buffer */
+                    // read data into data buffer
                     uint64_t chunk_offset_addr = child_addr + chunk_index;
                     ioRequest(&chunk_offset_addr, chunk_bytes, &buffer[buffer_index], dataSizeHint, true);
                     dataSizeHint = IO_CACHE_L1_LINESIZE;
                 }
             }
+            else // ndims > 1
+            {
+                // read entire chunk
+                ioRequest(&child_addr, curr_node.chunk_size, dataChunkFilterBuffer, dataSizeHint, true);
+                uint8_t* chunk_buffer = dataChunkFilterBuffer;
+
+                //  chunk_buffer -
+                //  ... variable to hold final output, since we will be ping-ponging
+                //  ... between dataChunkFilterBuffer and dataChunkBuffer because they
+                //  ... are the two pre-allocated buffers we have to work with and we can't
+                //  ... transform the buffer in place
+
+                // process chunk
+                if(metaData.filter[DEFLATE_FILTER])
+                {
+                    // check current node chunk size
+                    if(curr_node.chunk_size > (dataChunkBufferSize * FILTER_SIZE_SCALE))
+                    {
+                        throw RunTimeException(CRITICAL, RTE_ERROR, "Compressed chunk size exceeds buffer: %u > %lu", curr_node.chunk_size, (unsigned long)dataChunkBufferSize);
+                    }
+
+                    // decompress
+                    inflateChunk(dataChunkFilterBuffer, curr_node.chunk_size, dataChunkBuffer, dataChunkBufferSize);
+                    chunk_buffer = dataChunkBuffer; // sets chunk buffer to new output
+                    
+                    // unshuffle
+                    if(metaData.filter[SHUFFLE_FILTER])
+                    {
+                        shuffleChunk(dataChunkBuffer, dataChunkBufferSize, dataChunkFilterBuffer, 0, dataChunkBufferSize, metaData.typesize);
+                        chunk_buffer = dataChunkFilterBuffer; // sets chunk bufer to new output
+                    }
+                }
+
+                // get truncated slice to pull out of chunk 
+                // (intersection of chunk_slice and hyperslice selection)
+                range_t chunk_slice_to_read[MAX_NDIMS];
+                for(int d = 0; d < metaData.ndims; d++)
+                {
+                    chunk_slice_to_read[d].r0 = MAX(node_slice[d].r0, hyperslice[d].r0);
+                    chunk_slice_to_read[d].r1 = MIN(node_slice[d].r1, hyperslice[d].r1);
+                }
+
+                // build slice that is read
+                range_t read_slice[MAX_NDIMS];
+                for(int d = 0; d < metaData.ndims; d++)
+                {
+                    read_slice[d].r0 = abs(chunk_slice_to_read[d].r0 - node_slice[d].r0);
+                    read_slice[d].r1 = read_slice[d].r0 + abs(chunk_slice_to_read[d].r1 - chunk_slice_to_read[d].r0);
+                }
+
+                // build slice that is written
+                range_t write_slice[MAX_NDIMS];
+                for(int d = 0; d < metaData.ndims; d++)
+                {
+                    write_slice[d].r0 = abs(chunk_slice_to_read[d].r0 - hyperslice[d].r0);
+                    write_slice[d].r1 = write_slice[d].r0 + abs(chunk_slice_to_read[d].r1 - chunk_slice_to_read[d].r0);
+                }
+
+                // read subset of chunk into return buffer
+                readSlice(buffer, shape, write_slice, chunk_buffer, metaData.chunkdims, read_slice);
+            }
         }
 
-        /* Goto Next Key */
+        // goto next key
         curr_node = next_node;
     }
 
@@ -1583,21 +1657,17 @@ H5Dataset::btree_node_t H5Dataset::readBTreeNodeV1 (int ndims, uint64_t* pos)
 
     /* Read Trailing Zero */
     const uint64_t trailing_zero = readField(8, pos);
-    if(H5_ERROR_CHECKING)
+    if(H5CORO_ERROR_CHECKING)
     {
         if(trailing_zero % metaData.typesize != 0)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "key did not include a trailing zero: %lu", trailing_zero);
         }
-        if(H5_VERBOSE && H5_EXTRA_DEBUG)
+        if(H5CORO_VERBOSE && H5CORO_EXTRA_DEBUG)
         {
             print2term("Trailing Zero:                                                   %d\n", (int)trailing_zero);
         }
     }
-
-    /* Set Node Key */
-    if(ndims > 0)   node.row_key = node.slice[0];
-    else            node.row_key = 0;
 
     /* Return Copy of Node */
     return node;
@@ -1611,7 +1681,7 @@ int H5Dataset::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dlvl)
     const uint64_t starting_position = pos;
 
     /* Check Signature and Version */
-    if(!H5_ERROR_CHECKING)
+    if(!H5CORO_ERROR_CHECKING)
     {
         pos += 6;
     }
@@ -1666,7 +1736,7 @@ int H5Dataset::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dlvl)
             }
         }
         link_name[i] = '\0';
-        if(H5_VERBOSE)
+        if(H5CORO_VERBOSE)
         {
             print2term("Link Name:                                                       %s\n", link_name);
             print2term("Object Header Address:                                           0x%lx\n", obj_hdr_addr);
@@ -1706,7 +1776,7 @@ int H5Dataset::readObjHdr (uint64_t pos, int dlvl)
     if(peek == 1) return readObjHdrV1(starting_position, dlvl);
 
     /* Read Object Header */
-    if(!H5_ERROR_CHECKING)
+    if(!H5CORO_ERROR_CHECKING)
     {
         pos += 5; // move past signature and version
     }
@@ -1729,7 +1799,7 @@ int H5Dataset::readObjHdr (uint64_t pos, int dlvl)
     const uint8_t obj_hdr_flags = (uint8_t)readField(1, &pos);
     if(obj_hdr_flags & FILE_STATS_BIT)
     {
-        if(!H5_VERBOSE)
+        if(!H5CORO_VERBOSE)
         {
             pos += 16; // move past time fields
         }
@@ -1761,7 +1831,7 @@ int H5Dataset::readObjHdr (uint64_t pos, int dlvl)
     /* Optional Phase Attributes */
     if(obj_hdr_flags & STORE_CHANGE_PHASE_BIT)
     {
-        if(!H5_VERBOSE)
+        if(!H5CORO_VERBOSE)
         {
             pos += 4; // move past phase attributes
         }
@@ -1807,7 +1877,7 @@ int H5Dataset::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, int 
 
         /* Read Each Message */
         const int bytes_read = readMessage((msg_type_t)msg_type, msg_size, pos, hdr_flags, dlvl);
-        if(H5_ERROR_CHECKING && (bytes_read != msg_size))
+        if(H5CORO_ERROR_CHECKING && (bytes_read != msg_size))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "header message different size than specified: %d != %d", bytes_read, msg_size);
         }
@@ -1824,7 +1894,7 @@ int H5Dataset::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, int 
     }
 
     /* Check Size */
-    if(H5_ERROR_CHECKING)
+    if(H5CORO_ERROR_CHECKING)
     {
         if(pos != end)
         {
@@ -1845,7 +1915,7 @@ int H5Dataset::readObjHdrV1 (uint64_t pos, int dlvl)
     const uint64_t starting_position = pos;
 
     /* Read Version */
-    if(!H5_ERROR_CHECKING)
+    if(!H5CORO_ERROR_CHECKING)
     {
         pos += 2;
     }
@@ -1865,7 +1935,7 @@ int H5Dataset::readObjHdrV1 (uint64_t pos, int dlvl)
     }
 
     /* Read Number of Header Messages */
-    if(!H5_VERBOSE)
+    if(!H5CORO_VERBOSE)
     {
         pos += 2;
     }
@@ -1880,7 +1950,7 @@ int H5Dataset::readObjHdrV1 (uint64_t pos, int dlvl)
     }
 
     /* Read Object Reference Count */
-    if(!H5_VERBOSE)
+    if(!H5CORO_VERBOSE)
     {
         pos += 4;
     }
@@ -1893,7 +1963,7 @@ int H5Dataset::readObjHdrV1 (uint64_t pos, int dlvl)
     /* Read Object Header Size */
     const uint64_t obj_hdr_size = readField(metaData.lengthsize, &pos);
     const uint64_t end_of_hdr = pos + obj_hdr_size;
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("Object Header Size:                                              %d\n", (int)obj_hdr_size);
         print2term("End of Header:                                                   0x%lx\n", (unsigned long)end_of_hdr);
@@ -1923,7 +1993,7 @@ int H5Dataset::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags, in
         const uint8_t     msg_flags   = (uint8_t)readField(1, &pos); (void)msg_flags;
 
         /* Reserved Bytes */
-        if(!H5_ERROR_CHECKING)
+        if(!H5CORO_ERROR_CHECKING)
         {
             pos += 3;
         }
@@ -1942,7 +2012,7 @@ int H5Dataset::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags, in
 
         /* Handle 8-byte Alignment of Messages */
         if((bytes_read % 8) > 0) bytes_read += 8 - (bytes_read % 8);
-        if(H5_ERROR_CHECKING && (bytes_read != msg_size))
+        if(H5CORO_ERROR_CHECKING && (bytes_read != msg_size))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "message of type %d at position 0x%lx different size than specified: %d != %d", (int)msg_type, (unsigned long)pos, bytes_read, msg_size);
         }
@@ -1962,7 +2032,7 @@ int H5Dataset::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags, in
     if(pos < end) pos = end;
 
     /* Check Size */
-    if(H5_ERROR_CHECKING)
+    if(H5CORO_ERROR_CHECKING)
     {
         if(pos != end)
         {
@@ -1998,7 +2068,7 @@ int H5Dataset::readMessage (msg_type_t msg_type, uint64_t size, uint64_t pos, ui
 
         default:
         {
-            if(H5_VERBOSE)
+            if(H5CORO_VERBOSE)
             {
                 print2term("Skipped Message [%d]: 0x%x, %d, 0x%lx\n", dlvl, (int)msg_type, (int)size, (unsigned long)pos);
             }
@@ -2025,7 +2095,7 @@ int H5Dataset::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     const uint8_t flags           = (uint8_t)readField(1, &pos);
     pos += version == 1 ? 5 : 1; // go past reserved bytes
 
-    if(H5_ERROR_CHECKING)
+    if(H5CORO_ERROR_CHECKING)
     {
         if(version != 1 && version != 2)
         {
@@ -2043,7 +2113,7 @@ int H5Dataset::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Dataspace Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -2063,7 +2133,7 @@ int H5Dataset::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             metaData.dimensions[d] = readField(metaData.lengthsize, &pos);
             num_elements *= metaData.dimensions[d];
-            if(H5_VERBOSE)
+            if(H5CORO_VERBOSE)
             {
                 print2term("Dimension %d:                                                     %lu\n", (int)metaData.ndims, (unsigned long)metaData.dimensions[d]);
             }
@@ -2077,7 +2147,7 @@ int H5Dataset::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("Number of Elements:                                              %lu\n", (unsigned long)num_elements);
     }
@@ -2100,7 +2170,7 @@ int H5Dataset::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     const uint64_t version = readField(1, &pos);
     const uint64_t flags = readField(1, &pos);
 
-    if(H5_ERROR_CHECKING)
+    if(H5CORO_ERROR_CHECKING)
     {
         if(version != 0)
         {
@@ -2108,7 +2178,7 @@ int H5Dataset::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Link Information Message [%d], 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -2118,7 +2188,7 @@ int H5Dataset::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     /* Read Maximum Creation Index (number of elements in group) */
     if(flags & MAX_CREATE_PRESENT_BIT)
     {
-        if(H5_VERBOSE)
+        if(H5CORO_VERBOSE)
         {
             const uint64_t max_create_index = readField(8, &pos);
             print2term("Maximum Creation Index:                                          %lu\n", (unsigned long)max_create_index);
@@ -2131,7 +2201,7 @@ int H5Dataset::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     /* Read Heap and Name Offsets */
     const uint64_t heap_address = readField(metaData.offsetsize, &pos);
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         const uint64_t name_index = readField(metaData.offsetsize, &pos);
         print2term("Heap Address:                                                    %lX\n", (unsigned long)heap_address);
@@ -2144,7 +2214,7 @@ int H5Dataset::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     if(flags & CREATE_ORDER_PRESENT_BIT)
     {
-        if(H5_VERBOSE)
+        if(H5CORO_VERBOSE)
         {
             const uint64_t create_order_index = readField(metaData.offsetsize, &pos);
             print2term("Creation Order Index:                                            %lX\n", (unsigned long)create_order_index);
@@ -2184,7 +2254,7 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     const uint64_t version = (version_class & 0xF0) >> 4;
     const uint64_t databits = version_class >> 8;
 
-    if(H5_ERROR_CHECKING)
+    if(H5CORO_ERROR_CHECKING)
     {
         if(version != 1)
         {
@@ -2194,7 +2264,7 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     /* Set Data Type */
     metaData.type = (data_type_t)(version_class & 0x0F);
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Datatype Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -2211,7 +2281,7 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             metaData.signedval = ((databits & 0x08) >> 3) == 1;
 
-            if(!H5_VERBOSE)
+            if(!H5CORO_VERBOSE)
             {
                 pos += 4;
             }
@@ -2234,7 +2304,7 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         case FLOATING_POINT_TYPE:
         {
-            if(!H5_VERBOSE)
+            if(!H5CORO_VERBOSE)
             {
                 pos += 12;
             }
@@ -2272,7 +2342,7 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "variable length data types require reading a global heap, which is not yet supported");
 #if 0
-            if(H5_VERBOSE)
+            if(H5CORO_VERBOSE)
             {
                 unsigned int vt_type = databits & 0xF; // variable length type
                 unsigned int padding = (databits & 0xF0) >> 4;
@@ -2302,7 +2372,7 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         case STRING_TYPE:
         {
-            if(H5_VERBOSE)
+            if(H5CORO_VERBOSE)
             {
                 const unsigned int padding = databits & 0x0F;
                 const unsigned int charset = (databits & 0xF0) >> 4;
@@ -2324,7 +2394,7 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         default:
         {
-            if(H5_ERROR_CHECKING)
+            if(H5CORO_ERROR_CHECKING)
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported datatype: %d", (int)metaData.type);
             }
@@ -2348,7 +2418,7 @@ int H5Dataset::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     const uint64_t version = readField(1, &pos);
 
-    if(H5_ERROR_CHECKING)
+    if(H5CORO_ERROR_CHECKING)
     {
         if((version != 2) && (version != 3))
         {
@@ -2356,7 +2426,7 @@ int H5Dataset::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Fill Value Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -2365,7 +2435,7 @@ int H5Dataset::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     if(version == 2)
     {
-        if(!H5_VERBOSE)
+        if(!H5CORO_VERBOSE)
         {
             pos += 2;
         }
@@ -2382,7 +2452,7 @@ int H5Dataset::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         if(fill_value_defined)
         {
             metaData.fillsize = (int)readField(4, &pos);
-            if(H5_VERBOSE)
+            if(H5CORO_VERBOSE)
             {
                 print2term("Fill Value Size:                                                 %d\n", metaData.fillsize);
             }
@@ -2391,7 +2461,7 @@ int H5Dataset::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             {
                 const uint64_t fill_value = readField(metaData.fillsize, &pos);
                 metaData.fill.fill_ll = fill_value;
-                if(H5_VERBOSE)
+                if(H5CORO_VERBOSE)
                 {
                     print2term("Fill Value:                                                      0x%llX\n", (unsigned long long)fill_value);
                 }
@@ -2401,7 +2471,7 @@ int H5Dataset::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     else // if(version == 3)
     {
         const uint8_t flags = (uint8_t)readField(1, &pos);
-        if(H5_VERBOSE)
+        if(H5CORO_VERBOSE)
         {
             print2term("Fill Flags:                                                      %02X\n", flags);
         }
@@ -2410,14 +2480,14 @@ int H5Dataset::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         if(fill_value_defined)
         {
             metaData.fillsize = (int)readField(4, &pos);
-            if(H5_VERBOSE)
+            if(H5CORO_VERBOSE)
             {
                 print2term("Fill Value Size:                                                 %d\n", metaData.fillsize);
             }
 
             const uint64_t fill_value = readField(metaData.fillsize, &pos);
             metaData.fill.fill_ll = fill_value;
-            if(H5_VERBOSE)
+            if(H5CORO_VERBOSE)
             {
                 print2term("Fill Value:                                                      0x%llX\n", (unsigned long long)fill_value);
             }
@@ -2446,7 +2516,7 @@ int H5Dataset::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     const uint64_t version = readField(1, &pos);
     const uint64_t flags = readField(1, &pos);
 
-    if(H5_ERROR_CHECKING)
+    if(H5CORO_ERROR_CHECKING)
     {
         if(version != 1)
         {
@@ -2454,7 +2524,7 @@ int H5Dataset::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Link Message [%d]: 0x%x, 0x%lx\n", dlvl, (unsigned)flags, (unsigned long)starting_position);
@@ -2466,7 +2536,7 @@ int H5Dataset::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     if(flags & LINK_TYPE_PRESENT_BIT)
     {
         link_type = readField(1, &pos);
-        if(H5_VERBOSE)
+        if(H5CORO_VERBOSE)
         {
             print2term("Link Type:                                                       %lu\n", (unsigned long)link_type);
         }
@@ -2475,7 +2545,7 @@ int H5Dataset::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     /* Read Creation Order */
     if(flags & CREATE_ORDER_PRESENT_BIT)
     {
-        if(H5_VERBOSE)
+        if(H5CORO_VERBOSE)
         {
             const uint64_t create_order = readField(8, &pos);
             print2term("Creation Order:                                                  %lX\n", (unsigned long)create_order);
@@ -2489,7 +2559,7 @@ int H5Dataset::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     /* Read Character Set */
     if(flags & CHAR_SET_PRESENT_BIT)
     {
-        if(H5_VERBOSE)
+        if(H5CORO_VERBOSE)
         {
             const uint8_t char_set = readField(1, &pos);
             print2term("Character Set:                                                   %lu\n", (unsigned long)char_set);
@@ -2502,13 +2572,13 @@ int H5Dataset::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     /* Read Link Name */
     const int link_name_len_of_len = 1 << (flags & SIZE_OF_LEN_OF_NAME_MASK);
-    if(H5_ERROR_CHECKING && (link_name_len_of_len > 8))
+    if(H5CORO_ERROR_CHECKING && (link_name_len_of_len > 8))
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link name length of length: %d", link_name_len_of_len);
     }
 
     const uint64_t link_name_len = readField(link_name_len_of_len, &pos);
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("Link Name Length:                                                %lu\n", (unsigned long)link_name_len);
     }
@@ -2516,7 +2586,7 @@ int H5Dataset::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     uint8_t link_name[STR_BUFF_SIZE];
     readByteArray(link_name, link_name_len, &pos);
     link_name[link_name_len] = '\0';
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("Link Name:                                                       %s\n", link_name);
     }
@@ -2525,7 +2595,7 @@ int H5Dataset::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     if(link_type == 0) // hard link
     {
         const uint64_t object_header_addr = readField(metaData.offsetsize, &pos);
-        if(H5_VERBOSE)
+        if(H5CORO_VERBOSE)
         {
             print2term("Hard Link - Object Header Address:                               0x%lx\n", object_header_addr);
         }
@@ -2545,7 +2615,7 @@ int H5Dataset::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         uint8_t soft_link[STR_BUFF_SIZE];
         readByteArray(soft_link, soft_link_len, &pos);
         soft_link[soft_link_len] = '\0';
-        if(H5_VERBOSE)
+        if(H5CORO_VERBOSE)
         {
             print2term("Soft Link:                                                       %s\n", soft_link);
         }
@@ -2556,12 +2626,12 @@ int H5Dataset::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         uint8_t ext_link[STR_BUFF_SIZE];
         readByteArray(ext_link, ext_link_len, &pos);
         ext_link[ext_link_len] = '\0';
-        if(H5_VERBOSE)
+        if(H5CORO_VERBOSE)
         {
             print2term("External Link:                                                   %s\n", ext_link);
         }
     }
-    else if(H5_ERROR_CHECKING)
+    else if(H5CORO_ERROR_CHECKING)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link type: %d", link_type);
     }
@@ -2584,7 +2654,7 @@ int H5Dataset::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     const uint64_t version = readField(1, &pos);
     metaData.layout = (layout_t)readField(1, &pos);
 
-    if(H5_ERROR_CHECKING)
+    if(H5CORO_ERROR_CHECKING)
     {
         if(version != 3)
         {
@@ -2592,7 +2662,7 @@ int H5Dataset::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Data Layout Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -2624,7 +2694,7 @@ int H5Dataset::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             /* Read Number of Dimensions */
             int chunk_num_dim = (int)readField(1, &pos) - 1; // dimensionality is plus one over actual number of dimensions
             chunk_num_dim = MIN(chunk_num_dim, MAX_NDIMS);
-            if(H5_ERROR_CHECKING)
+            if(H5CORO_ERROR_CHECKING)
             {
                 if((metaData.ndims != UNKNOWN_VALUE) && (chunk_num_dim != metaData.ndims))
                 {
@@ -2650,7 +2720,7 @@ int H5Dataset::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             metaData.elementsize = (int)readField(4, &pos);
 
             /* Display Data Attributes */
-            if(H5_VERBOSE)
+            if(H5CORO_VERBOSE)
             {
                 print2term("Chunk Element Size:                                              %d\n", (int)metaData.elementsize);
                 print2term("Number of Chunked Dimensions:                                    %d\n", (int)chunk_num_dim);
@@ -2665,7 +2735,7 @@ int H5Dataset::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         default:
         {
-            if(H5_ERROR_CHECKING)
+            if(H5CORO_ERROR_CHECKING)
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "invalid data layout: %d", (int)metaData.layout);
             }
@@ -2690,7 +2760,7 @@ int H5Dataset::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     const uint64_t version = readField(1, &pos);
     const uint32_t num_filters = (uint32_t)readField(1, &pos);
 
-    if(H5_ERROR_CHECKING)
+    if(H5CORO_ERROR_CHECKING)
     {
         if((version != 1) && (version != 2))
         {
@@ -2698,7 +2768,7 @@ int H5Dataset::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Filter Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -2731,7 +2801,7 @@ int H5Dataset::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         const uint16_t num_parms          = (uint16_t)readField(2, &pos);
 
         /* Consistency Check Flags */
-        if(H5_ERROR_CHECKING)
+        if(H5CORO_ERROR_CHECKING)
         {
             if((flags != 0) && (flags != 1))
             {
@@ -2750,7 +2820,7 @@ int H5Dataset::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         filter_name[name_len] = '\0';
 
         /* Display */
-        if(H5_VERBOSE)
+        if(H5CORO_VERBOSE)
         {
             print2term("Filter Identification Value:                                     %d\n", filter);
             print2term("Flags:                                                           0x%x\n", (int)flags);
@@ -2799,7 +2869,7 @@ int H5Dataset::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, uint
     const uint64_t version = readField(1, &pos);
 
     /* Error Check Info */
-    if(H5_ERROR_CHECKING)
+    if(H5CORO_ERROR_CHECKING)
     {
         const uint64_t reserved0 = readField(1, &pos);
 
@@ -2846,7 +2916,7 @@ int H5Dataset::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, uint
         pos += (8 - (name_size % 8)) % 8;
     }
 
-    if(H5_ERROR_CHECKING)
+    if(H5CORO_ERROR_CHECKING)
     {
         if(attr_name[name_size - 1] != '\0')
         {
@@ -2860,7 +2930,7 @@ int H5Dataset::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, uint
     }
 
     /* Display Attribute Message Information */
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Attribute Message [%d]: 0x%lx\n", dlvl, static_cast<unsigned long>(starting_position));
@@ -2883,7 +2953,7 @@ int H5Dataset::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, uint
 
     /* Read Datatype Message */
     const int datatype_bytes_read = readDatatypeMsg(pos, hdr_flags, dlvl);
-    if(H5_ERROR_CHECKING && datatype_bytes_read > static_cast<int>(datatype_size))
+    if(H5CORO_ERROR_CHECKING && datatype_bytes_read > static_cast<int>(datatype_size))
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for datatype message: %d > %d\n", datatype_bytes_read, static_cast<int>(datatype_size));
     }
@@ -2896,7 +2966,7 @@ int H5Dataset::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, uint
 
     /* Read Dataspace Message */
     const int dataspace_bytes_read = readDataspaceMsg(pos, hdr_flags, dlvl);
-    if(H5_ERROR_CHECKING && dataspace_bytes_read > static_cast<int>(dataspace_size))
+    if(H5CORO_ERROR_CHECKING && dataspace_bytes_read > static_cast<int>(dataspace_size))
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for dataspace message: %d > %d\n", dataspace_bytes_read, static_cast<int>(dataspace_size));
     }
@@ -2934,7 +3004,7 @@ int H5Dataset::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     const uint64_t version = readField(1, &pos);
     const uint64_t flags = readField(1, &pos);
 
-    if(H5_ERROR_CHECKING)
+    if(H5CORO_ERROR_CHECKING)
     {
         if(version != 0)
         {
@@ -2942,7 +3012,7 @@ int H5Dataset::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
     }
 
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Attribute Information Message [%d], 0x%lx\n", dlvl, static_cast<unsigned long>(starting_position));
@@ -2952,7 +3022,7 @@ int H5Dataset::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     /* Read Maximum Creation Index (number of elements in group) */
     if(flags & MAX_CREATE_PRESENT_BIT)
     {
-        if(H5_VERBOSE)
+        if(H5CORO_VERBOSE)
         {
             const uint16_t max_create_index = readField(2, &pos);
             print2term("Maximum Creation Index:                                          %u\n", static_cast<unsigned short>(max_create_index));
@@ -2967,7 +3037,7 @@ int H5Dataset::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     const uint64_t heap_address = readField(metaData.offsetsize, &pos);
     const uint64_t name_bt2_address = readField(metaData.offsetsize, &pos);
 
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("Heap Address:                                                    %lX\n", static_cast<unsigned long>(heap_address));
         print2term("Attribute Name v2 B-tree Address:                                %lX\n", static_cast<unsigned long>(name_bt2_address));
@@ -2975,7 +3045,7 @@ int H5Dataset::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     if(flags & CREATE_ORDER_PRESENT_BIT)
     {
-        if(H5_VERBOSE)
+        if(H5CORO_VERBOSE)
         {
             const uint64_t create_order_index = readField(metaData.offsetsize, &pos);
             print2term("Creation Order Index:                                            %lX\n", static_cast<unsigned long>(create_order_index));
@@ -3023,7 +3093,7 @@ int H5Dataset::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     const uint64_t hc_offset = readField(metaData.offsetsize, &pos);
     const uint64_t hc_length = readField(metaData.lengthsize, &pos);
 
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Header Continuation Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -3042,7 +3112,7 @@ int H5Dataset::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     else
     {
         /* Read Continuation Header */
-        if(H5_ERROR_CHECKING)
+        if(H5CORO_ERROR_CHECKING)
         {
             const uint64_t signature = readField(4, &pos);
             if(signature != H5_OCHK_SIGNATURE_LE)
@@ -3061,7 +3131,7 @@ int H5Dataset::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         /* Verify Checksum */
         const uint64_t check_sum = readField(4, &pos);
-        if(H5_ERROR_CHECKING)
+        if(H5CORO_ERROR_CHECKING)
         {
             (void)check_sum;
         }
@@ -3084,7 +3154,7 @@ int H5Dataset::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     const uint64_t btree_addr = readField(metaData.offsetsize, &pos);
     const uint64_t heap_addr = readField(metaData.offsetsize, &pos);
 
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Symbol Table Message [%d]: 0x%lx\n", dlvl, (unsigned long)starting_position);
@@ -3095,7 +3165,7 @@ int H5Dataset::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
     /* Read Heap Info */
     pos = heap_addr;
-    if(!H5_ERROR_CHECKING)
+    if(!H5CORO_ERROR_CHECKING)
     {
         pos += 24;
     }
@@ -3122,7 +3192,7 @@ int H5Dataset::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     while(true)
     {
         /* Read Header Info */
-        if(!H5_ERROR_CHECKING)
+        if(!H5CORO_ERROR_CHECKING)
         {
             pos += 5;
         }
@@ -3159,7 +3229,7 @@ int H5Dataset::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         const uint64_t left_sibling = readField(metaData.offsetsize, &pos); (void)left_sibling;
         const uint64_t right_sibling = readField(metaData.offsetsize, &pos);
         const uint64_t key0 = readField(metaData.lengthsize, &pos); (void)key0;
-        if(H5_VERBOSE && H5_EXTRA_DEBUG)
+        if(H5CORO_VERBOSE && H5CORO_EXTRA_DEBUG)
         {
             print2term("Entries Used:                                                    %d\n", static_cast<int>(entries_used));
             print2term("Left Sibling:                                                    0x%lx\n", static_cast<unsigned long>(left_sibling));
@@ -3184,7 +3254,7 @@ int H5Dataset::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         pos = right_sibling;
 
         /* Read Header Info */
-        if(!H5_ERROR_CHECKING)
+        if(!H5CORO_ERROR_CHECKING)
         {
             pos += 6;
         }
@@ -3236,7 +3306,7 @@ void H5Dataset::parseDataset (void)
         gptr = nptr + 1;                            // go to start of next group
     }
 
-    if(H5_VERBOSE)
+    if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
         print2term("Dataset: ");
@@ -3245,6 +3315,122 @@ void H5Dataset::parseDataset (void)
             print2term("/%s", datasetPath[g]);
         }
         print2term("\n----------------\n");
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * hypersliceIntersection
+ *----------------------------------------------------------------------------*/
+bool H5Dataset::hypersliceIntersection(const range_t* node_slice, const uint8_t node_level)
+{
+    if(node_level == 0)
+    {
+        // check for intersection for all dimensions
+        for(int d = 0; d < metaData.ndims; d++)
+        {
+            if(node_slice[d].r1 < hyperslice[d].r0 || node_slice[d].r0 >= hyperslice[d].r1)
+            {
+                return false;
+            }
+        }
+    }
+    else // node_level > 0
+    {
+        range_t node_slice_in_chunks[MAX_NDIMS];
+        uint64_t node_start = 0;
+        uint64_t node_end = 0;
+        for(int d = 0; d < metaData.ndims; d++)
+        {
+            // calculate chunk of node slice
+            node_slice_in_chunks[d].r0 = node_slice[d].r0 / metaData.chunkdims[d];
+            node_slice_in_chunks[d].r1 = node_slice[d].r1 / metaData.chunkdims[d];
+            // calculate element position
+            node_start += node_slice_in_chunks[d].r0 * chunkStepSize[d];
+            node_end += node_slice_in_chunks[d].r1 * chunkStepSize[d];
+        }
+        // check for intersection of position
+        if(node_end < hypersliceChunkStart || node_start >= hypersliceChunkEnd)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * type2str
+ *----------------------------------------------------------------------------*/
+void H5Dataset::readSlice (uint8_t* output_buffer, const uint64_t* output_dimensions, const range_t* output_slice, 
+                           const uint8_t* input_buffer, const uint64_t* input_dimensions, const range_t* input_slice)
+{
+    // build serialized size of each input and output dimension
+    // ... for example a 4x4x4 cube of unsigned chars would be 16,4,1
+    uint64_t input_dim_step[MAX_NDIMS];
+    uint64_t output_dim_step[MAX_NDIMS];
+    for(int d = 0; d < metaData.ndims; d++)
+    {
+        input_dim_step[d] = metaData.typesize;
+        output_dim_step[d] = metaData.typesize;
+    }
+    for(int d = metaData.ndims - 1; d > 0; d--)
+    {
+        input_dim_step[d - 1] = input_dimensions[d] * input_dim_step[d];
+        output_dim_step[d - 1] = output_dimensions[d] * output_dim_step[d];
+    }
+
+    // initialize dimension indices
+    uint64_t input_dim_index[MAX_NDIMS];
+    uint64_t output_dim_index[MAX_NDIMS];
+    for(int d = 0; d < metaData.ndims; d++)
+    {
+        input_dim_index[d] = input_slice[d].r0; // initialize to the start index of each input_slice
+        output_dim_index[d] = output_slice[d].r0; // initialize to the start index of each output_slice
+    }
+
+    // calculate amount to read each time
+    uint64_t read_slice = input_slice[metaData.ndims - 1].r1 - input_slice[metaData.ndims - 1].r0;
+    uint64_t read_size = input_dim_step[metaData.ndims - 1] * read_slice; // size of data to read each time
+
+    // read each input_slice
+    while(input_dim_index[0] < input_slice[0].r1) // while the first dimension index has not traversed its range
+    {
+        // calculate source offset
+        uint64_t src_offset = 0;
+        for(int d = 0; d < metaData.ndims; d++)
+        {
+            src_offset += (input_dim_index[d] * input_dim_step[d]);
+        }
+
+        // calculate destination offset
+        uint64_t dst_offset = 0;
+        for(int d = 0; d < metaData.ndims; d++)
+        {
+            dst_offset += (output_dim_index[d] * output_dim_step[d]);
+        }
+
+        // copy data from input buffer to output buffer
+        memcpy(&output_buffer[dst_offset], &input_buffer[src_offset], read_size);
+
+        // go to next set of input indices
+        input_dim_index[metaData.ndims - 1] += read_slice;
+        uint64_t i = metaData.ndims - 1;
+        while(i > 0 && input_dim_index[i] == input_slice[i].r1)     // while the level being examined is at the last index
+        {
+            input_dim_index[i] = input_slice[i].r0;                 // set index back to the beginning of hyperslice
+            input_dim_index[i - 1] += 1;                            // bump the previous index to the next element in dimension
+            i -= 1;                                                 // go to previous dimension
+        }
+
+        // update output indices
+        output_dim_index[metaData.ndims - 1] += read_slice;
+        uint64_t j = metaData.ndims - 1;
+        while(j > 0 && output_dim_index[j] == output_slice[j].r1)   // while the level being examined is at the last index
+        {
+            output_dim_index[j] = output_slice[j].r0;               // set index back to the beginning of hyperslice
+            output_dim_index[j - 1] += 1;                           // bump the previous index to the next element in dimension
+            j -= 1;                                                 // go to previous dimension
+        }
     }
 }
 
@@ -3346,7 +3532,7 @@ int H5Dataset::inflateChunk (uint8_t* input, uint32_t input_size, uint8_t* outpu
  *----------------------------------------------------------------------------*/
 int H5Dataset::shuffleChunk (const uint8_t* input, uint32_t input_size, uint8_t* output, uint32_t output_offset, uint32_t output_size, int type_size)
 {
-    if(H5_ERROR_CHECKING)
+    if(H5CORO_ERROR_CHECKING)
     {
         if(type_size <= 0 || type_size > 8)
         {
