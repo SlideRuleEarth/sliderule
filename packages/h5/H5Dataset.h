@@ -245,7 +245,7 @@ class H5Dataset
         void                parseDataset          (void);
         bool                hypersliceIntersection(const range_t* node_slice, const uint8_t node_level);
         void                readSlice             (uint8_t* output_buffer, const int64_t* output_dimensions, const range_t* output_slice, 
-                                                   const uint8_t* input_buffer, const int64_t* input_dimensions, const range_t* input_slice);
+                                                   const uint8_t* input_buffer, const int64_t* input_dimensions, const range_t* input_slice) const;
 
         static const char*  type2str              (data_type_t datatype);
         static const char*  layout2str            (layout_t layout);

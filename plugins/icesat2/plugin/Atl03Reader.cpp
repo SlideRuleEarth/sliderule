@@ -1207,7 +1207,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     List<int32_t>* atl08_indices = NULL;      // used for ancillary data
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_subsetter", "{\"context\":\"%s\", \"track\":%d}", info->reader->context->name, info->track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try

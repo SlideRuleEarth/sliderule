@@ -188,7 +188,7 @@ namespace H5Coro
                         ~Context    (void);
 
         void            ioRequest   (uint64_t* pos, int64_t size, uint8_t* buffer, int64_t hint, bool cache);
-        bool            checkCache  (uint64_t pos, int64_t size, cache_t* cache, uint64_t line_mask, cache_entry_t* entry);
+        static bool     checkCache  (uint64_t pos, int64_t size, cache_t* cache, uint64_t line_mask, cache_entry_t* entry);
         static uint64_t hashL1      (uint64_t key);
         static uint64_t hashL2      (uint64_t key);
     };

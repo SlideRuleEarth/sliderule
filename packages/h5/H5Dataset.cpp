@@ -304,7 +304,7 @@ void H5Dataset::readDataset (info_t* info)
     uint64_t num_elements = 1;
     for(int d = 1; d < metaData.ndims; d++)
     {
-        uint64_t elements_in_dimension = hyperslice[d].r1 - hyperslice[d].r0;
+        const int64_t elements_in_dimension = hyperslice[d].r1 - hyperslice[d].r0;
         if(elements_in_dimension > 0) num_elements *= elements_in_dimension;
         shape[d] = elements_in_dimension;
         info->shape[d] = shape[d];
@@ -402,7 +402,7 @@ void H5Dataset::readDataset (info_t* info)
                 }
                 else if(metaData.ndims == 1)
                 {
-                    uint64_t buffer_offset = hyperslice[0].r0 * metaData.typesize;
+                    const uint64_t buffer_offset = hyperslice[0].r0 * metaData.typesize;
                     if(metaData.size != 0 && metaData.size < ((int64_t)buffer_offset + buffer_size))
                     {
                         throw RunTimeException(CRITICAL, RTE_ERROR, "read exceeds available data: %ld != %ld", (long)metaData.size, (long)buffer_size);
@@ -439,6 +439,10 @@ void H5Dataset::readDataset (info_t* info)
                     {
                         throw RunTimeException(CRITICAL, RTE_ERROR, "invalid number of chunk elements: %ld", (long)metaData.chunkelements);
                     }
+                    if(metaData.ndims <= 0)
+                    {
+                        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid number of dimensions for chunked layout: %ld", (long)metaData.ndims);
+                    }
                 }
 
                 /* Allocate Data Chunk Buffer */
@@ -453,9 +457,9 @@ void H5Dataset::readDataset (info_t* info)
                  *  overall data that would be read, then prefetch the entire block from the
                  *  beginning and set the size hint to the L1 cache line size.
                  */
-                if(metaData.ndims <= 1)
+                if(metaData.ndims == 1)
                 {
-                    uint64_t buffer_offset = hyperslice[0].r0 * metaData.typesize;
+                    const uint64_t buffer_offset = hyperslice[0].r0 * metaData.typesize;
                     if(buffer_offset < (uint64_t)buffer_size)
                     {
                         ioContext->ioRequest(&metaData.address, 0, NULL, buffer_offset + buffer_size, true);
@@ -1088,6 +1092,7 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
         const btree_node_t next_node = readBTreeNodeV1(metaData.ndims, &pos);
 
         /* Construct Node Slice */
+        assert(metaData.ndims > 0); // for static analysis
         range_t node_slice[MAX_NDIMS];
         if(node_level > 0)
         {
@@ -1121,7 +1126,7 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
         }
 
         /* Check for Short-Cutting */
-        if(metaData.ndims <= 1 && hyperslice[0].r1 < node_slice[0].r0)
+        if(metaData.ndims == 1 && hyperslice[0].r1 < node_slice[0].r0)
         {
             break;
         }
@@ -1257,7 +1262,7 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
                     dataSizeHint = Context::IO_CACHE_L1_LINESIZE;
                 }
             }
-            else // ndims > 1
+            else if(metaData.ndims > 1)
             {
                 // read entire chunk
                 ioContext->ioRequest(&child_addr, curr_node.chunk_size, dataChunkFilterBuffer, dataSizeHint, true);
@@ -1303,16 +1308,16 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
                 range_t read_slice[MAX_NDIMS];
                 for(int d = 0; d < metaData.ndims; d++)
                 {
-                    read_slice[d].r0 = abs(chunk_slice_to_read[d].r0 - node_slice[d].r0);
-                    read_slice[d].r1 = read_slice[d].r0 + abs(chunk_slice_to_read[d].r1 - chunk_slice_to_read[d].r0);
+                    read_slice[d].r0 = labs(chunk_slice_to_read[d].r0 - node_slice[d].r0);
+                    read_slice[d].r1 = read_slice[d].r0 + labs(chunk_slice_to_read[d].r1 - chunk_slice_to_read[d].r0);
                 }
 
                 // build slice that is written
                 range_t write_slice[MAX_NDIMS];
                 for(int d = 0; d < metaData.ndims; d++)
                 {
-                    write_slice[d].r0 = abs(chunk_slice_to_read[d].r0 - hyperslice[d].r0);
-                    write_slice[d].r1 = write_slice[d].r0 + abs(chunk_slice_to_read[d].r1 - chunk_slice_to_read[d].r0);
+                    write_slice[d].r0 = labs(chunk_slice_to_read[d].r0 - hyperslice[d].r0);
+                    write_slice[d].r1 = write_slice[d].r0 + labs(chunk_slice_to_read[d].r1 - chunk_slice_to_read[d].r0);
                 }
 
                 // read subset of chunk into return buffer
@@ -3049,8 +3054,10 @@ bool H5Dataset::hypersliceIntersection(const range_t* node_slice, const uint8_t 
  * type2str
  *----------------------------------------------------------------------------*/
 void H5Dataset::readSlice (uint8_t* output_buffer, const int64_t* output_dimensions, const range_t* output_slice, 
-                           const uint8_t* input_buffer, const int64_t* input_dimensions, const range_t* input_slice)
+                           const uint8_t* input_buffer, const int64_t* input_dimensions, const range_t* input_slice) const
 {
+    assert(metaData.ndims > 1); // this code should never be called when ndims is 0 or 1
+
     // build serialized size of each input and output dimension
     // ... for example a 4x4x4 cube of unsigned chars would be 16,4,1
     int64_t input_dim_step[MAX_NDIMS];
@@ -3076,8 +3083,8 @@ void H5Dataset::readSlice (uint8_t* output_buffer, const int64_t* output_dimensi
     }
 
     // calculate amount to read each time
-    int64_t read_slice = input_slice[metaData.ndims - 1].r1 - input_slice[metaData.ndims - 1].r0;
-    int64_t read_size = input_dim_step[metaData.ndims - 1] * read_slice; // size of data to read each time
+    const int64_t read_slice = input_slice[metaData.ndims - 1].r1 - input_slice[metaData.ndims - 1].r0;
+    const int64_t read_size = input_dim_step[metaData.ndims - 1] * read_slice; // size of data to read each time
 
     // read each input_slice
     while(input_dim_index[0] < input_slice[0].r1) // while the first dimension index has not traversed its range

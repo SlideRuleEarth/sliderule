@@ -457,7 +457,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
     info_t info;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5coro_read", "{\"asset\":\"%s\", \"resource\":\"%s\", \"dataset\":\"%s\"}", asset->getName(), resource, datasetname);
+    const uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5coro_read", "{\"context\":\"%s\", \"dataset\":\"%s\"}", context->name, datasetname);
 
     /* Open Resource and Read Dataset */
     const H5Dataset dataset(&info, context, datasetname, slice, slicendims, _meta_only);
@@ -663,7 +663,7 @@ H5Coro::Future* H5Coro::readp (Context* context, const char* datasetname, Record
         .h5f            = new H5Coro::Future()
     };
 
-    int ndims = MIN(H5Coro::MAX_NDIMS, slicendims);
+    const int ndims = MIN(H5Coro::MAX_NDIMS, slicendims);
     for(int d = 0; d < ndims; d++)
     {
         rqst.slice[d] = slice[d];
