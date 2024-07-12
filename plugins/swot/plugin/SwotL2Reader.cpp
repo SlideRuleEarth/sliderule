@@ -131,7 +131,11 @@ void SwotL2Reader::init (void)
  *----------------------------------------------------------------------------*/
 SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, SwotParms* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    region(_asset, _resource, _parms, &context)
+    context(NULL),
+    region(NULL),
+    varPid(NULL),
+    geoPid(NULL),
+    outQ(NULL)
 {
     /* Initialize Reader */
     asset       = _asset;
@@ -139,49 +143,64 @@ SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, 
     parms       = _parms;
     active      = true;
     numComplete = 0;
-    geoPid      = NULL;
-    varPid      = NULL;
+    threadCount = 0;
 
-    /* Create Publisher */
-    outQ = new Publisher(outq_name);
-    sendTerminator = _send_terminator;
+    try
+    {  
+        /* Create H5Coro Context */
+        context = new H5Coro::Context(asset, resource);
 
-    /* Clear Statistics */
-    stats.variables_read       = 0;
-    stats.variables_filtered   = 0;
-    stats.variables_sent       = 0;
-    stats.variables_dropped    = 0;
-    stats.variables_retried    = 0;
+        /* Initialize Region */
+        region = new Region(context, _parms);
 
-    /* Check If Anything to Process */
-    if(region.num_lines > 0)
-    {
-        /* Set Thread Count = geoThread + varThreads */
-        threadCount = 1 + parms->variables.length();
+        /* Create Publisher */
+        outQ = new Publisher(outq_name);
+        sendTerminator = _send_terminator;
 
-        /* Initialize Geo Thread */
-        geoPid = new Thread(geoThread, this);
+        /* Clear Statistics */
+        stats.variables_read       = 0;
+        stats.variables_filtered   = 0;
+        stats.variables_sent       = 0;
+        stats.variables_dropped    = 0;
+        stats.variables_retried    = 0;
 
-        /* Initialize Variable Threads */
-        if(threadCount > 1)
+        /* Check If Anything to Process */
+        if(region->num_lines > 0)
         {
-            varPid = new Thread* [threadCount - 1];
-            for(int i = 0; i < threadCount - 1; i++)
+            /* Set Thread Count = geoThread + varThreads */
+            threadCount = 1 + parms->variables.length();
+
+            /* Initialize Geo Thread */
+            geoPid = new Thread(geoThread, this);
+
+            /* Initialize Variable Threads */
+            if(threadCount > 1)
             {
-                info_t* info = new info_t;
-                info->reader = this;
-                info->variable_name = StringLib::duplicate(parms->variables[i].c_str());
-                varPid[i] = new Thread(varThread, info);
+                varPid = new Thread* [threadCount - 1];
+                for(int i = 0; i < threadCount - 1; i++)
+                {
+                    info_t* info = new info_t;
+                    info->reader = this;
+                    info->variable_name = StringLib::duplicate(parms->variables[i].c_str());
+                    varPid[i] = new Thread(varThread, info);
+                }
             }
         }
-    }
-    else
+        else
+        {
+            /* Report Empty Region */
+            alert(INFO, RTE_INFO, outQ, &active, "Empty spatial region for %s", resource);
+
+            /* Terminate */
+            checkComplete();
+        }
+    }       
+    catch(const RunTimeException& e)
     {
-        /* Report Empty Region */
-        alert(INFO, RTE_INFO, outQ, &active, "Empty spatial region for %s", resource);
+        mlog(CRITICAL, "Failed to create SWOT reader");
 
         /* Terminate */
-        threadCount = 0;
+        active = false;
         checkComplete();
     }
 }
@@ -201,6 +220,10 @@ SwotL2Reader::~SwotL2Reader (void)
 
     delete outQ;
 
+    delete region;
+
+    delete context;
+
     parms->releaseLuaObject();
 
     delete [] resource;
@@ -211,9 +234,9 @@ SwotL2Reader::~SwotL2Reader (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-SwotL2Reader::Region::Region (Asset* asset, const char* resource, const SwotParms* _parms, H5Coro::Context* context):
-    lat             (asset, resource, "latitude_nadir", context),
-    lon             (asset, resource, "longitude_nadir", context),
+SwotL2Reader::Region::Region (H5Coro::Context* context, const SwotParms* _parms):
+    lat             (context, "latitude_nadir"),
+    lon             (context, "longitude_nadir"),
     inclusion_mask  (NULL),
     inclusion_ptr   (NULL)
 {
@@ -387,7 +410,7 @@ void* SwotL2Reader::geoThread (void* parm)
     SwotL2Reader* reader = static_cast<SwotL2Reader*>(parm);
 
     /* Calculate Total Size of Record Data */
-    const int total_size = offsetof(geo_rec_t, scan) + (sizeof(scan_rec_t) * reader->region.num_lines);
+    const int total_size = offsetof(geo_rec_t, scan) + (sizeof(scan_rec_t) * reader->region->num_lines);
 
     /* Create Record Object */
     RecordObject rec_obj(geoRecType, total_size);
@@ -395,13 +418,13 @@ void* SwotL2Reader::geoThread (void* parm)
 
     /* Populate Record Object */
     StringLib::copy(rec_data->granule, reader->resource, MAX_GRANULE_NAME_STR);
-    for(int i = 0; i < reader->region.num_lines; i++)
+    for(int i = 0; i < reader->region->num_lines; i++)
     {
-        rec_data->scan[i].scan_id = (uint32_t)reader->region.lat[i];
+        rec_data->scan[i].scan_id = (uint32_t)reader->region->lat[i];
         rec_data->scan[i].scan_id <<= 32;
-        rec_data->scan[i].scan_id |= (uint32_t)reader->region.lon[i];
-        rec_data->scan[i].latitude = CONVERT_LAT(reader->region.lat[i]);
-        rec_data->scan[i].longitude = CONVERT_LON(reader->region.lon[i]);
+        rec_data->scan[i].scan_id |= (uint32_t)reader->region->lon[i];
+        rec_data->scan[i].latitude = CONVERT_LAT(reader->region->lat[i]);
+        rec_data->scan[i].longitude = CONVERT_LON(reader->region->lon[i]);
     }
 
     /* Post Record */
@@ -441,7 +464,8 @@ void* SwotL2Reader::varThread (void* parm)
     try
     {
         /* Read Dataset */
-        results = H5Coro::read(reader->asset, reader->resource, info->variable_name, RecordObject::DYNAMIC, H5Coro::ALL_COLS, reader->region.first_line, reader->region.num_lines, &(reader->context), false, trace_id);
+        H5Coro::range_t slice[2] = {{reader->region->first_line, reader->region->first_line + reader->region->num_lines}, {0, H5Coro::EOR}};
+        results = H5Coro::read(reader->context, info->variable_name, RecordObject::DYNAMIC, slice, 2, false, trace_id);
 
         /* Post Results to Output Queue */
         if(results.data)
@@ -453,7 +477,7 @@ void* SwotL2Reader::varThread (void* parm)
             StringLib::copy(rec_data->variable, info->variable_name, MAX_VARIABLE_NAME_STR);
             rec_data->datatype = static_cast<uint32_t>(results.datatype);
             rec_data->elements = results.elements;
-            rec_data->width = results.elements / reader->region.num_lines;
+            rec_data->width = results.elements / reader->region->num_lines;
             rec_data->size = results.datasize;
 
             /* Post Record */

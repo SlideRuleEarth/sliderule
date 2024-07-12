@@ -130,7 +130,7 @@ class SwotL2Reader: public LuaObject
         /* Region Subclass */
         struct Region
         {
-            Region              (Asset* asset, const char* resource, const SwotParms* _parms, H5Coro::Context* context);
+            Region              (H5Coro::Context* context, const SwotParms* _parms);
             ~Region             (void);
 
             void cleanup        (void) const;
@@ -151,8 +151,8 @@ class SwotL2Reader: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        H5Coro::Context       context;
-        Region                  region;
+        H5Coro::Context*        context;
+        Region*                 region;
         bool                    active;
         Thread**                varPid;
         Thread*                 geoPid;

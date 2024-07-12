@@ -133,7 +133,7 @@ class FootprintReader: public LuaObject
         Publisher*          outQ;
         GediParms*          parms;
         stats_t             stats;
-        H5Coro::Context   context;
+        H5Coro::Context*    context;
         RecordObject        batchRecord;
         int                 batchIndex;
         batch_t*            batchData;
@@ -183,6 +183,7 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, Asset* _asset, con
                                                 subset_func_t subsetter ):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->read_timeout * 1000),
+    context(NULL),
     batchRecord(batch_rec_type, sizeof(batch_t))
 {
     assert(_asset);
@@ -232,6 +233,9 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, Asset* _asset, con
     /* Process Resource */
     try
     {
+        /* Create H5Coro Context */
+        context = new H5Coro::Context(asset, resource);
+
         /* Read Beam Data */
         if(beam_count == 1)
         {
@@ -290,6 +294,8 @@ FootprintReader<footprint_t>::~FootprintReader (void)
 
     delete outQ;
 
+    delete context;
+
     parms->releaseLuaObject();
 
     delete [] resource;
@@ -302,8 +308,8 @@ FootprintReader<footprint_t>::~FootprintReader (void)
  *----------------------------------------------------------------------------*/
 template <class footprint_t>
 FootprintReader<footprint_t>::Region::Region (const info_t* info):
-    lat             (info->reader->asset, info->reader->resource, FString("%s/%s", GediParms::beam2group(info->beam), info->reader->latName).c_str(), &info->reader->context),
-    lon             (info->reader->asset, info->reader->resource, FString("%s/%s", GediParms::beam2group(info->beam), info->reader->lonName).c_str(), &info->reader->context),
+    lat             (info->reader->context, FString("%s/%s", GediParms::beam2group(info->beam), info->reader->latName).c_str()),
+    lon             (info->reader->context, FString("%s/%s", GediParms::beam2group(info->beam), info->reader->lonName).c_str()),
     inclusion_mask  (NULL),
     inclusion_ptr   (NULL)
 {

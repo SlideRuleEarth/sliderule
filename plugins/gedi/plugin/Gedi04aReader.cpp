@@ -127,16 +127,16 @@ Gedi04aReader::~Gedi04aReader (void) = default;
  * Gedi04a::Constructor
  *----------------------------------------------------------------------------*/
 Gedi04aReader::Gedi04a::Gedi04a (const info_t* info, const Region& region):
-    shot_number     (info->reader->asset, info->reader->resource, FString("%s/shot_number",      GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    delta_time      (info->reader->asset, info->reader->resource, FString("%s/delta_time",       GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    agbd            (info->reader->asset, info->reader->resource, FString("%s/agbd",             GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    elev_lowestmode (info->reader->asset, info->reader->resource, FString("%s/elev_lowestmode",  GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    solar_elevation (info->reader->asset, info->reader->resource, FString("%s/solar_elevation",  GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    sensitivity     (info->reader->asset, info->reader->resource, FString("%s/sensitivity",      GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    degrade_flag    (info->reader->asset, info->reader->resource, FString("%s/degrade_flag",     GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    l2_quality_flag (info->reader->asset, info->reader->resource, FString("%s/l2_quality_flag",  GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    l4_quality_flag (info->reader->asset, info->reader->resource, FString("%s/l4_quality_flag",  GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints),
-    surface_flag    (info->reader->asset, info->reader->resource, FString("%s/surface_flag",     GediParms::beam2group(info->beam)).c_str(), &info->reader->context, 0, region.first_footprint, region.num_footprints)
+    shot_number     (info->reader->context, FString("%s/shot_number",      GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
+    delta_time      (info->reader->context, FString("%s/delta_time",       GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
+    agbd            (info->reader->context, FString("%s/agbd",             GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
+    elev_lowestmode (info->reader->context, FString("%s/elev_lowestmode",  GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
+    solar_elevation (info->reader->context, FString("%s/solar_elevation",  GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
+    sensitivity     (info->reader->context, FString("%s/sensitivity",      GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
+    degrade_flag    (info->reader->context, FString("%s/degrade_flag",     GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
+    l2_quality_flag (info->reader->context, FString("%s/l2_quality_flag",  GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
+    l4_quality_flag (info->reader->context, FString("%s/l4_quality_flag",  GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
+    surface_flag    (info->reader->context, FString("%s/surface_flag",     GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints)
 {
 
     /* Join Hardcoded Reads */
