@@ -41,6 +41,8 @@
 #include "Asset.h"
 #include "H5Coro.h"
 
+using H5Coro::ALL_ROWS;
+
 /******************************************************************************
  * H5Array TEMPLATE
  ******************************************************************************/
@@ -54,7 +56,7 @@ class H5Array
          * Methods
          *--------------------------------------------------------------------*/
 
-                H5Array     (const Asset* asset, const char* resource, const char* dataset, H5Coro::context_t* context=NULL, long col=0, long startrow=0, long numrows=H5Coro::ALL_ROWS);
+                H5Array     (H5Coro::Context* context, const char* dataset, long col=0, long startrow=0, long numrows=ALL_ROWS);
         virtual ~H5Array    (void);
 
         bool    trim        (long offset);
@@ -66,7 +68,7 @@ class H5Array
          *--------------------------------------------------------------------*/
 
         const char*         name;
-        H5Future*           h5f;
+        H5Coro::Future*     h5f;
         long                size;
         T*                  data;
         T*                  pointer;
@@ -92,9 +94,10 @@ class H5Array
  *  further calls to this class are performed on a null array other than a join
  *----------------------------------------------------------------------------*/
 template <class T>
-H5Array<T>::H5Array(const Asset* asset, const char* resource, const char* dataset, H5Coro::context_t* context, long col, long startrow, long numrows)
+H5Array<T>::H5Array(H5Coro::Context* context, const char* dataset, long col, long startrow, long numrows)
 {
-    if(asset)   h5f = H5Coro::readp(asset, resource, dataset, RecordObject::DYNAMIC, col, startrow, numrows, context);
+    H5Coro::range_t slice[2] = {{startrow, startrow + numrows}, {col, col}};
+    if(context) h5f = H5Coro::readp(context, dataset, RecordObject::DYNAMIC, slice, 2);
     else        h5f = NULL;
 
     name    = StringLib::duplicate(dataset);
@@ -150,8 +153,8 @@ bool H5Array<T>::join(int timeout, bool throw_exception)
 
     if(h5f)
     {
-        const H5Future::rc_t rc = h5f->wait(timeout);
-        if(rc == H5Future::COMPLETE)
+        const H5Coro::Future::rc_t rc = h5f->wait(timeout);
+        if(rc == H5Coro::Future::COMPLETE)
         {
             status = true;
             size = h5f->info.elements;
@@ -173,9 +176,9 @@ bool H5Array<T>::join(int timeout, bool throw_exception)
             {
                 switch(rc)
                 {
-                    case H5Future::INVALID: throw RunTimeException(ERROR, RTE_ERROR, "H5Future read failure on %s", name);
-                    case H5Future::TIMEOUT: throw RunTimeException(ERROR, RTE_TIMEOUT, "H5Future read timeout on %s", name);
-                    default:                throw RunTimeException(ERROR, RTE_ERROR, "H5Future unknown error on %s", name);
+                    case H5Coro::Future::INVALID: throw RunTimeException(ERROR, RTE_ERROR, "H5Coro::Future read failure on %s", name);
+                    case H5Coro::Future::TIMEOUT: throw RunTimeException(ERROR, RTE_TIMEOUT, "H5Coro::Future read timeout on %s", name);
+                    default:                throw RunTimeException(ERROR, RTE_ERROR, "H5Coro::Future unknown error on %s", name);
                 }
             }
         }
@@ -185,7 +188,7 @@ bool H5Array<T>::join(int timeout, bool throw_exception)
         status = false;
         if(throw_exception)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "H5Future null join on %s", name);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "H5Coro::Future null join on %s", name);
         }
     }
 

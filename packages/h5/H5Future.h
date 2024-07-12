@@ -40,39 +40,16 @@
 #include "RecordObject.h"
 
 /******************************************************************************
- * DEFINES
- ******************************************************************************/
-
-#ifndef H5CORO_MAXIMUM_DIMENSIONS
-#define H5CORO_MAXIMUM_DIMENSIONS 3
-#endif
-
-/******************************************************************************
  * H5FUTURE CLASS
  ******************************************************************************/
 
-class H5Future
+class H5Coro::Future
 {
     public:
 
         /*--------------------------------------------------------------------
-        * Constants
-        *--------------------------------------------------------------------*/
-
-        static const int MAX_NDIMS = H5CORO_MAXIMUM_DIMENSIONS;
-
-        /*--------------------------------------------------------------------
         * Typedefs
         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            uint32_t                    elements;   // number of elements in dataset
-            uint32_t                    typesize;   // number of bytes per element
-            uint64_t                    datasize;   // total number of bytes in dataset
-            uint8_t*                    data;       // point to allocated data buffer
-            RecordObject::fieldType_t   datatype;   // data type of elements
-            uint64_t                    shape[MAX_NDIMS]; // dimensions of the data
-        } info_t;
 
         typedef enum {
             INVALID     = -1,
@@ -84,8 +61,8 @@ class H5Future
          * Methods
          *--------------------------------------------------------------------*/
 
-                H5Future        (void);
-                ~H5Future       (void);
+                H5Coro::Future        (void);
+                ~H5Coro::Future       (void);
 
         rc_t    wait            (int timeout); // ms
         void    finish          (bool _valid);

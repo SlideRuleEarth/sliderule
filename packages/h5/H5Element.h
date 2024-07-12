@@ -64,7 +64,7 @@ class H5Element
          * Methods
          *--------------------------------------------------------------------*/
 
-                H5Element   (const Asset* asset, const char* resource, const char* variable, H5Coro::context_t* context=NULL);
+                H5Element   (H5Coro::Context* context, const char* variable);
         virtual ~H5Element  (void);
 
         bool    join        (int timeout, bool throw_exception);
@@ -73,7 +73,7 @@ class H5Element
          * Data
          *--------------------------------------------------------------------*/
 
-        H5Future*           h5f;
+        H5Coro::Future*     h5f;
         T                   value;
         int                 size; // in bytes
 };
@@ -86,11 +86,12 @@ class H5Element
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-H5Element<T>::H5Element(const Asset* asset, const char* resource, const char* variable, H5Coro::context_t* context)
+H5Element<T>::H5Element(H5Coro::Context* context, const char* variable)
 {
     memset(&value, 0, sizeof(T));
     size = 0;
-    if(asset)   h5f = H5Coro::readp(asset, resource, variable, RecordObject::DYNAMIC, 0, 0, H5Coro::ALL_ROWS, context);
+    H5Coro::range_t slice[1] = {{0, H5Coro::EOR}};
+    if(context) h5f = H5Coro::readp(context, variable, RecordObject::DYNAMIC, slice, 1);
     else        h5f = NULL;
 }
 
@@ -113,8 +114,8 @@ bool H5Element<T>::join(int timeout, bool throw_exception)
 
     if(h5f)
     {
-        const H5Future::rc_t rc = h5f->wait(timeout);
-        if(rc == H5Future::COMPLETE)
+        const H5Coro::Future::rc_t rc = h5f->wait(timeout);
+        if(rc == H5Coro::Future::COMPLETE)
         {
             status = true;
             if(h5f->info.datatype == RecordObject::STRING)
@@ -150,9 +151,9 @@ bool H5Element<T>::join(int timeout, bool throw_exception)
             {
                 switch(rc)
                 {
-                    case H5Future::INVALID: throw RunTimeException(ERROR, RTE_ERROR, "H5Future read failure");
-                    case H5Future::TIMEOUT: throw RunTimeException(ERROR, RTE_TIMEOUT, "H5Future read timeout");
-                    default:                throw RunTimeException(ERROR, RTE_ERROR, "H5Future unknown error");
+                    case H5Coro::Future::INVALID: throw RunTimeException(ERROR, RTE_ERROR, "H5Coro::Future read failure");
+                    case H5Coro::Future::TIMEOUT: throw RunTimeException(ERROR, RTE_TIMEOUT, "H5Coro::Future read timeout");
+                    default:                throw RunTimeException(ERROR, RTE_ERROR, "H5Coro::Future unknown error");
                 }
             }
         }
@@ -162,7 +163,7 @@ bool H5Element<T>::join(int timeout, bool throw_exception)
         status = false;
         if(throw_exception)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "H5Future null join");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "H5Coro::Future null join");
         }
     }
 

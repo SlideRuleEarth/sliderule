@@ -33,7 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "H5Future.h"
+#include "H5Coro::Future.h"
 #include "RecordObject.h"
 #include "OsApi.h"
 
@@ -44,15 +44,18 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5Future::H5Future (void)
+H5Coro::Future::H5Coro::Future (void)
 {
     info.elements   = 0;
     info.typesize   = 0;
     info.datasize   = 0;
     info.data       = NULL;
     info.datatype   = RecordObject::INVALID_FIELD;
-    info.numcols    = 0;
-    info.numrows    = 0;
+    
+    for(int d = 0; d < MAX_NDIMS; d++)
+    {
+        info.shape[d] = 0;
+    }
 
     complete        = false;
     valid           = false;
@@ -61,7 +64,7 @@ H5Future::H5Future (void)
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-H5Future::~H5Future (void)
+H5Coro::Future::~H5Coro::Future (void)
 {
     wait(IO_PEND);
     delete [] info.data;
@@ -70,7 +73,7 @@ H5Future::~H5Future (void)
 /*----------------------------------------------------------------------------
  * wait
  *----------------------------------------------------------------------------*/
-H5Future::rc_t H5Future::wait (int timeout)
+H5Coro::Future::rc_t H5Coro::Future::wait (int timeout)
 {
     rc_t rc;
 
@@ -93,7 +96,7 @@ H5Future::rc_t H5Future::wait (int timeout)
 /*----------------------------------------------------------------------------
  * finish
  *----------------------------------------------------------------------------*/
- void H5Future::finish (bool _valid)
+ void H5Coro::Future::finish (bool _valid)
  {
     sync.lock();
     {

@@ -702,7 +702,7 @@ BathyReader::Atl09Class::Atl09Class (const info_t* info):
 /*----------------------------------------------------------------------------
  * AncillaryData::Constructor
  *----------------------------------------------------------------------------*/
-BathyReader::AncillaryData::AncillaryData (const Asset* asset, const char* resource, H5Coro::context_t* context, int timeout):
+BathyReader::AncillaryData::AncillaryData (const Asset* asset, const char* resource, H5Coro::Context* context, int timeout):
     atlas_sdp_gps_epoch (asset, resource, "/ancillary_data/atlas_sdp_gps_epoch",    context),
     data_end_utc        (asset, resource, "/ancillary_data/data_end_utc",           context),
     data_start_utc      (asset, resource, "/ancillary_data/data_start_utc",         context),
@@ -812,7 +812,7 @@ const char* BathyReader::AncillaryData::tojson (void) const
 /*----------------------------------------------------------------------------
  * OrbitInfo::Constructor
  *----------------------------------------------------------------------------*/
-BathyReader::OrbitInfo::OrbitInfo (const Asset* asset, const char* resource, H5Coro::context_t* context, int timeout):
+BathyReader::OrbitInfo::OrbitInfo (const Asset* asset, const char* resource, H5Coro::Context* context, int timeout):
     crossing_time  (asset, resource, "/orbit_info/crossing_time",  context),
     cycle_number   (asset, resource, "/orbit_info/cycle_number",   context),
     lan            (asset, resource, "/orbit_info/lan",            context),

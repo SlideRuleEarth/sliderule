@@ -243,7 +243,7 @@ class BathyReader: public LuaObject
         {
             public:
 
-                explicit AncillaryData  (const Asset* asset, const char* resource, H5Coro::context_t* context, int timeout);
+                explicit AncillaryData  (const Asset* asset, const char* resource, H5Coro::Context* context, int timeout);
                 ~AncillaryData          (void) = default;
                 const char* tojson      (void) const;
 
@@ -277,7 +277,7 @@ class BathyReader: public LuaObject
         {
             public:
 
-                explicit OrbitInfo  (const Asset* asset, const char* resource, H5Coro::context_t* context, int timeout);
+                explicit OrbitInfo  (const Asset* asset, const char* resource, H5Coro::Context* context, int timeout);
                 ~OrbitInfo          (void) = default;
                 const char* tojson  (void) const;
 
@@ -308,8 +308,8 @@ class BathyReader: public LuaObject
         int                 readTimeoutMs;
         stats_t             stats;
 
-        H5Coro::context_t   context; // for ATL03 file
-        H5Coro::context_t   context09; // for ATL08 file
+        H5Coro::Context   context; // for ATL03 file
+        H5Coro::Context   context09; // for ATL08 file
 
         TimeLib::date_t     granuleDate;
 

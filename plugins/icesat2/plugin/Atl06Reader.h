@@ -212,7 +212,7 @@ class Atl06Reader: public LuaObject
         Icesat2Parms*       parms;
         stats_t             stats;
 
-        H5Coro::context_t   context; // for ATL06 file
+        H5Coro::Context   context; // for ATL06 file
 
         int32_t             start_rgt;
         int32_t             start_cycle;

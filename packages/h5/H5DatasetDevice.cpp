@@ -33,8 +33,9 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "h5.h"
 #include "core.h"
+#include "H5DatasetDevice.h"
+#include "H5Coro.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -134,7 +135,9 @@ H5DatasetDevice::H5DatasetDevice (lua_State* L, role_t _role, Asset* _asset, con
     /* Read File */
     try
     {
-        const H5Coro::info_t info = H5Coro::read(asset, resource, dataName, datatype, col, startrow, numrows, NULL, false, trace_id);
+        H5Coro::Context context(asset, resource);
+        H5Coro::range_t slice[2] = {{startrow, startrow + numrows}, {col, col}};
+        const H5Coro::info_t info = H5Coro::read(&context, dataName, datatype, slice, 2, false, trace_id);
         recData->datatype = (uint32_t)info.datatype;
         dataBuffer = info.data;
         dataSize = info.datasize;

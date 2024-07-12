@@ -34,7 +34,13 @@
  ******************************************************************************/
 
 #include "core.h"
-#include "h5.h"
+
+#include "H5Coro.h"
+#include "H5Array.h"
+#include "H5DArray.h"
+#include "H5Element.h"
+#include "H5File.h"
+#include "H5DatasetDevice.h"
 
 /******************************************************************************
  * DEFINES
@@ -66,89 +72,91 @@ int h5_read (lua_State* L)
         const RecordObject::fieldType_t dtype = static_cast<RecordObject::fieldType_t>(LuaObject::getLuaInteger(L, 4));
         const int timeout = LuaObject::getLuaInteger(L, 5, true, 600 * 1000); // milliseconds
 
+        /* Create H5 Context */
+        H5Coro::Context context(asset, resource);
         /* Perform Read */
         switch(dtype)
         {
             case RecordObject::INT8:    
             {
-                H5Element<int8_t> element(asset, resource, variable, NULL);
+                H5Element<int8_t> element(&context, variable);
                 element.join(timeout, true);
                 lua_pushinteger(L, element.value);
                 break;
             }
             case RecordObject::INT16: 
             {
-                H5Element<int16_t> element(asset, resource, variable, NULL);
+                H5Element<int16_t> element(&context, variable);
                 element.join(timeout, true);
                 lua_pushinteger(L, element.value);
                 break;
             }            
             case RecordObject::INT32: 
             {
-                H5Element<int32_t> element(asset, resource, variable, NULL);
+                H5Element<int32_t> element(&context, variable);
                 element.join(timeout, true);
                 lua_pushinteger(L, element.value);
                 break;
             }
             case RecordObject::INT64: 
             {
-                H5Element<int64_t> element(asset, resource, variable, NULL);
+                H5Element<int64_t> element(&context, variable);
                 element.join(timeout, true);
                 lua_pushinteger(L, element.value);
                 break;
             }
             case RecordObject::UINT8: 
             {
-                H5Element<uint8_t> element(asset, resource, variable, NULL);
+                H5Element<uint8_t> element(&context, variable);
                 element.join(timeout, true);
                 lua_pushinteger(L, element.value);
                 break;
             }
             case RecordObject::UINT16:
             {
-                H5Element<uint16_t> element(asset, resource, variable, NULL);
+                H5Element<uint16_t> element(&context, variable);
                 element.join(timeout, true);
                 lua_pushinteger(L, element.value);
                 break;
             }
             case RecordObject::UINT32:
             {
-                H5Element<uint32_t> element(asset, resource, variable, NULL);
+                H5Element<uint32_t> element(&context, variable);
                 element.join(timeout, true);
                 lua_pushinteger(L, element.value);
                 break;
             }
             case RecordObject::UINT64:
             {
-                H5Element<uint64_t> element(asset, resource, variable, NULL);
+                H5Element<uint64_t> element(&context, variable);
                 element.join(timeout, true);
                 lua_pushinteger(L, element.value);
                 break;
             }
             case RecordObject::FLOAT: 
             {
-                H5Element<float> element(asset, resource, variable, NULL);
+                H5Element<float> element(&context, variable);
                 element.join(timeout, true);
                 lua_pushnumber(L, element.value);
                 break;
             }
             case RecordObject::DOUBLE:
             {
-                H5Element<double> element(asset, resource, variable, NULL);
+                H5Element<double> element(&context, variable);
                 element.join(timeout, true);
                 lua_pushnumber(L, element.value);
                 break;
             }
             case RecordObject::TIME8:     
             {
-                H5Element<int64_t> element(asset, resource, variable, NULL);
+                H5Element<int64_t> element(&context, variable);
                 element.join(timeout, true);
                 lua_pushinteger(L, element.value);
                 break;
             }
             case RecordObject::STRING:
             {
-                H5Element<const char*> element(asset, resource, variable, NULL);
+                H5Element<const char*> element(&context, variable);
                 element.join(timeout, true);
                 lua_pushlstring(L, element.value, element.size);
                 break;

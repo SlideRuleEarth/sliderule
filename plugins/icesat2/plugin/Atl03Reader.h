@@ -310,8 +310,8 @@ class Atl03Reader: public LuaObject
         int                 signalConfColIndex;
         stats_t             stats;
 
-        H5Coro::context_t   context; // for ATL03 file
-        H5Coro::context_t   context08; // for ATL08 file
+        H5Coro::Context   context; // for ATL03 file
+        H5Coro::Context   context08; // for ATL08 file
 
         uint16_t             start_rgt;
         uint8_t              start_cycle;

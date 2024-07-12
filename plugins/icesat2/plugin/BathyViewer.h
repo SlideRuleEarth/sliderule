@@ -123,7 +123,7 @@ class BathyViewer: public LuaObject
         const int           read_timeout_ms;
         Icesat2Parms*       parms;
 
-        H5Coro::context_t   context; // for ATL03 file
+        H5Coro::Context   context; // for ATL03 file
 
         GeoLib::TIFFImage*  bathyMask;
 

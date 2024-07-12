@@ -211,7 +211,7 @@ SwotL2Reader::~SwotL2Reader (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-SwotL2Reader::Region::Region (Asset* asset, const char* resource, const SwotParms* _parms, H5Coro::context_t* context):
+SwotL2Reader::Region::Region (Asset* asset, const char* resource, const SwotParms* _parms, H5Coro::Context* context):
     lat             (asset, resource, "latitude_nadir", context),
     lon             (asset, resource, "longitude_nadir", context),
     inclusion_mask  (NULL),

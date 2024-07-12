@@ -61,7 +61,7 @@ class GTArray
          * Methods
          *--------------------------------------------------------------------*/
 
-                    GTArray     (const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::context_t* context, long col=0, const long* prt_startrow=DefaultStartRow, const long* prt_numrows=DefaultNumRows);
+                    GTArray     (const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::Context* context, long col=0, const long* prt_startrow=DefaultStartRow, const long* prt_numrows=DefaultNumRows);
         virtual     ~GTArray    (void);
 
         H5Array<T>& operator[]  (int t);
@@ -92,7 +92,7 @@ const long GTArray<T>::DefaultNumRows[Icesat2Parms::NUM_PAIR_TRACKS] = {H5Coro::
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-GTArray<T>::GTArray(const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::context_t* context, long col, const long* prt_startrow, const long* prt_numrows):
+GTArray<T>::GTArray(const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::Context* context, long col, const long* prt_startrow, const long* prt_numrows):
     gt{ H5Array<T>(asset, resource, FString("/gt%dl/%s", track, gt_dataset).c_str(), context, col, prt_startrow[Icesat2Parms::RPT_L], prt_numrows[Icesat2Parms::RPT_L]),
         H5Array<T>(asset, resource, FString("/gt%dr/%s", track, gt_dataset).c_str(), context, col, prt_startrow[Icesat2Parms::RPT_R], prt_numrows[Icesat2Parms::RPT_R]) }
 {

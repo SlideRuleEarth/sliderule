@@ -33,8 +33,9 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "h5.h"
 #include "core.h"
+#include "H5File.h"
+#include "H5Array.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -44,7 +45,6 @@ const char* H5File::OBJECT_TYPE = "H5File";
 const char* H5File::LUA_META_NAME = "H5File";
 const struct luaL_Reg H5File::LUA_META_TABLE[] = {
     {"read",        luaRead},
-    {"dir",         luaTraverse},
     {"inspect",     luaInspect},
     {NULL,          NULL}
 };
@@ -76,9 +76,10 @@ int H5File::luaCreate(lua_State* L)
         /* Get Parameters */
         _asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
         const char* _resource = getLuaString(L, 2);
+        H5Coro::Context* _context = new H5Coro::Context(_asset, _resource);
 
         /* Return File Device Object */
-        return createLuaObject(L, new H5File(L, _asset, _resource));
+        return createLuaObject(L, new H5File(L, _context));
     }
     catch(const RunTimeException& e)
     {
@@ -99,11 +100,10 @@ void H5File::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5File::H5File (lua_State* L, Asset* _asset, const char* _resource):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
+H5File::H5File (lua_State* L, H5Coro::Context* _context):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
+    context(_context)
 {
-    asset = _asset;
-    resource = StringLib::duplicate(_resource);
 }
 
 /*----------------------------------------------------------------------------
@@ -111,8 +111,7 @@ H5File::H5File (lua_State* L, Asset* _asset, const char* _resource):
  *----------------------------------------------------------------------------*/
 H5File::~H5File (void)
 {
-    delete [] resource;
-    asset->releaseLuaObject();
+    delete context;
 }
 
 /*----------------------------------------------------------------------------
@@ -129,11 +128,12 @@ void* H5File::readThread (void* parm)
     try
     {
         /* Read Dataset */
-        results = H5Coro::read(info->h5file->asset, info->h5file->resource, info->dataset, info->valtype, info->col, info->startrow, info->numrows, &(info->h5file->context), false, info->h5file->traceId);
+        H5Coro::range_t slice[2] = {{info->startrow, info->startrow + info->numrows}, {info->col, info->col}};
+        results = H5Coro::read(info->h5file->context, info->dataset, info->valtype, slice, 2, false, info->h5file->traceId);
     }
     catch (const RunTimeException& e)
     {
-        mlog(e.level(), "Failed to read dataset %s://%s/%s: %s", info->h5file->asset->getName(), info->h5file->resource, info->dataset, e.what());
+        mlog(e.level(), "Failed to read dataset %s/%s: %s", info->h5file->context->resource, info->dataset, e.what());
     }
 
     /* Post Results to Output Queue */
@@ -156,7 +156,7 @@ void* H5File::readThread (void* parm)
         const int status = outq.postCopy(rec_buf, rec_size - results.datasize, results.data, results.datasize, SYS_TIMEOUT);
         if(status <= 0)
         {
-            mlog(CRITICAL, "Failed (%d) to post h5 dataset: %s/%s", status, info->h5file->asset->getName(), info->dataset);
+            mlog(CRITICAL, "Failed (%d) to post h5 dataset: %s/%s", status, info->h5file->context->resource, info->dataset);
         }
 
         /* Clean Up Result Data */
@@ -262,7 +262,7 @@ int H5File::luaRead (lua_State* L)
         }
 
         /* Status Complete */
-        mlog(INFO, "Finished reading %d datasets from %s", num_datasets, lua_obj->asset->getName());
+        mlog(INFO, "Finished reading %d datasets from %s", num_datasets, lua_obj->context->resource);
 
         /* Terminate Data */
         Publisher outQ(outq_name);
@@ -272,34 +272,6 @@ int H5File::luaRead (lua_State* L)
     {
         mlog(e.level(), "Failed to read resource: %s", e.what());
         status = false;
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status);
-}
-
-/*----------------------------------------------------------------------------
- * luaTraverse - :dir([<max depth>], [<starting group>])
- *----------------------------------------------------------------------------*/
-int H5File::luaTraverse (lua_State* L)
-{
-    bool  status = false;
-
-    try
-    {
-        /* Get Self */
-        const H5File* lua_obj = dynamic_cast<H5File*>(getLuaSelf(L, 1));
-
-        /* Get Parameters */
-        const uint32_t max_depth = getLuaInteger(L, 2, true, 32);
-        const char* group_path = getLuaString(L, 3, true, NULL);
-
-        /* Traverse File */
-        status = H5Coro::traverse(lua_obj->asset, lua_obj->resource, max_depth, group_path);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error traversing hdf5 file: %s", e.what());
     }
 
     /* Return Status */
@@ -325,37 +297,37 @@ int H5File::luaInspect (lua_State* L)
         /* Open Dataset */
         if(StringLib::match("double", datatype_name))
         {
-            const H5Array<double> values(lua_obj->asset, lua_obj->resource, dataset_name);
+            const H5Array<double> values(lua_obj->context, dataset_name);
             for(int i = 0; i < values.size; i++) print2term("%lf\n", values[i]);
         }
         else if(StringLib::match("float", datatype_name))
         {
-            const H5Array<float> values(lua_obj->asset, lua_obj->resource, dataset_name);
+            const H5Array<float> values(lua_obj->context, dataset_name);
             for(int i = 0; i < values.size; i++) print2term("%f\n", values[i]);
         }
         else if(StringLib::match("long", datatype_name))
         {
-            const H5Array<long> values(lua_obj->asset, lua_obj->resource, dataset_name);
+            const H5Array<long> values(lua_obj->context, dataset_name);
             for(int i = 0; i < values.size; i++) print2term("%ld\n", values[i]);
         }
         else if(StringLib::match("int", datatype_name))
         {
-            const H5Array<int> values(lua_obj->asset, lua_obj->resource, dataset_name);
+            const H5Array<int> values(lua_obj->context, dataset_name);
             for(int i = 0; i < values.size; i++) print2term("%d\n", values[i]);
         }
         else if(StringLib::match("short", datatype_name))
         {
-            const H5Array<short> values(lua_obj->asset, lua_obj->resource, dataset_name);
+            const H5Array<short> values(lua_obj->context, dataset_name);
             for(int i = 0; i < values.size; i++) print2term("%d\n", values[i]);
         }
         else if(StringLib::match("char", datatype_name))
         {
-            const H5Array<char> values(lua_obj->asset, lua_obj->resource, dataset_name);
+            const H5Array<char> values(lua_obj->context, dataset_name);
             for(int i = 0; i < values.size; i++) print2term("%c\n", values[i]);
         }
         else if(StringLib::match("byte", datatype_name))
         {
-            const H5Array<unsigned char> values(lua_obj->asset, lua_obj->resource, dataset_name);
+            const H5Array<unsigned char> values(lua_obj->context, dataset_name);
             for(int i = 0; i < values.size; i++) print2term("%02X\n", values[i]);
         }
     }

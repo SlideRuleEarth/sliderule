@@ -39,8 +39,8 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "RecordObject.h"
-#include "H5Coro.h"
 #include "Asset.h"
+#include "H5Coro.h"
 
 /******************************************************************************
  * HDF5 FILE CLASS
@@ -101,22 +101,19 @@ class H5File: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            H5File              (lua_State* L, Asset* _asset, const char* _resource);
+                            H5File              (lua_State* L, H5Coro::Context* _context);
                             ~H5File             (void) override;
 
         static void*        readThread          (void* parm);
 
         static int          luaRead             (lua_State* L);
-        static int          luaTraverse         (lua_State* L);
         static int          luaInspect          (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        Asset*              asset;
-        const char*         resource;
-        H5Coro::context_t   context;
+        H5Coro::Context*    context;
 };
 
 #endif  /* __h5_file__ */

@@ -143,7 +143,7 @@ info_t H5Coro::read (Asset* asset,
                      long col,
                      long startrow,
                      long numrows,
-                     context_t* context=NULL,
+                     Context* context=NULL,
                      bool _meta_only)
 ```
 
@@ -194,20 +194,20 @@ The `H5Coro::read` call is thread-safe and concurrent, allowing any number of th
 #### H5Coro::read
 
 ```cpp
-H5Future* H5Coro::readp (const char* asset,
+H5Coro::Future* H5Coro::readp (const char* asset,
                          const char* resource,
                          const char* datasetname,
                          RecordObject::valType_t valtype,
                          long col,
                          long startrow,
                          long numrows,
-                         context_t* context=NULL)
+                         Context* context=NULL)
 ```
 
 {parameters}
 :    see **H5Coro::read** for parameter descriptions
 
-H5Future*
+H5Coro::Future*
 :    a pointer to a structure that ___will___ contain the `info_t` information read from the H5 file when the read operation completes
 
 The `H5Coro::readp` call is thread-safe, concurrent, and highly parallel.  It is non-blocking and publishes the read request to a read queue that is serviced by a compile-time configurable number of reader threads.  This is intended to provide the capability to read data in parallel for applications that are inherently limited in the number of threads they are able to run.  Once a read request is picked up by one of the reader threads, the process of reading the dataset is identical to the `H5Coro::read` function.

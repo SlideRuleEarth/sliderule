@@ -133,7 +133,7 @@ class FootprintReader: public LuaObject
         Publisher*          outQ;
         GediParms*          parms;
         stats_t             stats;
-        H5Coro::context_t   context;
+        H5Coro::Context   context;
         RecordObject        batchRecord;
         int                 batchIndex;
         batch_t*            batchData;

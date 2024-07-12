@@ -37,8 +37,10 @@
  ******************************************************************************/
 
 #include "Asset.h"
-#include "H5Coro.h"
 #include "RecordObject.h"
+#include "H5Coro.h"
+
+using H5Coro::ALL_ROWS;
 
 /******************************************************************************
  * H5 DYNAMIC ARRAY CLASS
@@ -60,7 +62,7 @@ class H5DArray
 
         static void init            (void);
 
-                    H5DArray        (const Asset* asset, const char* resource, const char* dataset, H5Coro::context_t* context=NULL, long col=0, long startrow=0, long numrows=H5Coro::ALL_ROWS);
+                    H5DArray        (H5Coro::Context* context, const char* dataset, long col=0, long startrow=0, long numrows=H5Coro::ALL_ROWS);
         virtual     ~H5DArray       (void);
 
         bool        join            (int timeout, bool throw_exception) const;
@@ -75,7 +77,7 @@ class H5DArray
          *--------------------------------------------------------------------*/
 
         const char*         name;
-        H5Future*           h5f;
+        H5Coro::Future*     h5f;
 };
 
 #endif  /* __h5_dynamic_array__ */

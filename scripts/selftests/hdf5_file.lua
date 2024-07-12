@@ -9,8 +9,6 @@ asset = core.asset("local", "nil", "file", td, "empty.index")
 print('\n------------------\nTest01: File\n------------------')
 
 f1 = h5.file(asset, "h5ex_d_gzip.h5")
-runner.check(f1:dir(1, "/DS1"), "failed to traverse hdf5 file")
-
 rsps1 = msg.subscribe("h5testq")
 f1:read({{dataset="DS1", col=2}}, "h5testq")
 recdata = rsps1:recvrecord(3000)

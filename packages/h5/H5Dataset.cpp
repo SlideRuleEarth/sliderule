@@ -33,37 +33,21 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "H5Coro.h"
-#include "H5Dense.h"
-#include "H5Dataset.h"
-#include "H5Future.h"
 #include "RecordObject.h"
 #include "TimeLib.h"
 #include "OsApi.h"
+#include "H5Dense.h"
+#include "H5Dataset.h"
+#include "H5Coro.h"
 
 #include <zlib.h>
 
+using H5Coro::EOR;
+using H5Coro::range_t;
+using H5Coro::Context;
+using H5Coro::info_t;
+
 // NOLINTBEGIN(misc-no-recursion)
-
-/******************************************************************************
- * DEFINES
- ******************************************************************************/
-
-#ifndef H5CORO_VERBOSE
-#define H5CORO_VERBOSE false
-#endif
-
-#ifndef H5CORO_EXTRA_DEBUG
-#define H5CORO_EXTRA_DEBUG false
-#endif
-
-#ifndef H5CORO_ERROR_CHECKING
-#define H5CORO_ERROR_CHECKING true
-#endif
-
-#ifndef H5CORO_ENABLE_FILL
-#define H5CORO_ENABLE_FILL false
-#endif
 
 /******************************************************************************
  * MACROS
@@ -85,84 +69,25 @@ Mutex H5Dataset::metaMutex;
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5Dataset::context_t::context_t (void):
-    l1(IO_CACHE_L1_ENTRIES, ioHashL1),
-    l2(IO_CACHE_L2_ENTRIES, ioHashL2)
-{
-    pre_prefetch_request = 0;
-    post_prefetch_request = 0;
-    cache_miss = 0;
-    l1_cache_replace = 0;
-    l2_cache_replace = 0;
-    bytes_read = 0;
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-H5Dataset::context_t::~context_t (void)
-{
-    /* Empty L1 Cache */
-    {
-        cache_entry_t entry;
-        uint64_t key = l1.first(&entry);
-        while(key != INVALID_KEY)
-        {
-            assert(entry.data);
-            delete [] entry.data;
-            key = l1.next(&entry);
-        }
-    }
-
-    /* Empty L2 Cache */
-    {
-        cache_entry_t entry;
-        uint64_t key = l2.first(&entry);
-        while(key != INVALID_KEY)
-        {
-            assert(entry.data);
-            delete [] entry.data;
-            key = l2.next(&entry);
-        }
-    }
-}
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-H5Dataset::H5Dataset (info_t* info, context_t* context, 
-                      const Asset* asset, const char* resource, 
-                      const char* dataset, const vector<range_t>& slice, 
+H5Dataset::H5Dataset (info_t* info, Context* context, 
+                      const char* dataset, const range_t* slice, int slicendims,
                       bool _meta_only):
+    ioContext (context),
     datasetName (StringLib::duplicate(dataset)),
     datasetPrint (StringLib::duplicate(dataset)),
     metaOnly (_meta_only),
-    ioDriver (NULL),
-    ioBucket (NULL),
-    ioKey (NULL),
-    ioContext (NULL),
-    ioContextLocal (true),
-    ioPostPrefetch (false),
     dataChunkBuffer (NULL),
     dataChunkFilterBuffer (NULL),
     dataChunkBufferSize (0),
     highestDataLevel (0),
     dataSizeHint (0)
 {
-    assert(asset);
-    assert(resource);
     assert(dataset);
-
-    /* Initialize Info */
-    info->elements = 0;
-    info->datasize = 0;
-    info->data     = NULL;
-    info->datatype = RecordObject::INVALID_FIELD;
 
     /* Initialize HyperSlice */
     for(int d = 0; d < MAX_NDIMS; d++)
     {
-        if(d < slice.size())
+        if(d < slicendims)
         {
             hyperslice[d] = slice[d];
         }
@@ -176,24 +101,9 @@ H5Dataset::H5Dataset (info_t* info, context_t* context,
     /* Process File */
     try
     {
-        /* Initialize Driver */
-        ioDriver = asset->createDriver(resource);
-
-        /* Set or Create I/O Context */
-        if(context)
-        {
-            ioContext = context;
-            ioContextLocal = false;
-        }
-        else
-        {
-            ioContext = new context_t;
-            ioContextLocal = true;
-        }
-
         /* Check Meta Repository */
         char meta_url[MAX_META_NAME_SIZE];
-        metaGetUrl(meta_url, resource, dataset);
+        metaGetUrl(meta_url, ioContext->resource, dataset);
         const uint64_t meta_key = metaGetKey(meta_url);
         bool meta_found = false;
         metaMutex.lock();
@@ -281,15 +191,6 @@ H5Dataset::~H5Dataset (void)
  *----------------------------------------------------------------------------*/
 void H5Dataset::tearDown (void)
 {
-    /* Close I/O Resources */
-    delete ioDriver;
-
-    /* Delete Local Context */
-    if(ioContextLocal)
-    {
-        delete ioContext;
-    }
-
     /* Delete Dataset Strings */
     delete [] datasetName;
     delete [] datasetPrint;
@@ -300,212 +201,12 @@ void H5Dataset::tearDown (void)
 }
 
 /*----------------------------------------------------------------------------
- * ioRequest
- *----------------------------------------------------------------------------*/
-void H5Dataset::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, int64_t hint, bool cache_the_data)
-{
-    cache_entry_t entry;
-    int64_t data_offset = 0;
-    const uint64_t file_position = *pos;
-    bool cached = false;
-    ioContext->mut.lock();
-    {
-        /* Count I/O Request */
-        if(ioPostPrefetch) ioContext->post_prefetch_request++;
-        else ioContext->pre_prefetch_request++;
-
-        /* Attempt to fulfill data request from I/O cache
-        *  note that this is only checked if a buffer is supplied;
-        *  otherwise the purpose of the call is to cache the entry */
-        if(buffer)
-        {
-            if( ioCheckCache(file_position, size, &ioContext->l1, IO_CACHE_L1_MASK, &entry) ||
-                ioCheckCache(file_position, size, &ioContext->l2, IO_CACHE_L2_MASK, &entry) )
-            {
-                /* Entry Found in Cache */
-                cached = true;
-
-                /* Set Offset to Start of Requested Data */
-                data_offset = file_position - entry.pos;
-
-                /* Copy Data into Buffer */
-                memcpy(buffer, &entry.data[data_offset], size);
-            }
-            else
-            {
-                /* Count Cache Miss */
-                ioContext->cache_miss++;
-            }
-        }
-    }
-    ioContext->mut.unlock();
-
-    /* Read data to fulfill request */
-    if(!cached)
-    {
-        /* Cacluate How Much Data to Read and Set Data Buffer */
-        int64_t read_size;
-        if(cache_the_data)
-        {
-            read_size = MAX(size, hint); // overread when caching
-            entry.data = new uint8_t [read_size];
-        }
-        else
-        {
-            assert(buffer); // logically inconsistent to not cache when buffer is null
-            read_size = size;
-            entry.data = buffer;
-        }
-
-        /* Mark File Position of Entry */
-        entry.pos = file_position;
-
-        /* Read into Cache */
-        try
-        {
-            entry.size = ioDriver->ioRead(entry.data, read_size, entry.pos);
-        }
-        catch (const RunTimeException& e)
-        {
-            if(cache_the_data) delete [] entry.data;
-            throw; // rethrow exception
-        }
-
-        /* Check Enough Data was Read */
-        if(entry.size < size)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read %ld bytes of data: %ld", size, entry.size);
-        }
-
-        /* Handle Caching */
-        if(cache_the_data)
-        {
-            /* Copy Data into Buffer
-            *  only if caching, and buffer supplied;
-            *  else the data was already read directly into the buffer,
-            *  or the purpose was only to cache the entry (prefetch) */
-            if(buffer)
-            {
-                memcpy(buffer, &entry.data[data_offset], size);
-            }
-
-            /* Select Cache */
-            cache_t* cache = NULL;
-            long* cache_replace = NULL;
-            if(entry.size <= IO_CACHE_L1_LINESIZE)
-            {
-                cache = &ioContext->l1;
-                cache_replace = &ioContext->l1_cache_replace;
-            }
-            else
-            {
-                cache = &ioContext->l2;
-                cache_replace = &ioContext->l2_cache_replace;
-            }
-
-            /* Cache Entry */
-            ioContext->mut.lock();
-            {
-                /* Ensure Room in Cache */
-                if(cache->isfull())
-                {
-                    /* Replace Oldest Entry */
-                    cache_entry_t oldest_entry;
-                    const uint64_t oldest_pos = cache->first(&oldest_entry);
-                    if(oldest_pos != (uint64_t)INVALID_KEY)
-                    {
-                        delete [] oldest_entry.data;
-                        cache->remove(oldest_pos);
-                    }
-                    else
-                    {
-                        ioContext->mut.unlock();
-                        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to make room in cache for %s", datasetPrint);
-                    }
-
-                    /* Count Cache Replacement */
-                    (*cache_replace)++;
-                }
-
-                /* Add Cache Entry */
-                if(!cache->add(file_position, entry, true))
-                {
-                    /* Free Previously Allocated Entry
-                     *  should only fail to add if the cache line was
-                     *  already added, in which case it is safe to just
-                     *  delete what was allocated and move on */
-                    delete [] entry.data;
-                }
-
-                /* Count Bytes Read */
-                ioContext->bytes_read += entry.size;
-            }
-            ioContext->mut.unlock();
-        }
-        else // data not being cached
-        {
-            /* Count Bytes Read
-             *  the logic below is repeated to avoid locking the ioContext mutex
-             *  any more than it needs to be locked; the bytes_read could be updated
-             *  in a single place below, but then the ioRequest function would always
-             *  incur an additional mutex lock, whereas here it only occurs an aditional
-             *  time when data isn't being cached (which is rare)
-             */
-            ioContext->mut.lock();
-            {
-                ioContext->bytes_read += entry.size;
-            }
-            ioContext->mut.unlock();
-        }
-    }
-
-    /* Update Position */
-    *pos += size;
-}
-
-/*----------------------------------------------------------------------------
- * ioCheckCache
- *----------------------------------------------------------------------------*/
-bool H5Dataset::ioCheckCache (uint64_t pos, int64_t size, cache_t* cache, uint64_t line_mask, cache_entry_t* entry)
-{
-    const uint64_t prev_line_pos = (pos & ~line_mask) - 1;
-    const bool check_prev = pos > prev_line_pos; // checks for rollover
-
-    if( cache->find(pos, cache_t::MATCH_NEAREST_UNDER, entry, true) ||
-        (check_prev && cache->find(prev_line_pos, cache_t::MATCH_NEAREST_UNDER, entry, true)) )
-    {
-        if((pos >= entry->pos) && ((pos + size) <= (entry->pos + entry->size)))
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-/*----------------------------------------------------------------------------
- * ioHashL1
- *----------------------------------------------------------------------------*/
-uint64_t H5Dataset::ioHashL1 (uint64_t key)
-{
-    return key & (~IO_CACHE_L1_MASK);
-}
-
-/*----------------------------------------------------------------------------
- * ioHashL2
- *----------------------------------------------------------------------------*/
-uint64_t H5Dataset::ioHashL2 (uint64_t key)
-{
-    return key & (~IO_CACHE_L2_MASK);
-}
-
-/*----------------------------------------------------------------------------
  * readField
  *----------------------------------------------------------------------------*/
 void H5Dataset::readByteArray (uint8_t* data, int64_t size, uint64_t* pos)
 {
     assert(data);
-    ioRequest(pos, size, data, IO_CACHE_L1_LINESIZE, true);
+    ioContext->ioRequest(pos, size, data, Context::IO_CACHE_L1_LINESIZE, true);
 }
 
 /*----------------------------------------------------------------------------
@@ -521,7 +222,7 @@ uint64_t H5Dataset::readField (int64_t size, uint64_t* pos)
     uint8_t data_ptr[8];
 
     /* Request Data from I/O */
-    ioRequest(pos, size, data_ptr, IO_CACHE_L1_LINESIZE, true);
+    ioContext->ioRequest(pos, size, data_ptr, Context::IO_CACHE_L1_LINESIZE, true);
 
     /*  Read Field Value */
     switch(size)
@@ -582,23 +283,10 @@ void H5Dataset::readDataset (info_t* info)
     }
 
     /* Massage Hyperslice */
-    for(int d = 1; d < metaData.ndims; d++)
+    for(int d = 0; d < metaData.ndims; d++)
     {
-        if(d < hyperslice.size())
-        {
-            if(hyperslice[d].r1 == EOF)
-            {
-                hyperslice[d].r1 = metaData.dimensions[d];
-            }
-        }
-        else
-        {
-            range_t range = {
-                .r0 = 0,
-                .r1 = metaData.dimensions[d]
-            };
-            hyperslice.push_back(range);
-        }
+        if(hyperslice[d].r0 == EOR) hyperslice[d].r0 = 0;
+        if(hyperslice[d].r1 == EOR) hyperslice[d].r1 = metaData.dimensions[d];
     }
 
     /* Check for Valid Hyperslice */
@@ -693,10 +381,6 @@ void H5Dataset::readDataset (info_t* info)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "data not allocated in contiguous layout");
         }
-        if(metaData.size != 0 && metaData.size < ((int64_t)buffer_offset + buffer_size))
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "read exceeds available data: %ld != %ld", (long)metaData.size, (long)buffer_size);
-        }
         if((metaData.filter[DEFLATE_FILTER] || metaData.filter[SHUFFLE_FILTER]) && ((metaData.layout == COMPACT_LAYOUT) || (metaData.layout == CONTIGUOUS_LAYOUT)))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "filters unsupported on non-chunked layouts");
@@ -714,13 +398,17 @@ void H5Dataset::readDataset (info_t* info)
                 if(metaData.ndims == 0)
                 {
                     uint64_t data_addr = metaData.address;
-                    ioRequest(&data_addr, buffer_size, buffer, 0, false);
+                    ioContext->ioRequest(&data_addr, buffer_size, buffer, 0, false);
                 }
                 else if(metaData.ndims == 1)
                 {
                     uint64_t buffer_offset = hyperslice[0].r0 * metaData.typesize;
+                    if(metaData.size != 0 && metaData.size < ((int64_t)buffer_offset + buffer_size))
+                    {
+                        throw RunTimeException(CRITICAL, RTE_ERROR, "read exceeds available data: %ld != %ld", (long)metaData.size, (long)buffer_size);
+                    }
                     uint64_t data_addr = metaData.address + buffer_offset;
-                    ioRequest(&data_addr, buffer_size, buffer, 0, false);
+                    ioContext->ioRequest(&data_addr, buffer_size, buffer, 0, false);
                 }
                 else
                 {
@@ -731,7 +419,7 @@ void H5Dataset::readDataset (info_t* info)
                     }
                     uint8_t* compact_buffer = new uint8_t [compact_buffer_size];
                     uint64_t data_addr = metaData.address;
-                    ioRequest(&data_addr, buffer_size, buffer, 0, false);
+                    ioContext->ioRequest(&data_addr, buffer_size, buffer, 0, false);
                     readSlice(buffer, info->shape, hyperslice, compact_buffer, metaData.dimensions, hyperslice);
                     delete [] compact_buffer;
                 }
@@ -768,11 +456,10 @@ void H5Dataset::readDataset (info_t* info)
                 if(metaData.ndims <= 1)
                 {
                     uint64_t buffer_offset = hyperslice[0].r0 * metaData.typesize;
-                    ioPostPrefetch = true;
                     if(buffer_offset < (uint64_t)buffer_size)
                     {
-                        ioRequest(&metaData.address, 0, NULL, buffer_offset + buffer_size, true);
-                        dataSizeHint = IO_CACHE_L1_LINESIZE;
+                        ioContext->ioRequest(&metaData.address, 0, NULL, buffer_offset + buffer_size, true);
+                        dataSizeHint = Context::IO_CACHE_L1_LINESIZE;
                     }
                     else
                     {
@@ -1524,7 +1211,7 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
                     }
 
                     /* Read Data into Chunk Filter Buffer (holds the compressed data) */
-                    ioRequest(&child_addr, curr_node.chunk_size, dataChunkFilterBuffer, dataSizeHint, true);
+                    ioContext->ioRequest(&child_addr, curr_node.chunk_size, dataChunkFilterBuffer, dataSizeHint, true);
                     if((chunk_bytes == dataChunkBufferSize) && (!metaData.filter[SHUFFLE_FILTER]))
                     {
                         /* Inflate Directly into Data Buffer */
@@ -1548,7 +1235,7 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
                     }
 
                     // handle caching
-                    dataSizeHint = IO_CACHE_L1_LINESIZE;
+                    dataSizeHint = Context::IO_CACHE_L1_LINESIZE;
                 }
                 else // no supported filters
                 {
@@ -1566,14 +1253,14 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
 
                     // read data into data buffer
                     uint64_t chunk_offset_addr = child_addr + chunk_index;
-                    ioRequest(&chunk_offset_addr, chunk_bytes, &buffer[buffer_index], dataSizeHint, true);
-                    dataSizeHint = IO_CACHE_L1_LINESIZE;
+                    ioContext->ioRequest(&chunk_offset_addr, chunk_bytes, &buffer[buffer_index], dataSizeHint, true);
+                    dataSizeHint = Context::IO_CACHE_L1_LINESIZE;
                 }
             }
             else // ndims > 1
             {
                 // read entire chunk
-                ioRequest(&child_addr, curr_node.chunk_size, dataChunkFilterBuffer, dataSizeHint, true);
+                ioContext->ioRequest(&child_addr, curr_node.chunk_size, dataChunkFilterBuffer, dataSizeHint, true);
                 uint8_t* chunk_buffer = dataChunkFilterBuffer;
 
                 //  chunk_buffer -
@@ -3337,8 +3024,8 @@ bool H5Dataset::hypersliceIntersection(const range_t* node_slice, const uint8_t 
     else // node_level > 0
     {
         range_t node_slice_in_chunks[MAX_NDIMS];
-        uint64_t node_start = 0;
-        uint64_t node_end = 0;
+        int64_t node_start = 0;
+        int64_t node_end = 0;
         for(int d = 0; d < metaData.ndims; d++)
         {
             // calculate chunk of node slice
@@ -3361,13 +3048,13 @@ bool H5Dataset::hypersliceIntersection(const range_t* node_slice, const uint8_t 
 /*----------------------------------------------------------------------------
  * type2str
  *----------------------------------------------------------------------------*/
-void H5Dataset::readSlice (uint8_t* output_buffer, const uint64_t* output_dimensions, const range_t* output_slice, 
-                           const uint8_t* input_buffer, const uint64_t* input_dimensions, const range_t* input_slice)
+void H5Dataset::readSlice (uint8_t* output_buffer, const int64_t* output_dimensions, const range_t* output_slice, 
+                           const uint8_t* input_buffer, const int64_t* input_dimensions, const range_t* input_slice)
 {
     // build serialized size of each input and output dimension
     // ... for example a 4x4x4 cube of unsigned chars would be 16,4,1
-    uint64_t input_dim_step[MAX_NDIMS];
-    uint64_t output_dim_step[MAX_NDIMS];
+    int64_t input_dim_step[MAX_NDIMS];
+    int64_t output_dim_step[MAX_NDIMS];
     for(int d = 0; d < metaData.ndims; d++)
     {
         input_dim_step[d] = metaData.typesize;
@@ -3380,8 +3067,8 @@ void H5Dataset::readSlice (uint8_t* output_buffer, const uint64_t* output_dimens
     }
 
     // initialize dimension indices
-    uint64_t input_dim_index[MAX_NDIMS];
-    uint64_t output_dim_index[MAX_NDIMS];
+    int64_t input_dim_index[MAX_NDIMS];
+    int64_t output_dim_index[MAX_NDIMS];
     for(int d = 0; d < metaData.ndims; d++)
     {
         input_dim_index[d] = input_slice[d].r0; // initialize to the start index of each input_slice
@@ -3389,21 +3076,21 @@ void H5Dataset::readSlice (uint8_t* output_buffer, const uint64_t* output_dimens
     }
 
     // calculate amount to read each time
-    uint64_t read_slice = input_slice[metaData.ndims - 1].r1 - input_slice[metaData.ndims - 1].r0;
-    uint64_t read_size = input_dim_step[metaData.ndims - 1] * read_slice; // size of data to read each time
+    int64_t read_slice = input_slice[metaData.ndims - 1].r1 - input_slice[metaData.ndims - 1].r0;
+    int64_t read_size = input_dim_step[metaData.ndims - 1] * read_slice; // size of data to read each time
 
     // read each input_slice
     while(input_dim_index[0] < input_slice[0].r1) // while the first dimension index has not traversed its range
     {
         // calculate source offset
-        uint64_t src_offset = 0;
+        int64_t src_offset = 0;
         for(int d = 0; d < metaData.ndims; d++)
         {
             src_offset += (input_dim_index[d] * input_dim_step[d]);
         }
 
         // calculate destination offset
-        uint64_t dst_offset = 0;
+        int64_t dst_offset = 0;
         for(int d = 0; d < metaData.ndims; d++)
         {
             dst_offset += (output_dim_index[d] * output_dim_step[d]);
@@ -3414,7 +3101,7 @@ void H5Dataset::readSlice (uint8_t* output_buffer, const uint64_t* output_dimens
 
         // go to next set of input indices
         input_dim_index[metaData.ndims - 1] += read_slice;
-        uint64_t i = metaData.ndims - 1;
+        int64_t i = metaData.ndims - 1;
         while(i > 0 && input_dim_index[i] == input_slice[i].r1)     // while the level being examined is at the last index
         {
             input_dim_index[i] = input_slice[i].r0;                 // set index back to the beginning of hyperslice
@@ -3424,7 +3111,7 @@ void H5Dataset::readSlice (uint8_t* output_buffer, const uint64_t* output_dimens
 
         // update output indices
         output_dim_index[metaData.ndims - 1] += read_slice;
-        uint64_t j = metaData.ndims - 1;
+        int64_t j = metaData.ndims - 1;
         while(j > 0 && output_dim_index[j] == output_slice[j].r1)   // while the level being examined is at the last index
         {
             output_dim_index[j] = output_slice[j].r0;               // set index back to the beginning of hyperslice

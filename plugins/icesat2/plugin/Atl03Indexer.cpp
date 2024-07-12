@@ -208,7 +208,7 @@ void* Atl03Indexer::indexerThread (void* parm)
     StringLib::format(prefix, MAX_STR_SIZE, "%s://%s/", indexer->asset->getDriver(), indexer->asset->getPath());
 
     /* Initialize Context */
-    H5Coro::context_t* context = NULL;
+    H5Coro::Context* context = NULL;
 
     try
     {
@@ -236,7 +236,7 @@ void* Atl03Indexer::indexerThread (void* parm)
             if(resource_name)
             {
                 /* Create Context */
-                context = new H5Coro::context_t;
+                context = new H5Coro::Context;
 
                 /* Read Data from HDF5 File */
                 H5Array<double>     sdp_gps_epoch       (indexer->asset, resource_name, "/ancillary_data/atlas_sdp_gps_epoch", context);
