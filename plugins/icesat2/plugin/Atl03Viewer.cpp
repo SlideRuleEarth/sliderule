@@ -121,7 +121,8 @@ void Atl03Viewer::init (void)
  *----------------------------------------------------------------------------*/
 Atl03Viewer::Atl03Viewer (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    read_timeout_ms(_parms->read_timeout * 1000)
+    read_timeout_ms(_parms->read_timeout * 1000),
+    context(NULL)
 {
     assert(_asset);
     assert(_resource);
@@ -157,6 +158,9 @@ Atl03Viewer::Atl03Viewer (lua_State* L, Asset* _asset, const char* _resource, co
     /* Read Global Resource Information */
     try
     {
+        /* Create H5Coro Context */
+        context = new H5Coro::Context(asset, resource);
+
         /* Parse Globals (throws) */
         parseResource(resource, start_rgt, start_cycle, start_region);
 
@@ -212,6 +216,8 @@ Atl03Viewer::~Atl03Viewer (void)
 
     parms->releaseLuaObject();
 
+    delete context;
+
     delete [] resource;
 
     asset->releaseLuaObject();
@@ -221,9 +227,9 @@ Atl03Viewer::~Atl03Viewer (void)
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Viewer::Region::Region (const info_t* info):
-    segment_lat    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context),
-    segment_lon    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context),
-    segment_ph_cnt (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(),       &info->reader->context),
+    segment_lat    (info->reader->context, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str()),
+    segment_lon    (info->reader->context, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str()),
+    segment_ph_cnt (info->reader->context, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str()),
     inclusion_mask {NULL},
     inclusion_ptr  {NULL}
 {
@@ -402,10 +408,10 @@ void Atl03Viewer::Region::rasterregion (const info_t* info)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Viewer::Atl03Data::Atl03Data (const info_t* info, const Region& region):
-    sc_orient           (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",                     &info->reader->context),
-    segment_delta_time  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),           &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_id          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_id").c_str(),           &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_dist_x      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),       &info->reader->context, 0, region.first_segment, region.num_segments)
+    sc_orient           (info->reader->context,                                "/orbit_info/sc_orient"),
+    segment_delta_time  (info->reader->context, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),       0, region.first_segment, region.num_segments),
+    segment_id          (info->reader->context, FString("%s/%s", info->prefix, "geolocation/segment_id").c_str(),       0, region.first_segment, region.num_segments),
+    segment_dist_x      (info->reader->context, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),   0, region.first_segment, region.num_segments)
 {
     /* Join Hardcoded Reads */
     sc_orient.join(info->reader->read_timeout_ms, true);

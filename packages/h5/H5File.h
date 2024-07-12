@@ -101,7 +101,7 @@ class H5File: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            H5File              (lua_State* L, H5Coro::Context* _context);
+                            H5File              (lua_State* L, Asset* _asset, H5Coro::Context* _context);
                             ~H5File             (void) override;
 
         static void*        readThread          (void* parm);
@@ -113,6 +113,7 @@ class H5File: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
+        Asset*              asset;
         H5Coro::Context*    context;
 };
 

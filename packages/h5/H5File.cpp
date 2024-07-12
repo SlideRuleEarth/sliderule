@@ -79,7 +79,7 @@ int H5File::luaCreate(lua_State* L)
         H5Coro::Context* _context = new H5Coro::Context(_asset, _resource);
 
         /* Return File Device Object */
-        return createLuaObject(L, new H5File(L, _context));
+        return createLuaObject(L, new H5File(L, _asset, _context));
     }
     catch(const RunTimeException& e)
     {
@@ -100,8 +100,9 @@ void H5File::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5File::H5File (lua_State* L, H5Coro::Context* _context):
+H5File::H5File (lua_State* L, Asset* _asset, H5Coro::Context* _context):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
+    asset(_asset),
     context(_context)
 {
 }
@@ -112,6 +113,7 @@ H5File::H5File (lua_State* L, H5Coro::Context* _context):
 H5File::~H5File (void)
 {
     delete context;
+    asset->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -133,7 +135,7 @@ void* H5File::readThread (void* parm)
     }
     catch (const RunTimeException& e)
     {
-        mlog(e.level(), "Failed to read dataset %s/%s: %s", info->h5file->context->resource, info->dataset, e.what());
+        mlog(e.level(), "Failed to read dataset %s/%s: %s", info->h5file->context->name, info->dataset, e.what());
     }
 
     /* Post Results to Output Queue */
@@ -156,7 +158,7 @@ void* H5File::readThread (void* parm)
         const int status = outq.postCopy(rec_buf, rec_size - results.datasize, results.data, results.datasize, SYS_TIMEOUT);
         if(status <= 0)
         {
-            mlog(CRITICAL, "Failed (%d) to post h5 dataset: %s/%s", status, info->h5file->context->resource, info->dataset);
+            mlog(CRITICAL, "Failed (%d) to post h5 dataset: %s/%s", status, info->h5file->context->name, info->dataset);
         }
 
         /* Clean Up Result Data */
@@ -262,7 +264,7 @@ int H5File::luaRead (lua_State* L)
         }
 
         /* Status Complete */
-        mlog(INFO, "Finished reading %d datasets from %s", num_datasets, lua_obj->context->resource);
+        mlog(INFO, "Finished reading %d datasets from %s", num_datasets, lua_obj->context->name);
 
         /* Terminate Data */
         Publisher outQ(outq_name);

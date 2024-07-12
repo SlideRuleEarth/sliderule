@@ -42,7 +42,6 @@
 #include "StringLib.h"
 #include "RasterObject.h"
 #include "H5Array.h"
-#include "H5Element.h"
 #include "GeoLib.h"
 #include "Icesat2Parms.h"
 
@@ -123,7 +122,7 @@ class BathyViewer: public LuaObject
         const int           read_timeout_ms;
         Icesat2Parms*       parms;
 
-        H5Coro::Context   context; // for ATL03 file
+        H5Coro::Context*    context; // for ATL03 file
 
         GeoLib::TIFFImage*  bathyMask;
 

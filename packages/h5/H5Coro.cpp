@@ -145,10 +145,10 @@ H5Coro::Future::rc_t H5Coro::Future::wait (int timeout)
 
 /*----------------------------------------------------------------------------
  * Constructor
+ *  - assumes that asset is in scope for the duration this object is in scope
  *----------------------------------------------------------------------------*/
-H5Coro::Context::Context (Asset* _asset, const char* _resource):
-    asset               (_asset),
-    resource            (NULL),
+H5Coro::Context::Context (Asset* asset, const char* resource):
+    name                (NULL),
     ioDriver            (NULL),
     l1                  (IO_CACHE_L1_ENTRIES, hashL1),
     l2                  (IO_CACHE_L2_ENTRIES, hashL2),
@@ -159,12 +159,12 @@ H5Coro::Context::Context (Asset* _asset, const char* _resource):
 {
     try
     {
-        resource = StringLib::duplicate(_resource);
-        ioDriver = asset->createDriver(_resource);
+        name = StringLib::duplicate(resource);
+        ioDriver = asset->createDriver(resource);
     }
     catch(const RunTimeException& e)
     {
-        delete [] resource;
+        delete [] name;
         mlog(e.level(), "Failed to create H5 context: %s", e.what());
         throw;
     }    
@@ -175,9 +175,8 @@ H5Coro::Context::Context (Asset* _asset, const char* _resource):
  *----------------------------------------------------------------------------*/
 H5Coro::Context::~Context (void)
 {
+    delete [] name;
     delete ioDriver;
-    asset->releaseLuaObject();
-    delete [] resource;
 
     /* Empty L1 Cache */
     {
@@ -643,7 +642,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
     stop_trace(INFO, trace_id);
 
     /* Log Info Message */
-    mlog(DEBUG, "Read %d elements (%ld bytes) from %s/%s", info.elements, info.datasize, context->resource, datasetname);
+    mlog(DEBUG, "Read %d elements (%ld bytes) from %s/%s", info.elements, info.datasize, context->name, datasetname);
 
     /* Return Info */
     return info;
@@ -673,7 +672,7 @@ H5Coro::Future* H5Coro::readp (Context* context, const char* datasetname, Record
     const int post_status = rqstPub->postCopy(&rqst, sizeof(read_rqst_t), IO_CHECK);
     if(post_status <= 0)
     {
-        mlog(CRITICAL, "Failed to post read request for %s/%s: %d", context->resource, datasetname, post_status);
+        mlog(CRITICAL, "Failed to post read request for %s/%s: %d", context->name, datasetname, post_status);
         delete [] rqst.datasetname;
         delete rqst.h5f;
         return NULL;
@@ -703,7 +702,7 @@ void* H5Coro::readerThread (void* parm)
             }
             catch(const RunTimeException& e)
             {
-                mlog(e.level(), "Failure reading %s/%s: %s", rqst.context->resource, rqst.datasetname, e.what());
+                mlog(e.level(), "Failure reading %s/%s: %s", rqst.context->name, rqst.datasetname, e.what());
                 valid = false;
             }
 

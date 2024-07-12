@@ -44,7 +44,7 @@ using BathyFields::extent_t;
  * BATHY OPENOCEANS
  ******************************************************************************/
 
-class BathyOpenOceans
+class BathyOceanEyes
 {
     public:
 
@@ -101,8 +101,8 @@ class BathyOpenOceans
          *--------------------------------------------------------------------*/
 
         static void     init                    (void);
-                        BathyOpenOceans         (lua_State* L, int index);
-                        ~BathyOpenOceans        (void);
+                        BathyOceanEyes         (lua_State* L, int index);
+                        ~BathyOceanEyes        (void);
         void            findSeaSurface          (extent_t& extent) const;
         void            correctRefraction       (extent_t& extent) const;
         void            calculateUncertainty    (extent_t& extent) const;
@@ -147,7 +147,6 @@ class BathyOpenOceans
         static uncertainty_coeff_t  UNCERTAINTY_COEFF_MAP[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES][NUM_WIND_SPEEDS][NUM_KD_RANGES];
 
         parms_t                     parms;
-        H5Coro::Context           contextKd;
         H5Array<int16_t>*           Kd_490;
 };
 

@@ -39,8 +39,9 @@
 #include <stdarg.h>
 
 #include "core.h"
-#include "h5.h"
 #include "icesat2.h"
+#include "H5Coro.h"
+#include "H5Array.h"
 #include "GeoLib.h"
 #include "RasterObject.h"
 
@@ -109,6 +110,7 @@ void BathyViewer::init (void)
 BathyViewer::BathyViewer (lua_State* L, Asset* _asset, const char* _resource, Icesat2Parms* _parms):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->read_timeout * 1000),
+    context(NULL),
     bathyMask(NULL),
     totalPhotons(0),
     totalPhotonsInMask(0),
@@ -137,6 +139,9 @@ BathyViewer::BathyViewer (lua_State* L, Asset* _asset, const char* _resource, Ic
     /* Read Global Resource Information */
     try
     {
+        /* Create H5Coro Context */
+        context = new H5Coro::Context(asset, resource);
+
         /* Count Threads */
         for(int track = 1; track <= Icesat2Parms::NUM_TRACKS; track++)
         {
@@ -199,6 +204,8 @@ BathyViewer::~BathyViewer (void)
 
     delete bathyMask;
 
+    delete context;
+    
     parms->releaseLuaObject();
 
     delete [] resource;
@@ -210,9 +217,9 @@ BathyViewer::~BathyViewer (void)
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 BathyViewer::Region::Region (info_t* info):
-    segment_lat    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context),
-    segment_lon    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context),
-    segment_ph_cnt (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(), &info->reader->context)
+    segment_lat    (info->reader->context, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str()),
+    segment_lon    (info->reader->context, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str()),
+    segment_ph_cnt (info->reader->context, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str())
 {
     /* Join Reads */
     segment_lat.join(info->reader->read_timeout_ms, true);

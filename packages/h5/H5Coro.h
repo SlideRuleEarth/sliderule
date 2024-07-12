@@ -170,8 +170,7 @@ namespace H5Coro
         /* Data */
         /********/
 
-        Asset*              asset;
-        const char*         resource;
+        const char*         name;
         Asset::IODriver*    ioDriver;
         cache_t             l1;                     // level 1 cache
         cache_t             l2;                     // level 2 cache
@@ -185,7 +184,7 @@ namespace H5Coro
         /* Methods */
         /***********/
 
-                        Context     (Asset* _asset, const char* _resource);
+                        Context     (Asset* asset, const char* resource);
                         ~Context    (void);
 
         void            ioRequest   (uint64_t* pos, int64_t size, uint8_t* buffer, int64_t hint, bool cache);

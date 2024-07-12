@@ -103,7 +103,7 @@ H5Dataset::H5Dataset (info_t* info, Context* context,
     {
         /* Check Meta Repository */
         char meta_url[MAX_META_NAME_SIZE];
-        metaGetUrl(meta_url, ioContext->resource, dataset);
+        metaGetUrl(meta_url, ioContext->name, dataset);
         const uint64_t meta_key = metaGetKey(meta_url);
         bool meta_found = false;
         metaMutex.lock();

@@ -129,7 +129,8 @@ void Atl13Reader::init (void)
  *----------------------------------------------------------------------------*/
 Atl13Reader::Atl13Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    read_timeout_ms(_parms->read_timeout * 1000)
+    read_timeout_ms(_parms->read_timeout * 1000),
+    context(NULL)
 {
     assert(_asset);
     assert(_resource);
@@ -166,6 +167,9 @@ Atl13Reader::Atl13Reader (lua_State* L, Asset* _asset, const char* _resource, co
     /* Read Global Resource Information */
     try
     {
+        /* Create H5Coro Context */
+        context = new H5Coro::Context(asset, resource);
+
         /* Parse Globals (throws) */
         parseResource(resource, start_rgt, start_cycle, start_region);
 
@@ -219,6 +223,8 @@ Atl13Reader::~Atl13Reader (void)
 
     delete outQ;
 
+    delete context;
+
     parms->releaseLuaObject();
 
     delete [] resource;
@@ -230,8 +236,8 @@ Atl13Reader::~Atl13Reader (void)
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 Atl13Reader::Region::Region (const info_t* info):
-    latitude        (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "segment_lat").c_str(), &info->reader->context),
-    longitude       (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "segment_lon").c_str(), &info->reader->context),
+    latitude        (info->reader->context, FString("%s/%s", info->prefix, "segment_lat").c_str()),
+    longitude       (info->reader->context, FString("%s/%s", info->prefix, "segment_lon").c_str()),
     inclusion_mask  {NULL},
     inclusion_ptr   {NULL}
 {
@@ -399,17 +405,17 @@ void Atl13Reader::Region::rasterregion (const info_t* info)
  * Atl13Data::Constructor
  *----------------------------------------------------------------------------*/
 Atl13Reader::Atl13Data::Atl13Data (const info_t* info, const Region& region):
-    sc_orient               (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",           &info->reader->context),
-    delta_time              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "delta_time").c_str(),             &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_id_beg          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "segment_id_beg").c_str(),         &info->reader->context, 0, region.first_segment, region.num_segments),
-    snow_ice_atl09          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "snow_ice_atl09").c_str(),         &info->reader->context, 0, region.first_segment, region.num_segments),
-    cloud_flag_asr_atl09    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "cloud_flag_asr_atl09").c_str(),   &info->reader->context, 0, region.first_segment, region.num_segments),
-    ht_ortho                (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "ht_ortho").c_str(),               &info->reader->context, 0, region.first_segment, region.num_segments),
-    ht_water_surf           (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "ht_water_surf").c_str(),          &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_azimuth         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "segment_azimuth").c_str(),        &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_quality         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "segment_quality").c_str(),        &info->reader->context, H5Coro::ALL_ROWS, region.first_segment, region.num_segments),
-    segment_slope_trk_bdy   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "segment_slope_trk_bdy").c_str(),  &info->reader->context, 0, region.first_segment, region.num_segments),
-    water_depth             (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "water_depth").c_str(),            &info->reader->context, 0, region.first_segment, region.num_segments)
+    sc_orient               (info->reader->context,                                "/orbit_info/sc_orient"),
+    delta_time              (info->reader->context, FString("%s/%s", info->prefix, "delta_time").c_str(),            0, region.first_segment, region.num_segments),
+    segment_id_beg          (info->reader->context, FString("%s/%s", info->prefix, "segment_id_beg").c_str(),        0, region.first_segment, region.num_segments),
+    snow_ice_atl09          (info->reader->context, FString("%s/%s", info->prefix, "snow_ice_atl09").c_str(),        0, region.first_segment, region.num_segments),
+    cloud_flag_asr_atl09    (info->reader->context, FString("%s/%s", info->prefix, "cloud_flag_asr_atl09").c_str(),  0, region.first_segment, region.num_segments),
+    ht_ortho                (info->reader->context, FString("%s/%s", info->prefix, "ht_ortho").c_str(),              0, region.first_segment, region.num_segments),
+    ht_water_surf           (info->reader->context, FString("%s/%s", info->prefix, "ht_water_surf").c_str(),         0, region.first_segment, region.num_segments),
+    segment_azimuth         (info->reader->context, FString("%s/%s", info->prefix, "segment_azimuth").c_str(),       0, region.first_segment, region.num_segments),
+    segment_quality         (info->reader->context, FString("%s/%s", info->prefix, "segment_quality").c_str(),       H5Coro::ALL_ROWS, region.first_segment, region.num_segments),
+    segment_slope_trk_bdy   (info->reader->context, FString("%s/%s", info->prefix, "segment_slope_trk_bdy").c_str(), 0, region.first_segment, region.num_segments),
+    water_depth             (info->reader->context, FString("%s/%s", info->prefix, "water_depth").c_str(),           0, region.first_segment, region.num_segments)
 {
     AncillaryFields::list_t* anc_fields = info->reader->parms->atl13_fields;
 
@@ -420,7 +426,7 @@ Atl13Reader::Atl13Data::Atl13Data (const info_t* info, const Region& region):
         {
             const char* field_name = (*anc_fields)[i].field.c_str();
             FString dataset_name("%s/%s", info->prefix, field_name);
-            H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, dataset_name.c_str(), &info->reader->context, 0, region.first_segment, region.num_segments);
+            H5DArray* array = new H5DArray(info->reader->context, dataset_name.c_str(), 0, region.first_segment, region.num_segments);
             const bool status = anc_data.add(field_name, array);
             if(!status) delete array;
             assert(status); // the dictionary add should never fail

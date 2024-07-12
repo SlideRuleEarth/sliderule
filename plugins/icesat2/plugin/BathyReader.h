@@ -48,7 +48,7 @@
 #include "GeoLib.h"
 #include "Icesat2Parms.h"
 #include "BathyFields.h"
-#include "BathyOpenOceans.h"
+#include "BathyOceanEyes.h"
 
 using BathyFields::classifier_t;
 
@@ -99,7 +99,7 @@ class BathyReader: public LuaObject
             Asset*              asset09;                        // asset for ATL09 resources
             Icesat2Parms*       icesat2;                        // global icesat2 parameters
             GeoParms*           hls;                            // geo-package parms for sampling HLS for NDWI
-            BathyOpenOceans*    openoceans;                     // OpenOceans classifier
+            BathyOceanEyes*    openoceans;                     // OpenOceans classifier
             const char*         resource09;                     // ATL09 granule
             double              max_dem_delta;                  // initial filter of heights against DEM (For removing things like clouds)
             int                 ph_in_extent;                   // number of photons in each extent
@@ -243,7 +243,7 @@ class BathyReader: public LuaObject
         {
             public:
 
-                explicit AncillaryData  (const Asset* asset, const char* resource, H5Coro::Context* context, int timeout);
+                explicit AncillaryData  (H5Coro::Context* context, int timeout);
                 ~AncillaryData          (void) = default;
                 const char* tojson      (void) const;
 
@@ -277,7 +277,7 @@ class BathyReader: public LuaObject
         {
             public:
 
-                explicit OrbitInfo  (const Asset* asset, const char* resource, H5Coro::Context* context, int timeout);
+                explicit OrbitInfo  (H5Coro::Context* context, int timeout);
                 ~OrbitInfo          (void) = default;
                 const char* tojson  (void) const;
 
@@ -308,8 +308,8 @@ class BathyReader: public LuaObject
         int                 readTimeoutMs;
         stats_t             stats;
 
-        H5Coro::Context   context; // for ATL03 file
-        H5Coro::Context   context09; // for ATL08 file
+        H5Coro::Context*    context; // for ATL03 file
+        H5Coro::Context*    context09; // for ATL09 file
 
         TimeLib::date_t     granuleDate;
 

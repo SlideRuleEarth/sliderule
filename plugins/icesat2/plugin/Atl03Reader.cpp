@@ -132,22 +132,21 @@ void Atl03Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator):
+Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    read_timeout_ms(_parms->read_timeout * 1000)
+    read_timeout_ms(_parms->read_timeout * 1000),
+    parms(_parms),
+    asset(_asset),
+    context(NULL),
+    context08(NULL)
 {
     assert(_asset);
-    assert(_resource);
+    assert(resource);
     assert(outq_name);
     assert(_parms);
 
     /* Initialize Thread Count */
     threadCount = 0;
-
-    /* Save Info */
-    asset = _asset;
-    resource = StringLib::duplicate(_resource);
-    parms = _parms;
 
     /* Set Signal Confidence Index */
     if(parms->surface_type == Icesat2Parms::SRT_DYNAMIC)
@@ -160,7 +159,7 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     }
 
     /* Generate ATL08 Resource Name */
-    resource08 = StringLib::duplicate(resource);
+    char* resource08 = StringLib::duplicate(resource);
     resource08[4] = '8';
 
     /* Create Publisher */
@@ -185,6 +184,10 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
     /* Read Global Resource Information */
     try
     {
+        /* Create H5Coro Contexts */
+        context = new H5Coro::Context(asset, resource);
+        context08 = new H5Coro::Context(asset, resource08);
+
         /* Parse Globals (throws) */
         parseResource(resource, start_rgt, start_cycle, start_region);
 
@@ -213,7 +216,7 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
         }
     }
     catch(const RunTimeException& e)
-    {
+    {        
         /* Generate Exception Record */
         if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "Failure on resource %s: %s", resource, e.what());
         else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "Failure on resource %s: %s", resource, e.what());
@@ -222,6 +225,9 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* _resource, co
         if(sendTerminator) outQ->postCopy("", 0, SYS_TIMEOUT);
         signalComplete();
     }
+
+    /* Clean Up */
+    delete [] resource08;
 }
 
 /*----------------------------------------------------------------------------
@@ -238,11 +244,10 @@ Atl03Reader::~Atl03Reader (void)
 
     delete outQ;
 
+    delete context;
+    delete context08;
+
     parms->releaseLuaObject();
-
-    delete [] resource;
-    delete [] resource08;
-
     asset->releaseLuaObject();
 }
 
@@ -250,9 +255,9 @@ Atl03Reader::~Atl03Reader (void)
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Region::Region (const info_t* info):
-    segment_lat    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context),
-    segment_lon    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context),
-    segment_ph_cnt (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(), &info->reader->context),
+    segment_lat    (info->reader->context, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str()),
+    segment_lon    (info->reader->context, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str()),
+    segment_ph_cnt (info->reader->context, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str()),
     inclusion_mask {NULL},
     inclusion_ptr  {NULL}
 {
@@ -477,22 +482,22 @@ void Atl03Reader::Region::rasterregion (const info_t* info)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
-    sc_orient           (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",                &info->reader->context),
-    velocity_sc         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),     &info->reader->context, H5Coro::ALL_COLS, region.first_segment, region.num_segments),
-    segment_delta_time  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_id          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_id").c_str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_dist_x      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),  &info->reader->context, 0, region.first_segment, region.num_segments),
-    solar_elevation     (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/solar_elevation").c_str(), &info->reader->context, 0, region.first_segment, region.num_segments),
-    dist_ph_along       (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/dist_ph_along").c_str(),       &info->reader->context, 0, region.first_photon,  region.num_photons),
-    dist_ph_across      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/dist_ph_across").c_str(),      &info->reader->context, 0, region.first_photon,  region.num_photons),
-    h_ph                (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/h_ph").c_str(),                &info->reader->context, 0, region.first_photon,  region.num_photons),
-    signal_conf_ph      (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),      &info->reader->context, info->reader->signalConfColIndex, region.first_photon,  region.num_photons),
-    quality_ph          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/quality_ph").c_str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
-    lat_ph              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/lat_ph").c_str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
-    lon_ph              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/lon_ph").c_str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
-    delta_time          (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/delta_time").c_str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
-    bckgrd_delta_time   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "bckgrd_atlas/delta_time").c_str(),     &info->reader->context),
-    bckgrd_rate         (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "bckgrd_atlas/bckgrd_rate").c_str(),    &info->reader->context),
+    sc_orient           (info->reader->context,                                "/orbit_info/sc_orient"),
+    velocity_sc         (info->reader->context, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),      H5Coro::ALL_COLS, region.first_segment, region.num_segments),
+    segment_delta_time  (info->reader->context, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),       0, region.first_segment, region.num_segments),
+    segment_id          (info->reader->context, FString("%s/%s", info->prefix, "geolocation/segment_id").c_str(),       0, region.first_segment, region.num_segments),
+    segment_dist_x      (info->reader->context, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),   0, region.first_segment, region.num_segments),
+    solar_elevation     (info->reader->context, FString("%s/%s", info->prefix, "geolocation/solar_elevation").c_str(),  0, region.first_segment, region.num_segments),
+    dist_ph_along       (info->reader->context, FString("%s/%s", info->prefix, "heights/dist_ph_along").c_str(),        0, region.first_photon,  region.num_photons),
+    dist_ph_across      (info->reader->context, FString("%s/%s", info->prefix, "heights/dist_ph_across").c_str(),       0, region.first_photon,  region.num_photons),
+    h_ph                (info->reader->context, FString("%s/%s", info->prefix, "heights/h_ph").c_str(),                 0, region.first_photon,  region.num_photons),
+    signal_conf_ph      (info->reader->context, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),       info->reader->signalConfColIndex, region.first_photon,  region.num_photons),
+    quality_ph          (info->reader->context, FString("%s/%s", info->prefix, "heights/quality_ph").c_str(),           0, region.first_photon,  region.num_photons),
+    lat_ph              (info->reader->context, FString("%s/%s", info->prefix, "heights/lat_ph").c_str(),               0, region.first_photon,  region.num_photons),
+    lon_ph              (info->reader->context, FString("%s/%s", info->prefix, "heights/lon_ph").c_str(),               0, region.first_photon,  region.num_photons),
+    delta_time          (info->reader->context, FString("%s/%s", info->prefix, "heights/delta_time").c_str(),           0, region.first_photon,  region.num_photons),
+    bckgrd_delta_time   (info->reader->context, FString("%s/%s", info->prefix, "bckgrd_atlas/delta_time").c_str()),
+    bckgrd_rate         (info->reader->context, FString("%s/%s", info->prefix, "bckgrd_atlas/bckgrd_rate").c_str()),
     anc_geo_data        (NULL),
     anc_ph_data         (NULL)
 {
@@ -515,7 +520,7 @@ Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
                 group_name = "geophys_corr";
             }
             FString dataset_name("%s/%s", group_name, field_name);
-            H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, dataset_name.c_str()).c_str(), &info->reader->context, 0, region.first_segment, region.num_segments);
+            H5DArray* array = new H5DArray(info->reader->context, FString("%s/%s", info->prefix, dataset_name.c_str()).c_str(), 0, region.first_segment, region.num_segments);
             const bool status = anc_geo_data->add(field_name, array);
             if(!status) delete array;
             assert(status); // the dictionary add should never fail
@@ -530,7 +535,7 @@ Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
         {
             const char* field_name = (*photon_fields)[i].field.c_str();
             FString dataset_name("heights/%s", field_name);
-            H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, dataset_name.c_str()).c_str(), &info->reader->context, 0, region.first_photon,  region.num_photons);
+            H5DArray* array = new H5DArray(info->reader->context, FString("%s/%s", info->prefix, dataset_name.c_str()).c_str(), 0, region.first_photon,  region.num_photons);
             const bool status = anc_ph_data->add(field_name, array);
             if(!status) delete array;
             assert(status); // the dictionary add should never fail
@@ -601,13 +606,13 @@ Atl03Reader::Atl08Class::Atl08Class (const info_t* info):
     relief              {NULL},
     landcover           {NULL},
     snowcover           {NULL},
-    atl08_segment_id    (enabled ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "signal_photons/ph_segment_id").c_str(),       &info->reader->context08),
-    atl08_pc_indx       (enabled ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "signal_photons/classed_pc_indx").c_str(),     &info->reader->context08),
-    atl08_pc_flag       (enabled ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "signal_photons/classed_pc_flag").c_str(),     &info->reader->context08),
-    atl08_ph_h          (phoreal ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "signal_photons/ph_h").c_str(),                &info->reader->context08),
-    segment_id_beg      ((phoreal || ancillary) ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "land_segments/segment_id_beg").c_str(),       &info->reader->context08),
-    segment_landcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "land_segments/segment_landcover").c_str(),    &info->reader->context08),
-    segment_snowcover   (phoreal ? info->reader->asset : NULL, info->reader->resource08, FString("%s/%s", info->prefix, "land_segments/segment_snowcover").c_str(),    &info->reader->context08),
+    atl08_segment_id    (enabled ? info->reader->context08 : NULL, FString("%s/%s", info->prefix, "signal_photons/ph_segment_id").c_str()),
+    atl08_pc_indx       (enabled ? info->reader->context08 : NULL, FString("%s/%s", info->prefix, "signal_photons/classed_pc_indx").c_str()),
+    atl08_pc_flag       (enabled ? info->reader->context08 : NULL, FString("%s/%s", info->prefix, "signal_photons/classed_pc_flag").c_str()),
+    atl08_ph_h          (phoreal ? info->reader->context08 : NULL, FString("%s/%s", info->prefix, "signal_photons/ph_h").c_str()),
+    segment_id_beg      ((phoreal || ancillary) ? info->reader->context08 : NULL, FString("%s/%s", info->prefix, "land_segments/segment_id_beg").c_str()),
+    segment_landcover   (phoreal ? info->reader->context08 : NULL, FString("%s/%s", info->prefix, "land_segments/segment_landcover").c_str()),
+    segment_snowcover   (phoreal ? info->reader->context08 : NULL, FString("%s/%s", info->prefix, "land_segments/segment_snowcover").c_str()),
     anc_seg_data        (NULL),
     anc_seg_indices     (NULL)
 {
@@ -624,7 +629,7 @@ Atl03Reader::Atl08Class::Atl08Class (const info_t* info):
             {
                 const char* field_name = (*atl08_fields)[i].field.c_str();
                 FString dataset_name("%s/land_segments/%s", info->prefix, field_name);
-                H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource08, dataset_name.c_str(), &info->reader->context08);
+                H5DArray* array = new H5DArray(info->reader->context08, dataset_name.c_str());
                 const bool status = anc_seg_data->add(field_name, array);
                 if(!status) delete array;
                 assert(status); // the dictionary add should never fail
@@ -1287,7 +1292,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                 /* Check Current Segment */
                 if(current_segment >= atl03.segment_dist_x.size)
                 {
-                    mlog(ERROR, "Photons with no segments are detected is %s/%d     %d %ld %ld!", info->reader->resource, info->track, current_segment, atl03.segment_dist_x.size, region.num_segments);
+                    mlog(ERROR, "Photons with no segments are detected is %s/%d     %d %ld %ld!", info->reader->context->name, info->track, current_segment, atl03.segment_dist_x.size, region.num_segments);
                     state.track_complete = true;
                     break;
                 }
@@ -1543,7 +1548,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                 }
                 catch(const RunTimeException& e)
                 {
-                    alert(e.level(), e.code(), reader->outQ, &reader->active, "Error generating results for resource %s track %d.%d: %s", info->reader->resource, info->track, info->pair, e.what());
+                    alert(e.level(), e.code(), reader->outQ, &reader->active, "Error generating results for resource %s track %d.%d: %s", info->reader->context->name, info->track, info->pair, e.what());
                 }
 
                 /* Clean Up Records */
@@ -1563,7 +1568,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d.%d: %s", info->reader->resource, info->track, info->pair, e.what());
+        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d.%d: %s", info->reader->context->name, info->track, info->pair, e.what());
     }
 
     /* Handle Global Reader Updates */
@@ -1580,7 +1585,7 @@ void* Atl03Reader::subsettingThread (void* parm)
         reader->numComplete++;
         if(reader->numComplete == reader->threadCount)
         {
-            mlog(INFO, "Completed processing resource %s track %d.%d (f: %u, s: %u, d: %u)", info->reader->resource, info->track, info->pair, local_stats.extents_filtered, local_stats.extents_sent, local_stats.extents_dropped);
+            mlog(INFO, "Completed processing resource %s track %d.%d (f: %u, s: %u, d: %u)", info->reader->context->name, info->track, info->pair, local_stats.extents_filtered, local_stats.extents_sent, local_stats.extents_dropped);
 
             /* Indicate End of Data */
             if(reader->sendTerminator)
@@ -1591,12 +1596,12 @@ void* Atl03Reader::subsettingThread (void* parm)
                     status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
                     if(status < 0)
                     {
-                        mlog(CRITICAL, "Failed (%d) to post terminator for %s track %d.%d", status, info->reader->resource, info->track, info->pair);
+                        mlog(CRITICAL, "Failed (%d) to post terminator for %s track %d.%d", status, info->reader->context->name, info->track, info->pair);
                         break;
                     }
                     else if(status == MsgQ::STATE_TIMEOUT)
                     {
-                        mlog(INFO, "Timeout posting terminator for %s track %d.%d ... trying again", info->reader->resource, info->track, info->pair);
+                        mlog(INFO, "Timeout posting terminator for %s track %d.%d ... trying again", info->reader->context->name, info->track, info->pair);
                     }
                 }
             }

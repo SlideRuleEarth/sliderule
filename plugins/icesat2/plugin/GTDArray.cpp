@@ -51,9 +51,9 @@ const long GTDArray::DefaultNumRows[Icesat2Parms::NUM_PAIR_TRACKS] = {H5Coro::AL
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GTDArray::GTDArray(const Asset* asset, const char* resource, int track, const char* gt_dataset, H5Coro::Context* context, long col, const long* prt_startrow, const long* prt_numrows):
-    gt{ H5DArray(asset, resource, FString("/gt%dl/%s", track, gt_dataset).c_str(), context, col, prt_startrow[Icesat2Parms::RPT_L], prt_numrows[Icesat2Parms::RPT_L]),
-        H5DArray(asset, resource, FString("/gt%dr/%s", track, gt_dataset).c_str(), context, col, prt_startrow[Icesat2Parms::RPT_R], prt_numrows[Icesat2Parms::RPT_R]) }
+GTDArray::GTDArray(H5Coro::Context* context, int track, const char* gt_dataset, long col, const long* prt_startrow, const long* prt_numrows):
+    gt{ H5DArray(context, FString("/gt%dl/%s", track, gt_dataset).c_str(), col, prt_startrow[Icesat2Parms::RPT_L], prt_numrows[Icesat2Parms::RPT_L]),
+        H5DArray(context, FString("/gt%dr/%s", track, gt_dataset).c_str(), col, prt_startrow[Icesat2Parms::RPT_R], prt_numrows[Icesat2Parms::RPT_R]) }
 {
 }
 

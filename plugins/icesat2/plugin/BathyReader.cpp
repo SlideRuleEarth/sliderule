@@ -41,7 +41,7 @@
 #include "MsgQ.h"
 #include "H5Coro.h"
 #include "BathyReader.h"
-#include "BathyOpenOceans.h"
+#include "BathyOceanEyes.h"
 #include "GeoLib.h"
 #include "RasterObject.h"
 #include "BathyFields.h"
@@ -179,9 +179,9 @@ int BathyReader::luaCreate (lua_State* L)
             if(lua_istable(L, -1)) parms->hls = new GeoParms(L, -1);
             lua_pop(L, 1);
 
-            /* OpenOceans parameters (BathyOpenOceans) */
-            lua_getfield(L, bathy_parms_index, BathyOpenOceans::OPENOCEANS_PARMS);
-            parms->openoceans = new BathyOpenOceans(L, -1);
+            /* OpenOceans parameters (BathyOceanEyes) */
+            lua_getfield(L, bathy_parms_index, BathyOceanEyes::OPENOCEANS_PARMS);
+            parms->openoceans = new BathyOceanEyes(L, -1);
             lua_pop(L, 1);
 
             /* maximum DEM delta */
@@ -262,6 +262,8 @@ BathyReader::BathyReader (lua_State* L, const parms_t* _parms, const char* _reso
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
     readTimeoutMs(parms->icesat2->read_timeout * 1000),
+    context(NULL),
+    context09(NULL),
     bathyMask(NULL)
 {
     assert(_parms);
@@ -306,7 +308,7 @@ BathyReader::BathyReader (lua_State* L, const parms_t* _parms, const char* _reso
             char err_buf[256];
             throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create ancillary json file %s: %s", ancillary_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
         }
-        const AncillaryData ancillary_data(parms->asset, resource, &context, readTimeoutMs);
+        const AncillaryData ancillary_data(context, readTimeoutMs);
         const char* ancillary_json = ancillary_data.tojson();
         fprintf(ancillary_file, "%s", ancillary_json);
         fclose(ancillary_file);
@@ -320,7 +322,7 @@ BathyReader::BathyReader (lua_State* L, const parms_t* _parms, const char* _reso
             char err_buf[256];
             throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create orbit json file %s: %s", orbit_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
         }
-        const OrbitInfo orbit_info(parms->asset, resource, &context, readTimeoutMs);
+        const OrbitInfo orbit_info(context, readTimeoutMs);
         const char* orbit_json = orbit_info.tojson();
         fprintf(orbit_file, "%s", orbit_json);
         fclose(orbit_file);
@@ -341,6 +343,10 @@ BathyReader::BathyReader (lua_State* L, const parms_t* _parms, const char* _reso
     /* Read Global Resource Information */
     try
     {
+        /* Create H5Coro Contexts */
+        context = new H5Coro::Context(parms->asset, resource);
+        context09 = new H5Coro::Context(parms->asset09, parms->resource09);
+
         /* Parse Globals (throws) */
         parseResource(resource, granuleDate, startRgt, startCycle, startRegion, sdpVersion);
 
@@ -393,6 +399,9 @@ BathyReader::~BathyReader (void)
         delete readerPid[pid];
     }
 
+    delete context;
+    delete context09;
+
     delete [] sharedDirectory;
     delete bathyMask;
     delete outQ;
@@ -404,9 +413,9 @@ BathyReader::~BathyReader (void)
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 BathyReader::Region::Region (const info_t* info):
-    segment_lat    (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str(), &info->reader->context),
-    segment_lon    (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str(), &info->reader->context),
-    segment_ph_cnt (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str(), &info->reader->context),
+    segment_lat    (info->reader->context, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str()),
+    segment_lon    (info->reader->context, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str()),
+    segment_ph_cnt (info->reader->context, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str()),
     inclusion_mask {NULL},
     inclusion_ptr  {NULL}
 {
@@ -628,29 +637,29 @@ void BathyReader::Region::rasterregion (const info_t* info)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 BathyReader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
-    sc_orient           (info->parms->asset, info->reader->resource,                                "/orbit_info/sc_orient",                &info->reader->context),
-    velocity_sc         (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),     &info->reader->context, H5Coro::ALL_COLS, region.first_segment, region.num_segments),
-    segment_delta_time  (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),      &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_dist_x      (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),  &info->reader->context, 0, region.first_segment, region.num_segments),
-    solar_elevation     (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/solar_elevation").c_str(), &info->reader->context, 0, region.first_segment, region.num_segments),
-    sigma_h             (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/sigma_h").c_str(),         &info->reader->context, 0, region.first_segment, region.num_segments),
-    sigma_along         (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/sigma_along").c_str(),     &info->reader->context, 0, region.first_segment, region.num_segments),
-    sigma_across        (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/sigma_across").c_str(),    &info->reader->context, 0, region.first_segment, region.num_segments),
-    ref_azimuth         (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/ref_azimuth").c_str(),     &info->reader->context, 0, region.first_segment, region.num_segments),
-    ref_elev            (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "geolocation/ref_elev").c_str(),        &info->reader->context, 0, region.first_segment, region.num_segments),
-    geoid               (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "geophys_corr/geoid").c_str(),          &info->reader->context, 0, region.first_segment, region.num_segments),
-    dem_h               (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "geophys_corr/dem_h").c_str(),          &info->reader->context, 0, region.first_segment, region.num_segments),
-    dist_ph_along       (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/dist_ph_along").c_str(),       &info->reader->context, 0, region.first_photon,  region.num_photons),
-    dist_ph_across      (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/dist_ph_across").c_str(),      &info->reader->context, 0, region.first_photon,  region.num_photons),
-    h_ph                (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/h_ph").c_str(),                &info->reader->context, 0, region.first_photon,  region.num_photons),
-    signal_conf_ph      (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),      &info->reader->context, info->reader->signalConfColIndex, region.first_photon,  region.num_photons),
-    quality_ph          (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/quality_ph").c_str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
-    weight_ph           (info->reader->sdpVersion >= 6 ? info->parms->asset : NULL, info->reader->resource, FString("%s/%s", info->prefix, "heights/weight_ph").c_str(), &info->reader->context, 0, region.first_photon,  region.num_photons),
-    lat_ph              (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/lat_ph").c_str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
-    lon_ph              (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/lon_ph").c_str(),              &info->reader->context, 0, region.first_photon,  region.num_photons),
-    delta_time          (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "heights/delta_time").c_str(),          &info->reader->context, 0, region.first_photon,  region.num_photons),
-    bckgrd_delta_time   (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "bckgrd_atlas/delta_time").c_str(),     &info->reader->context),
-    bckgrd_rate         (info->parms->asset, info->reader->resource, FString("%s/%s", info->prefix, "bckgrd_atlas/bckgrd_rate").c_str(),    &info->reader->context)
+    sc_orient           (info->reader->context,                                "/orbit_info/sc_orient"),
+    velocity_sc         (info->reader->context, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),     H5Coro::ALL_COLS, region.first_segment, region.num_segments),
+    segment_delta_time  (info->reader->context, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),      0, region.first_segment, region.num_segments),
+    segment_dist_x      (info->reader->context, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),  0, region.first_segment, region.num_segments),
+    solar_elevation     (info->reader->context, FString("%s/%s", info->prefix, "geolocation/solar_elevation").c_str(), 0, region.first_segment, region.num_segments),
+    sigma_h             (info->reader->context, FString("%s/%s", info->prefix, "geolocation/sigma_h").c_str(),         0, region.first_segment, region.num_segments),
+    sigma_along         (info->reader->context, FString("%s/%s", info->prefix, "geolocation/sigma_along").c_str(),     0, region.first_segment, region.num_segments),
+    sigma_across        (info->reader->context, FString("%s/%s", info->prefix, "geolocation/sigma_across").c_str(),    0, region.first_segment, region.num_segments),
+    ref_azimuth         (info->reader->context, FString("%s/%s", info->prefix, "geolocation/ref_azimuth").c_str(),     0, region.first_segment, region.num_segments),
+    ref_elev            (info->reader->context, FString("%s/%s", info->prefix, "geolocation/ref_elev").c_str(),        0, region.first_segment, region.num_segments),
+    geoid               (info->reader->context, FString("%s/%s", info->prefix, "geophys_corr/geoid").c_str(),          0, region.first_segment, region.num_segments),
+    dem_h               (info->reader->context, FString("%s/%s", info->prefix, "geophys_corr/dem_h").c_str(),          0, region.first_segment, region.num_segments),
+    dist_ph_along       (info->reader->context, FString("%s/%s", info->prefix, "heights/dist_ph_along").c_str(),       0, region.first_photon,  region.num_photons),
+    dist_ph_across      (info->reader->context, FString("%s/%s", info->prefix, "heights/dist_ph_across").c_str(),      0, region.first_photon,  region.num_photons),
+    h_ph                (info->reader->context, FString("%s/%s", info->prefix, "heights/h_ph").c_str(),                0, region.first_photon,  region.num_photons),
+    signal_conf_ph      (info->reader->context, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),      info->reader->signalConfColIndex, region.first_photon,  region.num_photons),
+    quality_ph          (info->reader->context, FString("%s/%s", info->prefix, "heights/quality_ph").c_str(),          0, region.first_photon,  region.num_photons),
+    weight_ph           (info->reader->sdpVersion >= 6 ? info->reader->context : NULL, FString("%s/%s", info->prefix, "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
+    lat_ph              (info->reader->context, FString("%s/%s", info->prefix, "heights/lat_ph").c_str(),              0, region.first_photon,  region.num_photons),
+    lon_ph              (info->reader->context, FString("%s/%s", info->prefix, "heights/lon_ph").c_str(),              0, region.first_photon,  region.num_photons),
+    delta_time          (info->reader->context, FString("%s/%s", info->prefix, "heights/delta_time").c_str(),          0, region.first_photon,  region.num_photons),
+    bckgrd_delta_time   (info->reader->context, FString("%s/%s", info->prefix, "bckgrd_atlas/delta_time").c_str()),
+    bckgrd_rate         (info->reader->context, FString("%s/%s", info->prefix, "bckgrd_atlas/bckgrd_rate").c_str())
 {
     sc_orient.join(info->reader->readTimeoutMs, true);
     velocity_sc.join(info->reader->readTimeoutMs, true);
@@ -682,9 +691,9 @@ BathyReader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
  *----------------------------------------------------------------------------*/
 BathyReader::Atl09Class::Atl09Class (const info_t* info):
     valid       (false),
-    met_u10m    (info->parms->asset09, info->parms->resource09, FString("profile_%d/low_rate/met_u10m", info->track).c_str(), &info->reader->context09),
-    met_v10m    (info->parms->asset09, info->parms->resource09, FString("profile_%d/low_rate/met_v10m", info->track).c_str(), &info->reader->context09),
-    delta_time  (info->parms->asset09, info->parms->resource09, FString("profile_%d/low_rate/delta_time", info->track).c_str(), &info->reader->context09)
+    met_u10m    (info->reader->context09, FString("profile_%d/low_rate/met_u10m", info->track).c_str()),
+    met_v10m    (info->reader->context09, FString("profile_%d/low_rate/met_v10m", info->track).c_str()),
+    delta_time  (info->reader->context09, FString("profile_%d/low_rate/delta_time", info->track).c_str())
 {
     try
     {
@@ -702,30 +711,30 @@ BathyReader::Atl09Class::Atl09Class (const info_t* info):
 /*----------------------------------------------------------------------------
  * AncillaryData::Constructor
  *----------------------------------------------------------------------------*/
-BathyReader::AncillaryData::AncillaryData (const Asset* asset, const char* resource, H5Coro::Context* context, int timeout):
-    atlas_sdp_gps_epoch (asset, resource, "/ancillary_data/atlas_sdp_gps_epoch",    context),
-    data_end_utc        (asset, resource, "/ancillary_data/data_end_utc",           context),
-    data_start_utc      (asset, resource, "/ancillary_data/data_start_utc",         context),
-    end_cycle           (asset, resource, "/ancillary_data/end_cycle",              context),
-    end_delta_time      (asset, resource, "/ancillary_data/end_delta_time",         context),
-    end_geoseg          (asset, resource, "/ancillary_data/end_geoseg",             context),
-    end_gpssow          (asset, resource, "/ancillary_data/end_gpssow",             context),
-    end_gpsweek         (asset, resource, "/ancillary_data/end_gpsweek",            context),
-    end_orbit           (asset, resource, "/ancillary_data/end_orbit",              context),
-    end_region          (asset, resource, "/ancillary_data/end_region",             context),
-    end_rgt             (asset, resource, "/ancillary_data/end_rgt",                context),
-    release             (asset, resource, "/ancillary_data/release",                context),
-    granule_end_utc     (asset, resource, "/ancillary_data/granule_end_utc",        context),
-    granule_start_utc   (asset, resource, "/ancillary_data/granule_start_utc",      context),
-    start_cycle         (asset, resource, "/ancillary_data/start_cycle",            context),
-    start_delta_time    (asset, resource, "/ancillary_data/start_delta_time",       context),
-    start_geoseg        (asset, resource, "/ancillary_data/start_geoseg",           context),
-    start_gpssow        (asset, resource, "/ancillary_data/start_gpssow",           context),
-    start_gpsweek       (asset, resource, "/ancillary_data/start_gpsweek",          context),
-    start_orbit         (asset, resource, "/ancillary_data/start_orbit",            context),
-    start_region        (asset, resource, "/ancillary_data/start_region",           context),
-    start_rgt           (asset, resource, "/ancillary_data/start_rgt",              context),
-    version             (asset, resource, "/ancillary_data/version",                context)
+BathyReader::AncillaryData::AncillaryData (H5Coro::Context* context, int timeout):
+    atlas_sdp_gps_epoch (context, "/ancillary_data/atlas_sdp_gps_epoch"),
+    data_end_utc        (context, "/ancillary_data/data_end_utc"),
+    data_start_utc      (context, "/ancillary_data/data_start_utc"),
+    end_cycle           (context, "/ancillary_data/end_cycle"),
+    end_delta_time      (context, "/ancillary_data/end_delta_time"),
+    end_geoseg          (context, "/ancillary_data/end_geoseg"),
+    end_gpssow          (context, "/ancillary_data/end_gpssow"),
+    end_gpsweek         (context, "/ancillary_data/end_gpsweek"),
+    end_orbit           (context, "/ancillary_data/end_orbit"),
+    end_region          (context, "/ancillary_data/end_region"),
+    end_rgt             (context, "/ancillary_data/end_rgt"),
+    release             (context, "/ancillary_data/release"),
+    granule_end_utc     (context, "/ancillary_data/granule_end_utc"),
+    granule_start_utc   (context, "/ancillary_data/granule_start_utc"),
+    start_cycle         (context, "/ancillary_data/start_cycle"),
+    start_delta_time    (context, "/ancillary_data/start_delta_time"),
+    start_geoseg        (context, "/ancillary_data/start_geoseg"),
+    start_gpssow        (context, "/ancillary_data/start_gpssow"),
+    start_gpsweek       (context, "/ancillary_data/start_gpsweek"),
+    start_orbit         (context, "/ancillary_data/start_orbit"),
+    start_region        (context, "/ancillary_data/start_region"),
+    start_rgt           (context, "/ancillary_data/start_rgt"),
+    version             (context, "/ancillary_data/version")
 {
     atlas_sdp_gps_epoch.join(timeout, true);
     data_end_utc.join(timeout, true);
@@ -812,14 +821,14 @@ const char* BathyReader::AncillaryData::tojson (void) const
 /*----------------------------------------------------------------------------
  * OrbitInfo::Constructor
  *----------------------------------------------------------------------------*/
-BathyReader::OrbitInfo::OrbitInfo (const Asset* asset, const char* resource, H5Coro::Context* context, int timeout):
-    crossing_time  (asset, resource, "/orbit_info/crossing_time",  context),
-    cycle_number   (asset, resource, "/orbit_info/cycle_number",   context),
-    lan            (asset, resource, "/orbit_info/lan",            context),
-    orbit_number   (asset, resource, "/orbit_info/orbit_number",   context),
-    rgt            (asset, resource, "/orbit_info/rgt",            context),
-    sc_orient      (asset, resource, "/orbit_info/sc_orient",      context),
-    sc_orient_time (asset, resource, "/orbit_info/sc_orient_time", context)
+BathyReader::OrbitInfo::OrbitInfo (H5Coro::Context* context, int timeout):
+    crossing_time  (context, "/orbit_info/crossing_time"),
+    cycle_number   (context, "/orbit_info/cycle_number"),
+    lan            (context, "/orbit_info/lan"),
+    orbit_number   (context, "/orbit_info/orbit_number"),
+    rgt            (context, "/orbit_info/rgt"),
+    sc_orient      (context, "/orbit_info/sc_orient"),
+    sc_orient_time (context, "/orbit_info/sc_orient_time")
 {
     crossing_time.join(timeout, true);
     cycle_number.join(timeout, true);

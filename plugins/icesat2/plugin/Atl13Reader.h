@@ -198,7 +198,7 @@ class Atl13Reader: public LuaObject
         Icesat2Parms*       parms;
         stats_t             stats;
 
-        H5Coro::Context   context; // for ATL13 file
+        H5Coro::Context*    context; // for ATL13 file
 
         int32_t             start_rgt;
         int32_t             start_cycle;

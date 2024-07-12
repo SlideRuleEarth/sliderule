@@ -140,7 +140,8 @@ void Atl06Reader::init (void)
  *----------------------------------------------------------------------------*/
 Atl06Reader::Atl06Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    read_timeout_ms(_parms->read_timeout * 1000)
+    read_timeout_ms(_parms->read_timeout * 1000),
+    context(NULL)
 {
     assert(_asset);
     assert(_resource);
@@ -177,6 +178,9 @@ Atl06Reader::Atl06Reader (lua_State* L, Asset* _asset, const char* _resource, co
     /* Read Global Resource Information */
     try
     {
+        /* Create H5Coro Context */
+        context = new H5Coro::Context(asset, resource);
+
         /* Parse Globals (throws) */
         parseResource(resource, start_rgt, start_cycle, start_region);
 
@@ -230,6 +234,8 @@ Atl06Reader::~Atl06Reader (void)
 
     delete outQ;
 
+    delete context;
+
     parms->releaseLuaObject();
 
     delete [] resource;
@@ -241,8 +247,8 @@ Atl06Reader::~Atl06Reader (void)
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 Atl06Reader::Region::Region (const info_t* info):
-    latitude        (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/latitude").c_str(),  &info->reader->context),
-    longitude       (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/longitude").c_str(), &info->reader->context),
+    latitude        (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/latitude").c_str()),
+    longitude       (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/longitude").c_str()),
     inclusion_mask  {NULL},
     inclusion_ptr   {NULL}
 {
@@ -410,24 +416,24 @@ void Atl06Reader::Region::rasterregion (const info_t* info)
  * Atl06Data::Constructor
  *----------------------------------------------------------------------------*/
 Atl06Reader::Atl06Data::Atl06Data (const info_t* info, const Region& region):
-    sc_orient               (info->reader->asset, info->reader->resource,                                "/orbit_info/sc_orient",                                           &info->reader->context),
-    delta_time              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/delta_time").c_str(),                           &info->reader->context, 0, region.first_segment, region.num_segments),
-    h_li                    (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/h_li").c_str(),                                 &info->reader->context, 0, region.first_segment, region.num_segments),
-    h_li_sigma              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/h_li_sigma").c_str(),                           &info->reader->context, 0, region.first_segment, region.num_segments),
-    atl06_quality_summary   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/atl06_quality_summary").c_str(),                &info->reader->context, 0, region.first_segment, region.num_segments),
-    segment_id              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/segment_id").c_str(),                           &info->reader->context, 0, region.first_segment, region.num_segments),
-    sigma_geo_h             (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/sigma_geo_h").c_str(),                          &info->reader->context, 0, region.first_segment, region.num_segments),
-    x_atc                   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/ground_track/x_atc").c_str(),                   &info->reader->context, 0, region.first_segment, region.num_segments),
-    y_atc                   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/ground_track/y_atc").c_str(),                   &info->reader->context, 0, region.first_segment, region.num_segments),
-    seg_azimuth             (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/ground_track/seg_azimuth").c_str(),             &info->reader->context, 0, region.first_segment, region.num_segments),
-    dh_fit_dx               (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/fit_statistics/dh_fit_dx").c_str(),             &info->reader->context, 0, region.first_segment, region.num_segments),
-    h_robust_sprd           (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/fit_statistics/h_robust_sprd").c_str(),         &info->reader->context, 0, region.first_segment, region.num_segments),
-    n_fit_photons           (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/fit_statistics/n_fit_photons").c_str(),         &info->reader->context, 0, region.first_segment, region.num_segments),
-    w_surface_window_final  (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/fit_statistics/w_surface_window_final").c_str(),&info->reader->context, 0, region.first_segment, region.num_segments),
-    bsnow_conf              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/geophysical/bsnow_conf").c_str(),               &info->reader->context, 0, region.first_segment, region.num_segments),
-    bsnow_h                 (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/geophysical/bsnow_h").c_str(),                  &info->reader->context, 0, region.first_segment, region.num_segments),
-    r_eff                   (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/geophysical/r_eff").c_str(),                    &info->reader->context, 0, region.first_segment, region.num_segments),
-    tide_ocean              (info->reader->asset, info->reader->resource, FString("%s/%s", info->prefix, "land_ice_segments/geophysical/tide_ocean").c_str(),               &info->reader->context, 0, region.first_segment, region.num_segments)
+    sc_orient               (info->reader->context,                                "/orbit_info/sc_orient"),
+    delta_time              (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/delta_time").c_str(),                           0, region.first_segment, region.num_segments),
+    h_li                    (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/h_li").c_str(),                                 0, region.first_segment, region.num_segments),
+    h_li_sigma              (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/h_li_sigma").c_str(),                           0, region.first_segment, region.num_segments),
+    atl06_quality_summary   (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/atl06_quality_summary").c_str(),                0, region.first_segment, region.num_segments),
+    segment_id              (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/segment_id").c_str(),                           0, region.first_segment, region.num_segments),
+    sigma_geo_h             (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/sigma_geo_h").c_str(),                          0, region.first_segment, region.num_segments),
+    x_atc                   (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/ground_track/x_atc").c_str(),                   0, region.first_segment, region.num_segments),
+    y_atc                   (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/ground_track/y_atc").c_str(),                   0, region.first_segment, region.num_segments),
+    seg_azimuth             (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/ground_track/seg_azimuth").c_str(),             0, region.first_segment, region.num_segments),
+    dh_fit_dx               (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/fit_statistics/dh_fit_dx").c_str(),             0, region.first_segment, region.num_segments),
+    h_robust_sprd           (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/fit_statistics/h_robust_sprd").c_str(),         0, region.first_segment, region.num_segments),
+    n_fit_photons           (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/fit_statistics/n_fit_photons").c_str(),         0, region.first_segment, region.num_segments),
+    w_surface_window_final  (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/fit_statistics/w_surface_window_final").c_str(),0, region.first_segment, region.num_segments),
+    bsnow_conf              (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/geophysical/bsnow_conf").c_str(),               0, region.first_segment, region.num_segments),
+    bsnow_h                 (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/geophysical/bsnow_h").c_str(),                  0, region.first_segment, region.num_segments),
+    r_eff                   (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/geophysical/r_eff").c_str(),                    0, region.first_segment, region.num_segments),
+    tide_ocean              (info->reader->context, FString("%s/%s", info->prefix, "land_ice_segments/geophysical/tide_ocean").c_str(),               0, region.first_segment, region.num_segments)
 {
     AncillaryFields::list_t* anc_fields = info->reader->parms->atl06_fields;
 
@@ -438,7 +444,7 @@ Atl06Reader::Atl06Data::Atl06Data (const info_t* info, const Region& region):
         {
             const char* field_name = (*anc_fields)[i].field.c_str();
             FString dataset_name("%s/land_ice_segments/%s", info->prefix, field_name);
-            H5DArray* array = new H5DArray(info->reader->asset, info->reader->resource, dataset_name.c_str(), &info->reader->context, 0, region.first_segment, region.num_segments);
+            H5DArray* array = new H5DArray(info->reader->context, dataset_name.c_str(), 0, region.first_segment, region.num_segments);
             const bool status = anc_data.add(field_name, array);
             if(!status) delete array;
             assert(status); // the dictionary add should never fail

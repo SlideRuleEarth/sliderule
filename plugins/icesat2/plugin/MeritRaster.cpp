@@ -35,7 +35,7 @@
 
 #include "RasterSample.h"
 #include "core.h"
-#include "h5.h"
+#include "H5Coro.h"
 #include "geo.h"
 #include "MeritRaster.h"
 
@@ -171,8 +171,9 @@ uint32_t MeritRaster::getSamples (const MathLib::point_3d_t& point, int64_t gps,
         /* Read Dataset */
         if(!value_cached)
         {
-            H5Coro::Context context;
-            const H5Coro::info_t info = H5Coro::read(asset, RESOURCE_NAME, dataset.c_str(), RecordObject::DYNAMIC, H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS, &context, false, traceId);
+            H5Coro::Context context(asset, RESOURCE_NAME);
+            H5Coro::range_t slice[2] = {{0, H5Coro::EOR}, {0, H5Coro::EOR}};
+            const H5Coro::info_t info = H5Coro::read(&context, dataset.c_str(), RecordObject::DYNAMIC, slice, 2, false, traceId);
             assert(info.datasize == (X_MAX * Y_MAX * sizeof(int32_t)));
             int32_t* tile = reinterpret_cast<int32_t*>(info.data);
 

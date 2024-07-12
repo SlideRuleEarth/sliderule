@@ -300,9 +300,6 @@ class Atl03Reader: public LuaObject
         Mutex               threadMut;
         int                 threadCount;
         int                 numComplete;
-        Asset*              asset;
-        const char*         resource;
-        char*               resource08;
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
@@ -310,18 +307,19 @@ class Atl03Reader: public LuaObject
         int                 signalConfColIndex;
         stats_t             stats;
 
-        H5Coro::Context   context; // for ATL03 file
-        H5Coro::Context   context08; // for ATL08 file
+        Asset*              asset;
+        H5Coro::Context*    context; // for ATL03 file
+        H5Coro::Context*    context08; // for ATL08 file
 
-        uint16_t             start_rgt;
-        uint8_t              start_cycle;
-        uint8_t              start_region;
+        uint16_t            start_rgt;
+        uint8_t             start_cycle;
+        uint8_t             start_region;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Reader                 (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator=true);
+                            Atl03Reader                 (lua_State* L, Asset* _asset, const char* resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator=true);
                             ~Atl03Reader                (void) override;
 
         static void*        subsettingThread            (void* parm);

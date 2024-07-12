@@ -35,6 +35,8 @@
 
 #include "core.h"
 #include "icesat2.h"
+#include "H5Coro.h"
+#include "H5Array.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -236,18 +238,18 @@ void* Atl03Indexer::indexerThread (void* parm)
             if(resource_name)
             {
                 /* Create Context */
-                context = new H5Coro::Context;
+                context = new H5Coro::Context(indexer->asset, resource_name);
 
                 /* Read Data from HDF5 File */
-                H5Array<double>     sdp_gps_epoch       (indexer->asset, resource_name, "/ancillary_data/atlas_sdp_gps_epoch", context);
-                H5Array<double>     start_delta_time    (indexer->asset, resource_name, "/ancillary_data/start_delta_time", context);
-                H5Array<double>     end_delta_time      (indexer->asset, resource_name, "/ancillary_data/end_delta_time", context);
-                H5Array<int8_t>     cycle               (indexer->asset, resource_name, "/orbit_info/cycle_number", context);
-                H5Array<uint16_t>   rgt                 (indexer->asset, resource_name, "/orbit_info/rgt", context);
-                H5Array<double>     gt3r_lat            (indexer->asset, resource_name, "/gt3r/geolocation/reference_photon_lat", context, 0, 0, 1);
-                H5Array<double>     gt3r_lon            (indexer->asset, resource_name, "/gt3r/geolocation/reference_photon_lon", context, 0, 0, 1);
-                H5Array<double>     gt1l_lat            (indexer->asset, resource_name, "/gt1l/geolocation/reference_photon_lat", context);
-                H5Array<double>     gt1l_lon            (indexer->asset, resource_name, "/gt1l/geolocation/reference_photon_lon", context);
+                H5Array<double>     sdp_gps_epoch       (context, "/ancillary_data/atlas_sdp_gps_epoch");
+                H5Array<double>     start_delta_time    (context, "/ancillary_data/start_delta_time");
+                H5Array<double>     end_delta_time      (context, "/ancillary_data/end_delta_time");
+                H5Array<int8_t>     cycle               (context, "/orbit_info/cycle_number");
+                H5Array<uint16_t>   rgt                 (context, "/orbit_info/rgt");
+                H5Array<double>     gt3r_lat            (context, "/gt3r/geolocation/reference_photon_lat", 0, 0, 1);
+                H5Array<double>     gt3r_lon            (context, "/gt3r/geolocation/reference_photon_lon", 0, 0, 1);
+                H5Array<double>     gt1l_lat            (context, "/gt1l/geolocation/reference_photon_lat");
+                H5Array<double>     gt1l_lon            (context, "/gt1l/geolocation/reference_photon_lon");
 
                 /* Join Reads */
                 sdp_gps_epoch.join(H5_READ_TIMEOUT_MS, true);
@@ -287,8 +289,6 @@ void* Atl03Indexer::indexerThread (void* parm)
                 {
                     mlog(DEBUG, "Atl03 indexer failed to post to stream %s: %d", indexer->outQ->getName(), post_status);
                 }
-
-                /* Free Record */
             }
         }
     }

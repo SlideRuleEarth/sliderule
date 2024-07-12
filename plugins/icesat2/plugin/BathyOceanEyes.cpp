@@ -39,7 +39,7 @@
 
 #include "OsApi.h"
 #include "GeoLib.h"
-#include "BathyOpenOceans.h"
+#include "BathyOceanEyes.h"
 #include "BathyFields.h"
 
 using BathyFields::extent_t;
@@ -72,9 +72,9 @@ static const char*  OPENOCEANS_PARMS_MODEL_AS_POISSON       = "model_as_poisson"
 /*----------------------------------------------------------------------------
  * static data
  *----------------------------------------------------------------------------*/
-const char* BathyOpenOceans::OPENOCEANS_PARMS = "openoceans";
+const char* BathyOceanEyes::OPENOCEANS_PARMS = "openoceans";
 
-const char* BathyOpenOceans::TU_FILENAMES[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES] = {
+const char* BathyOceanEyes::TU_FILENAMES[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES] = {
    {"/data/ICESat2_0deg_500000_AGL_0.022_mrad_THU.csv",
     "/data/ICESat2_1deg_500000_AGL_0.022_mrad_THU.csv",
     "/data/ICESat2_2deg_500000_AGL_0.022_mrad_THU.csv",
@@ -89,22 +89,22 @@ const char* BathyOpenOceans::TU_FILENAMES[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTI
     "/data/ICESat2_5deg_500000_AGL_0.022_mrad_TVU.csv"}
 };
 
-const int BathyOpenOceans::POINTING_ANGLES[NUM_POINTING_ANGLES] = {0, 1, 2, 3, 4, 5};
+const int BathyOceanEyes::POINTING_ANGLES[NUM_POINTING_ANGLES] = {0, 1, 2, 3, 4, 5};
 
-const int BathyOpenOceans::WIND_SPEEDS[NUM_WIND_SPEEDS] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+const int BathyOceanEyes::WIND_SPEEDS[NUM_WIND_SPEEDS] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
-const double BathyOpenOceans::KD_RANGES[NUM_KD_RANGES][2] = {
+const double BathyOceanEyes::KD_RANGES[NUM_KD_RANGES][2] = {
 //       0             1             2             3            4
 //     clear     clear-moderate   moderate    moderate-high    high
     {0.06, 0.10}, {0.11, 0.17}, {0.18, 0.25}, {0.26, 0.32}, {0.33, 0.36}
 };
 
-BathyOpenOceans::uncertainty_coeff_t BathyOpenOceans::UNCERTAINTY_COEFF_MAP[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES][NUM_WIND_SPEEDS][NUM_KD_RANGES];
+BathyOceanEyes::uncertainty_coeff_t BathyOceanEyes::UNCERTAINTY_COEFF_MAP[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES][NUM_WIND_SPEEDS][NUM_KD_RANGES];
 
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void BathyOpenOceans::init (void)
+void BathyOceanEyes::init (void)
 {
     /*************************/
     /* UNCERTAINTY_COEFF_MAP */
@@ -194,7 +194,7 @@ void BathyOpenOceans::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyOpenOceans::BathyOpenOceans (lua_State* L, int index):
+BathyOceanEyes::BathyOceanEyes (lua_State* L, int index):
     Kd_490(NULL)
 {
     /* Get Algorithm Parameters */
@@ -271,13 +271,14 @@ BathyOpenOceans::BathyOpenOceans (lua_State* L, int index):
     /* Open Kd Resource */
     if(!parms.assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no asset provided");
     else if(!parms.resourceKd) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no filename provided");
-    Kd_490 = new H5Array<int16_t>(parms.assetKd, parms.resourceKd, "Kd_490", &contextKd, H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS);
+    H5Coro::Context context(parms.assetKd, parms.resourceKd);
+    Kd_490 = new H5Array<int16_t>(&context, "Kd_490", H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS);
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-BathyOpenOceans::~BathyOpenOceans (void)
+BathyOceanEyes::~BathyOceanEyes (void)
 {
     delete Kd_490;
 }
@@ -285,7 +286,7 @@ BathyOpenOceans::~BathyOpenOceans (void)
 /*----------------------------------------------------------------------------
  * findSeaSurface
  *----------------------------------------------------------------------------*/
-void BathyOpenOceans::findSeaSurface (extent_t& extent) const
+void BathyOceanEyes::findSeaSurface (extent_t& extent) const
 {
     /* initialize stats on photons */
     double min_h = std::numeric_limits<double>::max();
@@ -531,7 +532,7 @@ void BathyOpenOceans::findSeaSurface (extent_t& extent) const
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *----------------------------------------------------------------------------*/
-void BathyOpenOceans::correctRefraction(extent_t& extent) const
+void BathyOceanEyes::correctRefraction(extent_t& extent) const
 {
     GeoLib::UTMTransform transform(extent.utm_zone, extent.region < 8);
 
@@ -574,7 +575,7 @@ void BathyOpenOceans::correctRefraction(extent_t& extent) const
 /*----------------------------------------------------------------------------
  * uncertainty calculation
  *----------------------------------------------------------------------------*/
-void BathyOpenOceans::calculateUncertainty (extent_t& extent) const
+void BathyOceanEyes::calculateUncertainty (extent_t& extent) const
 {
     if(extent.photon_count <= 0) return; // nothing to do
 
