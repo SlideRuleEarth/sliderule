@@ -47,11 +47,6 @@ print("Read all inputs into data frame")
 
 # trim dataframe
 coastnet_df.rename(columns={'ph_index': 'index_ph', 'prediction': 'class_ph'}, inplace=True)
-del coastnet_df["along_track_dist"]
-del coastnet_df["geoid_corrected_h"]
-del coastnet_df["manual_label"]
-del coastnet_df["sea_surface_h"]
-del coastnet_df["bathy_h"]
 
 # write out new data
-coastnet_df.to_csv(coastnet_csv_file, index=False)
+coastnet_df.to_csv(coastnet_csv_file, index=False, columns=['index_ph', 'class_ph'])
