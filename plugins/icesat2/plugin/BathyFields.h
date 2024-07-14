@@ -63,7 +63,8 @@ namespace BathyFields
 
     /* Processing Flags */
     typedef enum {
-        EXCEEDS_MAX_SENSOR_DEPTH = 0x01
+        SENSOR_DEPTH_EXCEEDED = 0x01,
+        SEA_SURFACE_UNDETECTED = 0x02
     } flags_t;
 
     /* Photon Fields */

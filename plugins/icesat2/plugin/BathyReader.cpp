@@ -1146,8 +1146,8 @@ void* BathyReader::subsettingThread (void* parm)
 
                 /* Run OpenOceans */
                 parms->openoceans->findSeaSurface(*extent);
-                parms->openoceans->correctRefraction(*extent);
-                parms->openoceans->calculateUncertainty(*extent);
+//                parms->openoceans->correctRefraction(*extent);
+//                parms->openoceans->calculateUncertainty(*extent);
 
                 /* Update Statistics */
                 local_stats.photon_count += extent->photon_count;

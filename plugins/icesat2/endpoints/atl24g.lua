@@ -378,6 +378,6 @@ arrow.send2user(crenv.host_sandbox_directory.."/atl24.bin.json", arrow.parms(out
 -------------------------------------------------------
 -- cleanup 
 -------------------------------------------------------
-runner.cleanup(crenv) -- container runtime environment
+--runner.cleanup(crenv) -- container runtime environment
 netsvc.orchunlock({transaction_id}) -- unlock transaction
 

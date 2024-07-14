@@ -147,6 +147,7 @@ class BathyOceanEyes
         static uncertainty_coeff_t  UNCERTAINTY_COEFF_MAP[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES][NUM_WIND_SPEEDS][NUM_KD_RANGES];
 
         parms_t                     parms;
+        H5Coro::Context*            context;
         H5Array<int16_t>*           Kd_490;
 };
 

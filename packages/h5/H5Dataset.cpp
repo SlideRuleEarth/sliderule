@@ -302,7 +302,7 @@ void H5Dataset::readDataset (info_t* info)
 
     /* Initialize and Populate Shape in Info */
     uint64_t num_elements = 1;
-    for(int d = 1; d < metaData.ndims; d++)
+    for(int d = 0; d < metaData.ndims; d++)
     {
         const int64_t elements_in_dimension = hyperslice[d].r1 - hyperslice[d].r0;
         if(elements_in_dimension > 0) num_elements *= elements_in_dimension;
