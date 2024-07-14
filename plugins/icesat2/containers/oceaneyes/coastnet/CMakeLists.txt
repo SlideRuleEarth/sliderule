@@ -18,10 +18,12 @@ set(CMAKE_CXX_FLAGS "-Wall -Werror ${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 set(PI_NAME "index_ph")
 set(X_NAME "x_atc")
 set(Z_NAME "geoid_corr_h")
+set(PREDICTION_NAME "class_ph")
 
 add_definitions(-DPI_NAME=\"${PI_NAME}\")
 add_definitions(-DX_NAME=\"${X_NAME}\")
 add_definitions(-DZ_NAME=\"${Z_NAME}\")
+add_definitions(-DPREDICTION_NAME=\"${PREDICTION_NAME}\")
 
 include_directories(${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/ATL24_coastnet)
 
