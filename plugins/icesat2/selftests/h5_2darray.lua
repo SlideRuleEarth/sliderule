@@ -28,11 +28,22 @@ end
 local f = h5.file(atlas_asset, resource):name(resource)
 local rspq = msg.subscribe("h5testq")
 
-local var = {dataset="gt1r/heights/signal_conf_ph", col=0, startrow=0, numrows=10}
+local var = {dataset="gt1r/heights/signal_conf_ph", col=3, startrow=0, numrows=10}
 f:read({var}, "h5testq")
 
 local recdata = rspq:recvrecord(3000)
 local rectable = recdata:tabulate()
+
+runner.check(rectable.data[1] == 4)
+runner.check(rectable.data[2] == 1)
+runner.check(rectable.data[3] == 4)
+runner.check(rectable.data[4] == 4)
+runner.check(rectable.data[5] == 4)
+runner.check(rectable.data[6] == 4)
+runner.check(rectable.data[7] == 4)
+runner.check(rectable.data[8] == 4)
+runner.check(rectable.data[9] == 4)
+runner.check(rectable.data[10] == 4)
 
 pp.display(rectable)
 
