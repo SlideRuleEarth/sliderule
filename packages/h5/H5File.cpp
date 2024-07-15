@@ -130,7 +130,7 @@ void* H5File::readThread (void* parm)
     try
     {
         /* Read Dataset */
-        H5Coro::range_t slice[2] = {{info->startrow, info->startrow + info->numrows}, {info->col, info->col}};
+        H5Coro::range_t slice[2] = COLUMN_SLICE(info->col,info->startrow, info->numrows);
         results = H5Coro::read(info->h5file->context, info->dataset, info->valtype, slice, 2, false, info->h5file->traceId);
     }
     catch (const RunTimeException& e)

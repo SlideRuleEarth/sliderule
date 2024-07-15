@@ -3041,7 +3041,7 @@ bool H5Dataset::hypersliceIntersection(const range_t* node_slice, const uint8_t 
             node_end += node_slice_in_chunks[d].r1 * chunkStepSize[d];
         }
         // check for intersection of position
-        if(node_end < hypersliceChunkStart || node_start >= hypersliceChunkEnd)
+        if(node_end < hypersliceChunkStart || node_start > hypersliceChunkEnd)
         {
             return false;
         }

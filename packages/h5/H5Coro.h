@@ -55,11 +55,11 @@
 #endif
 
 #ifndef H5CORO_VERBOSE
-#define H5CORO_VERBOSE false
+#define H5CORO_VERBOSE true
 #endif
 
 #ifndef H5CORO_EXTRA_DEBUG
-#define H5CORO_EXTRA_DEBUG false
+#define H5CORO_EXTRA_DEBUG true
 #endif
 
 #ifndef H5CORO_ERROR_CHECKING
@@ -69,6 +69,12 @@
 #ifndef H5CORO_ENABLE_FILL
 #define H5CORO_ENABLE_FILL false
 #endif
+
+/******************************************************************************
+ * MACRO
+ ******************************************************************************/
+
+#define COLUMN_SLICE(col,startrow,numrows) {{startrow, startrow + numrows}, {col == H5Coro::ALL_COLS ? 0 : col, col == H5Coro::ALL_COLS ? H5Coro::EOR : col + 1}}
 
 /******************************************************************************
  * H5CORO CLASS

@@ -96,7 +96,7 @@ class H5Array
 template <class T>
 H5Array<T>::H5Array(H5Coro::Context* context, const char* dataset, long col, long startrow, long numrows)
 {
-    H5Coro::range_t slice[2] = {{startrow, startrow + numrows}, {col, col}};
+    H5Coro::range_t slice[2] = COLUMN_SLICE(col,startrow, numrows);
     if(context) h5f = H5Coro::readp(context, dataset, RecordObject::DYNAMIC, slice, 2);
     else        h5f = NULL;
 

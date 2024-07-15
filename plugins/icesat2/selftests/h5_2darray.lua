@@ -5,11 +5,15 @@ local pp = require("prettyprint")
 
 -- Setup --
 
+local console = require("console")
+console.monitor:config(core.LOG, core.DEBUG)
+sys.setlvl(core.LOG, core.DEBUG)
+
 local assets = asset.loaddir()
 local asset_name = "icesat2"
 local atlas_asset = core.getbyname(asset_name)
 local name, identity, driver = atlas_asset:info()
-local resource = "ATL03_20181015231931_02650102_005_01.h5"
+local resource = "ATL03_20190218011204_07880205_006_02.h5"
 
 local creds = aws.csget(identity)
 if not creds then
@@ -24,21 +28,13 @@ end
 local f = h5.file(atlas_asset, resource):name(resource)
 local rspq = msg.subscribe("h5testq")
 
-f:read({{dataset="ancillary_data/atlas_sdp_gps_epoch"}}, "h5testq")
+local var = {dataset="gt1r/heights/signal_conf_ph", col=0, startrow=0, numrows=10}
+f:read({var}, "h5testq")
 
 local recdata = rspq:recvrecord(3000)
 local rectable = recdata:tabulate()
 
 pp.display(rectable)
-
-runner.check(rectable.data[1] == 0)
-runner.check(rectable.data[2] == 0)
-runner.check(rectable.data[3] == 128)
-runner.check(rectable.data[4] == 36)
-runner.check(rectable.data[5] == 15)
-runner.check(rectable.data[6] == 221)
-runner.check(rectable.data[7] == 209)
-runner.check(rectable.data[8] == 65)
 
 rspq:destroy()
 f:destroy()

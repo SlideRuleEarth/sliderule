@@ -1,5 +1,4 @@
 local runner = require("test_executive")
--- local console = require("console")
 local asset = require("asset")
 local json = require("json")
 

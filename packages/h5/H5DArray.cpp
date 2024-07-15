@@ -53,7 +53,7 @@ void H5DArray::init(void)
  *----------------------------------------------------------------------------*/
 H5DArray::H5DArray(H5Coro::Context* context, const char* dataset, long col, long startrow, long numrows)
 {
-    H5Coro::range_t slice[2] = {{startrow, startrow + numrows}, {col, col}};
+    H5Coro::range_t slice[2] = COLUMN_SLICE(col,startrow, numrows);
     if(context) h5f = H5Coro::readp(context, dataset, RecordObject::DYNAMIC, slice, 2);
     else        h5f = NULL;
 
