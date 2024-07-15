@@ -332,8 +332,8 @@ end
 -------------------------------------------------------
 local in_parallel = true
 runclassifier(output_files, timeout, "qtrees", in_parallel, "bash /qtrees/runner.sh")
-runprocessor(timeout, "atl24refraction", in_parallel)
-runprocessor(timeout, "atl24uncertainty", in_parallel)
+--runprocessor(timeout, "atl24refraction", in_parallel)
+--runprocessor(timeout, "atl24uncertainty", in_parallel)
 runclassifier(output_files, timeout, "medianfilter", in_parallel)
 runclassifier(output_files, timeout, "cshelph", in_parallel)
 runclassifier(output_files, timeout, "bathypathfinder", in_parallel)
@@ -378,6 +378,6 @@ arrow.send2user(crenv.host_sandbox_directory.."/atl24.bin.json", arrow.parms(out
 -------------------------------------------------------
 -- cleanup 
 -------------------------------------------------------
---runner.cleanup(crenv) -- container runtime environment
+runner.cleanup(crenv) -- container runtime environment
 netsvc.orchunlock({transaction_id}) -- unlock transaction
 
