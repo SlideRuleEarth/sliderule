@@ -130,7 +130,7 @@ void* H5File::readThread (void* parm)
     try
     {
         /* Read Dataset */
-        H5Coro::range_t slice[2] = COLUMN_SLICE(info->col,info->startrow, info->numrows);
+        H5Coro::range_t slice[2] = COLUMN_SLICE(info->col, info->startrow, info->numrows);
         results = H5Coro::read(info->h5file->context, info->dataset, info->valtype, slice, 2, false, info->h5file->traceId);
     }
     catch (const RunTimeException& e)
@@ -182,18 +182,23 @@ int H5File::luaRead (lua_State* L)
     bool status = true;
     const char* outq_name = NULL;
     H5File* lua_obj = NULL;
+    bool with_terminator = true;
 
     try
     {
         const int self_index = 1;
         const int tbl_index  = 2;
         const int outq_index = 3;
+        const int with_terminator_index = 4;
 
         /* Get Self */
         lua_obj = dynamic_cast<H5File*>(getLuaSelf(L, self_index));
 
         /* Get Output Queue */
         outq_name = getLuaString(L, outq_index);
+
+        /* Get Termination Option */
+        with_terminator = getLuaBoolean(L, with_terminator_index, true, with_terminator);
 
         /* Process Table of Datasets */
         const int num_datasets = lua_rawlen(L, tbl_index);
@@ -267,8 +272,11 @@ int H5File::luaRead (lua_State* L)
         mlog(INFO, "Finished reading %d datasets from %s", num_datasets, lua_obj->context->name);
 
         /* Terminate Data */
-        Publisher outQ(outq_name);
-        outQ.postCopy("", 0, SYS_TIMEOUT);
+        if(with_terminator)
+        {
+            Publisher outQ(outq_name);
+            outQ.postCopy("", 0, SYS_TIMEOUT);
+        }
     }
     catch(const RunTimeException& e)
     {

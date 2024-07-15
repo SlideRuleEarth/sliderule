@@ -485,12 +485,12 @@ void H5Dataset::readDataset (info_t* info)
                 {
                     chunkStepSize[d - 1] = dimensionsInChunks[d] * chunkStepSize[d];
                 }            
-            
+
                 /* Calculate position of first and last element in hyperslice */
                 hypersliceChunkStart = 0;
                 hypersliceChunkEnd = 0;
                 range_t hyperslice_in_chunks[MAX_NDIMS];
-                for(int d = metaData.ndims - 1; d > 0; d--)
+                for(int d = 0; d < metaData.ndims; d++)
                 {
                     hyperslice_in_chunks[d].r0 = hyperslice[d].r0 / metaData.chunkdims[d];
                     hyperslice_in_chunks[d].r1 = hyperslice[d].r1 / metaData.chunkdims[d];
