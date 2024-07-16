@@ -46,7 +46,7 @@ coastnet_df = pd.read_csv(coastnet_csv_file)
 print("Read all inputs into data frame")
 
 # trim dataframe
-coastnet_df.rename(columns={'ph_index': 'index_ph', 'manual_label': 'class_ph'}, inplace=True)
+coastnet_df.rename(columns={'ph_index': 'index_ph', 'prediction': 'class_ph'}, inplace=True)
 
 # write out new data
 coastnet_df.to_csv(coastnet_csv_file, index=False, columns=['index_ph', 'class_ph'])
