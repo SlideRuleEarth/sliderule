@@ -29,7 +29,7 @@
 
 # Imports
 import sliderule
-from sliderule import earthdata, h5, icesat2, gedi
+from sliderule import earthdata, icesat2
 import argparse
 import time
 import os
