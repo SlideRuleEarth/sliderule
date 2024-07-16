@@ -57,8 +57,7 @@ del spot_df["surface_h"]
 spot_df = pd.merge(spot_df, trimmed_qtrees_df, on="index_ph", how='left')
 
 # write out new qtrees file
-del trimmed_qtrees_df['surface_h']
-trimmed_qtrees_df.to_csv(qtrees_csv_file, index=False)
+trimmed_qtrees_df.to_csv(qtrees_csv_file, index=False, columns=['index_ph', 'class_ph'])
 
 # write out new spot file
 spot_df.to_csv(spot_csv_file, index=False)

@@ -23,6 +23,14 @@ if sys.ispublic() then -- verify on a private cluster
 end
 
 -------------------------------------------------------
+-- function: cleanup 
+-------------------------------------------------------
+local function cleanup(_crenv, _transaction_id)
+    runner.cleanup(_crenv) -- container runtime environment
+    netsvc.orchunlock({_transaction_id}) -- unlock transaction
+end
+
+-------------------------------------------------------
 -- acquire lock for processing granule (because this is not proxied)
 -------------------------------------------------------
 local transaction_id = netsvc.INVALID_TX_ID
@@ -32,12 +40,22 @@ while transaction_id == netsvc.INVALID_TX_ID do
         local lock_retry_wait_time = (time.gps() - endpoint_start_time) / 1000.0
         if lock_retry_wait_time >= timeout then
             userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> failed to acquire lock... exiting", rspq))
-            return
+            return -- nothing yet to clean up
         else
             userlog:alert(core.INFO, core.RTE_TIMEOUT, string.format("request <%s> failed to acquire lock... retrying with %f seconds left", rspq, timeout - lock_retry_wait_time))
             sys.wait(30) -- seconds
         end
     end
+end
+
+-------------------------------------------------------
+-- initialize container runtime environment
+-------------------------------------------------------
+local crenv = runner.setup()
+if not crenv.host_sandbox_directory then
+    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to initialize container runtime for %s", resource))
+    cleanup(crenv, transaction_id)
+    return
 end
 
 -------------------------------------------------------
@@ -50,10 +68,12 @@ if not resource then
         local resources = rsps
         if #resources ~= 1 then
             userlog:alert(core.INFO, core.RTE_ERROR, string.format("request <%s> failed to retrieved single resource from CMR <%d>", rspq, #resources))
+            cleanup(crenv, transaction_id)
             return
         end
     else
         userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("request <%s> failed to make CMR request <%d>: %s", rspq, rc, rsps))
+        cleanup(crenv, transaction_id)
         return
     end
     profile["atl03_cmr"] = (time.gps() - atl03_cmr_start_time) / 1000.0
@@ -149,6 +169,7 @@ if rc2 == earthdata.SUCCESS and #rsps2 == 1 then
     parms["resource09"] = rsps2[1]
 else
     userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to make ATL09 CMR request <%d>: %s", rspq, rc2, rsps2))
+    cleanup(crenv, transaction_id)
     return
 end
 parms["asset"] = original_asset
@@ -159,22 +180,13 @@ profile["atl09_cmr"] = (time.gps() - atl09_cmr_start_time) / 1000.0
 userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL09 CMR search executed in %f seconds", profile["atl09_cmr"]))
 
 -------------------------------------------------------
--- initialize container runtime environment
--------------------------------------------------------
-local crenv = runner.setup()
-if not crenv.host_sandbox_directory then
-    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to initialize container runtime for %s", resource))
-    return
-end
-
--------------------------------------------------------
 -- build bathy reader parms
 -------------------------------------------------------
 parms["hls"] = geo_parms
 parms["icesat2"] = icesat2.parms(parms)
-parms["openoceans"] = parms["openoceans"] or {}
-parms["openoceans"]["resource_kd"] = viirs_filename
-parms["openoceans"]["assetKd"] = parms["openoceans"]["assetKd"] or "viirsj1-s3"
+parms["oceaneyes"] = parms["oceaneyes"] or {}
+parms["oceaneyes"]["resource_kd"] = viirs_filename
+parms["oceaneyes"]["assetKd"] = parms["oceaneyes"]["assetKd"] or "viirsj1-s3"
 
 -------------------------------------------------------
 -- read ICESat-2 inputs
@@ -193,7 +205,7 @@ while (userlog:numsubs() > 0) and not reader:waiton(interval * 1000) do
     duration = duration + interval
     if timeout >= 0 and duration >= timeout then -- check for timeout
         userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> for %s timed-out after %d seconds", rspq, resource, duration))
-        runner.cleanup(crenv)
+        cleanup(crenv, transaction_id)
         return
     end
     userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ... continuing to read %s (after %d seconds)", rspq, resource, duration))
@@ -201,6 +213,7 @@ end
 local bathy_stats = reader:stats()
 if bathy_stats["photon_count"] <= 0 then
     userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> was not able to read any photons from %s ... aborting!", rspq, resource))
+    cleanup(crenv, transaction_id)
     return
 end
 reader:destroy() -- free reader to save on memory usage (safe since all data is now written out)
@@ -291,53 +304,14 @@ local function runclassifier(output_table, container_timeout, name, in_parallel,
 end
 
 -------------------------------------------------------
--- function: run processor (overwrites input csv file)
--------------------------------------------------------
-local function runprocessor(container_timeout, name, in_parallel, command_override)
-    local start_time = time.gps()
-    local container_list = {}
-    for i = 1,icesat2.NUM_SPOTS do
-        if spot_mask[i] then
-            local settings_filename = string.format("%s/%s.json", crenv.container_sandbox_mount, name)                           -- e.g. /share/openoceans.json
-            local parameters_filename = string.format("%s/%s_%d.json", crenv.container_sandbox_mount, icesat2.BATHY_PREFIX, i)   -- e.g. /share/bathy_spot_3.json
-            local input_filename = string.format("%s/%s_%d.csv", crenv.container_sandbox_mount, icesat2.BATHY_PREFIX, i)         -- e.g. /share/bathy_spot_3.csv
-            local output_filename = input_filename -- overwrite input with new values
-            local container_command = command_override or string.format("/env/bin/python /%s/runner.py", name)
-            local container_parms = {
-                image =  "oceaneyes",
-                name = name,
-                command = string.format("%s %s %s %s %s", container_command, settings_filename, parameters_filename, input_filename, output_filename),
-                timeout = container_timeout,
-                parms = { [name..".json"] = parms[name] or {void=true} }
-            }
-            local container = runner.execute(crenv, container_parms, rspq)
-            table.insert(container_list, container)
-            if not in_parallel then
-                runner.wait(container, container_timeout)
-            end
-        end
-    end
-    if in_parallel then
-        for _,container in ipairs(container_list) do
-            runner.wait(container, container_timeout)
-        end
-    end
-    local stop_time = time.gps()
-    profile[name] = (stop_time - start_time) / 1000.0
-    userlog:alert(core.INFO, core.RTE_INFO, string.format("%s executed in %f seconds", name, profile[name]))
-end
-
--------------------------------------------------------
 -- execute classifiers
 -------------------------------------------------------
 local in_parallel = true
 runclassifier(output_files, timeout, "qtrees", in_parallel, "bash /qtrees/runner.sh")
---runprocessor(timeout, "atl24refraction", in_parallel)
---runprocessor(timeout, "atl24uncertainty", in_parallel)
 runclassifier(output_files, timeout, "medianfilter", in_parallel)
 runclassifier(output_files, timeout, "cshelph", in_parallel)
 runclassifier(output_files, timeout, "bathypathfinder", in_parallel)
-runclassifier(output_files, timeout, "coastnet", false, "bash /coastnet/runner.sh")
+runclassifier(output_files, timeout, "coastnet", in_parallel, "bash /coastnet/runner.sh")
 runclassifier(output_files, timeout, "pointnet2", false)
 runclassifier(output_files, timeout, "openoceans", false)
 profile["atl24_endpoint"] = (time.gps() - endpoint_start_time) / 1000.0 -- capture endpoint timing
@@ -376,8 +350,7 @@ output_parms["path"] = output_parms["path"]..".json"
 arrow.send2user(crenv.host_sandbox_directory.."/atl24.bin.json", arrow.parms(output_parms), rspq)
 
 -------------------------------------------------------
--- cleanup 
+-- exit 
 -------------------------------------------------------
-runner.cleanup(crenv) -- container runtime environment
-netsvc.orchunlock({transaction_id}) -- unlock transaction
+cleanup(crenv, transaction_id)
 

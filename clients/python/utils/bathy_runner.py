@@ -7,7 +7,7 @@ import os
 
 # Command Line Arguments
 parser = argparse.ArgumentParser(description="""ATL24""")
-parser.add_argument('--granule',            '-g',   type=str,               default="ATL03_20230213042035_08341807_006_02.h5")
+parser.add_argument('--granule',            '-g',   type=str,               default="ATL03_20230213042035_08341807_006_02.h5") # ATL03_20200702024739_01030806_006_01.h5
 parser.add_argument('--aoi',                '-a',   type=str,               default=None) # "tests/data/tarawa.geojson"
 parser.add_argument('--track',              '-t',   type=int,               default=1)
 parser.add_argument('--spots',                      type=int, nargs='+',    choices=range(1,7), default=[1,2,3,4,5,6])

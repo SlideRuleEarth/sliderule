@@ -84,7 +84,7 @@ int icesat2_open (lua_State *L)
     luaL_newlib(L, icesat2_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrStr(L, "BATHY_OPENOCEANS_PARMS",      BathyOceanEyes::OPENOCEANS_PARMS);
+    LuaEngine::setAttrStr(L, "OCEANEYES_PARMS",             BathyOceanEyes::OCEANEYES_PARMS);
     LuaEngine::setAttrInt(L, "CNF_POSSIBLE_TEP",            Icesat2Parms::CNF_POSSIBLE_TEP);
     LuaEngine::setAttrInt(L, "CNF_NOT_CONSIDERED",          Icesat2Parms::CNF_NOT_CONSIDERED);
     LuaEngine::setAttrInt(L, "CNF_BACKGROUND",              Icesat2Parms::CNF_BACKGROUND);

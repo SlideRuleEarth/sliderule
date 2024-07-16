@@ -180,7 +180,11 @@ int ContainerRunner::luaDeleteUnique (lua_State* L)
     bool status = false;
     try
     {
-        const char* host_shared_directory = getLuaString(L, 1);
+        const char* host_shared_directory = getLuaString(L, 1, true, NULL);
+        if(host_shared_directory == NULL)
+        {
+            throw RunTimeException(DEBUG, RTE_INFO, "shared directory does not exist");
+        }
         if(!std::filesystem::remove_all(host_shared_directory))
         {
             char err_buf[256];

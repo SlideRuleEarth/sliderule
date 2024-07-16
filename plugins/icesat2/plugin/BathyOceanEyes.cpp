@@ -54,25 +54,25 @@ using BathyFields::bathy_class_t;
 /*----------------------------------------------------------------------------
  * parameters names
  *----------------------------------------------------------------------------*/
-static const char*  OPENOCEANS_PARMS_ASSETKD                = "assetKd";
-static const char*  OPENOCEANS_PARMS_DEFAULT_ASSETKD        = "viirsj1-s3";
-static const char*  OPENOCEANS_PARMS_RESOURCE_KD            = "resource_kd";
-static const char*  OPENOCEANS_PARMS_RI_AIR                 = "ri_air";
-static const char*  OPENOCEANS_PARMS_RI_WATER               = "ri_water";
-static const char*  OPENOCEANS_PARMS_DEM_BUFFER             = "dem_buffer";
-static const char*  OPENOCEANS_PARMS_BIN_SIZE               = "bin_size";
-static const char*  OPENOCEANS_PARMS_MAX_RANGE              = "max_range";
-static const char*  OPENOCEANS_PARMS_MAX_BINS               = "max_bins";
-static const char*  OPENOCEANS_PARMS_SIGNAL_THRESHOLD       = "signal_threshold"; // sigmas
-static const char*  OPENOCEANS_PARMS_MIN_PEAK_SEPARATION    = "min_peak_separation";
-static const char*  OPENOCEANS_PARMS_HIGHEST_PEAK_RATIO     = "highest_peak_ratio";
-static const char*  OPENOCEANS_PARMS_SURFACE_WIDTH          = "surface_width"; // sigmas
-static const char*  OPENOCEANS_PARMS_MODEL_AS_POISSON       = "model_as_poisson"; // sigmas
+static const char*  OCEANEYES_PARMS_ASSET_KD               = "asset_kd";
+static const char*  OCEANEYES_PARMS_DEFAULT_ASSETKD        = "viirsj1-s3";
+static const char*  OCEANEYES_PARMS_RESOURCE_KD            = "resource_kd";
+static const char*  OCEANEYES_PARMS_RI_AIR                 = "ri_air";
+static const char*  OCEANEYES_PARMS_RI_WATER               = "ri_water";
+static const char*  OCEANEYES_PARMS_DEM_BUFFER             = "dem_buffer";
+static const char*  OCEANEYES_PARMS_BIN_SIZE               = "bin_size";
+static const char*  OCEANEYES_PARMS_MAX_RANGE              = "max_range";
+static const char*  OCEANEYES_PARMS_MAX_BINS               = "max_bins";
+static const char*  OCEANEYES_PARMS_SIGNAL_THRESHOLD       = "signal_threshold"; // sigmas
+static const char*  OCEANEYES_PARMS_MIN_PEAK_SEPARATION    = "min_peak_separation";
+static const char*  OCEANEYES_PARMS_HIGHEST_PEAK_RATIO     = "highest_peak_ratio";
+static const char*  OCEANEYES_PARMS_SURFACE_WIDTH          = "surface_width"; // sigmas
+static const char*  OCEANEYES_PARMS_MODEL_AS_POISSON       = "model_as_poisson"; // sigmas
 
 /*----------------------------------------------------------------------------
  * static data
  *----------------------------------------------------------------------------*/
-const char* BathyOceanEyes::OPENOCEANS_PARMS = "openoceans";
+const char* BathyOceanEyes::OCEANEYES_PARMS = "oceaneyes";
 
 const char* BathyOceanEyes::TU_FILENAMES[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES] = {
    {"/data/ICESat2_0deg_500000_AGL_0.022_mrad_THU.csv",
@@ -202,69 +202,69 @@ BathyOceanEyes::BathyOceanEyes (lua_State* L, int index):
     if(lua_istable(L, index))
     {
         /* assetKd */
-        lua_getfield(L, index, OPENOCEANS_PARMS_ASSETKD);
-        const char* assetkd_name = LuaObject::getLuaString(L, -1, true, OPENOCEANS_PARMS_DEFAULT_ASSETKD);
+        lua_getfield(L, index, OCEANEYES_PARMS_ASSET_KD);
+        const char* assetkd_name = LuaObject::getLuaString(L, -1, true, OCEANEYES_PARMS_DEFAULT_ASSETKD);
         parms.assetKd = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(assetkd_name, Asset::OBJECT_TYPE));
         if(!parms.assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to find asset %s", assetkd_name);
         lua_pop(L, 1);
 
         /* resource Kd */
-        lua_getfield(L, index, OPENOCEANS_PARMS_RESOURCE_KD);
+        lua_getfield(L, index, OCEANEYES_PARMS_RESOURCE_KD);
         parms.resourceKd = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, parms.resourceKd, NULL));
         lua_pop(L, 1);
 
         /* refraction index of air */
-        lua_getfield(L, index, OPENOCEANS_PARMS_RI_AIR);
+        lua_getfield(L, index, OCEANEYES_PARMS_RI_AIR);
         parms.ri_air = LuaObject::getLuaFloat(L, -1, true, parms.ri_air, NULL);
         lua_pop(L, 1);
 
         /* prefraction index of water */
-        lua_getfield(L, index, OPENOCEANS_PARMS_RI_WATER);
+        lua_getfield(L, index, OCEANEYES_PARMS_RI_WATER);
         parms.ri_water = LuaObject::getLuaFloat(L, -1, true, parms.ri_water, NULL);
         lua_pop(L, 1);
 
         /* DEM buffer */
-        lua_getfield(L, index, OPENOCEANS_PARMS_DEM_BUFFER);
+        lua_getfield(L, index, OCEANEYES_PARMS_DEM_BUFFER);
         parms.dem_buffer = LuaObject::getLuaFloat(L, -1, true, parms.dem_buffer, NULL);
         lua_pop(L, 1);
 
         /* bin size */
-        lua_getfield(L, index, OPENOCEANS_PARMS_BIN_SIZE);
+        lua_getfield(L, index, OCEANEYES_PARMS_BIN_SIZE);
         parms.bin_size = LuaObject::getLuaFloat(L, -1, true, parms.bin_size, NULL);
         lua_pop(L, 1);
 
         /* max range */
-        lua_getfield(L, index, OPENOCEANS_PARMS_MAX_RANGE);
+        lua_getfield(L, index, OCEANEYES_PARMS_MAX_RANGE);
         parms.max_range = LuaObject::getLuaFloat(L, -1, true, parms.max_range, NULL);
         lua_pop(L, 1);
 
         /* max bins */
-        lua_getfield(L, index, OPENOCEANS_PARMS_MAX_BINS);
+        lua_getfield(L, index, OCEANEYES_PARMS_MAX_BINS);
         parms.max_bins = LuaObject::getLuaInteger(L, -1, true, parms.max_bins, NULL);
         lua_pop(L, 1);
 
         /* signal threshold */
-        lua_getfield(L, index, OPENOCEANS_PARMS_SIGNAL_THRESHOLD);
+        lua_getfield(L, index, OCEANEYES_PARMS_SIGNAL_THRESHOLD);
         parms.signal_threshold = LuaObject::getLuaFloat(L, -1, true, parms.signal_threshold, NULL);
         lua_pop(L, 1);
 
         /* minimum peak separation */
-        lua_getfield(L, index, OPENOCEANS_PARMS_MIN_PEAK_SEPARATION);
+        lua_getfield(L, index, OCEANEYES_PARMS_MIN_PEAK_SEPARATION);
         parms.min_peak_separation = LuaObject::getLuaFloat(L, -1, true, parms.min_peak_separation, NULL);
         lua_pop(L, 1);
 
         /* highest peak ratio */
-        lua_getfield(L, index, OPENOCEANS_PARMS_HIGHEST_PEAK_RATIO);
+        lua_getfield(L, index, OCEANEYES_PARMS_HIGHEST_PEAK_RATIO);
         parms.highest_peak_ratio = LuaObject::getLuaFloat(L, -1, true, parms.highest_peak_ratio, NULL);
         lua_pop(L, 1);
 
         /* surface width */
-        lua_getfield(L, index, OPENOCEANS_PARMS_SURFACE_WIDTH);
+        lua_getfield(L, index, OCEANEYES_PARMS_SURFACE_WIDTH);
         parms.surface_width = LuaObject::getLuaFloat(L, -1, true, parms.surface_width, NULL);
         lua_pop(L, 1);
 
         /* model as poisson */
-        lua_getfield(L, index, OPENOCEANS_PARMS_MODEL_AS_POISSON);
+        lua_getfield(L, index, OCEANEYES_PARMS_MODEL_AS_POISSON);
         parms.model_as_poisson = LuaObject::getLuaBoolean(L, -1, true, parms.model_as_poisson, NULL);
         lua_pop(L, 1);        
     }
@@ -601,8 +601,7 @@ void BathyOceanEyes::calculateUncertainty (extent_t& extent) const
     if(extent.photon_count <= 0) return; // nothing to do
 
     /* join kd resource read */
-    const bool kd_status = Kd_490->join(parms.read_timeout_ms, false);
-    if(!kd_status) throw RunTimeException(CRITICAL, RTE_ERROR, "Timed-out reading kd");
+    Kd_490->join(parms.read_timeout_ms, true);
 
     /* get y offset */
     const double degrees_of_latitude = extent.photons[0].latitude + 90.0;

@@ -99,7 +99,7 @@ class BathyReader: public LuaObject
             Asset*              asset09;                        // asset for ATL09 resources
             Icesat2Parms*       icesat2;                        // global icesat2 parameters
             GeoParms*           hls;                            // geo-package parms for sampling HLS for NDWI
-            BathyOceanEyes*     openoceans;                     // OpenOceans classifier
+            BathyOceanEyes*     oceaneyes;                      // bathymetric utilities
             const char*         resource09;                     // ATL09 granule
             double              max_dem_delta;                  // initial filter of heights against DEM (For removing things like clouds)
             int                 ph_in_extent;                   // number of photons in each extent
@@ -115,7 +115,7 @@ class BathyReader: public LuaObject
                 asset09         (NULL),
                 icesat2         (NULL),
                 hls             (NULL),
-                openoceans      (NULL),
+                oceaneyes       (NULL),
                 resource09      (NULL),
                 max_dem_delta   (10000.0),
                 ph_in_extent    (8192),
@@ -131,7 +131,7 @@ class BathyReader: public LuaObject
                 if(asset09) asset09->releaseLuaObject();
                 if(icesat2) icesat2->releaseLuaObject();
                 if(hls) hls->releaseLuaObject();
-                delete openoceans;
+                delete oceaneyes;
                 delete [] resource09;
             }
         };

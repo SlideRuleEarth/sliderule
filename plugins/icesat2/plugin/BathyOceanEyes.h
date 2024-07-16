@@ -52,7 +52,7 @@ class BathyOceanEyes
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* OPENOCEANS_PARMS;
+        static const char* OCEANEYES_PARMS;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -77,7 +77,7 @@ class BathyOceanEyes
             parms_t():
                 assetKd             (NULL),
                 resourceKd          (NULL),
-                read_timeout_ms     (NetsvcParms::DEFAULT_READ_TIMEOUT),
+                read_timeout_ms     (NetsvcParms::DEFAULT_READ_TIMEOUT * 1000), // TODO: this is where we need to inherit the value from the request level parameters
                 ri_air              (1.00029),
                 ri_water            (1.34116),
                 dem_buffer          (50.0),
@@ -101,8 +101,8 @@ class BathyOceanEyes
          *--------------------------------------------------------------------*/
 
         static void     init                    (void);
-                        BathyOceanEyes         (lua_State* L, int index);
-                        ~BathyOceanEyes        (void);
+                        BathyOceanEyes          (lua_State* L, int index);
+                        ~BathyOceanEyes         (void);
         void            findSeaSurface          (extent_t& extent) const;
         void            correctRefraction       (extent_t& extent) const;
         void            calculateUncertainty    (extent_t& extent) const;

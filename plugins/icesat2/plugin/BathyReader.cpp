@@ -179,9 +179,9 @@ int BathyReader::luaCreate (lua_State* L)
             if(lua_istable(L, -1)) parms->hls = new GeoParms(L, -1);
             lua_pop(L, 1);
 
-            /* OpenOceans parameters (BathyOceanEyes) */
-            lua_getfield(L, bathy_parms_index, BathyOceanEyes::OPENOCEANS_PARMS);
-            parms->openoceans = new BathyOceanEyes(L, -1);
+            /* OceanEyes parameters (BathyOceanEyes) */
+            lua_getfield(L, bathy_parms_index, BathyOceanEyes::OCEANEYES_PARMS);
+            parms->oceaneyes = new BathyOceanEyes(L, -1);
             lua_pop(L, 1);
 
             /* maximum DEM delta */
@@ -1145,9 +1145,9 @@ void* BathyReader::subsettingThread (void* parm)
                 }
 
                 /* Run OpenOceans */
-                parms->openoceans->findSeaSurface(*extent);
-                parms->openoceans->correctRefraction(*extent);
-                parms->openoceans->calculateUncertainty(*extent);
+                parms->oceaneyes->findSeaSurface(*extent);
+                parms->oceaneyes->correctRefraction(*extent);
+                parms->oceaneyes->calculateUncertainty(*extent);
 
                 /* Update Statistics */
                 local_stats.photon_count += extent->photon_count;
