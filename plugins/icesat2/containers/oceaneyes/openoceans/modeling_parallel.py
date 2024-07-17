@@ -27,14 +27,11 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import copy
-import json
-import os
 from datetime import datetime
 from itertools import repeat
 
 import numpy as np
 import pandas as pd
-import scipy.stats as stats
 
 # from tqdm import tqdm
 from fast_histogram import histogram1d, histogram2d
@@ -45,69 +42,9 @@ from scipy.ndimage import gaussian_filter1d
 from tqdm import tqdm
 
 from waveform import Waveform
+from parms import Bathy
 
 # note parallelization provided via M. Holwill at UT Austin 3DGL    
-
-def iterate_models(params, input_profile, range_z=(-45, 15), z_res_jitter_bounds=(0.1, 0.3), verbose=False):
-    """Iteritive / Ensemble / super resolution models.
-    Can be run in two different modes:
-        1) Random jitter Z Resolution (different values within z_res_jitter_bounds for each model):
-            - Provide params as a list of 2-elements lists
-            -- [[AT resol1, window size1],[AT resol2, window size2],...]
-            - Provide z_res_jitter_bounds\n
-        2) Fixed Z resolutions for each model (defined for each model):
-            - Provide params as a list of 3-elements lists
-            -- [[AT resol1, window size1, z_res1],[AT resol2, window size2, z_res2],...]
-
-    Keyword arguments:\n
-    params: list of lists
-            - for jitter z | list of 2-elements lists of [[AT resol, window size]]
-            - for fixed z  | list of 3-element lists [[AT resol, window size, z res]]
-            
-    input_profile: OpenOceans profile object from, oo.Profile.from_h5(...)
-    
-    range_z: tuple (min_z,max_z) elevations for analysis
-    
-    z_res_jitter_bounds(optional): tuple (min,max) minimum and max values for random jitter in z_res
-    
-    verbose: boolean [default=False], extra pront statements for debugging
-    
-    """
-
-    if verbose:
-        print('{}-model ...'.format(len(params)))
-        print('Initiated at ' + datetime.now().strftime("%H:%M:%S"))
-
-    model_list = []
-
-    for ii in range(len(params)):
-        
-        if len(params[ii]) == 2:  # jitter Z resolution
-            i_res_at, i_window = params[ii]
-            # randomly jitter the z value to increase vertical resolution
-            i_res_z = np.random.default_rng().uniform(
-                z_res_jitter_bounds[0], z_res_jitter_bounds[1])
-            
-        elif len(params[ii]) == 3:  # fixed Z resolution
-            i_res_at, i_window, i_res_z = params[ii]
-
-        header_str = ' Model {}: Resolution: {} | Window: {}'.format(
-            ii+1, i_res_at, i_window)
-        if verbose:
-            print(header_str)
-
-
-        M_i = ModelMakerP(res_along_track=i_res_at,  # in meters # range from 5 to 10000 m
-                         res_z=i_res_z,  # in meters
-                         range_z=range_z,
-                         window_size=i_window,  # in bins # range from 3 , max depending on along track length
-                         fit=False, verbose=verbose)
-
-        # use the parameters of this model to process the profile from before
-        m_i = M_i.process(input_profile)
-        model_list.append(m_i)
-
-    return model_list
 
 def average_labels(profile, waveform_list):
     """
@@ -137,12 +74,10 @@ def average_labels(profile, waveform_list):
     )
 
     # get scores of individual classes
-    total_dupes = data_with_dupes.classification.groupby(
-        data_with_dupes.photon_index).size()
+    total_dupes = data_with_dupes.classification.groupby(data_with_dupes.photon_index).size()
 
     # for a given photon, average how many of the times it was classified as surface vs something else
-    is_surface = data_with_dupes.classification == profile.label_help(
-        "surface")
+    is_surface = data_with_dupes.classification == Bathy.SURFACE
     surface_total = is_surface.groupby(data_with_dupes.photon_index).sum()
     surface_score = surface_total / total_dupes
 
@@ -152,19 +87,17 @@ def average_labels(profile, waveform_list):
     subsurface_score = subsurface_total / total_dupes
 
     # for a given photon, average how many of the times it was classified as bathymetry vs something else
-    is_bathy = data_with_dupes.classification == profile.label_help(
-        "bathymetry")
+    is_bathy = data_with_dupes.classification == Bathy.BATHYMETRY
     bathy_total = is_bathy.groupby(data_with_dupes.photon_index).sum()
     bathy_score = bathy_total / total_dupes
 
     # for a given photon, average how many of the times it was classified as water column
-    is_column = data_with_dupes.classification == profile.label_help("column")
+    is_column = data_with_dupes.classification == Bathy.COLUMN
     column_total = is_column.groupby(data_with_dupes.photon_index).sum()
     column_score = column_total / total_dupes
 
     # for a given photon, average how many of the times it was classified as background
-    is_background = data_with_dupes.classification == profile.label_help(
-        "background")
+    is_background = data_with_dupes.classification == Bathy.BACKGROUND
     background_total = is_background.groupby(data_with_dupes.photon_index).sum()
     background_score = background_total / total_dupes
 
@@ -191,8 +124,7 @@ def average_labels(profile, waveform_list):
 
     # also, using .values for these will break the indexing (e.g. background score)
     # if you are looking for why the sea surface etc seems to be all over the place labeled at random, this is why
-    photon_class_scores.loc[classed_photons,
-                            "background"] = background_score
+    photon_class_scores.loc[classed_photons, "background"] = background_score
     photon_class_scores.loc[classed_photons, "surface"] = surface_score
     photon_class_scores.loc[classed_photons, "column"] = column_score
     photon_class_scores.loc[classed_photons, "bathymetry"] = bathy_score
@@ -202,17 +134,11 @@ def average_labels(profile, waveform_list):
     class_str_labels = photon_class_scores.idxmax(axis=1).values
 
     # convert string labels to numeric
-    photon_final_class[class_str_labels == "background"] = profile.label_help(
-        "background"
-    )
-    photon_final_class[class_str_labels ==
-                       "surface"] = profile.label_help("surface")
-    photon_final_class[class_str_labels ==
-                       "column"] = profile.label_help("column")
-    photon_final_class[class_str_labels == "bathymetry"] = profile.label_help(
-        "bathymetry"
-    )
-    photon_final_class[class_str_labels == "none"] = profile.label_help("none")
+    photon_final_class[class_str_labels == "background"]    = Bathy.BACKGROUND
+    photon_final_class[class_str_labels == "surface"]       = Bathy.SURFACE
+    photon_final_class[class_str_labels == "column"]        = Bathy.COLUMN
+    photon_final_class[class_str_labels == "bathymetry"]    = Bathy.BATHYMETRY
+    photon_final_class[class_str_labels == "none"]          = Bathy.NONE
 
     profile.data.loc[:, "classification"] = photon_final_class
 
@@ -237,21 +163,9 @@ def round_if_integer(x, n=2):
         return np.int64(x)
     return x
 
-def effectively_zero(values):
-
-    if len(values) < 2:
-        # not enough data to make a meaningful comparison
-        return False
-
-    t, p = stats.ttest_1samp(values, 0)
-
-    return p > 0.05
-
-
 class ModelMakerP:
 
-
-    def __init__(self, res_along_track, res_z, range_z, window_size, fit=False, verbose=False, photon_bins = False, parallel=False):
+    def __init__(self, res_along_track, res_z, range_z, window_size, fit=False, verbose=False):
         """Create an instance with specified processing parameters at which to process profiles..
 
         Args:
@@ -273,8 +187,6 @@ class ModelMakerP:
         self.window_size = window_size
         self.step_along_track = 1
         self.fit = fit
-        self.photon_bins = photon_bins
-        self.parallel = parallel
         self.verbose = verbose
 
         # vertical bin sizing
@@ -284,7 +196,6 @@ class ModelMakerP:
         if res_z_actual != self.res_z:
             print(f'Adjusting z_res - new value: {res_z_actual:.4f}')
             self.z_res = res_z_actual
-
 
     def __str__(self):
         return (f"ModelMaker(res_along_track={self.res_along_track}, res_z={self.res_z}, "
@@ -301,14 +212,11 @@ class ModelMakerP:
         step_at = self.step_along_track
 
         # programmatically create string to concatenate self attributes res_along_track, res_z, range_z, window_size, step_along_track
-        model_id = f'{res_at:.0f}_\
-{res_z:.2f}_{range_z_0:.0f}_\
-{range_z_1:.0f}_{win:.0f}_\
-{step_at:.0f}'
+        model_id = f'{res_at:.0f}_{res_z:.2f}_{range_z_0:.0f}_{range_z_1:.0f}_{win:.0f}_{step_at:.0f}'
 
         return model_id
     
-    def process_window(self, window_size=None, window_centre=None, z_min=None, z_max=None, z_bin_count=None, win_profile=None, bin_edges_z=None, at_beg=None, at_end=None, beam_strength=None):
+    def process_window(self, window_centre=None, z_min=None, z_max=None, z_bin_count=None, win_profile=None, bin_edges_z=None, at_beg=None, at_end=None, beam_strength=None):
 
         # version of dataframe with only nominal photons
         # use this data for constructing waveforms
@@ -324,8 +232,6 @@ class ModelMakerP:
         h = gaussian_filter1d(h_, 0.1/self.res_z)
 
         # identify median lat lon values of photon data in this chunk
-        # x_win = df_win_nom.lon_ph.median()
-        # y_win = df_win_nom.lat_ph.median()
         at_win = df_win_nom.x_ph.median()
         any_sat_ph = (win_profile.data.quality_ph > 0).any()
 
@@ -370,7 +276,6 @@ class ModelMakerP:
 
     def process(self, in_profile, n_cpu_cores=10):
 
-
         profile = copy.deepcopy(in_profile)
 
         z_min = self.range_z[0]
@@ -379,162 +284,73 @@ class ModelMakerP:
         bin_edges_z = np.linspace(z_min, z_max, num=z_bin_count+1)
         beam_strength = in_profile.info['beam_strength']
 
-
         data = copy.deepcopy(profile.data) 
 
-        if self.photon_bins == False:  
+        # along track bin sizing
+        #   get the max index of the dataframe
+        #   create bin group ids (at_idx_grp) based on pho_count spacing
+        at_max_idx = data.x_ph.max()
+        at_idx_grp = np.arange(data.x_ph.min(), at_max_idx + self.res_along_track, self.res_along_track)
         
-            # along track bin sizing
-            #   get the max index of the dataframe
-            #   create bin group ids (at_idx_grp) based on pho_count spacing
-            at_max_idx = data.x_ph.max()
-            at_min_idx = data.x_ph.min()
-            at_idx_grp = np.arange(data.x_ph.min(), at_max_idx + self.res_along_track, self.res_along_track)
-            
-            # sort the data by distance along track, reset the index
-            # add 'at_grp' column for the bin group id
-            data.sort_values(by='x_ph', inplace=True)
-            #data.reset_index(inplace=True)
-            data['idx'] = data.index
-            data['at_grp'] = 0
+        # sort the data by distance along track, reset the index
+        # add 'at_grp' column for the bin group id
+        data.sort_values(by='x_ph', inplace=True)
+        data['idx'] = data.index
+        data['at_grp'] = 0
 
-            # for each bin group, assign an integer id for index values between each of the 
-            #   group bin values. is pho_count = 20 then at_idx_grp = [0,20,49,60...]
-            #   - data indices between 0-20: at_grp = 1
-            #   - data indices between 20-40: at_grp = 2...
-            print('Computing at_grp...')
-            for i, grp in tqdm(enumerate(at_idx_grp)):
-                if grp < at_idx_grp.max():
-                    data['at_grp'][data['x_ph'].between(at_idx_grp[i], at_idx_grp[i+1])] = (at_idx_grp[i] - at_idx_grp.min()) / self.res_along_track
-            
-            # add group bin columns to the profile, photon group bin index
-            profile.data['pho_grp_idx'] = data['at_grp']
-            
-            # calculating the range so the histogram output maintains exact along track values
-            at_min = data.x_ph.min()
-            xh = (data.x_ph.values)
-            print('Computing bin_edges_at...')
-            bin_edges_at_min = data.groupby('at_grp').x_ph.min().values
-            bin_edges_at_max = data.groupby('at_grp').x_ph.max().values
+        # for each bin group, assign an integer id for index values between each of the 
+        #   group bin values. is pho_count = 20 then at_idx_grp = [0,20,49,60...]
+        #   - data indices between 0-20: at_grp = 1
+        #   - data indices between 20-40: at_grp = 2...
+        print('Computing at_grp...')
+        for i, grp in tqdm(enumerate(at_idx_grp)):
+            if grp < at_idx_grp.max():
+                data['at_grp'][data['x_ph'].between(at_idx_grp[i], at_idx_grp[i+1])] = (at_idx_grp[i] - at_idx_grp.min()) / self.res_along_track
+        
+        # add group bin columns to the profile, photon group bin index
+        profile.data['pho_grp_idx'] = data['at_grp']
+        
+        # calculating the range so the histogram output maintains exact along track values
+        print('Computing bin_edges_at...')
+        bin_edges_at_max = data.groupby('at_grp').x_ph.max().values
 
-            bin_edges_at = np.concatenate([np.array([data.x_ph.min()]), bin_edges_at_max])
+        bin_edges_at = np.concatenate([np.array([data.x_ph.min()]), bin_edges_at_max])
 
-            # array to store actual interpolated model and fitted model
-            hist_modeled = np.nan * np.zeros((bin_edges_at.shape[0] -1, z_bin_count))
-            
-            start_step = (self.window_size) / 2
-            end_step = len(bin_edges_at)
+        # array to store actual interpolated model and fitted model
+        hist_modeled = np.nan * np.zeros((bin_edges_at.shape[0] -1, z_bin_count))
+        
+        start_step = (self.window_size) / 2
+        end_step = len(bin_edges_at)
 
-            # -1 to start index at 0 instead of 1. For correct indexing when writing to hist_modeled array.
-            win_centers = np.arange(np.int64(start_step), np.int64(
-                end_step), self.step_along_track) -1
+        # -1 to start index at 0 instead of 1. For correct indexing when writing to hist_modeled array.
+        win_centers = np.arange(np.int64(start_step), np.int64(
+            end_step), self.step_along_track) -1
 
-            print('Running create_window_processing_args...')
-            window_args = self.create_window_processing_args(profile=profile, data=data, win_centers=win_centers, bin_edges_at=bin_edges_at)
-        else: 
+        print('Running create_window_processing_args...')
+        window_args = self.create_window_processing_args(profile=profile, data=data, win_centers=win_centers, bin_edges_at=bin_edges_at)
 
-            print("Photon Bin Processing")
-            
-            # set pho_count to the number of photons per bin from res_along_track input
-            pho_count = self.res_along_track
-            
-            # along track bin sizing
-            #   get the max index of the dataframe
-            #   create bin group ids (at_idx_grp) based on pho_count spacing
-            at_max_idx = data.index.max()
-            at_min_idx = data.index.min()
-            at_idx_grp = np.arange(data.index.min(), at_max_idx + pho_count, pho_count)
-            
-            # sort the data by distance along track, reset the index
-            # add 'at_grp' column for the bin group id
-            data.sort_values(by='x_ph', inplace=True)
-            #data.reset_index(inplace=True)
-            data['idx'] = data.index
-            data['at_grp'] = 0
+        # parallel processing
+        pstarttime = datetime.now()
+        data = []
 
-            # for each bin group, assign an integer id for index values between each of the 
-            #   group bin values. is pho_count = 20 then at_idx_grp = [0,20,49,60...]
-            #   - data indices between 0-20: at_grp = 1
-            #   - data indices between 20-40: at_grp = 2...
-            for i, grp in enumerate(at_idx_grp):
-                if grp < at_idx_grp.max():
-                    data['at_grp'][data['idx'].between(at_idx_grp[i], at_idx_grp[i+1])] = (at_idx_grp[i] - at_idx_grp.min()) / pho_count
-            
-            # add group bin columns to the profile, photon group bin index
-            profile.data['pho_grp_idx'] = data['at_grp']
-            
-            # calculating the range so the histogram output maintains exact along track values
-            at_min = data.x_ph.min()
-            xh = (data.x_ph.values)
-            bin_edges_at_min = data.groupby('at_grp').x_ph.min().values
-            bin_edges_at_max = data.groupby('at_grp').x_ph.max().values
+        print(f'Parallel processing {len(window_args["window_centres"])} bins...')
+        with multiprocessing.Pool(n_cpu_cores) as pool:
+            data = pool.starmap(self.process_window, zip(window_args['window_centres'], repeat(z_min), repeat(z_max),
+                                                            repeat(z_bin_count), window_args['window_profiles'], repeat(bin_edges_z), window_args['at_begs'],
+                                                            window_args['at_ends'], repeat(beam_strength)))
+        pendtime = datetime.now()
 
-            bin_edges_at = np.concatenate([np.array([data.x_ph.min()]), bin_edges_at_max]) 
-            
-            # array to store actual interpolated model and fitted model
-            hist_modeled = np.nan * np.zeros((bin_edges_at.shape[0] -1, z_bin_count))
+        self.ptime = pendtime - pstarttime
+        # summary of model params
+        params = pd.DataFrame(list(zip(*data))[1])
 
-            # print('bin_edges_at: ',bin_edges_at[0:5])
-            # print('hist_modeled james: ',hist_modeled.shape)
+        w_d = {elem[0]: elem[2] for elem in data}
 
-            win_centers = data['at_grp'].unique()
-            print('win_centers: ', win_centers)
+        replace_indices = np.vstack([np.full(hist_modeled.shape[1], elem[0]) for elem in data])
 
-            window_args = self.create_window_processing_args(profile=profile, data=data, win_centers=win_centers, bin_edges_at=bin_edges_at)
+        replace_with = np.vstack([np.flip(elem[2].model.output) for elem in data])
 
-        if self.parallel:
-            pstarttime = datetime.now()
-            data = []
-
-            print(f'Parallel processing {len(window_args["window_centres"])} bins...')
-            with multiprocessing.Pool(n_cpu_cores) as pool:
-                data = pool.starmap(self.process_window, zip(repeat(self.window_size), window_args['window_centres'], repeat(z_min), repeat(z_max),
-                                                             repeat(z_bin_count), window_args['window_profiles'], repeat(bin_edges_z), window_args['at_begs'],
-                                                             window_args['at_ends'], repeat(beam_strength)))
-            pendtime = datetime.now()
-
-            self.ptime = pendtime - pstarttime
-            # summary of model params
-            params = pd.DataFrame(list(zip(*data))[1])
-    
-            w_d = {elem[0]: elem[2] for elem in data}
-
-            replace_indices = np.vstack([np.full(hist_modeled.shape[1], elem[0]) for elem in data])
-    
-            replace_with = np.vstack([np.flip(elem[2].model.output) for elem in data])
-    
-            np.put_along_axis(hist_modeled, replace_indices, replace_with, axis=0)
-
-        else:
-
-            # dictionary of waveform objects - (AT_bin_i, w)
-            w_d = {}
-    
-            # list of organized/simple data series'
-            d_list = []
-
-            for at_beg, at_end, w_profile, window_centre in zip(window_args['at_begs'],
-                                                                window_args['at_ends'],
-                                                                window_args['window_profiles'],
-                                                                window_args['window_centres']):
-            
-                window_centre, data_dict, waveform = self.process_window(window_size=self.window_size,
-                                                                    window_centre=window_centre,
-                                                                    z_min=z_min, z_max=z_max,
-                                                                    z_bin_count=z_bin_count,
-                                                                    win_profile=w_profile, bin_edges_z=bin_edges_z, 
-                                                                    at_beg=at_beg, at_end=at_end, 
-                                                                    beam_strength=beam_strength)
-                
-                d_list.append(pd.Series(data_dict))
-    
-                # update dictionary of waveforms
-                w_d.update({window_centre: waveform})
-    
-                hist_modeled[window_centre, :] = np.flip(waveform.model.output)
-
-            # summary of model params
-            params = pd.DataFrame(d_list)
+        np.put_along_axis(hist_modeled, replace_indices, replace_with, axis=0)
 
         print('creating model...')
         m = ModelP(params=params, model_hist=hist_modeled,
@@ -555,70 +371,28 @@ class ModelMakerP:
 
         xh = profile.data.x_ph.values
 
-        if not self.photon_bins:
-            # optimized for speed, see slack message from Matt Holwill for original
-            for window_centre in tqdm(win_centers):
-                i_beg = np.int64(max((window_centre - (self.window_size-1) / 2), 0))
-                i_end = np.int64(min((window_centre + (self.window_size-1) / 2), len(bin_edges_at)-2)) + 1
+        # optimized for speed, see slack message from Matt Holwill for original
+        for window_centre in tqdm(win_centers):
+            i_beg = np.int64(max((window_centre - (self.window_size-1) / 2), 0))
+            i_end = np.int64(min((window_centre + (self.window_size-1) / 2), len(bin_edges_at)-2)) + 1
 
-                at_beg = bin_edges_at[i_beg]
-                at_end = bin_edges_at[i_end]
+            at_beg = bin_edges_at[i_beg]
+            at_end = bin_edges_at[i_end]
 
-                # Subset data using along-track distance window
-                # Does this need to be a deepcopy to avoid overwriting neighboring waveform labels?
-                w_profile = copy.deepcopy(profile)
+            # Subset data using along-track distance window
+            # Does this need to be a deepcopy to avoid overwriting neighboring waveform labels?
+            w_profile = copy.deepcopy(profile)
 
-                i_cond = (xh > at_beg) & (xh < at_end)
-                df_win = w_profile.data.loc[i_cond, :].copy()  # Make a copy here if needed
+            i_cond = (xh > at_beg) & (xh < at_end)
+            df_win = w_profile.data.loc[i_cond, :].copy()  # Make a copy here if needed
 
-                w_profile.data = df_win
+            w_profile.data = df_win
 
-                at_begs.append(at_beg)
-                at_ends.append(at_end)
-                window_profiles.append(w_profile)
-                window_centres.append(window_centre)
-        
-        else:
-            raise ValueError('Optimized photon bin processing not yet implemented')
-            # # not optimized
-            # bin_edges_at_min = data.groupby('at_grp').x_ph.min().values
-            # bin_edges_at_max = data.groupby('at_grp').x_ph.max().values
-
-            # for window_centre in win_centers:
-
-            #     # beginning and end dist for the photon group
-            #     if self.window_size == 1:
-            #         at_beg = data[data['at_grp']==window_centre].x_ph.min()
-            #         at_end = data[data['at_grp']==window_centre].x_ph.max()
-            #     else:
-            #         if self.window_size - window_centre > 1:
-            #             i_beg = 0
-            #             i_end = self.window_size - window_centre
-            #         elif window_centre - (data['at_grp'].max() - self.window_size) > 1:
-            #             i_beg = np.int64(data['at_grp'].max() - np.floor(self.window_size/2))
-            #             i_end = np.int64(data['at_grp'].max())
-            #         else:
-            #             i_beg = np.int64(window_centre - np.floor(self.window_size/2))
-            #             i_end = np.int64(window_centre + np.floor(self.window_size/2))
+            at_begs.append(at_beg)
+            at_ends.append(at_end)
+            window_profiles.append(w_profile)
+            window_centres.append(window_centre)
                 
-            #         at_beg = bin_edges_at_min[i_beg]
-            #         at_end = bin_edges_at_max[i_end]
-                
-            #     # subset data using photon group window
-            #     df_win = data[data['at_grp'].between(i_beg,i_end)]
-                
-            #     # copy profile to avoid overwriting
-            #     w_profile = copy.deepcopy(profile)
-                
-            #     # remove all data except for the photons in this window
-            #     w_profile.data = df_win
-                
-            #     at_begs.append(at_beg)
-            #     at_ends.append(at_end)
-            #     window_profiles.append(w_profile)
-            #     window_centres.append(window_centre)
-
-        
         return {'at_begs': at_begs,
                 'at_ends': at_ends,
                 'window_profiles': window_profiles,
@@ -709,8 +483,6 @@ class ModelMakerP:
             h = gaussian_filter1d(h_, 0.1/self.res_z)
 
             # identify median lat lon values of photon data in this chunk
-            # x_win = df_win_nom.lon_ph.median()
-            # y_win = df_win_nom.lat_ph.median()
             at_win = df_win_nom.x_ph.median()
             any_sat_ph = (df_win.quality_ph > 0).any()
 
@@ -737,8 +509,6 @@ class ModelMakerP:
 
             # combine useful data into a nice dict for turning into a df
             extra_dict = {'window_centre': i,  # indexing/location fields
-                        #   'x_med': x_win,
-                        #   'y_med': y_win,
                           'at_med': at_win,
                           'at_range': (at_beg, at_end),
                           'quality_flag': w.quality_flag,
@@ -812,9 +582,6 @@ class ModelP:
 
         # compute column score and append to model data
         self.params.loc[:, 'turb_score'] = column_score
-
-        # compute labels for photon data and update m.profile.data.classifications
-        # _ = self.label_by_pseudowaveform(inplace=True)
         
         list_of_models = self.waves.values() 
         
@@ -830,12 +597,6 @@ class ModelP:
         self.profile.data.weight_bathymetry = weights.bathymetry
         self.profile.data.subsurface_flag = subsurface_score
         
-    def __str__(self):
-
-        # print out useful info about this model like params, the ranges of the z , AT values, win, step size, num waveforms
-
-        pass
-
     def _compute_column_score(self):
 
         # index via wave keys or something else?
@@ -891,135 +652,12 @@ class ModelP:
 
     def _interp_model_hist(self, hist):
 
-        # move this to the actual model section
-
-        # print('Going into interp model hist...')
-
-        # print('Hist in shape: ', hist.shape)
-
         # interpolating between steps of data
-        hist_interp = pd.DataFrame(hist).interpolate(
-            method='linear', axis=0, limit=None, inplace=False, limit_area='inside')
+        hist_interp = pd.DataFrame(hist).interpolate(method='linear', axis=0, limit=None, inplace=False, limit_area='inside')
 
         # using the first/last steps to fill the edges
-        hist_interp.iloc[:self.window_size] = hist_interp.iloc[:self.window_size].fillna(
-            method='backfill')
+        hist_interp.iloc[:self.window_size] = hist_interp.iloc[:self.window_size].fillna(method='backfill')
 
-        hist_interp.iloc[-self.window_size:] = hist_interp.iloc[-self.window_size:].fillna(
-            method='ffill')
-
-        # print('Hist out shape: ', hist_interp.shape)
+        hist_interp.iloc[-self.window_size:] = hist_interp.iloc[-self.window_size:].fillna(method='ffill')
 
         return hist_interp
-    
-    def label_by_pseudowaveform(self, inplace=False):
-
-        # currently busted, need to redo for new waveforms
-
-        # on the dataframe with duplicates...
-        # one hot encode the class labels
-        # then groupby the index and take the mean to get each class confidence
-
-
-        list_of_photon_dfs = [
-            waveform.profile.data for wave_idx, waveform in self.waves.items()]
-
-        data_with_dupes = pd.concat(list_of_photon_dfs)
-
-
-        one_hot_classes = pd.DataFrame(-999, columns=['is_surface', 'is_bathymetry', 'is_column', 'is_background'],
-                                    index=data_with_dupes.index)
-
-        one_hot_classes.is_surface = data_with_dupes.classification == self.profile.label_help('surface')
-        one_hot_classes.is_bathymetry = data_with_dupes.classification == self.profile.label_help('bathymetry')
-        one_hot_classes.is_column = data_with_dupes.classification == self.profile.label_help('column')
-        one_hot_classes.is_background = data_with_dupes.classification == self.profile.label_help('background')
-
-        confidences = one_hot_classes.groupby(one_hot_classes.index).mean()
-        confidences.columns = ['surface', 'bathymetry', 'column', 'background']
-        # final_class = data_with_dupes.classification.groupby(one_hot_classes.index).apply(pd.Series.mode)
-
-        # initialize and then update scores
-        photon_class_data = pd.DataFrame(self.profile.label_help('unclassified'), # integer corresponding to unclassified label
-                                           index=self.profile.data.index.values,
-                                           columns=['classification', 'none', 'background', 'surface', 'column', 'bathymetry'])
-
-        # handles if photons weren't included in a waveform
-        # not sure why that's happening but seems to only be the first photon
-        classed_photons = data_with_dupes.index.unique().values
-
-        photon_class_data.loc[classed_photons,
-                                'background'] = confidences.background.values
-        photon_class_data.loc[classed_photons,
-                                'surface'] = confidences.surface.values
-        photon_class_data.loc[classed_photons,
-                                'column'] = confidences.column.values
-        photon_class_data.loc[classed_photons,
-                                'bathymetry'] = confidences.bathymetry.values
-        
-        # check each of the conf values and get arg max
-
-        # reorganize such that classes correspond to 0, 1, 2, 3
-        # should work for class labels below, otherwise needs tweaking
-        # {'surface': 3,
-        #  'column': 2,
-        #  'bathymetry': 1,
-        #  'background': 0,
-        #  'unclassified': -1,
-        #  'none': -999}
-
-
-        new_confidences = photon_class_data.loc[:, ['background', 'bathymetry', 'column', 'surface']].values
-
-        max_column_labels = np.argmax(new_confidences, axis=1).astype(int)
-        
-        photon_class_data.loc[:, 'classification'] = max_column_labels
-
-        if inplace:
-            # update class in full profile data
-            self.profile.data['classification'] = photon_class_data.classification
-
-            # insert individual scores
-            self.profile.data['conf_background'] = photon_class_data.background
-            self.profile.data['conf_surface'] = photon_class_data.surface
-            self.profile.data['conf_column'] = photon_class_data.column
-            self.profile.data['conf_bathymetry'] = photon_class_data.bathymetry
-            return None
-
-        else:
-            # return classes and confidence
-            return photon_class_data
-
-    def save_model_data(self, output_directory, prefix='FIXEDWIN_'):
-        model_prefix = 'FIXEDWIN'
-        formatted_filename_base = self.profile.get_formatted_filename(human_readable=False, use_short_name=True) \
-            + '_' + model_prefix +'_' + self.ModelMaker.get_formatted_filename()
-
-        if not os.path.exists(output_directory):
-            os.makedirs(output_directory)
-        
-        # Save tabular data (photon elevations and classifications) as an ASCII file
-        output_file = os.path.join(output_directory, formatted_filename_base + '_phclass.csv')
-        columns_to_save = ['lon', 'lat', 'height', 'classification', 'conf_surface',
-                        'conf_column', 'conf_bathymetry', 'conf_background',
-                        'weight_surface', 'weight_bathymetry', 'subsurface_flag']
-        self.profile.data[columns_to_save].to_csv(output_file, sep=',', index=True, header=True)
-
-        # Save simpler data (processing resolution, etc.) as a JSON file
-        metadata_file = os.path.join(output_directory, formatted_filename_base + '_metadata.json')
-        metadata = {
-            'res_z': self.res_z,
-            'res_at': self.res_at,
-            'bin_edges_z': self.bin_edges_z.tolist(),
-            'bin_edges_at': self.bin_edges_at.tolist(),
-            'window_size': self.window_size,
-            'step_along_track': self.step_along_track
-        }
-        with open(metadata_file, 'w') as f:
-            json.dump(metadata, f, indent=4)
-
-        # Save model parameters as a CSV file
-        params_file = os.path.join(output_directory, formatted_filename_base + '_model.csv')
-        self.params.to_csv(params_file, sep=',', index=False, header=True)
-
-

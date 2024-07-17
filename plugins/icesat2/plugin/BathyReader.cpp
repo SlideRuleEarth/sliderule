@@ -77,7 +77,7 @@ const RecordObject::fieldDef_t BathyReader::phRecDef[] = {
     {"y_atc",           RecordObject::DOUBLE,   offsetof(photon_t, y_atc),          1,  NULL, NATIVE_FLAGS},
     {"background_rate", RecordObject::DOUBLE,   offsetof(photon_t, background_rate),1,  NULL, NATIVE_FLAGS},
     {"geoid",           RecordObject::FLOAT,    offsetof(photon_t, geoid),          1,  NULL, NATIVE_FLAGS},
-    {"ortho_h",    RecordObject::FLOAT,    offsetof(photon_t, ortho_h),   1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
+    {"ortho_h",         RecordObject::FLOAT,    offsetof(photon_t, ortho_h),        1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"dem_h",           RecordObject::FLOAT,    offsetof(photon_t, dem_h),          1,  NULL, NATIVE_FLAGS},
     {"sigma_h",         RecordObject::FLOAT,    offsetof(photon_t, sigma_h),        1,  NULL, NATIVE_FLAGS},
     {"sigma_along",     RecordObject::FLOAT,    offsetof(photon_t, sigma_along),    1,  NULL, NATIVE_FLAGS},
