@@ -471,7 +471,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             /* Allocate Buffer of Integers */
             long* tbuf = new long [info.elements];
 
-            /* Float to Int */
+            /* Float to Long */
             if(info.datatype == RecordObject::FLOAT)
             {
                 float* dptr = reinterpret_cast<float*>(info.data);
@@ -480,7 +480,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
                     tbuf[i] = static_cast<long>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
-            /* Double to Int */
+            /* Double to Long */
             else if(info.datatype == RecordObject::DOUBLE)
             {
                 double* dptr = reinterpret_cast<double*>(info.data);
@@ -489,10 +489,18 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
                     tbuf[i] = static_cast<long>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
-            /* Char to Int */
-            else if(info.datatype == RecordObject::UINT8 || info.datatype == RecordObject::INT8)
+            /* Char to Long */
+            else if(info.datatype == RecordObject::INT8)
             {
-                char* cptr = reinterpret_cast<char*>(info.data);
+                int8_t* cptr = reinterpret_cast<int8_t*>(info.data);
+                for(uint32_t i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = static_cast<long>(cptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
+                }
+            }
+            else if(info.datatype == RecordObject::UINT8)
+            {
+                uint8_t* cptr = reinterpret_cast<uint8_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<long>(cptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -516,8 +524,16 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
                 }
                 info.elements = length;
             }
-            /* Short to Int */
-            else if(info.datatype == RecordObject::UINT16 || info.datatype == RecordObject::INT16)
+            /* Short to Long */
+            else if(info.datatype == RecordObject::INT16)
+            {
+                int16_t* dptr = reinterpret_cast<int16_t*>(info.data);
+                for(uint32_t i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = static_cast<long>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
+                }
+            }
+            else if(info.datatype == RecordObject::UINT16)
             {
                 uint16_t* dptr = reinterpret_cast<uint16_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
@@ -525,17 +541,25 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
                     tbuf[i] = static_cast<long>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
-            /* Int to Int */
-            else if(info.datatype == RecordObject::UINT32 || info.datatype == RecordObject::INT32)
+            /* Int to Long */
+            else if(info.datatype == RecordObject::INT32)
             {
-                long* dptr = reinterpret_cast<long*>(info.data);
+                int32_t* dptr = reinterpret_cast<int32_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = dptr[i]; // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
-            /* Long to Int */
-            else if(info.datatype == RecordObject::UINT64 || info.datatype == RecordObject::INT64)
+            else if(info.datatype == RecordObject::UINT32)
+            {
+                uint32_t* dptr = reinterpret_cast<uint32_t*>(info.data);
+                for(uint32_t i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = dptr[i]; // NOLINT(clang-analyzer-core.uninitialized.Assign)
+                }
+            }
+            /* Long to Long */
+            else if(info.datatype == RecordObject::INT64)
             {
                 int64_t* dptr = reinterpret_cast<int64_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
@@ -543,6 +567,15 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
                     tbuf[i] = static_cast<long>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
+            else if(info.datatype == RecordObject::UINT64)
+            {
+                uint64_t* dptr = reinterpret_cast<uint64_t*>(info.data);
+                for(uint32_t i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = static_cast<long>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
+                }
+            }
+            /* Invalid */
             else
             {
                 data_valid = false;
@@ -578,16 +611,32 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
                 }
             }
             /* Char to Double */
-            else if(info.datatype == RecordObject::UINT8 || info.datatype == RecordObject::INT8)
+            else if(info.datatype == RecordObject::INT8)
             {
-                uint8_t* dptr = info.data;
+                int8_t* dptr = reinterpret_cast<int8_t*>(info.data);
+                for(uint32_t i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
+                }
+            }
+            else if(info.datatype == RecordObject::UINT8)
+            {
+                uint8_t* dptr = reinterpret_cast<uint8_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
             /* Short to Double */
-            else if(info.datatype == RecordObject::UINT16 || info.datatype == RecordObject::INT16)
+            else if(info.datatype == RecordObject::INT16)
+            {
+                int16_t* dptr = reinterpret_cast<int16_t*>(info.data);
+                for(uint32_t i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
+                }
+            }
+            else if(info.datatype == RecordObject::UINT16)
             {
                 uint16_t* dptr = reinterpret_cast<uint16_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
@@ -596,7 +645,15 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
                 }
             }
             /* Int to Double */
-            else if(info.datatype == RecordObject::UINT32 || info.datatype == RecordObject::INT32)
+            else if(info.datatype == RecordObject::INT32)
+            {
+                int32_t* dptr = reinterpret_cast<int32_t*>(info.data);
+                for(uint32_t i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
+                }
+            }
+            else if(info.datatype == RecordObject::UINT32)
             {
                 uint32_t* dptr = reinterpret_cast<uint32_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
@@ -605,7 +662,15 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
                 }
             }
             /* Long to Double */
-            else if(info.datatype == RecordObject::UINT64 || info.datatype == RecordObject::INT64)
+            else if(info.datatype == RecordObject::INT64)
+            {
+                int64_t* dptr = reinterpret_cast<int64_t*>(info.data);
+                for(uint32_t i = 0; i < info.elements; i++)
+                {
+                    tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
+                }
+            }
+            else if(info.datatype == RecordObject::UINT64)
             {
                 uint64_t* dptr = reinterpret_cast<uint64_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
@@ -613,6 +678,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
                     tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
                 }
             }
+            /* Invalid */
             else
             {
                 data_valid = false;

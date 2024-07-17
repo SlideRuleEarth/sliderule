@@ -31,12 +31,12 @@ f2 = h5.dataset(core.READER, asset, "h5ex_d_gzip.h5", "/DS1", 0, true, core.INTE
 r2 = core.reader(f2, dataq)
 
 vals = rsps2:recvstring(3000)
-e1, e2, e3, e4 = string.unpack('iiii', vals)
+e1, e2, e3, e4 = string.unpack('jjjj', vals)
 
-runner.check(-2 == e1, "failed dataset read")
-runner.check( 0 == e2, "failed dataset read")
-runner.check( 2 == e3, "failed dataset read")
-runner.check( 4 == e4, "failed dataset read")
+runner.check(-2 == e1, string.format("failed dataset read, expected: %d, actual: %d", -2, e1))
+runner.check( 0 == e2, string.format("failed dataset read, expected: %d, actual: %d", 0,  e2))
+runner.check( 2 == e3, string.format("failed dataset read, expected: %d, actual: %d", 2,  e3))
+runner.check( 4 == e4, string.format("failed dataset read, expected: %d, actual: %d", 4,  e4))
 
 rsps2:destroy()
 r2:destroy()
