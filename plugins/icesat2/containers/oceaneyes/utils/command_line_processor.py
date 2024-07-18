@@ -71,7 +71,7 @@ def process_command_line(argv, columns=None):
 
     # read input
     if input_csv.endswith(".csv"):
-        data = pd.read_csv(input_csv, usecols=columns)
+        data = pd.read_csv(input_csv, usecols=columns, engine='pyarrow')
     elif input_csv.endswith(".parquet"):
         data = pd.read_parquet(input_csv, columns=columns)
     elif input_csv.endswith(".geoparquet"):

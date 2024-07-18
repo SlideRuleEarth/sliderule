@@ -249,12 +249,8 @@ class ModelMakerP:
         # may also be helpful to have track metadata/functions
         # this is for ALL photons, not just the nominal subset
 
-        # w.add_profile(p)  # bug somewhere here returning nans
-
         # combine useful data into a nice dict for turning into a df
         extra_dict = {'window_centre': window_centre,  # indexing/location fields
-                    #   'x_med': x_win,
-                    #   'y_med': y_win,
                       'at_med': at_win,
                       'at_range': (at_beg, at_end),
                       'quality_flag': w.quality_flag,
@@ -327,7 +323,7 @@ class ModelMakerP:
             end_step), self.step_along_track) -1
 
         print('Running create_window_processing_args...')
-        window_args = self.create_window_processing_args(profile=profile, data=data, win_centers=win_centers, bin_edges_at=bin_edges_at)
+        window_args = self.create_window_processing_args(profile=profile, win_centers=win_centers, bin_edges_at=bin_edges_at)
 
         # parallel processing
         pstarttime = datetime.now()
@@ -362,7 +358,7 @@ class ModelMakerP:
         return m
 
 
-    def create_window_processing_args(self, profile=None, data=None, win_centers=None, bin_edges_at=None):
+    def create_window_processing_args(self, profile=None, win_centers=None, bin_edges_at=None):
 
         at_begs = []
         at_ends = []
@@ -397,161 +393,6 @@ class ModelMakerP:
                 'at_ends': at_ends,
                 'window_profiles': window_profiles,
                 'window_centres': window_centres}
-
-
-    def process_orig(self, in_profile):
-        
-        profile = copy.deepcopy(in_profile)
-
-        z_min = self.range_z[0]
-        z_max = self.range_z[1]
-        z_bin_count = np.int64(np.ceil((z_max - z_min) / self.res_z))
-        beam_strength = in_profile.info['beam_strength']
-
-        data = copy.deepcopy(profile.data) #TO DO: profile.data.copy(deep=true)
-
-        # along track bin sizing
-        at_min = data.x_ph.min()
-
-        # calculating the range st the histogram output maintains exact along track values
-        last_bin_offset = (self.res_along_track - np.mod((data.x_ph.max() -
-                           data.x_ph.min()), self.res_along_track))
-
-        at_max = data.x_ph.max() + last_bin_offset
-        at_bin_count = np.int64((at_max - at_min) / self.res_along_track)
-
-        xh = (data.x_ph.values)
-
-        yh = (data.z_ph.values)
-
-        bin_edges_at = np.linspace(at_min, at_max, num=at_bin_count+1)
-        bin_edges_z = np.linspace(z_min, z_max, num=z_bin_count+1)
-
-        # dictionary of waveform objects - (AT_bin_i, w)
-        w_d = {}
-
-        # list of organized/simple data series'
-        d_list = []
-
-        print('bin_edges_at markel: ',bin_edges_at.shape)
-        print('at_bin_count markel: ',at_bin_count.shape)
-        print('bin_edges_at start markel: ',bin_edges_at[0])
-        print('bin_edges_at end markel: ',bin_edges_at[-1])
-
-        # array to store actual interpolated model and fitted model
-        hist_modeled = np.nan * np.zeros((at_bin_count, z_bin_count))
-
-        print('hist_modeled markel: ',hist_modeled.shape)
-
-        # at the center of each evaluation window
-        # win centers needs to actually handle the center values unlike here
-        # currently bugs out if win is 1
-
-        # this step ensures that histograms at edges don't have lower 'intensity' just because the window exceeds the data range
-        start_step = (self.window_size-1) / 2
-        end_step = len(bin_edges_at) - (self.window_size-1) / 2 - 1
-
-        win_centers = np.arange(np.int64(start_step), np.int64(
-            end_step), self.step_along_track)
-
-        for i in tqdm(win_centers):
-
-            # get indices/at distance of evaluation window
-            i_beg = np.int64(max((i - (self.window_size-1) / 2), 0))
-            i_end = np.int64(
-                min((i + (self.window_size-1) / 2), len(bin_edges_at)-2)) + 1
-            # + 1 above pushes i_end to include up to the edge of the bin when used as index
-
-            at_beg = bin_edges_at[i_beg]
-            at_end = bin_edges_at[i_end]
-
-            # could be sped up with numba if this is an issue
-            # subset data using along track distance window
-            i_cond = ((xh > at_beg) & (xh < at_end))
-            df_win = data.loc[i_cond, :]
-
-            # version of dataframe with only nominal photons
-            # use this data for constructing waveforms
-            df_win_nom = df_win.loc[df_win.quality_ph == 0]
-            height_geoid = (df_win_nom.z_ph.values)
-
-            # subset of histogram data in the evaluation window
-            h_ = histogram1d(height_geoid,
-                             range=[z_min, z_max], bins=z_bin_count)
-
-            # smooth the histogram with 0.1 sigma gaussian kernel
-            h = gaussian_filter1d(h_, 0.1/self.res_z)
-
-            # identify median lat lon values of photon data in this chunk
-            at_win = df_win_nom.x_ph.median()
-            any_sat_ph = (df_win.quality_ph > 0).any()
-
-            # copy profile to avoid overwriting
-            w_profile = copy.deepcopy(profile)
-
-            # remove all data except for the photons in this window
-            w_profile.data = df_win
-
-            w = Waveform(np.flip(h), -np.flip(bin_edges_z),
-                         fit=self.fit, sat_check=any_sat_ph, profile=w_profile, beam_strength=beam_strength)
-
-            #################################################################
-
-            # this next section is basically all reformatting and organizing the data
-            # might be better elsewhere but keeping here so i dont have to
-            # run through another loop
-
-            # we also want to have the original photon data for photons in this chunk
-            # may also be helpful to have track metadata/functions
-            # this is for ALL photons, not just the nominal subset
-
-            # w.add_profile(p)  # bug somewhere here returning nans
-
-            # combine useful data into a nice dict for turning into a df
-            extra_dict = {'window_centre': i,  # indexing/location fields
-                          'at_med': at_win,
-                          'at_range': (at_beg, at_end),
-                          'quality_flag': w.quality_flag,
-                          'water_conf': -999,
-                          'n_photons': df_win.shape[0]}
-
-            # combine into unified dict/df
-            data_dict = dict(extra_dict, **w.params.to_dict())
-
-            # add formatted series to the list to combine when done
-            # might be faster if you preallocate the dataframe instead
-            # but i dont want to have to constantly tweak the number
-            # of rows if i add fields to this
-
-            d_list.append(pd.Series(data_dict))
-
-            # update dictionary of waveforms
-            w_d.update({i: w})
-
-            # testing
-            # use -1 instead of nan in order to be able to ffill sparse matrix
-            # -1 indicates we checked this chunk and it actually is empty, not just
-            # that is got skipped by the step sizes
-            if np.all(np.isnan(w.model.output)):
-                w.model.output = -1 * np.ones_like(w.model.output)
-
-            hist_modeled[i, :] = np.flip(w.model.output)
-
-        print('Final hist_modeled markel: ',hist_modeled.shape)
-
-        # summary of model params
-        params = pd.DataFrame(d_list)
-
-        m = ModelP(params=params, model_hist=hist_modeled,
-                  bin_edges_z=bin_edges_z,
-                  bin_edges_at=bin_edges_at,
-                  window_size=self.window_size,
-                  waves=w_d, profile=profile, ModelMaker=self)
-
-        return m
-
-
-
 
 
 class ModelP:

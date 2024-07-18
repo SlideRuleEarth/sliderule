@@ -62,7 +62,7 @@ spot_table = {}
 for spot in input_files["spot_photons"]:
     if spot not in spot_table:
         spot_table[spot] = {}
-    spot_table[spot]["df"] = pd.read_csv(input_files["spot_photons"][spot])
+    spot_table[spot]["df"] = pd.read_csv(input_files["spot_photons"][spot], engine='pyarrow')
 print("Read photon data into dataframes")
 
 # read in granule info as dictionary from json file and add as necessary to dataframes
@@ -73,7 +73,7 @@ for spot in input_files["spot_granule"]:
 # read in photon classifications as dataframe from csv file and merge into dataframes
 for classifier in input_files["classifiers"]:
     for spot in input_files["classifiers"][classifier]:
-        classifier_df = pd.read_csv(input_files["classifiers"][classifier][spot])
+        classifier_df = pd.read_csv(input_files["classifiers"][classifier][spot], engine='pyarrow')
         classifier_df.rename(columns={'class_ph': classifier}, inplace=True)
         spot_table[spot]["df"] = pd.merge(spot_table[spot]["df"], classifier_df, on='index_ph', how='left')
 print("Added photon classifications to dataframes")

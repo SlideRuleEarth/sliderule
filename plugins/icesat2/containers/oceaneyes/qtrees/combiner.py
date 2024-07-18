@@ -43,8 +43,8 @@ spot_csv_file = sys.argv[1]
 qtrees_csv_file = sys.argv[2]
 
 # read in data
-spot_df = pd.read_csv(spot_csv_file)
-qtrees_df = pd.read_csv(qtrees_csv_file)
+spot_df = pd.read_csv(spot_csv_file, engine='pyarrow')
+qtrees_df = pd.read_csv(qtrees_csv_file, engine='pyarrow')
 print("Read all into data frame")
 
 # merge qtrees predictions into spot dataframe
