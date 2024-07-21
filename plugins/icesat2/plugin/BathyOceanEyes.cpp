@@ -645,13 +645,10 @@ void BathyOceanEyes::calculateUncertainty (extent_t& extent) const
 
             /* get kd range index */
             int kd_range_index = 0;
-            while(kd_range_index < NUM_KD_RANGES && KD_RANGES[kd_range_index][1] < kd)
+            while(kd_range_index < (NUM_KD_RANGES - 1) && KD_RANGES[kd_range_index][1] < kd)
             {
                 kd_range_index++;
             }
-
-            /* check for out of range */
-            if(kd_range_index == NUM_KD_RANGES) kd_range_index = NUM_KD_RANGES - 1;
 
             /* uncertainty coefficients */
             const uncertainty_coeff_t horizontal_coeff = UNCERTAINTY_COEFF_MAP[THU][pointing_angle_index][wind_speed_index][kd_range_index];
