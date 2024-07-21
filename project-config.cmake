@@ -126,6 +126,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=unreadVariable:*/TimeLib.cpp"                       # line: 471, terminating '\0' detected as 'unused' but it is used/needed
         "--suppress=invalidPointerCast:*/H5Array.h"                     # line: 166, documented in code
         "--suppress=invalidPointerCast:*/H5Element.h"                   # line: 141, documented in code
+        "--suppress=invalidPointerCast:*/H5Coro.cpp"                    # info.data (uint8_t* being cast to float/double ptrs. Allignments issues)
         "--suppress=copyCtorPointerCopying:*/MsgQ.cpp"                  # line: 120, shallow copy which is fine in code
         "--error-exitcode=1"
 
@@ -136,6 +137,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp"     # List [] const issue
         "--suppress=constParameterPointer:*/CcsdsPayloadDispatch.cpp"   # Not trivial to fix, would have to change DispachObject class as well.
         "--suppress=knownConditionTrueFalse"                            # -1 < 0 etc
+        "--suppress=constParameterReference:*/BathyOceanEyes.cpp"       # extent_t& extent cannot be const
     )
 
 endif()

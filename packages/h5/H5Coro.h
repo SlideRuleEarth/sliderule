@@ -86,7 +86,7 @@ namespace H5Coro
     * Constants
     *--------------------------------------------------------------------*/
 
-    const int MAX_NDIMS = H5CORO_MAXIMUM_DIMENSIONS;    
+    const int MAX_NDIMS = H5CORO_MAXIMUM_DIMENSIONS;
     const long EOR = -1L; // end of range - read rest of the span of a dimension
     const long ALL_ROWS = EOR;
     const long ALL_COLS = EOR;
@@ -190,7 +190,7 @@ namespace H5Coro
         /* Methods */
         /***********/
 
-                        Context     (Asset* asset, const char* resource);
+                        Context     (const Asset* asset, const char* resource);
                         ~Context    (void);
 
         void            ioRequest   (uint64_t* pos, int64_t size, uint8_t* buffer, int64_t hint, bool cache);

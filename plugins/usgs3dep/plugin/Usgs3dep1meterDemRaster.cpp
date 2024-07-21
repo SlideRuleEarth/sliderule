@@ -179,7 +179,7 @@ OGRErr Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
     const OGRErr er2 = vertical.importFromEPSG(NAVD88_HEIGHT_EPSG);
     const OGRErr er3 = target.SetCompoundCS("sliderule", &horizontal, &vertical);
 
-    if(((er1 == er2) == er3) == OGRERR_NONE)
+    if(er1 == OGRERR_NONE && er2 == OGRERR_NONE && er3 == OGRERR_NONE)
     {
         ogrerr = OGRERR_NONE;
     }
