@@ -184,7 +184,7 @@ bool H5DatasetDevice::isConnected (int num_open)
 void H5DatasetDevice::closeConnection (void)
 {
     connected = false;
-    delete [] dataBuffer;
+    operator delete[](dataBuffer, std::align_val_t(H5CORO_DATA_ALIGNMENT));
     dataBuffer = NULL;
 }
 

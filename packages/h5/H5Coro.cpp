@@ -99,7 +99,7 @@ H5Coro::Future::Future (void)
 H5Coro::Future::~Future (void)
 {
     wait(IO_PEND);
-    delete [] info.data;
+    operator delete[](info.data, std::align_val_t(H5CORO_DATA_ALIGNMENT));
 }
 
 /*----------------------------------------------------------------------------
@@ -456,9 +456,6 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
 {
     info_t info;
 
-    memset(&info, 0, sizeof(info_t));
-    info.datatype = RecordObject::INVALID_FIELD;
-
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, parent_trace_id, "h5coro_read", "{\"context\":\"%s\", \"dataset\":\"%s\"}", context->name, datasetname);
 
@@ -472,7 +469,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
         if(valtype == RecordObject::INTEGER)
         {
             /* Allocate Buffer of Integers */
-            long* tbuf = new long [info.elements];
+            long* tbuf = new (std::align_val_t(H5CORO_DATA_ALIGNMENT)) long [info.elements];
 
             /* Float to Long */
             if(info.datatype == RecordObject::FLOAT)
@@ -585,15 +582,15 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             }
 
             /* Switch Buffers */
-            delete [] info.data;
+            operator delete[](info.data, std::align_val_t(H5CORO_DATA_ALIGNMENT));
             info.data = reinterpret_cast<uint8_t*>(tbuf);
             info.datasize = sizeof(long) * info.elements;
         }
         /* Perform Integer Type Transaltion */
         else if(valtype == RecordObject::REAL)
         {
-            /* Allocate Buffer of Integers */
-            double* tbuf = new double [info.elements];
+            /* Allocate Buffer of doubles */
+            double* tbuf = new (std::align_val_t(H5CORO_DATA_ALIGNMENT)) double [info.elements];
 
             /* Float to Double */
             if(info.datatype == RecordObject::FLOAT)
@@ -688,7 +685,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             }
 
             /* Switch Buffers */
-            delete [] info.data;
+            operator delete[](info.data, std::align_val_t(H5CORO_DATA_ALIGNMENT));
             info.data = reinterpret_cast<uint8_t*>(tbuf);
             info.datasize = sizeof(double) * info.elements;
         }
@@ -696,7 +693,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
         /* Check Data Valid */
         if(!data_valid)
         {
-            delete [] info.data;
+            operator delete[](info.data, std::align_val_t(H5CORO_DATA_ALIGNMENT));
             info.data = NULL;
             info.datasize = 0;
             throw RunTimeException(CRITICAL, RTE_ERROR, "data translation failed for %s: [%d] %d --> %d", datasetname, info.typesize, (int)info.datatype, (int)valtype);

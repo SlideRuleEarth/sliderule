@@ -161,9 +161,9 @@ bool H5Array<T>::join(int timeout, bool throw_exception)
             /*
              * There is no way to do this in a portable "safe" way. The code
              * below works because our target architectures are x86_64 and aarch64.
-             * The data pointed to by info.data is new'ed and therefore guaranteed
-             * to be aligned to a 16 byte boundary.  The calling code is responsible
-             * for knowing what the data being read out of the h5 file is and
+             * The data pointed to by info.data is new'ed with H5CORO_DATA_ALIGNMENT alignment.
+             * The calling code is responsible for knowing
+             * what the data being read out of the h5 file is and
              * providing the correct type to the template.
              */
             data = reinterpret_cast<T*>(h5f->info.data);

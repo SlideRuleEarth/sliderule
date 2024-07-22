@@ -166,7 +166,7 @@ H5Dataset::H5Dataset (info_t* info, Context* context,
     catch(const RunTimeException& e)
     {
         /* Clean Up Data Allocations */
-        delete [] info->data;
+        operator delete [] (info->data, std::align_val_t(H5CORO_DATA_ALIGNMENT));
         info->data= NULL;
         info->datasize = 0;
 
@@ -319,7 +319,7 @@ void H5Dataset::readDataset (info_t* info)
         const int64_t extra_space_for_terminator = (metaData.type == STRING_TYPE);
 
         /* Allocate */
-        buffer = new uint8_t [buffer_size + extra_space_for_terminator];
+        buffer = new (std::align_val_t(H5CORO_DATA_ALIGNMENT)) uint8_t [buffer_size + extra_space_for_terminator];
 
         /* Gaurantee Termination of String */
         if(metaData.type == STRING_TYPE)

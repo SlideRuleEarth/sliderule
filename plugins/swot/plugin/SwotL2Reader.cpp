@@ -521,7 +521,7 @@ void* SwotL2Reader::varThread (void* parm)
     reader->checkComplete();
 
     /* Clean Up */
-    delete [] results.data;
+    operator delete[](results.data, std::align_val_t(H5CORO_DATA_ALIGNMENT));
     delete [] info->variable_name;
     delete info;
 

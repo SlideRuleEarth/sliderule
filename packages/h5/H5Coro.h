@@ -70,6 +70,10 @@
 #define H5CORO_ENABLE_FILL false
 #endif
 
+#ifndef H5CORO_DATA_ALIGNMENT
+#define H5CORO_DATA_ALIGNMENT 8
+#endif
+
 /******************************************************************************
  * MACRO
  ******************************************************************************/
@@ -99,7 +103,7 @@ namespace H5Coro
         uint32_t                    elements;   // number of elements in dataset
         uint32_t                    typesize;   // number of bytes per element
         uint64_t                    datasize;   // total number of bytes in dataset
-        uint8_t*                    data;       // point to allocated data buffer
+        uint8_t*                    data;       // point to allocated data buffer - must be H5CORO_DATA_ALIGNMENT aligned
         RecordObject::fieldType_t   datatype;   // data type of elements
         int64_t                     shape[MAX_NDIMS]; // dimensions of the data
     } info_t;

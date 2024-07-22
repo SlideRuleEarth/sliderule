@@ -75,7 +75,7 @@ RasterObject* MeritRaster::create(lua_State* L, GeoParms* _parms)
  *----------------------------------------------------------------------------*/
 MeritRaster::~MeritRaster(void)
 {
-    delete [] cache;
+    operator delete[](cache, std::align_val_t(H5CORO_DATA_ALIGNMENT));
     if(asset) asset->releaseLuaObject();
 }
 
@@ -180,7 +180,7 @@ uint32_t MeritRaster::getSamples (const MathLib::point_3d_t& point, int64_t gps,
             /* Update Cache */
             cacheMut.lock();
             {
-                delete [] cache;
+                operator delete[](cache, std::align_val_t(H5CORO_DATA_ALIGNMENT));
                 cache = tile;
                 cacheLon = left_lon;
                 cacheLat = upper_lat;
