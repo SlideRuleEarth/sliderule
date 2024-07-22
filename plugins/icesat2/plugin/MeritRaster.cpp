@@ -75,7 +75,7 @@ RasterObject* MeritRaster::create(lua_State* L, GeoParms* _parms)
  *----------------------------------------------------------------------------*/
 MeritRaster::~MeritRaster(void)
 {
-    delete [] cache;
+    operator delete[](cache, std::align_val_t(H5CORO_DATA_ALIGNMENT));
     if(asset) asset->releaseLuaObject();
 }
 
@@ -172,7 +172,7 @@ uint32_t MeritRaster::getSamples (const MathLib::point_3d_t& point, int64_t gps,
         if(!value_cached)
         {
             H5Coro::Context context(asset, RESOURCE_NAME);
-            H5Coro::range_t slice[2] = {{0, H5Coro::EOR}, {0, H5Coro::EOR}};
+            const H5Coro::range_t slice[2] = {{0, H5Coro::EOR}, {0, H5Coro::EOR}};
             const H5Coro::info_t info = H5Coro::read(&context, dataset.c_str(), RecordObject::DYNAMIC, slice, 2, false, traceId);
             assert(info.datasize == (X_MAX * Y_MAX * sizeof(int32_t)));
             int32_t* tile = reinterpret_cast<int32_t*>(info.data);
@@ -180,7 +180,7 @@ uint32_t MeritRaster::getSamples (const MathLib::point_3d_t& point, int64_t gps,
             /* Update Cache */
             cacheMut.lock();
             {
-                delete [] cache;
+                operator delete[](cache, std::align_val_t(H5CORO_DATA_ALIGNMENT));
                 cache = tile;
                 cacheLon = left_lon;
                 cacheLat = upper_lat;

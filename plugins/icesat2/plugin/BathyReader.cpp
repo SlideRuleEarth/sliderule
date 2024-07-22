@@ -257,7 +257,7 @@ void BathyReader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyReader::BathyReader (lua_State* L, const parms_t* _parms, const char* _resource, 
+BathyReader::BathyReader (lua_State* L, const parms_t* _parms, const char* _resource,
                           const char* outq_name, const char* shared_directory, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
@@ -1151,7 +1151,7 @@ void* BathyReader::subsettingThread (void* parm)
 
                 /* Update Statistics */
                 local_stats.photon_count += extent->photon_count;
-                
+
                 /* Export Data */
                 if(parms->return_inputs)
                 {
@@ -1254,7 +1254,7 @@ void* BathyReader::subsettingThread (void* parm)
                         fprintf(out_file, "%d,", extent->photons[i].yapc_score);
                         fprintf(out_file, "%d,", extent->photons[i].max_signal_conf);
                         fprintf(out_file, "%d,", extent->photons[i].quality_ph);
-                        fprintf(out_file, "%d,", extent->photons[i].processing_flags);
+                        fprintf(out_file, "%u,", extent->photons[i].processing_flags);
                         fprintf(out_file, "%d", extent->photons[i].class_ph);
                         fprintf(out_file, "\n");
                     }

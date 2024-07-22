@@ -69,7 +69,7 @@ Mutex H5Dataset::metaMutex;
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5Dataset::H5Dataset (info_t* info, Context* context, 
+H5Dataset::H5Dataset (info_t* info, Context* context,
                       const char* dataset, const range_t* slice, int slicendims,
                       bool _meta_only):
     ioContext (context),
@@ -166,7 +166,7 @@ H5Dataset::H5Dataset (info_t* info, Context* context,
     catch(const RunTimeException& e)
     {
         /* Clean Up Data Allocations */
-        delete [] info->data;
+        operator delete [] (info->data, std::align_val_t(H5CORO_DATA_ALIGNMENT));
         info->data= NULL;
         info->datasize = 0;
 
@@ -296,7 +296,7 @@ void H5Dataset::readDataset (info_t* info)
             (hyperslice[d].r1 > metaData.dimensions[d]) ||
             (hyperslice[d].r0 < 0) )
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid hyperslice at dimension %d [%ld]: [%ld, %ld)", d, metaData.dimensions[d], hyperslice[d].r0, hyperslice[d].r1);            
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid hyperslice at dimension %d [%ld]: [%ld, %ld)", d, metaData.dimensions[d], hyperslice[d].r0, hyperslice[d].r1);
         }
     }
 
@@ -319,12 +319,12 @@ void H5Dataset::readDataset (info_t* info)
         const int64_t extra_space_for_terminator = (metaData.type == STRING_TYPE);
 
         /* Allocate */
-        buffer = new uint8_t [buffer_size + extra_space_for_terminator];
+        buffer = new (std::align_val_t(H5CORO_DATA_ALIGNMENT)) uint8_t [buffer_size + extra_space_for_terminator];
 
         /* Gaurantee Termination of String */
         if(metaData.type == STRING_TYPE)
         {
-            buffer[buffer_size] = '\0'; 
+            buffer[buffer_size] = '\0';
         }
 
         /* Fill Buffer with Fill Value (if provided) */
@@ -484,7 +484,7 @@ void H5Dataset::readDataset (info_t* info)
                 for(int d = metaData.ndims - 1; d > 0; d--)
                 {
                     chunkStepSize[d - 1] = dimensionsInChunks[d] * chunkStepSize[d];
-                }            
+                }
 
                 /* Calculate position of first and last element in hyperslice */
                 hypersliceChunkStart = 0;
@@ -1286,7 +1286,7 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
                     // decompress
                     inflateChunk(dataChunkFilterBuffer, curr_node.chunk_size, dataChunkBuffer, dataChunkBufferSize);
                     chunk_buffer = dataChunkBuffer; // sets chunk buffer to new output
-                    
+
                     // unshuffle
                     if(metaData.filter[SHUFFLE_FILTER])
                     {
@@ -1295,7 +1295,7 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
                     }
                 }
 
-                // get truncated slice to pull out of chunk 
+                // get truncated slice to pull out of chunk
                 // (intersection of chunk_slice and hyperslice selection)
                 range_t chunk_slice_to_read[MAX_NDIMS];
                 for(int d = 0; d < metaData.ndims; d++)
@@ -3053,7 +3053,7 @@ bool H5Dataset::hypersliceIntersection(const range_t* node_slice, const uint8_t 
 /*----------------------------------------------------------------------------
  * type2str
  *----------------------------------------------------------------------------*/
-void H5Dataset::readSlice (uint8_t* output_buffer, const int64_t* output_dimensions, const range_t* output_slice, 
+void H5Dataset::readSlice (uint8_t* output_buffer, const int64_t* output_dimensions, const range_t* output_slice,
                            const uint8_t* input_buffer, const int64_t* input_dimensions, const range_t* input_slice) const
 {
     assert(metaData.ndims > 1); // this code should never be called when ndims is 0 or 1

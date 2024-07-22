@@ -70,6 +70,10 @@
 #define H5CORO_ENABLE_FILL false
 #endif
 
+#ifndef H5CORO_DATA_ALIGNMENT
+#define H5CORO_DATA_ALIGNMENT 8
+#endif
+
 /******************************************************************************
  * MACRO
  ******************************************************************************/
@@ -86,7 +90,7 @@ namespace H5Coro
     * Constants
     *--------------------------------------------------------------------*/
 
-    const int MAX_NDIMS = H5CORO_MAXIMUM_DIMENSIONS;    
+    const int MAX_NDIMS = H5CORO_MAXIMUM_DIMENSIONS;
     const long EOR = -1L; // end of range - read rest of the span of a dimension
     const long ALL_ROWS = EOR;
     const long ALL_COLS = EOR;
@@ -99,7 +103,7 @@ namespace H5Coro
         uint32_t                    elements;   // number of elements in dataset
         uint32_t                    typesize;   // number of bytes per element
         uint64_t                    datasize;   // total number of bytes in dataset
-        uint8_t*                    data;       // point to allocated data buffer
+        uint8_t*                    data;       // point to allocated data buffer - must be H5CORO_DATA_ALIGNMENT aligned
         RecordObject::fieldType_t   datatype;   // data type of elements
         int64_t                     shape[MAX_NDIMS]; // dimensions of the data
     } info_t;
@@ -190,7 +194,7 @@ namespace H5Coro
         /* Methods */
         /***********/
 
-                        Context     (Asset* asset, const char* resource);
+                        Context     (const Asset* asset, const char* resource);
                         ~Context    (void);
 
         void            ioRequest   (uint64_t* pos, int64_t size, uint8_t* buffer, int64_t hint, bool cache);

@@ -89,7 +89,7 @@ class BathyOceanEyes
                 highest_peak_ratio  (1.2),
                 surface_width       (3.0),
                 model_as_poisson    (true) {};
-            
+
             ~parms_t() {
                 if(assetKd) assetKd->releaseLuaObject();
                 delete [] resourceKd;
