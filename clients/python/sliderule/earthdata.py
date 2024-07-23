@@ -328,11 +328,11 @@ def __cmr_search(provider, short_name, version, polygons, time_start, time_end, 
                 urls,metadata = __cmr_query(provider, short_name, version, time_start, time_end, polygon=polystr, return_metadata=return_metadata, name_filter=name_filter)
                 break # exit loop because cmr search was successful
             except urllib.error.HTTPError as e:
-                logger.error('HTTP Request Error: {}'.format(e.reason))
+                logger.error('HTTP Request Error: {}'.format(e))
             except http.client.HTTPException as e:
-                logger.error('HTTP Client Error: {}'.format(e.reason))
+                logger.error('HTTP Client Error: {}'.format(e))
             except RuntimeError as e:
-                logger.error("Runtime Error:", e)
+                logger.error('Runtime Error: {}'.format(e))
 
             # simplify polygon
             if polygon and tolerance:
@@ -738,8 +738,11 @@ def tnm(short_name, polygon=None, time_start=None, time_end=datetime.utcnow().st
         # Make request
         rsps = context.get(url, params=rqst)
         rsps.raise_for_status()
-        print(rsps.content)
-        data = json.loads(rsps.content)
+        try:
+            data = json.loads(rsps.content)
+        except:
+            print(rsps.content)
+            raise
         items += data['items']
         if len(items) == data['total']:
             break

@@ -204,7 +204,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # create normalized dataset to process
 TEST_DATASET = PartNormalDataset(data, num_point)
-testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=1, shuffle=False, num_workers=3)
+testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=1, shuffle=False, num_workers=8)
 print("The number of test data is: %d" % len(TEST_DATASET))
 num_classes = 1
 num_part = 2
