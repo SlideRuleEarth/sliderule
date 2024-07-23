@@ -88,6 +88,10 @@ class Usgs3dep1meterDemRaster: public GeoIndexedRaster
          *--------------------------------------------------------------------*/
         std::string filePath;
         std::string indexFile;
+
+        OGRGeometry* cachedGeo;
+        rasters_group_t cachedRasterGroup;
+        bool onlyFirst;
 };
 
 #endif  /* __usgs3dep_1meter_dem_raster__ */

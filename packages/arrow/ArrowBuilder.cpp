@@ -49,6 +49,7 @@
 const char* ArrowBuilder::OBJECT_TYPE = "ArrowBuilder";
 const char* ArrowBuilder::LUA_META_NAME = "ArrowBuilder";
 const struct luaL_Reg ArrowBuilder::LUA_META_TABLE[] = {
+    {"filenames",   luaGetFileNames},
     {NULL,          NULL}
 };
 
@@ -58,7 +59,7 @@ const struct luaL_Reg ArrowBuilder::LUA_META_TABLE[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :parquet(<outq_name>, <inq_name>, <rec_type>, <id>, [<x_key>, <y_key>], [<time_key>])
+ * luaCreate - :parquet(<outq_name>, <inq_name>, <rec_type>, <id>, <parms_str>, <endpoint>, [<keep_local>])
  *----------------------------------------------------------------------------*/
 int ArrowBuilder::luaCreate (lua_State* L)
 {
@@ -74,9 +75,10 @@ int ArrowBuilder::luaCreate (lua_State* L)
         const char* id              = getLuaString(L, 5);
         const char* parms_str       = getLuaString(L, 6);
         const char* endpoint        = getLuaString(L, 7);
+        bool        keep_local      = getLuaBoolean(L, 8, true, false);
 
         /* Create Dispatch */
-        return createLuaObject(L, new ArrowBuilder(L, _parms, outq_name, inq_name, rec_type, id, parms_str, endpoint));
+        return createLuaObject(L, new ArrowBuilder(L, _parms, outq_name, inq_name, rec_type, id, parms_str, endpoint, keep_local));
     }
     catch(const RunTimeException& e)
     {
@@ -247,11 +249,13 @@ const char* ArrowBuilder::getEndpoint (void)
 ArrowBuilder::ArrowBuilder (lua_State* L, ArrowParms* _parms,
                             const char* outq_name, const char* inq_name,
                             const char* rec_type, const char* id,
-                            const char* parms_str, const char* _endpoint):
+                            const char* parms_str, const char* _endpoint,
+                            const bool keep_local):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
     hasAncillaryFields(false),
-    hasAncillaryElements(false)
+    hasAncillaryElements(false),
+    keepLocal(keep_local)
 {
     assert(_parms);
     assert(outq_name);
@@ -526,13 +530,20 @@ void* ArrowBuilder::builderThread(void* parm)
     if(!status) alert(INFO, RTE_ERROR, builder->outQ, NULL, "Failed to process last record batch for %s", builder->outputPath);
     builder->recordBatch.clear();
 
-    /* Send File to User */
-    ArrowCommon::send2User(builder->dataFile, builder->outputPath, trace_id, builder->parms, builder->outQ);
-
-    /* Send Metadata File to User */
-    if(ArrowCommon::fileExists(builder->metadataFile))
+    /* Check if Keeping Local
+     *  when performing additional operations on the parquet file, like the ArrowSampler
+     *  we need to keep the temporary file on disk so that additional operations can 
+     *  be performed on it */
+    if(!builder->keepLocal)
     {
-        ArrowCommon::send2User(builder->metadataFile, builder->outputMetadataPath, trace_id, builder->parms, builder->outQ);
+        /* Send File to User */
+        ArrowCommon::send2User(builder->dataFile, builder->outputPath, trace_id, builder->parms, builder->outQ);
+
+        /* Send Metadata File to User */
+        if(ArrowCommon::fileExists(builder->metadataFile))
+        {
+            ArrowCommon::send2User(builder->metadataFile, builder->outputMetadataPath, trace_id, builder->parms, builder->outQ);
+        }
     }
 
     /* Signal Completion */
@@ -545,3 +556,28 @@ void* ArrowBuilder::builderThread(void* parm)
     return NULL;
 }
 
+/*----------------------------------------------------------------------------
+ * luaGetFileNames -
+ *----------------------------------------------------------------------------*/
+int ArrowBuilder::luaGetFileNames (lua_State* L)
+{
+    try
+    {
+        /* Get Self */
+        ArrowBuilder* lua_obj = dynamic_cast<ArrowBuilder*>(getLuaSelf(L, 1));
+
+        /* Return Filenames */
+        if(lua_obj->dataFile)       lua_pushstring(L, lua_obj->dataFile);
+        else                        lua_pushnil(L);
+        if(lua_obj->metadataFile)   lua_pushstring(L, lua_obj->metadataFile);
+        else                        lua_pushnil(L);
+
+        /* Success */
+        return returnLuaStatus(L, true, 3);
+    }
+    catch(const RunTimeException& e)
+    {
+        /* Failure */
+        return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
+    }
+}

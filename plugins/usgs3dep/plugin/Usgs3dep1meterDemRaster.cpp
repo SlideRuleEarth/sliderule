@@ -60,7 +60,9 @@ const char* Usgs3dep1meterDemRaster::URL_str = "https://prd-tnm.s3.amazonaws.com
 Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State* L, GeoParms* _parms):
  GeoIndexedRaster(L, _parms, &overrideTargetCRS),
  filePath(_parms->asset->getPath()),
- indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson")
+ indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson"),
+ cachedGeo(NULL),
+ onlyFirst(_parms->single_stop)
 {
     if(_parms->catalog == NULL)
         throw RunTimeException(ERROR, RTE_ERROR, "Empty CATALOG/geojson index file received");
@@ -98,6 +100,16 @@ bool Usgs3dep1meterDemRaster::findRasters(const OGRGeometry* geo)
 {
     try
     {
+        /* Check cache entry when onlyFirst option enabled */
+        if(onlyFirst && cachedGeo && cachedGeo->Intersects(geo))
+        {
+            rasters_group_t* rgroup = new rasters_group_t;
+            *rgroup = cachedRasterGroup;
+            groupList.add(groupList.length(), rgroup);
+            return true;
+        }
+
+        /* Linearly search through feature list */
         for(unsigned i = 0; i < featuresList.size(); i++)
         {
             OGRFeature* feature = featuresList[i];
@@ -126,6 +138,14 @@ bool Usgs3dep1meterDemRaster::findRasters(const OGRGeometry* geo)
 
             mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
             groupList.add(groupList.length(), rgroup);
+
+            if(onlyFirst)
+            {
+                if(cachedGeo) delete cachedGeo;
+                cachedGeo = rastergeo->clone();
+                cachedRasterGroup = *rgroup;
+                break; // exit after first
+            }
         }
         mlog(DEBUG, "Found %ld raster groups", groupList.length());
     }

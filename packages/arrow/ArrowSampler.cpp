@@ -115,28 +115,6 @@ int ArrowSampler::luaCreate(lua_State* L)
     }
 }
 
-
-/*----------------------------------------------------------------------------
- * luaSamples - :sample([gps]) --> in|out
- *----------------------------------------------------------------------------*/
-int ArrowSampler::luaSample(lua_State* L)
-{
-    try
-    {
-        /* Get Self */
-        ArrowSampler* lua_obj = dynamic_cast<ArrowSampler*>(getLuaSelf(L, 1));
-        lua_obj->sample();
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error sampling %s: %s", LUA_META_NAME, e.what());
-        return returnLuaStatus(L, false);
-    }
-
-    return returnLuaStatus(L, true);
-}
-
-
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
@@ -188,40 +166,39 @@ void ArrowSampler::Sampler::clearSamples(void)
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
-void ArrowSampler::sample(void)
+void* ArrowSampler::mainThread(void* parm)
 {
-    if(alreadySampled) return;
-    alreadySampled = true;
+    ArrowSampler* s = reinterpret_cast<ArrowSampler*>(parm);
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, traceId, "arrow_sampler", "{\"filename\":\"%s\"}", dataFile);
+    const uint32_t trace_id = start_trace(INFO, s->traceId, "arrow_sampler", "{\"filename\":\"%s\"}", s->dataFile);
     EventLib::stashId(trace_id);
 
     /* Start sampling threads */
-    for(sampler_t* sampler : samplers)
+    std::vector<Thread*> pids;
+    for(sampler_t* sampler : s->samplers)
     {
         Thread* pid = new Thread(samplerThread, sampler);
-        samplerPids.push_back(pid);
+        pids.push_back(pid);
     }
 
     /* Wait for all sampling threads to finish */
-    for(Thread* pid : samplerPids)
+    for(Thread* pid : pids)
     {
         delete pid;
     }
-    samplerPids.clear();
 
     try
     {
-        impl->createOutpuFiles();
+        s->impl->createOutpuFiles();
 
         /* Send Data File to User */
-        ArrowCommon::send2User(dataFile, outputPath, trace_id, parms, outQ);
+        ArrowCommon::send2User(s->dataFile, s->outputPath, trace_id, s->parms, s->outQ);
 
         /* Send Metadata File to User */
-        if(ArrowCommon::fileExists(metadataFile))
+        if(ArrowCommon::fileExists(s->metadataFile))
         {
-            ArrowCommon::send2User(metadataFile, outputMetadataPath, trace_id, parms, outQ);
+            ArrowCommon::send2User(s->metadataFile, s->outputMetadataPath, trace_id, s->parms, s->outQ);
         }
     }
     catch(const RunTimeException& e)
@@ -231,7 +208,13 @@ void ArrowSampler::sample(void)
         throw;
     }
 
+    /* Signal Completion */
+    s->signalComplete();
+
+    /* Stop Trace */
     stop_trace(INFO, trace_id);
+
+    return NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -276,18 +259,16 @@ const std::vector<ArrowSampler::sampler_t*>& ArrowSampler::getSamplers(void)
 ArrowSampler::ArrowSampler(lua_State* L, ArrowParms* _parms, const char* input_file,
                            const char* outq_name, const std::vector<raster_info_t>& rasters):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
+    active(false),
+    mainPid(NULL),
     parms(_parms),
     outQ(NULL),
     impl(NULL),
     dataFile(NULL),
     metadataFile(NULL),
     outputPath(NULL),
-    outputMetadataPath(NULL),
-    alreadySampled(false)
+    outputMetadataPath(NULL)
 {
-    /* Add Lua sample function */
-    LuaEngine::setAttrFunc(L, "sample", luaSample);
-
     /* Validate Parameters */
     assert(parms);
     assert(input_file);
@@ -322,6 +303,10 @@ ArrowSampler::ArrowSampler(lua_State* L, ArrowParms* _parms, const char* input_f
 
         /* Process Input File */
         impl->processInputFile(input_file, points);
+
+        /* Start Main Thread */
+        active = true;
+        mainPid = new Thread(mainThread, this);
     }
     catch(const RunTimeException& e)
     {
@@ -343,10 +328,10 @@ ArrowSampler::~ArrowSampler(void)
  *----------------------------------------------------------------------------*/
 void ArrowSampler::Delete(void)
 {
-    parms->releaseLuaObject();
+    active = false;
+    delete mainPid;
 
-    for(Thread* pid : samplerPids)
-        delete pid;
+    parms->releaseLuaObject();
 
     for(sampler_t* sampler : samplers)
         delete sampler;
@@ -369,9 +354,10 @@ void* ArrowSampler::samplerThread(void* parm)
 {
     sampler_t* sampler = static_cast<sampler_t*>(parm);
     RasterObject* robj = sampler->robj;
-
     for(point_info_t* pinfo : sampler->obj->points)
     {
+        if(!sampler->obj->active) break; // early exit if lua object is being destroyed
+
         const MathLib::point_3d_t point = {pinfo->x, pinfo->y, 0.0};
         const double   gps = robj->usePOItime() ? pinfo->gps : 0.0;
 
@@ -396,7 +382,8 @@ void* ArrowSampler::samplerThread(void* parm)
     }
 
     /* Convert samples into new columns */
-    if(sampler->obj->impl->processSamples(sampler))
+    if(sampler->obj->active && 
+       sampler->obj->impl->processSamples(sampler))
     {
         /* Create raster file map <id, filename> */
         Dictionary<uint64_t>::Iterator iterator(robj->fileDictGet());

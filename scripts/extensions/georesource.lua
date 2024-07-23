@@ -36,7 +36,7 @@ local function initialize(resource, parms, algo, args)
 
     -- Raster Sampler --
     local sampler_disp = nil
-    if parms[geo.PARMS] then
+    if parms[geo.PARMS] and not parms[arrow.PARMS] then
         local rsps_bridge = core.bridge(args.result_q, rspq)
         sampler_disp = core.dispatcher(args.result_q, 1) -- 1 thread required due to performance issues for GeoIndexRasters
         for key,settings in pairs(parms[geo.PARMS]) do
