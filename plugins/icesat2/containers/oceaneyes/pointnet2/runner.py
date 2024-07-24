@@ -95,6 +95,7 @@ minNWDI         = settings.get('minNWDI', 0.3)
 useNWDI         = settings.get('useNWDI', False)
 gpu             = settings.get('gpu', "0")
 num_point       = settings.get('num_point', 8192)
+batch_size      = settings.get('batch_size', 8)
 num_votes       = settings.get('num_votes', 10)
 threshold       = settings.get('threshold', 0.5)
 model_seed      = settings.get('model_seed', 24)
@@ -204,7 +205,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # create normalized dataset to process
 TEST_DATASET = PartNormalDataset(data, num_point)
-testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=1, shuffle=False, num_workers=8)
+testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=batch_size, shuffle=False, num_workers=8)
 print("The number of test data is: %d" % len(TEST_DATASET))
 num_classes = 1
 num_part = 2
@@ -224,7 +225,7 @@ with torch.no_grad():
     for batch_id, (points, label, point_set_normalized_mask, pc_min, pc_max, row_slice) in \
             tqdm(enumerate(testDataLoader), total=len(testDataLoader), smoothing=0.9):
         cur_batch_size, NUM_POINT, _ = points.size()
-        assert cur_batch_size == 1 # we've hardcoded the batch size to 1 above
+
         points, label = points.float().to(device), label.long().to(device)
         points = points.transpose(2, 1)
         vote_pool = torch.zeros(cur_batch_size, NUM_POINT, num_part).to(device)
@@ -239,14 +240,17 @@ with torch.no_grad():
         cur_pred_val = np.zeros((cur_batch_size, NUM_POINT)).astype(np.int32)
         point_set_normalized_mask = point_set_normalized_mask.numpy()
 
-        prob = np.exp(cur_pred[0, :, :])
-        cur_pred_val[0, :] = np.where(prob[:, 1] < threshold, 0, 1)
-        cur_mask = point_set_normalized_mask[0, :]
-        cur_pred_val_mask = cur_pred_val[0, cur_mask]
+        cur_pred_val_mask = []
+        for i in range(cur_batch_size):
+            prob = np.exp(cur_pred[i, :, :])
+            cur_pred_val[0, :] = np.where(prob[:, 1] < threshold, 0, 1)
+            cur_mask = point_set_normalized_mask[i, :]
+            cur_pred_val_mask.append(cur_pred_val[i, cur_mask])
+        cur_pred_val_mask = np.concatenate(cur_pred_val_mask)
 
         # build dataframe of index and classification
-        index_ph = data[row_slice[0]:row_slice[1], 0].astype(np.int32)
-        class_ph = data[row_slice[0]:row_slice[1], 7]
+        index_ph = data[row_slice[0][0]:row_slice[1][-1], 0].astype(np.int32)
+        class_ph = data[row_slice[0][0]:row_slice[1][-1], 7]
         columns = {'index_ph': index_ph, 'class_ph': class_ph}            
         batch_df = pd.DataFrame(columns)
         if trust_class41:
