@@ -118,7 +118,7 @@ void BathyOceanEyes::init (void)
         {
             /* get uncertainty filename */
             const char* uncertainty_filename = TU_FILENAMES[tu_dimension_index][pointing_angle_index];
-            
+
             /* open csv file */
             fileptr_t file = fopen(uncertainty_filename, "r");
             if(!file)
@@ -170,9 +170,9 @@ void BathyOceanEyes::init (void)
                             coeff_sum.b += tu[i].b;
                             coeff_sum.c += tu[i].c;
                             count += 1.0;
-                        } 
+                        }
                     }
-                    
+
                     /* check count */
                     if(count <= 0)
                     {
@@ -266,7 +266,7 @@ BathyOceanEyes::BathyOceanEyes (lua_State* L, int index):
         /* model as poisson */
         lua_getfield(L, index, OCEANEYES_PARMS_MODEL_AS_POISSON);
         parms.model_as_poisson = LuaObject::getLuaBoolean(L, -1, true, parms.model_as_poisson, NULL);
-        lua_pop(L, 1);        
+        lua_pop(L, 1);
     }
 
     /* Open Kd Resource */
@@ -512,45 +512,45 @@ void BathyOceanEyes::findSeaSurface (extent_t& extent) const
 }
 
 /*----------------------------------------------------------------------------
- * photon_refraction - 
- * 
- * ICESat-2 refraction correction implemented as outlined in Parrish, et al. 
- * 2019 for correcting photon depth data. Reference elevations are to geoid datum 
+ * photon_refraction -
+ *
+ * ICESat-2 refraction correction implemented as outlined in Parrish, et al.
+ * 2019 for correcting photon depth data. Reference elevations are to geoid datum
  * to remove sea surface variations.
- * 
+ *
  * https://www.mdpi.com/2072-4292/11/14/1634
  *
  * ----------------------------------------------------------------------------
  * The code below was adapted from https://github.com/ICESat2-Bathymetry/Information.git
  * with the associated license replicated here:
  * ----------------------------------------------------------------------------
- * 
+ *
  * Copyright (c) 2022, Jonathan Markel/UT Austin.
- * 
- * Redistribution and use in source and binary forms, with or without 
+ *
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * Redistributions of source code must retain the above copyright notice, 
+ *
+ * Redistributions of source code must retain the above copyright notice,
  * this list of conditions and the following disclaimer.
  *
- * Redistributions in binary form must reproduce the above copyright notice, 
- * this list of conditions and the following disclaimer in the documentation 
+ * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
  * and/or other materials provided with the distribution.
  *
- * Neither the name of the copyright holder nor the names of its 
- * contributors may be used to endorse or promote products derived from this 
- * software without specific prior written permission. 
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR 
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; 
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
+ * Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR '
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *----------------------------------------------------------------------------*/
 void BathyOceanEyes::correctRefraction(extent_t& extent) const
@@ -578,7 +578,7 @@ void BathyOceanEyes::correctRefraction(extent_t& extent) const
             const double dZ = p * sin(beta);                            // vertical offset
             const double dY = p * cos(beta);                            // cross-track offset
             const double dE = dY * sin(static_cast<double>(photons[i].ref_az));              // UTM offsets
-            const double dN = dY * cos(static_cast<double>(photons[i].ref_az)); 
+            const double dN = dY * cos(static_cast<double>(photons[i].ref_az));
 
             /* Apply Refraction Corrections */
             photons[i].x_ph += dE;
@@ -598,7 +598,7 @@ void BathyOceanEyes::correctRefraction(extent_t& extent) const
  *----------------------------------------------------------------------------*/
 void BathyOceanEyes::calculateUncertainty (extent_t& extent) const
 {
-    if(extent.photon_count <= 0) return; // nothing to do
+    if(extent.photon_count == 0) return; // nothing to do
 
     /* join kd resource read */
     Kd_490->join(parms.read_timeout_ms, true);
@@ -628,7 +628,7 @@ void BathyOceanEyes::calculateUncertainty (extent_t& extent) const
         /* initialize total uncertainty to aerial uncertainty */
         photons[i].sigma_thu = sqrtf((photons[i].sigma_across * photons[i].sigma_across) + (photons[i].sigma_along * photons[i].sigma_along));
         photons[i].sigma_tvu = photons[i].sigma_h;
-        
+
         /* calculate subaqueous uncertainty */
         const double depth = extent.surface_h - photons[i].ortho_h;
         if(depth > 0.0)
@@ -637,7 +637,7 @@ void BathyOceanEyes::calculateUncertainty (extent_t& extent) const
             int pointing_angle_index = static_cast<int>(roundf(photons[i].pointing_angle));
             if(pointing_angle_index < 0) pointing_angle_index = 0;
             else if(pointing_angle_index >= NUM_POINTING_ANGLES) pointing_angle_index = NUM_POINTING_ANGLES - 1;
-            
+
             /* get wind speed index */
             int wind_speed_index = static_cast<int>(roundf(photons[i].wind_v)) - 1;
             if(wind_speed_index < 0) wind_speed_index = 0;
@@ -645,7 +645,7 @@ void BathyOceanEyes::calculateUncertainty (extent_t& extent) const
 
             /* get kd range index */
             int kd_range_index = 0;
-            while(kd_range_index < NUM_KD_RANGES && KD_RANGES[kd_range_index][1] < kd)
+            while(kd_range_index < (NUM_KD_RANGES-1) && KD_RANGES[kd_range_index][1] < kd)
             {
                 kd_range_index++;
             }
@@ -661,7 +661,7 @@ void BathyOceanEyes::calculateUncertainty (extent_t& extent) const
             /* add subaqueous uncertainties to total uncertainties */
             photons[i].sigma_thu += subaqueous_horizontal_uncertainty;
             photons[i].sigma_tvu += subaqueous_vertical_uncertainty;
-            
+
             /* set maximum sensor depth processing flag */
             if(kd > 0)
             {

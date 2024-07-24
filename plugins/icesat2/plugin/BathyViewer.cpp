@@ -205,7 +205,7 @@ BathyViewer::~BathyViewer (void)
     delete bathyMask;
 
     delete context;
-    
+
     parms->releaseLuaObject();
 
     delete [] resource;
@@ -328,7 +328,7 @@ int BathyViewer::luaCounts (lua_State* L)
 {
     bool status = false;
     int num_obj_to_return = 1;
-    BathyViewer* lua_obj = NULL;
+    const BathyViewer* lua_obj = NULL;
 
     try
     {

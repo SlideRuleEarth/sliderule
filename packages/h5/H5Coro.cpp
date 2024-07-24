@@ -83,7 +83,7 @@ H5Coro::Future::Future (void)
     info.datasize   = 0;
     info.data       = NULL;
     info.datatype   = RecordObject::INVALID_FIELD;
-    
+
     for(int d = 0; d < MAX_NDIMS; d++)
     {
         info.shape[d] = 0;
@@ -99,7 +99,7 @@ H5Coro::Future::Future (void)
 H5Coro::Future::~Future (void)
 {
     wait(IO_PEND);
-    delete [] info.data;
+    operator delete[](info.data, std::align_val_t(H5CORO_DATA_ALIGNMENT));
 }
 
 /*----------------------------------------------------------------------------
@@ -147,7 +147,7 @@ H5Coro::Future::rc_t H5Coro::Future::wait (int timeout)
  * Constructor
  *  - assumes that asset is in scope for the duration this object is in scope
  *----------------------------------------------------------------------------*/
-H5Coro::Context::Context (Asset* asset, const char* resource):
+H5Coro::Context::Context (const Asset* asset, const char* resource):
     name                (NULL),
     ioDriver            (NULL),
     l1                  (IO_CACHE_L1_ENTRIES, hashL1),
@@ -167,7 +167,7 @@ H5Coro::Context::Context (Asset* asset, const char* resource):
         delete [] name;
         mlog(e.level(), "Failed to create H5 context: %s", e.what());
         throw;
-    }    
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -469,12 +469,12 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
         if(valtype == RecordObject::INTEGER)
         {
             /* Allocate Buffer of Integers */
-            long* tbuf = new long [info.elements];
+            long* tbuf = new (std::align_val_t(H5CORO_DATA_ALIGNMENT)) long [info.elements];
 
             /* Float to Long */
             if(info.datatype == RecordObject::FLOAT)
             {
-                float* dptr = reinterpret_cast<float*>(info.data);
+                const float* dptr = reinterpret_cast<float*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<long>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -483,7 +483,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             /* Double to Long */
             else if(info.datatype == RecordObject::DOUBLE)
             {
-                double* dptr = reinterpret_cast<double*>(info.data);
+                const double* dptr = reinterpret_cast<double*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<long>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -492,7 +492,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             /* Char to Long */
             else if(info.datatype == RecordObject::INT8)
             {
-                int8_t* cptr = reinterpret_cast<int8_t*>(info.data);
+                const int8_t* cptr = reinterpret_cast<int8_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<long>(cptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -500,7 +500,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             }
             else if(info.datatype == RecordObject::UINT8)
             {
-                uint8_t* cptr = reinterpret_cast<uint8_t*>(info.data);
+                const uint8_t* cptr = info.data;
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<long>(cptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -527,7 +527,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             /* Short to Long */
             else if(info.datatype == RecordObject::INT16)
             {
-                int16_t* dptr = reinterpret_cast<int16_t*>(info.data);
+                const int16_t* dptr = reinterpret_cast<int16_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<long>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -535,7 +535,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             }
             else if(info.datatype == RecordObject::UINT16)
             {
-                uint16_t* dptr = reinterpret_cast<uint16_t*>(info.data);
+                const uint16_t* dptr = reinterpret_cast<uint16_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<long>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -544,7 +544,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             /* Int to Long */
             else if(info.datatype == RecordObject::INT32)
             {
-                int32_t* dptr = reinterpret_cast<int32_t*>(info.data);
+                const int32_t* dptr = reinterpret_cast<int32_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = dptr[i]; // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -552,7 +552,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             }
             else if(info.datatype == RecordObject::UINT32)
             {
-                uint32_t* dptr = reinterpret_cast<uint32_t*>(info.data);
+                const uint32_t* dptr = reinterpret_cast<uint32_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = dptr[i]; // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -561,7 +561,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             /* Long to Long */
             else if(info.datatype == RecordObject::INT64)
             {
-                int64_t* dptr = reinterpret_cast<int64_t*>(info.data);
+                const int64_t* dptr = reinterpret_cast<int64_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<long>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -569,7 +569,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             }
             else if(info.datatype == RecordObject::UINT64)
             {
-                uint64_t* dptr = reinterpret_cast<uint64_t*>(info.data);
+                const uint64_t* dptr = reinterpret_cast<uint64_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<long>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -582,20 +582,20 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             }
 
             /* Switch Buffers */
-            delete [] info.data;
+            operator delete[](info.data, std::align_val_t(H5CORO_DATA_ALIGNMENT));
             info.data = reinterpret_cast<uint8_t*>(tbuf);
             info.datasize = sizeof(long) * info.elements;
         }
         /* Perform Integer Type Transaltion */
         else if(valtype == RecordObject::REAL)
         {
-            /* Allocate Buffer of Integers */
-            double* tbuf = new double [info.elements];
+            /* Allocate Buffer of doubles */
+            double* tbuf = new (std::align_val_t(H5CORO_DATA_ALIGNMENT)) double [info.elements];
 
             /* Float to Double */
             if(info.datatype == RecordObject::FLOAT)
             {
-                float* dptr = reinterpret_cast<float*>(info.data);
+                const float* dptr = reinterpret_cast<float*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<double>(dptr[i]); // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -604,7 +604,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             /* Double to Double */
             else if(info.datatype == RecordObject::DOUBLE)
             {
-                double* dptr = reinterpret_cast<double*>(info.data);
+                const double* dptr = reinterpret_cast<double*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = dptr[i]; // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -613,7 +613,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             /* Char to Double */
             else if(info.datatype == RecordObject::INT8)
             {
-                int8_t* dptr = reinterpret_cast<int8_t*>(info.data);
+                const int8_t* dptr = reinterpret_cast<int8_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -621,7 +621,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             }
             else if(info.datatype == RecordObject::UINT8)
             {
-                uint8_t* dptr = reinterpret_cast<uint8_t*>(info.data);
+                const uint8_t* dptr = info.data;
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -630,7 +630,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             /* Short to Double */
             else if(info.datatype == RecordObject::INT16)
             {
-                int16_t* dptr = reinterpret_cast<int16_t*>(info.data);
+                const int16_t* dptr = reinterpret_cast<int16_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -638,7 +638,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             }
             else if(info.datatype == RecordObject::UINT16)
             {
-                uint16_t* dptr = reinterpret_cast<uint16_t*>(info.data);
+                const uint16_t* dptr = reinterpret_cast<uint16_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -647,7 +647,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             /* Int to Double */
             else if(info.datatype == RecordObject::INT32)
             {
-                int32_t* dptr = reinterpret_cast<int32_t*>(info.data);
+                const int32_t* dptr = reinterpret_cast<int32_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -655,7 +655,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             }
             else if(info.datatype == RecordObject::UINT32)
             {
-                uint32_t* dptr = reinterpret_cast<uint32_t*>(info.data);
+                const uint32_t* dptr = reinterpret_cast<uint32_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -664,7 +664,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             /* Long to Double */
             else if(info.datatype == RecordObject::INT64)
             {
-                int64_t* dptr = reinterpret_cast<int64_t*>(info.data);
+                const int64_t* dptr = reinterpret_cast<int64_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -672,7 +672,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             }
             else if(info.datatype == RecordObject::UINT64)
             {
-                uint64_t* dptr = reinterpret_cast<uint64_t*>(info.data);
+                const uint64_t* dptr = reinterpret_cast<uint64_t*>(info.data);
                 for(uint32_t i = 0; i < info.elements; i++)
                 {
                     tbuf[i] = static_cast<double>(dptr[i]);  // NOLINT(clang-analyzer-core.uninitialized.Assign)
@@ -685,7 +685,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             }
 
             /* Switch Buffers */
-            delete [] info.data;
+            operator delete[](info.data, std::align_val_t(H5CORO_DATA_ALIGNMENT));
             info.data = reinterpret_cast<uint8_t*>(tbuf);
             info.datasize = sizeof(double) * info.elements;
         }
@@ -693,7 +693,7 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
         /* Check Data Valid */
         if(!data_valid)
         {
-            delete [] info.data;
+            operator delete[](info.data, std::align_val_t(H5CORO_DATA_ALIGNMENT));
             info.data = NULL;
             info.datasize = 0;
             throw RunTimeException(CRITICAL, RTE_ERROR, "data translation failed for %s: [%d] %d --> %d", datasetname, info.typesize, (int)info.datatype, (int)valtype);

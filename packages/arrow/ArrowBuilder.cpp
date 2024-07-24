@@ -75,7 +75,7 @@ int ArrowBuilder::luaCreate (lua_State* L)
         const char* id              = getLuaString(L, 5);
         const char* parms_str       = getLuaString(L, 6);
         const char* endpoint        = getLuaString(L, 7);
-        bool        keep_local      = getLuaBoolean(L, 8, true, false);
+        const bool  keep_local      = getLuaBoolean(L, 8, true, false);
 
         /* Create Dispatch */
         return createLuaObject(L, new ArrowBuilder(L, _parms, outq_name, inq_name, rec_type, id, parms_str, endpoint, keep_local));
@@ -532,7 +532,7 @@ void* ArrowBuilder::builderThread(void* parm)
 
     /* Check if Keeping Local
      *  when performing additional operations on the parquet file, like the ArrowSampler
-     *  we need to keep the temporary file on disk so that additional operations can 
+     *  we need to keep the temporary file on disk so that additional operations can
      *  be performed on it */
     if(!builder->keepLocal)
     {
@@ -564,7 +564,7 @@ int ArrowBuilder::luaGetFileNames (lua_State* L)
     try
     {
         /* Get Self */
-        ArrowBuilder* lua_obj = dynamic_cast<ArrowBuilder*>(getLuaSelf(L, 1));
+        const ArrowBuilder* lua_obj = dynamic_cast<ArrowBuilder*>(getLuaSelf(L, 1));
 
         /* Return Filenames */
         if(lua_obj->dataFile)       lua_pushstring(L, lua_obj->dataFile);

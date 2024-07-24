@@ -62,8 +62,11 @@ Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State* L, GeoParms* _parms)
  filePath(_parms->asset->getPath()),
  indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson"),
  cachedGeo(NULL),
+ cachedRasterGroup{"", {}, {0, 0, 0, 0, 0, 0}, 0},
  onlyFirst(_parms->single_stop)
 {
+    // cachedRasterGroup = { "", {}, {0, 0, 0, 0, 0, 0}, 0 };
+
     if(_parms->catalog == NULL)
         throw RunTimeException(ERROR, RTE_ERROR, "Empty CATALOG/geojson index file received");
 
@@ -80,6 +83,7 @@ Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State* L, GeoParms* _parms)
 Usgs3dep1meterDemRaster::~Usgs3dep1meterDemRaster(void)
 {
     VSIUnlink(indexFile.c_str());
+    delete cachedGeo;
 }
 
 /*----------------------------------------------------------------------------
@@ -137,13 +141,18 @@ bool Usgs3dep1meterDemRaster::findRasters(const OGRGeometry* geo)
             }
 
             mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
+
+            if(onlyFirst)
+            {
+                delete cachedGeo;
+                cachedGeo = rastergeo->clone();
+                cachedRasterGroup = *rgroup;
+            }
+
             groupList.add(groupList.length(), rgroup);
 
             if(onlyFirst)
             {
-                if(cachedGeo) delete cachedGeo;
-                cachedGeo = rastergeo->clone();
-                cachedRasterGroup = *rgroup;
                 break; // exit after first
             }
         }
@@ -199,7 +208,7 @@ OGRErr Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
     const OGRErr er2 = vertical.importFromEPSG(NAVD88_HEIGHT_EPSG);
     const OGRErr er3 = target.SetCompoundCS("sliderule", &horizontal, &vertical);
 
-    if(((er1 == er2) == er3) == OGRERR_NONE)
+    if(er1 == OGRERR_NONE && er2 == OGRERR_NONE && er3 == OGRERR_NONE)
     {
         ogrerr = OGRERR_NONE;
     }

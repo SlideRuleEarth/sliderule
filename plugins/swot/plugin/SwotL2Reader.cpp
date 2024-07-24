@@ -146,7 +146,7 @@ SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, 
     threadCount = 0;
 
     try
-    {  
+    {
         /* Create H5Coro Context */
         context = new H5Coro::Context(asset, resource);
 
@@ -194,7 +194,7 @@ SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, 
             /* Terminate */
             checkComplete();
         }
-    }       
+    }
     catch(const RunTimeException& e)
     {
         mlog(CRITICAL, "Failed to create SWOT reader");
@@ -464,7 +464,7 @@ void* SwotL2Reader::varThread (void* parm)
     try
     {
         /* Read Dataset */
-        H5Coro::range_t slice[2] = {{reader->region->first_line, reader->region->first_line + reader->region->num_lines}, {0, H5Coro::EOR}};
+        const H5Coro::range_t slice[2] = {{reader->region->first_line, reader->region->first_line + reader->region->num_lines}, {0, H5Coro::EOR}};
         results = H5Coro::read(reader->context, info->variable_name, RecordObject::DYNAMIC, slice, 2, false, trace_id);
 
         /* Post Results to Output Queue */
@@ -521,7 +521,7 @@ void* SwotL2Reader::varThread (void* parm)
     reader->checkComplete();
 
     /* Clean Up */
-    delete [] results.data;
+    operator delete[](results.data, std::align_val_t(H5CORO_DATA_ALIGNMENT));
     delete [] info->variable_name;
     delete info;
 

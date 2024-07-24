@@ -90,7 +90,7 @@ H5Element<T>::H5Element(H5Coro::Context* context, const char* variable)
 {
     memset(&value, 0, sizeof(T));
     size = 0;
-    H5Coro::range_t slice[1] = {{0, H5Coro::EOR}};
+    const H5Coro::range_t slice[1] = {{0, H5Coro::EOR}};
     if(context) h5f = H5Coro::readp(context, variable, RecordObject::DYNAMIC, slice, 1);
     else        h5f = NULL;
 }

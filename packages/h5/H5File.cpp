@@ -162,7 +162,7 @@ void* H5File::readThread (void* parm)
         }
 
         /* Clean Up Result Data */
-        delete [] results.data;
+        operator delete[](results.data, std::align_val_t(H5CORO_DATA_ALIGNMENT));
     }
 
     /* Clean Up Thread Info */
