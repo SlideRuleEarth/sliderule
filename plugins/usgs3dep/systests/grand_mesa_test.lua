@@ -52,7 +52,7 @@ local errorChecking = true
 local starttime = time.latch();
 
 -- for i=1,#arr do
-for i=1, 5 do
+for i=1, 10 do
     local  lon = arr[i][1]
     local  lat = arr[i][2]
     local  height = 0
@@ -73,7 +73,7 @@ for i=1, 5 do
 
     samplesCnt = samplesCnt + 1
 
-    local modulovalue = 3000
+    local modulovalue = 1000
     if (i % modulovalue == 0) then
         print(string.format("Sample: %d", samplesCnt))
     end
@@ -86,4 +86,4 @@ local dtime = stoptime - starttime
 print(string.format("\nSamples: %d, failedRead: %d", samplesCnt, failedRead))
 print(string.format("ExecTime: %f", dtime))
 
-os.exit()
+sys.quit(0)
