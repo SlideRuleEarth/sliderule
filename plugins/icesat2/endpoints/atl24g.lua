@@ -312,7 +312,7 @@ runclassifier(output_files, timeout, "medianfilter", in_parallel)
 runclassifier(output_files, timeout, "cshelph", in_parallel)
 runclassifier(output_files, timeout, "bathypathfinder", in_parallel)
 runclassifier(output_files, timeout, "coastnet", in_parallel, "bash /coastnet/runner.sh")
-runclassifier(output_files, timeout, "pointnet2", false)
+runclassifier(output_files, timeout, "pointnet2", false, "bash /pointnet2/runner.sh")
 runclassifier(output_files, timeout, "openoceans", false)
 profile["atl24_endpoint"] = (time.gps() - endpoint_start_time) / 1000.0 -- capture endpoint timing
 userlog:alert(core.INFO, core.RTE_INFO, string.format("atl24 endpoint executed in %f seconds", profile["atl24_endpoint"]))
