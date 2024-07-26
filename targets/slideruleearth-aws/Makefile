@@ -350,7 +350,10 @@ cluster-docker-push: ## push all cluster images to docker container registries
 	docker push $(ECR)/monitor:$(MAJOR_VERSION)
 
 cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
-	cd packer; packer build -var version=$(MAJOR_VERSION) sliderule-base.pkr.hcl
+	cd packer; packer build -var version=$(MAJOR_VERSION) -var-file=aarch64_cpu.json sliderule-base.pkr.hcl
+	cd packer; packer build -var version=$(MAJOR_VERSION) -var-file=x86_86_cpu.json sliderule-base.pkr.hcl
+	cd packer; packer build -var version=$(MAJOR_VERSION) -var-file=aarch64_gpu.json sliderule-base.pkr.hcl
+	cd packer; packer build -var version=$(MAJOR_VERSION) -var-file=x86_86_gpu.json sliderule-base.pkr.hcl
 
 cluster-upload-terraform: ## upload the Cluster terraform for provisioning system; needs VERSION
 	-rm -Rf $(TF_STAGE_DIR)
