@@ -10,4 +10,5 @@ export THP_MEM_ALLOC_ENABLE=1
 export LRU_CACHE_CAPACITY=1024
 
 # Run pointnet2
-/env/bin/python /pointnet2/runner.py $1 $2 $3 $4
+#/env/bin/python /pointnet2/runner.py $1 $2 $3 $4
+/magic/bin/python /pointnet2/runner.py $1 $2 $3 $4
