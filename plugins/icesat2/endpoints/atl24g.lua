@@ -192,6 +192,11 @@ parms["oceaneyes"]["assetKd"] = parms["oceaneyes"]["assetKd"] or "viirsj1-s3"
 -- read ICESat-2 inputs
 -------------------------------------------------------
 local reader = icesat2.bathyreader(parms, resource, rspq, crenv.host_sandbox_directory, false)
+if not reader then
+    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create bathy reader", rspq))
+    cleanup(crenv, transaction_id)
+    return
+end
 local spot_mask = {} -- build spot mask using defaults/parsing from bathyreader (because reader will be destroyed)
 for spot = 1,icesat2.NUM_SPOTS do
     spot_mask[spot] = reader:spoton(spot)

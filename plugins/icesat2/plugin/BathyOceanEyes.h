@@ -64,7 +64,6 @@ class BathyOceanEyes
             long            read_timeout_ms;        // timeout for reading Kd
             double          ri_air;
             double          ri_water;
-            double          dem_buffer;             // meters
             double          bin_size;               // meters
             double          max_range;              // meters
             long            max_bins;               // bins
@@ -80,7 +79,6 @@ class BathyOceanEyes
                 read_timeout_ms     (NetsvcParms::DEFAULT_READ_TIMEOUT * 1000), // TODO: this is where we need to inherit the value from the request level parameters
                 ri_air              (1.00029),
                 ri_water            (1.34116),
-                dem_buffer          (50.0),
                 bin_size            (0.5),
                 max_range           (1000.0),
                 max_bins            (10000),
@@ -104,8 +102,14 @@ class BathyOceanEyes
                         BathyOceanEyes          (lua_State* L, int index);
                         ~BathyOceanEyes         (void);
         void            findSeaSurface          (extent_t& extent) const;
-        void            correctRefraction       (extent_t& extent) const;
-        void            calculateUncertainty    (extent_t& extent) const;
+        void            correctRefraction       (extent_t& extent,
+                                                 const H5Array<float>& ref_el,
+                                                 const H5Array<float>& ref_az) const;
+        void            calculateUncertainty    (extent_t& extent, 
+                                                 const H5Array<float>& sigma_across,
+                                                 const H5Array<float>& sigma_along,
+                                                 const H5Array<float>& sigma_h,
+                                                 const H5Array<float>& ref_el) const;
 
     private:
 

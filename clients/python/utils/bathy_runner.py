@@ -23,7 +23,6 @@ parser.add_argument('--verbose',            '-v',   action='store_true',    defa
 parser.add_argument('--cleanup',                    action='store_true',    default=False)
 parser.add_argument('--asset',                      type=str,               default="icesat2")
 parser.add_argument('--asset09',                    type=str,               default="icesat2")
-parser.add_argument('--generate_ndwi',              action='store_true',    default=False)
 parser.add_argument('--ignore_bathy_mask',          action='store_true',    default=False)
 parser.add_argument('--print_metadata',             action='store_true',    default=False) # only available if [geo]parquet file format chosen
 parser.add_argument('--with_checksum',              action='store_true',    default=False)
@@ -64,15 +63,11 @@ parms = {
     "srt": icesat2.SRT_DYNAMIC,
     "cnf": "atl03_not_considered",
     "pass_invalid": True,
-    "generate_ndwi": args.generate_ndwi,
     "use_bathy_mask": not args.ignore_bathy_mask,
     "timeout": args.timeout,
     "spots": args.spots,
     "output_as_sdp": args.output_as_sdp,
     "classifiers": args.classifiers,
-    "openoceans": {
-        "use_ndwi": args.generate_ndwi
-    },
     "bathypathfinder": {
         "find_surface": False
     },

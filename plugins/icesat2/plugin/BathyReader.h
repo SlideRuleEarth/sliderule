@@ -102,6 +102,7 @@ class BathyReader: public LuaObject
             BathyOceanEyes*     oceaneyes;                      // bathymetric utilities
             const char*         resource09;                     // ATL09 granule
             double              max_dem_delta;                  // initial filter of heights against DEM (For removing things like clouds)
+            double              min_dem_delta;                  // initial filter of heights against DEM (For removing things like clouds)
             int                 ph_in_extent;                   // number of photons in each extent
             bool                generate_ndwi;                  // use HLS data to generate NDWI for each segment lat,lon
             bool                use_bathy_mask;                 // global bathymetry mask downloaded in atl24 init lua routine
@@ -117,9 +118,10 @@ class BathyReader: public LuaObject
                 hls             (NULL),
                 oceaneyes       (NULL),
                 resource09      (NULL),
-                max_dem_delta   (10000.0),
+                max_dem_delta   (50.0),
+                min_dem_delta   (-100.0),
                 ph_in_extent    (8192),
-                generate_ndwi   (true),
+                generate_ndwi   (false),
                 use_bathy_mask  (true),
                 classifiers     {true, true, true, true, true, true, true, true, true},
                 return_inputs   (false),

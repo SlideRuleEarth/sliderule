@@ -1,5 +1,5 @@
 locals {
-  ami_name = format("sliderule-%s", split(".","${var.cluster_version}")[0])
+  ami_name = format("sliderule-arm-%s", split(".","${var.cluster_version}")[0])
 }
 
 data "aws_ami" "sliderule_cluster_ami" {
