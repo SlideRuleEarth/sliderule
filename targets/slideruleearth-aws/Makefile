@@ -1,43 +1,3 @@
-# Notes:
-#
-# In order to complete the release process, the following must be installed and configured in your environment:
-#     * GitHub command line client (gh)
-#           See https://github.com/cli/cli/blob/trunk/docs/install_linux.md for installation instructions.
-#           The user must authenticate to GitHub via `gh auth login`
-#     * AWS command line client (awscli)
-#           See https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html for installation instructions
-#           The user must have up-to-date aws credentials
-#     * Docker
-#           The user must be logged into the AWS Elastic Container Registry (ECR)
-#           The user must be logged into the GitHub Container Registry (GHCR)
-#     * Terraform & Packer
-#           The binaries are sufficient, but pay close attention to the local package versions
-#     * Node.js
-#			The javascript npm package for SlideRule is updated via a node.js script on release
-#     * conda-lock
-#           The Python base image used for the container runtime environment uses conda-lock to create the conda dependency file
-#
-# To release a version of SlideRule:
-#     1. Update .aws/credentials file with a temporary session token; {profile} references your long term aws credentials, {username} is your aws account, {code} is your MFA token
-#        $ aws --profile={profile} sts get-session-token --serial-number arn:aws:iam::742127912612:mfa/{username} --token-code={code}
-#     2. Login to AWS Elastic Container Registry
-#        $ aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
-#     3. Login to GitHub
-#        $ gh auth login
-#     4. Login to NPMJS
-#        $ cd sliderule/clients/nodejs && make login
-#     5. Execute the makefile target to release the code; X.Y.Z is the version
-#        $ make release VERSION=vX.Y.Z DOCKEROPTS=--no-cache
-#
-# To update the build environment for GitHub actions
-#     1. Login to GitHub Container Registry; {my_github_key} is a file storing an access key created for your account
-#        $ cat {my_github_key} | docker login ghcr.io -u jpswinski --password-stdin
-#     2. Build the docker build environment on x86 machine (x86 is IMPORTANT to match GitHub actions environment)
-#        $ make sliderule-buildenv-docker
-#     3. Push to GitHub container registry
-#        $ docker push ghcr.io/slideruleearth/sliderule-buildenv:latest
-#
-
 ROOT = $(shell pwd)/../..
 BUILD = $(ROOT)/build
 STAGE = $(ROOT)/stage
@@ -81,7 +41,7 @@ ECR := 742127912612.dkr.ecr.us-west-2.amazonaws.com
 GHCR := ghcr.io/slideruleearth
 DOCKEROPTS ?=
 BUILDX ?= # buildx
-DOCKER_PLATFORM ?= # linux/arm64
+DOCKER_PLATFORM ?= # --platform linux/arm64 | linux/amd64
 ARCH ?= $(shell arch)
 DOMAIN ?= testsliderule.org
 DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
@@ -284,11 +244,11 @@ sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
-	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(VERSION)
-	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
-	docker tag $(ECR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
-	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh
+	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest-$(ARCH) $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/sliderule-buildenv:latest-$(ARCH) $(ECR)/sliderule-buildenv:$(VERSION)-$(ARCH)
+	docker tag $(ECR)/sliderule-buildenv:latest-$(ARCH) $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)-$(ARCH)
+	docker tag $(ECR)/sliderule-buildenv:latest-$(ARCH) $(GHCR)/sliderule-buildenv:$(VERSION)-$(ARCH)
+	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)-$(ARCH) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
 
 sliderule-buildenv-docker-push: ## push build environment docker image to registry
 	docker push $(ECR)/sliderule-buildenv:$(VERSION)
