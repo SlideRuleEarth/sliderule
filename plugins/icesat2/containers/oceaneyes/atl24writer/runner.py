@@ -448,12 +448,15 @@ else:
                              'source':'ATL03', 
                              'units':''})
                 for classifier in input_files["classifiers"]:
-                    add_variable(beam_group, classifier, spot_df[classifier].astype(np.int16), 'int16',
-                                {'contentType':'physicalMeasurement', 
-                                'description':'', 
-                                'long_name':'', 
-                                'source':'ATL03', 
-                                'units':''})
+                    try:
+                        add_variable(beam_group, classifier, spot_df[classifier].astype(np.int16), 'int16',
+                                    {'contentType':'physicalMeasurement', 
+                                    'description':'', 
+                                    'long_name':'', 
+                                    'source':'ATL03', 
+                                    'units':''})
+                    except Exception as e:
+                        print(f'Failed to add classifier <{classifier}>: {e}')
 
 
     print("HDF5 file written: " + atl24_filename)

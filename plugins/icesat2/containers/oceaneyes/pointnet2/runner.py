@@ -84,7 +84,7 @@ import os
 # process command line
 sys.path.append('../utils')
 from command_line_processor import process_command_line
-settings, spot_info, spot_df, output_csv, info_json = process_command_line(sys.argv, columns=['index_ph', 'class_ph', 'x_ph', 'y_ph', 'lon_ph', 'lat_ph', 'ortho_h', 'max_signal_conf', 'surface_h'])
+settings, spot_info, spot_df, output_csv, info_json = process_command_line(sys.argv, columns=['index_ph', 'x_ph', 'y_ph', 'ortho_h', 'max_signal_conf', 'class_ph', 'surface_h'])
 
 # set configuration
 maxElev         = settings.get('maxElev', 10) 
@@ -96,38 +96,34 @@ batch_size      = settings.get('batch_size', 8)
 num_votes       = settings.get('num_votes', 10)
 threshold       = settings.get('threshold', 0.5)
 model_seed      = settings.get('model_seed', 24)
-trust_class41   = settings.get('trust_class41', False)
 
 ##################
 # BUILD DATAFRAME
 ##################
-
-# Add a pointnet specific class column
-spot_df['class'] = np.full((len(spot_df)), 3)                               # initialize everything to 3 (pointnet noise)
-spot_df.loc[spot_df.class_ph == 41, 'class'] = 5                            # change sea surface (41) to 5 (pointnet sea surface)
-
-# Remove photons above sea surfaace
-sea_surface_df = spot_df[spot_df['class'] == 5]                             # get the subset of the sea_surface_df where class_ph is sea surface
-average_sea_surface_level = sea_surface_df['ortho_h'].mean()                # take the average of the geoid corrected height of the sea surface photons
-spot_df = spot_df[spot_df['ortho_h'] < average_sea_surface_level]
-
-# Remove photons where the max_signal_conf doesn't meet minimum threshold
-spot_df = spot_df[spot_df['max_signal_conf'] >= minSignalConf]
-
-# Remove photons outside of height range
-spot_df = spot_df[(spot_df["ortho_h"] > minElev) & \
-                  (spot_df["ortho_h"] < maxElev)]                      # if geoid height is outside absolute range
 
 # Create dataframe with the columns and order expected by the rest of pointnet
 data_df = pd.DataFrame()
 data_df['index_ph'] = spot_df['index_ph']
 data_df['x'] = spot_df['x_ph']
 data_df['y'] = spot_df['y_ph']
-data_df['lon'] = spot_df['lon_ph']
-data_df['lat'] = spot_df['lat_ph']
 data_df['elev'] = spot_df['ortho_h']
 data_df['signal_conf_ph'] = spot_df['max_signal_conf']
-data_df['class'] = spot_df['class']
+
+# Add a pointnet specific class column
+data_df['class'] = np.full((len(data_df)), 3)                               # initialize everything to 3 (pointnet noise)
+data_df.loc[spot_df.class_ph == 41, 'class'] = 5                            # change sea surface (41) to 5 (pointnet sea surface)
+
+# Remove photons above sea surfaace
+sea_surface_df = data_df[data_df['class'] == 5]                             # get the subset of the sea_surface_df where class_ph is sea surface
+average_sea_surface_level = sea_surface_df['elev'].mean()                   # take the average of the geoid corrected height of the sea surface photons
+data_df = data_df[data_df['elev'] < average_sea_surface_level]
+
+# Remove photons where the max_signal_conf doesn't meet minimum threshold
+data_df = data_df[data_df['signal_conf_ph'] >= minSignalConf]
+
+# Remove photons outside of height range
+data_df = data_df[(data_df["elev"] > minElev) & \
+                  (data_df["elev"] < maxElev)]                              # if geoid height is outside absolute range
 
 # Normalize signal confidence
 data_df['signal_conf_ph'] = data_df['signal_conf_ph'] - 2
@@ -157,7 +153,7 @@ class PartNormalDataset(Dataset):
     def __init__(self, data, npoints):
         self.data = data
         self.npoints = npoints
-        self.column_indices = [1, 2, 5, 6] # use x,y,elev,signal_conf
+        self.column_indices = [1, 2, 3, 4] # use x,y,elev,signal_conf
 
     def __getitem__(self, index):
         r0 = self.npoints * index
@@ -242,17 +238,13 @@ with torch.no_grad():
 
         # build dataframe of index and classification
         index_ph = data[row_slice[0][0]:row_slice[1][-1], 0].astype(np.int32)
-        class_ph = data[row_slice[0][0]:row_slice[1][-1], 7]
+        class_ph = data[row_slice[0][0]:row_slice[1][-1], 5]
         columns = {'index_ph': index_ph, 'class_ph': class_ph}            
         batch_df = pd.DataFrame(columns)
-        if trust_class41:
-            # only keep bathymetry photons (prediction == 1) when original didn't have sea surface
-            # class 5 in pointnet is class 41 in atl24
-            batch_df = batch_df.loc[(cur_pred_val_mask == 1) & (batch_df['class_ph'] != 5)] 
-        else:
-            # only keep bathymetry photons (prediction == 1)
-            batch_df = batch_df.loc[cur_pred_val_mask == 1] 
-        batch_df['class_ph'] = 40 # set class to atl24 bathymetry class
+#        batch_df.loc[(cur_pred_val_mask == 1) & (batch_df['class_ph'] != 5), 'class_ph'] = 40 # only keep bathymetry photons (prediction == 1) when original didn't have sea surface
+        batch_df.loc[cur_pred_val_mask == 1, 'class_ph'] = 40 # set bathymetry photons (prediction == 1)
+        batch_df.loc[batch_df['class_ph'] == 5, 'class_ph'] = 41 # restore sea surface where it wasn't overwritten
+        batch_df.loc[(batch_df['class_ph'] != 40) & (batch_df['class_ph'] != 41), 'class_ph'] = 1 # set everything else to other
         output_dfs.append(batch_df)
 
 ################
@@ -260,8 +252,8 @@ with torch.no_grad():
 ################
 
 output_df = pd.concat(output_dfs)
-output_df.set_index('index_ph')
-spot_df.set_index('index_ph')
+output_df.set_index('index_ph', inplace=True)
+spot_df.set_index('index_ph', inplace=True)
 output_df = output_df.combine_first(spot_df).reset_index()
 
 if output_csv != None:
