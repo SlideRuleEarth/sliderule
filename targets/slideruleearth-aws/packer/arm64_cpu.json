@@ -1,0 +1,9 @@
+{
+  "architecture": "arm",
+  "docker_compose_arch": "aarch64",
+  "node_exporter_arch": "arm64",
+  "loki_arch": "arm64",
+  "source_ami": "al2023-ami-2023.*-arm64",
+  "source_owner": "137112412989",
+  "build_instance": "t4g.micro"
+}

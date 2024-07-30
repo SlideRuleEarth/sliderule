@@ -69,23 +69,16 @@ const RecordObject::fieldDef_t BathyReader::phRecDef[] = {
     {"time",            RecordObject::TIME8,    offsetof(photon_t, time_ns),        1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
     {"index_ph",        RecordObject::INT32,    offsetof(photon_t, index_ph),       1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
     {"index_seg",       RecordObject::INT32,    offsetof(photon_t, index_seg),      1,  NULL, NATIVE_FLAGS},
-    {"latitude",        RecordObject::DOUBLE,   offsetof(photon_t, latitude),       1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
-    {"longitude",       RecordObject::DOUBLE,   offsetof(photon_t, longitude),      1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
+    {"lat_ph",          RecordObject::DOUBLE,   offsetof(photon_t, lat_ph),         1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
+    {"lon_ph",          RecordObject::DOUBLE,   offsetof(photon_t, lon_ph),         1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
     {"x_ph",            RecordObject::DOUBLE,   offsetof(photon_t, x_ph),           1,  NULL, NATIVE_FLAGS},
     {"y_ph",            RecordObject::DOUBLE,   offsetof(photon_t, y_ph),           1,  NULL, NATIVE_FLAGS},
     {"x_atc",           RecordObject::DOUBLE,   offsetof(photon_t, x_atc),          1,  NULL, NATIVE_FLAGS},
     {"y_atc",           RecordObject::DOUBLE,   offsetof(photon_t, y_atc),          1,  NULL, NATIVE_FLAGS},
     {"background_rate", RecordObject::DOUBLE,   offsetof(photon_t, background_rate),1,  NULL, NATIVE_FLAGS},
-    {"geoid",           RecordObject::FLOAT,    offsetof(photon_t, geoid),          1,  NULL, NATIVE_FLAGS},
-    {"ortho_h",    RecordObject::FLOAT,    offsetof(photon_t, ortho_h),   1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
-    {"dem_h",           RecordObject::FLOAT,    offsetof(photon_t, dem_h),          1,  NULL, NATIVE_FLAGS},
-    {"sigma_h",         RecordObject::FLOAT,    offsetof(photon_t, sigma_h),        1,  NULL, NATIVE_FLAGS},
-    {"sigma_along",     RecordObject::FLOAT,    offsetof(photon_t, sigma_along),    1,  NULL, NATIVE_FLAGS},
-    {"sigma_across",    RecordObject::FLOAT,    offsetof(photon_t, sigma_across),   1,  NULL, NATIVE_FLAGS},
-    {"solar_elevation", RecordObject::FLOAT,    offsetof(photon_t, solar_elevation),1,  NULL, NATIVE_FLAGS},
-    {"wind_v",          RecordObject::FLOAT,    offsetof(photon_t, wind_v),         1,  NULL, NATIVE_FLAGS},
-    {"pointing_angle",  RecordObject::FLOAT,    offsetof(photon_t, pointing_angle), 1,  NULL, NATIVE_FLAGS},
-    {"ndwi",            RecordObject::FLOAT,    offsetof(photon_t, ndwi),           1,  NULL, NATIVE_FLAGS},
+    {"ellipse_h",       RecordObject::FLOAT,    offsetof(photon_t, ellipse_h),      1,  NULL, NATIVE_FLAGS},
+    {"ortho_h",         RecordObject::FLOAT,    offsetof(photon_t, ortho_h),        1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
+    {"surface_h",       RecordObject::FLOAT,    offsetof(photon_t, surface_h),      1,  NULL, NATIVE_FLAGS},
     {"yapc_score",      RecordObject::UINT8,    offsetof(photon_t, yapc_score),     1,  NULL, NATIVE_FLAGS},
     {"max_signal_conf", RecordObject::INT8,     offsetof(photon_t, max_signal_conf),1,  NULL, NATIVE_FLAGS},
     {"quality_ph",      RecordObject::INT8,     offsetof(photon_t, quality_ph),     1,  NULL, NATIVE_FLAGS},
@@ -101,7 +94,8 @@ const RecordObject::fieldDef_t BathyReader::exRecDef[] = {
     {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS},
     {"utm_zone",        RecordObject::UINT8,    offsetof(extent_t, utm_zone),               1,  NULL, NATIVE_FLAGS},
     {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS},
-    {"surface_h",       RecordObject::FLOAT,    offsetof(extent_t, surface_h),              1,  NULL, NATIVE_FLAGS},
+    {"wind_v",          RecordObject::FLOAT,    offsetof(extent_t, wind_v),                 1,  NULL, NATIVE_FLAGS},
+    {"ndwi",            RecordObject::FLOAT,    offsetof(extent_t, ndwi),                   1,  NULL, NATIVE_FLAGS},
     {"photons",         RecordObject::USER,     offsetof(extent_t, photons),                0,  phRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
 };
 
@@ -123,6 +117,7 @@ static const char*  BATHY_PARMS_ASSET09         = "asset09";
 static const char*  BATHY_PARMS_DEFAULT_ASSET09 = "icesat2";
 static const char*  BATHY_PARMS_HLS_PARMS       = "hls";
 static const char*  BATHY_PARMS_MAX_DEM_DELTA   = "max_dem_delta";
+static const char*  BATHY_PARMS_MIN_DEM_DELTA   = "min_dem_delta";
 static const char*  BATHY_PARMS_PH_IN_EXTENT    = "ph_in_extent";
 static const char*  BATHY_PARMS_GENERATE_NDWI   = "generate_ndwi";
 static const char*  BATHY_PARMS_USE_BATHY_MASK  = "use_bathy_mask";
@@ -187,6 +182,11 @@ int BathyReader::luaCreate (lua_State* L)
             /* maximum DEM delta */
             lua_getfield(L, bathy_parms_index, BATHY_PARMS_MAX_DEM_DELTA);
             parms->max_dem_delta = LuaObject::getLuaFloat(L, -1, true, parms->max_dem_delta, NULL);
+            lua_pop(L, 1);
+
+            /* minimum DEM delta */
+            lua_getfield(L, bathy_parms_index, BATHY_PARMS_MIN_DEM_DELTA);
+            parms->min_dem_delta = LuaObject::getLuaFloat(L, -1, true, parms->min_dem_delta, NULL);
             lua_pop(L, 1);
 
             /* photons in extent */
@@ -297,38 +297,6 @@ BathyReader::BathyReader (lua_State* L, const parms_t* _parms, const char* _reso
         bathyMask = new GeoLib::TIFFImage(NULL, GLOBAL_BATHYMETRY_MASK_FILE_PATH);
     }
 
-    /* Standard Data Product Variables */
-    if(parms->output_as_sdp)
-    {
-        /* Write Ancillary Data */
-        FString ancillary_filename("%s/writer_ancillary.json", sharedDirectory);
-        fileptr_t ancillary_file = fopen(ancillary_filename.c_str(), "w");
-        if(ancillary_file == NULL)
-        {
-            char err_buf[256];
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create ancillary json file %s: %s", ancillary_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
-        }
-        const AncillaryData ancillary_data(context, readTimeoutMs);
-        const char* ancillary_json = ancillary_data.tojson();
-        fprintf(ancillary_file, "%s", ancillary_json);
-        fclose(ancillary_file);
-        delete [] ancillary_json;
-
-        /* Write Orbit Info */
-        FString orbit_filename("%s/writer_orbit.json", sharedDirectory);
-        fileptr_t orbit_file = fopen(orbit_filename.c_str(), "w");
-        if(orbit_file == NULL)
-        {
-            char err_buf[256];
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create orbit json file %s: %s", orbit_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
-        }
-        const OrbitInfo orbit_info(context, readTimeoutMs);
-        const char* orbit_json = orbit_info.tojson();
-        fprintf(orbit_file, "%s", orbit_json);
-        fclose(orbit_file);
-        delete [] orbit_json;
-    }
-
     /* Initialize Stats */
     memset(&stats, 0, sizeof(stats));
 
@@ -346,6 +314,38 @@ BathyReader::BathyReader (lua_State* L, const parms_t* _parms, const char* _reso
         /* Create H5Coro Contexts */
         context = new H5Coro::Context(parms->asset, resource);
         context09 = new H5Coro::Context(parms->asset09, parms->resource09);
+
+        /* Standard Data Product Variables */
+        if(parms->output_as_sdp)
+        {
+            /* Write Ancillary Data */
+            FString ancillary_filename("%s/writer_ancillary.json", sharedDirectory);
+            fileptr_t ancillary_file = fopen(ancillary_filename.c_str(), "w");
+            if(ancillary_file == NULL)
+            {
+                char err_buf[256];
+                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create ancillary json file %s: %s", ancillary_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
+            }
+            const AncillaryData ancillary_data(context, readTimeoutMs);
+            const char* ancillary_json = ancillary_data.tojson();
+            fprintf(ancillary_file, "%s", ancillary_json);
+            fclose(ancillary_file);
+            delete [] ancillary_json;
+
+            /* Write Orbit Info */
+            FString orbit_filename("%s/writer_orbit.json", sharedDirectory);
+            fileptr_t orbit_file = fopen(orbit_filename.c_str(), "w");
+            if(orbit_file == NULL)
+            {
+                char err_buf[256];
+                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create orbit json file %s: %s", orbit_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
+            }
+            const OrbitInfo orbit_info(context, readTimeoutMs);
+            const char* orbit_json = orbit_info.tojson();
+            fprintf(orbit_file, "%s", orbit_json);
+            fclose(orbit_file);
+            delete [] orbit_json;
+        }
 
         /* Parse Globals (throws) */
         parseResource(resource, granuleDate, startRgt, startCycle, startRegion, sdpVersion);
@@ -907,7 +907,6 @@ void* BathyReader::subsettingThread (void* parm)
 
         /* Initialize Segment Level Fields */
         float wind_v = 0.0;
-        float pointing_angle = 90.0;
         float ndwi = std::numeric_limits<float>::quiet_NaN();
 
         /* Get Dataset Level Parameters */
@@ -1021,9 +1020,9 @@ void* BathyReader::subsettingThread (void* parm)
                     }
                 }
 
-                /* Check Maximum DEM Delta */
-                const double dem_delta = abs(atl03.dem_h[current_segment] - atl03.h_ph[current_photon]);
-                if(dem_delta > parms->max_dem_delta)
+                /* Check DEM Delta */
+                const float dem_delta = atl03.h_ph[current_photon] - atl03.dem_h[current_segment];
+                if(dem_delta > parms->max_dem_delta || dem_delta < parms->min_dem_delta)
                 {
                     break;
                 }
@@ -1056,9 +1055,6 @@ void* BathyReader::subsettingThread (void* parm)
                         wind_v = sqrt(pow(atl09.met_u10m[low_rate_index], 2.0) + pow(atl09.met_v10m[low_rate_index], 2.0));
                     }
 
-                    /* Calculate Pointing Angle */
-                    pointing_angle = 90.0 - ((180.0 / M_PI) * atl03.ref_elev[current_segment]);
-
                     /* Sample Raster for NDWI */
                     ndwi = std::numeric_limits<float>::quiet_NaN();
                     if(ndwiRaster && parms->generate_ndwi)
@@ -1081,27 +1077,19 @@ void* BathyReader::subsettingThread (void* parm)
                     .time_ns = Icesat2Parms::deltatime2timestamp(current_delta_time),
                     .index_ph = static_cast<int32_t>(region.first_photon) + current_photon,
                     .index_seg = static_cast<int32_t>(region.first_segment) + current_segment,
-                    .latitude = latitude,
-                    .longitude = longitude,
+                    .lat_ph = latitude,
+                    .lon_ph = longitude,
                     .x_ph = coord.x,
                     .y_ph = coord.y,
                     .x_atc = atl03.segment_dist_x[current_segment] + atl03.dist_ph_along[current_photon],
                     .y_atc = atl03.dist_ph_across[current_photon],
                     .background_rate = calculateBackground(current_segment, bckgrd_index, atl03),
-                    .geoid = atl03.geoid[current_segment],
+                    .delta_h = 0.0, // populated by refraction correction
+                    .surface_h = 0.0, // populated by sea surface finder
                     .ortho_h = atl03.h_ph[current_photon] - atl03.geoid[current_segment],
-                    .dem_h = atl03.dem_h[current_segment] - atl03.geoid[current_segment],
-                    .sigma_h = atl03.sigma_h[current_segment],
-                    .sigma_along = atl03.sigma_along[current_segment],
-                    .sigma_across = atl03.sigma_across[current_segment],
-                    .solar_elevation = atl03.solar_elevation[current_segment],
-                    .sigma_thu = 0.0,
-                    .sigma_tvu = 0.0,
-                    .ref_az = atl03.ref_azimuth[current_segment],
-                    .ref_el = atl03.ref_elev[current_segment],
-                    .wind_v = wind_v,
-                    .pointing_angle = pointing_angle,
-                    .ndwi = ndwi,
+                    .ellipse_h = atl03.h_ph[current_photon],
+                    .sigma_thu = 0.0, // populated by uncertainty calculation
+                    .sigma_tvu = 0.0, // populated by uncertainty calculation
                     .processing_flags = 0x0,
                     .yapc_score = yapc_score,
                     .max_signal_conf = atl03_cnf,
@@ -1135,6 +1123,8 @@ void* BathyReader::subsettingThread (void* parm)
                 extent->reference_ground_track  = reader->startRgt;
                 extent->cycle                   = reader->startCycle;
                 extent->utm_zone                = utm_transform.zone;
+                extent->wind_v                  = wind_v;
+                extent->ndwi                    = ndwi;
                 extent->photon_count            = extent_photons.length();
                 extent->extent_id               = extent_id;
 
@@ -1144,10 +1134,10 @@ void* BathyReader::subsettingThread (void* parm)
                     extent->photons[p] = extent_photons[p];
                 }
 
-                /* Run OpenOceans */
+                /* Preprocess Extent */
                 parms->oceaneyes->findSeaSurface(*extent);
-                parms->oceaneyes->correctRefraction(*extent);
-                parms->oceaneyes->calculateUncertainty(*extent);
+                parms->oceaneyes->correctRefraction(*extent, atl03.ref_elev, atl03.ref_azimuth);
+                parms->oceaneyes->calculateUncertainty(*extent, atl03.sigma_across, atl03.sigma_along, atl03.sigma_h, atl03.ref_elev);
 
                 /* Update Statistics */
                 local_stats.photon_count += extent->photon_count;
@@ -1220,37 +1210,28 @@ void* BathyReader::subsettingThread (void* parm)
                         }
 
                         /* Write Header */
-                        fprintf(out_file, "index_ph,time,latitude,longitude,x_ph,y_ph,x_atc,y_atc,index_seg,background_rate,geoid,surface_h,ortho_h,dem_h,sigma_h,sigma_along,sigma_across,sigma_thu,sigma_tvu,solar_elevation,ref_az,ref_el,wind_v,pointing_angle,ndwi,yapc_score,max_signal_conf,quality_ph,flags,class_ph\n");
+                        fprintf(out_file, "index_ph,index_seg,time,lat_ph,lon_ph,x_ph,y_ph,x_atc,y_atc,background_rate,surface_h,ortho_h,ellipse_h,sigma_thu,sigma_tvu,delta_h,yapc_score,max_signal_conf,quality_ph,flags,class_ph\n");
                     }
 
                     /* Write Data */
                     for(unsigned i = 0; i < extent->photon_count; i++)
                     {
                         fprintf(out_file, "%d,", extent->photons[i].index_ph);
+                        fprintf(out_file, "%d,", extent->photons[i].index_seg);
                         fprintf(out_file, "%ld,", extent->photons[i].time_ns);
-                        fprintf(out_file, "%lf,", extent->photons[i].latitude);
-                        fprintf(out_file, "%lf,", extent->photons[i].longitude);
+                        fprintf(out_file, "%lf,", extent->photons[i].lat_ph);
+                        fprintf(out_file, "%lf,", extent->photons[i].lon_ph);
                         fprintf(out_file, "%lf,", extent->photons[i].x_ph);
                         fprintf(out_file, "%lf,", extent->photons[i].y_ph);
                         fprintf(out_file, "%lf,", extent->photons[i].x_atc);
                         fprintf(out_file, "%lf,", extent->photons[i].y_atc);
-                        fprintf(out_file, "%d,", extent->photons[i].index_seg);
                         fprintf(out_file, "%lf,", extent->photons[i].background_rate);
-                        fprintf(out_file, "%f,", extent->photons[i].geoid);
-                        fprintf(out_file, "%f,", extent->surface_h);
+                        fprintf(out_file, "%f,", extent->photons[i].surface_h);
                         fprintf(out_file, "%f,", extent->photons[i].ortho_h);
-                        fprintf(out_file, "%f,", extent->photons[i].dem_h);
-                        fprintf(out_file, "%f,", extent->photons[i].sigma_h);
-                        fprintf(out_file, "%f,", extent->photons[i].sigma_along);
-                        fprintf(out_file, "%f,", extent->photons[i].sigma_across);
+                        fprintf(out_file, "%f,", extent->photons[i].ellipse_h);
                         fprintf(out_file, "%f,", extent->photons[i].sigma_thu);
                         fprintf(out_file, "%f,", extent->photons[i].sigma_tvu);
-                        fprintf(out_file, "%f,", extent->photons[i].solar_elevation);
-                        fprintf(out_file, "%f,", extent->photons[i].ref_az);
-                        fprintf(out_file, "%f,", extent->photons[i].ref_el);
-                        fprintf(out_file, "%f,", extent->photons[i].wind_v);
-                        fprintf(out_file, "%f,", extent->photons[i].pointing_angle);
-                        fprintf(out_file, "%f,", extent->photons[i].ndwi);
+                        fprintf(out_file, "%f,", extent->photons[i].delta_h);
                         fprintf(out_file, "%d,", extent->photons[i].yapc_score);
                         fprintf(out_file, "%d,", extent->photons[i].max_signal_conf);
                         fprintf(out_file, "%d,", extent->photons[i].quality_ph);

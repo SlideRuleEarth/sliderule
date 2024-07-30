@@ -68,6 +68,9 @@ RUN /root/miniforge3/bin/mamba create --copy -p /env --file conda-linux-aarch64.
     && /root/miniforge3/bin/conda clean -afy
 RUN /env/bin/pip install fast_histogram
 
+# install magic pytorch environment
+COPY magic_pytorch_env /magic
+
 # install binaries (from build environment above)
 COPY --from=buildenv /coastnet /coastnet
 COPY --from=buildenv /qtrees /qtrees

@@ -56,7 +56,7 @@ MODEL = importlib.import_module('c_shelph')
 # process command line
 sys.path.append('../utils')
 from command_line_processor import process_command_line
-settings, beam_info, point_cloud, output_csv, info_json = process_command_line(sys.argv, columns=["latitude", "longitude", "ortho_h", "index_ph", "class_ph"])
+settings, beam_info, point_cloud, output_csv, info_json = process_command_line(sys.argv, columns=["lat_ph", "lon_ph", "ortho_h", "index_ph", "class_ph"])
 
 # set configuration
 surface_buffer  = settings.get('surface_buffer', -0.5) 

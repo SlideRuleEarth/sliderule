@@ -37,10 +37,12 @@ from scipy.signal import find_peaks, peak_widths
 from scipy.stats import norm
 from sklearn.mixture import GaussianMixture
 
+from parms import Bathy, CLASS_LABELS
+
 pd.options.mode.chained_assignment = None
 
 
-def surface_confidence(z_inv: np.array, params, model_interp: pd.DataFrame) -> np.array:
+def surface_confidence(z_inv: np.array, model_interp: pd.DataFrame) -> np.array:
     """
     Calculate the confidence of the surface for a given elevation model.
 
@@ -118,7 +120,7 @@ def compute_feature_weights(
     else:
         conf_bathymetry = np.zeros_like(z_inv)
 
-    conf_surface = surface_confidence(z_inv, params, model_interp)
+    conf_surface = surface_confidence(z_inv, model_interp)
 
     class_confidence = pd.DataFrame(
         {
@@ -1653,10 +1655,10 @@ class Waveform:
 
         # final check on classifications
         # require at least 3 photons to make a classification 
-        n_surface = np.sum(self.profile.data.classification == self.profile.label_help("surface"))
-        n_column = np.sum(self.profile.data.classification == self.profile.label_help("column"))
-        n_bathy = np.sum(self.profile.data.classification == self.profile.label_help("bathymetry"))
-        n_background = np.sum(self.profile.data.classification == self.profile.label_help("background"))
+        n_surface = np.sum(self.profile.data.classification == Bathy.SURFACE)
+        n_column = np.sum(self.profile.data.classification == Bathy.COLUMN)
+        n_bathy = np.sum(self.profile.data.classification == Bathy.BATHYMETRY)
+        n_background = np.sum(self.profile.data.classification == Bathy.BACKGROUND)
 
         depth = self.params.bathy_loc - (-self.params.column_top) # column top isn't inverted? why did I do this...
 
@@ -1664,7 +1666,7 @@ class Waveform:
             self.quality_flag = -11
 
             # set all photons to background
-            self.profile.data.classification = np.ones_like(self.profile.data.classification) * self.profile.label_help("background")
+            self.profile.data.classification = np.ones_like(self.profile.data.classification) * Bathy.BACKGROUND
 
             # remove any feature weights (positions within the gaussian) for surface/seafloor guesses
             self.profile.data.weight_surface = np.zeros_like(self.profile.data.weight_surface)
@@ -1702,11 +1704,11 @@ class Waveform:
             # recall if there's any water column returns identified they stop at the top of the bathy gaussian
             if n_column > 0:
                 # if there are any column classified photons, convert bathy to column
-                self.profile.data.classification[self.profile.data.classification == self.profile.label_help("bathymetry")] = self.profile.label_help("column")
+                self.profile.data.classification[self.profile.data.classification == Bathy.BATHYMETRY] = Bathy.COLUMN
 
             else:
                 # if no column, convert bathy to background
-                self.profile.data.classification[self.profile.data.classification == self.profile.label_help("bathymetry")] = self.profile.label_help("background")
+                self.profile.data.classification[self.profile.data.classification == Bathy.BATHYMETRY] = Bathy.BACKGROUND
 
             # remove any feature weights (positions within the gaussian) for seafloor guesses
             self.profile.data.weight_bathymetry = np.zeros_like(self.profile.data.weight_bathymetry)
@@ -1739,7 +1741,7 @@ class Waveform:
                 # keep the surface and water column data, but ignore any bathymetry
                 # recall if there's any water column returns identified they stop at the top of the bathy gaussian
 
-                self.profile.data.classification[self.profile.data.classification == self.profile.label_help("bathymetry")] = self.profile.label_help("surface")
+                self.profile.data.classification[self.profile.data.classification == Bathy.BATHYMETRY] = Bathy.SURFACE
 
                 # remove any feature weights (positions within the gaussian) for seafloor guesses
                 self.profile.data.weight_bathymetry = np.zeros_like(self.profile.data.weight_bathymetry)
@@ -1858,8 +1860,7 @@ Overall Quality Flag : {self.quality_flag}
                 )
 
         # initialize all photons as unclassified
-        labels = self.profile.label_help(
-            "unclassified") * np.ones_like(input_heights)
+        labels = Bathy.UNCLASSIFIED * np.ones_like(input_heights)
 
         z_inv = -input_heights
 
@@ -1997,7 +1998,7 @@ Overall Quality Flag : {self.quality_flag}
 
         # # switch column names to numeric for labeling ease
         model_at_z_ph.columns = [
-            self.profile.label_help(x) for x in model_at_z_ph.columns
+            CLASS_LABELS[x] for x in model_at_z_ph.columns
         ]
 
         # # get the column label with the max value
@@ -2006,11 +2007,9 @@ Overall Quality Flag : {self.quality_flag}
         # switch sub seafloor column classifications to noise
         if bathy_flag:
             ph_below_seafloor = model_out.z_inv > params.bathy_loc
-            ph_column = labels == self.profile.label_help("column")
+            ph_column = labels == Bathy.COLUMN
 
-            labels[ph_below_seafloor & ph_column] = self.profile.label_help(
-                "background"
-            )
+            labels[ph_below_seafloor & ph_column] = Bathy.BACKGROUND
 
         model_out.classification = labels
 

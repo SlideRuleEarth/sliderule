@@ -1,0 +1,9 @@
+{
+  "architecture": "x86",
+  "docker_compose_arch": "x86_64",
+  "node_exporter_arch": "386",
+  "loki_arch": "amd64",
+  "source_ami": "al2023-ami-2023.*-x86_64",
+  "source_owner": "137112412989",
+  "build_instance": "t3.micro"
+}

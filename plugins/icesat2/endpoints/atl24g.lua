@@ -192,6 +192,11 @@ parms["oceaneyes"]["assetKd"] = parms["oceaneyes"]["assetKd"] or "viirsj1-s3"
 -- read ICESat-2 inputs
 -------------------------------------------------------
 local reader = icesat2.bathyreader(parms, resource, rspq, crenv.host_sandbox_directory, false)
+if not reader then
+    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create bathy reader", rspq))
+    cleanup(crenv, transaction_id)
+    return
+end
 local spot_mask = {} -- build spot mask using defaults/parsing from bathyreader (because reader will be destroyed)
 for spot = 1,icesat2.NUM_SPOTS do
     spot_mask[spot] = reader:spoton(spot)
@@ -312,7 +317,7 @@ runclassifier(output_files, timeout, "medianfilter", in_parallel)
 runclassifier(output_files, timeout, "cshelph", in_parallel)
 runclassifier(output_files, timeout, "bathypathfinder", in_parallel)
 runclassifier(output_files, timeout, "coastnet", in_parallel, "bash /coastnet/runner.sh")
-runclassifier(output_files, timeout, "pointnet2", false)
+runclassifier(output_files, timeout, "pointnet2", false, "bash /pointnet2/runner.sh")
 runclassifier(output_files, timeout, "openoceans", false)
 profile["atl24_endpoint"] = (time.gps() - endpoint_start_time) / 1000.0 -- capture endpoint timing
 userlog:alert(core.INFO, core.RTE_INFO, string.format("atl24 endpoint executed in %f seconds", profile["atl24_endpoint"]))

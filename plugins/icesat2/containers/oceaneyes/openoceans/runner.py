@@ -87,9 +87,7 @@ res_z           = settings.get('res_z', 0.2)
 window_size     = settings.get('window_size', 11) # 3x overlap is not enough to filter bad daytime noise
 range_z         = settings.get('range_z', [-50, 30]) # include at least a few meters more than 5m above the surface for noise estimation, key for daytime case noise filtering
 verbose         = settings.get('verbose', False) # not really fully integrated, it's still going to print some recent debugging statements
-photon_bins     = settings.get('photon_bins', False)
 parallel        = settings.get('parallel', True)
-use_ndwi        = settings.get('use_ndwi', False)
 chunk_size      = settings.get('chunk_size', 65536) # number of photons to process at one time
 
 ##################
@@ -112,10 +110,6 @@ ph_data["conf_bathymetry"] = NO_VALUE
 ph_data["subsurface_flag"] = NO_VALUE
 ph_data["weight_surface"] = NO_VALUE
 ph_data["weight_bathymetry"] = NO_VALUE
-
-# if ndwi is available, filter out land
-if use_ndwi and 'ndwi' in ph_data_all:
-    ph_data = ph_data[ph_data_all.ndwi > 0]
 
 print(ph_data)
 
@@ -144,16 +138,6 @@ class Profile:
         self.info = info
         self.data = data
         self.signal_finding = False
-        self.class_labels = {
-            "surface": 41,
-            "column": 45,
-            "bathymetry": 40,
-            "background": 1,
-            "unclassified": 0,
-            "none": 0,
-        }
-    def label_help(self, user_input=None):
-        return self.class_labels[user_input]
 
 ################
 # EXECUTE MODEL
@@ -163,7 +147,7 @@ model_outputs = []
 for start_row in range(0, len(ph_data), chunk_size):
     print(f'Processing rows {start_row} to {start_row + chunk_size} out of {len(ph_data)}')
     p_sr = Profile(data=ph_data.iloc[start_row:start_row+chunk_size], info=ph_info)
-    mmp = ModelMakerP(res_along_track=res_along_track, res_z=res_z, window_size=window_size, range_z=range_z, verbose=verbose, photon_bins=photon_bins, parallel=parallel)
+    mmp = ModelMakerP(res_along_track=res_along_track, res_z=res_z, window_size=window_size, range_z=range_z, verbose=verbose)
     m = mmp.process(p_sr, n_cpu_cores=8)
     model_outputs.append(m.profile.data)
 

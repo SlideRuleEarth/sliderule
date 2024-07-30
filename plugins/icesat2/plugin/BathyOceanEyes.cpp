@@ -59,7 +59,6 @@ static const char*  OCEANEYES_PARMS_DEFAULT_ASSETKD        = "viirsj1-s3";
 static const char*  OCEANEYES_PARMS_RESOURCE_KD            = "resource_kd";
 static const char*  OCEANEYES_PARMS_RI_AIR                 = "ri_air";
 static const char*  OCEANEYES_PARMS_RI_WATER               = "ri_water";
-static const char*  OCEANEYES_PARMS_DEM_BUFFER             = "dem_buffer";
 static const char*  OCEANEYES_PARMS_BIN_SIZE               = "bin_size";
 static const char*  OCEANEYES_PARMS_MAX_RANGE              = "max_range";
 static const char*  OCEANEYES_PARMS_MAX_BINS               = "max_bins";
@@ -223,11 +222,6 @@ BathyOceanEyes::BathyOceanEyes (lua_State* L, int index):
         parms.ri_water = LuaObject::getLuaFloat(L, -1, true, parms.ri_water, NULL);
         lua_pop(L, 1);
 
-        /* DEM buffer */
-        lua_getfield(L, index, OCEANEYES_PARMS_DEM_BUFFER);
-        parms.dem_buffer = LuaObject::getLuaFloat(L, -1, true, parms.dem_buffer, NULL);
-        lua_pop(L, 1);
-
         /* bin size */
         lua_getfield(L, index, OCEANEYES_PARMS_BIN_SIZE);
         parms.bin_size = LuaObject::getLuaFloat(L, -1, true, parms.bin_size, NULL);
@@ -314,11 +308,6 @@ void BathyOceanEyes::findSeaSurface (extent_t& extent) const
         {
             const double height = extent.photons[i].ortho_h;
             const double time_secs = static_cast<double>(extent.photons[i].time_ns) / 1000000000.0;
-
-            /* filter distance from DEM height */
-            if( (height > (extent.photons[i].dem_h + parms.dem_buffer)) ||
-                (height < (extent.photons[i].dem_h - parms.dem_buffer)) )
-                continue;
 
             /* get min and max height */
             if(height < min_h) min_h = height;
@@ -489,11 +478,12 @@ void BathyOceanEyes::findSeaSurface (extent_t& extent) const
         const double peak_stddev = (peak_width * parms.bin_size) / 2.35;
 
         /* calculate sea surface height and label sea surface photons */
-        extent.surface_h = min_h + (highest_peak_bin * parms.bin_size) + (parms.bin_size / 2.0);
-        const double min_surface_h = extent.surface_h - (peak_stddev * parms.surface_width);
-        const double max_surface_h = extent.surface_h + (peak_stddev * parms.surface_width);
+        const float surface_h = min_h + (highest_peak_bin * parms.bin_size) + (parms.bin_size / 2.0);
+        const double min_surface_h = surface_h - (peak_stddev * parms.surface_width);
+        const double max_surface_h = surface_h + (peak_stddev * parms.surface_width);
         for(long i = 0; i < extent.photon_count; i++)
         {
+            extent.photons[i].surface_h = surface_h;
             if( extent.photons[i].ortho_h >= min_surface_h &&
                 extent.photons[i].ortho_h <= max_surface_h )
             {
@@ -553,20 +543,23 @@ void BathyOceanEyes::findSeaSurface (extent_t& extent) const
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *----------------------------------------------------------------------------*/
-void BathyOceanEyes::correctRefraction(extent_t& extent) const
+void BathyOceanEyes::correctRefraction( extent_t& extent, 
+                                        const H5Array<float>& ref_el,
+                                        const H5Array<float>& ref_az) const
 {
     GeoLib::UTMTransform transform(extent.utm_zone, extent.region < 8);
 
     photon_t* photons = extent.photons;
     for(uint32_t i = 0; i < extent.photon_count; i++)
     {
-        const double depth = extent.surface_h - photons[i].ortho_h;      // compute un-refraction-corrected depths
+        const int32_t seg = extent.photons[i].index_seg;
+        const double depth = photons[i].surface_h - photons[i].ortho_h;     // compute un-refraction-corrected depths
         if(depth > 0)
         {
             /* Calculate Refraction Corrections */
             const double n1 = parms.ri_air;
             const double n2 = parms.ri_water;
-            const double theta_1 = (M_PI / 2.0) - photons[i].ref_el;    // angle of incidence (without Earth curvature)
+            const double theta_1 = (M_PI / 2.0) - ref_el[seg];          // angle of incidence (without Earth curvature)
             const double theta_2 = asin(n1 * sin(theta_1) / n2);        // angle of refraction
             const double phi = theta_1 - theta_2;
             const double s = depth / cos(theta_1);                      // uncorrected slant range to the uncorrected seabed photon location
@@ -577,18 +570,18 @@ void BathyOceanEyes::correctRefraction(extent_t& extent) const
             const double beta = gamma - alpha;
             const double dZ = p * sin(beta);                            // vertical offset
             const double dY = p * cos(beta);                            // cross-track offset
-            const double dE = dY * sin(static_cast<double>(photons[i].ref_az));              // UTM offsets
-            const double dN = dY * cos(static_cast<double>(photons[i].ref_az));
+            const double dE = dY * sin(static_cast<double>(ref_az[seg])); // UTM offsets
+            const double dN = dY * cos(static_cast<double>(ref_az[seg])); 
 
-            /* Apply Refraction Corrections */
-            photons[i].x_ph += dE;
-            photons[i].y_ph += dN;
-            photons[i].ortho_h += dZ;
+            /* Save Refraction Height Correction */
+            photons[i].delta_h = dZ;
 
             /* Correct Latitude and Longitude */
-            const GeoLib::point_t point = transform.calculateCoordinates(photons[i].x_ph, photons[i].y_ph);
-            photons[i].latitude = point.y;
-            photons[i].longitude = point.x;
+            double corr_x_ph = photons[i].x_ph + dE;
+            double corr_y_ph = photons[i].y_ph + dN;
+            const GeoLib::point_t point = transform.calculateCoordinates(corr_x_ph, corr_y_ph);
+            photons[i].lat_ph = point.y;
+            photons[i].lon_ph = point.x;
         }
     }
 }
@@ -596,7 +589,11 @@ void BathyOceanEyes::correctRefraction(extent_t& extent) const
 /*----------------------------------------------------------------------------
  * uncertainty calculation
  *----------------------------------------------------------------------------*/
-void BathyOceanEyes::calculateUncertainty (extent_t& extent) const
+void BathyOceanEyes::calculateUncertainty (extent_t& extent,
+                                           const H5Array<float>& sigma_across,
+                                           const H5Array<float>& sigma_along,
+                                           const H5Array<float>& sigma_h,
+                                           const H5Array<float>& ref_el) const
 {
     if(extent.photon_count == 0) return; // nothing to do
 
@@ -604,12 +601,12 @@ void BathyOceanEyes::calculateUncertainty (extent_t& extent) const
     Kd_490->join(parms.read_timeout_ms, true);
 
     /* get y offset */
-    const double degrees_of_latitude = extent.photons[0].latitude + 90.0;
+    const double degrees_of_latitude = extent.photons[0].lat_ph + 90.0;
     const double latitude_pixels = degrees_of_latitude / 24.0;
     const int32_t y = static_cast<int32_t>(latitude_pixels);
 
     /* get x offset */
-    const double degrees_of_longitude =  extent.photons[0].longitude + 180.0;
+    const double degrees_of_longitude =  extent.photons[0].lat_ph + 180.0;
     const double longitude_pixels = degrees_of_longitude / 24.0;
     const int32_t x = static_cast<int32_t>(longitude_pixels);
 
@@ -621,25 +618,38 @@ void BathyOceanEyes::calculateUncertainty (extent_t& extent) const
     const long offset = (x * 4320) + y;
     const double kd = static_cast<double>((*Kd_490)[offset]) * 0.0002;
 
+    /* segment level variables */
+    int32_t previous_segment = -1;
+    float pointing_angle = 0.0;
+
     /* for each photon in extent */
     photon_t* photons = extent.photons;
     for(uint32_t i = 0; i < extent.photon_count; i++)
     {
-        /* initialize total uncertainty to aerial uncertainty */
-        photons[i].sigma_thu = sqrtf((photons[i].sigma_across * photons[i].sigma_across) + (photons[i].sigma_along * photons[i].sigma_along));
-        photons[i].sigma_tvu = photons[i].sigma_h;
+        const int32_t s = extent.photons[i].index_seg;
 
+        /* calculate pointing angle */
+        if(previous_segment != s)
+        {
+            previous_segment = s;
+            pointing_angle = 90.0 - ((180.0 / M_PI) * ref_el[s]);
+        }
+
+        /* initialize total uncertainty to aerial uncertainty */
+        photons[i].sigma_thu = sqrtf((sigma_across[s] * sigma_across[s]) + (sigma_along[s] * sigma_along[s]));
+        photons[i].sigma_tvu = sigma_h[s];
+        
         /* calculate subaqueous uncertainty */
-        const double depth = extent.surface_h - photons[i].ortho_h;
+        const double depth = photons[i].surface_h - photons[i].ortho_h;
         if(depth > 0.0)
         {
             /* get pointing angle index */
-            int pointing_angle_index = static_cast<int>(roundf(photons[i].pointing_angle));
+            int pointing_angle_index = static_cast<int>(roundf(pointing_angle));
             if(pointing_angle_index < 0) pointing_angle_index = 0;
             else if(pointing_angle_index >= NUM_POINTING_ANGLES) pointing_angle_index = NUM_POINTING_ANGLES - 1;
 
             /* get wind speed index */
-            int wind_speed_index = static_cast<int>(roundf(photons[i].wind_v)) - 1;
+            int wind_speed_index = static_cast<int>(roundf(extent.wind_v)) - 1;
             if(wind_speed_index < 0) wind_speed_index = 0;
             else if(wind_speed_index >= NUM_WIND_SPEEDS) wind_speed_index = NUM_WIND_SPEEDS - 1;
 

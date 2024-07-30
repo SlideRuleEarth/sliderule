@@ -55,20 +55,20 @@ print("Building uncertainty tables")
 
 # create lookup tables
 THU = [
-    pd.read_csv("/data/ICESat2_0deg_500000_AGL_0.022_mrad_THU.csv"),
-    pd.read_csv("/data/ICESat2_1deg_500000_AGL_0.022_mrad_THU.csv"),
-    pd.read_csv("/data/ICESat2_2deg_500000_AGL_0.022_mrad_THU.csv"),
-    pd.read_csv("/data/ICESat2_3deg_500000_AGL_0.022_mrad_THU.csv"),
-    pd.read_csv("/data/ICESat2_4deg_500000_AGL_0.022_mrad_THU.csv"),
-    pd.read_csv("/data/ICESat2_5deg_500000_AGL_0.022_mrad_THU.csv")
+    pd.read_csv("/data/ICESat2_0deg_500000_AGL_0.022_mrad_THU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_1deg_500000_AGL_0.022_mrad_THU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_2deg_500000_AGL_0.022_mrad_THU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_3deg_500000_AGL_0.022_mrad_THU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_4deg_500000_AGL_0.022_mrad_THU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_5deg_500000_AGL_0.022_mrad_THU.csv", engine='pyarrow')
 ]
 TVU = [
-    pd.read_csv("/data/ICESat2_0deg_500000_AGL_0.022_mrad_TVU.csv"),
-    pd.read_csv("/data/ICESat2_1deg_500000_AGL_0.022_mrad_TVU.csv"),
-    pd.read_csv("/data/ICESat2_2deg_500000_AGL_0.022_mrad_TVU.csv"),
-    pd.read_csv("/data/ICESat2_3deg_500000_AGL_0.022_mrad_TVU.csv"),
-    pd.read_csv("/data/ICESat2_4deg_500000_AGL_0.022_mrad_TVU.csv"),
-    pd.read_csv("/data/ICESat2_5deg_500000_AGL_0.022_mrad_TVU.csv")
+    pd.read_csv("/data/ICESat2_0deg_500000_AGL_0.022_mrad_TVU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_1deg_500000_AGL_0.022_mrad_TVU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_2deg_500000_AGL_0.022_mrad_TVU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_3deg_500000_AGL_0.022_mrad_TVU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_4deg_500000_AGL_0.022_mrad_TVU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_5deg_500000_AGL_0.022_mrad_TVU.csv", engine='pyarrow')
 ]
 UNCERTAINTY_TABLES = [THU, TVU]
 POINTING_ANGLES = [0, 1, 2, 3, 4, 5]
@@ -106,7 +106,7 @@ profile_date = f'{info["year"]}-{info["month"]}-{info["day"]}_0000Z'
 kd_out, req_ok = get_kd_values(profile_date, outpath="/tmp", keep=False)
 
 # sample KD values at each coordinate
-coord_list = [(x, y) for x, y in zip(data.longitude, data.latitude)]
+coord_list = [(x, y) for x, y in zip(data.lon_ph, data.lat_ph)]
 with rio.open(f'netcdf:{kd_out}:Kd_490') as kd_src:
     data["kd_490"] = [x[0] for x in kd_src.sample(coord_list)]
     data["kd_490"] = data["kd_490"] * kd_src.scales[0] + kd_src.offsets[0]

@@ -1,5 +1,3 @@
-# Notes:
-#
 # In order to complete the release process, the following must be installed and configured in your environment:
 #     * GitHub command line client (gh)
 #           See https://github.com/cli/cli/blob/trunk/docs/install_linux.md for installation instructions.
@@ -27,7 +25,7 @@
 #     4. Login to NPMJS
 #        $ cd sliderule/clients/nodejs && make login
 #     5. Execute the makefile target to release the code; X.Y.Z is the version
-#        $ make release VERSION=vX.Y.Z DOCKEROPTS=--no-cache
+#        $ make release VERSION=vX.Y.Z
 #
 # To update the build environment for GitHub actions
 #     1. Login to GitHub Container Registry; {my_github_key} is a file storing an access key created for your account
@@ -73,6 +71,7 @@ COASTNET_CONTAINER_SOURCE_DIR = $(ROOT)/../coastnet
 CSHELPH_CONTAINER_SOURCE = $(ROOT)/../cshelph/c_shelph.py
 MEDIANFILTER_CONTAINER_SOURCE = $(ROOT)/../medianfilter/medianmodel.py
 QTREES_CONTAINER_SOURCE_DIR = $(ROOT)/../qtrees
+MAGIC_PYTORCH_DIR = $(ROOT)/../../miniconda3/envs/pointnet2
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -81,7 +80,7 @@ ECR := 742127912612.dkr.ecr.us-west-2.amazonaws.com
 GHCR := ghcr.io/slideruleearth
 DOCKEROPTS ?=
 BUILDX ?= # buildx
-DOCKER_PLATFORM ?= # linux/arm64
+DOCKER_PLATFORM ?= # --platform linux/arm64 | linux/amd64
 ARCH ?= $(shell arch)
 DOMAIN ?= testsliderule.org
 DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
@@ -234,6 +233,9 @@ oceaneyes-docker: ## create the coceaneyes container image
 	#
 	cp $(MEDIANFILTER_CONTAINER_SOURCE) $(OCEANEYES_CONTAINER_STAGE_DIR)/medianfilter
 	#
+	mkdir $(OCEANEYES_CONTAINER_STAGE_DIR)/magic_pytorch_env
+	rsync -a $(MAGIC_PYTORCH_DIR)/* $(OCEANEYES_CONTAINER_STAGE_DIR)/magic_pytorch_env
+	#
 	cd $(OCEANEYES_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION)
 	docker tag $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(MAJOR_VERSION)
@@ -284,11 +286,11 @@ sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
-	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(VERSION)
-	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
-	docker tag $(ECR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
-	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh
+	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest-$(ARCH) $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/sliderule-buildenv:latest-$(ARCH) $(ECR)/sliderule-buildenv:$(VERSION)-$(ARCH)
+	docker tag $(ECR)/sliderule-buildenv:latest-$(ARCH) $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)-$(ARCH)
+	docker tag $(ECR)/sliderule-buildenv:latest-$(ARCH) $(GHCR)/sliderule-buildenv:$(VERSION)-$(ARCH)
+	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)-$(ARCH) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
 
 sliderule-buildenv-docker-push: ## push build environment docker image to registry
 	docker push $(ECR)/sliderule-buildenv:$(VERSION)
@@ -350,7 +352,7 @@ cluster-docker-push: ## push all cluster images to docker container registries
 	docker push $(ECR)/monitor:$(MAJOR_VERSION)
 
 cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
-	cd packer; packer build -var version=$(MAJOR_VERSION) sliderule-base.pkr.hcl
+	cd packer; packer build -var version=$(MAJOR_VERSION) -var-file=arm64_cpu.json sliderule-base.pkr.hcl
 
 cluster-upload-terraform: ## upload the Cluster terraform for provisioning system; needs VERSION
 	-rm -Rf $(TF_STAGE_DIR)

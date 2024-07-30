@@ -62,7 +62,7 @@ spot_table = {}
 for spot in input_files["spot_photons"]:
     if spot not in spot_table:
         spot_table[spot] = {}
-    spot_table[spot]["df"] = pd.read_csv(input_files["spot_photons"][spot])
+    spot_table[spot]["df"] = pd.read_csv(input_files["spot_photons"][spot], engine='pyarrow')
 print("Read photon data into dataframes")
 
 # read in granule info as dictionary from json file and add as necessary to dataframes
@@ -73,7 +73,7 @@ for spot in input_files["spot_granule"]:
 # read in photon classifications as dataframe from csv file and merge into dataframes
 for classifier in input_files["classifiers"]:
     for spot in input_files["classifiers"][classifier]:
-        classifier_df = pd.read_csv(input_files["classifiers"][classifier][spot])
+        classifier_df = pd.read_csv(input_files["classifiers"][classifier][spot], engine='pyarrow')
         classifier_df.rename(columns={'class_ph': classifier}, inplace=True)
         spot_table[spot]["df"] = pd.merge(spot_table[spot]["df"], classifier_df, on='index_ph', how='left')
 print("Added photon classifications to dataframes")
@@ -106,17 +106,13 @@ if output_parms["format"] != "hdf5":
         print("CSV file written: " + atl24_filename)
     
     elif output_parms["format"] == "parquet" or output_parms["format"] == "geoparquet":
-        from geopandas.io.arrow import _geopandas_to_arrow
-        import pyarrow as pa
-        import pyarrow.parquet as pq
 
         if output_parms["as_geo"] or output_parms["format"] == "geoparquet":
     
             # GeoParquet
             df['time'] = df['time'].astype('datetime64[ns]')
-            geometry = gpd.points_from_xy(df['longitude'], df['latitude'])
-#            geometry = gpd.points_from_xy(df['longitude'], df['latitude'], df['ortho_h'])
-            df.drop(columns=['longitude', 'latitude'], inplace=True)
+            geometry = gpd.points_from_xy(df['lon_ph'], df['lat_ph'])
+            df.drop(columns=['lon_ph', 'lat_ph'], inplace=True)
             gdf = gpd.GeoDataFrame(df, geometry=geometry, crs="EPSG:7912")
             gdf.set_index('time', inplace=True)
             gdf.sort_index(inplace=True)
@@ -126,6 +122,8 @@ if output_parms["format"] != "hdf5":
         else:
 
             # Parquet
+            import pyarrow as pa
+            import pyarrow.parquet as pq
             table = pa.Table.from_pandas(df, preserve_index=False)
             schema = table.schema.with_metadata({"sliderule": json.dumps(metadata)})
             table = table.replace_schema_metadata(schema.metadata)
@@ -346,86 +344,93 @@ else:
             spot_info = spot_table[spot]["info"]
             spot_df = spot_table[spot]["df"]
             spot_df["delta_time"] = (spot_df["time"] / 1000000000.0) - ATLAS_GPS_EPOCH
-            spot_df["ellipse_h"] = spot_df["ortho_h"] + spot_df["geoid"]
+
+            # apply refraction correction
+            spot_df["ortho_h"] += spot_df["delta_h"]
+
+            # calculate depth
+            spot_df["depth"] = 0.0
+            subaqueous = spot_df["ortho_h"] < spot_df["surface_h"]
+            spot_df.loc[subaqueous, 'depth'] = spot_df.loc[subaqueous, 'surface_h'] - spot_df.loc[subaqueous, 'ortho_h']
 
             beam_group = hf.create_group(spot_info["beam"]) # e.g. gt1r, gt2l, etc.
             add_variable(beam_group, "index_ph",   spot_df["index_ph"],     'float32',
                         {'contentType':'physicalMeasurement', 
                          'description':'', 
                          'long_name':'', 
-                         'source':'ATL24G', 
+                         'source':'ATL03', 
                          'units':''})
             add_variable(beam_group, "index_seg",  spot_df["index_seg"],    'int32',
                         {'contentType':'physicalMeasurement', 
                          'description':'', 
                          'long_name':'', 
-                         'source':'ATL24G', 
+                         'source':'ATL03', 
                          'units':''})
             add_variable(beam_group, "delta_time", spot_df["delta_time"],   'float64',
                         {'contentType':'physicalMeasurement', 
                          'description':'', 
                          'long_name':'', 
-                         'source':'ATL24G', 
+                         'source':'ATL03', 
                          'units':''})
-            add_variable(beam_group, "latitude",   spot_df["latitude"],     'float64',
+            add_variable(beam_group, "lat_ph",   spot_df["lat_ph"],     'float64',
                         {'contentType':'physicalMeasurement', 
                          'description':'', 
                          'long_name':'', 
-                         'source':'ATL24G', 
+                         'source':'ATL03', 
                          'units':''})
-            add_variable(beam_group, "longitude",  spot_df["longitude"],    'float64',
+            add_variable(beam_group, "lon_ph",  spot_df["lon_ph"],    'float64',
                         {'contentType':'physicalMeasurement', 
                          'description':'', 
                          'long_name':'', 
-                         'source':'ATL24G', 
+                         'source':'ATL03', 
                          'units':''})
             add_variable(beam_group, "x_atc",      spot_df["x_atc"],        'float32',
                         {'contentType':'physicalMeasurement', 
                          'description':'', 
                          'long_name':'', 
-                         'source':'ATL24G', 
+                         'source':'ATL03', 
                          'units':''})
             add_variable(beam_group, "y_atc",      spot_df["y_atc"],        'float32',
                         {'contentType':'physicalMeasurement', 
                          'description':'', 
                          'long_name':'', 
-                         'source':'ATL24G', 
+                         'source':'ATL03', 
                          'units':''})
             add_variable(beam_group, "ellipse_h",  spot_df["ellipse_h"],    'float32',
                         {'contentType':'physicalMeasurement', 
                          'description':'', 
                          'long_name':'', 
-                         'source':'ATL24G', 
+                         'source':'ATL03', 
                          'units':''})
             add_variable(beam_group, "ortho_h",    spot_df["ortho_h"], 'float32',
                         {'contentType':'physicalMeasurement', 
                          'description':'', 
                          'long_name':'', 
-                         'source':'ATL24G', 
+                         'source':'ATL03', 
                          'units':''})
             add_variable(beam_group, "depth",      spot_df["depth"],        'float32',
                         {'contentType':'physicalMeasurement', 
                          'description':'', 
                          'long_name':'', 
-                         'source':'ATL24G', 
+                         'source':'ATL03', 
                          'units':''})
             add_variable(beam_group, "sigma_thu",  spot_df["sigma_thu"],    'float32',
                         {'contentType':'physicalMeasurement', 
                          'description':'', 
                          'long_name':'', 
-                         'source':'ATL24G', 
+                         'source':'ATL03', 
                          'units':''})
             add_variable(beam_group, "sigma_tvu",  spot_df["sigma_tvu"],    'float32',
                         {'contentType':'physicalMeasurement', 
                          'description':'', 
                          'long_name':'', 
-                         'source':'ATL24G', 
+                         'source':'ATL03', 
                          'units':''})
             add_variable(beam_group, "flags",       spot_df["flags"],       'int32',
                         {'contentType':'physicalMeasurement', 
                          'description':'', 
                          'long_name':'', 
-                         'source':'ATL24G', 
+                         'source':'ATL03', 
                          'units':''})
 
             if "ensemble" in spot_df:
@@ -433,22 +438,25 @@ else:
                             {'contentType':'physicalMeasurement', 
                              'description':'', 
                              'long_name':'', 
-                             'source':'ATL24G', 
+                             'source':'ATL03', 
                              'units':''})
             else:
                 add_variable(beam_group, "class_ph", spot_df["class_ph"].astype(np.int16), 'int16',
                             {'contentType':'physicalMeasurement', 
                              'description':'', 
                              'long_name':'', 
-                             'source':'ATL24G', 
+                             'source':'ATL03', 
                              'units':''})
                 for classifier in input_files["classifiers"]:
-                    add_variable(beam_group, classifier, spot_df[classifier].astype(np.int16), 'int16',
-                                {'contentType':'physicalMeasurement', 
-                                'description':'', 
-                                'long_name':'', 
-                                'source':'ATL24G', 
-                                'units':''})
+                    try:
+                        add_variable(beam_group, classifier, spot_df[classifier].astype(np.int16), 'int16',
+                                    {'contentType':'physicalMeasurement', 
+                                    'description':'', 
+                                    'long_name':'', 
+                                    'source':'ATL03', 
+                                    'units':''})
+                    except Exception as e:
+                        print(f'Failed to add classifier <{classifier}>: {e}')
 
 
     print("HDF5 file written: " + atl24_filename)

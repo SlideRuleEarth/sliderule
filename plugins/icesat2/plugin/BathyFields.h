@@ -72,27 +72,19 @@ namespace BathyFields
         int64_t         time_ns;                // nanoseconds since GPS epoch
         int32_t         index_ph;               // unique index of photon in granule
         int32_t         index_seg;              // index into segment level groups in source ATL03 granule
-        double          latitude;
-        double          longitude;
+        double          lat_ph;                 // latitude of photon (EPSG 7912)
+        double          lon_ph;                 // longitude of photon (EPSG 7912)
         double          x_ph;                   // the easting coordinate in meters of the photon for the given UTM zone
         double          y_ph;                   // the northing coordinate in meters of the photon for the given UTM zone
         double          x_atc;                  // along track distance calculated from segment_dist_x and dist_ph_along
         double          y_atc;                  // dist_ph_across
         double          background_rate;        // PE per second
-        float           geoid;                  // geoid correction
+        float           delta_h;                // refraction correction of height
+        float           surface_h;              // orthometric height of sea surface at each photon location
         float           ortho_h;                // geoid corrected height of photon, calculated from h_ph and geoid
-        float           dem_h;                  // best available dem height, geoid corrected
-        float           sigma_h;                // height aerial uncertainty
-        float           sigma_along;            // along track aerial uncertainty
-        float           sigma_across;           // across track aerial uncertainty
-        float           solar_elevation;
+        float           ellipse_h;              // height of photon with respect to reference ellipsoid
         float           sigma_thu;              // total horizontal uncertainty
         float           sigma_tvu;              // total vertical uncertainty
-        float           ref_az;                 // reference azimuth
-        float           ref_el;                 // reference elevation
-        float           wind_v;                 // the wind speed at the center photon of the subsetted granule; calculated from met_u10m and met_v10m
-        float           pointing_angle;         // angle of beam as measured from nadir
-        float           ndwi;                   // normalized difference water index using HLS data
         uint32_t        processing_flags;
         uint8_t         yapc_score;
         int8_t          max_signal_conf;        // maximum value in the atl03 confidence table
@@ -110,7 +102,8 @@ namespace BathyFields
         uint8_t         cycle;
         uint8_t         utm_zone;
         uint64_t        extent_id;
-        float           surface_h;              // orthometric (in meters)            
+        float           wind_v;                 // wind speed (in meters/second)            
+        float           ndwi;                   // normalized difference water index using HLS data
         uint32_t        photon_count;
         photon_t        photons[];              // zero length field
     } extent_t;
