@@ -535,10 +535,9 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
         setFindersRange();
     }
 
-    if(!_findRasters(geo))      return false;
-    if(!filterRasters(gps))     return false;
-    if(!updateCache())          return false;
-    if(!createReaderThreads())  return false;      /* Create additional reader threads if needed */
+    if(!findAndFilterRasters(geo, gps)) return false;
+    if(!updateCache())                  return false;
+    if(!createReaderThreads())          return false;      /* Create additional reader threads if needed */
 
     sampleRasters(geo);
 
@@ -1019,41 +1018,39 @@ void GeoIndexedRaster::setFindersRange(void)
 
 
 /*----------------------------------------------------------------------------
- * _findRasters
+ * findAndFilterRasters
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::_findRasters(OGRGeometry* geo)
+bool GeoIndexedRaster::findAndFilterRasters(OGRGeometry* geo, int64_t gps)
 {
     groupList.clear();
-
     findRastersCount++;
 
-    if(onlyFirst)
+    if(onlyFirst && !cachedRastersGroup.infovect.empty())
     {
-        if(!cachedRasterGroup.infovect.empty())
+        /* Only first rasters group will be returned */
+        bool allRastersIntersect = true;
+        std::vector<raster_info_t>& infovect = cachedRastersGroup.infovect;
+
+        for(uint32_t i = 0; i < infovect.size(); i++)
         {
-            /* Only first raster group will be returned */
-            bool allRastersIntersect = true;
-            std::vector<raster_info_t>& infovect = cachedRasterGroup.infovect;
-
-            for(uint32_t i = 0; i < infovect.size(); i++)
+            if(!infovect[i].rasterGeo->Intersects(geo))
             {
-                if(!infovect[i].rasterGeo->Intersects(geo))
-                {
-                    allRastersIntersect = false;
-                    break;
-                }
-            }
-
-            if(allRastersIntersect)
-            {
-                rasters_group_t* rgroup = new rasters_group_t;
-                *rgroup = cachedRasterGroup;
-                groupList.add(groupList.length(), rgroup);
-                onlyFirstCount++;
-                return true;
+                allRastersIntersect = false;
+                break;
             }
         }
+
+        if(allRastersIntersect)
+        {
+            rasters_group_t* rgroup = new rasters_group_t;
+            *rgroup = cachedRastersGroup;
+            groupList.add(groupList.length(), rgroup);
+            onlyFirstCount++;
+            return true;
+        }
     }
+
+    searchCount++;
 
     /* Start finder threads to find rasters intersecting with point/polygon */
     uint32_t signaledFinders = 0;
@@ -1095,14 +1092,20 @@ bool GeoIndexedRaster::_findRasters(OGRGeometry* geo)
         }
     }
 
-    searchCount++;
+    if(groupList.empty()) return false;
 
-    /* Cache the first group of rasters */
+    /*
+     * Filter out rasters based on URL, temporal, closest time and DOY range filters.
+     * Do it before caching rasters group.
+     */
+    filterRasters(gps);
+
+    /* Cache the first rasters group */
     if(onlyFirst && !groupList.empty())
     {
         const GroupOrdering::Iterator group_iter(groupList);
         const rasters_group_t* rgroup = group_iter[0].value;
-        cachedRasterGroup = *rgroup;
+        cachedRastersGroup = *rgroup;
     }
 
     return (!groupList.empty());

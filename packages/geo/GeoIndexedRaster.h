@@ -200,7 +200,7 @@ class GeoIndexedRaster: public RasterObject
         bool                      onlyFirst;
         uint32_t                  numFinders;
         finder_range_t*           findersRange;
-        rasters_group_t           cachedRasterGroup;
+        rasters_group_t           cachedRastersGroup;
         List<finder_t*>           finders;
         List<reader_t*>           readers;
         GdalRaster::overrideCRS_t crscb;
@@ -230,7 +230,7 @@ class GeoIndexedRaster: public RasterObject
         bool            updateCache     (void);
         bool            filterRasters   (int64_t gps);
         void            setFindersRange (void);
-        bool            _findRasters    (OGRGeometry* geo);
+        bool            findAndFilterRasters (OGRGeometry* geo, int64_t gps);
 };
 
 #endif  /* __geo_indexed_raster__ */
