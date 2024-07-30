@@ -60,13 +60,8 @@ const char* Usgs3dep1meterDemRaster::URL_str = "https://prd-tnm.s3.amazonaws.com
 Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State* L, GeoParms* _parms):
  GeoIndexedRaster(L, _parms, &overrideTargetCRS),
  filePath(_parms->asset->getPath()),
- indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson"),
- cachedGeo(NULL),
- cachedRasterGroup{"", {}, {0, 0, 0, 0, 0, 0}, 0},
- onlyFirst(_parms->single_stop)
+ indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson")
 {
-    // cachedRasterGroup = { "", {}, {0, 0, 0, 0, 0, 0}, 0 };
-
     if(_parms->catalog == NULL)
         throw RunTimeException(ERROR, RTE_ERROR, "Empty CATALOG/geojson index file received");
 
@@ -83,7 +78,6 @@ Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State* L, GeoParms* _parms)
 Usgs3dep1meterDemRaster::~Usgs3dep1meterDemRaster(void)
 {
     VSIUnlink(indexFile.c_str());
-    delete cachedGeo;
 }
 
 /*----------------------------------------------------------------------------
@@ -100,21 +94,16 @@ void Usgs3dep1meterDemRaster::getIndexFile(const OGRGeometry* geo, std::string& 
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool Usgs3dep1meterDemRaster::findRasters(const OGRGeometry* geo)
+bool Usgs3dep1meterDemRaster::findRasters(finder_t* finder)
 {
+    const OGRGeometry* geo    = finder->geo;
+    const uint32_t start_indx = finder->range.start_indx;
+    const uint32_t end_indx   = finder->range.end_indx;
+
     try
     {
-        /* Check cache entry when onlyFirst option enabled */
-        if(onlyFirst && cachedGeo && cachedGeo->Intersects(geo))
-        {
-            rasters_group_t* rgroup = new rasters_group_t;
-            *rgroup = cachedRasterGroup;
-            groupList.add(groupList.length(), rgroup);
-            return true;
-        }
-
         /* Linearly search through feature list */
-        for(unsigned i = 0; i < featuresList.size(); i++)
+        for(uint32_t i = start_indx; i < end_indx; i++)
         {
             OGRFeature* feature = featuresList[i];
             OGRGeometry *rastergeo = feature->GetGeometryRef();
@@ -137,33 +126,21 @@ bool Usgs3dep1meterDemRaster::findRasters(const OGRGeometry* geo)
                 rinfo.dataIsElevation = true;
                 rinfo.tag             = VALUE_TAG;
                 rinfo.fileName        = filePath + fileName.substr(pos);
+                rinfo.rasterGeo       = rastergeo->clone();
                 rgroup->infovect.push_back(rinfo);
             }
 
             mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
-
-            if(onlyFirst)
-            {
-                delete cachedGeo;
-                cachedGeo = rastergeo->clone();
-                cachedRasterGroup = *rgroup;
-            }
-
-            groupList.add(groupList.length(), rgroup);
-
-            if(onlyFirst)
-            {
-                break; // exit after first
-            }
+            finder->rasterGroups.push_back(rgroup);
         }
-        mlog(DEBUG, "Found %ld raster groups", groupList.length());
+        mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (!groupList.empty());
+    return (!finder->rasterGroups.empty());
 }
 
 

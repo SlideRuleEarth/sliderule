@@ -83,7 +83,7 @@ class LandsatHlsRaster: public GeoIndexedRaster
                ~LandsatHlsRaster (void) override;
 
         void    getIndexFile     (const OGRGeometry* geo, std::string& file) final;
-        bool    findRasters      (const OGRGeometry* geo) override;
+        bool    findRasters      (finder_t* finder) final;
         void    getGroupSamples  (const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags) final;
 
 
@@ -102,6 +102,7 @@ class LandsatHlsRaster: public GeoIndexedRaster
 
         std::string filePath;
         std::string indexFile;
+        Mutex bandsDictMutex;
         Dictionary<bool> bandsDict;
 
         bool ndsi;

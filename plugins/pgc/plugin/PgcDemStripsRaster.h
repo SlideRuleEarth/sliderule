@@ -54,7 +54,7 @@ class PgcDemStripsRaster: public GeoIndexedRaster
                 ~PgcDemStripsRaster (void) override;
         bool     openGeoIndex       (const OGRGeometry* geo) final;
         void     getIndexFile       (const OGRGeometry* geo, std::string& file) final;
-        bool     findRasters        (const OGRGeometry* geo) final;
+        bool     findRasters        (finder_t* finder) final;
 
     private:
         void    _getIndexFile       (double lon, double lat, std::string& file);

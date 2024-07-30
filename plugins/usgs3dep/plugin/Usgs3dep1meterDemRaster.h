@@ -73,7 +73,7 @@ class Usgs3dep1meterDemRaster: public GeoIndexedRaster
                ~Usgs3dep1meterDemRaster (void) override;
 
         void    getIndexFile     (const OGRGeometry* geo, std::string& file) final;
-        bool    findRasters      (const OGRGeometry* geo) final;
+        bool    findRasters      (finder_t* finder) final;
 
         static OGRErr overrideTargetCRS(OGRSpatialReference& target);
 
@@ -88,10 +88,6 @@ class Usgs3dep1meterDemRaster: public GeoIndexedRaster
          *--------------------------------------------------------------------*/
         std::string filePath;
         std::string indexFile;
-
-        OGRGeometry* cachedGeo;
-        rasters_group_t cachedRasterGroup;
-        bool onlyFirst;
 };
 
 #endif  /* __usgs3dep_1meter_dem_raster__ */

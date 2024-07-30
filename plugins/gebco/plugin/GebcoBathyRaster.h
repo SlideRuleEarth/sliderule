@@ -72,7 +72,7 @@ class GebcoBathyRaster: public GeoIndexedRaster
                ~GebcoBathyRaster (void) override;
 
         void    getIndexFile     (const OGRGeometry* geo, std::string& file) final;
-        bool    findRasters      (const OGRGeometry* geo) final;
+        bool    findRasters      (finder_t* finder) final;
 
         /*--------------------------------------------------------------------
          * Data

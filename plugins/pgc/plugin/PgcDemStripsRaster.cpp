@@ -157,8 +157,13 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
+bool PgcDemStripsRaster::findRasters(finder_t* finder)
 {
+
+    const OGRGeometry* geo    = finder->geo;
+    const uint32_t start_indx = finder->range.start_indx;
+    const uint32_t end_indx   = finder->range.end_indx;
+
     /*
      * Find rasters and their dates.
      * geojson index file contains two dates: 'start_date' and 'end_date'
@@ -174,7 +179,7 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
     const std::vector<const char*> dates = {"start_datetime", "end_datetime"};
     try
     {
-        for(unsigned i = 0; i < featuresList.size(); i++)
+        for(uint32_t i = start_indx; i < end_indx; i++)
         {
             OGRFeature* feature = featuresList[i];
             OGRGeometry* rastergeo = feature->GetGeometryRef();
@@ -196,11 +201,11 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
                 fileName = filePath + fileName.substr(pos);
 
                 rasters_group_t* rgroup = new rasters_group_t;
-
                 raster_info_t demRinfo;
                 demRinfo.dataIsElevation = true;
                 demRinfo.tag = VALUE_TAG;
                 demRinfo.fileName = fileName;
+                demRinfo.rasterGeo = rastergeo->clone();
 
                 /* bitmask raster, ie flags_file */
                 if(parms->flags_file)
@@ -218,6 +223,7 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
                     flagsRinfo.dataIsElevation = false;
                     flagsRinfo.tag = FLAGS_TAG;
                     flagsRinfo.fileName = fileName;
+                    flagsRinfo.rasterGeo = rastergeo->clone();  /* Should be the same as data raster */
 
                     if(!flagsRinfo.fileName.empty())
                     {
@@ -237,17 +243,17 @@ bool PgcDemStripsRaster::findRasters(const OGRGeometry* geo)
                 rgroup->gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
                 rgroup->gpsTime = static_cast<int64_t>(gps);
                 rgroup->infovect.push_back(demRinfo);
-                groupList.add(groupList.length(), rgroup);
+                finder->rasterGroups.push_back(rgroup);
             }
         }
-        mlog(DEBUG, "Found %ld raster groups", groupList.length());
+        mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (!groupList.empty());
+    return (!finder->rasterGroups.empty());
 }
 
 

@@ -166,11 +166,15 @@ void LandsatHlsRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
+bool LandsatHlsRaster::findRasters(finder_t* finder)
 {
+    const OGRGeometry* geo    = finder->geo;
+    const uint32_t start_indx = finder->range.start_indx;
+    const uint32_t end_indx   = finder->range.end_indx;
+
     try
     {
-        for(unsigned i = 0; i < featuresList.size(); i++)
+        for(uint32_t i = start_indx; i < end_indx; i++)
         {
             OGRFeature* feature = featuresList[i];
             OGRGeometry *rastergeo = feature->GetGeometryRef();
@@ -186,6 +190,8 @@ bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
 
             /* Find each requested band in the index file */
             bool val;
+
+            bandsDictMutex.lock();
             const char* bandName = bandsDict.first(&val);
             while(bandName != NULL)
             {
@@ -205,13 +211,16 @@ bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
                     raster_info_t rinfo;
                     rinfo.dataIsElevation = false; /* All bands are not elevation */
                     rinfo.fileName = filePath + fileName.substr(pos);
+                    rinfo.rasterGeo = rastergeo->clone();
 
                     if(strcmp(bandName, "Fmask") == 0)
                     {
                         /* Use base class generic flags tag */
                         rinfo.tag = FLAGS_TAG;
                         if(parms->flags_file)
+                        {
                             rgroup->infovect.push_back(rinfo);
+                        }
                     }
                     else
                     {
@@ -221,18 +230,19 @@ bool LandsatHlsRaster::findRasters(const OGRGeometry* geo)
                 }
                 bandName = bandsDict.next(&val);
             }
+            bandsDictMutex.unlock();
 
             mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
-            groupList.add(groupList.length(), rgroup);
+            finder->rasterGroups.push_back(rgroup);
         }
-        mlog(DEBUG, "Found %ld raster groups", groupList.length());
+        mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (!groupList.empty());
+    return (!finder->rasterGroups.empty());
 }
 
 

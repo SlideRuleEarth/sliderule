@@ -65,7 +65,7 @@ GeoIndexedRaster::Reader::Reader (GeoIndexedRaster* raster):
     sync(NUM_SYNC_SIGNALS),
     run(true)
 {
-    thread = new Thread(GeoIndexedRaster::readingThread, this);
+    thread = new Thread(GeoIndexedRaster::readerThread, this);
 }
 
 /*----------------------------------------------------------------------------
@@ -83,7 +83,38 @@ GeoIndexedRaster::Reader::~Reader (void)
     delete thread; /* delete thread waits on thread to join */
 
     /* geometry geo is cloned not 'newed' on GDAL heap. Use this call to free it */
-    if(geo) OGR_G_DestroyGeometry(geo);
+    OGRGeometryFactory::destroyGeometry(geo);
+}
+
+/*----------------------------------------------------------------------------
+ * Finder Constructor
+ *----------------------------------------------------------------------------*/
+GeoIndexedRaster::Finder::Finder (GeoIndexedRaster* raster):
+    obj(raster),
+    geo(NULL),
+    range{0, 0},
+    sync(NUM_SYNC_SIGNALS),
+    run(true)
+{
+    thread = new Thread(GeoIndexedRaster::finderThread, this);
+}
+
+/*----------------------------------------------------------------------------
+ * Finder Destructor
+ *----------------------------------------------------------------------------*/
+GeoIndexedRaster::Finder::~Finder (void)
+{
+    sync.lock();
+    {
+        run = false; /* Set run flag to false */
+        sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
+    }
+    sync.unlock();
+
+    delete thread; /* delete thread waits on thread to join */
+
+    /* geometry geo is cloned not 'newed' on GDAL heap. Use this call to free it */
+    OGRGeometryFactory::destroyGeometry(geo);
 }
 
 /*----------------------------------------------------------------------------
@@ -200,6 +231,11 @@ uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t g
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::~GeoIndexedRaster(void)
 {
+    print2term("GeoIndexedRaster::~GeoIndexedRaster, onlyFirstCount: %u, searchCount: %u, callCount: %u\n",
+                onlyFirstCount, searchCount, findRastersCount);
+
+    print2term("GeoIndexedRaster::~GeoIndexedRaster, cache size: %d\n", cache.length());
+    delete [] findersRange;
     emptyFeaturesList();
 }
 
@@ -214,10 +250,16 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
     RasterObject (L, _parms),
     cache        (MAX_READER_THREADS),
     ssError      (SS_NO_ERRORS),
+    onlyFirst    (_parms->single_stop),
+    numFinders   (0),
+    findersRange (NULL),
     crscb        (cb),
     bbox         {0, 0, 0, 0},
     rows         (0),
-    cols         (0)
+    cols         (0),
+    onlyFirstCount(0),
+    findRastersCount(0),
+    searchCount(0)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -229,6 +271,9 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
 
     /* Mark index file bbox/extent poly as empty */
     geoIndexPoly.empty();
+
+    /* Create finder threads used to find rasters intersecting with point/polygon */
+    createFinderThreads();
 }
 
 /*----------------------------------------------------------------------------
@@ -421,6 +466,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
 
         GDALClose((GDALDatasetH)dset);
         mlog(DEBUG, "Loaded %lu index file features/rasters from: %s", featuresList.size(), newFile.c_str());
+        print2term("Index file with %lu features/rasters from: %s\n", featuresList.size(), newFile.c_str());
     }
     catch (const RunTimeException &e)
     {
@@ -451,7 +497,7 @@ void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
         reader->sync.lock();
         {
             reader->entry = item;
-            if(reader->geo) OGR_G_DestroyGeometry(reader->geo);
+            OGRGeometryFactory::destroyGeometry(reader->geo);
             reader->geo = geo->clone();
             reader->sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
             signaledReaders++;
@@ -479,30 +525,24 @@ void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
  *----------------------------------------------------------------------------*/
 bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
 {
-    bool status = false;
-
-    groupList.clear();
-
     /* For AOI always open new index file, for POI it depends... */
     const bool openNewFile = GdalRaster::ispoly(geo) || geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo);
     if(openNewFile)
     {
         if(!openGeoIndex(geo))
-            return status;
+            return false;
+
+        setFindersRange();
     }
 
-    if(findRasters(geo) && filterRasters(gps) && updateCache())
-    {
-        /* Create additional reader threads if needed */
-        status = createThreads();
-        if(status)
-        {
-            sampleRasters(geo);
-            status = true;
-        }
-    }
+    if(!_findRasters(geo))      return false;
+    if(!filterRasters(gps))     return false;
+    if(!updateCache())          return false;
+    if(!createReaderThreads())  return false;      /* Create additional reader threads if needed */
 
-    return status;
+    sampleRasters(geo);
+
+    return true;
 }
 
 
@@ -588,6 +628,39 @@ int GeoIndexedRaster::luaBoundingBox(lua_State *L)
 }
 
 /*----------------------------------------------------------------------------
+ * finderThread
+ *----------------------------------------------------------------------------*/
+void* GeoIndexedRaster::finderThread(void *param)
+{
+    finder_t *finder = static_cast<finder_t*>(param);
+
+    while(finder->run)
+    {
+        finder->sync.lock();
+        {
+            while((finder->geo == NULL) && finder->run)
+                finder->sync.wait(DATA_TO_SAMPLE, SYS_TIMEOUT);
+        }
+        finder->sync.unlock();
+
+        if(finder->geo)
+        {
+            finder->obj->findRasters(finder);
+
+            finder->sync.lock();
+            {
+                OGRGeometryFactory::destroyGeometry(finder->geo);
+                finder->geo = NULL;
+                finder->sync.signal(DATA_SAMPLED, Cond::NOTIFY_ONE);
+            }
+            finder->sync.unlock();
+        }
+    }
+
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------
  * luaCellSize - :cell() --> cell size
  *----------------------------------------------------------------------------*/
 int GeoIndexedRaster::luaCellSize(lua_State *L)
@@ -617,9 +690,9 @@ int GeoIndexedRaster::luaCellSize(lua_State *L)
 }
 
 /*----------------------------------------------------------------------------
- * readingThread
+ * readerThread
  *----------------------------------------------------------------------------*/
-void* GeoIndexedRaster::readingThread(void *param)
+void* GeoIndexedRaster::readerThread(void *param)
 {
     reader_t *reader = static_cast<reader_t*>(param);
 
@@ -677,9 +750,28 @@ void* GeoIndexedRaster::readingThread(void *param)
 }
 
 /*----------------------------------------------------------------------------
- * createThreads
+ * createFinderThreads
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::createThreads(void)
+bool GeoIndexedRaster::createFinderThreads(void)
+{
+    /* Finder threads are created in the constructor, this call should not fail */
+
+    for(int i = 0; i < MAX_FINDER_THREADS; i++)
+    {
+        Finder* f = new Finder(this);
+        finders.add(f);
+    }
+
+    /* Array of ranges for each thread */
+    findersRange = new finder_range_t[MAX_FINDER_THREADS];
+
+    return finders.length() == MAX_FINDER_THREADS;
+}
+
+/*----------------------------------------------------------------------------
+ * createReaderThreads
+ *----------------------------------------------------------------------------*/
+bool GeoIndexedRaster::createReaderThreads(void)
 {
     const int threadsNeeded = cache.length();
     const int threadsNow    = readers.length();
@@ -742,6 +834,7 @@ bool GeoIndexedRaster::updateCache(void)
         }
     }
 
+#if 1
     /*
      * Maintain cache from getting too big.
      * Find all cache items not needed for this sample run.
@@ -773,6 +866,7 @@ bool GeoIndexedRaster::updateCache(void)
         mlog(ERROR, "Too many rasters to read: %d, max allowed: %d", cache.length(), MAX_READER_THREADS);
         return false;
     }
+#endif
 
     return true;
 }
@@ -888,3 +982,130 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
 
     return (!groupList.empty());
 }
+
+/*----------------------------------------------------------------------------
+ * setFindersRange
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::setFindersRange(void)
+{
+    const uint32_t minFeaturesPerThread = 4;
+    const uint32_t features = featuresList.size();
+
+    /* Determine how many finder threads to use and index range for each */
+    if(features <= minFeaturesPerThread)
+    {
+        numFinders = 1;
+        findersRange[0].start_indx = 0;
+        findersRange[0].end_indx = features;
+    }
+    else
+    {
+        numFinders = std::min(static_cast<uint32_t>(MAX_FINDER_THREADS), features/minFeaturesPerThread);
+        const uint32_t featuresPerThread = features / numFinders;
+
+        for(uint32_t i = 0; i < numFinders; i++)
+        {
+            findersRange[i].start_indx = i * featuresPerThread;
+            findersRange[i].end_indx = (i == numFinders - 1) ? features : (i + 1) * featuresPerThread;
+        }
+    }
+
+    print2term("numFinders: %u\n", numFinders);
+    for(uint32_t i = 0; i < numFinders; i++)
+    {
+        print2term("Finder thread %u, range: %u - %u\n", i, findersRange[i].start_indx, findersRange[i].end_indx);
+    }
+}
+
+
+/*----------------------------------------------------------------------------
+ * _findRasters
+ *----------------------------------------------------------------------------*/
+bool GeoIndexedRaster::_findRasters(OGRGeometry* geo)
+{
+    groupList.clear();
+
+    findRastersCount++;
+
+    if(onlyFirst)
+    {
+        if(!cachedRasterGroup.infovect.empty())
+        {
+            /* Only first raster group will be returned */
+            bool allRastersIntersect = true;
+            std::vector<raster_info_t>& infovect = cachedRasterGroup.infovect;
+
+            for(uint32_t i = 0; i < infovect.size(); i++)
+            {
+                if(!infovect[i].rasterGeo->Intersects(geo))
+                {
+                    allRastersIntersect = false;
+                    break;
+                }
+            }
+
+            if(allRastersIntersect)
+            {
+                rasters_group_t* rgroup = new rasters_group_t;
+                *rgroup = cachedRasterGroup;
+                groupList.add(groupList.length(), rgroup);
+                onlyFirstCount++;
+                return true;
+            }
+        }
+    }
+
+    /* Start finder threads to find rasters intersecting with point/polygon */
+    uint32_t signaledFinders = 0;
+    for(uint32_t i = 0; i < numFinders; i++)
+    {
+        Finder* finder = finders[i];
+        finder->sync.lock();
+        {
+            OGRGeometryFactory::destroyGeometry(finder->geo);
+            finder->geo = geo->clone();
+            finder->range = findersRange[i];
+            finder->rasterGroups.clear();
+            finder->sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
+            signaledFinders++;
+        }
+        finder->sync.unlock();
+    }
+
+    /* Wait for finder threads to finish searching for rasters */
+    for(uint32_t i = 0; i < signaledFinders; i++)
+    {
+        finder_t* finder = finders[i];
+        finder->sync.lock();
+        {
+            while(finder->geo != NULL)
+                finder->sync.wait(DATA_SAMPLED, SYS_TIMEOUT);
+        }
+        finder->sync.unlock();
+    }
+
+    /* Combine results from all finder threads */
+    for(uint32_t i = 0; i < numFinders; i++)
+    {
+        const Finder* finder = finders[i];
+        for(uint32_t j = 0; j < finder->rasterGroups.size(); j++)
+        {
+            rasters_group_t* rgroup = finder->rasterGroups[j];
+            groupList.add(groupList.length(), rgroup);
+        }
+    }
+
+    searchCount++;
+
+    /* Cache the first group of rasters */
+    if(onlyFirst && !groupList.empty())
+    {
+        const GroupOrdering::Iterator group_iter(groupList);
+        const rasters_group_t* rgroup = group_iter[0].value;
+        cachedRasterGroup = *rgroup;
+    }
+
+    return (!groupList.empty());
+}
+
+
