@@ -74,19 +74,18 @@ resource "aws_autoscaling_group" "sliderule-cluster" {
       }
 
       override {
-        instance_type = "r7g.xlarge"
-      }
-
-      override {
         instance_type = "r8g.2xlarge"
+        weighted_capacity = 1
       }
 
       override {
-        instance_type = "r8g.xlarge"
-      } 
+        instance_type = "r7g.2xlarge"
+        weighted_capacity = 1
+      }
 
       override {
-        instance_type = "c7g.2xlarge"
+        instance_type = "t4g.2xlarge"
+        weighted_capacity = 1
       }
     }
   }
