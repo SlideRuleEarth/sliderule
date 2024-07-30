@@ -81,13 +81,23 @@ variable "container_repo" {
   description = "container registry holding sliderule container images"
   default     = "742127912612.dkr.ecr.us-west-2.amazonaws.com"
 }
-variable "cluster_instance_type" {
-  description = "EC2 instance type for autoscaling group cluster"
-  type        = string
-  default     = "r7g.2xlarge" # "t4g.2xlarge"
-}
+# variable "cluster_instance_type" {
+#   description = "EC2 instance type for autoscaling group cluster"
+#   type        = string
+#   default     = "r7g.2xlarge" # "t4g.2xlarge"
+# }
 variable "cluster_volume_size" {
   description = "EC2 instance disk space in GBs"
   type        = number
   default     = 64
+}
+variable "spot_max_price" {
+  description = "maximum price sliderule cluster will pay for spot instances"
+  type        = string
+  default     = "0.17"
+}
+variable "spot_allocation_strategy" {
+  description = "strategy for allocating spot instances"
+  type        = string
+  default     = "lowest-price"
 }
