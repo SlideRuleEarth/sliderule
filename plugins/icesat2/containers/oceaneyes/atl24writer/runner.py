@@ -346,6 +346,7 @@ else:
             spot_df["delta_time"] = (spot_df["time"] / 1000000000.0) - ATLAS_GPS_EPOCH
 
             # apply refraction correction
+            spot_df["ellipse_h"] += spot_df["delta_h"]
             spot_df["ortho_h"] += spot_df["delta_h"]
 
             # calculate depth
@@ -356,105 +357,111 @@ else:
             beam_group = hf.create_group(spot_info["beam"]) # e.g. gt1r, gt2l, etc.
             add_variable(beam_group, "index_ph",   spot_df["index_ph"],     'float32',
                         {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
+                         'description':'0-based index of the photon in the ATL03 heights group', 
+                         'long_name':'Photon index', 
                          'source':'ATL03', 
-                         'units':''})
+                         'units':'scalar'})
             add_variable(beam_group, "index_seg",  spot_df["index_seg"],    'int32',
                         {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
+                         'description':'0-based index of the photon in the ATL03 geolocation group', 
+                         'long_name':'Segment index', 
                          'source':'ATL03', 
-                         'units':''})
+                         'units':'scalar'})
             add_variable(beam_group, "delta_time", spot_df["delta_time"],   'float64',
                         {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
+                         'description':'The transmit time of a given photon, measured in seconds from the ATLAS Standard Data Product Epoch. Note that multiple received photons associated with a single transmit pulse will have the same delta_time. The ATLAS Standard Data Products (SDP) epoch offset is defined within /ancillary_data/atlas_sdp_gps_epoch as the number of GPS seconds between the GPS epoch (1980-01-06T00:00:00.000000Z UTC) and the ATLAS SDP epoch. By adding the offset contained within atlas_sdp_gps_epoch to delta time parameters, the time in gps_seconds relative to the GPS epoch can be computed.', 
+                         'long_name':'Elapsed GPS seconds', 
                          'source':'ATL03', 
-                         'units':''})
+                         'units':'seconds since 2018-01-01'})
             add_variable(beam_group, "lat_ph",   spot_df["lat_ph"],     'float64',
-                        {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
+                        {'contentType':'modelResult', 
+                         'description':'Latitude of each received photon. Computed from the ECF Cartesian coordinates of the bounce point.', 
+                         'long_name':'Latitude', 
                          'source':'ATL03', 
-                         'units':''})
+                         'units':'degrees_north',
+                         'standard_name':'latitude',
+                         'valid_max': 90.0,
+                         'valid_min': -90.0})
             add_variable(beam_group, "lon_ph",  spot_df["lon_ph"],    'float64',
-                        {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
+                        {'contentType':'modelResult', 
+                         'description':'Longitude of each received photon. Computed from the ECF Cartesian coordinates of the bounce point.', 
+                         'long_name':'Longitude', 
                          'source':'ATL03', 
-                         'units':''})
+                         'units':'degrees_east',
+                         'standard_name': 'longitude',
+                         'valid_max': 180.0,
+                         'valid_min': -180.0})
             add_variable(beam_group, "x_atc",      spot_df["x_atc"],        'float32',
-                        {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
+                        {'contentType':'modelResult', 
+                         'description':'Along-track distance in a segment projected to the ellipsoid of the received photon, based on the Along-Track Segment algorithm.  Total along track distance can be found by adding this value to the sum of segment lengths measured from the start of the most recent reference groundtrack.', 
+                         'long_name':'Distance from equator crossing', 
                          'source':'ATL03', 
-                         'units':''})
+                         'units':'meters'})
             add_variable(beam_group, "y_atc",      spot_df["y_atc"],        'float32',
-                        {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
+                        {'contentType':'modelResult', 
+                         'description':'Across-track distance projected to the ellipsoid of the received photon from the reference ground track.  This is based on the Along-Track Segment algorithm described in Section 3.1.', 
+                         'long_name':'Distance off RGT', 
                          'source':'ATL03', 
-                         'units':''})
+                         'units':'meters'})
             add_variable(beam_group, "ellipse_h",  spot_df["ellipse_h"],    'float32',
                         {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
+                         'description':'Height of each received photon, relative to the WGS-84 ellipsoid including refraction correction. Note neither the geoid, ocean tide nor the dynamic atmosphere (DAC) corrections are applied to the ellipsoidal heights.', 
+                         'long_name':'Photon WGS84 height', 
                          'source':'ATL03', 
-                         'units':''})
+                         'units':'meters'})
             add_variable(beam_group, "ortho_h",    spot_df["ortho_h"], 'float32',
                         {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
+                         'description':'Height of each received photon, relative to the geoid.', 
+                         'long_name':'Orthometric height', 
                          'source':'ATL03', 
-                         'units':''})
+                         'units':'meters'})
             add_variable(beam_group, "depth",      spot_df["depth"],        'float32',
-                        {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
+                        {'contentType':'modelResult', 
+                         'description':'Depth of the received photon below the sea surface', 
+                         'long_name':'Depth', 
                          'source':'ATL03', 
-                         'units':''})
+                         'units':'meters'})
             add_variable(beam_group, "sigma_thu",  spot_df["sigma_thu"],    'float32',
                         {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
+                         'description':'The combination of the aerial and subaqueous horizontal uncertainty for each received photon', 
+                         'long_name':'Total horizontal uncertainty', 
                          'source':'ATL03', 
-                         'units':''})
+                         'units':'meters'})
             add_variable(beam_group, "sigma_tvu",  spot_df["sigma_tvu"],    'float32',
-                        {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
+                        {'contentType':'modelResult', 
+                         'description':'The combination of the aerial and subaqueous vertical uncertainty for each received photon', 
+                         'long_name':'Total vertical uncertainty', 
                          'source':'ATL03', 
-                         'units':''})
+                         'units':'meters'})
             add_variable(beam_group, "flags",       spot_df["flags"],       'int32',
-                        {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
+                        {'contentType':'modelResult', 
+                         'description':'bit 0 - max sensor depth exceeded', 
+                         'long_name':'Processing flags', 
                          'source':'ATL03', 
-                         'units':''})
+                         'units':'bit mask'})
 
             if "ensemble" in spot_df:
                 add_variable(beam_group, "class_ph", spot_df["ensemble"].astype(np.int16), 'int16',
-                            {'contentType':'physicalMeasurement', 
-                             'description':'', 
-                             'long_name':'', 
+                            {'contentType':'modelResult', 
+                             'description':'0 - unclassified, 1 - other, 40 - bathymetry, 41 - sea surface', 
+                             'long_name':'Photon classification', 
                              'source':'ATL03', 
-                             'units':''})
+                             'units':'scalar'})
             else:
                 add_variable(beam_group, "class_ph", spot_df["class_ph"].astype(np.int16), 'int16',
-                            {'contentType':'physicalMeasurement', 
-                             'description':'', 
-                             'long_name':'', 
+                            {'contentType':'modelResult', 
+                             'description':'0 - unclassified, 1 - other, 40 - bathymetry, 41 - sea surface', 
+                             'long_name':'Photon classification', 
                              'source':'ATL03', 
-                             'units':''})
+                             'units':'scalar'})
                 for classifier in input_files["classifiers"]:
                     try:
                         add_variable(beam_group, classifier, spot_df[classifier].astype(np.int16), 'int16',
-                                    {'contentType':'physicalMeasurement', 
-                                    'description':'', 
-                                    'long_name':'', 
+                                    {'contentType':'modelResult', 
+                                    'description':'0 - unclassified, 1 - other, 40 - bathymetry, 41 - sea surface', 
+                                    'long_name':f'Photon subclassification by {classifier}', 
                                     'source':'ATL03', 
-                                    'units':''})
+                                    'units':'scalar'})
                     except Exception as e:
                         print(f'Failed to add classifier <{classifier}>: {e}')
 
