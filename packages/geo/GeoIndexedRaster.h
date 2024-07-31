@@ -53,8 +53,10 @@ class GeoIndexedRaster: public RasterObject
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const int   MAX_CACHE_SIZE     = 20;
         static const int   MAX_READER_THREADS = 200;
         static const int   MAX_FINDER_THREADS  = 16;
+        static const int   MIN_FEATURES_PER_FINDER_THREAD = 10;
 
         static const char* FLAGS_TAG;
         static const char* VALUE_TAG;
@@ -226,11 +228,11 @@ class GeoIndexedRaster: public RasterObject
         static void*    readerThread    (void *param);
 
         bool            createFinderThreads (void);
-        bool            createReaderThreads (void);
-        bool            updateCache     (void);
-        bool            filterRasters   (int64_t gps);
-        void            setFindersRange (void);
-        bool            findAndFilterRasters (OGRGeometry* geo, int64_t gps);
+        bool            createReaderThreads (uint32_t  rasters2sample);
+        bool            updateCache         (uint32_t& rasters2sample);
+        bool            filterRasters       (int64_t gps);
+        void            setFindersRange     (void);
+        bool            findAndFilterRasters(OGRGeometry* geo, int64_t gps);
 };
 
 #endif  /* __geo_indexed_raster__ */

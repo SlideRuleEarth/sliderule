@@ -231,10 +231,12 @@ uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t g
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::~GeoIndexedRaster(void)
 {
+#if 0
     print2term("GeoIndexedRaster::~GeoIndexedRaster, onlyFirstCount: %u, searchCount: %u, callCount: %u\n",
                 onlyFirstCount, searchCount, findRastersCount);
-
     print2term("GeoIndexedRaster::~GeoIndexedRaster, cache size: %d\n", cache.length());
+#endif
+
     delete [] findersRange;
     emptyFeaturesList();
 }
@@ -466,7 +468,6 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
 
         GDALClose((GDALDatasetH)dset);
         mlog(DEBUG, "Loaded %lu index file features/rasters from: %s", featuresList.size(), newFile.c_str());
-        print2term("Index file with %lu features/rasters from: %s\n", featuresList.size(), newFile.c_str());
     }
     catch (const RunTimeException &e)
     {
@@ -493,16 +494,19 @@ void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
     const char* key = cache.first(&item);
     while(key != NULL)
     {
-        reader_t* reader = readers[i++];
-        reader->sync.lock();
+        if(item->enabled)
         {
-            reader->entry = item;
-            OGRGeometryFactory::destroyGeometry(reader->geo);
-            reader->geo = geo->clone();
-            reader->sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
-            signaledReaders++;
+            reader_t* reader = readers[i++];
+            reader->sync.lock();
+            {
+                reader->entry = item;
+                OGRGeometryFactory::destroyGeometry(reader->geo);
+                reader->geo = geo->clone();
+                reader->sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
+                signaledReaders++;
+            }
+            reader->sync.unlock();
         }
-        reader->sync.unlock();
         key = cache.next(&item);
     }
 
@@ -535,9 +539,16 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
         setFindersRange();
     }
 
-    if(!findAndFilterRasters(geo, gps)) return false;
-    if(!updateCache())                  return false;
-    if(!createReaderThreads())          return false;      /* Create additional reader threads if needed */
+    if(!findAndFilterRasters(geo, gps))
+        return false;
+
+    uint32_t rasters2sample = 0;
+    if(!updateCache(rasters2sample))
+        return false;
+
+    /* Create additional reader threads if needed */
+    if(!createReaderThreads(rasters2sample))
+        return false;
 
     sampleRasters(geo);
 
@@ -770,9 +781,9 @@ bool GeoIndexedRaster::createFinderThreads(void)
 /*----------------------------------------------------------------------------
  * createReaderThreads
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::createReaderThreads(void)
+bool GeoIndexedRaster::createReaderThreads(uint32_t rasters2sample)
 {
-    const int threadsNeeded = cache.length();
+    const int threadsNeeded = rasters2sample;
     const int threadsNow    = readers.length();
     const int newThreadsCnt = threadsNeeded - threadsNow;
 
@@ -799,8 +810,19 @@ bool GeoIndexedRaster::createReaderThreads(void)
 /*----------------------------------------------------------------------------
  * updateCache
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::updateCache(void)
+bool GeoIndexedRaster::updateCache(uint32_t& rasters2sample)
 {
+    /* Mark all items in cache as not enabled */
+    {
+        cacheitem_t* item;
+        const char* key = cache.first(&item);
+        while(key != NULL)
+        {
+            item->enabled = false;
+            key = cache.next(&item);
+        }
+    }
+
     /* Cache contains items/rasters from previous sample run */
     const GroupOrdering::Iterator group_iter(groupList);
     for(int i = 0; i < group_iter.length; i++)
@@ -830,42 +852,41 @@ bool GeoIndexedRaster::updateCache(void)
 
             /* Mark as Enabled */
             item->enabled = true;
+            rasters2sample++;
         }
     }
 
-#if 1
-    /*
-     * Maintain cache from getting too big.
-     * Find all cache items not needed for this sample run.
-     */
-    std::vector<const char*> keys_to_remove;
+    /* Maintain cache from getting too big. */
+    if(cache.length() > MAX_CACHE_SIZE)
     {
-        cacheitem_t* item;
-        const char* key = cache.first(&item);
-        while(key != NULL)
+        std::vector<const char*> keys_to_remove;
         {
-            if(!item->enabled)
+            cacheitem_t* item;
+            const char* key = cache.first(&item);
+            while(key != NULL)
             {
-                keys_to_remove.push_back(key);
+                if(!item->enabled)
+                {
+                    keys_to_remove.push_back(key);
+                }
+                key = cache.next(&item);
             }
-            key = cache.next(&item);
         }
-    }
 
-    /* Remove cache items found above */
-    for(const char* key: keys_to_remove)
-    {
-        cache.remove(key);
+        /* Remove cache items found above */
+        for(const char* key : keys_to_remove)
+        {
+            cache.remove(key);
+        }
     }
 
     /* Check for max limit of concurent reading raster threads */
-    if(cache.length() > MAX_READER_THREADS)
+    if(rasters2sample > MAX_READER_THREADS)
     {
         ssError |= SS_THREADS_LIMIT_ERROR;
         mlog(ERROR, "Too many rasters to read: %d, max allowed: %d", cache.length(), MAX_READER_THREADS);
         return false;
     }
-#endif
 
     return true;
 }
@@ -987,7 +1008,7 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::setFindersRange(void)
 {
-    const uint32_t minFeaturesPerThread = 4;
+    const uint32_t minFeaturesPerThread = MIN_FEATURES_PER_FINDER_THREAD;
     const uint32_t features = featuresList.size();
 
     /* Determine how many finder threads to use and index range for each */
@@ -1009,11 +1030,14 @@ void GeoIndexedRaster::setFindersRange(void)
         }
     }
 
+#if 0
     print2term("numFinders: %u\n", numFinders);
     for(uint32_t i = 0; i < numFinders; i++)
     {
         print2term("Finder thread %u, range: %u - %u\n", i, findersRange[i].start_indx, findersRange[i].end_indx);
     }
+#endif
+
 }
 
 
