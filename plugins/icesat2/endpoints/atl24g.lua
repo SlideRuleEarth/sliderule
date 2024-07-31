@@ -70,6 +70,8 @@ if not resource then
             userlog:alert(core.INFO, core.RTE_ERROR, string.format("request <%s> failed to retrieved single resource from CMR <%d>", rspq, #resources))
             cleanup(crenv, transaction_id)
             return
+        else
+            resource = resources[1]
         end
     else
         userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("request <%s> failed to make CMR request <%d>: %s", rspq, rc, rsps))
@@ -325,9 +327,10 @@ userlog:alert(core.INFO, core.RTE_INFO, string.format("atl24 endpoint executed i
 -------------------------------------------------------
 -- build final output
 -------------------------------------------------------
+local version, commit, environment, _launch, _duration, _packages = sys.version()
 local output_parms = parms[arrow.PARMS] or {
     path = string.gsub(resource, "ATL03", "ATL24"),
-    format = "hdf5",
+    format = "h5",
     as_geo = false
 }
 local writer_parms = {
@@ -340,7 +343,11 @@ local writer_parms = {
             input_files = output_files,
             output_parms = output_parms,
             atl24_filename = crenv.container_sandbox_mount.."/atl24.bin",
-            profile = profile
+            profile = profile,
+            version = version,
+            commit = commit,
+            environment = environment,
+            resource = resource
         }
     }
 }

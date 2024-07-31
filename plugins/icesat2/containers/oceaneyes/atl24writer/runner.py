@@ -39,6 +39,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # constants
 ATLAS_GPS_EPOCH = 1198800018
+RELEASE = 1
 
 # check command line parameters
 if len(sys.argv) <= 1:
@@ -54,6 +55,10 @@ with open(control_json, 'r') as json_file:
 input_files = control["input_files"]
 output_parms = control["output_parms"]
 atl24_filename = control["atl24_filename"]
+version = control["version"]
+commit = control["commit"]
+environment = control["environment"]
+resource = control["resource"]
 
 # read in data
 spot_table = {}
@@ -92,11 +97,15 @@ metadata["granule"] = {
     "bathy_photons": len(df[df["class_ph"] == 40]),
     "subaqueous_photons": len(df[df["ortho_h"] < df["surface_h"]])
 }
+metadata["version"] = version
+metadata["commit"] = commit
+metadata["environment"] = environment
+metadata["resource"] = resource
 with open(atl24_filename + ".json", "w") as file:
     file.write(json.dumps(metadata, indent=2))
 
 # Photon Output (Non-HDF5)
-if output_parms["format"] != "hdf5":
+if output_parms["format"] != "hdf5" and output_parms["format"] != "h5":
 
     # write output
     if output_parms["format"] == "csv":
@@ -226,10 +235,34 @@ else:
                          'long_name':'Start UTC Time of Granule (CCSDS-A, Requested)', 
                          'source':'Derived', 
                          'units':'1'})
-            add_variable(ancillary_group, "release",             ancillary["release"],             h5py.string_dtype(encoding='utf-8'),
+            add_variable(ancillary_group, "release",             RELEASE,                          h5py.string_dtype(encoding='utf-8'),
                         {'contentType':'auxiliaryInformation', 
                          'description':'Release number of the granule. The release number is incremented when the software or ancillary data used to create the granule has been changed.', 
                          'long_name':'Release Number', 
+                         'source':'Operations', 
+                         'units':'1'})
+            add_variable(ancillary_group, "resource",            resource,                         h5py.string_dtype(encoding='utf-8'),
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'ATL03 granule used to produce this granule', 
+                         'long_name':'ATL03 Resource', 
+                         'source':'Operations', 
+                         'units':'1'})
+            add_variable(ancillary_group, "sliderule_version",   version,                          h5py.string_dtype(encoding='utf-8'),
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'Version of SlideRule software used to generate this granule', 
+                         'long_name':'SlideRule Version', 
+                         'source':'Operations', 
+                         'units':'1'})
+            add_variable(ancillary_group, "sliderule_commit",    commit,                           h5py.string_dtype(encoding='utf-8'),
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'Git commit ID (https://github.com/SlideRuleEarth/sliderule.git) of SlideRule software used to generate this granule', 
+                         'long_name':'SlideRule Commit', 
+                         'source':'Operations', 
+                         'units':'1'})
+            add_variable(ancillary_group, "sliderule_environment",   environment,                  h5py.string_dtype(encoding='utf-8'),
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'Git commit ID (https://github.com/SlideRuleEarth/sliderule.git) of SlideRule environment used to generate this granule', 
+                         'long_name':'SlideRule Environment', 
                          'source':'Operations', 
                          'units':'1'})
             add_variable(ancillary_group, "start_cycle",         ancillary["start_cycle"],         'int32',
