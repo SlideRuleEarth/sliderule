@@ -39,6 +39,8 @@
  * PROTECTED METHODS
  ******************************************************************************/
 
+static const std::vector<const char*> dates = {"start_datetime", "end_datetime"};
+
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
@@ -59,12 +61,32 @@ PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const cha
  *----------------------------------------------------------------------------*/
 PgcDemStripsRaster::~PgcDemStripsRaster(void) = default;
 
+
+/*----------------------------------------------------------------------------
+ * getFeatureDate
+ *----------------------------------------------------------------------------*/
+bool PgcDemStripsRaster::getFeatureDate(const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate)
+{
+    double gps = 0;
+
+    for(const auto& s : dates)
+    {
+        TimeLib::gmt_time_t gmt;
+        gps += getGmtDate(feature, s, gmt);
+    }
+    gps = gps / dates.size();
+    gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
+
+    return true;
+}
+
+
 /*----------------------------------------------------------------------------
  * openGeoIndex
  *----------------------------------------------------------------------------*/
 bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
 {
-    /* For POI call parent class */
+    /* For point call parent class */
     if(GdalRaster::ispoint(geo))
         return GeoIndexedRaster::openGeoIndex(geo);
 
@@ -115,6 +137,19 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
                 layer->ResetReading();
                 while(OGRFeature* feature = layer->GetNextFeature())
                 {
+                    /* Temporal filter */
+                    TimeLib::gmt_time_t gmtDate;
+                    if(parms->filter_time && getFeatureDate(feature, gmtDate))
+                    {
+                        /* Check if feature is in time range */
+                        if(!TimeLib::gmtinrange(gmtDate, parms->start_time, parms->stop_time))
+                        {
+                            OGRFeature::DestroyFeature(feature);
+                            continue;
+                        }
+                    }
+
+                    /* Clone feature and store it */
                     OGRFeature* fp = feature->Clone();
                     featuresList.push_back(fp);
                     OGRFeature::DestroyFeature(feature);
@@ -176,7 +211,6 @@ bool PgcDemStripsRaster::findRasters(finder_t* finder)
      * the two images can be up to 30 days apart.
      *
      */
-    const std::vector<const char*> dates = {"start_datetime", "end_datetime"};
     try
     {
         for(uint32_t i = start_indx; i < end_indx; i++)

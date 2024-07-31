@@ -39,8 +39,8 @@ for i=1, 10 do
 end
 ]]
 
-local t0str = "2022:10:1:0:00:00"
-local t1str = "2023:9:30:24:00:00"
+local t0str = "2022:10:01:00:00:00"
+local t1str = "2023:09:30:23:59:59"
 
 
 print(string.format("\n-------------------------------------------------\nusgs3dep 1meter DEM wrzesien mountain snow test\n-------------------------------------------------"))
@@ -59,8 +59,8 @@ local errorChecking = true
 
 local starttime = time.latch();
 
--- for i=1,#arr do
-for i=1,  50000 do
+for i=1,#arr do
+-- for i=1,  50000 do
     local  lon = arr[i][1]
     local  lat = arr[i][2]
     local  height = 0

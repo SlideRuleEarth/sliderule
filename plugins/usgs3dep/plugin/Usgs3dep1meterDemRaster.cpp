@@ -114,7 +114,7 @@ bool Usgs3dep1meterDemRaster::findRasters(finder_t* finder)
             rasters_group_t* rgroup = new rasters_group_t;
             rgroup->infovect.reserve(1);
             rgroup->id = feature->GetFieldAsString("id");
-            rgroup->gpsTime = getGmtDate(feature, "datetime", rgroup->gmtDate);
+            rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
 
             const char* fname = feature->GetFieldAsString("url");
             if(fname && strlen(fname) > 0)

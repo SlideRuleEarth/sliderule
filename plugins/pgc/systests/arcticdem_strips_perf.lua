@@ -19,8 +19,12 @@ local  height = 0
 local _lon = lon
 local _lat = lat
 
+local t0str = "2000:2:25:23:00:00"
+local t1str = "2024:6:2:24:00:00"
+
 print(string.format("\n------------------------------------\nStrips reading one point\n------------------------------------"))
 local dem = geo.raster(geo.parms({asset="arcticdem-strips", algorithm="NearestNeighbour", radius=0}))
+-- local dem = geo.raster(geo.parms({asset="arcticdem-strips", algorithm="NearestNeighbour", radius=0, t0=t0str, t1=t1str}))
 local starttime = time.latch();
 local tbl, err = dem:sample(lon, lat, height)
 local stoptime = time.latch();

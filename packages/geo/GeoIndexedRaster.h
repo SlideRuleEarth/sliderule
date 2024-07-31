@@ -53,13 +53,14 @@ class GeoIndexedRaster: public RasterObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int   MAX_CACHE_SIZE     = 20;
+        static const int   MAX_CACHE_SIZE     =  20;
         static const int   MAX_READER_THREADS = 200;
-        static const int   MAX_FINDER_THREADS  = 16;
+        static const int   MAX_FINDER_THREADS =  16;
         static const int   MIN_FEATURES_PER_FINDER_THREAD = 10;
 
         static const char* FLAGS_TAG;
         static const char* VALUE_TAG;
+        static const char* DATE_TAG;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -161,6 +162,7 @@ class GeoIndexedRaster: public RasterObject
         uint32_t        getGroupFlags         (const rasters_group_t* rgroup);
         static double   getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         virtual bool    openGeoIndex          (const OGRGeometry* geo);
+        virtual bool    getFeatureDate        (const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate);
         virtual void    getIndexFile          (const OGRGeometry* geo, std::string& file) = 0;
         virtual bool    findRasters           (finder_t* finder) = 0;
         void            sampleRasters         (OGRGeometry* geo);
@@ -212,9 +214,10 @@ class GeoIndexedRaster: public RasterObject
         uint32_t                  rows;
         uint32_t                  cols;
 
-        uint32_t                  onlyFirstCount;
-        uint32_t                  findRastersCount;
-        uint32_t                  searchCount;
+        uint64_t                  onlyFirstCount;
+        uint64_t                  findRastersCount;
+        uint64_t                  fullSearchCount;
+        uint64_t                  allSamplesCount;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -232,7 +235,7 @@ class GeoIndexedRaster: public RasterObject
         bool            updateCache         (uint32_t& rasters2sample);
         bool            filterRasters       (int64_t gps);
         void            setFindersRange     (void);
-        bool            findAndFilterRasters(OGRGeometry* geo, int64_t gps);
+        bool            _findRasters        (OGRGeometry* geo);
 };
 
 #endif  /* __geo_indexed_raster__ */

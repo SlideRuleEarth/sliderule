@@ -186,7 +186,7 @@ bool LandsatHlsRaster::findRasters(finder_t* finder)
             rasters_group_t* rgroup = new rasters_group_t;
             rgroup->infovect.reserve(MAX_LANDSAT_RASTER_GROUP_SIZE);
             rgroup->id = feature->GetFieldAsString("id");
-            rgroup->gpsTime = getGmtDate(feature, "datetime", rgroup->gmtDate);
+            rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
 
             /* Find each requested band in the index file */
             bool val;

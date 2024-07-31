@@ -100,7 +100,7 @@ bool GebcoBathyRaster::findRasters(finder_t* finder)
             rasters_group_t* rgroup = new rasters_group_t;
             rgroup->infovect.reserve(1);
             rgroup->id = feature->GetFieldAsString("id");
-            rgroup->gpsTime = getGmtDate(feature, "datetime", rgroup->gmtDate);
+            rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
 
             const char* dataFile  = feature->GetFieldAsString("data_raster");
             if(dataFile && (strlen(dataFile) > 0))

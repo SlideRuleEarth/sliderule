@@ -50,6 +50,7 @@
 
 const char* GeoIndexedRaster::FLAGS_TAG = "Fmask";
 const char* GeoIndexedRaster::VALUE_TAG = "Value";
+const char* GeoIndexedRaster::DATE_TAG  = "datetime";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -188,6 +189,8 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
     }
     samplingMutex.unlock();
 
+    allSamplesCount += slist.length();
+
     return ssError;
 }
 
@@ -231,11 +234,8 @@ uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t g
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::~GeoIndexedRaster(void)
 {
-#if 0
-    print2term("GeoIndexedRaster::~GeoIndexedRaster, onlyFirstCount: %u, searchCount: %u, callCount: %u\n",
-                onlyFirstCount, searchCount, findRastersCount);
-    print2term("GeoIndexedRaster::~GeoIndexedRaster, cache size: %d\n", cache.length());
-#endif
+    mlog(INFO, "onlyFirst: %lu, fullSearch: %lu, findRastersCalls: %lu, allSamples: %lu\n",
+                onlyFirstCount, fullSearchCount, findRastersCount, allSamplesCount);
 
     delete [] findersRange;
     emptyFeaturesList();
@@ -249,19 +249,20 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::overrideCRS_t cb):
-    RasterObject (L, _parms),
-    cache        (MAX_READER_THREADS),
-    ssError      (SS_NO_ERRORS),
-    onlyFirst    (_parms->single_stop),
-    numFinders   (0),
-    findersRange (NULL),
-    crscb        (cb),
-    bbox         {0, 0, 0, 0},
-    rows         (0),
-    cols         (0),
-    onlyFirstCount(0),
+    RasterObject    (L, _parms),
+    cache           (MAX_READER_THREADS),
+    ssError         (SS_NO_ERRORS),
+    onlyFirst       (_parms->single_stop),
+    numFinders      (0),
+    findersRange    (NULL),
+    crscb           (cb),
+    bbox            {0, 0, 0, 0},
+    rows            (0),
+    cols            (0),
+    onlyFirstCount  (0),
     findRastersCount(0),
-    searchCount(0)
+    fullSearchCount (0),
+    allSamplesCount (0)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -363,10 +364,8 @@ uint32_t GeoIndexedRaster::getGroupFlags(const rasters_group_t* rgroup)
 /*----------------------------------------------------------------------------
  * getGmtDate
  *----------------------------------------------------------------------------*/
-double GeoIndexedRaster::getGmtDate(const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate)
+double GeoIndexedRaster::getGmtDate(const OGRFeature* feature, const char* field, TimeLib::gmt_time_t& gmtDate)
 {
-    memset(&gmtDate, 0, sizeof(TimeLib::gmt_time_t));
-
     const int i = feature->GetFieldIndex(field);
     if(i == -1)
     {
@@ -408,6 +407,17 @@ double GeoIndexedRaster::getGmtDate(const OGRFeature* feature, const char* field
 }
 
 /*----------------------------------------------------------------------------
+ * getFeatureDate
+ *----------------------------------------------------------------------------*/
+bool GeoIndexedRaster::getFeatureDate(const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate)
+{
+    if(getGmtDate(feature, DATE_TAG, gmtDate) > 0)
+        return true;
+
+    return false;
+}
+
+/*----------------------------------------------------------------------------
  * openGeoIndex
  *----------------------------------------------------------------------------*/
 bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
@@ -438,11 +448,24 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
         CHECKPTR(layer);
 
         /*
-         * Clone all features and store them for performance/speed of feature lookup
+         * Clone features and store them for performance/speed of feature lookup
          */
         layer->ResetReading();
         while(OGRFeature* feature = layer->GetNextFeature())
         {
+            /* Temporal filter */
+            TimeLib::gmt_time_t gmtDate;
+            if(parms->filter_time && getFeatureDate(feature, gmtDate))
+            {
+                /* Check if feature is in time range */
+                if(!TimeLib::gmtinrange(gmtDate, parms->start_time, parms->stop_time))
+                {
+                    OGRFeature::DestroyFeature(feature);
+                    continue;
+                }
+            }
+
+            /* Clone feature and store it */
             OGRFeature* fp = feature->Clone();
             featuresList.push_back(fp);
             OGRFeature::DestroyFeature(feature);
@@ -467,7 +490,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
         }
 
         GDALClose((GDALDatasetH)dset);
-        mlog(DEBUG, "Loaded %lu index file features/rasters from: %s", featuresList.size(), newFile.c_str());
+        mlog(INFO, "Loaded %lu index file features/rasters from: %s", featuresList.size(), newFile.c_str());
     }
     catch (const RunTimeException &e)
     {
@@ -539,8 +562,8 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
         setFindersRange();
     }
 
-    if(!findAndFilterRasters(geo, gps))
-        return false;
+    if(!_findRasters(geo))  return false;
+    if(!filterRasters(gps)) return false;
 
     uint32_t rasters2sample = 0;
     if(!updateCache(rasters2sample))
@@ -896,8 +919,8 @@ bool GeoIndexedRaster::updateCache(uint32_t& rasters2sample)
  *----------------------------------------------------------------------------*/
 bool GeoIndexedRaster::filterRasters(int64_t gps)
 {
-    /* URL and temporal filter - remove the whole raster group if one of rasters needs to be filtered out */
-    if(parms->url_substring || parms->filter_time || parms->filter_doy_range)
+    /* NOTE: temporal filter is applied in openGeoIndex() */
+    if(parms->url_substring || parms->filter_doy_range)
     {
         const GroupOrdering::Iterator group_iter(groupList);
         for(int i = 0; i < group_iter.length; i++)
@@ -911,16 +934,6 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
                 if(parms->url_substring)
                 {
                     if(rinfo.fileName.find(parms->url_substring) == std::string::npos)
-                    {
-                        removeGroup = true;
-                        break;
-                    }
-                }
-
-                /* Temporal filter */
-                if(parms->filter_time)
-                {
-                    if(!TimeLib::gmtinrange(rgroup->gmtDate, parms->start_time, parms->stop_time))
                     {
                         removeGroup = true;
                         break;
@@ -1042,21 +1055,22 @@ void GeoIndexedRaster::setFindersRange(void)
 
 
 /*----------------------------------------------------------------------------
- * findAndFilterRasters
+ * _findRasters
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::findAndFilterRasters(OGRGeometry* geo, int64_t gps)
+bool GeoIndexedRaster::_findRasters(OGRGeometry* geo)
 {
     groupList.clear();
     findRastersCount++;
 
     if(onlyFirst && !cachedRastersGroup.infovect.empty())
     {
-        /* Only first rasters group will be returned */
+        /* Only first rasters group (cached) will be returned */
         bool allRastersIntersect = true;
         std::vector<raster_info_t>& infovect = cachedRastersGroup.infovect;
 
         for(uint32_t i = 0; i < infovect.size(); i++)
         {
+            /* Make sure all rasters in the cached group intersect with geo */
             if(!infovect[i].rasterGeo->Intersects(geo))
             {
                 allRastersIntersect = false;
@@ -1074,7 +1088,7 @@ bool GeoIndexedRaster::findAndFilterRasters(OGRGeometry* geo, int64_t gps)
         }
     }
 
-    searchCount++;
+    fullSearchCount++;
 
     /* Start finder threads to find rasters intersecting with point/polygon */
     uint32_t signaledFinders = 0;
@@ -1116,20 +1130,18 @@ bool GeoIndexedRaster::findAndFilterRasters(OGRGeometry* geo, int64_t gps)
         }
     }
 
-    if(groupList.empty()) return false;
-
-    /*
-     * Filter out rasters based on URL, temporal, closest time and DOY range filters.
-     * Do it before caching rasters group.
-     */
-    filterRasters(gps);
-
-    /* Cache the first rasters group */
     if(onlyFirst && !groupList.empty())
     {
         const GroupOrdering::Iterator group_iter(groupList);
-        const rasters_group_t* rgroup = group_iter[0].value;
-        cachedRastersGroup = *rgroup;
+
+        /* Cache the first rasters group */
+        cachedRastersGroup = *group_iter[0].value;
+
+        /* Remove all but first rasters group */
+        for(int i = 1; i < group_iter.length; i++)
+        {
+            groupList.remove(group_iter[i].key);
+        }
     }
 
     return (!groupList.empty());
