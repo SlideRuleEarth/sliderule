@@ -42,6 +42,11 @@ COPY coastnet /coastnet
 RUN cd /coastnet \
     && make
 
+# build openoceans
+COPY openoceans /openoceans
+RUN cd /openoceans \
+    && make
+
 #
 # RUNTIME
 #
@@ -74,16 +79,14 @@ COPY magic_pytorch_env /magic
 # install binaries (from build environment above)
 COPY --from=buildenv /coastnet /coastnet
 COPY --from=buildenv /qtrees /qtrees
+COPY --from=buildenv /openoceans /openoceans
 COPY --from=buildenv /usr/local /usr/local
 
-# install applications
-COPY atl24refraction /atl24refraction
-COPY atl24uncertainty /atl24uncertainty
+# install python applications
 COPY atl24writer /atl24writer
 COPY bathypathfinder /bathypathfinder
 COPY cshelph /cshelph
 COPY medianfilter /medianfilter
-COPY openoceans /openoceans
 COPY pointnet2 /pointnet2
 COPY utils /utils
 
