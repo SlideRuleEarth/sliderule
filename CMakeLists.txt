@@ -214,13 +214,6 @@ if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
     set (CONFDIR ${INSTALLDIR}/etc/sliderule)
     set (INCDIR ${INSTALLDIR}/include/sliderule)
 
-elseif(CMAKE_BUILD_PLATFORM MATCHES "Windows")
-
-    # Set Environment Variables
-    set (INSTALLDIR "C:\\Program Files\\SlideRule" CACHE STRING "Installation directory for library and executables")
-    set (CONFDIR ${INSTALLDIR}\etc\sliderule)
-    set (INCDIR ${INSTALLDIR}\include\sliderule)
-
 endif()
 
 set (RUNTIMEDIR ${CONFDIR} CACHE STRING "Runtime directory for plugins and configuration scripts")
@@ -241,8 +234,6 @@ endif()
 
 if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
     add_subdirectory (platforms/linux)
-elseif(CMAKE_BUILD_PLATFORM MATCHES "Windows")
-    add_subdirectory (platforms/windows)
 endif()
 
 # Target Properties #
@@ -375,10 +366,6 @@ endif()
 
 add_subdirectory (scripts)
 
-# Executables #
+# Installation #
 
 install (TARGETS slideruleLib DESTINATION ${INSTALLDIR}/lib)
-
-if(${SERVER_APP} AND (CMAKE_BUILD_PLATFORM MATCHES "Linux"))
-    add_subdirectory (targets/server-linux)
-endif()

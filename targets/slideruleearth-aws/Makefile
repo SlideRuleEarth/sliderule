@@ -305,7 +305,6 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
 	mkdir -p $(ILB_STAGE_DIR)
 	cp docker/intelligent-load-balancer/* $(ILB_STAGE_DIR)
-	cp $(ROOT)/targets/orchestrator-haproxy/orchestrator.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/scripts/extensions/json.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/scripts/extensions/prettyprint.lua $(ILB_STAGE_DIR)
 	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ilb:latest $(DOCKER_PLATFORM) .
