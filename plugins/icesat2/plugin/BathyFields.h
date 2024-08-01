@@ -85,7 +85,8 @@ namespace BathyFields
         float           ellipse_h;              // height of photon with respect to reference ellipsoid
         float           sigma_thu;              // total horizontal uncertainty
         float           sigma_tvu;              // total vertical uncertainty
-        uint32_t        processing_flags;
+        uint16_t        processing_flags;       // bit mask of flags for capturing errors and warnings
+        uint16_t        processing_result;      // temporary storage for pipeline processing
         uint8_t         yapc_score;
         int8_t          max_signal_conf;        // maximum value in the atl03 confidence table
         int8_t          quality_ph;

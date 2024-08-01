@@ -1091,6 +1091,7 @@ void* BathyReader::subsettingThread (void* parm)
                     .sigma_thu = 0.0, // populated by uncertainty calculation
                     .sigma_tvu = 0.0, // populated by uncertainty calculation
                     .processing_flags = 0x0,
+                    .processing_result = 0,
                     .yapc_score = yapc_score,
                     .max_signal_conf = atl03_cnf,
                     .quality_ph = quality_ph,

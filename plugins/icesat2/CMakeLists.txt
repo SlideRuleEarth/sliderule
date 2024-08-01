@@ -44,6 +44,7 @@ target_sources(icesat2
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Viewer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Indexer.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/BathyClassifier.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/BathyReader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/BathyViewer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/plugin/BathyOceanEyes.cpp
@@ -107,6 +108,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Viewer.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/Atl03Indexer.h
+        ${CMAKE_CURRENT_LIST_DIR}/plugin/BathyClassifier.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/BathyFields.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/BathyReader.h
         ${CMAKE_CURRENT_LIST_DIR}/plugin/BathyViewer.h
