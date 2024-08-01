@@ -44,7 +44,7 @@ SLIDERULE_BUILD_DIR = $(BUILD)/sliderule
 PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
-SERVER_STAGE_DIR = $(STAGE)/sliderule
+SLIDERULE_STAGE_DIR = $(STAGE)/sliderule
 BUILDENV_STAGE_DIR = $(STAGE)/buildenv
 MONITOR_STAGE_DIR = $(STAGE)/monitor
 ILB_STAGE_DIR = $(STAGE)/ilb
@@ -53,7 +53,9 @@ TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
 STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
-INSTALL_DIR ?= $(SERVER_STAGE_DIR)
+INSTALL_DIR ?= $(SLIDERULE_STAGE_DIR)
+
+QTREES_SOURCE_DIR = $(ROOT)/../qtrees/plugin
 
 OCEANEYES_CONTAINER_STAGE_DIR = $(STAGE)/oceaneyes
 OCEANEYES_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/oceaneyes
@@ -132,6 +134,11 @@ manager-destroy: ## destroy manager using terraform; needs DOMAIN
 	cd terraform/manager && terraform init
 	cd terraform/manager && terraform workspace select $(DOMAIN)-manager|| terraform workspace new $(DOMAIN)-manager
 	cd terraform/manager && terraform destroy
+
+qtrees-plugin:
+	make -C $(QTREES_SOURCE_DIR) config INSTALLDIR=$(INSTALL_DIR)
+	make -C $(QTREES_SOURCE_DIR)
+	make -C $(QTREES_SOURCE_DIR) install
 
 oceaneyes-lock: ## create the lock file for the oceaneyes container image
 	cd $(OCEANEYES_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
@@ -220,12 +227,12 @@ sliderule-buildenv-docker-push: ## push build environment docker image to regist
 	docker push $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
-	-rm -Rf $(SERVER_STAGE_DIR)
-	mkdir -p $(SERVER_STAGE_DIR)
-	rsync -a $(ROOT) $(SERVER_STAGE_DIR)/sliderule --exclude build --exclude stage
-	cp docker/sliderule/Dockerfile.runtime $(SERVER_STAGE_DIR)/Dockerfile
-	cp docker/sliderule/config.json $(SERVER_STAGE_DIR)
-	cd $(SERVER_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest $(DOCKER_PLATFORM) .
+	-rm -Rf $(SLIDERULE_STAGE_DIR)
+	mkdir -p $(SLIDERULE_STAGE_DIR)
+	rsync -a $(ROOT) $(SLIDERULE_STAGE_DIR)/sliderule --exclude build --exclude stage
+	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
+	cp docker/sliderule/config.json $(SLIDERULE_STAGE_DIR)
+	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(VERSION)
 	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(MAJOR_VERSION)
 
@@ -337,16 +344,16 @@ ATL24_TEST_DATA_DIR ?= /data/AppServer.1
 ATL24_ALGORITHM ?= cshelph
 
 selftest: ## run the self test on the server code
-	$(SERVER_STAGE_DIR)/bin/sliderule $(TEST)
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
 
 perfmtest: ## run mosaics performance test on the server code
-	$(SERVER_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
 
 perfstest: ## run strips performance test on the server code
-	$(SERVER_STAGE_DIR)/bin/sliderule $(STRIPS_PERFORMANCE_TEST)
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(STRIPS_PERFORMANCE_TEST)
 
 perfsubsetest: ## run subset performance test
-	$(SERVER_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
 
 oceaneyes-python-test: ## run the oceaneyes container
 	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) /env/bin/python /$(ATL24_ALGORITHM)/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv

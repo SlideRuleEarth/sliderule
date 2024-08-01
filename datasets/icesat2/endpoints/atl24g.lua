@@ -189,6 +189,7 @@ parms["icesat2"] = icesat2.parms(parms)
 parms["oceaneyes"] = parms["oceaneyes"] or {}
 parms["oceaneyes"]["resource_kd"] = viirs_filename
 parms["oceaneyes"]["assetKd"] = parms["oceaneyes"]["assetKd"] or "viirsj1-s3"
+parms["qtrees"] = qtrees.classifier({})
 
 -------------------------------------------------------
 -- read ICESat-2 inputs
@@ -314,7 +315,6 @@ end
 -- execute classifiers
 -------------------------------------------------------
 local in_parallel = true
-runclassifier(output_files, timeout, "qtrees", in_parallel, "bash /qtrees/runner.sh")
 runclassifier(output_files, timeout, "medianfilter", in_parallel)
 runclassifier(output_files, timeout, "cshelph", in_parallel)
 runclassifier(output_files, timeout, "bathypathfinder", in_parallel)

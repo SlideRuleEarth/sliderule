@@ -116,6 +116,7 @@ static const char*  BATHY_PARMS_DEFAULT_ASSET   = "icesat2";
 static const char*  BATHY_PARMS_ASSET09         = "asset09";
 static const char*  BATHY_PARMS_DEFAULT_ASSET09 = "icesat2";
 static const char*  BATHY_PARMS_HLS_PARMS       = "hls";
+static const char*  BATHY_PARMS_QTREES_PARMS    = "qtrees";
 static const char*  BATHY_PARMS_MAX_DEM_DELTA   = "max_dem_delta";
 static const char*  BATHY_PARMS_MIN_DEM_DELTA   = "min_dem_delta";
 static const char*  BATHY_PARMS_PH_IN_EXTENT    = "ph_in_extent";
@@ -177,6 +178,11 @@ int BathyReader::luaCreate (lua_State* L)
             /* OceanEyes parameters (BathyOceanEyes) */
             lua_getfield(L, bathy_parms_index, BathyOceanEyes::OCEANEYES_PARMS);
             parms->oceaneyes = new BathyOceanEyes(L, -1);
+            lua_pop(L, 1);
+
+            /* Qtrees */
+            lua_getfield(L, bathy_parms_index, BATHY_PARMS_QTREES_PARMS);
+            parms->qtrees = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE));
             lua_pop(L, 1);
 
             /* maximum DEM delta */
@@ -876,7 +882,7 @@ void* BathyReader::subsettingThread (void* parm)
     RasterObject* ndwiRaster = RasterObject::cppCreate(parms->hls);
 
     /* Thread Variables */
-    fileptr_t out_file = NULL;
+    vector<extent_t*> extents;
     stats_t local_stats = {
         .photon_count = 0
     };
@@ -1115,8 +1121,10 @@ void* BathyReader::subsettingThread (void* parm)
                 const int extent_bytes = offsetof(extent_t, photons) + (sizeof(photon_t) * num_photons);
 
                 /* Allocate and Initialize Extent Record */
-                RecordObject record(exRecType, extent_bytes);
-                extent_t* extent                = reinterpret_cast<extent_t*>(record.getRecordData());
+                // RecordObject record(exRecType, extent_bytes);
+                // extent_t* extent                = reinterpret_cast<extent_t*>(record.getRecordData());
+                uint8_t* extent_buffer          = new uint8_t [extent_bytes];
+                extent_t* extent                = reinterpret_cast<extent_t*>(extent_buffer);
                 extent->region                  = reader->startRegion;
                 extent->track                   = info->track;
                 extent->pair                    = info->pair;
@@ -1135,128 +1143,48 @@ void* BathyReader::subsettingThread (void* parm)
                     extent->photons[p] = extent_photons[p];
                 }
 
-                /* Preprocess Extent */
-                parms->oceaneyes->findSeaSurface(*extent);
-                parms->oceaneyes->correctRefraction(*extent, atl03.ref_elev, atl03.ref_azimuth);
-                parms->oceaneyes->calculateUncertainty(*extent, atl03.sigma_across, atl03.sigma_along, atl03.sigma_h, atl03.ref_elev);
-
                 /* Update Statistics */
                 local_stats.photon_count += extent->photon_count;
 
                 /* Export Data */
-                if(parms->return_inputs)
-                {
-                    /* Post Record */
-                    uint8_t* rec_buf = NULL;
-                    const int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
-                    int post_status = MsgQ::STATE_TIMEOUT;
-                    while(reader->active && (post_status = reader->outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
-                    if(post_status <= 0)
-                    {
-                        mlog(ERROR, "Atl03 bathy reader failed to post %s to stream %s: %d", record.getRecordType(), reader->outQ->getName(), post_status);
-                    }
-                }
-                else
-                {
-                    if(out_file == NULL)
-                    {
-                        /* Open JSON File */
-                        FString json_filename("%s/%s_%d.json", reader->sharedDirectory, OUTPUT_FILE_PREFIX, spot);
-                        fileptr_t json_file = fopen(json_filename.c_str(), "w");
-                        if(json_file == NULL)
-                        {
-                            char err_buf[256];
-                            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output json file %s: %s", json_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
-                        }
+                //if(parms->return_inputs)
+                //{
+                //    /* Post Record */
+                //    uint8_t* rec_buf = NULL;
+                //    const int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
+                //    int post_status = MsgQ::STATE_TIMEOUT;
+                //    while(reader->active && (post_status = reader->outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
+                //    if(post_status <= 0)
+                //    {
+                //        mlog(ERROR, "Atl03 bathy reader failed to post %s to stream %s: %d", record.getRecordType(), reader->outQ->getName(), post_status);
+                //    }
+                //}
 
-                        /*
-                        * Build JSON File
-                        */
-                        FString json_contents(R"({)"
-                        R"("track":%d,)"
-                        R"("pair":%d,)"
-                        R"("beam":"gt%d%c",)"
-                        R"("spot":%d,)"
-                        R"("year":%d,)"
-                        R"("month":%d,)"
-                        R"("day":%d,)"
-                        R"("rgt":%d,)"
-                        R"("cycle":%d,)"
-                        R"("region":%d,)"
-                        R"("utm_zone":%d)"
-                        R"(})",
-                        extent->track,
-                        extent->pair,
-                        extent->track, extent->pair == 0 ? 'l' : 'r',
-                        extent->spot,
-                        reader->granuleDate.year,
-                        reader->granuleDate.month,
-                        reader->granuleDate.day,
-                        extent->reference_ground_track,
-                        extent->cycle,
-                        extent->region,
-                        extent->utm_zone);
-
-                        /* Write and Close JSON File */
-                        fprintf(json_file, "%s", json_contents.c_str());
-                        fclose(json_file);
-
-                        /* Open Data File */
-                        FString filename("%s/%s_%d.csv", reader->sharedDirectory, OUTPUT_FILE_PREFIX, spot);
-                        out_file = fopen(filename.c_str(), "w");
-                        if(out_file == NULL)
-                        {
-                            char err_buf[256];
-                            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output daata file %s: %s", filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
-                        }
-
-                        /* Write Header */
-                        fprintf(out_file, "index_ph,index_seg,time,lat_ph,lon_ph,x_ph,y_ph,x_atc,y_atc,background_rate,surface_h,ortho_h,ellipse_h,sigma_thu,sigma_tvu,delta_h,yapc_score,max_signal_conf,quality_ph,flags,class_ph\n");
-                    }
-
-                    /* Write Data */
-                    for(unsigned i = 0; i < extent->photon_count; i++)
-                    {
-                        fprintf(out_file, "%d,", extent->photons[i].index_ph);
-                        fprintf(out_file, "%d,", extent->photons[i].index_seg);
-                        fprintf(out_file, "%ld,", extent->photons[i].time_ns);
-                        fprintf(out_file, "%lf,", extent->photons[i].lat_ph);
-                        fprintf(out_file, "%lf,", extent->photons[i].lon_ph);
-                        fprintf(out_file, "%lf,", extent->photons[i].x_ph);
-                        fprintf(out_file, "%lf,", extent->photons[i].y_ph);
-                        fprintf(out_file, "%lf,", extent->photons[i].x_atc);
-                        fprintf(out_file, "%lf,", extent->photons[i].y_atc);
-                        fprintf(out_file, "%lf,", extent->photons[i].background_rate);
-                        fprintf(out_file, "%f,", extent->photons[i].surface_h);
-                        fprintf(out_file, "%f,", extent->photons[i].ortho_h);
-                        fprintf(out_file, "%f,", extent->photons[i].ellipse_h);
-                        fprintf(out_file, "%f,", extent->photons[i].sigma_thu);
-                        fprintf(out_file, "%f,", extent->photons[i].sigma_tvu);
-                        fprintf(out_file, "%f,", extent->photons[i].delta_h);
-                        fprintf(out_file, "%d,", extent->photons[i].yapc_score);
-                        fprintf(out_file, "%d,", extent->photons[i].max_signal_conf);
-                        fprintf(out_file, "%d,", extent->photons[i].quality_ph);
-                        fprintf(out_file, "%u,", extent->photons[i].processing_flags);
-                        fprintf(out_file, "%d", extent->photons[i].class_ph);
-                        fprintf(out_file, "\n");
-                    }
-                }
+                /* Add Extent */
+                extents.push_back(extent);
 
                 /* Update Extent Counters */
                 extent_counter++;
                 extent_photons.clear();
             }
         }
+
+        /* Run QTrees on Extents */
+        parms->qtrees->run(extents);
+
+        /* Process Extents */
+        for(auto extent: extents)
+        {
+            parms->oceaneyes->correctRefraction(*extent, atl03.ref_elev, atl03.ref_azimuth);
+            parms->oceaneyes->calculateUncertainty(*extent, atl03.sigma_across, atl03.sigma_along, atl03.sigma_h, atl03.ref_elev);
+        }
+
+        /* Write Extent to CSV File*/
+        reader->writeCSV(extents, spot);
     }
     catch(const RunTimeException& e)
     {
         alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d.%d: %s", reader->resource, info->track, info->pair, e.what());
-    }
-
-    /* Close Output File (if open) */
-    if(out_file)
-    {
-        fclose(out_file);
     }
 
     /* Handle Global Reader Updates */
@@ -1477,6 +1405,101 @@ void BathyReader::parseResource (const char* _resource, TimeLib::date_t& date, u
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse version from resource %s: %s", _resource, version_str);
     }
+}
+/*----------------------------------------------------------------------------
+ * writeCSV
+ *----------------------------------------------------------------------------*/
+void BathyReader::writeCSV (const vector<extent_t*>& extents, int spot)
+{
+    /* Check for Empty */
+    if(extents.empty()) return;
+
+    /* Open JSON File */
+    FString json_filename("%s/%s_%d.json", sharedDirectory, OUTPUT_FILE_PREFIX, spot);
+    fileptr_t json_file = fopen(json_filename.c_str(), "w");
+    if(json_file == NULL)
+    {
+        char err_buf[256];
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output json file %s: %s", json_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
+    }
+
+    /*
+    * Build JSON File
+    */
+    FString json_contents(R"({)"
+    R"("track":%d,)"
+    R"("pair":%d,)"
+    R"("beam":"gt%d%c",)"
+    R"("spot":%d,)"
+    R"("year":%d,)"
+    R"("month":%d,)"
+    R"("day":%d,)"
+    R"("rgt":%d,)"
+    R"("cycle":%d,)"
+    R"("region":%d,)"
+    R"("utm_zone":%d)"
+    R"(})",
+    extents[0]->track,
+    extents[0]->pair,
+    extents[0]->track, extents[0]->pair == 0 ? 'l' : 'r',
+    extents[0]->spot,
+    granuleDate.year,
+    granuleDate.month,
+    granuleDate.day,
+    extents[0]->reference_ground_track,
+    extents[0]->cycle,
+    extents[0]->region,
+    extents[0]->utm_zone);
+
+    /* Write and Close JSON File */
+    fprintf(json_file, "%s", json_contents.c_str());
+    fclose(json_file);
+
+    /* Open Data File */
+    FString filename("%s/%s_%d.csv", sharedDirectory, OUTPUT_FILE_PREFIX, spot);
+    fileptr_t out_file = fopen(filename.c_str(), "w");
+    if(out_file == NULL)
+    {
+        char err_buf[256];
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output daata file %s: %s", filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
+    }
+
+    /* Write Header */
+    fprintf(out_file, "index_ph,index_seg,time,lat_ph,lon_ph,x_ph,y_ph,x_atc,y_atc,background_rate,surface_h,ortho_h,ellipse_h,sigma_thu,sigma_tvu,delta_h,yapc_score,max_signal_conf,quality_ph,flags,class_ph\n");
+
+    /* Write Data */
+    for(auto extent: extents)
+    {
+        for(unsigned i = 0; i < extent->photon_count; i++)
+        {
+            fprintf(out_file, "%d,", extent->photons[i].index_ph);
+            fprintf(out_file, "%d,", extent->photons[i].index_seg);
+            fprintf(out_file, "%ld,", extent->photons[i].time_ns);
+            fprintf(out_file, "%lf,", extent->photons[i].lat_ph);
+            fprintf(out_file, "%lf,", extent->photons[i].lon_ph);
+            fprintf(out_file, "%lf,", extent->photons[i].x_ph);
+            fprintf(out_file, "%lf,", extent->photons[i].y_ph);
+            fprintf(out_file, "%lf,", extent->photons[i].x_atc);
+            fprintf(out_file, "%lf,", extent->photons[i].y_atc);
+            fprintf(out_file, "%lf,", extent->photons[i].background_rate);
+            fprintf(out_file, "%f,", extent->photons[i].surface_h);
+            fprintf(out_file, "%f,", extent->photons[i].ortho_h);
+            fprintf(out_file, "%f,", extent->photons[i].ellipse_h);
+            fprintf(out_file, "%f,", extent->photons[i].sigma_thu);
+            fprintf(out_file, "%f,", extent->photons[i].sigma_tvu);
+            fprintf(out_file, "%f,", extent->photons[i].delta_h);
+            fprintf(out_file, "%d,", extent->photons[i].yapc_score);
+            fprintf(out_file, "%d,", extent->photons[i].max_signal_conf);
+            fprintf(out_file, "%d,", extent->photons[i].quality_ph);
+            fprintf(out_file, "%u,", extent->photons[i].processing_flags);
+            fprintf(out_file, "%d", extent->photons[i].class_ph);
+            fprintf(out_file, "\n");
+        }
+    }
+
+    /* Close Output File */
+    fclose(out_file);
+
 }
 
 /*----------------------------------------------------------------------------

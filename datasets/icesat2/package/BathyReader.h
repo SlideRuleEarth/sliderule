@@ -49,6 +49,7 @@
 #include "Icesat2Parms.h"
 #include "BathyFields.h"
 #include "BathyOceanEyes.h"
+#include "BathyClassifier.h"
 
 using BathyFields::classifier_t;
 
@@ -100,6 +101,7 @@ class BathyReader: public LuaObject
             Icesat2Parms*       icesat2;                        // global icesat2 parameters
             GeoParms*           hls;                            // geo-package parms for sampling HLS for NDWI
             BathyOceanEyes*     oceaneyes;                      // bathymetric utilities
+            BathyClassifier*    qtrees;                         // qtrees algorithm
             const char*         resource09;                     // ATL09 granule
             double              max_dem_delta;                  // initial filter of heights against DEM (For removing things like clouds)
             double              min_dem_delta;                  // initial filter of heights against DEM (For removing things like clouds)
@@ -117,6 +119,7 @@ class BathyReader: public LuaObject
                 icesat2         (NULL),
                 hls             (NULL),
                 oceaneyes       (NULL),
+                qtrees          (NULL),
                 resource09      (NULL),
                 max_dem_delta   (50.0),
                 min_dem_delta   (-100.0),
@@ -340,6 +343,8 @@ class BathyReader: public LuaObject
         static void         parseResource               (const char* resource, TimeLib::date_t& date, 
                                                          uint16_t& rgt, uint8_t& cycle, uint8_t& region, 
                                                          uint8_t& version);
+        
+        void                writeCSV                    (const vector<extent_t*>& extents, int spot);
 
         static classifier_t str2classifier              (const char* str);
         static void         getSpotList                 (lua_State* L, int index, bool* provided, bool* spots, int size=Icesat2Parms::NUM_SPOTS);

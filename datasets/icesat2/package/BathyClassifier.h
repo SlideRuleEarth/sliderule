@@ -66,7 +66,7 @@ class BathyClassifier: public LuaObject
 
         static void init (void);
 
-        virtual bool classify (const vector<extent_t*>& extents) = 0;
+        virtual bool run (const vector<extent_t*>& extents) = 0;
 
     protected:
 

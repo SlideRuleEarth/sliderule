@@ -238,7 +238,7 @@ static void ldplugins(void)
             else continue;
 
             /* Load Plugin */
-            print2term("Loading plug-in %s ... ", plugin_name);
+            print2term("Loading plugin %s ... ", plugin_name);
             char plugin_path[MAX_STR_SIZE];
             StringLib::format(plugin_path, MAX_STR_SIZE, "%s%c%s.so", CONFDIR, PATH_DELIMETER, plugin_name);
             curr_plugin->plugin = dlopen(plugin_path, RTLD_NOW);
