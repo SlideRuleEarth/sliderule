@@ -300,7 +300,7 @@ print(string.format("\n-------------------------------------------------\nLandsa
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0,
                             bands = {"VAA", "VZA", "Fmask","SAA", "SZA", "NDSI", "NDVI", "NDWI",
                                      "B01", "B02", "B03", "B04", "B05", "B06",
-                                     "B07", "B08", "B09", "B10", "B11", "B12", "B8A", },
+                                     "B07", "B08", "B09", "B10", "B11", "B12", "B8A"},
                             catalog = contents }))
 
 sampleCnt = 0
@@ -321,6 +321,33 @@ end
 runner.check(sampleCnt == 180)
 print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, sampleCnt))
 
+
+print(string.format("\n-------------------------------------------------\nLandsat POI OnlyFirst test\n-------------------------------------------------"))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, single_stop = true,
+                            bands = {"VAA", "VZA", "Fmask","SAA", "SZA", "NDSI", "NDVI", "NDWI",
+                                     "B01", "B02", "B03", "B04", "B05", "B06",
+                                     "B07", "B08", "B09", "B10", "B11", "B12", "B8A"},
+                            catalog = contents }))
+
+sampleCnt = 0
+local starttime = time.latch();
+tbl, err = dem:sample(lon, lat, height)
+local stoptime = time.latch();
+if err ~= 0 then
+    print(string.format("======> FAILED to read", lon, lat))
+else
+    local value, fname
+    for j, v in ipairs(tbl) do
+        value = v["value"]
+        fname = v["file"]
+        sampleCnt = sampleCnt + 1
+        print(string.format("(%02d) value %10.3f, fname: %s", j, value, fname))
+    end
+end
+-- OnlyFirst should return 20 samples/rasters, not 180 (all bands given in parameters minues "Fmask")
+runner.check(sampleCnt == 20)
+print(string.format("POI OnlyFirst sample time: %.2f   (%d threads)", stoptime - starttime, sampleCnt))
+
 print(string.format("\n-------------------------------------------------\nLandsat AOI Subset test\n-------------------------------------------------"))
 
 -- AOI extent (extent of hls_trimmed.geojson)
@@ -329,6 +356,12 @@ lly =    50.45
 urx =  -178.27
 ury =    51.44
 
+
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0,
+                            bands = {"VAA", "VZA", "Fmask","SAA", "SZA", "NDSI", "NDVI", "NDWI",
+                                     "B01", "B02", "B03", "B04", "B05", "B06",
+                                     "B07", "B08", "B09", "B10", "B11", "B12", "B8A"},
+                            catalog = contents }))
 
 local starttime = time.latch();
 local tbl, err = dem:subset(llx, lly, urx, ury)

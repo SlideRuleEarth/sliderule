@@ -94,11 +94,16 @@ void Usgs3dep1meterDemRaster::getIndexFile(const OGRGeometry* geo, std::string& 
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool Usgs3dep1meterDemRaster::findRasters(const OGRGeometry* geo)
+bool Usgs3dep1meterDemRaster::findRasters(finder_t* finder)
 {
+    const OGRGeometry* geo    = finder->geo;
+    const uint32_t start_indx = finder->range.start_indx;
+    const uint32_t end_indx   = finder->range.end_indx;
+
     try
     {
-        for(unsigned i = 0; i < featuresList.size(); i++)
+        /* Linearly search through feature list */
+        for(uint32_t i = start_indx; i < end_indx; i++)
         {
             OGRFeature* feature = featuresList[i];
             OGRGeometry *rastergeo = feature->GetGeometryRef();
@@ -109,7 +114,7 @@ bool Usgs3dep1meterDemRaster::findRasters(const OGRGeometry* geo)
             rasters_group_t* rgroup = new rasters_group_t;
             rgroup->infovect.reserve(1);
             rgroup->id = feature->GetFieldAsString("id");
-            rgroup->gpsTime = getGmtDate(feature, "datetime", rgroup->gmtDate);
+            rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
 
             const char* fname = feature->GetFieldAsString("url");
             if(fname && strlen(fname) > 0)
@@ -121,20 +126,21 @@ bool Usgs3dep1meterDemRaster::findRasters(const OGRGeometry* geo)
                 rinfo.dataIsElevation = true;
                 rinfo.tag             = VALUE_TAG;
                 rinfo.fileName        = filePath + fileName.substr(pos);
+                rinfo.rasterGeo       = rastergeo->clone();
                 rgroup->infovect.push_back(rinfo);
             }
 
             mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
-            groupList.add(groupList.length(), rgroup);
+            finder->rasterGroups.push_back(rgroup);
         }
-        mlog(DEBUG, "Found %ld raster groups", groupList.length());
+        mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (!groupList.empty());
+    return (!finder->rasterGroups.empty());
 }
 
 

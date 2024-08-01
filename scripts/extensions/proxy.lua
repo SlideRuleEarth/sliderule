@@ -32,15 +32,23 @@ local function proxy(resources, parms, endpoint, rec)
 
     -- Handle Output Options --
     local arrow_builder = nil
+    local arrow_parms = nil
+    local arrow_file = nil
+    local arrow_metafile = nil
     if parms[arrow.PARMS] then
-        local output_parms = arrow.parms(parms[arrow.PARMS])
-        -- Arrow Writer --
-        if output_parms:isarrow() then
+        arrow_parms = arrow.parms(parms[arrow.PARMS])
+        -- Determine if Keeping Local File (needed for later ArrowSampler) --
+        local keep_local = parms[geo.PARMS] ~= nil
+        -- Arrow Builder --
+        if arrow_parms:isarrow() then
             local parms_str = json.encode(parms)
-            arrow_builder = arrow.builder(output_parms, rspq, rspq .. "-builder", rec, rqstid, parms_str, endpoint)
+            arrow_builder = arrow.builder(arrow_parms, rspq, rspq .. "-builder", rec, rqstid, parms_str, endpoint, keep_local)
             if arrow_builder then
                 rsps_from_nodes = rspq .. "-builder"
                 terminate_proxy_stream = true
+                if keep_local then
+                    arrow_file, arrow_metafile = arrow_builder:filenames()
+                end
             end
         end
     end
@@ -53,9 +61,9 @@ local function proxy(resources, parms, endpoint, rec)
         local rc, rsps = earthdata.cmr(parms)
         if rc == earthdata.SUCCESS then
             resources = rsps
-            userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> retrieved %d resources from CMR", rspq, #resources))
+            userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> retrieved %d resources from CMR", rspq, #resources))
         else
-            userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("proxy request <%s> failed to make CMR request <%d>: %s", rspq, rc, rsps))
+            userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("request <%s> failed to make CMR request <%d>: %s", rspq, rc, rsps))
             return
         end
     end
@@ -69,7 +77,7 @@ local function proxy(resources, parms, endpoint, rec)
                 if rc == earthdata.SUCCESS then
                     parms[geo.PARMS][dataset]["catalog"] = json.encode(rsps)
                 else
-                    userlog:alert(core.WARNING, core.RTE_INFO, string.format("proxy request <%s> failed to get catalog for %s: %d", rspq, dataset, rc))
+                    userlog:alert(core.WARNING, core.RTE_INFO, string.format("request <%s> failed to get catalog for %s: %d", rspq, dataset, rc))
                 end
             end
         end
@@ -84,20 +92,56 @@ local function proxy(resources, parms, endpoint, rec)
     while (userlog:numsubs() > 0) and not endpoint_proxy:waiton(interval * 1000) do
         duration = duration + interval
         if timeout >= 0 and duration >= timeout then
-            userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("proxy request <%s> timed-out after %d seconds", rspq, duration))
+            userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> timed-out after %d seconds waiting for endpoint proxy", rspq, duration))
             do return end
         end
     end
 
-    -- Wait Until Dispatch Completion --
+    -- Handle Arrow Builder and Arrow Sampler --
     if arrow_builder then
+        -- Create Raster Objects for Arrow Sampler --
+        local georasters = nil
+        if parms[geo.PARMS] then
+            georasters = {}
+            for key,settings in pairs(parms[geo.PARMS]) do
+                local robj = geo.raster(geo.parms(settings))
+                if robj then
+                    georasters[key] = robj
+                else
+                    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create raster %s", rspq, key))
+                end
+            end
+         end
+
+        -- Wait Until Arrow Builder Completion --
         while (userlog:numsubs() > 0) and not arrow_builder:waiton(interval * 1000) do
             duration = duration + interval
             if timeout >= 0 and duration >= timeout then
-                userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("proxy dispatch <%s> timed-out after %d seconds", rspq, duration))
+                userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> timed-out after %d seconds waiting for arrow builder", rspq, duration))
                 do return end
             end
         end
+
+        -- Create Arrow Sampler and Sample Rasters --
+        local arrow_sampler = arrow.sampler(arrow_parms, arrow_file, rspq, georasters)
+
+        -- Wait Until Arrow Sampler Completion --
+        while (userlog:numsubs() > 0) and not arrow_sampler:waiton(interval * 1000) do
+            duration = duration + interval
+            if timeout >= 0 and duration >= timeout then
+                userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> timed-out after %d seconds waiting for arrow sampler", rspq, duration))
+                do return end
+            end
+            userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> continuing to sample rasters after %d seconds...", rspq, duration))
+        end
+    end
+
+    -- cleanup
+    if arrow_file then
+        os.remove(arrow_file)
+    end
+    if arrow_metafile then
+        os.remove(arrow_metafile)
     end
 end
 

@@ -55,20 +55,20 @@ print("Building uncertainty tables")
 
 # create lookup tables
 THU = [
-    pd.read_csv("/data/ICESat2_0deg_500000_AGL_0.022_mrad_THU.csv"),
-    pd.read_csv("/data/ICESat2_1deg_500000_AGL_0.022_mrad_THU.csv"),
-    pd.read_csv("/data/ICESat2_2deg_500000_AGL_0.022_mrad_THU.csv"),
-    pd.read_csv("/data/ICESat2_3deg_500000_AGL_0.022_mrad_THU.csv"),
-    pd.read_csv("/data/ICESat2_4deg_500000_AGL_0.022_mrad_THU.csv"),
-    pd.read_csv("/data/ICESat2_5deg_500000_AGL_0.022_mrad_THU.csv")
+    pd.read_csv("/data/ICESat2_0deg_500000_AGL_0.022_mrad_THU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_1deg_500000_AGL_0.022_mrad_THU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_2deg_500000_AGL_0.022_mrad_THU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_3deg_500000_AGL_0.022_mrad_THU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_4deg_500000_AGL_0.022_mrad_THU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_5deg_500000_AGL_0.022_mrad_THU.csv", engine='pyarrow')
 ]
 TVU = [
-    pd.read_csv("/data/ICESat2_0deg_500000_AGL_0.022_mrad_TVU.csv"),
-    pd.read_csv("/data/ICESat2_1deg_500000_AGL_0.022_mrad_TVU.csv"),
-    pd.read_csv("/data/ICESat2_2deg_500000_AGL_0.022_mrad_TVU.csv"),
-    pd.read_csv("/data/ICESat2_3deg_500000_AGL_0.022_mrad_TVU.csv"),
-    pd.read_csv("/data/ICESat2_4deg_500000_AGL_0.022_mrad_TVU.csv"),
-    pd.read_csv("/data/ICESat2_5deg_500000_AGL_0.022_mrad_TVU.csv")
+    pd.read_csv("/data/ICESat2_0deg_500000_AGL_0.022_mrad_TVU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_1deg_500000_AGL_0.022_mrad_TVU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_2deg_500000_AGL_0.022_mrad_TVU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_3deg_500000_AGL_0.022_mrad_TVU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_4deg_500000_AGL_0.022_mrad_TVU.csv", engine='pyarrow'),
+    pd.read_csv("/data/ICESat2_5deg_500000_AGL_0.022_mrad_TVU.csv", engine='pyarrow')
 ]
 UNCERTAINTY_TABLES = [THU, TVU]
 POINTING_ANGLES = [0, 1, 2, 3, 4, 5]

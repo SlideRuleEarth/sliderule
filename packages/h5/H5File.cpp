@@ -269,7 +269,7 @@ int H5File::luaRead (lua_State* L)
         }
 
         /* Status Complete */
-        mlog(INFO, "Finished reading %d datasets from %s", num_datasets, lua_obj->context->name);
+        mlog(DEBUG, "Finished reading %d datasets from %s", num_datasets, lua_obj->context->name);
 
         /* Terminate Data */
         if(with_terminator)

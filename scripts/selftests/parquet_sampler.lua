@@ -51,7 +51,7 @@ runner.check(parquet_sampler ~= nil)
 local in_file_size = getFileSize(in_geoparquet);
 print("Input  geoparquet file size: " .. in_file_size .. " bytes")
 
-local status = parquet_sampler:sample()
+local status = parquet_sampler:waiton()
 local out_file_size = getFileSize(_out_geoparquet);
 print("Output geoparquet file size: " .. out_file_size .. " bytes")
 runner.check(out_file_size > in_file_size, "Output file size is not greater than input file size: ")
@@ -63,7 +63,7 @@ runner.check(parquet_sampler ~= nil)
 in_file_size = getFileSize(in_parquet);
 print("Input  parquet file size: "  .. in_file_size .. " bytes")
 
-status = parquet_sampler:sample()
+status = parquet_sampler:waiton()
 out_file_size = getFileSize(_out_parquet);
 print("Output parquet file size: " .. out_file_size .. " bytes")
 runner.check(out_file_size > in_file_size, "Output file size is not greater than input file size: ")
@@ -77,7 +77,7 @@ runner.check(parquet_sampler ~= nil)
 in_file_size = getFileSize(in_geoparquet);
 print("Input geoparquet file size: "  .. in_file_size .. " bytes")
 
-status = parquet_sampler:sample()
+status = parquet_sampler:waiton()
 out_file_size = getFileSize(_out_feather);
 print("Output parquet file size:    " .. out_file_size .. " bytes")
 runner.check(out_file_size < in_file_size, "Output file size is not smaller than input file size: ")
@@ -94,7 +94,7 @@ runner.check(parquet_sampler ~= nil)
 in_file_size = getFileSize(in_parquet);
 print("Input geoparquet file size: "  .. in_file_size .. " bytes")
 
-status = parquet_sampler:sample()
+status = parquet_sampler:waiton()
 out_file_size = getFileSize(_out_feather);
 print("Output parquet file size:    " .. out_file_size .. " bytes")
 runner.check(out_file_size < in_file_size, "Output file size is not smaller than input file size: ")
@@ -111,7 +111,7 @@ runner.check(parquet_sampler ~= nil)
 in_file_size = getFileSize(in_geoparquet);
 print("Input geoparquet file size: " .. in_file_size .. " bytes")
 
-status = parquet_sampler:sample()
+status = parquet_sampler:waiton()
 out_file_size = getFileSize(_out_csv);
 print("Output CSV file size:        " .. out_file_size .. " bytes")
 runner.check(out_file_size < in_file_size, "Output CSV file size is not smaller than input file size: ")
@@ -128,7 +128,7 @@ runner.check(parquet_sampler ~= nil)
 in_file_size = getFileSize(in_parquet);
 print("Input parquet file size: "  .. in_file_size .. " bytes")
 
-status = parquet_sampler:sample()
+status = parquet_sampler:waiton()
 out_file_size = getFileSize(_out_csv);
 print("Output CSV file size:     " .. out_file_size .. " bytes")
 runner.check(out_file_size < in_file_size, "Output CSV file size is not smaller than input file size: ")
@@ -145,7 +145,7 @@ runner.check(parquet_sampler ~= nil)
 in_file_size = getFileSize(in_geoparquet);
 print("Input  geoparquet file size: " .. in_file_size .. " bytes")
 
-status = parquet_sampler:sample()
+status = parquet_sampler:waiton()
 out_file_size = getFileSize(_out_geoparquet);
 print("Output geoparquet file size: " .. out_file_size .. " bytes")
 runner.check(out_file_size > in_file_size, "Output file size is not greater than input file size: ")

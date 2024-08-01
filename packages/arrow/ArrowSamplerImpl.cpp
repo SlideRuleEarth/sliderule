@@ -300,6 +300,7 @@ void ArrowSamplerImpl::getXYPoints(std::vector<ArrowSampler::point_info_t*>& poi
         ArrowSampler::point_info_t* pinfo = new ArrowSampler::point_info_t({x, y, 0.0});
         points.push_back(pinfo);
     }
+    mlog(INFO, "Read %ld points from file", points.size());
 }
 
 /*----------------------------------------------------------------------------
@@ -328,6 +329,7 @@ void ArrowSamplerImpl::getGeoPoints(std::vector<ArrowSampler::point_info_t*>& po
         ArrowSampler::point_info_t* pinfo = new ArrowSampler::point_info_t({point.x, point.y, 0.0});
         points.push_back(pinfo);
     }
+    mlog(INFO, "Read %ld geo points from file", points.size());
 }
 
 /*----------------------------------------------------------------------------

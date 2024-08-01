@@ -81,11 +81,15 @@ void GebcoBathyRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool GebcoBathyRaster::findRasters(const OGRGeometry* geo)
+bool GebcoBathyRaster::findRasters(finder_t* finder)
 {
+    const OGRGeometry* geo    = finder->geo;
+    const uint32_t start_indx = finder->range.start_indx;
+    const uint32_t end_indx   = finder->range.end_indx;
+
     try
     {
-        for(unsigned i = 0; i < featuresList.size(); i++)
+        for(uint32_t i = start_indx; i < end_indx; i++)
         {
             OGRFeature* feature = featuresList[i];
             OGRGeometry *rastergeo = feature->GetGeometryRef();
@@ -96,7 +100,7 @@ bool GebcoBathyRaster::findRasters(const OGRGeometry* geo)
             rasters_group_t* rgroup = new rasters_group_t;
             rgroup->infovect.reserve(1);
             rgroup->id = feature->GetFieldAsString("id");
-            rgroup->gpsTime = getGmtDate(feature, "datetime", rgroup->gmtDate);
+            rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
 
             const char* dataFile  = feature->GetFieldAsString("data_raster");
             if(dataFile && (strlen(dataFile) > 0))
@@ -105,6 +109,7 @@ bool GebcoBathyRaster::findRasters(const OGRGeometry* geo)
                 rinfo.dataIsElevation = true;
                 rinfo.tag             = VALUE_TAG;
                 rinfo.fileName        = filePath + "/" + dataFile;
+                rinfo.rasterGeo       = rastergeo->clone();
                 rgroup->infovect.push_back(rinfo);
             }
 
@@ -117,6 +122,7 @@ bool GebcoBathyRaster::findRasters(const OGRGeometry* geo)
                     rinfo.dataIsElevation = false;
                     rinfo.tag = FLAGS_TAG;
                     rinfo.fileName = filePath + "/" + flagsFile;
+                    rinfo.rasterGeo = rastergeo->clone();
                     rgroup->infovect.push_back(rinfo);
                 }
             }
@@ -125,17 +131,17 @@ bool GebcoBathyRaster::findRasters(const OGRGeometry* geo)
             for(unsigned j = 0; j < rgroup->infovect.size(); j++)
                 mlog(DEBUG, "  %s", rgroup->infovect[j].fileName.c_str());
 
-            // Add the group to the groupList
-            groupList.add(groupList.length(), rgroup);
+            // Add the group
+            finder->rasterGroups.push_back(rgroup);
         }
-        mlog(DEBUG, "Found %ld raster groups", groupList.length());
+        mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting time from raster feature file: %s", e.what());
     }
 
-    return (!groupList.empty());
+    return (!finder->rasterGroups.empty());
 }
 
 

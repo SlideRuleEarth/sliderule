@@ -42,7 +42,7 @@ if len(sys.argv) <= 1:
 coastnet_csv_file = sys.argv[1]
 
 # read in data
-coastnet_df = pd.read_csv(coastnet_csv_file)
+coastnet_df = pd.read_csv(coastnet_csv_file, engine='pyarrow')
 print("Read all inputs into data frame")
 
 # trim dataframe

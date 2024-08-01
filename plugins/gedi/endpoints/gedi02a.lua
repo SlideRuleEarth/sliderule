@@ -12,7 +12,7 @@ local parms         = rqst["parms"]
 local args = {
     shard           = rqst["shard"] or 0, -- key space
     default_asset   = "gedi02a",
-    result_q        = parms[geo.PARMS] and "result." .. resource .. "." .. rspq or rspq,
+    result_q        = (parms[geo.PARMS] and not parms[arrow.PARMS]) and "result." .. resource .. "." .. rspq or rspq,
     result_rec      = "gedi02arec",
 }
 

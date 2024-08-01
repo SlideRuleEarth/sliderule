@@ -53,26 +53,56 @@ class GeoIndexedRaster: public RasterObject
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const int   MAX_CACHE_SIZE     =  20;
         static const int   MAX_READER_THREADS = 200;
+
+        static const int   MAX_FINDER_THREADS;
+        static const int   MIN_FEATURES_PER_FINDER_THREAD;
 
         static const char* FLAGS_TAG;
         static const char* VALUE_TAG;
+        static const char* DATE_TAG;
 
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef struct {
+        typedef struct RasterInfo {
             bool         dataIsElevation;
             std::string  tag;
             std::string  fileName;
+            OGRGeometry* rasterGeo;
+
+            RasterInfo(void): dataIsElevation(false), rasterGeo(NULL) {}
+
+            RasterInfo(const RasterInfo& other):
+                dataIsElevation(other.dataIsElevation), tag(other.tag), fileName(other.fileName)
+            {
+                rasterGeo = other.rasterGeo->clone();
+            }
+
+            RasterInfo& operator=(const RasterInfo& other)
+            {
+                if (this != &other) {
+                    dataIsElevation = other.dataIsElevation;
+                    tag = other.tag;
+                    fileName = other.fileName;
+                    OGRGeometryFactory::destroyGeometry(rasterGeo);
+                    rasterGeo = other.rasterGeo->clone();
+                }
+                return *this;
+            }
+
+            ~RasterInfo(void) {OGRGeometryFactory::destroyGeometry(rasterGeo);}
         } raster_info_t;
 
-        typedef struct {
+        typedef struct RaserGroup {
             std::string                id;
             std::vector<raster_info_t> infovect;
             TimeLib::gmt_time_t        gmtDate;
             int64_t                    gpsTime;
+
+            RaserGroup(void): gmtDate{0,0,0,0,0,0}, gpsTime(0) {}
         } rasters_group_t;
 
         typedef struct CacheItem {
@@ -93,6 +123,23 @@ class GeoIndexedRaster: public RasterObject
             explicit Reader(GeoIndexedRaster* raster);
             ~Reader(void);
         } reader_t;
+
+        typedef struct {
+            uint32_t            start_indx;
+            uint32_t            end_indx;
+        } finder_range_t;
+
+        typedef struct Finder {
+            GeoIndexedRaster*             obj;
+            OGRGeometry*                  geo;
+            finder_range_t                range;
+            std::vector<rasters_group_t*> rasterGroups;
+            Thread*                       thread;
+            Cond                          sync;
+            bool                          run;
+            explicit Finder(GeoIndexedRaster* raster);
+            ~Finder(void);
+        } finder_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -116,8 +163,9 @@ class GeoIndexedRaster: public RasterObject
         uint32_t        getGroupFlags         (const rasters_group_t* rgroup);
         static double   getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         virtual bool    openGeoIndex          (const OGRGeometry* geo);
+        virtual bool    getFeatureDate        (const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate);
         virtual void    getIndexFile          (const OGRGeometry* geo, std::string& file) = 0;
-        virtual bool    findRasters           (const OGRGeometry* geo) = 0;
+        virtual bool    findRasters           (finder_t* finder) = 0;
         void            sampleRasters         (OGRGeometry* geo);
         bool            sample                (OGRGeometry* geo, int64_t gps);
         void            emptyFeaturesList     (void);
@@ -126,8 +174,8 @@ class GeoIndexedRaster: public RasterObject
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef Ordering<rasters_group_t*, unsigned long> GroupOrdering;
         typedef Dictionary<cacheitem_t*> CacheDictionary;
+        typedef Ordering<rasters_group_t*, unsigned long> GroupOrdering;
 
         /*--------------------------------------------------------------------
          * Data
@@ -154,6 +202,11 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
+        bool                      onlyFirst;
+        uint32_t                  numFinders;
+        finder_range_t*           findersRange;
+        rasters_group_t           cachedRastersGroup;
+        List<finder_t*>           finders;
         List<reader_t*>           readers;
         GdalRaster::overrideCRS_t crscb;
 
@@ -161,6 +214,11 @@ class GeoIndexedRaster: public RasterObject
         GdalRaster::bbox_t        bbox;
         uint32_t                  rows;
         uint32_t                  cols;
+
+        uint64_t                  onlyFirstCount;
+        uint64_t                  findRastersCount;
+        uint64_t                  fullSearchCount;
+        uint64_t                  allSamplesCount;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -170,11 +228,15 @@ class GeoIndexedRaster: public RasterObject
         static int      luaBoundingBox  (lua_State* L);
         static int      luaCellSize     (lua_State* L);
 
-        static void*    readingThread   (void *param);
+        static void*    finderThread    (void *param);
+        static void*    readerThread    (void *param);
 
-        bool            createThreads   (void);
-        bool            updateCache     (void);
-        bool            filterRasters   (int64_t gps);
+        bool            createFinderThreads (void);
+        bool            createReaderThreads (uint32_t  rasters2sample);
+        bool            updateCache         (uint32_t& rasters2sample);
+        bool            filterRasters       (int64_t gps);
+        void            setFindersRange     (void);
+        bool            _findRasters        (OGRGeometry* geo);
 };
 
 #endif  /* __geo_indexed_raster__ */

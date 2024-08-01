@@ -109,10 +109,8 @@ class ArrowSampler: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int                     luaCreate      (lua_State* L);
-        static int                     luaSample      (lua_State* L);
         static void                    init           (void);
         static void                    deinit         (void);
-        void                           sample         (void);
         const ArrowParms*              getParms       (void);
         const char*                    getDataFile    (void);
         const char*                    getMetadataFile(void);
@@ -128,9 +126,10 @@ class ArrowSampler: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
+        bool                       active;
+        Thread*                    mainPid;
         ArrowParms*                parms;
         Publisher*                 outQ;
-        std::vector<Thread*>       samplerPids;
         std::vector<point_info_t*> points;
         std::vector<sampler_t*>    samplers;
         ArrowSamplerImpl*          impl;
@@ -138,7 +137,6 @@ class ArrowSampler: public LuaObject
         const char*                metadataFile;       // used locally to build json metadata file
         const char*                outputPath;         // final destination of the data file
         const char*                outputMetadataPath; // final destination of the metadata file
-        bool                       alreadySampled;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -148,6 +146,7 @@ class ArrowSampler: public LuaObject
                                                const char* outq_name, const std::vector<raster_info_t>& rasters);
                         ~ArrowSampler         (void) override;
         void            Delete                (void);
+        static void*    mainThread            (void* parm);
         static void*    samplerThread         (void* parm);
 };
 
