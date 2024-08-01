@@ -84,57 +84,46 @@ import os
 # process command line
 sys.path.append('../utils')
 from command_line_processor import process_command_line
-settings, spot_info, spot_df, output_csv, info_json = process_command_line(sys.argv, columns=['index_ph', 'class_ph', 'x_ph', 'y_ph', 'longitude', 'latitude', 'ortho_h', 'max_signal_conf', 'dem_h', 'surface_h', 'ndwi'])
+settings, spot_info, spot_df, output_csv, info_json = process_command_line(sys.argv, columns=['index_ph', 'x_ph', 'y_ph', 'ortho_h', 'max_signal_conf', 'class_ph', 'surface_h'])
 
 # set configuration
 maxElev         = settings.get('maxElev', 10) 
 minElev         = settings.get('minElev', -50)
-demBuffer       = settings.get('demBuffer', 50)
 minSignalConf   = settings.get('minSignalConf', 3)
-minNWDI         = settings.get('minNWDI', 0.3)
-useNWDI         = settings.get('useNWDI', False)
 gpu             = settings.get('gpu', "0")
 num_point       = settings.get('num_point', 8192)
+batch_size      = settings.get('batch_size', 8)
 num_votes       = settings.get('num_votes', 10)
 threshold       = settings.get('threshold', 0.5)
 model_seed      = settings.get('model_seed', 24)
-trust_class41   = settings.get('trust_class41', False)
 
 ##################
 # BUILD DATAFRAME
 ##################
-
-# Add a pointnet specific class column
-spot_df['class'] = np.full((len(spot_df)), 3)                               # initialize everything to 3 (pointnet noise)
-spot_df.loc[spot_df.class_ph == 41, 'class'] = 5                            # change sea surface (41) to 5 (pointnet sea surface)
-
-# Remove photons above sea surfaace
-sea_surface_df = spot_df[spot_df['class'] == 5]                             # get the subset of the sea_surface_df where class_ph is sea surface
-average_sea_surface_level = sea_surface_df['ortho_h'].mean()           # take the average of the geoid corrected height of the sea surface photons
-spot_df = spot_df[spot_df['ortho_h'] < average_sea_surface_level]
-
-# Remove photons where the max_signal_conf doesn't meet minimum threshold
-spot_df = spot_df[spot_df['max_signal_conf'] >= minSignalConf]
-
-# Remove photons outside of height range
-spot_df = spot_df[(spot_df["ortho_h"] > minElev) & \
-                  (spot_df["ortho_h"] < maxElev)]                      # if geoid height is outside absolute range
-spot_df = spot_df[(spot_df["dem_h"] - spot_df["ortho_h"] < demBuffer)] # if geoid height is outside relative range to DEM
-
-# Remove photons where the NDWI value is greater than a minimum threshold
-if useNWDI:
-    spot_df = spot_df[spot_df["ndwi"] >= minNWDI]
 
 # Create dataframe with the columns and order expected by the rest of pointnet
 data_df = pd.DataFrame()
 data_df['index_ph'] = spot_df['index_ph']
 data_df['x'] = spot_df['x_ph']
 data_df['y'] = spot_df['y_ph']
-data_df['lon'] = spot_df['longitude']
-data_df['lat'] = spot_df['latitude']
 data_df['elev'] = spot_df['ortho_h']
 data_df['signal_conf_ph'] = spot_df['max_signal_conf']
-data_df['class'] = spot_df['class']
+
+# Add a pointnet specific class column
+data_df['class'] = np.full((len(data_df)), 3)                               # initialize everything to 3 (pointnet noise)
+data_df.loc[spot_df.class_ph == 41, 'class'] = 5                            # change sea surface (41) to 5 (pointnet sea surface)
+
+# Remove photons above sea surfaace
+sea_surface_df = data_df[data_df['class'] == 5]                             # get the subset of the sea_surface_df where class_ph is sea surface
+average_sea_surface_level = sea_surface_df['elev'].mean()                   # take the average of the geoid corrected height of the sea surface photons
+data_df = data_df[data_df['elev'] < average_sea_surface_level]
+
+# Remove photons where the max_signal_conf doesn't meet minimum threshold
+data_df = data_df[data_df['signal_conf_ph'] >= minSignalConf]
+
+# Remove photons outside of height range
+data_df = data_df[(data_df["elev"] > minElev) & \
+                  (data_df["elev"] < maxElev)]                              # if geoid height is outside absolute range
 
 # Normalize signal confidence
 data_df['signal_conf_ph'] = data_df['signal_conf_ph'] - 2
@@ -164,7 +153,7 @@ class PartNormalDataset(Dataset):
     def __init__(self, data, npoints):
         self.data = data
         self.npoints = npoints
-        self.column_indices = [1, 2, 5, 6] # use x,y,elev,signal_conf
+        self.column_indices = [1, 2, 3, 4] # use x,y,elev,signal_conf
 
     def __getitem__(self, index):
         r0 = self.npoints * index
@@ -204,7 +193,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # create normalized dataset to process
 TEST_DATASET = PartNormalDataset(data, num_point)
-testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=1, shuffle=False, num_workers=8)
+testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=batch_size, shuffle=False, num_workers=8)
 print("The number of test data is: %d" % len(TEST_DATASET))
 num_classes = 1
 num_part = 2
@@ -224,7 +213,7 @@ with torch.no_grad():
     for batch_id, (points, label, point_set_normalized_mask, pc_min, pc_max, row_slice) in \
             tqdm(enumerate(testDataLoader), total=len(testDataLoader), smoothing=0.9):
         cur_batch_size, NUM_POINT, _ = points.size()
-        assert cur_batch_size == 1 # we've hardcoded the batch size to 1 above
+
         points, label = points.float().to(device), label.long().to(device)
         points = points.transpose(2, 1)
         vote_pool = torch.zeros(cur_batch_size, NUM_POINT, num_part).to(device)
@@ -239,24 +228,23 @@ with torch.no_grad():
         cur_pred_val = np.zeros((cur_batch_size, NUM_POINT)).astype(np.int32)
         point_set_normalized_mask = point_set_normalized_mask.numpy()
 
-        prob = np.exp(cur_pred[0, :, :])
-        cur_pred_val[0, :] = np.where(prob[:, 1] < threshold, 0, 1)
-        cur_mask = point_set_normalized_mask[0, :]
-        cur_pred_val_mask = cur_pred_val[0, cur_mask]
+        cur_pred_val_mask = []
+        for i in range(cur_batch_size):
+            prob = np.exp(cur_pred[i, :, :])
+            cur_pred_val[0, :] = np.where(prob[:, 1] < threshold, 0, 1)
+            cur_mask = point_set_normalized_mask[i, :]
+            cur_pred_val_mask.append(cur_pred_val[i, cur_mask])
+        cur_pred_val_mask = np.concatenate(cur_pred_val_mask)
 
         # build dataframe of index and classification
-        index_ph = data[row_slice[0]:row_slice[1], 0].astype(np.int32)
-        class_ph = data[row_slice[0]:row_slice[1], 7]
+        index_ph = data[row_slice[0][0]:row_slice[1][-1], 0].astype(np.int32)
+        class_ph = data[row_slice[0][0]:row_slice[1][-1], 5]
         columns = {'index_ph': index_ph, 'class_ph': class_ph}            
         batch_df = pd.DataFrame(columns)
-        if trust_class41:
-            # only keep bathymetry photons (prediction == 1) when original didn't have sea surface
-            # class 5 in pointnet is class 41 in atl24
-            batch_df = batch_df.loc[(cur_pred_val_mask == 1) & (batch_df['class_ph'] != 5)] 
-        else:
-            # only keep bathymetry photons (prediction == 1)
-            batch_df = batch_df.loc[cur_pred_val_mask == 1] 
-        batch_df['class_ph'] = 40 # set class to atl24 bathymetry class
+#        batch_df.loc[(cur_pred_val_mask == 1) & (batch_df['class_ph'] != 5), 'class_ph'] = 40 # only keep bathymetry photons (prediction == 1) when original didn't have sea surface
+        batch_df.loc[cur_pred_val_mask == 1, 'class_ph'] = 40 # set bathymetry photons (prediction == 1)
+        batch_df.loc[batch_df['class_ph'] == 5, 'class_ph'] = 41 # restore sea surface where it wasn't overwritten
+        batch_df.loc[(batch_df['class_ph'] != 40) & (batch_df['class_ph'] != 41), 'class_ph'] = 1 # set everything else to other
         output_dfs.append(batch_df)
 
 ################
@@ -264,8 +252,8 @@ with torch.no_grad():
 ################
 
 output_df = pd.concat(output_dfs)
-output_df.set_index('index_ph')
-spot_df.set_index('index_ph')
+output_df.set_index('index_ph', inplace=True)
+spot_df.set_index('index_ph', inplace=True)
 output_df = output_df.combine_first(spot_df).reset_index()
 
 if output_csv != None:

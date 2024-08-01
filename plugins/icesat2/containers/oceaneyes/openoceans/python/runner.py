@@ -88,7 +88,6 @@ window_size     = settings.get('window_size', 11) # 3x overlap is not enough to 
 range_z         = settings.get('range_z', [-50, 30]) # include at least a few meters more than 5m above the surface for noise estimation, key for daytime case noise filtering
 verbose         = settings.get('verbose', False) # not really fully integrated, it's still going to print some recent debugging statements
 parallel        = settings.get('parallel', True)
-use_ndwi        = settings.get('use_ndwi', False)
 chunk_size      = settings.get('chunk_size', 65536) # number of photons to process at one time
 
 ##################
@@ -111,10 +110,6 @@ ph_data["conf_bathymetry"] = NO_VALUE
 ph_data["subsurface_flag"] = NO_VALUE
 ph_data["weight_surface"] = NO_VALUE
 ph_data["weight_bathymetry"] = NO_VALUE
-
-# if ndwi is available, filter out land
-if use_ndwi and 'ndwi' in ph_data_all:
-    ph_data = ph_data[ph_data_all.ndwi > 0]
 
 print(ph_data)
 

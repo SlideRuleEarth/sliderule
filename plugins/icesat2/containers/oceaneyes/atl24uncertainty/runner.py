@@ -106,7 +106,7 @@ profile_date = f'{info["year"]}-{info["month"]}-{info["day"]}_0000Z'
 kd_out, req_ok = get_kd_values(profile_date, outpath="/tmp", keep=False)
 
 # sample KD values at each coordinate
-coord_list = [(x, y) for x, y in zip(data.longitude, data.latitude)]
+coord_list = [(x, y) for x, y in zip(data.lon_ph, data.lat_ph)]
 with rio.open(f'netcdf:{kd_out}:Kd_490') as kd_src:
     data["kd_490"] = [x[0] for x in kd_src.sample(coord_list)]
     data["kd_490"] = data["kd_490"] * kd_src.scales[0] + kd_src.offsets[0]

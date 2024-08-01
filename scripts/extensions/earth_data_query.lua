@@ -356,7 +356,7 @@ local function stac (parms, poly)
     geotable["context"]["limit"] = max_resources
 
     -- return response
-    return RC_SUCCESS, geotable 
+    return RC_SUCCESS, geotable
 
 end
 
@@ -389,6 +389,10 @@ local function tnm (parms, poly)
         end
     end
 
+    -- get GPS times of t0 and t1
+    local t0_gps = time.gmt2gps(string.gsub(t0, '-', ':')..':00:00:00')
+    local t1_gps = time.gmt2gps(string.gsub(t1, '-', ':')..':00:00:00')
+
     -- scroll through requests to get items
     local num_items = 0
     while true do
@@ -406,10 +410,22 @@ local function tnm (parms, poly)
             string.format("&stop=%s", t1),
         })
 
-        -- issue http request
-        local rsps, status = netsvc.get(tnm_query_url, nil, {})
-        if not status then
-            return RC_RQST_FAILED, "http request to TNM failed"
+        -- make https request (with retries)
+        local rsps = nil
+        local rsps_status = false
+        local attempts = 3
+        local request_complete = false
+        while not request_complete do
+            rsps, rsps_status = netsvc.get(tnm_query_url, nil, {})
+            if rsps_status then
+                break
+            end
+            attempts = attempts - 1
+            if attempts <= 0 then
+                return RC_RQST_FAILED, rsps
+            else
+                sys.log(core.WARNING, string.format("TNM returned error <%d>, retrying... \n>>>\n%s\n<<<", rsps_status, rsps))
+            end
         end
 
         -- build table from response
@@ -423,6 +439,12 @@ local function tnm (parms, poly)
 
         -- then build the geojson from the response
         for _,item in ipairs(results["items"]) do
+            -- filter on time
+            local feature_gps = time.gmt2gps(item["lastUpdated"])
+            if feature_gps < t0_gps or feature_gps > t1_gps then
+                goto continue
+            end
+            -- build feature
             local minX = item["boundingBox"]["minX"]
             local maxX = item["boundingBox"]["maxX"]
             local minY = item["boundingBox"]["minY"]
@@ -435,11 +457,13 @@ local function tnm (parms, poly)
                     ["coordinates"] = {{{minX, minY}, {maxX, minY}, {maxX, maxY}, {minX, maxY}, {minX, minY}}}
                 },
                 ["properties"] = {
-                    ["datetime"] = string.format("%04d-%02d-%02dT%02d:%02d:%02d.%03d+00:00", time.gps2date(time.gmt2gps(item["lastUpdated"]))),
+                    ["datetime"] = string.format("%04d-%02d-%02dT%02d:%02d:%02d.%03d+00:00", time.gps2date(feature_gps)),
                     ["url"] = item["urls"]["TIFF"]
                 }
             }
+            -- add feature
             table.insert(geotable["features"], feature)
+            ::continue::
         end
 
         -- check if complete

@@ -129,6 +129,7 @@ void initicesat2 (void)
     Atl03Reader::init();
     Atl03Viewer::init();
     Atl03Indexer::init();
+    BathyClassifier::init();
     BathyOceanEyes::init();
     BathyReader::init();
     BathyViewer::init();

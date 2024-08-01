@@ -29,46 +29,59 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __icesat2_plugin__
-#define __icesat2_plugin__
+#ifndef __bathy_classifier__
+#define __bathy_classifier__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "Atl03Reader.h"
-#include "Atl03Viewer.h"
-#include "Atl03Indexer.h"
-#include "Atl06Dispatch.h"
-#include "Atl06Reader.h"
-#include "Atl08Dispatch.h"
-#include "Atl13IODriver.h"
-#include "Atl13Reader.h"
-#include "BathyClassifier.h"
+#include "LuaObject.h"
+#include "OsApi.h"
 #include "BathyFields.h"
-#include "BathyOceanEyes.h"
-#include "BathyReader.h"
-#include "BathyViewer.h"
-#include "CumulusIODriver.h"
-#include "GTArray.h"
-#include "GTDArray.h"
-#include "Icesat2Parms.h"
-#include "MeritRaster.h"
 
-#ifdef __unittesting__
-#include "UT_Atl03Reader.h"
-#include "UT_Atl06Dispatch.h"
-#endif
+using BathyFields::extent_t;
+using BathyFields::bathy_class_t;
 
 /******************************************************************************
- * PROTOTYPES
+ * BATHY CLASSIFIER
  ******************************************************************************/
 
-extern "C" {
-void initicesat2 (void);
-void deiniticesat2 (void);
-}
+class BathyClassifier: public LuaObject
+{
+    public:
 
-#endif  /* __icesat2_plugin__ */
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
+        static const char* OBJECT_TYPE;
 
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static void init (void);
+
+        virtual bool classify (const vector<extent_t*>& extents) = 0;
+
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        const char* classifier;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        BathyClassifier (lua_State* L, const char* _classifier);
+        ~BathyClassifier (void) override;
+};
+
+#endif  /* __bathy_classifier__ */

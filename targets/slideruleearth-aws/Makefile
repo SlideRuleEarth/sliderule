@@ -1,5 +1,3 @@
-# Notes:
-#
 # In order to complete the release process, the following must be installed and configured in your environment:
 #     * GitHub command line client (gh)
 #           See https://github.com/cli/cli/blob/trunk/docs/install_linux.md for installation instructions.
@@ -27,7 +25,7 @@
 #     4. Login to NPMJS
 #        $ cd sliderule/clients/nodejs && make login
 #     5. Execute the makefile target to release the code; X.Y.Z is the version
-#        $ make release VERSION=vX.Y.Z DOCKEROPTS=--no-cache
+#        $ make release VERSION=vX.Y.Z
 #
 # To update the build environment for GitHub actions
 #     1. Login to GitHub Container Registry; {my_github_key} is a file storing an access key created for your account
@@ -70,9 +68,11 @@ OCEANEYES_CONTAINER_STAGE_DIR = $(STAGE)/oceaneyes
 OCEANEYES_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/oceaneyes
 OCEANEYES_CONTAINER_NAME ?= oceaneyes
 COASTNET_CONTAINER_SOURCE_DIR = $(ROOT)/../coastnet
+QTREES_CONTAINER_SOURCE_DIR = $(ROOT)/../qtrees
+OPENOCEANS_CONTAINER_SOURCE_DIR = $(ROOT)/../openoceans
 CSHELPH_CONTAINER_SOURCE = $(ROOT)/../cshelph/c_shelph.py
 MEDIANFILTER_CONTAINER_SOURCE = $(ROOT)/../medianfilter/medianmodel.py
-QTREES_CONTAINER_SOURCE_DIR = $(ROOT)/../qtrees
+MAGIC_PYTORCH_DIR = $(ROOT)/../../miniconda3/envs/pointnet2
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -81,7 +81,7 @@ ECR := 742127912612.dkr.ecr.us-west-2.amazonaws.com
 GHCR := ghcr.io/slideruleearth
 DOCKEROPTS ?=
 BUILDX ?= # buildx
-DOCKER_PLATFORM ?= # linux/arm64
+DOCKER_PLATFORM ?= # --platform linux/arm64 | linux/amd64
 ARCH ?= $(shell arch)
 DOMAIN ?= testsliderule.org
 DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
@@ -214,13 +214,10 @@ oceaneyes-docker: ## create the coceaneyes container image
 	mkdir -p $(OCEANEYES_CONTAINER_STAGE_DIR)
 	cp $(OCEANEYES_CONTAINER_DIR)/Dockerfile $(OCEANEYES_CONTAINER_STAGE_DIR)
 	cp $(OCEANEYES_CONTAINER_DIR)/conda-* $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/atl24refraction $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/atl24uncertainty $(OCEANEYES_CONTAINER_STAGE_DIR)
 	cp -R $(OCEANEYES_CONTAINER_DIR)/atl24writer $(OCEANEYES_CONTAINER_STAGE_DIR)
 	cp -R $(OCEANEYES_CONTAINER_DIR)/bathypathfinder $(OCEANEYES_CONTAINER_STAGE_DIR)
 	cp -R $(OCEANEYES_CONTAINER_DIR)/cshelph $(OCEANEYES_CONTAINER_STAGE_DIR)
 	cp -R $(OCEANEYES_CONTAINER_DIR)/medianfilter $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/openoceans $(OCEANEYES_CONTAINER_STAGE_DIR)
 	cp -R $(OCEANEYES_CONTAINER_DIR)/pointnet2 $(OCEANEYES_CONTAINER_STAGE_DIR)
 	cp -R $(OCEANEYES_CONTAINER_DIR)/utils $(OCEANEYES_CONTAINER_STAGE_DIR)
 	#
@@ -230,9 +227,15 @@ oceaneyes-docker: ## create the coceaneyes container image
 	rsync -a $(QTREES_CONTAINER_SOURCE_DIR) $(OCEANEYES_CONTAINER_STAGE_DIR) --exclude build --exclude .git
 	cp $(OCEANEYES_CONTAINER_DIR)/qtrees/* $(OCEANEYES_CONTAINER_STAGE_DIR)/qtrees
 	#
+	rsync -a $(OPENOCEANS_CONTAINER_SOURCE_DIR) $(OCEANEYES_CONTAINER_STAGE_DIR) --exclude build --exclude .git
+	cp -r $(OCEANEYES_CONTAINER_DIR)/openoceans/* $(OCEANEYES_CONTAINER_STAGE_DIR)/openoceans
+	#
 	cp $(CSHELPH_CONTAINER_SOURCE) $(OCEANEYES_CONTAINER_STAGE_DIR)/cshelph
 	#
 	cp $(MEDIANFILTER_CONTAINER_SOURCE) $(OCEANEYES_CONTAINER_STAGE_DIR)/medianfilter
+	#
+	mkdir $(OCEANEYES_CONTAINER_STAGE_DIR)/magic_pytorch_env
+	rsync -a $(MAGIC_PYTORCH_DIR)/* $(OCEANEYES_CONTAINER_STAGE_DIR)/magic_pytorch_env
 	#
 	cd $(OCEANEYES_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION)
@@ -251,16 +254,14 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	cp docker/static-website/nginx.conf $(STATIC_WEB_STAGE_DIR)
 	cp docker/static-website/docker-entrypoint.sh $(STATIC_WEB_STAGE_DIR)
 	cd $(STATIC_WEB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/static-website:latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(VERSION)
-	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(MAJOR_VERSION)
 
 static-website-run: ## locally run the static website; needs VERSION
-	docker run -it -p 8080:4000 --rm --name website $(ECR)/static-website:$(VERSION)
+	docker run -it -p 8080:4000 --rm --name website $(ECR)/static-website:latest
 
 static-website-export: ## export static website to local host directory
 	-rm -Rf $(STATIC_WEB_EXPORT_DIR)
 	mkdir -p $(STATIC_WEB_EXPORT_DIR)
-	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:$(VERSION) /host/export_dist.sh
+	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:latest /host/export_dist.sh
 
 static-website-live-update: # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
 	aws s3 sync $(STATIC_WEB_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
@@ -276,19 +277,15 @@ static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
 	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
-static-website-docker-push: ## push static-website docker image to registry
-	docker push $(ECR)/static-website:$(VERSION)
-	docker push $(ECR)/static-website:$(MAJOR_VERSION)
-
 sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
-	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(VERSION)
-	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
-	docker tag $(ECR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
-	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh
+	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest-$(ARCH) $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/sliderule-buildenv:latest-$(ARCH) $(ECR)/sliderule-buildenv:$(VERSION)-$(ARCH)
+	docker tag $(ECR)/sliderule-buildenv:latest-$(ARCH) $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)-$(ARCH)
+	docker tag $(ECR)/sliderule-buildenv:latest-$(ARCH) $(GHCR)/sliderule-buildenv:$(VERSION)-$(ARCH)
+	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)-$(ARCH) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
 
 sliderule-buildenv-docker-push: ## push build environment docker image to registry
 	docker push $(ECR)/sliderule-buildenv:$(VERSION)
@@ -350,7 +347,7 @@ cluster-docker-push: ## push all cluster images to docker container registries
 	docker push $(ECR)/monitor:$(MAJOR_VERSION)
 
 cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
-	cd packer; packer build -var version=$(MAJOR_VERSION) sliderule-base.pkr.hcl
+	cd packer; packer build -var version=$(MAJOR_VERSION) -var-file=arm64_cpu.json sliderule-base.pkr.hcl
 
 cluster-upload-terraform: ## upload the Cluster terraform for provisioning system; needs VERSION
 	-rm -Rf $(TF_STAGE_DIR)
@@ -379,8 +376,6 @@ release: ## release a version of sliderule; needs VERSION
 	make sliderule-buildenv-docker-push
 	make cluster-docker
 	make cluster-docker-push
-	make static-website-docker
-	make static-website-docker-push
 	make cluster-build-packer
 	make cluster-upload-terraform
 
@@ -426,14 +421,11 @@ perfstest: ## run strips performance test on the server code
 perfsubsetest: ## run subset performance test
 	$(SERVER_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
 
-oceaneyes-test: ## run the oceaneyes container
+oceaneyes-python-test: ## run the oceaneyes container
 	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) /env/bin/python /$(ATL24_ALGORITHM)/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv
 	
-coastnet-test: ## run the coastnet bathy docker container
-	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) bash /coastnet/runner.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/coastnet_3.csv
-
-qtrees-test: ## run the qtrees docker container
-	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) bash /qtrees/runner.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/qtrees_3.csv
+oceaneyes-c-test: ## run the coastnet bathy docker container
+	docker run -it --rm -v /$(ATL24_TEST_DATA_DIR):/$(ATL24_TEST_DATA_DIR) --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) bash /$(ATL24_ALGORITHM)/runner.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/$(ATL24_ALGORITHM)_3.csv
 
 ########################
 # Help Target

@@ -29,46 +29,46 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __icesat2_plugin__
-#define __icesat2_plugin__
-
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "Atl03Reader.h"
-#include "Atl03Viewer.h"
-#include "Atl03Indexer.h"
-#include "Atl06Dispatch.h"
-#include "Atl06Reader.h"
-#include "Atl08Dispatch.h"
-#include "Atl13IODriver.h"
-#include "Atl13Reader.h"
 #include "BathyClassifier.h"
-#include "BathyFields.h"
-#include "BathyOceanEyes.h"
-#include "BathyReader.h"
-#include "BathyViewer.h"
-#include "CumulusIODriver.h"
-#include "GTArray.h"
-#include "GTDArray.h"
-#include "Icesat2Parms.h"
-#include "MeritRaster.h"
-
-#ifdef __unittesting__
-#include "UT_Atl03Reader.h"
-#include "UT_Atl06Dispatch.h"
-#endif
 
 /******************************************************************************
- * PROTOTYPES
+ * STATIC DATA
  ******************************************************************************/
 
-extern "C" {
-void initicesat2 (void);
-void deiniticesat2 (void);
+const char* BathyClassifier::OBJECT_TYPE = "BathyClassifier";
+const char* BathyClassifier::LUA_META_NAME = "BathyClassifier";
+const struct luaL_Reg BathyClassifier::LUA_META_TABLE[] = {
+    {NULL,          NULL}
+};
+
+/******************************************************************************
+ * BATHY CLASSIFIER CLASS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void BathyClassifier::init (void)
+{
 }
 
-#endif  /* __icesat2_plugin__ */
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+BathyClassifier::BathyClassifier (lua_State* L, const char* _classifier):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
+{
+    classifier = StringLib::duplicate(_classifier);
+}
 
-
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+BathyClassifier::~BathyClassifier (void)
+{
+    delete [] classifier;
+}

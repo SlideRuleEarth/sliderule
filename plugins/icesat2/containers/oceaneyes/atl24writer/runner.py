@@ -39,6 +39,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # constants
 ATLAS_GPS_EPOCH = 1198800018
+RELEASE = 1
 
 # check command line parameters
 if len(sys.argv) <= 1:
@@ -54,6 +55,10 @@ with open(control_json, 'r') as json_file:
 input_files = control["input_files"]
 output_parms = control["output_parms"]
 atl24_filename = control["atl24_filename"]
+version = control["version"]
+commit = control["commit"]
+environment = control["environment"]
+resource = control["resource"]
 
 # read in data
 spot_table = {}
@@ -92,11 +97,15 @@ metadata["granule"] = {
     "bathy_photons": len(df[df["class_ph"] == 40]),
     "subaqueous_photons": len(df[df["ortho_h"] < df["surface_h"]])
 }
+metadata["version"] = version
+metadata["commit"] = commit
+metadata["environment"] = environment
+metadata["resource"] = resource
 with open(atl24_filename + ".json", "w") as file:
     file.write(json.dumps(metadata, indent=2))
 
 # Photon Output (Non-HDF5)
-if output_parms["format"] != "hdf5":
+if output_parms["format"] != "hdf5" and output_parms["format"] != "h5":
 
     # write output
     if output_parms["format"] == "csv":
@@ -106,17 +115,13 @@ if output_parms["format"] != "hdf5":
         print("CSV file written: " + atl24_filename)
     
     elif output_parms["format"] == "parquet" or output_parms["format"] == "geoparquet":
-        from geopandas.io.arrow import _geopandas_to_arrow
-        import pyarrow as pa
-        import pyarrow.parquet as pq
 
         if output_parms["as_geo"] or output_parms["format"] == "geoparquet":
     
             # GeoParquet
             df['time'] = df['time'].astype('datetime64[ns]')
-            geometry = gpd.points_from_xy(df['longitude'], df['latitude'])
-#            geometry = gpd.points_from_xy(df['longitude'], df['latitude'], df['ortho_h'])
-            df.drop(columns=['longitude', 'latitude'], inplace=True)
+            geometry = gpd.points_from_xy(df['lon_ph'], df['lat_ph'])
+            df.drop(columns=['lon_ph', 'lat_ph'], inplace=True)
             gdf = gpd.GeoDataFrame(df, geometry=geometry, crs="EPSG:7912")
             gdf.set_index('time', inplace=True)
             gdf.sort_index(inplace=True)
@@ -126,6 +131,8 @@ if output_parms["format"] != "hdf5":
         else:
 
             # Parquet
+            import pyarrow as pa
+            import pyarrow.parquet as pq
             table = pa.Table.from_pandas(df, preserve_index=False)
             schema = table.schema.with_metadata({"sliderule": json.dumps(metadata)})
             table = table.replace_schema_metadata(schema.metadata)
@@ -228,10 +235,34 @@ else:
                          'long_name':'Start UTC Time of Granule (CCSDS-A, Requested)', 
                          'source':'Derived', 
                          'units':'1'})
-            add_variable(ancillary_group, "release",             ancillary["release"],             h5py.string_dtype(encoding='utf-8'),
+            add_variable(ancillary_group, "release",             RELEASE,                          h5py.string_dtype(encoding='utf-8'),
                         {'contentType':'auxiliaryInformation', 
                          'description':'Release number of the granule. The release number is incremented when the software or ancillary data used to create the granule has been changed.', 
                          'long_name':'Release Number', 
+                         'source':'Operations', 
+                         'units':'1'})
+            add_variable(ancillary_group, "resource",            resource,                         h5py.string_dtype(encoding='utf-8'),
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'ATL03 granule used to produce this granule', 
+                         'long_name':'ATL03 Resource', 
+                         'source':'Operations', 
+                         'units':'1'})
+            add_variable(ancillary_group, "sliderule_version",   version,                          h5py.string_dtype(encoding='utf-8'),
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'Version of SlideRule software used to generate this granule', 
+                         'long_name':'SlideRule Version', 
+                         'source':'Operations', 
+                         'units':'1'})
+            add_variable(ancillary_group, "sliderule_commit",    commit,                           h5py.string_dtype(encoding='utf-8'),
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'Git commit ID (https://github.com/SlideRuleEarth/sliderule.git) of SlideRule software used to generate this granule', 
+                         'long_name':'SlideRule Commit', 
+                         'source':'Operations', 
+                         'units':'1'})
+            add_variable(ancillary_group, "sliderule_environment",   environment,                  h5py.string_dtype(encoding='utf-8'),
+                        {'contentType':'auxiliaryInformation', 
+                         'description':'Git commit ID (https://github.com/SlideRuleEarth/sliderule.git) of SlideRule environment used to generate this granule', 
+                         'long_name':'SlideRule Environment', 
                          'source':'Operations', 
                          'units':'1'})
             add_variable(ancillary_group, "start_cycle",         ancillary["start_cycle"],         'int32',
@@ -346,109 +377,126 @@ else:
             spot_info = spot_table[spot]["info"]
             spot_df = spot_table[spot]["df"]
             spot_df["delta_time"] = (spot_df["time"] / 1000000000.0) - ATLAS_GPS_EPOCH
-            spot_df["ellipse_h"] = spot_df["ortho_h"] + spot_df["geoid"]
+
+            # apply refraction correction
+            spot_df["ellipse_h"] += spot_df["delta_h"]
+            spot_df["ortho_h"] += spot_df["delta_h"]
+
+            # calculate depth
+            spot_df["depth"] = 0.0
+            subaqueous = spot_df["ortho_h"] < spot_df["surface_h"]
+            spot_df.loc[subaqueous, 'depth'] = spot_df.loc[subaqueous, 'surface_h'] - spot_df.loc[subaqueous, 'ortho_h']
 
             beam_group = hf.create_group(spot_info["beam"]) # e.g. gt1r, gt2l, etc.
             add_variable(beam_group, "index_ph",   spot_df["index_ph"],     'float32',
                         {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
-                         'source':'ATL24G', 
-                         'units':''})
+                         'description':'0-based index of the photon in the ATL03 heights group', 
+                         'long_name':'Photon index', 
+                         'source':'ATL03', 
+                         'units':'scalar'})
             add_variable(beam_group, "index_seg",  spot_df["index_seg"],    'int32',
                         {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
-                         'source':'ATL24G', 
-                         'units':''})
+                         'description':'0-based index of the photon in the ATL03 geolocation group', 
+                         'long_name':'Segment index', 
+                         'source':'ATL03', 
+                         'units':'scalar'})
             add_variable(beam_group, "delta_time", spot_df["delta_time"],   'float64',
                         {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
-                         'source':'ATL24G', 
-                         'units':''})
-            add_variable(beam_group, "latitude",   spot_df["latitude"],     'float64',
-                        {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
-                         'source':'ATL24G', 
-                         'units':''})
-            add_variable(beam_group, "longitude",  spot_df["longitude"],    'float64',
-                        {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
-                         'source':'ATL24G', 
-                         'units':''})
+                         'description':'The transmit time of a given photon, measured in seconds from the ATLAS Standard Data Product Epoch. Note that multiple received photons associated with a single transmit pulse will have the same delta_time. The ATLAS Standard Data Products (SDP) epoch offset is defined within /ancillary_data/atlas_sdp_gps_epoch as the number of GPS seconds between the GPS epoch (1980-01-06T00:00:00.000000Z UTC) and the ATLAS SDP epoch. By adding the offset contained within atlas_sdp_gps_epoch to delta time parameters, the time in gps_seconds relative to the GPS epoch can be computed.', 
+                         'long_name':'Elapsed GPS seconds', 
+                         'source':'ATL03', 
+                         'units':'seconds since 2018-01-01'})
+            add_variable(beam_group, "lat_ph",   spot_df["lat_ph"],     'float64',
+                        {'contentType':'modelResult', 
+                         'description':'Latitude of each received photon. Computed from the ECF Cartesian coordinates of the bounce point.', 
+                         'long_name':'Latitude', 
+                         'source':'ATL03', 
+                         'units':'degrees_north',
+                         'standard_name':'latitude',
+                         'valid_max': 90.0,
+                         'valid_min': -90.0})
+            add_variable(beam_group, "lon_ph",  spot_df["lon_ph"],    'float64',
+                        {'contentType':'modelResult', 
+                         'description':'Longitude of each received photon. Computed from the ECF Cartesian coordinates of the bounce point.', 
+                         'long_name':'Longitude', 
+                         'source':'ATL03', 
+                         'units':'degrees_east',
+                         'standard_name': 'longitude',
+                         'valid_max': 180.0,
+                         'valid_min': -180.0})
             add_variable(beam_group, "x_atc",      spot_df["x_atc"],        'float32',
-                        {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
-                         'source':'ATL24G', 
-                         'units':''})
+                        {'contentType':'modelResult', 
+                         'description':'Along-track distance in a segment projected to the ellipsoid of the received photon, based on the Along-Track Segment algorithm.  Total along track distance can be found by adding this value to the sum of segment lengths measured from the start of the most recent reference groundtrack.', 
+                         'long_name':'Distance from equator crossing', 
+                         'source':'ATL03', 
+                         'units':'meters'})
             add_variable(beam_group, "y_atc",      spot_df["y_atc"],        'float32',
-                        {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
-                         'source':'ATL24G', 
-                         'units':''})
+                        {'contentType':'modelResult', 
+                         'description':'Across-track distance projected to the ellipsoid of the received photon from the reference ground track.  This is based on the Along-Track Segment algorithm described in Section 3.1.', 
+                         'long_name':'Distance off RGT', 
+                         'source':'ATL03', 
+                         'units':'meters'})
             add_variable(beam_group, "ellipse_h",  spot_df["ellipse_h"],    'float32',
                         {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
-                         'source':'ATL24G', 
-                         'units':''})
+                         'description':'Height of each received photon, relative to the WGS-84 ellipsoid including refraction correction. Note neither the geoid, ocean tide nor the dynamic atmosphere (DAC) corrections are applied to the ellipsoidal heights.', 
+                         'long_name':'Photon WGS84 height', 
+                         'source':'ATL03', 
+                         'units':'meters'})
             add_variable(beam_group, "ortho_h",    spot_df["ortho_h"], 'float32',
                         {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
-                         'source':'ATL24G', 
-                         'units':''})
+                         'description':'Height of each received photon, relative to the geoid.', 
+                         'long_name':'Orthometric height', 
+                         'source':'ATL03', 
+                         'units':'meters'})
             add_variable(beam_group, "depth",      spot_df["depth"],        'float32',
-                        {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
-                         'source':'ATL24G', 
-                         'units':''})
+                        {'contentType':'modelResult', 
+                         'description':'Depth of the received photon below the sea surface', 
+                         'long_name':'Depth', 
+                         'source':'ATL03', 
+                         'units':'meters'})
             add_variable(beam_group, "sigma_thu",  spot_df["sigma_thu"],    'float32',
                         {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
-                         'source':'ATL24G', 
-                         'units':''})
+                         'description':'The combination of the aerial and subaqueous horizontal uncertainty for each received photon', 
+                         'long_name':'Total horizontal uncertainty', 
+                         'source':'ATL03', 
+                         'units':'meters'})
             add_variable(beam_group, "sigma_tvu",  spot_df["sigma_tvu"],    'float32',
-                        {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
-                         'source':'ATL24G', 
-                         'units':''})
+                        {'contentType':'modelResult', 
+                         'description':'The combination of the aerial and subaqueous vertical uncertainty for each received photon', 
+                         'long_name':'Total vertical uncertainty', 
+                         'source':'ATL03', 
+                         'units':'meters'})
             add_variable(beam_group, "flags",       spot_df["flags"],       'int32',
-                        {'contentType':'physicalMeasurement', 
-                         'description':'', 
-                         'long_name':'', 
-                         'source':'ATL24G', 
-                         'units':''})
+                        {'contentType':'modelResult', 
+                         'description':'bit 0 - max sensor depth exceeded', 
+                         'long_name':'Processing flags', 
+                         'source':'ATL03', 
+                         'units':'bit mask'})
 
             if "ensemble" in spot_df:
                 add_variable(beam_group, "class_ph", spot_df["ensemble"].astype(np.int16), 'int16',
-                            {'contentType':'physicalMeasurement', 
-                             'description':'', 
-                             'long_name':'', 
-                             'source':'ATL24G', 
-                             'units':''})
+                            {'contentType':'modelResult', 
+                             'description':'0 - unclassified, 1 - other, 40 - bathymetry, 41 - sea surface', 
+                             'long_name':'Photon classification', 
+                             'source':'ATL03', 
+                             'units':'scalar'})
             else:
                 add_variable(beam_group, "class_ph", spot_df["class_ph"].astype(np.int16), 'int16',
-                            {'contentType':'physicalMeasurement', 
-                             'description':'', 
-                             'long_name':'', 
-                             'source':'ATL24G', 
-                             'units':''})
+                            {'contentType':'modelResult', 
+                             'description':'0 - unclassified, 1 - other, 40 - bathymetry, 41 - sea surface', 
+                             'long_name':'Photon classification', 
+                             'source':'ATL03', 
+                             'units':'scalar'})
                 for classifier in input_files["classifiers"]:
-                    add_variable(beam_group, classifier, spot_df[classifier].astype(np.int16), 'int16',
-                                {'contentType':'physicalMeasurement', 
-                                'description':'', 
-                                'long_name':'', 
-                                'source':'ATL24G', 
-                                'units':''})
+                    try:
+                        add_variable(beam_group, classifier, spot_df[classifier].astype(np.int16), 'int16',
+                                    {'contentType':'modelResult', 
+                                    'description':'0 - unclassified, 1 - other, 40 - bathymetry, 41 - sea surface', 
+                                    'long_name':f'Photon subclassification by {classifier}', 
+                                    'source':'ATL03', 
+                                    'units':'scalar'})
+                    except Exception as e:
+                        print(f'Failed to add classifier <{classifier}>: {e}')
 
 
     print("HDF5 file written: " + atl24_filename)

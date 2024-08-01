@@ -73,8 +73,8 @@ else:
     epsg_prefix = "EPSG:327"# southern hemisphere
 transformer = Transformer.from_crs(f"{epsg_prefix}{info['utm_zone']}", "EPSG:7912", always_xy=True)
 data["geoloc_corr"] = data.apply(lambda row: transformer.transform(row['x_ph'], row['y_ph']), axis=1)
-data["longitude"] = data.apply(lambda row: row['geoloc_corr'][0], axis=1)
-data["latitude"] = data.apply(lambda row: row['geoloc_corr'][1], axis=1)
+data["lon_ph"] = data.apply(lambda row: row['geoloc_corr'][0], axis=1)
+data["lat_ph"] = data.apply(lambda row: row['geoloc_corr'][1], axis=1)
 
 # calculate subaqueous depth
 data["depth"] = 0.0

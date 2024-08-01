@@ -70,6 +70,8 @@ if not resource then
             userlog:alert(core.INFO, core.RTE_ERROR, string.format("request <%s> failed to retrieved single resource from CMR <%d>", rspq, #resources))
             cleanup(crenv, transaction_id)
             return
+        else
+            resource = resources[1]
         end
     else
         userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("request <%s> failed to make CMR request <%d>: %s", rspq, rc, rsps))
@@ -192,6 +194,11 @@ parms["oceaneyes"]["assetKd"] = parms["oceaneyes"]["assetKd"] or "viirsj1-s3"
 -- read ICESat-2 inputs
 -------------------------------------------------------
 local reader = icesat2.bathyreader(parms, resource, rspq, crenv.host_sandbox_directory, false)
+if not reader then
+    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create bathy reader", rspq))
+    cleanup(crenv, transaction_id)
+    return
+end
 local spot_mask = {} -- build spot mask using defaults/parsing from bathyreader (because reader will be destroyed)
 for spot = 1,icesat2.NUM_SPOTS do
     spot_mask[spot] = reader:spoton(spot)
@@ -312,7 +319,7 @@ runclassifier(output_files, timeout, "medianfilter", in_parallel)
 runclassifier(output_files, timeout, "cshelph", in_parallel)
 runclassifier(output_files, timeout, "bathypathfinder", in_parallel)
 runclassifier(output_files, timeout, "coastnet", in_parallel, "bash /coastnet/runner.sh")
-runclassifier(output_files, timeout, "pointnet2", false)
+runclassifier(output_files, timeout, "pointnet2", false, "bash /pointnet2/runner.sh")
 runclassifier(output_files, timeout, "openoceans", false)
 profile["atl24_endpoint"] = (time.gps() - endpoint_start_time) / 1000.0 -- capture endpoint timing
 userlog:alert(core.INFO, core.RTE_INFO, string.format("atl24 endpoint executed in %f seconds", profile["atl24_endpoint"]))
@@ -320,9 +327,10 @@ userlog:alert(core.INFO, core.RTE_INFO, string.format("atl24 endpoint executed i
 -------------------------------------------------------
 -- build final output
 -------------------------------------------------------
+local version, commit, environment, _launch, _duration, _packages = sys.version()
 local output_parms = parms[arrow.PARMS] or {
     path = string.gsub(resource, "ATL03", "ATL24"),
-    format = "hdf5",
+    format = "h5",
     as_geo = false
 }
 local writer_parms = {
@@ -335,7 +343,11 @@ local writer_parms = {
             input_files = output_files,
             output_parms = output_parms,
             atl24_filename = crenv.container_sandbox_mount.."/atl24.bin",
-            profile = profile
+            profile = profile,
+            version = version,
+            commit = commit,
+            environment = environment,
+            resource = resource
         }
     }
 }
