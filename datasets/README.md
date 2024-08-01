@@ -1,6 +1,6 @@
 ### SlideRule Plugins
 
-| Plugin    | Description                          |
+| Dataset   | Description                          |
 |-----------|--------------------------------------|
 | icesat2   | ICESat-2 customized data products    |
 | atlas     | ATLAS instrument raw data processing |
