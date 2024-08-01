@@ -82,7 +82,7 @@ void initlandsat(void)
     LuaEngine::indicate(LUA_LANDSAT_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s plugin initialized (%s)\n", LUA_LANDSAT_LIBNAME, LIBID);
+    print2term("%s package initialized (%s)\n", LUA_LANDSAT_LIBNAME, LIBID);
 }
 
 void deinitlandsat (void)

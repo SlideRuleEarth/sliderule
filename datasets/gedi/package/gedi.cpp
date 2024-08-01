@@ -108,7 +108,7 @@ void initgedi (void)
     LuaEngine::indicate(LUA_GEDI_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s plugin initialized (%s)\n", LUA_GEDI_LIBNAME, LIBID);
+    print2term("%s package initialized (%s)\n", LUA_GEDI_LIBNAME, LIBID);
 }
 
 void deinitgedi (void)

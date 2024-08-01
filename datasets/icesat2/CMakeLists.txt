@@ -1,6 +1,6 @@
-message (STATUS "Including gedi dataset")
+message (STATUS "Including icesat2 dataset")
 
-target_compile_definitions (slideruleLib PUBLIC __gedi__)
+target_compile_definitions (slideruleLib PUBLIC __icesat2__)
 
 target_sources (slideruleLib
     PRIVATE

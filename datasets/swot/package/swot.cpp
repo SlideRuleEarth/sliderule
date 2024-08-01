@@ -82,7 +82,7 @@ void initswot (void)
     LuaEngine::indicate(LUA_SWOT_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s plugin initialized (%s)\n", LUA_SWOT_LIBNAME, LIBID);
+    print2term("%s package initialized (%s)\n", LUA_SWOT_LIBNAME, LIBID);
 }
 
 void deinitswot (void)

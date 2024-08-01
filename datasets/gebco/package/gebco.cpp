@@ -82,7 +82,7 @@ void initgebco(void)
     LuaEngine::indicate(LUA_GEBCO_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s plugin initialized (%s)\n", LUA_GEBCO_LIBNAME, LIBID);
+    print2term("%s package initialized (%s)\n", LUA_GEBCO_LIBNAME, LIBID);
 }
 
 void deinitgebco(void)

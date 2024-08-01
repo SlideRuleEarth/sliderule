@@ -82,7 +82,7 @@ void initusgs3dep(void)
     LuaEngine::indicate(LUA_USGS3DEP_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s plugin initialized (%s)\n", LUA_USGS3DEP_LIBNAME, LIBID);
+    print2term("%s package initialized (%s)\n", LUA_USGS3DEP_LIBNAME, LIBID);
 }
 
 void deinitusgs3dep (void)
