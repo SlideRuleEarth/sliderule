@@ -164,7 +164,7 @@ option (ENABLE_GDAL_ERROR_REPORTING "Log GDAL errors to message log" OFF)
 
 option (USE_ARROW_PACKAGE "Include the Apache Arrow package" ON)
 option (USE_AWS_PACKAGE "Include the AWS package" ON)
-option (USE_CCSDS_PACKAGE "Include the CCSDS package" ON)
+option (USE_CCSDS_PACKAGE "Include the CCSDS package" OFF)
 option (USE_CRE_PACKAGE "Include the CRE package" ON)
 option (USE_GEO_PACKAGE "Include the GEO package" ON)
 option (USE_H5_PACKAGE "Include the HDF5 package" ON)

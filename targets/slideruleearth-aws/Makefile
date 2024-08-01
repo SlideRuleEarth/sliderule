@@ -41,15 +41,6 @@ BUILD = $(ROOT)/build
 STAGE = $(ROOT)/stage
 
 SLIDERULE_BUILD_DIR = $(BUILD)/sliderule
-TARGET_BUILD_DIR = $(BUILD)/target
-ICESAT2_BUILD_DIR = $(BUILD)/icesat2
-PGC_BUILD_DIR = $(BUILD)/pgc
-LANDSAT_BUILD_DIR = $(BUILD)/landsat
-GEDI_BUILD_DIR = $(BUILD)/gedi
-USGS3DEP_BUILD_DIR = $(BUILD)/usgs3dep
-OPENDATA_BUILD_DIR = $(BUILD)/opendata
-GEBCO_BUILD_DIR = $(BUILD)/gebco
-SWOT_BUILD_DIR = $(BUILD)/swot
 PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
@@ -98,28 +89,10 @@ DEBUG_CFG := -DCMAKE_BUILD_TYPE=Debug
 DEBUG_CFG += -DINSTALLDIR=$(INSTALL_DIR)
 DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 DEBUG_CFG += -DENABLE_ADDRESS_SANITIZER=ON
-DEBUG_CFG += -DUSE_ARROW_PACKAGE=ON
-DEBUG_CFG += -DUSE_AWS_PACKAGE=ON
-DEBUG_CFG += -DUSE_CCSDS_PACKAGE=ON
-DEBUG_CFG += -DUSE_CRE_PACKAGE=ON
-DEBUG_CFG += -DUSE_GEO_PACKAGE=ON
-DEBUG_CFG += -DUSE_H5_PACKAGE=ON
-DEBUG_CFG += -DUSE_LEGACY_PACKAGE=ON
-DEBUG_CFG += -DUSE_NETSVC_PACKAGE=ON
-DEBUG_CFG += -DUSE_PISTACHE_PACKAGE=ON
 DEBUG_CFG += $(USERCFG)
 
 RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
 RELEASE_CFG += -DINSTALLDIR=$(INSTALL_DIR)
-RELEASE_CFG += -DUSE_ARROW_PACKAGE=ON
-RELEASE_CFG += -DUSE_AWS_PACKAGE=ON
-RELEASE_CFG += -DUSE_CRE_PACKAGE=ON
-RELEASE_CFG += -DUSE_GEO_PACKAGE=ON
-RELEASE_CFG += -DUSE_H5_PACKAGE=ON
-RELEASE_CFG += -DUSE_NETSVC_PACKAGE=ON
-RELEASE_CFG += -DUSE_CCSDS_PACKAGE=OFF
-RELEASE_CFG += -DUSE_LEGACY_PACKAGE=OFF
-RELEASE_CFG += -DUSE_PISTACHE_PACKAGE=OFF
 RELEASE_CFG += $(USERCFG)
 
 ########################
@@ -130,61 +103,16 @@ all: sliderule
 
 prep: ## create temporary directories needed for build
 	mkdir -p $(SLIDERULE_BUILD_DIR)
-	mkdir -p $(TARGET_BUILD_DIR)
-	mkdir -p $(ICESAT2_BUILD_DIR)
-	mkdir -p $(PGC_BUILD_DIR)
-	mkdir -p $(LANDSAT_BUILD_DIR)
-	mkdir -p $(GEDI_BUILD_DIR)
-	mkdir -p $(USGS3DEP_BUILD_DIR)
-	mkdir -p $(OPENDATA_BUILD_DIR)
-	mkdir -p $(GEBCO_BUILD_DIR)
-	mkdir -p $(SWOT_BUILD_DIR)
 
 config-debug: prep ## configure the server for running locally with debug symbols, optimizations off, static analysis, and address sanitizer
 	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_TRACING=ON $(ROOT)
-	cd $(TARGET_BUILD_DIR)    && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/targets/slideruleearth-aws
-	cd $(ICESAT2_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/icesat2
-	cd $(PGC_BUILD_DIR)       && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/landsat
-	cd $(GEDI_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/gedi
-	cd $(USGS3DEP_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/usgs3dep
-	cd $(OPENDATA_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/opendata
-	cd $(GEBCO_BUILD_DIR)     && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/gebco
-	cd $(SWOT_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/swot
 
 config-release: prep ## configure server to run a release version locally
 	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(ROOT)
-	cd $(TARGET_BUILD_DIR)    && cmake $(RELEASE_CFG) $(ROOT)/targets/slideruleearth-aws
-	cd $(ICESAT2_BUILD_DIR)   && cmake $(RELEASE_CFG) $(ROOT)/plugins/icesat2
-	cd $(PGC_BUILD_DIR)       && cmake $(RELEASE_CFG) $(ROOT)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR)   && cmake $(RELEASE_CFG) $(ROOT)/plugins/landsat
-	cd $(GEDI_BUILD_DIR)      && cmake $(RELEASE_CFG) $(ROOT)/plugins/gedi
-	cd $(USGS3DEP_BUILD_DIR)  && cmake $(RELEASE_CFG) $(ROOT)/plugins/usgs3dep
-	cd $(OPENDATA_BUILD_DIR)  && cmake $(RELEASE_CFG) $(ROOT)/plugins/opendata
-	cd $(GEBCO_BUILD_DIR)     && cmake $(RELEASE_CFG) $(ROOT)/plugins/gebco
-	cd $(SWOT_BUILD_DIR)      && cmake $(RELEASE_CFG) $(ROOT)/plugins/swot
 
 sliderule: ## build the server using the local configuration
 	make -j8 -C $(SLIDERULE_BUILD_DIR)
 	make -C $(SLIDERULE_BUILD_DIR) install
-	make -j8 -C $(TARGET_BUILD_DIR)
-	make -C $(TARGET_BUILD_DIR) install
-	make -j8 -C $(ICESAT2_BUILD_DIR)
-	make -C $(ICESAT2_BUILD_DIR) install
-	make -j8 -C $(PGC_BUILD_DIR)
-	make -C $(PGC_BUILD_DIR) install
-	make -j8 -C $(LANDSAT_BUILD_DIR)
-	make -C $(LANDSAT_BUILD_DIR) install
-	make -j8 -C $(GEDI_BUILD_DIR)
-	make -C $(GEDI_BUILD_DIR) install
-	make -j8 -C $(USGS3DEP_BUILD_DIR)
-	make -C $(USGS3DEP_BUILD_DIR) install
-	make -j8 -C $(OPENDATA_BUILD_DIR)
-	make -C $(OPENDATA_BUILD_DIR) install
-	make -j8 -C $(GEBCO_BUILD_DIR)
-	make -C $(GEBCO_BUILD_DIR) install
-	make -j8 -C $(SWOT_BUILD_DIR)
-	make -C $(SWOT_BUILD_DIR) install
 
 run: ## run the server locally
 	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(INSTALL_DIR)/bin/sliderule $(ROOT)/scripts/apps/server.lua config.json
