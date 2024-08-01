@@ -1,6 +1,5 @@
-#################
-# CMake Options #
-#################
+cmake_minimum_required (VERSION 3.13.0) # The minimum CMake version is chosen to enable policy CMP0079
+project (SLIDERULE LANGUAGES CXX)
 
 # Squelch a warning when building on Win32/Cygwin
 set (CMAKE_LEGACY_CYGWIN_WIN32 0)
@@ -165,13 +164,11 @@ option (ENABLE_GDAL_ERROR_REPORTING "Log GDAL errors to message log" OFF)
 
 option (USE_ARROW_PACKAGE "Include the Apache Arrow package" ON)
 option (USE_AWS_PACKAGE "Include the AWS package" ON)
-option (USE_CCSDS_PACKAGE "Include the CCSDS package" OFF)
+option (USE_CCSDS_PACKAGE "Include the CCSDS package" ON)
 option (USE_CRE_PACKAGE "Include the CRE package" ON)
 option (USE_GEO_PACKAGE "Include the GEO package" ON)
 option (USE_H5_PACKAGE "Include the HDF5 package" ON)
-option (USE_LEGACY_PACKAGE "Include the Legacy package" OFF)
 option (USE_NETSVC_PACKAGE "Include the Network Services package" ON)
-option (USE_PISTACHE_PACKAGE "Include the Pistache package" OFF)
 
 # Platform Options #
 
@@ -180,7 +177,6 @@ option (ENABLE_TERMINAL "Instantiate terminal messages" ON)
 
 # Dataset Options #
 
-option (USE_ATLAS_DATASET "Include the ATLAS dataset" ON)
 option (USE_GEBCO_DATASET "Include the GEBCO dataset" ON)
 option (USE_GEDI_DATASET "Include the GEDI dataset" ON)
 option (USE_ICESAT2_DATASET "Include the ICESat2 dataset" ON)
@@ -344,16 +340,8 @@ if(${USE_H5_PACKAGE})
     add_subdirectory (packages/h5)
 endif()
 
-if(${USE_LEGACY_PACKAGE})
-    add_subdirectory (packages/legacy)
-endif()
-
 if(${USE_NETSVC_PACKAGE})
     add_subdirectory (packages/netsvc)
-endif()
-
-if(${USE_PISTACHE_PACKAGE})
-    add_subdirectory (packages/pistache)
 endif()
 
 # Datasets #

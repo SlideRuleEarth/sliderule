@@ -67,10 +67,6 @@
 #include "netsvc.h"
 #endif
 
-#ifdef __pistache__
-#include "pistache.h"
-#endif
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <dlfcn.h>
