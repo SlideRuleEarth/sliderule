@@ -108,15 +108,17 @@ data_df['x'] = spot_df['x_ph']
 data_df['y'] = spot_df['y_ph']
 data_df['elev'] = spot_df['ortho_h']
 data_df['signal_conf_ph'] = spot_df['max_signal_conf']
+data_df['surface_h'] = spot_df['surface_h']
 
 # Add a pointnet specific class column
 data_df['class'] = np.full((len(data_df)), 3)                               # initialize everything to 3 (pointnet noise)
 data_df.loc[spot_df.class_ph == 41, 'class'] = 5                            # change sea surface (41) to 5 (pointnet sea surface)
 
 # Remove photons above sea surfaace
-sea_surface_df = data_df[data_df['class'] == 5]                             # get the subset of the sea_surface_df where class_ph is sea surface
-average_sea_surface_level = sea_surface_df['elev'].mean()                   # take the average of the geoid corrected height of the sea surface photons
-data_df = data_df[data_df['elev'] < average_sea_surface_level]
+#sea_surface_df = data_df[data_df['class'] == 5]                             # get the subset of the sea_surface_df where class_ph is sea surface
+#average_sea_surface_level = sea_surface_df['elev'].mean()                   # take the average of the geoid corrected height of the sea surface photons
+#data_df = data_df[data_df['elev'] < average_sea_surface_level]
+data_df = data_df[data_df['elev'] < data_df['surface_h']]
 
 # Remove photons where the max_signal_conf doesn't meet minimum threshold
 data_df = data_df[data_df['signal_conf_ph'] >= minSignalConf]
