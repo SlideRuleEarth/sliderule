@@ -1,55 +1,55 @@
-# ATLAS SlideRule Plugin top-level CMake build script
+message (STATUS "Including atlas dataset")
 
-project (ATLAS LANGUAGES CXX)
-cmake_minimum_required (VERSION 3.13.0) # The minimum CMake version is chosen to enable policy CMP0079
-include(${CMAKE_SOURCE_DIR}/../../project-config.cmake)
+target_compile_definitions (slideruleLib PUBLIC __atlas__)
 
-################
-# ATLAS Plugin #
-################
-
-add_library (atlas MODULE "")
-
-set_target_properties (atlas PROPERTIES OUTPUT_NAME atlas)
-set_target_properties (atlas PROPERTIES PREFIX "")
-
-# Prerequisites #
-find_package (Lua "5.3")
-
-# Compile Definitions #
-target_compile_definitions (atlas PUBLIC BINID="${TGTVER}")
-target_compile_definitions (atlas PUBLIC __gnu__)
-
-# Source Files #
-target_sources(atlas
+target_sources(slideruleLib
     PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/atlas.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/ItosRecord.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/ItosRecordParser.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/AtlasFileWriter.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/AtlasHistogram.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/AltimetryHistogram.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/TimeTagHistogram.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/TimeTagProcessorModule.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/AltimetryProcessorModule.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/MajorFrameProcessorModule.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/TimeProcessorModule.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/LaserProcessorModule.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/CmdEchoProcessorModule.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/DiagLogProcessorModule.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/HstvsSimulator.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/SafeString.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/atlas.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/ItosRecord.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/ItosRecordParser.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/AtlasFileWriter.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/AtlasHistogram.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/AltimetryHistogram.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/TimeTagHistogram.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/TimeTagProcessorModule.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/AltimetryProcessorModule.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/MajorFrameProcessorModule.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/TimeProcessorModule.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/LaserProcessorModule.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/CmdEchoProcessorModule.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/DiagLogProcessorModule.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/HstvsSimulator.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/SafeString.cpp
 )
 
-# Include Directories #
-target_include_directories (atlas
+target_include_directories (slideruleLib
     PUBLIC
-        ${INSTALLDIR}/include/sliderule
-        ${LUA_INCLUDE_DIR}
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>/plugin
+        $<INSTALL_INTERFACE:${INCDIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
 )
 
-# Script Installation #
+install (
+    FILES
+        ${CMAKE_CURRENT_LIST_DIR}/package/atlas.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/ItosRecord.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/ItosRecordParser.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/AtlasFileWriter.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/AtlasHistogram.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/AltimetryHistogram.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/TimeTagHistogram.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/TimeTagProcessorModule.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/AltimetryProcessorModule.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/MajorFrameProcessorModule.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/TimeProcessorModule.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/LaserProcessorModule.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/CmdEchoProcessorModule.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/DiagLogProcessorModule.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/HstvsSimulator.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/SafeString.h
+    DESTINATION
+        ${INCDIR}/atlas
+)
+
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl00.lua
@@ -57,5 +57,3 @@ install (
         ${CONFDIR}/api
 )
 
-# Plugin Installation #
-install (TARGETS atlas LIBRARY DESTINATION ${CONFDIR})
