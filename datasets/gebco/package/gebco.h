@@ -44,7 +44,7 @@
 
 extern "C" {
 void initgebco(void);
-void deinigebco(void);
+void deinitgebco(void);
 }
 
 #endif  /* __gebco_plugin__ */

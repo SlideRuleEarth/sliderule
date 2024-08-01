@@ -49,22 +49,11 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * opendata_version
- *----------------------------------------------------------------------------*/
-int opendata_version (lua_State* L)
-{
-    lua_pushstring(L, BINID);
-    lua_pushstring(L, BUILDINFO);
-    return 2;
-}
-
-/*----------------------------------------------------------------------------
  * opendata_open
  *----------------------------------------------------------------------------*/
 int opendata_open (lua_State *L)
 {
     static const struct luaL_Reg opendata_functions[] = {
-        {"version",         opendata_version},
         {NULL,              NULL}
     };
 
@@ -92,10 +81,10 @@ void initopendata(void)
     LuaEngine::extend(LUA_OPENDATA_LIBNAME, opendata_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_OPENDATA_LIBNAME, BINID);
+    LuaEngine::indicate(LUA_OPENDATA_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s plugin initialized (%s)\n", LUA_OPENDATA_LIBNAME, BINID);
+    print2term("%s plugin initialized (%s)\n", LUA_OPENDATA_LIBNAME, LIBID);
 }
 
 void deinitopendata (void)

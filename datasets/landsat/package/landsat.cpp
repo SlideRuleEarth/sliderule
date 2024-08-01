@@ -48,22 +48,11 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * arcticdem_version
- *----------------------------------------------------------------------------*/
-int landsat_version (lua_State* L)
-{
-    lua_pushstring(L, BINID);
-    lua_pushstring(L, BUILDINFO);
-    return 2;
-}
-
-/*----------------------------------------------------------------------------
  * arcticdem_open
  *----------------------------------------------------------------------------*/
 int landsat_open (lua_State *L)
 {
     static const struct luaL_Reg landsat_functions[] = {
-        {"version",         landsat_version},
         {NULL,              NULL}
     };
 
@@ -90,10 +79,10 @@ void initlandsat(void)
     LuaEngine::extend(LUA_LANDSAT_LIBNAME, landsat_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_LANDSAT_LIBNAME, BINID);
+    LuaEngine::indicate(LUA_LANDSAT_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s plugin initialized (%s)\n", LUA_LANDSAT_LIBNAME, BINID);
+    print2term("%s plugin initialized (%s)\n", LUA_LANDSAT_LIBNAME, LIBID);
 }
 
 void deinitlandsat (void)

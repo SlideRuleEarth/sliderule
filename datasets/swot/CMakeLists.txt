@@ -1,77 +1,33 @@
-# SWOT SlideRule Plugin top-level CMake build script
+message (STATUS "Including swot dataset")
 
-cmake_minimum_required (VERSION 3.13.0) # The minimum CMake version is chosen to enable policy CMP0079
-project (SWOT LANGUAGES CXX)
-include(${CMAKE_SOURCE_DIR}/../../project-config.cmake)
+target_compile_definitions (slideruleLib PUBLIC __swot__)
 
-###############
-# SWOT Plugin #
-###############
-
-add_library (swot MODULE "")
-
-set_target_properties (swot PROPERTIES OUTPUT_NAME swot)
-set_target_properties (swot PROPERTIES PREFIX "")
-set_target_properties (swot PROPERTIES CXX_STANDARD ${CXX_VERSION})
-
-# Prerequisites #
-find_package (Lua "5.3")
-find_package (GDAL)
-
-# Build Information #
-execute_process (COMMAND git --work-tree ${PROJECT_SOURCE_DIR}/../.. --git-dir ${PROJECT_SOURCE_DIR}/../../.git describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE BUILDINFO)
-string(REGEX REPLACE "\n$" "" BUILDINFO "${BUILDINFO}")
-target_compile_definitions (swot PUBLIC BUILDINFO="${BUILDINFO}")
-
-# Compile Definitions #
-target_compile_definitions (swot PUBLIC BINID="${TGTVER}")
-target_compile_options (swot PUBLIC -Wall) # turn on "all" warnings
-target_compile_options (swot PUBLIC -Wextra) # turn on "extra" warnings
-target_compile_options (swot PUBLIC -Wreorder) # turn on warning for object initializer list order enforcement
-target_compile_options (swot PUBLIC -Wshadow) # turn on warning for inner scope var with same name as outer scope var
-if(ENABLE_ADDRESS_SANITIZER)
-	target_compile_options (swot PUBLIC -fsanitize=address -fno-omit-frame-pointer)
-endif()
-
-# Address Sanitizer Option #
-if(ENABLE_ADDRESS_SANITIZER)
-	target_link_options (swot PUBLIC -fsanitize=address)
-endif()
-
-# Source Files #
-target_sources(swot
+target_sources(slideruleLib
     PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/swot.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/SwotL2Reader.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/plugin/SwotParms.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/swot.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/SwotL2Reader.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/SwotParms.cpp
 )
 
-# Include Directories #
-target_include_directories (swot
+target_include_directories (slideruleLib
     PUBLIC
-        ${INSTALLDIR}/include/sliderule
-        ${LUA_INCLUDE_DIR}
-        ${GDAL_INCLUDE_DIR}
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>/plugin
+        $<INSTALL_INTERFACE:${INCDIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>/package
 )
 
-# Script Installation #
+install (
+    FILES
+        ${CMAKE_CURRENT_LIST_DIR}/package/swot.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/SwotL2Reader.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/SwotParms.h
+    DESTINATION
+        ${INCDIR}/swot
+)
+
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/swotl2.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/swotl2p.lua
     DESTINATION
         ${CONFDIR}/api
-)
-
-# Plugin Installation #
-install (TARGETS swot LIBRARY DESTINATION ${CONFDIR})
-
-install (
-    FILES
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/swot.h
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/SwotL2Reader.h
-        ${CMAKE_CURRENT_LIST_DIR}/plugin/SwotParms.h
-    DESTINATION
-        ${INSTALLDIR}/include/sliderule/swot
 )

@@ -346,8 +346,36 @@ endif()
 
 # Datasets #
 
-if(${USE_ATLAS_DATASET})
-    add_subdirectory (datasets/atlas)
+if(${USE_GEBCO_DATASET})
+    add_subdirectory (datasets/gebco)
+endif()
+
+if(${USE_GEDI_DATASET})
+    add_subdirectory (datasets/gedi)
+endif()
+
+if(${USE_ICESAT2_DATASET})
+    add_subdirectory (datasets/icesat2)
+endif()
+
+if(${USE_LANDSAT_DATASET})
+    add_subdirectory (datasets/landsat)
+endif()
+
+if(${USE_OPENDATA_DATASET})
+    add_subdirectory (datasets/opendata)
+endif()
+
+if(${USE_PGC_DATASET})
+    add_subdirectory (datasets/pgc)
+endif()
+
+if(${USE_SWOT_DATASET})
+    add_subdirectory (datasets/swot)
+endif()
+
+if(${USE_USGS3DEP_DATASET})
+    add_subdirectory (datasets/usgs3dep)
 endif()
 
 # Scripts #

@@ -45,6 +45,7 @@
 
 extern "C" {
 void initswot (void);
+void deinitswot (void);
 }
 
 #endif  /* __swot_plugin__ */

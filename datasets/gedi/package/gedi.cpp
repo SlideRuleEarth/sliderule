@@ -53,16 +53,6 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * gedi_version
- *----------------------------------------------------------------------------*/
-int gedi_version (lua_State* L)
-{
-    lua_pushstring(L, BINID);
-    lua_pushstring(L, BUILDINFO);
-    return 2;
-}
-
-/*----------------------------------------------------------------------------
  * gedi_open
  *----------------------------------------------------------------------------*/
 int gedi_open (lua_State *L)
@@ -72,7 +62,6 @@ int gedi_open (lua_State *L)
         {"gedi01b",             Gedi01bReader::luaCreate},
         {"gedi02a",             Gedi02aReader::luaCreate},
         {"gedi04a",             Gedi04aReader::luaCreate},
-        {"version",             gedi_version},
         {NULL,                  NULL}
     };
 
@@ -116,10 +105,10 @@ void initgedi (void)
     LuaEngine::extend(LUA_GEDI_LIBNAME, gedi_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_GEDI_LIBNAME, BINID);
+    LuaEngine::indicate(LUA_GEDI_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s plugin initialized (%s)\n", LUA_GEDI_LIBNAME, BINID);
+    print2term("%s plugin initialized (%s)\n", LUA_GEDI_LIBNAME, LIBID);
 }
 
 void deinitgedi (void)

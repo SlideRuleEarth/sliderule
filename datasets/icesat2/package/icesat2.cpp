@@ -47,16 +47,6 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * icesat2_version
- *----------------------------------------------------------------------------*/
-int icesat2_version (lua_State* L)
-{
-    lua_pushstring(L, BINID);
-    lua_pushstring(L, BUILDINFO);
-    return 2;
-}
-
-/*----------------------------------------------------------------------------
  * icesat2_open
  *----------------------------------------------------------------------------*/
 int icesat2_open (lua_State *L)
@@ -76,7 +66,6 @@ int icesat2_open (lua_State *L)
         {"ut_atl06",            UT_Atl06Dispatch::luaCreate},
         {"ut_atl03",            UT_Atl03Reader::luaCreate},
 #endif
-        {"version",             icesat2_version},
         {NULL,                  NULL}
     };
 
@@ -149,10 +138,10 @@ void initicesat2 (void)
     LuaEngine::extend(LUA_ICESAT2_LIBNAME, icesat2_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_ICESAT2_LIBNAME, BINID);
+    LuaEngine::indicate(LUA_ICESAT2_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s plugin initialized (%s)\n", LUA_ICESAT2_LIBNAME, BINID);
+    print2term("%s plugin initialized (%s)\n", LUA_ICESAT2_LIBNAME, LIBID);
 }
 
 void deiniticesat2 (void)

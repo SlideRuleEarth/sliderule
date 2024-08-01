@@ -59,12 +59,40 @@
 #include "h5.h"
 #endif
 
-#ifdef __legacy__
-#include "legacy.h"
-#endif
-
 #ifdef __netsvc__
 #include "netsvc.h"
+#endif
+
+#ifdef __gebco__
+#include "gebco.h"
+#endif
+
+#ifdef __gedi__
+#include "gedi.h"
+#endif
+
+#ifdef __icesat2__
+#include "icesat2.h"
+#endif
+
+#ifdef __landsat__
+#include "landsat.h"
+#endif
+
+#ifdef __opendata__
+#include "opendata.h"
+#endif
+
+#ifdef __pgc__
+#include "pgc.h"
+#endif
+
+#ifdef __swot__
+#include "swot.h"
+#endif
+
+#ifdef __usgs3dep__
+#include "usgs3dep.h"
 #endif
 
 #include <stdlib.h>
@@ -316,16 +344,40 @@ int main (int argc, char* argv[])
         inith5();
     #endif
 
-    #ifdef __legacy__
-        initlegacy();
-    #endif
-
     #ifdef __netsvc__
         initnetsvc();
     #endif
 
-    #ifdef __pistache__
-        initpistache();
+    #ifdef __gebco__
+        initgebco();
+    #endif
+
+    #ifdef __gedi__
+        initgedi();
+    #endif
+
+    #ifdef __icesat2__
+        initicesat2();
+    #endif
+
+    #ifdef __landsat__
+        initlandsat();
+    #endif
+
+    #ifdef __opendata__
+        initopendata();
+    #endif
+
+    #ifdef __pgc__
+        initpgc();
+    #endif
+
+    #ifdef __swot__
+        initswot();
+    #endif
+
+    #ifdef __usgs3dep__
+        initusgs3dep();
     #endif
 
     /* Load Plugins */
@@ -364,16 +416,41 @@ int main (int argc, char* argv[])
     ulplugins();
 
     /* Clean Up Built-In Packages */
-    #ifdef __pistache__
-        deinitpistache();
+
+    #ifdef __gebco__
+        deinitgebco();
+    #endif
+
+    #ifdef __gedi__
+        deinitgedi();
+    #endif
+
+    #ifdef __icesat2__
+        deiniticesat2();
+    #endif
+
+    #ifdef __landsat__
+        deinitlandsat();
+    #endif
+
+    #ifdef __opendata__
+        deinitopendata();
+    #endif
+
+    #ifdef __pgc__
+        deinitpgc();
+    #endif
+
+    #ifdef __swot__
+        deinitswot();
+    #endif
+
+    #ifdef __usgs3dep__
+        deinitusgs3dep();
     #endif
 
     #ifdef __netsvc__
         deinitnetsvc();
-    #endif
-
-    #ifdef __legacy__
-        deinitlegacy();
     #endif
 
     #ifdef __h5__

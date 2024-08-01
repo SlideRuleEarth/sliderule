@@ -59,7 +59,6 @@ if __legacy__ then
     runner.script(td .. "table.lua")
     runner.script(td .. "timelib.lua")
     runner.script(td .. "ccsds_packetizer.lua")
-    runner.script(td .. "cfs_interface.lua")
     runner.script(td .. "record_dispatcher.lua")
     runner.script(td .. "limit_dispatch.lua")
 end
@@ -108,7 +107,7 @@ if __landsat__ and incloud then
     runner.script(landsat_td .. "landsat_reader.lua")
 end
 
--- Run usgs3dep Plugin Self Tests
+-- Run USGS3DEP Plugin Self Tests
 if __usgs3dep__ and incloud then
     local usg2dep_td = td .. "../../plugins/usgs3dep/selftests/"
     runner.script(usg2dep_td .. "usgs3dep_reader.lua")

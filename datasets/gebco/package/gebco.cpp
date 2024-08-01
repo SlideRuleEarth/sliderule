@@ -48,22 +48,11 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * gebco_version
- *----------------------------------------------------------------------------*/
-int gebco_version (lua_State* L)
-{
-    lua_pushstring(L, BINID);
-    lua_pushstring(L, BUILDINFO);
-    return 2;
-}
-
-/*----------------------------------------------------------------------------
  * gebco_open
  *----------------------------------------------------------------------------*/
 int gebco_open (lua_State *L)
 {
     static const struct luaL_Reg gebco_functions[] = {
-        {"version",         gebco_version},
         {NULL,              NULL}
     };
 
@@ -90,10 +79,10 @@ void initgebco(void)
     LuaEngine::extend(LUA_GEBCO_LIBNAME, gebco_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_GEBCO_LIBNAME, BINID);
+    LuaEngine::indicate(LUA_GEBCO_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s plugin initialized (%s)\n", LUA_GEBCO_LIBNAME, BINID);
+    print2term("%s plugin initialized (%s)\n", LUA_GEBCO_LIBNAME, LIBID);
 }
 
 void deinitgebco(void)

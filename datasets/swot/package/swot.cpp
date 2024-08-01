@@ -47,16 +47,6 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * swot_version
- *----------------------------------------------------------------------------*/
-int swot_version (lua_State* L)
-{
-    lua_pushstring(L, BINID);
-    lua_pushstring(L, BUILDINFO);
-    return 2;
-}
-
-/*----------------------------------------------------------------------------
  * swot_open
  *----------------------------------------------------------------------------*/
 int swot_open (lua_State *L)
@@ -64,7 +54,6 @@ int swot_open (lua_State *L)
     static const struct luaL_Reg swot_functions[] = {
         {"parms",               SwotParms::luaCreate},
         {"swotl2",              SwotL2Reader::luaCreate},
-        {"version",             swot_version},
         {NULL,                  NULL}
     };
 
@@ -90,10 +79,10 @@ void initswot (void)
     LuaEngine::extend(LUA_SWOT_LIBNAME, swot_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_SWOT_LIBNAME, BINID);
+    LuaEngine::indicate(LUA_SWOT_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s plugin initialized (%s)\n", LUA_SWOT_LIBNAME, BINID);
+    print2term("%s plugin initialized (%s)\n", LUA_SWOT_LIBNAME, LIBID);
 }
 
 void deinitswot (void)

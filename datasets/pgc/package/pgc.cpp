@@ -53,22 +53,11 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * pgc_version
- *----------------------------------------------------------------------------*/
-int pgc_version (lua_State* L)
-{
-    lua_pushstring(L, BINID);
-    lua_pushstring(L, BUILDINFO);
-    return 2;
-}
-
-/*----------------------------------------------------------------------------
  * pgc_open
  *----------------------------------------------------------------------------*/
 int pgc_open (lua_State *L)
 {
     static const struct luaL_Reg pgc_functions[] = {
-        {"version",         pgc_version},
         {NULL,              NULL}
     };
 
@@ -103,10 +92,10 @@ void initpgc(void)
     LuaEngine::extend(LUA_PGC_LIBNAME, pgc_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_PGC_LIBNAME, BINID);
+    LuaEngine::indicate(LUA_PGC_LIBNAME, LIBID);
 
     /* Display Status */
-    print2term("%s plugin initialized (%s)\n", LUA_PGC_LIBNAME, BINID);
+    print2term("%s plugin initialized (%s)\n", LUA_PGC_LIBNAME, LIBID);
 }
 
 void deinitpgc (void)

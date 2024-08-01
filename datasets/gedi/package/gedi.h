@@ -51,6 +51,7 @@
 
 extern "C" {
 void initgedi (void);
+void deinitgedi (void);
 }
 
 #endif  /* __gediplugin__ */
