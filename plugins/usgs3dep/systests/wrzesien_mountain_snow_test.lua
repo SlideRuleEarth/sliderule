@@ -11,15 +11,13 @@ local json = require("json")
 
 local assets = asset.loaddir()
 
-local _,td = runner.srcscript()
-local geojsonfile = td.."../data/wrzesien_mountain_snow_sieve_catalog.geojson"
+local geojsonfile = "/data/3dep/wrzesien_mountain_snow_sieve_catalog.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
 
 
-local _,td = runner.srcscript()
-local poifile = td.."../data/wrzesien_snow_poi.txt"
+local poifile = "/data/3dep/wrzesien_snow_poi.txt"
 local f = io.open(poifile, "r")
 -- read in array of POI from file
 local arr = {}
@@ -48,10 +46,10 @@ print(string.format("\n-------------------------------------------------\nusgs3d
 local demType = "usgs3dep-1meter-dem"
 
 -- local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents }))
--- local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, t0=t0str, t1=t1str, catalog = contents }))
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, t0=t0str, t1=t1str, catalog = contents }))
 
 -- local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", single_stop = true, radius = 0, catalog = contents }))
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", single_stop = true, radius = 0, t0=t0str, t1=t1str, catalog = contents }))
+-- local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", single_stop = true, radius = 0, t0=t0str, t1=t1str, catalog = contents }))
 
 local failedRead = 0
 local samplesCnt = 0
@@ -60,7 +58,6 @@ local errorChecking = true
 local starttime = time.latch();
 
 for i=1,#arr do
--- for i=1,  50000 do
     local  lon = arr[i][1]
     local  lat = arr[i][2]
     local  height = 0
@@ -91,7 +88,7 @@ end
 local stoptime = time.latch();
 local dtime = stoptime - starttime
 
-print(string.format("\nSamples: %d, failedRead: %d", samplesCnt, failedRead))
+print(string.format("Samples: %d, failedRead: %d", samplesCnt, failedRead))
 print(string.format("ExecTime: %f", dtime))
 
 sys.quit(0)

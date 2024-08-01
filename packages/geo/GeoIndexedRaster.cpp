@@ -52,6 +52,9 @@ const char* GeoIndexedRaster::FLAGS_TAG = "Fmask";
 const char* GeoIndexedRaster::VALUE_TAG = "Value";
 const char* GeoIndexedRaster::DATE_TAG  = "datetime";
 
+const int GeoIndexedRaster::MAX_FINDER_THREADS = std::thread::hardware_concurrency() > 8 ? std::thread::hardware_concurrency() : 8;
+const int GeoIndexedRaster::MIN_FEATURES_PER_FINDER_THREAD = 20;
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -234,7 +237,7 @@ uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t g
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::~GeoIndexedRaster(void)
 {
-    mlog(INFO, "onlyFirst: %lu, fullSearch: %lu, findRastersCalls: %lu, allSamples: %lu\n",
+    mlog(DEBUG, "onlyFirst: %lu, fullSearch: %lu, findRastersCalls: %lu, allSamples: %lu\n",
                 onlyFirstCount, fullSearchCount, findRastersCount, allSamplesCount);
 
     delete [] findersRange;
@@ -490,7 +493,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
         }
 
         GDALClose((GDALDatasetH)dset);
-        mlog(INFO, "Loaded %lu index file features/rasters from: %s", featuresList.size(), newFile.c_str());
+        mlog(DEBUG, "Loaded %lu index file features/rasters from: %s", featuresList.size(), newFile.c_str());
     }
     catch (const RunTimeException &e)
     {
@@ -1034,23 +1037,28 @@ void GeoIndexedRaster::setFindersRange(void)
     else
     {
         numFinders = std::min(static_cast<uint32_t>(MAX_FINDER_THREADS), features/minFeaturesPerThread);
-        const uint32_t featuresPerThread = features / numFinders;
 
+        /* Ensure at least two threads if features > minFeaturesPerThread */
+        if(numFinders == 1)
+        {
+            numFinders = 2;
+        }
+
+        const uint32_t featuresPerThread = features / numFinders;
+        uint32_t remainingFeatures = features % numFinders;
+
+        uint32_t start = 0;
         for(uint32_t i = 0; i < numFinders; i++)
         {
-            findersRange[i].start_indx = i * featuresPerThread;
-            findersRange[i].end_indx = (i == numFinders - 1) ? features : (i + 1) * featuresPerThread;
+            findersRange[i].start_indx = start;
+            findersRange[i].end_indx = start + featuresPerThread + (remainingFeatures > 0 ? 1 : 0);
+            start = findersRange[i].end_indx;
+            if (remainingFeatures > 0)
+            {
+                remainingFeatures--;
+            }
         }
     }
-
-#if 0
-    print2term("numFinders: %u\n", numFinders);
-    for(uint32_t i = 0; i < numFinders; i++)
-    {
-        print2term("Finder thread %u, range: %u - %u\n", i, findersRange[i].start_indx, findersRange[i].end_indx);
-    }
-#endif
-
 }
 
 
