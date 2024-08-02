@@ -56,8 +56,8 @@ class GeoIndexedRaster: public RasterObject
         static const int   MAX_CACHE_SIZE     =  20;
         static const int   MAX_READER_THREADS = 200;
 
-        static const int   MAX_FINDER_THREADS;
-        static const int   MIN_FEATURES_PER_FINDER_THREAD;
+        static const int   MAX_FINDER_THREADS = 16;
+        static const int   MIN_FEATURES_PER_FINDER_THREAD = 20;
 
         static const char* FLAGS_TAG;
         static const char* VALUE_TAG;

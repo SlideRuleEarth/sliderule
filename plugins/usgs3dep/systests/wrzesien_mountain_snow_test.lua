@@ -45,9 +45,7 @@ print(string.format("\n-------------------------------------------------\nusgs3d
 
 local demType = "usgs3dep-1meter-dem"
 
--- local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents }))
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, t0=t0str, t1=t1str, catalog = contents }))
-
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", single_stop = false, radius = 0, catalog = contents }))
 -- local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", single_stop = true, radius = 0, catalog = contents }))
 -- local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", single_stop = true, radius = 0, t0=t0str, t1=t1str, catalog = contents }))
 

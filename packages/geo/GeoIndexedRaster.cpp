@@ -52,9 +52,6 @@ const char* GeoIndexedRaster::FLAGS_TAG = "Fmask";
 const char* GeoIndexedRaster::VALUE_TAG = "Value";
 const char* GeoIndexedRaster::DATE_TAG  = "datetime";
 
-const int GeoIndexedRaster::MAX_FINDER_THREADS = std::thread::hardware_concurrency() > 8 ? std::thread::hardware_concurrency() : 8;
-const int GeoIndexedRaster::MIN_FEATURES_PER_FINDER_THREAD = 20;
-
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
