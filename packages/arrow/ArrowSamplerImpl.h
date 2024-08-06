@@ -64,7 +64,7 @@ class ArrowSamplerImpl
         ~ArrowSamplerImpl         (void);
 
         void processInputFile     (const char* file_path, std::vector<ArrowSampler::point_info_t*>& points);
-        bool processSamples       (ArrowSampler::sampler_t* sampler);
+        bool processSamples       (ArrowSampler::batch_sampler_t* sampler);
         void createOutpuFiles     (void);
 
     private:
@@ -104,8 +104,8 @@ class ArrowSamplerImpl
         void                          getGeoPoints            (std::vector<ArrowSampler::point_info_t*>& points);
         std::shared_ptr<arrow::Table> inputFileToTable        (const std::vector<const char*>& columnNames = {});
         std::shared_ptr<arrow::Table> addNewColumns           (const std::shared_ptr<arrow::Table>& table);
-        bool                          makeColumnsWithLists    (ArrowSampler::sampler_t* sampler);
-        bool                          makeColumnsWithOneSample(ArrowSampler::sampler_t* sampler);
+        bool                          makeColumnsWithLists    (ArrowSampler::batch_sampler_t* sampler);
+        bool                          makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* sampler);
         static RasterSample*          getFirstValidSample     (ArrowSampler::sample_list_t* slist);
         static void                   tableToParquet          (const std::shared_ptr<arrow::Table>& table,
                                                                const char* file_path);

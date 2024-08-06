@@ -108,7 +108,7 @@ void ArrowSamplerImpl::processInputFile(const char* file_path, std::vector<Arrow
 /*----------------------------------------------------------------------------
 * processSamples
 *----------------------------------------------------------------------------*/
-bool ArrowSamplerImpl::processSamples(ArrowSampler::sampler_t* sampler)
+bool ArrowSamplerImpl::processSamples(ArrowSampler::batch_sampler_t* sampler)
 {
     const ArrowParms* parms = arrowSampler->getParms();
     bool  status = false;
@@ -300,7 +300,7 @@ void ArrowSamplerImpl::getXYPoints(std::vector<ArrowSampler::point_info_t*>& poi
         ArrowSampler::point_info_t* pinfo = new ArrowSampler::point_info_t({x, y, 0.0});
         points.push_back(pinfo);
     }
-    mlog(INFO, "Read %ld points from file", points.size());
+    mlog(DEBUG, "Read %ld points from file", points.size());
 }
 
 /*----------------------------------------------------------------------------
@@ -413,7 +413,7 @@ std::shared_ptr<arrow::Table> ArrowSamplerImpl::addNewColumns(const std::shared_
 /*----------------------------------------------------------------------------
 * makeColumnsWithLists
 *----------------------------------------------------------------------------*/
-bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::sampler_t* sampler)
+bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampler)
 {
     auto* pool = arrow::default_memory_pool();
     RasterObject* robj = sampler->robj;
@@ -596,7 +596,7 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::sampler_t* sampler)
 /*----------------------------------------------------------------------------
 * makeColumnsWithOneSample
 *----------------------------------------------------------------------------*/
-bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::sampler_t* sampler)
+bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* sampler)
 {
     auto* pool = arrow::default_memory_pool();
     RasterObject* robj = sampler->robj;
@@ -933,8 +933,8 @@ std::string ArrowSamplerImpl::createFileMap(void)
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
 
     /* Serialize into JSON */
-    const std::vector<ArrowSampler::sampler_t*>& samplers = arrowSampler->getSamplers();
-    for(ArrowSampler::sampler_t* sampler : samplers)
+    const std::vector<ArrowSampler::batch_sampler_t*>& samplers = arrowSampler->getBatchSamplers();
+    for(ArrowSampler::batch_sampler_t* sampler : samplers)
     {
         rapidjson::Value asset_list_json(rapidjson::kArrayType);
 

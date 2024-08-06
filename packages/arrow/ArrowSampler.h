@@ -68,7 +68,6 @@ class ArrowSampler: public LuaObject
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
@@ -90,7 +89,7 @@ class ArrowSampler: public LuaObject
         } point_info_t;
 
         typedef List<RasterSample*> sample_list_t;
-        typedef struct Sampler
+        typedef struct BatchSampler
         {
             const char*                  rkey;
             RasterObject*                robj;
@@ -99,22 +98,38 @@ class ArrowSampler: public LuaObject
             std::set<uint64_t>           file_ids;
             std::vector<std::pair<uint64_t, const char*>> filemap;
 
-            explicit Sampler (const char* _rkey, RasterObject* _robj, ArrowSampler* _obj);
-                    ~Sampler (void);
-            void     clearSamples (void);
-        } sampler_t;
+            explicit BatchSampler (const char* _rkey, RasterObject* _robj, ArrowSampler* _obj);
+                    ~BatchSampler (void);
+        } batch_sampler_t;
+
+        typedef struct
+        {
+            uint32_t   start_indx;
+            uint32_t   end_indx;
+        } reader_range_t;
+
+        typedef struct Reader
+        {
+            RasterObject*               robj;
+            ArrowSampler*               obj;
+            reader_range_t              range;
+            std::vector<sample_list_t*> samples;
+
+            explicit Reader (RasterObject* _robj, ArrowSampler* _obj);
+                    ~Reader (void);
+        } reader_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int                     luaCreate      (lua_State* L);
-        static void                    init           (void);
-        static void                    deinit         (void);
-        const ArrowParms*              getParms       (void);
-        const char*                    getDataFile    (void);
-        const char*                    getMetadataFile(void);
-        const std::vector<sampler_t*>& getSamplers    (void);
+        static int                           luaCreate       (lua_State* L);
+        static void                          init            (void);
+        static void                          deinit          (void);
+        const ArrowParms*                    getParms        (void);
+        const char*                          getDataFile     (void);
+        const char*                          getMetadataFile (void);
+        const std::vector<batch_sampler_t*>& getBatchSamplers(void);
 
     private:
 
@@ -126,28 +141,31 @@ class ArrowSampler: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                       active;
-        Thread*                    mainPid;
-        ArrowParms*                parms;
-        Publisher*                 outQ;
-        std::vector<point_info_t*> points;
-        std::vector<sampler_t*>    samplers;
-        ArrowSamplerImpl*          impl;
-        const char*                dataFile;           // used locally to build parquet file
-        const char*                metadataFile;       // used locally to build json metadata file
-        const char*                outputPath;         // final destination of the data file
-        const char*                outputMetadataPath; // final destination of the metadata file
+        bool                          active;
+        Thread*                       mainPid;
+        ArrowParms*                   parms;
+        Publisher*                    outQ;
+        std::vector<point_info_t*>    points;
+        std::vector<batch_sampler_t*> batchSamplers;
+        ArrowSamplerImpl*             impl;
+        const char*                   dataFile;           // used locally to build parquet file
+        const char*                   metadataFile;       // used locally to build json metadata file
+        const char*                   outputPath;         // final destination of the data file
+        const char*                   outputMetadataPath; // final destination of the metadata file
+
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        ArrowSampler          (lua_State* L, ArrowParms* _parms, const char* input_file,
-                                               const char* outq_name, const std::vector<raster_info_t>& rasters);
-                        ~ArrowSampler         (void) override;
-        void            Delete                (void);
-        static void*    mainThread            (void* parm);
-        static void*    samplerThread         (void* parm);
+                        ArrowSampler     (lua_State* L, ArrowParms* _parms, const char* input_file,
+                                          const char* outq_name, const std::vector<raster_info_t>& rasters);
+                        ~ArrowSampler    (void) override;
+        void            Delete           (void);
+        void            getReadersRange  (std::vector<reader_range_t>& ranges, uint32_t maxNumThreads);
+        static void*    mainThread       (void* parm);
+        static void     batchSampling    (batch_sampler_t* sampler);
+        static void*    readerThread     (void* parm);
 };
 
 #endif  /* __parquet_sampler__*/

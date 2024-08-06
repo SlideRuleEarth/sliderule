@@ -132,7 +132,7 @@ void ArrowSampler::deinit(void)
 /*----------------------------------------------------------------------------
  * Sampler Constructor
  *----------------------------------------------------------------------------*/
-ArrowSampler::Sampler::Sampler(const char* _rkey, RasterObject* _robj, ArrowSampler* _obj) :
+ArrowSampler::BatchSampler::BatchSampler(const char* _rkey, RasterObject* _robj, ArrowSampler* _obj) :
     robj(_robj),
     obj(_obj)
 {
@@ -143,28 +143,38 @@ ArrowSampler::Sampler::Sampler(const char* _rkey, RasterObject* _robj, ArrowSamp
 /*----------------------------------------------------------------------------
  * Sampler Destructor
  *----------------------------------------------------------------------------*/
-ArrowSampler::Sampler::~Sampler(void)
+ArrowSampler::BatchSampler::~BatchSampler(void)
 {
-    clearSamples();
     delete [] rkey;
     robj->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
- * clearSamples
+ * Reader Constructor
  *----------------------------------------------------------------------------*/
-void ArrowSampler::Sampler::clearSamples(void)
+ArrowSampler::Reader::Reader(RasterObject* _robj, ArrowSampler* _obj) :
+    robj(_robj),
+    obj(_obj),
+    range({0, 0})
 {
-    for(ArrowSampler::sample_list_t* slist : samples)
-    {
-        slist->clear();
-        delete slist;
-    }
-    samples.clear();
 }
 
 /*----------------------------------------------------------------------------
- * sample
+ * Reader Destructor
+ *----------------------------------------------------------------------------*/
+ArrowSampler::Reader::~Reader(void)
+{
+    for(ArrowSampler::sample_list_t* slist : samples)
+    {
+        delete slist;
+    }
+
+    delete robj;  /* This is locally created RasterObject, not lua created */
+}
+
+
+/*----------------------------------------------------------------------------
+ * mainThread
  *----------------------------------------------------------------------------*/
 void* ArrowSampler::mainThread(void* parm)
 {
@@ -174,18 +184,10 @@ void* ArrowSampler::mainThread(void* parm)
     const uint32_t trace_id = start_trace(INFO, s->traceId, "arrow_sampler", "{\"filename\":\"%s\"}", s->dataFile);
     EventLib::stashId(trace_id);
 
-    /* Start sampling threads */
-    std::vector<Thread*> pids;
-    for(sampler_t* sampler : s->samplers)
+    /* Sample all user provided raster objects (data sets) */
+    for(batch_sampler_t* sampler : s->batchSamplers)
     {
-        Thread* pid = new Thread(samplerThread, sampler);
-        pids.push_back(pid);
-    }
-
-    /* Wait for all sampling threads to finish */
-    for(Thread* pid : pids)
-    {
-        delete pid;
+        batchSampling(sampler);
     }
 
     try
@@ -242,11 +244,11 @@ const char* ArrowSampler::getMetadataFile(void)
 }
 
 /*----------------------------------------------------------------------------
- * getSamplers
+ * getBatchSamplers
  *----------------------------------------------------------------------------*/
-const std::vector<ArrowSampler::sampler_t*>& ArrowSampler::getSamplers(void)
+const std::vector<ArrowSampler::batch_sampler_t*>& ArrowSampler::getBatchSamplers(void)
 {
-    return samplers;
+    return batchSamplers;
 }
 
 /******************************************************************************
@@ -276,14 +278,14 @@ ArrowSampler::ArrowSampler(lua_State* L, ArrowParms* _parms, const char* input_f
 
     try
     {
-        /* Copy raster objects, create samplers */
+        /* Copy user raster objects, create batch samplers */
         for(std::size_t i = 0; i < rasters.size(); i++)
         {
             const raster_info_t& raster = rasters[i];
             const char* rkey = raster.rkey;
             RasterObject* robj = raster.robj;
-            sampler_t* sampler = new sampler_t(rkey, robj, this);
-            samplers.push_back(sampler);
+            batch_sampler_t* sampler = new batch_sampler_t(rkey, robj, this);
+            batchSamplers.push_back(sampler);
         }
 
         /* Allocate Implementation */
@@ -333,7 +335,7 @@ void ArrowSampler::Delete(void)
 
     parms->releaseLuaObject();
 
-    for(sampler_t* sampler : samplers)
+    for(batch_sampler_t* sampler : batchSamplers)
         delete sampler;
 
     for(point_info_t* pinfo : points)
@@ -348,45 +350,123 @@ void ArrowSampler::Delete(void)
 }
 
 /*----------------------------------------------------------------------------
- * samplerThread
+ * getReadersRange
  *----------------------------------------------------------------------------*/
-void* ArrowSampler::samplerThread(void* parm)
+void ArrowSampler::getReadersRange(std::vector<reader_range_t>& ranges, uint32_t maxNumThreads)
 {
-    sampler_t* sampler = static_cast<sampler_t*>(parm);
-    RasterObject* robj = sampler->robj;
-    for(point_info_t* pinfo : sampler->obj->points)
+    const uint32_t minPointsPerThread = 20;
+
+    /* Determine how many reader threads to use and index range for each */
+    if(points.size() <= minPointsPerThread)
     {
-        if(!sampler->obj->active) break; // early exit if lua object is being destroyed
-
-        const MathLib::point_3d_t point = {pinfo->x, pinfo->y, 0.0};
-        const double   gps = robj->usePOItime() ? pinfo->gps : 0.0;
-
-        sample_list_t* slist = new sample_list_t;
-        bool listvalid = true;
-        const uint32_t err = robj->getSamples(point, gps, *slist, NULL);
-
-        if(err & SS_THREADS_LIMIT_ERROR)
-        {
-            listvalid = false;
-            mlog(CRITICAL, "Too many rasters to sample");
-        }
-
-        if(!listvalid)
-        {
-            /* Clear the list but don't delete it, empty slist indicates no samples for this point */
-            slist->clear();
-        }
-
-        /* Add sample list to sampler */
-        sampler->samples.push_back(slist);
+        ranges.emplace_back(reader_range_t{0, static_cast<uint32_t>(points.size())});
+        return;
     }
 
+    uint32_t numThreads = std::min(maxNumThreads, static_cast<uint32_t>(points.size()) / minPointsPerThread);
+
+    /* Ensure at least two threads if points.size() > minPointsPerThread */
+    if(numThreads == 1 && maxNumThreads > 1)
+    {
+        numThreads = 2;
+    }
+
+    const uint32_t pointsPerThread = points.size() / numThreads;
+    uint32_t remainingPoints = points.size() % numThreads;
+
+    uint32_t start = 0;
+    for(uint32_t i = 0; i < numThreads; i++)
+    {
+        const uint32_t end = start + pointsPerThread + (remainingPoints > 0 ? 1 : 0);
+        ranges.emplace_back(reader_range_t{start, end});
+
+        start = end;
+        if(remainingPoints > 0)
+        {
+            remainingPoints--;
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * batchSampling
+ *----------------------------------------------------------------------------*/
+void ArrowSampler::batchSampling(batch_sampler_t* sampler)
+{
+    /* Get maximum number of batch processing threads allowed */
+    const uint32_t maxNumThreads = sampler->robj->getMaxBatchThreads();
+
+    /* Get readers ranges */
+    std::vector<reader_range_t> ranges;
+    sampler->obj->getReadersRange(ranges, maxNumThreads);
+
+    for(uint32_t i = 0; i < ranges.size(); i++)
+    {
+        const reader_range_t& r = ranges[i];
+        print2term("%s: ragne-%u: %u to %u\n", sampler->rkey, i, r.start_indx, r.end_indx);
+    }
+
+    const uint32_t numThreads = ranges.size();
+
+    /* Start reader threads */
+    std::vector<Thread*> pids;
+    std::vector<reader_t*> readers;
+    for(uint32_t i = 0; i < numThreads; i++)
+    {
+        /* Create RasterObject for each reader.
+         * This is a local object and will be deleted in the reader destructor.
+         * RasterObject from the user is not used here.
+         */
+        RasterObject* _robj = RasterObject::cppCreate(sampler->robj);
+        reader_t* reader = new reader_t(_robj, sampler->obj);
+        reader->range = ranges[i];
+        readers.push_back(reader);
+        Thread* pid = new Thread(readerThread, reader);
+        pids.push_back(pid);
+    }
+
+    /* Wait for all reader threads to finish */
+    for(Thread* pid : pids)
+    {
+        delete pid;
+    }
+
+    /* Copy samples lists (pointers only) from each reader. */
+    for(const reader_t* reader : readers)
+    {
+        for(sample_list_t* slist : reader->samples)
+        {
+            for(int32_t i = 0; i < slist->length(); i++)
+            {
+                /* NOTE: sample.fileId is an index of the file name in the reader's file dictionary.
+                *        we need to convert it to the index in the batch sampler's dictionary (user's RasterObject dict).
+                */
+                RasterSample* sample = slist->get(i);
+
+                /* Find the file name for the sample id in reader's dictionary */
+                const char* name = reader->robj->fileDictGetFile(sample->fileId);
+
+                 /* Use user's RasterObject dictionary to store the file names. */
+                const uint64_t id = sampler->robj->fileDictAdd(name);
+
+                /* Update the sample file id */
+                sample->fileId = id;
+            }
+
+            /* slist pointer is now in two samples vectors, one in the reader and one in the batch sampler
+             * reader's destructor will delete it
+             */
+            sampler->samples.push_back(slist);
+        }
+    }
+
+
     /* Convert samples into new columns */
-    if(sampler->obj->active && 
+    if(sampler->obj->active &&
        sampler->obj->impl->processSamples(sampler))
     {
         /* Create raster file map <id, filename> */
-        Dictionary<uint64_t>::Iterator iterator(robj->fileDictGet());
+        Dictionary<uint64_t>::Iterator iterator(sampler->robj->fileDictGet());
         for(int i = 0; i < iterator.length; i++)
         {
             const char* name = iterator[i].key;
@@ -407,9 +487,56 @@ void* ArrowSampler::samplerThread(void* parm)
             { return a.first < b.first; });
     }
 
+    /* Clean up readers, deletes cppcreated raster objects */
+    for(const reader_t* reader : readers)
+    {
+        delete reader;
+    }
+
     /* Release since not needed anymore */
-    sampler->clearSamples();
+    sampler->samples.clear();
     sampler->file_ids.clear();
+}
+
+/*----------------------------------------------------------------------------
+ * readerThread
+ *----------------------------------------------------------------------------*/
+void* ArrowSampler::readerThread(void* parm)
+{
+    reader_t* reader = static_cast<reader_t*>(parm);
+    RasterObject* robj = reader->robj;
+
+    const uint32_t start_indx = reader->range.start_indx;
+    const uint32_t end_indx   = reader->range.end_indx;
+
+    for(uint32_t i = start_indx; i < end_indx; i++)
+    {
+        if(!reader->obj->active) break; // early exit if lua object is being destroyed
+
+        point_info_t* pinfo = reader->obj->points[i];
+
+        const MathLib::point_3d_t point = {pinfo->x, pinfo->y, 0.0};
+        const double   gps = robj->usePOItime() ? pinfo->gps : 0.0;
+
+        sample_list_t* slist = new sample_list_t;
+        bool listvalid = true;
+        const uint32_t err = robj->getSamples(point, gps, *slist, NULL);
+
+        if(err & SS_THREADS_LIMIT_ERROR)
+        {
+            listvalid = false;
+            mlog(CRITICAL, "Too many rasters to sample");
+        }
+
+        if(!listvalid)
+        {
+            /* Clear the list but don't delete it, empty slist indicates no samples for this point */
+            slist->clear();
+        }
+
+        /* Add sample list */
+        reader->samples.push_back(slist);
+    }
 
     /* Exit Thread */
     return NULL;

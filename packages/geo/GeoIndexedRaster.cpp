@@ -234,7 +234,7 @@ uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t g
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::~GeoIndexedRaster(void)
 {
-    mlog(DEBUG, "onlyFirst: %lu, fullSearch: %lu, findRastersCalls: %lu, allSamples: %lu\n",
+    mlog(INFO, "onlyFirst: %lu, fullSearch: %lu, findRastersCalls: %lu, allSamples: %lu",
                 onlyFirstCount, fullSearchCount, findRastersCount, allSamplesCount);
 
     delete [] findersRange;
@@ -490,7 +490,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
         }
 
         GDALClose((GDALDatasetH)dset);
-        mlog(DEBUG, "Loaded %lu index file features/rasters from: %s", featuresList.size(), newFile.c_str());
+        mlog(INFO, "Loaded %lu raster index file", featuresList.size());
     }
     catch (const RunTimeException &e)
     {
@@ -1030,30 +1030,29 @@ void GeoIndexedRaster::setFindersRange(void)
         numFinders = 1;
         findersRange[0].start_indx = 0;
         findersRange[0].end_indx = features;
+        return;
     }
-    else
+
+    numFinders = std::min(static_cast<uint32_t>(MAX_FINDER_THREADS), features / minFeaturesPerThread);
+
+    /* Ensure at least two threads if features > minFeaturesPerThread */
+    if(numFinders == 1)
     {
-        numFinders = std::min(static_cast<uint32_t>(MAX_FINDER_THREADS), features/minFeaturesPerThread);
+        numFinders = 2;
+    }
 
-        /* Ensure at least two threads if features > minFeaturesPerThread */
-        if(numFinders == 1)
+    const uint32_t featuresPerThread = features / numFinders;
+    uint32_t remainingFeatures = features % numFinders;
+
+    uint32_t start = 0;
+    for(uint32_t i = 0; i < numFinders; i++)
+    {
+        findersRange[i].start_indx = start;
+        findersRange[i].end_indx = start + featuresPerThread + (remainingFeatures > 0 ? 1 : 0);
+        start = findersRange[i].end_indx;
+        if(remainingFeatures > 0)
         {
-            numFinders = 2;
-        }
-
-        const uint32_t featuresPerThread = features / numFinders;
-        uint32_t remainingFeatures = features % numFinders;
-
-        uint32_t start = 0;
-        for(uint32_t i = 0; i < numFinders; i++)
-        {
-            findersRange[i].start_indx = start;
-            findersRange[i].end_indx = start + featuresPerThread + (remainingFeatures > 0 ? 1 : 0);
-            start = findersRange[i].end_indx;
-            if (remainingFeatures > 0)
-            {
-                remainingFeatures--;
-            }
+            remainingFeatures--;
         }
     }
 }
