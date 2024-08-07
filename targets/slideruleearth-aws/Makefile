@@ -56,16 +56,7 @@ STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
 INSTALL_DIR ?= $(SLIDERULE_STAGE_DIR)
 
 QTREES_SOURCE_DIR = $(ROOT)/../qtrees/plugin
-
-OCEANEYES_CONTAINER_STAGE_DIR = $(STAGE)/oceaneyes
-OCEANEYES_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/oceaneyes
-OCEANEYES_CONTAINER_NAME ?= oceaneyes
-COASTNET_CONTAINER_SOURCE_DIR = $(ROOT)/../coastnet
-QTREES_CONTAINER_SOURCE_DIR = $(ROOT)/../qtrees
-OPENOCEANS_CONTAINER_SOURCE_DIR = $(ROOT)/../openoceans
-CSHELPH_CONTAINER_SOURCE = $(ROOT)/../cshelph/c_shelph.py
-MEDIANFILTER_CONTAINER_SOURCE = $(ROOT)/../medianfilter/medianmodel.py
-MAGIC_PYTORCH_DIR = $(ROOT)/../../miniconda3/envs/pointnet2
+COASTNET_SOURCE_DIR = $(ROOT)/../coastnet/plugin
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -140,41 +131,10 @@ qtrees-plugin:
 	make -C $(QTREES_SOURCE_DIR)
 	make -C $(QTREES_SOURCE_DIR) install
 
-oceaneyes-lock: ## create the lock file for the oceaneyes container image
-	cd $(OCEANEYES_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
-	cd $(OCEANEYES_CONTAINER_DIR) && conda-lock render -p linux-$(ARCH)
-
-oceaneyes-docker: ## create the coceaneyes container image
-	-rm -Rf $(OCEANEYES_CONTAINER_STAGE_DIR)
-	mkdir -p $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp $(OCEANEYES_CONTAINER_DIR)/Dockerfile $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp $(OCEANEYES_CONTAINER_DIR)/conda-* $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/atl24writer $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/bathypathfinder $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/cshelph $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/medianfilter $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/pointnet2 $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/utils $(OCEANEYES_CONTAINER_STAGE_DIR)
-	#
-	rsync -a $(COASTNET_CONTAINER_SOURCE_DIR) $(OCEANEYES_CONTAINER_STAGE_DIR) --exclude build --exclude .git
-	cp $(OCEANEYES_CONTAINER_DIR)/coastnet/* $(OCEANEYES_CONTAINER_STAGE_DIR)/coastnet
-	#
-	rsync -a $(QTREES_CONTAINER_SOURCE_DIR) $(OCEANEYES_CONTAINER_STAGE_DIR) --exclude build --exclude .git
-	cp $(OCEANEYES_CONTAINER_DIR)/qtrees/* $(OCEANEYES_CONTAINER_STAGE_DIR)/qtrees
-	#
-	rsync -a $(OPENOCEANS_CONTAINER_SOURCE_DIR) $(OCEANEYES_CONTAINER_STAGE_DIR) --exclude build --exclude .git
-	cp -r $(OCEANEYES_CONTAINER_DIR)/openoceans/* $(OCEANEYES_CONTAINER_STAGE_DIR)/openoceans
-	#
-	cp $(CSHELPH_CONTAINER_SOURCE) $(OCEANEYES_CONTAINER_STAGE_DIR)/cshelph
-	#
-	cp $(MEDIANFILTER_CONTAINER_SOURCE) $(OCEANEYES_CONTAINER_STAGE_DIR)/medianfilter
-	#
-	mkdir $(OCEANEYES_CONTAINER_STAGE_DIR)/magic_pytorch_env
-	rsync -a $(MAGIC_PYTORCH_DIR)/* $(OCEANEYES_CONTAINER_STAGE_DIR)/magic_pytorch_env
-	#
-	cd $(OCEANEYES_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION)
-	docker tag $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(MAJOR_VERSION)
+coastnet-plugin:
+	make -C $(COASTNET_SOURCE_DIR) config INSTALLDIR=$(INSTALL_DIR)
+	make -C $(COASTNET_SOURCE_DIR)
+	make -C $(COASTNET_SOURCE_DIR) install
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
@@ -340,8 +300,6 @@ TEST ?= $(ROOT)/scripts/selftests/test_runner.lua cloud
 MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/plugins/pgc/systests/arcticdem_mosaic_perf.lua
 STRIPS_PERFORMANCE_TEST ?=  $(ROOT)/plugins/pgc/systests/arcticdem_strips_perf.lua
 SUBSET_PERFORMANCE_TEST ?=  $(ROOT)/scripts/systests/subset_perf_test.lua
-ATL24_TEST_DATA_DIR ?= /data/AppServer.1
-ATL24_ALGORITHM ?= cshelph
 
 selftest: ## run the self test on the server code
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
@@ -354,12 +312,6 @@ perfstest: ## run strips performance test on the server code
 
 perfsubsetest: ## run subset performance test
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
-
-oceaneyes-python-test: ## run the oceaneyes container
-	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) /env/bin/python /$(ATL24_ALGORITHM)/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv
-	
-oceaneyes-c-test: ## run the coastnet bathy docker container
-	docker run -it --rm -v /$(ATL24_TEST_DATA_DIR):/$(ATL24_TEST_DATA_DIR) --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) bash /$(ATL24_ALGORITHM)/runner.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/$(ATL24_ALGORITHM)_3.csv
 
 ########################
 # Help Target
