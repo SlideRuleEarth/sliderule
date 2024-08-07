@@ -182,7 +182,7 @@ class PartNormalDataset(Dataset):
         return math.ceil(len(self.data) / self.npoints)
 
 ################
-# RUN POINTNET2
+# RUN POINTNET
 ################
 
 # Set a manual_seed for reproducibilty of results. 

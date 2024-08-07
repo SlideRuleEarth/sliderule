@@ -56,8 +56,6 @@ int icesat2_open (lua_State *L)
         {"atl03s",              Atl03Reader::luaCreate},
         {"atl03v",              Atl03Viewer::luaCreate},
         {"atl03indexer",        Atl03Indexer::luaCreate},
-        {"bathyreader",         BathyReader::luaCreate},
-        {"bathyviewer",         BathyViewer::luaCreate},
         {"atl06",               Atl06Dispatch::luaCreate},
         {"atl06s",              Atl06Reader::luaCreate},
         {"atl08",               Atl08Dispatch::luaCreate},
@@ -74,7 +72,6 @@ int icesat2_open (lua_State *L)
 
     /* Set Globals */
     LuaEngine::setAttrStr(L, "PARMS",                       Icesat2Parms::ICESAT2_PARMS);
-    LuaEngine::setAttrStr(L, "OCEANEYES_PARMS",             BathyOceanEyes::OCEANEYES_PARMS);
     LuaEngine::setAttrInt(L, "CNF_POSSIBLE_TEP",            Icesat2Parms::CNF_POSSIBLE_TEP);
     LuaEngine::setAttrInt(L, "CNF_NOT_CONSIDERED",          Icesat2Parms::CNF_NOT_CONSIDERED);
     LuaEngine::setAttrInt(L, "CNF_BACKGROUND",              Icesat2Parms::CNF_BACKGROUND);
@@ -102,7 +99,6 @@ int icesat2_open (lua_State *L)
     LuaEngine::setAttrInt(L, "ATL08_CANOPY",                Icesat2Parms::ATL08_CANOPY);
     LuaEngine::setAttrInt(L, "ATL08_TOP_OF_CANOPY",         Icesat2Parms::ATL08_TOP_OF_CANOPY);
     LuaEngine::setAttrInt(L, "ATL08_UNCLASSIFIED",          Icesat2Parms::ATL08_UNCLASSIFIED);
-    LuaEngine::setAttrStr(L, "BATHY_PREFIX",                BathyReader::OUTPUT_FILE_PREFIX);
 
     return 1;
 }
@@ -118,10 +114,6 @@ void initicesat2 (void)
     Atl03Reader::init();
     Atl03Viewer::init();
     Atl03Indexer::init();
-    BathyClassifier::init();
-    BathyOceanEyes::init();
-    BathyReader::init();
-    BathyViewer::init();
     Atl06Dispatch::init();
     Atl06Reader::init();
     Atl08Dispatch::init();

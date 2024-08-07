@@ -8,10 +8,6 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Viewer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Indexer.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyClassifier.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyReader.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyOceanEyes.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Dispatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Dispatch.cpp
@@ -37,11 +33,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Viewer.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl03Indexer.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyClassifier.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyFields.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyReader.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyOceanEyes.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Dispatch.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Dispatch.h
@@ -72,16 +63,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl08p.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl13s.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl13sp.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl24g.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl24v.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/indexer.lua
     DESTINATION
         ${CONFDIR}/api
-)
-
-install (
-    FILES
-        ${CMAKE_CURRENT_LIST_DIR}/extensions/atl24_init.lua
-    DESTINATION
-        ${CONFDIR}
 )

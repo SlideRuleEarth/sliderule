@@ -30,45 +30,74 @@
  */
 
 /******************************************************************************
- * INCLUDES
+ *INCLUDES
  ******************************************************************************/
 
-#include "BathyClassifier.h"
+#include "core.h"
+#include "bathy.h"
+#include "BathyReader.h"
+#include "BathyViewer.h"
+#include "BathyRefractionCorrector.h"
+#include "BathyUncertaintyCalculator.h"
 
 /******************************************************************************
- * STATIC DATA
+ * DEFINES
  ******************************************************************************/
 
-const char* BathyClassifier::OBJECT_TYPE = "BathyClassifier";
-const char* BathyClassifier::LUA_META_NAME = "BathyClassifier";
-const struct luaL_Reg BathyClassifier::LUA_META_TABLE[] = {
-    {NULL,          NULL}
-};
+#define LUA_BATHY_LIBNAME    "bathy"
 
 /******************************************************************************
- * BATHY CLASSIFIER CLASS
+ * LOCAL FUNCTIONS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * init
+ * bathy_open
  *----------------------------------------------------------------------------*/
-void BathyClassifier::init (void)
+int bathy_open (lua_State *L)
 {
+    static const struct luaL_Reg bathy_functions[] = {
+        {"parms",               BathyParms::luaCreate},
+        {"reader",              BathyReader::luaCreate},
+        {"viewer",              BathyViewer::luaCreate},
+        {"refraction",          BathyRefractionCorrector::luaCreate},
+        {"uncertainty",         BathyUncertaintyCalculator::luaCreate},
+        {NULL,                  NULL}
+    };
+
+    /* Set Library */
+    luaL_newlib(L, bathy_functions);
+
+    /* Set Globals */
+    LuaEngine::setAttrStr(L, "BATHY_PREFIX", BathyReader::OUTPUT_FILE_PREFIX);
+
+    return 1;
 }
 
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-BathyClassifier::BathyClassifier (lua_State* L, const char* _classifier):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
+/******************************************************************************
+ * EXPORTED FUNCTIONS
+ ******************************************************************************/
+
+extern "C" {
+void initbathy (void)
 {
-    classifier = StringLib::duplicate(_classifier);
+    /* Initialize Modules */
+    BathyClassifier::init();
+    BathyRefractionCorrector::init();
+    BathyUncertaintyCalculator::init();
+    BathyReader::init();
+    BathyViewer::init();
+
+    /* Extend Lua */
+    LuaEngine::extend(LUA_BATHY_LIBNAME, bathy_open);
+
+    /* Indicate Presence of Package */
+    LuaEngine::indicate(LUA_BATHY_LIBNAME, LIBID);
+
+    /* Display Status */
+    print2term("%s package initialized (%s)\n", LUA_BATHY_LIBNAME, LIBID);
 }
 
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-BathyClassifier::~BathyClassifier (void)
+void deinitbathy (void)
 {
-    delete [] classifier;
+}
 }

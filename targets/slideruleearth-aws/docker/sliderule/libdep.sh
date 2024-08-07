@@ -5,3 +5,4 @@ echo geos: $(git --git-dir /geos/.git --work-tree /geos describe --abbrev --dirt
 echo libgeotiff: $(git --git-dir /libgeotiff/.git --work-tree /libgeotiff describe --abbrev --dirty --always --tags --long) >> $OUTPUT
 echo PROJ: $(git --git-dir /PROJ/.git --work-tree /PROJ describe --abbrev --dirty --always --tags --long) >> $OUTPUT
 echo rapidjson: $(git --git-dir /rapidjson/.git --work-tree /rapidjson  describe --abbrev --dirty --always --tags --long) >> $OUTPUT
+echo xgboost: $(git --git-dir /xgboost/.git --work-tree /xgboost  describe --abbrev --dirty --always --tags --long) >> $OUTPUT

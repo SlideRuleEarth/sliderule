@@ -42,6 +42,7 @@
 
 using BathyFields::extent_t;
 using BathyFields::bathy_class_t;
+using BathyFields::classifier_t;
 
 /******************************************************************************
  * BATHY CLASSIFIER
@@ -74,7 +75,7 @@ class BathyClassifier: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        const char* classifier;
+        classifier_t classifier;
 
         /*--------------------------------------------------------------------
          * Methods

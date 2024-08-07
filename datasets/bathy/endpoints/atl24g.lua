@@ -184,17 +184,21 @@ userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL09 CMR search executed
 -------------------------------------------------------
 -- build bathy reader parms
 -------------------------------------------------------
-parms["hls"] = geo_parms
-parms["icesat2"] = icesat2.parms(parms)
-parms["oceaneyes"] = parms["oceaneyes"] or {}
-parms["oceaneyes"]["resource_kd"] = viirs_filename
-parms["oceaneyes"]["assetKd"] = parms["oceaneyes"]["assetKd"] or "viirsj1-s3"
-parms["qtrees"] = qtrees.classifier({})
+parms["bathy"] = parms["bathy"] or {}
+parms["bathy"]["hls"] = geo_parms
+parms["bathy"]["uncertainty"] = parms["bathy"]["uncertainty"] or {}
+parms["bathy"]["uncertainty"]["resource_kd"] = viirs_filename
+parms["bathy"]["uncertainty"]["assetKd"] = parms["bathy"]["uncertainty"]["assetKd"] or "viirsj1-s3"
+local bathy_parms = bathy.parms(parms)
+local qtrees_classifier = qtrees.classifier(parms["bathy"]["qtrees"] or {})
+local coastnet_classifier = coastnet.classifier(parms["bathy"]["coastnet"] or {})
+local refraction_corrector = bathy.refraction(bathy_parms);
+local uncertainty_calculator = bathy.uncertainty(bathy_parms);
 
 -------------------------------------------------------
 -- read ICESat-2 inputs
 -------------------------------------------------------
-local reader = icesat2.bathyreader(parms, resource, rspq, crenv.host_sandbox_directory, false)
+local reader = bathy.reader(bathy_parms, qtrees_classifier, coastnet_classifier, refraction_corrector, uncertainty_calculator, resource, rspq, crenv.host_sandbox_directory, false)
 if not reader then
     userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create bathy reader", rspq))
     cleanup(crenv, transaction_id)
@@ -205,7 +209,7 @@ for spot = 1,icesat2.NUM_SPOTS do
     spot_mask[spot] = reader:spoton(spot)
 end
 local classifier_mask = {}  -- build classifier mask using defaults/parsing from bathyreader (because reader will be destroyed)
-for _,classifier in ipairs({"qtrees", "coastnet", "openoceans", "medianfilter", "cshelph", "bathypathfinder", "pointnet2", "ensemble"}) do
+for _,classifier in ipairs({"qtrees", "coastnet", "openoceans++", "medianfilter", "cshelph", "bathypathfinder", "pointnet", "ensemble"}) do
     classifier_mask[classifier] = reader:classifieron(classifier)
 end
 local duration = 0 -- wait for bathyreader to finish
@@ -318,7 +322,6 @@ local in_parallel = true
 runclassifier(output_files, timeout, "medianfilter", in_parallel)
 runclassifier(output_files, timeout, "cshelph", in_parallel)
 runclassifier(output_files, timeout, "bathypathfinder", in_parallel)
-runclassifier(output_files, timeout, "coastnet", in_parallel, "bash /coastnet/runner.sh")
 runclassifier(output_files, timeout, "pointnet2", false, "bash /pointnet2/runner.sh")
 runclassifier(output_files, timeout, "openoceans", false)
 profile["atl24_endpoint"] = (time.gps() - endpoint_start_time) / 1000.0 -- capture endpoint timing

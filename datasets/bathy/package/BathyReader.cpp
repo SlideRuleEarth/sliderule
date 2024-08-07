@@ -41,10 +41,13 @@
 #include "MsgQ.h"
 #include "H5Coro.h"
 #include "BathyReader.h"
-#include "BathyOceanEyes.h"
+#include "BathyClassifier.h"
+#include "BathyRefractionCorrector.h"
+#include "BathyUncertaintyCalculator.h"
 #include "GeoLib.h"
 #include "RasterObject.h"
 #include "BathyFields.h"
+#include "BathyParms.h"
 
 using BathyFields::extent_t;
 using BathyFields::photon_t;
@@ -108,144 +111,56 @@ const struct luaL_Reg BathyReader::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
-const char* BathyReader::BATHY_PARMS = "bathy";
-
-/* Parameter Names */
-static const char*  BATHY_PARMS_ASSET           = "asset";
-static const char*  BATHY_PARMS_DEFAULT_ASSET   = "icesat2";
-static const char*  BATHY_PARMS_ASSET09         = "asset09";
-static const char*  BATHY_PARMS_DEFAULT_ASSET09 = "icesat2";
-static const char*  BATHY_PARMS_HLS_PARMS       = "hls";
-static const char*  BATHY_PARMS_QTREES_PARMS    = "qtrees";
-static const char*  BATHY_PARMS_MAX_DEM_DELTA   = "max_dem_delta";
-static const char*  BATHY_PARMS_MIN_DEM_DELTA   = "min_dem_delta";
-static const char*  BATHY_PARMS_PH_IN_EXTENT    = "ph_in_extent";
-static const char*  BATHY_PARMS_GENERATE_NDWI   = "generate_ndwi";
-static const char*  BATHY_PARMS_USE_BATHY_MASK  = "use_bathy_mask";
-static const char*  BATHY_PARMS_CLASSIFIERS     = "classifiers";
-static const char*  BATHY_PARMS_RETURN_INPUTS   = "return_inputs";
-static const char*  BATHY_PARMS_OUTPUT_AS_SDP   = "output_as_sdp";
-static const char*  BATHY_PARMS_ATL09_RESOURCE  = "resource09";
-static const char*  BATHY_PARMS_SPOTS           = "spots";
-
 /******************************************************************************
  * ATL03 READER CLASS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<parms>, <resource>, <outq_name>, <shared_directory>, <send terminator>)
+ * luaCreate - create(...)
  *----------------------------------------------------------------------------*/
 int BathyReader::luaCreate (lua_State* L)
 {
-    parms_t* parms = new parms_t;
+    BathyParms* parms = NULL;
+    BathyClassifier* qtrees = NULL;
+    BathyClassifier* coastnet = NULL;
+    BathyRefractionCorrector* refraction = NULL;
+    BathyUncertaintyCalculator* uncertainty = NULL;
 
     try
     {
         /* Get Parameters */
-        const int bathy_parms_index = 1;
-        const char* resource = getLuaString(L, 2);
-        const char* outq_name = getLuaString(L, 3);
-        const char* shared_directory = getLuaString(L, 4);
-        const bool send_terminator = getLuaBoolean(L, 5, true, true);
-
-        /* Get Algorithm Parameters */
-        if(lua_istable(L, bathy_parms_index))
-        {
-            /* asset */
-            lua_getfield(L, bathy_parms_index, BATHY_PARMS_ASSET);
-            const char* asset_name = LuaObject::getLuaString(L, -1, true, BATHY_PARMS_DEFAULT_ASSET);
-            parms->asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
-            if(!parms->asset) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to find asset %s", asset_name);
-            lua_pop(L, 1);
-
-            /* asset09 */
-            lua_getfield(L, bathy_parms_index, BATHY_PARMS_ASSET09);
-            const char* asset09_name = LuaObject::getLuaString(L, -1, true, BATHY_PARMS_DEFAULT_ASSET09);
-            parms->asset09 = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset09_name, Asset::OBJECT_TYPE));
-            if(!parms->asset09) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to find asset %s", asset09_name);
-            lua_pop(L, 1);
-
-            /* ICESat-2 parameters (Icesat2Parms) */
-            lua_getfield(L, bathy_parms_index, Icesat2Parms::ICESAT2_PARMS);
-            parms->icesat2 = dynamic_cast<Icesat2Parms*>(getLuaObject(L, -1, Icesat2Parms::OBJECT_TYPE));
-            lua_pop(L, 1);
-
-            /* HLS parameters (GeoParms) */
-            lua_getfield(L, bathy_parms_index, BATHY_PARMS_HLS_PARMS);
-            if(lua_istable(L, -1)) parms->hls = new GeoParms(L, -1);
-            lua_pop(L, 1);
-
-            /* OceanEyes parameters (BathyOceanEyes) */
-            lua_getfield(L, bathy_parms_index, BathyOceanEyes::OCEANEYES_PARMS);
-            parms->oceaneyes = new BathyOceanEyes(L, -1);
-            lua_pop(L, 1);
-
-            /* Qtrees */
-            lua_getfield(L, bathy_parms_index, BATHY_PARMS_QTREES_PARMS);
-            parms->qtrees = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE));
-            lua_pop(L, 1);
-
-            /* maximum DEM delta */
-            lua_getfield(L, bathy_parms_index, BATHY_PARMS_MAX_DEM_DELTA);
-            parms->max_dem_delta = LuaObject::getLuaFloat(L, -1, true, parms->max_dem_delta, NULL);
-            lua_pop(L, 1);
-
-            /* minimum DEM delta */
-            lua_getfield(L, bathy_parms_index, BATHY_PARMS_MIN_DEM_DELTA);
-            parms->min_dem_delta = LuaObject::getLuaFloat(L, -1, true, parms->min_dem_delta, NULL);
-            lua_pop(L, 1);
-
-            /* photons in extent */
-            lua_getfield(L, bathy_parms_index, BATHY_PARMS_PH_IN_EXTENT);
-            parms->ph_in_extent = LuaObject::getLuaInteger(L, -1, true, parms->ph_in_extent, NULL);
-            lua_pop(L, 1);
-
-            /* generate ndwi */
-            lua_getfield(L, bathy_parms_index, BATHY_PARMS_GENERATE_NDWI);
-            parms->generate_ndwi = LuaObject::getLuaBoolean(L, -1, true, parms->generate_ndwi, NULL);
-            lua_pop(L, 1);
-
-            /* use bathy mask */
-            lua_getfield(L, bathy_parms_index, BATHY_PARMS_USE_BATHY_MASK);
-            parms->use_bathy_mask = LuaObject::getLuaBoolean(L, -1, true, parms->use_bathy_mask, NULL);
-            lua_pop(L, 1);
-
-            /* classifiers */
-            lua_getfield(L, bathy_parms_index, BATHY_PARMS_CLASSIFIERS);
-            getClassifiers(L, -1, NULL, parms->classifiers);
-            lua_pop(L, 1);
-
-            /* return inputs */
-            lua_getfield(L, bathy_parms_index, BATHY_PARMS_RETURN_INPUTS);
-            parms->return_inputs = LuaObject::getLuaBoolean(L, -1, true, parms->return_inputs, NULL);
-            lua_pop(L, 1);
-
-            /* output as sdp */
-            lua_getfield(L, bathy_parms_index, BATHY_PARMS_OUTPUT_AS_SDP);
-            parms->output_as_sdp = LuaObject::getLuaBoolean(L, -1, true, parms->output_as_sdp, NULL);
-            lua_pop(L, 1);
-
-            /* atl09 resources */
-            lua_getfield(L, bathy_parms_index, BATHY_PARMS_ATL09_RESOURCE);
-            parms->resource09 = StringLib::duplicate(LuaObject::getLuaString(L, -1));
-            lua_pop(L, 1);
-
-            /* spot selection */
-            lua_getfield(L, bathy_parms_index, BATHY_PARMS_SPOTS);
-            getSpotList(L, -1, NULL, parms->spots);
-            lua_pop(L, 1);
-        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Bathy parameters must be supplied as a lua table");
-        }
-
+        parms = dynamic_cast<BathyParms*>(getLuaObject(L, 1, BathyParms::OBJECT_TYPE));
+        qtrees = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE));
+        coastnet = dynamic_cast<BathyClassifier*>(getLuaObject(L, 3, BathyClassifier::OBJECT_TYPE));
+        refraction = dynamic_cast<BathyRefractionCorrector*>(getLuaObject(L, 4, BathyRefractionCorrector::OBJECT_TYPE));
+        uncertainty = dynamic_cast<BathyUncertaintyCalculator*>(getLuaObject(L, 5, BathyUncertaintyCalculator::OBJECT_TYPE));
+        const char* resource = getLuaString(L, 6);
+        const char* outq_name = getLuaString(L, 7);
+        const char* shared_directory = getLuaString(L, 8);
+        const bool send_terminator = getLuaBoolean(L, 9, true, true);
+        
+        /* Build Classifier List */
+        BathyClassifier* classifiers[BathyFields::NUM_CLASSIFIERS] = {
+            qtrees,
+            coastnet,
+            NULL, // openoceans++
+            NULL, // medianfilter
+            NULL, // cshelph
+            NULL, // bathypathfinder
+            NULL, // pointnet
+            NULL, // openoceans
+            NULL  // ensemble
+        };
         /* Return Reader Object */
-        return createLuaObject(L, new BathyReader(L, parms, resource, outq_name, shared_directory, send_terminator));
+        return createLuaObject(L, new BathyReader(L, parms, classifiers, refraction, uncertainty, resource, outq_name, shared_directory, send_terminator));
     }
     catch(const RunTimeException& e)
     {
-        delete parms;
+        if(parms) parms->releaseLuaObject();
+        if(qtrees) qtrees->releaseLuaObject();
+        if(coastnet) coastnet->releaseLuaObject();
+        if(refraction) refraction->releaseLuaObject();
+        if(uncertainty) uncertainty->releaseLuaObject();
         mlog(e.level(), "Error creating BathyReader: %s", e.what());
         return returnLuaStatus(L, false);
     }
@@ -263,11 +178,20 @@ void BathyReader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyReader::BathyReader (lua_State* L, const parms_t* _parms, const char* _resource,
-                          const char* outq_name, const char* shared_directory, bool _send_terminator):
+BathyReader::BathyReader (lua_State* L,
+                          BathyParms* _parms,
+                          BathyClassifier** _classifiers,
+                          BathyRefractionCorrector* _refraction,
+                          BathyUncertaintyCalculator* _uncertainty,
+                          const char* _resource,
+                          const char* outq_name,
+                          const char* shared_directory,
+                          bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
-    readTimeoutMs(parms->icesat2->read_timeout * 1000),
+    refraction(_refraction),
+    uncertainty(_uncertainty),
+    readTimeoutMs(parms->read_timeout * 1000),
     context(NULL),
     context09(NULL),
     bathyMask(NULL)
@@ -283,14 +207,20 @@ BathyReader::BathyReader (lua_State* L, const parms_t* _parms, const char* _reso
     resource = StringLib::duplicate(_resource);
     sharedDirectory = StringLib::duplicate(shared_directory);
 
+    /* Set Classifiers */
+    for(int i = 0; i < BathyFields::NUM_CLASSIFIERS; i++)
+    {
+        classifiers[i] = _classifiers[i];
+    }
+
     /* Set Signal Confidence Index */
-    if(parms->icesat2->surface_type == Icesat2Parms::SRT_DYNAMIC)
+    if(parms->surface_type == Icesat2Parms::SRT_DYNAMIC)
     {
         signalConfColIndex = H5Coro::ALL_COLS;
     }
     else
     {
-        signalConfColIndex = static_cast<int>(parms->icesat2->surface_type);
+        signalConfColIndex = static_cast<int>(parms->surface_type);
     }
 
     /* Create Publisher and File Pointer */
@@ -298,7 +228,7 @@ BathyReader::BathyReader (lua_State* L, const parms_t* _parms, const char* _reso
     sendTerminator = _send_terminator;
 
     /* Create Global Bathymetry Mask */
-    if(parms->use_bathy_mask)
+    if(parms->reader.use_bathy_mask)
     {
         bathyMask = new GeoLib::TIFFImage(NULL, GLOBAL_BATHYMETRY_MASK_FILE_PATH);
     }
@@ -318,11 +248,11 @@ BathyReader::BathyReader (lua_State* L, const parms_t* _parms, const char* _reso
     try
     {
         /* Create H5Coro Contexts */
-        context = new H5Coro::Context(parms->asset, resource);
-        context09 = new H5Coro::Context(parms->asset09, parms->resource09);
+        context = new H5Coro::Context(parms->reader.asset, resource);
+        context09 = new H5Coro::Context(parms->reader.asset09, parms->reader.resource09);
 
         /* Standard Data Product Variables */
-        if(parms->output_as_sdp)
+        if(parms->reader.output_as_sdp)
         {
             /* Write Ancillary Data */
             FString ancillary_filename("%s/writer_ancillary.json", sharedDirectory);
@@ -357,12 +287,12 @@ BathyReader::BathyReader (lua_State* L, const parms_t* _parms, const char* _reso
         parseResource(resource, granuleDate, startRgt, startCycle, startRegion, sdpVersion);
 
         /* Create Readers */
-        for(int track = 1; track <= Icesat2Parms::NUM_TRACKS; track++)
+        for(int track = 1; track <= BathyParms::NUM_TRACKS; track++)
         {
-            for(int pair = 0; pair < Icesat2Parms::NUM_PAIR_TRACKS; pair++)
+            for(int pair = 0; pair < BathyParms::NUM_PAIR_TRACKS; pair++)
             {
                 const int gt_index = (2 * (track - 1)) + pair;
-                if(parms->icesat2->beams[gt_index] && (parms->icesat2->track == Icesat2Parms::ALL_TRACKS || track == parms->icesat2->track))
+                if(parms->beams[gt_index] && (parms->track == BathyParms::ALL_TRACKS || track == parms->track))
                 {
                     info_t* info = new info_t;
                     info->reader = this;
@@ -378,7 +308,7 @@ BathyReader::BathyReader (lua_State* L, const parms_t* _parms, const char* _reso
         /* Check if Readers Created */
         if(threadCount == 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "No reader threads were created, invalid track specified: %d\n", parms->icesat2->track);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "No reader threads were created, invalid track specified: %d\n", parms->track);
         }
     }
     catch(const RunTimeException& e)
@@ -412,7 +342,15 @@ BathyReader::~BathyReader (void)
     delete bathyMask;
     delete outQ;
     delete [] resource;
-    delete parms;
+    
+    for(int i = 0; i < BathyFields::NUM_CLASSIFIERS; i++)
+    {
+        if(classifiers[i]) classifiers[i]->releaseLuaObject();
+    }
+    
+    if(parms) parms->releaseLuaObject();
+    if(uncertainty) uncertainty->releaseLuaObject();
+    if(refraction) refraction->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -439,11 +377,11 @@ BathyReader::Region::Region (const info_t* info):
         num_photons = H5Coro::ALL_ROWS;
 
         /* Determine Spatial Extent */
-        if(info->parms->icesat2->raster.valid())
+        if(info->parms->raster.valid())
         {
             rasterregion(info);
         }
-        else if(info->parms->icesat2->points_in_poly > 0)
+        else if(info->parms->points_in_poly > 0)
         {
             polyregion(info);
         }
@@ -506,10 +444,10 @@ void BathyReader::Region::polyregion (const info_t* info)
 
         /* Project Segment Coordinate */
         const MathLib::coord_t segment_coord = {segment_lon[segment], segment_lat[segment]};
-        const MathLib::point_t segment_point = MathLib::coord2point(segment_coord, info->parms->icesat2->projection);
+        const MathLib::point_t segment_point = MathLib::coord2point(segment_coord, info->parms->projection);
 
         /* Test Inclusion */
-        if(MathLib::inpoly(info->parms->icesat2->projected_poly, info->parms->icesat2->points_in_poly, segment_point))
+        if(MathLib::inpoly(info->parms->projected_poly, info->parms->points_in_poly, segment_point))
         {
             inclusion = true;
         }
@@ -583,7 +521,7 @@ void BathyReader::Region::rasterregion (const info_t* info)
         if(segment_ph_cnt[segment] != 0)
         {
             /* Check Inclusion */
-            const bool inclusion = info->parms->icesat2->raster.includes(segment_lon[segment], segment_lat[segment]);
+            const bool inclusion = info->parms->raster.includes(segment_lon[segment], segment_lat[segment]);
             inclusion_mask[segment] = inclusion;
 
             /* Check For First Segment */
@@ -710,7 +648,7 @@ BathyReader::Atl09Class::Atl09Class (const info_t* info):
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "ATL09 data unavailable <%s>", info->parms->resource09);
+        mlog(CRITICAL, "ATL09 data unavailable <%s>", info->parms->reader.resource09);
     }
 }
 
@@ -878,13 +816,16 @@ void* BathyReader::subsettingThread (void* parm)
     /* Get Thread Info */
     const info_t* info = static_cast<info_t*>(parm);
     BathyReader* reader = info->reader;
-    const parms_t* parms = info->parms;
-    RasterObject* ndwiRaster = RasterObject::cppCreate(parms->hls);
+    const BathyParms* parms = info->parms;
+    RasterObject* ndwiRaster = RasterObject::cppCreate(parms->reader.hls);
 
     /* Thread Variables */
     vector<extent_t*> extents;
     stats_t local_stats = {
-        .photon_count = 0
+        .photon_count = 0,
+        .subaqueous_photons = 0,
+        .qtrees_duration = 0.0,
+        .coastnet_duration = 0.0
     };
 
     /* Start Trace */
@@ -974,7 +915,7 @@ void* BathyReader::subsettingThread (void* parm)
 
                 /* Set Signal Confidence Level */
                 int8_t atl03_cnf;
-                if(parms->icesat2->surface_type == Icesat2Parms::SRT_DYNAMIC)
+                if(parms->surface_type == Icesat2Parms::SRT_DYNAMIC)
                 {
                     /* When dynamic, the signal_conf_ph contains all 5 columns; and the
                      * code below chooses the signal confidence that is the highest
@@ -999,7 +940,7 @@ void* BathyReader::subsettingThread (void* parm)
                 {
                     throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 signal confidence: %d", atl03_cnf);
                 }
-                if(!parms->icesat2->atl03_cnf[atl03_cnf + Icesat2Parms::SIGNAL_CONF_OFFSET])
+                if(!parms->atl03_cnf[atl03_cnf + Icesat2Parms::SIGNAL_CONF_OFFSET])
                 {
                     break;
                 }
@@ -1010,7 +951,7 @@ void* BathyReader::subsettingThread (void* parm)
                 {
                     throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 photon quality: %d", quality_ph);
                 }
-                if(!parms->icesat2->quality_ph[quality_ph])
+                if(!parms->quality_ph[quality_ph])
                 {
                     break;
                 }
@@ -1020,7 +961,7 @@ void* BathyReader::subsettingThread (void* parm)
                 if(reader->sdpVersion >= 6)
                 {
                     yapc_score = atl03.weight_ph[current_photon];
-                    if(yapc_score < parms->icesat2->yapc.score)
+                    if(yapc_score < parms->yapc.score)
                     {
                         break;
                     }
@@ -1028,7 +969,7 @@ void* BathyReader::subsettingThread (void* parm)
 
                 /* Check DEM Delta */
                 const float dem_delta = atl03.h_ph[current_photon] - atl03.dem_h[current_segment];
-                if(dem_delta > parms->max_dem_delta || dem_delta < parms->min_dem_delta)
+                if(dem_delta > parms->reader.max_dem_delta || dem_delta < parms->reader.min_dem_delta)
                 {
                     break;
                 }
@@ -1063,7 +1004,7 @@ void* BathyReader::subsettingThread (void* parm)
 
                     /* Sample Raster for NDWI */
                     ndwi = std::numeric_limits<float>::quiet_NaN();
-                    if(ndwiRaster && parms->generate_ndwi)
+                    if(ndwiRaster && parms->reader.generate_ndwi)
                     {
                         const double gps = current_delta_time + (double)Icesat2Parms::ATLAS_SDP_EPOCH_GPS;
                         const MathLib::point_3d_t point = {
@@ -1097,11 +1038,11 @@ void* BathyReader::subsettingThread (void* parm)
                     .sigma_thu = 0.0, // populated by uncertainty calculation
                     .sigma_tvu = 0.0, // populated by uncertainty calculation
                     .processing_flags = 0x0,
-                    .processing_result = 0,
                     .yapc_score = yapc_score,
                     .max_signal_conf = atl03_cnf,
                     .quality_ph = quality_ph,
                     .class_ph = static_cast<uint8_t>(BathyFields::UNCLASSIFIED),
+                    .predictions = {0, 0, 0, 0, 0, 0, 0, 0}
                 };
                 extent_photons.add(ph);
             } while(false);
@@ -1109,7 +1050,7 @@ void* BathyReader::subsettingThread (void* parm)
             /* Go to Next Photon */
             current_photon++;
 
-            if((extent_photons.length() >= parms->ph_in_extent) ||
+            if((extent_photons.length() >= parms->reader.ph_in_extent) ||
                (current_photon >= atl03.dist_ph_along.size) ||
                (!extent_photons.empty() && terminate_extent_on_boundary))
             {
@@ -1169,18 +1110,38 @@ void* BathyReader::subsettingThread (void* parm)
             }
         }
 
-        /* Run QTrees on Extents */
-        parms->qtrees->run(extents);
+        /* Run Qtrees on Extents */
+        if(parms->reader.classifiers[BathyFields::QTREES])
+        {
+            double start = TimeLib::latchtime();
+            classifiers[BathyFields::QTREES]->run(extents);
+            local_stats.qtrees_duration = TimeLib::latchtime() - start;
+        }
+        else // run native sea surface finder (since other classifiers need surface_h)
+        {
+            for(auto extent: extents)
+            {
+                findSeaSurface(*extent);
+            }
+        }
+
+        /* Run Coastnet on Extents */
+        if(parms->reader.classifiers[BathyFields::COASTNET])
+        {
+            double start = TimeLib::latchtime();
+            classifiers[BathyFields::COASTNET]->run(extents);
+            local_stats.coastnet_duration = TimeLib::latchtime() - start;
+        }
 
         /* Process Extents */
         for(auto extent: extents)
         {
-            parms->oceaneyes->correctRefraction(*extent, atl03.ref_elev, atl03.ref_azimuth);
-            parms->oceaneyes->calculateUncertainty(*extent, atl03.sigma_across, atl03.sigma_along, atl03.sigma_h, atl03.ref_elev);
+            refraction->run(*extent, atl03.ref_elev, atl03.ref_azimuth);
+            parms->reader.uncertainty->run(*extent, atl03.sigma_across, atl03.sigma_along, atl03.sigma_h, atl03.ref_elev);
         }
 
         /* Write Extent to CSV File*/
-        reader->writeCSV(extents, spot);
+        reader->writeCSV(extents, spot, local_stats);
     }
     catch(const RunTimeException& e)
     {
@@ -1270,6 +1231,220 @@ double BathyReader::calculateBackground (int32_t current_segment, int32_t& bckgr
         bckgrd_index++;
     }
     return background_rate;
+}
+
+/*----------------------------------------------------------------------------
+ * findSeaSurface
+ *----------------------------------------------------------------------------*/
+void BathyReader::findSeaSurface (extent_t& extent)
+{
+    BathyParms::reader_t& p = parms->reader;
+    try
+    {
+        /* initialize stats on photons */
+        double min_h = std::numeric_limits<double>::max();
+        double max_h = std::numeric_limits<double>::min();
+        double min_t = std::numeric_limits<double>::max();
+        double max_t = std::numeric_limits<double>::min();
+        double avg_bckgnd = 0.0;
+
+        /* build list photon heights */
+        vector<double> heights;
+        for(long i = 0; i < extent.photon_count; i++)
+        {
+            const double height = extent.photons[i].ortho_h;
+            const double time_secs = static_cast<double>(extent.photons[i].time_ns) / 1000000000.0;
+
+            /* get min and max height */
+            if(height < min_h) min_h = height;
+            if(height > max_h) max_h = height;
+
+            /* get min and max time */
+            if(time_secs < min_t) min_t = time_secs;
+            if(time_secs > max_t) max_t = time_secs;
+
+            /* accumulate background (divided out below) */
+            avg_bckgnd = extent.photons[i].background_rate;
+
+            /* add to list of photons to process */
+            heights.push_back(height);
+        }
+
+        /* check if photons are left to process */
+        if(heights.empty())
+        {
+            throw RunTimeException(WARNING, RTE_INFO, "No valid photons when determining sea surface");
+        }
+
+        /* calculate and check range */
+        const double range_h = max_h - min_h;
+        if(range_h <= 0 || range_h > p.max_range)
+        {
+            throw RunTimeException(ERROR, RTE_ERROR, "Invalid range <%lf> when determining sea surface", range_h);
+        }
+
+        /* calculate and check number of bins in histogram
+        *  - the number of bins is increased by 1 in case the ceiling and the floor
+        *    of the max range is both the same number */
+        const long num_bins = static_cast<long>(std::ceil(range_h / p.bin_size)) + 1;
+        if(num_bins <= 0 || num_bins > p.max_bins)
+        {
+            throw RunTimeException(ERROR, RTE_ERROR, "Invalid combination of range <%lf> and bin size <%lf> produced out of range histogram size <%ld>", range_h, p.bin_size, num_bins);
+        }
+
+        /* calculate average background */
+        avg_bckgnd /= heights.size();
+
+        /* build histogram of photon heights */
+        vector<long> histogram(num_bins);
+        std::for_each (std::begin(heights), std::end(heights), [&](const double h) {
+            const long bin = static_cast<long>(std::floor((h - min_h) / p.bin_size));
+            histogram[bin]++;
+        });
+
+        /* calculate mean and standard deviation of histogram */
+        double bckgnd = 0.0;
+        double stddev = 0.0;
+        if(p.model_as_poisson)
+        {
+            const long num_shots = std::round((max_t - min_t) / 0.0001);
+            const double bin_t = p.bin_size * 0.00000002 / 3.0; // bin size from meters to seconds
+            const double bin_pe = bin_t * num_shots * avg_bckgnd; // expected value
+            bckgnd = bin_pe;
+            stddev = sqrt(bin_pe);
+        }
+        else
+        {
+            const double bin_avg = static_cast<double>(heights.size()) / static_cast<double>(num_bins);
+            double accum = 0.0;
+            std::for_each (std::begin(histogram), std::end(histogram), [&](const double h) {
+                accum += (h - bin_avg) * (h - bin_avg);
+            });
+            bckgnd = bin_avg;
+            stddev = sqrt(accum / heights.size());
+        }
+
+        /* build guassian kernel (from -k to k)*/
+        const double kernel_size = 6.0 * stddev + 1.0;
+        const long k = (static_cast<long>(std::ceil(kernel_size / p.bin_size)) & ~0x1) / 2;
+        const long kernel_bins = 2 * k + 1;
+        double kernel_sum = 0.0;
+        vector<double> kernel(kernel_bins);
+        for(long x = -k; x <= k; x++)
+        {
+            const long i = x + k;
+            const double r = x / stddev;
+            kernel[i] = exp(-0.5 * r * r);
+            kernel_sum += kernel[i];
+        }
+        for(int i = 0; i < kernel_bins; i++)
+        {
+            kernel[i] /= kernel_sum;
+        }
+
+        /* build filtered histogram */
+        vector<double> smoothed_histogram(num_bins);
+        for(long i = 0; i < num_bins; i++)
+        {
+            double output = 0.0;
+            long num_samples = 0;
+            for(long j = -k; j <= k; j++)
+            {
+                const long index = i + k;
+                if(index >= 0 && index < num_bins)
+                {
+                    output += kernel[j + k] * static_cast<double>(histogram[index]);
+                    num_samples++;
+                }
+            }
+            smoothed_histogram[i] = output * static_cast<double>(kernel_bins) / static_cast<double>(num_samples);
+        }
+
+        /* find highest peak */
+        long highest_peak_bin = 0;
+        double highest_peak = smoothed_histogram[0];
+        for(int i = 1; i < num_bins; i++)
+        {
+            if(smoothed_histogram[i] > highest_peak)
+            {
+                highest_peak = smoothed_histogram[i];
+                highest_peak_bin = i;
+            }
+        }
+
+        /* find second highest peak */
+        const long peak_separation_in_bins = static_cast<long>(std::ceil(p.min_peak_separation / p.bin_size));
+        long second_peak_bin = -1; // invalid
+        double second_peak = std::numeric_limits<double>::min();
+        for(int i = 0; i < num_bins; i++)
+        {
+            if(std::abs(i - highest_peak_bin) > peak_separation_in_bins)
+            {
+                if(smoothed_histogram[i] > second_peak)
+                {
+                    second_peak = smoothed_histogram[i];
+                    second_peak_bin = i;
+                }
+            }
+        }
+
+        /* determine which peak is sea surface */
+        if( (second_peak_bin != -1) &&
+            (second_peak * p.highest_peak_ratio >= highest_peak) ) // second peak is close in size to highest peak
+        {
+            /* select peak that is highest in elevation */
+            if(highest_peak_bin < second_peak_bin)
+            {
+                highest_peak = second_peak;
+                highest_peak_bin = second_peak_bin;
+            }
+        }
+
+        /* check if sea surface signal is significant */
+        const double signal_threshold = bckgnd + (stddev * p.signal_threshold);
+        if(highest_peak < signal_threshold)
+        {
+            throw RunTimeException(WARNING, RTE_INFO, "Unable to determine sea surface (%lf < %lf)", highest_peak, signal_threshold);
+        }
+
+        /* calculate width of highest peak */
+        const double peak_above_bckgnd = smoothed_histogram[highest_peak_bin] - bckgnd;
+        const double peak_half_max = (peak_above_bckgnd * 0.4) + bckgnd;
+        long peak_width = 1;
+        for(long i = highest_peak_bin + 1; i < num_bins; i++)
+        {
+            if(smoothed_histogram[i] > peak_half_max) peak_width++;
+            else break;
+        }
+        for(long i = highest_peak_bin - 1; i >= 0; i--)
+        {
+            if(smoothed_histogram[i] > peak_half_max) peak_width++;
+            else break;
+        }
+        const double peak_stddev = (peak_width * p.bin_size) / 2.35;
+
+        /* calculate sea surface height and label sea surface photons */
+        const float surface_h = min_h + (highest_peak_bin * p.bin_size) + (p.bin_size / 2.0);
+        const double min_surface_h = surface_h - (peak_stddev * p.surface_width);
+        const double max_surface_h = surface_h + (peak_stddev * p.surface_width);
+        for(long i = 0; i < extent.photon_count; i++)
+        {
+            extent.photons[i].surface_h = surface_h;
+            if( extent.photons[i].ortho_h >= min_surface_h &&
+                extent.photons[i].ortho_h <= max_surface_h )
+            {
+                extent.photons[i].class_ph = BathyFields::SEA_SURFACE;
+            }
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Failed to find sea surface for spot %d [extend_id=0x%16lX]: %s", extent.spot, extent.extent_id, e.what());
+        for(long i = 0; i < extent.photon_count; i++)
+        {
+            extent.photons[i].processing_flags |= BathyFields::SEA_SURFACE_UNDETECTED;
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -1409,7 +1584,7 @@ void BathyReader::parseResource (const char* _resource, TimeLib::date_t& date, u
 /*----------------------------------------------------------------------------
  * writeCSV
  *----------------------------------------------------------------------------*/
-void BathyReader::writeCSV (const vector<extent_t*>& extents, int spot)
+void BathyReader::writeCSV (const vector<extent_t*>& extents, int spot, const stats_t& local_stats)
 {
     /* Check for Empty */
     if(extents.empty()) return;
@@ -1423,9 +1598,7 @@ void BathyReader::writeCSV (const vector<extent_t*>& extents, int spot)
         throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output json file %s: %s", json_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
     }
 
-    /*
-    * Build JSON File
-    */
+    /* Build JSON File */
     FString json_contents(R"({)"
     R"("track":%d,)"
     R"("pair":%d,)"
@@ -1437,7 +1610,11 @@ void BathyReader::writeCSV (const vector<extent_t*>& extents, int spot)
     R"("rgt":%d,)"
     R"("cycle":%d,)"
     R"("region":%d,)"
-    R"("utm_zone":%d)"
+    R"("utm_zone":%d,)"
+    R"("photon_count":%ld,)"
+    R"("subaqueous_photons":%ld,)"
+    R"("qtrees_duration":%0.3lf,)"
+    R"("coastnet_duration":%0.3lf)"
     R"(})",
     extents[0]->track,
     extents[0]->pair,
@@ -1449,7 +1626,11 @@ void BathyReader::writeCSV (const vector<extent_t*>& extents, int spot)
     extents[0]->reference_ground_track,
     extents[0]->cycle,
     extents[0]->region,
-    extents[0]->utm_zone);
+    extents[0]->utm_zone,
+    local_stats.photon_count,
+    local_stats.subaqueous_photons,
+    local_stats.qtrees_duration,
+    local_stats.coastnet_duration);
 
     /* Write and Close JSON File */
     fprintf(json_file, "%s", json_contents.c_str());
@@ -1465,7 +1646,13 @@ void BathyReader::writeCSV (const vector<extent_t*>& extents, int spot)
     }
 
     /* Write Header */
-    fprintf(out_file, "index_ph,index_seg,time,lat_ph,lon_ph,x_ph,y_ph,x_atc,y_atc,background_rate,surface_h,ortho_h,ellipse_h,sigma_thu,sigma_tvu,delta_h,yapc_score,max_signal_conf,quality_ph,flags,class_ph\n");
+    fprintf(out_file, "index_ph,index_seg,time,lat_ph,lon_ph,x_ph,y_ph,x_atc,y_atc,background_rate,surface_h,ortho_h,ellipse_h,sigma_thu,sigma_tvu,delta_h,yapc_score,max_signal_conf,quality_ph,flags,");
+    for(int j = 0; j < BathyFields::NUM_CLASSIFIERS; j++)
+    {
+        BathyFields::classifier_t classifier = static_cast<BathyFields::classifier_t>(j);
+        fprintf(out_file, "%s,", BathyFields::classifier2str(classifier));
+    }
+    fprintf(out_file, "class_ph\n");
 
     /* Write Data */
     for(auto extent: extents)
@@ -1492,6 +1679,10 @@ void BathyReader::writeCSV (const vector<extent_t*>& extents, int spot)
             fprintf(out_file, "%d,", extent->photons[i].max_signal_conf);
             fprintf(out_file, "%d,", extent->photons[i].quality_ph);
             fprintf(out_file, "%u,", extent->photons[i].processing_flags);
+            for(int j = 0; j < BathyFields::NUM_CLASSIFIERS; j++)
+            {
+                fprintf(out_file, "%d,", extent->photons[i].predictions[j]);
+            }
             fprintf(out_file, "%d", extent->photons[i].class_ph);
             fprintf(out_file, "\n");
         }
@@ -1499,183 +1690,6 @@ void BathyReader::writeCSV (const vector<extent_t*>& extents, int spot)
 
     /* Close Output File */
     fclose(out_file);
-
-}
-
-/*----------------------------------------------------------------------------
- * str2classifier
- *----------------------------------------------------------------------------*/
-classifier_t BathyReader::str2classifier (const char* str)
-{
-    if(StringLib::match(str, "qtrees"))             return BathyFields::QTREES;
-    if(StringLib::match(str, "coastnet"))           return BathyFields::COASTNET;
-    if(StringLib::match(str, "openoceans"))         return BathyFields::OPENOCEANS;
-    if(StringLib::match(str, "medianfilter"))       return BathyFields::MEDIANFILTER;
-    if(StringLib::match(str, "cshelph"))            return BathyFields::CSHELPH;
-    if(StringLib::match(str, "bathypathfinder"))    return BathyFields::BATHY_PATHFINDER;
-    if(StringLib::match(str, "pointnet2"))          return BathyFields::POINTNET2;
-    if(StringLib::match(str, "localcontrast"))      return BathyFields::LOCAL_CONTRAST;
-    if(StringLib::match(str, "ensemble"))           return BathyFields::ENSEMBLE;
-    return BathyFields::INVALID_CLASSIFIER;
-}
-
-/*----------------------------------------------------------------------------
- * getSpotList
- *----------------------------------------------------------------------------*/
-void BathyReader::getSpotList (lua_State* L, int index, bool* provided, bool* spots, int size)
-{
-    /* Reset Provided */
-    if(provided) *provided = false;
-
-    /* Must be table of spots or a single spot */
-    if(lua_istable(L, index))
-    {
-        /* Clear spot table (sets all to false) */
-        memset(spots, 0, sizeof(bool) * size);
-        if(provided) *provided = true;
-
-        /* Iterate through each spot in table */
-        const int num_spots = lua_rawlen(L, index);
-        for(int i = 0; i < num_spots; i++)
-        {
-            /* Get spot */
-            lua_rawgeti(L, index, i+1);
-
-            /* Set spot */
-            if(lua_isinteger(L, -1))
-            {
-                const int spot = LuaObject::getLuaInteger(L, -1);
-                if(spot >= 1 && spot <= Icesat2Parms::NUM_SPOTS)
-                {
-                    spots[spot-1] = true;
-                }
-                else
-                {
-                    mlog(ERROR, "Invalid spot: %d", spot);
-                }
-            }
-
-            /* Clean up stack */
-            lua_pop(L, 1);
-        }
-    }
-    else if(lua_isinteger(L, index))
-    {
-        /* Clear spot table (sets all to false) */
-        memset(spots, 0, sizeof(bool) * size);
-
-        /* Set spot */
-        const int spot = LuaObject::getLuaInteger(L, -1);
-        if(spot >= 1 && spot <= Icesat2Parms::NUM_SPOTS)
-        {
-            spots[spot-1] = true;
-        }
-        else
-        {
-            mlog(ERROR, "Invalid spot: %d", spot);
-        }
-    }
-    else if(!lua_isnil(L, index))
-    {
-        mlog(ERROR, "Spot selection must be provided as a table or integer");
-    }
-}
-
-/*----------------------------------------------------------------------------
- * getClassifiers
- *----------------------------------------------------------------------------*/
-void BathyReader::getClassifiers (lua_State* L, int index, bool* provided, bool* classifiers, int size)
-{
-    /* Reset Provided */
-    if(provided) *provided = false;
-
-    /* Must be table of classifiers or a single classifier as a string */
-    if(lua_istable(L, index))
-    {
-        /* Clear classifier table (sets all to false) */
-        memset(classifiers, 0, sizeof(bool) * size);
-
-        /* Get number of classifiers in table */
-        const int num_classifiers = lua_rawlen(L, index);
-        if(num_classifiers > 0 && provided) *provided = true;
-
-        /* Iterate through each classifier in table */
-        for(int i = 0; i < num_classifiers; i++)
-        {
-            /* Get classifier */
-            lua_rawgeti(L, index, i+1);
-
-            /* Set classifier */
-            if(lua_isinteger(L, -1))
-            {
-                const int classifier = LuaObject::getLuaInteger(L, -1);
-                if(classifier >= 0 && classifier < BathyFields::NUM_CLASSIFIERS)
-                {
-                    classifiers[classifier] = true;
-                    mlog(DEBUG, "Selecting classifier %d", classifier);
-                }
-                else
-                {
-                    mlog(ERROR, "Invalid classifier: %d", classifier);
-                }
-            }
-            else if(lua_isstring(L, -1))
-            {
-                const char* classifier_str = LuaObject::getLuaString(L, -1);
-                const classifier_t classifier = str2classifier(classifier_str);
-                if(classifier != BathyFields::INVALID_CLASSIFIER)
-                {
-                    classifiers[static_cast<int>(classifier)] = true;
-                }
-                else
-                {
-                    mlog(ERROR, "Invalid classifier: %s", classifier_str);
-                }
-            }
-
-            /* Clean up stack */
-            lua_pop(L, 1);
-        }
-    }
-    else if(lua_isinteger(L, index))
-    {
-        /* Clear classifier table (sets all to false) */
-        memset(classifiers, 0, sizeof(bool) * size);
-
-        /* Set classifier */
-        const int classifier = LuaObject::getLuaInteger(L, -1);
-        if(classifier >= 0 && classifier < BathyFields::NUM_CLASSIFIERS)
-        {
-            if(provided) *provided = true;
-            classifiers[classifier] = true;
-        }
-        else
-        {
-            mlog(ERROR, "Invalid classifier: %d", classifier);
-        }
-    }
-    else if(lua_isstring(L, index))
-    {
-        /* Clear classifiers table (sets all to false) */
-        memset(classifiers, 0, sizeof(bool) * size);
-
-        /* Set classifier */
-        const char* classifier_str = LuaObject::getLuaString(L, index);
-        const classifier_t classifier = str2classifier(classifier_str);
-        if(classifier != BathyFields::INVALID_CLASSIFIER)
-        {
-            if(provided) *provided = true;
-            classifiers[static_cast<int>(classifier)] = true;
-        }
-        else
-        {
-            mlog(ERROR, "Invalid classifier: %s", classifier_str);
-        }
-    }
-    else if(!lua_isnil(L, index))
-    {
-        mlog(ERROR, "ATL24 classifiers must be provided as a table, integer, or string");
-    }
 }
 
 /*----------------------------------------------------------------------------
@@ -1692,7 +1706,7 @@ int BathyReader::luaSpotEnabled (lua_State* L)
         const int spot = getLuaInteger(L, 2);
         if(spot >= 1 && spot <= Icesat2Parms::NUM_SPOTS)
         {
-            status = lua_obj->parms->spots[spot-1];
+            status = lua_obj->parms->reader.spots[spot-1];
         }
     }
     catch(const RunTimeException& e)
@@ -1716,11 +1730,11 @@ int BathyReader::luaClassifierEnabled (lua_State* L)
     {
         lua_obj = dynamic_cast<BathyReader*>(getLuaSelf(L, 1));
         const char* classifier_str = getLuaString(L, 2);
-        const classifier_t classifier = str2classifier(classifier_str);
+        const classifier_t classifier = BathyFields::str2classifier(classifier_str);
         if(classifier != BathyFields::INVALID_CLASSIFIER)
         {
             const int index = static_cast<int>(classifier);
-            status = lua_obj->parms->classifiers[index];
+            status = lua_obj->parms->reader.classifiers[index];
         }
     }
     catch(const RunTimeException& e)

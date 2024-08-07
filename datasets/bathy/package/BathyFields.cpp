@@ -29,41 +29,50 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __icesat2_plugin__
-#define __icesat2_plugin__
-
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "Atl03Reader.h"
-#include "Atl03Viewer.h"
-#include "Atl03Indexer.h"
-#include "Atl06Dispatch.h"
-#include "Atl06Reader.h"
-#include "Atl08Dispatch.h"
-#include "Atl13IODriver.h"
-#include "Atl13Reader.h"
-#include "CumulusIODriver.h"
-#include "GTArray.h"
-#include "GTDArray.h"
-#include "Icesat2Parms.h"
-#include "MeritRaster.h"
-
-#ifdef __unittesting__
-#include "UT_Atl03Reader.h"
-#include "UT_Atl06Dispatch.h"
-#endif
+#include "BathyFields.h"
+#include "StringLib.h"
 
 /******************************************************************************
- * PROTOTYPES
+ * BATHY FIELDS NAMESPACE
  ******************************************************************************/
 
-extern "C" {
-void initicesat2 (void);
-void deiniticesat2 (void);
+/*----------------------------------------------------------------------------
+ * str2classifier
+ *----------------------------------------------------------------------------*/
+BathyFields::classifier_t BathyFields::str2classifier (const char* str)
+{
+    if(StringLib::match(str, "qtrees"))             return QTREES;
+    if(StringLib::match(str, "coastnet"))           return COASTNET;
+    if(StringLib::match(str, "openoceans++"))       return OPENOCEANSPP;
+    if(StringLib::match(str, "medianfilter"))       return MEDIANFILTER;
+    if(StringLib::match(str, "cshelph"))            return CSHELPH;
+    if(StringLib::match(str, "bathypathfinder"))    return BATHYPATHFINDER;
+    if(StringLib::match(str, "pointnet2"))          return POINTNET;
+    if(StringLib::match(str, "openoceans"))         return OPENOCEANS;
+    if(StringLib::match(str, "ensemble"))           return ENSEMBLE;
+    return BathyFields::INVALID_CLASSIFIER;
 }
 
-#endif  /* __icesat2_plugin__ */
-
-
+/*----------------------------------------------------------------------------
+ * classifier2str
+ *----------------------------------------------------------------------------*/
+const char* BathyFields::classifier2str (classifier_t classifier)
+{
+    switch(classifier)
+    {
+        case QTREES:            return "qtrees";
+        case COASTNET:          return "coastnet";
+        case OPENOCEANSPP:      return "openoceans++";
+        case MEDIANFILTER:      return "medianfilter";
+        case CSHELPH:           return "cshelph";
+        case BATHYPATHFINDER:   return "bathypathfinder";
+        case POINTNET:          return "pointnet";
+        case OPENOCEANS:        return "openoceans";
+        case ENSEMBLE:          return "ensemble";
+        default:                return "unknown";
+    }
+}

@@ -348,6 +348,10 @@ int main (int argc, char* argv[])
         initnetsvc();
     #endif
 
+    #ifdef __bathy__
+        initbathy();
+    #endif
+
     #ifdef __gebco__
         initgebco();
     #endif
@@ -416,6 +420,10 @@ int main (int argc, char* argv[])
     ulplugins();
 
     /* Clean Up Built-In Packages */
+
+    #ifdef __bathy__
+        deinitbathy();
+    #endif
 
     #ifdef __gebco__
         deinitgebco();

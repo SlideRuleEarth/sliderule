@@ -48,7 +48,6 @@
 #include "GeoLib.h"
 #include "Icesat2Parms.h"
 #include "BathyFields.h"
-#include "BathyOceanEyes.h"
 #include "BathyClassifier.h"
 
 using BathyFields::classifier_t;
@@ -94,56 +93,12 @@ class BathyReader: public LuaObject
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        /* Parameters */
-        struct parms_t {
-            Asset*              asset;                          // asset for ATL03 resources
-            Asset*              asset09;                        // asset for ATL09 resources
-            Icesat2Parms*       icesat2;                        // global icesat2 parameters
-            GeoParms*           hls;                            // geo-package parms for sampling HLS for NDWI
-            BathyOceanEyes*     oceaneyes;                      // bathymetric utilities
-            BathyClassifier*    qtrees;                         // qtrees algorithm
-            const char*         resource09;                     // ATL09 granule
-            double              max_dem_delta;                  // initial filter of heights against DEM (For removing things like clouds)
-            double              min_dem_delta;                  // initial filter of heights against DEM (For removing things like clouds)
-            int                 ph_in_extent;                   // number of photons in each extent
-            bool                generate_ndwi;                  // use HLS data to generate NDWI for each segment lat,lon
-            bool                use_bathy_mask;                 // global bathymetry mask downloaded in atl24 init lua routine
-            bool                classifiers[BathyFields::NUM_CLASSIFIERS]; // which bathymetry classifiers to run
-            bool                return_inputs;                  // return the atl03 bathy records back to client
-            bool                spots[Icesat2Parms::NUM_SPOTS]; // only used by downstream algorithms
-            bool                output_as_sdp;                  // include all the necessary ancillary data for the standard data product
-
-            parms_t():
-                asset           (NULL),
-                asset09         (NULL),
-                icesat2         (NULL),
-                hls             (NULL),
-                oceaneyes       (NULL),
-                qtrees          (NULL),
-                resource09      (NULL),
-                max_dem_delta   (50.0),
-                min_dem_delta   (-100.0),
-                ph_in_extent    (8192),
-                generate_ndwi   (false),
-                use_bathy_mask  (true),
-                classifiers     {true, true, true, true, true, true, true, true, true},
-                return_inputs   (false),
-                spots           {true, true, true, true, true, true},
-                output_as_sdp   (false) {};
-
-            ~parms_t() {
-                if(asset) asset->releaseLuaObject();
-                if(asset09) asset09->releaseLuaObject();
-                if(icesat2) icesat2->releaseLuaObject();
-                if(hls) hls->releaseLuaObject();
-                delete oceaneyes;
-                delete [] resource09;
-            }
-        };
-
         /* Statitics */
         typedef struct {
-            uint64_t photon_count;
+            uint64_t    photon_count;
+            uint64_t    subaqueous_photons;
+            double      qtrees_duration;
+            double      coastnet_duration;
         } stats_t;
 
         /*--------------------------------------------------------------------
@@ -160,11 +115,11 @@ class BathyReader: public LuaObject
          *--------------------------------------------------------------------*/
 
         typedef struct Info {
-            BathyReader*    reader;
-            const parms_t*  parms;
-            char            prefix[7];
-            int             track;
-            int             pair;
+            BathyReader*        reader;
+            const BathyParms*   parms;
+            char                prefix[7];
+            int                 track;
+            int                 pair;
         } info_t;
 
         /* Region Subclass */
@@ -299,38 +254,44 @@ class BathyReader: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                active;
-        Thread*             readerPid[Icesat2Parms::NUM_SPOTS];
-        Mutex               threadMut;
-        int                 threadCount;
-        int                 numComplete;
-        const parms_t*      parms;
-        const char*         resource;
-        bool                sendTerminator;
-        Publisher*          outQ;
-        int                 signalConfColIndex;
-        const char*         sharedDirectory;
-        int                 readTimeoutMs;
-        stats_t             stats;
+        bool                        active;
+        Thread*                     readerPid[BathyParms::NUM_SPOTS];
+        Mutex                       threadMut;
+        int                         threadCount;
+        int                         numComplete;
+        BathyParms*                 parms;
+        BathyClassifier*            classifiers[BathyFields::NUM_CLASSIFIERS];
+        BathyRefractionCorrector*   refraction;         // refraction correction
+        BathyUncertaintyCalculator* uncertainty;        // uncertainty calculation
+        const char*                 resource;
+        bool                        sendTerminator;
+        Publisher*                  outQ;
+        int                         signalConfColIndex;
+        const char*                 sharedDirectory;
+        int                         readTimeoutMs;
+        stats_t                     stats;
 
-        H5Coro::Context*    context; // for ATL03 file
-        H5Coro::Context*    context09; // for ATL09 file
+        H5Coro::Context*            context; // for ATL03 file
+        H5Coro::Context*            context09; // for ATL09 file
 
-        TimeLib::date_t     granuleDate;
+        TimeLib::date_t             granuleDate;
 
-        uint16_t            startRgt;
-        uint8_t             startCycle;
-        uint8_t             startRegion;
-        uint8_t             sdpVersion;
+        uint16_t                    startRgt;
+        uint8_t                     startCycle;
+        uint8_t                     startRegion;
+        uint8_t                     sdpVersion;
 
-        GeoLib::TIFFImage*  bathyMask;
+        GeoLib::TIFFImage*          bathyMask;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
                             BathyReader                 (lua_State* L,
-                                                         const parms_t* _parms,
+                                                         BathyParms* _parms,
+                                                         BathyClassifier** _classifiers,
+                                                         BathyRefractionCorrector* _refraction,
+                                                         BathyUncertaintyCalculator* _uncertainty,
                                                          const char* _resource,
                                                          const char* outq_name,
                                                          const char* shared_directory,
@@ -340,15 +301,14 @@ class BathyReader: public LuaObject
         static void*        subsettingThread            (void* parm);
 
         static double       calculateBackground         (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03);
+        static void         findSeaSurface              (extent_t& extent);
+
         static void         parseResource               (const char* resource, TimeLib::date_t& date, 
                                                          uint16_t& rgt, uint8_t& cycle, uint8_t& region, 
                                                          uint8_t& version);
         
-        void                writeCSV                    (const vector<extent_t*>& extents, int spot);
+        void                writeCSV                    (const vector<extent_t*>& extents, int spot, const stats_t& local_stats);
 
-        static classifier_t str2classifier              (const char* str);
-        static void         getSpotList                 (lua_State* L, int index, bool* provided, bool* spots, int size=Icesat2Parms::NUM_SPOTS);
-        static void         getClassifiers              (lua_State* L, int index, bool* provided, bool* classifiers, int size=BathyFields::NUM_CLASSIFIERS);
         static int          luaSpotEnabled              (lua_State* L);
         static int          luaClassifierEnabled        (lua_State* L);
         static int          luaStats                    (lua_State* L);

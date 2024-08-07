@@ -137,7 +137,6 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp"     # List [] const issue
         "--suppress=constParameterPointer:*/CcsdsPayloadDispatch.cpp"   # Not trivial to fix, would have to change DispachObject class as well.
         "--suppress=knownConditionTrueFalse"                            # -1 < 0 etc
-        "--suppress=constParameterReference:*/BathyOceanEyes.cpp"       # extent_t& extent cannot be const
     )
 
 endif()
@@ -177,6 +176,7 @@ option (ENABLE_TERMINAL "Instantiate terminal messages" ON)
 
 # Dataset Options #
 
+option (USE_BATHY_DATASET "Include the BATHY dataset" ON)
 option (USE_GEBCO_DATASET "Include the GEBCO dataset" ON)
 option (USE_GEDI_DATASET "Include the GEDI dataset" ON)
 option (USE_ICESAT2_DATASET "Include the ICESat2 dataset" ON)
@@ -345,6 +345,10 @@ if(${USE_NETSVC_PACKAGE})
 endif()
 
 # Datasets #
+
+if(${USE_BATHY_DATASET})
+    add_subdirectory (datasets/bathy)
+endif()
 
 if(${USE_GEBCO_DATASET})
     add_subdirectory (datasets/gebco)

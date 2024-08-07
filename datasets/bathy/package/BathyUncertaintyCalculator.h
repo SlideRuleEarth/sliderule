@@ -33,10 +33,11 @@
 #define __bathy_openoceans__
 
 #include "OsApi.h"
+#include "LuaObject.h"
 #include "H5Coro.h"
 #include "H5Array.h"
-#include "NetsvcParms.h"
 #include "BathyFields.h"
+#include "BathyParms.h"
 
 using BathyFields::extent_t;
 
@@ -44,7 +45,7 @@ using BathyFields::extent_t;
  * BATHY OPENOCEANS
  ******************************************************************************/
 
-class BathyOceanEyes
+class BathyUncertaintyCalculator: public LuaObject
 {
     public:
 
@@ -52,64 +53,22 @@ class BathyOceanEyes
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* OCEANEYES_PARMS;
+        static const char* OBJECT_TYPE;
 
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        struct parms_t {
-            Asset*          assetKd;                // asset for reading Kd resources
-            const char*     resourceKd;             // filename for Kd (uncertainty calculation)
-            long            read_timeout_ms;        // timeout for reading Kd
-            double          ri_air;
-            double          ri_water;
-            double          bin_size;               // meters
-            double          max_range;              // meters
-            long            max_bins;               // bins
-            double          signal_threshold;       // standard deviations
-            double          min_peak_separation;    // meters
-            double          highest_peak_ratio;
-            double          surface_width;          // standard deviations
-            bool            model_as_poisson;
-
-            parms_t():
-                assetKd             (NULL),
-                resourceKd          (NULL),
-                read_timeout_ms     (NetsvcParms::DEFAULT_READ_TIMEOUT * 1000), // TODO: this is where we need to inherit the value from the request level parameters
-                ri_air              (1.00029),
-                ri_water            (1.34116),
-                bin_size            (0.5),
-                max_range           (1000.0),
-                max_bins            (10000),
-                signal_threshold    (3.0),
-                min_peak_separation (0.5),
-                highest_peak_ratio  (1.2),
-                surface_width       (3.0),
-                model_as_poisson    (true) {};
-
-            ~parms_t() {
-                if(assetKd) assetKd->releaseLuaObject();
-                delete [] resourceKd;
-            };
-        };
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void     init                    (void);
-                        BathyOceanEyes          (lua_State* L, int index);
-                        ~BathyOceanEyes         (void);
-        void            findSeaSurface          (extent_t& extent) const;
-        void            correctRefraction       (extent_t& extent,
-                                                 const H5Array<float>& ref_el,
-                                                 const H5Array<float>& ref_az) const;
-        void            calculateUncertainty    (extent_t& extent, 
-                                                 const H5Array<float>& sigma_across,
-                                                 const H5Array<float>& sigma_along,
-                                                 const H5Array<float>& sigma_h,
-                                                 const H5Array<float>& ref_el) const;
+        static void     init        (void);
+        static int      luaCreate   (lua_State* L);
+        void            run         (extent_t& extent, 
+                                     const H5Array<float>& sigma_across,
+                                     const H5Array<float>& sigma_along,
+                                     const H5Array<float>& sigma_h,
+                                     const H5Array<float>& ref_el) const;
 
     private:
 
@@ -132,6 +91,13 @@ class BathyOceanEyes
         } uncertainty_coeff_t;
 
         /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+        
+        BathyUncertaintyCalculator  (lua_State* L, BathyParms* _parms);
+        ~BathyUncertaintyCalculator (void);
+
+        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
@@ -150,7 +116,7 @@ class BathyOceanEyes
 
         static uncertainty_coeff_t  UNCERTAINTY_COEFF_MAP[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES][NUM_WIND_SPEEDS][NUM_KD_RANGES];
 
-        parms_t                     parms;
+        BathyParms*                 parms;
         H5Coro::Context*            context;
         H5Array<int16_t>*           Kd_490;
 };

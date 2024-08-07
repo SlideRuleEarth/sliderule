@@ -216,11 +216,11 @@ sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
-	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest-$(ARCH) $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/sliderule-buildenv:latest-$(ARCH) $(ECR)/sliderule-buildenv:$(VERSION)-$(ARCH)
-	docker tag $(ECR)/sliderule-buildenv:latest-$(ARCH) $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)-$(ARCH)
-	docker tag $(ECR)/sliderule-buildenv:latest-$(ARCH) $(GHCR)/sliderule-buildenv:$(VERSION)-$(ARCH)
-	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)-$(ARCH) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
+	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(VERSION)
+	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
+	docker tag $(ECR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
+	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
 
 sliderule-buildenv-docker-push: ## push build environment docker image to registry
 	docker push $(ECR)/sliderule-buildenv:$(VERSION)

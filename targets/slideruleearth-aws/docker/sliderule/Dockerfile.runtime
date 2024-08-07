@@ -20,6 +20,8 @@ RUN dnf update \
   openssl \
   libtiff \
   zlib \
+  gmp \
+  libomp \
   && dnf clean all \
   && rm -rf /var/cache/yum
 

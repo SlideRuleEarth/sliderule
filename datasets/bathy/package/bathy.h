@@ -29,41 +29,18 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __icesat2_plugin__
-#define __icesat2_plugin__
-
-/******************************************************************************
- * INCLUDES
- ******************************************************************************/
-
-#include "Atl03Reader.h"
-#include "Atl03Viewer.h"
-#include "Atl03Indexer.h"
-#include "Atl06Dispatch.h"
-#include "Atl06Reader.h"
-#include "Atl08Dispatch.h"
-#include "Atl13IODriver.h"
-#include "Atl13Reader.h"
-#include "CumulusIODriver.h"
-#include "GTArray.h"
-#include "GTDArray.h"
-#include "Icesat2Parms.h"
-#include "MeritRaster.h"
-
-#ifdef __unittesting__
-#include "UT_Atl03Reader.h"
-#include "UT_Atl06Dispatch.h"
-#endif
+#ifndef __bathy_plugin__
+#define __bathy_plugin__
 
 /******************************************************************************
  * PROTOTYPES
  ******************************************************************************/
 
 extern "C" {
-void initicesat2 (void);
-void deiniticesat2 (void);
+void initbathy (void);
+void deinitbathy (void);
 }
 
-#endif  /* __icesat2_plugin__ */
+#endif  /* __bathy_plugin__ */
 
 

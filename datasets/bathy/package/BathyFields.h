@@ -42,12 +42,12 @@ namespace BathyFields
         INVALID_CLASSIFIER  = -1,
         QTREES              = 0,
         COASTNET            = 1,
-        OPENOCEANS          = 2,
+        OPENOCEANSPP        = 2,
         MEDIANFILTER        = 3,
         CSHELPH             = 4,
-        BATHY_PATHFINDER    = 5,
-        POINTNET2           = 6,
-        LOCAL_CONTRAST      = 7,
+        BATHYPATHFINDER    = 5,
+        POINTNET           = 6,
+        OPENOCEANS          = 7,
         ENSEMBLE            = 8,
         NUM_CLASSIFIERS     = 9
     } classifier_t;
@@ -85,12 +85,12 @@ namespace BathyFields
         float           ellipse_h;              // height of photon with respect to reference ellipsoid
         float           sigma_thu;              // total horizontal uncertainty
         float           sigma_tvu;              // total vertical uncertainty
-        uint16_t        processing_flags;       // bit mask of flags for capturing errors and warnings
-        uint16_t        processing_result;      // temporary storage for pipeline processing
-        uint8_t         yapc_score;
+        uint32_t        processing_flags;       // bit mask of flags for capturing errors and warnings
+        uint8_t         yapc_score;             // atl03 density estimate (Yet Another Photon Classifier)
         int8_t          max_signal_conf;        // maximum value in the atl03 confidence table
-        int8_t          quality_ph;
-        int8_t          class_ph;               // photon classification        
+        int8_t          quality_ph;             // atl03 quality flags
+        int8_t          class_ph;               // photon classification
+        int8_t          predictions[NUM_CLASSIFIERS];
     } photon_t;
 
     /* Extent Record */
@@ -108,6 +108,10 @@ namespace BathyFields
         uint32_t        photon_count;
         photon_t        photons[];              // zero length field
     } extent_t;
+
+    /* functions */
+    classifier_t str2classifier (const char* str);
+    const char* classifier2str (classifier_t classifier);
 }
 
 #endif
