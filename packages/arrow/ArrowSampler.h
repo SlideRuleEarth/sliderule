@@ -100,6 +100,7 @@ class ArrowSampler: public LuaObject
 
             explicit BatchSampler (const char* _rkey, RasterObject* _robj, ArrowSampler* _obj);
                     ~BatchSampler (void);
+             void    clearSamples (void);
         } batch_sampler_t;
 
         typedef struct
@@ -166,6 +167,8 @@ class ArrowSampler: public LuaObject
         static void*    mainThread       (void* parm);
         static void     batchSampling    (batch_sampler_t* sampler);
         static void*    readerThread     (void* parm);
+        static void*    readSamples      (RasterObject* robj, uint32_t start_indx, uint32_t end_indx,
+                                          ArrowSampler* obj, std::vector<ArrowSampler::sample_list_t*>& samples);
 };
 
 #endif  /* __parquet_sampler__*/

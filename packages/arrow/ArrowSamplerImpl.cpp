@@ -113,6 +113,7 @@ bool ArrowSamplerImpl::processSamples(ArrowSampler::batch_sampler_t* sampler)
     const ArrowParms* parms = arrowSampler->getParms();
     bool  status = false;
 
+    /* Convert samples into new columns */
     try
     {
         if(parms->format == ArrowParms::PARQUET || parms->format == ArrowParms::FEATHER)
@@ -131,7 +132,31 @@ bool ArrowSamplerImpl::processSamples(ArrowSampler::batch_sampler_t* sampler)
         mlog(CRITICAL, "Error processing samples: %s", e.what());
     }
 
-    if(!status)
+    if(status)
+    {
+        /* Create raster file map <id, filename> */
+        Dictionary<uint64_t>::Iterator iterator(sampler->robj->fileDictGet());
+        for(int i = 0; i < iterator.length; i++)
+        {
+            const char* name = iterator[i].key;
+            const uint64_t id = iterator[i].value;
+
+            /* For some data sets, dictionary contains quality mask rasters in addition to data rasters.
+             * Only add rasters with id present in the samples
+            */
+            if(sampler->file_ids.find(id) != sampler->file_ids.end())
+            {
+                sampler->filemap.emplace_back(id, name);
+            }
+        }
+
+        /* Sort the map with increasing file id */
+        std::sort(sampler->filemap.begin(), sampler->filemap.end(),
+            [](const std::pair<uint64_t, std::string>& a, const std::pair<uint64_t, std::string>& b)
+            { return a.first < b.first; });
+
+    }
+    else
     {
         /* No columns will be added */
         newFields.clear();

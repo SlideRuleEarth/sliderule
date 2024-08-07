@@ -234,7 +234,7 @@ uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t g
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::~GeoIndexedRaster(void)
 {
-    mlog(INFO, "onlyFirst: %lu, fullSearch: %lu, findRastersCalls: %lu, allSamples: %lu",
+    mlog(DEBUG, "onlyFirst: %lu, fullSearch: %lu, findRastersCalls: %lu, allSamples: %lu",
                 onlyFirstCount, fullSearchCount, findRastersCount, allSamplesCount);
 
     delete [] findersRange;
@@ -490,7 +490,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
         }
 
         GDALClose((GDALDatasetH)dset);
-        mlog(INFO, "Loaded %lu raster index file", featuresList.size());
+        mlog(DEBUG, "Loaded %lu raster index file", featuresList.size());
     }
     catch (const RunTimeException &e)
     {

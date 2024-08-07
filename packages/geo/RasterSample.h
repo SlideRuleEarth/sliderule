@@ -77,6 +77,15 @@ public:
           .mad = 0.0}
     {
     }
+
+    std::string toString(void) const
+    {
+        char buffer[1024];
+        snprintf(buffer, sizeof(buffer), "time: %.2lf, value: %.2lf, verticalShift: %.2lf, fileId: %lu, flags: %u, stats: {count: %u, min: %.2lf, max: %.2lf, mean: %.2lf, median: %.2lf, stdev: %.2lf, mad: %.2lf}",
+            time, value, verticalShift, fileId, flags, stats.count, stats.min, stats.max, stats.mean, stats.median, stats.stdev, stats.mad);
+        return std::string(buffer);
+    }
+
 };
 
 #endif  /* __raster_sample__ */

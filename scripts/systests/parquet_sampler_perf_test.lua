@@ -35,6 +35,7 @@ function getFileSize(filePath)
 end
 
 local robj_3dep = geo.raster(geo.parms({asset="usgs3dep-1meter-dem", algorithm="NearestNeighbour", radius=0, catalog = contents, use_poi_time=true}))
+-- local robj_3dep = geo.raster(geo.parms({asset="usgs3dep-1meter-dem", algorithm="NearestNeighbour", radius=0, catalog = contents, use_poi_time=true, single_stop=true, }))
 runner.check(robj_3dep ~= nil)
 
 print('\n--------------------------------------\nTest01: input/output parquet (x, y)\n--------------------------------------')
