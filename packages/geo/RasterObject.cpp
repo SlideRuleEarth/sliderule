@@ -122,7 +122,7 @@ RasterObject* RasterObject::cppCreate(GeoParms* _parms)
 {
     /* Check Parameters */
     if(!_parms) return NULL;
-    
+
     /* Get Factory */
     factory_t factory;
     bool found = false;
@@ -156,6 +156,14 @@ RasterObject* RasterObject::cppCreate(GeoParms* _parms)
 }
 
 /*----------------------------------------------------------------------------
+ * cppCreate
+ *----------------------------------------------------------------------------*/
+RasterObject* RasterObject::cppCreate(const RasterObject* obj)
+{
+    return cppCreate(obj->parms);
+}
+
+/*----------------------------------------------------------------------------
  * registerDriver
  *----------------------------------------------------------------------------*/
 bool RasterObject::registerRaster (const char* _name, factory_f create)
@@ -186,12 +194,53 @@ uint8_t* RasterObject::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uin
 }
 
 /*----------------------------------------------------------------------------
+ * getMaxBatchThreads
+ *----------------------------------------------------------------------------*/
+uint32_t RasterObject::getMaxBatchThreads(void)
+{
+    /* Maximum number of batch threads.
+     * Each batch thread creates multiple raster reading threads.
+     */
+    return 16;
+}
+
+/*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
 RasterObject::~RasterObject(void)
 {
     /* Release GeoParms LuaObject */
     parms->releaseLuaObject();
+}
+
+/*----------------------------------------------------------------------------
+ * fileDictAdd
+ *----------------------------------------------------------------------------*/
+uint64_t RasterObject::fileDictAdd(const string& fileName)
+{
+    uint64_t id;
+
+    if(!fileDict.find(fileName.c_str(), &id))
+    {
+        id = (parms->key_space << 32) | fileDict.length();
+        fileDict.add(fileName.c_str(), id);
+    }
+
+    return id;
+}
+
+/*----------------------------------------------------------------------------
+ * fileDictGetFile
+ *----------------------------------------------------------------------------*/
+const char* RasterObject::fileDictGetFile (uint64_t fileId)
+{
+    Dictionary<uint64_t>::Iterator iterator(fileDict);
+    for(int i = 0; i < iterator.length; i++)
+    {
+        if(fileId == iterator[i].value)
+            return iterator[i].key;
+    }
+    return NULL;
 }
 
 /******************************************************************************
@@ -208,22 +257,6 @@ RasterObject::RasterObject(lua_State *L, GeoParms* _parms):
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "sample", luaSamples);
     LuaEngine::setAttrFunc(L, "subset", luaSubsets);
-}
-
-/*----------------------------------------------------------------------------
- * fileDictAdd
- *----------------------------------------------------------------------------*/
-uint64_t RasterObject::fileDictAdd(const std::string& fileName)
-{
-    uint64_t id;
-
-    if(!fileDict.find(fileName.c_str(), &id))
-    {
-        id = (parms->key_space << 32) | fileDict.length();
-        fileDict.add(fileName.c_str(), id);
-    }
-
-    return id;
 }
 
 /*----------------------------------------------------------------------------

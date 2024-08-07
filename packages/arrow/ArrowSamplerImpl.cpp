@@ -108,11 +108,12 @@ void ArrowSamplerImpl::processInputFile(const char* file_path, std::vector<Arrow
 /*----------------------------------------------------------------------------
 * processSamples
 *----------------------------------------------------------------------------*/
-bool ArrowSamplerImpl::processSamples(ArrowSampler::sampler_t* sampler)
+bool ArrowSamplerImpl::processSamples(ArrowSampler::batch_sampler_t* sampler)
 {
     const ArrowParms* parms = arrowSampler->getParms();
     bool  status = false;
 
+    /* Convert samples into new columns */
     try
     {
         if(parms->format == ArrowParms::PARQUET || parms->format == ArrowParms::FEATHER)
@@ -131,7 +132,31 @@ bool ArrowSamplerImpl::processSamples(ArrowSampler::sampler_t* sampler)
         mlog(CRITICAL, "Error processing samples: %s", e.what());
     }
 
-    if(!status)
+    if(status)
+    {
+        /* Create raster file map <id, filename> */
+        Dictionary<uint64_t>::Iterator iterator(sampler->robj->fileDictGet());
+        for(int i = 0; i < iterator.length; i++)
+        {
+            const char* name = iterator[i].key;
+            const uint64_t id = iterator[i].value;
+
+            /* For some data sets, dictionary contains quality mask rasters in addition to data rasters.
+             * Only add rasters with id present in the samples
+            */
+            if(sampler->file_ids.find(id) != sampler->file_ids.end())
+            {
+                sampler->filemap.emplace_back(id, name);
+            }
+        }
+
+        /* Sort the map with increasing file id */
+        std::sort(sampler->filemap.begin(), sampler->filemap.end(),
+            [](const std::pair<uint64_t, std::string>& a, const std::pair<uint64_t, std::string>& b)
+            { return a.first < b.first; });
+
+    }
+    else
     {
         /* No columns will be added */
         newFields.clear();
@@ -300,7 +325,7 @@ void ArrowSamplerImpl::getXYPoints(std::vector<ArrowSampler::point_info_t*>& poi
         ArrowSampler::point_info_t* pinfo = new ArrowSampler::point_info_t({x, y, 0.0});
         points.push_back(pinfo);
     }
-    mlog(INFO, "Read %ld points from file", points.size());
+    mlog(DEBUG, "Read %ld points from file", points.size());
 }
 
 /*----------------------------------------------------------------------------
@@ -413,7 +438,7 @@ std::shared_ptr<arrow::Table> ArrowSamplerImpl::addNewColumns(const std::shared_
 /*----------------------------------------------------------------------------
 * makeColumnsWithLists
 *----------------------------------------------------------------------------*/
-bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::sampler_t* sampler)
+bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampler)
 {
     auto* pool = arrow::default_memory_pool();
     RasterObject* robj = sampler->robj;
@@ -596,7 +621,7 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::sampler_t* sampler)
 /*----------------------------------------------------------------------------
 * makeColumnsWithOneSample
 *----------------------------------------------------------------------------*/
-bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::sampler_t* sampler)
+bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* sampler)
 {
     auto* pool = arrow::default_memory_pool();
     RasterObject* robj = sampler->robj;
@@ -933,8 +958,8 @@ std::string ArrowSamplerImpl::createFileMap(void)
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
 
     /* Serialize into JSON */
-    const std::vector<ArrowSampler::sampler_t*>& samplers = arrowSampler->getSamplers();
-    for(ArrowSampler::sampler_t* sampler : samplers)
+    const std::vector<ArrowSampler::batch_sampler_t*>& samplers = arrowSampler->getBatchSamplers();
+    for(ArrowSampler::batch_sampler_t* sampler : samplers)
     {
         rapidjson::Value asset_list_json(rapidjson::kArrayType);
 

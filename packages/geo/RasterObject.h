@@ -77,10 +77,12 @@ class RasterObject: public LuaObject
         static void          deinit          (void);
         static int           luaCreate       (lua_State* L);
         static RasterObject* cppCreate       (GeoParms* _parms);
+        static RasterObject* cppCreate       (const RasterObject* obj);
         static bool          registerRaster  (const char* _name, factory_f create);
         virtual uint32_t     getSamples      (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) = 0;
         virtual uint32_t     getSubsets      (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) = 0;
         virtual uint8_t*     getPixels       (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, void* param=NULL);
+        virtual uint32_t     getMaxBatchThreads(void);
                             ~RasterObject    (void) override;
 
         bool hasZonalStats (void)
@@ -103,6 +105,9 @@ class RasterObject: public LuaObject
             return fileDict;
         }
 
+        uint64_t    fileDictAdd     (const std::string& fileName);
+        const char* fileDictGetFile (uint64_t fileId);
+
     protected:
 
         /*--------------------------------------------------------------------
@@ -110,7 +115,6 @@ class RasterObject: public LuaObject
          *--------------------------------------------------------------------*/
 
                     RasterObject    (lua_State* L, GeoParms* _parms);
-        uint64_t    fileDictAdd     (const std::string& fileName);
         static int  luaSamples      (lua_State* L);
         static int  luaSubsets      (lua_State* L);
         static int  luaPixels       (lua_State *L);

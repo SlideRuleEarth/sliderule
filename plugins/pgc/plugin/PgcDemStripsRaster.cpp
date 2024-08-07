@@ -190,6 +190,19 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
 }
 
 /*----------------------------------------------------------------------------
+ * getMaxBatchThreads
+ *----------------------------------------------------------------------------*/
+uint32_t PgcDemStripsRaster::getMaxBatchThreads(void)
+{
+    /*
+     * The average number of strips for a point is between 10 to 20.
+     * There are areas where the number of strips can be over 100.
+     * Limit the number of batch threads to 1.
+     */
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
 bool PgcDemStripsRaster::findRasters(finder_t* finder)
