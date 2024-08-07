@@ -365,7 +365,7 @@ BathyParms::classifier_t BathyParms::str2classifier (const char* str)
     if(StringLib::match(str, "medianfilter"))       return MEDIANFILTER;
     if(StringLib::match(str, "cshelph"))            return CSHELPH;
     if(StringLib::match(str, "bathypathfinder"))    return BATHYPATHFINDER;
-    if(StringLib::match(str, "pointnet2"))          return POINTNET;
+    if(StringLib::match(str, "pointnet"))           return POINTNET;
     if(StringLib::match(str, "openoceans"))         return OPENOCEANS;
     if(StringLib::match(str, "ensemble"))           return ENSEMBLE;
     return INVALID_CLASSIFIER;

@@ -7,13 +7,13 @@
 
 local bathy_mask_complete = false
 local uncertainty_lut_complete = true -- logic below needs it to be seeded to true
-local pointnet2_model_complete = false
+local pointnet_model_complete = false
 local qtrees_model_complete = false
 local coastnet_model_complete = false
 
 while sys.alive() and ( (not bathy_mask_complete) or
                         (not uncertainty_lut_complete) or
-                        (not pointnet2_model_complete) or
+                        (not pointnet_model_complete) or
                         (not qtrees_model_complete) or
                         (not coastnet_model_complete)) do
 
@@ -34,10 +34,10 @@ while sys.alive() and ( (not bathy_mask_complete) or
         end
     end
 
-    -- pointnet2 model
-    local pointnet2_model_local = cre.HOST_DIRECTORY.."/pointnet2_model.pth"
-    local pointnet2_model_remote = "config/pointnet2_model.pth"
-    pointnet2_model_complete = sys.fileexists(pointnet2_model_local) or aws.s3download("sliderule", pointnet2_model_remote, aws.DEFAULT_REGION, aws.DEFAULT_IDENTITY, pointnet2_model_local)
+    -- pointnet model
+    local pointnet_model_local = cre.HOST_DIRECTORY.."/pointnet2_model.pth"
+    local pointnet_model_remote = "config/pointnet2_model.pth"
+    pointnet2_model_complete = sys.fileexists(pointnet_model_local) or aws.s3download("sliderule", pointnet_model_remote, aws.DEFAULT_REGION, aws.DEFAULT_IDENTITY, pointnet_model_local)
 
     -- qtrees model
     local qtrees_model_local = cre.HOST_DIRECTORY.."/model-20240607.json"
@@ -52,13 +52,13 @@ while sys.alive() and ( (not bathy_mask_complete) or
     -- check for completeness
     if (not bathy_mask_complete) or
        (not uncertainty_lut_complete) or
-       (not pointnet2_model_complete) or
+       (not pointnet_model_complete) or
        (not qtrees_model_complete) or
        (not coastnet_model_complete) then
         sys.log(core.CRITICAL, string.format("Failed to initialize ATL24 processing environment"))
         if not bathy_mask_complete then sys.log(core.CRITICAL, "bathy mask did not download") end
         if not uncertainty_lut_complete then sys.log(core.CRITICAL, "uncertainty look up tables did not download") end
-        if not pointnet2_model_complete then sys.log(core.CRITICAL, "pointnet2 model did not download") end
+        if not pointnet_model_complete then sys.log(core.CRITICAL, "pointnet model did not download") end
         if not qtrees_model_complete then sys.log(core.CRITICAL, "qtrees model did not download") end
         if not coastnet_model_complete then sys.log(core.CRITICAL, "coastnet model did not download") end
         sys.wait(30)

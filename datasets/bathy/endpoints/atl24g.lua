@@ -192,7 +192,8 @@ parms["bathy"]["uncertainty"]["assetKd"] = parms["bathy"]["uncertainty"]["assetK
 local bathy_parms = bathy.parms(parms)
 local classifiers = {
     qtrees = qtrees.classifier(parms["bathy"]["qtrees"] or {}),
-    coastnet = coastnet.classifier(parms["bathy"]["coastnet"] or {})
+    coastnet = coastnet.classifier(parms["bathy"]["coastnet"] or {}),
+    openoceanspp = openoceanspp.classifier(parms["bathy"]["openoceanspp"] or {})
 }
 local refraction_corrector = bathy.refraction(bathy_parms);
 local uncertainty_calculator = bathy.uncertainty(bathy_parms);
@@ -324,8 +325,7 @@ local in_parallel = true
 runclassifier(output_files, timeout, "medianfilter", in_parallel)
 runclassifier(output_files, timeout, "cshelph", in_parallel)
 runclassifier(output_files, timeout, "bathypathfinder", in_parallel)
-runclassifier(output_files, timeout, "pointnet2", false, "bash /pointnet2/runner.sh")
-runclassifier(output_files, timeout, "openoceans", false)
+runclassifier(output_files, timeout, "pointnet", false, "bash /pointnet/runner.sh")
 profile["atl24_endpoint"] = (time.gps() - endpoint_start_time) / 1000.0 -- capture endpoint timing
 userlog:alert(core.INFO, core.RTE_INFO, string.format("atl24 endpoint executed in %f seconds", profile["atl24_endpoint"]))
 
