@@ -53,7 +53,7 @@ while sys.alive() and ( (not bathy_mask_complete) or
     if (not bathy_mask_complete) or
        (not uncertainty_lut_complete) or
        (not pointnet2_model_complete) or
-       (not qtrees_model_complete) 
+       (not qtrees_model_complete) or
        (not coastnet_model_complete) then
         sys.log(core.CRITICAL, string.format("Failed to initialize ATL24 processing environment"))
         if not bathy_mask_complete then sys.log(core.CRITICAL, "bathy mask did not download") end
