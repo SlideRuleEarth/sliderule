@@ -190,15 +190,17 @@ parms["bathy"]["uncertainty"] = parms["bathy"]["uncertainty"] or {}
 parms["bathy"]["uncertainty"]["resource_kd"] = viirs_filename
 parms["bathy"]["uncertainty"]["assetKd"] = parms["bathy"]["uncertainty"]["assetKd"] or "viirsj1-s3"
 local bathy_parms = bathy.parms(parms)
-local qtrees_classifier = qtrees.classifier(parms["bathy"]["qtrees"] or {})
-local coastnet_classifier = coastnet.classifier(parms["bathy"]["coastnet"] or {})
+local classifiers = {
+    qtrees = qtrees.classifier(parms["bathy"]["qtrees"] or {}),
+    coastnet = coastnet.classifier(parms["bathy"]["coastnet"] or {})
+}
 local refraction_corrector = bathy.refraction(bathy_parms);
 local uncertainty_calculator = bathy.uncertainty(bathy_parms);
 
 -------------------------------------------------------
 -- read ICESat-2 inputs
 -------------------------------------------------------
-local reader = bathy.reader(bathy_parms, qtrees_classifier, coastnet_classifier, refraction_corrector, uncertainty_calculator, geo_parms, rspq, crenv.host_sandbox_directory, false)
+local reader = bathy.reader(bathy_parms, classifiers, refraction_corrector, uncertainty_calculator, geo_parms, rspq, crenv.host_sandbox_directory, false)
 if not reader then
     userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create bathy reader", rspq))
     cleanup(crenv, transaction_id)

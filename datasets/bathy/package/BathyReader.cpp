@@ -81,8 +81,7 @@ const struct luaL_Reg BathyReader::LUA_META_TABLE[] = {
 int BathyReader::luaCreate (lua_State* L)
 {
     BathyParms* parms = NULL;
-    BathyClassifier* qtrees = NULL;
-    BathyClassifier* coastnet = NULL;
+    BathyClassifier* classifiers[BathyParms::NUM_CLASSIFIERS] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
     BathyRefractionCorrector* refraction = NULL;
     BathyUncertaintyCalculator* uncertainty = NULL;
     GeoParms* hls = NULL;
@@ -91,8 +90,6 @@ int BathyReader::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         parms = dynamic_cast<BathyParms*>(getLuaObject(L, 1, BathyParms::OBJECT_TYPE));
-        qtrees = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE));
-        coastnet = dynamic_cast<BathyClassifier*>(getLuaObject(L, 3, BathyClassifier::OBJECT_TYPE));
         refraction = dynamic_cast<BathyRefractionCorrector*>(getLuaObject(L, 4, BathyRefractionCorrector::OBJECT_TYPE));
         uncertainty = dynamic_cast<BathyUncertaintyCalculator*>(getLuaObject(L, 5, BathyUncertaintyCalculator::OBJECT_TYPE));
         hls = dynamic_cast<GeoParms*>(getLuaObject(L, 6, GeoParms::OBJECT_TYPE));
@@ -101,25 +98,69 @@ int BathyReader::luaCreate (lua_State* L)
         const bool send_terminator = getLuaBoolean(L, 9, true, true);
         
         /* Build Classifier List */
-        BathyClassifier* classifiers[BathyParms::NUM_CLASSIFIERS] = {
-            qtrees,
-            coastnet,
-            NULL, // openoceans++
-            NULL, // medianfilter
-            NULL, // cshelph
-            NULL, // bathypathfinder
-            NULL, // pointnet
-            NULL, // openoceans
-            NULL  // ensemble
-        };
+        const int classifier_table_index = 2;
+        if(lua_istable(L, classifier_table_index))
+        {
+            /* qtrees */
+            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::QTREES));
+            classifiers[BathyParms::QTREES] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_pop(L, 1);
+
+            /* coastnet */
+            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::COASTNET));
+            classifiers[BathyParms::COASTNET] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_pop(L, 1);
+
+            /* openoceans++ */
+            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::OPENOCEANSPP));
+            classifiers[BathyParms::OPENOCEANSPP] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_pop(L, 1);
+
+            /* medianfilter */
+            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::MEDIANFILTER));
+            classifiers[BathyParms::MEDIANFILTER] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_pop(L, 1);
+
+            /* cshelph */
+            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::CSHELPH));
+            classifiers[BathyParms::CSHELPH] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_pop(L, 1);
+
+            /* bathypathfinder */
+            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::BATHYPATHFINDER));
+            classifiers[BathyParms::BATHYPATHFINDER] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_pop(L, 1);
+
+            /* pointnet */
+            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::POINTNET));
+            classifiers[BathyParms::POINTNET] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_pop(L, 1);
+
+            /* openoceans */
+            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::OPENOCEANS));
+            classifiers[BathyParms::OPENOCEANS] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_pop(L, 1);
+
+            /* ensemble */
+            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::ENSEMBLE));
+            classifiers[BathyParms::ENSEMBLE] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_pop(L, 1);
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply classifiers as a table");
+        }
+
         /* Return Reader Object */
         return createLuaObject(L, new BathyReader(L, parms, classifiers, refraction, uncertainty, hls, outq_name, shared_directory, send_terminator));
     }
     catch(const RunTimeException& e)
     {
         if(parms) parms->releaseLuaObject();
-        if(qtrees) qtrees->releaseLuaObject();
-        if(coastnet) coastnet->releaseLuaObject();
+        for(int i = 0; i < BathyParms::NUM_CLASSIFIERS; i++)
+        {
+            if(classifiers[i]) classifiers[i]->releaseLuaObject();
+        }
         if(refraction) refraction->releaseLuaObject();
         if(uncertainty) uncertainty->releaseLuaObject();
         if(hls) hls->releaseLuaObject();
