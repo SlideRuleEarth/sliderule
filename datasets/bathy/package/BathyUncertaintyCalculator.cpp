@@ -40,12 +40,7 @@
 #include "OsApi.h"
 #include "GeoLib.h"
 #include "BathyUncertaintyCalculator.h"
-#include "BathyFields.h"
-
-using BathyFields::extent_t;
-using BathyFields::photon_t;
-using BathyFields::classifier_t;
-using BathyFields::bathy_class_t;
+#include "BathyParms.h"
 
 /******************************************************************************
  * DATA
@@ -234,7 +229,7 @@ BathyUncertaintyCalculator::~BathyUncertaintyCalculator (void)
 /*----------------------------------------------------------------------------
  * uncertainty calculation
  *----------------------------------------------------------------------------*/
-void BathyUncertaintyCalculator::run (extent_t& extent,
+void BathyUncertaintyCalculator::run (BathyParms::extent_t& extent,
                                       const H5Array<float>& sigma_across,
                                       const H5Array<float>& sigma_along,
                                       const H5Array<float>& sigma_h,
@@ -268,7 +263,7 @@ void BathyUncertaintyCalculator::run (extent_t& extent,
     float pointing_angle = 0.0;
 
     /* for each photon in extent */
-    photon_t* photons = extent.photons;
+    BathyParms::photon_t* photons = extent.photons;
     for(uint32_t i = 0; i < extent.photon_count; i++)
     {
         const int32_t s = extent.photons[i].index_seg;
@@ -323,7 +318,7 @@ void BathyUncertaintyCalculator::run (extent_t& extent,
                 const double max_sensor_depth = 1.8 / kd;
                 if(depth > max_sensor_depth)
                 {
-                    photons[i].processing_flags |= BathyFields::SENSOR_DEPTH_EXCEEDED;
+                    photons[i].processing_flags |= BathyParms::SENSOR_DEPTH_EXCEEDED;
                 }
             }
         }

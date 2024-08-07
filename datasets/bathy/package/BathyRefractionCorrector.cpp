@@ -40,12 +40,6 @@
 #include "OsApi.h"
 #include "GeoLib.h"
 #include "BathyRefractionCorrector.h"
-#include "BathyFields.h"
-
-using BathyFields::extent_t;
-using BathyFields::photon_t;
-using BathyFields::classifier_t;
-using BathyFields::bathy_class_t;
 
 
 /******************************************************************************
@@ -143,13 +137,13 @@ BathyRefractionCorrector::~BathyRefractionCorrector (void)
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *----------------------------------------------------------------------------*/
-void BathyRefractionCorrector::run( extent_t& extent, 
+void BathyRefractionCorrector::run( BathyParms::extent_t& extent, 
                                     const H5Array<float>& ref_el,
                                     const H5Array<float>& ref_az ) const
 {
     GeoLib::UTMTransform transform(extent.utm_zone, extent.region < 8);
 
-    photon_t* photons = extent.photons;
+    BathyParms::photon_t* photons = extent.photons;
     for(uint32_t i = 0; i < extent.photon_count; i++)
     {
         const int32_t seg = extent.photons[i].index_seg;

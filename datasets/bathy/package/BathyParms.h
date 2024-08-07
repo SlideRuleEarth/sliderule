@@ -38,9 +38,6 @@
 
 #include "OsApi.h"
 #include "Asset.h"
-#include "GeoParms.h"
-#include "BathyClassifier.h"
-#include "BathyFields.h"
 #include "Icesat2Parms.h"
 
 /******************************************************************************
@@ -52,37 +49,118 @@ class BathyParms: public Icesat2Parms
     public:
 
         /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const char* phRecType;
+        static const RecordObject::fieldDef_t phRecDef[];
+        static const char* exRecType;
+        static const RecordObject::fieldDef_t exRecDef[];
+
+        /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
 
+        /* Photon Classifiers */
+        typedef enum {
+            INVALID_CLASSIFIER  = -1,
+            QTREES              = 0,
+            COASTNET            = 1,
+            OPENOCEANSPP        = 2,
+            MEDIANFILTER        = 3,
+            CSHELPH             = 4,
+            BATHYPATHFINDER     = 5,
+            POINTNET            = 6,
+            OPENOCEANS          = 7,
+            ENSEMBLE            = 8,
+            NUM_CLASSIFIERS     = 9
+        } classifier_t;
+
+        /* Photon Classifications */
+        typedef enum {
+            UNCLASSIFIED        = 0,
+            OTHER               = 1,
+            BATHYMETRY          = 40,
+            SEA_SURFACE         = 41,
+            WATER_COLUMN        = 45
+        } bathy_class_t;
+
+        /* Processing Flags */
+        typedef enum {
+            SENSOR_DEPTH_EXCEEDED   = 0x01,
+            SEA_SURFACE_UNDETECTED  = 0x02
+        } flags_t;
+
+        /* Photon Fields */
+        typedef struct {
+            int64_t         time_ns;                // nanoseconds since GPS epoch
+            int32_t         index_ph;               // unique index of photon in granule
+            int32_t         index_seg;              // index into segment level groups in source ATL03 granule
+            double          lat_ph;                 // latitude of photon (EPSG 7912)
+            double          lon_ph;                 // longitude of photon (EPSG 7912)
+            double          x_ph;                   // the easting coordinate in meters of the photon for the given UTM zone
+            double          y_ph;                   // the northing coordinate in meters of the photon for the given UTM zone
+            double          x_atc;                  // along track distance calculated from segment_dist_x and dist_ph_along
+            double          y_atc;                  // dist_ph_across
+            double          background_rate;        // PE per second
+            float           delta_h;                // refraction correction of height
+            float           surface_h;              // orthometric height of sea surface at each photon location
+            float           ortho_h;                // geoid corrected height of photon, calculated from h_ph and geoid
+            float           ellipse_h;              // height of photon with respect to reference ellipsoid
+            float           sigma_thu;              // total horizontal uncertainty
+            float           sigma_tvu;              // total vertical uncertainty
+            uint32_t        processing_flags;       // bit mask of flags for capturing errors and warnings
+            uint8_t         yapc_score;             // atl03 density estimate (Yet Another Photon Classifier)
+            int8_t          max_signal_conf;        // maximum value in the atl03 confidence table
+            int8_t          quality_ph;             // atl03 quality flags
+            int8_t          class_ph;               // photon classification
+            int8_t          predictions[NUM_CLASSIFIERS];
+        } photon_t;
+
+        /* Extent Record */
+        typedef struct {
+            uint8_t         region;
+            uint8_t         track;                  // 1, 2, or 3
+            uint8_t         pair;                   // 0 (l), 1 (r)
+            uint8_t         spot;                   // 1, 2, 3, 4, 5, 6
+            uint16_t        reference_ground_track;
+            uint8_t         cycle;
+            uint8_t         utm_zone;
+            uint64_t        extent_id;
+            float           wind_v;                 // wind speed (in meters/second)            
+            float           ndwi;                   // normalized difference water index using HLS data
+            uint32_t        photon_count;
+            photon_t        photons[];              // zero length field
+        } extent_t;
+
         /* Bathymetry Reader */
         struct reader_t {
-            Asset*                      asset;              // asset for ATL03 resources
-            Asset*                      asset09;            // asset for ATL09 resources
-            GeoParms*                   hls;                // geo-package parms for sampling HLS for NDWI
-            const char*                 resource09;         // ATL09 granule
-            double                      max_dem_delta;      // initial filter of heights against DEM (For removing things like clouds)
-            double                      min_dem_delta;      // initial filter of heights against DEM (For removing things like clouds)
-            int                         ph_in_extent;       // number of photons in each extent
-            bool                        generate_ndwi;      // use HLS data to generate NDWI for each segment lat,lon
-            bool                        use_bathy_mask;     // global bathymetry mask downloaded in atl24 init lua routine
-            bool                        classifiers[BathyFields::NUM_CLASSIFIERS]; // which bathymetry classifiers to run
-            bool                        return_inputs;      // return the atl03 bathy records back to client
-            bool                        spots[NUM_SPOTS];   // only used by downstream algorithms
-            bool                        output_as_sdp;      // include all the necessary ancillary data for the standard data product
-            double                      bin_size;           // meters
-            double                      max_range;          // meters
-            long                        max_bins;           // bins
-            double                      signal_threshold;   // standard deviations
-            double                      min_peak_separation;// meters
-            double                      highest_peak_ratio;
-            double                      surface_width;      // standard deviations
-            bool                        model_as_poisson;
+            Asset*          asset;              // asset for ATL03 resources
+            Asset*          asset09;            // asset for ATL09 resources
+            const char*     resource;           // ATL03 granule
+            const char*     resource09;         // ATL09 granule
+            double          max_dem_delta;      // initial filter of heights against DEM (For removing things like clouds)
+            double          min_dem_delta;      // initial filter of heights against DEM (For removing things like clouds)
+            int             ph_in_extent;       // number of photons in each extent
+            bool            generate_ndwi;      // use HLS data to generate NDWI for each segment lat,lon
+            bool            use_bathy_mask;     // global bathymetry mask downloaded in atl24 init lua routine
+            bool            classifiers[NUM_CLASSIFIERS]; // which bathymetry classifiers to run
+            bool            return_inputs;      // return the atl03 bathy records back to client
+            bool            spots[NUM_SPOTS];   // only used by downstream algorithms
+            bool            output_as_sdp;      // include all the necessary ancillary data for the standard data product
+            double          bin_size;           // meters
+            double          max_range;          // meters
+            long            max_bins;           // bins
+            double          signal_threshold;   // standard deviations
+            double          min_peak_separation;// meters
+            double          highest_peak_ratio;
+            double          surface_width;      // standard deviations
+            bool            model_as_poisson;
             
             reader_t():
                 asset                   (NULL),
                 asset09                 (NULL), 
-                hls                     (NULL),
+                resource                (NULL),
                 resource09              (NULL),
                 max_dem_delta           (50.0),
                 min_dem_delta           (-100.0),
@@ -104,7 +182,7 @@ class BathyParms: public Icesat2Parms
             ~reader_t() {
                 if(asset) asset->releaseLuaObject();
                 if(asset09) asset09->releaseLuaObject();
-                if(hls) hls->releaseLuaObject();
+                delete [] resource;
                 delete [] resource09;
             };
 
@@ -149,8 +227,11 @@ class BathyParms: public Icesat2Parms
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate   (lua_State* L);
-        const char* tojson      (void) const override;
+        static int          luaCreate       (lua_State* L);
+        static void         init            (void);
+        static classifier_t str2classifier  (const char* str);
+        static const char*  classifier2str  (classifier_t classifier);
+        const char*         tojson          (void) const override;
 
         /*--------------------------------------------------------------------
          * Data
@@ -168,8 +249,8 @@ class BathyParms: public Icesat2Parms
 
                         BathyParms      (lua_State* L, int index);
                         ~BathyParms     (void) override;
-        static void     getSpotList     (lua_State* L, int index, bool* provided, bool* spots, int size=Icesat2Parms::NUM_SPOTS);
-        static void     getClassifiers  (lua_State* L, int index, bool* provided, bool* classifiers, int size=BathyFields::NUM_CLASSIFIERS);
+        static void     getSpotList     (lua_State* L, int index, bool* provided, bool* spots, int size=NUM_SPOTS);
+        static void     getClassifiers  (lua_State* L, int index, bool* provided, bool* classifiers, int size=NUM_CLASSIFIERS);
 };
 
 #endif  /* __bathy_parms__ */

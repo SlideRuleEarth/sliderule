@@ -51,7 +51,8 @@ static const char* BATHY_PARMS_UNCERTAINTY          = "uncertainty";
 static const char* BATHY_PARMS_ASSET                = "asset";
 static const char* BATHY_PARMS_ASSET09              = "asset09";
 static const char* BATHY_PARMS_DEFAULT_ASSET09      = "icesat2";
-static const char* BATHY_PARMS_HLS_PARMS            = "hls";
+static const char* BATHY_PARMS_ATL03_RESOURCE       = "resource";
+static const char* BATHY_PARMS_ATL09_RESOURCE       = "resource09";
 static const char* BATHY_PARMS_MAX_DEM_DELTA        = "max_dem_delta";
 static const char* BATHY_PARMS_MIN_DEM_DELTA        = "min_dem_delta";
 static const char* BATHY_PARMS_PH_IN_EXTENT         = "ph_in_extent";
@@ -68,7 +69,6 @@ static const char* BATHY_PARMS_MIN_PEAK_SEPARATION  = "min_peak_separation";
 static const char* BATHY_PARMS_HIGHEST_PEAK_RATIO   = "highest_peak_ratio";
 static const char* BATHY_PARMS_SURFACE_WIDTH        = "surface_width"; // sigmas
 static const char* BATHY_PARMS_MODEL_AS_POISSON     = "model_as_poisson"; // sigmas
-static const char* BATHY_PARMS_ATL09_RESOURCE       = "resource09";
 static const char* BATHY_PARMS_SPOTS                = "spots";
 static const char* BATHY_PARMS_DEFAULT_ASSET        = "icesat2";
 
@@ -81,32 +81,46 @@ static const char* BATHY_PARMS_ASSET_KD             = "asset_kd";
 static const char* BATHY_PARMS_DEFAULT_ASSETKD      = "viirsj1-s3";
 static const char* BATHY_PARMS_RESOURCE_KD          = "resource_kd";
 
+/* Photon Record Definition */
+const char* BathyParms::phRecType = "bathyrec.photons";
+const RecordObject::fieldDef_t BathyParms::phRecDef[] = {
+    {"time",            RecordObject::TIME8,    offsetof(photon_t, time_ns),        1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
+    {"index_ph",        RecordObject::INT32,    offsetof(photon_t, index_ph),       1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
+    {"index_seg",       RecordObject::INT32,    offsetof(photon_t, index_seg),      1,  NULL, NATIVE_FLAGS},
+    {"lat_ph",          RecordObject::DOUBLE,   offsetof(photon_t, lat_ph),         1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
+    {"lon_ph",          RecordObject::DOUBLE,   offsetof(photon_t, lon_ph),         1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
+    {"x_ph",            RecordObject::DOUBLE,   offsetof(photon_t, x_ph),           1,  NULL, NATIVE_FLAGS},
+    {"y_ph",            RecordObject::DOUBLE,   offsetof(photon_t, y_ph),           1,  NULL, NATIVE_FLAGS},
+    {"x_atc",           RecordObject::DOUBLE,   offsetof(photon_t, x_atc),          1,  NULL, NATIVE_FLAGS},
+    {"y_atc",           RecordObject::DOUBLE,   offsetof(photon_t, y_atc),          1,  NULL, NATIVE_FLAGS},
+    {"background_rate", RecordObject::DOUBLE,   offsetof(photon_t, background_rate),1,  NULL, NATIVE_FLAGS},
+    {"ellipse_h",       RecordObject::FLOAT,    offsetof(photon_t, ellipse_h),      1,  NULL, NATIVE_FLAGS},
+    {"ortho_h",         RecordObject::FLOAT,    offsetof(photon_t, ortho_h),        1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
+    {"surface_h",       RecordObject::FLOAT,    offsetof(photon_t, surface_h),      1,  NULL, NATIVE_FLAGS},
+    {"yapc_score",      RecordObject::UINT8,    offsetof(photon_t, yapc_score),     1,  NULL, NATIVE_FLAGS},
+    {"max_signal_conf", RecordObject::INT8,     offsetof(photon_t, max_signal_conf),1,  NULL, NATIVE_FLAGS},
+    {"quality_ph",      RecordObject::INT8,     offsetof(photon_t, quality_ph),     1,  NULL, NATIVE_FLAGS},
+};
+
+/* Extent Record Definition */
+const char* BathyParms::exRecType = "bathyrec";
+const RecordObject::fieldDef_t BathyParms::exRecDef[] = {
+    {"region",          RecordObject::UINT8,    offsetof(extent_t, region),                 1,  NULL, NATIVE_FLAGS},
+    {"track",           RecordObject::UINT8,    offsetof(extent_t, track),                  1,  NULL, NATIVE_FLAGS},
+    {"pair",            RecordObject::UINT8,    offsetof(extent_t, pair),                   1,  NULL, NATIVE_FLAGS},
+    {"spot",            RecordObject::UINT8,    offsetof(extent_t, spot),                   1,  NULL, NATIVE_FLAGS},
+    {"rgt",             RecordObject::UINT16,   offsetof(extent_t, reference_ground_track), 1,  NULL, NATIVE_FLAGS},
+    {"cycle",           RecordObject::UINT8,    offsetof(extent_t, cycle),                  1,  NULL, NATIVE_FLAGS},
+    {"utm_zone",        RecordObject::UINT8,    offsetof(extent_t, utm_zone),               1,  NULL, NATIVE_FLAGS},
+    {"extent_id",       RecordObject::UINT64,   offsetof(extent_t, extent_id),              1,  NULL, NATIVE_FLAGS},
+    {"wind_v",          RecordObject::FLOAT,    offsetof(extent_t, wind_v),                 1,  NULL, NATIVE_FLAGS},
+    {"ndwi",            RecordObject::FLOAT,    offsetof(extent_t, ndwi),                   1,  NULL, NATIVE_FLAGS},
+    {"photons",         RecordObject::USER,     offsetof(extent_t, photons),                0,  phRecType, NATIVE_FLAGS | RecordObject::BATCH} // variable length
+};
+
 /******************************************************************************
  * METHODS
  ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * luaCreate - create(<parameter table>)
- *----------------------------------------------------------------------------*/
-int BathyParms::luaCreate (lua_State* L)
-{
-    try
-    {
-        /* Check if Lua Table */
-        if(lua_type(L, 1) != LUA_TTABLE)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Requests parameters must be supplied as a lua table");
-        }
-
-        /* Return Request Parameter Object */
-        return createLuaObject(L, new BathyParms(L, 1));
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
-        return returnLuaStatus(L, false);
-    }
-}
 
 /*----------------------------------------------------------------------------
  * reader_t::fromLua
@@ -130,9 +144,14 @@ void BathyParms::reader_t::fromLua (lua_State* L, int index)
         if(!asset09) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to find asset %s", asset09_name);
         lua_pop(L, 1);
 
-        /* HLS parameters (GeoParms) */
-        lua_getfield(L, index, BATHY_PARMS_HLS_PARMS);
-        if(lua_istable(L, -1)) hls = new GeoParms(L, -1);
+        /* atl03 resources */
+        lua_getfield(L, index, BATHY_PARMS_ATL03_RESOURCE);
+        resource = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+        lua_pop(L, 1);
+
+        /* atl09 resources */
+        lua_getfield(L, index, BATHY_PARMS_ATL09_RESOURCE);
+        resource09 = StringLib::duplicate(LuaObject::getLuaString(L, -1));
         lua_pop(L, 1);
 
         /* maximum DEM delta */
@@ -173,11 +192,6 @@ void BathyParms::reader_t::fromLua (lua_State* L, int index)
         /* output as sdp */
         lua_getfield(L, index, BATHY_PARMS_OUTPUT_AS_SDP);
         output_as_sdp = LuaObject::getLuaBoolean(L, -1, true, output_as_sdp, NULL);
-        lua_pop(L, 1);
-
-        /* atl09 resources */
-        lua_getfield(L, index, BATHY_PARMS_ATL09_RESOURCE);
-        resource09 = StringLib::duplicate(LuaObject::getLuaString(L, -1));
         lua_pop(L, 1);
 
         /* spot selection */
@@ -292,6 +306,38 @@ const char* BathyParms::uncertainty_t::toJson (void) const
 }
 
 /*----------------------------------------------------------------------------
+ * luaCreate - create(<parameter table>)
+ *----------------------------------------------------------------------------*/
+int BathyParms::luaCreate (lua_State* L)
+{
+    try
+    {
+        /* Check if Lua Table */
+        if(lua_type(L, 1) != LUA_TTABLE)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Requests parameters must be supplied as a lua table");
+        }
+
+        /* Return Request Parameter Object */
+        return createLuaObject(L, new BathyParms(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        return returnLuaStatus(L, false);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void BathyParms::init (void)
+{
+    RECDEF(phRecType,       phRecDef,       sizeof(photon_t),       NULL);
+    RECDEF(exRecType,       exRecDef,       sizeof(extent_t),       NULL /* "extent_id" */);
+}
+
+/*----------------------------------------------------------------------------
  * tojson
  *----------------------------------------------------------------------------*/
 const char* BathyParms::tojson (void) const
@@ -306,6 +352,43 @@ const char* BathyParms::tojson (void) const
     BATHY_PARMS_UNCERTAINTY, uncertainty.toJson());
 
     return json_contents.c_str(true);
+}
+
+/*----------------------------------------------------------------------------
+ * str2classifier
+ *----------------------------------------------------------------------------*/
+BathyParms::classifier_t BathyParms::str2classifier (const char* str)
+{
+    if(StringLib::match(str, "qtrees"))             return QTREES;
+    if(StringLib::match(str, "coastnet"))           return COASTNET;
+    if(StringLib::match(str, "openoceans++"))       return OPENOCEANSPP;
+    if(StringLib::match(str, "medianfilter"))       return MEDIANFILTER;
+    if(StringLib::match(str, "cshelph"))            return CSHELPH;
+    if(StringLib::match(str, "bathypathfinder"))    return BATHYPATHFINDER;
+    if(StringLib::match(str, "pointnet2"))          return POINTNET;
+    if(StringLib::match(str, "openoceans"))         return OPENOCEANS;
+    if(StringLib::match(str, "ensemble"))           return ENSEMBLE;
+    return INVALID_CLASSIFIER;
+}
+
+/*----------------------------------------------------------------------------
+ * classifier2str
+ *----------------------------------------------------------------------------*/
+const char* BathyParms::classifier2str (classifier_t classifier)
+{
+    switch(classifier)
+    {
+        case QTREES:            return "qtrees";
+        case COASTNET:          return "coastnet";
+        case OPENOCEANSPP:      return "openoceans++";
+        case MEDIANFILTER:      return "medianfilter";
+        case CSHELPH:           return "cshelph";
+        case BATHYPATHFINDER:   return "bathypathfinder";
+        case POINTNET:          return "pointnet";
+        case OPENOCEANS:        return "openoceans";
+        case ENSEMBLE:          return "ensemble";
+        default:                return "unknown";
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -433,7 +516,7 @@ void BathyParms::getClassifiers (lua_State* L, int index, bool* provided, bool* 
             if(lua_isinteger(L, -1))
             {
                 const int classifier = LuaObject::getLuaInteger(L, -1);
-                if(classifier >= 0 && classifier < BathyFields::NUM_CLASSIFIERS)
+                if(classifier >= 0 && classifier < NUM_CLASSIFIERS)
                 {
                     classifiers[classifier] = true;
                     mlog(DEBUG, "Selecting classifier %d", classifier);
@@ -446,8 +529,8 @@ void BathyParms::getClassifiers (lua_State* L, int index, bool* provided, bool* 
             else if(lua_isstring(L, -1))
             {
                 const char* classifier_str = LuaObject::getLuaString(L, -1);
-                const classifier_t classifier = BathyFields::str2classifier(classifier_str);
-                if(classifier != BathyFields::INVALID_CLASSIFIER)
+                const classifier_t classifier = str2classifier(classifier_str);
+                if(classifier != INVALID_CLASSIFIER)
                 {
                     classifiers[static_cast<int>(classifier)] = true;
                 }
@@ -468,7 +551,7 @@ void BathyParms::getClassifiers (lua_State* L, int index, bool* provided, bool* 
 
         /* Set classifier */
         const int classifier = LuaObject::getLuaInteger(L, -1);
-        if(classifier >= 0 && classifier < BathyFields::NUM_CLASSIFIERS)
+        if(classifier >= 0 && classifier < NUM_CLASSIFIERS)
         {
             if(provided) *provided = true;
             classifiers[classifier] = true;
@@ -485,8 +568,8 @@ void BathyParms::getClassifiers (lua_State* L, int index, bool* provided, bool* 
 
         /* Set classifier */
         const char* classifier_str = LuaObject::getLuaString(L, index);
-        const classifier_t classifier = BathyFields::str2classifier(classifier_str);
-        if(classifier != BathyFields::INVALID_CLASSIFIER)
+        const classifier_t classifier = str2classifier(classifier_str);
+        if(classifier != INVALID_CLASSIFIER)
         {
             if(provided) *provided = true;
             classifiers[static_cast<int>(classifier)] = true;

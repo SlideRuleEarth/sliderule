@@ -185,7 +185,7 @@ userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL09 CMR search executed
 -- build bathy reader parms
 -------------------------------------------------------
 parms["bathy"] = parms["bathy"] or {}
-parms["bathy"]["hls"] = geo_parms
+parms["bathy"]["resource"] = resource
 parms["bathy"]["uncertainty"] = parms["bathy"]["uncertainty"] or {}
 parms["bathy"]["uncertainty"]["resource_kd"] = viirs_filename
 parms["bathy"]["uncertainty"]["assetKd"] = parms["bathy"]["uncertainty"]["assetKd"] or "viirsj1-s3"
@@ -198,7 +198,7 @@ local uncertainty_calculator = bathy.uncertainty(bathy_parms);
 -------------------------------------------------------
 -- read ICESat-2 inputs
 -------------------------------------------------------
-local reader = bathy.reader(bathy_parms, qtrees_classifier, coastnet_classifier, refraction_corrector, uncertainty_calculator, resource, rspq, crenv.host_sandbox_directory, false)
+local reader = bathy.reader(bathy_parms, qtrees_classifier, coastnet_classifier, refraction_corrector, uncertainty_calculator, geo_parms, rspq, crenv.host_sandbox_directory, false)
 if not reader then
     userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create bathy reader", rspq))
     cleanup(crenv, transaction_id)

@@ -36,9 +36,6 @@
 #include "LuaObject.h"
 #include "H5Array.h"
 #include "BathyParms.h"
-#include "BathyFields.h"
-
-using BathyFields::extent_t;
 
 /******************************************************************************
  * BATHY OPENOCEANS
@@ -63,7 +60,7 @@ class BathyRefractionCorrector: public LuaObject
 
         static int      luaCreate   (lua_State* L);
         static void     init        (void);
-        void            run         (extent_t& extent,
+        void            run         (BathyParms::extent_t& extent,
                                      const H5Array<float>& ref_el,
                                      const H5Array<float>& ref_az) const;
     private:

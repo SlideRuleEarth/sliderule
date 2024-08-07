@@ -38,11 +38,7 @@
 
 #include "LuaObject.h"
 #include "OsApi.h"
-#include "BathyFields.h"
-
-using BathyFields::extent_t;
-using BathyFields::bathy_class_t;
-using BathyFields::classifier_t;
+#include "BathyParms.h"
 
 /******************************************************************************
  * BATHY CLASSIFIER
@@ -67,7 +63,7 @@ class BathyClassifier: public LuaObject
 
         static void init (void);
 
-        virtual bool run (const vector<extent_t*>& extents) = 0;
+        virtual bool run (const vector<BathyParms::extent_t*>& extents) = 0;
 
     protected:
 
@@ -75,7 +71,7 @@ class BathyClassifier: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        classifier_t classifier;
+        BathyParms::classifier_t classifier;
 
         /*--------------------------------------------------------------------
          * Methods

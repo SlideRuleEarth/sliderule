@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "BathyClassifier.h"
+#include "BathyParms.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -62,8 +63,8 @@ void BathyClassifier::init (void)
 BathyClassifier::BathyClassifier (lua_State* L, const char* _classifier):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
-    classifier = BathyFields::str2classifier(_classifier);
-    if(classifier == BathyFields::INVALID_CLASSIFIER) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid classifier specified: %s", _classifier);
+    classifier = BathyParms::str2classifier(_classifier);
+    if(classifier == BathyParms::INVALID_CLASSIFIER) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid classifier specified: %s", _classifier);
 }
 
 /*----------------------------------------------------------------------------

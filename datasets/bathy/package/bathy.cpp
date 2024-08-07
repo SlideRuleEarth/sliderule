@@ -81,6 +81,7 @@ extern "C" {
 void initbathy (void)
 {
     /* Initialize Modules */
+    BathyParms::init();
     BathyClassifier::init();
     BathyRefractionCorrector::init();
     BathyUncertaintyCalculator::init();

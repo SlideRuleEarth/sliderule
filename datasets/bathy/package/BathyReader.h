@@ -47,12 +47,9 @@
 #include "H5Element.h"
 #include "GeoLib.h"
 #include "BathyParms.h"
-#include "BathyFields.h"
 #include "BathyClassifier.h"
 #include "BathyRefractionCorrector.h"
 #include "BathyUncertaintyCalculator.h"
-
-using BathyFields::classifier_t;
 
 /******************************************************************************
  * BATHY READER
@@ -77,14 +74,6 @@ class BathyReader: public LuaObject
         static const double GLOBAL_BATHYMETRY_MASK_MIN_LON;
         static const double GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
         static const uint32_t GLOBAL_BATHYMETRY_MASK_OFF_VALUE;
-
-        static const char* BATHY_PARMS;
-
-        static const char* phRecType;
-        static const RecordObject::fieldDef_t phRecDef[];
-
-        static const char* exRecType;
-        static const RecordObject::fieldDef_t exRecDef[];
 
         static const char* OBJECT_TYPE;
 
@@ -262,10 +251,10 @@ class BathyReader: public LuaObject
         int                         threadCount;
         int                         numComplete;
         BathyParms*                 parms;
-        BathyClassifier*            classifiers[BathyFields::NUM_CLASSIFIERS];
+        BathyClassifier*            classifiers[BathyParms::NUM_CLASSIFIERS];
         BathyRefractionCorrector*   refraction;         // refraction correction
         BathyUncertaintyCalculator* uncertainty;        // uncertainty calculation
-        const char*                 resource;
+        GeoParms*                   hls;                // geo-package parms for sampling HLS for NDWI
         bool                        sendTerminator;
         Publisher*                  outQ;
         int                         signalConfColIndex;
@@ -294,7 +283,7 @@ class BathyReader: public LuaObject
                                                          BathyClassifier** _classifiers,
                                                          BathyRefractionCorrector* _refraction,
                                                          BathyUncertaintyCalculator* _uncertainty,
-                                                         const char* _resource,
+                                                         GeoParms* _hls,
                                                          const char* outq_name,
                                                          const char* shared_directory,
                                                          bool _send_terminator);
@@ -307,8 +296,8 @@ class BathyReader: public LuaObject
                                                          uint16_t& rgt, uint8_t& cycle, uint8_t& region, 
                                                          uint8_t& version);
         
-        void                findSeaSurface              (extent_t& extent);
-        void                writeCSV                    (const vector<extent_t*>& extents, int spot, const stats_t& local_stats);
+        void                findSeaSurface              (BathyParms::extent_t& extent);
+        void                writeCSV                    (const vector<BathyParms::extent_t*>& extents, int spot, const stats_t& local_stats);
 
         static int          luaSpotEnabled              (lua_State* L);
         static int          luaClassifierEnabled        (lua_State* L);

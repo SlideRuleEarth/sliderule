@@ -36,10 +36,7 @@
 #include "LuaObject.h"
 #include "H5Coro.h"
 #include "H5Array.h"
-#include "BathyFields.h"
 #include "BathyParms.h"
-
-using BathyFields::extent_t;
 
 /******************************************************************************
  * BATHY OPENOCEANS
@@ -64,7 +61,7 @@ class BathyUncertaintyCalculator: public LuaObject
 
         static void     init        (void);
         static int      luaCreate   (lua_State* L);
-        void            run         (extent_t& extent, 
+        void            run         (BathyParms::extent_t& extent, 
                                      const H5Array<float>& sigma_across,
                                      const H5Array<float>& sigma_along,
                                      const H5Array<float>& sigma_h,
