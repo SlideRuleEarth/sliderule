@@ -6,6 +6,8 @@ target_sources (slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/bathy.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyClassifier.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyFields.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyParms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyReader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyRefractionCorrector.cpp
@@ -23,6 +25,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/bathy.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyClassifier.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyFields.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyParms.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyReader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyRefractionCorrector.h

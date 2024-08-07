@@ -46,9 +46,11 @@
 #include "H5Array.h"
 #include "H5Element.h"
 #include "GeoLib.h"
-#include "Icesat2Parms.h"
+#include "BathyParms.h"
 #include "BathyFields.h"
 #include "BathyClassifier.h"
+#include "BathyRefractionCorrector.h"
+#include "BathyUncertaintyCalculator.h"
 
 using BathyFields::classifier_t;
 
@@ -301,12 +303,11 @@ class BathyReader: public LuaObject
         static void*        subsettingThread            (void* parm);
 
         static double       calculateBackground         (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03);
-        static void         findSeaSurface              (extent_t& extent);
-
         static void         parseResource               (const char* resource, TimeLib::date_t& date, 
                                                          uint16_t& rgt, uint8_t& cycle, uint8_t& region, 
                                                          uint8_t& version);
         
+        void                findSeaSurface              (extent_t& extent);
         void                writeCSV                    (const vector<extent_t*>& extents, int spot, const stats_t& local_stats);
 
         static int          luaSpotEnabled              (lua_State* L);

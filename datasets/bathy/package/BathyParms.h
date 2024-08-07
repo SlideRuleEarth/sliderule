@@ -41,8 +41,6 @@
 #include "GeoParms.h"
 #include "BathyClassifier.h"
 #include "BathyFields.h"
-#include "BathyRefractionCorrector.h"
-#include "BathyUncertaintyCalculator.h"
 #include "Icesat2Parms.h"
 
 /******************************************************************************
@@ -72,6 +70,14 @@ class BathyParms: public Icesat2Parms
             bool                        return_inputs;      // return the atl03 bathy records back to client
             bool                        spots[NUM_SPOTS];   // only used by downstream algorithms
             bool                        output_as_sdp;      // include all the necessary ancillary data for the standard data product
+            double                      bin_size;           // meters
+            double                      max_range;          // meters
+            long                        max_bins;           // bins
+            double                      signal_threshold;   // standard deviations
+            double                      min_peak_separation;// meters
+            double                      highest_peak_ratio;
+            double                      surface_width;      // standard deviations
+            bool                        model_as_poisson;
             
             reader_t():
                 asset                   (NULL),
@@ -86,14 +92,19 @@ class BathyParms: public Icesat2Parms
                 classifiers             {true, true, true, true, true, true, true, true, true},
                 return_inputs           (false),
                 spots                   {true, true, true, true, true, true},
-                output_as_sdp           (false) {};
-
+                output_as_sdp           (false),
+                bin_size                (0.5),
+                max_range               (1000.0),
+                max_bins                (10000),
+                signal_threshold        (3.0),
+                min_peak_separation     (0.5),
+                highest_peak_ratio      (1.2),
+                surface_width           (3.0),
+                model_as_poisson        (true) {};
             ~reader_t() {
                 if(asset) asset->releaseLuaObject();
                 if(asset09) asset09->releaseLuaObject();
                 if(hls) hls->releaseLuaObject();
-                if(qtrees) qtrees->releaseLuaObject();
-                if(coastnet) coastnet->releaseLuaObject();
                 delete [] resource09;
             };
 
@@ -120,26 +131,10 @@ class BathyParms: public Icesat2Parms
         struct uncertainty_t {
             Asset*          assetKd;                // asset for reading Kd resources
             const char*     resourceKd;             // filename for Kd (uncertainty calculation)
-            double          bin_size;               // meters
-            double          max_range;              // meters
-            long            max_bins;               // bins
-            double          signal_threshold;       // standard deviations
-            double          min_peak_separation;    // meters
-            double          highest_peak_ratio;
-            double          surface_width;          // standard deviations
-            bool            model_as_poisson;
 
             uncertainty_t():
                 assetKd             (NULL),
-                resourceKd          (NULL),
-                bin_size            (0.5),
-                max_range           (1000.0),
-                max_bins            (10000),
-                signal_threshold    (3.0),
-                min_peak_separation (0.5),
-                highest_peak_ratio  (1.2),
-                surface_width       (3.0),
-                model_as_poisson    (true) {};
+                resourceKd          (NULL) {};
 
             ~uncertainty_t() {
                 if(assetKd) assetKd->releaseLuaObject();

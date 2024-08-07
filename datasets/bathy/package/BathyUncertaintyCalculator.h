@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __bathy_openoceans__
-#define __bathy_openoceans__
+#ifndef __bathy_uncertainty_calculator__
+#define __bathy_uncertainty_calculator__
 
 #include "OsApi.h"
 #include "LuaObject.h"

@@ -63,6 +63,10 @@
 #include "netsvc.h"
 #endif
 
+#ifdef __bathy__
+#include "bathy.h"
+#endif
+
 #ifdef __gebco__
 #include "gebco.h"
 #endif

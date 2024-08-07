@@ -36,6 +36,7 @@
 #include <cmath>
 #include <numeric>
 #include <stdarg.h>
+#include <algorithm>
 
 #include "OsApi.h"
 #include "MsgQ.h"
@@ -1114,14 +1115,14 @@ void* BathyReader::subsettingThread (void* parm)
         if(parms->reader.classifiers[BathyFields::QTREES])
         {
             double start = TimeLib::latchtime();
-            classifiers[BathyFields::QTREES]->run(extents);
+            reader->classifiers[BathyFields::QTREES]->run(extents);
             local_stats.qtrees_duration = TimeLib::latchtime() - start;
         }
         else // run native sea surface finder (since other classifiers need surface_h)
         {
             for(auto extent: extents)
             {
-                findSeaSurface(*extent);
+                reader->findSeaSurface(*extent);
             }
         }
 
@@ -1129,15 +1130,15 @@ void* BathyReader::subsettingThread (void* parm)
         if(parms->reader.classifiers[BathyFields::COASTNET])
         {
             double start = TimeLib::latchtime();
-            classifiers[BathyFields::COASTNET]->run(extents);
+            reader->classifiers[BathyFields::COASTNET]->run(extents);
             local_stats.coastnet_duration = TimeLib::latchtime() - start;
         }
 
         /* Process Extents */
         for(auto extent: extents)
         {
-            refraction->run(*extent, atl03.ref_elev, atl03.ref_azimuth);
-            parms->reader.uncertainty->run(*extent, atl03.sigma_across, atl03.sigma_along, atl03.sigma_h, atl03.ref_elev);
+            reader->refraction->run(*extent, atl03.ref_elev, atl03.ref_azimuth);
+            reader->uncertainty->run(*extent, atl03.sigma_across, atl03.sigma_along, atl03.sigma_h, atl03.ref_elev);
         }
 
         /* Write Extent to CSV File*/
@@ -1231,6 +1232,141 @@ double BathyReader::calculateBackground (int32_t current_segment, int32_t& bckgr
         bckgrd_index++;
     }
     return background_rate;
+}
+
+/*----------------------------------------------------------------------------
+ * parseResource
+ *
+ *  ATL0x_YYYYMMDDHHMMSS_ttttccrr_vvv_ee
+ *      YYYY    - year
+ *      MM      - month
+ *      DD      - day
+ *      HH      - hour
+ *      MM      - minute
+ *      SS      - second
+ *      tttt    - reference ground track
+ *      cc      - cycle
+ *      rr      - region
+ *      vvv     - version
+ *      ee      - revision
+ *----------------------------------------------------------------------------*/
+void BathyReader::parseResource (const char* _resource, TimeLib::date_t& date, uint16_t& rgt, uint8_t& cycle, uint8_t& region, uint8_t& version)
+{
+    long val;
+
+    if(StringLib::size(_resource) < 29)
+    {
+        rgt = 0;
+        cycle = 0;
+        region = 0;
+        date.year = 0;
+        date.month = 0;
+        date.day = 0;
+        return; // early exit on error
+    }
+
+    /* get year */
+    char year_str[5];
+    year_str[0] = _resource[6];
+    year_str[1] = _resource[7];
+    year_str[2] = _resource[8];
+    year_str[3] = _resource[9];
+    year_str[4] = '\0';
+    if(StringLib::str2long(year_str, &val, 10))
+    {
+        date.year = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse year from resource %s: %s", _resource, year_str);
+    }
+
+    /* get month */
+    char month_str[3];
+    month_str[0] = _resource[10];
+    month_str[1] = _resource[11];
+    month_str[2] = '\0';
+    if(StringLib::str2long(month_str, &val, 10))
+    {
+        date.month = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse month from resource %s: %s", _resource, month_str);
+    }
+
+    /* get month */
+    char day_str[3];
+    day_str[0] = _resource[12];
+    day_str[1] = _resource[13];
+    day_str[2] = '\0';
+    if(StringLib::str2long(day_str, &val, 10))
+    {
+        date.day = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse day from resource %s: %s", _resource, day_str);
+    }
+
+    /* get RGT */
+    char rgt_str[5];
+    rgt_str[0] = _resource[21];
+    rgt_str[1] = _resource[22];
+    rgt_str[2] = _resource[23];
+    rgt_str[3] = _resource[24];
+    rgt_str[4] = '\0';
+    if(StringLib::str2long(rgt_str, &val, 10))
+    {
+        rgt = static_cast<uint16_t>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse RGT from resource %s: %s", _resource, rgt_str);
+    }
+
+    /* get cycle */
+    char cycle_str[3];
+    cycle_str[0] = _resource[25];
+    cycle_str[1] = _resource[26];
+    cycle_str[2] = '\0';
+    if(StringLib::str2long(cycle_str, &val, 10))
+    {
+        cycle = static_cast<uint8_t>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse cycle from resource %s: %s", _resource, cycle_str);
+    }
+
+    /* get region */
+    char region_str[3];
+    region_str[0] = _resource[27];
+    region_str[1] = _resource[28];
+    region_str[2] = '\0';
+    if(StringLib::str2long(region_str, &val, 10))
+    {
+        region = static_cast<uint8_t>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse region from resource %s: %s", _resource, region_str);
+    }
+
+    /* get version */
+    char version_str[4];
+    version_str[0] = _resource[30];
+    version_str[1] = _resource[31];
+    version_str[2] = _resource[32];
+    version_str[3] = '\0';
+    if(StringLib::str2long(version_str, &val, 10))
+    {
+        version = static_cast<uint8_t>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse version from resource %s: %s", _resource, version_str);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -1447,140 +1583,6 @@ void BathyReader::findSeaSurface (extent_t& extent)
     }
 }
 
-/*----------------------------------------------------------------------------
- * parseResource
- *
- *  ATL0x_YYYYMMDDHHMMSS_ttttccrr_vvv_ee
- *      YYYY    - year
- *      MM      - month
- *      DD      - day
- *      HH      - hour
- *      MM      - minute
- *      SS      - second
- *      tttt    - reference ground track
- *      cc      - cycle
- *      rr      - region
- *      vvv     - version
- *      ee      - revision
- *----------------------------------------------------------------------------*/
-void BathyReader::parseResource (const char* _resource, TimeLib::date_t& date, uint16_t& rgt, uint8_t& cycle, uint8_t& region, uint8_t& version)
-{
-    long val;
-
-    if(StringLib::size(_resource) < 29)
-    {
-        rgt = 0;
-        cycle = 0;
-        region = 0;
-        date.year = 0;
-        date.month = 0;
-        date.day = 0;
-        return; // early exit on error
-    }
-
-    /* get year */
-    char year_str[5];
-    year_str[0] = _resource[6];
-    year_str[1] = _resource[7];
-    year_str[2] = _resource[8];
-    year_str[3] = _resource[9];
-    year_str[4] = '\0';
-    if(StringLib::str2long(year_str, &val, 10))
-    {
-        date.year = static_cast<int>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse year from resource %s: %s", _resource, year_str);
-    }
-
-    /* get month */
-    char month_str[3];
-    month_str[0] = _resource[10];
-    month_str[1] = _resource[11];
-    month_str[2] = '\0';
-    if(StringLib::str2long(month_str, &val, 10))
-    {
-        date.month = static_cast<int>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse month from resource %s: %s", _resource, month_str);
-    }
-
-    /* get month */
-    char day_str[3];
-    day_str[0] = _resource[12];
-    day_str[1] = _resource[13];
-    day_str[2] = '\0';
-    if(StringLib::str2long(day_str, &val, 10))
-    {
-        date.day = static_cast<int>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse day from resource %s: %s", _resource, day_str);
-    }
-
-    /* get RGT */
-    char rgt_str[5];
-    rgt_str[0] = _resource[21];
-    rgt_str[1] = _resource[22];
-    rgt_str[2] = _resource[23];
-    rgt_str[3] = _resource[24];
-    rgt_str[4] = '\0';
-    if(StringLib::str2long(rgt_str, &val, 10))
-    {
-        rgt = static_cast<uint16_t>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse RGT from resource %s: %s", _resource, rgt_str);
-    }
-
-    /* get cycle */
-    char cycle_str[3];
-    cycle_str[0] = _resource[25];
-    cycle_str[1] = _resource[26];
-    cycle_str[2] = '\0';
-    if(StringLib::str2long(cycle_str, &val, 10))
-    {
-        cycle = static_cast<uint8_t>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse cycle from resource %s: %s", _resource, cycle_str);
-    }
-
-    /* get region */
-    char region_str[3];
-    region_str[0] = _resource[27];
-    region_str[1] = _resource[28];
-    region_str[2] = '\0';
-    if(StringLib::str2long(region_str, &val, 10))
-    {
-        region = static_cast<uint8_t>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse region from resource %s: %s", _resource, region_str);
-    }
-
-    /* get version */
-    char version_str[4];
-    version_str[0] = _resource[30];
-    version_str[1] = _resource[31];
-    version_str[2] = _resource[32];
-    version_str[3] = '\0';
-    if(StringLib::str2long(version_str, &val, 10))
-    {
-        version = static_cast<uint8_t>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse version from resource %s: %s", _resource, version_str);
-    }
-}
 /*----------------------------------------------------------------------------
  * writeCSV
  *----------------------------------------------------------------------------*/

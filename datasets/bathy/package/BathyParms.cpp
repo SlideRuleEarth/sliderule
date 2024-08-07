@@ -52,8 +52,6 @@ static const char* BATHY_PARMS_ASSET                = "asset";
 static const char* BATHY_PARMS_ASSET09              = "asset09";
 static const char* BATHY_PARMS_DEFAULT_ASSET09      = "icesat2";
 static const char* BATHY_PARMS_HLS_PARMS            = "hls";
-static const char* BATHY_PARMS_QTREES_PARMS         = "qtrees";
-static const char* BATHY_PARMS_COASTNET_PARMS       = "coastnet";
 static const char* BATHY_PARMS_MAX_DEM_DELTA        = "max_dem_delta";
 static const char* BATHY_PARMS_MIN_DEM_DELTA        = "min_dem_delta";
 static const char* BATHY_PARMS_PH_IN_EXTENT         = "ph_in_extent";
@@ -62,6 +60,14 @@ static const char* BATHY_PARMS_USE_BATHY_MASK       = "use_bathy_mask";
 static const char* BATHY_PARMS_CLASSIFIERS          = "classifiers";
 static const char* BATHY_PARMS_RETURN_INPUTS        = "return_inputs";
 static const char* BATHY_PARMS_OUTPUT_AS_SDP        = "output_as_sdp";
+static const char* BATHY_PARMS_BIN_SIZE             = "bin_size";
+static const char* BATHY_PARMS_MAX_RANGE            = "max_range";
+static const char* BATHY_PARMS_MAX_BINS             = "max_bins";
+static const char* BATHY_PARMS_SIGNAL_THRESHOLD     = "signal_threshold"; // sigmas
+static const char* BATHY_PARMS_MIN_PEAK_SEPARATION  = "min_peak_separation";
+static const char* BATHY_PARMS_HIGHEST_PEAK_RATIO   = "highest_peak_ratio";
+static const char* BATHY_PARMS_SURFACE_WIDTH        = "surface_width"; // sigmas
+static const char* BATHY_PARMS_MODEL_AS_POISSON     = "model_as_poisson"; // sigmas
 static const char* BATHY_PARMS_ATL09_RESOURCE       = "resource09";
 static const char* BATHY_PARMS_SPOTS                = "spots";
 static const char* BATHY_PARMS_DEFAULT_ASSET        = "icesat2";
@@ -74,14 +80,6 @@ static const char* BATHY_PARMS_RI_WATER             = "ri_water";
 static const char* BATHY_PARMS_ASSET_KD             = "asset_kd";
 static const char* BATHY_PARMS_DEFAULT_ASSETKD      = "viirsj1-s3";
 static const char* BATHY_PARMS_RESOURCE_KD          = "resource_kd";
-static const char* BATHY_PARMS_BIN_SIZE             = "bin_size";
-static const char* BATHY_PARMS_MAX_RANGE            = "max_range";
-static const char* BATHY_PARMS_MAX_BINS             = "max_bins";
-static const char* BATHY_PARMS_SIGNAL_THRESHOLD     = "signal_threshold"; // sigmas
-static const char* BATHY_PARMS_MIN_PEAK_SEPARATION  = "min_peak_separation";
-static const char* BATHY_PARMS_HIGHEST_PEAK_RATIO   = "highest_peak_ratio";
-static const char* BATHY_PARMS_SURFACE_WIDTH        = "surface_width"; // sigmas
-static const char* BATHY_PARMS_MODEL_AS_POISSON     = "model_as_poisson"; // sigmas
 
 /******************************************************************************
  * METHODS
@@ -186,6 +184,46 @@ void BathyParms::reader_t::fromLua (lua_State* L, int index)
         lua_getfield(L, index, BATHY_PARMS_SPOTS);
         getSpotList(L, -1, NULL, spots);
         lua_pop(L, 1);
+
+        /* bin size */
+        lua_getfield(L, index, BATHY_PARMS_BIN_SIZE);
+        bin_size = LuaObject::getLuaFloat(L, -1, true, bin_size, NULL);
+        lua_pop(L, 1);
+
+        /* max range */
+        lua_getfield(L, index, BATHY_PARMS_MAX_RANGE);
+        max_range = LuaObject::getLuaFloat(L, -1, true, max_range, NULL);
+        lua_pop(L, 1);
+
+        /* max bins */
+        lua_getfield(L, index, BATHY_PARMS_MAX_BINS);
+        max_bins = LuaObject::getLuaInteger(L, -1, true, max_bins, NULL);
+        lua_pop(L, 1);
+
+        /* signal threshold */
+        lua_getfield(L, index, BATHY_PARMS_SIGNAL_THRESHOLD);
+        signal_threshold = LuaObject::getLuaFloat(L, -1, true, signal_threshold, NULL);
+        lua_pop(L, 1);
+
+        /* minimum peak separation */
+        lua_getfield(L, index, BATHY_PARMS_MIN_PEAK_SEPARATION);
+        min_peak_separation = LuaObject::getLuaFloat(L, -1, true, min_peak_separation, NULL);
+        lua_pop(L, 1);
+
+        /* highest peak ratio */
+        lua_getfield(L, index, BATHY_PARMS_HIGHEST_PEAK_RATIO);
+        highest_peak_ratio = LuaObject::getLuaFloat(L, -1, true, highest_peak_ratio, NULL);
+        lua_pop(L, 1);
+
+        /* surface width */
+        lua_getfield(L, index, BATHY_PARMS_SURFACE_WIDTH);
+        surface_width = LuaObject::getLuaFloat(L, -1, true, surface_width, NULL);
+        lua_pop(L, 1);
+
+        /* model as poisson */
+        lua_getfield(L, index, BATHY_PARMS_MODEL_AS_POISSON);
+        model_as_poisson = LuaObject::getLuaBoolean(L, -1, true, model_as_poisson, NULL);
+        lua_pop(L, 1);
     }
 }
 
@@ -242,46 +280,6 @@ void BathyParms::uncertainty_t::fromLua (lua_State* L, int index)
         lua_getfield(L, index, BATHY_PARMS_RESOURCE_KD);
         resourceKd = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, resourceKd, NULL));
         lua_pop(L, 1);
-
-        /* bin size */
-        lua_getfield(L, index, BATHY_PARMS_BIN_SIZE);
-        bin_size = LuaObject::getLuaFloat(L, -1, true, bin_size, NULL);
-        lua_pop(L, 1);
-
-        /* max range */
-        lua_getfield(L, index, BATHY_PARMS_MAX_RANGE);
-        max_range = LuaObject::getLuaFloat(L, -1, true, max_range, NULL);
-        lua_pop(L, 1);
-
-        /* max bins */
-        lua_getfield(L, index, BATHY_PARMS_MAX_BINS);
-        max_bins = LuaObject::getLuaInteger(L, -1, true, max_bins, NULL);
-        lua_pop(L, 1);
-
-        /* signal threshold */
-        lua_getfield(L, index, BATHY_PARMS_SIGNAL_THRESHOLD);
-        signal_threshold = LuaObject::getLuaFloat(L, -1, true, signal_threshold, NULL);
-        lua_pop(L, 1);
-
-        /* minimum peak separation */
-        lua_getfield(L, index, BATHY_PARMS_MIN_PEAK_SEPARATION);
-        min_peak_separation = LuaObject::getLuaFloat(L, -1, true, min_peak_separation, NULL);
-        lua_pop(L, 1);
-
-        /* highest peak ratio */
-        lua_getfield(L, index, BATHY_PARMS_HIGHEST_PEAK_RATIO);
-        highest_peak_ratio = LuaObject::getLuaFloat(L, -1, true, highest_peak_ratio, NULL);
-        lua_pop(L, 1);
-
-        /* surface width */
-        lua_getfield(L, index, BATHY_PARMS_SURFACE_WIDTH);
-        surface_width = LuaObject::getLuaFloat(L, -1, true, surface_width, NULL);
-        lua_pop(L, 1);
-
-        /* model as poisson */
-        lua_getfield(L, index, BATHY_PARMS_MODEL_AS_POISSON);
-        model_as_poisson = LuaObject::getLuaBoolean(L, -1, true, model_as_poisson, NULL);
-        lua_pop(L, 1);
     }
 }
 
@@ -314,7 +312,7 @@ const char* BathyParms::tojson (void) const
  * Constructor
  *----------------------------------------------------------------------------*/
 BathyParms::BathyParms(lua_State* L, int index):
-    BathyParms (L, index)
+    Icesat2Parms (L, index)
 {
     /* bathy parms */
     lua_getfield(L, index, BATHY_PARMS);

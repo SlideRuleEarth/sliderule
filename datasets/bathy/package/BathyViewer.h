@@ -139,8 +139,8 @@ class BathyViewer: public LuaObject
                             BathyViewer            (lua_State* L, Asset* _asset, const char* _resource, Icesat2Parms* _parms);
                             ~BathyViewer           (void) override;
 
-        static void*        subsettingThread            (void* parm);
-        static int          luaCounts                   (lua_State* L);
+        static void*        subsettingThread        (void* parm);
+        static int          luaCounts               (lua_State* L);
 };
 
 #endif  /* __bathy_viewer__ */
