@@ -928,18 +928,16 @@ def atl08p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
 #
 #  ATL24 Gold Standard
 #
-def atl24g(parm, callbacks={}, resource=None, keep_id=False, height_key=None):
+def atl24g(parm, callbacks={}, keep_id=False, height_key=None):
     '''
     Performs ATL24 gold standard generation on ATL03 data.
 
     Parameters
     ----------
         parms:          dict
-                        parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
+                        parameters used to configure ATL24 processing (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
         callbacks:      dictionary
                         a callback function that is called for each result record
-        resource:       str
-                        a granule to process (e.g. "ATL03_20181019065445_03150111_005_01.h5")
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
     Returns
@@ -950,17 +948,8 @@ def atl24g(parm, callbacks={}, resource=None, keep_id=False, height_key=None):
     try:
         tstart = time.perf_counter()
 
-        # Default the Asset
-        if "asset" not in parm:
-            parm["asset"] = "icesat2"
-
-        # Build Request
-        rqst = {
-            "resource": resource,
-            "parms": parm
-        }
-
         # Make Request
+        rqst = { "parms": parm }
         rsps = sliderule.source("atl24g", rqst, stream=True, callbacks=callbacks)
 
         # Check for Output Options

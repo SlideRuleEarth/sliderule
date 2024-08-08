@@ -90,60 +90,60 @@ int BathyReader::luaCreate (lua_State* L)
     {
         /* Get Parameters */
         parms = dynamic_cast<BathyParms*>(getLuaObject(L, 1, BathyParms::OBJECT_TYPE));
-        refraction = dynamic_cast<BathyRefractionCorrector*>(getLuaObject(L, 4, BathyRefractionCorrector::OBJECT_TYPE));
-        uncertainty = dynamic_cast<BathyUncertaintyCalculator*>(getLuaObject(L, 5, BathyUncertaintyCalculator::OBJECT_TYPE));
-        hls = dynamic_cast<GeoParms*>(getLuaObject(L, 6, GeoParms::OBJECT_TYPE));
-        const char* outq_name = getLuaString(L, 7);
-        const char* shared_directory = getLuaString(L, 8);
-        const bool send_terminator = getLuaBoolean(L, 9, true, true);
+        const int classifier_table_index = 2;
+        refraction = dynamic_cast<BathyRefractionCorrector*>(getLuaObject(L, 3, BathyRefractionCorrector::OBJECT_TYPE));
+        uncertainty = dynamic_cast<BathyUncertaintyCalculator*>(getLuaObject(L, 4, BathyUncertaintyCalculator::OBJECT_TYPE));
+        hls = dynamic_cast<GeoParms*>(getLuaObject(L, 5, GeoParms::OBJECT_TYPE, true, NULL));
+        const char* outq_name = getLuaString(L, 6);
+        const char* shared_directory = getLuaString(L, 7);
+        const bool send_terminator = getLuaBoolean(L, 8, true, true);
         
         /* Build Classifier List */
-        const int classifier_table_index = 2;
         if(lua_istable(L, classifier_table_index))
         {
             /* qtrees */
             lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::QTREES));
-            classifiers[BathyParms::QTREES] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            classifiers[BathyParms::QTREES] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
 
             /* coastnet */
             lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::COASTNET));
-            classifiers[BathyParms::COASTNET] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            classifiers[BathyParms::COASTNET] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
 
-            /* openoceans++ */
+            /* openoceanspp */
             lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::OPENOCEANSPP));
-            classifiers[BathyParms::OPENOCEANSPP] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            classifiers[BathyParms::OPENOCEANSPP] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
 
             /* medianfilter */
             lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::MEDIANFILTER));
-            classifiers[BathyParms::MEDIANFILTER] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            classifiers[BathyParms::MEDIANFILTER] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
 
             /* cshelph */
             lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::CSHELPH));
-            classifiers[BathyParms::CSHELPH] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            classifiers[BathyParms::CSHELPH] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
 
             /* bathypathfinder */
             lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::BATHYPATHFINDER));
-            classifiers[BathyParms::BATHYPATHFINDER] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            classifiers[BathyParms::BATHYPATHFINDER] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
 
             /* pointnet */
             lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::POINTNET));
-            classifiers[BathyParms::POINTNET] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            classifiers[BathyParms::POINTNET] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
 
             /* openoceans */
             lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::OPENOCEANS));
-            classifiers[BathyParms::OPENOCEANS] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            classifiers[BathyParms::OPENOCEANS] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
 
             /* ensemble */
             lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::ENSEMBLE));
-            classifiers[BathyParms::ENSEMBLE] = dynamic_cast<BathyClassifier*>(getLuaObject(L, 2, BathyClassifier::OBJECT_TYPE, true, NULL));
+            classifiers[BathyParms::ENSEMBLE] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
         }
         else
@@ -228,7 +228,7 @@ BathyReader::BathyReader (lua_State* L,
     sendTerminator = _send_terminator;
 
     /* Create Global Bathymetry Mask */
-    if(parms->reader.use_bathy_mask)
+    if(parms->use_bathy_mask)
     {
         bathyMask = new GeoLib::TIFFImage(NULL, GLOBAL_BATHYMETRY_MASK_FILE_PATH);
     }
@@ -248,11 +248,11 @@ BathyReader::BathyReader (lua_State* L,
     try
     {
         /* Create H5Coro Contexts */
-        context = new H5Coro::Context(parms->reader.asset, parms->reader.resource);
-        context09 = new H5Coro::Context(parms->reader.asset09, parms->reader.resource09);
+        context = new H5Coro::Context(parms->asset, parms->resource);
+        context09 = new H5Coro::Context(parms->asset09, parms->resource09);
 
         /* Standard Data Product Variables */
-        if(parms->reader.output_as_sdp)
+        if(parms->output_as_sdp)
         {
             /* Write Ancillary Data */
             FString ancillary_filename("%s/writer_ancillary.json", sharedDirectory);
@@ -284,7 +284,7 @@ BathyReader::BathyReader (lua_State* L,
         }
 
         /* Parse Globals (throws) */
-        parseResource(parms->reader.resource, granuleDate, startRgt, startCycle, startRegion, sdpVersion);
+        parseResource(parms->resource, granuleDate, startRgt, startCycle, startRegion, sdpVersion);
 
         /* Create Readers */
         for(int track = 1; track <= BathyParms::NUM_TRACKS; track++)
@@ -314,8 +314,8 @@ BathyReader::BathyReader (lua_State* L,
     catch(const RunTimeException& e)
     {
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "Failure on resource %s: %s", parms->reader.resource, e.what());
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "Failure on resource %s: %s", parms->reader.resource, e.what());
+        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "Failure on resource %s: %s", parms->resource, e.what());
+        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "Failure on resource %s: %s", parms->resource, e.what());
 
         /* Indicate End of Data */
         if(sendTerminator) outQ->postCopy("", 0, SYS_TIMEOUT);
@@ -648,7 +648,7 @@ BathyReader::Atl09Class::Atl09Class (const info_t* info):
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "ATL09 data unavailable <%s>", info->parms->reader.resource09);
+        mlog(CRITICAL, "ATL09 data unavailable <%s>", info->parms->resource09);
     }
 }
 
@@ -875,7 +875,7 @@ void* BathyReader::subsettingThread (void* parm)
             /* Check Current Segment */
             if(current_segment >= atl03.segment_dist_x.size)
             {
-                mlog(ERROR, "Photons with no segments are detected in %s/%d (%d %ld %ld)!", parms->reader.resource, spot, current_segment, atl03.segment_dist_x.size, region.num_segments);
+                mlog(ERROR, "Photons with no segments are detected in %s/%d (%d %ld %ld)!", parms->resource, spot, current_segment, atl03.segment_dist_x.size, region.num_segments);
                 break;
             }
 
@@ -969,7 +969,7 @@ void* BathyReader::subsettingThread (void* parm)
 
                 /* Check DEM Delta */
                 const float dem_delta = atl03.h_ph[current_photon] - atl03.dem_h[current_segment];
-                if(dem_delta > parms->reader.max_dem_delta || dem_delta < parms->reader.min_dem_delta)
+                if(dem_delta > parms->max_dem_delta || dem_delta < parms->min_dem_delta)
                 {
                     break;
                 }
@@ -1004,7 +1004,7 @@ void* BathyReader::subsettingThread (void* parm)
 
                     /* Sample Raster for NDWI */
                     ndwi = std::numeric_limits<float>::quiet_NaN();
-                    if(ndwiRaster && parms->reader.generate_ndwi)
+                    if(ndwiRaster && parms->generate_ndwi)
                     {
                         const double gps = current_delta_time + (double)Icesat2Parms::ATLAS_SDP_EPOCH_GPS;
                         const MathLib::point_3d_t point = {
@@ -1015,7 +1015,7 @@ void* BathyReader::subsettingThread (void* parm)
                         List<RasterSample*> slist(1);
                         const uint32_t err = ndwiRaster->getSamples(point, gps, slist);
                         if(!slist.empty()) ndwi = static_cast<float>(slist[0]->value);
-                        else mlog(WARNING, "Unable to calculate NDWI for %s at %lf, %lf: %u", parms->reader.resource, point.y, point.x, err);
+                        else mlog(WARNING, "Unable to calculate NDWI for %s at %lf, %lf: %u", parms->resource, point.y, point.x, err);
                     }
                 }
 
@@ -1050,7 +1050,7 @@ void* BathyReader::subsettingThread (void* parm)
             /* Go to Next Photon */
             current_photon++;
 
-            if((extent_photons.length() >= parms->reader.ph_in_extent) ||
+            if((extent_photons.length() >= parms->ph_in_extent) ||
                (current_photon >= atl03.dist_ph_along.size) ||
                (!extent_photons.empty() && terminate_extent_on_boundary))
             {
@@ -1111,7 +1111,7 @@ void* BathyReader::subsettingThread (void* parm)
         }
 
         /* Run Qtrees on Extents */
-        if(parms->reader.classifiers[BathyParms::QTREES])
+        if(parms->classifiers[BathyParms::QTREES])
         {
             double start = TimeLib::latchtime();
             reader->classifiers[BathyParms::QTREES]->run(extents);
@@ -1126,7 +1126,7 @@ void* BathyReader::subsettingThread (void* parm)
         }
 
         /* Run Coastnet on Extents */
-        if(parms->reader.classifiers[BathyParms::COASTNET])
+        if(parms->classifiers[BathyParms::COASTNET])
         {
             double start = TimeLib::latchtime();
             reader->classifiers[BathyParms::COASTNET]->run(extents);
@@ -1145,7 +1145,7 @@ void* BathyReader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d.%d: %s", parms->reader.resource, info->track, info->pair, e.what());
+        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d.%d: %s", parms->resource, info->track, info->pair, e.what());
     }
 
     /* Handle Global Reader Updates */
@@ -1155,7 +1155,7 @@ void* BathyReader::subsettingThread (void* parm)
         reader->numComplete++;
         if(reader->numComplete == reader->threadCount)
         {
-            mlog(INFO, "Completed processing resource %s", parms->reader.resource);
+            mlog(INFO, "Completed processing resource %s", parms->resource);
 
             /* Update Statistics */
             reader->stats.photon_count += local_stats.photon_count;
@@ -1169,12 +1169,12 @@ void* BathyReader::subsettingThread (void* parm)
                     status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
                     if(status < 0)
                     {
-                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, parms->reader.resource);
+                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, parms->resource);
                         break;
                     }
                     else if(status == MsgQ::STATE_TIMEOUT)
                     {
-                        mlog(INFO, "Timeout posting terminator for %s ... trying again", parms->reader.resource);
+                        mlog(INFO, "Timeout posting terminator for %s ... trying again", parms->resource);
                     }
                 }
             }
@@ -1373,7 +1373,7 @@ void BathyReader::parseResource (const char* _resource, TimeLib::date_t& date, u
  *----------------------------------------------------------------------------*/
 void BathyReader::findSeaSurface (BathyParms::extent_t& extent)
 {
-    BathyParms::reader_t& p = parms->reader;
+    BathyParms::surface_t& p = parms->surface;
     try
     {
         /* initialize stats on photons */
@@ -1707,7 +1707,7 @@ int BathyReader::luaSpotEnabled (lua_State* L)
         const int spot = getLuaInteger(L, 2);
         if(spot >= 1 && spot <= Icesat2Parms::NUM_SPOTS)
         {
-            status = lua_obj->parms->reader.spots[spot-1];
+            status = lua_obj->parms->spots[spot-1];
         }
     }
     catch(const RunTimeException& e)
@@ -1735,7 +1735,7 @@ int BathyReader::luaClassifierEnabled (lua_State* L)
         if(classifier != BathyParms::INVALID_CLASSIFIER)
         {
             const int index = static_cast<int>(classifier);
-            status = lua_obj->parms->reader.classifiers[index];
+            status = lua_obj->parms->classifiers[index];
         }
     }
     catch(const RunTimeException& e)

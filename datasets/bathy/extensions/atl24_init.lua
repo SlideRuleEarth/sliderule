@@ -37,7 +37,7 @@ while sys.alive() and ( (not bathy_mask_complete) or
     -- pointnet model
     local pointnet_model_local = cre.HOST_DIRECTORY.."/pointnet2_model.pth"
     local pointnet_model_remote = "config/pointnet2_model.pth"
-    pointnet2_model_complete = sys.fileexists(pointnet_model_local) or aws.s3download("sliderule", pointnet_model_remote, aws.DEFAULT_REGION, aws.DEFAULT_IDENTITY, pointnet_model_local)
+    pointnet_model_complete = sys.fileexists(pointnet_model_local) or aws.s3download("sliderule", pointnet_model_remote, aws.DEFAULT_REGION, aws.DEFAULT_IDENTITY, pointnet_model_local)
 
     -- qtrees model
     local qtrees_model_local = cre.HOST_DIRECTORY.."/model-20240607.json"

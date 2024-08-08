@@ -6,8 +6,8 @@ local json          = require("json")
 local earthdata     = require("earth_data_query")
 local runner        = require("container_runtime")
 local rqst          = json.decode(arg[1])
-local resource      = rqst["resource"]
-local parms         = rqst["parms"]
+local parms         = rqst["parms"] or {}
+local resource      = parms["resource"]
 local timeout       = parms["node-timeout"] or parms["timeout"] or netsvc.NODE_TIMEOUT
 local interval      = 10 < timeout and 10 or timeout -- seconds
 
@@ -61,6 +61,7 @@ end
 -------------------------------------------------------
 -- populate resource via CMR request (ONLY IF NOT SUPPLIED)
 -------------------------------------------------------
+parms["asset"] = parms["asset"] or "icesat2"
 if not resource then
     local atl03_cmr_start_time = time.gps()
     local rc, rsps = earthdata.cmr(parms)
@@ -184,16 +185,13 @@ userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL09 CMR search executed
 -------------------------------------------------------
 -- build bathy reader parms
 -------------------------------------------------------
-parms["bathy"] = parms["bathy"] or {}
-parms["bathy"]["resource"] = resource
-parms["bathy"]["uncertainty"] = parms["bathy"]["uncertainty"] or {}
-parms["bathy"]["uncertainty"]["resource_kd"] = viirs_filename
-parms["bathy"]["uncertainty"]["assetKd"] = parms["bathy"]["uncertainty"]["assetKd"] or "viirsj1-s3"
+parms["uncertainty"] = parms["uncertainty"] or {}
+parms["uncertainty"]["resource_kd"] = viirs_filename
 local bathy_parms = bathy.parms(parms)
 local classifiers = {
-    qtrees = qtrees.classifier(parms["bathy"]["qtrees"] or {}),
-    coastnet = coastnet.classifier(parms["bathy"]["coastnet"] or {}),
-    openoceanspp = openoceanspp.classifier(parms["bathy"]["openoceanspp"] or {})
+    qtrees = qtrees.classifier(parms["qtrees"] or {}),
+    coastnet = coastnet.classifier(parms["coastnet"] or {}),
+    openoceanspp = openoceanspp.classifier(parms["openoceanspp"] or {})
 }
 local refraction_corrector = bathy.refraction(bathy_parms);
 local uncertainty_calculator = bathy.uncertainty(bathy_parms);
@@ -212,8 +210,10 @@ for spot = 1,icesat2.NUM_SPOTS do
     spot_mask[spot] = reader:spoton(spot)
 end
 local classifier_mask = {}  -- build classifier mask using defaults/parsing from bathyreader (because reader will be destroyed)
-for _,classifier in ipairs({"qtrees", "coastnet", "openoceans++", "medianfilter", "cshelph", "bathypathfinder", "pointnet", "ensemble"}) do
+local classifier_list = {}
+for _,classifier in ipairs({"qtrees", "coastnet", "openoceanspp", "medianfilter", "cshelph", "bathypathfinder", "pointnet", "ensemble"}) do
     classifier_mask[classifier] = reader:classifieron(classifier)
+    table.insert(classifier_list, classifier)
 end
 local duration = 0 -- wait for bathyreader to finish
 while (userlog:numsubs() > 0) and not reader:waiton(interval * 1000) do
@@ -348,6 +348,7 @@ local writer_parms = {
             input_files = output_files,
             output_parms = output_parms,
             atl24_filename = crenv.container_sandbox_mount.."/atl24.bin",
+            classifiers = classifier_list,
             profile = profile,
             version = version,
             commit = commit,

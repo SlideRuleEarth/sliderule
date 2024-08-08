@@ -57,6 +57,7 @@ INSTALL_DIR ?= $(SLIDERULE_STAGE_DIR)
 
 QTREES_SOURCE_DIR = $(ROOT)/../qtrees/plugin
 COASTNET_SOURCE_DIR = $(ROOT)/../coastnet/plugin
+OPENOCEANS_SOURCE_DIR = $(ROOT)/../openoceans/plugin
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -135,6 +136,11 @@ coastnet-plugin:
 	make -C $(COASTNET_SOURCE_DIR) config INSTALLDIR=$(INSTALL_DIR)
 	make -C $(COASTNET_SOURCE_DIR)
 	make -C $(COASTNET_SOURCE_DIR) install
+
+openoceans-plugin:
+	make -C $(OPENOCEANS_SOURCE_DIR) config INSTALLDIR=$(INSTALL_DIR)
+	make -C $(OPENOCEANS_SOURCE_DIR)
+	make -C $(OPENOCEANS_SOURCE_DIR) install
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)

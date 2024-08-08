@@ -133,21 +133,8 @@ class BathyParms: public Icesat2Parms
             photon_t        photons[];              // zero length field
         } extent_t;
 
-        /* Bathymetry Reader */
-        struct reader_t {
-            Asset*          asset;              // asset for ATL03 resources
-            Asset*          asset09;            // asset for ATL09 resources
-            const char*     resource;           // ATL03 granule
-            const char*     resource09;         // ATL09 granule
-            double          max_dem_delta;      // initial filter of heights against DEM (For removing things like clouds)
-            double          min_dem_delta;      // initial filter of heights against DEM (For removing things like clouds)
-            int             ph_in_extent;       // number of photons in each extent
-            bool            generate_ndwi;      // use HLS data to generate NDWI for each segment lat,lon
-            bool            use_bathy_mask;     // global bathymetry mask downloaded in atl24 init lua routine
-            bool            classifiers[NUM_CLASSIFIERS]; // which bathymetry classifiers to run
-            bool            return_inputs;      // return the atl03 bathy records back to client
-            bool            spots[NUM_SPOTS];   // only used by downstream algorithms
-            bool            output_as_sdp;      // include all the necessary ancillary data for the standard data product
+        /* Bathymetry Surface Finder */
+        struct surface_t {
             double          bin_size;           // meters
             double          max_range;          // meters
             long            max_bins;           // bins
@@ -157,20 +144,7 @@ class BathyParms: public Icesat2Parms
             double          surface_width;      // standard deviations
             bool            model_as_poisson;
             
-            reader_t():
-                asset                   (NULL),
-                asset09                 (NULL), 
-                resource                (NULL),
-                resource09              (NULL),
-                max_dem_delta           (50.0),
-                min_dem_delta           (-100.0),
-                ph_in_extent            (8192),
-                generate_ndwi           (false),
-                use_bathy_mask          (true),
-                classifiers             {true, true, true, true, true, true, true, true, true},
-                return_inputs           (false),
-                spots                   {true, true, true, true, true, true},
-                output_as_sdp           (false),
+            surface_t():
                 bin_size                (0.5),
                 max_range               (1000.0),
                 max_bins                (10000),
@@ -179,11 +153,7 @@ class BathyParms: public Icesat2Parms
                 highest_peak_ratio      (1.2),
                 surface_width           (3.0),
                 model_as_poisson        (true) {};
-            ~reader_t() {
-                if(asset) asset->releaseLuaObject();
-                if(asset09) asset09->releaseLuaObject();
-                delete [] resource;
-                delete [] resource09;
+            ~surface_t() {
             };
 
             void        fromLua (lua_State* L, int index);
@@ -237,7 +207,20 @@ class BathyParms: public Icesat2Parms
          * Data
          *--------------------------------------------------------------------*/
 
-        reader_t        reader;
+        Asset*          asset;              // asset for ATL03 resources
+        Asset*          asset09;            // asset for ATL09 resources
+        const char*     resource;           // ATL03 granule
+        const char*     resource09;         // ATL09 granule
+        double          max_dem_delta;      // initial filter of heights against DEM (For removing things like clouds)
+        double          min_dem_delta;      // initial filter of heights against DEM (For removing things like clouds)
+        int             ph_in_extent;       // number of photons in each extent
+        bool            generate_ndwi;      // use HLS data to generate NDWI for each segment lat,lon
+        bool            use_bathy_mask;     // global bathymetry mask downloaded in atl24 init lua routine
+        bool            classifiers[NUM_CLASSIFIERS]; // which bathymetry classifiers to run
+        bool            return_inputs;      // return the atl03 bathy records back to client
+        bool            spots[NUM_SPOTS];   // only used by downstream algorithms
+        bool            output_as_sdp;      // include all the necessary ancillary data for the standard data product
+        surface_t       surface;
         refraction_t    refraction;
         uncertainty_t   uncertainty;
 

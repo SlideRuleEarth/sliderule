@@ -42,8 +42,7 @@
  ******************************************************************************/
 
 /* Bathy Parameters */
-static const char* BATHY_PARMS                      = "bathy";
-static const char* BATHY_PARMS_READER               = "reader";
+static const char* BATHY_PARMS_SURFACE              = "surface";
 static const char* BATHY_PARMS_REFRACTION           = "refraction";
 static const char* BATHY_PARMS_UNCERTAINTY          = "uncertainty";
 
@@ -123,82 +122,13 @@ const RecordObject::fieldDef_t BathyParms::exRecDef[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * reader_t::fromLua
+ * surface_t::fromLua
  *----------------------------------------------------------------------------*/
-void BathyParms::reader_t::fromLua (lua_State* L, int index)
+void BathyParms::surface_t::fromLua (lua_State* L, int index)
 {
     /* Get Algorithm Parameters */
     if(lua_istable(L, index))
     {
-        /* asset */
-        lua_getfield(L, index, BATHY_PARMS_ASSET);
-        const char* asset_name = LuaObject::getLuaString(L, -1, true, BATHY_PARMS_DEFAULT_ASSET);
-        asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
-        if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to find asset %s", asset_name);
-        lua_pop(L, 1);
-
-        /* asset09 */
-        lua_getfield(L, index, BATHY_PARMS_ASSET09);
-        const char* asset09_name = LuaObject::getLuaString(L, -1, true, BATHY_PARMS_DEFAULT_ASSET09);
-        asset09 = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset09_name, Asset::OBJECT_TYPE));
-        if(!asset09) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to find asset %s", asset09_name);
-        lua_pop(L, 1);
-
-        /* atl03 resources */
-        lua_getfield(L, index, BATHY_PARMS_ATL03_RESOURCE);
-        resource = StringLib::duplicate(LuaObject::getLuaString(L, -1));
-        lua_pop(L, 1);
-
-        /* atl09 resources */
-        lua_getfield(L, index, BATHY_PARMS_ATL09_RESOURCE);
-        resource09 = StringLib::duplicate(LuaObject::getLuaString(L, -1));
-        lua_pop(L, 1);
-
-        /* maximum DEM delta */
-        lua_getfield(L, index, BATHY_PARMS_MAX_DEM_DELTA);
-        max_dem_delta = LuaObject::getLuaFloat(L, -1, true, max_dem_delta, NULL);
-        lua_pop(L, 1);
-
-        /* minimum DEM delta */
-        lua_getfield(L, index, BATHY_PARMS_MIN_DEM_DELTA);
-        min_dem_delta = LuaObject::getLuaFloat(L, -1, true, min_dem_delta, NULL);
-        lua_pop(L, 1);
-
-        /* photons in extent */
-        lua_getfield(L, index, BATHY_PARMS_PH_IN_EXTENT);
-        ph_in_extent = LuaObject::getLuaInteger(L, -1, true, ph_in_extent, NULL);
-        lua_pop(L, 1);
-
-        /* generate ndwi */
-        lua_getfield(L, index, BATHY_PARMS_GENERATE_NDWI);
-        generate_ndwi = LuaObject::getLuaBoolean(L, -1, true, generate_ndwi, NULL);
-        lua_pop(L, 1);
-
-        /* use bathy mask */
-        lua_getfield(L, index, BATHY_PARMS_USE_BATHY_MASK);
-        use_bathy_mask = LuaObject::getLuaBoolean(L, -1, true, use_bathy_mask, NULL);
-        lua_pop(L, 1);
-
-        /* classifiers */
-        lua_getfield(L, index, BATHY_PARMS_CLASSIFIERS);
-        getClassifiers(L, -1, NULL, classifiers);
-        lua_pop(L, 1);
-
-        /* return inputs */
-        lua_getfield(L, index, BATHY_PARMS_RETURN_INPUTS);
-        return_inputs = LuaObject::getLuaBoolean(L, -1, true, return_inputs, NULL);
-        lua_pop(L, 1);
-
-        /* output as sdp */
-        lua_getfield(L, index, BATHY_PARMS_OUTPUT_AS_SDP);
-        output_as_sdp = LuaObject::getLuaBoolean(L, -1, true, output_as_sdp, NULL);
-        lua_pop(L, 1);
-
-        /* spot selection */
-        lua_getfield(L, index, BATHY_PARMS_SPOTS);
-        getSpotList(L, -1, NULL, spots);
-        lua_pop(L, 1);
-
         /* bin size */
         lua_getfield(L, index, BATHY_PARMS_BIN_SIZE);
         bin_size = LuaObject::getLuaFloat(L, -1, true, bin_size, NULL);
@@ -239,12 +169,16 @@ void BathyParms::reader_t::fromLua (lua_State* L, int index)
         model_as_poisson = LuaObject::getLuaBoolean(L, -1, true, model_as_poisson, NULL);
         lua_pop(L, 1);
     }
+    else
+    {
+        mlog(INFO,"Using default bathy sea surface finder parameters");
+    }
 }
 
 /*----------------------------------------------------------------------------
- * reader_t::toJson
+ * surface_t::toJson
  *----------------------------------------------------------------------------*/
-const char* BathyParms::reader_t::toJson (void) const
+const char* BathyParms::surface_t::toJson (void) const
 {
     return "";
 }
@@ -265,6 +199,10 @@ void BathyParms::refraction_t::fromLua (lua_State* L, int index)
         lua_getfield(L, index, BATHY_PARMS_RI_WATER);
         ri_water = LuaObject::getLuaFloat(L, -1, true, ri_water, NULL);
         lua_pop(L, 1);
+    }
+    else
+    {
+        mlog(INFO, "Using default bathy refraction parameters");
     }
 }
 
@@ -294,6 +232,10 @@ void BathyParms::uncertainty_t::fromLua (lua_State* L, int index)
         lua_getfield(L, index, BATHY_PARMS_RESOURCE_KD);
         resourceKd = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, resourceKd, NULL));
         lua_pop(L, 1);
+    }
+    else
+    {
+        mlog(INFO, "Using default bathy uncertainty parameters");
     }
 }
 
@@ -347,7 +289,7 @@ const char* BathyParms::tojson (void) const
     R"("%s":%s,)"
     R"("%s":"%s")"
     R"(})",
-    BATHY_PARMS_READER, reader.toJson(),
+    BATHY_PARMS_SURFACE, surface.toJson(),
     BATHY_PARMS_REFRACTION, refraction.toJson(),
     BATHY_PARMS_UNCERTAINTY, uncertainty.toJson());
 
@@ -361,7 +303,7 @@ BathyParms::classifier_t BathyParms::str2classifier (const char* str)
 {
     if(StringLib::match(str, "qtrees"))             return QTREES;
     if(StringLib::match(str, "coastnet"))           return COASTNET;
-    if(StringLib::match(str, "openoceans++"))       return OPENOCEANSPP;
+    if(StringLib::match(str, "openoceanspp"))       return OPENOCEANSPP;
     if(StringLib::match(str, "medianfilter"))       return MEDIANFILTER;
     if(StringLib::match(str, "cshelph"))            return CSHELPH;
     if(StringLib::match(str, "bathypathfinder"))    return BATHYPATHFINDER;
@@ -380,7 +322,7 @@ const char* BathyParms::classifier2str (classifier_t classifier)
     {
         case QTREES:            return "qtrees";
         case COASTNET:          return "coastnet";
-        case OPENOCEANSPP:      return "openoceans++";
+        case OPENOCEANSPP:      return "openoceanspp";
         case MEDIANFILTER:      return "medianfilter";
         case CSHELPH:           return "cshelph";
         case BATHYPATHFINDER:   return "bathypathfinder";
@@ -395,27 +337,103 @@ const char* BathyParms::classifier2str (classifier_t classifier)
  * Constructor
  *----------------------------------------------------------------------------*/
 BathyParms::BathyParms(lua_State* L, int index):
-    Icesat2Parms (L, index)
+    Icesat2Parms    (L, index),
+    asset           (NULL),
+    asset09         (NULL), 
+    resource        (NULL),
+    resource09      (NULL),
+    max_dem_delta   (50.0),
+    min_dem_delta   (-100.0),
+    ph_in_extent    (8192),
+    generate_ndwi   (false),
+    use_bathy_mask  (true),
+    classifiers     {true, true, true, true, true, true, true, true, true},
+    return_inputs   (false),
+    spots           {true, true, true, true, true, true},
+    output_as_sdp   (false)
 {
-    /* bathy parms */
-    lua_getfield(L, index, BATHY_PARMS);
-    if(lua_istable(L, index))
-    {
-        /* reader parms */
-        lua_getfield(L, index, BATHY_PARMS_READER);
-        reader.fromLua(L, -1);   
-        lua_pop(L, 1);
+    /* asset */
+    lua_getfield(L, index, BATHY_PARMS_ASSET);
+    const char* asset_name = LuaObject::getLuaString(L, -1, true, BATHY_PARMS_DEFAULT_ASSET);
+    asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
+    if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to find asset %s", asset_name);
+    lua_pop(L, 1);
 
-        /* refraction parms */
-        lua_getfield(L, index, BATHY_PARMS_REFRACTION);
-        refraction.fromLua(L, -1);   
-        lua_pop(L, 1);
+    /* asset09 */
+    lua_getfield(L, index, BATHY_PARMS_ASSET09);
+    const char* asset09_name = LuaObject::getLuaString(L, -1, true, BATHY_PARMS_DEFAULT_ASSET09);
+    asset09 = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset09_name, Asset::OBJECT_TYPE));
+    if(!asset09) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to find asset %s", asset09_name);
+    lua_pop(L, 1);
 
-        /* uncertainty parms */
-        lua_getfield(L, index, BATHY_PARMS_UNCERTAINTY);
-        uncertainty.fromLua(L, -1);   
-        lua_pop(L, 1);
-    }
+    /* atl03 resources */
+    lua_getfield(L, index, BATHY_PARMS_ATL03_RESOURCE);
+    resource = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+    lua_pop(L, 1);
+
+    /* atl09 resources */
+    lua_getfield(L, index, BATHY_PARMS_ATL09_RESOURCE);
+    resource09 = StringLib::duplicate(LuaObject::getLuaString(L, -1));
+    lua_pop(L, 1);
+
+    /* maximum DEM delta */
+    lua_getfield(L, index, BATHY_PARMS_MAX_DEM_DELTA);
+    max_dem_delta = LuaObject::getLuaFloat(L, -1, true, max_dem_delta, NULL);
+    lua_pop(L, 1);
+
+    /* minimum DEM delta */
+    lua_getfield(L, index, BATHY_PARMS_MIN_DEM_DELTA);
+    min_dem_delta = LuaObject::getLuaFloat(L, -1, true, min_dem_delta, NULL);
+    lua_pop(L, 1);
+
+    /* photons in extent */
+    lua_getfield(L, index, BATHY_PARMS_PH_IN_EXTENT);
+    ph_in_extent = LuaObject::getLuaInteger(L, -1, true, ph_in_extent, NULL);
+    lua_pop(L, 1);
+
+    /* generate ndwi */
+    lua_getfield(L, index, BATHY_PARMS_GENERATE_NDWI);
+    generate_ndwi = LuaObject::getLuaBoolean(L, -1, true, generate_ndwi, NULL);
+    lua_pop(L, 1);
+
+    /* use bathy mask */
+    lua_getfield(L, index, BATHY_PARMS_USE_BATHY_MASK);
+    use_bathy_mask = LuaObject::getLuaBoolean(L, -1, true, use_bathy_mask, NULL);
+    lua_pop(L, 1);
+
+    /* classifiers */
+    lua_getfield(L, index, BATHY_PARMS_CLASSIFIERS);
+    getClassifiers(L, -1, NULL, classifiers);
+    lua_pop(L, 1);
+
+    /* return inputs */
+    lua_getfield(L, index, BATHY_PARMS_RETURN_INPUTS);
+    return_inputs = LuaObject::getLuaBoolean(L, -1, true, return_inputs, NULL);
+    lua_pop(L, 1);
+
+    /* output as sdp */
+    lua_getfield(L, index, BATHY_PARMS_OUTPUT_AS_SDP);
+    output_as_sdp = LuaObject::getLuaBoolean(L, -1, true, output_as_sdp, NULL);
+    lua_pop(L, 1);
+
+    /* spot selection */
+    lua_getfield(L, index, BATHY_PARMS_SPOTS);
+    getSpotList(L, -1, NULL, spots);
+    lua_pop(L, 1);
+
+    /* surface parms */
+    lua_getfield(L, index, BATHY_PARMS_SURFACE);
+    surface.fromLua(L, -1);   
+    lua_pop(L, 1);
+
+    /* refraction parms */
+    lua_getfield(L, index, BATHY_PARMS_REFRACTION);
+    refraction.fromLua(L, -1);   
+    lua_pop(L, 1);
+
+    /* uncertainty parms */
+    lua_getfield(L, index, BATHY_PARMS_UNCERTAINTY);
+    uncertainty.fromLua(L, -1);   
     lua_pop(L, 1);
 }
 
@@ -424,6 +442,10 @@ BathyParms::BathyParms(lua_State* L, int index):
  *----------------------------------------------------------------------------*/
 BathyParms::~BathyParms (void)
 {
+    if(asset) asset->releaseLuaObject();
+    if(asset09) asset09->releaseLuaObject();
+    delete [] resource;
+    delete [] resource09;
 }
 
 /*----------------------------------------------------------------------------
