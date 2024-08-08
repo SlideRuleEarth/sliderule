@@ -210,10 +210,8 @@ for spot = 1,icesat2.NUM_SPOTS do
     spot_mask[spot] = reader:spoton(spot)
 end
 local classifier_mask = {}  -- build classifier mask using defaults/parsing from bathyreader (because reader will be destroyed)
-local classifier_list = {}
 for _,classifier in ipairs({"qtrees", "coastnet", "openoceanspp", "medianfilter", "cshelph", "bathypathfinder", "pointnet", "ensemble"}) do
     classifier_mask[classifier] = reader:classifieron(classifier)
-    table.insert(classifier_list, classifier)
 end
 local duration = 0 -- wait for bathyreader to finish
 while (userlog:numsubs() > 0) and not reader:waiton(interval * 1000) do
@@ -348,7 +346,6 @@ local writer_parms = {
             input_files = output_files,
             output_parms = output_parms,
             atl24_filename = crenv.container_sandbox_mount.."/atl24.bin",
-            classifiers = classifier_list,
             profile = profile,
             version = version,
             commit = commit,
