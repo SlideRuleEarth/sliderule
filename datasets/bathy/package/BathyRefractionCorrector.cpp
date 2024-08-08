@@ -137,10 +137,12 @@ BathyRefractionCorrector::~BathyRefractionCorrector (void)
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *----------------------------------------------------------------------------*/
-void BathyRefractionCorrector::run( BathyParms::extent_t& extent, 
-                                    const H5Array<float>& ref_el,
-                                    const H5Array<float>& ref_az ) const
+uint64_t BathyRefractionCorrector::run( BathyParms::extent_t& extent, 
+                                        const H5Array<float>& ref_el,
+                                        const H5Array<float>& ref_az ) const
 {
+    uint64_t subaqueous_photons = 0;
+
     GeoLib::UTMTransform transform(extent.utm_zone, extent.region < 8);
 
     BathyParms::photon_t* photons = extent.photons;
@@ -150,6 +152,9 @@ void BathyRefractionCorrector::run( BathyParms::extent_t& extent,
         const double depth = photons[i].surface_h - photons[i].ortho_h; // compute un-refraction-corrected depths
         if(depth > 0)
         {
+            /* Count Subaqueous Photons */
+            subaqueous_photons++;
+
             /* Calculate Refraction Corrections */
             const double n1 = parms->refraction.ri_air;
             const double n2 = parms->refraction.ri_water;
@@ -178,4 +183,6 @@ void BathyRefractionCorrector::run( BathyParms::extent_t& extent,
             photons[i].lon_ph = point.x;
         }
     }
+
+    return subaqueous_photons;
 }

@@ -88,8 +88,10 @@ class BathyReader: public LuaObject
         typedef struct {
             uint64_t    photon_count;
             uint64_t    subaqueous_photons;
+            double      corrections_duration;
             double      qtrees_duration;
             double      coastnet_duration;
+            double      openoceanspp_duration;
         } stats_t;
 
         /*--------------------------------------------------------------------

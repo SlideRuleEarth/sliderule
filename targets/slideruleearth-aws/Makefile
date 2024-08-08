@@ -58,6 +58,7 @@ INSTALL_DIR ?= $(SLIDERULE_STAGE_DIR)
 QTREES_SOURCE_DIR = $(ROOT)/../qtrees/plugin
 COASTNET_SOURCE_DIR = $(ROOT)/../coastnet/plugin
 OPENOCEANS_SOURCE_DIR = $(ROOT)/../openoceans/plugin
+OCEANEYES_SOURCE_DIR = $(ROOT)/../oceaneyes
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -141,6 +142,9 @@ openoceans-plugin:
 	make -C $(OPENOCEANS_SOURCE_DIR) config INSTALLDIR=$(INSTALL_DIR)
 	make -C $(OPENOCEANS_SOURCE_DIR)
 	make -C $(OPENOCEANS_SOURCE_DIR) install
+
+oceaneyes-docker:
+	make -C $(OCEANEYES_SOURCE_DIR) docker
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)

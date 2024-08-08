@@ -60,7 +60,7 @@ class BathyRefractionCorrector: public LuaObject
 
         static int      luaCreate   (lua_State* L);
         static void     init        (void);
-        void            run         (BathyParms::extent_t& extent,
+        uint64_t        run         (BathyParms::extent_t& extent,
                                      const H5Array<float>& ref_el,
                                      const H5Array<float>& ref_az) const;
     private:

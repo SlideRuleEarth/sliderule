@@ -824,8 +824,10 @@ void* BathyReader::subsettingThread (void* parm)
     stats_t local_stats = {
         .photon_count = 0,
         .subaqueous_photons = 0,
+        .corrections_duration = 0.0,
         .qtrees_duration = 0.0,
-        .coastnet_duration = 0.0
+        .coastnet_duration = 0.0,
+        .openoceanspp_duration = 0.0
     };
 
     /* Start Trace */
@@ -1133,12 +1135,22 @@ void* BathyReader::subsettingThread (void* parm)
             local_stats.coastnet_duration = TimeLib::latchtime() - start;
         }
 
+        /* Run OpenOceans++ on Extents */
+        if(parms->classifiers[BathyParms::OPENOCEANSPP])
+        {
+            double start = TimeLib::latchtime();
+            reader->classifiers[BathyParms::OPENOCEANSPP]->run(extents);
+            local_stats.openoceanspp_duration = TimeLib::latchtime() - start;
+        }
+
         /* Process Extents */
+        double start = TimeLib::latchtime();
         for(auto extent: extents)
         {
-            reader->refraction->run(*extent, atl03.ref_elev, atl03.ref_azimuth);
+            local_stats.subaqueous_photons += reader->refraction->run(*extent, atl03.ref_elev, atl03.ref_azimuth);
             reader->uncertainty->run(*extent, atl03.sigma_across, atl03.sigma_along, atl03.sigma_h, atl03.ref_elev);
         }
+        local_stats.corrections_duration = TimeLib::latchtime() - start;
 
         /* Write Extent to CSV File*/
         reader->writeCSV(extents, spot, local_stats);
@@ -1614,8 +1626,10 @@ void BathyReader::writeCSV (const vector<BathyParms::extent_t*>& extents, int sp
     R"("utm_zone":%d,)"
     R"("photon_count":%ld,)"
     R"("subaqueous_photons":%ld,)"
+    R"("corrections_duration":%0.3lf,)"
     R"("qtrees_duration":%0.3lf,)"
-    R"("coastnet_duration":%0.3lf)"
+    R"("coastnet_duration":%0.3lf,)"
+    R"("openoceanspp_duration":%0.3lf)"
     R"(})",
     extents[0]->track,
     extents[0]->pair,
@@ -1630,8 +1644,10 @@ void BathyReader::writeCSV (const vector<BathyParms::extent_t*>& extents, int sp
     extents[0]->utm_zone,
     local_stats.photon_count,
     local_stats.subaqueous_photons,
+    local_stats.corrections_duration,
     local_stats.qtrees_duration,
-    local_stats.coastnet_duration);
+    local_stats.coastnet_duration,
+    local_stats.openoceanspp_duration);
 
     /* Write and Close JSON File */
     fprintf(json_file, "%s", json_contents.c_str());
