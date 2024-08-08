@@ -53,11 +53,12 @@ TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
 STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
-INSTALL_DIR ?= $(SLIDERULE_STAGE_DIR)
 
-QTREES_SOURCE_DIR = $(ROOT)/../qtrees/plugin
-COASTNET_SOURCE_DIR = $(ROOT)/../coastnet/plugin
-OPENOCEANS_SOURCE_DIR = $(ROOT)/../openoceans/plugin
+INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
+
+QTREES_SOURCE_DIR = $(ROOT)/../qtrees
+COASTNET_SOURCE_DIR = $(ROOT)/../coastnet
+OPENOCEANS_SOURCE_DIR = $(ROOT)/../openoceans
 OCEANEYES_SOURCE_DIR = $(ROOT)/../oceaneyes
 
 VERSION ?= latest
@@ -81,13 +82,13 @@ CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverri
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
 
 DEBUG_CFG := -DCMAKE_BUILD_TYPE=Debug
-DEBUG_CFG += -DINSTALLDIR=$(INSTALL_DIR)
+DEBUG_CFG += -DINSTALLDIR=$(INSTALLDIR)
 DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 DEBUG_CFG += -DENABLE_ADDRESS_SANITIZER=ON
 DEBUG_CFG += $(USERCFG)
 
 RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
-RELEASE_CFG += -DINSTALLDIR=$(INSTALL_DIR)
+RELEASE_CFG += -DINSTALLDIR=$(INSTALLDIR)
 RELEASE_CFG += $(USERCFG)
 
 ########################
@@ -110,7 +111,7 @@ sliderule: ## build the server using the local configuration
 	make -C $(SLIDERULE_BUILD_DIR) install
 
 run: ## run the server locally
-	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(INSTALL_DIR)/bin/sliderule $(ROOT)/scripts/apps/server.lua config.json
+	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(INSTALLDIR)/bin/sliderule $(ROOT)/scripts/apps/server.lua config.json
 
 run-buildenv: ## run the build environment docker container
 	docker run -it -v $(ROOT):/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)
@@ -129,19 +130,19 @@ manager-destroy: ## destroy manager using terraform; needs DOMAIN
 	cd terraform/manager && terraform destroy
 
 qtrees-plugin:
-	make -C $(QTREES_SOURCE_DIR) config INSTALLDIR=$(INSTALL_DIR)
-	make -C $(QTREES_SOURCE_DIR)
-	make -C $(QTREES_SOURCE_DIR) install
+	make -C $(QTREES_SOURCE_DIR)/plugin config INSTALLDIR=$(INSTALLDIR)
+	make -C $(QTREES_SOURCE_DIR)/plugin
+	make -C $(QTREES_SOURCE_DIR)/plugin install
 
 coastnet-plugin:
-	make -C $(COASTNET_SOURCE_DIR) config INSTALLDIR=$(INSTALL_DIR)
-	make -C $(COASTNET_SOURCE_DIR)
-	make -C $(COASTNET_SOURCE_DIR) install
+	make -C $(COASTNET_SOURCE_DIR)/plugin config INSTALLDIR=$(INSTALLDIR)
+	make -C $(COASTNET_SOURCE_DIR)/plugin
+	make -C $(COASTNET_SOURCE_DIR)/plugin install
 
 openoceans-plugin:
-	make -C $(OPENOCEANS_SOURCE_DIR) config INSTALLDIR=$(INSTALL_DIR)
-	make -C $(OPENOCEANS_SOURCE_DIR)
-	make -C $(OPENOCEANS_SOURCE_DIR) install
+	make -C $(OPENOCEANS_SOURCE_DIR)/plugin config INSTALLDIR=$(INSTALLDIR)
+	make -C $(OPENOCEANS_SOURCE_DIR)/plugin
+	make -C $(OPENOCEANS_SOURCE_DIR)/plugin install
 
 oceaneyes-docker:
 	make -C $(OCEANEYES_SOURCE_DIR) docker
@@ -200,6 +201,9 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 	-rm -Rf $(SLIDERULE_STAGE_DIR)
 	mkdir -p $(SLIDERULE_STAGE_DIR)
 	rsync -a $(ROOT) $(SLIDERULE_STAGE_DIR)/sliderule --exclude build --exclude stage
+	rsync -a $(QTREES_SOURCE_DIR)/* $(SLIDERULE_STAGE_DIR)/qtrees --exclude build
+	rsync -a $(COASTNET_SOURCE_DIR)/* $(SLIDERULE_STAGE_DIR)/coastnet --exclude build
+	rsync -a $(OPENOCEANS_SOURCE_DIR)/* $(SLIDERULE_STAGE_DIR)/openoceans --exclude build
 	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/config.json $(SLIDERULE_STAGE_DIR)
 	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest $(DOCKER_PLATFORM) .
