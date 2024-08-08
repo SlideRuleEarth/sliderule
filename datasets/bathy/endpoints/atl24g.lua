@@ -287,8 +287,8 @@ local function runclassifier(output_table, container_timeout, name, in_parallel,
         if spot_mask[i] then
             local spot_key = string.format("spot_%d", i)
             local settings_filename = string.format("%s/%s.json", crenv.container_sandbox_mount, name)                           -- e.g. /share/openoceans.json
-            local parameters_filename = string.format("%s/%s_%d.json", crenv.container_sandbox_mount, icesat2.BATHY_PREFIX, i)   -- e.g. /share/bathy_spot_3.json
-            local input_filename = string.format("%s/%s_%d.csv", crenv.container_sandbox_mount, icesat2.BATHY_PREFIX, i)         -- e.g. /share/bathy_spot_3.csv
+            local parameters_filename = string.format("%s/%s_%d.json", crenv.container_sandbox_mount, bathy.BATHY_PREFIX, i)   -- e.g. /share/bathy_spot_3.json
+            local input_filename = string.format("%s/%s_%d.csv", crenv.container_sandbox_mount, bathy.BATHY_PREFIX, i)         -- e.g. /share/bathy_spot_3.csv
             local output_filename = string.format("%s/%s_%d.csv", crenv.container_sandbox_mount, name, i)                        -- e.g. /share/openoceans_3.csv
             local container_command = command_override or string.format("/env/bin/python /%s/runner.py", name)
             local container_parms = {
