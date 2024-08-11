@@ -242,18 +242,18 @@ void BathyUncertaintyCalculator::run (BathyParms::extent_t& extent,
 
     /* get y offset */
     const double degrees_of_latitude = extent.photons[0].lat_ph + 90.0;
-    const double latitude_pixels = degrees_of_latitude / 24.0;
+    const double latitude_pixels = degrees_of_latitude * 24.0;
     const int32_t y = static_cast<int32_t>(latitude_pixels);
 
     /* get x offset */
     const double degrees_of_longitude =  extent.photons[0].lat_ph + 180.0;
-    const double longitude_pixels = degrees_of_longitude / 24.0;
+    const double longitude_pixels = degrees_of_longitude * 24.0;
     const int32_t x = static_cast<int32_t>(longitude_pixels);
 
     /* calculate total offset */
     if(x < 0 || x >= 4320 || y < 0 || y >= 8640)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid Kd coordinates: %d, %d | %lf, %lf | %lf %lf", x, y, degrees_of_longitude, degrees_of_latitude);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid Kd coordinates: %d, %d | %lf, %lf", x, y, degrees_of_longitude, degrees_of_latitude);
     }
     const long offset = (x * 4320) + y;
     const double kd = static_cast<double>((*Kd_490)[offset]) * 0.0002;

@@ -158,18 +158,18 @@ uint64_t BathyRefractionCorrector::run( BathyParms::extent_t& extent,
             /* Calculate Refraction Corrections */
             const double n1 = parms->refraction.ri_air;
             const double n2 = parms->refraction.ri_water;
-            const double theta_1 = (M_PI / 2.0) - ref_el[seg];          // angle of incidence (without Earth curvature)
-            const double theta_2 = asin(n1 * sin(theta_1) / n2);        // angle of refraction
+            const double theta_1 = (M_PI / 2.0) - ref_el[seg];              // angle of incidence (without Earth curvature)
+            const double theta_2 = asin(n1 * sin(theta_1) / n2);            // angle of refraction
             const double phi = theta_1 - theta_2;
-            const double s = depth / cos(theta_1);                      // uncorrected slant range to the uncorrected seabed photon location
-            const double r = s * n1 / n2;                               // corrected slant range
+            const double s = depth / cos(theta_1);                          // uncorrected slant range to the uncorrected seabed photon location
+            const double r = s * n1 / n2;                                   // corrected slant range
             const double p = sqrt((r*r) + (s*s) - (2*r*s*cos(theta_1 - theta_2)));
             const double gamma = (M_PI / 2.0) - theta_1;
             const double alpha = asin(r * sin(phi) / p);
             const double beta = gamma - alpha;
-            const double dZ = p * sin(beta);                            // vertical offset
-            const double dY = p * cos(beta);                            // cross-track offset
-            const double dE = dY * sin(static_cast<double>(ref_az[seg])); // UTM offsets
+            const double dZ = p * sin(beta);                                // vertical offset
+            const double dY = p * cos(beta);                                // cross-track offset
+            const double dE = dY * sin(static_cast<double>(ref_az[seg]));   // UTM offsets
             const double dN = dY * cos(static_cast<double>(ref_az[seg])); 
 
             /* Save Refraction Height Correction */
@@ -178,9 +178,9 @@ uint64_t BathyRefractionCorrector::run( BathyParms::extent_t& extent,
             /* Correct Latitude and Longitude */
             double corr_x_ph = photons[i].x_ph + dE;
             double corr_y_ph = photons[i].y_ph + dN;
-            const GeoLib::point_t point = transform.calculateCoordinates(corr_y_ph, corr_x_ph);
-            photons[i].lat_ph = point.y;
-            photons[i].lon_ph = point.x;
+            const GeoLib::point_t point = transform.calculateCoordinates(corr_x_ph, corr_y_ph);
+            photons[i].lat_ph = point.x;
+            photons[i].lon_ph = point.y;
         }
     }
 
