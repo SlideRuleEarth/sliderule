@@ -235,6 +235,7 @@ BathyReader::BathyReader (lua_State* L,
 
     /* Initialize Stats */
     memset(&stats, 0, sizeof(stats));
+    stats.valid = true;
 
     /* Initialize Readers */
     active = true;
@@ -822,6 +823,7 @@ void* BathyReader::subsettingThread (void* parm)
     /* Thread Variables */
     vector<BathyParms::extent_t*> extents;
     stats_t local_stats = {
+        .valid = true,
         .photon_count = 0,
         .subaqueous_photons = 0,
         .corrections_duration = 0.0,
@@ -1158,6 +1160,7 @@ void* BathyReader::subsettingThread (void* parm)
     catch(const RunTimeException& e)
     {
         alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d.%d: %s", parms->resource, info->track, info->pair, e.what());
+        local_stats.valid = false;
     }
 
     /* Handle Global Reader Updates */
@@ -1170,7 +1173,13 @@ void* BathyReader::subsettingThread (void* parm)
             mlog(INFO, "Completed processing resource %s", parms->resource);
 
             /* Update Statistics */
+            reader->stats.valid &= local_stats.valid;
             reader->stats.photon_count += local_stats.photon_count;
+            reader->stats.subaqueous_photons += local_stats.subaqueous_photons;
+            reader->stats.corrections_duration += local_stats.corrections_duration;
+            reader->stats.qtrees_duration += local_stats.qtrees_duration;
+            reader->stats.coastnet_duration += local_stats.coastnet_duration;
+            reader->stats.openoceanspp_duration += local_stats.openoceanspp_duration;
 
             /* Indicate End of Data */
             if(reader->sendTerminator)
@@ -1624,6 +1633,7 @@ void BathyReader::writeCSV (const vector<BathyParms::extent_t*>& extents, int sp
     R"("cycle":%d,)"
     R"("region":%d,)"
     R"("utm_zone":%d,)"
+    R"("valid":%d,)"
     R"("photon_count":%ld,)"
     R"("subaqueous_photons":%ld,)"
     R"("corrections_duration":%0.3lf,)"
@@ -1642,6 +1652,7 @@ void BathyReader::writeCSV (const vector<BathyParms::extent_t*>& extents, int sp
     extents[0]->cycle,
     extents[0]->region,
     extents[0]->utm_zone,
+    local_stats.valid,
     local_stats.photon_count,
     local_stats.subaqueous_photons,
     local_stats.corrections_duration,
@@ -1789,7 +1800,13 @@ int BathyReader::luaStats (lua_State* L)
 
         /* Create Statistics Table */
         lua_newtable(L);
+        LuaEngine::setAttrBool(L, "valid", lua_obj->stats.valid);
         LuaEngine::setAttrInt(L, "photon_count", lua_obj->stats.photon_count);
+        LuaEngine::setAttrInt(L, "subaqueous_photons", lua_obj->stats.subaqueous_photons);
+        LuaEngine::setAttrNum(L, "corrections_duration", lua_obj->stats.corrections_duration);
+        LuaEngine::setAttrNum(L, "qtrees_duration", lua_obj->stats.qtrees_duration);
+        LuaEngine::setAttrNum(L, "coastnet_duration", lua_obj->stats.coastnet_duration);
+        LuaEngine::setAttrNum(L, "openoceanspp_duration", lua_obj->stats.openoceanspp_duration);
 
         /* Clear if Requested */
         if(with_clear) memset(&lua_obj->stats, 0, sizeof(lua_obj->stats));

@@ -58,7 +58,7 @@ def init (url=sliderule.service_url, verbose=False, loglevel=logging.CRITICAL, o
         >>> from sliderule import swot
         >>> swot.init()
     '''
-    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, bypass_dns, plugins=['swot'])
+    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, bypass_dns)
 
 #
 #  L2

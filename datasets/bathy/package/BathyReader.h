@@ -86,6 +86,7 @@ class BathyReader: public LuaObject
 
         /* Statitics */
         typedef struct {
+            bool        valid;
             uint64_t    photon_count;
             uint64_t    subaqueous_photons;
             double      corrections_duration;

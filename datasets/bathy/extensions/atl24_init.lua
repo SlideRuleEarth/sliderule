@@ -45,8 +45,8 @@ while sys.alive() and ( (not bathy_mask_complete) or
     qtrees_model_complete = sys.fileexists(qtrees_model_local) or aws.s3download("sliderule", qtrees_model_remote, aws.DEFAULT_REGION, aws.DEFAULT_IDENTITY, qtrees_model_local)
 
     -- coastnet model
-    local coastnet_model_local = cre.HOST_DIRECTORY.."/model-20240607.json"
-    local coastnet_model_remote = "config/model-20240607.json"
+    local coastnet_model_local = cre.HOST_DIRECTORY.."/coastnet_model-20240628.json"
+    local coastnet_model_remote = "config/coastnet_model-20240628.json"
     coastnet_model_complete = sys.fileexists(coastnet_model_local) or aws.s3download("sliderule", coastnet_model_remote, aws.DEFAULT_REGION, aws.DEFAULT_IDENTITY, coastnet_model_local)
 
     -- check for completeness

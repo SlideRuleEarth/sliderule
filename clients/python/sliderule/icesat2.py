@@ -279,7 +279,7 @@ def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFA
         >>> icesat2.init()
     '''
     global rethrow_exceptions
-    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, bypass_dns, plugins=['icesat2'])
+    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, bypass_dns)
     earthdata.set_max_resources(max_resources) # set maximum number of resources allowed per request
     rethrow_exceptions = rethrow
 

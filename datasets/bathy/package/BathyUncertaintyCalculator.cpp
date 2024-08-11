@@ -253,7 +253,7 @@ void BathyUncertaintyCalculator::run (BathyParms::extent_t& extent,
     /* calculate total offset */
     if(x < 0 || x >= 4320 || y < 0 || y >= 8640)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid Kd coordinates: %d, %d", x, y);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid Kd coordinates: %d, %d | %lf, %lf | %lf %lf", x, y, degrees_of_longitude, degrees_of_latitude);
     }
     const long offset = (x * 4320) + y;
     const double kd = static_cast<double>((*Kd_490)[offset]) * 0.0002;

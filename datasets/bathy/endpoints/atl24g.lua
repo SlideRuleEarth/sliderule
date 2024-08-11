@@ -224,14 +224,21 @@ while (userlog:numsubs() > 0) and not reader:waiton(interval * 1000) do
     userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ... continuing to read %s (after %d seconds)", rspq, resource, duration))
 end
 local bathy_stats = reader:stats()
-if bathy_stats["photon_count"] <= 0 then
+if not bathy_stats["valid"] then
+    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to process %s ... aborting!", rspq, resource))
+    cleanup(crenv, transaction_id)
+    return
+elseif bathy_stats["photon_count"] <= 0 then
     userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> was not able to read any photons from %s ... aborting!", rspq, resource))
     cleanup(crenv, transaction_id)
     return
 end
 reader:destroy() -- free reader to save on memory usage (safe since all data is now written out)
-profile["total_input_generation"] = (time.gps() - endpoint_start_time) / 1000.0 -- capture setup time
-userlog:alert(core.INFO, core.RTE_INFO, string.format("sliderule setup executed in %f seconds", profile["total_input_generation"]))
+profile["reader"] = {
+    stats = bathy_stats,
+    total_duration = (time.gps() - endpoint_start_time) / 1000.0 -- capture setup time
+}
+userlog:alert(core.INFO, core.RTE_INFO, string.format("sliderule setup executed in %f seconds", profile["reader"]["total_duration"]))
 
 -------------------------------------------------------
 -- table of files being processed
