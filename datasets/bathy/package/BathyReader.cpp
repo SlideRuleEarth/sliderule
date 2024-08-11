@@ -1166,20 +1166,20 @@ void* BathyReader::subsettingThread (void* parm)
     /* Handle Global Reader Updates */
     reader->threadMut.lock();
     {
+        /* Update Statistics */
+        reader->stats.valid = reader->stats.valid && local_stats.valid;
+        reader->stats.photon_count += local_stats.photon_count;
+        reader->stats.subaqueous_photons += local_stats.subaqueous_photons;
+        reader->stats.corrections_duration += local_stats.corrections_duration;
+        reader->stats.qtrees_duration += local_stats.qtrees_duration;
+        reader->stats.coastnet_duration += local_stats.coastnet_duration;
+        reader->stats.openoceanspp_duration += local_stats.openoceanspp_duration;
+
         /* Count Completion */
         reader->numComplete++;
         if(reader->numComplete == reader->threadCount)
         {
             mlog(INFO, "Completed processing resource %s", parms->resource);
-
-            /* Update Statistics */
-            reader->stats.valid &= local_stats.valid;
-            reader->stats.photon_count += local_stats.photon_count;
-            reader->stats.subaqueous_photons += local_stats.subaqueous_photons;
-            reader->stats.corrections_duration += local_stats.corrections_duration;
-            reader->stats.qtrees_duration += local_stats.qtrees_duration;
-            reader->stats.coastnet_duration += local_stats.coastnet_duration;
-            reader->stats.openoceanspp_duration += local_stats.openoceanspp_duration;
 
             /* Indicate End of Data */
             if(reader->sendTerminator)

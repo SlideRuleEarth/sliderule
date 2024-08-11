@@ -197,50 +197,6 @@ local refraction_corrector = bathy.refraction(bathy_parms);
 local uncertainty_calculator = bathy.uncertainty(bathy_parms);
 
 -------------------------------------------------------
--- read ICESat-2 inputs
--------------------------------------------------------
-local reader = bathy.reader(bathy_parms, classifiers, refraction_corrector, uncertainty_calculator, geo_parms, rspq, crenv.host_sandbox_directory, false)
-if not reader then
-    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create bathy reader", rspq))
-    cleanup(crenv, transaction_id)
-    return
-end
-local spot_mask = {} -- build spot mask using defaults/parsing from bathyreader (because reader will be destroyed)
-for spot = 1,icesat2.NUM_SPOTS do
-    spot_mask[spot] = reader:spoton(spot)
-end
-local classifier_mask = {}  -- build classifier mask using defaults/parsing from bathyreader (because reader will be destroyed)
-for _,classifier in ipairs({"qtrees", "coastnet", "openoceanspp", "medianfilter", "cshelph", "bathypathfinder", "pointnet", "ensemble"}) do
-    classifier_mask[classifier] = reader:classifieron(classifier)
-end
-local duration = 0 -- wait for bathyreader to finish
-while (userlog:numsubs() > 0) and not reader:waiton(interval * 1000) do
-    duration = duration + interval
-    if timeout >= 0 and duration >= timeout then -- check for timeout
-        userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> for %s timed-out after %d seconds", rspq, resource, duration))
-        cleanup(crenv, transaction_id)
-        return
-    end
-    userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ... continuing to read %s (after %d seconds)", rspq, resource, duration))
-end
-local bathy_stats = reader:stats()
-if not bathy_stats["valid"] then
-    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to process %s ... aborting!", rspq, resource))
-    cleanup(crenv, transaction_id)
-    return
-elseif bathy_stats["photon_count"] <= 0 then
-    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> was not able to read any photons from %s ... aborting!", rspq, resource))
-    cleanup(crenv, transaction_id)
-    return
-end
-reader:destroy() -- free reader to save on memory usage (safe since all data is now written out)
-profile["reader"] = {
-    stats = bathy_stats,
-    total_duration = (time.gps() - endpoint_start_time) / 1000.0 -- capture setup time
-}
-userlog:alert(core.INFO, core.RTE_INFO, string.format("sliderule setup executed in %f seconds", profile["reader"]["total_duration"]))
-
--------------------------------------------------------
 -- table of files being processed
 --  {
 --      "spot_photons": {
@@ -279,6 +235,68 @@ output_files["spot_granule"] = {}
 output_files["classifiers"] = {}
 
 -------------------------------------------------------
+-- function: get_input_filename
+-------------------------------------------------------
+local function get_input_filename(spot)
+    return string.format("%s/%s_%d.csv", crenv.container_sandbox_mount, bathy.BATHY_PREFIX, spot) -- e.g. /share/bathy_spot_3.csv
+end
+
+-------------------------------------------------------
+-- function: get_info_filename
+-------------------------------------------------------
+local function get_info_filename(spot)
+    return string.format("%s/%s_%d.json", crenv.container_sandbox_mount, bathy.BATHY_PREFIX, spot)   -- e.g. /share/bathy_spot_3.json
+end
+
+-------------------------------------------------------
+-- read ICESat-2 inputs
+-------------------------------------------------------
+local reader = bathy.reader(bathy_parms, classifiers, refraction_corrector, uncertainty_calculator, geo_parms, rspq, crenv.host_sandbox_directory, false)
+if not reader then
+    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create bathy reader", rspq))
+    cleanup(crenv, transaction_id)
+    return
+end
+local spot_mask = {} -- build spot mask using defaults/parsing from bathyreader (because reader will be destroyed)
+for spot = 1,icesat2.NUM_SPOTS do
+    spot_mask[spot] = reader:spoton(spot)
+    if spot_mask[spot] then
+        output_files["spot_photons"][string.format("spot_%d", spot)] = get_input_filename(spot)
+        output_files["spot_granule"][string.format("spot_%d", spot)] = get_info_filename(spot)
+    end
+end
+local classifier_mask = {}  -- build classifier mask using defaults/parsing from bathyreader (because reader will be destroyed)
+for _,classifier in ipairs({"qtrees", "coastnet", "openoceanspp", "medianfilter", "cshelph", "bathypathfinder", "pointnet", "ensemble"}) do
+    classifier_mask[classifier] = reader:classifieron(classifier)
+end
+local duration = 0 -- wait for bathyreader to finish
+while (userlog:numsubs() > 0) and not reader:waiton(interval * 1000) do
+    duration = duration + interval
+    if timeout >= 0 and duration >= timeout then -- check for timeout
+        userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> for %s timed-out after %d seconds", rspq, resource, duration))
+        cleanup(crenv, transaction_id)
+        return
+    end
+    userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ... continuing to read %s (after %d seconds)", rspq, resource, duration))
+end
+local bathy_stats = reader:stats()
+if not bathy_stats["valid"] then
+    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to process %s ... aborting!", rspq, resource))
+    cleanup(crenv, transaction_id)
+    return
+elseif bathy_stats["photon_count"] <= 0 then
+    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> was not able to read any photons from %s ... aborting!", rspq, resource))
+    cleanup(crenv, transaction_id)
+    return
+end
+reader:destroy() -- free reader to save on memory usage (safe since all data is now written out)
+profile["reader"] = {
+    stats = bathy_stats,
+    total_duration = (time.gps() - endpoint_start_time) / 1000.0 -- capture setup time
+}
+userlog:alert(core.INFO, core.RTE_INFO, string.format("sliderule setup executed in %f seconds", profile["reader"]["total_duration"]))
+
+-------------------------------------------------------
 -- function: run classifier
 -------------------------------------------------------
 local function runclassifier(output_table, container_timeout, name, in_parallel, command_override)
@@ -291,10 +309,10 @@ local function runclassifier(output_table, container_timeout, name, in_parallel,
     for i = 1,icesat2.NUM_SPOTS do
         if spot_mask[i] then
             local spot_key = string.format("spot_%d", i)
-            local settings_filename = string.format("%s/%s.json", crenv.container_sandbox_mount, name)                           -- e.g. /share/openoceans.json
-            local parameters_filename = string.format("%s/%s_%d.json", crenv.container_sandbox_mount, bathy.BATHY_PREFIX, i)   -- e.g. /share/bathy_spot_3.json
-            local input_filename = string.format("%s/%s_%d.csv", crenv.container_sandbox_mount, bathy.BATHY_PREFIX, i)         -- e.g. /share/bathy_spot_3.csv
-            local output_filename = string.format("%s/%s_%d.csv", crenv.container_sandbox_mount, name, i)                        -- e.g. /share/openoceans_3.csv
+            local settings_filename = string.format("%s/%s.json", crenv.container_sandbox_mount, name) -- e.g. /share/openoceans.json
+            local parameters_filename = get_info_filename(i)
+            local input_filename = get_input_filename(i)
+            local output_filename = string.format("%s/%s_%d.csv", crenv.container_sandbox_mount, name, i) -- e.g. /share/openoceans_3.csv
             local container_command = command_override or string.format("/env/bin/python /%s/runner.py", name)
             local container_parms = {
                 image =  "oceaneyes",
@@ -305,8 +323,6 @@ local function runclassifier(output_table, container_timeout, name, in_parallel,
             }
             local container = runner.execute(crenv, container_parms, rspq)
             table.insert(container_list, container)
-            output_table["spot_photons"][spot_key] = input_filename
-            output_table["spot_granule"][spot_key] = parameters_filename
             output_table["classifiers"][name][spot_key] = output_filename
             if not in_parallel then
                 runner.wait(container, container_timeout)
