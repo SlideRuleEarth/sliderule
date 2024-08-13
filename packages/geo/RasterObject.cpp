@@ -201,7 +201,7 @@ uint32_t RasterObject::getMaxBatchThreads(void)
     /* Maximum number of batch threads.
      * Each batch thread creates multiple raster reading threads.
      */
-    return 16;
+    return MAX_BATCH_THREADS;
 }
 
 /*----------------------------------------------------------------------------

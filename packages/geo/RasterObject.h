@@ -54,7 +54,7 @@ class RasterObject: public LuaObject
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-
+        static const int   MAX_BATCH_THREADS = 16;
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
