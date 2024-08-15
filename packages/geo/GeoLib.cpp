@@ -214,7 +214,7 @@ GeoLib::TIFFImage::TIFFImage(lua_State* L, const char* filename, long driver):
         size = width * height * typesize;
         raster = new uint8_t [size];
         void* _data = const_cast<void*>(reinterpret_cast<const void*>(raster));
-        OGRErr err = band->RasterIO(GF_Read, 0, 0, width, height, _data, width, height, dtype, 0, 0);
+        const OGRErr err = band->RasterIO(GF_Read, 0, 0, width, height, _data, width, height, dtype, 0, 0);
         GDALClose((GDALDatasetH)dataset);
 
         switch(dtype)
@@ -346,7 +346,7 @@ int GeoLib::TIFFImage::luaPixel (lua_State* L)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "out of bounds (%d, %d) ^ (%d, %d)", x, y, lua_obj->width, lua_obj->height);
         }
-        val_t val = lua_obj->getPixel(x, y);
+        const val_t val = lua_obj->getPixel(x, y);
         switch(type)
         {
             case RecordObject::INT8:    lua_pushnumber(L, val.i8);  break;
@@ -385,7 +385,7 @@ int GeoLib::TIFFImage::luaConvertToBMP (lua_State* L)
         if(lua_obj->type == RecordObject::DOUBLE)
         {
             /* special case conversion of 64-bit floats to scaled 32-bit unsigned ints */
-            uint32_t num_elements = lua_obj->width * lua_obj->height;
+            const uint32_t num_elements = lua_obj->width * lua_obj->height;
             double* _raster = reinterpret_cast<double*>(lua_obj->raster);
             uint32_t* data = new uint32_t [num_elements];
             double minval =  std::numeric_limits<double>::max();
@@ -395,8 +395,8 @@ int GeoLib::TIFFImage::luaConvertToBMP (lua_State* L)
                 if(_raster[i] < minval) minval = _raster[i];
                 if(_raster[i] > maxval) maxval = _raster[i];
             }
-            double spread = maxval - minval;
-            double resolution = spread / 0xFFFFFFFF;
+            const double spread = maxval - minval;
+            const double resolution = spread / 0xFFFFFFFF;
             for(uint32_t i = 0; i < num_elements; i++)
             {
                 data[i] = (_raster[i] - minval) / resolution;
@@ -407,7 +407,7 @@ int GeoLib::TIFFImage::luaConvertToBMP (lua_State* L)
         if(lua_obj->typesize == 1)
         {
             /* special case conversion of 8-bit integers to 32-bit unsigned ints */
-            uint32_t num_elements = lua_obj->width * lua_obj->height;
+            const uint32_t num_elements = lua_obj->width * lua_obj->height;
             uint32_t* data = new uint32_t [num_elements];
             for(uint32_t i = 0; i < num_elements; i++)
             {

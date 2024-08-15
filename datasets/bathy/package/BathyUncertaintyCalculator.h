@@ -92,7 +92,7 @@ class BathyUncertaintyCalculator: public LuaObject
          *--------------------------------------------------------------------*/
         
         BathyUncertaintyCalculator  (lua_State* L, BathyParms* _parms);
-        ~BathyUncertaintyCalculator (void);
+        ~BathyUncertaintyCalculator (void) override;
 
         /*--------------------------------------------------------------------
          * Data

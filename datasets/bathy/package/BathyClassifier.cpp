@@ -66,10 +66,3 @@ BathyClassifier::BathyClassifier (lua_State* L, const char* _classifier):
     classifier = BathyParms::str2classifier(_classifier);
     if(classifier == BathyParms::INVALID_CLASSIFIER) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid classifier specified: %s", _classifier);
 }
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-BathyClassifier::~BathyClassifier (void)
-{
-}

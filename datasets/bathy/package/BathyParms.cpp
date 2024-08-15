@@ -57,7 +57,6 @@ static const char* BATHY_PARMS_MIN_DEM_DELTA        = "min_dem_delta";
 static const char* BATHY_PARMS_PH_IN_EXTENT         = "ph_in_extent";
 static const char* BATHY_PARMS_GENERATE_NDWI        = "generate_ndwi";
 static const char* BATHY_PARMS_USE_BATHY_MASK       = "use_bathy_mask";
-static const char* BATHY_PARMS_USE_WATER_RI_MASK    = "use_water_ri_mask";
 static const char* BATHY_PARMS_CLASSIFIERS          = "classifiers";
 static const char* BATHY_PARMS_RETURN_INPUTS        = "return_inputs";
 static const char* BATHY_PARMS_BIN_SIZE             = "bin_size";
@@ -72,6 +71,7 @@ static const char* BATHY_PARMS_SPOTS                = "spots";
 static const char* BATHY_PARMS_DEFAULT_ASSET        = "icesat2";
 
 /* Refraction Parameters */
+static const char* BATHY_PARMS_USE_WATER_RI_MASK    = "use_water_ri_mask";
 static const char* BATHY_PARMS_RI_AIR               = "ri_air";
 static const char* BATHY_PARMS_RI_WATER             = "ri_water";
 
@@ -180,7 +180,26 @@ void BathyParms::surface_t::fromLua (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 const char* BathyParms::surface_t::toJson (void) const
 {
-    return "";
+    FString json_contents(R"({)"
+    R"("%s":%lf,)"
+    R"("%s":%lf,)"
+    R"("%s":"%ld,")"
+    R"("%s":"%lf,")"
+    R"("%s":"%lf,")"
+    R"("%s":"%lf,")"
+    R"("%s":"%lf,")"
+    R"("%s":"%d")"
+    R"(})",
+    BATHY_PARMS_BIN_SIZE, bin_size,
+    BATHY_PARMS_MAX_RANGE, max_range,
+    BATHY_PARMS_MAX_BINS, max_bins,
+    BATHY_PARMS_SIGNAL_THRESHOLD, signal_threshold,
+    BATHY_PARMS_MIN_PEAK_SEPARATION, min_peak_separation,
+    BATHY_PARMS_HIGHEST_PEAK_RATIO, highest_peak_ratio,
+    BATHY_PARMS_SURFACE_WIDTH, surface_width,
+    BATHY_PARMS_MODEL_AS_POISSON, model_as_poisson);
+
+    return json_contents.c_str(true);
 }
 
 /*----------------------------------------------------------------------------
@@ -216,7 +235,16 @@ void BathyParms::refraction_t::fromLua (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 const char* BathyParms::refraction_t::toJson (void) const
 {
-    return "";
+    FString json_contents(R"({)"
+    R"("%s":%d,)"
+    R"("%s":%lf,)"
+    R"("%s":"%lf")"
+    R"(})",
+    BATHY_PARMS_USE_WATER_RI_MASK, use_water_ri_mask,
+    BATHY_PARMS_RI_AIR, ri_air,
+    BATHY_PARMS_RI_WATER, ri_water);
+
+    return json_contents.c_str(true);
 }
 
 /*----------------------------------------------------------------------------
@@ -249,7 +277,14 @@ void BathyParms::uncertainty_t::fromLua (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 const char* BathyParms::uncertainty_t::toJson (void) const
 {
-    return "";
+    FString json_contents(R"({)"
+    R"("%s":%s,)"
+    R"("%s":%s)"
+    R"(})",
+    BATHY_PARMS_ASSET_KD, assetKd->getName(),
+    BATHY_PARMS_RESOURCE_KD, resourceKd);
+
+    return json_contents.c_str(true);
 }
 
 /*----------------------------------------------------------------------------

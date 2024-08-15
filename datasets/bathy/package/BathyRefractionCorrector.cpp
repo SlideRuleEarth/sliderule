@@ -206,8 +206,8 @@ uint64_t BathyRefractionCorrector::run( BathyParms::extent_t& extent,
             photons[i].delta_h = dZ;
 
             /* Correct Latitude and Longitude */
-            double corr_x_ph = photons[i].x_ph + dE;
-            double corr_y_ph = photons[i].y_ph + dN;
+            const double corr_x_ph = photons[i].x_ph + dE;
+            const double corr_y_ph = photons[i].y_ph + dN;
             const GeoLib::point_t point = transform.calculateCoordinates(corr_x_ph, corr_y_ph);
             photons[i].lat_ph = point.x;
             photons[i].lon_ph = point.y;

@@ -78,7 +78,6 @@ class BathyClassifier: public LuaObject
          *--------------------------------------------------------------------*/
 
         BathyClassifier (lua_State* L, const char* _classifier);
-        ~BathyClassifier (void) override;
 };
 
 #endif  /* __bathy_classifier__ */

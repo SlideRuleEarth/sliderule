@@ -153,8 +153,7 @@ class BathyParms: public Icesat2Parms
                 highest_peak_ratio      (1.2),
                 surface_width           (3.0),
                 model_as_poisson        (true) {};
-            ~surface_t() {
-            };
+            ~surface_t() = default;
 
             void        fromLua (lua_State* L, int index);
             const char* toJson  (void) const;

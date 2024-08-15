@@ -77,7 +77,7 @@ class BathyRefractionCorrector: public LuaObject
          *--------------------------------------------------------------------*/
 
         BathyRefractionCorrector    (lua_State* L, BathyParms* _parms);
-        ~BathyRefractionCorrector   (void);
+        ~BathyRefractionCorrector   (void) override;
 
         /*--------------------------------------------------------------------
          * Data

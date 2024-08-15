@@ -835,7 +835,7 @@ void* BathyReader::subsettingThread (void* parm)
     };
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms->asset->getName(), reader->resource, info->track);
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms->asset->getName(), parms->resource, info->track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -1119,13 +1119,13 @@ void* BathyReader::subsettingThread (void* parm)
         /* Run Qtrees on Extents */
         if(parms->classifiers[BathyParms::QTREES])
         {
-            double start = TimeLib::latchtime();
+            const double start = TimeLib::latchtime();
             reader->classifiers[BathyParms::QTREES]->run(extents);
             local_stats.qtrees_duration = TimeLib::latchtime() - start;
         }
         else // run native sea surface finder (since other classifiers need surface_h)
         {
-            for(auto extent: extents)
+            for(auto* extent: extents)
             {
                 reader->findSeaSurface(*extent);
             }
@@ -1134,7 +1134,7 @@ void* BathyReader::subsettingThread (void* parm)
         /* Run Coastnet on Extents */
         if(parms->classifiers[BathyParms::COASTNET])
         {
-            double start = TimeLib::latchtime();
+            const double start = TimeLib::latchtime();
             reader->classifiers[BathyParms::COASTNET]->run(extents);
             local_stats.coastnet_duration = TimeLib::latchtime() - start;
         }
@@ -1142,14 +1142,14 @@ void* BathyReader::subsettingThread (void* parm)
         /* Run OpenOceans++ on Extents */
         if(parms->classifiers[BathyParms::OPENOCEANSPP])
         {
-            double start = TimeLib::latchtime();
+            const double start = TimeLib::latchtime();
             reader->classifiers[BathyParms::OPENOCEANSPP]->run(extents);
             local_stats.openoceanspp_duration = TimeLib::latchtime() - start;
         }
 
         /* Process Extents */
-        double start = TimeLib::latchtime();
-        for(auto extent: extents)
+        const double start = TimeLib::latchtime();
+        for(auto* extent: extents)
         {
             local_stats.subaqueous_photons += reader->refraction->run(*extent, atl03.ref_elev, atl03.ref_azimuth);
             reader->uncertainty->run(*extent, atl03.sigma_across, atl03.sigma_along, atl03.sigma_h, atl03.ref_elev);
@@ -1679,13 +1679,13 @@ void BathyReader::writeCSV (const vector<BathyParms::extent_t*>& extents, int sp
     fprintf(out_file, "index_ph,index_seg,time,lat_ph,lon_ph,x_ph,y_ph,x_atc,y_atc,background_rate,surface_h,ortho_h,ellipse_h,sigma_thu,sigma_tvu,delta_h,yapc_score,max_signal_conf,quality_ph,flags,");
     for(int j = 0; j < BathyParms::NUM_CLASSIFIERS; j++)
     {
-        BathyParms::classifier_t classifier = static_cast<BathyParms::classifier_t>(j);
+        const BathyParms::classifier_t classifier = static_cast<BathyParms::classifier_t>(j);
         fprintf(out_file, "%s,", BathyParms::classifier2str(classifier));
     }
     fprintf(out_file, "class_ph\n");
 
     /* Write Data */
-    for(auto extent: extents)
+    for(auto* extent: extents)
     {
         for(unsigned i = 0; i < extent->photon_count; i++)
         {
