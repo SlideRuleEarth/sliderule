@@ -79,6 +79,8 @@ decode_aux = True
 logger = logging.getLogger(__name__)
 console = None
 
+rethrow_exceptions = False
+
 clustering_enabled = False
 try:
     from sklearn.cluster import KMeans
@@ -702,6 +704,13 @@ def simplifypolygon(parm):
     
     logger.warning('Using simplified polygon (for CMR request only!), {} points using tolerance of {}'.format(len(simplified_coords), tolerance))
 
+#
+# rethrow
+#
+def rethrow():
+    global rethrow_exceptions
+    return rethrow_exceptions
+
 ###############################################################################
 # APIs
 ###############################################################################
@@ -718,7 +727,9 @@ def init (
     time_to_live=60, 
     bypass_dns=False, 
     plugins=[],
-    trust_env=DEFAULT_TRUST_ENV
+    trust_env=DEFAULT_TRUST_ENV,
+    log_handler=None,
+    rethrow=None
 ):
     '''
     Initializes the Python client for use with SlideRule, and should be called before other ICESat-2 API calls.
@@ -742,6 +753,10 @@ def init (
                         if true then the ip address for the cluster is retrieved from the provisioning system and used directly
         plugins:        list
                         names of the plugins that need to be available on the server
+        log_handler:    logger
+                        user provided logging handler
+        rethrow:        bool
+                        configure client to throw any exceptions it encounters instead of automatic retries
 
     Returns
     -------
@@ -753,14 +768,20 @@ def init (
         >>> import sliderule
         >>> sliderule.init()
     '''
+    global session, logger, rethrow_exceptions
     # massage function parameters
     if organization == 0:
         organization = PUBLIC_ORG
     # reconfigure session (if necessary)
     if session.trust_env != trust_env:
         session.trust_env = trust_env
-    # configure client
+    # configure logging
+    if log_handler != None:
+        logger.addHandler(log_handler)
     set_verbose(verbose, loglevel)
+    # configure client
+    if rethrow != None:
+        rethrow_exceptions = rethrow
     set_url(url) # configure domain
     authenticate(organization) # configure credentials (if any) for organization
     scaleout(desired_nodes, time_to_live, bypass_dns) # set cluster to desired number of nodes (if permitted based on credentials)
@@ -806,7 +827,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
         >>> print(rsps)
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
-    global service_url, service_org
+    global service_url, service_org, rethrow_exceptions
     rsps = {}
     headers = None
     # Build Callbacks
@@ -851,18 +872,26 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
             simplifypolygon(parm)
         except requests.exceptions.SSLError as e:
             logger.debug("Exception in request to {}: {}".format(url, e))
+            if rethrow_exceptions:
+                raise
             if not silence:
                 logger.error("Unable to verify SSL certificate for {} ...retrying request".format(url))
         except requests.ConnectionError as e:
             logger.debug("Exception in request to {}: {}".format(url, e))
+            if rethrow_exceptions:
+                raise
             if not silence:
                 logger.error("Connection error to endpoint {} ...retrying request".format(url))
         except requests.Timeout as e:
             logger.debug("Exception in request to {}: {}".format(url, e))
+            if rethrow_exceptions:
+                raise
             if not silence:
                 logger.error("Timed-out waiting for response from endpoint {} ...retrying request".format(url))
         except requests.exceptions.ChunkedEncodingError as e:
             logger.debug("Exception in request to {}: {}".format(url, e))
+            if rethrow_exceptions:
+                raise
             if not silence:
                 logger.error("Unexpected termination of response from endpoint {} ...retrying request".format(url))
         except requests.HTTPError as e:
@@ -900,6 +929,7 @@ def set_url (url):
     '''
     global service_url
     service_url = url
+    logger.info(f'Setting URL to {service_url}')
 
 #
 #  set_verbose
@@ -1030,7 +1060,7 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
         >>> import sliderule
         >>> num_servers, max_workers = sliderule.update_available_servers(10)
     '''
-    global service_url, service_org, request_timeout
+    global service_url, service_org, request_timeout, rethrow_exceptions
     requested_nodes = 0
 
     # Update number of nodes
@@ -1051,6 +1081,8 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
         except requests.exceptions.HTTPError as e:
             logger.info('{}'.format(e))
             logger.info('Provisioning system status request returned error => {}'.format(rsps_body["error_msg"]))
+            if rethrow_exceptions:
+                raise
 
         # Request number of nodes in cluster
         try:
@@ -1065,6 +1097,8 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
         except requests.exceptions.HTTPError as e:
             logger.info('{}'.format(e))
             logger.error('Provisioning system update request error => {}'.format(rsps_body["error_msg"]))
+            if rethrow_exceptions:
+                raise
 
     # Get number of nodes currently registered
     try:
@@ -1218,6 +1252,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None, github_to
                 logger.error("Unable to authenticate %s user to %s" % (user, api))
 
     # return login status
+    logger.info(f'Login status to {service_url}/{service_org}: {login_status and 'success' or 'failure'}')
     return login_status
 
 #

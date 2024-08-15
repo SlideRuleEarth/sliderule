@@ -41,9 +41,6 @@ from sliderule import earthdata, logger
 # profiling times for each major function
 profiles = {}
 
-# whether exceptions should be rethrown
-rethrow_exceptions = False
-
 # icesat2 parameters
 CNF_POSSIBLE_TEP = -2
 CNF_NOT_CONSIDERED = -1
@@ -278,10 +275,8 @@ def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFA
         >>> from sliderule import icesat2
         >>> icesat2.init()
     '''
-    global rethrow_exceptions
-    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, bypass_dns)
+    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, bypass_dns, rethrow=rethrow)
     earthdata.set_max_resources(max_resources) # set maximum number of resources allowed per request
-    rethrow_exceptions = rethrow
 
 #
 #  ATL06
@@ -383,7 +378,7 @@ def atl06p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        if rethrow_exceptions:
+        if sliderule.rethrow():
             raise
 
     # Error Case
@@ -464,7 +459,7 @@ def atl06sp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fa
     # Handle Runtime Errorss
     except RuntimeError as e:
         logger.critical(e)
-        if rethrow_exceptions:
+        if sliderule.rethrow():
             raise
 
     # Error Case
@@ -539,7 +534,7 @@ def atl13sp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fa
     # Handle Runtime Errorss
     except RuntimeError as e:
         logger.critical(e)
-        if rethrow_exceptions:
+        if sliderule.rethrow():
             raise
 
     # Error Case
@@ -702,7 +697,7 @@ def atl03sp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        if rethrow_exceptions:
+        if sliderule.rethrow():
             raise
 
     # Error Case
@@ -837,7 +832,7 @@ def atl03vp(parm, callbacks={}, resources=None, keep_id=False):
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        if rethrow_exceptions:
+        if sliderule.rethrow():
             raise
 
     # Error Case
@@ -919,7 +914,7 @@ def atl08p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        if rethrow_exceptions:
+        if sliderule.rethrow():
             raise
 
     # Error Case
@@ -1022,7 +1017,7 @@ def atl24g(parm, callbacks={}, keep_id=False, height_key=None):
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        if rethrow_exceptions:
+        if sliderule.rethrow():
             raise
 
     # Error Case

@@ -49,6 +49,13 @@ class BathyRefractionCorrector: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const char* GLOBAL_WATER_RI_MASK;
+        static const double GLOBAL_WATER_RI_MASK_MAX_LAT;
+        static const double GLOBAL_WATER_RI_MASK_MIN_LAT;
+        static const double GLOBAL_WATER_RI_MASK_MAX_LON;
+        static const double GLOBAL_WATER_RI_MASK_MIN_LON;
+        static const double GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
+
         static const char* OBJECT_TYPE;
 
         static const char* LUA_META_NAME;
@@ -76,7 +83,9 @@ class BathyRefractionCorrector: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        BathyParms* parms;
+        BathyParms*         parms;
+        GeoLib::TIFFImage*  waterRiMask;
+
 };
 
 #endif

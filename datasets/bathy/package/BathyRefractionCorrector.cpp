@@ -46,6 +46,13 @@
  * STATIC DATA
  ******************************************************************************/
 
+const char* BathyRefractionCorrector::GLOBAL_WATER_RI_MASK = "/data/cop_rep_ANNUAL_meanRI_d00.tif";
+const double BathyRefractionCorrector::GLOBAL_WATER_RI_MASK_MAX_LAT = 90.0;
+const double BathyRefractionCorrector::GLOBAL_WATER_RI_MASK_MIN_LAT = -78.75;
+const double BathyRefractionCorrector::GLOBAL_WATER_RI_MASK_MAX_LON = 180.0;
+const double BathyRefractionCorrector::GLOBAL_WATER_RI_MASK_MIN_LON = -180.0;
+const double BathyRefractionCorrector::GLOBAL_WATER_RI_MASK_PIXEL_SIZE = 0.25;
+
 const char* BathyRefractionCorrector::OBJECT_TYPE = "BathyRefractionCorrector";
 const char* BathyRefractionCorrector::LUA_META_NAME = "BathyRefractionCorrector";
 const struct luaL_Reg BathyRefractionCorrector::LUA_META_TABLE[] = {
@@ -84,8 +91,13 @@ void BathyRefractionCorrector::init (void)
  *----------------------------------------------------------------------------*/
 BathyRefractionCorrector::BathyRefractionCorrector (lua_State* L, BathyParms* _parms):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    parms(_parms)
+    parms(_parms),
+    waterRiMask(NULL)
 {
+    if(parms->refraction.use_water_ri_mask)
+    {
+        waterRiMask = new GeoLib::TIFFImage(NULL, GLOBAL_WATER_RI_MASK, GeoLib::TIFFImage::GDAL_DRIVER);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -93,6 +105,7 @@ BathyRefractionCorrector::BathyRefractionCorrector (lua_State* L, BathyParms* _p
  *----------------------------------------------------------------------------*/
 BathyRefractionCorrector::~BathyRefractionCorrector (void)
 {
+    delete waterRiMask;
 }
 
 /*----------------------------------------------------------------------------
@@ -148,7 +161,23 @@ uint64_t BathyRefractionCorrector::run( BathyParms::extent_t& extent,
     BathyParms::photon_t* photons = extent.photons;
     for(uint32_t i = 0; i < extent.photon_count; i++)
     {
-        const int32_t seg = extent.photons[i].index_seg;
+        /* Get Refraction Index of Water */
+        double ri_water = parms->refraction.ri_water;
+        if(waterRiMask)
+        {
+            const double degrees_of_latitude = photons[i].lat_ph - GLOBAL_WATER_RI_MASK_MIN_LAT;
+            const double latitude_pixels = degrees_of_latitude / GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
+            const uint32_t y = waterRiMask->getHeight() - static_cast<uint32_t>(latitude_pixels); // flipped image
+
+            const double degrees_of_longitude =  photons[i].lon_ph - GLOBAL_WATER_RI_MASK_MIN_LON;
+            const double longitude_pixels = degrees_of_longitude / GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
+            const uint32_t x = static_cast<uint32_t>(longitude_pixels);
+
+            const GeoLib::TIFFImage::val_t pixel = waterRiMask->getPixel(x, y);
+            ri_water = pixel.f64;
+        }
+
+        /* Correct All Subaqueous Photons */
         const double depth = photons[i].surface_h - photons[i].ortho_h; // compute un-refraction-corrected depths
         if(depth > 0)
         {
@@ -156,8 +185,9 @@ uint64_t BathyRefractionCorrector::run( BathyParms::extent_t& extent,
             subaqueous_photons++;
 
             /* Calculate Refraction Corrections */
+            const int32_t seg = extent.photons[i].index_seg;
             const double n1 = parms->refraction.ri_air;
-            const double n2 = parms->refraction.ri_water;
+            const double n2 = ri_water;
             const double theta_1 = (M_PI / 2.0) - ref_el[seg];              // angle of incidence (without Earth curvature)
             const double theta_2 = asin(n1 * sin(theta_1) / n2);            // angle of refraction
             const double phi = theta_1 - theta_2;

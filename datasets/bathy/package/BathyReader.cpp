@@ -899,8 +899,8 @@ void* BathyReader::subsettingThread (void* parm)
                     const double longitude_pixels = degrees_of_longitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
                     const uint32_t x = static_cast<uint32_t>(longitude_pixels);
 
-                    const uint32_t pixel = reader->bathyMask->getPixel(x, y);
-                    if(pixel == GLOBAL_BATHYMETRY_MASK_OFF_VALUE)
+                    const GeoLib::TIFFImage::val_t pixel = reader->bathyMask->getPixel(x, y);
+                    if(pixel.u32 == GLOBAL_BATHYMETRY_MASK_OFF_VALUE)
                     {
                         terminate_extent_on_boundary = true;
                         break;

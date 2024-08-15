@@ -316,12 +316,12 @@ void initgeo (void)
     GeoLib::init();
 
     /* Register GDAL custom error handler */
-    #ifdef GDAL_ERROR_REPORTING
+//    #ifdef GDAL_ERROR_REPORTING
         void (*fptrGdalErrorHandler)(CPLErr, int, const char *) = GdalErrHandler;
         CPLSetErrorHandler(fptrGdalErrorHandler);
-    #else
-        CPLSetErrorHandler(NULL);
-    #endif
+//    #else
+//        CPLSetErrorHandler(NULL);
+//    #endif
 
     /* Extend Lua */
     LuaEngine::extend(LUA_GEO_LIBNAME, geo_open);

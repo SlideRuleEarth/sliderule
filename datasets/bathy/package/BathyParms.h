@@ -162,12 +162,14 @@ class BathyParms: public Icesat2Parms
 
         /* Refraction Correction */
         struct refraction_t {
+            bool            use_water_ri_mask;      // global water refractive index mask downloaded in atl24 init lua routine
             double          ri_air;                 // refraction index of air
             double          ri_water;               // refraction index of water
 
             refraction_t():
-                ri_air      (1.00029),
-                ri_water    (1.34116) {};
+                use_water_ri_mask   (true),
+                ri_air              (1.00029),
+                ri_water            (1.34116) {};
 
             ~refraction_t() = default;
 

@@ -274,8 +274,8 @@ void* BathyViewer::subsettingThread (void* parm)
             }
 
             /* Count Photons in Mask*/
-            const uint32_t pixel = reader->bathyMask->getPixel(x, y);
-            if(pixel != GLOBAL_BATHYMETRY_MASK_OFF_VALUE)
+            const GeoLib::TIFFImage::val_t pixel = reader->bathyMask->getPixel(x, y);
+            if(pixel.u32 == GLOBAL_BATHYMETRY_MASK_OFF_VALUE)
             {
                 photons_in_mask += photons_in_segment;
                 segments_in_mask++;

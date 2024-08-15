@@ -57,6 +57,7 @@ static const char* BATHY_PARMS_MIN_DEM_DELTA        = "min_dem_delta";
 static const char* BATHY_PARMS_PH_IN_EXTENT         = "ph_in_extent";
 static const char* BATHY_PARMS_GENERATE_NDWI        = "generate_ndwi";
 static const char* BATHY_PARMS_USE_BATHY_MASK       = "use_bathy_mask";
+static const char* BATHY_PARMS_USE_WATER_RI_MASK    = "use_water_ri_mask";
 static const char* BATHY_PARMS_CLASSIFIERS          = "classifiers";
 static const char* BATHY_PARMS_RETURN_INPUTS        = "return_inputs";
 static const char* BATHY_PARMS_OUTPUT_AS_SDP        = "output_as_sdp";
@@ -190,6 +191,11 @@ void BathyParms::refraction_t::fromLua (lua_State* L, int index)
 {
     if(lua_istable(L, index))
     {
+        /* use water refractive index mask */
+        lua_getfield(L, index, BATHY_PARMS_USE_WATER_RI_MASK);
+        use_water_ri_mask = LuaObject::getLuaBoolean(L, -1, true, use_water_ri_mask, NULL);
+        lua_pop(L, 1);
+
         /* refraction index of air */
         lua_getfield(L, index, BATHY_PARMS_RI_AIR);
         ri_air = LuaObject::getLuaFloat(L, -1, true, ri_air, NULL);
