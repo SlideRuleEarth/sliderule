@@ -183,6 +183,15 @@ profile["atl09_cmr"] = (time.gps() - atl09_cmr_start_time) / 1000.0
 userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL09 CMR search executed in %f seconds", profile["atl09_cmr"]))
 
 -------------------------------------------------------
+-- build output parms
+-------------------------------------------------------
+local output_parms = parms[arrow.PARMS] or {
+    path = string.gsub(resource, "ATL03", "ATL24"),
+    format = "h5",
+    as_geo = false
+}
+
+-------------------------------------------------------
 -- build bathy reader parms
 -------------------------------------------------------
 parms["uncertainty"] = parms["uncertainty"] or {}
@@ -195,6 +204,7 @@ local classifiers = {
 }
 local refraction_corrector = bathy.refraction(bathy_parms);
 local uncertainty_calculator = bathy.uncertainty(bathy_parms);
+local read_sdp_variables = (output_parms["format"] == "h5") or (output_parms["format"] == "hdf5")
 
 -------------------------------------------------------
 -- table of files being processed
@@ -251,7 +261,7 @@ end
 -------------------------------------------------------
 -- read ICESat-2 inputs
 -------------------------------------------------------
-local reader = bathy.reader(bathy_parms, classifiers, refraction_corrector, uncertainty_calculator, geo_parms, rspq, crenv.host_sandbox_directory, false)
+local reader = bathy.reader(bathy_parms, classifiers, refraction_corrector, uncertainty_calculator, geo_parms, rspq, crenv.host_sandbox_directory, read_sdp_variables, false)
 if not reader then
     userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create bathy reader", rspq))
     cleanup(crenv, transaction_id)
@@ -354,11 +364,6 @@ userlog:alert(core.INFO, core.RTE_INFO, string.format("atl24 endpoint executed i
 -- build final output
 -------------------------------------------------------
 local version, commit, environment, _launch, _duration, _packages = sys.version()
-local output_parms = parms[arrow.PARMS] or {
-    path = string.gsub(resource, "ATL03", "ATL24"),
-    format = "h5",
-    as_geo = false
-}
 local writer_parms = {
     image =  "oceaneyes",
     name = "writer",

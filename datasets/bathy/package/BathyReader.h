@@ -289,6 +289,7 @@ class BathyReader: public LuaObject
                                                          GeoParms* _hls,
                                                          const char* outq_name,
                                                          const char* shared_directory,
+                                                         bool read_sdp_variables,
                                                          bool _send_terminator);
                             ~BathyReader                (void) override;
 

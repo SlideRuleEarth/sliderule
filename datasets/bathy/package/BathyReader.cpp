@@ -96,7 +96,8 @@ int BathyReader::luaCreate (lua_State* L)
         hls = dynamic_cast<GeoParms*>(getLuaObject(L, 5, GeoParms::OBJECT_TYPE, true, NULL));
         const char* outq_name = getLuaString(L, 6);
         const char* shared_directory = getLuaString(L, 7);
-        const bool send_terminator = getLuaBoolean(L, 8, true, true);
+        const bool read_sdp_variables = getLuaBoolean(L, 8, true, false);
+        const bool send_terminator = getLuaBoolean(L, 9, true, true);
         
         /* Build Classifier List */
         if(lua_istable(L, classifier_table_index))
@@ -152,7 +153,7 @@ int BathyReader::luaCreate (lua_State* L)
         }
 
         /* Return Reader Object */
-        return createLuaObject(L, new BathyReader(L, parms, classifiers, refraction, uncertainty, hls, outq_name, shared_directory, send_terminator));
+        return createLuaObject(L, new BathyReader(L, parms, classifiers, refraction, uncertainty, hls, outq_name, shared_directory, read_sdp_variables, send_terminator));
     }
     catch(const RunTimeException& e)
     {
@@ -187,6 +188,7 @@ BathyReader::BathyReader (lua_State* L,
                           GeoParms* _hls,
                           const char* outq_name,
                           const char* shared_directory,
+                          bool read_sdp_variables,
                           bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
@@ -253,7 +255,7 @@ BathyReader::BathyReader (lua_State* L,
         context09 = new H5Coro::Context(parms->asset09, parms->resource09);
 
         /* Standard Data Product Variables */
-        if(parms->output_as_sdp)
+        if(read_sdp_variables)
         {
             /* Write Ancillary Data */
             FString ancillary_filename("%s/writer_ancillary.json", sharedDirectory);

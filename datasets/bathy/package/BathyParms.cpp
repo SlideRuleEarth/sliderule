@@ -60,7 +60,6 @@ static const char* BATHY_PARMS_USE_BATHY_MASK       = "use_bathy_mask";
 static const char* BATHY_PARMS_USE_WATER_RI_MASK    = "use_water_ri_mask";
 static const char* BATHY_PARMS_CLASSIFIERS          = "classifiers";
 static const char* BATHY_PARMS_RETURN_INPUTS        = "return_inputs";
-static const char* BATHY_PARMS_OUTPUT_AS_SDP        = "output_as_sdp";
 static const char* BATHY_PARMS_BIN_SIZE             = "bin_size";
 static const char* BATHY_PARMS_MAX_RANGE            = "max_range";
 static const char* BATHY_PARMS_MAX_BINS             = "max_bins";
@@ -355,8 +354,7 @@ BathyParms::BathyParms(lua_State* L, int index):
     use_bathy_mask  (true),
     classifiers     {true, true, true, true, true, true, true, true, true},
     return_inputs   (false),
-    spots           {true, true, true, true, true, true},
-    output_as_sdp   (false)
+    spots           {true, true, true, true, true, true}
 {
     /* asset */
     lua_getfield(L, index, BATHY_PARMS_ASSET);
@@ -415,11 +413,6 @@ BathyParms::BathyParms(lua_State* L, int index):
     /* return inputs */
     lua_getfield(L, index, BATHY_PARMS_RETURN_INPUTS);
     return_inputs = LuaObject::getLuaBoolean(L, -1, true, return_inputs, NULL);
-    lua_pop(L, 1);
-
-    /* output as sdp */
-    lua_getfield(L, index, BATHY_PARMS_OUTPUT_AS_SDP);
-    output_as_sdp = LuaObject::getLuaBoolean(L, -1, true, output_as_sdp, NULL);
     lua_pop(L, 1);
 
     /* spot selection */

@@ -221,7 +221,6 @@ class BathyParms: public Icesat2Parms
         bool            classifiers[NUM_CLASSIFIERS]; // which bathymetry classifiers to run
         bool            return_inputs;      // return the atl03 bathy records back to client
         bool            spots[NUM_SPOTS];   // only used by downstream algorithms
-        bool            output_as_sdp;      // include all the necessary ancillary data for the standard data product
         surface_t       surface;
         refraction_t    refraction;
         uncertainty_t   uncertainty;
