@@ -154,6 +154,7 @@ bool Asset::registerDriver (const char* _format, io_driver_f factory)
     {
         const io_driver_t driver = { .factory = factory };
         status = ioDrivers.add(_format, driver);
+        mlog(DEBUG, "Registering driver %s: %d", _format, status);
     }
     ioDriverMut.unlock();
 

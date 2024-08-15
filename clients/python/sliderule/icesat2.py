@@ -41,9 +41,6 @@ from sliderule import earthdata, logger
 # profiling times for each major function
 profiles = {}
 
-# whether exceptions should be rethrown
-rethrow_exceptions = False
-
 # icesat2 parameters
 CNF_POSSIBLE_TEP = -2
 CNF_NOT_CONSIDERED = -1
@@ -278,10 +275,8 @@ def init (url=sliderule.service_url, verbose=False, max_resources=earthdata.DEFA
         >>> from sliderule import icesat2
         >>> icesat2.init()
     '''
-    global rethrow_exceptions
-    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, bypass_dns, plugins=['icesat2'])
+    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, bypass_dns, rethrow=rethrow)
     earthdata.set_max_resources(max_resources) # set maximum number of resources allowed per request
-    rethrow_exceptions = rethrow
 
 #
 #  ATL06
@@ -383,7 +378,7 @@ def atl06p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        if rethrow_exceptions:
+        if sliderule.rethrow():
             raise
 
     # Error Case
@@ -464,7 +459,7 @@ def atl06sp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fa
     # Handle Runtime Errorss
     except RuntimeError as e:
         logger.critical(e)
-        if rethrow_exceptions:
+        if sliderule.rethrow():
             raise
 
     # Error Case
@@ -539,7 +534,7 @@ def atl13sp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fa
     # Handle Runtime Errorss
     except RuntimeError as e:
         logger.critical(e)
-        if rethrow_exceptions:
+        if sliderule.rethrow():
             raise
 
     # Error Case
@@ -702,7 +697,7 @@ def atl03sp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        if rethrow_exceptions:
+        if sliderule.rethrow():
             raise
 
     # Error Case
@@ -837,7 +832,7 @@ def atl03vp(parm, callbacks={}, resources=None, keep_id=False):
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        if rethrow_exceptions:
+        if sliderule.rethrow():
             raise
 
     # Error Case
@@ -919,7 +914,7 @@ def atl08p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        if rethrow_exceptions:
+        if sliderule.rethrow():
             raise
 
     # Error Case
@@ -928,18 +923,16 @@ def atl08p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
 #
 #  ATL24 Gold Standard
 #
-def atl24g(parm, callbacks={}, resource=None, keep_id=False, height_key=None):
+def atl24g(parm, callbacks={}, keep_id=False, height_key=None):
     '''
     Performs ATL24 gold standard generation on ATL03 data.
 
     Parameters
     ----------
         parms:          dict
-                        parameters used to configure ATL03 subsetting (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
+                        parameters used to configure ATL24 processing (see `Parameters </web/rtd/user_guide/ICESat-2.html#parameters>`_)
         callbacks:      dictionary
                         a callback function that is called for each result record
-        resource:       str
-                        a granule to process (e.g. "ATL03_20181019065445_03150111_005_01.h5")
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
     Returns
@@ -950,17 +943,8 @@ def atl24g(parm, callbacks={}, resource=None, keep_id=False, height_key=None):
     try:
         tstart = time.perf_counter()
 
-        # Default the Asset
-        if "asset" not in parm:
-            parm["asset"] = "icesat2"
-
-        # Build Request
-        rqst = {
-            "resource": resource,
-            "parms": parm
-        }
-
         # Make Request
+        rqst = { "parms": parm }
         rsps = sliderule.source("atl24g", rqst, stream=True, callbacks=callbacks)
 
         # Check for Output Options
@@ -1033,7 +1017,7 @@ def atl24g(parm, callbacks={}, resource=None, keep_id=False, height_key=None):
     # Handle Runtime Errors
     except RuntimeError as e:
         logger.critical(e)
-        if rethrow_exceptions:
+        if sliderule.rethrow():
             raise
 
     # Error Case

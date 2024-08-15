@@ -1,0 +1,7 @@
+arrow: apache-arrow-15.0.2-0-ge03105efc
+gdal: v3.9.1-0-g01ac70772b
+geos: 3.12.2-0-gb74fefb7b
+libgeotiff: 1.7.3-0-gd2c72db
+PROJ: 9.4.1-0-g875a485f
+rapidjson: v1.1.0-752-gab1842a2
+xgboost: v2.1.1-0-g9c9db1259

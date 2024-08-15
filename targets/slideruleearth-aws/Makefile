@@ -1,5 +1,3 @@
-# Notes:
-#
 # In order to complete the release process, the following must be installed and configured in your environment:
 #     * GitHub command line client (gh)
 #           See https://github.com/cli/cli/blob/trunk/docs/install_linux.md for installation instructions.
@@ -27,7 +25,7 @@
 #     4. Login to NPMJS
 #        $ cd sliderule/clients/nodejs && make login
 #     5. Execute the makefile target to release the code; X.Y.Z is the version
-#        $ make release VERSION=vX.Y.Z DOCKEROPTS=--no-cache
+#        $ make release VERSION=vX.Y.Z
 #
 # To update the build environment for GitHub actions
 #     1. Login to GitHub Container Registry; {my_github_key} is a file storing an access key created for your account
@@ -43,19 +41,10 @@ BUILD = $(ROOT)/build
 STAGE = $(ROOT)/stage
 
 SLIDERULE_BUILD_DIR = $(BUILD)/sliderule
-TARGET_BUILD_DIR = $(BUILD)/target
-ICESAT2_BUILD_DIR = $(BUILD)/icesat2
-PGC_BUILD_DIR = $(BUILD)/pgc
-LANDSAT_BUILD_DIR = $(BUILD)/landsat
-GEDI_BUILD_DIR = $(BUILD)/gedi
-USGS3DEP_BUILD_DIR = $(BUILD)/usgs3dep
-OPENDATA_BUILD_DIR = $(BUILD)/opendata
-GEBCO_BUILD_DIR = $(BUILD)/gebco
-SWOT_BUILD_DIR = $(BUILD)/swot
 PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
 PYTHON_CLIENT_DIR = $(ROOT)/clients/python
 NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
-SERVER_STAGE_DIR = $(STAGE)/sliderule
+SLIDERULE_STAGE_DIR = $(STAGE)/sliderule
 BUILDENV_STAGE_DIR = $(STAGE)/buildenv
 MONITOR_STAGE_DIR = $(STAGE)/monitor
 ILB_STAGE_DIR = $(STAGE)/ilb
@@ -64,15 +53,13 @@ TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
 STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
-INSTALL_DIR ?= $(SERVER_STAGE_DIR)
 
-OCEANEYES_CONTAINER_STAGE_DIR = $(STAGE)/oceaneyes
-OCEANEYES_CONTAINER_DIR = $(ROOT)/plugins/icesat2/containers/oceaneyes
-OCEANEYES_CONTAINER_NAME ?= oceaneyes
-COASTNET_CONTAINER_SOURCE_DIR = $(ROOT)/../coastnet
-CSHELPH_CONTAINER_SOURCE = $(ROOT)/../cshelph/c_shelph.py
-MEDIANFILTER_CONTAINER_SOURCE = $(ROOT)/../medianfilter/medianmodel.py
-QTREES_CONTAINER_SOURCE_DIR = $(ROOT)/../qtrees
+INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
+
+QTREES_SOURCE_DIR = $(ROOT)/../qtrees
+COASTNET_SOURCE_DIR = $(ROOT)/../coastnet
+OPENOCEANS_SOURCE_DIR = $(ROOT)/../openoceans
+OCEANEYES_SOURCE_DIR = $(ROOT)/../oceaneyes
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -81,7 +68,7 @@ ECR := 742127912612.dkr.ecr.us-west-2.amazonaws.com
 GHCR := ghcr.io/slideruleearth
 DOCKEROPTS ?=
 BUILDX ?= # buildx
-DOCKER_PLATFORM ?= # linux/arm64
+DOCKER_PLATFORM ?= # --platform linux/arm64 | linux/amd64
 ARCH ?= $(shell arch)
 DOMAIN ?= testsliderule.org
 DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
@@ -95,31 +82,13 @@ CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverri
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
 
 DEBUG_CFG := -DCMAKE_BUILD_TYPE=Debug
-DEBUG_CFG += -DINSTALLDIR=$(INSTALL_DIR)
+DEBUG_CFG += -DINSTALLDIR=$(INSTALLDIR)
 DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 DEBUG_CFG += -DENABLE_ADDRESS_SANITIZER=ON
-DEBUG_CFG += -DUSE_ARROW_PACKAGE=ON
-DEBUG_CFG += -DUSE_AWS_PACKAGE=ON
-DEBUG_CFG += -DUSE_CCSDS_PACKAGE=ON
-DEBUG_CFG += -DUSE_CRE_PACKAGE=ON
-DEBUG_CFG += -DUSE_GEO_PACKAGE=ON
-DEBUG_CFG += -DUSE_H5_PACKAGE=ON
-DEBUG_CFG += -DUSE_LEGACY_PACKAGE=ON
-DEBUG_CFG += -DUSE_NETSVC_PACKAGE=ON
-DEBUG_CFG += -DUSE_PISTACHE_PACKAGE=ON
 DEBUG_CFG += $(USERCFG)
 
 RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
-RELEASE_CFG += -DINSTALLDIR=$(INSTALL_DIR)
-RELEASE_CFG += -DUSE_ARROW_PACKAGE=ON
-RELEASE_CFG += -DUSE_AWS_PACKAGE=ON
-RELEASE_CFG += -DUSE_CRE_PACKAGE=ON
-RELEASE_CFG += -DUSE_GEO_PACKAGE=ON
-RELEASE_CFG += -DUSE_H5_PACKAGE=ON
-RELEASE_CFG += -DUSE_NETSVC_PACKAGE=ON
-RELEASE_CFG += -DUSE_CCSDS_PACKAGE=OFF
-RELEASE_CFG += -DUSE_LEGACY_PACKAGE=OFF
-RELEASE_CFG += -DUSE_PISTACHE_PACKAGE=OFF
+RELEASE_CFG += -DINSTALLDIR=$(INSTALLDIR)
 RELEASE_CFG += $(USERCFG)
 
 ########################
@@ -130,64 +99,19 @@ all: sliderule
 
 prep: ## create temporary directories needed for build
 	mkdir -p $(SLIDERULE_BUILD_DIR)
-	mkdir -p $(TARGET_BUILD_DIR)
-	mkdir -p $(ICESAT2_BUILD_DIR)
-	mkdir -p $(PGC_BUILD_DIR)
-	mkdir -p $(LANDSAT_BUILD_DIR)
-	mkdir -p $(GEDI_BUILD_DIR)
-	mkdir -p $(USGS3DEP_BUILD_DIR)
-	mkdir -p $(OPENDATA_BUILD_DIR)
-	mkdir -p $(GEBCO_BUILD_DIR)
-	mkdir -p $(SWOT_BUILD_DIR)
 
 config-debug: prep ## configure the server for running locally with debug symbols, optimizations off, static analysis, and address sanitizer
 	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_TRACING=ON $(ROOT)
-	cd $(TARGET_BUILD_DIR)    && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/targets/slideruleearth-aws
-	cd $(ICESAT2_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/icesat2
-	cd $(PGC_BUILD_DIR)       && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR)   && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/landsat
-	cd $(GEDI_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/gedi
-	cd $(USGS3DEP_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/usgs3dep
-	cd $(OPENDATA_BUILD_DIR)  && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/opendata
-	cd $(GEBCO_BUILD_DIR)     && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/gebco
-	cd $(SWOT_BUILD_DIR)      && $(CLANG_CFG) && cmake $(DEBUG_CFG) $(ROOT)/plugins/swot
 
 config-release: prep ## configure server to run a release version locally
 	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(ROOT)
-	cd $(TARGET_BUILD_DIR)    && cmake $(RELEASE_CFG) $(ROOT)/targets/slideruleearth-aws
-	cd $(ICESAT2_BUILD_DIR)   && cmake $(RELEASE_CFG) $(ROOT)/plugins/icesat2
-	cd $(PGC_BUILD_DIR)       && cmake $(RELEASE_CFG) $(ROOT)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR)   && cmake $(RELEASE_CFG) $(ROOT)/plugins/landsat
-	cd $(GEDI_BUILD_DIR)      && cmake $(RELEASE_CFG) $(ROOT)/plugins/gedi
-	cd $(USGS3DEP_BUILD_DIR)  && cmake $(RELEASE_CFG) $(ROOT)/plugins/usgs3dep
-	cd $(OPENDATA_BUILD_DIR)  && cmake $(RELEASE_CFG) $(ROOT)/plugins/opendata
-	cd $(GEBCO_BUILD_DIR)     && cmake $(RELEASE_CFG) $(ROOT)/plugins/gebco
-	cd $(SWOT_BUILD_DIR)      && cmake $(RELEASE_CFG) $(ROOT)/plugins/swot
 
 sliderule: ## build the server using the local configuration
 	make -j8 -C $(SLIDERULE_BUILD_DIR)
 	make -C $(SLIDERULE_BUILD_DIR) install
-	make -j8 -C $(TARGET_BUILD_DIR)
-	make -C $(TARGET_BUILD_DIR) install
-	make -j8 -C $(ICESAT2_BUILD_DIR)
-	make -C $(ICESAT2_BUILD_DIR) install
-	make -j8 -C $(PGC_BUILD_DIR)
-	make -C $(PGC_BUILD_DIR) install
-	make -j8 -C $(LANDSAT_BUILD_DIR)
-	make -C $(LANDSAT_BUILD_DIR) install
-	make -j8 -C $(GEDI_BUILD_DIR)
-	make -C $(GEDI_BUILD_DIR) install
-	make -j8 -C $(USGS3DEP_BUILD_DIR)
-	make -C $(USGS3DEP_BUILD_DIR) install
-	make -j8 -C $(OPENDATA_BUILD_DIR)
-	make -C $(OPENDATA_BUILD_DIR) install
-	make -j8 -C $(GEBCO_BUILD_DIR)
-	make -C $(GEBCO_BUILD_DIR) install
-	make -j8 -C $(SWOT_BUILD_DIR)
-	make -C $(SWOT_BUILD_DIR) install
 
 run: ## run the server locally
-	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(INSTALL_DIR)/bin/sliderule $(ROOT)/scripts/apps/server.lua config.json
+	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(INSTALLDIR)/bin/sliderule $(ROOT)/scripts/apps/server.lua config.json
 
 run-buildenv: ## run the build environment docker container
 	docker run -it -v $(ROOT):/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)
@@ -205,38 +129,23 @@ manager-destroy: ## destroy manager using terraform; needs DOMAIN
 	cd terraform/manager && terraform workspace select $(DOMAIN)-manager|| terraform workspace new $(DOMAIN)-manager
 	cd terraform/manager && terraform destroy
 
-oceaneyes-lock: ## create the lock file for the oceaneyes container image
-	cd $(OCEANEYES_CONTAINER_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
-	cd $(OCEANEYES_CONTAINER_DIR) && conda-lock render -p linux-$(ARCH)
+qtrees-plugin:
+	make -C $(QTREES_SOURCE_DIR)/plugin config INSTALLDIR=$(INSTALLDIR)
+	make -C $(QTREES_SOURCE_DIR)/plugin
+	make -C $(QTREES_SOURCE_DIR)/plugin install
 
-oceaneyes-docker: ## create the coceaneyes container image
-	-rm -Rf $(OCEANEYES_CONTAINER_STAGE_DIR)
-	mkdir -p $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp $(OCEANEYES_CONTAINER_DIR)/Dockerfile $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp $(OCEANEYES_CONTAINER_DIR)/conda-* $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/atl24refraction $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/atl24uncertainty $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/atl24writer $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/bathypathfinder $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/cshelph $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/medianfilter $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/openoceans $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/pointnet2 $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R $(OCEANEYES_CONTAINER_DIR)/utils $(OCEANEYES_CONTAINER_STAGE_DIR)
-	#
-	rsync -a $(COASTNET_CONTAINER_SOURCE_DIR) $(OCEANEYES_CONTAINER_STAGE_DIR) --exclude build --exclude .git
-	cp $(OCEANEYES_CONTAINER_DIR)/coastnet/* $(OCEANEYES_CONTAINER_STAGE_DIR)/coastnet
-	#
-	rsync -a $(QTREES_CONTAINER_SOURCE_DIR) $(OCEANEYES_CONTAINER_STAGE_DIR) --exclude build --exclude .git
-	cp $(OCEANEYES_CONTAINER_DIR)/qtrees/* $(OCEANEYES_CONTAINER_STAGE_DIR)/qtrees
-	#
-	cp $(CSHELPH_CONTAINER_SOURCE) $(OCEANEYES_CONTAINER_STAGE_DIR)/cshelph
-	#
-	cp $(MEDIANFILTER_CONTAINER_SOURCE) $(OCEANEYES_CONTAINER_STAGE_DIR)/medianfilter
-	#
-	cd $(OCEANEYES_CONTAINER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION)
-	docker tag $(ECR)/$(OCEANEYES_CONTAINER_NAME):latest $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(MAJOR_VERSION)
+coastnet-plugin:
+	make -C $(COASTNET_SOURCE_DIR)/plugin config INSTALLDIR=$(INSTALLDIR)
+	make -C $(COASTNET_SOURCE_DIR)/plugin
+	make -C $(COASTNET_SOURCE_DIR)/plugin install
+
+openoceans-plugin:
+	make -C $(OPENOCEANS_SOURCE_DIR)/plugin config INSTALLDIR=$(INSTALLDIR)
+	make -C $(OPENOCEANS_SOURCE_DIR)/plugin
+	make -C $(OPENOCEANS_SOURCE_DIR)/plugin install
+
+oceaneyes-docker:
+	make -C $(OCEANEYES_SOURCE_DIR) docker
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
@@ -251,16 +160,14 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	cp docker/static-website/nginx.conf $(STATIC_WEB_STAGE_DIR)
 	cp docker/static-website/docker-entrypoint.sh $(STATIC_WEB_STAGE_DIR)
 	cd $(STATIC_WEB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/static-website:latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(VERSION)
-	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(MAJOR_VERSION)
 
 static-website-run: ## locally run the static website; needs VERSION
-	docker run -it -p 8080:4000 --rm --name website $(ECR)/static-website:$(VERSION)
+	docker run -it -p 8080:4000 --rm --name website $(ECR)/static-website:latest
 
 static-website-export: ## export static website to local host directory
 	-rm -Rf $(STATIC_WEB_EXPORT_DIR)
 	mkdir -p $(STATIC_WEB_EXPORT_DIR)
-	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:$(VERSION) /host/export_dist.sh
+	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:latest /host/export_dist.sh
 
 static-website-live-update: # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
 	aws s3 sync $(STATIC_WEB_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
@@ -276,9 +183,7 @@ static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
 	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
-static-website-docker-push: ## push static-website docker image to registry
-	docker push $(ECR)/static-website:$(VERSION)
-	docker push $(ECR)/static-website:$(MAJOR_VERSION)
+sliderule-local: sliderule qtrees-plugin coastnet-plugin openoceans-plugin ## build sliderule locally with all plugins
 
 sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
@@ -288,19 +193,22 @@ sliderule-buildenv-docker: ## build sliderule build environment docker image
 	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(VERSION)
 	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
 	docker tag $(ECR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
-	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh
+	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
 
 sliderule-buildenv-docker-push: ## push build environment docker image to registry
 	docker push $(ECR)/sliderule-buildenv:$(VERSION)
 	docker push $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
-	-rm -Rf $(SERVER_STAGE_DIR)
-	mkdir -p $(SERVER_STAGE_DIR)
-	rsync -a $(ROOT) $(SERVER_STAGE_DIR)/sliderule --exclude build --exclude stage
-	cp docker/sliderule/Dockerfile.runtime $(SERVER_STAGE_DIR)/Dockerfile
-	cp docker/sliderule/config.json $(SERVER_STAGE_DIR)
-	cd $(SERVER_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest $(DOCKER_PLATFORM) .
+	-rm -Rf $(SLIDERULE_STAGE_DIR)
+	mkdir -p $(SLIDERULE_STAGE_DIR)
+	rsync -a $(ROOT) $(SLIDERULE_STAGE_DIR)/sliderule --exclude build --exclude stage
+	rsync -a $(QTREES_SOURCE_DIR)/* $(SLIDERULE_STAGE_DIR)/qtrees --exclude build
+	rsync -a $(COASTNET_SOURCE_DIR)/* $(SLIDERULE_STAGE_DIR)/coastnet --exclude build
+	rsync -a $(OPENOCEANS_SOURCE_DIR)/* $(SLIDERULE_STAGE_DIR)/openoceans --exclude build
+	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
+	cp docker/sliderule/config.json $(SLIDERULE_STAGE_DIR)
+	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(VERSION)
 	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(MAJOR_VERSION)
 
@@ -308,7 +216,6 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
 	mkdir -p $(ILB_STAGE_DIR)
 	cp docker/intelligent-load-balancer/* $(ILB_STAGE_DIR)
-	cp $(ROOT)/targets/orchestrator-haproxy/orchestrator.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/scripts/extensions/json.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/scripts/extensions/prettyprint.lua $(ILB_STAGE_DIR)
 	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ilb:latest $(DOCKER_PLATFORM) .
@@ -350,7 +257,7 @@ cluster-docker-push: ## push all cluster images to docker container registries
 	docker push $(ECR)/monitor:$(MAJOR_VERSION)
 
 cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
-	cd packer; packer build -var version=$(MAJOR_VERSION) sliderule-base.pkr.hcl
+	cd packer; packer build -var version=$(MAJOR_VERSION) -var-file=arm64_cpu.json sliderule-base.pkr.hcl
 
 cluster-upload-terraform: ## upload the Cluster terraform for provisioning system; needs VERSION
 	-rm -Rf $(TF_STAGE_DIR)
@@ -379,8 +286,6 @@ release: ## release a version of sliderule; needs VERSION
 	make sliderule-buildenv-docker-push
 	make cluster-docker
 	make cluster-docker-push
-	make static-website-docker
-	make static-website-docker-push
 	make cluster-build-packer
 	make cluster-upload-terraform
 
@@ -411,29 +316,18 @@ TEST ?= $(ROOT)/scripts/selftests/test_runner.lua cloud
 MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/plugins/pgc/systests/arcticdem_mosaic_perf.lua
 STRIPS_PERFORMANCE_TEST ?=  $(ROOT)/plugins/pgc/systests/arcticdem_strips_perf.lua
 SUBSET_PERFORMANCE_TEST ?=  $(ROOT)/scripts/systests/subset_perf_test.lua
-ATL24_TEST_DATA_DIR ?= /data/AppServer.1
-ATL24_ALGORITHM ?= cshelph
 
 selftest: ## run the self test on the server code
-	$(SERVER_STAGE_DIR)/bin/sliderule $(TEST)
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
 
 perfmtest: ## run mosaics performance test on the server code
-	$(SERVER_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
 
 perfstest: ## run strips performance test on the server code
-	$(SERVER_STAGE_DIR)/bin/sliderule $(STRIPS_PERFORMANCE_TEST)
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(STRIPS_PERFORMANCE_TEST)
 
 perfsubsetest: ## run subset performance test
-	$(SERVER_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
-
-oceaneyes-test: ## run the oceaneyes container
-	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) /env/bin/python /$(ATL24_ALGORITHM)/runner.py $(ATL24_TEST_DATA_DIR)/bathy_spot_3.json $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv
-	
-coastnet-test: ## run the coastnet bathy docker container
-	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) bash /coastnet/runner.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/coastnet_3.csv
-
-qtrees-test: ## run the qtrees docker container
-	docker run -it --rm -v /data:/data --name $(OCEANEYES_CONTAINER_NAME) $(ECR)/$(OCEANEYES_CONTAINER_NAME):$(VERSION) bash /qtrees/runner.sh nil nil $(ATL24_TEST_DATA_DIR)/bathy_spot_3.csv $(ATL24_TEST_DATA_DIR)/qtrees_3.csv
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
 
 ########################
 # Help Target

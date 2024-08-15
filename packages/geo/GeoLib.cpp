@@ -36,10 +36,12 @@
 #include <cmath>
 #include <proj.h>
 #include <tiffio.h>
-#include "ogr_spatialref.h"
+#include <gdal.h>
+#include <ogr_spatialref.h>
 
 #include "GeoLib.h"
 #include "LuaObject.h"
+#include "GdalRaster.h"
 
 /******************************************************************************
  * LOCAL TYPES
@@ -157,7 +159,8 @@ int GeoLib::TIFFImage::luaCreate (lua_State* L)
     try
     {
         const char* filename = getLuaString(L, 1);
-        return createLuaObject(L, new TIFFImage(L, filename));
+        const long driver = getLuaInteger(L, 2, true, LIBTIFF_DRIVER);
+        return createLuaObject(L, new TIFFImage(L, filename, driver));
     }
     catch(const RunTimeException& e)
     {
@@ -169,26 +172,76 @@ int GeoLib::TIFFImage::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoLib::TIFFImage::TIFFImage(lua_State* L, const char* filename):
+GeoLib::TIFFImage::TIFFImage(lua_State* L, const char* filename, long driver):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
-    TIFF* tif = TIFFOpen(filename, "r");
-    if(!tif) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to open tiff file: %s", filename);
-
-    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
-    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &length);
-    mlog(INFO, "Reading image %s which is %u x %u pixels", filename, width, length);
-
-    size = width * length;
-    raster = new uint32_t[size];
-
-    if(!TIFFReadRGBAImage(tif, width, length, raster, 0))
+    if(driver == LIBTIFF_DRIVER)
     {
-        delete [] raster;
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read tiff file: %s", filename);
-    }
+        TIFF* tif = TIFFOpen(filename, "r");
+        if(!tif) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to open tiff file: %s", filename);
 
-    TIFFClose(tif);
+        TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
+        TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height);
+        typesize = 4; // tiff driver only supports uint32_t (RGB)
+        
+        mlog(INFO, "Reading image %s which is %u x %u pixels", filename, width, height);
+
+        size = width * height * typesize;
+        raster = new uint8_t[size];
+        type = RecordObject::UINT32;
+
+        uint32_t* _raster = reinterpret_cast<uint32_t*>(raster);
+        if(!TIFFReadRGBAImage(tif, width, height, _raster, 0))
+        {
+            delete [] raster;
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read tiff file: %s", filename);
+        }
+
+        TIFFClose(tif);
+    }
+    else if(driver == GDAL_DRIVER)
+    {
+        GDALDataset* dataset = static_cast<GDALDataset*>(GDALOpen(filename, GA_ReadOnly));
+        if(!dataset) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to open tiff file: %s", filename);
+        width = dataset->GetRasterXSize();
+        height = dataset->GetRasterYSize();
+        GDALRasterBand* band = dataset->GetRasterBand(1);
+        const GDALDataType dtype = band->GetRasterDataType();
+        typesize  = GDALGetDataTypeSizeBytes(dtype);
+
+        mlog(INFO, "Reading image %s which is %u x %u pixels", filename, width, height);
+
+        size = width * height * typesize;
+        raster = new uint8_t [size];
+        void* _data = const_cast<void*>(reinterpret_cast<const void*>(raster));
+        const OGRErr err = band->RasterIO(GF_Read, 0, 0, width, height, _data, width, height, dtype, 0, 0);
+        GDALClose((GDALDatasetH)dataset);
+
+        switch(dtype)
+        {
+            case GDT_Int8:      type = RecordObject::INT8;   break;
+            case GDT_Int16:     type = RecordObject::INT16;  break;
+            case GDT_Int32:     type = RecordObject::INT32;  break;
+            case GDT_Int64:     type = RecordObject::INT64;  break;
+            case GDT_Byte:      type = RecordObject::UINT8;  break;
+            case GDT_UInt16:    type = RecordObject::UINT16; break;
+            case GDT_UInt32:    type = RecordObject::UINT32; break;
+            case GDT_UInt64:    type = RecordObject::UINT64; break;
+            case GDT_Float32:   type = RecordObject::FLOAT;  break;
+            case GDT_Float64:   type = RecordObject::DOUBLE; break;
+            default:            type = RecordObject::INVALID_FIELD; break;
+        }
+
+        if(err != CE_None) 
+        {
+            delete [] raster;
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read tiff file: %s", filename);
+        }
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid driver selected: %ld", driver);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -202,11 +255,43 @@ GeoLib::TIFFImage::~TIFFImage(void)
 /*----------------------------------------------------------------------------
  * getPixel
  *----------------------------------------------------------------------------*/
-uint32_t GeoLib::TIFFImage::getPixel(uint32_t x, uint32_t y)
+GeoLib::TIFFImage::val_t GeoLib::TIFFImage::getPixel(uint32_t x, uint32_t y)
 {
-    const uint32_t offset = (y * width) + x;
-    if(offset < size) return raster[offset];
-    return INVALID_PIXEL;
+    val_t val = {.u64 = INVALID_PIXEL};
+    const uint32_t offset = ((y * width) + x) * typesize;
+    
+    if(offset < size)
+    {
+        switch(typesize)
+        {
+            case 1:
+            {
+                uint8_t* valptr = reinterpret_cast<uint8_t*>(&raster[offset]);
+                val.u8 = *valptr;
+                break;
+            }
+            case 2:
+            {
+                uint16_t* valptr = reinterpret_cast<uint16_t*>(&raster[offset]);
+                val.u16 = *valptr;
+                break;
+            }
+            case 4:
+            {
+                uint32_t* valptr = reinterpret_cast<uint32_t*>(&raster[offset]);
+                val.u32 = *valptr;
+                break;
+            }
+            case 8:
+            {
+                uint64_t* valptr = reinterpret_cast<uint64_t*>(&raster[offset]);
+                val.u64 = *valptr;
+                break;
+            }
+        }
+    }
+
+    return val;
 }
 
 /*----------------------------------------------------------------------------
@@ -220,9 +305,9 @@ uint32_t GeoLib::TIFFImage::getWidth(void) const
 /*----------------------------------------------------------------------------
  * getLength
  *----------------------------------------------------------------------------*/
-uint32_t GeoLib::TIFFImage::getLength() const
+uint32_t GeoLib::TIFFImage::getHeight() const
 {
-    return length;
+    return height;
 }
 
 /*----------------------------------------------------------------------------
@@ -234,8 +319,10 @@ int GeoLib::TIFFImage::luaDimensions (lua_State* L)
     {
         GeoLib::TIFFImage* lua_obj = dynamic_cast<GeoLib::TIFFImage*>(getLuaSelf(L, 1));
         lua_pushnumber(L, lua_obj->width);
-        lua_pushnumber(L, lua_obj->length);
-        return returnLuaStatus(L, true, 3);
+        lua_pushnumber(L, lua_obj->height);
+        lua_pushnumber(L, lua_obj->typesize);
+        lua_pushnumber(L, lua_obj->type);
+        return returnLuaStatus(L, true, 5);
     }
     catch(const RunTimeException& e)
     {
@@ -252,13 +339,29 @@ int GeoLib::TIFFImage::luaPixel (lua_State* L)
     try
     {
         GeoLib::TIFFImage* lua_obj = dynamic_cast<GeoLib::TIFFImage*>(getLuaSelf(L, 1));
+        const int type = getLuaInteger(L, 2, true, RecordObject::UINT32);
         const int x = getLuaInteger(L, 2);
         const int y = getLuaInteger(L, 3);
-        if(x < 0 || x >= (int)lua_obj->width || y < 0 || y >= (int)lua_obj->length)
+        if(x < 0 || x >= (int)lua_obj->width || y < 0 || y >= (int)lua_obj->height)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "out of bounds (%d, %d) ^ (%d, %d)", x, y, lua_obj->width, lua_obj->length);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "out of bounds (%d, %d) ^ (%d, %d)", x, y, lua_obj->width, lua_obj->height);
         }
-        lua_pushnumber(L, lua_obj->getPixel(x, y));
+        const val_t val = lua_obj->getPixel(x, y);
+        switch(type)
+        {
+            case RecordObject::INT8:    lua_pushnumber(L, val.i8);  break;
+            case RecordObject::INT16:   lua_pushnumber(L, val.i16); break;
+            case RecordObject::INT32:   lua_pushnumber(L, val.i32); break;
+            case RecordObject::INT64:   lua_pushnumber(L, val.i64); break;
+            case RecordObject::UINT8:   lua_pushnumber(L, val.u8);  break;
+            case RecordObject::UINT16:  lua_pushnumber(L, val.u16); break;
+            case RecordObject::UINT32:  lua_pushnumber(L, val.u32); break;
+            case RecordObject::UINT64:  lua_pushnumber(L, val.u64); break;
+            case RecordObject::FLOAT:   lua_pushnumber(L, val.f32); break;
+            case RecordObject::DOUBLE:  lua_pushnumber(L, val.f64); break;
+            default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid type: %d", type);
+        }
+        
         status = true;
     }
     catch(const RunTimeException& e)
@@ -279,7 +382,50 @@ int GeoLib::TIFFImage::luaConvertToBMP (lua_State* L)
     {
         const GeoLib::TIFFImage* lua_obj = dynamic_cast<GeoLib::TIFFImage*>(getLuaSelf(L, 1));
         const char* bmp_filename = getLuaString(L, 2);
-        status = GeoLib::writeBMP(lua_obj->raster, lua_obj->width, lua_obj->length, bmp_filename);
+        if(lua_obj->type == RecordObject::DOUBLE)
+        {
+            /* special case conversion of 64-bit floats to scaled 32-bit unsigned ints */
+            const uint32_t num_elements = lua_obj->width * lua_obj->height;
+            double* _raster = reinterpret_cast<double*>(lua_obj->raster);
+            uint32_t* data = new uint32_t [num_elements];
+            double minval =  std::numeric_limits<double>::max();
+            double maxval =  std::numeric_limits<double>::min();
+            for(uint32_t i = 0; i < num_elements; i++)
+            {
+                if(_raster[i] < minval) minval = _raster[i];
+                if(_raster[i] > maxval) maxval = _raster[i];
+            }
+            const double spread = maxval - minval;
+            const double resolution = spread / 0xFFFFFFFF;
+            for(uint32_t i = 0; i < num_elements; i++)
+            {
+                data[i] = (_raster[i] - minval) / resolution;
+            }
+            status = GeoLib::writeBMP(data, lua_obj->width, lua_obj->height, bmp_filename);
+            delete [] data;
+        }
+        if(lua_obj->typesize == 1)
+        {
+            /* special case conversion of 8-bit integers to 32-bit unsigned ints */
+            const uint32_t num_elements = lua_obj->width * lua_obj->height;
+            uint32_t* data = new uint32_t [num_elements];
+            for(uint32_t i = 0; i < num_elements; i++)
+            {
+                data[i] = lua_obj->raster[i];
+            }
+            status = GeoLib::writeBMP(data, lua_obj->width, lua_obj->height, bmp_filename);
+            delete [] data;
+        }
+        else if(lua_obj->typesize != 4)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "only 32-bit tiff files can be converted to BMP: %d", lua_obj->typesize);
+        }
+        else
+        {
+            /* just use the value as-is if it is 32 bits */
+            uint32_t* _raster = reinterpret_cast<uint32_t*>(lua_obj->raster);
+            status = GeoLib::writeBMP(_raster, lua_obj->width, lua_obj->height, bmp_filename);
+        }
     }
     catch(const RunTimeException& e)
     {

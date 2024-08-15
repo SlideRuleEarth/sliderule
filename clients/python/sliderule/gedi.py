@@ -195,7 +195,7 @@ def init (url=sliderule.service_url, verbose=False, loglevel=logging.CRITICAL, o
         >>> from sliderule import gedi
         >>> gedi.init()
     '''
-    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, bypass_dns, plugins=['gedi'])
+    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, bypass_dns)
 
 #
 #  GEDI L4A

@@ -73,9 +73,11 @@ local function proxy(resources, parms, endpoint, rec)
     if geo_parms then
         for dataset,raster_parms in pairs(geo_parms) do
             if not raster_parms["catalog"] then
+                userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> querying resources for %s", rspq, dataset))
                 local rc, rsps = earthdata.search(raster_parms, parms["poly"])
                 if rc == earthdata.SUCCESS then
                     parms[geo.PARMS][dataset]["catalog"] = json.encode(rsps)
+                    userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> returned %d resources for %s", rspq, #parms[geo.PARMS][dataset]["catalog"]["features"], dataset))
                 else
                     userlog:alert(core.WARNING, core.RTE_INFO, string.format("request <%s> failed to get catalog for %s: %d", rspq, dataset, rc))
                 end

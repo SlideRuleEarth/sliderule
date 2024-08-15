@@ -352,12 +352,6 @@ const char* getOutputPath(ArrowParms* parms)
 
     if(parms->asset_name)
     {
-        /* Check Private Cluster */
-        if(OsApi::getIsPublic())
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to stage output on public cluster");
-        }
-
         /* Generate Output Path */
         Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(parms->asset_name, Asset::OBJECT_TYPE));
         const char* path_prefix = StringLib::match(asset->getDriver(), "s3") ? "s3://" : "";

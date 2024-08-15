@@ -34,6 +34,7 @@
 
 #include "LuaEngine.h"
 #include "LuaObject.h"
+#include "RecordObject.h"
 #include "MathLib.h"
 
 class GeoLib: public MathLib
@@ -75,21 +76,37 @@ class GeoLib: public MathLib
                 static const char* OBJECT_TYPE;
                 static const char* LUA_META_NAME;
                 static const struct luaL_Reg LUA_META_TABLE[];
-                static const uint32_t INVALID_PIXEL = 0xFFFFFFFF;
+                static const uint64_t INVALID_PIXEL = 0xFFFFFFFFFFFFFFFFL;
+                static const long LIBTIFF_DRIVER = 0;
+                static const long GDAL_DRIVER = 1;
                 static int luaCreate (lua_State* L);
-                TIFFImage (lua_State* L, const char* filename);
+                typedef union {
+                    double f64;
+                    float f32;
+                    uint64_t u64;
+                    uint32_t u32;
+                    uint16_t u16;
+                    uint8_t u8;
+                    int64_t i64;
+                    int32_t i32;
+                    int16_t i16;
+                    int8_t i8;
+                } val_t;
+                TIFFImage (lua_State* L, const char* filename, long driver=LIBTIFF_DRIVER);
                 ~TIFFImage (void) override;
-                uint32_t getPixel (uint32_t x, uint32_t y);
+                val_t getPixel (uint32_t x, uint32_t y);
                 uint32_t getWidth (void) const;
-                uint32_t getLength (void) const;
+                uint32_t getHeight (void) const;
             private:
                 static int luaDimensions (lua_State* L);
                 static int luaPixel (lua_State* L);
                 static int luaConvertToBMP (lua_State* L);
                 uint32_t width;
-                uint32_t length;
+                uint32_t height;
+                uint32_t typesize;
                 uint32_t size;
-                uint32_t* raster;
+                uint8_t* raster;
+                RecordObject::fieldType_t type;
         };
 
         /*--------------------------------------------------------------------
