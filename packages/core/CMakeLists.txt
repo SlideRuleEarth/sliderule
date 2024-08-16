@@ -61,6 +61,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/Uart.cpp
         ${CMAKE_CURRENT_LIST_DIR}/UdpSocket.cpp
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Dictionary.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_List.cpp>
 )
 
 target_include_directories (slideruleLib
@@ -124,6 +125,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/Uart.h
         ${CMAKE_CURRENT_LIST_DIR}/UdpSocket.h
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Dictionary.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_List.h>
     DESTINATION
         ${INCDIR}
 )

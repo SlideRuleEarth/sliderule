@@ -3,11 +3,10 @@ local console = require("console")
 
 -- Table Unit Test --
 
-runner.command("NEW UT_LIST ut_list")
-runner.command("ut_list::ADD_REMOVE")
-runner.command("ut_list::DUPLICATES")
-runner.command("ut_list::SORT")
-runner.command("DELETE ut_list")
+local ut_list = core.ut_list()
+runner.check(ut_list:addremove())
+runner.check(ut_list:duplicates())
+runner.check(ut_list:sort())
 
 -- Report Results --
 

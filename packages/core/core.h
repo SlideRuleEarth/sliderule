@@ -92,6 +92,7 @@
 
 #ifdef __unittesting__
 #include "UT_Dictionary.h"
+#include "UT_List.h"
 #endif
 
 /******************************************************************************

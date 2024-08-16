@@ -95,7 +95,6 @@ int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
     {
         lua_obj = dynamic_cast<UT_Dictionary*>(getLuaSelf(L, 1));
         wordset_name = getLuaString(L, 2);
-        
     }
     catch(const RunTimeException& e)
     {
@@ -314,7 +313,6 @@ int UT_Dictionary::iteratorUnitTestCmd (lua_State* L)
     {
         lua_obj = dynamic_cast<UT_Dictionary*>(getLuaSelf(L, 1));
         wordset_name = getLuaString(L, 2);
-        
     }
     catch(const RunTimeException& e)
     {

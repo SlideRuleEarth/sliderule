@@ -100,6 +100,7 @@ static int core_open (lua_State *L)
         {"spatialindex",    SpatialIndex::luaCreate},
 #ifdef __unittesting__
         {"ut_dictionary",   UT_Dictionary::luaCreate},
+        {"ut_list",         UT_List::luaCreate},
 #endif
         {NULL,              NULL}
     };
