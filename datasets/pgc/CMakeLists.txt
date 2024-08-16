@@ -23,3 +23,11 @@ install (
     DESTINATION
         ${INCDIR}/pgc
 )
+
+install (
+    FILES
+        ${CMAKE_CURRENT_LIST_DIR}/package/ITRF2014_3031.wkt
+        ${CMAKE_CURRENT_LIST_DIR}/package/ITRF2014_3413.wkt
+    DESTINATION
+        ${CONFDIR}
+)
