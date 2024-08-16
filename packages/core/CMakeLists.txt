@@ -64,6 +64,9 @@ target_sources (slideruleLib
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_List.cpp>
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_MsgQ.cpp>
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Ordering.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_String.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Table.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_TimeLib.cpp>
 )
 
 target_include_directories (slideruleLib
@@ -130,6 +133,9 @@ install (
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_List.h>
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_MsgQ.h>
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Ordering.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_String.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Table.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_TimeLib.h>
     DESTINATION
         ${INCDIR}
 )

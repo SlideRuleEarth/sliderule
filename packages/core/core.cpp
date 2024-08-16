@@ -103,6 +103,9 @@ static int core_open (lua_State *L)
         {"ut_list",         UT_List::luaCreate},
         {"ut_msgq",         UT_MsgQ::luaCreate},
         {"ut_ordering",     UT_Ordering::luaCreate},
+        {"ut_string",       UT_String::luaCreate},
+        {"ut_table",        UT_Table::luaCreate},
+        {"ut_timelib",      UT_TimeLib::luaCreate},
 #endif
         {NULL,              NULL}
     };
@@ -171,11 +174,11 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "STRING",                   RecordObject::STRING);
     LuaEngine::setAttrInt   (L, "USER",                     RecordObject::USER);
 
-    #ifdef __unittesting__
+#ifdef __unittesting__
     LuaEngine::setAttrBool(L, "UNITTEST",                   true);
-    #else
+#else
     LuaEngine::setAttrBool(L, "UNITTEST",                   false);
-    #endif
+#endif
 
     return 1;
 }
@@ -203,6 +206,9 @@ void initcore (void)
     LuaEngine::init();
     ContainerRecord::init();
     AncillaryFields::init();
+#ifdef __unittesting__
+    UT_TimeLib::init();
+#endif    
 
     /* Register IO Drivers */
     Asset::registerDriver("nil", Asset::IODriver::create);

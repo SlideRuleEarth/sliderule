@@ -41,45 +41,54 @@
  * MACROS
  ******************************************************************************/
 
-#define ut_assert(e,...)    UT_Table::_ut_assert(e,__FILE__,__LINE__,__VA_ARGS__)
+#define ut_assert(e,...)    lua_obj->_ut_assert(e,__FILE__,__LINE__,__VA_ARGS__)
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* UT_Table::TYPE = "UT_Table";
+const char* UT_Table::OBJECT_TYPE = "UT_Table";
+
+const char* UT_Table::LUA_META_NAME = "UT_Table";
+const struct luaL_Reg UT_Table::LUA_META_TABLE[] = {
+    {"addremove",   testAddRemove},
+    {"chaining",    testChaining},
+    {"removing",    testRemoving},
+    {"duplicates",  testDuplicates},
+    {"fulltable",   testFullTable},
+    {"collisions",  testCollisions},
+    {"stress",      testStress},
+    {NULL,          NULL}
+};
 
 /******************************************************************************
- * PUBLIC METHODS
+ * METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * createObject  -
+ * luaCreate -
  *----------------------------------------------------------------------------*/
-CommandableObject* UT_Table::createObject(CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE])
+int UT_Table::luaCreate (lua_State* L)
 {
-    (void)argc;
-    (void)argv;
-
-    /* Create Message Queue Unit Test */
-    return new UT_Table(cmd_proc, name);
+    try
+    {
+        /* Create Unit Test */
+        return createLuaObject(L, new UT_Table(L));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        return returnLuaStatus(L, false);
+    }
 }
 
 /*----------------------------------------------------------------------------
- * Constructor  -
+ * Constructor
  *----------------------------------------------------------------------------*/
-UT_Table::UT_Table(CommandProcessor* cmd_proc, const char* obj_name):
-    CommandableObject(cmd_proc, obj_name, TYPE),
+UT_Table::UT_Table (lua_State* L):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     failures(0)
 {
-    /* Register Commands */
-    registerCommand("ADD_REMOVE", (cmdFunc_t)&UT_Table::testAddRemove,  0, "");
-    registerCommand("CHAINING",   (cmdFunc_t)&UT_Table::testChaining,   0, "");
-    registerCommand("REMOVING",   (cmdFunc_t)&UT_Table::testRemoving,   0, "");
-    registerCommand("DUPLICATES", (cmdFunc_t)&UT_Table::testDuplicates, 0, "");
-    registerCommand("FULL_TABLE", (cmdFunc_t)&UT_Table::testFullTable,  0, "");
-    registerCommand("COLLISIONS", (cmdFunc_t)&UT_Table::testCollisions, 0, "");
-    registerCommand("STRESS",     (cmdFunc_t)&UT_Table::testStress,     0, "");
 }
 
 /*----------------------------------------------------------------------------
@@ -133,16 +142,25 @@ bool UT_Table::_ut_assert(bool e, const char* file, int line, const char* fmt, .
 /*--------------------------------------------------------------------------------------
  * testAddRemove
  *--------------------------------------------------------------------------------------*/
-int UT_Table::testAddRemove(int argc, char argv[][MAX_CMD_SIZE])
+int UT_Table::testAddRemove(lua_State* L)
 {
-    (void)argc;
-    (void)argv;
+    UT_Table* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_Table*>(getLuaSelf(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
     int key, data;
     const int size = 8;
     Table<int,int> mytable(size);
 
-    failures = 0;
+    lua_obj->failures = 0;
 
     /* Add Initial Set */
     for(key = 0; key < size; key++)
@@ -167,23 +185,33 @@ int UT_Table::testAddRemove(int argc, char argv[][MAX_CMD_SIZE])
     ut_assert(mytable.first(&data) == (int)INVALID_KEY, "Failed to get error\n");
     ut_assert(mytable.length() == 0, "Failed to remove all entries\n");
 
-    return failures == 0 ? 0 : -1;
+    lua_pushboolean(L, lua_obj->failures == 0);
+    return 1;
 }
 
 /*--------------------------------------------------------------------------------------
  * testChaining
  *--------------------------------------------------------------------------------------*/
-int UT_Table::testChaining(int argc, char argv[][MAX_CMD_SIZE])
+int UT_Table::testChaining(lua_State* L)
 {
-    (void)argc;
-    (void)argv;
+    UT_Table* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_Table*>(getLuaSelf(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
     int key, data;
     const int size = 8;
     Table<int,int> mytable(size);
     const int test_data[8] = {0,1,2,3,8,9,10,11};
 
-    failures = 0;
+    lua_obj->failures = 0;
 
     /* Add Initial Set */
     for(int i = 0; i < size; i++)
@@ -205,16 +233,26 @@ int UT_Table::testChaining(int argc, char argv[][MAX_CMD_SIZE])
     ut_assert(mytable.first(&data) == (int)INVALID_KEY, "Failed to get error\n");
     ut_assert(mytable.length() == 0, "Failed to remove all entries\n");
 
-    return failures == 0 ? 0 : -1;
+    lua_pushboolean(L, lua_obj->failures == 0);
+    return 1;
 }
 
 /*--------------------------------------------------------------------------------------
  * testRemoving
  *--------------------------------------------------------------------------------------*/
-int UT_Table::testRemoving(int argc, char argv[][MAX_CMD_SIZE])
+int UT_Table::testRemoving(lua_State* L)
 {
-    (void)argc;
-    (void)argv;
+    UT_Table* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_Table*>(getLuaSelf(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
     int key;
     int data;
@@ -224,7 +262,7 @@ int UT_Table::testRemoving(int argc, char argv[][MAX_CMD_SIZE])
     const int remove_order[16] = {0, 16, 32, 17, 33,  1, 34, 18,  2,  3,  4,  5,  6,  7,  8,  9};
     const int check_order[16]  = {0, 16, 32,  1,  1,  1,  2,  2,   2,  3,  4,  5,  6,  7,  8,  9};
 
-    failures = 0;
+    lua_obj->failures = 0;
 
     /* Add Initial Set */
     for(int i = 0; i < size; i++)
@@ -246,23 +284,33 @@ int UT_Table::testRemoving(int argc, char argv[][MAX_CMD_SIZE])
     ut_assert(mytable.first(&data) == (int)INVALID_KEY, "Failed to get error\n");
     ut_assert(mytable.length() == 0, "Failed to remove all entries\n");
 
-    return failures == 0 ? 0 : -1;
+    lua_pushboolean(L, lua_obj->failures == 0);
+    return 1;
 }
 
 /*--------------------------------------------------------------------------------------
  * testDuplicates
  *--------------------------------------------------------------------------------------*/
-int UT_Table::testDuplicates(int argc, char argv[][MAX_CMD_SIZE])
+int UT_Table::testDuplicates(lua_State* L)
 {
-    (void)argc;
-    (void)argv;
+    UT_Table* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_Table*>(getLuaSelf(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
     int key;
     const int size = 16;
     Table<int,int> mytable(size);
     const int test_data[16] = {0,16,32,1,17,33,2,18,34,3,4,5,6,7,8,9};
 
-    failures = 0;
+    lua_obj->failures = 0;
 
     /* Add Initial Set */
     for(int i = 0; i < 9; i++)
@@ -306,23 +354,33 @@ int UT_Table::testDuplicates(int argc, char argv[][MAX_CMD_SIZE])
     /* Check Size */
     ut_assert(mytable.length() == size, "Failed to rget size of table\n");
 
-    return failures == 0 ? 0 : -1;
+    lua_pushboolean(L, lua_obj->failures == 0);
+    return 1;
 }
 
 /*--------------------------------------------------------------------------------------
  * testFullTable
  *--------------------------------------------------------------------------------------*/
-int UT_Table::testFullTable(int argc, char argv[][MAX_CMD_SIZE])
+int UT_Table::testFullTable(lua_State* L)
 {
-    (void)argc;
-    (void)argv;
+    UT_Table* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_Table*>(getLuaSelf(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
     int key;
     const int size = 8;
     Table<int,int> mytable(size);
     const int test_data[8] = {0,1,2,3,4,5,6,7};
 
-    failures = 0;
+    lua_obj->failures = 0;
 
     /* Add Initial Set */
     for(int i = 0; i < size; i++)
@@ -366,16 +424,26 @@ int UT_Table::testFullTable(int argc, char argv[][MAX_CMD_SIZE])
         ut_assert(mytable.add(new2_key, new2_key, true) == false, "Failed to error on adding key to full table %d\n", new2_key);
     }
 
-    return failures == 0 ? 0 : -1;
+    lua_pushboolean(L, lua_obj->failures == 0);
+    return 1;
 }
 
 /*--------------------------------------------------------------------------------------
  * testCollisions
  *--------------------------------------------------------------------------------------*/
-int UT_Table::testCollisions(int argc, char argv[][MAX_CMD_SIZE])
+int UT_Table::testCollisions(lua_State* L)
 {
-    (void)argc;
-    (void)argv;
+    UT_Table* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_Table*>(getLuaSelf(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
     int key, data;
     const int size = 16;
@@ -384,7 +452,7 @@ int UT_Table::testCollisions(int argc, char argv[][MAX_CMD_SIZE])
     const int remove_order[16] =  {0,16,32,17,33, 1,34,18, 2,40,50,66,48,35, 8, 9};
     const int check_order[16]  =  {0,16,32, 1, 1, 1, 2, 2, 2,40,50,66,48,35, 8, 9};
 
-    failures = 0;
+    lua_obj->failures = 0;
 
     /* Add Initial Set */
     for(int i = 0; i < size; i++)
@@ -406,16 +474,26 @@ int UT_Table::testCollisions(int argc, char argv[][MAX_CMD_SIZE])
     ut_assert(mytable.first(&data) == (int)INVALID_KEY, "Failed to get error\n");
     ut_assert(mytable.length() == 0, "Failed to remove all entries\n");
 
-    return failures == 0 ? 0 : -1;
+    lua_pushboolean(L, lua_obj->failures == 0);
+    return 1;
 }
 
 /*--------------------------------------------------------------------------------------
  * testStress
  *--------------------------------------------------------------------------------------*/
-int UT_Table::testStress(int argc, char argv[][MAX_CMD_SIZE])
+int UT_Table::testStress(lua_State* L)
 {
-    (void)argc;
-    (void)argv;
+    UT_Table* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_Table*>(getLuaSelf(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
     int key, data = 0;
     const int size = 64;
@@ -424,7 +502,7 @@ int UT_Table::testStress(int argc, char argv[][MAX_CMD_SIZE])
     const int key_range = 0xFFFFFFFF;
     Table<int,int> mytable(size);
 
-    failures = 0;
+    lua_obj->failures = 0;
 
     /* Seed Random Number */
     srand((unsigned int)TimeLib::latchtime());
@@ -462,5 +540,6 @@ int UT_Table::testStress(int argc, char argv[][MAX_CMD_SIZE])
         ut_assert(mytable.length() == 0, "Failed to remove all entries\n");
     }
 
-    return failures == 0 ? 0 : -1;
+    lua_pushboolean(L, lua_obj->failures == 0);
+    return 1;
 }

@@ -36,7 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "CommandableObject.h"
+#include "LuaObject.h"
 #include "MsgQ.h"
 #include "OsApi.h"
 #include "core.h"
@@ -45,7 +45,7 @@
  * UNIT TEST TIME LIBRARY CLASS
  ******************************************************************************/
 
-class UT_TimeLib: public CommandableObject
+class UT_TimeLib: public LuaObject
 {
     public:
 
@@ -53,34 +53,39 @@ class UT_TimeLib: public CommandableObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char*      TYPE;
-        static const int64_t    Truth_Times[39][2];
-        TimeLib::gmt_time_t     Truth_GMT[39];
-        static const int        UNIX_Epoch_Start;
+        static const int64_t Truth_Times[39][2];
+        static const int UNIX_Epoch_Start;
+
+        static const char* OBJECT_TYPE;
+
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        static TimeLib::gmt_time_t Truth_GMT[39];
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static CommandableObject* createObject (CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE]);
+        static void init        (void);
+        static int  luaCreate   (lua_State* L);
 
     private:
 
         /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-            UT_TimeLib          (CommandProcessor* cmd_proc, const char* obj_name);
-            ~UT_TimeLib         (void) override;
-	int     CheckGmt2GpsCmd     (int argc, char argv[][MAX_CMD_SIZE]);
-	int     CheckGps2GmtCmd     (int argc, char argv[][MAX_CMD_SIZE]);
-	int     CheckGetCountCmd    (int argc, char argv[][MAX_CMD_SIZE]);
-	void    initTruthGMT        (void);
+    explicit    UT_TimeLib          (lua_State* L);
+                ~UT_TimeLib         (void) override;
+	static int  CheckGmt2GpsCmd     (lua_State* L);
+	static int  CheckGps2GmtCmd     (lua_State* L);
+	static int  CheckGetCountCmd    (lua_State* L);
+	void        initTruthGMT        (void);
 };
 
 #endif  /* __ut_timelib__ */

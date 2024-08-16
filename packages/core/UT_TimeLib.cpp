@@ -40,80 +40,105 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char*   UT_TimeLib::TYPE               = "UT_TimeLib";
 const int     UT_TimeLib::UNIX_Epoch_Start   = 1970;
 const int64_t UT_TimeLib::Truth_Times[39][2] = {
-  //UNIX (us)        //GPS (ms)
-  {315964800000000,  0},              // January 06, 1980
-  {347587200000000,  31622400000},    // January 06, 1981
-  {379123200000000,  63158401000},    // January 06, 1982
-  {410659200000000,  94694402000},    // January 06, 1983
-  {442195200000000,  126230403000},   // January 06, 1984
-  {473817600000000,  157852803000},   // January 06, 1985
-  {505353600000000,  189388804000},   // January 06, 1986
-  {536889600000000,  220924804000},   // January 06, 1987
-  {568425600000000,  252460805000},   // January 06, 1988
-  {600048000000000,  284083205000},   // January 06, 1989
-  {631584000000000,  315619206000},   // January 06, 1990
-  {663120000000000,  347155207000},   // January 06, 1991
-  {694656000000000,  378691207000},   // January 06, 1992
-  {726278400000000,  410313608000},   // January 06, 1993
-  {757814400000000,  441849609000},   // January 06, 1994
-  {789350400000000,  473385610000},   // January 06, 1995
-  {820886400000000,  504921611000},   // January 06, 1996
-  {852508800000000,  536544011000},   // January 06, 1997
-  {884044800000000,  568080012000},   // January 06, 1998
-  {915580800000000,  599616013000},   // January 06, 1999
-  {947116800000000,  631152013000},   // January 06, 2000
-  {978739200000000,  662774413000},   // January 06, 2001
-  {1010275200000000, 694310413000},   // January 06, 2002
-  {1041811200000000, 725846413000},   // January 06, 2003
-  {1073347200000000, 757382413000},   // January 06, 2004
-  {1104969600000000, 789004813000},   // January 06, 2005
-  {1136505600000000, 820540814000},   // January 06, 2006
-  {1168041600000000, 852076814000},   // January 06, 2007
-  {1199577600000000, 883612814000},   // January 06, 2008
-  {1231200000000000, 915235215000},   // January 06, 2009
-  {1262736000000000, 946771215000},   // January 06, 2010
-  {1294272000000000, 978307215000},   // January 06, 2011
-  {1325808000000000, 1009843215000},  // January 06, 2012
-  {1357430400000000, 1041465616000},  // January 06, 2013
-  {1388966400000000, 1073001616000},  // January 06, 2014
-  {1420502400000000, 1104537616000},  // January 06, 2015
-  {1452038400000000, 1136073617000},  // January 06, 2016
-  {1483660800000000, 1167696018000},  // January 06, 2017
-  {1515196800000000, 1199232018000}   // January 06, 2018
+    //UNIX (us)        //GPS (ms)
+    {315964800000000,  0},              // January 06, 1980
+    {347587200000000,  31622400000},    // January 06, 1981
+    {379123200000000,  63158401000},    // January 06, 1982
+    {410659200000000,  94694402000},    // January 06, 1983
+    {442195200000000,  126230403000},   // January 06, 1984
+    {473817600000000,  157852803000},   // January 06, 1985
+    {505353600000000,  189388804000},   // January 06, 1986
+    {536889600000000,  220924804000},   // January 06, 1987
+    {568425600000000,  252460805000},   // January 06, 1988
+    {600048000000000,  284083205000},   // January 06, 1989
+    {631584000000000,  315619206000},   // January 06, 1990
+    {663120000000000,  347155207000},   // January 06, 1991
+    {694656000000000,  378691207000},   // January 06, 1992
+    {726278400000000,  410313608000},   // January 06, 1993
+    {757814400000000,  441849609000},   // January 06, 1994
+    {789350400000000,  473385610000},   // January 06, 1995
+    {820886400000000,  504921611000},   // January 06, 1996
+    {852508800000000,  536544011000},   // January 06, 1997
+    {884044800000000,  568080012000},   // January 06, 1998
+    {915580800000000,  599616013000},   // January 06, 1999
+    {947116800000000,  631152013000},   // January 06, 2000
+    {978739200000000,  662774413000},   // January 06, 2001
+    {1010275200000000, 694310413000},   // January 06, 2002
+    {1041811200000000, 725846413000},   // January 06, 2003
+    {1073347200000000, 757382413000},   // January 06, 2004
+    {1104969600000000, 789004813000},   // January 06, 2005
+    {1136505600000000, 820540814000},   // January 06, 2006
+    {1168041600000000, 852076814000},   // January 06, 2007
+    {1199577600000000, 883612814000},   // January 06, 2008
+    {1231200000000000, 915235215000},   // January 06, 2009
+    {1262736000000000, 946771215000},   // January 06, 2010
+    {1294272000000000, 978307215000},   // January 06, 2011
+    {1325808000000000, 1009843215000},  // January 06, 2012
+    {1357430400000000, 1041465616000},  // January 06, 2013
+    {1388966400000000, 1073001616000},  // January 06, 2014
+    {1420502400000000, 1104537616000},  // January 06, 2015
+    {1452038400000000, 1136073617000},  // January 06, 2016
+    {1483660800000000, 1167696018000},  // January 06, 2017
+    {1515196800000000, 1199232018000}   // January 06, 2018
 };
 
+const char* UT_TimeLib::OBJECT_TYPE = "UT_TimeLib";
+
+const char* UT_TimeLib::LUA_META_NAME = "UT_TimeLib";
+const struct luaL_Reg UT_TimeLib::LUA_META_TABLE[] = {
+    {"gmt2gps",     CheckGmt2GpsCmd},
+    {"gps2gmt",     CheckGps2GmtCmd},
+    {"getcount",    CheckGetCountCmd},
+    {NULL,          NULL}
+};
+
+TimeLib::gmt_time_t UT_TimeLib::Truth_GMT[39];
 
 /******************************************************************************
- * PUBLIC METHODS
+ * METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * createObject  -
+ * luaCreate -
  *----------------------------------------------------------------------------*/
-CommandableObject* UT_TimeLib::createObject(CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE])
+int UT_TimeLib::luaCreate (lua_State* L)
 {
-    (void)argc;
-    (void)argv;
-
-    /* Create Message Queue Unit Test */
-    return new UT_TimeLib(cmd_proc, name);
+    try
+    {
+        /* Create Unit Test */
+        return createLuaObject(L, new UT_TimeLib(L));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        return returnLuaStatus(L, false);
+    }
 }
 
 /*----------------------------------------------------------------------------
- * Constructor  -
+ * Constructor
  *----------------------------------------------------------------------------*/
-UT_TimeLib::UT_TimeLib(CommandProcessor* cmd_proc, const char* obj_name):
-    CommandableObject(cmd_proc, obj_name, TYPE)
+void UT_TimeLib::init (void)
 {
-    initTruthGMT();
+    for (int i = 0; i < 39; i++)
+    {
+        Truth_GMT[i].millisecond = 0;
+        Truth_GMT[i].second      = 0;
+        Truth_GMT[i].minute      = 0;
+        Truth_GMT[i].hour        = 0;
+        Truth_GMT[i].doy         = 6;
+        Truth_GMT[i].year        = 1980 + i;
+    }
+}
 
-    /* Register Commands */
-    registerCommand("CHECK_GMT_2_GPS", (cmdFunc_t)&UT_TimeLib::CheckGmt2GpsCmd,  0, "");
-    registerCommand("CHECK_GPS_2_GMT", (cmdFunc_t)&UT_TimeLib::CheckGps2GmtCmd,  0, "");
-    registerCommand("CHECK_GET_COUNT", (cmdFunc_t)&UT_TimeLib::CheckGetCountCmd, 0, "");
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+UT_TimeLib::UT_TimeLib (lua_State* L):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
+{
 }
 
 /*----------------------------------------------------------------------------
@@ -126,10 +151,9 @@ UT_TimeLib::~UT_TimeLib(void) = default;
  *
  *  Checks that a SYS time is converted to the correct GPS time
  *----------------------------------------------------------------------------*/
-int UT_TimeLib::CheckGetCountCmd(int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
+int UT_TimeLib::CheckGetCountCmd(lua_State* L) // NOLINT(readability-convert-member-functions-to-static)
 {
-  (void)argc;
-  (void)argv;
+  bool status = true;
   for (int i = 0; i < 39; i++)
   {
     const int64_t gps_ms = TimeLib::sys2gpstime(Truth_Times[i][0]);
@@ -137,10 +161,11 @@ int UT_TimeLib::CheckGetCountCmd(int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(
     {
       print2term("Calculated: %lld\n", (long long)gps_ms);
       print2term("Truth Time: %lld\n", (long long)Truth_Times[i][1]);
-      return -1;
+      status = false;
     }
   }
-  return 0;
+  lua_pushboolean(L, status);
+  return 1;
 }
 
 /*----------------------------------------------------------------------------
@@ -148,10 +173,9 @@ int UT_TimeLib::CheckGetCountCmd(int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(
  *
  *  Checks that a GPS time is converted to the correct GMT time
  *----------------------------------------------------------------------------*/
-int UT_TimeLib::CheckGps2GmtCmd(int argc, char argv[][MAX_CMD_SIZE])
+int UT_TimeLib::CheckGps2GmtCmd(lua_State* L)
 {
-  (void)argc;
-  (void)argv;
+  bool status = true;
   for (int i = 0; i < 39; ++i)
   {
     const TimeLib::gmt_time_t gmt_time = TimeLib::gps2gmttime(Truth_Times[i][1]);
@@ -167,10 +191,11 @@ int UT_TimeLib::CheckGps2GmtCmd(int argc, char argv[][MAX_CMD_SIZE])
     {
       print2term("Calculated - Year: %d, DOY: %d, Hour: %d, Minute: %d, second: %d, millisecond: %d\n", gmt_time.year, gmt_time.doy, gmt_time.hour, gmt_time.minute, gmt_time.second, gmt_time.millisecond);
       print2term("Truth      - Year: %d, DOY: %d, Hour: %d, Minute: %d, second: %d, millisecond: %d\n", Truth_GMT[i].year, Truth_GMT[i].doy, Truth_GMT[i].hour, Truth_GMT[i].minute, Truth_GMT[i].second, Truth_GMT[i].millisecond);
-      return -1;
+      status = false;
     }
   }
-  return 0;
+  lua_pushboolean(L, status);
+  return 1;
 }
 
 /*----------------------------------------------------------------------------
@@ -178,10 +203,8 @@ int UT_TimeLib::CheckGps2GmtCmd(int argc, char argv[][MAX_CMD_SIZE])
  *
  *  Checks that a GMT time is converted to the correct GPS time
  *----------------------------------------------------------------------------*/
-int UT_TimeLib::CheckGmt2GpsCmd(int argc, char argv[][MAX_CMD_SIZE])
+int UT_TimeLib::CheckGmt2GpsCmd(lua_State* L)
 {
-  (void)argc;
-  (void)argv;
   for (int i = 0; i < 39; ++i)
   {
     const int64_t gps_time = TimeLib::gmt2gpstime(Truth_GMT[i]);
@@ -189,24 +212,10 @@ int UT_TimeLib::CheckGmt2GpsCmd(int argc, char argv[][MAX_CMD_SIZE])
     {
       print2term("Calculated: %lld\n", (long long)gps_time);
       print2term("Truth:      %lld\n", (long long)Truth_Times[i][1]);
-      return -1;
+      lua_pushboolean(L, false);
+      return 1;
     }
   }
-  return 0;
-}
-
-/*----------------------------------------------------------------------------
- * initTruthGMT
- *----------------------------------------------------------------------------*/
-void UT_TimeLib::initTruthGMT(void)
-{
-  for (int i = 0; i < 39; i++)
-  {
-    Truth_GMT[i].millisecond = 0;
-    Truth_GMT[i].second      = 0;
-    Truth_GMT[i].minute      = 0;
-    Truth_GMT[i].hour        = 0;
-    Truth_GMT[i].doy         = 6;
-    Truth_GMT[i].year        = 1980 + i;
-  }
+  lua_pushboolean(L, true);
+  return 1;
 }

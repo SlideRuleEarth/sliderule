@@ -2,11 +2,10 @@ local runner = require("test_executive")
 
 -- TimeLib Unit Test --
 
-runner.command("NEW UT_TIMELIB ut_timelib")
-runner.command("ut_timelib::CHECK_GMT_2_GPS")
-runner.command("ut_timelib::CHECK_GPS_2_GMT")
-runner.command("ut_timelib::CHECK_GET_COUNT")
-runner.command("DELETE ut_timelib")
+local ut_timelib = core.ut_timelib()
+runner.check(ut_timelib:gmt2gps())
+runner.check(ut_timelib:gps2gmt())
+runner.check(ut_timelib:getcount())
 
 -- Lua Time Unit Tests --
 

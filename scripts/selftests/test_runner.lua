@@ -15,6 +15,15 @@ if __core__ then
     runner.script(td .. "http_faults.lua")
     runner.script(td .. "http_rqst.lua")
     runner.script(td .. "lua_script.lua")
+    runner.script(td .. "message_queue.lua")
+    runner.script(td .. "list.lua")
+    runner.script(td .. "ordering.lua")
+    runner.script(td .. "dictionary.lua")
+    runner.script(td .. "table.lua")
+    runner.script(td .. "timelib.lua")
+--    runner.script(td .. "ccsds_packetizer.lua")
+--    runner.script(td .. "record_dispatcher.lua")
+--    runner.script(td .. "limit_dispatch.lua")
 end
 
 -- Run AWS Self Tests --
@@ -48,19 +57,6 @@ end
 -- Run Network Services Self Tests
 if __netsvc__ then
     runner.script(td .. "earth_data.lua")
-end
-
--- Run Legacy Self Tests --
-if __legacy__ then
-    runner.script(td .. "message_queue.lua")
-    runner.script(td .. "list.lua")
-    runner.script(td .. "ordering.lua")
-    runner.script(td .. "dictionary.lua")
-    runner.script(td .. "table.lua")
-    runner.script(td .. "timelib.lua")
-    runner.script(td .. "ccsds_packetizer.lua")
-    runner.script(td .. "record_dispatcher.lua")
-    runner.script(td .. "limit_dispatch.lua")
 end
 
 -- Run ICESat-2 Plugin Self Tests

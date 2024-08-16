@@ -1,17 +1,16 @@
 local runner = require("test_executive")
 local console = require("console")
 
--- Table Unit Test --
+-- Unit Test --
 
-runner.command("NEW UT_TABLE ut_table")
-runner.command("ut_table::ADD_REMOVE")
-runner.command("ut_table::CHAINING")
-runner.command("ut_table::REMOVING")
-runner.command("ut_table::DUPLICATES")
-runner.command("ut_table::FULL_TABLE")
-runner.command("ut_table::COLLISIONS")
-runner.command("ut_table::STRESS")
-runner.command("DELETE ut_table")
+local ut_table = core.ut_table()
+runner.check(ut_table:addremove())
+runner.check(ut_table:chaining())
+runner.check(ut_table:removing())
+runner.check(ut_table:duplicates())
+runner.check(ut_table:fulltable())
+runner.check(ut_table:collisions())
+runner.check(ut_table:stress())
 
 -- Report Results --
 

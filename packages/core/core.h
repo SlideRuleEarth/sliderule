@@ -95,6 +95,9 @@
 #include "UT_List.h"
 #include "UT_MsgQ.h"
 #include "UT_Ordering.h"
+#include "UT_String.h"
+#include "UT_Table.h"
+#include "UT_TimeLib.h"
 #endif
 
 /******************************************************************************

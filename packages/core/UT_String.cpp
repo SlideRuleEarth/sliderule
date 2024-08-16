@@ -166,7 +166,7 @@ int UT_String::testReplace(lua_State* L)
     const char* newtxt[2] = { "sentence", "not" };
     char* test3 = StringLib::replace("This is a long $1 and I am $2 sure if this $1 will work or $2", oldtxt, newtxt, 2);
     ut_assert(StringLib::match(test3, "This is a long sentence and I am not sure if this sentence will work or not"), "Failed multiple replacements: %s", test3);
-    delete test3;
+    delete [] test3;
 
     // return success or failure
     lua_pushboolean(L, lua_obj->failures == 0);
