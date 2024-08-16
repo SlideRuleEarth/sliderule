@@ -73,7 +73,7 @@ class UT_Dictionary: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        UT_Dictionary (lua_State* L);
+        explicit UT_Dictionary (lua_State* L);
         ~UT_Dictionary (void) override;
 
         static int  functionalUnitTestCmd   (lua_State* L);

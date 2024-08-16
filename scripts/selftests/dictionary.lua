@@ -3,13 +3,12 @@ local td = runner.rootdir(arg[0])
 
 -- Dictionary Unit Test --
 
-runner.command("NEW UT_DICTIONARY ut_dictionary")
-runner.command(string.format('ut_dictionary::ADD_WORD_SET small %s/alphabet_words.txt 26', td))
-runner.command(string.format('ut_dictionary::ADD_WORD_SET large %s/english_words.txt 354983', td))
-runner.command("ut_dictionary::FUNCTIONAL_TEST small")
-runner.command("ut_dictionary::FUNCTIONAL_TEST large")
-runner.command("ut_dictionary::ITERATOR_TEST small")
-runner.command("DELETE ut_dictionary")
+local ut = core.ut_dictionary()
+runner.check(ut:add_wordset("small", td.."/alphabet_words.txt", 26))
+runner.check(ut:add_wordset("large", td.."/english_words.txt", 354983))
+runner.check(ut:functional("small"))
+runner.check(ut:functional("large"))
+runner.check(ut:iterator("small"))
 
 -- Report Results --
 

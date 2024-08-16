@@ -62,7 +62,6 @@ int icesat2_open (lua_State *L)
         {"atl13s",              Atl13Reader::luaCreate},
 #ifdef __unittesting__
         {"ut_atl06",            UT_Atl06Dispatch::luaCreate},
-        {"ut_atl03",            UT_Atl03Reader::luaCreate},
 #endif
         {NULL,                  NULL}
     };

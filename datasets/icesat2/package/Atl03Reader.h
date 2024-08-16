@@ -332,9 +332,6 @@ class Atl03Reader: public LuaObject
         static void         parseResource               (const char* resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region);
 
         static int          luaStats                    (lua_State* L);
-
-        /* Unit Tests */
-        friend class UT_Atl03Reader;
 };
 
 #endif  /* __atl03_reader__ */
