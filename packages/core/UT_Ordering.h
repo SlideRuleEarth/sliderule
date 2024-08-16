@@ -36,14 +36,14 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "CommandableObject.h"
+#include "LuaObject.h"
 #include "core.h"
 
 /******************************************************************************
  * UNIT TEST ORDERING CLASS
  ******************************************************************************/
 
-class UT_Ordering: public CommandableObject
+class UT_Ordering: public LuaObject
 {
     public:
 
@@ -51,14 +51,18 @@ class UT_Ordering: public CommandableObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* TYPE;
         static const int UT_MAX_ASSERT = 256;
+
+        static const char* OBJECT_TYPE;
+
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static CommandableObject* createObject (CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE]);
+        static int  luaCreate   (lua_State* L);
 
     private:
 
@@ -72,16 +76,16 @@ class UT_Ordering: public CommandableObject
          * Methods
          *--------------------------------------------------------------------*/
 
-            UT_Ordering         (CommandProcessor* cmd_proc, const char* obj_name);
-            ~UT_Ordering        (void) override;
+    explicit    UT_Ordering     (lua_State* L);
+                ~UT_Ordering    (void) override;
 
-    bool    _ut_assert          (bool e, const char* file, int line, const char* fmt, ...);
+    bool        _ut_assert      (bool e, const char* file, int line, const char* fmt, ...);
 
-	int     testAddRemove       (int argc, char argv[][MAX_CMD_SIZE]);
-	int     testDuplicates      (int argc, char argv[][MAX_CMD_SIZE]);
-	int     testSort            (int argc, char argv[][MAX_CMD_SIZE]);
-	int     testIterator        (int argc, char argv[][MAX_CMD_SIZE]);
-	int     testAssignment      (int argc, char argv[][MAX_CMD_SIZE]);
+	static int  testAddRemove   (lua_State* L);
+	static int  testDuplicates  (lua_State* L);
+	static int  testSort        (lua_State* L);
+	static int  testIterator    (lua_State* L);
+	static int  testAssignment  (lua_State* L);
 };
 
 #endif  /* __ut_ordering__ */

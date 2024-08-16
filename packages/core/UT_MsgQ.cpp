@@ -37,38 +37,53 @@
 #include "core.h"
 
 /******************************************************************************
+ * DEFINES
+ ******************************************************************************/
+
+#define MAX_SUBSCRIBERS 15
+
+/******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* UT_MsgQ::TYPE = "UT_MsgQ";
+const char* UT_MsgQ::OBJECT_TYPE = "UT_MsgQ";
+
+const char* UT_MsgQ::LUA_META_NAME = "UT_MsgQ";
+const struct luaL_Reg UT_MsgQ::LUA_META_TABLE[] = {
+    {"blocking_receive",            blockingReceiveUnitTestCmd},
+    {"subscribe_unsubscribe",       subscribeUnsubscribeUnitTestCmd},
+    {"performance",                 performanceUnitTestCmd},
+    {"subscriber_of_opportunity",   subscriberOfOpporunityUnitTestCmd},
+    {NULL,                          NULL}
+};
 
 /******************************************************************************
- * PUBLIC METHODS
+ * METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * createObject  -
+ * luaCreate -
  *----------------------------------------------------------------------------*/
-CommandableObject* UT_MsgQ::createObject(CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE])
+int UT_MsgQ::luaCreate (lua_State* L)
 {
-    (void)argc;
-    (void)argv;
-
-    /* Create Message Queue Unit Test */
-    return new UT_MsgQ(cmd_proc, name);
+    try
+    {
+        /* Create Unit Test */
+        return createLuaObject(L, new UT_MsgQ(L));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        return returnLuaStatus(L, false);
+    }
 }
 
 /*----------------------------------------------------------------------------
- * Constructor  -
+ * Constructor
  *----------------------------------------------------------------------------*/
-UT_MsgQ::UT_MsgQ(CommandProcessor* cmd_proc, const char* obj_name):
-    CommandableObject(cmd_proc, obj_name, TYPE)
+UT_MsgQ::UT_MsgQ (lua_State* L):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
-    /* Register Commands */
-    registerCommand("BLOCKING_RECEIVE_TEST", static_cast<cmdFunc_t>(&UT_MsgQ::blockingReceiveUnitTestCmd), 0, "");
-    registerCommand("SUBSCRIBE_UNSUBSCRIBE_TEST", static_cast<cmdFunc_t>(&UT_MsgQ::subscribeUnsubscribeUnitTestCmd), 0, "");
-    registerCommand("PERFORMANCE_TEST", static_cast<cmdFunc_t>(&UT_MsgQ::performanceUnitTestCmd), 0, "[<depth> <size>]");
-    registerCommand("SUBSCRIBER_OF_OPPORTUNITY_TEST", static_cast<cmdFunc_t>(&UT_MsgQ::subscriberOfOpporunityUnitTestCmd), 0, "");
 }
 
 /*----------------------------------------------------------------------------
@@ -79,10 +94,20 @@ UT_MsgQ::~UT_MsgQ(void) = default;
 /*----------------------------------------------------------------------------
  * blockingReceiveUnitTestCmd  -
  *----------------------------------------------------------------------------*/
-int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
+int UT_MsgQ::blockingReceiveUnitTestCmd (lua_State* L) // NOLINT(readability-convert-member-functions-to-static)
 {
-    (void)argc;
-    (void)argv;
+    UT_MsgQ* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_MsgQ*>(getLuaSelf(L, 1));
+        (void)lua_obj; // unused below
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
     bool test_status = true;
 
@@ -161,17 +186,27 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) //
     delete pubq;
     delete subq;
 
-    if(test_status) return 0;
-    else            return -1;
+    lua_pushboolean(L, test_status);
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
  * subscriberThread  -
  *----------------------------------------------------------------------------*/
-int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
+int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (lua_State* L) // NOLINT(readability-convert-member-functions-to-static)
 {
-    (void)argc;
-    (void)argv;
+    UT_MsgQ* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_MsgQ*>(getLuaSelf(L, 1));
+        (void)lua_obj; // unused below
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
     bool test_status = true;
 
@@ -270,39 +305,33 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE
     delete [] subparms;
 
     /* Return */
-    if(test_status) return 0;
-    else            return -1;
+    lua_pushboolean(L, test_status);
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
  * performanceUnitTestCmd  -
  *----------------------------------------------------------------------------*/
-int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
+int UT_MsgQ::performanceUnitTestCmd (lua_State* L) // NOLINT(readability-convert-member-functions-to-static)
 {
     long depth = 500000;
     long size = 1000;
     bool failure = false;
 
-    /* Parse Inputs */
-    if(argc == 2)
+    UT_MsgQ* lua_obj = NULL;
+    try
     {
-        const char* depth_str = argv[0];
-        const char* size_str = argv[1];
-        if(StringLib::str2long(depth_str, &depth) == false)
-        {
-            print2term("[%d] ERROR: unable to parse depth\n", __LINE__);
-            return -1;
-        }
-        else if(StringLib::str2long(size_str, &size) == false)
-        {
-            print2term("[%d] ERROR: unable to parse size\n", __LINE__);
-            return -1;
-        }
+        lua_obj = dynamic_cast<UT_MsgQ*>(getLuaSelf(L, 1));
+        (void)lua_obj; // unused below
+
+        depth = getLuaInteger(L, 2, true, depth);
+        size = getLuaInteger(L, 3, true, size);
     }
-    else if(argc != 0)
+    catch(const RunTimeException& e)
     {
-        print2term("Invalid number of parameters passed to command: %d\n", argc);
-        return -1;
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
     }
 
     /* Create Performance Test Data Structures */
@@ -385,17 +414,27 @@ int UT_MsgQ::performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOL
     /* Delete Test Structures */
     delete p;
 
-    if(failure) return -1;
-    else        return 0;
+    lua_pushboolean(L, !failure);
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
  * subscriberOfOpporunityUnitTestCmd  -
  *----------------------------------------------------------------------------*/
-int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLINT(readability-convert-member-functions-to-static)
+int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (lua_State* L) // NOLINT(readability-convert-member-functions-to-static)
 {
-    (void)argc;
-    (void)argv;
+    UT_MsgQ* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_MsgQ*>(getLuaSelf(L, 1));
+        (void)lua_obj; // unused below
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
     bool test_status = true;
 
@@ -483,8 +522,8 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SI
     delete [] subparms;
 
     /* Return */
-    if(test_status) return 0;
-    else            return -1;
+    lua_pushboolean(L, test_status);
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

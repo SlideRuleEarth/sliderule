@@ -4,15 +4,14 @@ local console = require("console")
 --console.monitor:config(core.LOG, core.DEBUG)
 --sys.setlvl(core.LOG, core.DEBUG)
 
--- Table Unit Test --
+-- Unit Test --
 
-runner.command("NEW UT_ORDERING ut_ordering")
-runner.command("ut_ordering::ADD_REMOVE")
-runner.command("ut_ordering::DUPLICATES")
-runner.command("ut_ordering::SORT")
-runner.command("ut_ordering::ITERATE")
-runner.command("ut_ordering::ASSIGN")
-runner.command("DELETE ut_ordering")
+local ut_ordering = core.ut_ordering()
+runner.check(ut_ordering:addremove())
+runner.check(ut_ordering:duplicates())
+runner.check(ut_ordering:sort())
+runner.check(ut_ordering:iterator())
+runner.check(ut_ordering:assignment())
 
 -- Report Results --
 

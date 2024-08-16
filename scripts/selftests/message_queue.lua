@@ -2,11 +2,10 @@ local runner = require("test_executive")
 
 -- Message Queue Unit Test --
 
-runner.command("NEW UT_MSGQ ut_msgq")
-runner.command("ut_msgq::BLOCKING_RECEIVE_TEST")
-runner.command("ut_msgq::SUBSCRIBE_UNSUBSCRIBE_TEST")
-runner.command("ut_msgq::SUBSCRIBER_OF_OPPORTUNITY_TEST")
-runner.command("DELETE ut_msgq")
+local ut_msgq = core.ut_msgq()
+runner.check(ut_msgq:blocking_receive())
+runner.check(ut_msgq:subscribe_unsubscribe())
+runner.check(ut_msgq:subscriber_of_opportunity())
 
 -- Report Results --
 

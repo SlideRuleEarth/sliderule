@@ -36,7 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "CommandableObject.h"
+#include "LuaObject.h"
 #include "MsgQ.h"
 #include "OsApi.h"
 
@@ -44,7 +44,7 @@
  * UNIT TEST MSGQ CLASS
  ******************************************************************************/
 
-class UT_MsgQ: public CommandableObject
+class UT_MsgQ: public LuaObject
 {
     public:
 
@@ -52,14 +52,16 @@ class UT_MsgQ: public CommandableObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* TYPE;
-        static const int MAX_SUBSCRIBERS = 15;
+        static const char* OBJECT_TYPE;
+
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static CommandableObject* createObject (CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE]);
+        static int  luaCreate   (lua_State* L);
 
     private:
 
@@ -90,20 +92,20 @@ class UT_MsgQ: public CommandableObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        UT_MsgQ (CommandProcessor* cmd_proc, const char* obj_name);
+        explicit UT_MsgQ (lua_State* L);
         ~UT_MsgQ (void) override;
 
-        int blockingReceiveUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]);
-        int subscribeUnsubscribeUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]);
-        int performanceUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]);
-        int subscriberOfOpporunityUnitTestCmd (int argc, char argv[][MAX_CMD_SIZE]);
+        static int blockingReceiveUnitTestCmd           (lua_State* L);
+        static int subscribeUnsubscribeUnitTestCmd      (lua_State* L);
+        static int performanceUnitTestCmd               (lua_State* L);
+        static int subscriberOfOpporunityUnitTestCmd    (lua_State* L);
 
-        static void* subscriberThread (void* parm);
-        static void* publisherThread (void* parm);
-        static void* performanceThread (void* parm);
-        static void* opportunityThread (void* parm);
+        static void* subscriberThread   (void* parm);
+        static void* publisherThread    (void* parm);
+        static void* performanceThread  (void* parm);
+        static void* opportunityThread  (void* parm);
 
-        static void randomDelay(long max_milliseconds);
+        static void randomDelay (long max_milliseconds);
 };
 
 #endif  /* __ut_msgq__ */

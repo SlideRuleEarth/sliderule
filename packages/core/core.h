@@ -93,6 +93,8 @@
 #ifdef __unittesting__
 #include "UT_Dictionary.h"
 #include "UT_List.h"
+#include "UT_MsgQ.h"
+#include "UT_Ordering.h"
 #endif
 
 /******************************************************************************

@@ -101,6 +101,8 @@ static int core_open (lua_State *L)
 #ifdef __unittesting__
         {"ut_dictionary",   UT_Dictionary::luaCreate},
         {"ut_list",         UT_List::luaCreate},
+        {"ut_msgq",         UT_MsgQ::luaCreate},
+        {"ut_ordering",     UT_Ordering::luaCreate},
 #endif
         {NULL,              NULL}
     };

@@ -62,6 +62,8 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/UdpSocket.cpp
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Dictionary.cpp>
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_List.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_MsgQ.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Ordering.cpp>
 )
 
 target_include_directories (slideruleLib
@@ -126,6 +128,8 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/UdpSocket.h
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Dictionary.h>
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_List.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_MsgQ.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Ordering.h>
     DESTINATION
         ${INCDIR}
 )

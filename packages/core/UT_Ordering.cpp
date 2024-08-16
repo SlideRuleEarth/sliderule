@@ -43,47 +43,56 @@
 
 #define ut_assert(e,...)    \
     try { \
-        UT_Ordering::_ut_assert(e,__FILE__,__LINE__,__VA_ARGS__); \
+        lua_obj->_ut_assert(e,__FILE__,__LINE__,__VA_ARGS__); \
     } catch(const RunTimeException& x) { \
         print2term("Caught exception: %s\n", x.what()); \
-        UT_Ordering::_ut_assert(false,__FILE__,__LINE__,__VA_ARGS__); \
+        lua_obj->_ut_assert(false,__FILE__,__LINE__,__VA_ARGS__); \
     };
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* UT_Ordering::TYPE = "UT_Ordering";
+const char* UT_Ordering::OBJECT_TYPE = "UT_Ordering";
+
+const char* UT_Ordering::LUA_META_NAME = "UT_Ordering";
+const struct luaL_Reg UT_Ordering::LUA_META_TABLE[] = {
+    {"addremove",   testAddRemove},
+    {"duplicates",  testDuplicates},
+    {"sort",        testSort},
+    {"iterator",    testIterator},
+    {"assignment",  testAssignment},
+    {NULL,          NULL}
+};
 
 /******************************************************************************
- * PUBLIC METHODS
+ * METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * createObject  -
+ * luaCreate -
  *----------------------------------------------------------------------------*/
-CommandableObject* UT_Ordering::createObject(CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE])
+int UT_Ordering::luaCreate (lua_State* L)
 {
-    (void)argc;
-    (void)argv;
-
-    /* Create Message Queue Unit Test */
-    return new UT_Ordering(cmd_proc, name);
+    try
+    {
+        /* Create Unit Test */
+        return createLuaObject(L, new UT_Ordering(L));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        return returnLuaStatus(L, false);
+    }
 }
 
 /*----------------------------------------------------------------------------
- * Constructor  -
+ * Constructor
  *----------------------------------------------------------------------------*/
-UT_Ordering::UT_Ordering(CommandProcessor* cmd_proc, const char* obj_name):
-    CommandableObject(cmd_proc, obj_name, TYPE),
+UT_Ordering::UT_Ordering (lua_State* L):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     failures(0)
 {
-    /* Register Commands */
-    registerCommand("ADD_REMOVE", (cmdFunc_t)&UT_Ordering::testAddRemove,  0, "");
-    registerCommand("DUPLICATES", (cmdFunc_t)&UT_Ordering::testDuplicates, 0, "");
-    registerCommand("SORT",       (cmdFunc_t)&UT_Ordering::testSort,       0, "");
-    registerCommand("ITERATE",    (cmdFunc_t)&UT_Ordering::testIterator,   0, "");
-    registerCommand("ASSIGN",     (cmdFunc_t)&UT_Ordering::testAssignment, 0, "");
 }
 
 /*----------------------------------------------------------------------------
@@ -137,12 +146,21 @@ bool UT_Ordering::_ut_assert(bool e, const char* file, int line, const char* fmt
 /*--------------------------------------------------------------------------------------
  * testAddRemove
  *--------------------------------------------------------------------------------------*/
-int UT_Ordering::testAddRemove(int argc, char argv[][MAX_CMD_SIZE])
+int UT_Ordering::testAddRemove(lua_State* L)
 {
-    (void)argc;
-    (void)argv;
+    UT_Ordering* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_Ordering*>(getLuaSelf(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
-    failures = 0;
+    lua_obj->failures = 0;
     Ordering<int,int> mylist;
 
     // add initial set
@@ -182,18 +200,28 @@ int UT_Ordering::testAddRemove(int argc, char argv[][MAX_CMD_SIZE])
     for(int i = 67; i < 75; i++) ut_assert(mylist[i] == i, "failed to keep %d\n", i);
 
     // return success or failure
-    return failures == 0 ? 0 : -1;
+    lua_pushboolean(L, lua_obj->failures == 0);
+    return 1;
 }
 
 /*--------------------------------------------------------------------------------------
  * testDuplicates
  *--------------------------------------------------------------------------------------*/
-int UT_Ordering::testDuplicates(int argc, char argv[][MAX_CMD_SIZE])
+int UT_Ordering::testDuplicates(lua_State* L)
 {
-    (void)argc;
-    (void)argv;
+    UT_Ordering* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_Ordering*>(getLuaSelf(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
-    failures = 0;
+    lua_obj->failures = 0;
     Ordering<int,int> mylist;
 
     // add initial set
@@ -215,18 +243,28 @@ int UT_Ordering::testDuplicates(int argc, char argv[][MAX_CMD_SIZE])
     }
 
     // return success or failure
-    return failures == 0 ? 0 : -1;
+    lua_pushboolean(L, lua_obj->failures == 0);
+    return 1;
 }
 
 /*--------------------------------------------------------------------------------------
  * testSort
  *--------------------------------------------------------------------------------------*/
-int UT_Ordering::testSort(int argc, char argv[][MAX_CMD_SIZE])
+int UT_Ordering::testSort(lua_State* L)
 {
-    (void)argc;
-    (void)argv;
+    UT_Ordering* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_Ordering*>(getLuaSelf(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
-    failures = 0;
+    lua_obj->failures = 0;
 
     // in order
     Ordering<int,int> mylist1;
@@ -267,18 +305,28 @@ int UT_Ordering::testSort(int argc, char argv[][MAX_CMD_SIZE])
     d = 0; mylist3.add(0, d);
     for(int i = 0; i < 20; i++) ut_assert(mylist3[i] == i, "failed to sort %d\n", i);
 
-    return failures == 0 ? 0 : -1;
+    lua_pushboolean(L, lua_obj->failures == 0);
+    return 1;
 }
 
 /*--------------------------------------------------------------------------------------
  * testIterator
  *--------------------------------------------------------------------------------------*/
-int UT_Ordering::testIterator(int argc, char argv[][MAX_CMD_SIZE])
+int UT_Ordering::testIterator(lua_State* L)
 {
-    (void)argc;
-    (void)argv;
+    UT_Ordering* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_Ordering*>(getLuaSelf(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
-    failures = 0;
+    lua_obj->failures = 0;
 
     Ordering<int,int> mylist;
 
@@ -295,18 +343,28 @@ int UT_Ordering::testIterator(int argc, char argv[][MAX_CMD_SIZE])
         ut_assert(iterator[i].value == (i + 1), "failed to iterate value %d\n", i + 1);
     }
 
-    return failures == 0 ? 0 : -1;
+    lua_pushboolean(L, lua_obj->failures == 0);
+    return 1;
 }
 
 /*--------------------------------------------------------------------------------------
  * testAssignment
  *--------------------------------------------------------------------------------------*/
-int UT_Ordering::testAssignment(int argc, char argv[][MAX_CMD_SIZE])
+int UT_Ordering::testAssignment(lua_State* L)
 {
-    (void)argc;
-    (void)argv;
+    UT_Ordering* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_Ordering*>(getLuaSelf(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
-    failures = 0;
+    lua_obj->failures = 0;
     Ordering<int,int> mylist;
 
     // add initial set
@@ -341,5 +399,6 @@ int UT_Ordering::testAssignment(int argc, char argv[][MAX_CMD_SIZE])
     for(int i = 67; i < 75; i++) ut_assert(copiedlist[i] == i, "failed to keep %d\n", i);
 
     // return success or failure
-    return failures == 0 ? 0 : -1;
+    lua_pushboolean(L, lua_obj->failures == 0);
+    return 1;
 }

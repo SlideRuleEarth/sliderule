@@ -36,14 +36,14 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "CommandableObject.h"
+#include "LuaObject.h"
 #include "core.h"
 
 /******************************************************************************
  * UNIT TEST STRING CLASS
  ******************************************************************************/
 
-class UT_String: public CommandableObject
+class UT_String: public LuaObject
 {
     public:
 
@@ -51,14 +51,18 @@ class UT_String: public CommandableObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* TYPE;
         static const int UT_MAX_ASSERT = 256;
+
+        static const char* OBJECT_TYPE;
+
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static CommandableObject* createObject (CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE]);
+        static int  luaCreate   (lua_State* L);
 
     private:
 
@@ -72,12 +76,12 @@ class UT_String: public CommandableObject
          * Methods
          *--------------------------------------------------------------------*/
 
-            UT_String           (CommandProcessor* cmd_proc, const char* obj_name);
+    explicit UT_String          (lua_State* L);
             ~UT_String          (void) override;
 
     bool    _ut_assert          (bool e, const char* file, int line, const char* fmt, ...);
 
-	int     testReplace         (int argc, char argv[][MAX_CMD_SIZE]);
+	static int  testReplace     (lua_State* L);
 };
 
 #endif  /* __ut_string__ */

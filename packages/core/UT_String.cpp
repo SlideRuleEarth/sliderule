@@ -41,39 +41,48 @@
  * MACROS
  ******************************************************************************/
 
-#define ut_assert(e,...)    UT_String::_ut_assert(e,__FILE__,__LINE__,__VA_ARGS__)
+#define ut_assert(e,...)    lua_obj->_ut_assert(e,__FILE__,__LINE__,__VA_ARGS__)
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* UT_String::TYPE = "UT_String";
+const char* UT_String::OBJECT_TYPE = "UT_String";
+
+const char* UT_String::LUA_META_NAME = "UT_String";
+const struct luaL_Reg UT_String::LUA_META_TABLE[] = {
+    {"replace",     testReplace},
+    {NULL,          NULL}
+};
 
 /******************************************************************************
- * PUBLIC METHODS
+ * METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * createObject  -
+ * luaCreate -
  *----------------------------------------------------------------------------*/
-CommandableObject* UT_String::createObject(CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE])
+int UT_String::luaCreate (lua_State* L)
 {
-    (void)argc;
-    (void)argv;
-
-    /* Create Message Queue Unit Test */
-    return new UT_String(cmd_proc, name);
+    try
+    {
+        /* Create Unit Test */
+        return createLuaObject(L, new UT_String(L));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        return returnLuaStatus(L, false);
+    }
 }
 
 /*----------------------------------------------------------------------------
- * Constructor  -
+ * Constructor
  *----------------------------------------------------------------------------*/
-UT_String::UT_String(CommandProcessor* cmd_proc, const char* obj_name):
-    CommandableObject(cmd_proc, obj_name, TYPE),
+UT_String::UT_String (lua_State* L):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     failures(0)
 {
-    /* Register Commands */
-    registerCommand("REPLACEMENT", (cmdFunc_t)&UT_String::testReplace,  0, "");
 }
 
 /*----------------------------------------------------------------------------
@@ -127,12 +136,21 @@ bool UT_String::_ut_assert(bool e, const char* file, int line, const char* fmt, 
 /*--------------------------------------------------------------------------------------
  * testReplace
  *--------------------------------------------------------------------------------------*/
-int UT_String::testReplace(int argc, char argv[][MAX_CMD_SIZE])
+int UT_String::testReplace(lua_State* L)
 {
-    (void)argc;
-    (void)argv;
+    UT_String* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_String*>(getLuaSelf(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
-    failures = 0;
+    lua_obj->failures = 0;
 
     // 1) Replace Single Character
     char* test1 = StringLib::replace("Hello World", "o", "X");
@@ -151,5 +169,6 @@ int UT_String::testReplace(int argc, char argv[][MAX_CMD_SIZE])
     delete test3;
 
     // return success or failure
-    return failures == 0 ? 0 : -1;
+    lua_pushboolean(L, lua_obj->failures == 0);
+    return 1;
 }
