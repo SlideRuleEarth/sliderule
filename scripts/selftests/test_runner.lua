@@ -65,7 +65,7 @@ end
 
 -- Run ICESat-2 Plugin Self Tests
 if __icesat2__ and incloud then
-    local icesat2_td = td .. "../../plugins/icesat2/selftests/"
+    local icesat2_td = td .. "../../datasets/icesat2/selftests/"
     runner.script(icesat2_td .. "plugin_unittest.lua")
     runner.script(icesat2_td .. "atl03_reader.lua")
     runner.script(icesat2_td .. "atl03_viewer.lua")
@@ -80,14 +80,14 @@ end
 
 -- Run opendata Plugin Self Tests
 if __opendata__ and incloud then
-    local opendata_td = td .. "../../plugins/opendata/selftests/"
+    local opendata_td = td .. "../../datasets/opendata/selftests/"
     runner.script(opendata_td .. "worldcover_reader.lua")
     runner.script(opendata_td .. "globalcanopy_reader.lua")
 end
 
 -- Run PGC Plugin Self Tests
 if __pgc__ and incloud then
-    local pgc_td = td .. "../../plugins/pgc/selftests/"
+    local pgc_td = td .. "../../datasets/pgc/selftests/"
     runner.script(pgc_td .. "plugin_unittest.lua")
     runner.script(pgc_td .. "arcticdem_reader.lua")
     runner.script(pgc_td .. "temporal_filter_test.lua")
@@ -103,19 +103,19 @@ end
 
 -- Run Landsat Plugin Self Tests
 if __landsat__ and incloud then
-    local landsat_td = td .. "../../plugins/landsat/selftests/"
+    local landsat_td = td .. "../../datasets/landsat/selftests/"
     runner.script(landsat_td .. "landsat_reader.lua")
 end
 
 -- Run USGS3DEP Plugin Self Tests
 if __usgs3dep__ and incloud then
-    local usg2dep_td = td .. "../../plugins/usgs3dep/selftests/"
+    local usg2dep_td = td .. "../../datasets/usgs3dep/selftests/"
     runner.script(usg2dep_td .. "usgs3dep_reader.lua")
 end
 
 -- Run GEBCO Plugin Self Tests
 if __gebco__ and incloud then
-    local gebco_td = td .. "../../plugins/gebco/selftests/"
+    local gebco_td = td .. "../../datasets/gebco/selftests/"
     runner.script(gebco_td .. "gebco_reader.lua")
 end
 

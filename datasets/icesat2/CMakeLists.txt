@@ -17,7 +17,6 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/GTDArray.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Icesat2Parms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/MeritRaster.cpp
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Atl03Reader.cpp>
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Atl06Dispatch.cpp>
 )
 
@@ -43,7 +42,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/GTDArray.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Icesat2Parms.h
         ${CMAKE_CURRENT_LIST_DIR}/package/MeritRaster.h
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Atl03Reader.h>
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Atl06Dispatch.h>
     DESTINATION
         ${INCDIR}/icesat2

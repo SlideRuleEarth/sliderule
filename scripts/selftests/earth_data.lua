@@ -1,8 +1,6 @@
 local runner = require("test_executive")
 local console = require("console")
 local earthdata = require("earth_data_query")
-local prettyprint = require("prettyprint")
-local json = require("json")
 
 -- Setup --
 
@@ -70,8 +68,6 @@ end
 --]]
 local parms = {
     ["asset"] = "usgs3dep-1meter-dem",
-    ["t0"] = "2021-01-01",
-    ["t1"] = "2022-01-01",
     ["poly"] = {
         {["lon"] = -108.3435200747503, ["lat"] = 38.89102961045247},
         {["lon"] = -107.7677425431139, ["lat"] = 38.90611184543033},

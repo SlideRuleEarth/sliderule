@@ -40,33 +40,43 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* UT_Dictionary::TYPE = "UT_Dictionary";
+const char* UT_Dictionary::OBJECT_TYPE = "UT_Dictionary";
+
+const char* UT_Dictionary::LUA_META_NAME = "UT_Dictionary";
+const struct luaL_Reg UT_Dictionary::LUA_META_TABLE[] = {
+    {"functional",  functionalUnitTestCmd},
+    {"iterator",    iteratorUnitTestCmd},
+    {"add_wordset", addWordSetCmd},
+    {NULL,          NULL}
+};
 
 /******************************************************************************
- * PUBLIC METHODS
+ * METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * createObject  -
+ * luaCreate -
  *----------------------------------------------------------------------------*/
-CommandableObject* UT_Dictionary::createObject(CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE])
+int UT_Dictionary::luaCreate (lua_State* L)
 {
-    (void)argc;
-    (void)argv;
-
-    return new UT_Dictionary(cmd_proc, name);
+    try
+    {
+        /* Create Unit Test */
+        return createLuaObject(L, new UT_Dictionary(L));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        return returnLuaStatus(L, false);
+    }
 }
 
 /*----------------------------------------------------------------------------
- * Constructor  -
+ * Constructor
  *----------------------------------------------------------------------------*/
-UT_Dictionary::UT_Dictionary(CommandProcessor* cmd_proc, const char* obj_name):
-    CommandableObject(cmd_proc, obj_name, TYPE)
+UT_Dictionary::UT_Dictionary (lua_State* L):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
-    /* Register Commands */
-    registerCommand("FUNCTIONAL_TEST", reinterpret_cast<cmdFunc_t>(&UT_Dictionary::functionalUnitTestCmd), 1, "<set name>");
-    registerCommand("ITERATOR_TEST", reinterpret_cast<cmdFunc_t>(&UT_Dictionary::iteratorUnitTestCmd), 1, "<set name>");
-    registerCommand("ADD_WORD_SET", reinterpret_cast<cmdFunc_t>(&UT_Dictionary::addWordSetCmd), 3, "<set name> <filename> <num words in set>");
 }
 
 /*----------------------------------------------------------------------------
@@ -77,10 +87,23 @@ UT_Dictionary::~UT_Dictionary(void) = default;
 /*----------------------------------------------------------------------------
  * functionalUnitTestCmd  -
  *----------------------------------------------------------------------------*/
-int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SIZE])
+int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
 {
-    (void)argc;
-
+    UT_Dictionary* lua_obj = NULL;
+    const char* wordset_name = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_Dictionary*>(getLuaSelf(L, 1));
+        wordset_name = getLuaString(L, 2);
+        
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
+    
     Dictionary<long> d1;
 
     long seq;
@@ -94,21 +117,22 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
     const int64_t start_time = TimeLib::gpstime();
 
     /* Get Word List */
-    const char* wordset_name = argv[0];
     vector<string>* wordlist_ptr;
     try
     {
-        wordlist_ptr = wordsets[wordset_name];
+        wordlist_ptr = lua_obj->wordsets[wordset_name];
         if(wordlist_ptr->empty())
         {
             print2term("[%d] ERROR: word set %s is empty!\n", __LINE__, wordset_name);
-            return -1;
+            lua_pushboolean(L, false);
+            return 1;
         }
     }
     catch(RunTimeException& e)
     {
         print2term("[%d] ERROR: unable to locate word set %s: %s\n", __LINE__, wordset_name, e.what());
-        return -1;
+        lua_pushboolean(L, false);
+        return 1;
     }
 
     /* Get Number of Words */
@@ -275,36 +299,50 @@ int UT_Dictionary::functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SI
     print2term("Time to complete: %lf seconds\n", elapsed_time);
 
     /* Return Status */
-    if(failure) return -1;
-    else        return 0;
+    lua_pushboolean(L, !failure);
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
  * iteratorUnitTestCmd  -
  *----------------------------------------------------------------------------*/
-int UT_Dictionary::iteratorUnitTestCmd (int argc, const char argv[][MAX_CMD_SIZE])
+int UT_Dictionary::iteratorUnitTestCmd (lua_State* L)
 {
-    (void)argc;
+    UT_Dictionary* lua_obj = NULL;
+    const char* wordset_name = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_Dictionary*>(getLuaSelf(L, 1));
+        wordset_name = getLuaString(L, 2);
+        
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
     Dictionary<long> d1;
     bool failure=false;
 
     /* Get Word List */
-    const char* wordset_name = argv[0];
     vector<string>* wordlist_ptr;
     try
     {
-        wordlist_ptr = wordsets[wordset_name];
+        wordlist_ptr = lua_obj->wordsets[wordset_name];
         if(wordlist_ptr->empty())
         {
             print2term("[%d] ERROR: word set %s is empty!\n", __LINE__, wordset_name);
-            return -1;
+            lua_pushboolean(L, false);
+            return 1;
         }
     }
     catch(RunTimeException& e)
     {
         print2term("[%d] ERROR: unable to locate word set %s: %s\n", __LINE__, wordset_name, e.what());
-        return -1;
+        lua_pushboolean(L, false);
+        return 1;
     }
 
     /* Get Word Set */
@@ -399,28 +437,38 @@ int UT_Dictionary::iteratorUnitTestCmd (int argc, const char argv[][MAX_CMD_SIZE
     }
 
     /* Return Status */
-    if(failure) return -1;
-    else        return 0;
+    lua_pushboolean(L, !failure);
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
  * addWordSetCmd  -
  *----------------------------------------------------------------------------*/
-int UT_Dictionary::addWordSetCmd (int argc, const char argv[][MAX_CMD_SIZE])
+int UT_Dictionary::addWordSetCmd (lua_State* L)
 {
-    (void)argc;
-
-    const char* setname = argv[0];
-    const char* filename = argv[1];
-    const char* size_str = argv[2];
-
+    UT_Dictionary* lua_obj = NULL;
+    const char* setname = NULL;
+    const char* filename = NULL;
     long size = 0;
-    if(!StringLib::str2long(size_str, &size)) return -1;
 
-    const int numwords = createWordSet(setname, filename);
+    try
+    {
+        lua_obj = dynamic_cast<UT_Dictionary*>(getLuaSelf(L, 1));
+        setname = getLuaString(L, 2);
+        filename = getLuaString(L, 3);
+        size = getLuaInteger(L, 4);        
+    }
+    catch(const RunTimeException& e)
+    {
+        print2term("Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
 
-    if(numwords == size)    return 0;
-    else                    return -1;
+    const int numwords = lua_obj->createWordSet(setname, filename);
+
+    lua_pushboolean(L, numwords == size);
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

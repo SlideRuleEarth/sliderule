@@ -7,7 +7,6 @@ if not core.UNITTEST then return end
 -- Setup --
 
 local atl06_dispatch = icesat2.ut_atl06()
-local atl03_reader = icesat2.ut_atl03()
 
 -- Unit Test --
 

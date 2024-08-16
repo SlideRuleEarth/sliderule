@@ -35,14 +35,14 @@
 #include "List.h"
 #include "StringLib.h"
 #include "Dictionary.h"
-#include "CommandableObject.h"
+#include "LuaObject.h"
 #include "OsApi.h"
 
 /******************************************************************************
  * UNIT TEST DICTIONARY CLASS
  ******************************************************************************/
 
-class UT_Dictionary: public CommandableObject
+class UT_Dictionary: public LuaObject
 {
     public:
 
@@ -50,13 +50,16 @@ class UT_Dictionary: public CommandableObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* TYPE;
+        static const char* OBJECT_TYPE;
+
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static CommandableObject* createObject (CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE]);
+        static int  luaCreate   (lua_State* L);
 
     private:
 
@@ -70,12 +73,14 @@ class UT_Dictionary: public CommandableObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        UT_Dictionary (CommandProcessor* cmd_proc, const char* obj_name);
+        UT_Dictionary (lua_State* L);
         ~UT_Dictionary (void) override;
 
-        int functionalUnitTestCmd (int argc, const char argv[][MAX_CMD_SIZE]);
-        int iteratorUnitTestCmd (int argc, const char argv[][MAX_CMD_SIZE]);
-        int addWordSetCmd (int argc, const char argv[][MAX_CMD_SIZE]);
+        static int  functionalUnitTestCmd   (lua_State* L);
+        static int  iteratorUnitTestCmd     (lua_State* L);
+        static int  addWordSetCmd           (lua_State* L);
+        static int  luaTriangleTest         (lua_State* L);
+
         int createWordSet (const char* name, const char* filename);
 };
 

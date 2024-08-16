@@ -98,6 +98,9 @@ static int core_open (lua_State *L)
         {"pointindex",      PointIndex::luaCreate},
         {"intervalindex",   IntervalIndex::luaCreate},
         {"spatialindex",    SpatialIndex::luaCreate},
+#ifdef __unittesting__
+        {"ut_dictionary",   UT_Dictionary::luaCreate},
+#endif
         {NULL,              NULL}
     };
 
