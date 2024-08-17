@@ -72,17 +72,12 @@ class TestVersion:
         assert len(rsps['server']['commit']) > 0
         assert ':' in rsps['server']['launch']
         assert rsps['server']['duration'] > 0
-        assert 'icesat2' in rsps['server']['packages']
-        assert 'version' in rsps['icesat2']
-        assert 'commit' in rsps['icesat2']
-        assert '.' in rsps['icesat2']['version']
-        assert len(rsps['icesat2']['commit'])
 
     def test_get_version_api(self, init):
         version = sliderule.get_version()
         assert init
         assert isinstance(version, dict)
-        assert {'icesat2', 'server', 'client'} <= version.keys()
+        assert {'server', 'client'} <= version.keys()
 
     def test_client_version(self):
         assert hasattr(sliderule, '__version__')
@@ -92,7 +87,7 @@ class TestVersion:
         sliderule.set_url(domain)
         sliderule.authenticate(organization)
         sliderule.scaleout(desired_nodes, 15, True)
-        assert sliderule.check_version(plugins=['icesat2'])
+        assert sliderule.check_version()
 
 #
 # Initialization APIs
