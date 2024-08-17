@@ -1252,7 +1252,7 @@ def authenticate (ps_organization, ps_username=None, ps_password=None, github_to
                 logger.error("Unable to authenticate %s user to %s" % (user, api))
 
     # return login status
-    logger.info(f'Login status to {service_url}/{service_org}: {login_status and 'success' or 'failure'}')
+    logger.info(f'Login status to {service_url}/{service_org}: {login_status and "success" or "failure"}')
     return login_status
 
 #
