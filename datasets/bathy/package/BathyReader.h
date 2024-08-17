@@ -85,7 +85,7 @@ class BathyReader: public LuaObject
          *--------------------------------------------------------------------*/
 
         /* Statitics */
-        typedef struct {
+        typedef struct Stats {
             bool        valid;
             uint64_t    photon_count;
             uint64_t    subaqueous_photons;
@@ -93,6 +93,16 @@ class BathyReader: public LuaObject
             double      qtrees_duration;
             double      coastnet_duration;
             double      openoceanspp_duration;
+
+            void clear (void) {
+                valid = false;
+                photon_count = 0;
+                subaqueous_photons = 0;
+                corrections_duration = 0;
+                qtrees_duration = 0;
+                coastnet_duration = 0;
+                openoceanspp_duration = 0;
+            }
         } stats_t;
 
         /*--------------------------------------------------------------------
@@ -296,10 +306,10 @@ class BathyReader: public LuaObject
         static void*        subsettingThread            (void* parm);
 
         static double       calculateBackground         (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03);
-        static void         parseResource               (const char* resource, TimeLib::date_t& date, 
-                                                         uint16_t& rgt, uint8_t& cycle, uint8_t& region, 
+        static void         parseResource               (const char* resource, TimeLib::date_t& date,
+                                                         uint16_t& rgt, uint8_t& cycle, uint8_t& region,
                                                          uint8_t& version);
-        
+
         void                findSeaSurface              (BathyParms::extent_t& extent);
         void                writeCSV                    (const vector<BathyParms::extent_t*>& extents, int spot, const stats_t& local_stats);
 

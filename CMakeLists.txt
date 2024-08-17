@@ -128,6 +128,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=invalidPointerCast:*/H5Coro.cpp"                    # info.data is newed on 8 byte boundries, can supress this warning
         "--suppress=uninitvar:*/H5Coro.cpp"                             # info
         "--suppress=copyCtorPointerCopying:*/MsgQ.cpp"                  # line: 120, shallow copy which is fine in code
+        "--suppress=invalidPointerCast:*/GeoLib.cpp"                    # TIFFImage.raster is newed on 8 byte boundries, can supress this warning
         "--error-exitcode=1"
 
         "--suppress=duplInheritedMember"                                # Name hiding for functions with the same name
@@ -135,6 +136,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=memleak:*/LuaEndpoint.cpp"                          # line: 254, 'info' is freed by requestThread but ccpcheck does not 'see it'
         "--suppress=returnDanglingLifetime:*/LuaLibraryMsg.cpp"         # line 198, code is OK
         "--suppress=constParameterReference:*/ArrowBuilderImpl.cpp"     # List [] const issue
+        "--suppress=constParameterReference:*/BathyRefractionCorrector.cpp" # in run() param extent cannot be const
         "--suppress=constParameterPointer:*/CcsdsPayloadDispatch.cpp"   # Not trivial to fix, would have to change DispachObject class as well.
         "--suppress=knownConditionTrueFalse"                            # -1 < 0 etc
     )

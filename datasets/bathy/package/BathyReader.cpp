@@ -98,7 +98,7 @@ int BathyReader::luaCreate (lua_State* L)
         const char* shared_directory = getLuaString(L, 7);
         const bool read_sdp_variables = getLuaBoolean(L, 8, true, false);
         const bool send_terminator = getLuaBoolean(L, 9, true, true);
-        
+
         /* Build Classifier List */
         if(lua_istable(L, classifier_table_index))
         {
@@ -236,8 +236,7 @@ BathyReader::BathyReader (lua_State* L,
     }
 
     /* Initialize Stats */
-    memset(&stats, 0, sizeof(stats));
-    stats.valid = true;
+    stats.clear();
 
     /* Initialize Readers */
     active = true;
@@ -344,12 +343,12 @@ BathyReader::~BathyReader (void)
     delete [] sharedDirectory;
     delete bathyMask;
     delete outQ;
-    
+
     for(int i = 0; i < BathyParms::NUM_CLASSIFIERS; i++)
     {
         if(classifiers[i]) classifiers[i]->releaseLuaObject();
     }
-    
+
     if(parms) parms->releaseLuaObject();
     if(uncertainty) uncertainty->releaseLuaObject();
     if(refraction) refraction->releaseLuaObject();
@@ -1811,7 +1810,7 @@ int BathyReader::luaStats (lua_State* L)
         LuaEngine::setAttrNum(L, "openoceanspp_duration", lua_obj->stats.openoceanspp_duration);
 
         /* Clear if Requested */
-        if(with_clear) memset(&lua_obj->stats, 0, sizeof(lua_obj->stats));
+        if(with_clear) lua_obj->stats.clear();
 
         /* Set Success */
         status = true;
