@@ -82,7 +82,16 @@ H5Dataset::H5Dataset (info_t* info, Context* context,
     highestDataLevel (0),
     dataSizeHint (0)
 {
+    assert(info);
     assert(dataset);
+
+    /* Initialize Info */
+    info->elements = 0;
+    info->typesize = 0;
+    info->datasize = 0;
+    info->data     = NULL;
+    info->datatype = RecordObject::INVALID_FIELD;
+    for(int d = 0; d < MAX_NDIMS; d++) info->shape[d] = 0;
 
     /* Initialize HyperSlice */
     for(int d = 0; d < MAX_NDIMS; d++)
