@@ -32,7 +32,6 @@
 #ifndef __ut_dictionary__
 #define __ut_dictionary__
 
-#include "List.h"
 #include "StringLib.h"
 #include "Dictionary.h"
 #include "LuaObject.h"

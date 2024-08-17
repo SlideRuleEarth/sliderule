@@ -39,7 +39,6 @@
 #include "LuaObject.h"
 #include "MsgQ.h"
 #include "OsApi.h"
-#include "core.h"
 
 /******************************************************************************
  * UNIT TEST TIME LIBRARY CLASS
