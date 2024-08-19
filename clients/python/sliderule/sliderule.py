@@ -572,7 +572,10 @@ def emptyframe(**kwargs):
 #
 def procoutputfile(parm, rsps):
     output = parm["output"]
-    path = output["path"]
+    if "path" in output:
+        path = output["path"]
+    else:
+        path = None
     # Check If Remote Record Is In Responses
     for rsp in rsps:
         if 'arrowrec.remote' == rsp['__rectype']:
