@@ -72,6 +72,8 @@ class GeoLib: public MathLib
 
         class TIFFImage: public LuaObject
         {
+            static const int RASTER_DATA_ALIGNMENT = 8;
+
             public:
                 static const char* OBJECT_TYPE;
                 static const char* LUA_META_NAME;

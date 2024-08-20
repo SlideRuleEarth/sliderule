@@ -150,7 +150,7 @@ BathyRefractionCorrector::~BathyRefractionCorrector (void)
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *----------------------------------------------------------------------------*/
-uint64_t BathyRefractionCorrector::run( BathyParms::extent_t& extent, 
+uint64_t BathyRefractionCorrector::run( BathyParms::extent_t& extent,
                                         const H5Array<float>& ref_el,
                                         const H5Array<float>& ref_az ) const
 {
@@ -200,7 +200,7 @@ uint64_t BathyRefractionCorrector::run( BathyParms::extent_t& extent,
             const double dZ = p * sin(beta);                                // vertical offset
             const double dY = p * cos(beta);                                // cross-track offset
             const double dE = dY * sin(static_cast<double>(ref_az[seg]));   // UTM offsets
-            const double dN = dY * cos(static_cast<double>(ref_az[seg])); 
+            const double dN = dY * cos(static_cast<double>(ref_az[seg]));
 
             /* Save Refraction Height Correction */
             photons[i].delta_h = dZ;
