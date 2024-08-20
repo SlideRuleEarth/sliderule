@@ -1771,7 +1771,7 @@ int BathyReader::luaStats (lua_State* L)
 {
     bool status = false;
     int num_obj_to_return = 1;
-    BathyReader* lua_obj = NULL;
+    const BathyReader* lua_obj = NULL;
 
     try
     {
