@@ -235,9 +235,6 @@ BathyReader::BathyReader (lua_State* L,
         bathyMask = new GeoLib::TIFFImage(NULL, GLOBAL_BATHYMETRY_MASK_FILE_PATH);
     }
 
-    /* Initialize Stats */
-    stats.clear();
-
     /* Initialize Readers */
     active = true;
     numComplete = 0;
@@ -823,15 +820,7 @@ void* BathyReader::subsettingThread (void* parm)
 
     /* Thread Variables */
     vector<BathyParms::extent_t*> extents;
-    stats_t local_stats = {
-        .valid = true,
-        .photon_count = 0,
-        .subaqueous_photons = 0,
-        .corrections_duration = 0.0,
-        .qtrees_duration = 0.0,
-        .coastnet_duration = 0.0,
-        .openoceanspp_duration = 0.0
-    };
+    stats_t local_stats;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms->asset->getName(), parms->resource, info->track);
@@ -1776,7 +1765,7 @@ int BathyReader::luaClassifierEnabled (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaStats - :stats(<with_clear>) --> {<key>=<value>, ...} containing statistics
+ * luaStats - :stats() --> {<key>=<value>, ...} containing statistics
  *----------------------------------------------------------------------------*/
 int BathyReader::luaStats (lua_State* L)
 {
@@ -1796,9 +1785,6 @@ int BathyReader::luaStats (lua_State* L)
 
     try
     {
-        /* Get Clear Parameter */
-        const bool with_clear = getLuaBoolean(L, 2, true, false);
-
         /* Create Statistics Table */
         lua_newtable(L);
         LuaEngine::setAttrBool(L, "valid", lua_obj->stats.valid);
@@ -1808,9 +1794,6 @@ int BathyReader::luaStats (lua_State* L)
         LuaEngine::setAttrNum(L, "qtrees_duration", lua_obj->stats.qtrees_duration);
         LuaEngine::setAttrNum(L, "coastnet_duration", lua_obj->stats.coastnet_duration);
         LuaEngine::setAttrNum(L, "openoceanspp_duration", lua_obj->stats.openoceanspp_duration);
-
-        /* Clear if Requested */
-        if(with_clear) lua_obj->stats.clear();
 
         /* Set Success */
         status = true;

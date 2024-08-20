@@ -94,15 +94,14 @@ class BathyReader: public LuaObject
             double      coastnet_duration;
             double      openoceanspp_duration;
 
-            void clear (void) {
-                valid = false;
-                photon_count = 0;
-                subaqueous_photons = 0;
-                corrections_duration = 0;
-                qtrees_duration = 0;
-                coastnet_duration = 0;
-                openoceanspp_duration = 0;
-            }
+            Stats (void):
+                valid(true),
+                photon_count(0),
+                subaqueous_photons(0),
+                corrections_duration(0.0),
+                qtrees_duration(0.0),
+                coastnet_duration(0.0),
+                openoceanspp_duration(0.0) {}
         } stats_t;
 
         /*--------------------------------------------------------------------
