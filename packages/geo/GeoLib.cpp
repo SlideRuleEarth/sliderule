@@ -489,7 +489,7 @@ int GeoLib::luaCalcUTM (lua_State* L)
 /*----------------------------------------------------------------------------
  * writeBMP
  *----------------------------------------------------------------------------*/
-bool GeoLib::writeBMP (const uint32_t* data, int width, int height, const char* filename)
+bool GeoLib::writeBMP (const uint32_t* data, int width, int height, const char* filename, uint32_t min_val, uint32_t max_val)
 {
     /* open file */
     FILE* bmp_file = fopen(filename, "w");
@@ -550,7 +550,8 @@ bool GeoLib::writeBMP (const uint32_t* data, int width, int height, const char* 
         for(int x = 0; x < width; x++)
         {
             const int offset = (y * width) + x;
-            const double normalized_pixel = (static_cast<double>(data[offset]) / static_cast<double>(0xFFFFFFFF)) * 256.0;
+            uint32_t value = data[offset] - min_val;
+            const double normalized_pixel = (static_cast<double>(value) / static_cast<double>(max_val)) * 256.0;
             uint8_t scaled_pixel = static_cast<uint8_t>(normalized_pixel);
             fwrite(&scaled_pixel, 1, 1, bmp_file);
         }

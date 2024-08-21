@@ -188,7 +188,7 @@ NetsvcParms::NetsvcParms(lua_State* L, int index):
         /* Raster */
         lua_getfield(L, index, NetsvcParms::RASTER);
         get_lua_raster(L, -1, &provided);
-        if(provided) mlog(DEBUG, "Setting %s file for use", NetsvcParms::RASTER);
+        if(provided) mlog(INFO, "Setting %s file for use", NetsvcParms::RASTER);
         lua_pop(L, 1);
 
         /* Projection */

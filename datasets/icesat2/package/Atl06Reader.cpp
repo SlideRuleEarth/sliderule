@@ -520,6 +520,15 @@ void* Atl06Reader::subsettingThread (void* parm)
         /* Loop Through Each Segment */
         for(long segment = 0; reader->active && segment < region.num_segments; segment++)
         {
+            /* Check for Inclusion Mask */
+            if(region.inclusion_ptr)
+            {
+                if(!region.inclusion_ptr[segment])
+                {
+                    continue;
+                }
+            }
+
             /* Create Elevation Batch Record */
             if(!batch_record)
             {
