@@ -229,6 +229,20 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* _geojst
         CHECK_GDALERR(cplerr);
         mlog(DEBUG, "Rasterized geojson into raster %s", rasterFileName.c_str());
 
+#if 0
+       /* For debugging, save raster to local file */
+       GDALDriver* localDriver = GetGDALDriverManager()->GetDriverByName("GTiff");
+       if(localDriver)
+       {
+           const char* localFileName = "/tmp/local_raster.tif";
+           remove(localFileName);
+           GDALDataset* dsetcopy = localDriver->CreateCopy(localFileName, rasterDset, FALSE, NULL, NULL, NULL);
+           GDALClose(reinterpret_cast<GDALDatasetH>(dsetcopy));
+           mlog(INFO, "Raster saved to local file: %s", localFileName);
+       }
+       else mlog(ERROR, "Failed to get GDAL driver for local file");
+#endif
+
         /* Must close raster to flush it into file in vsimem */
         GDALClose((GDALDatasetH)rasterDset);
         rasterDset = NULL;
@@ -255,8 +269,8 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* _geojst
 
    /* Cleanup */
    VSIUnlink(jsonFile.c_str());
-if(jsonDset) GDALClose(reinterpret_cast<GDALDatasetH>(jsonDset));
-if(rasterDset) GDALClose(reinterpret_cast<GDALDatasetH>(rasterDset));
+   if(jsonDset) GDALClose(reinterpret_cast<GDALDatasetH>(jsonDset));
+   if(rasterDset) GDALClose(reinterpret_cast<GDALDatasetH>(rasterDset));
 
    if(!rasterCreated)
        throw RunTimeException(CRITICAL, RTE_ERROR, "GeoJsonRaster failed");
