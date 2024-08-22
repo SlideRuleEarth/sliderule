@@ -125,17 +125,20 @@ local function proxy(resources, parms, endpoint, rec)
             end
         end
 
-        -- Create Arrow Sampler and Sample Rasters --
-        local arrow_sampler = arrow.sampler(arrow_parms, arrow_file, rspq, georasters)
+        -- Handle Arrow Sampler --
+        if georasters then
+            -- Create Arrow Sampler and Sample Rasters --
+            local arrow_sampler = arrow.sampler(arrow_parms, arrow_file, rspq, georasters)
 
-        -- Wait Until Arrow Sampler Completion --
-        while (userlog:numsubs() > 0) and not arrow_sampler:waiton(interval * 1000) do
-            duration = duration + interval
-            if timeout >= 0 and duration >= timeout then
-                userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> timed-out after %d seconds waiting for arrow sampler", rspq, duration))
-                do return end
+            -- Wait Until Arrow Sampler Completion --
+            while (userlog:numsubs() > 0) and not arrow_sampler:waiton(interval * 1000) do
+                duration = duration + interval
+                if timeout >= 0 and duration >= timeout then
+                    userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> timed-out after %d seconds waiting for arrow sampler", rspq, duration))
+                    do return end
+                end
+                userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> continuing to sample rasters after %d seconds...", rspq, duration))
             end
-            userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> continuing to sample rasters after %d seconds...", rspq, duration))
         end
     end
 
