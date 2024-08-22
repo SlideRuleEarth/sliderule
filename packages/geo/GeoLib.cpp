@@ -550,7 +550,7 @@ bool GeoLib::writeBMP (const uint32_t* data, int width, int height, const char* 
         for(int x = 0; x < width; x++)
         {
             const int offset = (y * width) + x;
-            uint32_t value = data[offset] - min_val;
+            const uint32_t value = data[offset] - min_val;
             const double normalized_pixel = (static_cast<double>(value) / static_cast<double>(max_val)) * 256.0;
             uint8_t scaled_pixel = static_cast<uint8_t>(normalized_pixel);
             fwrite(&scaled_pixel, 1, 1, bmp_file);
