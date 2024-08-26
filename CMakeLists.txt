@@ -391,3 +391,4 @@ add_subdirectory (scripts)
 # Installation #
 
 install (TARGETS slideruleLib DESTINATION ${INSTALLDIR}/lib)
+install (FILES ${CMAKE_CURRENT_LIST_DIR}/version.txt DESTINATION ${CONFDIR})
