@@ -178,7 +178,8 @@ class Atl03Reader: public LuaObject
                 Atl03Data           (const info_t* info, const Region& region);
                 ~Atl03Data          (void);
 
-                /* Read Data */
+                bool                read_yapc;
+
                 H5Array<int8_t>     sc_orient;
                 H5Array<float>      velocity_sc;
                 H5Array<double>     segment_delta_time;
@@ -190,6 +191,7 @@ class Atl03Reader: public LuaObject
                 H5Array<float>      h_ph;
                 H5Array<int8_t>     signal_conf_ph;
                 H5Array<int8_t>     quality_ph;
+                H5Array<uint8_t>    weight_ph; // yapc
                 H5Array<double>     lat_ph;
                 H5Array<double>     lon_ph;
                 H5Array<double>     delta_time;
@@ -314,6 +316,7 @@ class Atl03Reader: public LuaObject
         uint16_t            start_rgt;
         uint8_t             start_cycle;
         uint8_t             start_region;
+        uint8_t             sdp_version;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -329,7 +332,7 @@ class Atl03Reader: public LuaObject
         void                generateExtentRecord        (uint64_t extent_id, const info_t* info, TrackState& state, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
         static void         generateAncillaryRecords    (uint64_t extent_id, AncillaryFields::list_t* field_list, H5DArrayDictionary* field_dict, Icesat2Parms::anc_type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
-        static void         parseResource               (const char* resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region);
+        static void         parseResource               (const char* resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region, uint8_t& version);
 
         static int          luaStats                    (lua_State* L);
 };

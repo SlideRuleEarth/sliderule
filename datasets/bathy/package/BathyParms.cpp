@@ -57,6 +57,7 @@ static const char* BATHY_PARMS_MIN_DEM_DELTA        = "min_dem_delta";
 static const char* BATHY_PARMS_PH_IN_EXTENT         = "ph_in_extent";
 static const char* BATHY_PARMS_GENERATE_NDWI        = "generate_ndwi";
 static const char* BATHY_PARMS_USE_BATHY_MASK       = "use_bathy_mask";
+static const char* BATHY_PARMS_FIND_SEA_SURFACE     = "find_sea_surface";
 static const char* BATHY_PARMS_CLASSIFIERS          = "classifiers";
 static const char* BATHY_PARMS_RETURN_INPUTS        = "return_inputs";
 static const char* BATHY_PARMS_BIN_SIZE             = "bin_size";
@@ -387,6 +388,7 @@ BathyParms::BathyParms(lua_State* L, int index):
     ph_in_extent    (8192),
     generate_ndwi   (false),
     use_bathy_mask  (true),
+    find_sea_surface(false),
     classifiers     {true, true, true, true, true, true, true, true, true},
     return_inputs   (false),
     spots           {true, true, true, true, true, true}
@@ -438,6 +440,11 @@ BathyParms::BathyParms(lua_State* L, int index):
     /* use bathy mask */
     lua_getfield(L, index, BATHY_PARMS_USE_BATHY_MASK);
     use_bathy_mask = LuaObject::getLuaBoolean(L, -1, true, use_bathy_mask, NULL);
+    lua_pop(L, 1);
+
+    /* find sea surface */
+    lua_getfield(L, index, BATHY_PARMS_FIND_SEA_SURFACE);
+    find_sea_surface = LuaObject::getLuaBoolean(L, -1, true, find_sea_surface, NULL);
     lua_pop(L, 1);
 
     /* classifiers */

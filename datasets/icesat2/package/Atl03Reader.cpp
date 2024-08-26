@@ -189,7 +189,7 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* resource, con
         context08 = new H5Coro::Context(asset, resource08);
 
         /* Parse Globals (throws) */
-        parseResource(resource, start_rgt, start_cycle, start_region);
+        parseResource(resource, start_rgt, start_cycle, start_region, sdp_version);
 
         /* Create Readers */
         for(int track = 1; track <= Icesat2Parms::NUM_TRACKS; track++)
@@ -482,6 +482,7 @@ void Atl03Reader::Region::rasterregion (const info_t* info)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
+    read_yapc           (info->reader->parms->stages[Icesat2Parms::STAGE_YAPC] && (info->reader->parms->yapc.version == 0) && (info->reader->sdp_version >= 6)),
     sc_orient           (info->reader->context,                                "/orbit_info/sc_orient"),
     velocity_sc         (info->reader->context, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),      H5Coro::ALL_COLS, region.first_segment, region.num_segments),
     segment_delta_time  (info->reader->context, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),       0, region.first_segment, region.num_segments),
@@ -493,6 +494,7 @@ Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
     h_ph                (info->reader->context, FString("%s/%s", info->prefix, "heights/h_ph").c_str(),                 0, region.first_photon,  region.num_photons),
     signal_conf_ph      (info->reader->context, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),       info->reader->signalConfColIndex, region.first_photon,  region.num_photons),
     quality_ph          (info->reader->context, FString("%s/%s", info->prefix, "heights/quality_ph").c_str(),           0, region.first_photon,  region.num_photons),
+    weight_ph           (read_yapc ? info->reader->context : NULL, FString("%s/%s", info->prefix, "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
     lat_ph              (info->reader->context, FString("%s/%s", info->prefix, "heights/lat_ph").c_str(),               0, region.first_photon,  region.num_photons),
     lon_ph              (info->reader->context, FString("%s/%s", info->prefix, "heights/lon_ph").c_str(),               0, region.first_photon,  region.num_photons),
     delta_time          (info->reader->context, FString("%s/%s", info->prefix, "heights/delta_time").c_str(),           0, region.first_photon,  region.num_photons),
@@ -554,6 +556,7 @@ Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
     h_ph.join(info->reader->read_timeout_ms, true);
     signal_conf_ph.join(info->reader->read_timeout_ms, true);
     quality_ph.join(info->reader->read_timeout_ms, true);
+    if(read_yapc) weight_ph.join(info->reader->read_timeout_ms, true);
     lat_ph.join(info->reader->read_timeout_ms, true);
     lon_ph.join(info->reader->read_timeout_ms, true);
     delta_time.join(info->reader->read_timeout_ms, true);
@@ -845,7 +848,7 @@ Atl03Reader::YapcScore::YapcScore (const info_t* info, const Region& region, con
     {
         yapcV2(info, region, atl03);
     }
-    else
+    else if(info->reader->parms->yapc.version != 0) // read from file
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid YAPC version specified: %d", info->reader->parms->yapc.version);
     }
@@ -1379,9 +1382,17 @@ void* Atl03Reader::subsettingThread (void* parm)
 
                         /* Set and Check YAPC Score */
                         uint8_t yapc_score = 0;
-                        if(yapc.score)
+                        if(yapc.score) // dynamically calculated
                         {
                             yapc_score = yapc[current_photon];
+                            if(yapc_score < parms->yapc.score)
+                            {
+                                break;
+                            }
+                        }
+                        else if(atl03.read_yapc) // read from atl03 granule
+                        {
+                            yapc_score = atl03.weight_ph[current_photon];
                             if(yapc_score < parms->yapc.score)
                             {
                                 break;
@@ -1821,7 +1832,7 @@ void Atl03Reader::postRecord (RecordObject& record, stats_t& local_stats)
  *      vvv     - version
  *      ee      - revision
  *----------------------------------------------------------------------------*/
-void Atl03Reader::parseResource (const char* _resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region)
+void Atl03Reader::parseResource (const char* _resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region, uint8_t& version)
 {
     if(StringLib::size(_resource) < 29)
     {
@@ -1871,6 +1882,21 @@ void Atl03Reader::parseResource (const char* _resource, uint16_t& rgt, uint8_t& 
     else
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Region from resource %s: %s", _resource, region_str);
+    }
+
+    /* get version */
+    char version_str[4];
+    version_str[0] = _resource[30];
+    version_str[1] = _resource[31];
+    version_str[2] = _resource[32];
+    version_str[3] = '\0';
+    if(StringLib::str2long(version_str, &val, 10))
+    {
+        version = static_cast<uint8_t>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Version from resource %s: %s", _resource, version_str);
     }
 }
 

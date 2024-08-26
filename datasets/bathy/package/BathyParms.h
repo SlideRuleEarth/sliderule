@@ -217,6 +217,7 @@ class BathyParms: public Icesat2Parms
         int             ph_in_extent;       // number of photons in each extent
         bool            generate_ndwi;      // use HLS data to generate NDWI for each segment lat,lon
         bool            use_bathy_mask;     // global bathymetry mask downloaded in atl24 init lua routine
+        bool            find_sea_surface;   // locally implemented sea surface finder
         bool            classifiers[NUM_CLASSIFIERS]; // which bathymetry classifiers to run
         bool            return_inputs;      // return the atl03 bathy records back to client
         bool            spots[NUM_SPOTS];   // only used by downstream algorithms

@@ -1104,19 +1104,21 @@ void* BathyReader::subsettingThread (void* parm)
             }
         }
 
-        /* Run Qtrees on Extents */
-        if(parms->classifiers[BathyParms::QTREES])
-        {
-            const double start = TimeLib::latchtime();
-            reader->classifiers[BathyParms::QTREES]->run(extents);
-            local_stats.qtrees_duration = TimeLib::latchtime() - start;
-        }
-        else // run native sea surface finder (since other classifiers need surface_h)
+        /* Run Native Sea Surface Finder (defaults to false) */
+        if(parms->find_sea_surface)
         {
             for(auto* extent: extents)
             {
                 reader->findSeaSurface(*extent);
             }
+        }
+
+        /* Run OpenOceans++ on Extents */
+        if(parms->classifiers[BathyParms::OPENOCEANSPP])
+        {
+            const double start = TimeLib::latchtime();
+            reader->classifiers[BathyParms::OPENOCEANSPP]->run(extents);
+            local_stats.openoceanspp_duration = TimeLib::latchtime() - start;
         }
 
         /* Run Coastnet on Extents */
@@ -1127,12 +1129,12 @@ void* BathyReader::subsettingThread (void* parm)
             local_stats.coastnet_duration = TimeLib::latchtime() - start;
         }
 
-        /* Run OpenOceans++ on Extents */
-        if(parms->classifiers[BathyParms::OPENOCEANSPP])
+        /* Run Qtrees on Extents */
+        if(parms->classifiers[BathyParms::QTREES])
         {
             const double start = TimeLib::latchtime();
-            reader->classifiers[BathyParms::OPENOCEANSPP]->run(extents);
-            local_stats.openoceanspp_duration = TimeLib::latchtime() - start;
+            reader->classifiers[BathyParms::QTREES]->run(extents);
+            local_stats.qtrees_duration = TimeLib::latchtime() - start;
         }
 
         /* Process Extents */
