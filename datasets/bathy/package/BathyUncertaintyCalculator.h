@@ -76,13 +76,11 @@ class BathyUncertaintyCalculator: public LuaObject
         typedef struct {
             int Wind;
             double Kd;
-            double a;
             double b;
             double c;
         } uncertainty_entry_t;
 
         typedef struct {
-            double a;
             double b;
             double c;
         } uncertainty_coeff_t;

@@ -111,8 +111,8 @@ void BathyUncertaintyCalculator::init (void)
             }
 
             /* read header line */
-            char columns[5][10];
-            if(fscanf(file, "%9s,%9s,%9s,%9s,%9s\n", columns[0], columns[1], columns[2], columns[3], columns[4]) != 5)
+            char columns[4][10];
+            if(fscanf(file, "%9s,%9s,%9s,%9s\n", columns[0], columns[1], columns[2], columns[3]) != 5)
             {
                 mlog(CRITICAL, "Failed to read header from uncertainty file: %s", uncertainty_filename);
                 return;
@@ -121,7 +121,7 @@ void BathyUncertaintyCalculator::init (void)
             /* read all rows */
             vector<uncertainty_entry_t> tu(INITIAL_UNCERTAINTY_ROWS);
             uncertainty_entry_t entry;
-            while(fscanf(file, "%d,%lf,%lf,%lf,%lf\n", &entry.Wind, &entry.Kd, &entry.a, &entry.b, &entry.c) == 5)
+            while(fscanf(file, "%d,%lf,%lf,%lf\n", &entry.Wind, &entry.Kd, &entry.b, &entry.c) == 5)
             {
                 tu.push_back(entry);
             }
@@ -137,7 +137,6 @@ void BathyUncertaintyCalculator::init (void)
                 {
                     /* sum coefficients for each entry in table */
                     uncertainty_coeff_t coeff_sum = {
-                        .a = 0.0,
                         .b = 0.0,
                         .c = 0.0
                     };
@@ -148,7 +147,6 @@ void BathyUncertaintyCalculator::init (void)
                             (tu[i].Kd >= KD_RANGES[kd_range_index][0]) &&
                             (tu[i].Kd <= KD_RANGES[kd_range_index][1]) )
                         {
-                            coeff_sum.a += tu[i].a;
                             coeff_sum.b += tu[i].b;
                             coeff_sum.c += tu[i].c;
                             count += 1.0;
@@ -164,7 +162,6 @@ void BathyUncertaintyCalculator::init (void)
 
                     /* set average coefficients */
                     uncertainty_coeff_t& coeff = UNCERTAINTY_COEFF_MAP[tu_dimension_index][pointing_angle_index][wind_speed_index][kd_range_index];
-                    coeff.a = coeff_sum.a / count;
                     coeff.b = coeff_sum.b / count;
                     coeff.c = coeff_sum.c / count;
                 }
@@ -305,8 +302,8 @@ void BathyUncertaintyCalculator::run (BathyParms::extent_t& extent,
             const uncertainty_coeff_t vertical_coeff = UNCERTAINTY_COEFF_MAP[TVU][pointing_angle_index][wind_speed_index][kd_range_index];
 
             /* subaqueous uncertainties */
-            const double subaqueous_horizontal_uncertainty = (horizontal_coeff.a * depth * depth) + (horizontal_coeff.b * depth) + horizontal_coeff.c;
-            const double subaqueous_vertical_uncertainty = (vertical_coeff.a * depth * depth) + (vertical_coeff.b * depth) + vertical_coeff.c;
+            const double subaqueous_horizontal_uncertainty = (horizontal_coeff.b * depth) + horizontal_coeff.c;
+            const double subaqueous_vertical_uncertainty = (vertical_coeff.b * depth) + vertical_coeff.c;
 
             /* add subaqueous uncertainties to total uncertainties */
             photons[i].sigma_thu += subaqueous_horizontal_uncertainty;
