@@ -189,8 +189,6 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
     }
     samplingMutex.unlock();
 
-    allSamplesCount += slist.length();
-
     return ssError;
 }
 
@@ -234,9 +232,6 @@ uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t g
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::~GeoIndexedRaster(void)
 {
-    mlog(DEBUG, "onlyFirst: %lu, fullSearch: %lu, findRastersCalls: %lu, allSamples: %lu",
-                onlyFirstCount, fullSearchCount, findRastersCount, allSamplesCount);
-
     delete [] findersRange;
     emptyFeaturesList();
 }
@@ -252,17 +247,12 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
     RasterObject    (L, _parms),
     cache           (MAX_READER_THREADS),
     ssError         (SS_NO_ERRORS),
-    onlyFirst       (_parms->single_stop),
     numFinders      (0),
     findersRange    (NULL),
     crscb           (cb),
     bbox            {0, 0, 0, 0},
     rows            (0),
-    cols            (0),
-    onlyFirstCount  (0),
-    findRastersCount(0),
-    fullSearchCount (0),
-    allSamplesCount (0)
+    cols            (0)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -1064,35 +1054,6 @@ void GeoIndexedRaster::setFindersRange(void)
 bool GeoIndexedRaster::_findRasters(OGRGeometry* geo)
 {
     groupList.clear();
-    findRastersCount++;
-
-    if(onlyFirst && !cachedRastersGroup.infovect.empty())
-    {
-        /* Only first rasters group (cached) will be returned */
-        bool allRastersIntersect = true;
-        std::vector<raster_info_t>& infovect = cachedRastersGroup.infovect;
-
-        for(uint32_t i = 0; i < infovect.size(); i++)
-        {
-            /* Make sure all rasters in the cached group intersect with geo */
-            if(!infovect[i].rasterGeo->Intersects(geo))
-            {
-                allRastersIntersect = false;
-                break;
-            }
-        }
-
-        if(allRastersIntersect)
-        {
-            rasters_group_t* rgroup = new rasters_group_t;
-            *rgroup = cachedRastersGroup;
-            groupList.add(groupList.length(), rgroup);
-            onlyFirstCount++;
-            return true;
-        }
-    }
-
-    fullSearchCount++;
 
     /* Start finder threads to find rasters intersecting with point/polygon */
     uint32_t signaledFinders = 0;
@@ -1131,20 +1092,6 @@ bool GeoIndexedRaster::_findRasters(OGRGeometry* geo)
         {
             rasters_group_t* rgroup = finder->rasterGroups[j];
             groupList.add(groupList.length(), rgroup);
-        }
-    }
-
-    if(onlyFirst && !groupList.empty())
-    {
-        const GroupOrdering::Iterator group_iter(groupList);
-
-        /* Cache the first rasters group */
-        cachedRastersGroup = *group_iter[0].value;
-
-        /* Remove all but first rasters group */
-        for(int i = 1; i < group_iter.length; i++)
-        {
-            groupList.remove(group_iter[i].key);
         }
     }
 

@@ -265,7 +265,6 @@ bool PgcDemStripsRaster::findRasters(finder_t* finder)
                 demRinfo.dataIsElevation = true;
                 demRinfo.tag = VALUE_TAG;
                 demRinfo.fileName = fileName;
-                demRinfo.rasterGeo = rastergeo->clone();
 
                 /* bitmask raster, ie flags_file */
                 if(parms->flags_file)
@@ -283,7 +282,6 @@ bool PgcDemStripsRaster::findRasters(finder_t* finder)
                     flagsRinfo.dataIsElevation = false;
                     flagsRinfo.tag = FLAGS_TAG;
                     flagsRinfo.fileName = fileName;
-                    flagsRinfo.rasterGeo = rastergeo->clone();  /* Should be the same as data raster */
 
                     if(!flagsRinfo.fileName.empty())
                     {
