@@ -38,7 +38,8 @@
 #include <map>
 #include <limits>
 
-#include "core.h"
+#include "OsApi.h"
+#include "ContainerRecord.h"
 #include "icesat2.h"
 
 using std::numeric_limits;

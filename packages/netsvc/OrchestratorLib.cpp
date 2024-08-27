@@ -33,12 +33,14 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <rapidjson/document.h>
 
 #include "OrchestratorLib.h"
+#include "OsApi.h"
+#include "TimeLib.h"
+#include "LuaEngine.h"
+#include "EndpointObject.h"
 #include "netsvc.h"
-#include "core.h"
-
-#include <rapidjson/document.h>
 
 /******************************************************************************
  * ORCHESTRATOR LIBRARY CLASS

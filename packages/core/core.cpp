@@ -33,7 +33,71 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
+
+#include "AncillaryFields.h"
+#include "Asset.h"
+#include "AssetIndex.h"
+#include "CaptureDispatch.h"
+#include "ClusterSocket.h"
+#include "ContainerRecord.h"
+#include "CsvDispatch.h"
+#include "DispatchObject.h"
+#include "DeviceIO.h"
+#include "DeviceObject.h"
+#include "DeviceReader.h"
+#include "DeviceWriter.h"
+#include "Dictionary.h"
+#include "EndpointObject.h"
+#include "EventLib.h"
+#include "PointIndex.h"
+#include "Field.h"
+#include "FieldElement.h"
+#include "File.h"
+#include "FileIODriver.h"
+#include "HttpClient.h"
+#include "HttpServer.h"
+#include "LimitDispatch.h"
+#include "List.h"
+#include "LimitRecord.h"
+#include "LuaEndpoint.h"
+#include "LuaEngine.h"
+#include "LuaLibraryMsg.h"
+#include "LuaLibrarySys.h"
+#include "LuaLibraryTime.h"
+#include "LuaObject.h"
+#include "LuaScript.h"
+#include "MathLib.h"
+#include "MetricDispatch.h"
+#include "MetricRecord.h"
+#include "Monitor.h"
+#include "MsgBridge.h"
+#include "MsgProcessor.h"
+#include "MsgQ.h"
+#include "Ordering.h"
+#include "OsApi.h"
+#include "PublisherDispatch.h"
+#include "PublishMonitor.h"
+#include "RecordObject.h"
+#include "RecordDispatcher.h"
+#include "ReportDispatch.h"
+#include "SpatialIndex.h"
+#include "StringLib.h"
+#include "Table.h"
+#include "TcpSocket.h"
+#include "IntervalIndex.h"
+#include "TimeLib.h"
+#include "Uart.h"
+#include "UdpSocket.h"
+#ifdef __unittesting__
+#include "UT_Dictionary.h"
+#include "UT_Field.h"
+#include "UT_List.h"
+#include "UT_MsgQ.h"
+#include "UT_Ordering.h"
+#include "UT_String.h"
+#include "UT_Table.h"
+#include "UT_TimeLib.h"
+#endif
 
 /******************************************************************************
  * DEFINES
@@ -100,6 +164,7 @@ static int core_open (lua_State *L)
         {"spatialindex",    SpatialIndex::luaCreate},
 #ifdef __unittesting__
         {"ut_dictionary",   UT_Dictionary::luaCreate},
+        {"ut_field",        UT_Field::luaCreate},
         {"ut_list",         UT_List::luaCreate},
         {"ut_msgq",         UT_MsgQ::luaCreate},
         {"ut_ordering",     UT_Ordering::luaCreate},

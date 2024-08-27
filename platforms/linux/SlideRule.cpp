@@ -34,6 +34,9 @@
  ******************************************************************************/
 
 #include "core.h"
+#include "StringLib.h"
+#include "LuaEngine.h"
+#include "LuaObject.h"
 
 #ifdef __arrow__
 #include "arrow.h"

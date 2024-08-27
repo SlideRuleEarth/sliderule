@@ -33,11 +33,11 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <curl/curl.h>
 
 #include "CurlLib.h"
-#include "core.h"
-
-#include <curl/curl.h>
+#include "OsApi.h"
+#include "RecordObject.h"
 
 /******************************************************************************
  * cURL LIBRARY CLASS

@@ -29,75 +29,69 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __provisioning_system_lib__
-#define __provisioning_system_lib__
+#ifndef __field__
+#define __field__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "LuaEndpoint.h"
+#include "LuaEngine.h"
 
 /******************************************************************************
- * DEFINES
+ * CLASS
  ******************************************************************************/
 
-#define DEFAULT_ORGANIZATION_NAME   "sliderule"
-#define DEFAULT_PS_URL              "https://ps.testsliderule.org"
-
-/******************************************************************************
- * PROVISIONING SYSTEM LIBRARY CLASS
- ******************************************************************************/
-
-class ProvisioningSystemLib
+class Field
 {
     public:
 
         /*--------------------------------------------------------------------
-         * Typedefs
+         * Types
          *--------------------------------------------------------------------*/
 
-        typedef struct {
-            char* data;
-            size_t size;
-        } data_t;
+        typedef enum {
+            INVALID         = -1,
+            INT8            = 0,
+            INT16           = 1,
+            INT32           = 2,
+            INT64           = 3,
+            UINT8           = 4,
+            UINT16          = 5,
+            UINT32          = 6,
+            UINT64          = 7,
+            FLOAT           = 8,
+            DOUBLE          = 9,
+            CHAR            = 10,
+            NUM_ENCODINGS   = 11
+        } encoding_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void         init                (void);
-        static void         deinit              (void);
+        explicit        Field       (encoding_t _encoding): encoding(_encoding) {};
+        virtual         ~Field      (void) = default;
 
-        static const char*  login               (const char* username, const char* password, const char* organization, bool verbose=false);
-        static bool         validate            (const char* access_token, bool verbose=false);
+        virtual bool    toJson      (string& str) = 0;
+        virtual int     toLua       (lua_State* L) = 0;
 
-        static int          luaUrl              (lua_State* L);
-        static int          luaSetOrganization  (lua_State* L);
-        static int          luaLogin            (lua_State* L);
-        static int          luaValidate         (lua_State* L);
+        virtual bool    fromJson    (const string& str) = 0;
+        virtual int     fromLua     (lua_State* L) = 0;
 
-        static size_t       writeData           (const void *buffer, size_t size, size_t nmemb, void *userp);
+    protected:
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static const char* URL;
-        static const char* Organization;
+        const encoding_t encoding;
 
         /*--------------------------------------------------------------------
-         * Authenticator Subclass
+         * Methods
          *--------------------------------------------------------------------*/
-        class Authenticator: public LuaEndpoint::Authenticator
-        {
-            public:
-                static int luaCreate (lua_State* L);
-                explicit Authenticator(lua_State* L);
-                ~Authenticator(void) override;
-                bool isValid(const char* token) override;
-        };
+
 };
 
-#endif  /* __provisioning_system_lib__ */
+#endif  /* __field__ */

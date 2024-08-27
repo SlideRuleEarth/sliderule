@@ -33,7 +33,7 @@
  *INCLUDES
  ******************************************************************************/
 
-#include "core.h"
+#include "OsApi.h"
 #include "arrow.h"
 #include "ArrowCommon.h"
 

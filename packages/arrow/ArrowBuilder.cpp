@@ -33,10 +33,12 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
+#include "OsApi.h"
 #include "ArrowParms.h"
 #include "ArrowBuilder.h"
 #include "ArrowBuilderImpl.h"
+#include "AncillaryFields.h"
+#include "ContainerRecord.h"
 
 #ifdef __aws__
 #include "aws.h"

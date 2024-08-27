@@ -33,12 +33,12 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "AncillaryFields.h"
 #include <math.h>
 #include <float.h>
 #include <map>
 
-#include "core.h"
+#include "AncillaryFields.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA

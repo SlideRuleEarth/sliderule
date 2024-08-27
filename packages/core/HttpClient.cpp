@@ -38,7 +38,7 @@
 #include "HttpClient.h"
 #include "EndpointObject.h"
 #include "LuaEngine.h"
-#include "core.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA

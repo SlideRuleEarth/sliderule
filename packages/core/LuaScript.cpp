@@ -36,7 +36,7 @@
 
 #include "LuaScript.h"
 #include "LuaEngine.h"
-#include "core.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA

@@ -33,7 +33,7 @@
  * INCLUDE
  ******************************************************************************/
 
-#include "core.h"
+#include "OsApi.h"
 #include "geo.h"
 #include "NetsvcParms.h"
 

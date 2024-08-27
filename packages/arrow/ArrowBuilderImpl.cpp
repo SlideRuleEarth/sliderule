@@ -40,9 +40,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
-#include "ArrowBuilderImpl.h"
-
 #include <parquet/arrow/schema.h>
 #include <parquet/arrow/writer.h>
 #include <parquet/properties.h>
@@ -57,6 +54,10 @@
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
+
+#include "OsApi.h"
+#include "ArrowBuilderImpl.h"
+#include "AncillaryFields.h"
 
 #ifdef __aws__
 #include "aws.h"

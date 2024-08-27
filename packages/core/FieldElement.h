@@ -29,83 +29,97 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef __field_element__
+#define __field_element__
+
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "CcsdsParserModule.h"
 #include "OsApi.h"
+#include "LuaEngine.h"
+#include "Field.h"
 
 /******************************************************************************
- * STATIC DATA
+ * FUNCTIONS
  ******************************************************************************/
 
-const char* CcsdsParserModule::OBJECT_TYPE = "CcsdsParserModule";
-const char* CcsdsParserModule::LUA_META_NAME = "CcsdsParserModule";
-const struct luaL_Reg CcsdsParserModule::LUA_META_TABLE[] = {
-    {NULL,          NULL}
+inline Field::encoding_t getFieldEncoding(const int8_t& v) { (void)v; return Field::INT8; }
+inline Field::encoding_t getFieldEncoding(const int16_t& v) { (void)v; return Field::INT16; }
+inline Field::encoding_t getFieldEncoding(const int32_t& v) { (void)v; return Field::INT32; }
+inline Field::encoding_t getFieldEncoding(const int64_t& v) { (void)v; return Field::INT64; }
+inline Field::encoding_t getFieldEncoding(const uint8_t& v) { (void)v; return Field::UINT8; }
+inline Field::encoding_t getFieldEncoding(const uint16_t& v) { (void)v; return Field::UINT16; }
+inline Field::encoding_t getFieldEncoding(const uint32_t& v) { (void)v; return Field::UINT32; }
+inline Field::encoding_t getFieldEncoding(const uint64_t& v) { (void)v; return Field::UINT64; }
+inline Field::encoding_t getFieldEncoding(const float& v) { (void)v; return Field::FLOAT; }
+inline Field::encoding_t getFieldEncoding(const double& v) { (void)v; return Field::DOUBLE; }
+inline Field::encoding_t getFieldEncoding(const char* v) { (void)v; return Field::CHAR; }
+
+/******************************************************************************
+ * CLASS
+ ******************************************************************************/
+
+template <class T>
+class FieldElement: public Field
+{
+    public:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        explicit        FieldElement    (T default_value);
+                        FieldElement    (void);
+                        ~FieldElement   (void) override = default;
+
+        FieldElement&   operator=       (const T& v);
+
+        bool            toJson          (string& str) override;
+        int             toLua           (lua_State* L) override;
+        bool            fromJson        (const string& str) override;
+        int             fromLua         (lua_State* L) override;
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        T value;
 };
 
 /******************************************************************************
- * PUBLIC METHODS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * luaCreate - create()
- *----------------------------------------------------------------------------*/
-int CcsdsParserModule::luaCreate (lua_State* L)
-{
-    try
-    {
-        /* Return Dispatch Object */
-        return createLuaObject(L, new CcsdsParserModule(L));
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
-        return returnLuaStatus(L, false);
-    }
-}
-
-/******************************************************************************
- * PRIVATE METHODS
+ * METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CcsdsParserModule::CcsdsParserModule(lua_State* L):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
+template <class T>
+FieldElement<T>::FieldElement(T default_value):
+    Field(getFieldEncoding(default_value)),
+    value(default_value)
 {
-    CcsdsParserModule::gotoInitState(true);
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-CcsdsParserModule::CcsdsParserModule(lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]):
-    LuaObject(L, OBJECT_TYPE, meta_name, meta_table)
+template <class T>
+FieldElement<T>::FieldElement(void):
+    Field(Field::INVALID),
+    value(0)
 {
-    CcsdsParserModule::gotoInitState(true);
 }
 
 /*----------------------------------------------------------------------------
- * Destructor
+ * operator=
  *----------------------------------------------------------------------------*/
-CcsdsParserModule::~CcsdsParserModule(void) = default;
-
-/*----------------------------------------------------------------------------
- * parseBuffer
- *----------------------------------------------------------------------------*/
-int CcsdsParserModule::parseBuffer (unsigned char* buffer, int bytes, CcsdsPacket* pkt)
+template <class T>
+FieldElement<T>& FieldElement<T>::operator=(const T& v) 
 {
-    return pkt->appendStream(buffer, bytes);
+    encoding = getFieldEncoding(v);
+    value = v;
+    return *this;
 }
 
-/*----------------------------------------------------------------------------
- * gotoInitState
- *----------------------------------------------------------------------------*/
-void CcsdsParserModule::gotoInitState(bool reset)
-{
-    (void)reset;
-}
+#endif  /* __field_element__ */

@@ -33,7 +33,6 @@
  *INCLUDES
  ******************************************************************************/
 
-#include "core.h"
 #include "bathy.h"
 #include "BathyReader.h"
 #include "BathyViewer.h"

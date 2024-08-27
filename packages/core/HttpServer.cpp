@@ -36,7 +36,7 @@
 #include <atomic>
 
 #include "HttpServer.h"
-#include "core.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA

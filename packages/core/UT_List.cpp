@@ -159,7 +159,7 @@ int UT_List::testDuplicates(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        print2term("Failed to get lua parameters: %s", e.what());
+        mlog(CRITICAL, "Failed to get lua parameters: %s", e.what());
         lua_pushboolean(L, false);
         return 1;
     }
@@ -202,7 +202,7 @@ int UT_List::testSort(lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        print2term("Failed to get lua parameters: %s", e.what());
+        mlog(CRITICAL, "Failed to get lua parameters: %s", e.what());
         lua_pushboolean(L, false);
         return 1;
     }

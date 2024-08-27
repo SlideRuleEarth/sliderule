@@ -33,48 +33,79 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "LimitRecord.h"
+#include <stdlib.h>
+#include "UT_Field.h"
+#include "UnitTest.h"
 #include "OsApi.h"
+#include "Field.h"
+#include "FieldElement.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* LimitRecord::rec_type = "Limit";
-
-RecordObject::fieldDef_t LimitRecord::rec_def[] =
-{
-    {"FILTER_ID",   UINT8,  offsetof(limit_t, filter_id),   1,                      NULL, NATIVE_FLAGS},
-    {"LIMIT_MIN",   UINT8,  offsetof(limit_t, limit_min),   1,                      NULL, NATIVE_FLAGS},
-    {"LIMIT_MAX",   UINT8,  offsetof(limit_t, limit_max),   1,                      NULL, NATIVE_FLAGS},
-    {"ID",          INT64,  offsetof(limit_t, id),          1,                      NULL, NATIVE_FLAGS},
-    {"D_MIN",       DOUBLE, offsetof(limit_t, d_min),       1,                      NULL, NATIVE_FLAGS},
-    {"D_MAX",       DOUBLE, offsetof(limit_t, d_max),       1,                      NULL, NATIVE_FLAGS},
-    {"D_VAL",       DOUBLE, offsetof(limit_t, d_val),       1,                      NULL, NATIVE_FLAGS},
-    {"FIELD_NAME",  STRING, offsetof(limit_t, field_name),  MAX_FIELD_NAME_SIZE,    NULL, NATIVE_FLAGS},
-    {"RECORD_NAME", STRING, offsetof(limit_t, record_name), MAX_RECORD_NAME_SIZE,   NULL, NATIVE_FLAGS}
+const char* UT_Field::LUA_META_NAME = "UT_Field";
+const struct luaL_Reg UT_Field::LUA_META_TABLE[] = {
+    {"basic",       testBasic},
+    {NULL,          NULL}
 };
 
-int LimitRecord::rec_elem = sizeof(LimitRecord::rec_def) / sizeof(RecordObject::fieldDef_t);
+/******************************************************************************
+ * METHODS
+ ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Constructor
+ * luaCreate -
  *----------------------------------------------------------------------------*/
-LimitRecord::LimitRecord(void): RecordObject(rec_type)
+int UT_Field::luaCreate (lua_State* L)
 {
-    limit = reinterpret_cast<limit_t*>(recordData);
+    try
+    {
+        /* Create Unit Test */
+        return createLuaObject(L, new UT_Field(L));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        return returnLuaStatus(L, false);
+    }
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LimitRecord::LimitRecord(const limit_t& _limit): RecordObject(rec_type)
+UT_Field::UT_Field (lua_State* L):
+    UnitTest(L, LUA_META_NAME, LUA_META_TABLE)
 {
-    limit = reinterpret_cast<limit_t*>(recordData);
-    *limit = _limit;
 }
 
 /*----------------------------------------------------------------------------
- * Destructor
+ * Destructor  -
  *----------------------------------------------------------------------------*/
-LimitRecord::~LimitRecord() = default;
+UT_Field::~UT_Field(void) = default;
+
+/*--------------------------------------------------------------------------------------
+ * testBasic
+ *--------------------------------------------------------------------------------------*/
+int UT_Field::testBasic(lua_State* L)
+{
+    UT_Field* lua_obj = NULL;
+    try
+    {
+        lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));        
+        ut_initialize(lua_obj);
+
+
+        FieldElement<double> val1 = 5.3;
+        mlog(INFO, "Val1 = %lf", val1.value);
+
+        lua_pushboolean(L, ut_status(lua_obj));
+        return 1;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(CRITICAL, "Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
+}

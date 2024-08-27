@@ -35,7 +35,7 @@
 
 
 #include "CredentialStore.h"
-#include "core.h"
+#include "OsApi.h"
 
 #include <assert.h>
 

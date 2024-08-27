@@ -33,11 +33,12 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
-#include "ArrowCommon.h"
-
 #include <filesystem>
 #include <uuid/uuid.h>
+
+#include "OsApi.h"
+#include "ArrowCommon.h"
+#include "RecordObject.h"
 
 #ifdef __aws__
 #include "aws.h"

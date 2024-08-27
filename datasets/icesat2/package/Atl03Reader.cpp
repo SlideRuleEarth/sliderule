@@ -37,7 +37,8 @@
 #include <float.h>
 #include <stdarg.h>
 
-#include "core.h"
+#include "OsApi.h"
+#include "ContainerRecord.h"
 #include "h5.h"
 #include "icesat2.h"
 

@@ -29,75 +29,46 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __provisioning_system_lib__
-#define __provisioning_system_lib__
+#ifndef __ut_field__
+#define __ut_field__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "OsApi.h"
-#include "LuaEndpoint.h"
+#include "UnitTest.h"
 
 /******************************************************************************
- * DEFINES
+ * CLASS
  ******************************************************************************/
 
-#define DEFAULT_ORGANIZATION_NAME   "sliderule"
-#define DEFAULT_PS_URL              "https://ps.testsliderule.org"
-
-/******************************************************************************
- * PROVISIONING SYSTEM LIBRARY CLASS
- ******************************************************************************/
-
-class ProvisioningSystemLib
+class UT_Field: public UnitTest
 {
     public:
 
         /*--------------------------------------------------------------------
-         * Typedefs
+         * Constants
          *--------------------------------------------------------------------*/
 
-        typedef struct {
-            char* data;
-            size_t size;
-        } data_t;
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void         init                (void);
-        static void         deinit              (void);
+        static int  luaCreate   (lua_State* L);
 
-        static const char*  login               (const char* username, const char* password, const char* organization, bool verbose=false);
-        static bool         validate            (const char* access_token, bool verbose=false);
-
-        static int          luaUrl              (lua_State* L);
-        static int          luaSetOrganization  (lua_State* L);
-        static int          luaLogin            (lua_State* L);
-        static int          luaValidate         (lua_State* L);
-
-        static size_t       writeData           (const void *buffer, size_t size, size_t nmemb, void *userp);
+    private:
 
         /*--------------------------------------------------------------------
-         * Data
+         * Methods
          *--------------------------------------------------------------------*/
 
-        static const char* URL;
-        static const char* Organization;
+    explicit    UT_Field         (lua_State* L);
+                ~UT_Field        (void) override;
 
-        /*--------------------------------------------------------------------
-         * Authenticator Subclass
-         *--------------------------------------------------------------------*/
-        class Authenticator: public LuaEndpoint::Authenticator
-        {
-            public:
-                static int luaCreate (lua_State* L);
-                explicit Authenticator(lua_State* L);
-                ~Authenticator(void) override;
-                bool isValid(const char* token) override;
-        };
+	static int  testBasic       (lua_State* L);
 };
 
-#endif  /* __provisioning_system_lib__ */
+#endif  /* __ut_field__ */

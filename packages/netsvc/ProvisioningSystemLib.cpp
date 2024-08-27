@@ -33,11 +33,10 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <curl/curl.h>
 
 #include "ProvisioningSystemLib.h"
-#include "core.h"
-
-#include <curl/curl.h>
+#include "OsApi.h"
 
 /******************************************************************************
  * PROVISIONING SYSTEM LIBRARY CLASS

@@ -33,9 +33,10 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaEngine.h"
-#include "core.h"
 #include <regex>
+
+#include "LuaEngine.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA
