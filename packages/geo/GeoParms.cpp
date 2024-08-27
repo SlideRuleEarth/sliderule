@@ -55,7 +55,6 @@ const char* GeoParms::START_TIME            = "t0";
 const char* GeoParms::STOP_TIME             = "t1";
 const char* GeoParms::URL_SUBSTRING         = "substr";
 const char* GeoParms::CLOSEST_TIME          = "closest_time";
-const char* GeoParms::SINGLE_STOP           = "single_stop";
 const char* GeoParms::USE_POI_TIME          = "use_poi_time";
 const char* GeoParms::DOY_RANGE             = "doy_range";
 const char* GeoParms::PROJ_PIPELINE         = "proj_pipeline";
@@ -122,7 +121,6 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
     filter_time         (false),
     url_substring       (NULL),
     filter_closest_time (false),
-    single_stop         (false),
     use_poi_time        (false),
     filter_doy_range    (false),
     doy_keep_inrange    (true),
@@ -236,12 +234,6 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
                 const TimeLib::date_t closest_date = TimeLib::gmt2date(closest_time);
                 mlog(DEBUG, "Setting %s to %04d-%02d-%02dT%02d:%02d:%02dZ", CLOSEST_TIME, closest_date.year, closest_date.month, closest_date.day, closest_time.hour, closest_time.minute, closest_time.second);
             }
-            lua_pop(L, 1);
-
-            /* Single Stop */
-            lua_getfield(L, index, SINGLE_STOP);
-            single_stop = LuaObject::getLuaBoolean(L, -1, true, single_stop, &field_provided);
-            if(field_provided) mlog(DEBUG, "Setting %s to %d", SINGLE_STOP, (int)single_stop);
             lua_pop(L, 1);
 
             /* Use Point of Interest Time */

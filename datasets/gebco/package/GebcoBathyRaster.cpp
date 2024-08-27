@@ -109,7 +109,6 @@ bool GebcoBathyRaster::findRasters(finder_t* finder)
                 rinfo.dataIsElevation = true;
                 rinfo.tag             = VALUE_TAG;
                 rinfo.fileName        = filePath + "/" + dataFile;
-                rinfo.rasterGeo       = rastergeo->clone();
                 rgroup->infovect.push_back(rinfo);
             }
 
@@ -122,7 +121,6 @@ bool GebcoBathyRaster::findRasters(finder_t* finder)
                     rinfo.dataIsElevation = false;
                     rinfo.tag = FLAGS_TAG;
                     rinfo.fileName = filePath + "/" + flagsFile;
-                    rinfo.rasterGeo = rastergeo->clone();
                     rgroup->infovect.push_back(rinfo);
                 }
             }

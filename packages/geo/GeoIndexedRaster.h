@@ -71,29 +71,8 @@ class GeoIndexedRaster: public RasterObject
             bool         dataIsElevation;
             std::string  tag;
             std::string  fileName;
-            OGRGeometry* rasterGeo;
 
-            RasterInfo(void): dataIsElevation(false), rasterGeo(NULL) {}
-
-            RasterInfo(const RasterInfo& other):
-                dataIsElevation(other.dataIsElevation), tag(other.tag), fileName(other.fileName)
-            {
-                rasterGeo = other.rasterGeo->clone();
-            }
-
-            RasterInfo& operator=(const RasterInfo& other)
-            {
-                if (this != &other) {
-                    dataIsElevation = other.dataIsElevation;
-                    tag = other.tag;
-                    fileName = other.fileName;
-                    OGRGeometryFactory::destroyGeometry(rasterGeo);
-                    rasterGeo = other.rasterGeo->clone();
-                }
-                return *this;
-            }
-
-            ~RasterInfo(void) {OGRGeometryFactory::destroyGeometry(rasterGeo);}
+            RasterInfo(void): dataIsElevation(false) {}
         } raster_info_t;
 
         typedef struct RaserGroup {
@@ -202,10 +181,8 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                      onlyFirst;
         uint32_t                  numFinders;
         finder_range_t*           findersRange;
-        rasters_group_t           cachedRastersGroup;
         List<finder_t*>           finders;
         List<reader_t*>           readers;
         GdalRaster::overrideCRS_t crscb;
@@ -214,11 +191,6 @@ class GeoIndexedRaster: public RasterObject
         GdalRaster::bbox_t        bbox;
         uint32_t                  rows;
         uint32_t                  cols;
-
-        uint64_t                  onlyFirstCount;
-        uint64_t                  findRastersCount;
-        uint64_t                  fullSearchCount;
-        uint64_t                  allSamplesCount;
 
         /*--------------------------------------------------------------------
          * Methods

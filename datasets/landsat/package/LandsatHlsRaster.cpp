@@ -211,7 +211,6 @@ bool LandsatHlsRaster::findRasters(finder_t* finder)
                     raster_info_t rinfo;
                     rinfo.dataIsElevation = false; /* All bands are not elevation */
                     rinfo.fileName = filePath + fileName.substr(pos);
-                    rinfo.rasterGeo = rastergeo->clone();
 
                     if(strcmp(bandName, "Fmask") == 0)
                     {
