@@ -33,85 +33,100 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "UT_String.h"
+#include <stdlib.h>
 #include "UnitTest.h"
 #include "OsApi.h"
+#include "LuaObject.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* UT_String::LUA_META_NAME = "UT_String";
-const struct luaL_Reg UT_String::LUA_META_TABLE[] = {
-    {"replace",     testReplace},
-    {NULL,          NULL}
-};
+const char* UnitTest::OBJECT_TYPE = "UnitTest";
 
 /******************************************************************************
  * METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate -
- *----------------------------------------------------------------------------*/
-int UT_String::luaCreate (lua_State* L)
-{
-    try
-    {
-        /* Create Unit Test */
-        return createLuaObject(L, new UT_String(L));
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
-        return returnLuaStatus(L, false);
-    }
-}
-
-/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-UT_String::UT_String (lua_State* L):
-    UnitTest(L, LUA_META_NAME, LUA_META_TABLE)
+UnitTest::UnitTest (lua_State* L, const char* meta_name, const struct luaL_Reg* meta_table):
+    LuaObject(L, OBJECT_TYPE, meta_name, meta_table),
+    failures(0)
 {
 }
 
 /*--------------------------------------------------------------------------------------
- * testReplace
+ * _ut_initialize - called via ut_initialize macro
  *--------------------------------------------------------------------------------------*/
-int UT_String::testReplace(lua_State* L)
+bool UnitTest::_ut_initialize(void)
 {
-    UT_String* lua_obj = NULL;
-    try
+    lock.lock();
     {
-        lua_obj = dynamic_cast<UT_String*>(getLuaSelf(L, 1));
+        failures = 0;
     }
-    catch(const RunTimeException& e)
+    lock.unlock();
+    return true;
+}
+
+/*--------------------------------------------------------------------------------------
+ * _ut_assert - called via ut_assert macro
+ *--------------------------------------------------------------------------------------*/
+bool UnitTest::_ut_assert(bool e, const char* file, int line, const char* fmt, ...)
+{
+    if(!e)
     {
-        print2term("Failed to get lua parameters: %s", e.what());
-        lua_pushboolean(L, false);
-        return 1;
+        char formatted_string[UT_MAX_ASSERT];
+        char log_message[UT_MAX_ASSERT];
+        va_list args;
+        int vlen, msglen;
+        char* pathptr;
+
+        /* Build Formatted String */
+        va_start(args, fmt);
+        vlen = vsnprintf(formatted_string, UT_MAX_ASSERT - 1, fmt, args);
+        msglen = vlen < UT_MAX_ASSERT - 1 ? vlen : UT_MAX_ASSERT - 1;
+        va_end(args);
+        if (msglen < 0) formatted_string[0] = '\0';
+        else            formatted_string[msglen] = '\0';
+
+        /* Chop Path in Filename */
+        pathptr = StringLib::find(file, '/', false);
+        if(pathptr) pathptr++;
+        else pathptr = const_cast<char*>(file);
+
+        /* Create Log Message */
+        msglen = snprintf(log_message, UT_MAX_ASSERT, "Failure at %s:%d:%s", pathptr, line, formatted_string);
+        if(msglen > (UT_MAX_ASSERT - 1))
+        {
+            log_message[UT_MAX_ASSERT - 1] = '#';
+        }
+
+        /* Display Log Message */
+        print2term("%s", log_message);
+
+        /* Count Error */
+        lock.lock();
+        {
+            failures++;
+        }
+        lock.unlock();
     }
 
-    ut_initialize(lua_obj);
+    return e;
+}
 
-    // 1) Replace Single Character
-    char* test1 = StringLib::replace("Hello World", "o", "X");
-    ut_assert(lua_obj, StringLib::match(test1, "HellX WXrld"), "Failed single character test: %s", test1);
-    delete [] test1;
-    // 2) Replace String
-    char* test2 = StringLib::replace("Hello World", "ello", "eal");
-    ut_assert(lua_obj, StringLib::match(test2, "Heal World"), "Failed to replace string: %s", test2);
-    delete [] test2;
-
-    // 3) Replace Strings
-    const char* oldtxt[2] = { "$1", "$2" };
-    const char* newtxt[2] = { "sentence", "not" };
-    char* test3 = StringLib::replace("This is a long $1 and I am $2 sure if this $1 will work or $2", oldtxt, newtxt, 2);
-    ut_assert(lua_obj, StringLib::match(test3, "This is a long sentence and I am not sure if this sentence will work or not"), "Failed multiple replacements: %s", test3);
-    delete [] test3;
-
-    // return success or failure
-    lua_pushboolean(L, ut_status(lua_obj));
-    return 1;
+/*--------------------------------------------------------------------------------------
+ * _ut_status - called via ut_status macro
+ *--------------------------------------------------------------------------------------*/
+bool UnitTest::_ut_status(void)
+{
+    bool status;
+    lock.lock();
+    {
+        status = failures == 0;
+    }
+    lock.unlock();
+    return status;
 }

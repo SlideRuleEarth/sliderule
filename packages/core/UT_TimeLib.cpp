@@ -34,7 +34,9 @@
  ******************************************************************************/
 
 #include "UT_TimeLib.h"
-#include "core.h"
+#include "UnitTest.h"
+#include "TimeLib.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -83,8 +85,6 @@ const int64_t UT_TimeLib::Truth_Times[39][2] = {
     {1483660800000000, 1167696018000},  // January 06, 2017
     {1515196800000000, 1199232018000}   // January 06, 2018
 };
-
-const char* UT_TimeLib::OBJECT_TYPE = "UT_TimeLib";
 
 const char* UT_TimeLib::LUA_META_NAME = "UT_TimeLib";
 const struct luaL_Reg UT_TimeLib::LUA_META_TABLE[] = {
@@ -137,14 +137,9 @@ void UT_TimeLib::init (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 UT_TimeLib::UT_TimeLib (lua_State* L):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
+    UnitTest(L, LUA_META_NAME, LUA_META_TABLE)
 {
 }
-
-/*----------------------------------------------------------------------------
- * Destructor  -
- *----------------------------------------------------------------------------*/
-UT_TimeLib::~UT_TimeLib(void) = default;
 
 /*----------------------------------------------------------------------------
  * CheckGetCountCmd

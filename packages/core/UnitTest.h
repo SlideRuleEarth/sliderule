@@ -29,22 +29,28 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __ut_timelib__
-#define __ut_timelib__
+#ifndef __unittest__
+#define __unittest__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "UnitTest.h"
-#include "TimeLib.h"
-#include "OsApi.h"
+#include "LuaObject.h"
+
+/******************************************************************************
+ * DEFINES
+ ******************************************************************************/
+
+#define ut_initialize(obj)      obj->_ut_initialize()
+#define ut_assert(obj,e,...)    obj->_ut_assert(e,__FILE__,__LINE__,__VA_ARGS__)
+#define ut_status(obj)          obj->_ut_status()
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class UT_TimeLib: public UnitTest
+class UnitTest: public LuaObject
 {
     public:
 
@@ -52,37 +58,28 @@ class UT_TimeLib: public UnitTest
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int64_t Truth_Times[39][2];
-        static const int UNIX_Epoch_Start;
+        static const int UT_MAX_ASSERT = 256;
+        static const char* OBJECT_TYPE;
 
-        static const char* LUA_META_NAME;
-        static const struct luaL_Reg LUA_META_TABLE[];
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        explicit    UnitTest        (lua_State* L, const char* meta_name, const struct luaL_Reg* meta_table);
+                    ~UnitTest       (void) override = default;
+
+        bool        _ut_initialize  (void);
+        bool        _ut_assert      (bool e, const char* file, int line, const char* fmt, ...);
+        bool        _ut_status      (void);
+
+    private:
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        static TimeLib::gmt_time_t Truth_GMT[39];
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        static void init        (void);
-        static int  luaCreate   (lua_State* L);
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-    explicit    UT_TimeLib          (lua_State* L);
-                ~UT_TimeLib         (void) override = default;
-	static int  CheckGmt2GpsCmd     (lua_State* L);
-	static int  CheckGps2GmtCmd     (lua_State* L);
-	static int  CheckGetCountCmd    (lua_State* L);
-	void        initTruthGMT        (void);
+        int failures;
+        Mutex lock;
 };
 
-#endif  /* __ut_timelib__ */
+#endif  /* __unittest__ */

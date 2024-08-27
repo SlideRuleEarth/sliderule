@@ -34,7 +34,8 @@
  ******************************************************************************/
 
 #include "UT_MsgQ.h"
-#include "core.h"
+#include "UnitTest.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * DEFINES
@@ -45,8 +46,6 @@
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
-
-const char* UT_MsgQ::OBJECT_TYPE = "UT_MsgQ";
 
 const char* UT_MsgQ::LUA_META_NAME = "UT_MsgQ";
 const struct luaL_Reg UT_MsgQ::LUA_META_TABLE[] = {
@@ -82,14 +81,9 @@ int UT_MsgQ::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 UT_MsgQ::UT_MsgQ (lua_State* L):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
+    UnitTest(L, LUA_META_NAME, LUA_META_TABLE)
 {
 }
-
-/*----------------------------------------------------------------------------
- * Destructor  -
- *----------------------------------------------------------------------------*/
-UT_MsgQ::~UT_MsgQ(void) = default;
 
 /*----------------------------------------------------------------------------
  * blockingReceiveUnitTestCmd  -
@@ -100,16 +94,15 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (lua_State* L) // NOLINT(readability-con
     try
     {
         lua_obj = dynamic_cast<UT_MsgQ*>(getLuaSelf(L, 1));
-        (void)lua_obj; // unused below
     }
     catch(const RunTimeException& e)
     {
-        print2term("Failed to get lua parameters: %s", e.what());
+        mlog(CRITICAL, "Failed to get lua parameters: %s", e.what());
         lua_pushboolean(L, false);
         return 1;
     }
 
-    bool test_status = true;
+    ut_initialize(lua_obj);
 
     /* Set Unit Test Parameters (TODO: set from command parameters) */
     parms_t unit_test_parms;
@@ -138,8 +131,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (lua_State* L) // NOLINT(readability-con
         const int status1 = pubq->postCopy(static_cast<void*>(&data), sizeof(long));
         if(status1 <= 0)
         {
-            print2term("[%d] ERROR: post %ld error %d\n", __LINE__, data, status1);
-            unit_test_parms.errorcnt++;
+            ut_assert(lua_obj, false, "ERROR: post %ld error %d", data, status1);
             break;
         }
         data++;
@@ -149,8 +141,7 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (lua_State* L) // NOLINT(readability-con
     const int status2 = pubq->postCopy(static_cast<void*>(&data), sizeof(long), SYS_TIMEOUT);
     if(status2 != MsgQ::STATE_TIMEOUT)
     {
-        print2term("[%d] ERROR: post %ld did not timeout: %d\n", __LINE__, data, status2);
-        unit_test_parms.errorcnt++;
+        ut_assert(lua_obj, false, "ERROR: post %ld did not timeout: %d", data, status2);
     }
 
     /* STEP 3: Receive Data */
@@ -161,13 +152,11 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (lua_State* L) // NOLINT(readability-con
         const int status3 = subq->receiveCopy(static_cast<void*>(&value), sizeof(long), SYS_TIMEOUT);
         if(status3 != sizeof(long))
         {
-            print2term("[%d] ERROR: receive failed with status %d\n", __LINE__, status3);
-            unit_test_parms.errorcnt++;
+            ut_assert(lua_obj, false, "ERROR: receive failed with status %d", status3);
         }
         else if(value != data)
         {
-            print2term("[%d] ERROR: receive got the wrong value %ld != %ld\n", __LINE__, value, data);
-            unit_test_parms.errorcnt++;
+            ut_assert(lua_obj, false, "ERROR: receive got the wrong value %ld != %ld", value, data);
         }
         data++;
     }
@@ -176,17 +165,14 @@ int UT_MsgQ::blockingReceiveUnitTestCmd (lua_State* L) // NOLINT(readability-con
     const int status4 = subq->receiveCopy(static_cast<void*>(&value), sizeof(long), SYS_TIMEOUT);
     if(status4 != MsgQ::STATE_TIMEOUT)
     {
-        print2term("[%d] ERROR: receive %ld did not timeout: %d\n", __LINE__, data, status4);
-        unit_test_parms.errorcnt++;
+        ut_assert(lua_obj, false, "ERROR: receive %ld did not timeout: %d", data, status4);
     }
-
-    if(unit_test_parms.errorcnt != 0) test_status = false;
 
     /* Clean Up */
     delete pubq;
     delete subq;
 
-    lua_pushboolean(L, test_status);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -199,16 +185,15 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (lua_State* L) // NOLINT(readabilit
     try
     {
         lua_obj = dynamic_cast<UT_MsgQ*>(getLuaSelf(L, 1));
-        (void)lua_obj; // unused below
     }
     catch(const RunTimeException& e)
     {
-        print2term("Failed to get lua parameters: %s", e.what());
+        mlog(CRITICAL, "Failed to get lua parameters: %s", e.what());
         lua_pushboolean(L, false);
         return 1;
     }
 
-    bool test_status = true;
+    ut_initialize(lua_obj);
 
     /* Set Unit Test Parameters (TODO: set from command parameters) */
     parms_t unit_test_parms;
@@ -218,6 +203,7 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (lua_State* L) // NOLINT(readabilit
     unit_test_parms.qdepth = 100;
     unit_test_parms.numpubs = 3;
     unit_test_parms.numsubs = 3;
+    unit_test_parms.self = lua_obj;
 
     /* Initialize Random Seed */
     srand(static_cast<unsigned int>(time(NULL)));
@@ -248,29 +234,19 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (lua_State* L) // NOLINT(readabilit
     for(int p = 0; p < unit_test_parms.numpubs; p++)
     {
         delete p_pid[p];
-        if(pubparms[p]->errorcnt != 0)
-        {
-            test_status = false;
-        }
         delete pubparms[p]->lastvalue;
         delete pubparms[p];
     }
     for(int s = 0; s < unit_test_parms.numsubs; s++)
     {
         delete s_pid[s];
-        if(subparms[s]->errorcnt != 0)
-        {
-            test_status = false;
-            print2term("[%d] ERROR: SUB %d error count is %d\n", __LINE__, s, subparms[s]->errorcnt);
-        }
         for(int p = 0; p < unit_test_parms.numpubs; p++)
         {
             if(subparms[s]->lastvalue[p] != 0)
             {
                 if(subparms[s]->lastvalue[p] != ((p << 16) | unit_test_parms.loopcnt))
                 {
-                    test_status = false;
-                    print2term("[%d] ERROR: sub %d last value %d of %lX is not %X\n", __LINE__, s, p, subparms[s]->lastvalue[p], (p << 16) | unit_test_parms.loopcnt);
+                    ut_assert(lua_obj, false, "ERROR: sub %d last value %d of %lX is not %X", s, p, subparms[s]->lastvalue[p], (p << 16) | unit_test_parms.loopcnt);
                 }
             }
         }
@@ -290,8 +266,7 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (lua_State* L) // NOLINT(readabilit
             {
                 if(msgQs[i].subscriptions != 0)
                 {
-                    test_status = false;
-                    print2term("[%d] ERROR: msgQ %40s %8d %9s %d failed to unsubscribe all subscribers\n", __LINE__, msgQs[i].name, msgQs[i].len, msgQs[i].state, msgQs[i].subscriptions);
+                    ut_assert(lua_obj, false, "ERROR: msgQ %40s %8d %9s %d failed to unsubscribe all subscribers", msgQs[i].name, msgQs[i].len, msgQs[i].state, msgQs[i].subscriptions);
                 }
             }
         }
@@ -305,7 +280,7 @@ int UT_MsgQ::subscribeUnsubscribeUnitTestCmd (lua_State* L) // NOLINT(readabilit
     delete [] subparms;
 
     /* Return */
-    lua_pushboolean(L, test_status);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -316,23 +291,23 @@ int UT_MsgQ::performanceUnitTestCmd (lua_State* L) // NOLINT(readability-convert
 {
     long depth = 500000;
     long size = 1000;
-    bool failure = false;
 
     UT_MsgQ* lua_obj = NULL;
     try
     {
         lua_obj = dynamic_cast<UT_MsgQ*>(getLuaSelf(L, 1));
-        (void)lua_obj; // unused below
-
         depth = getLuaInteger(L, 2, true, depth);
         size = getLuaInteger(L, 3, true, size);
     }
     catch(const RunTimeException& e)
     {
-        print2term("Failed to get lua parameters: %s", e.what());
+        mlog(CRITICAL, "Failed to get lua parameters: %s", e.what());
         lua_pushboolean(L, false);
         return 1;
     }
+
+    /* Initialize Test */
+    ut_initialize(lua_obj);
 
     /* Create Performance Test Data Structures */
     Publisher* p = new Publisher("testq_03", NULL);
@@ -352,7 +327,6 @@ int UT_MsgQ::performanceUnitTestCmd (lua_State* L) // NOLINT(readability-convert
         {
             RAW[i].s = new Subscriber("testq_03");
             RAW[i].v = new Sem();
-            RAW[i].f = false;
             RAW[i].depth = depth;
             RAW[i].size = size;
             t[i] = new Thread(performanceThread, &RAW[i]);
@@ -371,8 +345,7 @@ int UT_MsgQ::performanceUnitTestCmd (lua_State* L) // NOLINT(readability-convert
             const int status = p->postCopy(pkt, size);
             if(status <= 0)
             {
-                print2term("[%d] ERROR: unable to post pkt %d with error %d\n", __LINE__, i, status);
-                failure = true;
+                ut_assert(lua_obj, false, "ERROR: unable to post pkt %d with error %d", i, status);
             }
         }
         delete [] pkt;
@@ -390,7 +363,6 @@ int UT_MsgQ::performanceUnitTestCmd (lua_State* L) // NOLINT(readability-convert
         for(int i = 0; i < numsubs; i++)
         {
             delete t[i]; // performs a join
-            failure = failure || RAW[i].f; // checks status
         }
         delete [] t;
         end = clock();
@@ -414,7 +386,7 @@ int UT_MsgQ::performanceUnitTestCmd (lua_State* L) // NOLINT(readability-convert
     /* Delete Test Structures */
     delete p;
 
-    lua_pushboolean(L, !failure);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -427,16 +399,13 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (lua_State* L) // NOLINT(readabil
     try
     {
         lua_obj = dynamic_cast<UT_MsgQ*>(getLuaSelf(L, 1));
-        (void)lua_obj; // unused below
     }
     catch(const RunTimeException& e)
     {
-        print2term("Failed to get lua parameters: %s", e.what());
+        mlog(CRITICAL, "Failed to get lua parameters: %s", e.what());
         lua_pushboolean(L, false);
         return 1;
     }
-
-    bool test_status = true;
 
     /* Set Unit Test Parameters (TODO: set from command parameters) */
     parms_t unit_test_parms;
@@ -446,6 +415,10 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (lua_State* L) // NOLINT(readabil
     unit_test_parms.qdepth = 5000;
     unit_test_parms.numpubs = 10;
     unit_test_parms.numsubs = 10;
+    unit_test_parms.self= lua_obj;
+
+    /* Initialize Test */
+    ut_initialize(lua_obj);
 
     /* Initialize Random Seed */
     srand(static_cast<unsigned int>(time(NULL)));
@@ -476,21 +449,12 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (lua_State* L) // NOLINT(readabil
     for(int p = 0; p < unit_test_parms.numpubs; p++)
     {
         delete p_pid[p];
-        if(pubparms[p]->errorcnt != 0)
-        {
-            test_status = false;
-        }
         delete pubparms[p]->lastvalue;
         delete pubparms[p];
     }
     for(int s = 0; s < unit_test_parms.numsubs; s++)
     {
         delete s_pid[s];
-        if(subparms[s]->errorcnt != 0)
-        {
-            test_status = false;
-            print2term("[%d] ERROR: SUB %d error count is %d\n", __LINE__, s, subparms[s]->errorcnt);
-        }
         delete [] subparms[s]->lastvalue;
         delete subparms[s];
     }
@@ -507,8 +471,7 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (lua_State* L) // NOLINT(readabil
             {
                 if(msgQs[i].subscriptions != 0)
                 {
-                    test_status = false;
-                    print2term("[%d] ERROR: msgQ %40s %8d %9s %d failed to unsubscribe all subscribers\n", __LINE__, msgQs[i].name, msgQs[i].len, msgQs[i].state, msgQs[i].subscriptions);
+                    ut_assert(lua_obj, false, "ERROR: msgQ %40s %8d %9s %d failed to unsubscribe all subscribers", msgQs[i].name, msgQs[i].len, msgQs[i].state, msgQs[i].subscriptions);
                 }
             }
         }
@@ -522,7 +485,7 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (lua_State* L) // NOLINT(readabil
     delete [] subparms;
 
     /* Return */
-    lua_pushboolean(L, test_status);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -532,6 +495,7 @@ int UT_MsgQ::subscriberOfOpporunityUnitTestCmd (lua_State* L) // NOLINT(readabil
 void* UT_MsgQ::subscriberThread(void* parm)
 {
     parms_t* unit_test_parms = static_cast<parms_t*>(parm);
+    UnitTest* lua_obj = unit_test_parms->self;
 
     /* Initialize Checking Variables */
     unit_test_parms->lastvalue = new long[unit_test_parms->numpubs];
@@ -541,7 +505,7 @@ void* UT_MsgQ::subscriberThread(void* parm)
     /* Create Queue */
     randomDelay(100);
     Subscriber* q = new Subscriber(unit_test_parms->qname, MsgQ::SUBSCRIBER_OF_CONFIDENCE, unit_test_parms->qdepth);
-    print2term("Subscriber thread %d created on queue %s\n", unit_test_parms->threadid, unit_test_parms->qname);
+    mlog(INFO, "Subscriber thread %d created on queue %s", unit_test_parms->threadid, unit_test_parms->qname);
 
     /* Loop */
     long data;
@@ -555,8 +519,7 @@ void* UT_MsgQ::subscriberThread(void* parm)
             const int threadid = data >> 16;
             if(threadid < 0 || threadid >= unit_test_parms->numpubs)
             {
-                print2term("[%d] ERROR: out of bounds threadid in %d: %d", __LINE__, unit_test_parms->threadid, threadid);
-                unit_test_parms->errorcnt++;
+                ut_assert(lua_obj, false, "ERROR: out of bounds threadid in %d: %d", unit_test_parms->threadid, threadid);
                 break;
             }
             else if(first_read[threadid])
@@ -565,25 +528,23 @@ void* UT_MsgQ::subscriberThread(void* parm)
             }
             else if(data != unit_test_parms->lastvalue[threadid] + 1)
             {
-                print2term("[%d] ERROR: read %d sequence error %ld != %ld + 1\n", __LINE__, unit_test_parms->threadid, data, unit_test_parms->lastvalue[threadid]);
-                unit_test_parms->errorcnt++;
+                ut_assert(lua_obj, false, "ERROR: read %d sequence error %ld != %ld + 1", unit_test_parms->threadid, data, unit_test_parms->lastvalue[threadid]);
             }
             unit_test_parms->lastvalue[threadid] = data;
         }
         else if(status == MsgQ::STATE_TIMEOUT)
         {
-            print2term("Subscriber thread %d encountered timeout\n", unit_test_parms->threadid);
+            mlog(INFO, "Subscriber thread %d encountered timeout", unit_test_parms->threadid);
             break;
         }
         else
         {
-            print2term("[%d] ERROR: %d error %d\n", __LINE__, unit_test_parms->threadid, status);
-            unit_test_parms->errorcnt++;
+            ut_assert(lua_obj, false, "ERROR: %d error %d", unit_test_parms->threadid, status);
             break;
         }
     }
 
-    print2term("Subscriber thread %d exited with %d loops to go\n", unit_test_parms->threadid, loops + 1);
+    mlog(INFO, "Subscriber thread %d exited with %d loops to go", unit_test_parms->threadid, loops + 1);
 
     /* Clean Up */
     delete [] first_read;
@@ -598,6 +559,7 @@ void* UT_MsgQ::subscriberThread(void* parm)
 void* UT_MsgQ::publisherThread(void* parm)
 {
     parms_t* unit_test_parms = static_cast<parms_t*>(parm);
+    UnitTest* lua_obj = unit_test_parms->self;
 
     /* Last Value Instantiation */
     unit_test_parms->lastvalue = new long;
@@ -605,7 +567,7 @@ void* UT_MsgQ::publisherThread(void* parm)
     /* Create Queue */
     randomDelay(100);
     Publisher* q = new Publisher(unit_test_parms->qname, NULL, unit_test_parms->qdepth);
-    print2term("Publisher thread %d created on queue %s\n", unit_test_parms->threadid, unit_test_parms->qname);
+    mlog(INFO, "Publisher thread %d created on queue %s", unit_test_parms->threadid, unit_test_parms->qname);
 
     /* Loop */
     int timeout_cnt = 0;
@@ -625,13 +587,12 @@ void* UT_MsgQ::publisherThread(void* parm)
         }
         else
         {
-            print2term("[%d] ERROR: post %d error %d\n", __LINE__, unit_test_parms->threadid, status);
-            unit_test_parms->errorcnt++;
+            ut_assert(lua_obj, false, "ERROR: post %d error %d", unit_test_parms->threadid, status);
             break;
         }
     }
 
-    print2term("Publisher thread %d encountered %d timeouts at data %ld\n", unit_test_parms->threadid, timeout_cnt, data & 0xFFFF);
+    mlog(INFO, "Publisher thread %d encountered %d timeouts at data %ld", unit_test_parms->threadid, timeout_cnt, data & 0xFFFF);
 
     /* Clean Up */
     delete q;
@@ -645,6 +606,7 @@ void* UT_MsgQ::publisherThread(void* parm)
 void* UT_MsgQ::performanceThread(void* parm)
 {
     perf_thread_t* RAW = static_cast<perf_thread_t*>(parm);
+    UnitTest* lua_obj = RAW->self;
     unsigned long sequence = 0;
 
     /* Wait to Start */
@@ -659,8 +621,7 @@ void* UT_MsgQ::performanceThread(void* parm)
         {
             if(ref.size != RAW->size)
             {
-                print2term("[%d] ERROR:  mismatched size of receive: %d != %d\n", __LINE__, ref.size, RAW->size);
-                RAW->f = true;
+                ut_assert(lua_obj, false, "ERROR:  mismatched size of receive: %d != %d", ref.size, RAW->size);
             }
             else
             {
@@ -669,8 +630,7 @@ void* UT_MsgQ::performanceThread(void* parm)
                 {
                     if(pkt[i] != static_cast<unsigned char>(sequence++))
                     {
-                        print2term("[%d] ERROR:  invalid sequence detected in data: %d != %d\n", __LINE__, pkt[i], static_cast<unsigned char>(sequence - 1));
-                        RAW->f = true;
+                        ut_assert(lua_obj, false, "ERROR:  invalid sequence detected in data: %d != %d", pkt[i], static_cast<unsigned char>(sequence - 1));
                     }
                 }
             }
@@ -679,13 +639,11 @@ void* UT_MsgQ::performanceThread(void* parm)
         }
         else if(status == MsgQ::STATE_TIMEOUT)
         {
-            print2term("[%d] ERROR:  unexpected timeout on receive at pkt %d!\n", __LINE__, pktnum);
-            RAW->f = true;
+            ut_assert(lua_obj, false, "ERROR:  unexpected timeout on receive at pkt %d!", pktnum);
         }
         else
         {
-            print2term("[%d] ERROR:  failed to receive message, error %d\n", __LINE__, status);
-            RAW->f = true;
+            ut_assert(lua_obj, false, "ERROR:  failed to receive message, error %d", status);
         }
     }
 
@@ -694,8 +652,7 @@ void* UT_MsgQ::performanceThread(void* parm)
     const int status = RAW->s->receiveRef(ref, IO_CHECK);
     if(status != MsgQ::STATE_EMPTY)
     {
-        print2term("[%d] ERROR: queue unexpectedly not empty, return status %d\n", __LINE__, status);
-        RAW->f = true;
+        ut_assert(lua_obj, false, "ERROR: queue unexpectedly not empty, return status %d", status);
     }
 
     /* Clean up and exit */
@@ -708,6 +665,7 @@ void* UT_MsgQ::performanceThread(void* parm)
 void* UT_MsgQ::opportunityThread(void* parm)
 {
     parms_t* unit_test_parms = static_cast<parms_t*>(parm);
+    UnitTest* lua_obj = unit_test_parms->self;
 
     /* Initialize Checking Variables */
     unit_test_parms->lastvalue = new long[unit_test_parms->numpubs];
@@ -732,8 +690,7 @@ void* UT_MsgQ::opportunityThread(void* parm)
             const int threadid = data >> 16;
             if(threadid < 0 || threadid >= unit_test_parms->numpubs)
             {
-                print2term("[%d] ERROR: out of bounds threadid in %d: %d\n", __LINE__, unit_test_parms->threadid, threadid);
-                unit_test_parms->errorcnt++;
+                ut_assert(lua_obj, false, "ERROR: out of bounds threadid in %d: %d", unit_test_parms->threadid, threadid);
                 break;
             }
             else if(first_read[threadid])
@@ -749,8 +706,7 @@ void* UT_MsgQ::opportunityThread(void* parm)
         }
         else if(status != MsgQ::STATE_TIMEOUT)
         {
-            print2term("[%d] ERROR: %d error %d\n", __LINE__, unit_test_parms->threadid, status);
-            unit_test_parms->errorcnt++;
+            ut_assert(lua_obj, false, "ERROR: %d error %d", unit_test_parms->threadid, status);
             break;
         }
         else if(timeouts++ > 1)
@@ -760,7 +716,7 @@ void* UT_MsgQ::opportunityThread(void* parm)
     }
 
     /* Display Drop Count */
-    print2term("Exiting subscriber of opportunity %d test loop at count %d with %d drops\n", unit_test_parms->threadid, loops, drops);
+    mlog(INFO, "Exiting subscriber of opportunity %d test loop at count %d with %d drops", unit_test_parms->threadid, loops, drops);
 
     /* Clean Up */
     delete [] first_read;
