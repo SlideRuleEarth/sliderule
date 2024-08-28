@@ -104,7 +104,7 @@ bool UnitTest::_ut_assert(bool e, const char* file, int line, const char* fmt, .
         }
 
         /* Display Log Message */
-        print2term("%s", log_message);
+        mlog(CRITICAL, "%s", log_message);
 
         /* Count Error */
         lock.lock();

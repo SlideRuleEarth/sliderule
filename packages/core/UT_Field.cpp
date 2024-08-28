@@ -34,6 +34,8 @@
  ******************************************************************************/
 
 #include <stdlib.h>
+#include <cmath>
+
 #include "UT_Field.h"
 #include "UnitTest.h"
 #include "OsApi.h"
@@ -92,35 +94,68 @@ int UT_Field::testBasic(lua_State* L)
     UT_Field* lua_obj = NULL;
     try
     {
+        // initialize test
         lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));        
         ut_initialize(lua_obj);
 
-        // test encodings
-        const struct hi {
-            FieldElement<int8_t>        p0{10};
-            FieldElement<int16_t>       p1{11};
-            FieldElement<int32_t>       p2{12};
-            FieldElement<int64_t>       p3{13};
-            FieldElement<uint8_t>       p4{14};
-            FieldElement<uint16_t>      p5{15};
-            FieldElement<uint32_t>      p6{16};
-            FieldElement<uint64_t>      p7{17};
-            FieldElement<float>         p8{2.3};
-            FieldElement<double>        p9{3.14};
-            FieldElement<const char*>   p10{"good"};
+        struct hi {
+            FieldElement<bool>          p0{true};
+            FieldElement<int8_t>        p1{10};
+            FieldElement<int16_t>       p2{11};
+            FieldElement<int32_t>       p3{12};
+            FieldElement<int64_t>       p4{13};
+            FieldElement<uint8_t>       p5{14};
+            FieldElement<uint16_t>      p6{15};
+            FieldElement<uint32_t>      p7{16};
+            FieldElement<uint64_t>      p8{17};
+            FieldElement<float>         p9{2.3};
+            FieldElement<double>        p10{3.14};
+            FieldElement<const char*>   p11{"good"};
         } bye;
-        ut_assert(lua_obj, bye.p0.getEncoding() == Field::INT8, "failed to set encoding for int8_t: %d", bye.p0.getEncoding());
-        ut_assert(lua_obj, bye.p1.getEncoding() == Field::INT16, "failed to set encoding for int16_t: %d", bye.p1.getEncoding());
-        ut_assert(lua_obj, bye.p2.getEncoding() == Field::INT32, "failed to set encoding for int32_t: %d", bye.p2.getEncoding());
-        ut_assert(lua_obj, bye.p3.getEncoding() == Field::INT64, "failed to set encoding for int64_t: %d", bye.p3.getEncoding());
-        ut_assert(lua_obj, bye.p4.getEncoding() == Field::UINT8, "failed to set encoding for uint8_t: %d", bye.p4.getEncoding());
-        ut_assert(lua_obj, bye.p5.getEncoding() == Field::UINT16, "failed to set encoding for uint16_t: %d", bye.p5.getEncoding());
-        ut_assert(lua_obj, bye.p6.getEncoding() == Field::UINT32, "failed to set encoding for uint32_t: %d", bye.p6.getEncoding());
-        ut_assert(lua_obj, bye.p7.getEncoding() == Field::UINT64, "failed to set encoding for uint64_t: %d", bye.p7.getEncoding());
-        ut_assert(lua_obj, bye.p8.getEncoding() == Field::FLOAT, "failed to set encoding for float: %d", bye.p8.getEncoding());
-        ut_assert(lua_obj, bye.p9.getEncoding() == Field::DOUBLE, "failed to set encoding for double: %d", bye.p9.getEncoding());
-        ut_assert(lua_obj, bye.p10.getEncoding() == Field::STRING, "failed to set encoding for char: %d", bye.p10.getEncoding());
 
+        // test encodings
+        ut_assert(lua_obj, bye.p0.getEncoding() == Field::BOOLEAN,  "failed to set encoding for bool: %d",      bye.p0.getEncoding());
+        ut_assert(lua_obj, bye.p1.getEncoding() == Field::INT8,     "failed to set encoding for int8_t: %d",    bye.p1.getEncoding());
+        ut_assert(lua_obj, bye.p2.getEncoding() == Field::INT16,    "failed to set encoding for int16_t: %d",   bye.p2.getEncoding());
+        ut_assert(lua_obj, bye.p3.getEncoding() == Field::INT32,    "failed to set encoding for int32_t: %d",   bye.p3.getEncoding());
+        ut_assert(lua_obj, bye.p4.getEncoding() == Field::INT64,    "failed to set encoding for int64_t: %d",   bye.p4.getEncoding());
+        ut_assert(lua_obj, bye.p5.getEncoding() == Field::UINT8,    "failed to set encoding for uint8_t: %d",   bye.p5.getEncoding());
+        ut_assert(lua_obj, bye.p6.getEncoding() == Field::UINT16,   "failed to set encoding for uint16_t: %d",  bye.p6.getEncoding());
+        ut_assert(lua_obj, bye.p7.getEncoding() == Field::UINT32,   "failed to set encoding for uint32_t: %d",  bye.p7.getEncoding());
+        ut_assert(lua_obj, bye.p8.getEncoding() == Field::UINT64,   "failed to set encoding for uint64_t: %d",  bye.p8.getEncoding());
+        ut_assert(lua_obj, bye.p9.getEncoding() == Field::FLOAT,    "failed to set encoding for float: %d",     bye.p9.getEncoding());
+        ut_assert(lua_obj, bye.p10.getEncoding() == Field::DOUBLE,  "failed to set encoding for double: %d",    bye.p10.getEncoding());
+        ut_assert(lua_obj, bye.p11.getEncoding() == Field::STRING,  "failed to set encoding for char: %d",      bye.p11.getEncoding());
+
+        // test toJson
+        ut_assert(lua_obj, bye.p0.toJson() == "true",      "failed to convert to json: %s", bye.p0.toJson().c_str());
+        ut_assert(lua_obj, bye.p1.toJson() == "10",        "failed to convert to json: %s", bye.p1.toJson().c_str());
+        ut_assert(lua_obj, bye.p2.toJson() == "11",        "failed to convert to json: %s", bye.p2.toJson().c_str());
+        ut_assert(lua_obj, bye.p3.toJson() == "12",        "failed to convert to json: %s", bye.p3.toJson().c_str());
+        ut_assert(lua_obj, bye.p4.toJson() == "13",        "failed to convert to json: %s", bye.p4.toJson().c_str());
+        ut_assert(lua_obj, bye.p5.toJson() == "14",        "failed to convert to json: %s", bye.p5.toJson().c_str());
+        ut_assert(lua_obj, bye.p6.toJson() == "15",        "failed to convert to json: %s", bye.p6.toJson().c_str());
+        ut_assert(lua_obj, bye.p7.toJson() == "16",        "failed to convert to json: %s", bye.p7.toJson().c_str());
+        ut_assert(lua_obj, bye.p8.toJson() == "17",        "failed to convert to json: %s", bye.p8.toJson().c_str());
+        ut_assert(lua_obj, bye.p9.toJson() == "2.300000",  "failed to convert to json: %s", bye.p9.toJson().c_str());
+        ut_assert(lua_obj, bye.p10.toJson() == "3.140000", "failed to convert to json: %s", bye.p10.toJson().c_str());
+        ut_assert(lua_obj, bye.p11.toJson() == "good",     "failed to convert to json: %s", bye.p11.toJson().c_str());
+
+        // test fromJson
+        const string s0("false"); bye.p0.fromJson(s0);   ut_assert(lua_obj, bye.p0.value == false, "failed to convert from json: %s", bye.p0.toJson().c_str());
+        const string s1("90");    bye.p1.fromJson(s1);   ut_assert(lua_obj, bye.p1.value == 90,    "failed to convert from json: %s", bye.p1.toJson().c_str());
+        const string s2("91");    bye.p2.fromJson(s2);   ut_assert(lua_obj, bye.p2.value == 91,    "failed to convert from json: %s", bye.p2.toJson().c_str());
+        const string s3("92");    bye.p3.fromJson(s3);   ut_assert(lua_obj, bye.p3.value == 92,    "failed to convert from json: %s", bye.p3.toJson().c_str());
+        const string s4("93");    bye.p4.fromJson(s4);   ut_assert(lua_obj, bye.p4.value == 93,    "failed to convert from json: %s", bye.p4.toJson().c_str());
+        const string s5("94");    bye.p5.fromJson(s5);   ut_assert(lua_obj, bye.p5.value == 94,    "failed to convert from json: %s", bye.p5.toJson().c_str());
+        const string s6("95");    bye.p6.fromJson(s6);   ut_assert(lua_obj, bye.p6.value == 95,    "failed to convert from json: %s", bye.p6.toJson().c_str());
+        const string s7("96");    bye.p7.fromJson(s7);   ut_assert(lua_obj, bye.p7.value == 96,    "failed to convert from json: %s", bye.p7.toJson().c_str());
+        const string s8("97");    bye.p8.fromJson(s8);   ut_assert(lua_obj, bye.p8.value == 97,    "failed to convert from json: %s", bye.p8.toJson().c_str());
+        const string s9("5.4");   bye.p9.fromJson(s9);   ut_assert(lua_obj, fabs(bye.p9.value - 5.4) < 0.01,   "failed to convert from json: %s", bye.p9.toJson().c_str());
+        const string s10("8.3");  bye.p10.fromJson(s10); ut_assert(lua_obj, fabs(bye.p10.value - 8.3) < 0.01,  "failed to convert from json: %s", bye.p10.toJson().c_str());
+        const string s11("bad");  bye.p11.fromJson(s11); ut_assert(lua_obj, StringLib::match(bye.p11.value, "bad"), "failed to convert from json: %s", bye.p11.toJson().c_str());
+
+        // return status
         lua_pushboolean(L, ut_status(lua_obj));
         return 1;
     }

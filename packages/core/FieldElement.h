@@ -59,10 +59,10 @@ class FieldElement: public Field
 
         FieldElement&   operator=       (const T v);
 
-        bool            toJson          (string& str) override;
+        string          toJson          (void) override;
         int             toLua           (lua_State* L) override;
-        bool            fromJson        (const string& str) override;
-        int             fromLua         (lua_State* L) override;
+        void            fromJson        (const string& str) override;
+        void            fromLua         (lua_State* L) override;
 
         /*--------------------------------------------------------------------
          * Data
@@ -109,10 +109,9 @@ FieldElement<T>& FieldElement<T>::operator=(const T v)
  * toJson
  *----------------------------------------------------------------------------*/
 template <class T>
-bool FieldElement<T>::toJson (string& str) 
+string FieldElement<T>::toJson (void) 
 {
-    (void)str;
-    return true;
+    return convertToString(value);
 }
 
 /*----------------------------------------------------------------------------
@@ -121,29 +120,25 @@ bool FieldElement<T>::toJson (string& str)
 template <class T>
 int FieldElement<T>::toLua (lua_State* L) 
 {
-    (void)L;
-    return 0;
+    return convertToLua(L, value);
 }
 
 /*----------------------------------------------------------------------------
  * toJson
  *----------------------------------------------------------------------------*/
 template <class T>
-bool FieldElement<T>::fromJson (const string& str) 
+void FieldElement<T>::fromJson (const string& str) 
 {
-    (void)str;
-    return true;
+    convertFromString(str, value);
 }
 
 /*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
 template <class T>
-int FieldElement<T>::fromLua (lua_State* L) 
+void FieldElement<T>::fromLua (lua_State* L) 
 {
-    (void)L;
-    return 0;
+    convertFromLua(L, value);
 }
-
 
 #endif  /* __field_element__ */
