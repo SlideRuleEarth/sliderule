@@ -34,7 +34,6 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "OsApi.h"
 #include "RasterObject.h"
 #include "GdalRaster.h"
 #include "GeoIndexedRaster.h"

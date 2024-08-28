@@ -97,7 +97,7 @@ bool UnitTest::_ut_assert(bool e, const char* file, int line, const char* fmt, .
         else pathptr = const_cast<char*>(file);
 
         /* Create Log Message */
-        msglen = snprintf(log_message, UT_MAX_ASSERT, "Failure at %s:%d:%s", pathptr, line, formatted_string);
+        msglen = snprintf(log_message, UT_MAX_ASSERT, "Failure at %s:%d: %s", pathptr, line, formatted_string);
         if(msglen > (UT_MAX_ASSERT - 1))
         {
             log_message[UT_MAX_ASSERT - 1] = '#';

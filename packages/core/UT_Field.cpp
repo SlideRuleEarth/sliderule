@@ -95,9 +95,31 @@ int UT_Field::testBasic(lua_State* L)
         lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));        
         ut_initialize(lua_obj);
 
-
-        FieldElement<double> val1 = 5.3;
-        mlog(INFO, "Val1 = %lf", val1.value);
+        // test encodings
+        const struct hi {
+            FieldElement<int8_t>        p0{10};
+            FieldElement<int16_t>       p1{11};
+            FieldElement<int32_t>       p2{12};
+            FieldElement<int64_t>       p3{13};
+            FieldElement<uint8_t>       p4{14};
+            FieldElement<uint16_t>      p5{15};
+            FieldElement<uint32_t>      p6{16};
+            FieldElement<uint64_t>      p7{17};
+            FieldElement<float>         p8{2.3};
+            FieldElement<double>        p9{3.14};
+            FieldElement<const char*>   p10{"good"};
+        } bye;
+        ut_assert(lua_obj, bye.p0.getEncoding() == Field::INT8, "failed to set encoding for int8_t: %d", bye.p0.getEncoding());
+        ut_assert(lua_obj, bye.p1.getEncoding() == Field::INT16, "failed to set encoding for int16_t: %d", bye.p1.getEncoding());
+        ut_assert(lua_obj, bye.p2.getEncoding() == Field::INT32, "failed to set encoding for int32_t: %d", bye.p2.getEncoding());
+        ut_assert(lua_obj, bye.p3.getEncoding() == Field::INT64, "failed to set encoding for int64_t: %d", bye.p3.getEncoding());
+        ut_assert(lua_obj, bye.p4.getEncoding() == Field::UINT8, "failed to set encoding for uint8_t: %d", bye.p4.getEncoding());
+        ut_assert(lua_obj, bye.p5.getEncoding() == Field::UINT16, "failed to set encoding for uint16_t: %d", bye.p5.getEncoding());
+        ut_assert(lua_obj, bye.p6.getEncoding() == Field::UINT32, "failed to set encoding for uint32_t: %d", bye.p6.getEncoding());
+        ut_assert(lua_obj, bye.p7.getEncoding() == Field::UINT64, "failed to set encoding for uint64_t: %d", bye.p7.getEncoding());
+        ut_assert(lua_obj, bye.p8.getEncoding() == Field::FLOAT, "failed to set encoding for float: %d", bye.p8.getEncoding());
+        ut_assert(lua_obj, bye.p9.getEncoding() == Field::DOUBLE, "failed to set encoding for double: %d", bye.p9.getEncoding());
+        ut_assert(lua_obj, bye.p10.getEncoding() == Field::STRING, "failed to set encoding for char: %d", bye.p10.getEncoding());
 
         lua_pushboolean(L, ut_status(lua_obj));
         return 1;

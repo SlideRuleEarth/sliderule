@@ -41,22 +41,6 @@
 #include "Field.h"
 
 /******************************************************************************
- * FUNCTIONS
- ******************************************************************************/
-
-inline Field::encoding_t getFieldEncoding(const int8_t& v) { (void)v; return Field::INT8; }
-inline Field::encoding_t getFieldEncoding(const int16_t& v) { (void)v; return Field::INT16; }
-inline Field::encoding_t getFieldEncoding(const int32_t& v) { (void)v; return Field::INT32; }
-inline Field::encoding_t getFieldEncoding(const int64_t& v) { (void)v; return Field::INT64; }
-inline Field::encoding_t getFieldEncoding(const uint8_t& v) { (void)v; return Field::UINT8; }
-inline Field::encoding_t getFieldEncoding(const uint16_t& v) { (void)v; return Field::UINT16; }
-inline Field::encoding_t getFieldEncoding(const uint32_t& v) { (void)v; return Field::UINT32; }
-inline Field::encoding_t getFieldEncoding(const uint64_t& v) { (void)v; return Field::UINT64; }
-inline Field::encoding_t getFieldEncoding(const float& v) { (void)v; return Field::FLOAT; }
-inline Field::encoding_t getFieldEncoding(const double& v) { (void)v; return Field::DOUBLE; }
-inline Field::encoding_t getFieldEncoding(const char* v) { (void)v; return Field::CHAR; }
-
-/******************************************************************************
  * CLASS
  ******************************************************************************/
 
@@ -73,7 +57,7 @@ class FieldElement: public Field
                         FieldElement    (void);
                         ~FieldElement   (void) override = default;
 
-        FieldElement&   operator=       (const T& v);
+        FieldElement&   operator=       (const T v);
 
         bool            toJson          (string& str) override;
         int             toLua           (lua_State* L) override;
@@ -115,11 +99,51 @@ FieldElement<T>::FieldElement(void):
  * operator=
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldElement<T>& FieldElement<T>::operator=(const T& v) 
+FieldElement<T>& FieldElement<T>::operator=(const T v) 
 {
-    encoding = getFieldEncoding(v);
     value = v;
     return *this;
 }
+
+/*----------------------------------------------------------------------------
+ * toJson
+ *----------------------------------------------------------------------------*/
+template <class T>
+bool FieldElement<T>::toJson (string& str) 
+{
+    (void)str;
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * toJson
+ *----------------------------------------------------------------------------*/
+template <class T>
+int FieldElement<T>::toLua (lua_State* L) 
+{
+    (void)L;
+    return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * toJson
+ *----------------------------------------------------------------------------*/
+template <class T>
+bool FieldElement<T>::fromJson (const string& str) 
+{
+    (void)str;
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * fromLua
+ *----------------------------------------------------------------------------*/
+template <class T>
+int FieldElement<T>::fromLua (lua_State* L) 
+{
+    (void)L;
+    return 0;
+}
+
 
 #endif  /* __field_element__ */

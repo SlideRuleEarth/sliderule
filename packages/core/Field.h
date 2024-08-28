@@ -63,7 +63,7 @@ class Field
             UINT64          = 7,
             FLOAT           = 8,
             DOUBLE          = 9,
-            CHAR            = 10,
+            STRING          = 10,
             NUM_ENCODINGS   = 11
         } encoding_t;
 
@@ -71,14 +71,26 @@ class Field
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit        Field       (encoding_t _encoding): encoding(_encoding) {};
+        explicit        Field       (encoding_t _encoding): encoding(_encoding) {}
         virtual         ~Field      (void) = default;
 
+        encoding_t      getEncoding (void) const { return encoding; }
         virtual bool    toJson      (string& str) = 0;
         virtual int     toLua       (lua_State* L) = 0;
-
         virtual bool    fromJson    (const string& str) = 0;
         virtual int     fromLua     (lua_State* L) = 0;
+
+        inline static encoding_t getFieldEncoding(const int8_t& v)      { (void)v; return Field::INT8;   }
+        inline static encoding_t getFieldEncoding(const int16_t& v)     { (void)v; return Field::INT16;  }
+        inline static encoding_t getFieldEncoding(const int32_t& v)     { (void)v; return Field::INT32;  }
+        inline static encoding_t getFieldEncoding(const int64_t& v)     { (void)v; return Field::INT64;  }
+        inline static encoding_t getFieldEncoding(const uint8_t& v)     { (void)v; return Field::UINT8;  }
+        inline static encoding_t getFieldEncoding(const uint16_t& v)    { (void)v; return Field::UINT16; }
+        inline static encoding_t getFieldEncoding(const uint32_t& v)    { (void)v; return Field::UINT32; }
+        inline static encoding_t getFieldEncoding(const uint64_t& v)    { (void)v; return Field::UINT64; }
+        inline static encoding_t getFieldEncoding(const float& v)       { (void)v; return Field::FLOAT;  }
+        inline static encoding_t getFieldEncoding(const double& v)      { (void)v; return Field::DOUBLE; }
+        inline static encoding_t getFieldEncoding(const char* v)        { (void)v; return Field::STRING; }
 
     protected:
 
@@ -87,11 +99,6 @@ class Field
          *--------------------------------------------------------------------*/
 
         const encoding_t encoding;
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
 };
 
 #endif  /* __field__ */
