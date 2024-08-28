@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __field_element__
-#define __field_element__
+#ifndef __field_array__
+#define __field_array__
 
 /******************************************************************************
  * INCLUDES
@@ -44,8 +44,8 @@
  * CLASS
  ******************************************************************************/
 
-template <class T>
-class FieldElement: public Field
+template <class T, int N>
+class FieldArray: public Field
 {
     public:
 
@@ -53,20 +53,12 @@ class FieldElement: public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit        FieldElement    (T default_value);
-                        FieldElement    (void);
-                        ~FieldElement   (void) override = default;
+                        FieldArray      (std::initializer_list<T> init_list);
+                        FieldArray      (void);
+                        ~FieldArray     (void) override = default;
 
-        FieldElement&   operator=       (T v);
-        bool            operator==      (T v);
-        bool            operator<=      (T v);
-        bool            operator>=      (T v);
-        bool            operator<       (T v);
-        bool            operator>       (T v);
-        T               operator+       (T v);
-        T               operator-       (T v);
-        T               operator*       (T v);
-        T               operator/       (T v);
+        T               operator[]      (int i) const;
+        T&              operator[]      (int i);
 
         string          toJson          (void) override;
         int             toLua           (lua_State* L) override;
@@ -77,7 +69,7 @@ class FieldElement: public Field
          * Data
          *--------------------------------------------------------------------*/
 
-        T value;
+        T values[N];
 };
 
 /******************************************************************************
@@ -87,148 +79,147 @@ class FieldElement: public Field
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T>
-FieldElement<T>::FieldElement(T default_value):
-    Field(getFieldEncoding(default_value)),
-    value(default_value)
+template <class T, int N>
+FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list):
+    Field(Field::INVALID)
 {
+    assert(N > 0);
+    std::copy(init_list.begin(), init_list.end(), values);
+    encoding = getFieldEncoding(values[0]);
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T>
-FieldElement<T>::FieldElement(void):
-    Field(Field::INVALID),
-    value(0)
+template <class T, int N>
+FieldArray<T,N>::FieldArray(void):
+    Field(Field::INVALID)
 {
+    assert(N > 0);
+    for(int i = 0; i < N; i++)
+    {
+        values[i] = 0;
+    }
 }
 
 /*----------------------------------------------------------------------------
- * operator=
+ * operator[] - rvalue
  *----------------------------------------------------------------------------*/
-template <class T>
-FieldElement<T>& FieldElement<T>::operator=(T v) 
+template <class T, int N>
+T FieldArray<T,N>::operator[](int i) const
 {
-    value = v;
-    return *this;
+    return values[i];
 }
 
 /*----------------------------------------------------------------------------
- * operator==
+ * operator[] - lvalue
  *----------------------------------------------------------------------------*/
-template <class T>
-bool FieldElement<T>::operator==(T v) 
+template <class T, int N>
+T& FieldArray<T,N>::operator[](int i)
 {
-    return value == v;
-}
-
-/*----------------------------------------------------------------------------
- * operator<=
- *----------------------------------------------------------------------------*/
-template <class T>
-bool FieldElement<T>::operator<=(T v) 
-{
-    return value <= v;
-}
-
-/*----------------------------------------------------------------------------
- * operator>=
- *----------------------------------------------------------------------------*/
-template <class T>
-bool FieldElement<T>::operator>=(T v) 
-{
-    return value >= v;
-}
-
-/*----------------------------------------------------------------------------
- * operator<
- *----------------------------------------------------------------------------*/
-template <class T>
-bool FieldElement<T>::operator<(T v) 
-{
-    return value < v;
-}
-
-/*----------------------------------------------------------------------------
- * operator>
- *----------------------------------------------------------------------------*/
-template <class T>
-bool FieldElement<T>::operator>(T v) 
-{
-    return value > v;
-}
-
-/*----------------------------------------------------------------------------
- * operator+
- *----------------------------------------------------------------------------*/
-template <class T>
-T FieldElement<T>::operator+(T v) 
-{
-    return value + v;
-}
-
-/*----------------------------------------------------------------------------
- * operator-
- *----------------------------------------------------------------------------*/
-template <class T>
-T FieldElement<T>::operator-(T v) 
-{
-    return value - v;
-}
-
-/*----------------------------------------------------------------------------
- * operator*
- *----------------------------------------------------------------------------*/
-template <class T>
-T FieldElement<T>::operator*(T v) 
-{
-    return value * v;
-}
-
-/*----------------------------------------------------------------------------
- * operator/
- *----------------------------------------------------------------------------*/
-template <class T>
-T FieldElement<T>::operator/(T v) 
-{
-    return value / v;
+    return values[i];
 }
 
 /*----------------------------------------------------------------------------
  * toJson
  *----------------------------------------------------------------------------*/
-template <class T>
-string FieldElement<T>::toJson (void) 
+template <class T, int N>
+string FieldArray<T,N>::toJson (void) 
 {
-    return convertToJson(value);
+    string str("[");
+    for(int i = 0; i < N-1; i++)
+    {
+        str += convertToJson(values[i]);
+        str += ",";
+    }
+    str += convertToJson(values[N-1]);
+    str += "]";
+    return str;
 }
 
 /*----------------------------------------------------------------------------
  * toLua
  *----------------------------------------------------------------------------*/
-template <class T>
-int FieldElement<T>::toLua (lua_State* L) 
+template <class T, int N>
+int FieldArray<T,N>::toLua (lua_State* L) 
 {
-    return convertToLua(L, value);
+    lua_newtable(L);
+    for(int i = 0; i < N; i++)
+    {
+        convertToLua(L, values[i]);
+        lua_rawseti(L, -2, i + 1);
+    }
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
  * fromJson
  *----------------------------------------------------------------------------*/
-template <class T>
-void FieldElement<T>::fromJson (const string& str) 
+template <class T, int N>
+void FieldArray<T,N>::fromJson (const string& str) 
 {
-    convertFromJson(str, value);
+    bool in_error = false;
+
+    // build list of element tokens
+    const char* old_txt[2] = {"[", "]"};
+    const char* new_txt[2] = {"", ""};
+    char* list_str = StringLib::replace(str.c_str(), old_txt, new_txt, 2);
+    List<string*>* tokens = StringLib::split(list_str, StringLib::size(list_str), ',');
+    
+    try
+    {
+        // check size
+        if(tokens->length() != N)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "mismatch in array size, expected %d, got %d", N, tokens->length());
+        }
+
+        // convert all elements in array
+        for(int i = 0; i < N; i++)
+        {
+            convertFromJson(*tokens->get(i), values[i]);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(CRITICAL, "error parsing json array: %s", e.what());
+        in_error = true;
+    }
+    catch(const std::runtime_error& e)
+    {
+        mlog(CRITICAL, "error parsing json array: %s", e.what());
+        in_error = true;
+    }
+
+    // clean up memory
+    delete [] list_str;
+    delete tokens;
+    
+    // throw exception on any errors
+    if(in_error) throw RunTimeException(CRITICAL, RTE_ERROR, "json array parse error");
 }
 
 /*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
-template <class T>
-void FieldElement<T>::fromLua (lua_State* L, int index) 
+template <class T, int N>
+void FieldArray<T,N>::fromLua (lua_State* L, int index) 
 {
-    convertFromLua(L, index, value);
+    const int num_elements = lua_rawlen(L, index);
+
+    // check size
+    if(num_elements != N)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "mismatch in array size, expected %d, got %d", N, num_elements);
+    }
+
+    // convert all elements from lua
+    for(int i = 0; i < N; i++)
+    {
+        lua_rawgeti(L, index, i + 1);
+        convertFromLua(L, -1, values[i]);
+        lua_pop(L, 1);
+    }
 }
 
-#endif  /* __field_element__ */
+#endif  /* __field_array__ */

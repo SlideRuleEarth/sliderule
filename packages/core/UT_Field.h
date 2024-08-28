@@ -66,9 +66,10 @@ class UT_Field: public UnitTest
          *--------------------------------------------------------------------*/
 
     explicit    UT_Field         (lua_State* L);
-                ~UT_Field        (void) override;
+                ~UT_Field        (void) override = default;
 
-	static int  testBasic       (lua_State* L);
+	static int  testElement     (lua_State* L);
+	static int  testArray       (lua_State* L);
 };
 
 #endif  /* __ut_field__ */

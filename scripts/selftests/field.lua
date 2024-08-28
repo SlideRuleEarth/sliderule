@@ -7,7 +7,8 @@ sys.setlvl(core.LOG, core.INFO)
 -- Test --
 
 local ut = core.ut_field()
-runner.check(ut:basic())
+runner.check(ut:element())
+runner.check(ut:array())
 
 -- Report Results --
 
