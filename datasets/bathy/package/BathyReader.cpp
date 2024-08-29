@@ -1075,7 +1075,7 @@ void* BathyReader::subsettingThread (void* parm)
                 /* Populate Photons */
                 for(int32_t p = 0; p < extent_photons.length(); p++)
                 {
-                    extent->photons[p] = extent_photons[p];
+                    extent->photons[p] = extent_photons.get(p);
                 }
 
                 /* Update Statistics */

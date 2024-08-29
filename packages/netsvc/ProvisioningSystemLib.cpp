@@ -132,7 +132,7 @@ const char* ProvisioningSystemLib::login (const char* username, const char* pass
                     int rsps_size = 0;
                     for(int i = 0; i < rsps_set.length(); i++)
                     {
-                        rsps_size += rsps_set[i].size;
+                        rsps_size += rsps_set.get(i).size;
                     }
 
                     /* Allocate and Populate Response */
@@ -140,9 +140,9 @@ const char* ProvisioningSystemLib::login (const char* username, const char* pass
                     rsps = new char [rsps_size + 1];
                     for(int i = 0; i < rsps_set.length(); i++)
                     {
-                        memcpy(&rsps[rsps_index], rsps_set[i].data, rsps_set[i].size);
-                        rsps_index += rsps_set[i].size;
-                        delete [] rsps_set[i].data;
+                        memcpy(&rsps[rsps_index], rsps_set.get(i).data, rsps_set.get(i).size);
+                        rsps_index += rsps_set.get(i).size;
+                        delete [] rsps_set.get(i).data;
                     }
                     rsps[rsps_index] = '\0';
                 }

@@ -1140,7 +1140,7 @@ void Atl03Reader::YapcScore::yapcV3 (const info_t* info, const Region& region, c
             double weight_sum = 0.0;
             for(int i = 0; i < num_nearest_neighbors; i++)
             {
-                weight_sum += hWZ - proximities[i];
+                weight_sum += hWZ - proximities.get(i);
             }
             ph_weights[ph_in_seg_index] = weight_sum;
 

@@ -574,7 +574,7 @@ void CurlLib::combineResponse (List<data_t>* rsps_set, const char** response, in
     int total_rsps_size = 0;
     for(int i = 0; i < rsps_set->length(); i++)
     {
-        total_rsps_size += (*rsps_set)[i].size;
+        total_rsps_size += rsps_set->get(i).size;
     }
 
     /* Allocate and Populate Total Response */
@@ -582,9 +582,9 @@ void CurlLib::combineResponse (List<data_t>* rsps_set, const char** response, in
     char* total_rsps = new char [total_rsps_size + 1];
     for(int i = 0; i < rsps_set->length(); i++)
     {
-        memcpy(&total_rsps[total_rsps_index], (*rsps_set)[i].data, (*rsps_set)[i].size);
-        total_rsps_index += (*rsps_set)[i].size;
-        delete [] (*rsps_set)[i].data;
+        memcpy(&total_rsps[total_rsps_index], rsps_set->get(i).data, rsps_set->get(i).size);
+        total_rsps_index += rsps_set->get(i).size;
+        delete [] rsps_set->get(i).data;
     }
     total_rsps[total_rsps_index] = '\0';
 
