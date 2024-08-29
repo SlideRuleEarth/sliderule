@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __field_array__
-#define __field_array__
+#ifndef __field_column__
+#define __field_column__
 
 /******************************************************************************
  * INCLUDES
@@ -44,17 +44,26 @@
  * CLASS
  ******************************************************************************/
 
-template <class T, int N>
-class FieldArray: public Field
+template <class T>
+class FieldColumn: public Field
 {
     public:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const int DEFAULT_CHUNK_SIZE = 256;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        FieldArray      (std::initializer_list<T> init_list);
-                        ~FieldArray     (void) override = default;
+        explicit        FieldColumn     (int chunk_size=DEFAULT_CHUNK_SIZE);
+                        ~FieldColumn    (void) override = default;
+
+        int             append          (const T& v);
+        T*              array           (void) const;
 
         T               operator[]      (int i) const;
         T&              operator[]      (int i);
@@ -68,7 +77,7 @@ class FieldArray: public Field
          * Data
          *--------------------------------------------------------------------*/
 
-        T values[N];
+        List<T> values;
 };
 
 /******************************************************************************
@@ -78,20 +87,36 @@ class FieldArray: public Field
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T, int N>
-FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list):
-    Field(Field::INVALID)
+template<class T>
+FieldColumn<T>::FieldColumn(int chunk_size):
+    Field(Field::inferEncoding<T>()),
+    values(chunk_size)
 {
-    assert(N > 0);
-    std::copy(init_list.begin(), init_list.end(), values);
-    encoding = getFieldEncoding(values[0]);
+}
+
+/*----------------------------------------------------------------------------
+ * append
+ *----------------------------------------------------------------------------*/
+template<class T>
+int FieldColumn<T>::append(const T& v)
+{
+    return values.add(v);
+}
+
+/*----------------------------------------------------------------------------
+ * array
+ *----------------------------------------------------------------------------*/
+template<class T>
+T* FieldColumn<T>::array(void) const
+{
+    return values.array();
 }
 
 /*----------------------------------------------------------------------------
  * operator[] - rvalue
  *----------------------------------------------------------------------------*/
-template <class T, int N>
-T FieldArray<T,N>::operator[](int i) const
+template<class T>
+T FieldColumn<T>::operator[](int i) const
 {
     return values[i];
 }
@@ -99,8 +124,8 @@ T FieldArray<T,N>::operator[](int i) const
 /*----------------------------------------------------------------------------
  * operator[] - lvalue
  *----------------------------------------------------------------------------*/
-template <class T, int N>
-T& FieldArray<T,N>::operator[](int i)
+template<class T>
+T& FieldColumn<T>::operator[](int i)
 {
     return values[i];
 }
@@ -108,16 +133,17 @@ T& FieldArray<T,N>::operator[](int i)
 /*----------------------------------------------------------------------------
  * toJson
  *----------------------------------------------------------------------------*/
-template <class T, int N>
-string FieldArray<T,N>::toJson (void) const
+template<class T>
+string FieldColumn<T>::toJson (void) const
 {
+    const int length = values.length();
     string str("[");
-    for(int i = 0; i < N-1; i++)
+    for(int i = 0; i < length-1; i++)
     {
         str += convertToJson(values[i]);
         str += ",";
     }
-    str += convertToJson(values[N-1]);
+    str += convertToJson(values[length-1]);
     str += "]";
     return str;
 }
@@ -125,11 +151,12 @@ string FieldArray<T,N>::toJson (void) const
 /*----------------------------------------------------------------------------
  * toLua
  *----------------------------------------------------------------------------*/
-template <class T, int N>
-int FieldArray<T,N>::toLua (lua_State* L) const
+template<class T>
+int FieldColumn<T>::toLua (lua_State* L) const
 {
+    const int length = values.length();
     lua_newtable(L);
-    for(int i = 0; i < N; i++)
+    for(int i = 0; i < length; i++)
     {
         convertToLua(L, values[i]);
         lua_rawseti(L, -2, i + 1);
@@ -140,8 +167,8 @@ int FieldArray<T,N>::toLua (lua_State* L) const
 /*----------------------------------------------------------------------------
  * fromJson
  *----------------------------------------------------------------------------*/
-template <class T, int N>
-void FieldArray<T,N>::fromJson (const string& str) 
+template<class T>
+void FieldColumn<T>::fromJson (const string& str)
 {
     bool in_error = false;
 
@@ -150,19 +177,18 @@ void FieldArray<T,N>::fromJson (const string& str)
     const char* new_txt[2] = {"", ""};
     char* list_str = StringLib::replace(str.c_str(), old_txt, new_txt, 2);
     List<string*>* tokens = StringLib::split(list_str, StringLib::size(list_str), ',');
-    
+
+    // clear out existing values
+    values.clear();
+
     try
     {
-        // check size
-        if(tokens->length() != N)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "mismatch in array size, expected %d, got %d", N, tokens->length());
-        }
-
         // convert all elements in array
-        for(int i = 0; i < N; i++)
+        for(int i = 0; i < tokens->length(); i++)
         {
-            convertFromJson(*tokens->get(i), values[i]);
+            T value;
+            convertFromJson(*tokens->get(i), value);
+            values.add(value);
         }
     }
     catch(const RunTimeException& e)
@@ -187,24 +213,22 @@ void FieldArray<T,N>::fromJson (const string& str)
 /*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
-template <class T, int N>
-void FieldArray<T,N>::fromLua (lua_State* L, int index) 
+template<class T>
+void FieldColumn<T>::fromLua (lua_State* L, int index) 
 {
-    const int num_elements = lua_rawlen(L, index);
-
-    // check size
-    if(num_elements != N)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "mismatch in array size, expected %d, got %d", N, num_elements);
-    }
+    // clear out existing values
+    values.clear();
 
     // convert all elements from lua
-    for(int i = 0; i < N; i++)
+    const int num_elements = lua_rawlen(L, index);
+    for(int i = 0; i < num_elements; i++)
     {
+        T value;
         lua_rawgeti(L, index, i + 1);
-        convertFromLua(L, -1, values[i]);
+        convertFromLua(L, -1, value);
         lua_pop(L, 1);
+        values.add(value);
     }
 }
 
-#endif  /* __field_array__ */
+#endif  /* __field_column__ */

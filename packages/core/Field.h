@@ -76,24 +76,27 @@ class Field
         virtual         ~Field      (void) = default;
 
         encoding_t      getEncoding (void) const { return encoding; }
-        virtual string  toJson      (void) = 0;
-        virtual int     toLua       (lua_State* L) = 0;
+        virtual string  toJson      (void) const = 0;
+        virtual int     toLua       (lua_State* L) const = 0;
         virtual void    fromJson    (const string& str) = 0;
         virtual void    fromLua     (lua_State* L, int index) = 0;
 
+        template<class T>
+        static encoding_t inferEncoding(void) {T dummy; return getFieldEncoding(dummy);}
+        
         // encoding 
-        inline static encoding_t getFieldEncoding(const bool& v)     { (void)v; return Field::BOOLEAN; }
-        inline static encoding_t getFieldEncoding(const int8_t& v)   { (void)v; return Field::INT8;    }
-        inline static encoding_t getFieldEncoding(const int16_t& v)  { (void)v; return Field::INT16;   }
-        inline static encoding_t getFieldEncoding(const int32_t& v)  { (void)v; return Field::INT32;   }
-        inline static encoding_t getFieldEncoding(const int64_t& v)  { (void)v; return Field::INT64;   }
-        inline static encoding_t getFieldEncoding(const uint8_t& v)  { (void)v; return Field::UINT8;   }
-        inline static encoding_t getFieldEncoding(const uint16_t& v) { (void)v; return Field::UINT16;  }
-        inline static encoding_t getFieldEncoding(const uint32_t& v) { (void)v; return Field::UINT32;  }
-        inline static encoding_t getFieldEncoding(const uint64_t& v) { (void)v; return Field::UINT64;  }
-        inline static encoding_t getFieldEncoding(const float& v)    { (void)v; return Field::FLOAT;   }
-        inline static encoding_t getFieldEncoding(const double& v)   { (void)v; return Field::DOUBLE;  }
-        inline static encoding_t getFieldEncoding(const string& v)   { (void)v; return Field::STRING;  }
+        inline static encoding_t getFieldEncoding(bool& v)     { (void)v; return Field::BOOLEAN; }
+        inline static encoding_t getFieldEncoding(int8_t& v)   { (void)v; return Field::INT8;    }
+        inline static encoding_t getFieldEncoding(int16_t& v)  { (void)v; return Field::INT16;   }
+        inline static encoding_t getFieldEncoding(int32_t& v)  { (void)v; return Field::INT32;   }
+        inline static encoding_t getFieldEncoding(int64_t& v)  { (void)v; return Field::INT64;   }
+        inline static encoding_t getFieldEncoding(uint8_t& v)  { (void)v; return Field::UINT8;   }
+        inline static encoding_t getFieldEncoding(uint16_t& v) { (void)v; return Field::UINT16;  }
+        inline static encoding_t getFieldEncoding(uint32_t& v) { (void)v; return Field::UINT32;  }
+        inline static encoding_t getFieldEncoding(uint64_t& v) { (void)v; return Field::UINT64;  }
+        inline static encoding_t getFieldEncoding(float& v)    { (void)v; return Field::FLOAT;   }
+        inline static encoding_t getFieldEncoding(double& v)   { (void)v; return Field::DOUBLE;  }
+        inline static encoding_t getFieldEncoding(string& v)   { (void)v; return Field::STRING;  }
 
         // tojson
         inline static string convertToJson(const bool& v)     { if(v) return string("true"); else return string("false"); }
@@ -121,7 +124,7 @@ class Field
         inline static int convertToLua(lua_State* L, const uint64_t& v) { lua_pushinteger(L, v); return 1;        }
         inline static int convertToLua(lua_State* L, const float& v)    { lua_pushnumber(L, v);  return 1;        }
         inline static int convertToLua(lua_State* L, const double& v)   { lua_pushnumber(L, v);  return 1;        }
-        inline static int convertToLua(lua_State* L, string& v)         { lua_pushstring(L, v.c_str()); return 1; }
+        inline static int convertToLua(lua_State* L, const string& v)   { lua_pushstring(L, v.c_str()); return 1; }
 
         // fromjson
         inline static void convertFromJson(const string& str, bool& v)  { 

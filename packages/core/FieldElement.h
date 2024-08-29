@@ -54,22 +54,21 @@ class FieldElement: public Field
          *--------------------------------------------------------------------*/
 
         explicit        FieldElement    (T default_value);
-                        FieldElement    (void);
                         ~FieldElement   (void) override = default;
 
         FieldElement&   operator=       (T v);
-        bool            operator==      (T v);
-        bool            operator<=      (T v);
-        bool            operator>=      (T v);
-        bool            operator<       (T v);
-        bool            operator>       (T v);
+        bool            operator==      (T v) const;
+        bool            operator<=      (T v) const;
+        bool            operator>=      (T v) const;
+        bool            operator<       (T v) const;
+        bool            operator>       (T v) const;
         T               operator+       (T v);
         T               operator-       (T v);
         T               operator*       (T v);
         T               operator/       (T v);
 
-        string          toJson          (void) override;
-        int             toLua           (lua_State* L) override;
+        string          toJson          (void) const override;
+        int             toLua           (lua_State* L) const override;
         void            fromJson        (const string& str) override;
         void            fromLua         (lua_State* L, int index) override;
 
@@ -95,16 +94,6 @@ FieldElement<T>::FieldElement(T default_value):
 }
 
 /*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-template <class T>
-FieldElement<T>::FieldElement(void):
-    Field(Field::INVALID),
-    value(0)
-{
-}
-
-/*----------------------------------------------------------------------------
  * operator=
  *----------------------------------------------------------------------------*/
 template <class T>
@@ -118,7 +107,7 @@ FieldElement<T>& FieldElement<T>::operator=(T v)
  * operator==
  *----------------------------------------------------------------------------*/
 template <class T>
-bool FieldElement<T>::operator==(T v) 
+bool FieldElement<T>::operator==(T v) const
 {
     return value == v;
 }
@@ -127,7 +116,7 @@ bool FieldElement<T>::operator==(T v)
  * operator<=
  *----------------------------------------------------------------------------*/
 template <class T>
-bool FieldElement<T>::operator<=(T v) 
+bool FieldElement<T>::operator<=(T v) const
 {
     return value <= v;
 }
@@ -136,7 +125,7 @@ bool FieldElement<T>::operator<=(T v)
  * operator>=
  *----------------------------------------------------------------------------*/
 template <class T>
-bool FieldElement<T>::operator>=(T v) 
+bool FieldElement<T>::operator>=(T v) const
 {
     return value >= v;
 }
@@ -145,7 +134,7 @@ bool FieldElement<T>::operator>=(T v)
  * operator<
  *----------------------------------------------------------------------------*/
 template <class T>
-bool FieldElement<T>::operator<(T v) 
+bool FieldElement<T>::operator<(T v) const
 {
     return value < v;
 }
@@ -154,7 +143,7 @@ bool FieldElement<T>::operator<(T v)
  * operator>
  *----------------------------------------------------------------------------*/
 template <class T>
-bool FieldElement<T>::operator>(T v) 
+bool FieldElement<T>::operator>(T v) const
 {
     return value > v;
 }
@@ -163,7 +152,7 @@ bool FieldElement<T>::operator>(T v)
  * operator+
  *----------------------------------------------------------------------------*/
 template <class T>
-T FieldElement<T>::operator+(T v) 
+T FieldElement<T>::operator+(T v)
 {
     return value + v;
 }
@@ -199,7 +188,7 @@ T FieldElement<T>::operator/(T v)
  * toJson
  *----------------------------------------------------------------------------*/
 template <class T>
-string FieldElement<T>::toJson (void) 
+string FieldElement<T>::toJson (void) const
 {
     return convertToJson(value);
 }
@@ -208,7 +197,7 @@ string FieldElement<T>::toJson (void)
  * toLua
  *----------------------------------------------------------------------------*/
 template <class T>
-int FieldElement<T>::toLua (lua_State* L) 
+int FieldElement<T>::toLua (lua_State* L) const
 {
     return convertToLua(L, value);
 }

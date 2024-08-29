@@ -96,6 +96,8 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.h
         ${CMAKE_CURRENT_LIST_DIR}/PointIndex.h
         ${CMAKE_CURRENT_LIST_DIR}/Field.h
+        ${CMAKE_CURRENT_LIST_DIR}/FieldArray.h
+        ${CMAKE_CURRENT_LIST_DIR}/FieldColumn.h
         ${CMAKE_CURRENT_LIST_DIR}/FieldElement.h
         ${CMAKE_CURRENT_LIST_DIR}/File.h
         ${CMAKE_CURRENT_LIST_DIR}/FileIODriver.h
