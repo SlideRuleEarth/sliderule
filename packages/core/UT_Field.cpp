@@ -85,32 +85,32 @@ UT_Field::UT_Field (lua_State* L):
 {
 }
 
-/*--------------------------------------------------------------------------------------
- * testElement
- *--------------------------------------------------------------------------------------*/
-int UT_Field::testElement(lua_State* L)
-{
-    UT_Field* lua_obj = NULL;
-    try
-    {
-        // initialize test
-        lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));        
-        ut_initialize(lua_obj);
+ /*--------------------------------------------------------------------------------------
+  * testElement
+  *--------------------------------------------------------------------------------------*/
+ int UT_Field::testElement(lua_State* L)
+ {
+     UT_Field* lua_obj = NULL;
+     try
+     {
+         // initialize test
+         lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));        
+         ut_initialize(lua_obj);
 
-        struct hi {
-            FieldElement<bool>      p0{true};
-            FieldElement<int8_t>    p1{10};
-            FieldElement<int16_t>   p2{11};
-            FieldElement<int32_t>   p3{12};
-            FieldElement<int64_t>   p4{13};
-            FieldElement<uint8_t>   p5{14};
-            FieldElement<uint16_t>  p6{15};
-            FieldElement<uint32_t>  p7{16};
-            FieldElement<uint64_t>  p8{17};
-            FieldElement<float>     p9{2.3};
-            FieldElement<double>    p10{3.14};
-            FieldElement<string>    p11{"good"};
-        } bye;
+         struct hi {
+             FieldElement<bool>      p0{true};
+             FieldElement<int8_t>    p1{10};
+             FieldElement<int16_t>   p2{11};
+             FieldElement<int32_t>   p3{12};
+             FieldElement<int64_t>   p4{13};
+             FieldElement<uint8_t>   p5{14};
+             FieldElement<uint16_t>  p6{15};
+             FieldElement<uint32_t>  p7{16};
+             FieldElement<uint64_t>  p8{17};
+             FieldElement<float>     p9{2.3};
+             FieldElement<double>    p10{3.14};
+             FieldElement<string>    p11{"good"};
+         } bye;
 
         // test encodings
         ut_assert(lua_obj, bye.p0.getEncoding() == Field::BOOLEAN,  "failed to set encoding for bool: %d",      bye.p0.getEncoding());

@@ -40,6 +40,83 @@
 #include "LuaEngine.h"
 
 /******************************************************************************
+ * FUNCTIONS
+ ******************************************************************************/
+
+// tojson
+inline string convertToJson(const bool& v)     { if(v) return string("true"); else return string("false"); }
+inline string convertToJson(const int8_t& v)   { return std::to_string(v); }
+inline string convertToJson(const int16_t& v)  { return std::to_string(v); }
+inline string convertToJson(const int32_t& v)  { return std::to_string(v); }
+inline string convertToJson(const int64_t& v)  { return std::to_string(v); }
+inline string convertToJson(const uint8_t& v)  { return std::to_string(v); }
+inline string convertToJson(const uint16_t& v) { return std::to_string(v); }
+inline string convertToJson(const uint32_t& v) { return std::to_string(v); }
+inline string convertToJson(const uint64_t& v) { return std::to_string(v); }
+inline string convertToJson(const float& v)    { return std::to_string(v); }
+inline string convertToJson(const double& v)   { return std::to_string(v); }
+inline string convertToJson(const string& v)   { return "\"" + string(v) + "\""; }
+
+// tolua
+inline int convertToLua(lua_State* L, const bool& v)     { lua_pushinteger(L, v); return 1; }
+inline int convertToLua(lua_State* L, const int8_t& v)   { lua_pushinteger(L, v); return 1; }
+inline int convertToLua(lua_State* L, const int16_t& v)  { lua_pushinteger(L, v); return 1; }
+inline int convertToLua(lua_State* L, const int32_t& v)  { lua_pushinteger(L, v); return 1; }
+inline int convertToLua(lua_State* L, const int64_t& v)  { lua_pushinteger(L, v); return 1; }
+inline int convertToLua(lua_State* L, const uint8_t& v)  { lua_pushinteger(L, v); return 1; }
+inline int convertToLua(lua_State* L, const uint16_t& v) { lua_pushinteger(L, v); return 1; }
+inline int convertToLua(lua_State* L, const uint32_t& v) { lua_pushinteger(L, v); return 1; }
+inline int convertToLua(lua_State* L, const uint64_t& v) { lua_pushinteger(L, v); return 1; }
+inline int convertToLua(lua_State* L, const float& v)    { lua_pushnumber(L, v);  return 1; }
+inline int convertToLua(lua_State* L, const double& v)   { lua_pushnumber(L, v);  return 1; }
+inline int convertToLua(lua_State* L, const string& v)   { lua_pushstring(L, v.c_str()); return 1; }
+
+// fromjson
+inline void convertFromJson(const string& str, bool& v)  { 
+    if(!StringLib::str2bool(str.c_str(), &v))
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to parse boolean element: %s", str.c_str()); 
+    }
+}
+inline void convertFromJson(const string& str, int8_t& v)   { v = static_cast<int8_t>(std::stoi(str)); }
+inline void convertFromJson(const string& str, int16_t& v)  { v = static_cast<int16_t>(std::stoi(str)); }
+inline void convertFromJson(const string& str, int32_t& v)  { v = static_cast<int32_t>(std::stol(str)); }
+inline void convertFromJson(const string& str, int64_t& v)  { v = static_cast<int64_t>(std::stoll(str)); }
+inline void convertFromJson(const string& str, uint8_t& v)  { v = static_cast<uint8_t>(std::stoi(str)); }
+inline void convertFromJson(const string& str, uint16_t& v) { v = static_cast<uint16_t>(std::stoi(str)); }
+inline void convertFromJson(const string& str, uint32_t& v) { v = static_cast<uint32_t>(std::stoul(str)); }
+inline void convertFromJson(const string& str, uint64_t& v) { v = static_cast<uint64_t>(std::stoull(str)); }
+inline void convertFromJson(const string& str, float& v)    { v = std::stof(str); }
+inline void convertFromJson(const string& str, double& v)   { v = std::stod(str); }
+inline void convertFromJson(const string& str, string& v)   { 
+    const size_t first_pos = str.find('"');
+    size_t last_pos = first_pos;
+    size_t pos = first_pos;
+    while (pos != std::string::npos)
+    {
+        last_pos = pos;
+        pos = str.find('"', pos + 1);
+    }
+    if(first_pos == std::string::npos) throw RunTimeException(CRITICAL, RTE_ERROR, "missing string quotations");
+    else if(first_pos == last_pos) throw RunTimeException(CRITICAL, RTE_ERROR, "missing matching string quotations");
+    v = str.substr(first_pos + 1, last_pos - first_pos - 1);
+}
+
+// fromlua
+inline void convertFromLua(lua_State* L, int index, bool& v)     { v = LuaObject::getLuaBoolean(L, index); }
+inline void convertFromLua(lua_State* L, int index, int8_t& v)   { v = static_cast<int8_t>(LuaObject::getLuaInteger(L, index)); }
+inline void convertFromLua(lua_State* L, int index, int16_t& v)  { v = static_cast<int16_t>(LuaObject::getLuaInteger(L, index)); }
+inline void convertFromLua(lua_State* L, int index, int32_t& v)  { v = static_cast<int32_t>(LuaObject::getLuaInteger(L, index)); }
+inline void convertFromLua(lua_State* L, int index, int64_t& v)  { v = static_cast<int64_t>(LuaObject::getLuaInteger(L, index)); }
+inline void convertFromLua(lua_State* L, int index, uint8_t& v)  { v = static_cast<uint8_t>(LuaObject::getLuaInteger(L, index)); }
+inline void convertFromLua(lua_State* L, int index, uint16_t& v) { v = static_cast<uint16_t>(LuaObject::getLuaInteger(L, index)); }
+inline void convertFromLua(lua_State* L, int index, uint32_t& v) { v = static_cast<uint32_t>(LuaObject::getLuaInteger(L, index)); }
+inline void convertFromLua(lua_State* L, int index, uint64_t& v) { v = static_cast<uint64_t>(LuaObject::getLuaInteger(L, index)); }
+inline void convertFromLua(lua_State* L, int index, float& v)    { v = static_cast<float>(LuaObject::getLuaFloat(L, index)); }
+inline void convertFromLua(lua_State* L, int index, double& v)   { v = LuaObject::getLuaFloat(L, index); }
+inline void convertFromLua(lua_State* L, int index, string& v)   { v = LuaObject::getLuaString(L, index); }
+
+/******************************************************************************
  * CLASS
  ******************************************************************************/
 
@@ -76,6 +153,7 @@ class Field
         virtual         ~Field      (void) = default;
 
         encoding_t      getEncoding (void) const { return encoding; }
+        
         virtual string  toJson      (void) const = 0;
         virtual int     toLua       (lua_State* L) const = 0;
         virtual void    fromJson    (const string& str) = 0;
@@ -83,7 +161,7 @@ class Field
 
         template<class T>
         static encoding_t inferEncoding(void) {T dummy; return getFieldEncoding(dummy);}
-        
+
         // encoding 
         inline static encoding_t getFieldEncoding(bool& v)     { (void)v; return Field::BOOLEAN; }
         inline static encoding_t getFieldEncoding(int8_t& v)   { (void)v; return Field::INT8;    }
@@ -97,79 +175,6 @@ class Field
         inline static encoding_t getFieldEncoding(float& v)    { (void)v; return Field::FLOAT;   }
         inline static encoding_t getFieldEncoding(double& v)   { (void)v; return Field::DOUBLE;  }
         inline static encoding_t getFieldEncoding(string& v)   { (void)v; return Field::STRING;  }
-
-        // tojson
-        inline static string convertToJson(const bool& v)     { if(v) return string("true"); else return string("false"); }
-        inline static string convertToJson(const int8_t& v)   { return std::to_string(v);       }
-        inline static string convertToJson(const int16_t& v)  { return std::to_string(v);       }
-        inline static string convertToJson(const int32_t& v)  { return std::to_string(v);       }
-        inline static string convertToJson(const int64_t& v)  { return std::to_string(v);       }
-        inline static string convertToJson(const uint8_t& v)  { return std::to_string(v);       }
-        inline static string convertToJson(const uint16_t& v) { return std::to_string(v);       }
-        inline static string convertToJson(const uint32_t& v) { return std::to_string(v);       }
-        inline static string convertToJson(const uint64_t& v) { return std::to_string(v);       }
-        inline static string convertToJson(const float& v)    { return std::to_string(v);       }
-        inline static string convertToJson(const double& v)   { return std::to_string(v);       }
-        inline static string convertToJson(const string& v)   { return "\"" + string(v) + "\""; }
-
-        // tolua
-        inline static int convertToLua(lua_State* L, const bool& v)     { lua_pushinteger(L, v); return 1;        }
-        inline static int convertToLua(lua_State* L, const int8_t& v)   { lua_pushinteger(L, v); return 1;        }
-        inline static int convertToLua(lua_State* L, const int16_t& v)  { lua_pushinteger(L, v); return 1;        }
-        inline static int convertToLua(lua_State* L, const int32_t& v)  { lua_pushinteger(L, v); return 1;        }
-        inline static int convertToLua(lua_State* L, const int64_t& v)  { lua_pushinteger(L, v); return 1;        }
-        inline static int convertToLua(lua_State* L, const uint8_t& v)  { lua_pushinteger(L, v); return 1;        }
-        inline static int convertToLua(lua_State* L, const uint16_t& v) { lua_pushinteger(L, v); return 1;        }
-        inline static int convertToLua(lua_State* L, const uint32_t& v) { lua_pushinteger(L, v); return 1;        }
-        inline static int convertToLua(lua_State* L, const uint64_t& v) { lua_pushinteger(L, v); return 1;        }
-        inline static int convertToLua(lua_State* L, const float& v)    { lua_pushnumber(L, v);  return 1;        }
-        inline static int convertToLua(lua_State* L, const double& v)   { lua_pushnumber(L, v);  return 1;        }
-        inline static int convertToLua(lua_State* L, const string& v)   { lua_pushstring(L, v.c_str()); return 1; }
-
-        // fromjson
-        inline static void convertFromJson(const string& str, bool& v)  { 
-            if(!StringLib::str2bool(str.c_str(), &v))
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to parse boolean element: %s", str.c_str()); 
-            }
-        }
-        inline static void convertFromJson(const string& str, int8_t& v)   { v = static_cast<int8_t>(std::stoi(str));     }
-        inline static void convertFromJson(const string& str, int16_t& v)  { v = static_cast<int16_t>(std::stoi(str));    }
-        inline static void convertFromJson(const string& str, int32_t& v)  { v = static_cast<int32_t>(std::stol(str));    }
-        inline static void convertFromJson(const string& str, int64_t& v)  { v = static_cast<int64_t>(std::stoll(str));   }
-        inline static void convertFromJson(const string& str, uint8_t& v)  { v = static_cast<uint8_t>(std::stoi(str));    }
-        inline static void convertFromJson(const string& str, uint16_t& v) { v = static_cast<uint16_t>(std::stoi(str));   }
-        inline static void convertFromJson(const string& str, uint32_t& v) { v = static_cast<uint32_t>(std::stoul(str));  }
-        inline static void convertFromJson(const string& str, uint64_t& v) { v = static_cast<uint64_t>(std::stoull(str)); }
-        inline static void convertFromJson(const string& str, float& v)    { v = std::stof(str);                          }
-        inline static void convertFromJson(const string& str, double& v)   { v = std::stod(str);                          }
-        inline static void convertFromJson(const string& str, string& v)   { 
-            const size_t first_pos = str.find('"');
-            size_t last_pos = first_pos;
-            size_t pos = first_pos;
-            while (pos != std::string::npos)
-            {
-                last_pos = pos;
-                pos = str.find('"', pos + 1);
-            }
-            if(first_pos == std::string::npos) throw RunTimeException(CRITICAL, RTE_ERROR, "missing string quotations");
-            else if(first_pos == last_pos) throw RunTimeException(CRITICAL, RTE_ERROR, "missing matching string quotations");
-            v = str.substr(first_pos + 1, last_pos - first_pos - 1);
-        }
-
-        // fromlua
-        inline static void convertFromLua(lua_State* L, int index, bool& v)     { v = LuaObject::getLuaBoolean(L, index);                        }
-        inline static void convertFromLua(lua_State* L, int index, int8_t& v)   { v = static_cast<int8_t>(LuaObject::getLuaInteger(L, index));   }
-        inline static void convertFromLua(lua_State* L, int index, int16_t& v)  { v = static_cast<int16_t>(LuaObject::getLuaInteger(L, index));  }
-        inline static void convertFromLua(lua_State* L, int index, int32_t& v)  { v = static_cast<int32_t>(LuaObject::getLuaInteger(L, index));  }
-        inline static void convertFromLua(lua_State* L, int index, int64_t& v)  { v = static_cast<int64_t>(LuaObject::getLuaInteger(L, index));  }
-        inline static void convertFromLua(lua_State* L, int index, uint8_t& v)  { v = static_cast<uint8_t>(LuaObject::getLuaInteger(L, index));  }
-        inline static void convertFromLua(lua_State* L, int index, uint16_t& v) { v = static_cast<uint16_t>(LuaObject::getLuaInteger(L, index)); }
-        inline static void convertFromLua(lua_State* L, int index, uint32_t& v) { v = static_cast<uint32_t>(LuaObject::getLuaInteger(L, index)); }
-        inline static void convertFromLua(lua_State* L, int index, uint64_t& v) { v = static_cast<uint64_t>(LuaObject::getLuaInteger(L, index)); }
-        inline static void convertFromLua(lua_State* L, int index, float& v)    { v = static_cast<float>(LuaObject::getLuaFloat(L, index));      }
-        inline static void convertFromLua(lua_State* L, int index, double& v)   { v = LuaObject::getLuaFloat(L, index);                          }
-        inline static void convertFromLua(lua_State* L, int index, string& v)   { v = LuaObject::getLuaString(L, index);                         }
 
     protected:
 

@@ -81,6 +81,30 @@ class FieldColumn: public Field
 };
 
 /******************************************************************************
+ * FUNCTIONS
+ ******************************************************************************/
+
+template <class T>
+inline string convertToJson(const FieldColumn<T>& v) {
+    return v.toJson();
+}
+
+template <class T>
+inline int convertToLua(lua_State* L, const FieldColumn<T>& v) {
+    return v.toLua(L);
+}
+
+template <class T>
+inline void convertFromJson(const string& str, const FieldColumn<T>& v) {
+    v.fromJson(str);
+}
+
+template <class T>
+inline void convertFromLua(lua_State* L, int index, const FieldColumn<T>& v) {
+    v.fromLua(L, index);
+}
+
+/******************************************************************************
  * METHODS
  ******************************************************************************/
 
