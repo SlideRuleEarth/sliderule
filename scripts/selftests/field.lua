@@ -10,6 +10,7 @@ local ut = core.ut_field()
 runner.check(ut:element())
 runner.check(ut:array())
 runner.check(ut:column())
+runner.check(ut:dictionary())
 
 -- Report Results --
 

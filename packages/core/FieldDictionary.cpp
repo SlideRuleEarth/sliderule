@@ -29,59 +29,13 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __field_array__
-#define __field_array__
-
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
 #include "LuaEngine.h"
-#include "Field.h"
-
-/******************************************************************************
- * CLASS
- ******************************************************************************/
-
-template <class T, int N>
-class FieldArray: public Field
-{
-    public:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                        FieldArray      (std::initializer_list<T> init_list);
-                        ~FieldArray     (void) override = default;
-
-        T               operator[]      (int i) const;
-        T&              operator[]      (int i);
-
-        int             toLua           (lua_State* L) const override;
-        void            fromLua         (lua_State* L, int index) override;
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        T values[N];
-};
-
-/******************************************************************************
- * FUNCTIONS
- ******************************************************************************/
-
-template <class T, int N>
-inline int convertToLua(lua_State* L, const FieldArray<T, N>& v) {
-    return v.toLua(L);
-}
-
-template <class T, int N>
-inline void convertFromLua(lua_State* L, int index, FieldArray<T, N>& v) {
-    v.fromLua(L, index);
-}
+#include "FieldDictionary.h"
 
 /******************************************************************************
  * METHODS
@@ -90,42 +44,46 @@ inline void convertFromLua(lua_State* L, int index, FieldArray<T, N>& v) {
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-template <class T, int N>
-FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list)
+FieldDictionary::FieldDictionary(std::initializer_list<entry_t> init_list, int hash_table_size):
+    fields(hash_table_size)
 {
-    assert(N > 0);
-    std::copy(init_list.begin(), init_list.end(), values);
+    for(const entry_t elem: init_list) 
+    {
+        fields.add(elem.name, elem);
+    }
 }
 
 /*----------------------------------------------------------------------------
- * operator[] - rvalue
+ * add
  *----------------------------------------------------------------------------*/
-template <class T, int N>
-T FieldArray<T,N>::operator[](int i) const
+bool FieldDictionary::add(const entry_t& entry)
 {
-    return values[i];
+    return fields.add(entry.name, entry);
 }
 
+
 /*----------------------------------------------------------------------------
- * operator[] - lvalue
+ * operator[]
  *----------------------------------------------------------------------------*/
-template <class T, int N>
-T& FieldArray<T,N>::operator[](int i)
+
+Field* FieldDictionary::operator[](const char* key) const
 {
-    return values[i];
+    return fields[key].field;
 }
 
 /*----------------------------------------------------------------------------
  * toLua
  *----------------------------------------------------------------------------*/
-template <class T, int N>
-int FieldArray<T,N>::toLua (lua_State* L) const
+int FieldDictionary::toLua (lua_State* L) const
 {
+    Dictionary<entry_t>::Iterator iter(fields);
     lua_newtable(L);
-    for(int i = 0; i < N; i++)
+    for(int i = 0; i < iter.length; i++)
     {
-        convertToLua(L, values[i]);
-        lua_rawseti(L, -2, i + 1);
+        const Dictionary<entry_t>::kv_t kv = iter[i];
+        lua_pushstring(L, kv.value.name);
+        kv.value.field->toLua(L);
+        lua_settable(L, -3);
     }
     return 1;
 }
@@ -133,24 +91,23 @@ int FieldArray<T,N>::toLua (lua_State* L) const
 /*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
-template <class T, int N>
-void FieldArray<T,N>::fromLua (lua_State* L, int index) 
+
+void FieldDictionary::fromLua (lua_State* L, int index) 
 {
-    const int num_elements = lua_rawlen(L, index);
-
-    // check size
-    if(num_elements != N)
+    Dictionary<entry_t>::Iterator iter(fields);
+    for(int i = 0; i < iter.length; i++)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "mismatch in array size, expected %d, got %d", N, num_elements);
-    }
-
-    // convert all elements from lua
-    for(int i = 0; i < N; i++)
-    {
-        lua_rawgeti(L, index, i + 1);
-        convertFromLua(L, -1, values[i]);
+        Dictionary<entry_t>::kv_t kv = iter[i];
+        lua_getfield(L, index, kv.value.name);
+        try 
+        {
+            kv.value.field->fromLua(L, -1);
+        }
+        catch (const RunTimeException& e)
+        {
+            mlog(DEBUG, "Field <%s> using default value", kv.value.name);
+        }
         lua_pop(L, 1);
     }
 }
 
-#endif  /* __field_array__ */

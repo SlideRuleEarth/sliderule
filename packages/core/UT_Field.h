@@ -71,6 +71,7 @@ class UT_Field: public UnitTest
 	static int  testElement     (lua_State* L);
 	static int  testArray       (lua_State* L);
 	static int  testColumn      (lua_State* L);
+	static int  testDictionary  (lua_State* L);
 };
 
 #endif  /* __ut_field__ */

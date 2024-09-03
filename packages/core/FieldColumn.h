@@ -68,9 +68,7 @@ class FieldColumn: public Field
         T               operator[]      (int i) const;
         T&              operator[]      (int i);
 
-        string          toJson          (void) const override;
         int             toLua           (lua_State* L) const override;
-        void            fromJson        (const string& str) override;
         void            fromLua         (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
@@ -85,22 +83,12 @@ class FieldColumn: public Field
  ******************************************************************************/
 
 template <class T>
-inline string convertToJson(const FieldColumn<T>& v) {
-    return v.toJson();
-}
-
-template <class T>
 inline int convertToLua(lua_State* L, const FieldColumn<T>& v) {
     return v.toLua(L);
 }
 
 template <class T>
-inline void convertFromJson(const string& str, const FieldColumn<T>& v) {
-    v.fromJson(str);
-}
-
-template <class T>
-inline void convertFromLua(lua_State* L, int index, const FieldColumn<T>& v) {
+inline void convertFromLua(lua_State* L, int index, FieldColumn<T>& v) {
     v.fromLua(L, index);
 }
 
@@ -113,7 +101,6 @@ inline void convertFromLua(lua_State* L, int index, const FieldColumn<T>& v) {
  *----------------------------------------------------------------------------*/
 template<class T>
 FieldColumn<T>::FieldColumn(int chunk_size):
-    Field(Field::inferEncoding<T>()),
     values(chunk_size)
 {
 }
@@ -155,24 +142,6 @@ T& FieldColumn<T>::operator[](int i)
 }
 
 /*----------------------------------------------------------------------------
- * toJson
- *----------------------------------------------------------------------------*/
-template<class T>
-string FieldColumn<T>::toJson (void) const
-{
-    const int length = values.length();
-    string str("[");
-    for(int i = 0; i < length-1; i++)
-    {
-        str += convertToJson(values[i]);
-        str += ",";
-    }
-    str += convertToJson(values[length-1]);
-    str += "]";
-    return str;
-}
-
-/*----------------------------------------------------------------------------
  * toLua
  *----------------------------------------------------------------------------*/
 template<class T>
@@ -186,52 +155,6 @@ int FieldColumn<T>::toLua (lua_State* L) const
         lua_rawseti(L, -2, i + 1);
     }
     return 1;
-}
-
-/*----------------------------------------------------------------------------
- * fromJson
- *----------------------------------------------------------------------------*/
-template<class T>
-void FieldColumn<T>::fromJson (const string& str)
-{
-    bool in_error = false;
-
-    // build list of element tokens
-    const char* old_txt[2] = {"[", "]"};
-    const char* new_txt[2] = {"", ""};
-    char* list_str = StringLib::replace(str.c_str(), old_txt, new_txt, 2);
-    List<string*>* tokens = StringLib::split(list_str, StringLib::size(list_str), ',');
-
-    // clear out existing values
-    values.clear();
-
-    try
-    {
-        // convert all elements in array
-        for(int i = 0; i < tokens->length(); i++)
-        {
-            T value;
-            convertFromJson(*tokens->get(i), value);
-            values.add(value);
-        }
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(CRITICAL, "error parsing json array: %s", e.what());
-        in_error = true;
-    }
-    catch(const std::runtime_error& e)
-    {
-        mlog(CRITICAL, "error parsing json array: %s", e.what());
-        in_error = true;
-    }
-
-    // clean up memory
-    delete [] list_str;
-    delete tokens;
-    
-    // throw exception on any errors
-    if(in_error) throw RunTimeException(CRITICAL, RTE_ERROR, "json array parse error");
 }
 
 /*----------------------------------------------------------------------------

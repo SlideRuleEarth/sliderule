@@ -38,24 +38,11 @@
 
 #include "OsApi.h"
 #include "LuaEngine.h"
+#include "LuaObject.h"
 
 /******************************************************************************
  * FUNCTIONS
  ******************************************************************************/
-
-// tojson
-inline string convertToJson(const bool& v)     { if(v) return string("true"); else return string("false"); }
-inline string convertToJson(const int8_t& v)   { return std::to_string(v); }
-inline string convertToJson(const int16_t& v)  { return std::to_string(v); }
-inline string convertToJson(const int32_t& v)  { return std::to_string(v); }
-inline string convertToJson(const int64_t& v)  { return std::to_string(v); }
-inline string convertToJson(const uint8_t& v)  { return std::to_string(v); }
-inline string convertToJson(const uint16_t& v) { return std::to_string(v); }
-inline string convertToJson(const uint32_t& v) { return std::to_string(v); }
-inline string convertToJson(const uint64_t& v) { return std::to_string(v); }
-inline string convertToJson(const float& v)    { return std::to_string(v); }
-inline string convertToJson(const double& v)   { return std::to_string(v); }
-inline string convertToJson(const string& v)   { return "\"" + string(v) + "\""; }
 
 // tolua
 inline int convertToLua(lua_State* L, const bool& v)     { lua_pushinteger(L, v); return 1; }
@@ -70,37 +57,6 @@ inline int convertToLua(lua_State* L, const uint64_t& v) { lua_pushinteger(L, v)
 inline int convertToLua(lua_State* L, const float& v)    { lua_pushnumber(L, v);  return 1; }
 inline int convertToLua(lua_State* L, const double& v)   { lua_pushnumber(L, v);  return 1; }
 inline int convertToLua(lua_State* L, const string& v)   { lua_pushstring(L, v.c_str()); return 1; }
-
-// fromjson
-inline void convertFromJson(const string& str, bool& v)  { 
-    if(!StringLib::str2bool(str.c_str(), &v))
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to parse boolean element: %s", str.c_str()); 
-    }
-}
-inline void convertFromJson(const string& str, int8_t& v)   { v = static_cast<int8_t>(std::stoi(str)); }
-inline void convertFromJson(const string& str, int16_t& v)  { v = static_cast<int16_t>(std::stoi(str)); }
-inline void convertFromJson(const string& str, int32_t& v)  { v = static_cast<int32_t>(std::stol(str)); }
-inline void convertFromJson(const string& str, int64_t& v)  { v = static_cast<int64_t>(std::stoll(str)); }
-inline void convertFromJson(const string& str, uint8_t& v)  { v = static_cast<uint8_t>(std::stoi(str)); }
-inline void convertFromJson(const string& str, uint16_t& v) { v = static_cast<uint16_t>(std::stoi(str)); }
-inline void convertFromJson(const string& str, uint32_t& v) { v = static_cast<uint32_t>(std::stoul(str)); }
-inline void convertFromJson(const string& str, uint64_t& v) { v = static_cast<uint64_t>(std::stoull(str)); }
-inline void convertFromJson(const string& str, float& v)    { v = std::stof(str); }
-inline void convertFromJson(const string& str, double& v)   { v = std::stod(str); }
-inline void convertFromJson(const string& str, string& v)   { 
-    const size_t first_pos = str.find('"');
-    size_t last_pos = first_pos;
-    size_t pos = first_pos;
-    while (pos != std::string::npos)
-    {
-        last_pos = pos;
-        pos = str.find('"', pos + 1);
-    }
-    if(first_pos == std::string::npos) throw RunTimeException(CRITICAL, RTE_ERROR, "missing string quotations");
-    else if(first_pos == last_pos) throw RunTimeException(CRITICAL, RTE_ERROR, "missing matching string quotations");
-    v = str.substr(first_pos + 1, last_pos - first_pos - 1);
-}
 
 // fromlua
 inline void convertFromLua(lua_State* L, int index, bool& v)     { v = LuaObject::getLuaBoolean(L, index); }
@@ -125,64 +81,14 @@ class Field
     public:
 
         /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef enum {
-            INVALID         = -1,
-            BOOLEAN         = 0,   
-            INT8            = 1,
-            INT16           = 2,
-            INT32           = 3,
-            INT64           = 4,
-            UINT8           = 5,
-            UINT16          = 6,
-            UINT32          = 7,
-            UINT64          = 8,
-            FLOAT           = 9,
-            DOUBLE          = 10,
-            STRING          = 11,
-            NUM_ENCODINGS   = 12
-        } encoding_t;
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit        Field       (encoding_t _encoding): encoding(_encoding) {}
+                        Field       (void) = default;
         virtual         ~Field      (void) = default;
-
-        encoding_t      getEncoding (void) const { return encoding; }
         
-        virtual string  toJson      (void) const = 0;
         virtual int     toLua       (lua_State* L) const = 0;
-        virtual void    fromJson    (const string& str) = 0;
         virtual void    fromLua     (lua_State* L, int index) = 0;
-
-        template<class T>
-        static encoding_t inferEncoding(void) {T dummy; return getFieldEncoding(dummy);}
-
-        // encoding 
-        inline static encoding_t getFieldEncoding(bool& v)     { (void)v; return Field::BOOLEAN; }
-        inline static encoding_t getFieldEncoding(int8_t& v)   { (void)v; return Field::INT8;    }
-        inline static encoding_t getFieldEncoding(int16_t& v)  { (void)v; return Field::INT16;   }
-        inline static encoding_t getFieldEncoding(int32_t& v)  { (void)v; return Field::INT32;   }
-        inline static encoding_t getFieldEncoding(int64_t& v)  { (void)v; return Field::INT64;   }
-        inline static encoding_t getFieldEncoding(uint8_t& v)  { (void)v; return Field::UINT8;   }
-        inline static encoding_t getFieldEncoding(uint16_t& v) { (void)v; return Field::UINT16;  }
-        inline static encoding_t getFieldEncoding(uint32_t& v) { (void)v; return Field::UINT32;  }
-        inline static encoding_t getFieldEncoding(uint64_t& v) { (void)v; return Field::UINT64;  }
-        inline static encoding_t getFieldEncoding(float& v)    { (void)v; return Field::FLOAT;   }
-        inline static encoding_t getFieldEncoding(double& v)   { (void)v; return Field::DOUBLE;  }
-        inline static encoding_t getFieldEncoding(string& v)   { (void)v; return Field::STRING;  }
-
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        encoding_t encoding;
 };
 
 #endif  /* __field__ */

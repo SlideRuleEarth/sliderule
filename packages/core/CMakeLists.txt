@@ -28,6 +28,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/EventLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/PointIndex.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/FieldDictionary.cpp
         ${CMAKE_CURRENT_LIST_DIR}/File.cpp
         ${CMAKE_CURRENT_LIST_DIR}/FileIODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/HttpClient.cpp
@@ -98,6 +99,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/Field.h
         ${CMAKE_CURRENT_LIST_DIR}/FieldArray.h
         ${CMAKE_CURRENT_LIST_DIR}/FieldColumn.h
+        ${CMAKE_CURRENT_LIST_DIR}/FieldDictionary.h
         ${CMAKE_CURRENT_LIST_DIR}/FieldElement.h
         ${CMAKE_CURRENT_LIST_DIR}/File.h
         ${CMAKE_CURRENT_LIST_DIR}/FileIODriver.h

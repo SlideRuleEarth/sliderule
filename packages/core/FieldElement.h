@@ -67,9 +67,7 @@ class FieldElement: public Field
         T               operator*       (T v);
         T               operator/       (T v);
 
-        string          toJson          (void) const override;
         int             toLua           (lua_State* L) const override;
-        void            fromJson        (const string& str) override;
         void            fromLua         (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
@@ -88,7 +86,6 @@ class FieldElement: public Field
  *----------------------------------------------------------------------------*/
 template <class T>
 FieldElement<T>::FieldElement(T default_value):
-    Field(getFieldEncoding(default_value)),
     value(default_value)
 {
 }
@@ -185,30 +182,12 @@ T FieldElement<T>::operator/(T v)
 }
 
 /*----------------------------------------------------------------------------
- * toJson
- *----------------------------------------------------------------------------*/
-template <class T>
-string FieldElement<T>::toJson (void) const
-{
-    return convertToJson(value);
-}
-
-/*----------------------------------------------------------------------------
  * toLua
  *----------------------------------------------------------------------------*/
 template <class T>
 int FieldElement<T>::toLua (lua_State* L) const
 {
     return convertToLua(L, value);
-}
-
-/*----------------------------------------------------------------------------
- * fromJson
- *----------------------------------------------------------------------------*/
-template <class T>
-void FieldElement<T>::fromJson (const string& str) 
-{
-    convertFromJson(str, value);
 }
 
 /*----------------------------------------------------------------------------
