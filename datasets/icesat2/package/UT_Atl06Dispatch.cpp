@@ -33,7 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
+#include "OsApi.h"
 #include "UT_Atl06Dispatch.h"
 #include "Atl06Dispatch.h"
 

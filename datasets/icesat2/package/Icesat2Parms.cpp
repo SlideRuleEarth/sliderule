@@ -33,7 +33,7 @@
  * INCLUDE
  ******************************************************************************/
 
-#include "core.h"
+#include "OsApi.h"
 #include "geo.h"
 #include "Icesat2Parms.h"
 

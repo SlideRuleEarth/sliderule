@@ -70,7 +70,8 @@
 #include <math.h>
 #include <float.h>
 
-#include "core.h"
+#include "OsApi.h"
+#include "ContainerRecord.h"
 #include "icesat2.h"
 
 /******************************************************************************

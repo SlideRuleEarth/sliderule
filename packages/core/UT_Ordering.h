@@ -36,23 +36,19 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaObject.h"
+#include "UnitTest.h"
 
 /******************************************************************************
- * UNIT TEST ORDERING CLASS
+ * CLASS
  ******************************************************************************/
 
-class UT_Ordering: public LuaObject
+class UT_Ordering: public UnitTest
 {
     public:
 
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-
-        static const int UT_MAX_ASSERT = 256;
-
-        static const char* OBJECT_TYPE;
 
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
@@ -66,19 +62,11 @@ class UT_Ordering: public LuaObject
     private:
 
         /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        int failures;
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
     explicit    UT_Ordering     (lua_State* L);
-                ~UT_Ordering    (void) override;
-
-    bool        _ut_assert      (bool e, const char* file, int line, const char* fmt, ...);
+                ~UT_Ordering    (void) override = default;
 
 	static int  testAddRemove   (lua_State* L);
 	static int  testDuplicates  (lua_State* L);

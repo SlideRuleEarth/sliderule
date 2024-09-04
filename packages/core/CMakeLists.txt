@@ -28,6 +28,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/EventLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/PointIndex.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/FieldDictionary.cpp
         ${CMAKE_CURRENT_LIST_DIR}/File.cpp
         ${CMAKE_CURRENT_LIST_DIR}/FileIODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/HttpClient.cpp
@@ -60,7 +61,9 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/TimeLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/Uart.cpp
         ${CMAKE_CURRENT_LIST_DIR}/UdpSocket.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/UnitTest.cpp
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Dictionary.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Field.cpp>
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_List.cpp>
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_MsgQ.cpp>
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Ordering.cpp>
@@ -93,6 +96,11 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/DispatchObject.h
         ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.h
         ${CMAKE_CURRENT_LIST_DIR}/PointIndex.h
+        ${CMAKE_CURRENT_LIST_DIR}/Field.h
+        ${CMAKE_CURRENT_LIST_DIR}/FieldArray.h
+        ${CMAKE_CURRENT_LIST_DIR}/FieldColumn.h
+        ${CMAKE_CURRENT_LIST_DIR}/FieldDictionary.h
+        ${CMAKE_CURRENT_LIST_DIR}/FieldElement.h
         ${CMAKE_CURRENT_LIST_DIR}/File.h
         ${CMAKE_CURRENT_LIST_DIR}/FileIODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/HttpClient.h
@@ -129,7 +137,9 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/TimeLib.h
         ${CMAKE_CURRENT_LIST_DIR}/Uart.h
         ${CMAKE_CURRENT_LIST_DIR}/UdpSocket.h
+        ${CMAKE_CURRENT_LIST_DIR}/UnitTest.h
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Dictionary.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Field.h>
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_List.h>
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_MsgQ.h>
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_Ordering.h>

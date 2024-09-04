@@ -37,7 +37,7 @@
 #include <float.h>
 #include <stdarg.h>
 
-#include "core.h"
+#include "OsApi.h"
 #include "netsvc.h"
 #include "EndpointProxy.h"
 

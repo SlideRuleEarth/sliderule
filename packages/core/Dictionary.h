@@ -106,7 +106,8 @@ class Dictionary
         const char* last            (T* data);
 
         Dictionary& operator=       (const Dictionary& other);
-        T&          operator[]      (const char* key) const;
+        T           operator[]      (const char* key) const;
+        T&          operator[]      (const char* key);
 
     protected:
 
@@ -630,12 +631,23 @@ Dictionary<T>& Dictionary<T>::operator=(const Dictionary& other)
 }
 
 /*----------------------------------------------------------------------------
- * []
+ * [] - rvalue
  *
  *  indexed by key
  *----------------------------------------------------------------------------*/
 template <class T>
-T& Dictionary<T>::operator[](const char* key) const
+T Dictionary<T>::operator[](const char* key) const
+{
+    return get(key);
+}
+
+/*----------------------------------------------------------------------------
+ * [] - lvalue
+ *
+ *  indexed by key
+ *----------------------------------------------------------------------------*/
+template <class T>
+T& Dictionary<T>::operator[](const char* key)
 {
     return get(key);
 }

@@ -33,7 +33,7 @@
  * INCLUDE
  ******************************************************************************/
 
-#include "core.h"
+#include "OsApi.h"
 #include "NetsvcParms.h"
 #include "AoiMetrics.h"
 

@@ -40,9 +40,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
-#include "ArrowBuilderImpl.h"
-
 #include <parquet/arrow/schema.h>
 #include <parquet/arrow/writer.h>
 #include <parquet/properties.h>
@@ -57,6 +54,10 @@
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
+
+#include "OsApi.h"
+#include "ArrowBuilderImpl.h"
+#include "AncillaryFields.h"
 
 #ifdef __aws__
 #include "aws.h"
@@ -104,7 +105,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     for(int i = 0; i < fieldList.length(); i++)
     {
         const uint32_t field_trace_id = start_trace(INFO, trace_id, "append_field", "{\"field\": %d}", i);
-        RecordObject::field_t& field = fieldList[i];
+        RecordObject::field_t& field = fieldList.get(i);
 
         /* Build Column */
         shared_ptr<arrow::Array> column;
@@ -661,7 +662,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
             (void)builder.Reserve(num_rows);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 if(field.flags & RecordObject::BATCH)
                 {
                     const int32_t starting_offset = field.offset;
@@ -691,7 +692,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
             (void)builder.Reserve(num_rows);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 if(field.flags & RecordObject::BATCH)
                 {
                     const int32_t starting_offset = field.offset;
@@ -721,7 +722,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
             (void)builder.Reserve(num_rows);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 if(field.flags & RecordObject::BATCH)
                 {
                     const int32_t starting_offset = field.offset;
@@ -751,7 +752,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
             (void)builder.Reserve(num_rows);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 if(field.flags & RecordObject::BATCH)
                 {
                     const int32_t starting_offset = field.offset;
@@ -781,7 +782,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
             (void)builder.Reserve(num_rows);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 if(field.flags & RecordObject::BATCH)
                 {
                     const int32_t starting_offset = field.offset;
@@ -811,7 +812,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
             (void)builder.Reserve(num_rows);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 if(field.flags & RecordObject::BATCH)
                 {
                     const int32_t starting_offset = field.offset;
@@ -841,7 +842,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
             (void)builder.Reserve(num_rows);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 if(field.flags & RecordObject::BATCH)
                 {
                     const int32_t starting_offset = field.offset;
@@ -871,7 +872,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
             (void)builder.Reserve(num_rows);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 if(field.flags & RecordObject::BATCH)
                 {
                     const int32_t starting_offset = field.offset;
@@ -901,7 +902,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
             (void)builder.Reserve(num_rows);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 if(field.flags & RecordObject::BATCH)
                 {
                     const int32_t starting_offset = field.offset;
@@ -931,7 +932,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
             (void)builder.Reserve(num_rows);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 if(field.flags & RecordObject::BATCH)
                 {
                     const int32_t starting_offset = field.offset;
@@ -961,7 +962,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
             (void)builder.Reserve(num_rows);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 if(field.flags & RecordObject::BATCH)
                 {
                     const int32_t starting_offset = field.offset;
@@ -991,7 +992,7 @@ void ArrowBuilderImpl::processField (RecordObject::field_t& field, shared_ptr<ar
             (void)builder.Reserve(num_rows);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 if(field.flags & RecordObject::BATCH)
                 {
                     const int32_t starting_offset = field.offset;
@@ -1041,7 +1042,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
@@ -1064,7 +1065,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
@@ -1087,7 +1088,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
@@ -1110,7 +1111,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
@@ -1133,7 +1134,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
@@ -1156,7 +1157,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
@@ -1179,7 +1180,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
@@ -1202,7 +1203,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
@@ -1225,7 +1226,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
@@ -1248,7 +1249,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
@@ -1271,7 +1272,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
@@ -1294,7 +1295,7 @@ void ArrowBuilderImpl::processArray (RecordObject::field_t& field, shared_ptr<ar
             arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
             for(int i = 0; i < record_batch.length(); i++)
             {
-                ArrowBuilder::batch_t* batch = record_batch[i];
+                ArrowBuilder::batch_t* batch = record_batch.get(i);
                 const int32_t starting_offset = field.offset;
                 for(int row = 0; row < batch->rows; row++)
                 {
@@ -1329,7 +1330,7 @@ void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordOb
     (void)builder.ReserveData(num_rows * sizeof(ArrowCommon::wkbpoint_t));
     for(int i = 0; i < record_batch.length(); i++)
     {
-        ArrowBuilder::batch_t* batch = record_batch[i];
+        ArrowBuilder::batch_t* batch = record_batch.get(i);
         const int32_t starting_x_offset = x_field.offset;
         const int32_t starting_y_offset = y_field.offset;
         for(int row = 0; row < batch->rows; row++)
@@ -1374,7 +1375,7 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
     /* Populate Field Table */
     for(int i = 0; i < record_batch.length(); i++)
     {
-        ArrowBuilder::batch_t* batch = record_batch[i];
+        ArrowBuilder::batch_t* batch = record_batch.get(i);
 
         /* Loop through Ancillary Fields */
         for(int j = 0; j < batch->num_anc_recs; j++)
@@ -1613,7 +1614,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
     /* Populate Field Table */
     for(int i = 0; i < record_batch.length(); i++)
     {
-        ArrowBuilder::batch_t* batch = record_batch[i];
+        ArrowBuilder::batch_t* batch = record_batch.get(i);
 
         /* Loop through Ancillary Elements */
         for(int j = 0; j < batch->num_anc_recs; j++)

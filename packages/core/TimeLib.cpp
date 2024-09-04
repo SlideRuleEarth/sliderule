@@ -902,6 +902,6 @@ void TimeLib::parsenistfile(void)
     /* Populate Leap Second Array - Convert from NTP to UNIX epoch */
     for (int i = 0; i < leapCount; i++)
     {
-        leapSeconds[i]  = NTP_TO_SYS(ntp_leap_seconds[i]);
+        leapSeconds[i]  = NTP_TO_SYS(ntp_leap_seconds.get(i));
     }
 }

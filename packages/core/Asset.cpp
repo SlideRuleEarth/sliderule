@@ -197,7 +197,7 @@ int Asset::load (const resource_t& resource)
  *----------------------------------------------------------------------------*/
 Asset::resource_t& Asset::operator[](int i)
 {
-    return resources[i];
+    return resources.get(i);
 }
 
 /*----------------------------------------------------------------------------

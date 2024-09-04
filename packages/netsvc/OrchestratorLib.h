@@ -36,7 +36,9 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
+#include "OsApi.h"
+#include "EndpointObject.h"
+#include "LuaEngine.h"
 
 /******************************************************************************
  * ORCHESTRATOR LIBRARY CLASS

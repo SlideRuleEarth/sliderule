@@ -35,7 +35,8 @@
 
 #include "ReportDispatch.h"
 #include "MetricRecord.h"
-#include "core.h"
+#include "OsApi.h"
+#include "TimeLib.h"
 
 /******************************************************************************
  * DEFINES

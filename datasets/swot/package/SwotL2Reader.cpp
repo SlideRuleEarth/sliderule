@@ -37,7 +37,7 @@
 #include <float.h>
 #include <stdarg.h>
 
-#include "core.h"
+#include "OsApi.h"
 #include "h5.h"
 #include "swot.h"
 

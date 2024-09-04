@@ -36,21 +36,19 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaObject.h"
+#include "UnitTest.h"
 
 /******************************************************************************
- * UNIT TEST LIST CLASS
+ * CLASS
  ******************************************************************************/
 
-class UT_List: public LuaObject
+class UT_List: public UnitTest
 {
     public:
 
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-
-        static const char* OBJECT_TYPE;
 
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
@@ -64,19 +62,11 @@ class UT_List: public LuaObject
     private:
 
         /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        int failures;
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
     explicit    UT_List         (lua_State* L);
                 ~UT_List        (void) override;
-
-    bool        _ut_assert      (bool e, const char* file, int line, const char* fmt, ...);
 
 	static int  testAddRemove   (lua_State* L);
 	static int  testDuplicates  (lua_State* L);

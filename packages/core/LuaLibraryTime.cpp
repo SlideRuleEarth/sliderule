@@ -35,7 +35,8 @@
 
 #include "LuaLibraryTime.h"
 #include "LuaEngine.h"
-#include "core.h"
+#include "OsApi.h"
+#include "TimeLib.h"
 
 /******************************************************************************
  * STATIC DATA

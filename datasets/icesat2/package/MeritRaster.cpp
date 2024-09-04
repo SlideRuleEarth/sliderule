@@ -34,7 +34,7 @@
  ******************************************************************************/
 
 #include "RasterSample.h"
-#include "core.h"
+#include "OsApi.h"
 #include "H5Coro.h"
 #include "geo.h"
 #include "MeritRaster.h"

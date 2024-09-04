@@ -37,7 +37,7 @@
 #include <float.h>
 #include <stdarg.h>
 
-#include "core.h"
+#include "OsApi.h"
 #include "h5.h"
 #include "icesat2.h"
 
@@ -492,7 +492,7 @@ void* Atl03Viewer::subsettingThread (void* parm)
                 /* Populate Segments */
                 for(int32_t i = 0; i < segments.length(); i++)
                 {
-                    extent->segments[i] = segments[i];
+                    extent->segments[i] = segments.get(i);
                 }
 
                 reader->postRecord(record, local_stats);

@@ -33,7 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
+#include "OsApi.h"
 #include "geo.h"
 #include "RasterSampler.h"
 #include "GeoIndexedRaster.h"
