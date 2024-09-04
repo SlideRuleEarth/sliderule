@@ -53,13 +53,11 @@ TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
 STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
+OCEANEYES_SRC_DIR = $(ROOT)/datasets/bathy/docker/oceaneyes
+OCEANEYES_STAGE_DIR = $(STAGE)/oceaneyes
+MAGIC_PYTORCH_DIR = $(ROOT)/../../miniconda3/envs/pointnet2
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
-
-QTREES_SOURCE_DIR = $(ROOT)/../qtrees
-COASTNET_SOURCE_DIR = $(ROOT)/../coastnet
-OPENOCEANS_SOURCE_DIR = $(ROOT)/../openoceans
-OCEANEYES_SOURCE_DIR = $(ROOT)/../oceaneyes
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -129,24 +127,6 @@ manager-destroy: ## destroy manager using terraform; needs DOMAIN
 	cd terraform/manager && terraform workspace select $(DOMAIN)-manager|| terraform workspace new $(DOMAIN)-manager
 	cd terraform/manager && terraform destroy
 
-qtrees-plugin:
-	make -C $(QTREES_SOURCE_DIR)/plugin config INSTALLDIR=$(INSTALLDIR)
-	make -C $(QTREES_SOURCE_DIR)/plugin
-	make -C $(QTREES_SOURCE_DIR)/plugin install
-
-coastnet-plugin:
-	make -C $(COASTNET_SOURCE_DIR)/plugin config INSTALLDIR=$(INSTALLDIR)
-	make -C $(COASTNET_SOURCE_DIR)/plugin
-	make -C $(COASTNET_SOURCE_DIR)/plugin install
-
-openoceans-plugin:
-	make -C $(OPENOCEANS_SOURCE_DIR)/plugin config INSTALLDIR=$(INSTALLDIR)
-	make -C $(OPENOCEANS_SOURCE_DIR)/plugin
-	make -C $(OPENOCEANS_SOURCE_DIR)/plugin install
-
-oceaneyes-docker:
-	make -C $(OCEANEYES_SOURCE_DIR) docker
-
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
 	mkdir -p $(STATIC_WEB_STAGE_DIR)
@@ -183,7 +163,31 @@ static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
 	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
-sliderule-local: sliderule qtrees-plugin coastnet-plugin openoceans-plugin ## build sliderule locally with all plugins
+oceaneyes-lock:
+	conda-lock -p linux-$(ARCH) -f environment.yml
+	conda-lock render -p linux-$(ARCH)
+
+oceaneyes-docker:
+	-rm -Rf $(OCEANEYES_STAGE_DIR)
+	mkdir -p $(OCEANEYES_STAGE_DIR)
+	cp $(OCEANEYES_SRC_DIR)/Dockerfile $(OCEANEYES_STAGE_DIR)
+	cp $(OCEANEYES_SRC_DIR)/conda-* $(OCEANEYES_STAGE_DIR)
+	cp -R $(OCEANEYES_SRC_DIR)/atl24writer $(OCEANEYES_STAGE_DIR)
+	cp -R $(OCEANEYES_SRC_DIR)/bathypathfinder $(OCEANEYES_STAGE_DIR)
+	cp -R $(OCEANEYES_SRC_DIR)/cshelph $(OCEANEYES_STAGE_DIR)
+	cp -R $(OCEANEYES_SRC_DIR)/medianfilter $(OCEANEYES_STAGE_DIR)
+	cp -R $(OCEANEYES_SRC_DIR)/pointnet $(OCEANEYES_STAGE_DIR)
+	cp -R $(OCEANEYES_SRC_DIR)/openoceans $(OCEANEYES_STAGE_DIR)
+	cp -R $(OCEANEYES_SRC_DIR)/utils $(OCEANEYES_STAGE_DIR)
+	mkdir $(OCEANEYES_STAGE_DIR)/magic_pytorch_env
+	rsync -a $(MAGIC_PYTORCH_DIR)/* $(OCEANEYES_STAGE_DIR)/magic_pytorch_env
+	cd $(OCEANEYES_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/oceaneyes:latest $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/oceaneyes:latest $(ECR)/oceaneyes:$(VERSION)
+	docker tag $(ECR)/oceaneyes:latest $(ECR)/oceaneyes:$(MAJOR_VERSION)
+
+oceaneyes-push:
+	docker push $(ECR)/oceaneyes:$(VERSION)
+	docker push $(ECR)/oceaneyes:$(MAJOR_VERSION)
 
 sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)

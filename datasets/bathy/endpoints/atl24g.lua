@@ -176,7 +176,7 @@ while true do
             parms["resource09"] = rsps2[1]
             break -- success
         else
-            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> returned an invalid number of resources for ATL09 CMR request: %d", rspq, #rsps2))
+            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> returned an invalid number of resources for ATL09 CMR request for %s: %d", rspq, resource, #rsps2))
             cleanup(crenv, transaction_id)
             return -- failure
         end
