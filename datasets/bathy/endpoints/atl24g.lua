@@ -167,13 +167,22 @@ parms["asset"] = "icesat2-atl09"
 parms["t0"] = t0
 parms["t1"] = t1
 parms["name_filter"] = '*_'..rgt..'????_*'
-local rc2, rsps2 = earthdata.search(parms)
-if rc2 == earthdata.SUCCESS and #rsps2 == 1 then
-    parms["resource09"] = rsps2[1]
-else
-    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to make ATL09 CMR request <%d>: %s", rspq, rc2, rsps2))
-    cleanup(crenv, transaction_id)
-    return
+local atl09_max_retries = 3
+local atl09_attempt = 1
+while true do
+    local rc2, rsps2 = earthdata.search(parms)
+    if rc2 == earthdata.SUCCESS and #rsps2 == 1 then
+        parms["resource09"] = rsps2[1]
+        break -- success
+    else
+        userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed attempt %d to make ATL09 CMR request <%d>: %s", rspq, atl09_attempt, rc2, rsps2))
+        atl09_attempt = atl09_attempt + 1
+        if atl09_attempt == atl09_max_retries then
+            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to make ATL09 CMR request... aborting!", rspq))
+            cleanup(crenv, transaction_id)
+            return -- failure
+        end
+    end
 end
 parms["asset"] = original_asset
 parms["t0"] = original_t0

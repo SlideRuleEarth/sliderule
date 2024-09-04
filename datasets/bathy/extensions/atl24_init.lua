@@ -11,13 +11,15 @@ local uncertainty_lut_complete = true -- logic below needs it to be seeded to tr
 local pointnet_model_complete = false
 local qtrees_model_complete = false
 local coastnet_model_complete = false
+local ensemble_model_complete = false
 
 while sys.alive() and ( (not bathy_mask_complete) or
                         (not water_ri_mask_complete) or
                         (not uncertainty_lut_complete) or
                         (not pointnet_model_complete) or
                         (not qtrees_model_complete) or
-                        (not coastnet_model_complete)) do
+                        (not coastnet_model_complete)
+                        (not ensemble_model_complete)) do
 
     sys.log(core.INFO, "Initializing ATL24 processing environment...")
 
@@ -47,8 +49,8 @@ while sys.alive() and ( (not bathy_mask_complete) or
     pointnet_model_complete = sys.fileexists(pointnet_model_local) or aws.s3download("sliderule", pointnet_model_remote, aws.DEFAULT_REGION, aws.DEFAULT_IDENTITY, pointnet_model_local)
 
     -- qtrees model
-    local qtrees_model_local = cre.HOST_DIRECTORY.."/model-20240607.json"
-    local qtrees_model_remote = "config/model-20240607.json"
+    local qtrees_model_local = cre.HOST_DIRECTORY.."/qtrees_model-20240607.json"
+    local qtrees_model_remote = "config/qtrees_model-20240607.json"
     qtrees_model_complete = sys.fileexists(qtrees_model_local) or aws.s3download("sliderule", qtrees_model_remote, aws.DEFAULT_REGION, aws.DEFAULT_IDENTITY, qtrees_model_local)
 
     -- coastnet model
@@ -56,13 +58,19 @@ while sys.alive() and ( (not bathy_mask_complete) or
     local coastnet_model_remote = "config/coastnet_model-20240628.json"
     coastnet_model_complete = sys.fileexists(coastnet_model_local) or aws.s3download("sliderule", coastnet_model_remote, aws.DEFAULT_REGION, aws.DEFAULT_IDENTITY, coastnet_model_local)
 
+    -- ensemble model
+    local ensemble_model_local = cre.HOST_DIRECTORY.."/track_stacker_model.json"
+    local ensemble_model_remote = "config/track_stacker_model.json"
+    ensemble_model_complete = sys.fileexists(ensemble_model_local) or aws.s3download("sliderule", ensemble_model_remote, aws.DEFAULT_REGION, aws.DEFAULT_IDENTITY, ensemble_model_local)
+
     -- check for completeness
     if (not bathy_mask_complete) or
        (not water_ri_mask_complete) or
        (not uncertainty_lut_complete) or
        (not pointnet_model_complete) or
        (not qtrees_model_complete) or
-       (not coastnet_model_complete) then
+       (not coastnet_model_complete) or
+       (not ensemble_model_complete) then
         sys.log(core.CRITICAL, string.format("Failed to initialize ATL24 processing environment"))
         if not bathy_mask_complete then sys.log(core.CRITICAL, "bathy mask did not download") end
         if not water_ri_mask_complete then sys.log(core.CRITICAL, "water refractive index mask did not download") end
@@ -70,6 +78,7 @@ while sys.alive() and ( (not bathy_mask_complete) or
         if not pointnet_model_complete then sys.log(core.CRITICAL, "pointnet model did not download") end
         if not qtrees_model_complete then sys.log(core.CRITICAL, "qtrees model did not download") end
         if not coastnet_model_complete then sys.log(core.CRITICAL, "coastnet model did not download") end
+        if not ensemble_model_complete then sys.log(core.CRITICAL, "ensemble model did not download") end
         sys.wait(30)
     end
 
