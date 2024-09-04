@@ -54,6 +54,14 @@ FieldDictionary::FieldDictionary(std::initializer_list<entry_t> init_list, int h
 }
 
 /*----------------------------------------------------------------------------
+ * Copy Constructor
+ *----------------------------------------------------------------------------*/
+FieldDictionary::FieldDictionary(const FieldDictionary& dictionary):
+    fields(dictionary.fields)
+{
+}
+
+/*----------------------------------------------------------------------------
  * add
  *----------------------------------------------------------------------------*/
 bool FieldDictionary::add(const entry_t& entry)
@@ -61,14 +69,31 @@ bool FieldDictionary::add(const entry_t& entry)
     return fields.add(entry.name, entry);
 }
 
+/*----------------------------------------------------------------------------
+ * operator=
+ *----------------------------------------------------------------------------*/
+FieldDictionary& FieldDictionary::operator= (const FieldDictionary& dictionary)
+{
+    if(this == &dictionary) return *this;
+    fields = dictionary.fields;
+    return *this;
+}
 
 /*----------------------------------------------------------------------------
- * operator[]
+ * operator[] - rvalue
  *----------------------------------------------------------------------------*/
-
 Field* FieldDictionary::operator[](const char* key) const
 {
     return fields[key].field;
+}
+
+/*----------------------------------------------------------------------------
+ * operator[] - lvalue
+ *----------------------------------------------------------------------------*/
+
+Field& FieldDictionary::operator[](const char* key)
+{
+    return *(fields[key].field);
 }
 
 /*----------------------------------------------------------------------------

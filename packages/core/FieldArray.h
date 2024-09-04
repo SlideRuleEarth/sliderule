@@ -57,9 +57,9 @@ class FieldArray: public Field
                             FieldArray      (const FieldArray<T,N>& array);
                             ~FieldArray     (void) override = default;
 
+        FieldArray<T,N>&    operator=       (const FieldArray<T,N>& array);
         T                   operator[]      (int i) const;
         T&                  operator[]      (int i);
-        FieldArray<T,N>&    operator=       (const FieldArray<T,N>& array);
 
         int                 toLua           (lua_State* L) const override;
         void                fromLua         (lua_State* L, int index) override;
@@ -118,6 +118,17 @@ FieldArray<T,N>::FieldArray(const FieldArray<T,N>& array)
 }
 
 /*----------------------------------------------------------------------------
+ * operator=
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+FieldArray<T,N>& FieldArray<T,N>::operator=(const FieldArray<T,N>& array)
+{
+    if(this == &array) return *this;
+    copy(array);
+    return *this;
+}
+
+/*----------------------------------------------------------------------------
  * operator[] - rvalue
  *----------------------------------------------------------------------------*/
 template <class T, int N>
@@ -133,16 +144,6 @@ template <class T, int N>
 T& FieldArray<T,N>::operator[](int i)
 {
     return values[i];
-}
-
-/*----------------------------------------------------------------------------
- * operator[] - lvalue
- *----------------------------------------------------------------------------*/
-template <class T, int N>
-FieldArray<T,N>& FieldArray<T,N>::operator=(const FieldArray<T,N>& array)
-{
-    copy(array);
-    return *this;
 }
 
 /*----------------------------------------------------------------------------

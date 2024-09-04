@@ -117,7 +117,7 @@ FieldColumn<T>::FieldColumn(int _chunk_size):
 }
 
 /*----------------------------------------------------------------------------
- * Constructor
+ * Copy Constructor
  *----------------------------------------------------------------------------*/
 template<class T>
 FieldColumn<T>::FieldColumn(const FieldColumn<T>& column):
@@ -213,11 +213,13 @@ long FieldColumn<T>::length(void) const
 }
 
 /*----------------------------------------------------------------------------
- * operator[] - rvalue
+ * operator=
  *----------------------------------------------------------------------------*/
 template<class T>
 FieldColumn<T>& FieldColumn<T>::operator= (const FieldColumn<T>& column)
 {
+    if(this == &column) return *this;
+
     clear();
     for(long i = 0; i < column.numElements; i++)
     {

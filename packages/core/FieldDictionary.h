@@ -68,10 +68,14 @@ class FieldDictionary: public Field
          *--------------------------------------------------------------------*/
 
                         FieldDictionary (std::initializer_list<entry_t> init_list, int hash_table_size=DEFAULT_INITIAL_HASH_TABLE_SIZE);
+                        FieldDictionary (const FieldDictionary& dictionary);                        
                         ~FieldDictionary(void) override = default;
 
         bool            add             (const entry_t& entry);
+
+        FieldDictionary& operator=      (const FieldDictionary& dictionary);
         Field*          operator[]      (const char* key) const;
+        Field&          operator[]      (const char* key);
 
         int             toLua           (lua_State* L) const override;
         void            fromLua         (lua_State* L, int index) override;

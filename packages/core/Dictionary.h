@@ -88,6 +88,7 @@ class Dictionary
          *--------------------------------------------------------------------*/
 
         explicit    Dictionary      (int hash_size=DEFAULT_HASH_TABLE_SIZE, double hash_load=DEFAULT_HASH_TABLE_LOAD);
+                    Dictionary      (const Dictionary<T>& dictionary);
                     ~Dictionary     (void);
 
         bool        add             (const char* key, const T& data, bool unique=false);
@@ -236,6 +237,30 @@ Dictionary<T>::Dictionary(int hash_size, double hash_load)
     currIndex = 0;
     numEntries = 0;
     maxChain = 0;
+}
+
+/*----------------------------------------------------------------------------
+ * Copy Constructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+Dictionary<T>::Dictionary(const Dictionary<T>& dictionary):
+    hashSize(dictionary.hashSize),
+    hashLoad(dictionary.hashLoad)
+{
+    hashTable = new hash_node_t [hashSize];
+    for(unsigned int i = 0; i < hashSize; i++)
+    {
+        OsApi::dupstr(&hashTable[i].key, dictionary.hashTable[i].key);
+        hashTable[i].data = dictionary.hashTable[i].data;
+        hashTable[i].chain = dictionary.hashTable[i].chain;
+        hashTable[i].hash = dictionary.hashTable[i].hash;
+        hashTable[i].next = dictionary.hashTable[i].next;
+        hashTable[i].prev = dictionary.hashTable[i].prev;
+    }
+
+    currIndex = dictionary.currIndex;
+    numEntries = dictionary.numEntries;
+    maxChain = dictionary.maxChain;
 }
 
 /*----------------------------------------------------------------------------
