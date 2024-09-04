@@ -18,7 +18,7 @@ while sys.alive() and ( (not bathy_mask_complete) or
                         (not uncertainty_lut_complete) or
                         (not pointnet_model_complete) or
                         (not qtrees_model_complete) or
-                        (not coastnet_model_complete)
+                        (not coastnet_model_complete) or
                         (not ensemble_model_complete)) do
 
     sys.log(core.INFO, "Initializing ATL24 processing environment...")
