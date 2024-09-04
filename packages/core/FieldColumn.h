@@ -59,12 +59,15 @@ class FieldColumn: public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit        FieldColumn     (int chunk_size=DEFAULT_CHUNK_SIZE);
-                        ~FieldColumn    (void) override = default;
+        explicit        FieldColumn     (int _chunk_size=DEFAULT_CHUNK_SIZE);
+                        FieldColumn     (const FieldColumn<T>& column);
+                        ~FieldColumn    (void) override;
 
         int             append          (const T& v);
-        T*              array           (void) const;
+        void            clear           (void);
+        long            length          (void) const;
 
+        FieldColumn<T>& operator=       (const FieldColumn<T>& column);
         T               operator[]      (int i) const;
         T&              operator[]      (int i);
 
@@ -75,7 +78,11 @@ class FieldColumn: public Field
          * Data
          *--------------------------------------------------------------------*/
 
-        List<T> values;
+        vector<T*> chunks;
+        long currChunk;
+        long currChunkOffset;
+        long numElements;
+        long chunkSize;
 };
 
 /******************************************************************************
@@ -100,9 +107,58 @@ inline void convertFromLua(lua_State* L, int index, FieldColumn<T>& v) {
  * Constructor
  *----------------------------------------------------------------------------*/
 template<class T>
-FieldColumn<T>::FieldColumn(int chunk_size):
-    values(chunk_size)
+FieldColumn<T>::FieldColumn(int _chunk_size):
+    chunks(1),
+    currChunk(-1),
+    currChunkOffset(_chunk_size),
+    numElements(0),
+    chunkSize(_chunk_size)
 {
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+template<class T>
+FieldColumn<T>::FieldColumn(const FieldColumn<T>& column):
+    chunks(column.chunks.size()),
+    currChunk(column.currChunk),
+    currChunkOffset(column.currChunkOffset),
+    numElements(column.numElements),
+    chunkSize(column.chunkSize)
+{
+    // all but last chunk
+    for(long c = 0; c < currChunk; c++)
+    {
+        T* chunk = new T[chunkSize];
+        for(long i = 0; i < chunkSize; i++)
+        {
+            chunk[i] = column.chunks[c][i];
+        }
+        chunks.push_back(chunk);
+    }
+    // last chunk
+    if(currChunk >= 0)
+    {
+        T* chunk = new T[chunkSize];
+        for(long i = 0; i < currChunkOffset; i++)
+        {
+            chunk[i] = column.chunks[currChunk][i];
+        }
+        chunks.push_back(chunk);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+template<class T>
+FieldColumn<T>::~FieldColumn(void)
+{
+    for(T* chunk: chunks)
+    {
+        delete [] chunk;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -111,16 +167,63 @@ FieldColumn<T>::FieldColumn(int chunk_size):
 template<class T>
 int FieldColumn<T>::append(const T& v)
 {
-    return values.add(v);
+    if(currChunkOffset < chunkSize)
+    {
+        chunks[currChunk][currChunkOffset] = v;
+        currChunkOffset++;
+    }
+    else
+    {
+        T* chunk = new T[chunkSize];
+        chunk[0] = v;
+        chunks.push_back(chunk);
+        currChunk++;
+        currChunkOffset = 1;
+    }
+
+    return ++numElements;
 }
 
 /*----------------------------------------------------------------------------
- * array
+ * clear
  *----------------------------------------------------------------------------*/
 template<class T>
-T* FieldColumn<T>::array(void) const
+void FieldColumn<T>::clear(void)
 {
-    return values.array();
+    // delete all chunks
+    for(T* chunk: chunks)
+    {
+        delete [] chunk;
+    }
+    chunks.clear();
+
+    // reset indices
+    currChunk = -1;
+    currChunkOffset = chunkSize;
+    numElements = 0;
+}
+
+/*----------------------------------------------------------------------------
+ * length
+ *----------------------------------------------------------------------------*/
+template<class T>
+long FieldColumn<T>::length(void) const
+{
+    return numElements;
+}
+
+/*----------------------------------------------------------------------------
+ * operator[] - rvalue
+ *----------------------------------------------------------------------------*/
+template<class T>
+FieldColumn<T>& FieldColumn<T>::operator= (const FieldColumn<T>& column)
+{
+    clear();
+    for(long i = 0; i < column.numElements; i++)
+    {
+        append(column[i]);
+    }
+    return *this;
 }
 
 /*----------------------------------------------------------------------------
@@ -129,7 +232,9 @@ T* FieldColumn<T>::array(void) const
 template<class T>
 T FieldColumn<T>::operator[](int i) const
 {
-    return values[i];
+    const long chunk_index = i / chunkSize;
+    const long chunk_offset = i % chunkSize;
+    return chunks[chunk_index][chunk_offset];
 }
 
 /*----------------------------------------------------------------------------
@@ -138,7 +243,9 @@ T FieldColumn<T>::operator[](int i) const
 template<class T>
 T& FieldColumn<T>::operator[](int i)
 {
-    return values[i];
+    const long chunk_index = i / chunkSize;
+    const long chunk_offset = i % chunkSize;
+    return chunks[chunk_index][chunk_offset];
 }
 
 /*----------------------------------------------------------------------------
@@ -147,11 +254,10 @@ T& FieldColumn<T>::operator[](int i)
 template<class T>
 int FieldColumn<T>::toLua (lua_State* L) const
 {
-    const int length = values.length();
     lua_newtable(L);
-    for(int i = 0; i < length; i++)
+    for(int i = 0; i < numElements; i++)
     {
-        convertToLua(L, values[i]);
+        convertToLua(L, this->operator[](i));
         lua_rawseti(L, -2, i + 1);
     }
     return 1;
@@ -163,8 +269,8 @@ int FieldColumn<T>::toLua (lua_State* L) const
 template<class T>
 void FieldColumn<T>::fromLua (lua_State* L, int index) 
 {
-    // clear out existing values
-    values.clear();
+    // clear out existing elements
+    clear();
 
     // convert all elements from lua
     const int num_elements = lua_rawlen(L, index);
@@ -174,7 +280,7 @@ void FieldColumn<T>::fromLua (lua_State* L, int index)
         lua_rawgeti(L, index, i + 1);
         convertFromLua(L, -1, value);
         lua_pop(L, 1);
-        values.add(value);
+        append(value);
     }
 }
 

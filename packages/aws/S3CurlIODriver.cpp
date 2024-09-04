@@ -769,7 +769,7 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
                     else
                     {
                         /* Request Failed */
-                        mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
+                        mlog(CRITICAL, "S3 put returned http error <%ld>", http_code);
                     }
 
                     /* Request Completed */

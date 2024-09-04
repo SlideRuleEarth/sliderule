@@ -171,14 +171,20 @@ local atl09_max_retries = 3
 local atl09_attempt = 1
 while true do
     local rc2, rsps2 = earthdata.search(parms)
-    if rc2 == earthdata.SUCCESS and #rsps2 == 1 then
-        parms["resource09"] = rsps2[1]
-        break -- success
+    if rc2 == earthdata.SUCCESS then
+        if #rsps2 == 1 then
+            parms["resource09"] = rsps2[1]
+            break -- success
+        else
+            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> returned an invalid number of resources for ATL09 CMR request: %d", rspq, #rsps2))
+            cleanup(crenv, transaction_id)
+            return -- failure
+        end
     else
         userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed attempt %d to make ATL09 CMR request <%d>: %s", rspq, atl09_attempt, rc2, rsps2))
         atl09_attempt = atl09_attempt + 1
-        if atl09_attempt == atl09_max_retries then
-            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to make ATL09 CMR request... aborting!", rspq))
+        if atl09_attempt > atl09_max_retries then
+            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to make ATL09 CMR request for %s... aborting!", rspq, resource))
             cleanup(crenv, transaction_id)
             return -- failure
         end

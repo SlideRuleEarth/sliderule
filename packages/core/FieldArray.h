@@ -53,20 +53,30 @@ class FieldArray: public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-                        FieldArray      (std::initializer_list<T> init_list);
-                        ~FieldArray     (void) override = default;
+                            FieldArray      (std::initializer_list<T> init_list);
+                            FieldArray      (const FieldArray<T,N>& array);
+                            ~FieldArray     (void) override = default;
 
-        T               operator[]      (int i) const;
-        T&              operator[]      (int i);
+        T                   operator[]      (int i) const;
+        T&                  operator[]      (int i);
+        FieldArray<T,N>&    operator=       (const FieldArray<T,N>& array);
 
-        int             toLua           (lua_State* L) const override;
-        void            fromLua         (lua_State* L, int index) override;
+        int                 toLua           (lua_State* L) const override;
+        void                fromLua         (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         T values[N];
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        void copy (const FieldArray<T,N>& array);
 };
 
 /******************************************************************************
@@ -98,6 +108,16 @@ FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list)
 }
 
 /*----------------------------------------------------------------------------
+ * Copy Constructor
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+FieldArray<T,N>::FieldArray(const FieldArray<T,N>& array)
+{
+    assert(N > 0);
+    copy(array);
+}
+
+/*----------------------------------------------------------------------------
  * operator[] - rvalue
  *----------------------------------------------------------------------------*/
 template <class T, int N>
@@ -113,6 +133,16 @@ template <class T, int N>
 T& FieldArray<T,N>::operator[](int i)
 {
     return values[i];
+}
+
+/*----------------------------------------------------------------------------
+ * operator[] - lvalue
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+FieldArray<T,N>& FieldArray<T,N>::operator=(const FieldArray<T,N>& array)
+{
+    copy(array);
+    return *this;
 }
 
 /*----------------------------------------------------------------------------
@@ -150,6 +180,19 @@ void FieldArray<T,N>::fromLua (lua_State* L, int index)
         lua_rawgeti(L, index, i + 1);
         convertFromLua(L, -1, values[i]);
         lua_pop(L, 1);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * copy
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+void FieldArray<T,N>::copy(const FieldArray<T,N>& array)
+{
+    assert(N > 0);
+    for(int i = 0; i < N; i++)
+    {
+        values[i] = array.values[i];
     }
 }
 

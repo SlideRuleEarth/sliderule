@@ -54,7 +54,10 @@ class FieldElement: public Field
          *--------------------------------------------------------------------*/
 
         explicit        FieldElement    (T default_value);
+                        FieldElement    (const FieldElement<T>& element);
                         ~FieldElement   (void) override = default;
+
+        FieldElement&   operator=       (const FieldElement<T>& element);
 
         FieldElement&   operator=       (T v);
         bool            operator==      (T v) const;
@@ -88,6 +91,25 @@ template <class T>
 FieldElement<T>::FieldElement(T default_value):
     value(default_value)
 {
+}
+
+/*----------------------------------------------------------------------------
+ * Copy Constructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+FieldElement<T>::FieldElement(const FieldElement<T>& element)
+{
+    value = element.value;
+}
+
+/*----------------------------------------------------------------------------
+ * operator=
+ *----------------------------------------------------------------------------*/
+template <class T>
+FieldElement<T>& FieldElement<T>::operator=(const FieldElement<T>& element)
+{
+    value = element.value;
+    return *this;
 }
 
 /*----------------------------------------------------------------------------
