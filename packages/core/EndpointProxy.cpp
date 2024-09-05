@@ -38,7 +38,7 @@
 #include <stdarg.h>
 
 #include "OsApi.h"
-#include "netsvc.h"
+#include "CurlLib.h"
 #include "EndpointProxy.h"
 
 /******************************************************************************

@@ -293,7 +293,7 @@ const char* Icesat2Parms::tojson (void) const
     rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
 
     /* Base class params first */
-    const char* netsvcjson = NetsvcParms::tojson();
+    const char* netsvcjson = RequestParms::tojson();
     if(netsvcjson)
     {
         doc.Parse(netsvcjson);
@@ -456,7 +456,7 @@ const char* Icesat2Parms::tojson (void) const
  * Constructor
  *----------------------------------------------------------------------------*/
 Icesat2Parms::Icesat2Parms(lua_State* L, int index):
-    NetsvcParms                 (L, index),
+    RequestParms                 (L, index),
     surface_type                (SRT_LAND_ICE),
     pass_invalid                (false),
     dist_in_seg                 (false),

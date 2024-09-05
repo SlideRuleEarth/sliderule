@@ -64,7 +64,7 @@ sys.setmemlimit(stream_mem_thresh)
 sys.setlvl(core.LOG | core.TRACE | core.METRIC, event_level) -- set level globally
 local log_monitor = core.monitor(core.LOG, core.DEBUG, event_format):name("LogMonitor") -- monitor logs and write to stdout
 log_monitor:tail(1024)
-local metric_monitor = netsvc.mmonitor(core.DEBUG):name("MetricMonitor") -- monitor metrics and push to orchestrator
+local metric_monitor = core.mmonitor(core.DEBUG):name("MetricMonitor") -- monitor metrics and push to orchestrator
 local dispatcher = core.dispatcher(core.EVENTQ, 1):name("EventDispatcher")
 dispatcher:attach(log_monitor, "eventrec")
 dispatcher:attach(metric_monitor, "eventrec")
@@ -118,10 +118,10 @@ end
 local source_endpoint = core.endpoint(normal_mem_thresh, stream_mem_thresh):name("SourceEndpoint")
 
 -- Configure Provisioning System Authentication --
-netsvc.psurl(ps_url)
-netsvc.psorg(org_name)
+core.psurl(ps_url)
+core.psorg(org_name)
 if ps_auth then
-    local authenticator = netsvc.psauth()
+    local authenticator = core.psauth()
     source_endpoint:auth(authenticator)
 end
 
@@ -134,7 +134,7 @@ app_server:attach(source_endpoint, "/source")
 --------------------------------------------------
 
 -- Initialize Orchestrator --
-netsvc.orchurl(orchestrator_url)
+core.orchurl(orchestrator_url)
 if register_as_service then
     local service_script = core.script("service_registry", "http://"..sys.ipv4()..":"..tostring(app_port)):name("ServiceScript")
 end

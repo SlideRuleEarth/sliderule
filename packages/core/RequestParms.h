@@ -46,10 +46,10 @@
 #endif
 
 /******************************************************************************
- * GEDI PARAMETERS
+ * REQUEST PARAMETERS
  ******************************************************************************/
 
-class NetsvcParms: public LuaObject
+class RequestParms: public LuaObject
 {
     public:
 
@@ -126,8 +126,8 @@ class NetsvcParms: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                                NetsvcParms             (lua_State* L, int index);
-                                ~NetsvcParms            (void) override;
+                                RequestParms            (lua_State* L, int index);
+                                ~RequestParms           (void) override;
         void                    cleanup                 (void) const;
         void                    get_lua_polygon         (lua_State* L, int index, bool* provided);
         void                    get_lua_raster          (lua_State* L, int index, bool* provided);

@@ -166,10 +166,10 @@ option (ENABLE_GDAL_ERROR_REPORTING "Log GDAL errors to message log" OFF)
 option (USE_ARROW_PACKAGE "Include the Apache Arrow package" ON)
 option (USE_AWS_PACKAGE "Include the AWS package" ON)
 option (USE_CCSDS_PACKAGE "Include the CCSDS package" OFF)
-option (USE_CRE_PACKAGE "Include the CRE package" ON)
-option (USE_GEO_PACKAGE "Include the GEO package" ON)
-option (USE_H5_PACKAGE "Include the HDF5 package" ON)
-option (USE_NETSVC_PACKAGE "Include the Network Services package" ON)
+option (USE_CRE_PACKAGE "Include the container runtime environment package" ON)
+option (USE_GEO_PACKAGE "Include the geospatial library (GDAL) package" ON)
+option (USE_H5_PACKAGE "Include the HDF5 (H5Coro) package" ON)
+option (USE_STREAM_PACKAGE "Include the streaming package" ON)
 
 # Platform Options #
 
@@ -187,6 +187,10 @@ option (USE_OPENDATA_DATASET "Include the OpenData dataset" ON)
 option (USE_PGC_DATASET "Include the PGC dataset" ON)
 option (USE_SWOT_DATASET "Include the SWOT dataset" ON)
 option (USE_USGS3DEP_DATASET "Include the USDS 3DEP dataset" ON)
+
+# Target Options #
+
+option (USE_SLIDERULEEARTH_TARGET "Include slideruleearth.io target configuration" ON)
 
 # Version Information #
 
@@ -342,8 +346,8 @@ if(${USE_H5_PACKAGE})
     add_subdirectory (packages/h5)
 endif()
 
-if(${USE_NETSVC_PACKAGE})
-    add_subdirectory (packages/netsvc)
+if(${USE_STREAM_PACKAGE})
+    add_subdirectory (packages/stream)
 endif()
 
 # Datasets #
@@ -382,6 +386,12 @@ endif()
 
 if(${USE_USGS3DEP_DATASET})
     add_subdirectory (datasets/usgs3dep)
+endif()
+
+# Targets #
+
+if(${USE_SLIDERULEEARTH_TARGET})
+    add_subdirectory (targets/slideruleearth-aws)
 endif()
 
 # Scripts #

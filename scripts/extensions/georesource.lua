@@ -86,7 +86,7 @@ end
 local function waiton(resource, parms, algo, reader, algo_disp, sampler_disp, userlog, with_stats)
 
     -- Initialize Timeouts --
-    local timeout = parms["node-timeout"] or parms["timeout"] or netsvc.NODE_TIMEOUT
+    local timeout = parms["node-timeout"] or parms["timeout"] or core.NODE_TIMEOUT
     local duration = 0
     local interval = 10 < timeout and 10 or timeout -- seconds
 

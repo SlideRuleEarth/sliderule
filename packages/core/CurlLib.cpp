@@ -469,7 +469,7 @@ int CurlLib::luaGet (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error performing netsvc GET: %s", e.what());
+        mlog(e.level(), "Error performing GET: %s", e.what());
         lua_pushnil(L);
     }
 
@@ -515,7 +515,7 @@ int CurlLib::luaPut (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error performing netsvc GET: %s", e.what());
+        mlog(e.level(), "Error performing GET: %s", e.what());
         lua_pushnil(L);
     }
 
@@ -556,7 +556,7 @@ int CurlLib::luaPost (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error performing netsvc POST: %s", e.what());
+        mlog(e.level(), "Error performing POST: %s", e.what());
         lua_pushnil(L);
     }
 

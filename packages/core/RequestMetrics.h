@@ -38,13 +38,13 @@
 
 #include "OsApi.h"
 #include "MathLib.h"
-#include "NetsvcParms.h"
+#include "RequestParms.h"
 
 /******************************************************************************
- * METRICS FOR PLUGIN
+ * CLASS
  ******************************************************************************/
 
-class AoiMetrics
+class RequestMetrics
 {
     public:
 
@@ -89,7 +89,7 @@ class AoiMetrics
          *--------------------------------------------------------------------*/
 
         static bool         init            (void);
-        static regions_t    getRegion       (NetsvcParms* parms);
+        static regions_t    getRegion       (RequestParms* parms);
     
     private:
 

@@ -63,8 +63,8 @@
 #include "h5.h"
 #endif
 
-#ifdef __netsvc__
-#include "netsvc.h"
+#ifdef __stream__
+#include "stream.h"
 #endif
 
 #ifdef __bathy__
@@ -352,8 +352,8 @@ int main (int argc, char* argv[])
         inith5();
     #endif
 
-    #ifdef __netsvc__
-        initnetsvc();
+    #ifdef __stream__
+        initstream();
     #endif
 
     #ifdef __bathy__
@@ -465,8 +465,8 @@ int main (int argc, char* argv[])
         deinitusgs3dep();
     #endif
 
-    #ifdef __netsvc__
-        deinitnetsvc();
+    #ifdef __stream__
+        deinitstream();
     #endif
 
     #ifdef __h5__

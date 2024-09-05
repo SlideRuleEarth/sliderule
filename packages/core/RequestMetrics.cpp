@@ -34,14 +34,14 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "NetsvcParms.h"
-#include "AoiMetrics.h"
+#include "RequestParms.h"
+#include "RequestMetrics.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-AoiMetrics::region_t continental_us = {
+RequestMetrics::region_t continental_us = {
     .name = "continental_us",
     .proj = MathLib::PLATE_CARREE,
     .coords = {
@@ -58,7 +58,7 @@ AoiMetrics::region_t continental_us = {
     .num_points = 8
 };
 
-AoiMetrics::region_t alaska = {
+RequestMetrics::region_t alaska = {
     .name = "alaska",
     .proj = MathLib::NORTH_POLAR,
     .coords = {
@@ -75,7 +75,7 @@ AoiMetrics::region_t alaska = {
     .num_points = 8
 };
 
-AoiMetrics::region_t canada = {
+RequestMetrics::region_t canada = {
     .name = "canada",
     .proj = MathLib::NORTH_POLAR,
     .coords = {
@@ -94,7 +94,7 @@ AoiMetrics::region_t canada = {
     .num_points = 10
 };
 
-AoiMetrics::region_t greenland = {
+RequestMetrics::region_t greenland = {
     .name = "greenland",
     .proj = MathLib::NORTH_POLAR,
     .coords = {
@@ -110,7 +110,7 @@ AoiMetrics::region_t greenland = {
     .num_points = 7
 };
 
-AoiMetrics::region_t central_america = {
+RequestMetrics::region_t central_america = {
     .name = "central_america",
     .proj = MathLib::PLATE_CARREE,
     .coords = {
@@ -127,7 +127,7 @@ AoiMetrics::region_t central_america = {
     .num_points = 8
 };
 
-AoiMetrics::region_t south_america = {
+RequestMetrics::region_t south_america = {
     .name = "south_america",
     .proj = MathLib::PLATE_CARREE,
     .coords = {
@@ -143,7 +143,7 @@ AoiMetrics::region_t south_america = {
     .num_points = 7
 };
 
-AoiMetrics::region_t africa = {
+RequestMetrics::region_t africa = {
     .name = "africa",
     .proj = MathLib::PLATE_CARREE,
     .coords = {
@@ -161,7 +161,7 @@ AoiMetrics::region_t africa = {
     .num_points = 9
 };
 
-AoiMetrics::region_t middle_east = {
+RequestMetrics::region_t middle_east = {
     .name = "middle_east",
     .proj = MathLib::PLATE_CARREE,
      .coords = {
@@ -175,7 +175,7 @@ AoiMetrics::region_t middle_east = {
     .num_points = 5
 };
 
-AoiMetrics::region_t europe = {
+RequestMetrics::region_t europe = {
     .name = "europe",
     .proj = MathLib::PLATE_CARREE,
     .coords = {
@@ -190,7 +190,7 @@ AoiMetrics::region_t europe = {
     .num_points = 6
 };
 
-AoiMetrics::region_t north_asia = {
+RequestMetrics::region_t north_asia = {
     .name = "north_asia",
     .proj = MathLib::NORTH_POLAR,
     .coords = {
@@ -207,7 +207,7 @@ AoiMetrics::region_t north_asia = {
     .num_points = 8
 };
 
-AoiMetrics::region_t south_asia = {
+RequestMetrics::region_t south_asia = {
     .name = "south_asia",
     .proj = MathLib::PLATE_CARREE,
     .coords = {
@@ -222,7 +222,7 @@ AoiMetrics::region_t south_asia = {
     .num_points = 6
 };
 
-AoiMetrics::region_t oceania = {
+RequestMetrics::region_t oceania = {
     .name = "oceania",
     .proj = MathLib::PLATE_CARREE,
     .coords = {
@@ -238,7 +238,7 @@ AoiMetrics::region_t oceania = {
     .num_points = 7
 };
 
-AoiMetrics::region_t antarctica = {
+RequestMetrics::region_t antarctica = {
     .name = "antarctica",
     .proj = MathLib::SOUTH_POLAR,
     .coords = {
@@ -250,7 +250,7 @@ AoiMetrics::region_t antarctica = {
     .num_points = 3
 };
 
-AoiMetrics::region_t unknown_region = {
+RequestMetrics::region_t unknown_region = {
     .name = "unknown_region",
     .proj = MathLib::PLATE_CARREE,
     .coords = {},
@@ -265,7 +265,7 @@ AoiMetrics::region_t unknown_region = {
 /*----------------------------------------------------------------------------
  * region2str
  *----------------------------------------------------------------------------*/
-bool AoiMetrics::init (void)
+bool RequestMetrics::init (void)
 {
     const bool status = true;
 
@@ -288,7 +288,7 @@ bool AoiMetrics::init (void)
 /*----------------------------------------------------------------------------
  * getRegion
  *----------------------------------------------------------------------------*/
-AoiMetrics::regions_t AoiMetrics::getRegion (NetsvcParms* parms)
+RequestMetrics::regions_t RequestMetrics::getRegion (RequestParms* parms)
 {
     regions_t region_found = REGION_UNKNOWN;
     if(!parms->polygon.empty())
@@ -318,7 +318,7 @@ AoiMetrics::regions_t AoiMetrics::getRegion (NetsvcParms* parms)
 /*----------------------------------------------------------------------------
  * region2str
  *----------------------------------------------------------------------------*/
-AoiMetrics::region_t* AoiMetrics::region2struct (regions_t region)
+RequestMetrics::region_t* RequestMetrics::region2struct (regions_t region)
 {
     switch(region)
     {
@@ -343,7 +343,7 @@ AoiMetrics::region_t* AoiMetrics::region2struct (regions_t region)
 /*----------------------------------------------------------------------------
  * checkRegion
  *----------------------------------------------------------------------------*/
-bool AoiMetrics::checkRegion (MathLib::coord_t coord, regions_t r)
+bool RequestMetrics::checkRegion (MathLib::coord_t coord, regions_t r)
 {
     region_t* region = region2struct(r);
     const MathLib::point_t point = MathLib::coord2point(coord, region->proj);

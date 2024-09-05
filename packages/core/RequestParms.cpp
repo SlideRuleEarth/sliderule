@@ -35,7 +35,7 @@
 
 #include "OsApi.h"
 #include "geo.h"
-#include "NetsvcParms.h"
+#include "RequestParms.h"
 
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
@@ -45,21 +45,21 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* NetsvcParms::SELF               = "netsvc";
-const char* NetsvcParms::POLYGON            = "poly";
-const char* NetsvcParms::RASTER             = "raster";
-const char* NetsvcParms::LATITUDE           = "lat";
-const char* NetsvcParms::LONGITUDE          = "lon";
-const char* NetsvcParms::PROJECTION         = "proj";
-const char* NetsvcParms::RQST_TIMEOUT       = "rqst-timeout";
-const char* NetsvcParms::NODE_TIMEOUT       = "node-timeout";
-const char* NetsvcParms::READ_TIMEOUT       = "read-timeout";
-const char* NetsvcParms::GLOBAL_TIMEOUT     = "timeout";
-const char* NetsvcParms::CLUSTER_SIZE_HINT  = "cluster_size_hint";
+const char* RequestParms::SELF               = "rqst";
+const char* RequestParms::POLYGON            = "poly";
+const char* RequestParms::RASTER             = "raster";
+const char* RequestParms::LATITUDE           = "lat";
+const char* RequestParms::LONGITUDE          = "lon";
+const char* RequestParms::PROJECTION         = "proj";
+const char* RequestParms::RQST_TIMEOUT       = "rqst-timeout";
+const char* RequestParms::NODE_TIMEOUT       = "node-timeout";
+const char* RequestParms::READ_TIMEOUT       = "read-timeout";
+const char* RequestParms::GLOBAL_TIMEOUT     = "timeout";
+const char* RequestParms::CLUSTER_SIZE_HINT  = "cluster_size_hint";
 
-const char* NetsvcParms::OBJECT_TYPE = "NetsvcParms";
-const char* NetsvcParms::LUA_META_NAME = "NetsvcParms";
-const struct luaL_Reg NetsvcParms::LUA_META_TABLE[] = {
+const char* RequestParms::OBJECT_TYPE = "RequestParms";
+const char* RequestParms::LUA_META_NAME = "RequestParms";
+const struct luaL_Reg RequestParms::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
@@ -70,7 +70,7 @@ const struct luaL_Reg NetsvcParms::LUA_META_TABLE[] = {
 /*----------------------------------------------------------------------------
  * luaCreate - create(<parameter table>)
  *----------------------------------------------------------------------------*/
-int NetsvcParms::luaCreate (lua_State* L)
+int RequestParms::luaCreate (lua_State* L)
 {
     try
     {
@@ -81,7 +81,7 @@ int NetsvcParms::luaCreate (lua_State* L)
         }
 
         /* Return Request Parameter Object */
-        return createLuaObject(L, new NetsvcParms(L, 1));
+        return createLuaObject(L, new RequestParms(L, 1));
     }
     catch(const RunTimeException& e)
     {
@@ -93,7 +93,7 @@ int NetsvcParms::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * tojson
  *----------------------------------------------------------------------------*/
-const char* NetsvcParms::tojson(void) const
+const char* RequestParms::tojson(void) const
 {
     rapidjson::Document doc;
     doc.SetObject();
@@ -141,7 +141,7 @@ const char* NetsvcParms::tojson(void) const
 /*----------------------------------------------------------------------------
  * includes
  *----------------------------------------------------------------------------*/
-bool NetsvcParms::RasterImpl::includes(double lon, double lat) const  // NOLINT(readability-convert-member-functions-to-static)
+bool RequestParms::RasterImpl::includes(double lon, double lat) const  // NOLINT(readability-convert-member-functions-to-static)
 {
     /*
      * This function must be defined in the source file to ensure that
@@ -165,7 +165,7 @@ bool NetsvcParms::RasterImpl::includes(double lon, double lat) const  // NOLINT(
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-NetsvcParms::NetsvcParms(lua_State* L, int index):
+RequestParms::RequestParms(lua_State* L, int index):
     LuaObject                   (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     rqst_timeout                (DEFAULT_RQST_TIMEOUT),
     node_timeout                (DEFAULT_NODE_TIMEOUT),
@@ -180,59 +180,59 @@ NetsvcParms::NetsvcParms(lua_State* L, int index):
     try
     {
         /* Polygon */
-        lua_getfield(L, index, NetsvcParms::POLYGON);
+        lua_getfield(L, index, RequestParms::POLYGON);
         get_lua_polygon(L, -1, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d points", NetsvcParms::POLYGON, polygon.length());
+        if(provided) mlog(DEBUG, "Setting %s to %d points", RequestParms::POLYGON, polygon.length());
         lua_pop(L, 1);
 
         /* Raster */
-        lua_getfield(L, index, NetsvcParms::RASTER);
+        lua_getfield(L, index, RequestParms::RASTER);
         get_lua_raster(L, -1, &provided);
-        if(provided) mlog(INFO, "Setting %s file for use", NetsvcParms::RASTER);
+        if(provided) mlog(INFO, "Setting %s file for use", RequestParms::RASTER);
         lua_pop(L, 1);
 
         /* Projection */
-        lua_getfield(L, index, NetsvcParms::PROJECTION);
+        lua_getfield(L, index, RequestParms::PROJECTION);
         get_lua_projection(L, -1, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", NetsvcParms::PROJECTION, projection);
+        if(provided) mlog(DEBUG, "Setting %s to %d", RequestParms::PROJECTION, projection);
         lua_pop(L, 1);
 
         /* Global Timeout */
-        lua_getfield(L, index, NetsvcParms::GLOBAL_TIMEOUT);
+        lua_getfield(L, index, RequestParms::GLOBAL_TIMEOUT);
         const int global_timeout = LuaObject::getLuaInteger(L, -1, true, 0, &provided);
         if(provided)
         {
             rqst_timeout = global_timeout;
             node_timeout = global_timeout;
             read_timeout = global_timeout;
-            mlog(DEBUG, "Setting %s to %d", NetsvcParms::RQST_TIMEOUT, global_timeout);
-            mlog(DEBUG, "Setting %s to %d", NetsvcParms::NODE_TIMEOUT, global_timeout);
-            mlog(DEBUG, "Setting %s to %d", NetsvcParms::READ_TIMEOUT, global_timeout);
+            mlog(DEBUG, "Setting %s to %d", RequestParms::RQST_TIMEOUT, global_timeout);
+            mlog(DEBUG, "Setting %s to %d", RequestParms::NODE_TIMEOUT, global_timeout);
+            mlog(DEBUG, "Setting %s to %d", RequestParms::READ_TIMEOUT, global_timeout);
         }
         lua_pop(L, 1);
 
         /* Request Timeout */
-        lua_getfield(L, index, NetsvcParms::RQST_TIMEOUT);
+        lua_getfield(L, index, RequestParms::RQST_TIMEOUT);
         rqst_timeout = LuaObject::getLuaInteger(L, -1, true, rqst_timeout, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", NetsvcParms::RQST_TIMEOUT, rqst_timeout);
+        if(provided) mlog(DEBUG, "Setting %s to %d", RequestParms::RQST_TIMEOUT, rqst_timeout);
         lua_pop(L, 1);
 
         /* Node Timeout */
-        lua_getfield(L, index, NetsvcParms::NODE_TIMEOUT);
+        lua_getfield(L, index, RequestParms::NODE_TIMEOUT);
         node_timeout = LuaObject::getLuaInteger(L, -1, true, node_timeout, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", NetsvcParms::NODE_TIMEOUT, node_timeout);
+        if(provided) mlog(DEBUG, "Setting %s to %d", RequestParms::NODE_TIMEOUT, node_timeout);
         lua_pop(L, 1);
 
         /* Read Timeout */
-        lua_getfield(L, index, NetsvcParms::READ_TIMEOUT);
+        lua_getfield(L, index, RequestParms::READ_TIMEOUT);
         read_timeout = LuaObject::getLuaInteger(L, -1, true, read_timeout, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", NetsvcParms::READ_TIMEOUT, read_timeout);
+        if(provided) mlog(DEBUG, "Setting %s to %d", RequestParms::READ_TIMEOUT, read_timeout);
         lua_pop(L, 1);
 
         /* Cluster Size Hint */
-        lua_getfield(L, index, NetsvcParms::CLUSTER_SIZE_HINT);
+        lua_getfield(L, index, RequestParms::CLUSTER_SIZE_HINT);
         cluster_size_hint = LuaObject::getLuaInteger(L, -1, true, cluster_size_hint, &provided);
-        if(provided) mlog(DEBUG, "Setting %s to %d", NetsvcParms::CLUSTER_SIZE_HINT, cluster_size_hint);
+        if(provided) mlog(DEBUG, "Setting %s to %d", RequestParms::CLUSTER_SIZE_HINT, cluster_size_hint);
         lua_pop(L, 1);
 
         /* Process Area of Interest */
@@ -266,7 +266,7 @@ NetsvcParms::NetsvcParms(lua_State* L, int index):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-NetsvcParms::~NetsvcParms (void)
+RequestParms::~RequestParms (void)
 {
     cleanup();
 }
@@ -274,7 +274,7 @@ NetsvcParms::~NetsvcParms (void)
 /*----------------------------------------------------------------------------
  * cleanup
  *----------------------------------------------------------------------------*/
-void NetsvcParms::cleanup (void) const
+void RequestParms::cleanup (void) const
 {
     delete [] projected_poly;
 }
@@ -282,7 +282,7 @@ void NetsvcParms::cleanup (void) const
 /*----------------------------------------------------------------------------
  * get_lua_polygon
  *----------------------------------------------------------------------------*/
-void NetsvcParms::get_lua_polygon (lua_State* L, int index, bool* provided)
+void RequestParms::get_lua_polygon (lua_State* L, int index, bool* provided)
 {
     /* Reset Provided */
     if(provided) *provided = false;
@@ -303,12 +303,12 @@ void NetsvcParms::get_lua_polygon (lua_State* L, int index, bool* provided)
                 MathLib::coord_t coord;
 
                 /* Get longitude entry */
-                lua_getfield(L, index, NetsvcParms::LONGITUDE);
+                lua_getfield(L, index, RequestParms::LONGITUDE);
                 coord.lon = LuaObject::getLuaFloat(L, -1);
                 lua_pop(L, 1);
 
                 /* Get latitude entry */
-                lua_getfield(L, index, NetsvcParms::LATITUDE);
+                lua_getfield(L, index, RequestParms::LATITUDE);
                 coord.lat = LuaObject::getLuaFloat(L, -1);
                 lua_pop(L, 1);
 
@@ -324,7 +324,7 @@ void NetsvcParms::get_lua_polygon (lua_State* L, int index, bool* provided)
 /*----------------------------------------------------------------------------
  * get_lua_raster
  *----------------------------------------------------------------------------*/
-void NetsvcParms::get_lua_raster (lua_State* L, int index, bool* provided)
+void RequestParms::get_lua_raster (lua_State* L, int index, bool* provided)
 {
     /* Reset Provided */
     *provided = false;
@@ -354,7 +354,7 @@ void NetsvcParms::get_lua_raster (lua_State* L, int index, bool* provided)
 /*----------------------------------------------------------------------------
  * get_lua_projection
  *----------------------------------------------------------------------------*/
-void NetsvcParms::get_lua_projection (lua_State* L, int index, bool* provided)
+void RequestParms::get_lua_projection (lua_State* L, int index, bool* provided)
 {
     *provided = false;
     if(lua_isnumber(L, index))

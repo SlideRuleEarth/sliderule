@@ -29,30 +29,10 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __netsvcpkg__
-#define __netsvcpkg__
+#ifndef __streampkg__
+#define __streampkg__
 
-/******************************************************************************
- * INCLUDES
- ******************************************************************************/
+void    initstream      (void);
+void    deinitstream    (void);
 
-#include "AoiMetrics.h"
-#include "CurlLib.h"
-#include "EndpointProxy.h"
-#include "OrchestratorLib.h"
-#include "ProvisioningSystemLib.h"
-#include "MetricMonitor.h"
-#include "NetsvcParms.h"
-
-/******************************************************************************
- * PROTOTYPES
- ******************************************************************************/
-
-extern "C" {
-void initnetsvc (void);
-void deinitnetsvc (void);
-}
-
-#endif  /* __netsvcpkg__ */
-
-
+#endif  /* __streampkg__ */

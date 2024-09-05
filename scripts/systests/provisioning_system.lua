@@ -8,16 +8,16 @@ local org_name = arg[3] or "sliderule"
 local url = os.getenv("PROVISIONING_SYSTEM") or "https://ps.testsliderule.org"
 
 -- Set URL and Organization
-netsvc.psurl(url)
-netsvc.psorg(org_name)
+core.psurl(url)
+core.psorg(org_name)
 
 -- Login
-local rsps_str = netsvc.pslogin(username, password, org_name, true)
+local rsps_str = core.pslogin(username, password, org_name, true)
 local rsps = json.decode(rsps_str)
 runner.check(rsps["access"] ~= nil, "unable to login")
 
 -- Validate
-local status = netsvc.psvalidate(rsps["access"], true)
+local status = core.psvalidate(rsps["access"], true)
 runner.check(status, "unable to validate member")
 
 

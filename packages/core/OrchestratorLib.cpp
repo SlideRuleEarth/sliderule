@@ -40,7 +40,7 @@
 #include "TimeLib.h"
 #include "LuaEngine.h"
 #include "EndpointObject.h"
-#include "netsvc.h"
+#include "CurlLib.h"
 
 /******************************************************************************
  * ORCHESTRATOR LIBRARY CLASS
