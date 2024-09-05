@@ -208,13 +208,12 @@ if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
     LINK_DIRECTORIES(/usr/local/lib /usr/local/lib64)
 
     # Set Environment Variables
-    set (INSTALLDIR /usr/local CACHE STRING "Installation directory for library and executables")
+    set (INSTALLDIR /usr/local CACHE STRING "Installation prefix directory for sliderule application")
     set (CONFDIR ${INSTALLDIR}/etc/sliderule)
     set (INCDIR ${INSTALLDIR}/include/sliderule)
+    set (PLUGINDIR ${INSTALLDIR}/lib/sliderule)
 
 endif()
-
-set (RUNTIMEDIR ${CONFDIR} CACHE STRING "Runtime directory for plugins and configuration scripts")
 
 #####################
 # Target: SlideRule #
@@ -281,7 +280,8 @@ endif ()
 # Platform File #
 
 set_property(GLOBAL APPEND PROPERTY platform "#define LIBID \"${TGTVER}\"\n")
-set_property(GLOBAL APPEND PROPERTY platform "#define CONFDIR \"${RUNTIMEDIR}\"\n")
+set_property(GLOBAL APPEND PROPERTY platform "#define CONFDIR \"${CONFDIR}\"\n")
+set_property(GLOBAL APPEND PROPERTY platform "#define PLUGINDIR \"${PLUGINDIR}\"\n")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set_property(GLOBAL APPEND PROPERTY platform "#define __unittesting__\n")

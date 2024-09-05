@@ -37,6 +37,7 @@
 #include "StringLib.h"
 #include "LuaEngine.h"
 #include "LuaObject.h"
+#include "OsApi.h"
 
 #ifdef __arrow__
 #include "arrow.h"
@@ -232,7 +233,7 @@ static void ldplugins(void)
 
     /* Load All Plugins from Configuration Directory */
     DIR *dir;
-    if((dir = opendir(CONFDIR)) != NULL)
+    if((dir = opendir(PLUGINDIR)) != NULL)
     {
         const struct dirent *ent;
         while((ent = readdir(dir)) != NULL)  // NOLINT(concurrency-mt-unsafe)
@@ -247,7 +248,7 @@ static void ldplugins(void)
             /* Load Plugin */
             print2term("Loading plugin %s ... ", plugin_name);
             char plugin_path[MAX_STR_SIZE];
-            StringLib::format(plugin_path, MAX_STR_SIZE, "%s%c%s.so", CONFDIR, PATH_DELIMETER, plugin_name);
+            StringLib::format(plugin_path, MAX_STR_SIZE, "%s%c%s.so", PLUGINDIR, PATH_DELIMETER, plugin_name);
             curr_plugin->plugin = dlopen(plugin_path, RTLD_NOW);
             if(!curr_plugin->plugin)
             {
