@@ -29,10 +29,10 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __streampkg__
-#define __streampkg__
+#ifndef __streamingpkg__
+#define __streamingpkg__
 
-void    initstream      (void);
-void    deinitstream    (void);
+void    initstreaming   (void);
+void    deinitstreaming (void);
 
-#endif  /* __streampkg__ */
+#endif  /* __streamingpkg__ */

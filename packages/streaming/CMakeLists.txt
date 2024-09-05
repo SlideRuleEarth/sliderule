@@ -1,10 +1,10 @@
-message (STATUS "Including stream package")
+message (STATUS "Including streaming package")
 
-target_compile_definitions (slideruleLib PUBLIC __stream__)
+target_compile_definitions (slideruleLib PUBLIC __streaming__)
 
 target_sources (slideruleLib
     PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/stream.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/streaming.cpp
         ${CMAKE_CURRENT_LIST_DIR}/AncillaryFields.cpp
         ${CMAKE_CURRENT_LIST_DIR}/CaptureDispatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/ClusterSocket.cpp
@@ -40,7 +40,7 @@ target_include_directories (slideruleLib
 
 install (
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/stream.h
+        ${CMAKE_CURRENT_LIST_DIR}/streaming.h
         ${CMAKE_CURRENT_LIST_DIR}/AncillaryFields.h
         ${CMAKE_CURRENT_LIST_DIR}/CaptureDispatch.h
         ${CMAKE_CURRENT_LIST_DIR}/ClusterSocket.h

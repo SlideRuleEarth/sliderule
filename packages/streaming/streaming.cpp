@@ -65,7 +65,7 @@
  * DEFINES
  ******************************************************************************/
 
-#define LUA_STREAM_LIBNAME  "stream"
+#define LUA_STREAMING_LIBNAME  "streaming"
 
 /******************************************************************************
  * LOCAL FUNCTIONS
@@ -126,31 +126,31 @@ static int stream_open (lua_State *L)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- *  initstream
+ *  initstreaming
  *
- *  initialize stream package
+ *  initialize streaming package
  *----------------------------------------------------------------------------*/
-void initstream (void)
+void initstreaming (void)
 {
     /* Initialize Libraries */
     ContainerRecord::init();
     AncillaryFields::init();
 
     /* Add Lua Extensions */
-    LuaEngine::extend(LUA_STREAM_LIBNAME, stream_open);
+    LuaEngine::extend(LUA_STREAMING_LIBNAME, stream_open);
 
     /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_STREAM_LIBNAME, LIBID);
+    LuaEngine::indicate(LUA_STREAMING_LIBNAME, LIBID);
 
     /* Print Status */
-    print2term("%s package initialized (%s)\n", LUA_STREAM_LIBNAME, LIBID);
+    print2term("%s package initialized (%s)\n", LUA_STREAMING_LIBNAME, LIBID);
 }
 
 /*----------------------------------------------------------------------------
- * deinitstream
+ * deinitstreaming
  *
- *  uninitialize stream package
+ *  uninitialize streaming package
  *----------------------------------------------------------------------------*/
-void deinitstream (void)
+void deinitstreaming (void)
 {
 }

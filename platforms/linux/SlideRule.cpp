@@ -63,8 +63,8 @@
 #include "h5.h"
 #endif
 
-#ifdef __stream__
-#include "stream.h"
+#ifdef __streaming__
+#include "streaming.h"
 #endif
 
 #ifdef __bathy__

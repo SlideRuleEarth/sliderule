@@ -169,7 +169,7 @@ option (USE_CCSDS_PACKAGE "Include the CCSDS package" OFF)
 option (USE_CRE_PACKAGE "Include the container runtime environment package" ON)
 option (USE_GEO_PACKAGE "Include the geospatial library (GDAL) package" ON)
 option (USE_H5_PACKAGE "Include the HDF5 (H5Coro) package" ON)
-option (USE_STREAM_PACKAGE "Include the streaming package" ON)
+option (USE_STREAMING_PACKAGE "Include the streaming package" ON)
 
 # Platform Options #
 
@@ -346,8 +346,8 @@ if(${USE_H5_PACKAGE})
     add_subdirectory (packages/h5)
 endif()
 
-if(${USE_STREAM_PACKAGE})
-    add_subdirectory (packages/stream)
+if(${USE_STREAMING_PACKAGE})
+    add_subdirectory (packages/streaming)
 endif()
 
 # Datasets #
