@@ -190,32 +190,6 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
 }
 
 /*----------------------------------------------------------------------------
- * getMaxBatchThreads
- *----------------------------------------------------------------------------*/
-uint32_t PgcDemStripsRaster::getMaxBatchThreads(void)
-{
-    /*
-     * Typically, the average number of strips for a point ranges between 10 to 20,
-     * but in some areas, the number can exceed 100. To avoid overwhelming the system
-     * in these high-density areas we limit the number of batch threads to 1
-     * .
-     */
-    uint32_t numThreads = 1;
-
-    /*
-     * If we are filtering by closest time or using POI time, we only process
-     * the data strip raster and the quality mask raster. In this scenario,
-     * we allow the default number of threads to maximize performance.
-     */
-    if(parms->filter_closest_time || parms->use_poi_time)
-    {
-        numThreads = MAX_BATCH_THREADS;
-    }
-
-    return numThreads;
-}
-
-/*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
 bool PgcDemStripsRaster::findRasters(finder_t* finder)

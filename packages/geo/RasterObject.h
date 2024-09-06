@@ -78,6 +78,23 @@ class RasterObject: public LuaObject
 
         typedef List<RasterSample*> sample_list_t;
 
+        typedef struct
+        {
+            uint32_t   start_indx;
+            uint32_t   end_indx;
+        } reader_range_t;
+
+        typedef struct Reader
+        {
+            RasterObject*                     robj;
+            reader_range_t                    range;
+            const std::vector<point_info_t*>& points;
+            std::vector<sample_list_t*>       samples;
+
+            explicit Reader (RasterObject* _robj, const std::vector<point_info_t*>& _points);
+                    ~Reader (void);
+        } reader_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -89,9 +106,9 @@ class RasterObject: public LuaObject
         static RasterObject* cppCreate       (const RasterObject* obj);
         static bool          registerRaster  (const char* _name, factory_f create);
         virtual uint32_t     getSamples      (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) = 0;
+        virtual uint32_t     getSamples      (const std::vector<point_info_t*>& points, std::vector<sample_list_t*>& samples, void* param=NULL);
         virtual uint32_t     getSubsets      (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) = 0;
         virtual uint8_t*     getPixels       (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, void* param=NULL);
-        virtual uint32_t     getMaxBatchThreads(void);
                             ~RasterObject    (void) override;
 
         bool hasZonalStats (void) const
@@ -141,6 +158,15 @@ class RasterObject: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int slist2table(const List<RasterSubset*>& slist, uint32_t errors, lua_State* L);
+
+        static void*    readerThread (void* parm);
+        static void*    readSamples  (RasterObject* robj, uint32_t start_indx, uint32_t end_indx,
+                                      const std::vector<point_info_t*>& points,
+                                      std::vector<sample_list_t*>& samples);
+
+        static void     getReadersRange (std::vector<reader_range_t>& ranges,
+                                         const std::vector<point_info_t*>& points,
+                                         uint32_t maxNumThreads);
 
         /*--------------------------------------------------------------------
          * Data

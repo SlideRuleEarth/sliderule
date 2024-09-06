@@ -95,23 +95,6 @@ class ArrowSampler: public LuaObject
              void    clearSamples (void);
         } batch_sampler_t;
 
-        typedef struct
-        {
-            uint32_t   start_indx;
-            uint32_t   end_indx;
-        } reader_range_t;
-
-        typedef struct Reader
-        {
-            RasterObject*               robj;
-            reader_range_t              range;
-            const std::vector<RasterObject::point_info_t*>& points;
-            std::vector<RasterObject::sample_list_t*>       samples;
-
-            explicit Reader (RasterObject* _robj, const std::vector<RasterObject::point_info_t*>& _points);
-                    ~Reader (void);
-        } reader_t;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -138,8 +121,8 @@ class ArrowSampler: public LuaObject
         Thread*                       mainPid;
         ArrowParms*                   parms;
         Publisher*                    outQ;
-        std::vector<RasterObject::point_info_t*>    points;
-        std::vector<batch_sampler_t*> batchSamplers;
+        std::vector<RasterObject::point_info_t*> points;
+        std::vector<batch_sampler_t*>            batchSamplers;
         ArrowSamplerImpl*             impl;
         const char*                   dataFile;           // used locally to build parquet file
         const char*                   metadataFile;       // used locally to build json metadata file
@@ -155,13 +138,7 @@ class ArrowSampler: public LuaObject
                                           const char* outq_name, const std::vector<raster_info_t>& rasters);
                         ~ArrowSampler    (void) override;
         void            Delete           (void);
-        void            getReadersRange  (std::vector<reader_range_t>& ranges, uint32_t maxNumThreads);
         static void*    mainThread       (void* parm);
-        static void     batchSampling    (batch_sampler_t* sampler);
-        static void*    readerThread     (void* parm);
-        static void*    readSamples      (RasterObject* robj, uint32_t start_indx, uint32_t end_indx,
-                                          const std::vector<RasterObject::point_info_t*>& points,
-                                          std::vector<RasterObject::sample_list_t*>& samples);
 };
 
 #endif  /* __parquet_sampler__*/

@@ -347,20 +347,6 @@ void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, List<Rast
 
 
 
-/*----------------------------------------------------------------------------
- * getMaxBatchThreads
- *----------------------------------------------------------------------------*/
-uint32_t LandsatHlsRaster::getMaxBatchThreads(void)
-{
-    /*
-     * The average number of strips for a point is ~10
-     * Limit the number of batch threads to 8.
-     */
-    return 8;
-}
-
-
-
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
