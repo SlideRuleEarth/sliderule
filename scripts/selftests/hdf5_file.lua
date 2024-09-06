@@ -27,8 +27,8 @@ print('\n------------------\nTest02: Read Dataset\n------------------')
 dataq = "dataq"
 rsps2 = msg.subscribe(dataq)
 
-f2 = h5.dataset(core.READER, asset, "h5ex_d_gzip.h5", "/DS1", 0, true, core.INTEGER, 2, 0, core.ALL_ROWS)
-r2 = core.reader(f2, dataq)
+f2 = h5.dataset(streaming.READER, asset, "h5ex_d_gzip.h5", "/DS1", 0, true, core.INTEGER, 2, 0, core.ALL_ROWS)
+r2 = streaming.reader(f2, dataq)
 
 vals = rsps2:recvstring(3000)
 e1, e2, e3, e4 = string.unpack('jjjj', vals)
@@ -46,8 +46,8 @@ print('\n------------------\nTest03: Read Dataset as Record\n------------------'
 recq = "recq"
 rsps3 = msg.subscribe(recq)
 
-f3 = h5.dataset(core.READER, asset, "h5ex_d_gzip.h5", "/DS1", 5, false, core.INTEGER, 2, 0, core.ALL_ROWS)
-r3 = core.reader(f3, recq)
+f3 = h5.dataset(streaming.READER, asset, "h5ex_d_gzip.h5", "/DS1", 5, false, core.INTEGER, 2, 0, core.ALL_ROWS)
+r3 = streaming.reader(f3, recq)
 
 recdata = rsps3:recvrecord(3000)
 
@@ -64,9 +64,9 @@ r3:destroy()
 print('\n------------------\nTest04: Read Dataset Raw\n------------------')
 
 h5_file = "h5ex_d_gzip.bin"
-o4 = core.writer(core.file(core.WRITER, core.BINARY, h5_file, core.FLUSHED), "h5rawq")
-f4 = h5.dataset(core.READER, asset, "h5ex_d_gzip.h5", "/DS1", 0, true, core.DYNAMIC, 2)
-r4 = core.reader(f4, "h5rawq")
+o4 = streaming.writer(core.file(streaming.WRITER, core.BINARY, h5_file, core.FLUSHED), "h5rawq")
+f4 = h5.dataset(streaming.READER, asset, "h5ex_d_gzip.h5", "/DS1", 0, true, core.DYNAMIC, 2)
+r4 = streaming.reader(f4, "h5rawq")
 
 r4:waiton()
 r4:destroy()

@@ -58,6 +58,7 @@
 #include "OrchestratorLib.h"
 #include "Ordering.h"
 #include "ProvisioningSystemLib.h"
+#include "PublishMonitor.h"
 #include "RecordObject.h"
 #include "RequestMetrics.h"
 #include "RequestParms.h"
@@ -140,6 +141,7 @@ static int core_open (lua_State *L)
         {"pslogin",         ProvisioningSystemLib::luaLogin},
         {"psvalidate",      ProvisioningSystemLib::luaValidate},
         {"psauth",          ProvisioningSystemLib::Authenticator::luaCreate},
+        {"pmonitor",        PublishMonitor::luaCreate},
         {"mmonitor",        MetricMonitor::luaCreate},
         {"parms",           RequestParms::luaCreate},
 #ifdef __unittesting__

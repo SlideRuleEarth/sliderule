@@ -24,7 +24,6 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/MsgBridge.cpp
         ${CMAKE_CURRENT_LIST_DIR}/MsgProcessor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/PublisherDispatch.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/PublishMonitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/RecordDispatcher.cpp
         ${CMAKE_CURRENT_LIST_DIR}/ReportDispatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/TcpSocket.cpp
@@ -60,7 +59,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/MsgBridge.h
         ${CMAKE_CURRENT_LIST_DIR}/MsgProcessor.h
         ${CMAKE_CURRENT_LIST_DIR}/PublisherDispatch.h
-        ${CMAKE_CURRENT_LIST_DIR}/PublishMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/RecordDispatcher.h
         ${CMAKE_CURRENT_LIST_DIR}/ReportDispatch.h
         ${CMAKE_CURRENT_LIST_DIR}/TcpSocket.h

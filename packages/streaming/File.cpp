@@ -48,7 +48,7 @@
 /*----------------------------------------------------------------------------
  * luaCreate - file(<role>, <format>, <filename(s)>, [<file i/o>], [<max file size>])
  *
- *  <role> is either core.READER or core.WRITER
+ *  <role> is either streaming.READER or streaming.WRITER
  *
  *  <format> is core.BINARY, core.ASCII, core.TEXT, or core.FIFO
  *

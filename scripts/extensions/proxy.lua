@@ -24,7 +24,7 @@ local function proxy(resources, parms, endpoint, rec)
     -- Request Parameters --
     local timeout = parms["rqst-timeout"] or parms["timeout"] or core.RQST_TIMEOUT
     local node_timeout = parms["node-timeout"] or parms["timeout"] or core.NODE_TIMEOUT
-    local cluster_size_hint = parms["cluster_size_hint"] or core.cluster_size_hint
+    local cluster_size_hint = parms["cluster_size_hint"] or core.CLUSTER_SIZE_HINT
 
     -- Initialize Queue Management --
     local rsps_from_nodes = rspq

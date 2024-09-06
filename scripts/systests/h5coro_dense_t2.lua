@@ -35,7 +35,7 @@
     local startrow = 0
     local numrows = core.ALL_ROWS
     
-    f2 = h5.dataset(core.READER, 
+    f2 = h5.dataset(streaming.READER, 
                     asset, 
                     resource_path, 
                     dataset_name, 
@@ -46,7 +46,7 @@
                     startrow, 
                     numrows)
     
-    r2 = core.reader(f2, dataq)
+    r2 = streaming.reader(f2, dataq)
     vals = rsps2:recvstring(3000) -- read out from listner
     e1 = string.unpack('f', vals)
     print("RESULT geospatial_eastbound_longitude: " .. e1)
@@ -65,7 +65,7 @@
     dataset_name = "/geospatial_lat_lon_extent/geospatial_lat_center"
     dtype = core.DYNAMIC
     
-    f3 = h5.dataset(core.READER, 
+    f3 = h5.dataset(streaming.READER, 
                     asset2, 
                     resource_path, 
                     dataset_name, 
@@ -76,7 +76,7 @@
                     startrow, 
                     numrows)
     
-    r3 = core.reader(f3, dataq)
+    r3 = streaming.reader(f3, dataq)
     vals = rsps2s2:recvstring(3000) -- read out from listner
     e1 = string.unpack('f', vals)
     print("RESULT geospatial_lat_center: " .. e1)
@@ -95,7 +95,7 @@
     dataset_name = "/geospatial_lat_lon_extent/geospatial_lon_center"
     dtype = core.DYNAMIC
     
-    f3 = h5.dataset(core.READER, 
+    f3 = h5.dataset(streaming.READER, 
                     asset3, 
                     resource_path, 
                     dataset_name, 
@@ -106,7 +106,7 @@
                     startrow, 
                     numrows)
     
-    r4 = core.reader(f3, dataq)
+    r4 = streaming.reader(f3, dataq)
     vals = rsps2s3:recvstring(3000)
     e1 = string.unpack('f', vals)
     print("RESULT geospatial_lon_center: " .. e1)
@@ -125,7 +125,7 @@
     dataset_name = "/geospatial_lat_lon_extent/geospatial_lat_units"
     dtype = core.DYNAMIC -- NOTE: TEXT not valid 
     
-    f4 = h5.dataset(core.READER, 
+    f4 = h5.dataset(streaming.READER, 
                     asset4, 
                     resource_path, 
                     dataset_name, 
@@ -136,7 +136,7 @@
                     startrow, 
                     numrows)
     
-    r5 = core.reader(f4, dataq)
+    r5 = streaming.reader(f4, dataq)
     vals = rsps2s4:recvstring(3000)
     print("RESULT geospatial_lat_units (string)" .. " '" .. vals .. "' ")
     runner.check("degrees_north" == vals, "failed dataset read")
@@ -153,7 +153,7 @@
     dataset_name = "/geospatial_lat_lon_extent/geospatial_lon_nadir"
     dtype = core.DYNAMIC
     
-    f5 = h5.dataset(core.READER, 
+    f5 = h5.dataset(streaming.READER, 
                     asset5, 
                     resource_path, 
                     dataset_name, 
@@ -164,7 +164,7 @@
                     startrow, 
                     numrows)
     
-    r6 = core.reader(f5, dataq)
+    r6 = streaming.reader(f5, dataq)
     vals = rsps2s5:recvstring(3000) -- read out from listner
     e1 = string.unpack('f', vals)
     print("RESULT geospatial_lon_nadir: " .. e1)

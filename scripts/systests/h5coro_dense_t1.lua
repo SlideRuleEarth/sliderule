@@ -35,7 +35,7 @@ local col = 0
 local startrow = 0
 local numrows = core.ALL_ROWS
 
-f2 = h5.dataset(core.READER, 
+f2 = h5.dataset(streaming.READER, 
                 asset, 
                 resource_path, 
                 dataset_name, 
@@ -46,7 +46,7 @@ f2 = h5.dataset(core.READER,
                 startrow, 
                 numrows)
 
-r2 = core.reader(f2, dataq)
+r2 = streaming.reader(f2, dataq)
 vals = rsps2:recvstring(3000) -- read out from listner
 e1 = string.unpack('f', vals)
 print("RESULT add_offset: " .. e1)
@@ -64,7 +64,7 @@ rsps2s2 = msg.subscribe(dataq) -- responses posted to dataq
 dataset_name = "/Temp/scale_factor"
 dtype = core.DYNAMIC
 
-f3 = h5.dataset(core.READER, 
+f3 = h5.dataset(streaming.READER, 
                 asset2, 
                 resource_path, 
                 dataset_name, 
@@ -75,7 +75,7 @@ f3 = h5.dataset(core.READER,
                 startrow, 
                 numrows)
 
-r3 = core.reader(f3, dataq)
+r3 = streaming.reader(f3, dataq)
 vals = rsps2s2:recvstring(3000) -- read out from listner
 e1 = string.unpack('f', vals)
 print("RESULT scale_factor: " .. e1)
@@ -93,7 +93,7 @@ rsps2s3 = msg.subscribe(dataq) -- responses posted to dataq
 dataset_name = "/Temp/valid_range"
 dtype = core.INTEGER
 
-f3 = h5.dataset(core.READER, 
+f3 = h5.dataset(streaming.READER, 
                 asset3, 
                 resource_path, 
                 dataset_name, 
@@ -104,7 +104,7 @@ f3 = h5.dataset(core.READER,
                 startrow, 
                 numrows)
 
-r4 = core.reader(f3, dataq)
+r4 = streaming.reader(f3, dataq)
 vals = rsps2s3:recvstring(3000)
 e1, e2, e3 = string.unpack('i2i2i2', vals)
 print("RESULT valid_range[0]: " .. e1)
@@ -125,7 +125,7 @@ rsps2s4 = msg.subscribe(dataq)
 dataset_name = "/Temp/coordinates"
 dtype = core.STRING -- NOTE: TEXT not valid --> use DYNAMIC or STRING
 
-f4 = h5.dataset(core.READER, 
+f4 = h5.dataset(streaming.READER, 
                 asset4, 
                 resource_path, 
                 dataset_name, 
@@ -136,7 +136,7 @@ f4 = h5.dataset(core.READER,
                 startrow, 
                 numrows)
 
-r5 = core.reader(f4, dataq)
+r5 = streaming.reader(f4, dataq)
 vals = rsps2s4:recvstring(3000)
 print("RESULT coordinates (string)" .. " '" .. vals .. "' ")
 runner.check("sunglint_angle local_zenith_angle solar_zenith_angle t y x" == vals, "failed dataset read")
@@ -153,7 +153,7 @@ rsps2s5 = msg.subscribe(dataq)
 dataset_name = "/Temp/_FillValue"
 dtype = core.INTEGER
 
-f5 = h5.dataset(core.READER, 
+f5 = h5.dataset(streaming.READER, 
                 asset5, 
                 resource_path, 
                 dataset_name, 
@@ -164,7 +164,7 @@ f5 = h5.dataset(core.READER,
                 startrow, 
                 numrows)
 
-r6 = core.reader(f5, dataq)
+r6 = streaming.reader(f5, dataq)
 vals = rsps2s5:recvstring(3000) -- read out from listner
 e1 = string.unpack('i2', vals)
 print("RESULT _FillValue: " .. e1)

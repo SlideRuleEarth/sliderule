@@ -49,6 +49,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/MsgQ.cpp
         ${CMAKE_CURRENT_LIST_DIR}/OrchestratorLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/ProvisioningSystemLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/PublishMonitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/RecordObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/RequestMetrics.cpp
         ${CMAKE_CURRENT_LIST_DIR}/RequestParms.cpp
@@ -108,6 +109,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/OrchestratorLib.h
         ${CMAKE_CURRENT_LIST_DIR}/Ordering.h
         ${CMAKE_CURRENT_LIST_DIR}/ProvisioningSystemLib.h
+        ${CMAKE_CURRENT_LIST_DIR}/PublishMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/RecordObject.h
         ${CMAKE_CURRENT_LIST_DIR}/RequestMetrics.h
         ${CMAKE_CURRENT_LIST_DIR}/RequestParms.h

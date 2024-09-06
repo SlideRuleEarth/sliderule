@@ -4,22 +4,22 @@ local json = require("json")
 
 -- Unit Test --
 
-endpoint = core.endpoint()
-server   = core.httpd(9081):attach(endpoint, "/source"):untilup()
+local endpoint = core.endpoint()
+local server   = core.httpd(9081):attach(endpoint, "/source"):untilup()
 
-client = core.http("127.0.0.1", 9081)
+local client = streaming.http("127.0.0.1", 9081)
 
 print('\n------------------\nTest01: Return\n------------------')
 
-rsps, code, status = client:request("GET", "/source/version", "{}")
-rsps_table = json.decode(rsps)
+local rsps, code, status = client:request("GET", "/source/version", "{}")
+local rsps_table = json.decode(rsps)
 runner.check(rsps_table["server"]["packages"][1] == "core")
 runner.check(code == 200)
 runner.check(status)
 
 print('\n------------------\nTest02: Return\n------------------')
 
-json_object = '{ \
+local json_object = '{ \
     \"var1\": false, \
     \"var2\": \"*.rec\", \
     \"var3\": 4, \

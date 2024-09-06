@@ -53,7 +53,6 @@
 #include "MsgBridge.h"
 #include "MsgProcessor.h"
 #include "PublisherDispatch.h"
-#include "PublishMonitor.h"
 #include "RecordDispatcher.h"
 #include "ReportDispatch.h"
 #include "TcpSocket.h"
@@ -76,8 +75,7 @@
  *----------------------------------------------------------------------------*/
 static int stream_open (lua_State *L)
 {
-    static const struct luaL_Reg core_functions[] = {
-        {"pmonitor",        PublishMonitor::luaCreate},
+    static const struct luaL_Reg streaming_functions[] = {
         {"cluster",         ClusterSocket::luaCreate},
         {"file",            File::luaCreate},
         {"tcp",             TcpSocket::luaCreate},
@@ -98,7 +96,7 @@ static int stream_open (lua_State *L)
     };
 
     /* Set Library */
-    luaL_newlib(L, core_functions);
+    luaL_newlib(L, streaming_functions);
 
     /* Set Globals */
     LuaEngine::setAttrInt   (L, "READER",                   DeviceObject::READER);

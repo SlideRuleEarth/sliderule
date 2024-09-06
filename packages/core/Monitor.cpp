@@ -42,6 +42,7 @@
  * STATIC DATA
  ******************************************************************************/
 
+const char* Monitor::OBJECT_TYPE = "Monitor";
 const char* Monitor::LUA_META_NAME = "Monitor";
 const struct luaL_Reg Monitor::LUA_META_TABLE[] = {
     {"config",      luaConfig},
@@ -92,7 +93,7 @@ void Monitor::processEvent(const unsigned char* event_buf_ptr, int event_size)
  * Constructor
  *----------------------------------------------------------------------------*/
 Monitor::Monitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t format):
-    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     /* Initialize Event Monitor */
     eventTypeMask   = type_mask;
@@ -116,19 +117,81 @@ Monitor::~Monitor(void)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * processRecord
+ * processEvent
  *----------------------------------------------------------------------------*/
-bool Monitor::processRecord (RecordObject* record, okey_t key, recVec_t* records)
+void* Monitor::monitorThread (void* parm)
 {
-    (void)key;
-    (void)records;
+    Monitor* monitor = static_cast<Monitor*>(parm);
 
     int event_size;
     char event_buffer[MAX_EVENT_SIZE];
     unsigned char* event_buf_ptr = reinterpret_cast<unsigned char*>(&event_buffer[0]);
 
+    /* Loop Forever */
+    while(monitor->active)
+    {
+        /* Receive Message */
+        Subscriber::msgRef_t ref;
+        const int recv_status = monitor->inQ->receiveRef(ref, SYS_TIMEOUT);
+        if(recv_status > 0)
+        {
+            unsigned char* msg = reinterpret_cast<unsigned char*>(ref.data);
+            const int len = ref.size;
+            if(len > 0)
+            {
+                try
+                {
+                    /* Process Event Record */
+                    RecordInterface record(msg, len);
+                    if(StringLib::match(record.getRecordType(), EventLib::eventRecType))
+                    {
+                        EventLib::event_t* event = reinterpret_cast<EventLib::event_t*>(record.getRecordData());
+                        processEvent();
+                    }
+                }
+                catch (const RunTimeException& e)
+                {
+                    // pass silently
+                }
+            }
+            else
+            {
+                /* Terminating Message */
+                mlog(DEBUG, "Terminator received on %s, exiting dispatcher", dispatcher->inQ->getName());
+                dispatcher->dispatcherActive = false; // breaks out of loop
+            }
+
+            /* Dereference Message */
+            monitor->inQ->dereference(ref);
+        }
+        else
+        {
+            /* Break Out on Failure */
+            mlog(CRITICAL, "Failed queue receive on %s with error %d", monitor->inQ->getName(), recv_status);
+            monitor->active = false; // breaks out of loop
+        }
+    }
+
+    /* Signal Completion */
+    monitor->signalComplete();
+    return NULL;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     /* Pull Out Log Message */
-    EventLib::event_t* event = reinterpret_cast<EventLib::event_t*>(record->getRecordData());
+//    EventLib::event_t* event = reinterpret_cast<EventLib::event_t*>(record->getRecordData());
 
     /* Filter Events */
     if( ((event->type & eventTypeMask) == 0) ||

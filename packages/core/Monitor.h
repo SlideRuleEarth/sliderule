@@ -46,7 +46,7 @@
  * Monitor CLASS
  ******************************************************************************/
 
-class Monitor: public DispatchObject
+class Monitor: public LuaObject
 {
     public:
 
@@ -54,6 +54,7 @@ class Monitor: public DispatchObject
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
@@ -103,21 +104,23 @@ class Monitor: public DispatchObject
          * Methods
          *--------------------------------------------------------------------*/
 
+        static void*    monitorThread   (void* parm);
 
-        bool        processRecord   (RecordObject* record, okey_t key, recVec_t* records) override;
+        static int      textOutput      (EventLib::event_t* event, char* event_buffer);
+        static int      jsonOutput      (EventLib::event_t* event, char* event_buffer);
+        static int      cloudOutput     (EventLib::event_t* event, char* event_buffer);
 
-        static int  textOutput      (EventLib::event_t* event, char* event_buffer);
-        static int  jsonOutput      (EventLib::event_t* event, char* event_buffer);
-        static int  cloudOutput     (EventLib::event_t* event, char* event_buffer);
-
-        static int  luaConfig       (lua_State* L);
-        static int  luaTail         (lua_State* L);
-        static int  luaCat          (lua_State* L);
+        static int      luaConfig       (lua_State* L);
+        static int      luaTail         (lua_State* L);
+        static int      luaCat          (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
+        bool            active;
+        Thread*         pid;
+        Subscriber*     inQ;
         uint8_t         eventTypeMask;
         event_level_t   eventLevel;
         format_t        outputFormat;

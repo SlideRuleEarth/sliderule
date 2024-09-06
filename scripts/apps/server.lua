@@ -65,7 +65,7 @@ sys.setlvl(core.LOG | core.TRACE | core.METRIC, event_level) -- set level global
 local log_monitor = core.monitor(core.LOG, core.DEBUG, event_format):name("LogMonitor") -- monitor logs and write to stdout
 log_monitor:tail(1024)
 local metric_monitor = core.mmonitor(core.DEBUG):name("MetricMonitor") -- monitor metrics and push to orchestrator
-local dispatcher = core.dispatcher(core.EVENTQ, 1):name("EventDispatcher")
+local dispatcher = streaming.dispatcher(core.EVENTQ, 1):name("EventDispatcher")
 dispatcher:attach(log_monitor, "eventrec")
 dispatcher:attach(metric_monitor, "eventrec")
 dispatcher:run()
