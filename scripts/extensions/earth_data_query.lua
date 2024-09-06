@@ -15,14 +15,14 @@ DEFAULT_MAX_REQUESTED_RESOURCES = 300
 
 -- best effort match of datasets to providers and versions for earthdata
 DATASETS = {
-    ATL03 =                                               {provider = "NSIDC_ECS",   version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
-    ATL06 =                                               {provider = "NSIDC_ECS",   version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
-    ATL08 =                                               {provider = "NSIDC_ECS",   version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
-    ATL09 =                                               {provider = "NSIDC_ECS",   version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
-    ATL13 =                                               {provider = "NSIDC_ECS",   version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
-    GEDI01_B =                                            {provider = "LPDAAC_ECS",  version = "002",  api = "cmr",   formats = {".h5"},    collections = {}},
-    GEDI02_A =                                            {provider = "LPDAAC_ECS",  version = "002",  api = "cmr",   formats = {".h5"},    collections = {}},
-    GEDI02_B =                                            {provider = "LPDAAC_ECS",  version = "002",  api = "cmr",   formats = {".tiff"},  collections = {}},
+    ATL03 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
+    ATL06 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
+    ATL08 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
+    ATL09 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
+    ATL13 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
+    GEDI01_B =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {}},
+    GEDI02_A =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {}},
+    GEDI02_B =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".tiff"},  collections = {}},
     GEDI_L3_LandSurface_Metrics_V2_1952 =                 {provider = "ORNL_CLOUD",  version = nil,    api = "cmr",   formats = {".h5"},    collections = {}},
     GEDI_L4A_AGB_Density_V2_1_2056 =                      {provider = "ORNL_CLOUD",  version = nil,    api = "cmr",   formats = {".h5"},    collections = {}},
     GEDI_L4B_Gridded_Biomass_2017 =                       {provider = "ORNL_CLOUD",  version = nil,    api = "cmr",   formats = {".tiff"},  collections = {}},
@@ -72,6 +72,8 @@ RC_FAILURE = -1
 RC_RQST_FAILED = -2
 RC_RSPS_UNPARSEABLE = -3
 RC_RSPS_UNEXPECTED = -4
+RC_RSPS_TRUNCATED = -5
+RC_UNSUPPORTED = -6
 
 --
 -- Build GeoJSON
@@ -260,8 +262,7 @@ local function cmr (parms, poly, with_meta)
         if num_links == 0 then
             break
         elseif total_links >= max_resources then
-            sys.log(core.WARNING, string.format("Number of matched resources truncated to %d for %s", total_links, short_name))
-            break
+            return RC_RSPS_TRUNCATED, string.format("number of matched resources at %d exceeded maximum allowed for %s", total_links, short_name)
         end
     end
 
@@ -332,8 +333,7 @@ local function stac (parms, poly)
     local num_returned = geotable["context"]["returned"]
     local num_matched = geotable["context"]["matched"]
     if num_matched > max_resources then
-        sys.log(core.WARNING, string.format("Number of matched resources truncated from %d to %d",num_matched, max_resources))
-        num_matched = max_resources
+        return RC_RSPS_TRUNCATED, string.format("number of matched resources truncated from %d to %d", num_matched, max_resources)
     end
     local num_pages = math.floor((num_matched  + (num_returned - 1)) / num_returned)
     for page = 2, num_pages do
@@ -496,7 +496,7 @@ local function search (parms, poly)
     elseif api == "tnm" then
         return tnm(parms, poly)
     else
-        return RC_FAILURE, string.format("unsupport api: %s", api)
+        return RC_UNSUPPORTED, string.format("unsupported api: %s", api)
     end
 
 end
@@ -514,4 +514,6 @@ return {
     RQST_FAILED = RC_RQST_FAILED,
     RSPS_UNPARSEABLE = RC_RSPS_UNPARSEABLE,
     RSPS_UNEXPECTED = RC_RSPS_UNEXPECTED,
+    RSPS_TRUNCATED = RC_RSPS_TRUNCATED,
+    UNSUPPORTED = RC_UNSUPPORTED
 }

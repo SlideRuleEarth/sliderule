@@ -79,8 +79,8 @@ local function proxy(resources, parms, endpoint, rec)
                     parms[geo.PARMS][dataset]["catalog"] = json.encode(rsps)
                     local num_features = parms[geo.PARMS][dataset]["catalog"]["features"] and #parms[geo.PARMS][dataset]["catalog"]["features"] or 0
                     userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> returned %d resources for %s", rspq, num_features, dataset))
-                else
-                    userlog:alert(core.WARNING, core.RTE_INFO, string.format("request <%s> failed to get catalog for %s: %d", rspq, dataset, rc))
+                elseif rc ~= earthdata.UNSUPPORTED then
+                    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to get catalog for %s <%d>: %s", rspq, dataset, rc, rsps))
                 end
             end
         end
