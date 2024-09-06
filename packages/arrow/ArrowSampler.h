@@ -81,21 +81,13 @@ class ArrowSampler: public LuaObject
             RasterObject*  robj;
         } raster_info_t;
 
-        typedef struct
-        {
-            double        x;
-            double        y;
-            double        gps;
-        } point_info_t;
-
-        typedef List<RasterSample*> sample_list_t;
         typedef struct BatchSampler
         {
             const char*                  rkey;
             RasterObject*                robj;
             ArrowSampler*                obj;
-            std::vector<sample_list_t*>  samples;
-            std::set<uint64_t>           file_ids;
+            std::vector<RasterObject::sample_list_t*>     samples;
+            std::set<uint64_t>                            file_ids;
             std::vector<std::pair<uint64_t, const char*>> filemap;
 
             explicit BatchSampler (const char* _rkey, RasterObject* _robj, ArrowSampler* _obj);
@@ -112,11 +104,11 @@ class ArrowSampler: public LuaObject
         typedef struct Reader
         {
             RasterObject*               robj;
-            ArrowSampler*               obj;
             reader_range_t              range;
-            std::vector<sample_list_t*> samples;
+            const std::vector<RasterObject::point_info_t*>& points;
+            std::vector<RasterObject::sample_list_t*>       samples;
 
-            explicit Reader (RasterObject* _robj, ArrowSampler* _obj);
+            explicit Reader (RasterObject* _robj, const std::vector<RasterObject::point_info_t*>& _points);
                     ~Reader (void);
         } reader_t;
 
@@ -146,7 +138,7 @@ class ArrowSampler: public LuaObject
         Thread*                       mainPid;
         ArrowParms*                   parms;
         Publisher*                    outQ;
-        std::vector<point_info_t*>    points;
+        std::vector<RasterObject::point_info_t*>    points;
         std::vector<batch_sampler_t*> batchSamplers;
         ArrowSamplerImpl*             impl;
         const char*                   dataFile;           // used locally to build parquet file
@@ -168,7 +160,8 @@ class ArrowSampler: public LuaObject
         static void     batchSampling    (batch_sampler_t* sampler);
         static void*    readerThread     (void* parm);
         static void*    readSamples      (RasterObject* robj, uint32_t start_indx, uint32_t end_indx,
-                                          ArrowSampler* obj, std::vector<ArrowSampler::sample_list_t*>& samples);
+                                          const std::vector<RasterObject::point_info_t*>& points,
+                                          std::vector<RasterObject::sample_list_t*>& samples);
 };
 
 #endif  /* __parquet_sampler__*/

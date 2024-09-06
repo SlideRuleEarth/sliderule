@@ -63,7 +63,7 @@ class ArrowSamplerImpl
         explicit ArrowSamplerImpl (ArrowSampler* _sampler);
         ~ArrowSamplerImpl         (void);
 
-        void processInputFile     (const char* file_path, std::vector<ArrowSampler::point_info_t*>& points);
+        void processInputFile     (const char* file_path, std::vector<RasterObject::point_info_t*>& points);
         bool processSamples       (ArrowSampler::batch_sampler_t* sampler);
         void createOutpuFiles     (void);
 
@@ -99,14 +99,14 @@ class ArrowSamplerImpl
          *--------------------------------------------------------------------*/
 
         void                          getMetadata             (void);
-        void                          getPoints               (std::vector<ArrowSampler::point_info_t*>& points);
-        void                          getXYPoints             (std::vector<ArrowSampler::point_info_t*>& points);
-        void                          getGeoPoints            (std::vector<ArrowSampler::point_info_t*>& points);
+        void                          getPoints               (std::vector<RasterObject::point_info_t*>& points);
+        void                          getXYPoints             (std::vector<RasterObject::point_info_t*>& points);
+        void                          getGeoPoints            (std::vector<RasterObject::point_info_t*>& points);
         std::shared_ptr<arrow::Table> inputFileToTable        (const std::vector<const char*>& columnNames = {});
         std::shared_ptr<arrow::Table> addNewColumns           (const std::shared_ptr<arrow::Table>& table);
         bool                          makeColumnsWithLists    (ArrowSampler::batch_sampler_t* sampler);
         bool                          makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* sampler);
-        static RasterSample*          getFirstValidSample     (ArrowSampler::sample_list_t* slist);
+        static RasterSample*          getFirstValidSample     (RasterObject::sample_list_t* slist);
         static void                   tableToParquet          (const std::shared_ptr<arrow::Table>& table,
                                                                const char* file_path);
         static void                   tableToCsv              (const std::shared_ptr<arrow::Table>& table,

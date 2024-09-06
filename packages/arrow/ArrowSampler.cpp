@@ -155,7 +155,7 @@ ArrowSampler::BatchSampler::~BatchSampler(void)
  *----------------------------------------------------------------------------*/
 void ArrowSampler::BatchSampler::clearSamples(void)
 {
-    for(ArrowSampler::sample_list_t* slist : samples)
+    for(RasterObject::sample_list_t* slist : samples)
     {
         delete slist;
     }
@@ -165,10 +165,10 @@ void ArrowSampler::BatchSampler::clearSamples(void)
 /*----------------------------------------------------------------------------
  * Reader Constructor
  *----------------------------------------------------------------------------*/
-ArrowSampler::Reader::Reader(RasterObject* _robj, ArrowSampler* _obj) :
+ArrowSampler::Reader::Reader(RasterObject* _robj, const std::vector<RasterObject::point_info_t*>& _points) :
     robj(_robj),
-    obj(_obj),
-    range({0, 0})
+    range({0, 0}),
+    points(_points)
 {
 }
 
@@ -360,7 +360,7 @@ void ArrowSampler::Delete(void)
     for(batch_sampler_t* sampler : batchSamplers)
         delete sampler;
 
-    for(point_info_t* pinfo : points)
+    for(RasterObject::point_info_t* pinfo : points)
         delete pinfo;
 
     delete [] dataFile;
@@ -447,7 +447,7 @@ void ArrowSampler::batchSampling(batch_sampler_t* sampler)
     if(numThreads == 1)
     {
         /* Single thread, read all samples in this thread using user RasterObject */
-        readSamples(sampler->robj, ranges[0].start_indx, ranges[0].end_indx, sampler->obj, sampler->samples);
+        readSamples(sampler->robj, ranges[0].start_indx, ranges[0].end_indx, sampler->obj->points, sampler->samples);
     }
     else
     {
@@ -461,7 +461,7 @@ void ArrowSampler::batchSampling(batch_sampler_t* sampler)
              * User RasterObject is not used for sampling. It is used for acumulating samples from all readers.
              */
             RasterObject* _robj = RasterObject::cppCreate(sampler->robj);
-            reader_t* reader = new reader_t(_robj, sampler->obj);
+            reader_t* reader = new reader_t(_robj, sampler->obj->points);
             reader->range = ranges[i];
             readers.push_back(reader);
             Thread* pid = new Thread(readerThread, reader);
@@ -477,7 +477,7 @@ void ArrowSampler::batchSampling(batch_sampler_t* sampler)
         /* Copy samples lists (slist pointers only) from each reader. */
         for(const reader_t* reader : readers)
         {
-            for(sample_list_t* slist : reader->samples)
+            for(RasterObject::sample_list_t* slist : reader->samples)
             {
                 for(int32_t i = 0; i < slist->length(); i++)
                 {
@@ -516,7 +516,7 @@ void* ArrowSampler::readerThread(void* parm)
     readSamples(reader->robj,
                 reader->range.start_indx,
                 reader->range.end_indx,
-                reader->obj,
+                reader->points,
                 reader->samples);
 
     /* Exit Thread */
@@ -527,18 +527,17 @@ void* ArrowSampler::readerThread(void* parm)
  * readSamples
  *----------------------------------------------------------------------------*/
 void* ArrowSampler::readSamples(RasterObject* robj, uint32_t start_indx, uint32_t end_indx,
-                                ArrowSampler* obj,  std::vector<ArrowSampler::sample_list_t*>& samples)
+                                const std::vector<RasterObject::point_info_t*>& points,
+                                std::vector<RasterObject::sample_list_t*>& samples)
 {
     for(uint32_t i = start_indx; i < end_indx; i++)
     {
-        if(!obj->active) break; // early exit if lua object is being destroyed
-
-        point_info_t* pinfo = obj->points[i];
+        RasterObject::point_info_t* pinfo = points[i];
 
         const MathLib::point_3d_t point = {pinfo->x, pinfo->y, 0.0};
         const double   gps = robj->usePOItime() ? pinfo->gps : 0.0;
 
-        sample_list_t* slist = new sample_list_t;
+        RasterObject::sample_list_t* slist = new RasterObject::sample_list_t;
         bool listvalid = true;
         const uint32_t err = robj->getSamples(point, gps, *slist, NULL);
 

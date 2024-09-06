@@ -69,6 +69,15 @@ class RasterObject: public LuaObject
             factory_f   create;
         } factory_t;
 
+
+        typedef struct {
+            double        x;
+            double        y;
+            double        gps;
+        } point_info_t;
+
+        typedef List<RasterSample*> sample_list_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -85,17 +94,17 @@ class RasterObject: public LuaObject
         virtual uint32_t     getMaxBatchThreads(void);
                             ~RasterObject    (void) override;
 
-        bool hasZonalStats (void)
+        bool hasZonalStats (void) const
         {
             return parms->zonal_stats;
         }
 
-        bool hasFlags (void)
+        bool hasFlags (void) const
         {
             return parms->flags_file;
         }
 
-        bool usePOItime(void)
+        bool usePOItime(void) const
         {
             return parms->use_poi_time;
         }

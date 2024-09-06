@@ -6,7 +6,9 @@ local td = runner.rootdir(arg[0])
 
 local outq_name = "outq-luatest"
 
-local in_parquet = '/data/3dep/wrzesien_snow.parquet'
+local in_parquet = '/data/3dep/wrzesien_snow_64k.parquet'
+-- local in_parquet = '/data/3dep/wrzesien_snow_525k.parquet'
+-- local in_parquet = '/data/3dep/wrzesien_snow_2618k.parquet'
 
 -- Indicates local file system (no s3 or client)
 local prefix = "file://"
@@ -34,8 +36,7 @@ function getFileSize(filePath)
     return fileSize
 end
 
-local robj_3dep = geo.raster(geo.parms({asset="usgs3dep-1meter-dem", algorithm="NearestNeighbour", radius=0, catalog = contents, use_poi_time=true}))
--- local robj_3dep = geo.raster(geo.parms({asset="usgs3dep-1meter-dem", algorithm="NearestNeighbour", radius=0, catalog = contents, use_poi_time=true, single_stop=true, }))
+local robj_3dep = geo.raster(geo.parms({asset="usgs3dep-1meter-dem", algorithm="NearestNeighbour", radius=0, catalog = contents, use_poi_time=false}))
 runner.check(robj_3dep ~= nil)
 
 print('\n--------------------------------------\nTest01: input/output parquet (x, y)\n--------------------------------------')
