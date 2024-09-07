@@ -88,7 +88,7 @@ class RasterObject: public LuaObject
             RasterObject*                robj;
             points_range_t               range;
             const List<point_info_t*>&   points;
-            std::vector<sample_list_t*>  samples;
+            std::vector<sample_list_t*>  samples;  /* Must be vector, not a List */
 
             explicit Reader (RasterObject* _robj, const List<point_info_t*>& _points);
                     ~Reader (void);
@@ -105,7 +105,7 @@ class RasterObject: public LuaObject
         static RasterObject* cppCreate       (const RasterObject* obj);
         static bool          registerRaster  (const char* _name, factory_f create);
         virtual uint32_t     getSamples      (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) = 0;
-        virtual uint32_t     getSamples      (const List<point_info_t*>& points, std::vector<sample_list_t*>& samples, void* param=NULL);
+        virtual uint32_t     getSamples      (const List<point_info_t*>& points, List<sample_list_t*>& sllist, void* param=NULL);
         virtual uint32_t     getSubsets      (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) = 0;
         virtual uint8_t*     getPixels       (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, void* param=NULL);
                             ~RasterObject    (void) override;
@@ -160,8 +160,7 @@ class RasterObject: public LuaObject
 
         static void*    readerThread (void* parm);
         static void*    readSamples  (RasterObject* robj, const points_range_t& range,
-                                      const List<point_info_t*>& points,
-                                      std::vector<sample_list_t*>& samples);
+                                      const List<point_info_t*>& points, std::vector<sample_list_t*>& samples);
 
         static void     getRanges    (std::vector<points_range_t>& ranges, uint32_t numPoints, uint32_t maxNumThreads);
 

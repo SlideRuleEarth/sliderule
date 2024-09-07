@@ -482,8 +482,10 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
     std::shared_ptr<arrow::Array> count_list_array, min_list_array, max_list_array, mean_list_array, median_list_array, stdev_list_array, mad_list_array;
 
     /* Iterate over each sample in a vector of lists of samples */
-    for(sample_list_t* slist : sampler->samples)
+    for(int i = 0; i < sampler->samples.length(); i++)
     {
+        sample_list_t* slist = sampler->samples[i];
+
         /* Start new lists */
         PARQUET_THROW_NOT_OK(value_list_builder.Append());
         PARQUET_THROW_NOT_OK(time_list_builder.Append());
@@ -507,9 +509,9 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
          * If slist is empty the column will contain an empty list
          * to keep the number of rows consistent with the other columns
          */
-        for(int i = 0; i < slist->length(); i++)
+        for(int j = 0; j < slist->length(); j++)
         {
-            const RasterSample* sample = slist->get(i);
+            const RasterSample* sample = slist->get(j);
 
             /* Append the value to the value list */
             PARQUET_THROW_NOT_OK(value_builder->Append(sample->value));
@@ -647,8 +649,9 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
     RasterSample fakeSample(0.0, 0);
     fakeSample.value = std::nan("");
 
-    for(sample_list_t* slist : sampler->samples)
+    for(int i = 0; i < sampler->samples.length(); i++)
     {
+        sample_list_t* slist = sampler->samples[i];
         RasterSample* sample;
 
         if(!slist->empty())

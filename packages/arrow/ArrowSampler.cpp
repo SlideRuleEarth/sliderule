@@ -145,21 +145,8 @@ ArrowSampler::BatchSampler::BatchSampler(const char* _rkey, RasterObject* _robj,
  *----------------------------------------------------------------------------*/
 ArrowSampler::BatchSampler::~BatchSampler(void)
 {
-    clearSamples();
     delete [] rkey;
     robj->releaseLuaObject();
-}
-
-/*----------------------------------------------------------------------------
- * clearSamples
- *----------------------------------------------------------------------------*/
-void ArrowSampler::BatchSampler::clearSamples(void)
-{
-    for(sample_list_t* slist : samples)
-    {
-        delete slist;
-    }
-    samples.clear();
 }
 
 /*----------------------------------------------------------------------------
@@ -187,7 +174,7 @@ void* ArrowSampler::mainThread(void* parm)
         }
 
         /* Release since not needed anymore */
-        sampler->clearSamples();
+        sampler->samples.clear();
         sampler->file_ids.clear();
     }
 

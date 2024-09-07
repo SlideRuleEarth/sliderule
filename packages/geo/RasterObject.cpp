@@ -183,7 +183,7 @@ bool RasterObject::registerRaster (const char* _name, factory_f create)
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-uint32_t RasterObject::getSamples(const List<point_info_t*>& points, std::vector<sample_list_t*>& samples, void* param)
+uint32_t RasterObject::getSamples(const List<point_info_t*>& points, List<sample_list_t*>& sllist, void* param)
 {
     static_cast<void>(param);
 
@@ -204,8 +204,13 @@ uint32_t RasterObject::getSamples(const List<point_info_t*>& points, std::vector
 
     if(numThreads == 1)
     {
-        /* Single thread, read all samples in this thread using user RasterObject */
+        /* Single thread, read all samples in one thread using this RasterObject */
+        std::vector<sample_list_t*> samples;
         readSamples(this, ranges[0], points, samples);
+        for(sample_list_t* slist : samples)
+        {
+            sllist.add(slist);
+        }
     }
     else
     {
@@ -214,9 +219,9 @@ uint32_t RasterObject::getSamples(const List<point_info_t*>& points, std::vector
         std::vector<reader_t*> readers;
         for(uint32_t i = 0; i < numThreads; i++)
         {
-            /* Create RasterObject for each reader.
-             * These are local objects and will be deleted in the reader destructor.
-             * User RasterObject is not used for sampling. It is used for acumulating samples from all readers.
+            /* Create a RasterObject for each reader thread.
+             * These objects are local and will be deleted in the reader destructor.
+             * The user's (this) RasterObject is not directly used for sampling; it is used to accumulate samples from all readers.
              */
             RasterObject* _robj = RasterObject::cppCreate(this);
             reader_t* reader = new reader_t(_robj, points);
@@ -240,8 +245,8 @@ uint32_t RasterObject::getSamples(const List<point_info_t*>& points, std::vector
                 for(int32_t i = 0; i < slist->length(); i++)
                 {
                     /* NOTE: sample.fileId is an index of the file name in the reader's file dictionary.
-                    *        we need to convert it to the index in the batch sampler's dictionary (user's RasterObject dict).
-                    */
+                     *        we need to convert it to the index in the batch sampler's dictionary (user's RasterObject dict).
+                     */
                     RasterSample* sample = slist->get(i);
 
                     /* Find the file name for the sample id in reader's dictionary */
@@ -254,8 +259,7 @@ uint32_t RasterObject::getSamples(const List<point_info_t*>& points, std::vector
                     sample->fileId = id;
                 }
 
-                /* Caller must free the slists */
-                samples.push_back(slist);
+                sllist.add(slist);
             }
 
             delete reader;
@@ -581,8 +585,7 @@ void* RasterObject::readerThread(void* parm)
  * readSamples
  *----------------------------------------------------------------------------*/
 void* RasterObject::readSamples(RasterObject* robj, const points_range_t& range,
-                                const List<point_info_t*>& points,
-                                std::vector<sample_list_t*>& samples)
+                                const List<point_info_t*>& points, std::vector<sample_list_t*>& samples)
 {
     /* cast away constness because of List [] operator */
     List<point_info_t*>& _points = const_cast<List<point_info_t*>&>(points);
