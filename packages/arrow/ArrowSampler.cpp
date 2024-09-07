@@ -155,7 +155,7 @@ ArrowSampler::BatchSampler::~BatchSampler(void)
  *----------------------------------------------------------------------------*/
 void ArrowSampler::BatchSampler::clearSamples(void)
 {
-    for(RasterObject::sample_list_t* slist : samples)
+    for(sample_list_t* slist : samples)
     {
         delete slist;
     }
@@ -341,9 +341,6 @@ void ArrowSampler::Delete(void)
 
     for(batch_sampler_t* sampler : batchSamplers)
         delete sampler;
-
-    for(RasterObject::point_info_t* pinfo : points)
-        delete pinfo;
 
     delete [] dataFile;
     delete [] metadataFile;

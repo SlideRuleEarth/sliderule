@@ -75,6 +75,9 @@ class ArrowSampler: public LuaObject
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
+        typedef RasterObject::sample_list_t sample_list_t;
+        typedef RasterObject::point_info_t point_info_t;
+
         typedef struct
         {
             const char*    rkey;
@@ -86,8 +89,8 @@ class ArrowSampler: public LuaObject
             const char*                  rkey;
             RasterObject*                robj;
             ArrowSampler*                obj;
-            std::vector<RasterObject::sample_list_t*>     samples;
-            std::set<uint64_t>                            file_ids;
+            std::vector<sample_list_t*>  samples;
+            std::set<uint64_t>           file_ids;
             std::vector<std::pair<uint64_t, const char*>> filemap;
 
             explicit BatchSampler (const char* _rkey, RasterObject* _robj, ArrowSampler* _obj);
@@ -121,8 +124,8 @@ class ArrowSampler: public LuaObject
         Thread*                       mainPid;
         ArrowParms*                   parms;
         Publisher*                    outQ;
-        std::vector<RasterObject::point_info_t*> points;
-        std::vector<batch_sampler_t*>            batchSamplers;
+        List<point_info_t*>           points;
+        std::vector<batch_sampler_t*> batchSamplers;
         ArrowSamplerImpl*             impl;
         const char*                   dataFile;           // used locally to build parquet file
         const char*                   metadataFile;       // used locally to build json metadata file

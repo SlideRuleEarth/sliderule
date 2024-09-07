@@ -56,6 +56,9 @@ class ArrowSamplerImpl
          * Types
          *--------------------------------------------------------------------*/
 
+        typedef RasterObject::sample_list_t sample_list_t;
+        typedef RasterObject::point_info_t point_info_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -63,7 +66,7 @@ class ArrowSamplerImpl
         explicit ArrowSamplerImpl (ArrowSampler* _sampler);
         ~ArrowSamplerImpl         (void);
 
-        void processInputFile     (const char* file_path, std::vector<RasterObject::point_info_t*>& points);
+        void processInputFile     (const char* file_path, List<point_info_t*>& points);
         bool processSamples       (ArrowSampler::batch_sampler_t* sampler);
         void createOutpuFiles     (void);
 
@@ -99,14 +102,14 @@ class ArrowSamplerImpl
          *--------------------------------------------------------------------*/
 
         void                          getMetadata             (void);
-        void                          getPoints               (std::vector<RasterObject::point_info_t*>& points);
-        void                          getXYPoints             (std::vector<RasterObject::point_info_t*>& points);
-        void                          getGeoPoints            (std::vector<RasterObject::point_info_t*>& points);
+        void                          getPoints               (List<point_info_t*>& points);
+        void                          getXYPoints             (List<point_info_t*>& points);
+        void                          getGeoPoints            (List<point_info_t*>& points);
         std::shared_ptr<arrow::Table> inputFileToTable        (const std::vector<const char*>& columnNames = {});
         std::shared_ptr<arrow::Table> addNewColumns           (const std::shared_ptr<arrow::Table>& table);
         bool                          makeColumnsWithLists    (ArrowSampler::batch_sampler_t* sampler);
         bool                          makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* sampler);
-        static RasterSample*          getFirstValidSample     (RasterObject::sample_list_t* slist);
+        static RasterSample*          getFirstValidSample     (sample_list_t* slist);
         static void                   tableToParquet          (const std::shared_ptr<arrow::Table>& table,
                                                                const char* file_path);
         static void                   tableToCsv              (const std::shared_ptr<arrow::Table>& table,

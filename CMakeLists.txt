@@ -139,6 +139,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=constParameterReference:*/BathyRefractionCorrector.cpp" # in run() param extent cannot be const
         "--suppress=constParameterPointer:*/CcsdsPayloadDispatch.cpp"   # Not trivial to fix, would have to change DispachObject class as well.
         "--suppress=knownConditionTrueFalse"                            # -1 < 0 etc
+        "--suppress=constVariableReference:*/RasterObject.cpp"          # List [] const issue
     )
 
 endif()

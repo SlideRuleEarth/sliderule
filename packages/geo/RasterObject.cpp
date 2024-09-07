@@ -183,7 +183,7 @@ bool RasterObject::registerRaster (const char* _name, factory_f create)
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-uint32_t RasterObject::getSamples(const std::vector<point_info_t*>& points, std::vector<sample_list_t*>& samples, void* param)
+uint32_t RasterObject::getSamples(const List<point_info_t*>& points, std::vector<sample_list_t*>& samples, void* param)
 {
     static_cast<void>(param);
 
@@ -191,13 +191,13 @@ uint32_t RasterObject::getSamples(const std::vector<point_info_t*>& points, std:
     const uint32_t maxNumThreads = MAX_BATCH_THREADS;
 
     /* Get readers ranges */
-    std::vector<reader_range_t> ranges;
-    getReadersRange(ranges, points, maxNumThreads);
+    std::vector<points_range_t> ranges;
+    getRanges(ranges, points.length(), maxNumThreads);
 
     for(uint32_t i = 0; i < ranges.size(); i++)
     {
-        const reader_range_t& r = ranges[i];
-        mlog(DEBUG, "ragne-%u: %u to %u\n", i, r.start_indx, r.end_indx);
+        const points_range_t& range = ranges[i];
+        mlog(DEBUG, "ragne-%u: %u to %u\n", i, range.start, range.end);
     }
 
     const uint32_t numThreads = ranges.size();
@@ -205,7 +205,7 @@ uint32_t RasterObject::getSamples(const std::vector<point_info_t*>& points, std:
     if(numThreads == 1)
     {
         /* Single thread, read all samples in this thread using user RasterObject */
-        readSamples(this, ranges[0].start_indx, ranges[0].end_indx, points, samples);
+        readSamples(this, ranges[0], points, samples);
     }
     else
     {
@@ -493,7 +493,7 @@ int RasterObject::luaSubsets(lua_State *L)
 /*----------------------------------------------------------------------------
  * Reader Constructor
  *----------------------------------------------------------------------------*/
-RasterObject::Reader::Reader(RasterObject* _robj, const std::vector<RasterObject::point_info_t*>& _points) :
+RasterObject::Reader::Reader(RasterObject* _robj, const List<RasterObject::point_info_t*>& _points) :
     robj(_robj),
     range({0, 0}),
     points(_points)
@@ -569,8 +569,7 @@ void* RasterObject::readerThread(void* parm)
 {
     reader_t* reader = static_cast<reader_t*>(parm);
     readSamples(reader->robj,
-                reader->range.start_indx,
-                reader->range.end_indx,
+                reader->range,
                 reader->points,
                 reader->samples);
 
@@ -581,16 +580,18 @@ void* RasterObject::readerThread(void* parm)
 /*----------------------------------------------------------------------------
  * readSamples
  *----------------------------------------------------------------------------*/
-void* RasterObject::readSamples(RasterObject* robj, uint32_t start_indx, uint32_t end_indx,
-                                const std::vector<point_info_t*>& points,
+void* RasterObject::readSamples(RasterObject* robj, const points_range_t& range,
+                                const List<point_info_t*>& points,
                                 std::vector<sample_list_t*>& samples)
 {
-    for(uint32_t i = start_indx; i < end_indx; i++)
-    {
-        RasterObject::point_info_t* pinfo = points[i];
+    /* cast away constness because of List [] operator */
+    List<point_info_t*>& _points = const_cast<List<point_info_t*>&>(points);
 
-        const MathLib::point_3d_t point = {pinfo->x, pinfo->y, 0.0};
-        const double   gps = robj->usePOItime() ? pinfo->gps : 0.0;
+    for(uint32_t i = range.start; i < range.end; i++)
+    {
+        RasterObject::point_info_t* pinfo = _points[i];
+        const MathLib::point_3d_t&  point = pinfo->point;
+        const double gps = robj->usePOItime() ? pinfo->gps : 0.0;
 
         sample_list_t* slist = new sample_list_t;
         bool listvalid = true;
@@ -617,11 +618,9 @@ void* RasterObject::readSamples(RasterObject* robj, uint32_t start_indx, uint32_
 }
 
 /*----------------------------------------------------------------------------
- * getReadersRange
+ * getRanges
  *----------------------------------------------------------------------------*/
-void RasterObject::getReadersRange(std::vector<reader_range_t>& ranges,
-                                   const std::vector<point_info_t*>& points,
-                                   uint32_t maxNumThreads)
+void RasterObject::getRanges(std::vector<points_range_t>& ranges, uint32_t numPoints, uint32_t maxNumThreads)
 {
     /*
      * If points are geographically dispersed and fall into different data blocks of a raster,
@@ -640,28 +639,28 @@ void RasterObject::getReadersRange(std::vector<reader_range_t>& ranges,
     const uint32_t minPointsPerThread = 5;
 
     /* Determine how many reader threads to use and index range for each */
-    if(points.size() <= minPointsPerThread)
+    if(numPoints <= minPointsPerThread)
     {
-        ranges.emplace_back(reader_range_t{0, static_cast<uint32_t>(points.size())});
+        ranges.emplace_back(points_range_t{0, numPoints});
         return;
     }
 
-    uint32_t numThreads = std::min(maxNumThreads, static_cast<uint32_t>(points.size()) / minPointsPerThread);
+    uint32_t numThreads = std::min(maxNumThreads, numPoints / minPointsPerThread);
 
-    /* Ensure at least two threads if points.size() > minPointsPerThread */
+    /* Ensure at least two threads if numPoints > minPointsPerThread */
     if(numThreads == 1 && maxNumThreads > 1)
     {
         numThreads = 2;
     }
 
-    const uint32_t pointsPerThread = points.size() / numThreads;
-    uint32_t remainingPoints = points.size() % numThreads;
+    const uint32_t pointsPerThread = numPoints / numThreads;
+    uint32_t remainingPoints = numPoints % numThreads;
 
     uint32_t start = 0;
     for(uint32_t i = 0; i < numThreads; i++)
     {
         const uint32_t end = start + pointsPerThread + (remainingPoints > 0 ? 1 : 0);
-        ranges.emplace_back(reader_range_t{start, end});
+        ranges.emplace_back(points_range_t{start, end});
 
         start = end;
         if(remainingPoints > 0)

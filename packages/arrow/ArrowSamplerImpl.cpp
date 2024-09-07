@@ -87,7 +87,7 @@ ArrowSamplerImpl::~ArrowSamplerImpl (void)
 /*----------------------------------------------------------------------------
 * processInputFile
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::processInputFile(const char* file_path, std::vector<RasterObject::point_info_t*>& points)
+void ArrowSamplerImpl::processInputFile(const char* file_path, List<point_info_t*>& points)
 {
     try
     {
@@ -276,7 +276,7 @@ void ArrowSamplerImpl::getMetadata(void)
 /*----------------------------------------------------------------------------
 * getPoints
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getPoints(std::vector<RasterObject::point_info_t*>& points)
+void ArrowSamplerImpl::getPoints(List<point_info_t*>& points)
 {
     if(asGeo)
         getGeoPoints(points);
@@ -302,7 +302,7 @@ void ArrowSamplerImpl::getPoints(std::vector<RasterObject::point_info_t*>& point
 /*----------------------------------------------------------------------------
 * getXYPoints
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getXYPoints(std::vector<RasterObject::point_info_t*>& points)
+void ArrowSamplerImpl::getXYPoints(List<point_info_t*>& points)
 {
     const std::vector<const char*> columnNames = {xKey, yKey};
 
@@ -316,22 +316,22 @@ void ArrowSamplerImpl::getXYPoints(std::vector<RasterObject::point_info_t*>& poi
     auto x_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(x_column_index)->chunk(0));
     auto y_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(y_column_index)->chunk(0));
 
-    /* x and y columns are the same longth */
+    /* x and y columns are the same length */
     for(int64_t i = 0; i < x_column->length(); i++)
     {
         const double x = x_column->Value(i);
         const double y = y_column->Value(i);
 
-        RasterObject::point_info_t* pinfo = new RasterObject::point_info_t({x, y, 0.0});
-        points.push_back(pinfo);
+        point_info_t* pinfo = new point_info_t({{x, y, 0.0}, 0.0});
+        points.add(pinfo);
     }
-    mlog(DEBUG, "Read %ld points from file", points.size());
+    mlog(DEBUG, "Read %d points from file", points.length());
 }
 
 /*----------------------------------------------------------------------------
 * getGeoPoints
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getGeoPoints(std::vector<RasterObject::point_info_t*>& points)
+void ArrowSamplerImpl::getGeoPoints(List<point_info_t*>& points)
 {
     const char* geocol  = "geometry";
     const std::vector<const char*> columnNames = {geocol};
@@ -351,10 +351,10 @@ void ArrowSamplerImpl::getGeoPoints(std::vector<RasterObject::point_info_t*>& po
     {
         const std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
         const ArrowCommon::wkbpoint_t point = convertWKBToPoint(wkb_data);
-        RasterObject::point_info_t* pinfo = new RasterObject::point_info_t({point.x, point.y, 0.0});
-        points.push_back(pinfo);
+        point_info_t* pinfo = new point_info_t({{point.x, point.y, 0.0}, 0.0});
+        points.add(pinfo);
     }
-    mlog(INFO, "Read %ld geo points from file", points.size());
+    mlog(INFO, "Read %d geo points from file", points.length());
 }
 
 /*----------------------------------------------------------------------------
@@ -482,7 +482,7 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
     std::shared_ptr<arrow::Array> count_list_array, min_list_array, max_list_array, mean_list_array, median_list_array, stdev_list_array, mad_list_array;
 
     /* Iterate over each sample in a vector of lists of samples */
-    for(RasterObject::sample_list_t* slist : sampler->samples)
+    for(sample_list_t* slist : sampler->samples)
     {
         /* Start new lists */
         PARQUET_THROW_NOT_OK(value_list_builder.Append());
@@ -647,7 +647,7 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
     RasterSample fakeSample(0.0, 0);
     fakeSample.value = std::nan("");
 
-    for(RasterObject::sample_list_t* slist : sampler->samples)
+    for(sample_list_t* slist : sampler->samples)
     {
         RasterSample* sample;
 
@@ -771,7 +771,7 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
 /*----------------------------------------------------------------------------
 * getFirstValidSample
 *----------------------------------------------------------------------------*/
-RasterSample* ArrowSamplerImpl::getFirstValidSample(RasterObject::sample_list_t* slist)
+RasterSample* ArrowSamplerImpl::getFirstValidSample(sample_list_t* slist)
 {
     for(int i = 0; i < slist->length(); i++)
     {
