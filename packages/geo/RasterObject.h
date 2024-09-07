@@ -54,7 +54,6 @@ class RasterObject: public LuaObject
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-        static const int   MAX_BATCH_THREADS = 16;
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
@@ -108,6 +107,7 @@ class RasterObject: public LuaObject
         virtual uint32_t     getSamples      (const List<point_info_t*>& points, List<sample_list_t*>& sllist, void* param=NULL);
         virtual uint32_t     getSubsets      (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) = 0;
         virtual uint8_t*     getPixels       (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, void* param=NULL);
+        virtual uint32_t     getMaxBatchThreads(void);
                             ~RasterObject    (void) override;
 
         bool hasZonalStats (void) const
@@ -130,6 +130,7 @@ class RasterObject: public LuaObject
             return fileDict;
         }
 
+        void        stopSampling    (void);
         uint64_t    fileDictAdd     (const std::string& fileName);
         const char* fileDictGetFile (uint64_t fileId);
 
@@ -159,7 +160,7 @@ class RasterObject: public LuaObject
         static int      slist2table  (const List<RasterSubset*>& slist, uint32_t errors, lua_State* L);
 
         static void*    readerThread (void* parm);
-        static void*    readSamples  (RasterObject* robj, const points_range_t& range,
+        static void     readSamples  (RasterObject* robj, const points_range_t& range,
                                       const List<point_info_t*>& points, std::vector<sample_list_t*>& samples);
 
         static void     getRanges    (std::vector<points_range_t>& ranges, uint32_t numPoints, uint32_t maxNumThreads);
@@ -171,6 +172,10 @@ class RasterObject: public LuaObject
         static Mutex                    factoryMut;
         static Dictionary<factory_t>    factories;
         Dictionary<uint64_t>            fileDict;
+
+        static Mutex                    readersMut;
+        std::atomic<bool>               sampling;  /* Used by batch getSample code */
+        std::vector<reader_t*>          readers;
 };
 
 #endif  /* __raster_object__ */

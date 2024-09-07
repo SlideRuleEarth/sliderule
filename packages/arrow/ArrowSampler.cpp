@@ -324,10 +324,11 @@ void ArrowSampler::Delete(void)
     active = false;
     delete mainPid;
 
-    parms->releaseLuaObject();
-
     for(batch_sampler_t* sampler : batchSamplers)
+    {
+        sampler->robj->stopSampling();
         delete sampler;
+    }
 
     delete [] dataFile;
     delete [] metadataFile;
@@ -335,4 +336,6 @@ void ArrowSampler::Delete(void)
     delete [] outputMetadataPath;
     delete outQ;
     delete impl;
+
+    parms->releaseLuaObject();
 }

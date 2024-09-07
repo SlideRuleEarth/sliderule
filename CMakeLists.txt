@@ -52,6 +52,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "-misc-non-private-member-variables-in-classes,"
         "-misc-include-cleaner,"
         "-misc-use-anonymous-namespace,"
+        "-misc-no-recursion,"
 
         "hicpp-*,"
         "-hicpp-special-member-functions,"
