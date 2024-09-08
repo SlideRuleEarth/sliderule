@@ -165,8 +165,8 @@ void* ArrowSampler::mainThread(void* parm)
     {
         if(s->active)
         {
-            const uint32_t error_status = sampler->robj->getSamples(sampler->obj->points, sampler->samples);
-            mlog(INFO, "getSamples for %s returned %u", sampler->rkey, error_status);
+            const uint32_t ssErrors = sampler->robj->getSamples(sampler->obj->points, sampler->samples);
+            mlog(INFO, "getSamples for %s returned %s", sampler->rkey, GeoParms::sserror2str(ssErrors).c_str());
 
             /* batchSampling can take minutes, check active again */
             if(s->active)

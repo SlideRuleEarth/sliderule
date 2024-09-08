@@ -140,10 +140,10 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
 {
     static_cast<void>(param);
 
-    samplingMutex.lock();
+    lockSampling();
     try
     {
-        ssError = SS_NO_ERRORS;
+        ssErrors = SS_NO_ERRORS;
 
         OGRPoint ogr_point(point.x, point.y, point.z);
 
@@ -187,9 +187,38 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
         }
         key = cache.next(&item);
     }
-    samplingMutex.unlock();
+    unlockSampling();
 
-    return ssError;
+    return ssErrors;
+}
+
+/*----------------------------------------------------------------------------
+ * getSamples
+ *----------------------------------------------------------------------------*/
+uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sample_list_t*>& sllist, void* param)
+{
+    static_cast<void>(param);
+    static_cast<void>(sllist);
+    static_cast<void>(points);
+
+    // Call the base class function
+    ssErrors = RasterObject::getSamples(points, sllist, param);
+
+#if 0
+    lockSampling();
+    try
+    {
+        ssErrors = SS_NO_ERRORS;
+
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error getting samples: %s", e.what());
+    }
+    unlockSampling();
+#endif
+
+    return ssErrors;
 }
 
 /*----------------------------------------------------------------------------
@@ -199,10 +228,10 @@ uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t g
 {
     static_cast<void>(param);
 
-    samplingMutex.lock();
+    lockSampling();
     try
     {
-        ssError = SS_NO_ERRORS;
+        ssErrors = SS_NO_ERRORS;
 
         OGRPolygon poly = GdalRaster::makeRectangle(extent.ll.x, extent.ll.y, extent.ur.x, extent.ur.y);
 
@@ -222,9 +251,9 @@ uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t g
     {
         mlog(e.level(), "Error subsetting raster: %s", e.what());
     }
-    samplingMutex.unlock();
+    unlockSampling();
 
-    return ssError;
+    return ssErrors;
 }
 
 /*----------------------------------------------------------------------------
@@ -246,7 +275,7 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
 GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::overrideCRS_t cb):
     RasterObject    (L, _parms),
     cache           (MAX_READER_THREADS),
-    ssError         (SS_NO_ERRORS),
+    ssErrors        (SS_NO_ERRORS),
     numFinders      (0),
     findersRange    (NULL),
     crscb           (cb),
@@ -291,7 +320,7 @@ void GeoIndexedRaster::getGroupSamples(const rasters_group_t* rgroup, List<Raste
                 }
 
                 /* Get sampling/subset error status */
-                ssError |= item->raster->getSSerror();
+                ssErrors |= item->raster->getSSerror();
             }
         }
     }
@@ -317,7 +346,7 @@ void GeoIndexedRaster::getGroupSubsets(const rasters_group_t* rgroup, List<Raste
             }
 
             /* Get sampling/subset error status */
-            ssError |= item->raster->getSSerror();
+            ssErrors |= item->raster->getSSerror();
         }
     }
 }
@@ -486,7 +515,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
     {
         if(dset) GDALClose((GDALDatasetH)dset);
         emptyFeaturesList();
-        ssError |= SS_INDEX_FILE_ERROR;
+        ssErrors |= SS_INDEX_FILE_ERROR;
         return false;
     }
 
@@ -813,7 +842,7 @@ bool GeoIndexedRaster::createReaderThreads(uint32_t rasters2sample)
     }
     catch (const RunTimeException &e)
     {
-        ssError |= SS_RESOURCE_LIMIT_ERROR;
+        ssErrors |= SS_RESOURCE_LIMIT_ERROR;
         mlog(CRITICAL, "Failed to create reader threads, needed: %d, created: %d", newThreadsCnt, readers.length() - threadsNow);
     }
 
@@ -896,7 +925,7 @@ bool GeoIndexedRaster::updateCache(uint32_t& rasters2sample)
     /* Check for max limit of concurent reading raster threads */
     if(rasters2sample > MAX_READER_THREADS)
     {
-        ssError |= SS_THREADS_LIMIT_ERROR;
+        ssErrors |= SS_THREADS_LIMIT_ERROR;
         mlog(ERROR, "Too many rasters to read: %d, max allowed: %d", cache.length(), MAX_READER_THREADS);
         return false;
     }

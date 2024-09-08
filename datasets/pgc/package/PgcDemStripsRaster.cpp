@@ -170,7 +170,7 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
     {
         /* All geocells were 'empty' */
         geoIndexPoly.empty();
-        ssError |= SS_INDEX_FILE_ERROR;
+        ssErrors |= SS_INDEX_FILE_ERROR;
         return false;
     }
 

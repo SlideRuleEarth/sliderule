@@ -127,6 +127,7 @@ class GeoIndexedRaster: public RasterObject
         static void     init              (void);
         static void     deinit            (void);
         uint32_t        getSamples        (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) final;
+        uint32_t        getSamples        (const List<point_info_t*>& points, List<sample_list_t*>& sllist, void* param=NULL) final;
         uint32_t        getSubsets        (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) final;
                        ~GeoIndexedRaster  (void) override;
 
@@ -160,12 +161,11 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        Mutex                   samplingMutex;
         GroupOrdering           groupList;
         CacheDictionary         cache;
         vector<OGRFeature*>     featuresList;
         OGRPolygon              geoIndexPoly;
-        uint32_t                ssError;
+        uint32_t                ssErrors;
 
     private:
 

@@ -58,8 +58,6 @@ const struct luaL_Reg RasterObject::LUA_META_TABLE[] = {
 Mutex RasterObject::factoryMut;
 Dictionary<RasterObject::factory_t> RasterObject::factories;
 
-Mutex RasterObject::readersMut;
-
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
@@ -188,101 +186,114 @@ bool RasterObject::registerRaster (const char* _name, factory_f create)
 uint32_t RasterObject::getSamples(const List<point_info_t*>& points, List<sample_list_t*>& sllist, void* param)
 {
     static_cast<void>(param);
+    uint32_t ssErrors = SS_NO_ERRORS;
 
-    /* Get maximum number of batch processing threads allowed */
-    const uint32_t maxNumThreads = getMaxBatchThreads();
-
-    /* Get readers ranges */
-    std::vector<points_range_t> ranges;
-    getRanges(ranges, points.length(), maxNumThreads);
-
-    for(uint32_t i = 0; i < ranges.size(); i++)
+    samplingMut.lock();
+    try
     {
-        const points_range_t& range = ranges[i];
-        mlog(DEBUG, "ragne-%u: %u to %u\n", i, range.start, range.end);
-    }
+        /* Get maximum number of batch processing threads allowed */
+        const uint32_t maxNumThreads = getMaxBatchThreads();
 
-    const uint32_t numThreads = ranges.size();
-    mlog(DEBUG, "Number of reader threads: %u", numThreads);
+        /* Get readers ranges */
+        std::vector<points_range_t> ranges;
+        getRanges(ranges, points.length(), maxNumThreads);
 
-    if(numThreads == 1)
-    {
-        /* Single thread, read all samples in one thread using this RasterObject */
-        std::vector<sample_list_t*> samples;
-        readSamples(this, ranges[0], points, samples);
-        for(sample_list_t* slist : samples)
+        for(uint32_t i = 0; i < ranges.size(); i++)
         {
-            sllist.add(slist);
+            const points_range_t& range = ranges[i];
+            mlog(DEBUG, "ragne-%u: %u to %u\n", i, range.start, range.end);
         }
-    }
-    else
-    {
-        /* Start reader threads */
-        std::vector<Thread*> pids;
 
-        for(uint32_t i = 0; i < numThreads; i++)
+        const uint32_t numThreads = ranges.size();
+        mlog(INFO, "Number of reader threads: %u", numThreads);
+
+        if(numThreads == 1)
         {
-            /* Create a RasterObject for each reader thread.
-             * These objects are local and will be deleted in the reader destructor.
-             * The user's (this) RasterObject is not directly used for sampling; it is used to accumulate samples from all readers.
-             */
-            RasterObject* _robj = RasterObject::cppCreate(this);
-            reader_t* reader = new reader_t(_robj, points);
-            reader->range = ranges[i];
-            readersMut.lock();
+            /* Single thread, read all samples in one thread using this RasterObject */
+            std::vector<sample_list_t*> samples;
+            ssErrors = readSamples(this, ranges[0], points, samples);
+            for(sample_list_t* slist : samples)
             {
-                readers.push_back(reader);
-            }
-            readersMut.unlock();
-            Thread* pid = new Thread(readerThread, reader);
-            pids.push_back(pid);
-        }
-
-        /* Wait for all reader threads to finish */
-        for(Thread* pid : pids)
-        {
-            delete pid;
-        }
-
-        /* Copy samples lists (slist pointers only) from each reader. */
-        for(const reader_t* reader : readers)
-        {
-            for(sample_list_t* slist : reader->samples)
-            {
-                for(int32_t i = 0; i < slist->length(); i++)
-                {
-                    /* NOTE: sample.fileId is an index of the file name in the reader's file dictionary.
-                     *        we need to convert it to the index in the batch sampler's dictionary (user's RasterObject dict).
-                     */
-                    RasterSample* sample = slist->get(i);
-
-                    /* Find the file name for the sample id in reader's dictionary */
-                    const char* name = reader->robj->fileDictGetFile(sample->fileId);
-
-                    /* Use user's RasterObject dictionary to store the file names. */
-                    const uint64_t id = fileDictAdd(name);
-
-                    /* Update the sample file id */
-                    sample->fileId = id;
-                }
-
                 sllist.add(slist);
             }
         }
-
-        /* Clear raders */
-        readersMut.lock();
+        else
         {
+            /* Start reader threads */
+            std::vector<Thread*> pids;
+
+            for(uint32_t i = 0; i < numThreads; i++)
+            {
+                /* Create a RasterObject for each reader thread.
+                 * These objects are local and will be deleted in the reader destructor.
+                 * The user's (this) RasterObject is not directly used for sampling; it is used to accumulate samples from all readers.
+                 */
+                RasterObject* _robj = RasterObject::cppCreate(this);
+                reader_t* reader = new reader_t(_robj, points);
+                reader->range = ranges[i];
+                readersMut.lock();
+                {
+                    readers.push_back(reader);
+                }
+                readersMut.unlock();
+                Thread* pid = new Thread(readerThread, reader);
+                pids.push_back(pid);
+            }
+
+            /* Wait for all reader threads to finish */
+            for(Thread* pid : pids)
+            {
+                delete pid;
+            }
+
+            /* Copy samples lists (slist pointers only) from each reader. */
             for(const reader_t* reader : readers)
-                delete reader;
+            {
+                /* Acumulate errors from all reader threads */
+                ssErrors |= reader->ssErrors;
 
-            readers.clear();
+                for(sample_list_t* slist : reader->samples)
+                {
+                    for(int32_t i = 0; i < slist->length(); i++)
+                    {
+                        /* NOTE: sample.fileId is an index of the file name in the reader's file dictionary.
+                         *        we need to convert it to the index in the batch sampler's dictionary (user's RasterObject dict).
+                         */
+                        RasterSample* sample = slist->get(i);
+
+                        /* Find the file name for the sample id in reader's dictionary */
+                        const char* name = reader->robj->fileDictGetFile(sample->fileId);
+
+                        /* Use user's RasterObject dictionary to store the file names. */
+                        const uint64_t id = fileDictAdd(name);
+
+                        /* Update the sample file id */
+                        sample->fileId = id;
+                    }
+
+                    sllist.add(slist);
+                }
+            }
+
+            /* Clear raders */
+            readersMut.lock();
+            {
+                for(const reader_t* reader : readers)
+                    delete reader;
+
+                readers.clear();
+            }
+            readersMut.unlock();
+
         }
-        readersMut.unlock();
-
     }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error getting samples: %s", e.what());
+    }
+    samplingMut.unlock();
 
-    return SS_NO_ERRORS;
+    return ssErrors;
 }
 
 /*----------------------------------------------------------------------------
@@ -540,7 +551,8 @@ int RasterObject::luaSubsets(lua_State *L)
 RasterObject::Reader::Reader(RasterObject* _robj, const List<RasterObject::point_info_t*>& _points) :
     robj(_robj),
     range({0, 0}),
-    points(_points)
+    points(_points),
+    ssErrors(SS_NO_ERRORS)
 {
 }
 
@@ -612,10 +624,7 @@ int RasterObject::slist2table(const List<RasterSubset*>& slist, uint32_t errors,
 void* RasterObject::readerThread(void* parm)
 {
     reader_t* reader = static_cast<reader_t*>(parm);
-    readSamples(reader->robj,
-                reader->range,
-                reader->points,
-                reader->samples);
+    reader->ssErrors = readSamples(reader->robj, reader->range, reader->points, reader->samples);
 
     /* Exit Thread */
     return NULL;
@@ -624,9 +633,11 @@ void* RasterObject::readerThread(void* parm)
 /*----------------------------------------------------------------------------
  * readSamples
  *----------------------------------------------------------------------------*/
-void RasterObject::readSamples(RasterObject* robj, const points_range_t& range,
-                                const List<point_info_t*>& points, std::vector<sample_list_t*>& samples)
+uint32_t RasterObject::readSamples(RasterObject* robj, const points_range_t& range,
+                                   const List<point_info_t*>& points, std::vector<sample_list_t*>& samples)
 {
+    uint32_t ssErrors = SS_NO_ERRORS;
+
     /* cast away constness because of List [] operator */
     List<point_info_t*>& _points = const_cast<List<point_info_t*>&>(points);
 
@@ -647,6 +658,9 @@ void RasterObject::readSamples(RasterObject* robj, const points_range_t& range,
         bool listvalid = true;
         const uint32_t err = robj->getSamples(point, gps, *slist, NULL);
 
+        /* Acumulate errors from all getSamples calls */
+        ssErrors |= err;
+
         if(err & SS_THREADS_LIMIT_ERROR)
         {
             listvalid = false;
@@ -662,6 +676,8 @@ void RasterObject::readSamples(RasterObject* robj, const points_range_t& range,
         /* Add sample list */
         samples.push_back(slist);
     }
+
+    return ssErrors;
 }
 
 /*----------------------------------------------------------------------------
@@ -671,15 +687,12 @@ void RasterObject::getRanges(std::vector<points_range_t>& ranges, uint32_t numPo
 {
     /*
      * If points are geographically dispersed and fall into different data blocks of a raster,
-     * the initial read operation from the AWS S3 bucket can take approximately one second due
+     * the initial read operation from the AWS S3 bucket can takes the longest time due
      * to network latency and data retrieval time. Subsequent reads from the same data blocks
      * are significantly faster due to caching mechanisms.
      *
-     * The worst-case scenario occurs when points are not located within the same data block,
-     * leading to multiple time-consuming read operations.
-     *
      * To optimize performance and balance the overhead of creating new RasterObjects and
-     * managing multiple threads, a threshold of 5 seconds (minPointsPerThread) is used. This value
+     * managing multiple threads, a threshold of 5 minPointsPerThread is used. This value
      * determines when to initiate multiple threads for parallel processing. By doing so,
      * we aim to enhance efficiency and reduce overall processing time.
      */

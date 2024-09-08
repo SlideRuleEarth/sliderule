@@ -155,6 +155,8 @@ class GeoParms: public LuaObject
                     ~GeoParms   (void) override;
         const char* tojson      (void) const override;
 
+        static std::string sserror2str(uint32_t error);
+
     private:
 
         /*--------------------------------------------------------------------

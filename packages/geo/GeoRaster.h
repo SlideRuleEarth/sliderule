@@ -90,7 +90,6 @@ class GeoRaster: public RasterObject
         * Data
         *--------------------------------------------------------------------*/
 
-        Mutex      samplingMutex;
         GdalRaster raster;
 
         /*--------------------------------------------------------------------

@@ -88,6 +88,7 @@ class RasterObject: public LuaObject
             points_range_t               range;
             const List<point_info_t*>&   points;
             std::vector<sample_list_t*>  samples;  /* Must be vector, not a List */
+            uint32_t                     ssErrors;
 
             explicit Reader (RasterObject* _robj, const List<point_info_t*>& _points);
                     ~Reader (void);
@@ -130,6 +131,16 @@ class RasterObject: public LuaObject
             return fileDict;
         }
 
+        void lockSampling(void)
+        {
+            samplingMut.lock();
+        }
+
+        void unlockSampling(void)
+        {
+            samplingMut.unlock();
+        }
+
         void        stopSampling    (void);
         uint64_t    fileDictAdd     (const std::string& fileName);
         const char* fileDictGetFile (uint64_t fileId);
@@ -160,7 +171,7 @@ class RasterObject: public LuaObject
         static int      slist2table  (const List<RasterSubset*>& slist, uint32_t errors, lua_State* L);
 
         static void*    readerThread (void* parm);
-        static void     readSamples  (RasterObject* robj, const points_range_t& range,
+        static uint32_t readSamples  (RasterObject* robj, const points_range_t& range,
                                       const List<point_info_t*>& points, std::vector<sample_list_t*>& samples);
 
         static void     getRanges    (std::vector<points_range_t>& ranges, uint32_t numPoints, uint32_t maxNumThreads);
@@ -173,7 +184,8 @@ class RasterObject: public LuaObject
         static Dictionary<factory_t>    factories;
         Dictionary<uint64_t>            fileDict;
 
-        static Mutex                    readersMut;
+        Mutex                           readersMut;
+        Mutex                           samplingMut;
         std::atomic<bool>               sampling;  /* Used by batch getSample code */
         std::vector<reader_t*>          readers;
 };

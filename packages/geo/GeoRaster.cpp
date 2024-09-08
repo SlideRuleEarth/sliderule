@@ -83,7 +83,7 @@ uint32_t GeoRaster::getSamples(const MathLib::point_3d_t& point, int64_t gps, Li
     static_cast<void>(gps);
     static_cast<void>(param);
 
-    samplingMutex.lock();
+    lockSampling();
     try
     {
         OGRPoint ogr_point(point.x, point.y, point.z);
@@ -94,7 +94,7 @@ uint32_t GeoRaster::getSamples(const MathLib::point_3d_t& point, int64_t gps, Li
     {
         mlog(e.level(), "Error getting samples: %s", e.what());
     }
-    samplingMutex.unlock();
+    unlockSampling();
 
     return raster.getSSerror();
 }
@@ -107,7 +107,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
     static_cast<void>(gps);
     static_cast<void>(param);
 
-    samplingMutex.lock();
+    lockSampling();
 
     /* Enable multi-threaded decompression in Gtiff driver */
     CPLSetThreadLocalConfigOption("GDAL_NUM_THREADS", "ALL_CPUS");
@@ -146,7 +146,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
     /* Disable multi-threaded decompression in Gtiff driver */
     CPLSetThreadLocalConfigOption("GDAL_NUM_THREADS", "1");
 
-    samplingMutex.unlock();
+    unlockSampling();
 
     return raster.getSSerror();
 }
@@ -159,7 +159,7 @@ uint8_t* GeoRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32
     static_cast<void>(param);
     uint8_t* data = NULL;
 
-    samplingMutex.lock();
+    lockSampling();
 
     /* Enable multi-threaded decompression in Gtiff driver */
     CPLSetThreadLocalConfigOption("GDAL_NUM_THREADS", "ALL_CPUS");
@@ -169,7 +169,7 @@ uint8_t* GeoRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32
     /* Disable multi-threaded decompression in Gtiff driver */
     CPLSetThreadLocalConfigOption("GDAL_NUM_THREADS", "1");
 
-    samplingMutex.unlock();
+    unlockSampling();
 
     return data;
 }
