@@ -571,18 +571,13 @@ void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
  *----------------------------------------------------------------------------*/
 bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
 {
-    /* For AOI always open new index file, for POI it depends... */
-    const bool openNewFile = GdalRaster::ispoly(geo) || geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo);
-    if(openNewFile)
-    {
-        if(!openGeoIndex(geo))
-            return false;
+    /* Parallelized search for rasters intersecting with point/polygon */
+    if(!findRastersParallel(geo))
+        return false;
 
-        setFindersRange();
-    }
-
-    if(!_findRasters(geo))  return false;
-    if(!filterRasters(gps)) return false;
+    /* Filter rasters - must be done in one thread (uses Lists and Orderings) */
+    if(!filterRasters(gps))
+        return false;
 
     uint32_t rasters2sample = 0;
     if(!updateCache(rasters2sample))
@@ -1078,11 +1073,21 @@ void GeoIndexedRaster::setFindersRange(void)
 
 
 /*----------------------------------------------------------------------------
- * _findRasters
+ * findRastersParallel
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::_findRasters(OGRGeometry* geo)
+bool GeoIndexedRaster::findRastersParallel(OGRGeometry* geo)
 {
     groupList.clear();
+
+    /* For AOI always open new index file, for POI it depends... */
+    const bool openNewFile = GdalRaster::ispoly(geo) || geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo);
+    if(openNewFile)
+    {
+        if(!openGeoIndex(geo))
+            return false;
+
+        setFindersRange();
+    }
 
     /* Start finder threads to find rasters intersecting with point/polygon */
     uint32_t signaledFinders = 0;
@@ -1101,7 +1106,7 @@ bool GeoIndexedRaster::_findRasters(OGRGeometry* geo)
         finder->sync.unlock();
     }
 
-    /* Wait for finder threads to finish searching for rasters */
+    /* Wait for finder threads to finish */
     for(uint32_t i = 0; i < signaledFinders; i++)
     {
         finder_t* finder = finders[i];

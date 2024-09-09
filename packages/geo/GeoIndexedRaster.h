@@ -208,7 +208,7 @@ class GeoIndexedRaster: public RasterObject
         bool            updateCache         (uint32_t& rasters2sample);
         bool            filterRasters       (int64_t gps);
         void            setFindersRange     (void);
-        bool            _findRasters        (OGRGeometry* geo);
+        bool            findRastersParallel (OGRGeometry* geo);
 };
 
 #endif  /* __geo_indexed_raster__ */
