@@ -35,7 +35,7 @@
 
 #include "Atl13IODriver.h"
 #include "S3CurlIODriver.h"
-#include "core.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA

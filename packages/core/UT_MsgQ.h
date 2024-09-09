@@ -36,23 +36,21 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaObject.h"
+#include "UnitTest.h"
 #include "MsgQ.h"
 #include "OsApi.h"
 
 /******************************************************************************
- * UNIT TEST MSGQ CLASS
+ * CLASS
  ******************************************************************************/
 
-class UT_MsgQ: public LuaObject
+class UT_MsgQ: public UnitTest
 {
     public:
 
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-
-        static const char* OBJECT_TYPE;
 
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
@@ -77,15 +75,15 @@ class UT_MsgQ: public LuaObject
             int threadid;       // identification for thread
             long* lastvalue;    // array of previous values read by subscriber, indexed by threadid
             int qdepth;         // size of the queue - number of elements it can hold
-            int errorcnt;
+            UnitTest* self;     // lua object running test
         } parms_t;
 
         typedef struct {
             Subscriber* s;
             Sem* v;
-            bool f;
             int depth;
             int size;
+            UnitTest* self;     // lua object running test
         } perf_thread_t;
 
         /*--------------------------------------------------------------------
@@ -93,7 +91,7 @@ class UT_MsgQ: public LuaObject
          *--------------------------------------------------------------------*/
 
         explicit UT_MsgQ (lua_State* L);
-        ~UT_MsgQ (void) override;
+        ~UT_MsgQ (void) override = default;
 
         static int blockingReceiveUnitTestCmd           (lua_State* L);
         static int subscribeUnsubscribeUnitTestCmd      (lua_State* L);

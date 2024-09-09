@@ -1,8 +1,7 @@
 --
 -- Provides functions to query CMR, STAC, TNM
 --
---  NOTES:  The code below uses libcurl (via the netsvc package) to
---          issue http requests
+--  NOTES:  The code below uses libcurl to issue http requests
 
 local json = require("json")
 
@@ -193,9 +192,9 @@ local function cmr (parms, poly, with_meta)
     while true do
 
         -- issue http request
-        local rsps, hdrs, status = netsvc.get(cmr_query_url, nil, headers, false, false, true)
+        local rsps, hdrs, status = core.get(cmr_query_url, nil, headers, false, false, true)
         if not status then
-            return RC_RQST_FAILED, string.format("http request to CMR failed - %s", rsps)
+            return RC_RQST_FAILED, string.format("http request to CMR failed <%s>", rsps)
         end
 
         -- add scroll id for future page requests
@@ -318,7 +317,7 @@ local function stac (parms, poly)
     end
 
     -- post initial request
-    local rsps, status = netsvc.post(url, json.encode(rqst), headers)
+    local rsps, status = core.post(url, json.encode(rqst), headers)
     if not status then
         return RC_RQST_FAILED, "http request to stac server failed"
     end
@@ -340,7 +339,7 @@ local function stac (parms, poly)
         rqst["page"] = page
 
         -- post paged request
-        local rsps, status = netsvc.post(url, json.encode(rqst), headers)
+        local rsps, status = core.post(url, json.encode(rqst), headers)
         if not status then
             return RC_RQST_FAILED, "http request to stac server failed"
         end
@@ -416,7 +415,7 @@ local function tnm (parms, poly)
         local attempts = 3
         local request_complete = false
         while not request_complete do
-            rsps, rsps_status = netsvc.get(tnm_query_url, nil, {})
+            rsps, rsps_status = core.get(tnm_query_url, nil, {})
             if rsps_status then
                 break
             end

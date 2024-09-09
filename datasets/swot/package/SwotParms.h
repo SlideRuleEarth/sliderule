@@ -40,13 +40,13 @@
 #include "LuaObject.h"
 #include "GeoJsonRaster.h"
 #include "List.h"
-#include "NetsvcParms.h"
+#include "RequestParms.h"
 
 /******************************************************************************
  * SWOT PARAMETERS
  ******************************************************************************/
 
-class SwotParms: public NetsvcParms
+class SwotParms: public RequestParms
 {
     public:
 

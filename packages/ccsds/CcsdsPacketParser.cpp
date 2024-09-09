@@ -35,7 +35,7 @@
 
 #include "CcsdsPacketParser.h"
 #include "CcsdsParserModule.h"
-#include "core.h"
+#include "OsApi.h"
 
 #include <float.h>
 

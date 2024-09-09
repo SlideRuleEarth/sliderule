@@ -36,7 +36,7 @@
 #include <atomic>
 
 #include "HttpServer.h"
-#include "core.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -286,7 +286,7 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
         for(int h = 1; h < header_list->length(); h++)
         {
             /* Create Key/Value Pairs */
-            List<string*>* keyvalue_list = StringLib::split((*header_list)[h]->c_str(), (*header_list)[h]->length(), ':');
+            List<string*>* keyvalue_list = StringLib::split(header_list->get(h)->c_str(), header_list->get(h)->length(), ':');
             try
             {
                 char* key = const_cast<char*>((*keyvalue_list)[0]->c_str());
@@ -296,7 +296,7 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
             }
             catch(const RunTimeException& e)
             {
-                mlog(e.level(), "Invalid header in http request: %s: %s", (*header_list)[h]->c_str(), e.what());
+                mlog(e.level(), "Invalid header in http request: %s: %s", header_list->get(h)->c_str(), e.what());
             }
             delete keyvalue_list;
         }

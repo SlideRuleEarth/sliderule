@@ -1207,7 +1207,7 @@ unsigned int RecordObject::str2flags (const char* str)
     List<string*>* flaglist = StringLib::split(str, strlen(str), '|');
     for(int i = 0; i < flaglist->length(); i++)
     {
-        const char* flag = (*flaglist)[i]->c_str();
+        const char* flag = flaglist->get(i)->c_str();
         if(StringLib::match(flag, "NATIVE"))        flags = NATIVE_FLAGS;
         else if(StringLib::match(flag, "LE"))       flags &= ~BIGENDIAN;
         else if(StringLib::match(flag, "BE"))       flags |= BIGENDIAN;

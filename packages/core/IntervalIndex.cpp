@@ -126,10 +126,10 @@ void IntervalIndex::split (node_t* node, intervalspan_t& lspan, intervalspan_t& 
 
     /* Calculate Split */
     const int midpoint = endpoints.length() / 2;
-    lspan.t0 = endpoints[0];
-    lspan.t1 = endpoints[midpoint - 1];
-    rspan.t0 = endpoints[midpoint];
-    rspan.t1 = endpoints[endpoints.length() - 1];
+    lspan.t0 = endpoints.get(0);
+    lspan.t1 = endpoints.get(midpoint - 1);
+    rspan.t0 = endpoints.get(midpoint);
+    rspan.t1 = endpoints.get(endpoints.length() - 1);
 }
 
 /*----------------------------------------------------------------------------

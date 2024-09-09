@@ -33,17 +33,18 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "ContainerRunner.h"
-#include "OsApi.h"
-#include "EventLib.h"
-#include "CurlLib.h" // netsvc package dependency
-#include "EndpointObject.h"
-#include "TimeLib.h"
 #include <rapidjson/document.h>
 #include <cstdlib>
 #include <filesystem>
 #include <sstream>
 #include <iostream>
+
+#include "ContainerRunner.h"
+#include "OsApi.h"
+#include "EventLib.h"
+#include "CurlLib.h"
+#include "EndpointObject.h"
+#include "TimeLib.h"
 
 /******************************************************************************
  * STATIC DATA

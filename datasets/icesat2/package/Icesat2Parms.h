@@ -42,14 +42,14 @@
 #include "GeoJsonRaster.h"
 #include "List.h"
 #include "MathLib.h"
-#include "NetsvcParms.h"
+#include "RequestParms.h"
 #include "AncillaryFields.h"
 
 /******************************************************************************
  * REQUEST PARAMETERS
  ******************************************************************************/
 
-class Icesat2Parms: public NetsvcParms
+class Icesat2Parms: public RequestParms
 {
     public:
 

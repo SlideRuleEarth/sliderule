@@ -33,7 +33,7 @@
  * INCLUDE
  ******************************************************************************/
 
-#include "core.h"
+#include "OsApi.h"
 #include "geo.h"
 #include "SwotParms.h"
 
@@ -93,7 +93,7 @@ const char* SwotParms::tojson (void) const
     rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
 
     /* Base class params first */
-    const char* netsvcjson = NetsvcParms::tojson();
+    const char* netsvcjson = RequestParms::tojson();
     if(netsvcjson)
     {
         doc.Parse(netsvcjson);
@@ -125,7 +125,7 @@ const char* SwotParms::tojson (void) const
  * Constructor
  *----------------------------------------------------------------------------*/
 SwotParms::SwotParms(lua_State* L, int index):
-    NetsvcParms(L, index),
+    RequestParms(L, index),
     variables(EXPECTED_NUM_FIELDS)
 {
     bool provided = false;

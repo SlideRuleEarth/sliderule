@@ -33,7 +33,51 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
+#include "Asset.h"
+#include "AssetIndex.h"
+#include "CurlLib.h"
+#include "Dictionary.h"
+#include "EndpointObject.h"
+#include "EndpointProxy.h"
+#include "EventLib.h"
+#include "PointIndex.h"
+#include "FileIODriver.h"
+#include "HttpServer.h"
+#include "List.h"
+#include "LuaEndpoint.h"
+#include "LuaEngine.h"
+#include "LuaLibraryMsg.h"
+#include "LuaLibrarySys.h"
+#include "LuaLibraryTime.h"
+#include "LuaObject.h"
+#include "LuaScript.h"
+#include "MathLib.h"
+#include "MetricMonitor.h"
+#include "Monitor.h"
+#include "MsgQ.h"
+#include "OrchestratorLib.h"
+#include "Ordering.h"
+#include "ProvisioningSystemLib.h"
+#include "PublishMonitor.h"
+#include "RecordObject.h"
+#include "RequestMetrics.h"
+#include "RequestParms.h"
+#include "SpatialIndex.h"
+#include "StringLib.h"
+#include "Table.h"
+#include "IntervalIndex.h"
+#include "TimeLib.h"
+#include "OsApi.h"
+#ifdef __unittesting__
+#include "UT_Dictionary.h"
+#include "UT_Field.h"
+#include "UT_List.h"
+#include "UT_MsgQ.h"
+#include "UT_Ordering.h"
+#include "UT_String.h"
+#include "UT_Table.h"
+#include "UT_TimeLib.h"
+#endif
 
 /******************************************************************************
  * DEFINES
@@ -75,31 +119,34 @@ static int core_open (lua_State *L)
         {"getbyname",       LuaObject::luaGetByName},
         {"script",          LuaScript::luaCreate},
         {"monitor",         Monitor::luaCreate},
-        {"pmonitor",        PublishMonitor::luaCreate},
-        {"cluster",         ClusterSocket::luaCreate},
-        {"file",            File::luaCreate},
-        {"tcp",             TcpSocket::luaCreate},
-        {"uart",            Uart::luaCreate},
-        {"udp",             UdpSocket::luaCreate},
-        {"reader",          DeviceReader::luaCreate},
-        {"writer",          DeviceWriter::luaCreate},
         {"httpd",           HttpServer::luaCreate},
-        {"http",            HttpClient::luaCreate},
         {"endpoint",        LuaEndpoint::luaCreate},
-        {"dispatcher",      RecordDispatcher::luaCreate},
-        {"capture",         CaptureDispatch::luaCreate},
-        {"limit",           LimitDispatch::luaCreate},
-        {"metric",          MetricDispatch::luaCreate},
-        {"publish",         PublisherDispatch::luaCreate},
-        {"report",          ReportDispatch::luaCreate},
-        {"csv",             CsvDispatch::luaCreate},
-        {"bridge",          MsgBridge::luaCreate},
         {"asset",           Asset::luaCreate},
         {"pointindex",      PointIndex::luaCreate},
         {"intervalindex",   IntervalIndex::luaCreate},
         {"spatialindex",    SpatialIndex::luaCreate},
+        {"get",             CurlLib::luaGet},
+        {"put",             CurlLib::luaPut},
+        {"post",            CurlLib::luaPost},
+        {"proxy",           EndpointProxy::luaCreate},
+        {"orchurl",         OrchestratorLib::luaUrl},
+        {"orchreg",         OrchestratorLib::luaRegisterService},
+        {"orchselflock",    OrchestratorLib::luaSelfLock},
+        {"orchlock",        OrchestratorLib::luaLock},
+        {"orchunlock",      OrchestratorLib::luaUnlock},
+        {"orchhealth",      OrchestratorLib::luaHealth},
+        {"orchnodes",       OrchestratorLib::luaGetNodes},
+        {"psurl",           ProvisioningSystemLib::luaUrl},
+        {"psorg",           ProvisioningSystemLib::luaSetOrganization},
+        {"pslogin",         ProvisioningSystemLib::luaLogin},
+        {"psvalidate",      ProvisioningSystemLib::luaValidate},
+        {"psauth",          ProvisioningSystemLib::Authenticator::luaCreate},
+        {"pmonitor",        PublishMonitor::luaCreate},
+        {"mmonitor",        MetricMonitor::luaCreate},
+        {"parms",           RequestParms::luaCreate},
 #ifdef __unittesting__
         {"ut_dictionary",   UT_Dictionary::luaCreate},
+        {"ut_field",        UT_Field::luaCreate},
         {"ut_list",         UT_List::luaCreate},
         {"ut_msgq",         UT_MsgQ::luaCreate},
         {"ut_ordering",     UT_Ordering::luaCreate},
@@ -131,22 +178,6 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "REAL",                     RecordObject::REAL);
     LuaEngine::setAttrInt   (L, "INTEGER",                  RecordObject::INTEGER);
     LuaEngine::setAttrInt   (L, "DYNAMIC",                  RecordObject::DYNAMIC);
-    LuaEngine::setAttrInt   (L, "READER",                   DeviceObject::READER);
-    LuaEngine::setAttrInt   (L, "WRITER",                   DeviceObject::WRITER);
-    LuaEngine::setAttrInt   (L, "DUPLEX",                   DeviceObject::DUPLEX);
-    LuaEngine::setAttrBool  (L, "SERVER",                   true);
-    LuaEngine::setAttrBool  (L, "CLIENT",                   false);
-    LuaEngine::setAttrInt   (L, "DIE_ON_DISCONNECT",        true);
-    LuaEngine::setAttrInt   (L, "PERSISTENT",               false);
-    LuaEngine::setAttrInt   (L, "BLOCK",                    true);
-    LuaEngine::setAttrInt   (L, "QUEUE",                    ClusterSocket::QUEUE);
-    LuaEngine::setAttrInt   (L, "BUS",                      ClusterSocket::BUS);
-    LuaEngine::setAttrInt   (L, "BINARY",                   File::BINARY);
-    LuaEngine::setAttrInt   (L, "ASCII",                    File::ASCII);
-    LuaEngine::setAttrInt   (L, "TEXT",                     File::TEXT);
-    LuaEngine::setAttrInt   (L, "FIFO",                     File::FIFO);
-    LuaEngine::setAttrInt   (L, "FLUSHED",                  File::FLUSHED);
-    LuaEngine::setAttrInt   (L, "CACHED",                   File::CACHED);
     LuaEngine::setAttrInt   (L, "NORTH_POLAR",              MathLib::NORTH_POLAR);
     LuaEngine::setAttrInt   (L, "SOUTH_POLAR",              MathLib::SOUTH_POLAR);
     LuaEngine::setAttrInt   (L, "PEND",                     IO_PEND);
@@ -173,6 +204,13 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "TIME8",                    RecordObject::TIME8);
     LuaEngine::setAttrInt   (L, "STRING",                   RecordObject::STRING);
     LuaEngine::setAttrInt   (L, "USER",                     RecordObject::USER);
+    LuaEngine::setAttrStr   (L, "PARMS",                    RequestParms::SELF);
+    LuaEngine::setAttrInt   (L, "RQST_TIMEOUT",             RequestParms::DEFAULT_RQST_TIMEOUT);
+    LuaEngine::setAttrInt   (L, "NODE_TIMEOUT",             RequestParms::DEFAULT_NODE_TIMEOUT);
+    LuaEngine::setAttrInt   (L, "READ_TIMEOUT",             RequestParms::DEFAULT_READ_TIMEOUT);
+    LuaEngine::setAttrInt   (L, "CLUSTER_SIZE_HINT",        RequestParms::DEFAULT_CLUSTER_SIZE_HINT);
+    LuaEngine::setAttrInt   (L, "MAX_LOCKS_PER_NODE",       OrchestratorLib::MAX_LOCKS_PER_NODE);
+    LuaEngine::setAttrInt   (L, "INVALID_TX_ID",            OrchestratorLib::INVALID_TX_ID);
 
 #ifdef __unittesting__
     LuaEngine::setAttrBool(L, "UNITTEST",                   true);
@@ -204,8 +242,10 @@ void initcore (void)
     TTYLib::init();
     TimeLib::init();
     LuaEngine::init();
-    ContainerRecord::init();
-    AncillaryFields::init();
+    RequestMetrics::init();
+    CurlLib::init();
+    OrchestratorLib::init();
+    ProvisioningSystemLib::init();
 #ifdef __unittesting__
     UT_TimeLib::init();
 #endif    
@@ -217,12 +257,12 @@ void initcore (void)
     /* Initialize Modules */
     LuaEndpoint::init();
 
-    /* Initialize Default Lua Extensions */
+    /* Initialize Lua Extensions */
     LuaLibrarySys::lsys_init();
     LuaLibraryMsg::lmsg_init();
     LuaLibraryTime::ltime_init();
 
-    /* Add Default Lua Extensions */
+    /* Add Lua Extensions */
     LuaEngine::extend(LuaLibraryMsg::LUA_MSGLIBNAME, LuaLibraryMsg::luaopen_msglib);
     LuaEngine::extend(LuaLibrarySys::LUA_SYSLIBNAME, LuaLibrarySys::luaopen_syslib);
     LuaEngine::extend(LuaLibraryTime::LUA_TIMELIBNAME, LuaLibraryTime::luaopen_timelib);
@@ -243,6 +283,9 @@ void initcore (void)
 void deinitcore (void)
 {
     print2term("Exiting... ");
+    ProvisioningSystemLib::deinit();
+    OrchestratorLib::deinit();
+    CurlLib::deinit();
     LuaEngine::deinit();
     EventLib::deinit();
     TimeLib::deinit();

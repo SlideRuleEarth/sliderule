@@ -35,7 +35,7 @@
 
 #include <gdal.h>
 
-#include "core.h"
+#include "OsApi.h"
 #include "GeoParms.h"
 
 #include "rapidjson/document.h"

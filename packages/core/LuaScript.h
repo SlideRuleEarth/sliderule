@@ -36,15 +36,9 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <atomic>
-
-#include "MsgQ.h"
 #include "OsApi.h"
-#include "List.h"
-#include "StringLib.h"
 #include "LuaEngine.h"
 #include "LuaObject.h"
-#include "EndpointObject.h"
 
 /******************************************************************************
  * LUA SCRIPT CLASS

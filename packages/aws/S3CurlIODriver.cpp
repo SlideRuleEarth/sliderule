@@ -35,7 +35,7 @@
 
 #include "S3CurlIODriver.h"
 #include "CredentialStore.h"
-#include "core.h"
+#include "OsApi.h"
 
 #include <curl/curl.h>
 #include <openssl/hmac.h>
@@ -550,7 +550,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
                 /* Get Response Size */
                 for(int i = 0; i < rsps_set.length(); i++)
                 {
-                    rsps_size += rsps_set[i].size;
+                    rsps_size += rsps_set.get(i).size;
                 }
 
                 /* Allocate and Populate Response */
@@ -559,8 +559,8 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
                 uint8_t* rsps = *data; // reads easier below
                 for(int i = 0; i < rsps_set.length(); i++)
                 {
-                    memcpy(&rsps[rsps_index], rsps_set[i].data, rsps_set[i].size);
-                    rsps_index += rsps_set[i].size;
+                    memcpy(&rsps[rsps_index], rsps_set.get(i).data, rsps_set.get(i).size);
+                    rsps_index += rsps_set.get(i).size;
                 }
                 rsps[rsps_index] = '\0';
 
@@ -611,7 +611,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
     /* Clean Up Response List */
     for(int i = 0; i < rsps_set.length(); i++)
     {
-        delete [] rsps_set[i].data;
+        delete [] rsps_set.get(i).data;
     }
 
     /* Throw Exception on Failure */
@@ -769,7 +769,7 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
                     else
                     {
                         /* Request Failed */
-                        mlog(CRITICAL, "S3 get returned http error <%ld>", http_code);
+                        mlog(CRITICAL, "S3 put returned http error <%ld>", http_code);
                     }
 
                     /* Request Completed */

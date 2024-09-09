@@ -40,13 +40,13 @@
 #include "LuaObject.h"
 #include "GeoJsonRaster.h"
 #include "List.h"
-#include "NetsvcParms.h"
+#include "RequestParms.h"
 
 /******************************************************************************
  * GEDI PARAMETERS
  ******************************************************************************/
 
-class GediParms: public NetsvcParms
+class GediParms: public RequestParms
 {
     public:
 

@@ -34,6 +34,10 @@
  ******************************************************************************/
 
 #include "core.h"
+#include "StringLib.h"
+#include "LuaEngine.h"
+#include "LuaObject.h"
+#include "OsApi.h"
 
 #ifdef __arrow__
 #include "arrow.h"
@@ -59,8 +63,8 @@
 #include "h5.h"
 #endif
 
-#ifdef __netsvc__
-#include "netsvc.h"
+#ifdef __streaming__
+#include "streaming.h"
 #endif
 
 #ifdef __bathy__
@@ -229,7 +233,7 @@ static void ldplugins(void)
 
     /* Load All Plugins from Configuration Directory */
     DIR *dir;
-    if((dir = opendir(CONFDIR)) != NULL)
+    if((dir = opendir(PLUGINDIR)) != NULL)
     {
         const struct dirent *ent;
         while((ent = readdir(dir)) != NULL)  // NOLINT(concurrency-mt-unsafe)
@@ -244,7 +248,7 @@ static void ldplugins(void)
             /* Load Plugin */
             print2term("Loading plugin %s ... ", plugin_name);
             char plugin_path[MAX_STR_SIZE];
-            StringLib::format(plugin_path, MAX_STR_SIZE, "%s%c%s.so", CONFDIR, PATH_DELIMETER, plugin_name);
+            StringLib::format(plugin_path, MAX_STR_SIZE, "%s%c%s.so", PLUGINDIR, PATH_DELIMETER, plugin_name);
             curr_plugin->plugin = dlopen(plugin_path, RTLD_NOW);
             if(!curr_plugin->plugin)
             {
@@ -348,8 +352,8 @@ int main (int argc, char* argv[])
         inith5();
     #endif
 
-    #ifdef __netsvc__
-        initnetsvc();
+    #ifdef __stream__
+        initstream();
     #endif
 
     #ifdef __bathy__
@@ -461,8 +465,8 @@ int main (int argc, char* argv[])
         deinitusgs3dep();
     #endif
 
-    #ifdef __netsvc__
-        deinitnetsvc();
+    #ifdef __stream__
+        deinitstream();
     #endif
 
     #ifdef __h5__

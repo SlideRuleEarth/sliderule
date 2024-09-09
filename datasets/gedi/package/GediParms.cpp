@@ -33,7 +33,7 @@
  * INCLUDE
  ******************************************************************************/
 
-#include "core.h"
+#include "OsApi.h"
 #include "geo.h"
 #include "GediParms.h"
 
@@ -227,7 +227,7 @@ const char* GediParms::tojson (void) const
     rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
 
     /* Base class params first */
-    const char* netsvcjson = NetsvcParms::tojson();
+    const char* netsvcjson = RequestParms::tojson();
     if(netsvcjson)
     {
         doc.Parse(netsvcjson);
@@ -263,7 +263,7 @@ const char* GediParms::tojson (void) const
  * Constructor
  *----------------------------------------------------------------------------*/
 GediParms::GediParms(lua_State* L, int index):
-    NetsvcParms                 (L, index),
+    RequestParms                 (L, index),
     beams                       {true, true, true, true, true, true, true, true},
     degrade_filter              (DEGRADE_UNFILTERED),
     l2_quality_filter           (L2QLTY_UNFILTERED),

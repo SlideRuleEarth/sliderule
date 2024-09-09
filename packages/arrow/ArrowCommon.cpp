@@ -33,11 +33,12 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
-#include "ArrowCommon.h"
-
 #include <filesystem>
 #include <uuid/uuid.h>
+
+#include "OsApi.h"
+#include "ArrowCommon.h"
+#include "RecordObject.h"
 
 #ifdef __aws__
 #include "aws.h"
@@ -208,11 +209,23 @@ bool send2S3 (const char* fileName, const char* s3dst, const char* outputPath,
         /* Send Initial Status */
         alert(INFO, RTE_INFO, outQ, NULL, "Initiated upload of results to S3, bucket = %s, key = %s", bucket, key);
 
-        try
+        /* Upload to S3 */
+        int attempt = 0;
+        int64_t bytes_uploaded = 0;
+        while(bytes_uploaded == 0 && attempt++ < S3CurlIODriver::ATTEMPTS_PER_REQUEST)
         {
-            /* Upload to S3 */
-            const int64_t bytes_uploaded = S3CurlIODriver::put(fileName, bucket, key, parms->region, &parms->credentials);
+            try
+            {
+                bytes_uploaded = S3CurlIODriver::put(fileName, bucket, key, parms->region, &parms->credentials);
+            }
+            catch(const RunTimeException& e)
+            {
+                alert(e.level(), RTE_ERROR, outQ, NULL, "S3 PUT failed attempt %d, bucket = %s, key = %s, error = %s", attempt, bucket, key, e.what());
+            }
+        }
 
+        if(bytes_uploaded > 0)
+        {
             /* Send Successful Status */
             alert(INFO, RTE_INFO, outQ, NULL, "Upload to S3 completed, bucket = %s, key = %s, size = %ld", bucket, key, bytes_uploaded);
 
@@ -226,12 +239,13 @@ bool send2S3 (const char* fileName, const char* s3dst, const char* outputPath,
                 mlog(CRITICAL, "Failed to send remote record back to user for %s", outputPath);
             }
         }
-        catch(const RunTimeException& e)
+        else
         {
+            /* Set Error Status */
             status = false;
 
             /* Send Error Status */
-            alert(e.level(), RTE_ERROR, outQ, NULL, "Upload to S3 failed, bucket = %s, key = %s, error = %s", bucket, key, e.what());
+            alert(CRITICAL, RTE_ERROR, outQ, NULL, "Upload to S3 failed, bucket = %s, key = %s", bucket, key);
         }
     }
 

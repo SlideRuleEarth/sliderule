@@ -16,7 +16,7 @@ local name, identity, driver = nsidc_s3:info()
 local creds = aws.csget(identity)
 if not creds then
     local earthdata_url = "https://data.nsidc.earthdatacloud.nasa.gov/s3credentials"
-    local response, _ = netsvc.get(earthdata_url)
+    local response, _ = core.get(earthdata_url)
     local _, credential = pcall(json.decode, response)
     aws.csput(identity, credential)
 end

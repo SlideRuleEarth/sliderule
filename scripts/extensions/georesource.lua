@@ -37,8 +37,8 @@ local function initialize(resource, parms, algo, args)
     -- Raster Sampler --
     local sampler_disp = nil
     if parms[geo.PARMS] and not parms[arrow.PARMS] then
-        local rsps_bridge = core.bridge(args.result_q, rspq)
-        sampler_disp = core.dispatcher(args.result_q, 1) -- 1 thread required due to performance issues for GeoIndexRasters
+        local rsps_bridge = streaming.bridge(args.result_q, rspq)
+        sampler_disp = streaming.dispatcher(args.result_q, 1) -- 1 thread required due to performance issues for GeoIndexRasters
         for key,settings in pairs(parms[geo.PARMS]) do
             local robj = geo.raster(geo.parms(settings):keyspace(args.shard))
             if robj then
@@ -60,10 +60,10 @@ local function initialize(resource, parms, algo, args)
     local algo_disp = nil
     if algo then
         source_q = resource .. "." .. rspq
-        algo_disp = core.dispatcher(source_q)
+        algo_disp = streaming.dispatcher(source_q)
 
         -- Attach Exception and Ancillary Record Forwarding --
-        local except_pub = core.publish(rspq)
+        local except_pub = streaming.publish(rspq)
         algo_disp:attach(except_pub, "exceptrec") -- exception records
 
         -- Attach Algorithm --
@@ -86,7 +86,7 @@ end
 local function waiton(resource, parms, algo, reader, algo_disp, sampler_disp, userlog, with_stats)
 
     -- Initialize Timeouts --
-    local timeout = parms["node-timeout"] or parms["timeout"] or netsvc.NODE_TIMEOUT
+    local timeout = parms["node-timeout"] or parms["timeout"] or core.NODE_TIMEOUT
     local duration = 0
     local interval = 10 < timeout and 10 or timeout -- seconds
 

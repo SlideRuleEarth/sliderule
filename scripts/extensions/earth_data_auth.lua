@@ -1,7 +1,7 @@
 --
 -- Maintains up-to-date credentials for earthdata login
 --
---  NOTES:  The code below uses libcurl (via the netsvc package) to
+--  NOTES:  The code below uses libcurl to
 --          issue a request to earthdatacloud.nasa.gov to get S3 credentials.
 --          It then saves those credentials into SlideRule's credential store
 --          so that when H5Coro issues a S3 request, it can use them to authenticate
@@ -56,7 +56,7 @@ while netrc_present and sys.alive() do
     sys.log(core.DEBUG, "Fetching Earthdata Credentials...")
 
     -- get new credentials
-    local response, status = netsvc.get(earthdata)
+    local response, status = core.get(earthdata)
 
     -- convert reponse to credential table
     if status then

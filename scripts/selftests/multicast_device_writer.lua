@@ -5,27 +5,27 @@ local console = require("console")
 
 -- create writer
 
-sockoutq = msg.publish("sockoutq")
+local sockoutq = msg.publish("sockoutq")
 runner.check(sockoutq, "Failed to create socket output queue")
 
-client = core.udp("239.255.0.1", 35028, core.CLIENT)
-writer = core.writer(client, "sockoutq")
+local client = streaming.udp("239.255.0.1", 35028, streaming.CLIENT)
+local writer = streaming.writer(client, "sockoutq")
 sys.wait(2)
 
 -- create reader
 
-sockinq = msg.subscribe("sockinq")
+local sockinq = msg.subscribe("sockinq")
 runner.check(sockinq)
 
-server = core.udp("0.0.0.0", 35028, core.SERVER, "239.255.0.1")
-reader = core.reader(server, "sockinq")
+local server = streaming.udp("0.0.0.0", 35028, streaming.SERVER, "239.255.0.1")
+local reader = streaming.reader(server, "sockinq")
 sys.wait(2)
 
 -- send message
 
-expected_message = "Hello World"
+local expected_message = "Hello World"
 runner.check(sockoutq:sendstring(expected_message), "Failed to send message")
-actual_message = sockinq:recvstring(5000)
+local actual_message = sockinq:recvstring(5000)
 
 -- check results
 

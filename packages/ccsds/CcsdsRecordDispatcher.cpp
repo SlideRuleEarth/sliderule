@@ -35,7 +35,7 @@
 
 #include "CcsdsRecordDispatcher.h"
 #include "CcsdsRecord.h"
-#include "core.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * PUBLIC METHODS

@@ -33,27 +33,14 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <stdlib.h>
 #include "UT_Ordering.h"
-#include "core.h"
-
-/******************************************************************************
- * MACROS
- ******************************************************************************/
-
-#define ut_assert(e,...)    \
-    try { \
-        lua_obj->_ut_assert(e,__FILE__,__LINE__,__VA_ARGS__); \
-    } catch(const RunTimeException& x) { \
-        print2term("Caught exception: %s\n", x.what()); \
-        lua_obj->_ut_assert(false,__FILE__,__LINE__,__VA_ARGS__); \
-    };
+#include "Ordering.h"
+#include "UnitTest.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
-
-const char* UT_Ordering::OBJECT_TYPE = "UT_Ordering";
 
 const char* UT_Ordering::LUA_META_NAME = "UT_Ordering";
 const struct luaL_Reg UT_Ordering::LUA_META_TABLE[] = {
@@ -90,57 +77,8 @@ int UT_Ordering::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 UT_Ordering::UT_Ordering (lua_State* L):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    failures(0)
+    UnitTest(L, LUA_META_NAME, LUA_META_TABLE)
 {
-}
-
-/*----------------------------------------------------------------------------
- * Destructor  -
- *----------------------------------------------------------------------------*/
-UT_Ordering::~UT_Ordering(void) = default;
-
-/*--------------------------------------------------------------------------------------
- * _ut_assert - called via ut_assert macro
- *--------------------------------------------------------------------------------------*/
-bool UT_Ordering::_ut_assert(bool e, const char* file, int line, const char* fmt, ...)
-{
-    if(!e)
-    {
-        char formatted_string[UT_MAX_ASSERT];
-        char log_message[UT_MAX_ASSERT];
-        va_list args;
-        int vlen, msglen;
-        char* pathptr;
-
-        /* Build Formatted String */
-        va_start(args, fmt);
-        vlen = vsnprintf(formatted_string, UT_MAX_ASSERT - 1, fmt, args);
-        msglen = vlen < UT_MAX_ASSERT - 1 ? vlen : UT_MAX_ASSERT - 1;
-        va_end(args);
-        if (msglen < 0) formatted_string[0] = '\0';
-        else            formatted_string[msglen] = '\0';
-
-        /* Chop Path in Filename */
-        pathptr = StringLib::find(file, '/', false);
-        if(pathptr) pathptr++;
-        else pathptr = const_cast<char*>(file);
-
-        /* Create Log Message */
-        msglen = snprintf(log_message, UT_MAX_ASSERT, "Failure at %s:%d:%s", pathptr, line, formatted_string);
-        if(msglen > (UT_MAX_ASSERT - 1))
-        {
-            log_message[UT_MAX_ASSERT - 1] = '#';
-        }
-
-        /* Display Log Message */
-        print2term("%s", log_message);
-
-        /* Count Error */
-        failures++;
-    }
-
-    return e;
 }
 
 /*--------------------------------------------------------------------------------------
@@ -160,7 +98,8 @@ int UT_Ordering::testAddRemove(lua_State* L)
         return 1;
     }
 
-    lua_obj->failures = 0;
+    ut_initialize(lua_obj);
+
     Ordering<int,int> mylist;
 
     // add initial set
@@ -170,12 +109,12 @@ int UT_Ordering::testAddRemove(lua_State* L)
     }
 
     // check size
-    ut_assert(mylist.length() == 75, "failed length check %d\n", mylist.length());
+    ut_assert(lua_obj, mylist.length() == 75, "failed length check %d\n", mylist.length());
 
     // check initial set
     for(int i = 0; i < 75; i++)
     {
-        ut_assert(mylist[i] == i, "failed to add %d\n", i);
+        ut_assert(lua_obj, mylist[i] == i, "failed to add %d\n", i);
     }
 
     // remove a handful of items
@@ -188,19 +127,19 @@ int UT_Ordering::testAddRemove(lua_State* L)
     mylist.remove(0);
 
     // check new size
-    ut_assert(mylist.length() == 68, "failed length check %d\n", mylist.length());
+    ut_assert(lua_obj, mylist.length() == 68, "failed length check %d\n", mylist.length());
 
     // check final set
-    for(int i =  1; i < 11; i++) ut_assert(mylist[i] == i, "failed to keep %d\n", i);
-    for(int i = 12; i < 22; i++) ut_assert(mylist[i] == i, "failed to keep %d\n", i);
-    for(int i = 23; i < 33; i++) ut_assert(mylist[i] == i, "failed to keep %d\n", i);
-    for(int i = 34; i < 44; i++) ut_assert(mylist[i] == i, "failed to keep %d\n", i);
-    for(int i = 45; i < 55; i++) ut_assert(mylist[i] == i, "failed to keep %d\n", i);
-    for(int i = 56; i < 66; i++) ut_assert(mylist[i] == i, "failed to keep %d\n", i);
-    for(int i = 67; i < 75; i++) ut_assert(mylist[i] == i, "failed to keep %d\n", i);
+    for(int i =  1; i < 11; i++) ut_assert(lua_obj, mylist[i] == i, "failed to keep %d\n", i);
+    for(int i = 12; i < 22; i++) ut_assert(lua_obj, mylist[i] == i, "failed to keep %d\n", i);
+    for(int i = 23; i < 33; i++) ut_assert(lua_obj, mylist[i] == i, "failed to keep %d\n", i);
+    for(int i = 34; i < 44; i++) ut_assert(lua_obj, mylist[i] == i, "failed to keep %d\n", i);
+    for(int i = 45; i < 55; i++) ut_assert(lua_obj, mylist[i] == i, "failed to keep %d\n", i);
+    for(int i = 56; i < 66; i++) ut_assert(lua_obj, mylist[i] == i, "failed to keep %d\n", i);
+    for(int i = 67; i < 75; i++) ut_assert(lua_obj, mylist[i] == i, "failed to keep %d\n", i);
 
     // return success or failure
-    lua_pushboolean(L, lua_obj->failures == 0);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -221,7 +160,8 @@ int UT_Ordering::testDuplicates(lua_State* L)
         return 1;
     }
 
-    lua_obj->failures = 0;
+    ut_initialize(lua_obj);
+
     Ordering<int,int> mylist;
 
     // add initial set
@@ -232,18 +172,18 @@ int UT_Ordering::testDuplicates(lua_State* L)
     }
 
     // check size
-    ut_assert(mylist.length() == 40, "failed length check %d\n", mylist.length());
+    ut_assert(lua_obj, mylist.length() == 40, "failed length check %d\n", mylist.length());
 
     // check initial set
     for(int i = 0; i < 20; i++)
     {
-        ut_assert(mylist[i] == i, "failed to add %d\n", i);
+        ut_assert(lua_obj, mylist[i] == i, "failed to add %d\n", i);
         mylist.remove(i);
-        ut_assert(mylist[i] == i, "failed to add %d\n", i);
+        ut_assert(lua_obj, mylist[i] == i, "failed to add %d\n", i);
     }
 
     // return success or failure
-    lua_pushboolean(L, lua_obj->failures == 0);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -264,12 +204,12 @@ int UT_Ordering::testSort(lua_State* L)
         return 1;
     }
 
-    lua_obj->failures = 0;
+    ut_initialize(lua_obj);
 
     // in order
     Ordering<int,int> mylist1;
     for(int i = 0; i < 20; i++)mylist1.add(i, i);
-    for(int i = 0; i < 20; i++) ut_assert(mylist1[i] == i, "failed to sort %d\n", i);
+    for(int i = 0; i < 20; i++) ut_assert(lua_obj, mylist1[i] == i, "failed to sort %d\n", i);
 
     // reverse order
     Ordering<int,int> mylist2;
@@ -278,7 +218,7 @@ int UT_Ordering::testSort(lua_State* L)
         const int d = 20 - i;
         mylist2.add(20 - i, d);
     }
-    for(int i = 1; i <= 20; i++) ut_assert(mylist2[i] == i, "failed to sort %d\n", i);
+    for(int i = 1; i <= 20; i++) ut_assert(lua_obj, mylist2[i] == i, "failed to sort %d\n", i);
 
     // random order
     Ordering<int,int> mylist3;
@@ -303,9 +243,9 @@ int UT_Ordering::testSort(lua_State* L)
     d = 17; mylist3.add(17, d);
     d = 16; mylist3.add(16, d);
     d = 0; mylist3.add(0, d);
-    for(int i = 0; i < 20; i++) ut_assert(mylist3[i] == i, "failed to sort %d\n", i);
+    for(int i = 0; i < 20; i++) ut_assert(lua_obj, mylist3[i] == i, "failed to sort %d\n", i);
 
-    lua_pushboolean(L, lua_obj->failures == 0);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -326,7 +266,7 @@ int UT_Ordering::testIterator(lua_State* L)
         return 1;
     }
 
-    lua_obj->failures = 0;
+    ut_initialize(lua_obj);
 
     Ordering<int,int> mylist;
 
@@ -339,11 +279,11 @@ int UT_Ordering::testIterator(lua_State* L)
     const Ordering<int,int>::Iterator iterator(mylist);
     for(int i = 0; i < 20; i++)
     {
-        ut_assert(iterator[i].key == (i + 1), "failed to iterate key %d\n", i + 1);
-        ut_assert(iterator[i].value == (i + 1), "failed to iterate value %d\n", i + 1);
+        ut_assert(lua_obj, iterator[i].key == (i + 1), "failed to iterate key %d\n", i + 1);
+        ut_assert(lua_obj, iterator[i].value == (i + 1), "failed to iterate value %d\n", i + 1);
     }
 
-    lua_pushboolean(L, lua_obj->failures == 0);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -364,7 +304,7 @@ int UT_Ordering::testAssignment(lua_State* L)
         return 1;
     }
 
-    lua_obj->failures = 0;
+    ut_initialize(lua_obj);
     Ordering<int,int> mylist;
 
     // add initial set
@@ -387,18 +327,18 @@ int UT_Ordering::testAssignment(lua_State* L)
     copiedlist = mylist;
 
     // check new size
-    ut_assert(copiedlist.length() == 68, "failed length check %d\n", copiedlist.length());
+    ut_assert(lua_obj, copiedlist.length() == 68, "failed length check %d\n", copiedlist.length());
 
     // check final set
-    for(int i =  1; i < 11; i++) ut_assert(copiedlist[i] == i, "failed to keep %d\n", i);
-    for(int i = 12; i < 22; i++) ut_assert(copiedlist[i] == i, "failed to keep %d\n", i);
-    for(int i = 23; i < 33; i++) ut_assert(copiedlist[i] == i, "failed to keep %d\n", i);
-    for(int i = 34; i < 44; i++) ut_assert(copiedlist[i] == i, "failed to keep %d\n", i);
-    for(int i = 45; i < 55; i++) ut_assert(copiedlist[i] == i, "failed to keep %d\n", i);
-    for(int i = 56; i < 66; i++) ut_assert(copiedlist[i] == i, "failed to keep %d\n", i);
-    for(int i = 67; i < 75; i++) ut_assert(copiedlist[i] == i, "failed to keep %d\n", i);
+    for(int i =  1; i < 11; i++) ut_assert(lua_obj, copiedlist[i] == i, "failed to keep %d\n", i);
+    for(int i = 12; i < 22; i++) ut_assert(lua_obj, copiedlist[i] == i, "failed to keep %d\n", i);
+    for(int i = 23; i < 33; i++) ut_assert(lua_obj, copiedlist[i] == i, "failed to keep %d\n", i);
+    for(int i = 34; i < 44; i++) ut_assert(lua_obj, copiedlist[i] == i, "failed to keep %d\n", i);
+    for(int i = 45; i < 55; i++) ut_assert(lua_obj, copiedlist[i] == i, "failed to keep %d\n", i);
+    for(int i = 56; i < 66; i++) ut_assert(lua_obj, copiedlist[i] == i, "failed to keep %d\n", i);
+    for(int i = 67; i < 75; i++) ut_assert(lua_obj, copiedlist[i] == i, "failed to keep %d\n", i);
 
     // return success or failure
-    lua_pushboolean(L, lua_obj->failures == 0);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }

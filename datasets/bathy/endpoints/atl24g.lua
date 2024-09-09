@@ -8,7 +8,7 @@ local runner        = require("container_runtime")
 local rqst          = json.decode(arg[1])
 local parms         = rqst["parms"] or {}
 local resource      = parms["resource"]
-local timeout       = parms["node-timeout"] or parms["timeout"] or netsvc.NODE_TIMEOUT
+local timeout       = parms["node-timeout"] or parms["timeout"] or core.NODE_TIMEOUT
 local interval      = 10 < timeout and 10 or timeout -- seconds
 
 -------------------------------------------------------
@@ -27,16 +27,16 @@ end
 -------------------------------------------------------
 local function cleanup(_crenv, _transaction_id)
     runner.cleanup(_crenv) -- container runtime environment
-    netsvc.orchunlock({_transaction_id}) -- unlock transaction
+    core.orchunlock({_transaction_id}) -- unlock transaction
 end
 
 -------------------------------------------------------
 -- acquire lock for processing granule (because this is not proxied)
 -------------------------------------------------------
-local transaction_id = netsvc.INVALID_TX_ID
-while transaction_id == netsvc.INVALID_TX_ID do
-    transaction_id = netsvc.orchselflock("sliderule", timeout, 3)
-    if transaction_id == netsvc.INVALID_TX_ID then
+local transaction_id = core.INVALID_TX_ID
+while transaction_id == core.INVALID_TX_ID do
+    transaction_id = core.orchselflock("sliderule", timeout, 3)
+    if transaction_id == core.INVALID_TX_ID then
         local lock_retry_wait_time = (time.gps() - endpoint_start_time) / 1000.0
         if lock_retry_wait_time >= timeout then
             userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> failed to acquire lock... exiting", rspq))
@@ -171,14 +171,20 @@ local atl09_max_retries = 3
 local atl09_attempt = 1
 while true do
     local rc2, rsps2 = earthdata.search(parms)
-    if rc2 == earthdata.SUCCESS and #rsps2 == 1 then
-        parms["resource09"] = rsps2[1]
-        break -- success
+    if rc2 == earthdata.SUCCESS then
+        if #rsps2 == 1 then
+            parms["resource09"] = rsps2[1]
+            break -- success
+        else
+            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> returned an invalid number of resources for ATL09 CMR request for %s: %d", rspq, resource, #rsps2))
+            cleanup(crenv, transaction_id)
+            return -- failure
+        end
     else
         userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed attempt %d to make ATL09 CMR request <%d>: %s", rspq, atl09_attempt, rc2, rsps2))
         atl09_attempt = atl09_attempt + 1
-        if atl09_attempt == atl09_max_retries then
-            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to make ATL09 CMR request... aborting!", rspq))
+        if atl09_attempt > atl09_max_retries then
+            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to make ATL09 CMR request for %s... aborting!", rspq, resource))
             cleanup(crenv, transaction_id)
             return -- failure
         end

@@ -33,12 +33,17 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaLibrarySys.h"
-#include "LuaEngine.h"
-#include "core.h"
-
 #include <unistd.h>
 #include <filesystem>
+
+#include "LuaLibrarySys.h"
+#include "LuaEngine.h"
+#include "OsApi.h"
+#include "TimeLib.h"
+#include "LuaObject.h"
+#include "RecordObject.h"
+#include "DeviceObject.h"
+#include "core.h"
 
 /******************************************************************************
  * STATIC DATA

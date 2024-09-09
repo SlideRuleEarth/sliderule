@@ -15,6 +15,7 @@ if __core__ then
     runner.script(td .. "http_faults.lua")
     runner.script(td .. "http_rqst.lua")
     runner.script(td .. "lua_script.lua")
+    runner.script(td .. "earth_data.lua")
 --    runner.script(td .. "ccsds_packetizer.lua")
 --    runner.script(td .. "record_dispatcher.lua")
 --    runner.script(td .. "limit_dispatch.lua")
@@ -55,11 +56,6 @@ end
 if __geo__ then
     runner.script(td .. "geojson_raster.lua")
     runner.script(td .. "geouser_raster.lua")
-end
-
--- Run Network Services Self Tests
-if __netsvc__ then
-    runner.script(td .. "earth_data.lua")
 end
 
 -- Run ICESat-2 Plugin Self Tests

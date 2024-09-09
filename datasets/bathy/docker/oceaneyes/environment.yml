@@ -1,0 +1,20 @@
+name: oceaneyes
+channels:
+  - conda-forge
+dependencies:
+  - numpy
+  - pandas
+  - geopandas
+  - pyarrow
+  - h5py
+  - rasterio
+  - pytorch
+  - requests
+  - networkx
+  - scikit-learn
+  - pyproj
+  - numba
+  - pathos
+  - tqdm
+  - xgboost
+  - pip

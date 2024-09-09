@@ -40,7 +40,7 @@
 #include "StringLib.h"
 #include "MsgQ.h"
 #include "OsApi.h"
-
+#include "EventLib.h"
 
 /******************************************************************************
  * DEFINES

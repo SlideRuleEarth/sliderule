@@ -7,8 +7,8 @@ local startrow = tonumber(arg[4]) or 13665185
 local numrows = tonumber(arg[5]) or 89624
 local dataset_file = arg[6] or dataset:sub(string.find(dataset, "/[^/]*$") + 1)
 
-local file_writer = core.writer(core.file(core.WRITER, core.BINARY, dataset_file..".bin", core.FLUSHED), "h5rawq")
-local file_reader = core.reader(h5.dataset(core.READER, "file://"..resource, dataset, 0, true, core.DYNAMIC, col, startrow, numrows), "h5rawq")
+local file_writer = streaming.writer(streaming.file(streaming.WRITER, streaming.BINARY, dataset_file..".bin", streaming.FLUSHED), "h5rawq")
+local file_reader = streaming.reader(h5.dataset(streaming.READER, "file://"..resource, dataset, 0, true, core.DYNAMIC, col, startrow, numrows), "h5rawq")
 
 file_reader:waiton()
 file_reader:destroy()
