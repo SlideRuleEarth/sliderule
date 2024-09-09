@@ -143,12 +143,13 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
     lockSampling();
     try
     {
+        GroupOrdering groupList;
+        OGRPoint      ogr_point(point.x, point.y, point.z);
+
         ssErrors = SS_NO_ERRORS;
 
-        OGRPoint ogr_point(point.x, point.y, point.z);
-
         /* Sample Rasters */
-        if(sample(&ogr_point, gps))
+        if(sample(&ogr_point, gps, &groupList))
         {
             /* Populate Return Vector of Samples (slist) */
             const GroupOrdering::Iterator iter(groupList);
@@ -198,17 +199,102 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
 uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sample_list_t*>& sllist, void* param)
 {
     static_cast<void>(param);
-    static_cast<void>(sllist);
-    static_cast<void>(points);
 
     // Call the base class function
-    ssErrors = RasterObject::getSamples(points, sllist, param);
+    // ssErrors = RasterObject::getSamples(points, sllist, param);
 
-#if 0
+    /* cast away constness because of List [] operator */
+    List<point_info_t*>& _points = const_cast<List<point_info_t*>&>(points);
+
+    /* List of points and their associated raster groups */
+    std::vector<point_raster_groups_t> pointsRasterGroups;
+
+    //TODO REMOVE THIS
+    sllist.clear();
+
     lockSampling();
     try
     {
         ssErrors = SS_NO_ERRORS;
+        double t0, t1;
+
+        /* Find raster groups for each point */
+        print2term("Finding raster groups\n");
+        t0 = TimeLib::latchtime();
+        for(int i = 0; i < _points.length(); i++)
+        {
+            const point_info_t* pinfo = _points[i];
+            const int64_t gps = usePOItime() ? pinfo->gps : 0.0;
+            OGRPoint ogr_point(pinfo->point.x, pinfo->point.y, pinfo->point.z);
+
+            GroupOrdering* groupList = new GroupOrdering();
+            findRastersParallel(&ogr_point, groupList);
+            filterRasters(gps, groupList);
+
+            pointsRasterGroups.emplace_back(point_raster_groups_t{&pinfo->point, groupList});
+        }
+        t1 = TimeLib::latchtime();
+        print2term("time: %6.3lf\n", t1 - t0);
+        print2term("Number of pointsRasterGroups: %zu\n", pointsRasterGroups.size());
+
+        /* List of rasters and all points they contain */
+        std::vector<raster_points_t> rastersPoints;
+
+        /* Find unique rasters */
+        print2term("Finding unique rasters\n");
+        t0 = TimeLib::latchtime();
+        for(const point_raster_groups_t& prg : pointsRasterGroups)
+        {
+            const GroupOrdering::Iterator iter(*prg.groupList);
+            for(int i = 0; i < iter.length; i++)
+            {
+                const rasters_group_t* rgroup = iter[i].value;
+                for(const auto& rinfo : rgroup->infovect)
+                {
+                    /* Only add unique rasters */
+                    if(std::none_of(rastersPoints.begin(), rastersPoints.end(), [&rinfo](const raster_points_t& rpts) {
+                            return rpts.rinfo.fileName == rinfo.fileName;
+                        }))
+                    {
+                        rastersPoints.emplace_back(raster_points_t{rinfo, {}});
+                    }
+                }
+            }
+        }
+        t1 = TimeLib::latchtime();
+        print2term("time: %6.3lf\n", t1 - t0);
+        print2term("Number of unique rasters: %zu\n", rastersPoints.size());
+
+
+        /* List of points for each unique raster */
+        print2term("Finding points for unique rasters\n");
+        t0 = TimeLib::latchtime();
+        for(raster_points_t& rpts : rastersPoints)
+        {
+            for(const point_raster_groups_t& prg : pointsRasterGroups)
+            {
+                const GroupOrdering::Iterator iter(*prg.groupList);
+                for(int i = 0; i < iter.length; i++)
+                {
+                    const rasters_group_t* rgroup = iter[i].value;
+                    for(const auto& rinfo : rgroup->infovect)
+                    {
+                        if(rinfo.fileName == rpts.rinfo.fileName)
+                        {
+                            rpts.points.emplace_back(prg.point);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        t1 = TimeLib::latchtime();
+        print2term("time: %6.3lf\n", t1 - t0);
+
+        for(const raster_points_t& rpts : rastersPoints)
+        {
+            print2term("%6zu  -- %s\n", rpts.points.size(), rpts.rinfo.fileName.c_str());
+        }
 
     }
     catch (const RunTimeException &e)
@@ -216,7 +302,12 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
         mlog(e.level(), "Error getting samples: %s", e.what());
     }
     unlockSampling();
-#endif
+
+    /* Clean up */
+    for(const point_raster_groups_t& prg : pointsRasterGroups)
+    {
+        delete prg.groupList;
+    }
 
     return ssErrors;
 }
@@ -231,12 +322,12 @@ uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t g
     lockSampling();
     try
     {
+        GroupOrdering groupList;
+        OGRPolygon    poly = GdalRaster::makeRectangle(extent.ll.x, extent.ll.y, extent.ur.x, extent.ur.y);
         ssErrors = SS_NO_ERRORS;
 
-        OGRPolygon poly = GdalRaster::makeRectangle(extent.ll.x, extent.ll.y, extent.ur.x, extent.ur.y);
-
         /* Sample Subsets */
-        if(sample(&poly, gps))
+        if(sample(&poly, gps, &groupList))
         {
             /* Populate Return Vector of Subsets (slist) */
             const GroupOrdering::Iterator iter(groupList);
@@ -569,18 +660,18 @@ void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps)
+bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps, GroupOrdering* groupList)
 {
     /* Parallelized search for rasters intersecting with point/polygon */
-    if(!findRastersParallel(geo))
+    if(!findRastersParallel(geo, groupList))
         return false;
 
     /* Filter rasters - must be done in one thread (uses Lists and Orderings) */
-    if(!filterRasters(gps))
+    if(!filterRasters(gps, groupList))
         return false;
 
     uint32_t rasters2sample = 0;
-    if(!updateCache(rasters2sample))
+    if(!updateCache(rasters2sample, groupList))
         return false;
 
     /* Create additional reader threads if needed */
@@ -847,7 +938,7 @@ bool GeoIndexedRaster::createReaderThreads(uint32_t rasters2sample)
 /*----------------------------------------------------------------------------
  * updateCache
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::updateCache(uint32_t& rasters2sample)
+bool GeoIndexedRaster::updateCache(uint32_t& rasters2sample, const GroupOrdering* groupList)
 {
     /* Mark all items in cache as not enabled */
     {
@@ -861,7 +952,7 @@ bool GeoIndexedRaster::updateCache(uint32_t& rasters2sample)
     }
 
     /* Cache contains items/rasters from previous sample run */
-    const GroupOrdering::Iterator group_iter(groupList);
+    const GroupOrdering::Iterator group_iter(*groupList);
     for(int i = 0; i < group_iter.length; i++)
     {
         const rasters_group_t* rgroup = group_iter[i].value;
@@ -931,12 +1022,12 @@ bool GeoIndexedRaster::updateCache(uint32_t& rasters2sample)
 /*----------------------------------------------------------------------------
  * filterRasters
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::filterRasters(int64_t gps)
+bool GeoIndexedRaster::filterRasters(int64_t gps, GroupOrdering* groupList)
 {
     /* NOTE: temporal filter is applied in openGeoIndex() */
     if(parms->url_substring || parms->filter_doy_range)
     {
-        const GroupOrdering::Iterator group_iter(groupList);
+        const GroupOrdering::Iterator group_iter(*groupList);
         for(int i = 0; i < group_iter.length; i++)
         {
             const rasters_group_t* rgroup = group_iter[i].value;
@@ -979,7 +1070,7 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
 
             if(removeGroup)
             {
-                groupList.remove(group_iter[i].key);
+                groupList->remove(group_iter[i].key);
             }
         }
     }
@@ -1002,7 +1093,7 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
         int64_t minDelta = abs(std::numeric_limits<int64_t>::max() - closestGps);
 
         /* Find raster group with the closest time */
-        const GroupOrdering::Iterator group_iter(groupList);
+        const GroupOrdering::Iterator group_iter(*groupList);
         for(int i = 0; i < group_iter.length; i++)
         {
             const rasters_group_t* rgroup = group_iter[i].value;
@@ -1022,12 +1113,12 @@ bool GeoIndexedRaster::filterRasters(int64_t gps)
 
             if(delta > minDelta)
             {
-                groupList.remove(group_iter[i].key);
+                groupList->remove(group_iter[i].key);
             }
         }
     }
 
-    return (!groupList.empty());
+    return (!groupList->empty());
 }
 
 /*----------------------------------------------------------------------------
@@ -1075,10 +1166,8 @@ void GeoIndexedRaster::setFindersRange(void)
 /*----------------------------------------------------------------------------
  * findRastersParallel
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::findRastersParallel(OGRGeometry* geo)
+bool GeoIndexedRaster::findRastersParallel(OGRGeometry* geo, GroupOrdering* groupList)
 {
-    groupList.clear();
-
     /* For AOI always open new index file, for POI it depends... */
     const bool openNewFile = GdalRaster::ispoly(geo) || geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo);
     if(openNewFile)
@@ -1125,11 +1214,11 @@ bool GeoIndexedRaster::findRastersParallel(OGRGeometry* geo)
         for(uint32_t j = 0; j < finder->rasterGroups.size(); j++)
         {
             rasters_group_t* rgroup = finder->rasterGroups[j];
-            groupList.add(groupList.length(), rgroup);
+            groupList->add(groupList->length(), rgroup);
         }
     }
 
-    return (!groupList.empty());
+    return (!groupList->empty());
 }
 
 

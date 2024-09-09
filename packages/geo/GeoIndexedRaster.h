@@ -134,6 +134,25 @@ class GeoIndexedRaster: public RasterObject
     protected:
 
         /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef Dictionary<cacheitem_t*> CacheDictionary;
+        typedef Ordering<rasters_group_t*, unsigned long> GroupOrdering;
+
+        typedef struct {
+            const MathLib::point_3d_t*  point;
+            GroupOrdering*              groupList;
+        } point_raster_groups_t;
+
+        typedef struct
+        {
+            raster_info_t                            rinfo;
+            std::vector<const MathLib::point_3d_t*>  points;
+        } raster_points_t;
+
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -147,21 +166,13 @@ class GeoIndexedRaster: public RasterObject
         virtual void    getIndexFile          (const OGRGeometry* geo, std::string& file) = 0;
         virtual bool    findRasters           (finder_t* finder) = 0;
         void            sampleRasters         (OGRGeometry* geo);
-        bool            sample                (OGRGeometry* geo, int64_t gps);
+        bool            sample                (OGRGeometry* geo, int64_t gps, GroupOrdering* groupList);
         void            emptyFeaturesList     (void);
-
-        /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef Dictionary<cacheitem_t*> CacheDictionary;
-        typedef Ordering<rasters_group_t*, unsigned long> GroupOrdering;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        GroupOrdering           groupList;
         CacheDictionary         cache;
         vector<OGRFeature*>     featuresList;
         OGRPolygon              geoIndexPoly;
@@ -205,10 +216,10 @@ class GeoIndexedRaster: public RasterObject
 
         bool            createFinderThreads (void);
         bool            createReaderThreads (uint32_t  rasters2sample);
-        bool            updateCache         (uint32_t& rasters2sample);
-        bool            filterRasters       (int64_t gps);
+        bool            updateCache         (uint32_t& rasters2sample, const GroupOrdering* groupList);
+        bool            filterRasters       (int64_t gps, GroupOrdering* groupList);
         void            setFindersRange     (void);
-        bool            findRastersParallel (OGRGeometry* geo);
+        bool            findRastersParallel (OGRGeometry* geo, GroupOrdering* groupList);
 };
 
 #endif  /* __geo_indexed_raster__ */

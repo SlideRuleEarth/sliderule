@@ -650,9 +650,9 @@ uint32_t RasterObject::readSamples(RasterObject* robj, const points_range_t& ran
             break;
         }
 
-        RasterObject::point_info_t* pinfo = _points[i];
-        const MathLib::point_3d_t&  point = pinfo->point;
-        const double gps = robj->usePOItime() ? pinfo->gps : 0.0;
+        const RasterObject::point_info_t* pinfo = _points[i];
+        const MathLib::point_3d_t& point = pinfo->point;
+        const int64_t gps = robj->usePOItime() ? pinfo->gps : 0.0;
 
         sample_list_t* slist = new sample_list_t;
         bool listvalid = true;
