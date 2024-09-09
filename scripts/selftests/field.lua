@@ -1,10 +1,14 @@
 local runner = require("test_executive")
 local console = require("console")
 
+-- Check If Present --
+if not core.UNITTEST then return end
+
+-- Setup --
 console.monitor:config(core.LOG, core.INFO)
 sys.setlvl(core.LOG, core.INFO)
 
--- Test --
+-- Unit Test --
 
 local ut = core.ut_field()
 runner.check(ut:element())

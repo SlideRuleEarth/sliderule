@@ -3,14 +3,14 @@ local console = require("console")
 
 -- UdpSocket Unit Test --
 
-server = core.udp("127.0.0.1", 35505, streaming.SERVER):name("server")
-client = core.udp("127.0.0.1", 35505, streaming.CLIENT):name("client")
+local server = streaming.udp("127.0.0.1", 35505, streaming.SERVER):name("server")
+local client = streaming.udp("127.0.0.1", 35505, streaming.CLIENT):name("client")
 
 sys.wait(2)
 
-expected_message = "Hello World"
+local expected_message = "Hello World"
 runner.check(client:send(expected_message), "Failed to send message")
-actual_message = server:receive()
+local actual_message = server:receive()
 
 print("Message: ", actual_message)
 runner.check(expected_message == actual_message, "Failed to match messages")

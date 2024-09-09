@@ -1,5 +1,8 @@
 local runner = require("test_executive")
 
+-- Check If Present --
+if not core.UNITTEST then return end
+
 -- TimeLib Unit Test --
 
 local ut_timelib = core.ut_timelib()

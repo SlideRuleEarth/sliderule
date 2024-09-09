@@ -352,8 +352,8 @@ int main (int argc, char* argv[])
         inith5();
     #endif
 
-    #ifdef __stream__
-        initstream();
+    #ifdef __streaming__
+        initstreaming();
     #endif
 
     #ifdef __bathy__
@@ -465,8 +465,8 @@ int main (int argc, char* argv[])
         deinitusgs3dep();
     #endif
 
-    #ifdef __stream__
-        deinitstream();
+    #ifdef __streaming__
+        deinitstreaming();
     #endif
 
     #ifdef __h5__

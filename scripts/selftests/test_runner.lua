@@ -5,30 +5,31 @@ local incloud = arg[1] == "cloud"
 
 -- Run Core Self Tests --
 if __core__ then
+    runner.script(td .. "monitor.lua")
+    runner.script(td .. "http_server.lua")
+    runner.script(td .. "lua_script.lua")
+    runner.script(td .. "earth_data.lua")
+    runner.script(td .. "message_queue.lua")
+    runner.script(td .. "list.lua")
+    runner.script(td .. "ordering.lua")
+    runner.script(td .. "dictionary.lua")
+    runner.script(td .. "table.lua")
+    runner.script(td .. "timelib.lua")
+end
+
+-- Run Streaming Self Tests --
+if __streaming__ then
     runner.script(td .. "tcp_socket.lua")
     runner.script(td .. "udp_socket.lua")
     runner.script(td .. "multicast_device_writer.lua")
     runner.script(td .. "cluster_socket.lua")
-    runner.script(td .. "monitor.lua")
-    runner.script(td .. "http_server.lua")
     runner.script(td .. "http_client.lua")
     runner.script(td .. "http_faults.lua")
     runner.script(td .. "http_rqst.lua")
-    runner.script(td .. "lua_script.lua")
-    runner.script(td .. "earth_data.lua")
 --    runner.script(td .. "ccsds_packetizer.lua")
 --    runner.script(td .. "record_dispatcher.lua")
 --    runner.script(td .. "limit_dispatch.lua")
-    if core.UNITTEST then
-        runner.script(td .. "message_queue.lua")
-        runner.script(td .. "list.lua")
-        runner.script(td .. "ordering.lua")
-        runner.script(td .. "dictionary.lua")
-        runner.script(td .. "table.lua")
-        runner.script(td .. "timelib.lua")
-    end
 end
-
 
 -- Run AWS Self Tests --
 if __aws__ then
@@ -40,11 +41,6 @@ end
 -- Run H5 Self Tests --
 if __h5__ then
     runner.script(td .. "hdf5_file.lua")
-end
-
--- Run Pistache Self Tests --
-if __pistache__ then
-    runner.script(td .. "pistache_endpoint.lua")
 end
 
 -- Run Parquet Self Tests --
