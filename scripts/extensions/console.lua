@@ -1,9 +1,4 @@
-local console_monitor = core.monitor(core.LOG, core.INFO, core.FMT_TEXT):name("console.monitor")
-console_monitor:tail(1024)
-
-local console_dispatcher = streaming.dispatcher(core.EVENTQ, 1):name("console.dispatcher")
-console_dispatcher:attach(console_monitor, "eventrec")
-console_dispatcher:run()
+local console_monitor = core.monitor(core.LOG, core.INFO, core.FMT_TEXT):tail(1024):name("console.monitor")
 
 local function loglvl (lvl)
     console_monitor:config(core.LOG, lvl)
@@ -11,7 +6,6 @@ local function loglvl (lvl)
 end
 
 local package = {
-    dispatcher = console_dispatcher,
     monitor = console_monitor,
     loglvl = loglvl
 }

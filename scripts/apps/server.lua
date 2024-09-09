@@ -62,13 +62,8 @@ sys.setmemlimit(stream_mem_thresh)
 
 -- Configure Monitoring --
 sys.setlvl(core.LOG | core.TRACE | core.METRIC, event_level) -- set level globally
-local log_monitor = core.monitor(core.LOG, core.DEBUG, event_format):name("LogMonitor") -- monitor logs and write to stdout
-log_monitor:tail(1024)
+local log_monitor = core.monitor(core.LOG, core.DEBUG, event_format):tail(1024):name("LogMonitor") -- monitor logs and write to stdout
 local metric_monitor = core.mmonitor(core.DEBUG):name("MetricMonitor") -- monitor metrics and push to orchestrator
-local dispatcher = streaming.dispatcher(core.EVENTQ, 1):name("EventDispatcher")
-dispatcher:attach(log_monitor, "eventrec")
-dispatcher:attach(metric_monitor, "eventrec")
-dispatcher:run()
 
 -- Configure Assets --
 local assets = asset.loaddir(asset_directory)

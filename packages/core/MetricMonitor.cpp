@@ -53,9 +53,10 @@ int MetricMonitor::luaCreate (lua_State* L)
     {
         /* Get Parmeters */
         const event_level_t level = static_cast<event_level_t>(getLuaInteger(L, 1));
+        const char* eventq_name = getLuaString(L, 2, true, EVENTQ);
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new MetricMonitor(L, level));
+        return createLuaObject(L, new MetricMonitor(L, level, eventq_name));
     }
     catch(const RunTimeException& e)
     {
@@ -83,8 +84,8 @@ void MetricMonitor::processEvent(const unsigned char* event_buf_ptr, int event_s
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-MetricMonitor::MetricMonitor(lua_State* L, event_level_t level):
-    Monitor(L, EventLib::METRIC, level, Monitor::JSON)
+MetricMonitor::MetricMonitor(lua_State* L, event_level_t level, const char* eventq_name):
+    Monitor(L, EventLib::METRIC, level, Monitor::JSON, eventq_name)
 {
 }
 

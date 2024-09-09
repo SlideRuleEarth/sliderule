@@ -70,7 +70,7 @@ class MetricMonitor: public Monitor
          * Methods
          *--------------------------------------------------------------------*/
 
-        MetricMonitor  (lua_State* L, event_level_t level);
+        MetricMonitor  (lua_State* L, event_level_t level, const char* eventq_name);
         ~MetricMonitor (void) override;
 };
 

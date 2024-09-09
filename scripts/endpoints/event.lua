@@ -24,9 +24,7 @@ local format = global.eval(parm["format"]) or nil
 local duration = parm["duration"] or 0
 
 -- Attach monitor to post event to response queue --
-local userevents = streaming.dispatcher(core.EVENTQ)
-userevents:attach(core.pmonitor(type, level, format, rspq), "eventrec")
-userevents:run()
+local userevents = core.pmonitor(type, level, format, core.EVENTQ, rspq)
 
 -- Bounds check duration
 if duration > 600 then
