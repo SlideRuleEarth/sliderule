@@ -76,7 +76,6 @@ USERCFG ?=
 DISTRIBUTION_ID = $(shell aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" --output text)
 
 CLANG_VER ?= ""
-CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
 
 DEBUG_CFG := -DCMAKE_BUILD_TYPE=Debug

@@ -63,6 +63,10 @@
 #include "h5.h"
 #endif
 
+#ifdef __legacy__
+#include "legacy.h"
+#endif
+
 #ifdef __streaming__
 #include "streaming.h"
 #endif
@@ -352,6 +356,10 @@ int main (int argc, char* argv[])
         inith5();
     #endif
 
+    #ifdef __legacy__
+        initlegacy();
+    #endif
+
     #ifdef __streaming__
         initstreaming();
     #endif
@@ -467,6 +475,10 @@ int main (int argc, char* argv[])
 
     #ifdef __streaming__
         deinitstreaming();
+    #endif
+
+    #ifdef __legacy__
+        deinitlegacy();
     #endif
 
     #ifdef __h5__

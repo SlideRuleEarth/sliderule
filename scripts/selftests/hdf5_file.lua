@@ -2,16 +2,16 @@ local runner = require("test_executive")
 local console = require("console")
 local td = runner.rootdir(arg[0])
 
-asset = core.asset("local", "nil", "file", td, "empty.index")
+local asset = core.asset("local", "nil", "file", td, "empty.index")
 
 -- Unit Test --
 
 print('\n------------------\nTest01: File\n------------------')
 
-f1 = h5.file(asset, "h5ex_d_gzip.h5")
-rsps1 = msg.subscribe("h5testq")
+local f1 = h5.file(asset, "h5ex_d_gzip.h5")
+local rsps1 = msg.subscribe("h5testq")
 f1:read({{dataset="DS1", col=2}}, "h5testq")
-recdata = rsps1:recvrecord(3000)
+local recdata = rsps1:recvrecord(3000)
 
 runner.check(-2 == string.unpack("i", string.char(recdata:getvalue("data[0]"), recdata:getvalue("data[1]"), recdata:getvalue("data[2]"), recdata:getvalue("data[3]"))), "failed to read hdf5 file")
 runner.check( 0 == string.unpack("i", string.char(recdata:getvalue("data[4]"), recdata:getvalue("data[5]"), recdata:getvalue("data[6]"), recdata:getvalue("data[7]"))), "failed to read hdf5 file")
@@ -24,14 +24,14 @@ f1:destroy()
 
 print('\n------------------\nTest02: Read Dataset\n------------------')
 
-dataq = "dataq"
-rsps2 = msg.subscribe(dataq)
+local dataq = "dataq"
+local rsps2 = msg.subscribe(dataq)
 
-f2 = h5.dataset(streaming.READER, asset, "h5ex_d_gzip.h5", "/DS1", 0, true, core.INTEGER, 2, 0, core.ALL_ROWS)
-r2 = streaming.reader(f2, dataq)
+local f2 = h5.dataset(streaming.READER, asset, "h5ex_d_gzip.h5", "/DS1", 0, true, core.INTEGER, 2, 0, core.ALL_ROWS)
+local r2 = streaming.reader(f2, dataq)
 
-vals = rsps2:recvstring(3000)
-e1, e2, e3, e4 = string.unpack('jjjj', vals)
+local vals = rsps2:recvstring(3000)
+local e1, e2, e3, e4 = string.unpack('jjjj', vals)
 
 runner.check(-2 == e1, string.format("failed dataset read, expected: %d, actual: %d", -2, e1))
 runner.check( 0 == e2, string.format("failed dataset read, expected: %d, actual: %d", 0,  e2))
@@ -43,15 +43,15 @@ r2:destroy()
 
 print('\n------------------\nTest03: Read Dataset as Record\n------------------')
 
-recq = "recq"
-rsps3 = msg.subscribe(recq)
+local recq = "recq"
+local rsps3 = msg.subscribe(recq)
 
-f3 = h5.dataset(streaming.READER, asset, "h5ex_d_gzip.h5", "/DS1", 5, false, core.INTEGER, 2, 0, core.ALL_ROWS)
-r3 = streaming.reader(f3, recq)
+local f3 = h5.dataset(streaming.READER, asset, "h5ex_d_gzip.h5", "/DS1", 5, false, core.INTEGER, 2, 0, core.ALL_ROWS)
+local r3 = streaming.reader(f3, recq)
 
 recdata = rsps3:recvrecord(3000)
 
-rectable = recdata:tabulate()
+local rectable = recdata:tabulate()
 print("ID:     "..rectable.id)
 print("OFFSET: "..rectable.offset)
 print("SIZE:   "..rectable.size)
@@ -63,10 +63,10 @@ r3:destroy()
 
 print('\n------------------\nTest04: Read Dataset Raw\n------------------')
 
-h5_file = "h5ex_d_gzip.bin"
-o4 = streaming.writer(core.file(streaming.WRITER, core.BINARY, h5_file, core.FLUSHED), "h5rawq")
-f4 = h5.dataset(streaming.READER, asset, "h5ex_d_gzip.h5", "/DS1", 0, true, core.DYNAMIC, 2)
-r4 = streaming.reader(f4, "h5rawq")
+local h5_file = "h5ex_d_gzip.bin"
+local o4 = streaming.writer(streaming.file(streaming.WRITER, streaming.BINARY, h5_file, streaming.FLUSHED), "h5rawq")
+local f4 = h5.dataset(streaming.READER, asset, "h5ex_d_gzip.h5", "/DS1", 0, true, core.DYNAMIC, 2)
+local r4 = streaming.reader(f4, "h5rawq")
 
 r4:waiton()
 r4:destroy()

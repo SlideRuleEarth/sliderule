@@ -50,7 +50,7 @@
  *
  *  <role> is either streaming.READER or streaming.WRITER
  *
- *  <format> is core.BINARY, core.ASCII, core.TEXT, or core.FIFO
+ *  <format> is streaming.BINARY, core.ASCII, core.TEXT, or core.FIFO
  *
  *  <filename(s)> is name of the file to be written or a list of regular
  *  expressions of filenames to be read from.  If being written, the filename is
@@ -60,7 +60,7 @@
  *  are all supported filenames that refer to standard output, error, and input
  *  respectively.
  *
- *  <file i/o> is either core.FLUSHED or core.CACHED.  Flushed means that the file
+ *  <file i/o> is either streaming.FLUSHED or core.CACHED.  Flushed means that the file
  *  descriptor is flushed after every write, and cached means that the file descriptor
  *  is flushed when the operating system decides to perform the flush.
  *  It is only specified for writers.

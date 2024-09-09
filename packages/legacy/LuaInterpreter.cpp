@@ -29,117 +29,99 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * TODO: Clean up semaphores from signal and waiton
+ */
+
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "OsApi.h"
-#include "LuaLibraryMsg.h"
-#include "ccsds.h"
+#include "LuaInterpreter.h"
+#include "LuaEngine.h"
 
 /******************************************************************************
- * DEFINES
+ * STATIC DATA
  ******************************************************************************/
 
-#define LUA_CCSDS_LIBNAME   "ccsds"
+const char* LuaInterpreter::TYPE = "LuaInterpreter";
 
 /******************************************************************************
- * GLOBALS
- ******************************************************************************/
-
-const char* CDS_KEY_CALC_NAME = "CDS";
-const char* CCSDS_RECORD_CLASS = "CCSDS";
-const char CCSDS_RECORD_PREFIX = '/';
-
-/******************************************************************************
- * LOCAL FUNCTIONS
+ * PUBLIC METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * calcCdsTime  -
+ * createObject  -
  *----------------------------------------------------------------------------*/
-okey_t calcCdsTime(unsigned char* buffer, int size)
+CommandableObject* LuaInterpreter::createObject(CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE], bool safe)
 {
-    okey_t key = 0;
-    if(buffer && size >= 12)
+    return new LuaInterpreter(cmd_proc, name, argc, &argv[0], safe);
+}
+
+/*----------------------------------------------------------------------------
+ * createObject  -
+ *----------------------------------------------------------------------------*/
+CommandableObject* LuaInterpreter::createSafeObject(CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE])
+{
+    return createObject(cmd_proc, name, argc, argv, true);
+}
+
+/*----------------------------------------------------------------------------
+ * createObject  -
+ *----------------------------------------------------------------------------*/
+CommandableObject* LuaInterpreter::createUnsafeObject(CommandProcessor* cmd_proc, const char* name, int argc, char argv[][MAX_CMD_SIZE])
+{
+    return createObject(cmd_proc, name, argc, argv, false);
+}
+
+/*----------------------------------------------------------------------------
+ * abortHook
+ *
+ *    Notes:  this hook currently only aborts the interpreter, but it could be extended
+ *            with much more functionality like stepping through a script
+ *----------------------------------------------------------------------------*/
+void LuaInterpreter::abortHook (lua_State *L, lua_Debug *ar)
+{
+    (void)ar;
+
+    /* Default to Aborting */
+    bool abort = true;
+
+    /* Check if Interpreter still Active -  in which case don't abort */
+    lua_pushstring(L, LuaEngine::LUA_SELFKEY);
+    lua_gettable(L, LUA_REGISTRYINDEX); /* retrieve value */
+    const LuaEngine* li = static_cast<LuaEngine*>(lua_touserdata(L, -1));
+    if(li) abort = !li->isActive();
+
+    /* If Aborting */
+    if(abort)
     {
-        const CcsdsSpacePacket pkt(buffer, size);
-        const double timestamp_ms = pkt.getCdsTime() * 1000.0;
-        key = (okey_t)timestamp_ms;
+        luaL_error(L, "Interpreter no longer active - aborting!\n");
     }
-
-    return key;
-}
-
-/*----------------------------------------------------------------------------
- * createCcsdsRec  -
- *----------------------------------------------------------------------------*/
-RecordObject* createCcsdsRec(const char* rec_type)
-{
-    return new CcsdsRecord(rec_type);
-}
-
-/*----------------------------------------------------------------------------
- * associateCcsdsRec  -
- *----------------------------------------------------------------------------*/
-RecordObject* associateCcsdsRec(const unsigned char* data, int size)
-{
-    return new CcsdsRecord(data, size);
-}
-
-/*----------------------------------------------------------------------------
- * ccsds_open
- *----------------------------------------------------------------------------*/
-int ccsds_open (lua_State *L)
-{
-    static const struct luaL_Reg dispatch_functions[] = {
-        {"packetizer",  CcsdsPacketizer::luaCreate},
-        {"interleaver", CcsdsPacketInterleaver::luaCreate},
-        {"parser",      CcsdsPacketParser::luaCreate},
-        {"aosmod",      CcsdsParserAOSFrameModule::luaCreate},
-        {"pktmod",      CcsdsParserModule::luaCreate},
-        {"stripmod",    CcsdsParserStripModule::luaCreate},
-        {"zmod",        CcsdsParserZFrameModule::luaCreate},
-        {"payload",     CcsdsPayloadDispatch::luaCreate},
-        {"dispatcher",  CcsdsRecordDispatcher::luaCreate},
-        {NULL,          NULL}
-    };
-
-    luaL_newlib(L, dispatch_functions);
-
-    LuaEngine::setAttrInt   (L, "ALL_APIDS",    ALL_APIDS);
-    LuaEngine::setAttrInt   (L, "TLM",          CcsdsPacketizer::TLM_PKT);
-    LuaEngine::setAttrInt   (L, "CMD",          CcsdsPacketizer::CMD_PKT);
-    LuaEngine::setAttrStr   (L, "NOSYNC",       "NOSYNC");
-    LuaEngine::setAttrStr   (L, "ENCAP",        "ENCAP");
-    LuaEngine::setAttrStr   (L, "SPACE",        "SPACE");
-
-    return 1;
 }
 
 /******************************************************************************
- * EXPORTED FUNCTIONS
+ * PRIVATE METHODS
  ******************************************************************************/
 
-void initccsds (void)
+/*----------------------------------------------------------------------------
+ * Constructor  -
+ *----------------------------------------------------------------------------*/
+LuaInterpreter::LuaInterpreter(CommandProcessor* cmd_proc, const char* obj_name, int lua_argc, char lua_argv[][MAX_CMD_SIZE], bool safe):
+    CommandableObject(cmd_proc, obj_name, TYPE)
 {
-    /* Initialize CCSDS Record Objects */
-    CcsdsRecord::initCcsdsRecord();
+    LuaEngine::luaStepHook hook = NULL;
+    if(safe) hook = abortHook;
 
-    /* Extend Lua */
-    LuaEngine::extend(LUA_CCSDS_LIBNAME, ccsds_open);
-
-    /* Install Add On Functions */
-    RecordDispatcher::addKeyCalcFunc(CDS_KEY_CALC_NAME, calcCdsTime);
-    LuaLibraryMsg::lmsg_addtype(CCSDS_RECORD_CLASS, CCSDS_RECORD_PREFIX, createCcsdsRec, associateCcsdsRec);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_CCSDS_LIBNAME, LIBID);
-
-    /* Print Status */
-    print2term("%s package initialized (%s)\n", LUA_CCSDS_LIBNAME, LIBID);
+    /* Start Interpreter Thread */
+    luaEngine = new LuaEngine(obj_name, lua_argc, lua_argv, ORIGIN, hook);
 }
 
-void deinitccsds (void)
+/*----------------------------------------------------------------------------
+ * Destructor  -
+ *----------------------------------------------------------------------------*/
+LuaInterpreter::~LuaInterpreter(void)
 {
+    delete luaEngine;
 }
+

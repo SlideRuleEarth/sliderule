@@ -26,9 +26,13 @@ if __streaming__ then
     runner.script(td .. "http_client.lua")
     runner.script(td .. "http_faults.lua")
     runner.script(td .. "http_rqst.lua")
---    runner.script(td .. "ccsds_packetizer.lua")
---    runner.script(td .. "record_dispatcher.lua")
---    runner.script(td .. "limit_dispatch.lua")
+end
+
+-- Run Legact Self Tests --
+if __legacy__ then
+    runner.script(td .. "ccsds_packetizer.lua")
+    runner.script(td .. "record_dispatcher.lua")
+    runner.script(td .. "limit_dispatch.lua")
 end
 
 -- Run AWS Self Tests --

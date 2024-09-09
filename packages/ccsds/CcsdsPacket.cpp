@@ -35,6 +35,7 @@
 
 #include "CcsdsPacket.h"
 #include "OsApi.h"
+#include "EventLib.h"
 
 #include <math.h>
 
