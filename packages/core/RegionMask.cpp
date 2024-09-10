@@ -30,110 +30,135 @@
  */
 
 /******************************************************************************
- * INCLUDES
+ * INCLUDE
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "LuaEngine.h"
-#include "FieldDictionary.h"
+#include "RegionMask.h"
 
 /******************************************************************************
- * METHODS
+ * STATIC DATA
+ ******************************************************************************/
+
+RegionMask::burn_func_t RegionMask::burnMask = NULL;
+
+/******************************************************************************
+ * CLASS METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Constructor
+ * registerRasterizer
  *----------------------------------------------------------------------------*/
-FieldDictionary::FieldDictionary(std::initializer_list<entry_t> init_list, int hash_table_size):
-    fields(hash_table_size)
+void RegionMask::registerRasterizer (burn_func_t func)
 {
-    printf("INSIDE THE FIELD DICTIONARY CONSTRUCTOR\n");
-    for(const entry_t elem: init_list) 
+    burnMask = func;
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor - RegionMask
+ *----------------------------------------------------------------------------*/
+RegionMask::RegionMask(void):
+    FieldDictionary ({  {"geojson",     &geojson},
+                        {"cellsize",    &cellSize},
+                        {"cols",        &cols},
+                        {"rows",        &rows},
+                        {"lonmin",      &lonMin},
+                        {"latmin",      &latMin},
+                        {"lonmax",      &lonMax},
+                        {"latmax",      &latMax}  })
+{
+    printf("REGION MASK CONSTRUCTOR\n");
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+RegionMask::~RegionMask(void)
+{
+    delete [] data;
+}
+
+/*----------------------------------------------------------------------------
+ * includes
+ *----------------------------------------------------------------------------*/
+bool RegionMask::includes(double lon, double lat)
+{
+    if((lonMin.value <= lon) && (lonMax.value >= lon) &&
+        (latMin.value <= lat) && (latMax.value >= lat))
     {
-        printf("ADDING FIELDL %s\n", elem.name);
-        fields.add(elem.name, elem);
+        const uint32_t row = (latMax.value - lat) / cellSize.value;
+        const uint32_t col = (lon - lonMin.value) / cellSize.value;
+        if((row < rows.value) && (col < cols.value))
+        {
+            return static_cast<int>(data[(row * cols.value) + col]) == PIXEL_ON;
+        }
     }
-}
-
-/*----------------------------------------------------------------------------
- * Copy Constructor
- *----------------------------------------------------------------------------*/
-FieldDictionary::FieldDictionary(const FieldDictionary& dictionary):
-    fields(dictionary.fields)
-{
-}
-
-/*----------------------------------------------------------------------------
- * add
- *----------------------------------------------------------------------------*/
-bool FieldDictionary::add(const entry_t& entry)
-{
-    return fields.add(entry.name, entry);
+    return false;
 }
 
 /*----------------------------------------------------------------------------
  * operator=
  *----------------------------------------------------------------------------*/
-FieldDictionary& FieldDictionary::operator= (const FieldDictionary& dictionary)
+RegionMask& RegionMask::operator= (const RegionMask v)
 {
-    if(this == &dictionary) return *this;
-    fields = dictionary.fields;
+    if(this == &v) return *this;
+    
+    geojson = v.geojson;
+    cellSize = v.cellSize;
+    cols = v.cols;
+    rows = v.rows;
+    lonMin = v.lonMin;
+    latMin = v.latMin;
+    lonMax = v.lonMax;
+    latMax = v.latMax;
+    data = NULL;
+
+    delete [] data;
+    long size = cols.value * rows.value;
+    if(v.data && size > 0)
+    {
+        data = new uint8_t [size];
+        memcpy(data, v.data, size);
+    }
+
     return *this;
 }
 
 /*----------------------------------------------------------------------------
- * operator[] - rvalue
+ * operator== 
  *----------------------------------------------------------------------------*/
-Field* FieldDictionary::operator[](const char* key) const
+bool RegionMask::operator== (const RegionMask& v) const
 {
-    return fields[key].field;
+    (void)v;
+    return false;
 }
 
 /*----------------------------------------------------------------------------
- * operator[] - lvalue
+ * operator!=
  *----------------------------------------------------------------------------*/
-Field& FieldDictionary::operator[](const char* key)
+bool RegionMask::operator!= (const RegionMask& v) const
 {
-    return *(fields[key].field);
+    (void)v;
+    return false;
+}
+
+/******************************************************************************
+ * FUNCTIONS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * convertToLua
+ *----------------------------------------------------------------------------*/
+int convertToLua(lua_State* L, const RegionMask& v)
+{
+    return v.toLua(L);
 }
 
 /*----------------------------------------------------------------------------
- * toLua
+ * convertFromLua
  *----------------------------------------------------------------------------*/
-int FieldDictionary::toLua (lua_State* L) const
+void convertFromLua(lua_State* L, int index, RegionMask& v)
 {
-    Dictionary<entry_t>::Iterator iter(fields);
-    lua_newtable(L);
-    for(int i = 0; i < iter.length; i++)
-    {
-        const Dictionary<entry_t>::kv_t kv = iter[i];
-        lua_pushstring(L, kv.value.name);
-        kv.value.field->toLua(L);
-        lua_settable(L, -3);
-    }
-    return 1;
+    v.fromLua(L, index);
+    if(RegionMask::burnMask) RegionMask::burnMask(v);
 }
-
-/*----------------------------------------------------------------------------
- * fromLua
- *----------------------------------------------------------------------------*/
-
-void FieldDictionary::fromLua (lua_State* L, int index) 
-{
-    Dictionary<entry_t>::Iterator iter(fields);
-    for(int i = 0; i < iter.length; i++)
-    {
-        Dictionary<entry_t>::kv_t kv = iter[i];
-        lua_getfield(L, index, kv.value.name);
-        try 
-        {
-            kv.value.field->fromLua(L, -1);
-        }
-        catch (const RunTimeException& e)
-        {
-            mlog(DEBUG, "Field <%s> using default value", kv.value.name);
-        }
-        lua_pop(L, 1);
-    }
-}
-

@@ -51,6 +51,8 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/ProvisioningSystemLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/PublishMonitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/RecordObject.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/RegionMask.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/RequestFields.cpp
         ${CMAKE_CURRENT_LIST_DIR}/RequestMetrics.cpp
         ${CMAKE_CURRENT_LIST_DIR}/RequestParms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/SpatialIndex.cpp
@@ -111,6 +113,8 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/ProvisioningSystemLib.h
         ${CMAKE_CURRENT_LIST_DIR}/PublishMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/RecordObject.h
+        ${CMAKE_CURRENT_LIST_DIR}/RegionMask.h
+        ${CMAKE_CURRENT_LIST_DIR}/RequestFields.h
         ${CMAKE_CURRENT_LIST_DIR}/RequestMetrics.h
         ${CMAKE_CURRENT_LIST_DIR}/RequestParms.h
         ${CMAKE_CURRENT_LIST_DIR}/SpatialIndex.h

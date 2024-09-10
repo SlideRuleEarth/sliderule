@@ -38,7 +38,6 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "GeoJsonRaster.h"
 #include "List.h"
 #include "RequestParms.h"
 

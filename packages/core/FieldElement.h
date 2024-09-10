@@ -54,21 +54,15 @@ class FieldElement: public Field
          *--------------------------------------------------------------------*/
 
         explicit        FieldElement    (T default_value);
+                        FieldElement    (void);
                         FieldElement    (const FieldElement<T>& element);
                         ~FieldElement   (void) override = default;
 
         FieldElement&   operator=       (const FieldElement<T>& element);
 
-        FieldElement&   operator=       (T v);
-        bool            operator==      (T v) const;
-        bool            operator<=      (T v) const;
-        bool            operator>=      (T v) const;
-        bool            operator<       (T v) const;
-        bool            operator>       (T v) const;
-        T               operator+       (T v);
-        T               operator-       (T v);
-        T               operator*       (T v);
-        T               operator/       (T v);
+        FieldElement&   operator=       (const T& v);
+        bool            operator==      (const T& v) const;
+        bool            operator!=      (const T& v) const;
 
         int             toLua           (lua_State* L) const override;
         void            fromLua         (lua_State* L, int index) override;
@@ -90,6 +84,14 @@ class FieldElement: public Field
 template <class T>
 FieldElement<T>::FieldElement(T default_value):
     value(default_value)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+FieldElement<T>::FieldElement(void)
 {
 }
 
@@ -116,7 +118,7 @@ FieldElement<T>& FieldElement<T>::operator=(const FieldElement<T>& element)
  * operator=
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldElement<T>& FieldElement<T>::operator=(T v) 
+FieldElement<T>& FieldElement<T>::operator=(const T& v) 
 {
     value = v;
     return *this;
@@ -126,81 +128,18 @@ FieldElement<T>& FieldElement<T>::operator=(T v)
  * operator==
  *----------------------------------------------------------------------------*/
 template <class T>
-bool FieldElement<T>::operator==(T v) const
+bool FieldElement<T>::operator==(const T& v) const
 {
     return value == v;
 }
 
 /*----------------------------------------------------------------------------
- * operator<=
+ * operator!=
  *----------------------------------------------------------------------------*/
 template <class T>
-bool FieldElement<T>::operator<=(T v) const
+bool FieldElement<T>::operator!=(const T& v) const
 {
-    return value <= v;
-}
-
-/*----------------------------------------------------------------------------
- * operator>=
- *----------------------------------------------------------------------------*/
-template <class T>
-bool FieldElement<T>::operator>=(T v) const
-{
-    return value >= v;
-}
-
-/*----------------------------------------------------------------------------
- * operator<
- *----------------------------------------------------------------------------*/
-template <class T>
-bool FieldElement<T>::operator<(T v) const
-{
-    return value < v;
-}
-
-/*----------------------------------------------------------------------------
- * operator>
- *----------------------------------------------------------------------------*/
-template <class T>
-bool FieldElement<T>::operator>(T v) const
-{
-    return value > v;
-}
-
-/*----------------------------------------------------------------------------
- * operator+
- *----------------------------------------------------------------------------*/
-template <class T>
-T FieldElement<T>::operator+(T v)
-{
-    return value + v;
-}
-
-/*----------------------------------------------------------------------------
- * operator-
- *----------------------------------------------------------------------------*/
-template <class T>
-T FieldElement<T>::operator-(T v) 
-{
-    return value - v;
-}
-
-/*----------------------------------------------------------------------------
- * operator*
- *----------------------------------------------------------------------------*/
-template <class T>
-T FieldElement<T>::operator*(T v) 
-{
-    return value * v;
-}
-
-/*----------------------------------------------------------------------------
- * operator/
- *----------------------------------------------------------------------------*/
-template <class T>
-T FieldElement<T>::operator/(T v) 
-{
-    return value / v;
+    return value != v;
 }
 
 /*----------------------------------------------------------------------------

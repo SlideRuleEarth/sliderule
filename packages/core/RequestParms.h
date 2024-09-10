@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __netsvc_parms__
-#define __netsvc_parms__
+#ifndef __request_parms__
+#define __request_parms__
 
 /******************************************************************************
  * INCLUDES
@@ -134,4 +134,4 @@ class RequestParms: public LuaObject
         void                    get_lua_projection      (lua_State* L, int index, bool* provided);
 };
 
-#endif  /* __netsvc_parms__ */
+#endif  /* __request_parms__ */

@@ -60,6 +60,8 @@
 #include "ProvisioningSystemLib.h"
 #include "PublishMonitor.h"
 #include "RecordObject.h"
+#include "RegionMask.h"
+#include "RequestFields.h"
 #include "RequestMetrics.h"
 #include "RequestParms.h"
 #include "SpatialIndex.h"
@@ -139,6 +141,7 @@ static int core_open (lua_State *L)
         {"psauth",          ProvisioningSystemLib::Authenticator::luaCreate},
         {"pmonitor",        PublishMonitor::luaCreate},
         {"mmonitor",        MetricMonitor::luaCreate},
+        {"rqstparms",       RequestFields::luaCreate},
         {"parms",           RequestParms::luaCreate},
 #ifdef __unittesting__
         {"ut_dictionary",   UT_Dictionary::luaCreate},

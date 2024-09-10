@@ -190,9 +190,9 @@ For APIs that return GeoDataFrames, the **"time"** column values are represented
 
 Each request supports setting three different timeouts. These timeouts should only need to be set by a user manually either when making extremely large processing requests, or when failing fast is necessary and default timeouts are too long.
 
-* ``"rqst-timeout"``: total time in seconds for request to be processed
-* ``"node-timeout"``: time in seconds for a single node to work on a distributed request (used for proxied requests)
-* ``"read-timeout"``: time in seconds for a single read of an asset to take
+* ``"rqst_timeout"``: total time in seconds for request to be processed
+* ``"node_timeout"``: time in seconds for a single node to work on a distributed request (used for proxied requests)
+* ``"read_timeout"``: time in seconds for a single read of an asset to take
 * ``"timeout"``: global timeout setting that sets all timeouts at once (can be overridden by further specifying the other timeouts)
 
 5.5 Raster Sampling
@@ -276,7 +276,7 @@ The default set of parameters used by SlideRule are set to match anticipated use
    * - ``"key_space"``
      - Integer
      -
-   * - ``"node-timeout"``
+   * - ``"node_timeout"``
      - Integer, seconds
      - 600
    * - ``"output.asset"``
@@ -312,13 +312,13 @@ The default set of parameters used by SlideRule are set to match anticipated use
    * - ``"raster"``
      - String, JSON
      -
-   * - ``"read-timeout"``
+   * - ``"read_timeout"``
      - Integer, seconds
      - 600
    * - ``"region"``
      - Integer, orbit region
      -
-   * - ``"rqst-timeout"``
+   * - ``"rqst_timeout"``
      - Integer, seconds
      - 600
    * - ``"samples.asset"``

@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __swot_parms__
-#define __swot_parms__
+#ifndef __request_fields__
+#define __request_fields__
 
 /******************************************************************************
  * INCLUDES
@@ -38,14 +38,18 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
+#include "FieldDictionary.h"
+#include "FieldElement.h"
+#include "FieldColumn.h"
+#include "RegionMask.h"
 #include "List.h"
-#include "RequestParms.h"
+#include "MathLib.h"
 
 /******************************************************************************
- * SWOT PARAMETERS
+ * CLASS
  ******************************************************************************/
 
-class SwotParms: public RequestParms
+class RequestFields: public LuaObject, FieldDictionary
 {
     public:
 
@@ -53,41 +57,57 @@ class SwotParms: public RequestParms
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* _SELF;
-        static const char* VARIABLES;
-        static const int64_t SWOT_SDP_EPOCH_GPS = 630720013; // seconds to add to SWOT times to get GPS times
-        static const int EXPECTED_NUM_FIELDS = 16;
+        static const int DEFAULT_TIMEOUT            = 600; // seconds
+        static const int DEFAULT_CLUSTER_SIZE_HINT  = 0; // dynamic
+        static const int TIMEOUT_UNSET              = -1;
 
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef List<string> string_list_t;
+        static const char* OBJECT_TYPE;
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int          luaCreate           (lua_State* L);
-        static int64_t      deltatime2timestamp (double delta_time);
-        const char*         tojson              (void) const override;
+        static int luaCreate (lua_State* L);
+        static int luaExport (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        string_list_t       variables;
+        FieldColumn<MathLib::coord_t>   polygon;
+        FieldColumn<MathLib::point_t>   projectedPolygon;
+        FieldElement<MathLib::proj_t>   projection          {MathLib::AUTOMATIC};
+        FieldElement<int>               pointsInPolygon     {0};
+        FieldElement<int>               timeout             {TIMEOUT_UNSET}; // global timeout
+        FieldElement<int>               rqstTimeout         {TIMEOUT_UNSET};
+        FieldElement<int>               nodeTimeout         {TIMEOUT_UNSET};
+        FieldElement<int>               readTimeout         {TIMEOUT_UNSET};
+        FieldElement<int>               clusterSizeHint     {DEFAULT_CLUSTER_SIZE_HINT};
+        FieldElement<RegionMask>        regionMask;
 
-    private:
+    protected:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            SwotParms           (lua_State* L, int index);
-                            ~SwotParms          (void) override;
-        void                cleanup             (void);
-        static void         get_lua_string_list (lua_State* L, int index, string_list_t& string_list, bool* provided);
+        RequestFields   (lua_State* L, int index);
+        ~RequestFields  (void) override = default;
 };
 
-#endif  /* __swot_parms__ */
+/******************************************************************************
+ * FUNCTIONS
+ ******************************************************************************/
+
+int convertToLua(lua_State* L, const MathLib::coord_t& v);
+void convertFromLua(lua_State* L, int index, MathLib::coord_t& v);
+
+int convertToLua(lua_State* L, const MathLib::point_t& v);
+void convertFromLua(lua_State* L, int index, MathLib::point_t& v);
+
+int convertToLua(lua_State* L, const MathLib::proj_t& v);
+void convertFromLua(lua_State* L, int index, MathLib::proj_t& v);
+
+#endif  /* __request_fields__ */

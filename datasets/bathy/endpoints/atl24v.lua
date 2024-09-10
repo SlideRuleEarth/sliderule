@@ -19,7 +19,7 @@ end
 -- run bathy viewer
 local bathy_parms   = bathy.parms(parms)
 local reader        = bathy.viewer(asset, resource, bathy_parms)
-local timeout       = parms["node-timeout"] or parms["timeout"] or core.NODE_TIMEOUT
+local timeout       = parms["node_timeout"] or parms["timeout"] or core.NODE_TIMEOUT
 local status        = reader:waiton(timeout * 1000)
 
 -- return counts

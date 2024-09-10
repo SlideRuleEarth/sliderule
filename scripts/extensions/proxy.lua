@@ -22,8 +22,8 @@ local function proxy(resources, parms, endpoint, rec)
     local userlog = msg.publish(rspq)
 
     -- Request Parameters --
-    local timeout = parms["rqst-timeout"] or parms["timeout"] or core.RQST_TIMEOUT
-    local node_timeout = parms["node-timeout"] or parms["timeout"] or core.NODE_TIMEOUT
+    local timeout = parms["rqst_timeout"] or parms["timeout"] or core.RQST_TIMEOUT
+    local node_timeout = parms["node_timeout"] or parms["timeout"] or core.NODE_TIMEOUT
     local cluster_size_hint = parms["cluster_size_hint"] or core.CLUSTER_SIZE_HINT
 
     -- Initialize Queue Management --

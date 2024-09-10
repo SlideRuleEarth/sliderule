@@ -8,7 +8,7 @@ local runner        = require("container_runtime")
 local rqst          = json.decode(arg[1])
 local parms         = rqst["parms"] or {}
 local resource      = parms["resource"]
-local timeout       = parms["node-timeout"] or parms["timeout"] or core.NODE_TIMEOUT
+local timeout       = parms["node_timeout"] or parms["timeout"] or core.NODE_TIMEOUT
 local interval      = 10 < timeout and 10 or timeout -- seconds
 
 -------------------------------------------------------

@@ -29,65 +29,76 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __swot_parms__
-#define __swot_parms__
+#ifndef __region_mask__
+#define __region_mask__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "LuaObject.h"
-#include "List.h"
-#include "RequestParms.h"
+#include "FieldDictionary.h"
+#include "FieldElement.h"
 
 /******************************************************************************
- * SWOT PARAMETERS
+ * CLASS
  ******************************************************************************/
 
-class SwotParms: public RequestParms
+class RegionMask: public FieldDictionary
 {
     public:
-
+    
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* _SELF;
-        static const char* VARIABLES;
-        static const int64_t SWOT_SDP_EPOCH_GPS = 630720013; // seconds to add to SWOT times to get GPS times
-        static const int EXPECTED_NUM_FIELDS = 16;
+        static const int PIXEL_ON   = 1;
+        static const int PIXEL_OFF  = 0;
 
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef List<string> string_list_t;
+        typedef bool (*burn_func_t) (RegionMask& image);
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int          luaCreate           (lua_State* L);
-        static int64_t      deltatime2timestamp (double delta_time);
-        const char*         tojson              (void) const override;
+        static void registerRasterizer  (burn_func_t func);
+
+                    RegionMask          (void);
+                    ~RegionMask         (void) override;
+
+        RegionMask& operator=           (const RegionMask v);
+        bool        operator==          (const RegionMask& v) const;
+        bool        operator!=          (const RegionMask& v) const;
+
+        bool        includes            (double lon, double lat);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        string_list_t       variables;
+        static burn_func_t burnMask;
 
-    private:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                            SwotParms           (lua_State* L, int index);
-                            ~SwotParms          (void) override;
-        void                cleanup             (void);
-        static void         get_lua_string_list (lua_State* L, int index, string_list_t& string_list, bool* provided);
+        FieldElement<string>    geojson{""};
+        FieldElement<double>    cellSize{0.0};
+        FieldElement<uint32_t>  cols{0};
+        FieldElement<uint32_t>  rows{0};
+        FieldElement<double>    lonMin{0.0};
+        FieldElement<double>    latMin{0.0};
+        FieldElement<double>    lonMax{0.0};
+        FieldElement<double>    latMax{0.0};    
+        uint8_t*                data{NULL};
 };
 
-#endif  /* __swot_parms__ */
+/******************************************************************************
+ * FUNCTIONS
+ ******************************************************************************/
+
+int convertToLua(lua_State* L, const RegionMask& v);
+void convertFromLua(lua_State* L, int index, RegionMask& v);
+
+
+#endif  /* __region_mask__ */

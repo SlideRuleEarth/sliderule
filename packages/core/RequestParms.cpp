@@ -51,9 +51,9 @@ const char* RequestParms::RASTER             = "raster";
 const char* RequestParms::LATITUDE           = "lat";
 const char* RequestParms::LONGITUDE          = "lon";
 const char* RequestParms::PROJECTION         = "proj";
-const char* RequestParms::RQST_TIMEOUT       = "rqst-timeout";
-const char* RequestParms::NODE_TIMEOUT       = "node-timeout";
-const char* RequestParms::READ_TIMEOUT       = "read-timeout";
+const char* RequestParms::RQST_TIMEOUT       = "rqst_timeout";
+const char* RequestParms::NODE_TIMEOUT       = "node_timeout";
+const char* RequestParms::READ_TIMEOUT       = "read_timeout";
 const char* RequestParms::GLOBAL_TIMEOUT     = "timeout";
 const char* RequestParms::CLUSTER_SIZE_HINT  = "cluster_size_hint";
 

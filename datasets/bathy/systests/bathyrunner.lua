@@ -82,7 +82,7 @@ local bathy_parms = icesat2.bathyparms(parms)
 local reader = icesat2.bathyreader(nsidc_s3, resource, "resultq", bathy_parms, hls_parms_obj, false)
 
 -- wait until bathy reader completes
-local timeout = parms["node-timeout"] or parms["timeout"] or core.NODE_TIMEOUT
+local timeout = parms["node_timeout"] or parms["timeout"] or core.NODE_TIMEOUT
 local duration = 0
 local interval = 10 < timeout and 10 or timeout -- seconds
 while not reader:waiton(interval * 1000) do

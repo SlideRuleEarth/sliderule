@@ -38,6 +38,8 @@
 #include <tiffio.h>
 #include <gdal.h>
 #include <ogr_spatialref.h>
+#include <gdalwarper.h>
+
 
 #include "GeoLib.h"
 #include "LuaObject.h"
@@ -567,4 +569,89 @@ bool GeoLib::writeBMP (const uint32_t* data, int width, int height, const char* 
 
     /* return success */
     return true;
+}
+
+/*----------------------------------------------------------------------------
+ * burnGeoJson
+ *----------------------------------------------------------------------------*/
+bool GeoLib::burnGeoJson(RegionMask& image)
+{
+    /* variables that need to be cleaned up on exceptions */
+    GDALDataset* memRaster = NULL;
+    GDALDataset* geojsonDset   = NULL;
+    const std::string geojsonFile = "/vsimem/" + GdalRaster::getUUID() + ".geojson";
+
+    /* initialize image */
+    delete [] image.data;
+    image.data = NULL;
+
+    try
+    {
+        /* check parameters */
+        if (image.cellSize.value <= 0.0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid cellSize: %.2lf:", image.cellSize.value);
+
+        /* create raster from geojson file */
+        const vsi_l_offset len = image.geojson.value.size();
+        GByte* bytes = const_cast<GByte*>(reinterpret_cast<const GByte*>(image.geojson.value.c_str()));
+        VSILFILE* fp = VSIFileFromMemBuffer(geojsonFile.c_str(), bytes, len, FALSE);
+        CHECKPTR(fp);
+        VSIFCloseL(fp);
+
+        /* open up the geojson file */
+        geojsonDset = static_cast<GDALDataset *>(GDALOpenEx(geojsonFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL));
+        CHECKPTR(geojsonDset);
+        OGRLayer *srcLayer = geojsonDset->GetLayer(0);
+        CHECKPTR(srcLayer);
+
+        /* get envelope (extent) of image */
+        OGREnvelope e;
+        OGRErr ogrerr = srcLayer->GetExtent(&e);
+        CHECK_GDALERR(ogrerr);
+
+        /* populate image properties (except for data array) */
+        image.cols = static_cast<int>((e.MaxX - e.MinX) / image.cellSize.value);
+        image.rows = static_cast<int>((e.MaxY - e.MinY) / image.cellSize.value);
+        image.lonMin = e.MinX;
+        image.lonMax = e.MaxX;
+        image.latMin = e.MinY;
+        image.latMax = e.MaxY;
+
+        /* reate an in-memory raster dataset */
+        GDALDriver* memDriver = GetGDALDriverManager()->GetDriverByName("MEM");
+        memRaster = memDriver->Create("", image.cols.value, image.rows.value, 1, GDT_Byte, NULL);
+        CHECKPTR(memRaster);
+
+        /* set geotransform and projection */
+        double geotransform[6] = { image.lonMin.value, image.cellSize.value, 0, image.latMin.value, 0, image.cellSize.value };
+        memRaster->SetGeoTransform(geotransform);
+        memRaster->SetProjection("EPSG:4326");
+
+        /* burn the geojson into the in-memory raster */
+        int bandIndex = 1;
+        double burnValue = RegionMask::PIXEL_ON;
+        char** options = NULL;
+        CPLErr rasterizeerr = GDALRasterizeLayers(memRaster, 1, &bandIndex, 1, (OGRLayerH*)&srcLayer, NULL, NULL, &burnValue, options, NULL, NULL);
+        CHECK_GDALERR(rasterizeerr);
+
+        /* read the raw raster data from memory (allocate and populate image data array )*/
+        long raster_size = image.cols.value * image.rows.value;
+        image.data = new uint8_t [raster_size];
+        GDALRasterBand* band = memRaster->GetRasterBand(1);
+        OGRErr banderr = band->RasterIO(GF_Read, 0, 0, image.cols.value, image.rows.value, &image.data, image.cols.value, image.rows.value, GDT_Byte, 0, 0);
+        CHECK_GDALERR(banderr);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating GeoJsonRaster: %s", e.what());
+        delete [] image.data;
+        image.data = NULL;
+    }
+
+   /* cleanup */
+   VSIUnlink(geojsonFile.c_str());
+   if(geojsonDset) GDALClose(reinterpret_cast<GDALDatasetH>(geojsonDset));
+   if(memRaster) GDALClose(reinterpret_cast<GDALDatasetH>(memRaster));
+
+   /* return status */
+   return image.data == NULL;
 }

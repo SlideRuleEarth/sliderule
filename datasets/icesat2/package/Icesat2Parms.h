@@ -39,7 +39,6 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "EndpointProxy.h"
-#include "GeoJsonRaster.h"
 #include "List.h"
 #include "MathLib.h"
 #include "RequestParms.h"
