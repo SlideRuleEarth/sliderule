@@ -90,7 +90,6 @@ Field* FieldDictionary::operator[](const char* key) const
 /*----------------------------------------------------------------------------
  * operator[] - lvalue
  *----------------------------------------------------------------------------*/
-
 Field& FieldDictionary::operator[](const char* key)
 {
     return *(fields[key].field);

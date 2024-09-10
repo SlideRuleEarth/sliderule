@@ -213,7 +213,7 @@ void* Monitor::monitorThread (void* parm)
             /* Dereference Message */
             monitor->inQ->dereference(ref);
         }
-        else
+        else if(recv_status != MsgQ::STATE_TIMEOUT)
         {
             /* Break Out on Failure */
             mlog(CRITICAL, "Failed queue receive on %s with error %d", monitor->inQ->getName(), recv_status);
