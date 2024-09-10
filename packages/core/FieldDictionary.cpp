@@ -47,10 +47,8 @@
 FieldDictionary::FieldDictionary(std::initializer_list<entry_t> init_list, int hash_table_size):
     fields(hash_table_size)
 {
-    printf("INSIDE THE FIELD DICTIONARY CONSTRUCTOR\n");
     for(const entry_t elem: init_list) 
     {
-        printf("ADDING FIELDL %s\n", elem.name);
         fields.add(elem.name, elem);
     }
 }

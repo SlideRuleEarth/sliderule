@@ -12,11 +12,7 @@ sys.setlvl(core.LOG, core.DEBUG)
 
 -- (1) Check Defaults
 
-print("Hello")
-
-local parms = core.rqstparms()
-
-print("World")
+local p = core.rqstparms({})
 
 --prettyprint.display(parms.export())
 

@@ -43,7 +43,8 @@
 const char* RequestFields::OBJECT_TYPE = "RequestFields";
 const char* RequestFields::LUA_META_NAME = "RequestFields";
 const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
-    {"export", luaExport}
+    {"export",  luaExport},
+    {NULL,      NULL}
 };
 
 /******************************************************************************
@@ -57,7 +58,6 @@ int RequestFields::luaCreate (lua_State* L)
 {
     try
     {
-        printf("ABOUT TO CREATE REQUEST FIELDS\n");
         return createLuaObject(L, new RequestFields(L, 1));
     }
     catch(const RunTimeException& e)
@@ -106,11 +106,9 @@ RequestFields::RequestFields(lua_State* L, int index):
                         {"cluster_size_hint",   &clusterSizeHint},
                         {"region_mask",         &regionMask} })
 {
-    printf("FROM LUA\n");
     // read in from Lua
     fromLua(L, index);
-    printf("AFTER LUA\n");
-
+    
     // set timeouts (if necessary)
     if(timeout == TIMEOUT_UNSET)        timeout = DEFAULT_TIMEOUT;    
     if(rqstTimeout == TIMEOUT_UNSET)    rqstTimeout = timeout;

@@ -67,7 +67,6 @@ RegionMask::RegionMask(void):
                         {"lonmax",      &lonMax},
                         {"latmax",      &latMax}  })
 {
-    printf("REGION MASK CONSTRUCTOR\n");
 }
 
 /*----------------------------------------------------------------------------
