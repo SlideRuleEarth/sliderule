@@ -44,6 +44,8 @@ const char* RequestFields::OBJECT_TYPE = "RequestFields";
 const char* RequestFields::LUA_META_NAME = "RequestFields";
 const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {"export",  luaExport},
+    {"poly",    luaProjectedPolygonIncludes},
+    {"mask",    luaRegionMaskIncludes},
     {NULL,      NULL}
 };
 
@@ -73,21 +75,90 @@ int RequestFields::luaCreate (lua_State* L)
 int RequestFields::luaExport (lua_State* L)
 {
     int num_rets = 1;
-    RequestFields* lua_obj = NULL;
 
     try
     {
-        lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
         num_rets = lua_obj->toLua(L);
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error exporting %s: %s", OBJECT_TYPE, e.what());
         lua_pushnil(L);
-        num_rets = 1;
     }
 
     return num_rets;
+}
+
+/*----------------------------------------------------------------------------
+ * luaProjectedPolygonIncludes - poly(lon, lat)
+ *----------------------------------------------------------------------------*/
+int RequestFields::luaProjectedPolygonIncludes (lua_State* L)
+{
+    try
+    {
+        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        double lon = getLuaFloat(L, 2);
+        double lat = getLuaFloat(L, 3);
+        bool includes = lua_obj->polyIncludes(lon, lat);
+        lua_pushboolean(L, includes);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error testing for inclusion in polygon: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaRegionMaskIncludes - mask(lon, lat)
+ *----------------------------------------------------------------------------*/
+int RequestFields::luaRegionMaskIncludes (lua_State* L)
+{
+    try
+    {
+        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        double lon = getLuaFloat(L, 2);
+        double lat = getLuaFloat(L, 3);
+        bool includes = lua_obj->maskIncludes(lon, lat);
+        lua_pushboolean(L, includes);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error testing for inclusion in region mask: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * polyIncludes
+ *----------------------------------------------------------------------------*/
+bool RequestFields::polyIncludes (double lon, double lat)
+{
+    // project coordinate
+    const MathLib::coord_t coord = {lon, lat};
+    const MathLib::point_t point = MathLib::coord2point(coord, projection.value);
+
+    // test inside polygon
+    if(MathLib::inpoly(projectedPolygon, pointsInPolygon.value, point))
+    {
+        return true;
+    }
+
+    // not inside polygon
+    return false;
+}
+
+/*----------------------------------------------------------------------------
+ * maskIncludes
+ *----------------------------------------------------------------------------*/
+bool RequestFields::maskIncludes (double lon, double lat)
+{
+    return regionMask.value.includes(lon, lat);
 }
 
 /*----------------------------------------------------------------------------
@@ -96,7 +167,6 @@ int RequestFields::luaExport (lua_State* L)
 RequestFields::RequestFields(lua_State* L, int index):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     FieldDictionary ({  {"polygon",             &polygon},
-                        {"projected_polygon",   &projectedPolygon},
                         {"projection",          &projection},
                         {"points_in_polygon",   &pointsInPolygon},
                         {"timeout",             &timeout},
@@ -108,7 +178,7 @@ RequestFields::RequestFields(lua_State* L, int index):
 {
     // read in from Lua
     fromLua(L, index);
-    
+
     // set timeouts (if necessary)
     if(timeout == TIMEOUT_UNSET)        timeout = DEFAULT_TIMEOUT;    
     if(rqstTimeout == TIMEOUT_UNSET)    rqstTimeout = timeout;
@@ -116,26 +186,32 @@ RequestFields::RequestFields(lua_State* L, int index):
     if(readTimeout == TIMEOUT_UNSET)    readTimeout = timeout;
 
     // project polygon (if necessary)
-    if(projectedPolygon.length() == 0)
+    pointsInPolygon = polygon.length();
+    if(pointsInPolygon.value > 0)
     {
-        pointsInPolygon = polygon.length();
-        if(pointsInPolygon.value > 0)
+        // determine best projection to use
+        if(projection == MathLib::AUTOMATIC)
         {
-            // determine best projection to use
-            if(projection == MathLib::AUTOMATIC)
-            {
-                if(polygon[0].lat > 70.0) projection = MathLib::NORTH_POLAR;
-                else if(polygon[0].lat < -70.0) projection = MathLib::SOUTH_POLAR;
-                else projection = MathLib::PLATE_CARREE;
-            }
+            if(polygon[0].lat > 70.0) projection = MathLib::NORTH_POLAR;
+            else if(polygon[0].lat < -70.0) projection = MathLib::SOUTH_POLAR;
+            else projection = MathLib::PLATE_CARREE;
+        }
 
-            // project polygon
-            for(int i = 0; i < pointsInPolygon.value; i++)
-            {
-                projectedPolygon.append(MathLib::coord2point(polygon[i], projection.value));
-            }
+        // project polygon
+        projectedPolygon = new MathLib::point_t [pointsInPolygon.value];
+        for(int i = 0; i < pointsInPolygon.value; i++)
+        {
+            projectedPolygon[i] = MathLib::coord2point(polygon[i], projection.value);
         }
     }
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+RequestFields::~RequestFields(void)
+{
+    delete [] projectedPolygon;
 }
 
 /******************************************************************************

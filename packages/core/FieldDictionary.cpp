@@ -118,20 +118,26 @@ int FieldDictionary::toLua (lua_State* L) const
 
 void FieldDictionary::fromLua (lua_State* L, int index) 
 {
-    Dictionary<entry_t>::Iterator iter(fields);
-    for(int i = 0; i < iter.length; i++)
+    if(lua_istable(L, index))
     {
-        Dictionary<entry_t>::kv_t kv = iter[i];
-        lua_getfield(L, index, kv.value.name);
-        try 
+        Dictionary<entry_t>::Iterator iter(fields);
+        for(int i = 0; i < iter.length; i++)
         {
-            kv.value.field->fromLua(L, -1);
+            Dictionary<entry_t>::kv_t kv = iter[i];
+            lua_getfield(L, index, kv.value.name);
+            try 
+            {
+                kv.value.field->fromLua(L, -1);                
+            }
+            catch (const RunTimeException& e)
+            {
+                if(!lua_isnil(L, -1))
+                {
+                    mlog(ERROR, "Field <%s> using default value: %s", kv.value.name, e.what());
+                }
+            }
+            lua_pop(L, 1);
         }
-        catch (const RunTimeException& e)
-        {
-            mlog(DEBUG, "Field <%s> using default value", kv.value.name);
-        }
-        lua_pop(L, 1);
     }
 }
 

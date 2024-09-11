@@ -80,7 +80,7 @@ class RegionMask: public FieldDictionary
          * Data
          *--------------------------------------------------------------------*/
 
-        static burn_func_t burnMask;
+        static burn_func_t      burnMask;
 
         FieldElement<string>    geojson{""};
         FieldElement<double>    cellSize{0.0};
@@ -90,6 +90,7 @@ class RegionMask: public FieldDictionary
         FieldElement<double>    latMin{0.0};
         FieldElement<double>    lonMax{0.0};
         FieldElement<double>    latMax{0.0};    
+        
         uint8_t*                data{NULL};
 };
 

@@ -72,12 +72,17 @@ class RequestFields: public LuaObject, FieldDictionary
         static int luaCreate (lua_State* L);
         static int luaExport (lua_State* L);
 
+        static int luaProjectedPolygonIncludes (lua_State* L);
+        static int luaRegionMaskIncludes (lua_State* L);
+
+        bool polyIncludes (double lon, double lat);
+        bool maskIncludes (double lon, double lat);
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         FieldColumn<MathLib::coord_t>   polygon;
-        FieldColumn<MathLib::point_t>   projectedPolygon;
         FieldElement<MathLib::proj_t>   projection          {MathLib::AUTOMATIC};
         FieldElement<int>               pointsInPolygon     {0};
         FieldElement<int>               timeout             {TIMEOUT_UNSET}; // global timeout
@@ -86,6 +91,8 @@ class RequestFields: public LuaObject, FieldDictionary
         FieldElement<int>               readTimeout         {TIMEOUT_UNSET};
         FieldElement<int>               clusterSizeHint     {DEFAULT_CLUSTER_SIZE_HINT};
         FieldElement<RegionMask>        regionMask;
+        
+        MathLib::point_t*               projectedPolygon    {NULL};
 
     protected:
 
@@ -94,7 +101,7 @@ class RequestFields: public LuaObject, FieldDictionary
          *--------------------------------------------------------------------*/
 
         RequestFields   (lua_State* L, int index);
-        ~RequestFields  (void) override = default;
+        ~RequestFields  (void) override;
 };
 
 /******************************************************************************

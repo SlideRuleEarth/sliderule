@@ -159,5 +159,15 @@ int convertToLua(lua_State* L, const RegionMask& v)
 void convertFromLua(lua_State* L, int index, RegionMask& v)
 {
     v.fromLua(L, index);
-    if(RegionMask::burnMask) RegionMask::burnMask(v);
+    if(v.cellSize.value > 0.0 && !v.geojson.value.empty())
+    {
+        if(RegionMask::burnMask) 
+        {
+            RegionMask::burnMask(v);
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "unable to rasterize geojson - function unregistered");
+        }
+    }
 }
