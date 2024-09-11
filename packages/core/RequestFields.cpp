@@ -250,7 +250,7 @@ void convertFromLua(lua_State* L, int index, MathLib::coord_t& v)
 
     // latitude
     lua_getfield(L, index, "lat");
-    v.lon = LuaObject::getLuaFloat(L, -1);
+    v.lat = LuaObject::getLuaFloat(L, -1);
     lua_pop(L, 1);
 }
 
