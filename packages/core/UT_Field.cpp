@@ -260,10 +260,10 @@ int UT_Field::testList(lua_State* L)
         FieldList<string>   pstring;
 
         // populate string list
-        ut_assert(lua_obj, pstring.append("good") == 0, "failed to append");
-        ut_assert(lua_obj, pstring.append("guys") == 1, "failed to append");
-        ut_assert(lua_obj, pstring.append("always") == 2, "failed to append");
-        ut_assert(lua_obj, pstring.append("win") == 3, "failed to append");
+        ut_assert(lua_obj, pstring.append("good") == 1, "failed to append");
+        ut_assert(lua_obj, pstring.append("guys") == 2, "failed to append");
+        ut_assert(lua_obj, pstring.append("always") == 3, "failed to append");
+        ut_assert(lua_obj, pstring.append("win") == 4, "failed to append");
 
         // check list
         ut_assert(lua_obj, pstring.length() == 4, "failed to return size of list");
@@ -298,26 +298,26 @@ int UT_Field::testColumn(lua_State* L)
         FieldColumn<double>    pdouble;
 
         // populate bool column
-        ut_assert(lua_obj, pbool.append(true) == 0, "failed to append");
         ut_assert(lua_obj, pbool.append(true) == 1, "failed to append");
-        ut_assert(lua_obj, pbool.append(false) == 2, "failed to append");
+        ut_assert(lua_obj, pbool.append(true) == 2, "failed to append");
+        ut_assert(lua_obj, pbool.append(false) == 3, "failed to append");
 
         // populate string column
-        ut_assert(lua_obj, pstring.append("good") == 0, "failed to append");
-        ut_assert(lua_obj, pstring.append("guys") == 1, "failed to append");
-        ut_assert(lua_obj, pstring.append("always") == 2, "failed to append");
-        ut_assert(lua_obj, pstring.append("win") == 3, "failed to append");
+        ut_assert(lua_obj, pstring.append("good") == 1, "failed to append");
+        ut_assert(lua_obj, pstring.append("guys") == 2, "failed to append");
+        ut_assert(lua_obj, pstring.append("always") == 3, "failed to append");
+        ut_assert(lua_obj, pstring.append("win") == 4, "failed to append");
 
         // populate int column
-        ut_assert(lua_obj, pint.append(1) == 0, "failed to append");
-        ut_assert(lua_obj, pint.append(2) == 1, "failed to append");
-        ut_assert(lua_obj, pint.append(3) == 2, "failed to append");
-        ut_assert(lua_obj, pint.append(4) == 3, "failed to append");
-        ut_assert(lua_obj, pint.append(5) == 4, "failed to append");
+        ut_assert(lua_obj, pint.append(1) == 1, "failed to append");
+        ut_assert(lua_obj, pint.append(2) == 2, "failed to append");
+        ut_assert(lua_obj, pint.append(3) == 3, "failed to append");
+        ut_assert(lua_obj, pint.append(4) == 4, "failed to append");
+        ut_assert(lua_obj, pint.append(5) == 5, "failed to append");
         
         // populate double column
-        ut_assert(lua_obj, pdouble.append(1.1) == 0, "failed to append");
-        ut_assert(lua_obj, pdouble.append(2.2) == 1, "failed to append");
+        ut_assert(lua_obj, pdouble.append(1.1) == 1, "failed to append");
+        ut_assert(lua_obj, pdouble.append(2.2) == 2, "failed to append");
         
         // return status
         lua_pushboolean(L, ut_status(lua_obj));

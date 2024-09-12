@@ -117,7 +117,7 @@ template<class T>
 long FieldList<T>::append(const T& v)
 {
     values.push_back(v);
-    return static_cast<long>(values.size() - 1);
+    return static_cast<long>(values.size());
 }
 
 /*----------------------------------------------------------------------------

@@ -108,7 +108,6 @@ inline void convertFromLua(lua_State* L, int index, FieldColumn<T>& v) {
  *----------------------------------------------------------------------------*/
 template<class T>
 FieldColumn<T>::FieldColumn(int _chunk_size):
-    chunks(1),
     currChunk(-1),
     currChunkOffset(_chunk_size),
     numElements(0),
@@ -121,7 +120,6 @@ FieldColumn<T>::FieldColumn(int _chunk_size):
  *----------------------------------------------------------------------------*/
 template<class T>
 FieldColumn<T>::FieldColumn(const FieldColumn<T>& column):
-    chunks(column.chunks.size()),
     currChunk(column.currChunk),
     currChunkOffset(column.currChunkOffset),
     numElements(column.numElements),
