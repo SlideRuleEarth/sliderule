@@ -49,7 +49,7 @@
  * CLASS
  ******************************************************************************/
 
-class RequestFields: public LuaObject, FieldDictionary
+class RequestFields: public LuaObject, public FieldDictionary
 {
     public:
 

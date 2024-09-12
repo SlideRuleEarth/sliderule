@@ -47,6 +47,7 @@
 #include "FieldDictionary.h"
 #include "FieldList.h"
 #include "TimeLib.h"
+#include "Asset.h"
 
 /******************************************************************************
  * CLASSES
@@ -307,6 +308,8 @@ class Icesat2Fields: public RequestFields
          * Data
          *--------------------------------------------------------------------*/
 
+        FieldElement<string>                                assetName {"icesat2"};                                  // name of Asset in asset dictionary to user for granules
+        FieldElement<string>                                resource;                                               // granule name (including file extension)
         FieldElement<surface_type_t>                        surfaceType {SRT_LAND_ICE};                             // surface reference type (used to select signal confidence column)
         FieldElement<bool>                                  passInvalid {false};                                    // post extent even if each pair is invalid
         FieldElement<bool>                                  distInSeg {false};                                      // the extent length and step are expressed in segments, not meters
@@ -317,10 +320,10 @@ class Icesat2Fields: public RequestFields
         FieldElement<YapcFields>                            yapc;                                                   // settings used in YAPC algorithm
         FieldElement<int>                                   track {ALL_TRACKS};                                     // reference pair track number (1, 2, 3, or 0 for all tracks)
         FieldElement<int>                                   maxIterations {5};                                      // least squares fit iterations
-        FieldElement<int>                                   minPhotonCount {10};                                // PE
+        FieldElement<int>                                   minPhotonCount {10};                                    // PE
         FieldElement<double>                                alongTrackSpread {20.0};                                // meters
-        FieldElement<double>                                minWindow {3.0};                                    // H_win minimum
-        FieldElement<double>                                maxRobustDispersion {5.0};                          // sigma_r
+        FieldElement<double>                                minWindow {3.0};                                        // H_win minimum
+        FieldElement<double>                                maxRobustDispersion {5.0};                              // sigma_r
         FieldElement<double>                                extentLength {40.0};                                    // length of ATL06 extent (meters or segments if dist_in_seg is true)
         FieldElement<double>                                extentStep {20.0};                                      // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
         FieldElement<PhorealFields>                         phoreal;                                                // phoreal algorithm settings
@@ -330,6 +333,7 @@ class Icesat2Fields: public RequestFields
         FieldList<string>                                   atl08Fields;                                            // list of ATL08 fields to associate with an extent
         FieldList<string>                                   atl13Fields;                                            // list of ATL13 fields to associate with an extent
 
+        Asset* asset {NULL};
         bool stages[NUM_STAGES] = {true, false, false, false};
 
     protected:
@@ -338,8 +342,8 @@ class Icesat2Fields: public RequestFields
          * Methods
          *--------------------------------------------------------------------*/
 
-        Icesat2Fields   (lua_State* L, int index);
-        ~Icesat2Fields  (void) override = default;
+        Icesat2Fields   (lua_State* L, int index, const std::initializer_list<FieldDictionary::entry_t>& init_list);
+        ~Icesat2Fields  (void) override;
 };
 
 /******************************************************************************
@@ -368,6 +372,11 @@ int convertToLua(lua_State* L, const Icesat2Fields::gt_t& v);
 void convertFromLua(lua_State* L, int index, Icesat2Fields::gt_t& v);
 int convertToIndex(const Icesat2Fields::gt_t& v);
 void convertFromIndex(int index, Icesat2Fields::gt_t& v);
+
+int convertToLua(lua_State* L, const Icesat2Fields::spot_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Fields::spot_t& v);
+int convertToIndex(const Icesat2Fields::spot_t& v);
+void convertFromIndex(int index, Icesat2Fields::spot_t& v);
 
 int convertToLua(lua_State* L, const Icesat2Fields::surface_type_t& v);
 void convertFromLua(lua_State* L, int index, Icesat2Fields::surface_type_t& v);

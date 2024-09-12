@@ -35,6 +35,7 @@
 
 #include "OsApi.h"
 #include "Icesat2Fields.h"
+#include "FieldDictionary.h"
 #include "LuaObject.h"
 
 /******************************************************************************
@@ -55,7 +56,7 @@ int Icesat2Fields::luaCreate (lua_State* L)
         }
 
         /* Return Request Parameter Object */
-        return createLuaObject(L, new Icesat2Fields(L, 1));
+        return createLuaObject(L, new Icesat2Fields(L, 1, {}));
     }
     catch(const RunTimeException& e)
     {
@@ -67,8 +68,10 @@ int Icesat2Fields::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Icesat2Fields::Icesat2Fields(lua_State* L, int index):
-    RequestFields (L, index, {  {"srt",                 &surfaceType},
+Icesat2Fields::Icesat2Fields(lua_State* L, int index, const std::initializer_list<FieldDictionary::entry_t>& init_list):
+    RequestFields (L, index, {  {"asset",               &assetName},
+                                {"resource",            &resource},
+                                {"srt",                 &surfaceType},
                                 {"pass_invalid",        &passInvalid},
                                 {"dist_in_seg",         &distInSeg},
                                 {"cnf",                 &atl03Cnf},
@@ -91,6 +94,16 @@ Icesat2Fields::Icesat2Fields(lua_State* L, int index):
                                 {"atl08_fields",        &atl08Fields},
                                 {"atl13_fields",        &atl13Fields}  })
 {
+    // add additional fields to dictionary
+    for(const FieldDictionary::entry_t elem: init_list) 
+    {
+        fields.add(elem.name, elem);
+    }
+
+    // handle asset
+    asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(assetName.value.c_str(), Asset::OBJECT_TYPE));
+    if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", assetName.value.c_str());
+
     // handle signal confidence options
     if(atl03Cnf.provided && atl03Cnf.asSingle)
     {        
@@ -142,6 +155,14 @@ Icesat2Fields::Icesat2Fields(lua_State* L, int index):
             atl08Class[ATL08_UNCLASSIFIED] = false;
         }
     }
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+Icesat2Fields::~Icesat2Fields(void)
+{
+    if(asset) asset->releaseLuaObject();
 }
 
 /******************************************************************************
@@ -425,6 +446,64 @@ int convertToIndex(const Icesat2Fields::gt_t& v)
 void convertFromIndex(int index, Icesat2Fields::gt_t& v)
 {
     v = static_cast<Icesat2Fields::gt_t>((index + 1) * 10);
+}
+
+/*----------------------------------------------------------------------------
+ * convertToLua - spot_t
+ *----------------------------------------------------------------------------*/
+int convertToLua(lua_State* L, const Icesat2Fields::spot_t& v)
+{
+    switch(v)
+    {
+        case Icesat2Fields::SPOT_1:   lua_pushinteger(L, 1);  break;
+        case Icesat2Fields::SPOT_2:   lua_pushinteger(L, 2);  break;
+        case Icesat2Fields::SPOT_3:   lua_pushinteger(L, 3);  break;
+        case Icesat2Fields::SPOT_4:   lua_pushinteger(L, 4);  break;
+        case Icesat2Fields::SPOT_5:   lua_pushinteger(L, 5);  break;
+        case Icesat2Fields::SPOT_6:   lua_pushinteger(L, 6);  break;
+        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid spot: %d", static_cast<int>(v));
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * convertFromLua - spot_t
+ *----------------------------------------------------------------------------*/
+void convertFromLua(lua_State* L, int index, Icesat2Fields::spot_t& v)
+{
+    if(lua_isinteger(L, index))
+    {
+        int i = LuaObject::getLuaInteger(L, index);
+        if(i >= 1 && i <= Icesat2Fields::NUM_SPOTS)
+        {
+            v = static_cast<Icesat2Fields::spot_t>(i);
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid spot: %d", i);
+        }
+    }    
+    else if(!lua_isnil(L, index))
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "spot is an invalid type: %d", lua_type(L, index));
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertToIndex - spot_t
+ *----------------------------------------------------------------------------*/
+int convertToIndex(const Icesat2Fields::spot_t& v)
+{
+    return static_cast<int>(v) - 1;
+}
+
+/*----------------------------------------------------------------------------
+ * convertFromIndex - spot_t
+ *----------------------------------------------------------------------------*/
+void convertFromIndex(int index, Icesat2Fields::spot_t& v)
+{
+    v = static_cast<Icesat2Fields::spot_t>(index + 1);
 }
 
 /*----------------------------------------------------------------------------
