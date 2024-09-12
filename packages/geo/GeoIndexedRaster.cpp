@@ -201,27 +201,31 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
     static_cast<void>(param);
 
     // Call the base class function
-    // ssErrors = RasterObject::getSamples(points, sllist, param);
+    // return RasterObject::getSamples(points, sllist, param);
 
     /* cast away constness because of List [] operator */
     List<point_info_t*>& _points = const_cast<List<point_info_t*>&>(points);
 
-    /* List of points and their associated raster groups */
-    std::vector<point_raster_groups_t> pointsRasterGroups;
-
-    //TODO REMOVE THIS
-    sllist.clear();
-
     lockSampling();
+
+    /* Vector of points and their associated raster groups */
+    std::vector<point_groups_t> pointGroups;
+
+    /* Vector of rasters and all points they contain */
+    std::vector<unique_raster_t*> uiniqueRasters;
+
     try
     {
+
         ssErrors = SS_NO_ERRORS;
         double t0, t1;
 
         /* Find raster groups for each point */
-        print2term("Finding raster groups\n");
+        print2term("\nFinding raster groups\n");
         t0 = TimeLib::latchtime();
-        for(int i = 0; i < _points.length(); i++)
+
+        /* For all points from the caller, create a vector of raster group lists */
+        for(int64_t i = 0; i < _points.length(); i++)
         {
             const point_info_t* pinfo = _points[i];
             const int64_t gps = usePOItime() ? pinfo->gps : 0.0;
@@ -231,57 +235,105 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
             findRastersParallel(&ogr_point, groupList);
             filterRasters(gps, groupList);
 
-            pointsRasterGroups.emplace_back(point_raster_groups_t{&pinfo->point, groupList});
+            pointGroups.emplace_back(point_groups_t{{ogr_point, i}, groupList});
         }
         t1 = TimeLib::latchtime();
         print2term("time: %6.3lf\n", t1 - t0);
-        print2term("Number of pointsRasterGroups: %zu\n", pointsRasterGroups.size());
+        print2term("Number of pointGroups: %zu\n", pointGroups.size());
 
-        /* List of rasters and all points they contain */
-        std::vector<raster_points_t> rastersPoints;
 
-        /* Find unique rasters */
-        print2term("Finding unique rasters\n");
+
+        /* Create vector of unique rasters. */
+        print2term("\nFinding unique rasters\n");
         t0 = TimeLib::latchtime();
-        for(const point_raster_groups_t& prg : pointsRasterGroups)
+        for(const point_groups_t& pg : pointGroups)
         {
-            const GroupOrdering::Iterator iter(*prg.groupList);
-            for(int i = 0; i < iter.length; i++)
+            const GroupOrdering::Iterator iter(*pg.groupList);
+            for(int64_t i = 0; i < iter.length; i++)
             {
-                const rasters_group_t* rgroup = iter[i].value;
-                for(const auto& rinfo : rgroup->infovect)
+                rasters_group_t* rgroup = iter[i].value;
+                for(raster_info_t& rinfo : rgroup->infovect)
                 {
-                    /* Only add unique rasters */
-                    if(std::none_of(rastersPoints.begin(), rastersPoints.end(), [&rinfo](const raster_points_t& rpts) {
-                            return rpts.rinfo.fileName == rinfo.fileName;
-                        }))
+                    /* Is this raster already in the list of unique rasters? */
+                    bool addNewRaster = true;
+                    for(unique_raster_t* ur : uiniqueRasters)
                     {
-                        rastersPoints.emplace_back(raster_points_t{rinfo, {}});
+                        if(ur->rinfo.fileName == rinfo.fileName)
+                        {
+                            /* already in unique rasters list, set pointer in rinfo to this raster */
+                            rinfo.uraster = ur;
+                            addNewRaster = false;
+                            break;
+                        }
+                    }
+
+                    if(addNewRaster)
+                    {
+                        unique_raster_t* ur = new unique_raster_t();
+                        ur->rinfo = rinfo;
+                        ur->gpsTime = rgroup->gpsTime;
+                        ur->fileId = fileDictAdd(rinfo.fileName);
+                        uiniqueRasters.push_back(ur);
+
+                        /* Set pointer in rinfo to this new unique raster */
+                        rinfo.uraster = ur;
                     }
                 }
             }
         }
         t1 = TimeLib::latchtime();
         print2term("time: %6.3lf\n", t1 - t0);
-        print2term("Number of unique rasters: %zu\n", rastersPoints.size());
+        print2term("Number of unique rasters: %zu\n", uiniqueRasters.size());
 
+#if 0
+        /*
+        * Special case: if there are only one or two unique rasters but many points,
+        * it would be more efficient to call the base class function to sample all points using multiple RasterObjects.
+        * In the current implementation, only one thread is created per unique raster, leading to inefficient
+        * utilization of multi-core systems when processing large numbers of points.
+        * The base class implementation creates multiple RasterObjects, each with its own threads, to sample all points concurrently.
+        * GDAL cache is shared, so when multiple threads read the same raster, the data will be cached, avoiding redundant reads.
+        * Although GDAL’s internal cache mutexes will be contended, this approach is still likely to be more efficient on multi-core systems.
+        * Tests have shown that reading many points from one raster in one thread is slower than using multiple threads, even with mutex contention.
+        */
 
-        /* List of points for each unique raster */
-        print2term("Finding points for unique rasters\n");
+       if(uiniqueRasters.size() <= 2 && pointGroups.size() > 10000)
+       {
+           mlog(INFO, "Special case: Using base class function to sample points");
+
+           /* Clean up */
+           for(const point_groups_t& pg : pointGroups) delete pg.groupList;
+           for(unique_raster_t* ur : uiniqueRasters) delete ur;
+
+           unlockSampling();
+           return RasterObject::getSamples(points, sllist, param);
+       }
+#endif
+
+        /*
+         * For each unique raster, find the points that belong to it
+         */
+        print2term("\nFinding points for unique rasters\n");
         t0 = TimeLib::latchtime();
-        for(raster_points_t& rpts : rastersPoints)
+        for(unique_raster_t* ur : uiniqueRasters)
         {
-            for(const point_raster_groups_t& prg : pointsRasterGroups)
+            const std::string& rasterName = ur->rinfo.fileName;
+
+            /* Is this raster in the group of rasters for this point? */
+            for(uint32_t pointIndx = 0; pointIndx < pointGroups.size(); pointIndx++)
             {
-                const GroupOrdering::Iterator iter(*prg.groupList);
+                const point_groups_t& pg = pointGroups[pointIndx];
+                const GroupOrdering::Iterator iter(*pg.groupList);
                 for(int i = 0; i < iter.length; i++)
                 {
                     const rasters_group_t* rgroup = iter[i].value;
-                    for(const auto& rinfo : rgroup->infovect)
+                    for(const auto& ri : rgroup->infovect)
                     {
-                        if(rinfo.fileName == rpts.rinfo.fileName)
+                        if(ri.fileName == rasterName)
                         {
-                            rpts.points.emplace_back(prg.point);
+                            /* Found rasterName in this group of rasters, add this point */
+                            const point_sample_t pointSample = {pg.pointInfo, NULL, SS_NO_ERRORS};
+                            ur->pointSamples.push_back(pointSample);
                             break;
                         }
                     }
@@ -289,25 +341,142 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
             }
         }
         t1 = TimeLib::latchtime();
-        print2term("time: %6.3lf\n", t1 - t0);
+        print2term("time: %6.3lf\n\n", t1 - t0);
 
-        for(const raster_points_t& rpts : rastersPoints)
+#if 1
+        uint32_t totalSamples = 0;
+        for(const unique_raster_t* ur: uiniqueRasters)
         {
-            print2term("%6zu  -- %s\n", rpts.points.size(), rpts.rinfo.fileName.c_str());
+            // print2term("%6zu  -- %s\n", ur->pointSamples.size(), ur->rinfo.fileName.c_str());
+            totalSamples += ur->pointSamples.size();
         }
+        print2term("Total samples: %u in %zu rasters.\n", totalSamples, uiniqueRasters.size());
+#endif
+
+        /* Create batch reader threads */
+        const uint32_t maxThreads = MAX_READER_THREADS/2;
+        createBatchReaderThreads(maxThreads);
+
+        /* Sample points for each raster */
+        const uint32_t numRasters = uiniqueRasters.size();
+        uint32_t currentRaster = 0;
+        uint32_t batchCnt = 0;
+
+        t0 = TimeLib::latchtime();
+        while(currentRaster < numRasters)
+        {
+            /* Calculate how many rasters we can process in this batch */
+            const uint32_t batchSize = std::min(maxThreads, numRasters - currentRaster);
+
+            print2term("%u batch with %u rasters\n", batchCnt++, batchSize);
+            const double bt0 = TimeLib::latchtime();
+
+            /* Signal threads to process rasters in the current batch */
+            for(uint32_t i = 0; i < batchSize; i++)
+            {
+                unique_raster_t* ur = uiniqueRasters[currentRaster + i];
+                BatchReader* breader = batchReaders[i];
+
+                breader->sync.lock();
+                {
+                    breader->uraster = ur;
+                    breader->sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
+                }
+                breader->sync.unlock();
+            }
+
+            /* Wait for batch readers to finish sampling for this batch */
+            for(uint32_t i = 0; i < batchSize; i++)
+            {
+                BatchReader* breader = batchReaders[i];
+
+                breader->sync.lock();
+                {
+                    while(breader->uraster != NULL)
+                        breader->sync.wait(DATA_SAMPLED, SYS_TIMEOUT);
+                }
+                breader->sync.unlock();
+            }
+            const double bt1 = TimeLib::latchtime();
+            print2term("\ttime: %6.3lf, \n", bt1 - bt0);
+
+            /* Move to the next batch of rasters */
+            currentRaster += batchSize;
+        }
+        t1 = TimeLib::latchtime();
+        print2term("All batches time: %6.3lf\n", t1 - t0);
+
+
+        /*
+         * Populate sllist with samples
+         */
+        t0 = TimeLib::latchtime();
+        for(uint32_t pointIndx = 0; pointIndx < pointGroups.size(); pointIndx++)
+        {
+            const point_groups_t& pg = pointGroups[pointIndx];
+            const GroupOrdering::Iterator iter(*pg.groupList);
+
+            /* Allocate a new sample list for groupList */
+            sample_list_t* slist = new sample_list_t();
+
+            for(int i = 0; i < iter.length; i++)
+            {
+                const rasters_group_t* rgroup = iter[i].value;
+                uint32_t flags = 0;
+
+                /* Get flags value for this group of rasters */
+                if(parms->flags_file)
+                    flags = getBatchGroupFlags(rgroup, pointIndx);
+
+                ssErrors |= getBatchGroupSamples(rgroup, slist, flags, pointIndx);
+            }
+
+            sllist.add(slist);
+        }
+        t1 = TimeLib::latchtime();
+        print2term("Creating sllist: %6.3lf\n", t1 - t0);
+
+#if 1
+        uint32_t numSamples = 0;
+        uint32_t nullSamples = 0;
+        for(unique_raster_t* ur : uiniqueRasters)
+        {
+            for(uint32_t i = 0; i < ur->pointSamples.size(); i++)
+            {
+                numSamples++;
+                const point_sample_t& ps = ur->pointSamples.at(i);
+
+                if(ps.sample == NULL)
+                {
+                    nullSamples++;
+                }
+            }
+        }
+        print2term("numSamples: %u, nullSamples: %u\n", numSamples, nullSamples);
+#endif
 
     }
     catch (const RunTimeException &e)
     {
         mlog(e.level(), "Error getting samples: %s", e.what());
     }
-    unlockSampling();
+
+    /* batchReaders are no longer needed */
+    batchReaders.clear();
 
     /* Clean up */
-    for(const point_raster_groups_t& prg : pointsRasterGroups)
+    for(const point_groups_t& pg : pointGroups)
+        delete pg.groupList;
+
+    for(unique_raster_t* ur : uiniqueRasters)
     {
-        delete prg.groupList;
+        for(const point_sample_t& ps : ur->pointSamples)
+            delete ps.sample;
+
+        delete ur;
     }
+
+    unlockSampling();
 
     return ssErrors;
 }
@@ -361,6 +530,33 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * BatchReader Constructor
+ *----------------------------------------------------------------------------*/
+GeoIndexedRaster::BatchReader::BatchReader (GeoIndexedRaster* raster):
+    obj(raster),
+    uraster(NULL),
+    sync(NUM_SYNC_SIGNALS),
+    run(true)
+{
+    thread = new Thread(GeoIndexedRaster::batchReaderThread, this);
+}
+
+/*----------------------------------------------------------------------------
+ * BatchReader Destructor
+ *----------------------------------------------------------------------------*/
+GeoIndexedRaster::BatchReader::~BatchReader (void)
+{
+    sync.lock();
+    {
+        run = false; /* Set run flag to false */
+        sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
+    }
+    sync.unlock();
+
+    delete thread; /* delete thread waits on thread to join */
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::overrideCRS_t cb):
@@ -389,6 +585,84 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
     createFinderThreads();
 }
 
+
+/*----------------------------------------------------------------------------
+ * getBatchGroupSamples
+ *----------------------------------------------------------------------------*/
+uint32_t GeoIndexedRaster::getBatchGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx)
+{
+    uint32_t errors = SS_NO_ERRORS;
+
+    for(const auto& rinfo: rgroup->infovect)
+    {
+        if(strcmp(VALUE_TAG, rinfo.tag.c_str()) != 0) continue;
+
+        /* This is the unique raster we are looking for, it cannot be NULL */
+        unique_raster_t* ur = rinfo.uraster;
+        assert(ur);
+
+        /* Get the sample for this point from unique raster */
+        for(const point_sample_t& ps : ur->pointSamples)
+        {
+            if(ps.pointInfo.index == pointIndx)
+            {
+                /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
+                if(ps.sample == NULL) break;
+
+                /*
+                * A copy of the sample must be made. The sample is owned by the unique raster,
+                * and the same sample may be returned by multiple rasters that reference the same unique raster.
+                */
+                RasterSample* s = new RasterSample(*ps.sample);
+
+                /* Set flags for this sample, add it to the list */
+                s->flags = flags;
+                slist->add(s);
+                errors |= ps.ssErrors;
+
+                /*
+                 * There is only one raster with VALUE_TAG and one with FLAGS_TAG in a group.
+                 * If group has other type rasters the dataset must override the getGroupFlags method.
+                 */
+                return errors;
+            }
+        }
+    }
+
+    return errors;
+}
+
+/*----------------------------------------------------------------------------
+ * getBatchGroupFlags
+ *----------------------------------------------------------------------------*/
+uint32_t GeoIndexedRaster::getBatchGroupFlags(const rasters_group_t* rgroup, uint32_t pointIndx)
+{
+    for(const auto& rinfo: rgroup->infovect)
+    {
+        if(strcmp(FLAGS_TAG, rinfo.tag.c_str()) != 0) continue;
+
+        /* This is the unique raster we are looking for, it cannot be NULL */
+        unique_raster_t* ur = rinfo.uraster;
+        assert(ur);
+
+        /* Get the sample for this point from unique raster */
+        for(const point_sample_t& ps : ur->pointSamples)
+        {
+            if(ps.pointInfo.index == pointIndx)
+            {
+                /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
+                if(ps.sample)
+                {
+                    return ps.sample->value;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+
 /*----------------------------------------------------------------------------
  * getGroupSamples
  *----------------------------------------------------------------------------*/
@@ -396,23 +670,28 @@ void GeoIndexedRaster::getGroupSamples(const rasters_group_t* rgroup, List<Raste
 {
     for(const auto& rinfo: rgroup->infovect)
     {
-        if(strcmp(VALUE_TAG, rinfo.tag.c_str()) == 0)
-        {
-            const char* key = rinfo.fileName.c_str();
-            cacheitem_t* item;
-            if(cache.find(key, &item))
-            {
-                RasterSample* _sample = item->sample;
-                if(_sample)
-                {
-                    _sample->flags = flags;
-                    slist.add(_sample);
-                    item->sample = NULL;
-                }
+        if(strcmp(VALUE_TAG, rinfo.tag.c_str()) != 0) continue;
 
-                /* Get sampling/subset error status */
-                ssErrors |= item->raster->getSSerror();
+        const char* key = rinfo.fileName.c_str();
+        cacheitem_t* item;
+        if(cache.find(key, &item))
+        {
+            RasterSample* _sample = item->sample;
+            if(_sample)
+            {
+                _sample->flags = flags;
+                slist.add(_sample);
+                item->sample = NULL;
             }
+
+            /* Get sampling/subset error status */
+            ssErrors |= item->raster->getSSerror();
+
+            /*
+             * There is only one raster with VALUE_TAG and one with FLAGS_TAG in a group.
+             * If group has other type rasters the dataset must override the getGroupFlags method.
+             */
+            break;
         }
     }
 }
@@ -448,27 +727,23 @@ void GeoIndexedRaster::getGroupSubsets(const rasters_group_t* rgroup, List<Raste
  *----------------------------------------------------------------------------*/
 uint32_t GeoIndexedRaster::getGroupFlags(const rasters_group_t* rgroup)
 {
-    uint32_t flags = 0;
-
     for(const auto& rinfo: rgroup->infovect)
     {
-        if(strcmp(FLAGS_TAG, rinfo.tag.c_str()) == 0)
+        if(strcmp(FLAGS_TAG, rinfo.tag.c_str()) != 0) continue;
+
+        cacheitem_t* item;
+        const char* key = rinfo.fileName.c_str();
+        if(cache.find(key, &item))
         {
-            cacheitem_t* item;
-            const char* key = rinfo.fileName.c_str();
-            if(cache.find(key, &item))
+            const RasterSample* _sample = item->sample;
+            if(_sample)
             {
-                const RasterSample* _sample = item->sample;
-                if(_sample)
-                {
-                    flags = _sample->value;
-                }
+                return _sample->value;
             }
-            break;
         }
     }
 
-    return flags;
+    return 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -888,6 +1163,55 @@ void* GeoIndexedRaster::readerThread(void *param)
 }
 
 /*----------------------------------------------------------------------------
+ * batchReaderThread
+ *----------------------------------------------------------------------------*/
+void* GeoIndexedRaster::batchReaderThread(void *param)
+{
+    batch_reader_t *breader = static_cast<batch_reader_t*>(param);
+
+    GDALSetCacheMax(0);  // Disable cache for a particular thread or dataset
+
+    while(breader->run)
+    {
+        breader->sync.lock();
+        {
+            /* Wait for raster to work on */
+            while((breader->uraster == NULL) && breader->run)
+                breader->sync.wait(DATA_TO_SAMPLE, SYS_TIMEOUT);
+        }
+        breader->sync.unlock();
+
+        if(breader->uraster != NULL)
+        {
+            unique_raster_t* ur = breader->uraster;
+            GdalRaster* raster = new GdalRaster(breader->obj->parms,
+                                                ur->rinfo.fileName,
+                                                ur->gpsTime,
+                                                ur->fileId,
+                                                ur->rinfo.dataIsElevation,
+                                                breader->obj->crscb);
+
+            /* Sample all points for this raster */
+            for(point_sample_t& ps : ur->pointSamples)
+            {
+                ps.sample = raster->samplePOI(&ps.pointInfo.point);
+                ps.ssErrors |= raster->getSSerror();
+            }
+
+            delete raster;
+            breader->sync.lock();
+            {
+                breader->uraster = NULL; /* Done with this raster and all points */
+                breader->sync.signal(DATA_SAMPLED, Cond::NOTIFY_ONE);
+            }
+            breader->sync.unlock();
+        }
+    }
+
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------
  * createFinderThreads
  *----------------------------------------------------------------------------*/
 bool GeoIndexedRaster::createFinderThreads(void)
@@ -933,6 +1257,29 @@ bool GeoIndexedRaster::createReaderThreads(uint32_t rasters2sample)
     }
 
     return readers.length() == threadsNeeded;
+}
+
+/*----------------------------------------------------------------------------
+ * createBatchReaderThreads
+ *----------------------------------------------------------------------------*/
+bool GeoIndexedRaster::createBatchReaderThreads(uint32_t cnt)
+{
+    try
+    {
+        for(uint32_t i = 0; i < cnt; i++)
+        {
+            BatchReader* r = new BatchReader(this);
+            batchReaders.add(r);
+        }
+    }
+    catch (const RunTimeException &e)
+    {
+        ssErrors |= SS_RESOURCE_LIMIT_ERROR;
+        mlog(CRITICAL, "Failed to create batch reader threads");
+    }
+
+    print2term("Number of batch readers: %d\n", batchReaders.length());
+    return batchReaders.length() == static_cast<int>(cnt);
 }
 
 /*----------------------------------------------------------------------------
@@ -1220,5 +1567,3 @@ bool GeoIndexedRaster::findRastersParallel(OGRGeometry* geo, GroupOrdering* grou
 
     return (!groupList->empty());
 }
-
-

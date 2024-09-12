@@ -67,13 +67,35 @@ class GeoIndexedRaster: public RasterObject
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef struct RasterInfo {
-            bool         dataIsElevation;
-            std::string  tag;
-            std::string  fileName;
 
-            RasterInfo(void): dataIsElevation(false) {}
+        typedef struct {
+            OGRPoint                    point;
+            int64_t                     index;
+        } ogr_point_info_t;
+
+        typedef struct {
+            ogr_point_info_t            pointInfo;
+            RasterSample*               sample;
+            uint32_t                    ssErrors;
+        } point_sample_t;
+
+        struct unique_raster_t;
+        typedef struct RasterInfo {
+            bool                       dataIsElevation;
+            std::string                tag;
+            std::string                fileName;
+            unique_raster_t*           uraster;  // only used for batch reading
+
+            RasterInfo(void): dataIsElevation(false), uraster(NULL) {}
         } raster_info_t;
+
+        typedef struct unique_raster_t {
+            raster_info_t               rinfo;
+            double                      gpsTime;
+            uint64_t                    fileId;
+            std::vector<point_sample_t> pointSamples;
+        } unique_raster_t;
+
 
         typedef struct RaserGroup {
             std::string                id;
@@ -83,6 +105,24 @@ class GeoIndexedRaster: public RasterObject
 
             RaserGroup(void): gmtDate{0,0,0,0,0,0}, gpsTime(0) {}
         } rasters_group_t;
+
+        typedef Ordering<rasters_group_t*, unsigned long> GroupOrdering;
+
+        typedef struct {
+            ogr_point_info_t            pointInfo;
+            GroupOrdering*              groupList;
+        } point_groups_t;
+
+        typedef struct BatchReader {
+            GeoIndexedRaster*   obj;
+            unique_raster_t*    uraster;
+            Thread*             thread;
+            Cond                sync;
+            bool                run;
+            explicit BatchReader(GeoIndexedRaster* raster);
+            ~BatchReader(void);
+        } batch_reader_t;
+
 
         typedef struct CacheItem {
             bool            enabled;
@@ -138,36 +178,27 @@ class GeoIndexedRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
         typedef Dictionary<cacheitem_t*> CacheDictionary;
-        typedef Ordering<rasters_group_t*, unsigned long> GroupOrdering;
-
-        typedef struct {
-            const MathLib::point_3d_t*  point;
-            GroupOrdering*              groupList;
-        } point_raster_groups_t;
-
-        typedef struct
-        {
-            raster_info_t                            rinfo;
-            std::vector<const MathLib::point_3d_t*>  points;
-        } raster_points_t;
-
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        GeoIndexedRaster      (lua_State* L, GeoParms* _parms, GdalRaster::overrideCRS_t cb=NULL);
-        virtual void    getGroupSamples       (const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags);
-        virtual void    getGroupSubsets       (const rasters_group_t* rgroup, List<RasterSubset*>& slist);
-        uint32_t        getGroupFlags         (const rasters_group_t* rgroup);
-        static double   getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
-        virtual bool    openGeoIndex          (const OGRGeometry* geo);
-        virtual bool    getFeatureDate        (const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate);
-        virtual void    getIndexFile          (const OGRGeometry* geo, std::string& file) = 0;
-        virtual bool    findRasters           (finder_t* finder) = 0;
-        void            sampleRasters         (OGRGeometry* geo);
-        bool            sample                (OGRGeometry* geo, int64_t gps, GroupOrdering* groupList);
-        void            emptyFeaturesList     (void);
+                         GeoIndexedRaster      (lua_State* L, GeoParms* _parms, GdalRaster::overrideCRS_t cb=NULL);
+        virtual uint32_t getBatchGroupSamples  (const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx);
+        static  uint32_t getBatchGroupFlags    (const rasters_group_t* rgroup, uint32_t pointIndx);
+
+        virtual void     getGroupSamples       (const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags);
+        virtual void     getGroupSubsets       (const rasters_group_t* rgroup, List<RasterSubset*>& slist);
+        uint32_t         getGroupFlags         (const rasters_group_t* rgroup);
+
+        static double    getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
+        virtual bool     openGeoIndex          (const OGRGeometry* geo);
+        virtual bool     getFeatureDate        (const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate);
+        virtual void     getIndexFile          (const OGRGeometry* geo, std::string& file) = 0;
+        virtual bool     findRasters           (finder_t* finder) = 0;
+        void             sampleRasters         (OGRGeometry* geo);
+        bool             sample                (OGRGeometry* geo, int64_t gps, GroupOrdering* groupList);
+        void             emptyFeaturesList     (void);
 
         /*--------------------------------------------------------------------
          * Data
@@ -196,6 +227,7 @@ class GeoIndexedRaster: public RasterObject
         finder_range_t*           findersRange;
         List<finder_t*>           finders;
         List<reader_t*>           readers;
+        List<batch_reader_t*>     batchReaders;
         GdalRaster::overrideCRS_t crscb;
 
         std::string               indexFile;
@@ -207,15 +239,17 @@ class GeoIndexedRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int      luaDimensions   (lua_State* L);
-        static int      luaBoundingBox  (lua_State* L);
-        static int      luaCellSize     (lua_State* L);
+        static int      luaDimensions       (lua_State* L);
+        static int      luaBoundingBox      (lua_State* L);
+        static int      luaCellSize         (lua_State* L);
 
-        static void*    finderThread    (void *param);
-        static void*    readerThread    (void *param);
+        static void*    finderThread        (void *param);
+        static void*    readerThread        (void *param);
+        static void*    batchReaderThread   (void *param);
 
         bool            createFinderThreads (void);
         bool            createReaderThreads (uint32_t  rasters2sample);
+        bool            createBatchReaderThreads (uint32_t cnt);
         bool            updateCache         (uint32_t& rasters2sample, const GroupOrdering* groupList);
         bool            filterRasters       (int64_t gps, GroupOrdering* groupList);
         void            setFindersRange     (void);
