@@ -60,9 +60,9 @@ class FieldElement: public Field
 
         FieldElement&   operator=       (const FieldElement<T>& element);
 
-        FieldElement&   operator=       (const T& v);
-        bool            operator==      (const T& v) const;
-        bool            operator!=      (const T& v) const;
+        FieldElement&   operator=       (const T v);
+        bool            operator==      (const T v) const;
+        bool            operator!=      (const T v) const;
 
         int             toLua           (lua_State* L) const override;
         void            fromLua         (lua_State* L, int index) override;
@@ -112,7 +112,7 @@ FieldElement<T>& FieldElement<T>::operator=(const FieldElement<T>& element)
  * operator=
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldElement<T>& FieldElement<T>::operator=(const T& v) 
+FieldElement<T>& FieldElement<T>::operator=(const T v) 
 {
     value = v;
     return *this;
@@ -122,7 +122,7 @@ FieldElement<T>& FieldElement<T>::operator=(const T& v)
  * operator==
  *----------------------------------------------------------------------------*/
 template <class T>
-bool FieldElement<T>::operator==(const T& v) const
+bool FieldElement<T>::operator==(const T v) const
 {
     return value == v;
 }
@@ -131,7 +131,7 @@ bool FieldElement<T>::operator==(const T& v) const
  * operator!=
  *----------------------------------------------------------------------------*/
 template <class T>
-bool FieldElement<T>::operator!=(const T& v) const
+bool FieldElement<T>::operator!=(const T v) const
 {
     return value != v;
 }
