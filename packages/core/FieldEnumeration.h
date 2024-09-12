@@ -54,8 +54,11 @@ class FieldEnumeration: public Field
          *--------------------------------------------------------------------*/
 
                                 FieldEnumeration    (std::initializer_list<bool> init_list);
+                                FieldEnumeration    (void);
                                 FieldEnumeration    (const FieldEnumeration<T,N>& array);
                                 ~FieldEnumeration   (void) override = default;
+
+        bool                    get                 (int i) const;
 
         FieldEnumeration<T,N>&  operator=           (const FieldEnumeration<T,N>& array);
         bool                    operator[]          (T i) const;
@@ -107,6 +110,17 @@ FieldEnumeration<T,N>::FieldEnumeration(std::initializer_list<bool> init_list):
 {
     assert(N > 0);
     std::copy(init_list.begin(), init_list.end(), values);
+    initialized = true;
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+FieldEnumeration<T,N>::FieldEnumeration(void):
+    asSingle(false)
+{
+    assert(N > 0);
 }
 
 /*----------------------------------------------------------------------------
@@ -117,6 +131,19 @@ FieldEnumeration<T,N>::FieldEnumeration(const FieldEnumeration<T,N>& array)
 {
     assert(N > 0);
     copy(array);
+}
+
+/*----------------------------------------------------------------------------
+ * get
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+bool FieldEnumeration<T,N>::get(int i) const
+{
+    if(i < 0 || i >= N)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "index out of bounds: %d", index);
+    }
+    return values[i];
 }
 
 /*----------------------------------------------------------------------------
@@ -229,6 +256,7 @@ void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
 
     // set provided
     provided = true;
+    initialized = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -244,6 +272,7 @@ void FieldEnumeration<T,N>::copy(const FieldEnumeration<T,N>& array)
     }
     asSingle = array.asSingle;
     provided = array.provided;
+    initialized = array.initialized;
 }
 
 #endif  /* __field_enumeration__ */

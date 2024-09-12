@@ -51,6 +51,15 @@ FieldDictionary::FieldDictionary(std::initializer_list<entry_t> init_list, int h
     {
         fields.add(elem.name, elem);
     }
+    initialized = true;
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+FieldDictionary::FieldDictionary(int hash_table_size):
+    fields(hash_table_size)
+{
 }
 
 /*----------------------------------------------------------------------------
@@ -60,6 +69,7 @@ FieldDictionary::FieldDictionary(const FieldDictionary& dictionary):
     fields(dictionary.fields)
 {
     provided = dictionary.provided;
+    initialized = dictionary.initialized;
 }
 
 /*----------------------------------------------------------------------------
@@ -78,6 +88,7 @@ FieldDictionary& FieldDictionary::operator= (const FieldDictionary& dictionary)
     if(this == &dictionary) return *this;
     fields = dictionary.fields;
     provided = dictionary.provided;
+    initialiezd = dictionary.initialized;
     return *this;
 }
 
@@ -107,9 +118,12 @@ int FieldDictionary::toLua (lua_State* L) const
     for(int i = 0; i < iter.length; i++)
     {
         const Dictionary<entry_t>::kv_t kv = iter[i];
-        lua_pushstring(L, kv.value.name);
-        kv.value.field->toLua(L);
-        lua_settable(L, -3);
+        if(kv.value.field->initialized)
+        {
+            lua_pushstring(L, kv.value.name);
+            kv.value.field->toLua(L);
+            lua_settable(L, -3);
+        }
     }
     return 1;
 }
@@ -141,6 +155,7 @@ void FieldDictionary::fromLua (lua_State* L, int index)
             lua_pop(L, 1);
         }
         provided = true; // even if no element within table are set, presence of table is sufficient
+        initialized = true;
     }
 }
 

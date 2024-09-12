@@ -54,6 +54,7 @@ class FieldArray: public Field
          *--------------------------------------------------------------------*/
 
                             FieldArray      (std::initializer_list<T> init_list);
+                            FieldArray      (void);
                             FieldArray      (const FieldArray<T,N>& array);
                             ~FieldArray     (void) override = default;
 
@@ -105,6 +106,16 @@ FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list)
 {
     assert(N > 0);
     std::copy(init_list.begin(), init_list.end(), values);
+    initialized = true;
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+FieldArray<T,N>::FieldArray(void)
+{
+    assert(N > 0);
 }
 
 /*----------------------------------------------------------------------------
@@ -185,6 +196,7 @@ void FieldArray<T,N>::fromLua (lua_State* L, int index)
 
     // set provided
     provided = true;
+    initialized = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -199,6 +211,7 @@ void FieldArray<T,N>::copy(const FieldArray<T,N>& array)
         values[i] = array.values[i];
     }
     provided = array.provided;
+    initialized = array.initialized;
 }
 
 #endif  /* __field_array__ */

@@ -131,6 +131,16 @@ class BathyFields: public Icesat2Fields
         static const char* exRecType;
         static const RecordObject::fieldDef_t exRecDef[];
 
+        inline static const char* QTREES_NAME           = "qtrees";
+        inline static const char* COASTNET_NAME         = "coastnet";
+        inline static const char* OPENOCEANSPP_NAME     = "openoceanspp";
+        inline static const char* MEDIANFILTER_NAME     = "medianfilter";
+        inline static const char* CSHELPH_NAME          = "cshelph";
+        inline static const char* BATHYPATHFINDER_NAME  = "bathypathfinder";
+        inline static const char* POINTNET_NAME         = "pointnet";
+        inline static const char* OPENOCEANS_NAME       = "openoceans";
+        inline static const char* ENSEMBLE_NAME         = "ensemble";
+
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/

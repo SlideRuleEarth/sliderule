@@ -156,15 +156,15 @@ int convertToLua(lua_State* L, const BathyFields::classifier_t& v)
 {
     switch(v)
     {
-        case BathyFields::QTREES:           lua_pushstring(L, "qtrees");            break;
-        case BathyFields::COASTNET:         lua_pushstring(L, "coastnet");          break;
-        case BathyFields::OPENOCEANSPP:     lua_pushstring(L, "openoceanspp");      break;
-        case BathyFields::MEDIANFILTER:     lua_pushstring(L, "medianfilter");      break;
-        case BathyFields::CSHELPH:          lua_pushstring(L, "cshelph");           break;
-        case BathyFields::BATHYPATHFINDER:  lua_pushstring(L, "bathypathfinder");   break;
-        case BathyFields::POINTNET:         lua_pushstring(L, "pointnet");          break;
-        case BathyFields::OPENOCEANS:       lua_pushstring(L, "openoceans");        break;
-        case BathyFields::ENSEMBLE:         lua_pushstring(L, "ensemble");          break;
+        case BathyFields::QTREES:           lua_pushstring(L, BathyFields::QTREES_NAME);            break;
+        case BathyFields::COASTNET:         lua_pushstring(L, BathyFields::COASTNET_NAME);          break;
+        case BathyFields::OPENOCEANSPP:     lua_pushstring(L, BathyFields::OPENOCEANSPP_NAME);      break;
+        case BathyFields::MEDIANFILTER:     lua_pushstring(L, BathyFields::MEDIANFILTER_NAME);      break;
+        case BathyFields::CSHELPH:          lua_pushstring(L, BathyFields::CSHELPH_NAME);           break;
+        case BathyFields::BATHYPATHFINDER:  lua_pushstring(L, BathyFields::BATHYPATHFINDER_NAME);   break;
+        case BathyFields::POINTNET:         lua_pushstring(L, BathyFields::POINTNET_NAME);          break;
+        case BathyFields::OPENOCEANS:       lua_pushstring(L, BathyFields::OPENOCEANS_NAME);        break;
+        case BathyFields::ENSEMBLE:         lua_pushstring(L, BathyFields::ENSEMBLE_NAME);          break;
         default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid classifier: %d", static_cast<int>(v));
     }
 
@@ -183,15 +183,15 @@ void convertFromLua(lua_State* L, int index, BathyFields::classifier_t& v)
     else if(lua_isstring(L, index))
     {
         const char* str = LuaObject::getLuaString(L, index);
-        if     (StringLib::match(str, "qtrees"))            v = BathyFields::QTREES;
-        else if(StringLib::match(str, "coastnet"))          v = BathyFields::COASTNET;
-        else if(StringLib::match(str, "openoceanspp"))      v = BathyFields::OPENOCEANSPP;
-        else if(StringLib::match(str, "medianfilter"))      v = BathyFields::MEDIANFILTER;
-        else if(StringLib::match(str, "cshelph"))           v = BathyFields::CSHELPH;
-        else if(StringLib::match(str, "bathypathfinder"))   v = BathyFields::BATHYPATHFINDER;
-        else if(StringLib::match(str, "pointnet"))          v = BathyFields::POINTNET;
-        else if(StringLib::match(str, "openoceans"))        v = BathyFields::OPENOCEANS;
-        else if(StringLib::match(str, "ensemble"))          v = BathyFields::ENSEMBLE;
+        if     (StringLib::match(str, BathyFields::QTREES_NAME))            v = BathyFields::QTREES;
+        else if(StringLib::match(str, BathyFields::COASTNET_NAME))          v = BathyFields::COASTNET;
+        else if(StringLib::match(str, BathyFields::OPENOCEANSPP_NAME))      v = BathyFields::OPENOCEANSPP;
+        else if(StringLib::match(str, BathyFields::MEDIANFILTER_NAME))      v = BathyFields::MEDIANFILTER;
+        else if(StringLib::match(str, BathyFields::CSHELPH_NAME))           v = BathyFields::CSHELPH;
+        else if(StringLib::match(str, BathyFields::BATHYPATHFINDER_NAME))   v = BathyFields::BATHYPATHFINDER;
+        else if(StringLib::match(str, BathyFields::POINTNET_NAME))          v = BathyFields::POINTNET;
+        else if(StringLib::match(str, BathyFields::OPENOCEANS_NAME))        v = BathyFields::OPENOCEANS;
+        else if(StringLib::match(str, BathyFields::ENSEMBLE_NAME))          v = BathyFields::ENSEMBLE;
         else throw RunTimeException(CRITICAL, RTE_ERROR, "classifier is an invalid value: %d", static_cast<int>(v));
     }
     else if(!lua_isnil(L, index))

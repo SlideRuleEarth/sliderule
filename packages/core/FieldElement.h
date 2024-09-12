@@ -85,6 +85,7 @@ template <class T>
 FieldElement<T>::FieldElement(T default_value):
     value(default_value)
 {
+    initialized = element.initialized;
 }
 
 /*----------------------------------------------------------------------------
@@ -95,6 +96,7 @@ FieldElement<T>::FieldElement(const FieldElement<T>& element)
 {
     value = element.value;
     provided = element.provided;
+    initialized = element.initialized;
 }
 
 /*----------------------------------------------------------------------------
@@ -105,6 +107,7 @@ FieldElement<T>& FieldElement<T>::operator=(const FieldElement<T>& element)
 {
     value = element.value;
     provided = element.provided;
+    initialized = element.initialized;
     return *this;
 }
 

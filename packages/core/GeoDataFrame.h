@@ -29,22 +29,27 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __field_dictionary__
-#define __field_dictionary__
+#ifndef __geo_data_frame__
+#define __geo_data_frame__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "LuaEngine.h"
-#include "Field.h"
+#include "LuaObject.h"
+#include "FieldDictionary.h"
+#include "FieldElement.h"
+#include "FieldColumn.h"
+#include "RegionMask.h"
+#include "List.h"
+#include "MathLib.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class FieldDictionary: public Field
+class GeoDataFrame: public LuaObject, public FieldDictionary
 {
     public:
 
@@ -52,52 +57,32 @@ class FieldDictionary: public Field
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int DEFAULT_INITIAL_HASH_TABLE_SIZE = 32;
-
-        /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            const char* name;
-            Field* field;
-        } entry_t;
+        static const char* OBJECT_TYPE;
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        FieldDictionary (std::initializer_list<entry_t> init_list, int hash_table_size=DEFAULT_INITIAL_HASH_TABLE_SIZE);
-                        FieldDictionary (int hash_table_size=DEFAULT_INITIAL_HASH_TABLE_SIZE);
-                        FieldDictionary (const FieldDictionary& dictionary);                        
-                        ~FieldDictionary(void) override = default;
+        static int luaCreate (lua_State* L);
+        static int luaExport (lua_State* L);
+        static int luaImport (lua_State* L);
 
-        bool            add             (const entry_t& entry);
+    protected:
 
-        FieldDictionary& operator=      (const FieldDictionary& dictionary);
-        Field*          operator[]      (const char* key) const;
-        Field&          operator[]      (const char* key);
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
-        int             toLua           (lua_State* L) const override;
-        void            fromLua         (lua_State* L, int index) override;
+        GeoDataFrame   (lua_State* L, const std::initializer_list<entry_t>& column_list, const std::initializer_list<entry_t>& meta_list);
+        ~GeoDataFrame  (void) override = default;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        Dictionary<entry_t> fields;
+        FieldDictionary metaFields;
 };
 
-/******************************************************************************
- * FUNCTIONS
- ******************************************************************************/
-
-inline int convertToLua(lua_State* L, const FieldDictionary& v) {
-    return v.toLua(L);
-}
-
-inline void convertFromLua(lua_State* L, int index, FieldDictionary& v) {
-    v.fromLua(L, index);
-}
-
-#endif  /* __field_dictionary__ */
+#endif  /* __geo_data_frame__ */

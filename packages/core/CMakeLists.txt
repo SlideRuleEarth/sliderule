@@ -32,9 +32,9 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/EndpointProxy.cpp
         ${CMAKE_CURRENT_LIST_DIR}/EventLib.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/PointIndex.cpp
         ${CMAKE_CURRENT_LIST_DIR}/FieldDictionary.cpp
         ${CMAKE_CURRENT_LIST_DIR}/FileIODriver.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/GeoDataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/HttpServer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/LuaEndpoint.cpp
         ${CMAKE_CURRENT_LIST_DIR}/LuaEngine.cpp
@@ -48,6 +48,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/Monitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/MsgQ.cpp
         ${CMAKE_CURRENT_LIST_DIR}/OrchestratorLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/PointIndex.cpp
         ${CMAKE_CURRENT_LIST_DIR}/ProvisioningSystemLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/PublishMonitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/RecordObject.cpp
@@ -86,7 +87,8 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/CurlLib.h
         ${CMAKE_CURRENT_LIST_DIR}/Dictionary.h
         ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.h
-        ${CMAKE_CURRENT_LIST_DIR}/PointIndex.h
+        ${CMAKE_CURRENT_LIST_DIR}/EndpointProxy.h
+        ${CMAKE_CURRENT_LIST_DIR}/EventLib.h
         ${CMAKE_CURRENT_LIST_DIR}/Field.h
         ${CMAKE_CURRENT_LIST_DIR}/FieldArray.h
         ${CMAKE_CURRENT_LIST_DIR}/FieldColumn.h
@@ -95,10 +97,9 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/FieldEnumeration.h
         ${CMAKE_CURRENT_LIST_DIR}/FieldList.h
         ${CMAKE_CURRENT_LIST_DIR}/FileIODriver.h
+        ${CMAKE_CURRENT_LIST_DIR}/GeoDataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/HttpServer.h
         ${CMAKE_CURRENT_LIST_DIR}/List.h
-        ${CMAKE_CURRENT_LIST_DIR}/EndpointProxy.h
-        ${CMAKE_CURRENT_LIST_DIR}/EventLib.h
         ${CMAKE_CURRENT_LIST_DIR}/LuaEndpoint.h
         ${CMAKE_CURRENT_LIST_DIR}/LuaEngine.h
         ${CMAKE_CURRENT_LIST_DIR}/LuaLibraryMsg.h
@@ -112,6 +113,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/MsgQ.h
         ${CMAKE_CURRENT_LIST_DIR}/OrchestratorLib.h
         ${CMAKE_CURRENT_LIST_DIR}/Ordering.h
+        ${CMAKE_CURRENT_LIST_DIR}/PointIndex.h
         ${CMAKE_CURRENT_LIST_DIR}/ProvisioningSystemLib.h
         ${CMAKE_CURRENT_LIST_DIR}/PublishMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/RecordObject.h

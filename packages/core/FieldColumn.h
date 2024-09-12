@@ -147,6 +147,7 @@ FieldColumn<T>::FieldColumn(const FieldColumn<T>& column):
     }
     // base class
     provided = column.provided;
+    initalized = column.initalized;
 }
 
 /*----------------------------------------------------------------------------
@@ -227,6 +228,7 @@ FieldColumn<T>& FieldColumn<T>::operator= (const FieldColumn<T>& column)
     }
 
     provided = column.provided;
+    initialized = column.provided;
 
     return *this;
 }
@@ -292,6 +294,7 @@ void FieldColumn<T>::fromLua (lua_State* L, int index)
     if(num_elements > 0)
     {
         provided = true;
+        initialized = true;
     }
 }
 

@@ -94,7 +94,8 @@ class Field
          * Data
          *--------------------------------------------------------------------*/
 
-        bool provided {false};
+        bool provided {false};      // whether the field has been populated by the fromLua function
+        bool initialized {false};   // whether the field has been initialized by any means
 };
 
 #endif  /* __field__ */
