@@ -92,6 +92,8 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/FieldColumn.h
         ${CMAKE_CURRENT_LIST_DIR}/FieldDictionary.h
         ${CMAKE_CURRENT_LIST_DIR}/FieldElement.h
+        ${CMAKE_CURRENT_LIST_DIR}/FieldEnumeration.h
+        ${CMAKE_CURRENT_LIST_DIR}/FieldList.h
         ${CMAKE_CURRENT_LIST_DIR}/FileIODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/HttpServer.h
         ${CMAKE_CURRENT_LIST_DIR}/List.h

@@ -87,9 +87,9 @@ class GeoJsonRaster: public GeoRaster
         }
 
         uint8_t* getRasterData (void) { return data; }
-        uint32_t getRasterCols (void) { return cols; }
-        uint32_t getRasterRows (void) { return rows; }
-        bbox_t   getRasterBbox (void) { return bbox; }
+        uint32_t getRasterCols (void) const { return cols; }
+        uint32_t getRasterRows (void) const { return rows; }
+        bbox_t   getRasterBbox (void) const { return bbox; }
 
 
     protected:

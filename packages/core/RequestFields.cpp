@@ -60,7 +60,7 @@ int RequestFields::luaCreate (lua_State* L)
 {
     try
     {
-        return createLuaObject(L, new RequestFields(L, 1));
+        return createLuaObject(L, new RequestFields(L, 1, {}));
     }
     catch(const RunTimeException& e)
     {
@@ -98,9 +98,9 @@ int RequestFields::luaProjectedPolygonIncludes (lua_State* L)
     try
     {
         RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
-        double lon = getLuaFloat(L, 2);
-        double lat = getLuaFloat(L, 3);
-        bool includes = lua_obj->polyIncludes(lon, lat);
+        const double lon = getLuaFloat(L, 2);
+        const double lat = getLuaFloat(L, 3);
+        const bool includes = lua_obj->polyIncludes(lon, lat);
         lua_pushboolean(L, includes);
     }
     catch(const RunTimeException& e)
@@ -120,9 +120,9 @@ int RequestFields::luaRegionMaskIncludes (lua_State* L)
     try
     {
         RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
-        double lon = getLuaFloat(L, 2);
-        double lat = getLuaFloat(L, 3);
-        bool includes = lua_obj->maskIncludes(lon, lat);
+        const double lon = getLuaFloat(L, 2);
+        const double lat = getLuaFloat(L, 3);
+        const bool includes = lua_obj->maskIncludes(lon, lat);
         lua_pushboolean(L, includes);
     }
     catch(const RunTimeException& e)
@@ -137,7 +137,7 @@ int RequestFields::luaRegionMaskIncludes (lua_State* L)
 /*----------------------------------------------------------------------------
  * polyIncludes
  *----------------------------------------------------------------------------*/
-bool RequestFields::polyIncludes (double lon, double lat)
+bool RequestFields::polyIncludes (double lon, double lat) const
 {
     // project coordinate
     const MathLib::coord_t coord = {lon, lat};
@@ -156,7 +156,7 @@ bool RequestFields::polyIncludes (double lon, double lat)
 /*----------------------------------------------------------------------------
  * maskIncludes
  *----------------------------------------------------------------------------*/
-bool RequestFields::maskIncludes (double lon, double lat)
+bool RequestFields::maskIncludes (double lon, double lat) const
 {
     return regionMask.value.includes(lon, lat);
 }
@@ -164,7 +164,7 @@ bool RequestFields::maskIncludes (double lon, double lat)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RequestFields::RequestFields(lua_State* L, int index):
+RequestFields::RequestFields(lua_State* L, int index, const std::initializer_list<entry_t>& init_list):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     FieldDictionary ({  {"polygon",             &polygon},
                         {"projection",          &projection},
@@ -176,6 +176,12 @@ RequestFields::RequestFields(lua_State* L, int index):
                         {"cluster_size_hint",   &clusterSizeHint},
                         {"region_mask",         &regionMask} })
 {
+    // add additional fields to dictionary
+    for(const entry_t elem: init_list) 
+    {
+        fields.add(elem.name, elem);
+    }
+
     // read in from Lua
     fromLua(L, index);
 

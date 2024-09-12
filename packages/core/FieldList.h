@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __field_column__
-#define __field_column__
+#ifndef __field_list__
+#define __field_list__
 
 /******************************************************************************
  * INCLUDES
@@ -45,44 +45,42 @@
  ******************************************************************************/
 
 template <class T>
-class FieldColumn: public Field
+class FieldList: public Field
 {
     public:
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const int DEFAULT_CHUNK_SIZE = 256;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit        FieldColumn     (int _chunk_size=DEFAULT_CHUNK_SIZE);
-                        FieldColumn     (const FieldColumn<T>& column);
-                        ~FieldColumn    (void) override;
+                        FieldList   (void) = default;
+                        FieldList   (const FieldList<T>& array);
+                        ~FieldList  (void) override = default;
 
-        long            append          (const T& v);
-        void            clear           (void);
-        long            length          (void) const;
+        long            append      (const T& v);
+        void            clear       (void);
+        long            length      (void) const;
 
-        FieldColumn<T>& operator=       (const FieldColumn<T>& column);
-        T               operator[]      (int i) const;
-        T&              operator[]      (int i);
+        FieldList<T>&   operator=   (const FieldList<T>& array);
+        T               operator[]  (int i) const;
+        T&              operator[]  (int i);
 
-        int             toLua           (lua_State* L) const override;
-        void            fromLua         (lua_State* L, int index) override;
+        int             toLua       (lua_State* L) const override;
+        void            fromLua     (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        vector<T*> chunks;
-        long currChunk;
-        long currChunkOffset;
-        long numElements;
-        long chunkSize;
+        vector<T> values;
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        void copy (const FieldList<T>& array);
 };
 
 /******************************************************************************
@@ -90,12 +88,12 @@ class FieldColumn: public Field
  ******************************************************************************/
 
 template <class T>
-inline int convertToLua(lua_State* L, const FieldColumn<T>& v) {
+inline int convertToLua(lua_State* L, const FieldList<T>& v) {
     return v.toLua(L);
 }
 
 template <class T>
-inline void convertFromLua(lua_State* L, int index, FieldColumn<T>& v) {
+inline void convertFromLua(lua_State* L, int index, FieldList<T>& v) {
     v.fromLua(L, index);
 }
 
@@ -104,167 +102,81 @@ inline void convertFromLua(lua_State* L, int index, FieldColumn<T>& v) {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-template<class T>
-FieldColumn<T>::FieldColumn(int _chunk_size):
-    chunks(1),
-    currChunk(-1),
-    currChunkOffset(_chunk_size),
-    numElements(0),
-    chunkSize(_chunk_size)
-{
-}
-
-/*----------------------------------------------------------------------------
  * Copy Constructor
  *----------------------------------------------------------------------------*/
-template<class T>
-FieldColumn<T>::FieldColumn(const FieldColumn<T>& column):
-    chunks(column.chunks.size()),
-    currChunk(column.currChunk),
-    currChunkOffset(column.currChunkOffset),
-    numElements(column.numElements),
-    chunkSize(column.chunkSize)
+template <class T>
+FieldList<T>::FieldList(const FieldList<T>& array)
 {
-    // all but last chunk
-    for(long c = 0; c < currChunk; c++)
-    {
-        T* chunk = new T[chunkSize];
-        for(long i = 0; i < chunkSize; i++)
-        {
-            chunk[i] = column.chunks[c][i];
-        }
-        chunks.push_back(chunk);
-    }
-    // last chunk
-    if(currChunk >= 0)
-    {
-        T* chunk = new T[chunkSize];
-        for(long i = 0; i < currChunkOffset; i++)
-        {
-            chunk[i] = column.chunks[currChunk][i];
-        }
-        chunks.push_back(chunk);
-    }
-    // base class
-    provided = column.provided;
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-template<class T>
-FieldColumn<T>::~FieldColumn(void)
-{
-    for(T* chunk: chunks)
-    {
-        delete [] chunk;
-    }
+    copy(array);
 }
 
 /*----------------------------------------------------------------------------
  * append
  *----------------------------------------------------------------------------*/
 template<class T>
-long FieldColumn<T>::append(const T& v)
+long FieldList<T>::append(const T& v)
 {
-    if(currChunkOffset < chunkSize)
-    {
-        chunks[currChunk][currChunkOffset] = v;
-        currChunkOffset++;
-    }
-    else
-    {
-        T* chunk = new T[chunkSize];
-        chunk[0] = v;
-        chunks.push_back(chunk);
-        currChunk++;
-        currChunkOffset = 1;
-    }
-
-    return ++numElements;
+    values.push_back(v);
+    return static_cast<long>(values.size() - 1);
 }
 
 /*----------------------------------------------------------------------------
  * clear
  *----------------------------------------------------------------------------*/
 template<class T>
-void FieldColumn<T>::clear(void)
+void FieldList<T>::clear(void)
 {
-    // delete all chunks
-    for(T* chunk: chunks)
-    {
-        delete [] chunk;
-    }
-    chunks.clear();
-
-    // reset indices
-    currChunk = -1;
-    currChunkOffset = chunkSize;
-    numElements = 0;
+    values.clear();
 }
 
 /*----------------------------------------------------------------------------
  * length
  *----------------------------------------------------------------------------*/
 template<class T>
-long FieldColumn<T>::length(void) const
+long FieldList<T>::length(void) const
 {
-    return numElements;
+    return static_cast<long>(values.size());
 }
 
 /*----------------------------------------------------------------------------
  * operator=
  *----------------------------------------------------------------------------*/
-template<class T>
-FieldColumn<T>& FieldColumn<T>::operator= (const FieldColumn<T>& column)
+template <class T>
+FieldList<T>& FieldList<T>::operator=(const FieldList<T>& array)
 {
-    if(this == &column) return *this;
-
-    clear();
-    for(long i = 0; i < column.numElements; i++)
-    {
-        append(column[i]);
-    }
-
-    provided = column.provided;
-
+    if(this == &array) return *this;
+    copy(array);
     return *this;
 }
 
 /*----------------------------------------------------------------------------
  * operator[] - rvalue
  *----------------------------------------------------------------------------*/
-template<class T>
-T FieldColumn<T>::operator[](int i) const
+template <class T>
+T FieldList<T>::operator[](int i) const
 {
-    const long chunk_index = i / chunkSize;
-    const long chunk_offset = i % chunkSize;
-    return chunks[chunk_index][chunk_offset];
+    return values[i];
 }
 
 /*----------------------------------------------------------------------------
  * operator[] - lvalue
  *----------------------------------------------------------------------------*/
-template<class T>
-T& FieldColumn<T>::operator[](int i)
+template <class T>
+T& FieldList<T>::operator[](int i)
 {
-    const long chunk_index = i / chunkSize;
-    const long chunk_offset = i % chunkSize;
-    return chunks[chunk_index][chunk_offset];
+    return values[i];
 }
 
 /*----------------------------------------------------------------------------
  * toLua
  *----------------------------------------------------------------------------*/
-template<class T>
-int FieldColumn<T>::toLua (lua_State* L) const
+template <class T>
+int FieldList<T>::toLua (lua_State* L) const
 {
     lua_newtable(L);
-    for(int i = 0; i < numElements; i++)
+    for(size_t i = 0; i < values.size(); i++)
     {
-        convertToLua(L, this->operator[](i));
+        convertToLua(L, values[i]);
         lua_rawseti(L, -2, i + 1);
     }
     return 1;
@@ -273,28 +185,39 @@ int FieldColumn<T>::toLua (lua_State* L) const
 /*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
-template<class T>
-void FieldColumn<T>::fromLua (lua_State* L, int index) 
+template <class T>
+void FieldList<T>::fromLua (lua_State* L, int index) 
 {
-    // clear out existing elements
-    clear();
+    T value;
+
+    // clear the list of values
+    values.clear();
 
     // convert all elements from lua
     const int num_elements = lua_rawlen(L, index);
     for(int i = 0; i < num_elements; i++)
     {
-        T value;
         lua_rawgeti(L, index, i + 1);
         convertFromLua(L, -1, value);
         lua_pop(L, 1);
-        append(value);
+        values.push_back(value);
     }
 
     // set provided
-    if(num_elements > 0)
-    {
-        provided = true;
-    }
+    provided = true;
 }
 
-#endif  /* __field_column__ */
+/*----------------------------------------------------------------------------
+ * copy
+ *----------------------------------------------------------------------------*/
+template <class T>
+void FieldList<T>::copy(const FieldList<T>& array)
+{
+    for(size_t i = 0; i < values.size(); i++)
+    {
+        values[i] = array.values[i];
+    }
+    provided = array.provided;
+}
+
+#endif  /* __field_list__ */

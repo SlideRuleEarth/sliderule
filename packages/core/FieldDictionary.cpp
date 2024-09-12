@@ -59,6 +59,7 @@ FieldDictionary::FieldDictionary(std::initializer_list<entry_t> init_list, int h
 FieldDictionary::FieldDictionary(const FieldDictionary& dictionary):
     fields(dictionary.fields)
 {
+    provided = dictionary.provided;
 }
 
 /*----------------------------------------------------------------------------
@@ -76,6 +77,7 @@ FieldDictionary& FieldDictionary::operator= (const FieldDictionary& dictionary)
 {
     if(this == &dictionary) return *this;
     fields = dictionary.fields;
+    provided = dictionary.provided;
     return *this;
 }
 
@@ -138,6 +140,7 @@ void FieldDictionary::fromLua (lua_State* L, int index)
             }
             lua_pop(L, 1);
         }
+        provided = true; // even if no element within table are set, presence of table is sufficient
     }
 }
 

@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __field_array__
-#define __field_array__
+#ifndef __field_enumeration__
+#define __field_enumeration__
 
 /******************************************************************************
  * INCLUDES
@@ -45,7 +45,7 @@
  ******************************************************************************/
 
 template <class T, int N>
-class FieldArray: public Field
+class FieldEnumeration: public Field
 {
     public:
 
@@ -53,22 +53,23 @@ class FieldArray: public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-                            FieldArray      (std::initializer_list<T> init_list);
-                            FieldArray      (const FieldArray<T,N>& array);
-                            ~FieldArray     (void) override = default;
+                                FieldEnumeration    (std::initializer_list<bool> init_list);
+                                FieldEnumeration    (const FieldEnumeration<T,N>& array);
+                                ~FieldEnumeration   (void) override = default;
 
-        FieldArray<T,N>&    operator=       (const FieldArray<T,N>& array);
-        T                   operator[]      (int i) const;
-        T&                  operator[]      (int i);
+        FieldEnumeration<T,N>&  operator=           (const FieldEnumeration<T,N>& array);
+        bool                    operator[]          (T i) const;
+        bool&                   operator[]          (T i);
 
-        int                 toLua           (lua_State* L) const override;
-        void                fromLua         (lua_State* L, int index) override;
+        int                     toLua               (lua_State* L) const override;
+        void                    fromLua             (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        T values[N];
+        bool values[N];
+        bool asSingle;  // provided as a single value as opposed to an array
 
     private:
 
@@ -76,7 +77,7 @@ class FieldArray: public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-        void copy (const FieldArray<T,N>& array);
+        void copy (const FieldEnumeration<T,N>& array);
 };
 
 /******************************************************************************
@@ -84,12 +85,12 @@ class FieldArray: public Field
  ******************************************************************************/
 
 template <class T, int N>
-inline int convertToLua(lua_State* L, const FieldArray<T, N>& v) {
+inline int convertToLua(lua_State* L, const FieldEnumeration<T, N>& v) {
     return v.toLua(L);
 }
 
 template <class T, int N>
-inline void convertFromLua(lua_State* L, int index, FieldArray<T, N>& v) {
+inline void convertFromLua(lua_State* L, int index, FieldEnumeration<T, N>& v) {
     v.fromLua(L, index);
 }
 
@@ -101,7 +102,8 @@ inline void convertFromLua(lua_State* L, int index, FieldArray<T, N>& v) {
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T, int N>
-FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list)
+FieldEnumeration<T,N>::FieldEnumeration(std::initializer_list<bool> init_list):
+    asSingle(false)
 {
     assert(N > 0);
     std::copy(init_list.begin(), init_list.end(), values);
@@ -111,7 +113,7 @@ FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list)
  * Copy Constructor
  *----------------------------------------------------------------------------*/
 template <class T, int N>
-FieldArray<T,N>::FieldArray(const FieldArray<T,N>& array)
+FieldEnumeration<T,N>::FieldEnumeration(const FieldEnumeration<T,N>& array)
 {
     assert(N > 0);
     copy(array);
@@ -121,7 +123,7 @@ FieldArray<T,N>::FieldArray(const FieldArray<T,N>& array)
  * operator=
  *----------------------------------------------------------------------------*/
 template <class T, int N>
-FieldArray<T,N>& FieldArray<T,N>::operator=(const FieldArray<T,N>& array)
+FieldEnumeration<T,N>& FieldEnumeration<T,N>::operator=(const FieldEnumeration<T,N>& array)
 {
     if(this == &array) return *this;
     copy(array);
@@ -132,31 +134,46 @@ FieldArray<T,N>& FieldArray<T,N>::operator=(const FieldArray<T,N>& array)
  * operator[] - rvalue
  *----------------------------------------------------------------------------*/
 template <class T, int N>
-T FieldArray<T,N>::operator[](int i) const
+bool FieldEnumeration<T,N>::operator[](T i) const
 {
-    return values[i];
+    const int index = convertToIndex(i);
+    if(index < 0 || index >= N)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "index out of bounds: %d", index);
+    }
+    return values[index];
 }
 
 /*----------------------------------------------------------------------------
  * operator[] - lvalue
  *----------------------------------------------------------------------------*/
 template <class T, int N>
-T& FieldArray<T,N>::operator[](int i)
+bool& FieldEnumeration<T,N>::operator[](T i)
 {
-    return values[i];
+    const int index = convertToIndex(i);
+    if(index < 0 || index >= N)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "index out of bounds: %d", index);
+    }
+    return values[index];
 }
 
 /*----------------------------------------------------------------------------
  * toLua
  *----------------------------------------------------------------------------*/
 template <class T, int N>
-int FieldArray<T,N>::toLua (lua_State* L) const
+int FieldEnumeration<T,N>::toLua (lua_State* L) const
 {
     lua_newtable(L);
     for(int i = 0; i < N; i++)
     {
-        convertToLua(L, values[i]);
-        lua_rawseti(L, -2, i + 1);
+        if(values[i])
+        {
+            T selection;
+            convertFromIndex(i, selection);
+            convertToLua(L, selection);
+            lua_rawseti(L, -2, i + 1);
+        }
     }
     return 1;
 }
@@ -165,22 +182,49 @@ int FieldArray<T,N>::toLua (lua_State* L) const
  * fromLua
  *----------------------------------------------------------------------------*/
 template <class T, int N>
-void FieldArray<T,N>::fromLua (lua_State* L, int index) 
+void FieldEnumeration<T,N>::fromLua (lua_State* L, int index) 
 {
-    const int num_elements = lua_rawlen(L, index);
+    T selection;
 
-    // check size
-    if(num_elements != N)
+    memset(values, 0, sizeof(values)); // set all to false
+
+    if(lua_istable(L, index)) // provided as a table
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "mismatch in array size, expected %d, got %d", N, num_elements);
+        const int num_elements = lua_rawlen(L, index);
+        for(int i = 0; i < num_elements; i++)
+        {
+            lua_rawgeti(L, index, i + 1);
+            convertFromLua(L, -1, selection);
+            lua_pop(L, 1);
+
+            const int selection_index = convertToIndex(selection);
+            if(selection_index >= 0 && selection_index < N)
+            {
+                values[selection_index] = true;
+            }
+            else
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "selection outside of bounds: %d", selection);
+            }
+        }
+
+        asSingle = false;
     }
-
-    // convert all elements from lua
-    for(int i = 0; i < N; i++)
+    else // provided as a single selection
     {
-        lua_rawgeti(L, index, i + 1);
-        convertFromLua(L, -1, values[i]);
-        lua_pop(L, 1);
+        convertFromLua(L, -1, selection);
+
+        const int selection_index = convertToIndex(selection);
+        if(selection_index >= 0 && selection_index < N)
+        {
+            values[selection_index] = true;
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "selection outside of bounds: %d", selection);
+        }
+
+        asSingle = true;
     }
 
     // set provided
@@ -191,14 +235,15 @@ void FieldArray<T,N>::fromLua (lua_State* L, int index)
  * copy
  *----------------------------------------------------------------------------*/
 template <class T, int N>
-void FieldArray<T,N>::copy(const FieldArray<T,N>& array)
+void FieldEnumeration<T,N>::copy(const FieldEnumeration<T,N>& array)
 {
     assert(N > 0);
     for(int i = 0; i < N; i++)
     {
         values[i] = array.values[i];
     }
+    asSingle = array.asSingle;
     provided = array.provided;
 }
 
-#endif  /* __field_array__ */
+#endif  /* __field_enumeration__ */

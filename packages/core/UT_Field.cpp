@@ -42,6 +42,8 @@
 #include "Field.h"
 #include "FieldElement.h"
 #include "FieldArray.h"
+#include "FieldEnumeration.h"
+#include "FieldList.h"
 #include "FieldColumn.h"
 #include "FieldDictionary.h"
 
@@ -53,6 +55,8 @@ const char* UT_Field::LUA_META_NAME = "UT_Field";
 const struct luaL_Reg UT_Field::LUA_META_TABLE[] = {
     {"element",     testElement},
     {"array",       testArray},
+    {"enumeration", testEnumeration},
+    {"list",        testList},
     {"column",      testColumn},
     {"dictionary",  testDictionary},
     {NULL,          NULL}
@@ -156,6 +160,113 @@ int UT_Field::testArray(lua_State* L)
         } bye;
 
         ut_assert(lua_obj, bye.p0[0] == true, "failed to initialize parameter");
+
+        // return status
+        lua_pushboolean(L, ut_status(lua_obj));
+        return 1;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(CRITICAL, "Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
+}
+
+/*--------------------------------------------------------------------------------------
+ * testEnumeration
+ *--------------------------------------------------------------------------------------*/
+typedef enum {
+    UT_FIELD_ENUM_0 = 0,
+    UT_FIELD_ENUM_1 = 10,
+    UT_FIELD_ENUM_2 = 20,
+    NUM_UT_FIELD_ENUMS = 3
+} ut_field_enum_t;
+
+int convertToLua(lua_State* L, const ut_field_enum_t& v) {
+    switch(v) {
+        case UT_FIELD_ENUM_0:   lua_pushstring(L, "enum0");  break;
+        case UT_FIELD_ENUM_1:   lua_pushstring(L, "enum1");  break;
+        case UT_FIELD_ENUM_2:   lua_pushstring(L, "enum2");  break;
+        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid enumeration: %d", static_cast<int>(v));
+    }
+    return 1;
+}
+
+void convertFromLua(lua_State* L, int index, ut_field_enum_t& v) {
+    if(lua_isstring(L, index)) {
+        const char* str = LuaObject::getLuaString(L, index);
+        if     (StringLib::match(str, "enum0")) v = UT_FIELD_ENUM_0;
+        else if(StringLib::match(str, "enum1")) v = UT_FIELD_ENUM_1;
+        else if(StringLib::match(str, "enum2")) v = UT_FIELD_ENUM_2;
+        else throw RunTimeException(CRITICAL, RTE_ERROR, "ground track is an invalid value: %d", static_cast<int>(v));
+    }
+    else if(!lua_isnil(L, index)) {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "ground track is an invalid type: %d", lua_type(L, index));
+    }
+}
+
+int convertToIndex(const ut_field_enum_t& v) {
+    return static_cast<int>(v) / 10;
+}
+
+void convertFromIndex(int index, ut_field_enum_t& v) {
+    v = static_cast<ut_field_enum_t>(index * 10);
+}
+
+int UT_Field::testEnumeration(lua_State* L)
+{
+    UT_Field* lua_obj = NULL;
+    try
+    {
+        // initialize test
+        lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));        
+        ut_initialize(lua_obj);
+
+        FieldEnumeration<ut_field_enum_t,NUM_UT_FIELD_ENUMS> e = {true, false, true};
+
+        ut_assert(lua_obj, e.values[0] == true, "failed to initialize parameter");
+        ut_assert(lua_obj, e.values[1] == false, "failed to initialize parameter");
+        ut_assert(lua_obj, e.values[2] == true, "failed to initialize parameter");
+
+        ut_assert(lua_obj, e[UT_FIELD_ENUM_0] == true, "failed to initialize parameter");
+        ut_assert(lua_obj, e[UT_FIELD_ENUM_1] == false, "failed to initialize parameter");
+        ut_assert(lua_obj, e[UT_FIELD_ENUM_0] == true, "failed to initialize parameter");
+
+        // return status
+        lua_pushboolean(L, ut_status(lua_obj));
+        return 1;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(CRITICAL, "Failed to get lua parameters: %s", e.what());
+        lua_pushboolean(L, false);
+        return 1;
+    }
+}
+
+/*--------------------------------------------------------------------------------------
+ * testList
+ *--------------------------------------------------------------------------------------*/
+int UT_Field::testList(lua_State* L)
+{
+    UT_Field* lua_obj = NULL;
+    try
+    {
+        // initialize test
+        lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));        
+        ut_initialize(lua_obj);
+
+        FieldList<string>   pstring;
+
+        // populate string list
+        ut_assert(lua_obj, pstring.append("good") == 0, "failed to append");
+        ut_assert(lua_obj, pstring.append("guys") == 1, "failed to append");
+        ut_assert(lua_obj, pstring.append("always") == 2, "failed to append");
+        ut_assert(lua_obj, pstring.append("win") == 3, "failed to append");
+
+        // check list
+        ut_assert(lua_obj, pstring.length() == 4, "failed to return size of list");
 
         // return status
         lua_pushboolean(L, ut_status(lua_obj));

@@ -80,7 +80,7 @@ RegionMask::~RegionMask(void)
 /*----------------------------------------------------------------------------
  * includes
  *----------------------------------------------------------------------------*/
-bool RegionMask::includes(double lon, double lat)
+bool RegionMask::includes(double lon, double lat) const
 {
     if((lonMin.value <= lon) && (lonMax.value >= lon) &&
         (latMin.value <= lat) && (latMax.value >= lat))
@@ -113,7 +113,7 @@ RegionMask& RegionMask::operator= (const RegionMask v)
     data = NULL;
 
     delete [] data;
-    long size = cols.value * rows.value;
+    const long size = cols.value * rows.value;
     if(v.data && size > 0)
     {
         data = new uint8_t [size];

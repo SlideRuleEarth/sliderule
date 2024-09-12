@@ -70,6 +70,8 @@ class UT_Field: public UnitTest
 
 	static int  testElement     (lua_State* L);
 	static int  testArray       (lua_State* L);
+	static int  testEnumeration (lua_State* L);
+	static int  testList        (lua_State* L);
 	static int  testColumn      (lua_State* L);
 	static int  testDictionary  (lua_State* L);
 };

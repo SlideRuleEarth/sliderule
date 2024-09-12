@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __icesat2_parms__
-#define __icesat2_parms__
+#ifndef __icesat2_fields__
+#define __icesat2_fields__
 
 /******************************************************************************
  * INCLUDES
@@ -41,15 +41,71 @@
 #include "EndpointProxy.h"
 #include "List.h"
 #include "MathLib.h"
-#include "RequestParms.h"
-#include "AncillaryFields.h"
+#include "RequestFields.h"
+#include "FieldElement.h"
+#include "FieldEnumeration.h"
+#include "FieldDictionary.h"
+#include "FieldList.h"
 #include "TimeLib.h"
 
 /******************************************************************************
- * REQUEST PARAMETERS
+ * CLASSES
  ******************************************************************************/
 
-class Icesat2Parms: public RequestParms
+/***************/
+/* YAPC Fields */
+/***************/
+struct YapcFields: public FieldDictionary 
+{
+    FieldElement<uint8_t>   score {0};      // minimum allowed weight of photon using yapc algorithm
+    FieldElement<int>       version {3};    // version of the yapc algorithm to run
+    FieldElement<int>       knn {0};        // (version 2 only) k-nearest neighbors
+    FieldElement<int>       min_knn {5};    // (version 3 only) minimum number of k-nearest neighors
+    FieldElement<double>    win_h {6.0};    // window height (overrides calculated value if non-zero)
+    FieldElement<double>    win_x {15.0};   // window width
+    
+    YapcFields(void): 
+        FieldDictionary({ {"score",     &score},
+                          {"version",   &version}, 
+                          {"knn",       &knn},
+                          {"min_knn",   &min_knn},
+                          {"win_h",     &win_h},
+                          {"win_x",     &win_x} }) {};
+    ~YapcFields(void) override = default;
+};
+
+/******************/
+/* PhoREAL Fields */
+/******************/
+struct PhorealFields: public FieldDictionary 
+{
+    typedef enum {
+        MEAN = 0,
+        MEDIAN = 1,
+        CENTER = 2
+    } phoreal_geoloc_t;
+
+    FieldElement<double>            binsize {1.0};              // size of photon height bin
+    FieldElement<phoreal_geoloc_t>  geoloc {MEDIAN};            // how are geolocation stats calculated
+    FieldElement<bool>              use_abs_h {false};          // use absolute heights
+    FieldElement<bool>              send_waveform {false};      // include the waveform in the results
+    FieldElement<bool>              above_classifier {false};   // use the ABoVE classification algorithm
+
+    PhorealFields(void): 
+        FieldDictionary({ {"binsize",           &binsize},
+                          {"geoloc",            &geoloc},
+                          {"use_abs_h",         &use_abs_h},
+                          {"send_waveform",     &send_waveform},
+                          {"above_classifier",  &above_classifier} }) {
+            if(binsize.value <= 0.0) throw RunTimeException(CRITICAL, RTE_ERROR, "invalid binsize: %lf", binsize.value);
+        };
+    ~PhorealFields(void) override = default;
+};
+
+/*******************/
+/* ICESat-2 Fields */
+/*******************/
+class Icesat2Fields: public RequestFields
 {
     public:
 
@@ -57,53 +113,14 @@ class Icesat2Parms: public RequestParms
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* ICESAT2_PARMS;
-        static const char* SURFACE_TYPE;
-        static const char* ATL03_CNF;
-        static const char* YAPC;
-        static const char* YAPC_SCORE;
-        static const char* YAPC_KNN;
-        static const char* YAPC_MIN_KNN;
-        static const char* YAPC_WIN_H;
-        static const char* YAPC_WIN_X;
-        static const char* YAPC_VERSION;
-        static const char* ATL08_CLASS;
-        static const char* QUALITY;
-        static const char* TRACK;
-        static const char* BEAMS;
-        static const char* STAGES;
-        static const char* ALONG_TRACK_SPREAD;
-        static const char* MIN_PHOTON_COUNT;
-        static const char* EXTENT_LENGTH;
-        static const char* EXTENT_STEP;
-        static const char* MAX_ITERATIONS;
-        static const char* MIN_WINDOW;
-        static const char* MAX_ROBUST_DISPERSION;
-        static const char* PASS_INVALID;
-        static const char* DISTANCE_IN_SEGMENTS;
-        static const char* ATL03_GEO_FIELDS;
-        static const char* ATL03_PH_FIELDS;
-        static const char* ATL06_FIELDS;
-        static const char* ATL08_FIELDS;
-        static const char* ATL13_FIELDS;
-        static const char* PHOREAL;
-        static const char* PHOREAL_BINSIZE;
-        static const char* PHOREAL_GEOLOC;
-        static const char* PHOREAL_USE_ABS_H;
-        static const char* PHOREAL_WAVEFORM;
-        static const char* PHOREAL_ABOVE;
-
+        static const int NUM_SPOTS                  = 6;
         static const int NUM_PAIR_TRACKS            = 2;
         static const int RPT_L                      = 0;
         static const int RPT_R                      = 1;
-
         static const int EXTENT_ID_PHOTONS          = 0x0;
         static const int EXTENT_ID_ELEVATION        = 0x2;
-
         static const int EXPECTED_NUM_FIELDS        = 8; // a typical number of ancillary fields requested
-
         static const uint8_t INVALID_FLAG           = 0xFF;
-
         static const int64_t ATLAS_SDP_EPOCH_GPS    = 1198800018; // seconds to add to ATLAS delta times to get GPS times
 
         /*--------------------------------------------------------------------
@@ -121,13 +138,13 @@ class Icesat2Parms: public RequestParms
 
         /* Ground Tracks */
         typedef enum {
+            INVALID_GT = 0,
             GT1L = 10,
             GT1R = 20,
             GT2L = 30,
             GT2R = 40,
             GT3L = 50,
-            GT3R = 60,
-            INVALID_GT = 70
+            GT3R = 60
         } gt_t;
 
         /* Spots */
@@ -138,8 +155,7 @@ class Icesat2Parms: public RequestParms
             SPOT_3 = 3,
             SPOT_4 = 4,
             SPOT_5 = 5,
-            SPOT_6 = 6,
-            NUM_SPOTS = 6
+            SPOT_6 = 6
         } spot_t;
 
         /* Spacecraft Orientation */
@@ -151,7 +167,6 @@ class Icesat2Parms: public RequestParms
 
         /* Signal Confidence per Photon */
         typedef enum {
-            ATL03_INVALID_CONFIDENCE = -3,
             CNF_POSSIBLE_TEP = -2,
             CNF_NOT_CONSIDERED = -1,
             CNF_BACKGROUND = 0,
@@ -160,7 +175,6 @@ class Icesat2Parms: public RequestParms
             CNF_SURFACE_MEDIUM = 3,
             CNF_SURFACE_HIGH = 4,
             NUM_SIGNAL_CONF = 7,
-            SIGNAL_CONF_OFFSET = 2 // added to value to get index
         } signal_conf_t;
 
         /* Quality Level per Photon */
@@ -170,7 +184,6 @@ class Icesat2Parms: public RequestParms
             QUALITY_POSSIBLE_IMPULSE_RESPONSE = 2,
             QUALITY_POSSIBLE_TEP = 3,
             NUM_PHOTON_QUALITY = 4,
-            ATL03_INVALID_QUALITY = 5
         } quality_ph_t;
 
         /* Surface Types for Signal Confidence */
@@ -191,9 +204,8 @@ class Icesat2Parms: public RequestParms
             ATL08_CANOPY = 2,
             ATL08_TOP_OF_CANOPY = 3,
             ATL08_UNCLASSIFIED = 4,
-            NUM_ATL08_CLASSES = 5,
-            ATL08_INVALID_CLASSIFICATION = 6
-        } atl08_classification_t;
+            NUM_ATL08_CLASSES = 5
+        } atl08_class_t;
 
         /* Algorithm Stages */
         typedef enum {
@@ -204,54 +216,11 @@ class Icesat2Parms: public RequestParms
             NUM_STAGES = 4
         } atl06_stages_t;
 
-        /* PhoREAL Geolocation Modes */
-        typedef enum {
-            PHOREAL_MEAN = 0,
-            PHOREAL_MEDIAN = 1,
-            PHOREAL_CENTER = 2,
-            PHOREAL_UNSUPPORTED = 3
-        } phoreal_geoloc_t;
-
-        /* Ancillary Field Types */
-        typedef enum {
-            PHOTON_ANC_TYPE     = 0,
-            EXTENT_ANC_TYPE     = 1,
-            ATL08_ANC_TYPE      = 2,
-            ATL06_ANC_TYPE      = 3
-        } anc_type_t;
-
-        /* YAPC Settings */
-        typedef struct {
-            uint8_t             score;                          // minimum allowed weight of photon using yapc algorithm
-            int                 version;                        // version of the yapc algorithm to run
-            int                 knn;                            // (version 2 only) k-nearest neighbors
-            int                 min_knn;                        // (version 3 only) minimum number of k-nearest neighors
-            double              win_h;                          // window height (overrides calculated value if non-zero)
-            double              win_x;                          // window width
-        } yapc_t;
-
-        /* PhoREAL Settings */
-        typedef struct {
-            double              binsize;                        // size of photon height bin
-            phoreal_geoloc_t    geoloc;                         // how are geolocation stats calculated
-            bool                use_abs_h;                      // use absolute heights
-            bool                send_waveform;                  // include the waveform in the results
-            bool                above_classifier;               // use the ABoVE classification algorithm
-        } phoreal_t;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int                      luaCreate               (lua_State* L);
-        static signal_conf_t            str2atl03cnf            (const char* confidence_str);
-        static quality_ph_t             str2atl03quality        (const char* quality_ph_str);
-        static atl08_classification_t   str2atl08class          (const char* classifiction_str);
-        static phoreal_geoloc_t         str2geoloc              (const char* fmt_str);
-        static gt_t                     str2gt                  (const char* gt_str);
-        static int                      gt2index                (int gt) { return (gt / 10) - 1; }
-        static const char*              atl03srt2str            (surface_type_t type);
-        const char*                     tojson                  (void) const override;
+        static int luaCreate (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Inline Methods
@@ -338,29 +307,30 @@ class Icesat2Parms: public RequestParms
          * Data
          *--------------------------------------------------------------------*/
 
-        surface_type_t              surface_type;                   // surface reference type (used to select signal confidence column)
-        bool                        pass_invalid;                   // post extent even if each pair is invalid
-        bool                        dist_in_seg;                    // the extent length and step are expressed in segments, not meters
-        bool                        atl03_cnf[NUM_SIGNAL_CONF];     // list of desired signal confidences of photons from atl03 classification
-        bool                        quality_ph[NUM_PHOTON_QUALITY]; // list of desired photon quality levels from atl03
-        bool                        atl08_class[NUM_ATL08_CLASSES]; // list of surface classifications to use (leave empty to skip)
-        bool                        beams[NUM_SPOTS];               // list of which beams (gt[l|r][1|2|3])
-        bool                        stages[NUM_STAGES];             // algorithm iterations
-        yapc_t                      yapc;                           // settings used in YAPC algorithm
-        int                         track;                          // reference pair track number (1, 2, 3, or 0 for all tracks)
-        int                         max_iterations;                 // least squares fit iterations
-        int                         minimum_photon_count;           // PE
-        double                      along_track_spread;             // meters
-        double                      minimum_window;                 // H_win minimum
-        double                      maximum_robust_dispersion;      // sigma_r
-        double                      extent_length;                  // length of ATL06 extent (meters or segments if dist_in_seg is true)
-        double                      extent_step;                    // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
-        AncillaryFields::list_t*    atl03_geo_fields;               // list of geolocation and geophys_corr fields to associate with an extent
-        AncillaryFields::list_t*    atl03_ph_fields;                // list of per-photon fields to associate with an extent
-        AncillaryFields::list_t*    atl06_fields;                   // list of ATL06 fields to associate with an ATL06 subsetting request
-        AncillaryFields::list_t*    atl08_fields;                   // list of ATL08 fields to associate with an extent
-        AncillaryFields::list_t*    atl13_fields;                   // list of ATL13 fields to associate with an extent
-        phoreal_t                   phoreal;                        // phoreal algorithm settings
+        FieldElement<surface_type_t>                        surfaceType {SRT_LAND_ICE};                             // surface reference type (used to select signal confidence column)
+        FieldElement<bool>                                  passInvalid {false};                                    // post extent even if each pair is invalid
+        FieldElement<bool>                                  distInSeg {false};                                      // the extent length and step are expressed in segments, not meters
+        FieldEnumeration<signal_conf_t,NUM_SIGNAL_CONF>     atl03Cnf {false, false, true, true, true, true, true};  // list of desired signal confidences of photons from atl03 classification
+        FieldEnumeration<quality_ph_t,NUM_PHOTON_QUALITY>   qualityPh {true, false, false, false};                  // list of desired photon quality levels from atl03
+        FieldEnumeration<atl08_class_t,NUM_ATL08_CLASSES>   atl08Class {false, false, false, false, false};         // list of surface classifications to use (leave empty to skip)
+        FieldEnumeration<gt_t,NUM_SPOTS>                    beams {true, true, true, true, true, true};             // list of which beams (gt[l|r][1|2|3])
+        FieldElement<YapcFields>                            yapc;                                                   // settings used in YAPC algorithm
+        FieldElement<int>                                   track {ALL_TRACKS};                                     // reference pair track number (1, 2, 3, or 0 for all tracks)
+        FieldElement<int>                                   maxIterations {5};                                      // least squares fit iterations
+        FieldElement<int>                                   minPhotonCount {10};                                // PE
+        FieldElement<double>                                alongTrackSpread {20.0};                                // meters
+        FieldElement<double>                                minWindow {3.0};                                    // H_win minimum
+        FieldElement<double>                                maxRobustDispersion {5.0};                          // sigma_r
+        FieldElement<double>                                extentLength {40.0};                                    // length of ATL06 extent (meters or segments if dist_in_seg is true)
+        FieldElement<double>                                extentStep {20.0};                                      // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
+        FieldElement<PhorealFields>                         phoreal;                                                // phoreal algorithm settings
+        FieldList<string>                                   atl03GeoFields;                                         // list of geolocation and geophys_corr fields to associate with an extent
+        FieldList<string>                                   atl03PhFields;                                          // list of per-photon fields to associate with an extent
+        FieldList<string>                                   atl06Fields;                                            // list of ATL06 fields to associate with an ATL06 subsetting request
+        FieldList<string>                                   atl08Fields;                                            // list of ATL08 fields to associate with an extent
+        FieldList<string>                                   atl13Fields;                                            // list of ATL13 fields to associate with an extent
+
+        bool stages[NUM_STAGES] = {true, false, false, false};
 
     protected:
 
@@ -368,17 +338,38 @@ class Icesat2Parms: public RequestParms
          * Methods
          *--------------------------------------------------------------------*/
 
-                                Icesat2Parms               (lua_State* L, int index);
-                                ~Icesat2Parms              (void) override;
-
-        void                    cleanup                 (void) const;
-        void                    get_lua_atl03_cnf       (lua_State* L, int index, bool* provided);
-        void                    get_lua_atl03_quality   (lua_State* L, int index, bool* provided);
-        void                    get_lua_atl08_class     (lua_State* L, int index, bool* provided);
-        void                    get_lua_beams           (lua_State* L, int index, bool* provided);
-        void                    get_lua_yapc            (lua_State* L, int index, bool* provided);
-        static void             get_lua_field_list      (lua_State* L, int index, AncillaryFields::list_t** string_list, bool* provided);
-        void                    get_lua_phoreal         (lua_State* L, int index, bool* provided);
+        Icesat2Fields   (lua_State* L, int index);
+        ~Icesat2Fields  (void) override = default;
 };
 
-#endif  /* __icesat2_parms__ */
+/******************************************************************************
+ * FUNCTIONS
+ ******************************************************************************/
+
+int convertToLua(lua_State* L, const PhorealFields::phoreal_geoloc_t& v);
+void convertFromLua(lua_State* L, int index, PhorealFields::phoreal_geoloc_t& v);
+
+int convertToLua(lua_State* L, const Icesat2Fields::signal_conf_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Fields::signal_conf_t& v);
+int convertToIndex(const Icesat2Fields::signal_conf_t& v);
+void convertFromIndex(int index, Icesat2Fields::signal_conf_t& v);
+
+int convertToLua(lua_State* L, const Icesat2Fields::quality_ph_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Fields::quality_ph_t& v);
+int convertToIndex(const Icesat2Fields::quality_ph_t& v);
+void convertFromIndex(int index, Icesat2Fields::quality_ph_t& v);
+
+int convertToLua(lua_State* L, const Icesat2Fields::atl08_class_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Fields::atl08_class_t& v);
+int convertToIndex(const Icesat2Fields::atl08_class_t& v);
+void convertFromIndex(int index, Icesat2Fields::atl08_class_t& v);
+
+int convertToLua(lua_State* L, const Icesat2Fields::gt_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Fields::gt_t& v);
+int convertToIndex(const Icesat2Fields::gt_t& v);
+void convertFromIndex(int index, Icesat2Fields::gt_t& v);
+
+int convertToLua(lua_State* L, const Icesat2Fields::surface_type_t& v);
+void convertFromLua(lua_State* L, int index, Icesat2Fields::surface_type_t& v);
+
+#endif  /* __icesat2_fields__ */

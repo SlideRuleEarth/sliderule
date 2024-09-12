@@ -58,8 +58,8 @@ class RequestFields: public LuaObject, FieldDictionary
          *--------------------------------------------------------------------*/
 
         static const int DEFAULT_TIMEOUT            = 600; // seconds
-        static const int DEFAULT_CLUSTER_SIZE_HINT  = 0; // dynamic
         static const int TIMEOUT_UNSET              = -1;
+        static const int DEFAULT_CLUSTER_SIZE_HINT  = 0; // dynamic
 
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
@@ -72,11 +72,11 @@ class RequestFields: public LuaObject, FieldDictionary
         static int luaCreate (lua_State* L);
         static int luaExport (lua_State* L);
 
-        static int luaProjectedPolygonIncludes (lua_State* L);
+        static int luaProjectedPolygonIncludes (lua_State* L) ;
         static int luaRegionMaskIncludes (lua_State* L);
 
-        bool polyIncludes (double lon, double lat);
-        bool maskIncludes (double lon, double lat);
+        bool polyIncludes (double lon, double lat) const;
+        bool maskIncludes (double lon, double lat) const;
 
         /*--------------------------------------------------------------------
          * Data
@@ -100,7 +100,7 @@ class RequestFields: public LuaObject, FieldDictionary
          * Methods
          *--------------------------------------------------------------------*/
 
-        RequestFields   (lua_State* L, int index);
+        RequestFields   (lua_State* L, int index, const std::initializer_list<entry_t>& init_list);
         ~RequestFields  (void) override;
 };
 

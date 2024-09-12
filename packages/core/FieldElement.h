@@ -54,7 +54,7 @@ class FieldElement: public Field
          *--------------------------------------------------------------------*/
 
         explicit        FieldElement    (T default_value);
-                        FieldElement    (void);
+                        FieldElement    (void) = default;
                         FieldElement    (const FieldElement<T>& element);
                         ~FieldElement   (void) override = default;
 
@@ -88,20 +88,13 @@ FieldElement<T>::FieldElement(T default_value):
 }
 
 /*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-template <class T>
-FieldElement<T>::FieldElement(void)
-{
-}
-
-/*----------------------------------------------------------------------------
  * Copy Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
 FieldElement<T>::FieldElement(const FieldElement<T>& element)
 {
     value = element.value;
+    provided = element.provided;
 }
 
 /*----------------------------------------------------------------------------
@@ -111,6 +104,7 @@ template <class T>
 FieldElement<T>& FieldElement<T>::operator=(const FieldElement<T>& element)
 {
     value = element.value;
+    provided = element.provided;
     return *this;
 }
 
@@ -158,6 +152,7 @@ template <class T>
 void FieldElement<T>::fromLua (lua_State* L, int index) 
 {
     convertFromLua(L, index, value);
+    provided = true;
 }
 
 #endif  /* __field_element__ */

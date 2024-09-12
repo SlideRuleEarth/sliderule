@@ -589,7 +589,7 @@ bool GeoLib::burnGeoJson(RegionMask& image)
         raster = GeoJsonRaster::create(image.geojson.value, image.cellSize.value);
 
         // populate image attributes
-        GeoJsonRaster::bbox_t bbox = raster->getRasterBbox();
+        const GeoJsonRaster::bbox_t bbox = raster->getRasterBbox();
         image.cols = raster->getRasterCols();
         image.rows = raster->getRasterRows();
         image.lonMin = bbox.lon_min;
@@ -598,7 +598,7 @@ bool GeoLib::burnGeoJson(RegionMask& image)
         image.latMax = bbox.lat_max;
 
         // populate image data
-        long data_size = image.cols.value * image.rows.value;
+        const long data_size = image.cols.value * image.rows.value;
         if(data_size > 0)
         {
             image.data = new uint8_t [data_size];

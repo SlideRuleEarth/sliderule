@@ -74,7 +74,7 @@ class RegionMask: public FieldDictionary
         bool        operator==          (const RegionMask& v) const;
         bool        operator!=          (const RegionMask& v) const;
 
-        bool        includes            (double lon, double lat);
+        bool        includes            (double lon, double lat) const;
 
         /*--------------------------------------------------------------------
          * Data

@@ -89,6 +89,12 @@ class Field
         
         virtual int     toLua       (lua_State* L) const = 0;
         virtual void    fromLua     (lua_State* L, int index) = 0;
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        bool provided {false};
 };
 
 #endif  /* __field__ */
