@@ -42,30 +42,30 @@
 #include "OsApi.h"
 #include "MsgQ.h"
 #include "H5Coro.h"
-#include "BathyReader.h"
+#include "BathyDataFrame.h"
 #include "BathyClassifier.h"
 #include "BathyRefractionCorrector.h"
 #include "BathyUncertaintyCalculator.h"
 #include "GeoLib.h"
 #include "RasterObject.h"
-#include "BathyParms.h"
+#include "BathyFields.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* BathyReader::OUTPUT_FILE_PREFIX = "bathy_spot";
-const char* BathyReader::GLOBAL_BATHYMETRY_MASK_FILE_PATH = "/data/ATL24_Mask_v5_Raster.tif";
-const double BathyReader::GLOBAL_BATHYMETRY_MASK_MAX_LAT = 84.25;
-const double BathyReader::GLOBAL_BATHYMETRY_MASK_MIN_LAT = -79.0;
-const double BathyReader::GLOBAL_BATHYMETRY_MASK_MAX_LON = 180.0;
-const double BathyReader::GLOBAL_BATHYMETRY_MASK_MIN_LON = -180.0;
-const double BathyReader::GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE = 0.25;
-const uint32_t BathyReader::GLOBAL_BATHYMETRY_MASK_OFF_VALUE = 0xFFFFFFFF;
+const char* BathyDataFrame::OUTPUT_FILE_PREFIX = "bathy_spot";
+const char* BathyDataFrame::GLOBAL_BATHYMETRY_MASK_FILE_PATH = "/data/ATL24_Mask_v5_Raster.tif";
+const double BathyDataFrame::GLOBAL_BATHYMETRY_MASK_MAX_LAT = 84.25;
+const double BathyDataFrame::GLOBAL_BATHYMETRY_MASK_MIN_LAT = -79.0;
+const double BathyDataFrame::GLOBAL_BATHYMETRY_MASK_MAX_LON = 180.0;
+const double BathyDataFrame::GLOBAL_BATHYMETRY_MASK_MIN_LON = -180.0;
+const double BathyDataFrame::GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE = 0.25;
+const uint32_t BathyDataFrame::GLOBAL_BATHYMETRY_MASK_OFF_VALUE = 0xFFFFFFFF;
 
-const char* BathyReader::OBJECT_TYPE = "BathyReader";
-const char* BathyReader::LUA_META_NAME = "BathyReader";
-const struct luaL_Reg BathyReader::LUA_META_TABLE[] = {
+const char* BathyDataFrame::OBJECT_TYPE = "BathyDataFrame";
+const char* BathyDataFrame::LUA_META_NAME = "BathyDataFrame";
+const struct luaL_Reg BathyDataFrame::LUA_META_TABLE[] = {
     {"spoton",      luaSpotEnabled},
     {"classifieron",luaClassifierEnabled},
     {"stats",       luaStats},
@@ -79,10 +79,10 @@ const struct luaL_Reg BathyReader::LUA_META_TABLE[] = {
 /*----------------------------------------------------------------------------
  * luaCreate - create(...)
  *----------------------------------------------------------------------------*/
-int BathyReader::luaCreate (lua_State* L)
+int BathyDataFrame::luaCreate (lua_State* L)
 {
-    BathyParms* parms = NULL;
-    BathyClassifier* classifiers[BathyParms::NUM_CLASSIFIERS] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+    BathyFields* parms = NULL;
+    BathyClassifier* classifiers[BathyFields::NUM_CLASSIFIERS] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
     BathyRefractionCorrector* refraction = NULL;
     BathyUncertaintyCalculator* uncertainty = NULL;
     GeoParms* hls = NULL;
@@ -90,7 +90,7 @@ int BathyReader::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        parms = dynamic_cast<BathyParms*>(getLuaObject(L, 1, BathyParms::OBJECT_TYPE));
+        parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
         const int classifier_table_index = 2;
         refraction = dynamic_cast<BathyRefractionCorrector*>(getLuaObject(L, 3, BathyRefractionCorrector::OBJECT_TYPE));
         uncertainty = dynamic_cast<BathyUncertaintyCalculator*>(getLuaObject(L, 4, BathyUncertaintyCalculator::OBJECT_TYPE));
@@ -104,48 +104,48 @@ int BathyReader::luaCreate (lua_State* L)
         if(lua_istable(L, classifier_table_index))
         {
             /* qtrees */
-            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::QTREES));
-            classifiers[BathyParms::QTREES] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_getfield(L, classifier_table_index, BathyFields::QTREES_NAME);
+            classifiers[BathyFields::QTREES] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
 
             /* coastnet */
-            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::COASTNET));
-            classifiers[BathyParms::COASTNET] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_getfield(L, classifier_table_index, BathyFields::COASTNET_NAME);
+            classifiers[BathyFields::COASTNET] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
 
             /* openoceanspp */
-            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::OPENOCEANSPP));
-            classifiers[BathyParms::OPENOCEANSPP] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_getfield(L, classifier_table_index, BathyFields::OPENOCEANSPP_NAME);
+            classifiers[BathyFields::OPENOCEANSPP] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
 
             /* medianfilter */
-            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::MEDIANFILTER));
-            classifiers[BathyParms::MEDIANFILTER] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_getfield(L, classifier_table_index, BathyFields::MEDIANFILTER_NAME);
+            classifiers[BathyFields::MEDIANFILTER] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
 
             /* cshelph */
-            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::CSHELPH));
-            classifiers[BathyParms::CSHELPH] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_getfield(L, classifier_table_index, BathyFields::CSHELPH_NAME);
+            classifiers[BathyFields::CSHELPH] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
 
             /* bathypathfinder */
-            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::BATHYPATHFINDER));
-            classifiers[BathyParms::BATHYPATHFINDER] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_getfield(L, classifier_table_index, BathyFields::BATHYPATHFINDER_NAME);
+            classifiers[BathyFields::BATHYPATHFINDER] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
 
             /* pointnet */
-            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::POINTNET));
-            classifiers[BathyParms::POINTNET] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_getfield(L, classifier_table_index, BathyFields::POINTNET_NAME);
+            classifiers[BathyFields::POINTNET] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
 
             /* openoceans */
-            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::OPENOCEANS));
-            classifiers[BathyParms::OPENOCEANS] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_getfield(L, classifier_table_index, BathyFields::OPENOCEANS_NAME);
+            classifiers[BathyFields::OPENOCEANS] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
 
             /* ensemble */
-            lua_getfield(L, classifier_table_index, BathyParms::classifier2str(BathyParms::ENSEMBLE));
-            classifiers[BathyParms::ENSEMBLE] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
+            lua_getfield(L, classifier_table_index, BathyFields::ENSEMBLE_NAME);
+            classifiers[BathyFields::ENSEMBLE] = dynamic_cast<BathyClassifier*>(getLuaObject(L, -1, BathyClassifier::OBJECT_TYPE, true, NULL));
             lua_pop(L, 1);
         }
         else
@@ -154,19 +154,19 @@ int BathyReader::luaCreate (lua_State* L)
         }
 
         /* Return Reader Object */
-        return createLuaObject(L, new BathyReader(L, parms, classifiers, refraction, uncertainty, hls, outq_name, shared_directory, read_sdp_variables, send_terminator));
+        return createLuaObject(L, new BathyDataFrame(L, parms, classifiers, refraction, uncertainty, hls, outq_name, shared_directory, read_sdp_variables, send_terminator));
     }
     catch(const RunTimeException& e)
     {
         if(parms) parms->releaseLuaObject();
-        for(int i = 0; i < BathyParms::NUM_CLASSIFIERS; i++)
+        for(int i = 0; i < BathyFields::NUM_CLASSIFIERS; i++)
         {
             if(classifiers[i]) classifiers[i]->releaseLuaObject();
         }
         if(refraction) refraction->releaseLuaObject();
         if(uncertainty) uncertainty->releaseLuaObject();
         if(hls) hls->releaseLuaObject();
-        mlog(e.level(), "Error creating BathyReader: %s", e.what());
+        mlog(e.level(), "Error creating BathyDataFrame: %s", e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -174,29 +174,46 @@ int BathyReader::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void BathyReader::init (void)
+void BathyDataFrame::init (void)
 {
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyReader::BathyReader (lua_State* L,
-                          BathyParms* _parms,
-                          BathyClassifier** _classifiers,
-                          BathyRefractionCorrector* _refraction,
-                          BathyUncertaintyCalculator* _uncertainty,
-                          GeoParms* _hls,
-                          const char* outq_name,
-                          const char* shared_directory,
-                          bool read_sdp_variables,
-                          bool _send_terminator):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
+BathyDataFrame::BathyDataFrame (lua_State* L,
+                                BathyFields* _parms,
+                                BathyClassifier** _classifiers,
+                                BathyRefractionCorrector* _refraction,
+                                BathyUncertaintyCalculator* _uncertainty,
+                                GeoParms* _hls,
+                                const char* outq_name,
+                                const char* shared_directory,
+                                bool read_sdp_variables,
+                                bool _send_terminator):
+    GeoDataFrame(L, {}, 
+    {   {"track",                   &metaData.track},
+        {"pair",                    &metaData.pair},
+        {"beam",                    &metaData.beam},
+        {"spot",                    &metaData.spot},
+        {"year",                    &metaData.year},
+        {"month",                   &metaData.month},
+        {"day",                     &metaData.day},
+        {"rgt",                     &metaData.rgt},
+        {"cycle",                   &metaData.cycle},
+        {"region",                  &metaData.region},
+        {"utm_zone",                &metaData.utm_zone},
+        {"photon_count",            &metaData.photonCount},
+        {"subaqueous_photons",      &metaData.subaqueousPhotons},
+        {"corrections_duration",    &metaData.correctionsDuration},
+        {"qtrees_duration",         &metaData.qtreesDuration},
+        {"coastnet_duration",       &metaData.coastnetDuration},
+        {"openoceanspp_duration",   &metaData.openoceansppDuration} }),
     parms(_parms),
     refraction(_refraction),
     uncertainty(_uncertainty),
     hls(_hls),
-    readTimeoutMs(parms->read_timeout * 1000),
+    readTimeoutMs(parms->readTimeout.value * 1000),
     context(NULL),
     context09(NULL),
     bathyMask(NULL)
@@ -211,19 +228,19 @@ BathyReader::BathyReader (lua_State* L,
     sharedDirectory = StringLib::duplicate(shared_directory);
 
     /* Set Classifiers */
-    for(int i = 0; i < BathyParms::NUM_CLASSIFIERS; i++)
+    for(int i = 0; i < BathyFields::NUM_CLASSIFIERS; i++)
     {
         classifiers[i] = _classifiers[i];
     }
 
     /* Set Signal Confidence Index */
-    if(parms->surface_type == Icesat2Parms::SRT_DYNAMIC)
+    if(parms->surfaceType == Icesat2Fields::SRT_DYNAMIC)
     {
         signalConfColIndex = H5Coro::ALL_COLS;
     }
     else
     {
-        signalConfColIndex = static_cast<int>(parms->surface_type);
+        signalConfColIndex = static_cast<int>(parms->surfaceType.value);
     }
 
     /* Create Publisher and File Pointer */
@@ -231,7 +248,7 @@ BathyReader::BathyReader (lua_State* L,
     sendTerminator = _send_terminator;
 
     /* Create Global Bathymetry Mask */
-    if(parms->use_bathy_mask)
+    if(parms->useBathyMask.value)
     {
         bathyMask = new GeoLib::TIFFImage(NULL, GLOBAL_BATHYMETRY_MASK_FILE_PATH);
     }
@@ -248,8 +265,8 @@ BathyReader::BathyReader (lua_State* L,
     try
     {
         /* Create H5Coro Contexts */
-        context = new H5Coro::Context(parms->asset, parms->resource);
-        context09 = new H5Coro::Context(parms->asset09, parms->resource09);
+        context = new H5Coro::Context(parms->asset, parms->resource.value.c_str());
+        context09 = new H5Coro::Context(parms->asset09, parms->atl09Resource.value.c_str());
 
         /* Standard Data Product Variables */
         if(read_sdp_variables)
@@ -284,15 +301,30 @@ BathyReader::BathyReader (lua_State* L,
         }
 
         /* Parse Globals (throws) */
-        parseResource(parms->resource, granuleDate, startRgt, startCycle, startRegion, sdpVersion);
+        parseResource(parms->resource.value.c_str(), granuleDate, startRgt, startCycle, startRegion, sdpVersion);
+
+        /* Initialize Meta Data */
+        metaData.track.value = 
+        metaDAta.pair
+    extents[0]->track,
+    extents[0]->pair,
+    extents[0]->track, extents[0]->pair == 0 ? 'l' : 'r',
+    extents[0]->spot,
+    granuleDate.year,
+    granuleDate.month,
+    granuleDate.day,
+    extents[0]->reference_ground_track,
+    extents[0]->cycle,
+    extents[0]->region,
+    extents[0]->utm_zone,
 
         /* Create Readers */
-        for(int track = 1; track <= BathyParms::NUM_TRACKS; track++)
+        for(int track = 1; track <= BathyFields::NUM_TRACKS; track++)
         {
-            for(int pair = 0; pair < BathyParms::NUM_PAIR_TRACKS; pair++)
+            for(int pair = 0; pair < BathyFields::NUM_PAIR_TRACKS; pair++)
             {
                 const int gt_index = (2 * (track - 1)) + pair;
-                if(parms->beams[gt_index] && (parms->track == BathyParms::ALL_TRACKS || track == parms->track))
+                if(parms->beams.get(gt_index) && (parms->track == BathyFields::ALL_TRACKS || track == parms->track.value))
                 {
                     info_t* info = new info_t;
                     info->reader = this;
@@ -326,7 +358,7 @@ BathyReader::BathyReader (lua_State* L,
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-BathyReader::~BathyReader (void)
+BathyDataFrame::~BathyDataFrame (void)
 {
     active = false;
 
@@ -342,7 +374,7 @@ BathyReader::~BathyReader (void)
     delete bathyMask;
     delete outQ;
 
-    for(int i = 0; i < BathyParms::NUM_CLASSIFIERS; i++)
+    for(int i = 0; i < BathyFields::NUM_CLASSIFIERS; i++)
     {
         if(classifiers[i]) classifiers[i]->releaseLuaObject();
     }
@@ -356,7 +388,7 @@ BathyReader::~BathyReader (void)
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-BathyReader::Region::Region (const info_t* info):
+BathyDataFrame::Region::Region (const info_t* info):
     segment_lat    (info->reader->context, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str()),
     segment_lon    (info->reader->context, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str()),
     segment_ph_cnt (info->reader->context, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str()),
@@ -377,11 +409,11 @@ BathyReader::Region::Region (const info_t* info):
         num_photons = H5Coro::ALL_ROWS;
 
         /* Determine Spatial Extent */
-        if(info->parms->raster.valid())
+        if(info->parms->regionMask.provided)
         {
             rasterregion(info);
         }
-        else if(info->parms->points_in_poly > 0)
+        else if(info->parms->pointsInPolygon.value > 0)
         {
             polyregion(info);
         }
@@ -416,7 +448,7 @@ BathyReader::Region::Region (const info_t* info):
 /*----------------------------------------------------------------------------
  * Region::Destructor
  *----------------------------------------------------------------------------*/
-BathyReader::Region::~Region (void)
+BathyDataFrame::Region::~Region (void)
 {
     cleanup();
 }
@@ -424,7 +456,7 @@ BathyReader::Region::~Region (void)
 /*----------------------------------------------------------------------------
  * Region::cleanup
  *----------------------------------------------------------------------------*/
-void BathyReader::Region::cleanup (void)
+void BathyDataFrame::Region::cleanup (void)
 {
     delete [] inclusion_mask;
     inclusion_mask = NULL;
@@ -433,24 +465,15 @@ void BathyReader::Region::cleanup (void)
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void BathyReader::Region::polyregion (const info_t* info)
+void BathyDataFrame::Region::polyregion (const info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
     int segment = 0;
     while(segment < segment_ph_cnt.size)
     {
-        bool inclusion = false;
-
-        /* Project Segment Coordinate */
-        const MathLib::coord_t segment_coord = {segment_lon[segment], segment_lat[segment]};
-        const MathLib::point_t segment_point = MathLib::coord2point(segment_coord, info->parms->projection);
-
         /* Test Inclusion */
-        if(MathLib::inpoly(info->parms->projected_poly, info->parms->points_in_poly, segment_point))
-        {
-            inclusion = true;
-        }
+        const bool inclusion = info->parms->polyIncludes(segment_lon[segment], segment_lat[segment]);
 
         /* Check First Segment */
         if(!first_segment_found)
@@ -497,7 +520,7 @@ void BathyReader::Region::polyregion (const info_t* info)
 /*----------------------------------------------------------------------------
  * Region::rasterregion
  *----------------------------------------------------------------------------*/
-void BathyReader::Region::rasterregion (const info_t* info)
+void BathyDataFrame::Region::rasterregion (const info_t* info)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -521,7 +544,7 @@ void BathyReader::Region::rasterregion (const info_t* info)
         if(segment_ph_cnt[segment] != 0)
         {
             /* Check Inclusion */
-            const bool inclusion = info->parms->raster.includes(segment_lon[segment], segment_lat[segment]);
+            const bool inclusion = info->parms->maskIncludes(segment_lon[segment], segment_lat[segment]);
             inclusion_mask[segment] = inclusion;
 
             /* Check For First Segment */
@@ -580,7 +603,7 @@ void BathyReader::Region::rasterregion (const info_t* info)
 /*----------------------------------------------------------------------------
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
-BathyReader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
+BathyDataFrame::Atl03Data::Atl03Data (const info_t* info, const Region& region):
     sc_orient           (info->reader->context,                                "/orbit_info/sc_orient"),
     velocity_sc         (info->reader->context, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),     H5Coro::ALL_COLS, region.first_segment, region.num_segments),
     segment_delta_time  (info->reader->context, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),      0, region.first_segment, region.num_segments),
@@ -633,7 +656,7 @@ BathyReader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
 /*----------------------------------------------------------------------------
  * Atl09Class::Constructor
  *----------------------------------------------------------------------------*/
-BathyReader::Atl09Class::Atl09Class (const info_t* info):
+BathyDataFrame::Atl09Class::Atl09Class (const info_t* info):
     valid       (false),
     met_u10m    (info->reader->context09, FString("profile_%d/low_rate/met_u10m", info->track).c_str()),
     met_v10m    (info->reader->context09, FString("profile_%d/low_rate/met_v10m", info->track).c_str()),
@@ -648,180 +671,24 @@ BathyReader::Atl09Class::Atl09Class (const info_t* info):
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "ATL09 data unavailable <%s>", info->parms->resource09);
+        mlog(CRITICAL, "ATL09 data unavailable <%s>", info->parms->atl09Resource.value.c_str());
     }
-}
-
-/*----------------------------------------------------------------------------
- * AncillaryData::Constructor
- *----------------------------------------------------------------------------*/
-BathyReader::AncillaryData::AncillaryData (H5Coro::Context* context, int timeout):
-    atlas_sdp_gps_epoch (context, "/ancillary_data/atlas_sdp_gps_epoch"),
-    data_end_utc        (context, "/ancillary_data/data_end_utc"),
-    data_start_utc      (context, "/ancillary_data/data_start_utc"),
-    end_cycle           (context, "/ancillary_data/end_cycle"),
-    end_delta_time      (context, "/ancillary_data/end_delta_time"),
-    end_geoseg          (context, "/ancillary_data/end_geoseg"),
-    end_gpssow          (context, "/ancillary_data/end_gpssow"),
-    end_gpsweek         (context, "/ancillary_data/end_gpsweek"),
-    end_orbit           (context, "/ancillary_data/end_orbit"),
-    end_region          (context, "/ancillary_data/end_region"),
-    end_rgt             (context, "/ancillary_data/end_rgt"),
-    release             (context, "/ancillary_data/release"),
-    granule_end_utc     (context, "/ancillary_data/granule_end_utc"),
-    granule_start_utc   (context, "/ancillary_data/granule_start_utc"),
-    start_cycle         (context, "/ancillary_data/start_cycle"),
-    start_delta_time    (context, "/ancillary_data/start_delta_time"),
-    start_geoseg        (context, "/ancillary_data/start_geoseg"),
-    start_gpssow        (context, "/ancillary_data/start_gpssow"),
-    start_gpsweek       (context, "/ancillary_data/start_gpsweek"),
-    start_orbit         (context, "/ancillary_data/start_orbit"),
-    start_region        (context, "/ancillary_data/start_region"),
-    start_rgt           (context, "/ancillary_data/start_rgt"),
-    version             (context, "/ancillary_data/version")
-{
-    atlas_sdp_gps_epoch.join(timeout, true);
-    data_end_utc.join(timeout, true);
-    data_start_utc.join(timeout, true);
-    end_cycle.join(timeout, true);
-    end_delta_time.join(timeout, true);
-    end_geoseg.join(timeout, true);
-    end_gpssow.join(timeout, true);
-    end_gpsweek.join(timeout, true);
-    end_orbit.join(timeout, true);
-    end_region.join(timeout, true);
-    end_rgt.join(timeout, true);
-    release.join(timeout, true);
-    granule_end_utc.join(timeout, true);
-    granule_start_utc.join(timeout, true);
-    start_cycle.join(timeout, true);
-    start_delta_time.join(timeout, true);
-    start_geoseg.join(timeout, true);
-    start_gpssow.join(timeout, true);
-    start_gpsweek.join(timeout, true);
-    start_orbit.join(timeout, true);
-    start_region.join(timeout, true);
-    start_rgt.join(timeout, true);
-    version.join(timeout, true);
-}
-
-/*----------------------------------------------------------------------------
- * AncillaryData::tojson
- *----------------------------------------------------------------------------*/
-const char* BathyReader::AncillaryData::tojson (void) const
-{
-    FString json_contents(R"({)"
-    R"("atlas_sdp_gps_epoch":%lf,)"
-    R"("data_end_utc":"%s",)"
-    R"("data_start_utc":"%s",)"
-    R"("end_cycle":%d,)"
-    R"("end_delta_time":%lf,)"
-    R"("end_geoseg":%d,)"
-    R"("end_gpssow":%lf,)"
-    R"("end_gpsweek":%d,)"
-    R"("end_orbit":%d,)"
-    R"("end_region":%d,)"
-    R"("end_rgt":%d,)"
-    R"("release":"%s",)"
-    R"("granule_end_utc":"%s",)"
-    R"("granule_start_utc":"%s",)"
-    R"("start_cycle":%d,)"
-    R"("start_delta_time":%lf,)"
-    R"("start_geoseg":%d,)"
-    R"("start_gpssow":%lf,)"
-    R"("start_gpsweek":%d,)"
-    R"("start_orbit":%d,)"
-    R"("start_region":%d,)"
-    R"("start_rgt":%d,)"
-    R"("version":"%s")"
-    R"(})",
-    atlas_sdp_gps_epoch.value,
-    data_end_utc.value,
-    data_start_utc.value,
-    end_cycle.value,
-    end_delta_time.value,
-    end_geoseg.value,
-    end_gpssow.value,
-    end_gpsweek.value,
-    end_orbit.value,
-    end_region.value,
-    end_rgt.value,
-    release.value,
-    granule_end_utc.value,
-    granule_start_utc.value,
-    start_cycle.value,
-    start_delta_time.value,
-    start_geoseg.value,
-    start_gpssow.value,
-    start_gpsweek.value,
-    start_orbit.value,
-    start_region.value,
-    start_rgt.value,
-    version.value);
-
-    return json_contents.c_str(true);
-}
-
-/*----------------------------------------------------------------------------
- * OrbitInfo::Constructor
- *----------------------------------------------------------------------------*/
-BathyReader::OrbitInfo::OrbitInfo (H5Coro::Context* context, int timeout):
-    crossing_time  (context, "/orbit_info/crossing_time"),
-    cycle_number   (context, "/orbit_info/cycle_number"),
-    lan            (context, "/orbit_info/lan"),
-    orbit_number   (context, "/orbit_info/orbit_number"),
-    rgt            (context, "/orbit_info/rgt"),
-    sc_orient      (context, "/orbit_info/sc_orient"),
-    sc_orient_time (context, "/orbit_info/sc_orient_time")
-{
-    crossing_time.join(timeout, true);
-    cycle_number.join(timeout, true);
-    lan.join(timeout, true);
-    orbit_number.join(timeout, true);
-    rgt.join(timeout, true);
-    sc_orient.join(timeout, true);
-    sc_orient_time.join(timeout, true);
-}
-
-/*----------------------------------------------------------------------------
- * OrbitInfo::tojson
- *----------------------------------------------------------------------------*/
-const char* BathyReader::OrbitInfo::tojson (void) const
-{
-    FString json_contents(R"({)"
-    R"("crossing_time":%lf,)"
-    R"("cycle_number":%d,)"
-    R"("lan":%lf,)"
-    R"("orbit_number":%d,)"
-    R"("rgt":%d,)"
-    R"("sc_orient":%d,)"
-    R"("sc_orient_time":%lf)"
-    R"(})",
-    crossing_time.value,
-    cycle_number.value,
-    lan.value,
-    orbit_number.value,
-    rgt.value,
-    sc_orient.value,
-    sc_orient_time.value);
-
-    return json_contents.c_str(true);
 }
 
 /*----------------------------------------------------------------------------
  * subsettingThread
  *----------------------------------------------------------------------------*/
-void* BathyReader::subsettingThread (void* parm)
+void* BathyDataFrame::subsettingThread (void* parm)
 {
     /* Get Thread Info */
     const info_t* info = static_cast<info_t*>(parm);
-    BathyReader* reader = info->reader;
-    const BathyParms* parms = info->parms;
+    BathyDataFrame* reader = info->reader;
+    const BathyFields* parms = info->parms;
     RasterObject* ndwiRaster = RasterObject::cppCreate(reader->hls);
 
     /* Thread Variables */
-    vector<BathyParms::extent_t*> extents;
-    stats_t local_stats;
+    vector<BathyFields::extent_t*> extents;
+    Stats local_stats;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms->asset->getName(), parms->resource, info->track);
@@ -837,7 +704,7 @@ void* BathyReader::subsettingThread (void* parm)
         const Atl09Class atl09(info);
 
         /* Initialize Extent State */
-        List<BathyParms::photon_t> extent_photons; // list of individual photons in extent
+        List<BathyFields::photon_t> extent_photons; // list of individual photons in extent
         uint32_t extent_counter = 0;
         int32_t current_photon = 0; // index into the photon rate variables
         int32_t current_segment = 0; // index into the segment rate variables
@@ -853,7 +720,7 @@ void* BathyReader::subsettingThread (void* parm)
 
         /* Get Dataset Level Parameters */
         GeoLib::UTMTransform utm_transform(region.segment_lat[0], region.segment_lon[0]);
-        const uint8_t spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)atl03.sc_orient[0], (Icesat2Parms::track_t)info->track, info->pair);
+        const uint8_t spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], (Icesat2Fields::track_t)info->track, info->pair);
 
         /* Traverse All Photons In Dataset */
         while(reader->active && (current_photon < atl03.dist_ph_along.size))
@@ -909,44 +776,36 @@ void* BathyReader::subsettingThread (void* parm)
                 }
 
                 /* Set Signal Confidence Level */
-                int8_t atl03_cnf;
-                if(parms->surface_type == Icesat2Parms::SRT_DYNAMIC)
+                Icesat2Fields::signal_conf_t atl03_cnf;
+                if(parms->surfaceType == Icesat2Fields::SRT_DYNAMIC)
                 {
                     /* When dynamic, the signal_conf_ph contains all 5 columns; and the
                      * code below chooses the signal confidence that is the highest
                      * value of the five */
-                    const int32_t conf_index = current_photon * Icesat2Parms::NUM_SURFACE_TYPES;
-                    atl03_cnf = Icesat2Parms::ATL03_INVALID_CONFIDENCE;
-                    for(int i = 0; i < Icesat2Parms::NUM_SURFACE_TYPES; i++)
+                    const int32_t conf_index = current_photon * Icesat2Fields::NUM_SURFACE_TYPES;
+                    atl03_cnf = Icesat2Fields::CNF_POSSIBLE_TEP;
+                    for(int i = 0; i < Icesat2Fields::NUM_SURFACE_TYPES; i++)
                     {
                         if(atl03.signal_conf_ph[conf_index + i] > atl03_cnf)
                         {
-                            atl03_cnf = atl03.signal_conf_ph[conf_index + i];
+                            atl03_cnf = static_cast<Icesat2Fields::signal_conf_t>(atl03.signal_conf_ph[conf_index + i]);
                         }
                     }
                 }
                 else
                 {
-                    atl03_cnf = atl03.signal_conf_ph[current_photon];
+                    atl03_cnf = static_cast<Icesat2Fields::signal_conf_t>(atl03.signal_conf_ph[current_photon]);
                 }
 
                 /* Check Signal Confidence Level */
-                if(atl03_cnf < Icesat2Parms::CNF_POSSIBLE_TEP || atl03_cnf > Icesat2Parms::CNF_SURFACE_HIGH)
-                {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 signal confidence: %d", atl03_cnf);
-                }
-                if(!parms->atl03_cnf[atl03_cnf + Icesat2Parms::SIGNAL_CONF_OFFSET])
+                if(!parms->atl03Cnf[atl03_cnf])
                 {
                     break;
                 }
 
                 /* Set and Check ATL03 Photon Quality Level */
-                const int8_t quality_ph = atl03.quality_ph[current_photon];
-                if(quality_ph < Icesat2Parms::QUALITY_NOMINAL || quality_ph > Icesat2Parms::QUALITY_POSSIBLE_TEP)
-                {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 photon quality: %d", quality_ph);
-                }
-                if(!parms->quality_ph[quality_ph])
+                const Icesat2Fields::quality_ph_t quality_ph = static_cast<Icesat2Fields::quality_ph_t>(atl03.quality_ph[current_photon]);
+                if(!parms->qualityPh[quality_ph])
                 {
                     break;
                 }
@@ -956,7 +815,7 @@ void* BathyReader::subsettingThread (void* parm)
                 if(reader->sdpVersion >= 6)
                 {
                     yapc_score = atl03.weight_ph[current_photon];
-                    if(yapc_score < parms->yapc.score)
+                    if(yapc_score < parms->yapc.value.score.value)
                     {
                         break;
                     }
@@ -964,7 +823,7 @@ void* BathyReader::subsettingThread (void* parm)
 
                 /* Check DEM Delta */
                 const float dem_delta = atl03.h_ph[current_photon] - atl03.dem_h[current_segment];
-                if(dem_delta > parms->max_dem_delta || dem_delta < parms->min_dem_delta)
+                if(dem_delta > parms->maxDemDelta.value || dem_delta < parms->minDemDelta.value)
                 {
                     break;
                 }
@@ -999,9 +858,9 @@ void* BathyReader::subsettingThread (void* parm)
 
                     /* Sample Raster for NDWI */
                     ndwi = std::numeric_limits<float>::quiet_NaN();
-                    if(ndwiRaster && parms->generate_ndwi)
+                    if(ndwiRaster && parms->generateNdwi.value)
                     {
-                        const double gps = current_delta_time + (double)Icesat2Parms::ATLAS_SDP_EPOCH_GPS;
+                        const double gps = current_delta_time + (double)Icesat2Fields::ATLAS_SDP_EPOCH_GPS;
                         const MathLib::point_3d_t point = {
                             .x = region.segment_lon[current_segment],
                             .y = region.segment_lat[current_segment],
@@ -1015,8 +874,8 @@ void* BathyReader::subsettingThread (void* parm)
                 }
 
                 /* Add Photon to Extent */
-                const BathyParms::photon_t ph = {
-                    .time_ns = Icesat2Parms::deltatime2timestamp(current_delta_time),
+                const BathyFields::photon_t ph = {
+                    .time_ns = Icesat2Fields::deltatime2timestamp(current_delta_time),
                     .index_ph = static_cast<int32_t>(region.first_photon) + current_photon,
                     .index_seg = static_cast<int32_t>(region.first_segment) + current_segment,
                     .lat_ph = latitude,
@@ -1036,7 +895,7 @@ void* BathyReader::subsettingThread (void* parm)
                     .yapc_score = yapc_score,
                     .max_signal_conf = atl03_cnf,
                     .quality_ph = quality_ph,
-                    .class_ph = static_cast<uint8_t>(BathyParms::UNCLASSIFIED),
+                    .class_ph = static_cast<uint8_t>(BathyFields::UNCLASSIFIED),
                     .predictions = {0, 0, 0, 0, 0, 0, 0, 0}
                 };
                 extent_photons.add(ph);
@@ -1045,22 +904,22 @@ void* BathyReader::subsettingThread (void* parm)
             /* Go to Next Photon */
             current_photon++;
 
-            if((extent_photons.length() >= parms->ph_in_extent) ||
+            if((extent_photons.length() >= parms->phInExtent.value) ||
                (current_photon >= atl03.dist_ph_along.size) ||
                (!extent_photons.empty() && terminate_extent_on_boundary))
             {
                 /* Generate Extent ID */
-                const uint64_t extent_id = Icesat2Parms::generateExtentId(reader->startRgt, reader->startCycle, reader->startRegion, info->track, info->pair, extent_counter);
+                const uint64_t extent_id = Icesat2Fields::generateExtentId(reader->startRgt, reader->startCycle, reader->startRegion, info->track, info->pair, extent_counter);
 
                 /* Calculate Extent Record Size */
                 const int num_photons = extent_photons.length();
-                const int extent_bytes = offsetof(BathyParms::extent_t, photons) + (sizeof(BathyParms::photon_t) * num_photons);
+                const int extent_bytes = offsetof(BathyFields::extent_t, photons) + (sizeof(BathyFields::photon_t) * num_photons);
 
                 /* Allocate and Initialize Extent Record */
                 // RecordObject record(exRecType, extent_bytes);
                 // extent_t* extent                = reinterpret_cast<extent_t*>(record.getRecordData());
                 uint8_t* extent_buffer          = new uint8_t [extent_bytes];
-                BathyParms::extent_t* extent    = reinterpret_cast<BathyParms::extent_t*>(extent_buffer);
+                BathyFields::extent_t* extent   = reinterpret_cast<BathyFields::extent_t*>(extent_buffer);
                 extent->region                  = reader->startRegion;
                 extent->track                   = info->track;
                 extent->pair                    = info->pair;
@@ -1080,21 +939,7 @@ void* BathyReader::subsettingThread (void* parm)
                 }
 
                 /* Update Statistics */
-                local_stats.photon_count += extent->photon_count;
-
-                /* Export Data */
-                //if(parms->return_inputs)
-                //{
-                //    /* Post Record */
-                //    uint8_t* rec_buf = NULL;
-                //    const int rec_bytes = record.serialize(&rec_buf, RecordObject::REFERENCE);
-                //    int post_status = MsgQ::STATE_TIMEOUT;
-                //    while(reader->active && (post_status = reader->outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT);
-                //    if(post_status <= 0)
-                //    {
-                //        mlog(ERROR, "Atl03 bathy reader failed to post %s to stream %s: %d", record.getRecordType(), reader->outQ->getName(), post_status);
-                //    }
-                //}
+                local_stats.photonCount.value += extent->photon_count;
 
                 /* Add Extent */
                 extents.push_back(extent);
@@ -1106,7 +951,7 @@ void* BathyReader::subsettingThread (void* parm)
         }
 
         /* Run Native Sea Surface Finder (defaults to false) */
-        if(parms->find_sea_surface)
+        if(parms->findSeaSurface.value)
         {
             for(auto* extent: extents)
             {
@@ -1115,37 +960,37 @@ void* BathyReader::subsettingThread (void* parm)
         }
 
         /* Run OpenOceans++ on Extents */
-        if(parms->classifiers[BathyParms::OPENOCEANSPP])
+        if(parms->classifiers[BathyFields::OPENOCEANSPP])
         {
             const double start = TimeLib::latchtime();
-            reader->classifiers[BathyParms::OPENOCEANSPP]->run(extents);
-            local_stats.openoceanspp_duration = TimeLib::latchtime() - start;
+            reader->classifiers[BathyFields::OPENOCEANSPP]->run(extents);
+            local_stats.openoceansppDuration.value = TimeLib::latchtime() - start;
         }
 
         /* Run Coastnet on Extents */
-        if(parms->classifiers[BathyParms::COASTNET])
+        if(parms->classifiers[BathyFields::COASTNET])
         {
             const double start = TimeLib::latchtime();
-            reader->classifiers[BathyParms::COASTNET]->run(extents);
-            local_stats.coastnet_duration = TimeLib::latchtime() - start;
+            reader->classifiers[BathyFields::COASTNET]->run(extents);
+            local_stats.coastnetDuration.value = TimeLib::latchtime() - start;
         }
 
         /* Run Qtrees on Extents */
-        if(parms->classifiers[BathyParms::QTREES])
+        if(parms->classifiers[BathyFields::QTREES])
         {
             const double start = TimeLib::latchtime();
-            reader->classifiers[BathyParms::QTREES]->run(extents);
-            local_stats.qtrees_duration = TimeLib::latchtime() - start;
+            reader->classifiers[BathyFields::QTREES]->run(extents);
+            local_stats.qtreesDuration.value = TimeLib::latchtime() - start;
         }
 
         /* Process Extents */
         const double start = TimeLib::latchtime();
         for(auto* extent: extents)
         {
-            local_stats.subaqueous_photons += reader->refraction->run(*extent, atl03.ref_elev, atl03.ref_azimuth);
+            local_stats.subaqueousPhotons.value += reader->refraction->run(*extent, atl03.ref_elev, atl03.ref_azimuth);
             reader->uncertainty->run(*extent, atl03.sigma_across, atl03.sigma_along, atl03.sigma_h, atl03.ref_elev);
         }
-        local_stats.corrections_duration = TimeLib::latchtime() - start;
+        local_stats.correctionsDuration.value = TimeLib::latchtime() - start;
 
         /* Write Extent to CSV File*/
         reader->writeCSV(extents, spot, local_stats);
@@ -1159,14 +1004,14 @@ void* BathyReader::subsettingThread (void* parm)
     /* Handle Global Reader Updates */
     reader->threadMut.lock();
     {
-        /* Update Statistics */
-        reader->stats.valid = reader->stats.valid && local_stats.valid;
-        reader->stats.photon_count += local_stats.photon_count;
-        reader->stats.subaqueous_photons += local_stats.subaqueous_photons;
-        reader->stats.corrections_duration += local_stats.corrections_duration;
-        reader->stats.qtrees_duration += local_stats.qtrees_duration;
-        reader->stats.coastnet_duration += local_stats.coastnet_duration;
-        reader->stats.openoceanspp_duration += local_stats.openoceanspp_duration;
+        /* Update Meta Data */
+        reader->stats.valid = reader->stats.valid.value && local_stats.valid.value;
+        reader->stats.photonCount.value += local_stats.photonCount.value;
+        reader->stats.subaqueousPhotons.value += local_stats.subaqueousPhotons.value;
+        reader->stats.correctionsDuration.value += local_stats.correctionsDuration.value;
+        reader->stats.qtreesDuration.value += local_stats.qtreesDuration.value;
+        reader->stats.coastnetDuration.value += local_stats.coastnetDuration.value;
+        reader->stats.openoceansppDuration.value += local_stats.openoceansppDuration.value;
 
         /* Count Completion */
         reader->numComplete++;
@@ -1211,7 +1056,7 @@ void* BathyReader::subsettingThread (void* parm)
 /*----------------------------------------------------------------------------
  * calculateBackground
  *----------------------------------------------------------------------------*/
-double BathyReader::calculateBackground (int32_t current_segment, int32_t& bckgrd_index, const Atl03Data& atl03)
+double BathyDataFrame::calculateBackground (int32_t current_segment, int32_t& bckgrd_index, const Atl03Data& atl03)
 {
     double background_rate = atl03.bckgrd_rate[atl03.bckgrd_rate.size - 1];
     while(bckgrd_index < atl03.bckgrd_rate.size)
@@ -1263,7 +1108,7 @@ double BathyReader::calculateBackground (int32_t current_segment, int32_t& bckgr
  *      vvv     - version
  *      ee      - revision
  *----------------------------------------------------------------------------*/
-void BathyReader::parseResource (const char* _resource, TimeLib::date_t& date, uint16_t& rgt, uint8_t& cycle, uint8_t& region, uint8_t& version)
+void BathyDataFrame::parseResource (const char* _resource, TimeLib::date_t& date, uint16_t& rgt, uint8_t& cycle, uint8_t& region, uint8_t& version)
 {
     long val;
 
@@ -1385,9 +1230,111 @@ void BathyReader::parseResource (const char* _resource, TimeLib::date_t& date, u
 /*----------------------------------------------------------------------------
  * findSeaSurface
  *----------------------------------------------------------------------------*/
-void BathyReader::findSeaSurface (BathyParms::extent_t& extent)
+void BathyDataFrame::readStandardData (GranuleMetaData& granule_meta_data, H5Coro::Context* context, int timeout)
 {
-    BathyParms::surface_t& p = parms->surface;
+    H5Element<double>       atlas_sdp_gps_epoch (context, "/ancillary_data/atlas_sdp_gps_epoch");
+    H5Element<const char*>  data_end_utc        (context, "/ancillary_data/data_end_utc");
+    H5Element<const char*>  data_start_utc      (context, "/ancillary_data/data_start_utc");
+    H5Element<int32_t>      end_cycle           (context, "/ancillary_data/end_cycle");
+    H5Element<double>       end_delta_time      (context, "/ancillary_data/end_delta_time");
+    H5Element<int32_t>      end_geoseg          (context, "/ancillary_data/end_geoseg");
+    H5Element<double>       end_gpssow          (context, "/ancillary_data/end_gpssow");
+    H5Element<int32_t>      end_gpsweek         (context, "/ancillary_data/end_gpsweek");
+    H5Element<int32_t>      end_orbit           (context, "/ancillary_data/end_orbit");
+    H5Element<int32_t>      end_region          (context, "/ancillary_data/end_region");
+    H5Element<int32_t>      end_rgt             (context, "/ancillary_data/end_rgt");
+    H5Element<const char*>  release             (context, "/ancillary_data/release");
+    H5Element<const char*>  granule_end_utc     (context, "/ancillary_data/granule_end_utc");
+    H5Element<const char*>  granule_start_utc   (context, "/ancillary_data/granule_start_utc");
+    H5Element<int32_t>      start_cycle         (context, "/ancillary_data/start_cycle");
+    H5Element<double>       start_delta_time    (context, "/ancillary_data/start_delta_time");
+    H5Element<int32_t>      start_geoseg        (context, "/ancillary_data/start_geoseg");
+    H5Element<double>       start_gpssow        (context, "/ancillary_data/start_gpssow");
+    H5Element<int32_t>      start_gpsweek       (context, "/ancillary_data/start_gpsweek");
+    H5Element<int32_t>      start_orbit         (context, "/ancillary_data/start_orbit");
+    H5Element<int32_t>      start_region        (context, "/ancillary_data/start_region");
+    H5Element<int32_t>      start_rgt           (context, "/ancillary_data/start_rgt");
+    H5Element<const char*>  version             (context, "/ancillary_data/version");
+
+    H5Element<double>       crossing_time       (context, "/orbit_info/crossing_time");
+    H5Element<int8_t>       cycle_number        (context, "/orbit_info/cycle_number");
+    H5Element<double>       lan                 (context, "/orbit_info/lan"); 
+    H5Element<int16_t>      orbit_number        (context, "/orbit_info/orbit_number");
+    H5Element<int16_t>      rgt                 (context, "/orbit_info/rgt"); 
+    H5Element<int8_t>       sc_orient           (context, "/orbit_info/sc_orient");
+    H5Element<double>       sc_orient_time      (context, "/orbit_info/sc_orient_time");
+
+    atlas_sdp_gps_epoch.join(timeout, true);
+    data_end_utc.join(timeout, true);
+    data_start_utc.join(timeout, true);
+    end_cycle.join(timeout, true);
+    end_delta_time.join(timeout, true);
+    end_geoseg.join(timeout, true);
+    end_gpssow.join(timeout, true);
+    end_gpsweek.join(timeout, true);
+    end_orbit.join(timeout, true);
+    end_region.join(timeout, true);
+    end_rgt.join(timeout, true);
+    release.join(timeout, true);
+    granule_end_utc.join(timeout, true);
+    granule_start_utc.join(timeout, true);
+    start_cycle.join(timeout, true);
+    start_delta_time.join(timeout, true);
+    start_geoseg.join(timeout, true);
+    start_gpssow.join(timeout, true);
+    start_gpsweek.join(timeout, true);
+    start_orbit.join(timeout, true);
+    start_region.join(timeout, true);
+    start_rgt.join(timeout, true);
+    version.join(timeout, true);
+
+    crossing_time.join(timeout, true);
+    cycle_number.join(timeout, true);
+    lan.join(timeout, true);
+    orbit_number.join(timeout, true);
+    rgt.join(timeout, true);
+    sc_orient.join(timeout, true);
+    sc_orient_time.join(timeout, true);
+
+    granule_meta_data.atlas_sdp_gps_epoch   = atlas_sdp_gps_epoch.value;
+    granule_meta_data.data_end_utc          = data_end_utc.value;
+    granule_meta_data.data_start_utc        = data_start_utc.value;
+    granule_meta_data.end_cycle             = end_cycle.value;
+    granule_meta_data.end_delta_time        = end_delta_time.value;
+    granule_meta_data.end_geoseg            = end_geoseg.value;
+    granule_meta_data.end_gpssow            = end_gpssow.value;
+    granule_meta_data.end_gpsweek           = end_gpsweek.value;
+    granule_meta_data.end_orbit             = end_orbit.value;
+    granule_meta_data.end_region            = end_region.value;
+    granule_meta_data.end_rgt               = end_rgt.value;
+    granule_meta_data.release               = release.value;
+    granule_meta_data.granule_end_utc       = granule_end_utc.value;
+    granule_meta_data.granule_start_utc     = granule_start_utc.value;
+    granule_meta_data.start_cycle           = start_cycle.value;
+    granule_meta_data.start_delta_time      = start_delta_time.value;
+    granule_meta_data.start_geoseg          = start_geoseg.value;
+    granule_meta_data.start_gpssow          = start_gpssow.value;
+    granule_meta_data.start_gpsweek         = start_gpsweek.value;
+    granule_meta_data.start_orbit           = start_orbit.value;
+    granule_meta_data.start_region          = start_region.value;
+    granule_meta_data.start_rgt             = start_rgt.value;
+    granule_meta_data.version               = version.value;
+
+    granule_meta_data.crossing_time         = crossing_time.value;
+    granule_meta_data.cycle_number          = cycle_number.value;
+    granule_meta_data.lan                   = lan.value;
+    granule_meta_data.orbit_number          = orbit_number.value;
+    granule_meta_data.rgt                   = rgt.value;
+    granule_meta_data.sc_orient             = sc_orient.value;
+    granule_meta_data.sc_orient_time        = sc_orient_time.value;
+}
+
+/*----------------------------------------------------------------------------
+ * findSeaSurface
+ *----------------------------------------------------------------------------*/
+void BathyDataFrame::findSeaSurface (BathyFields::extent_t& extent)
+{
+    SurfaceFields& p = parms->surface.value;
     try
     {
         /* initialize stats on photons */
@@ -1427,7 +1374,7 @@ void BathyReader::findSeaSurface (BathyParms::extent_t& extent)
 
         /* calculate and check range */
         const double range_h = max_h - min_h;
-        if(range_h <= 0 || range_h > p.max_range)
+        if(range_h <= 0 || range_h > p.maxRange.value)
         {
             throw RunTimeException(ERROR, RTE_ERROR, "Invalid range <%lf> when determining sea surface", range_h);
         }
@@ -1435,8 +1382,8 @@ void BathyReader::findSeaSurface (BathyParms::extent_t& extent)
         /* calculate and check number of bins in histogram
         *  - the number of bins is increased by 1 in case the ceiling and the floor
         *    of the max range is both the same number */
-        const long num_bins = static_cast<long>(std::ceil(range_h / p.bin_size)) + 1;
-        if(num_bins <= 0 || num_bins > p.max_bins)
+        const long num_bins = static_cast<long>(std::ceil(range_h / p.binSize.value)) + 1;
+        if(num_bins <= 0 || num_bins > p.maxBins.value)
         {
             throw RunTimeException(ERROR, RTE_ERROR, "Invalid combination of range <%lf> and bin size <%lf> produced out of range histogram size <%ld>", range_h, p.bin_size, num_bins);
         }
@@ -1447,17 +1394,17 @@ void BathyReader::findSeaSurface (BathyParms::extent_t& extent)
         /* build histogram of photon heights */
         vector<long> histogram(num_bins);
         std::for_each (std::begin(heights), std::end(heights), [&](const double h) {
-            const long bin = static_cast<long>(std::floor((h - min_h) / p.bin_size));
+            const long bin = static_cast<long>(std::floor((h - min_h) / p.binSize.value));
             histogram[bin]++;
         });
 
         /* calculate mean and standard deviation of histogram */
         double bckgnd = 0.0;
         double stddev = 0.0;
-        if(p.model_as_poisson)
+        if(p.modelAsPoisson.value)
         {
             const long num_shots = std::round((max_t - min_t) / 0.0001);
-            const double bin_t = p.bin_size * 0.00000002 / 3.0; // bin size from meters to seconds
+            const double bin_t = p.binSize.value * 0.00000002 / 3.0; // bin size from meters to seconds
             const double bin_pe = bin_t * num_shots * avg_bckgnd; // expected value
             bckgnd = bin_pe;
             stddev = sqrt(bin_pe);
@@ -1475,7 +1422,7 @@ void BathyReader::findSeaSurface (BathyParms::extent_t& extent)
 
         /* build guassian kernel (from -k to k)*/
         const double kernel_size = 6.0 * stddev + 1.0;
-        const long k = (static_cast<long>(std::ceil(kernel_size / p.bin_size)) & ~0x1) / 2;
+        const long k = (static_cast<long>(std::ceil(kernel_size / p.binSize.value)) & ~0x1) / 2;
         const long kernel_bins = 2 * k + 1;
         double kernel_sum = 0.0;
         vector<double> kernel(kernel_bins);
@@ -1522,7 +1469,7 @@ void BathyReader::findSeaSurface (BathyParms::extent_t& extent)
         }
 
         /* find second highest peak */
-        const long peak_separation_in_bins = static_cast<long>(std::ceil(p.min_peak_separation / p.bin_size));
+        const long peak_separation_in_bins = static_cast<long>(std::ceil(p.minPeakSeparation.value / p.binSize.value));
         long second_peak_bin = -1; // invalid
         double second_peak = std::numeric_limits<double>::min();
         for(int i = 0; i < num_bins; i++)
@@ -1539,7 +1486,7 @@ void BathyReader::findSeaSurface (BathyParms::extent_t& extent)
 
         /* determine which peak is sea surface */
         if( (second_peak_bin != -1) &&
-            (second_peak * p.highest_peak_ratio >= highest_peak) ) // second peak is close in size to highest peak
+            (second_peak * p.highestPeakRatio.value >= highest_peak) ) // second peak is close in size to highest peak
         {
             /* select peak that is highest in elevation */
             if(highest_peak_bin < second_peak_bin)
@@ -1550,7 +1497,7 @@ void BathyReader::findSeaSurface (BathyParms::extent_t& extent)
         }
 
         /* check if sea surface signal is significant */
-        const double signal_threshold = bckgnd + (stddev * p.signal_threshold);
+        const double signal_threshold = bckgnd + (stddev * p.signalThreshold.value);
         if(highest_peak < signal_threshold)
         {
             throw RunTimeException(WARNING, RTE_INFO, "Unable to determine sea surface (%lf < %lf)", highest_peak, signal_threshold);
@@ -1570,19 +1517,19 @@ void BathyReader::findSeaSurface (BathyParms::extent_t& extent)
             if(smoothed_histogram[i] > peak_half_max) peak_width++;
             else break;
         }
-        const double peak_stddev = (peak_width * p.bin_size) / 2.35;
+        const double peak_stddev = (peak_width * p.binSize.value) / 2.35;
 
         /* calculate sea surface height and label sea surface photons */
-        const float surface_h = min_h + (highest_peak_bin * p.bin_size) + (p.bin_size / 2.0);
-        const double min_surface_h = surface_h - (peak_stddev * p.surface_width);
-        const double max_surface_h = surface_h + (peak_stddev * p.surface_width);
+        const float surface_h = min_h + (highest_peak_bin * p.binSize.value) + (p.binSize.value / 2.0);
+        const double min_surface_h = surface_h - (peak_stddev * p.surfaceWidth.value);
+        const double max_surface_h = surface_h + (peak_stddev * p.surfaceWidth.value);
         for(long i = 0; i < extent.photon_count; i++)
         {
             extent.photons[i].surface_h = surface_h;
             if( extent.photons[i].ortho_h >= min_surface_h &&
                 extent.photons[i].ortho_h <= max_surface_h )
             {
-                extent.photons[i].class_ph = BathyParms::SEA_SURFACE;
+                extent.photons[i].class_ph = BathyFields::SEA_SURFACE;
             }
         }
     }
@@ -1591,222 +1538,7 @@ void BathyReader::findSeaSurface (BathyParms::extent_t& extent)
         mlog(e.level(), "Failed to find sea surface for spot %d [extend_id=0x%16lX]: %s", extent.spot, extent.extent_id, e.what());
         for(long i = 0; i < extent.photon_count; i++)
         {
-            extent.photons[i].processing_flags |= BathyParms::SEA_SURFACE_UNDETECTED;
+            extent.photons[i].processing_flags |= BathyFields::SEA_SURFACE_UNDETECTED;
         }
     }
-}
-
-/*----------------------------------------------------------------------------
- * writeCSV
- *----------------------------------------------------------------------------*/
-void BathyReader::writeCSV (const vector<BathyParms::extent_t*>& extents, int spot, const stats_t& local_stats)
-{
-    /* Check for Empty */
-    if(extents.empty()) return;
-
-    /* Open JSON File */
-    FString json_filename("%s/%s_%d.json", sharedDirectory, OUTPUT_FILE_PREFIX, spot);
-    fileptr_t json_file = fopen(json_filename.c_str(), "w");
-    if(json_file == NULL)
-    {
-        char err_buf[256];
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output json file %s: %s", json_filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
-    }
-
-    /* Build JSON File */
-    FString json_contents(R"({)"
-    R"("track":%d,)"
-    R"("pair":%d,)"
-    R"("beam":"gt%d%c",)"
-    R"("spot":%d,)"
-    R"("year":%d,)"
-    R"("month":%d,)"
-    R"("day":%d,)"
-    R"("rgt":%d,)"
-    R"("cycle":%d,)"
-    R"("region":%d,)"
-    R"("utm_zone":%d,)"
-    R"("valid":%d,)"
-    R"("photon_count":%ld,)"
-    R"("subaqueous_photons":%ld,)"
-    R"("corrections_duration":%0.3lf,)"
-    R"("qtrees_duration":%0.3lf,)"
-    R"("coastnet_duration":%0.3lf,)"
-    R"("openoceanspp_duration":%0.3lf)"
-    R"(})",
-    extents[0]->track,
-    extents[0]->pair,
-    extents[0]->track, extents[0]->pair == 0 ? 'l' : 'r',
-    extents[0]->spot,
-    granuleDate.year,
-    granuleDate.month,
-    granuleDate.day,
-    extents[0]->reference_ground_track,
-    extents[0]->cycle,
-    extents[0]->region,
-    extents[0]->utm_zone,
-    local_stats.valid,
-    local_stats.photon_count,
-    local_stats.subaqueous_photons,
-    local_stats.corrections_duration,
-    local_stats.qtrees_duration,
-    local_stats.coastnet_duration,
-    local_stats.openoceanspp_duration);
-
-    /* Write and Close JSON File */
-    fprintf(json_file, "%s", json_contents.c_str());
-    fclose(json_file);
-
-    /* Open Data File */
-    FString filename("%s/%s_%d.csv", sharedDirectory, OUTPUT_FILE_PREFIX, spot);
-    fileptr_t out_file = fopen(filename.c_str(), "w");
-    if(out_file == NULL)
-    {
-        char err_buf[256];
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to create output daata file %s: %s", filename.c_str(), strerror_r(errno, err_buf, sizeof(err_buf)));
-    }
-
-    /* Write Header */
-    fprintf(out_file, "index_ph,index_seg,time,lat_ph,lon_ph,x_ph,y_ph,x_atc,y_atc,background_rate,surface_h,ortho_h,ellipse_h,sigma_thu,sigma_tvu,delta_h,yapc_score,max_signal_conf,quality_ph,flags,");
-    for(int j = 0; j < BathyParms::NUM_CLASSIFIERS; j++)
-    {
-        const BathyParms::classifier_t classifier = static_cast<BathyParms::classifier_t>(j);
-        fprintf(out_file, "%s,", BathyParms::classifier2str(classifier));
-    }
-    fprintf(out_file, "class_ph\n");
-
-    /* Write Data */
-    for(auto* extent: extents)
-    {
-        for(unsigned i = 0; i < extent->photon_count; i++)
-        {
-            fprintf(out_file, "%d,", extent->photons[i].index_ph);
-            fprintf(out_file, "%d,", extent->photons[i].index_seg);
-            fprintf(out_file, "%ld,", extent->photons[i].time_ns);
-            fprintf(out_file, "%lf,", extent->photons[i].lat_ph);
-            fprintf(out_file, "%lf,", extent->photons[i].lon_ph);
-            fprintf(out_file, "%lf,", extent->photons[i].x_ph);
-            fprintf(out_file, "%lf,", extent->photons[i].y_ph);
-            fprintf(out_file, "%lf,", extent->photons[i].x_atc);
-            fprintf(out_file, "%lf,", extent->photons[i].y_atc);
-            fprintf(out_file, "%lf,", extent->photons[i].background_rate);
-            fprintf(out_file, "%f,", extent->photons[i].surface_h);
-            fprintf(out_file, "%f,", extent->photons[i].ortho_h);
-            fprintf(out_file, "%f,", extent->photons[i].ellipse_h);
-            fprintf(out_file, "%f,", extent->photons[i].sigma_thu);
-            fprintf(out_file, "%f,", extent->photons[i].sigma_tvu);
-            fprintf(out_file, "%f,", extent->photons[i].delta_h);
-            fprintf(out_file, "%d,", extent->photons[i].yapc_score);
-            fprintf(out_file, "%d,", extent->photons[i].max_signal_conf);
-            fprintf(out_file, "%d,", extent->photons[i].quality_ph);
-            fprintf(out_file, "%u,", extent->photons[i].processing_flags);
-            for(int j = 0; j < BathyParms::NUM_CLASSIFIERS; j++)
-            {
-                fprintf(out_file, "%d,", extent->photons[i].predictions[j]);
-            }
-            fprintf(out_file, "%d", extent->photons[i].class_ph);
-            fprintf(out_file, "\n");
-        }
-    }
-
-    /* Close Output File */
-    fclose(out_file);
-}
-
-/*----------------------------------------------------------------------------
- * luaSpotEnabled - :spoton(<spot>) --> true|false
- *----------------------------------------------------------------------------*/
-int BathyReader::luaSpotEnabled (lua_State* L)
-{
-    bool status = false;
-    BathyReader* lua_obj = NULL;
-
-    try
-    {
-        lua_obj = dynamic_cast<BathyReader*>(getLuaSelf(L, 1));
-        const int spot = getLuaInteger(L, 2);
-        if(spot >= 1 && spot <= Icesat2Parms::NUM_SPOTS)
-        {
-            status = lua_obj->parms->spots[spot-1];
-        }
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error retrieving spot status: %s", e.what());
-    }
-
-    lua_pushboolean(L, status);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * luaClassifierEnabled - :classifieron(<spot>) --> true|false
- *----------------------------------------------------------------------------*/
-int BathyReader::luaClassifierEnabled (lua_State* L)
-{
-    bool status = false;
-    BathyReader* lua_obj = NULL;
-
-    try
-    {
-        lua_obj = dynamic_cast<BathyReader*>(getLuaSelf(L, 1));
-        const char* classifier_str = getLuaString(L, 2);
-        const BathyParms::classifier_t classifier = BathyParms::str2classifier(classifier_str);
-        if(classifier != BathyParms::INVALID_CLASSIFIER)
-        {
-            const int index = static_cast<int>(classifier);
-            status = lua_obj->parms->classifiers[index];
-        }
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error retrieving classifier status: %s", e.what());
-    }
-
-    lua_pushboolean(L, status);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * luaStats - :stats() --> {<key>=<value>, ...} containing statistics
- *----------------------------------------------------------------------------*/
-int BathyReader::luaStats (lua_State* L)
-{
-    bool status = false;
-    int num_obj_to_return = 1;
-    const BathyReader* lua_obj = NULL;
-
-    try
-    {
-        /* Get Self */
-        lua_obj = dynamic_cast<BathyReader*>(getLuaSelf(L, 1));
-    }
-    catch(const RunTimeException& e)
-    {
-        return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
-    }
-
-    try
-    {
-        /* Create Statistics Table */
-        lua_newtable(L);
-        LuaEngine::setAttrBool(L, "valid", lua_obj->stats.valid);
-        LuaEngine::setAttrInt(L, "photon_count", lua_obj->stats.photon_count);
-        LuaEngine::setAttrInt(L, "subaqueous_photons", lua_obj->stats.subaqueous_photons);
-        LuaEngine::setAttrNum(L, "corrections_duration", lua_obj->stats.corrections_duration);
-        LuaEngine::setAttrNum(L, "qtrees_duration", lua_obj->stats.qtrees_duration);
-        LuaEngine::setAttrNum(L, "coastnet_duration", lua_obj->stats.coastnet_duration);
-        LuaEngine::setAttrNum(L, "openoceanspp_duration", lua_obj->stats.openoceanspp_duration);
-
-        /* Set Success */
-        status = true;
-        num_obj_to_return = 2;
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error returning stats %s: %s", lua_obj->getName(), e.what());
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status, num_obj_to_return);
 }

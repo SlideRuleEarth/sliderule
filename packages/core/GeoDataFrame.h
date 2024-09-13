@@ -49,7 +49,7 @@
  * CLASS
  ******************************************************************************/
 
-class GeoDataFrame: public LuaObject, public FieldDictionary
+class GeoDataFrame: public LuaObject, public Field
 {
     public:
 
@@ -58,16 +58,52 @@ class GeoDataFrame: public LuaObject, public FieldDictionary
          *--------------------------------------------------------------------*/
 
         static const char* OBJECT_TYPE;
-        static const char* LUA_META_NAME;
-        static const struct luaL_Reg LUA_META_TABLE[];
+        static const char* GDF;
+        static const char* META;
+
+        /*--------------------------------------------------------------------
+         * Subclasses
+         *--------------------------------------------------------------------*/
+
+        struct FrameColumn: public LuaObject
+        {
+            static const char* OBJECT_TYPE;
+            static const char* LUA_META_NAME;
+            static const struct luaL_Reg LUA_META_TABLE[];
+
+            static int luaGetData (lua_State* L);
+
+            FrameColumn(lua_State* L, const Field* _column);
+            ~FrameColumn(void) override = default;
+
+            const Field* column;
+        };
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaCreate (lua_State* L);
-        static int luaExport (lua_State* L);
-        static int luaImport (lua_State* L);
+        static int              luaExport       (lua_State* L);
+        static int              luaImport       (lua_State* L);
+        static int              luaGetColumnData(lua_State* L);
+        static int              luaGetMetaData  (lua_State* L);
+
+        long                    length          (void);
+        long                    addRow          (void);
+        void                    addColumnData   (const char* name, Field* column);
+        Field*                  getColumnData   (const char* name);
+        void                    addMetaData     (const char* name, Field* column);
+        Field*                  getMetaData     (const char* name);
+
+        void                    setTimeColumn   (const char* name, FieldColumn<int64_t>* time_column = NULL);
+        void                    setXColumn      (const char* name, FieldColumn<double>* x_column = NULL);
+        void                    setYColumn      (const char* name, FieldColumn<double>* y_column = NULL);
+        void                    setZColumn      (const char* name, FieldColumn<double>* z_column = NULL);
+
+        FieldColumn<int64_t>&   getTimeColumn   (void);
+        FieldColumn<double>&    getXColumn      (void);
+        FieldColumn<double>&    getYColumn      (void);
+        FieldColumn<double>&    getZColumn      (void);
 
     protected:
 
@@ -75,14 +111,32 @@ class GeoDataFrame: public LuaObject, public FieldDictionary
          * Methods
          *--------------------------------------------------------------------*/
 
-        GeoDataFrame   (lua_State* L, const std::initializer_list<entry_t>& column_list, const std::initializer_list<entry_t>& meta_list);
-        ~GeoDataFrame  (void) override = default;
+        GeoDataFrame    (lua_State* L, 
+                         const char* meta_name,
+                         const struct luaL_Reg meta_table[],
+                         const std::initializer_list<FieldDictionary::entry_t>& column_list, 
+                         const std::initializer_list<FieldDictionary::entry_t>& meta_list,
+                         FieldColumn<int64_t>* time_column = NULL,
+                         FieldColumn<double>* x_column = NULL,
+                         FieldColumn<double>* y_column = NULL,
+                         FieldColumn<double>* z_column = NULL);
+        ~GeoDataFrame   (void) override = default;
+
+        int     toLua   (lua_State* L) const override;
+        void    fromLua (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
+        vector<long> index;
+        FieldDictionary columnFields;
         FieldDictionary metaFields;
+
+        FieldColumn<int64_t>* timeColumn;
+        FieldColumn<double>* xColumn;
+        FieldColumn<double>* yColumn;
+        FieldColumn<double>* zColumn;
 };
 
 #endif  /* __geo_data_frame__ */

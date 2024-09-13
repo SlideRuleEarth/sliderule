@@ -67,6 +67,8 @@ class FieldEnumeration: public Field
         int                     toLua               (lua_State* L) const override;
         void                    fromLua             (lua_State* L, int index) override;
 
+        int                     toLua               (lua_State* L, long key) const override;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
@@ -257,6 +259,32 @@ void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
     // set provided
     provided = true;
     initialized = true;
+}
+
+/*----------------------------------------------------------------------------
+ * toLua
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+int FieldEnumeration<T,N>::toLua (lua_State* L, long key) const
+{
+    T selection = static_cast<T>(key);
+    int index = convertToIndex(selection);
+    if(index >= 0 && index < N)
+    {
+        if(values[index])
+        {
+            convertToLua(L, selection);
+        }
+        else
+        {
+            lua_pushnil(L);
+        }
+    }
+    else
+    {
+        lua_pushnil(L);
+    }
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

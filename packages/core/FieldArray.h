@@ -59,11 +59,14 @@ class FieldArray: public Field
                             ~FieldArray     (void) override = default;
 
         FieldArray<T,N>&    operator=       (const FieldArray<T,N>& array);
+        FieldArray<T,N>&    operator=       (std::initializer_list<T> init_list);
         T                   operator[]      (int i) const;
         T&                  operator[]      (int i);
 
         int                 toLua           (lua_State* L) const override;
         void                fromLua         (lua_State* L, int index) override;
+
+        int                 toLua           (lua_State* L, long key) const override;
 
         /*--------------------------------------------------------------------
          * Data
@@ -104,7 +107,7 @@ inline void convertFromLua(lua_State* L, int index, FieldArray<T, N>& v) {
 template <class T, int N>
 FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list)
 {
-    assert(N > 0);
+    assert(N == init_list.size());
     std::copy(init_list.begin(), init_list.end(), values);
     initialized = true;
 }
@@ -136,6 +139,19 @@ FieldArray<T,N>& FieldArray<T,N>::operator=(const FieldArray<T,N>& array)
 {
     if(this == &array) return *this;
     copy(array);
+    return *this;
+}
+
+/*----------------------------------------------------------------------------
+ * operator=
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+FieldArray<T,N>& FieldArray<T,N>::operator=(std::initializer_list<T> init_list)
+{
+    assert(N == init_list.size());
+    if(this == &array) return *this;
+    std::copy(init_list.begin(), init_list.end(), values);
+    initialized = true;
     return *this;
 }
 
@@ -197,6 +213,23 @@ void FieldArray<T,N>::fromLua (lua_State* L, int index)
     // set provided
     provided = true;
     initialized = true;
+}
+
+/*----------------------------------------------------------------------------
+ * toLua
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+int FieldArray<T,N>::toLua (lua_State* L, long key) const
+{
+    if(key >= 0 && key < N)
+    {
+        convertToLua(L, values[key]);
+    }
+    else
+    {
+        lua_pushnil(L);
+    }
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

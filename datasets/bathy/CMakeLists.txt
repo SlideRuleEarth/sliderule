@@ -10,6 +10,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyFields.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyParms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyReader.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyStats.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyRefractionCorrector.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyUncertaintyCalculator.cpp
@@ -29,6 +30,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyFields.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyParms.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyReader.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyStats.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyRefractionCorrector.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyUncertaintyCalculator.h

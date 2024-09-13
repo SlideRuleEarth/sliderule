@@ -68,6 +68,8 @@ class FieldList: public Field
         int             toLua       (lua_State* L) const override;
         void            fromLua     (lua_State* L, int index) override;
 
+        int             toLua       (lua_State* L, long key) const override;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
@@ -205,6 +207,23 @@ void FieldList<T>::fromLua (lua_State* L, int index)
 
     // set provided
     provided = true;
+}
+
+/*----------------------------------------------------------------------------
+ * toLua
+ *----------------------------------------------------------------------------*/
+template <class T>
+int FieldList<T>::toLua (lua_State* L, long key) const
+{
+    if(key >= 0 && key < values.size())
+    {
+        convertToLua(L, values[key]);
+    }
+    else
+    {
+        lua_pushnil(L);
+    }
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

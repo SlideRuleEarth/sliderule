@@ -59,11 +59,12 @@ class FieldColumn: public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit        FieldColumn     (int _chunk_size=DEFAULT_CHUNK_SIZE);
+        explicit        FieldColumn     (long _chunk_size=DEFAULT_CHUNK_SIZE);
                         FieldColumn     (const FieldColumn<T>& column);
                         ~FieldColumn    (void) override;
 
         long            append          (const T& v);
+        void            initialize      (long size, const T& v);
         void            clear           (void);
         long            length          (void) const;
 
@@ -73,6 +74,8 @@ class FieldColumn: public Field
 
         int             toLua           (lua_State* L) const override;
         void            fromLua         (lua_State* L, int index) override;
+
+        int             toLua           (lua_State* L, long key) const override;
 
         /*--------------------------------------------------------------------
          * Data
@@ -107,7 +110,7 @@ inline void convertFromLua(lua_State* L, int index, FieldColumn<T>& v) {
  * Constructor
  *----------------------------------------------------------------------------*/
 template<class T>
-FieldColumn<T>::FieldColumn(int _chunk_size):
+FieldColumn<T>::FieldColumn(long _chunk_size):
     currChunk(-1),
     currChunkOffset(_chunk_size),
     numElements(0),
@@ -183,6 +186,25 @@ long FieldColumn<T>::append(const T& v)
     }
 
     return ++numElements;
+}
+
+/*----------------------------------------------------------------------------
+ * initialize
+ *----------------------------------------------------------------------------*/
+template<class T>
+void FieldColumn<T>::initialize(long size, const T& v)
+{
+    clear();
+    chunkSize = size;
+    currChunkOffset = size;
+    currChunk = 0;
+    T* chunk = new T[chunkSize];
+    for(int i = 0; i < chunkSize; i++)
+    {
+        chunk[i] = v;
+    }
+    chunks.push_back(chunk);
+    initialized = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -296,6 +318,23 @@ void FieldColumn<T>::fromLua (lua_State* L, int index)
         provided = true;
         initialized = true;
     }
+}
+
+/*----------------------------------------------------------------------------
+ * toLua
+ *----------------------------------------------------------------------------*/
+template <class T>
+int FieldColumn<T>::toLua (lua_State* L, long key) const
+{
+    if(key >= 0 && key < numElements)
+    {
+        convertToLua(L, this->operator[](i));
+    }
+    else
+    {
+        lua_pushnil(L);
+    }
+    return 1;
 }
 
 #endif  /* __field_column__ */

@@ -81,6 +81,8 @@ class FieldDictionary: public Field
         int             toLua           (lua_State* L) const override;
         void            fromLua         (lua_State* L, int index) override;
 
+        int             toLua           (lua_State* L, const string& key) const override;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/

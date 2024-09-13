@@ -74,6 +74,7 @@ class RequestFields: public LuaObject, public FieldDictionary
 
         static int luaProjectedPolygonIncludes (lua_State* L) ;
         static int luaRegionMaskIncludes (lua_State* L);
+        static int luaGetField (lua_State* L);
 
         bool polyIncludes (double lon, double lat) const;
         bool maskIncludes (double lon, double lat) const;

@@ -46,6 +46,7 @@ const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {"export",  luaExport},
     {"poly",    luaProjectedPolygonIncludes},
     {"mask",    luaRegionMaskIncludes},
+    {"__index", luaGetField},
     {NULL,      NULL}
 };
 
@@ -128,6 +129,26 @@ int RequestFields::luaRegionMaskIncludes (lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error testing for inclusion in region mask: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaGetField - [<field_name>]
+ *----------------------------------------------------------------------------*/
+int RequestFields::luaGetField (lua_State* L)
+{
+    try
+    {
+        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        const char* field_name = getLuaString(L, 2);
+        return lua_obj->fields[field_name].field->toLua(L);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "error retrieving field: %s", e.what());
         lua_pushnil(L);
     }
 

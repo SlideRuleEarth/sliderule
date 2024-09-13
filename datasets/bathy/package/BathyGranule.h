@@ -36,18 +36,21 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <atomic>
+
 #include "LuaObject.h"
+#include "RecordObject.h"
 #include "MsgQ.h"
 #include "OsApi.h"
-#include "GeoLib.h"
+#include "RasterObject.h"
 #include "H5Array.h"
 #include "H5Element.h"
+#include "GeoLib.h"
 #include "BathyFields.h"
-#include "FieldElement.h"
-#include "FieldArray.h"
-#include "FieldColumn.h"
+#include "BathyClassifier.h"
+#include "BathyRefractionCorrector.h"
+#include "BathyUncertaintyCalculator.h"
 #include "GeoDataFrame.h"
-#include "BathyStats.h"
 
 /******************************************************************************
  * CLASS
@@ -73,6 +76,8 @@ class BathyDataFrame: public GeoDataFrame
         static const double GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
         static const uint32_t GLOBAL_BATHYMETRY_MASK_OFF_VALUE;
 
+        static const char* OBJECT_TYPE;
+
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
@@ -81,6 +86,7 @@ class BathyDataFrame: public GeoDataFrame
          *--------------------------------------------------------------------*/
 
         static int  luaCreate   (lua_State* L);
+        static void init        (void);
 
     private:
 
@@ -88,17 +94,25 @@ class BathyDataFrame: public GeoDataFrame
          * Types
          *--------------------------------------------------------------------*/
 
+        typedef struct Info {
+            BathyDataFrame*     reader;
+            const BathyFields*  parms;
+            char                prefix[7];
+            int                 track;
+            int                 pair;
+        } info_t;
+
         /* Region Subclass */
         class Region
         {
             public:
 
-                explicit Region     (const BathyDataFrame& dataframe);
+                explicit Region     (const info_t* info);
                 ~Region             (void);
 
                 void cleanup        (void);
-                void polyregion     (const BathyDataFrame& dataframe);
-                void rasterregion   (const BathyDataFrame& dataframe);
+                void polyregion     (const info_t* info);
+                void rasterregion   (const info_t* info);
 
                 H5Array<double>     segment_lat;
                 H5Array<double>     segment_lon;
@@ -118,7 +132,7 @@ class BathyDataFrame: public GeoDataFrame
         {
             public:
 
-                Atl03Data           (const BathyDataFrame& dataframe, const Region& region);
+                Atl03Data           (const info_t* info, const Region& region);
                 ~Atl03Data          (void) = default;
 
                 /* Read Data */
@@ -152,7 +166,7 @@ class BathyDataFrame: public GeoDataFrame
         {
             public:
 
-                explicit Atl09Class (const BathyDataFrame& dataframe);
+                explicit Atl09Class (const info_t* info);
                 ~Atl09Class         (void) = default;
 
                 /* Generated Data */
@@ -164,74 +178,132 @@ class BathyDataFrame: public GeoDataFrame
                 H5Array<double>     delta_time;
         };
 
+        /* Statistics SubClass */
+        struct Stats
+        {
+            FieldElement<bool>      valid {true};
+            FieldElement<uint64_t>  photonCount {0};
+            FieldElement<uint64_t>  subaqueousPhotons {0.0};
+            FieldElement<double>    correctionsDuration {0.0};
+            FieldElement<double>    qtreesDuration {0.0};
+            FieldElement<double>    coastnetDuration {0.0};
+            FieldElement<double>    openoceansppDuration {0.0};
+        };
+
+        /* GranuleMetaData SubClass */
+        struct GranuleMetaData: public FieldDictionary
+        {
+            FieldElement<int>       year;
+            FieldElement<int>       month;
+            FieldElement<int>       day;
+            FieldElement<int>       rgt;
+            FieldElement<int>       cycle;
+            FieldElement<int>       region;
+            FieldElement<int>       utm_zone;
+            Stats                   stats;
+            FieldElement<double>    atlas_sdp_gps_epoch;
+            FieldElement<string>    data_end_utc;
+            FieldElement<string>    data_start_utc;
+            FieldElement<int32_t>   end_cycle;
+            FieldElement<double>    end_delta_time;
+            FieldElement<int32_t>   end_geoseg;
+            FieldElement<double>    end_gpssow;
+            FieldElement<int32_t>   end_gpsweek;
+            FieldElement<int32_t>   end_orbit;
+            FieldElement<int32_t>   end_region;
+            FieldElement<int32_t>   end_rgt;
+            FieldElement<string>    release;
+            FieldElement<string>    granule_end_utc;
+            FieldElement<string>    granule_start_utc;
+            FieldElement<int32_t>   start_cycle;
+            FieldElement<double>    start_delta_time;
+            FieldElement<int32_t>   start_geoseg;
+            FieldElement<double>    start_gpssow;
+            FieldElement<int32_t>   start_gpsweek;
+            FieldElement<int32_t>   start_orbit;
+            FieldElement<int32_t>   start_region;
+            FieldElement<int32_t>   start_rgt;
+            FieldElement<string>    version;
+            FieldElement<double>    crossing_time;
+            FieldElement<int8_t>    cycle_number;
+            FieldElement<double>    lan;
+            FieldElement<int16_t>   orbit_number;
+            FieldElement<int16_t>   rgt;
+            FieldElement<int8_t>    sc_orient;
+            FieldElement<double>    sc_orient_time;
+
+            GranuleMetaData(void): FieldDictionary({}) {};
+            ~GranuleMetaData(void) override = default;
+        };
+
+        /* SpotMetaData SubClass */
+        struct SpotMetaData: public FieldDictionary??? // or does this just go into the metadata for the BeamDataFrame
+        {
+            FieldElement<int>       track;
+            FieldElement<int>       pair;
+            FieldElement<string>    beam;
+            FieldElement<int>       spot;
+            Stats                   stats;
+        };
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         bool                        active;
-        Thread*                     pid;
-        BathyFields*                parmsPtr;
-        const BathyFields&          parms;
-        Publisher                   rqstQ;
+        Thread*                     readerPid[BathyFields::NUM_SPOTS];
+        Mutex                       threadMut;
+        int                         threadCount;
+        int                         numComplete;
+        BathyFields*                parms;
+        BathyClassifier*            classifiers[BathyFields::NUM_CLASSIFIERS];
+        BathyRefractionCorrector*   refraction;         // refraction correction
+        BathyUncertaintyCalculator* uncertainty;        // uncertainty calculation
+        GeoParms*                   hls;                // geo-package parms for sampling HLS for NDWI
+        bool                        sendTerminator;
+        Publisher*                  outQ;
         int                         signalConfColIndex;
+        const char*                 sharedDirectory;
         int                         readTimeoutMs;
-        int                         sdpVersion;
-        bool                        valid;
-
-
         H5Coro::Context*            context; // for ATL03 file
         H5Coro::Context*            context09; // for ATL09 file
+        TimeLib::date_t             granuleDate;
+        uint16_t                    startRgt;
+        uint8_t                     startCycle;
+        uint8_t                     startRegion;
+        uint8_t                     sdpVersion;
         GeoLib::TIFFImage*          bathyMask;
 
         /* Meta Data */
-        FieldElement<string>        beam;               // ATL03 beam (i.e. gt1l, gt1r, gt2l, gt2r, gt3l, gt3r)
-        FieldElement<int>           track;              // ATL03 track (i.e. 1, 2, 3)
-        FieldElement<int>           pair;               // ATL03 pair (i.e. left, right)
-        FieldElement<int>           spot;               // ATL03 spot (1, 2, 3, 4, 5, 6)
-
-        /* Column Data */
-        FieldColumn<int64_t>        time_ns;            // nanoseconds since GPS epoch
-        FieldColumn<int32_t>        index_ph;           // unique index of photon in granule
-        FieldColumn<int32_t>        index_seg;          // index into segment level groups in source ATL03 granule
-        FieldColumn<double>         lat_ph;             // latitude of photon (EPSG 7912)
-        FieldColumn<double>         lon_ph;             // longitude of photon (EPSG 7912)
-        FieldColumn<double>         x_ph;               // the easting coordinate in meters of the photon for the given UTM zone
-        FieldColumn<double>         y_ph;               // the northing coordinate in meters of the photon for the given UTM zone
-        FieldColumn<double>         x_atc;              // along track distance calculated from segment_dist_x and dist_ph_along
-        FieldColumn<double>         y_atc;              // dist_ph_across
-        FieldColumn<double>         background_rate;    // PE per second
-        FieldColumn<float>          delta_h;            // refraction correction of height
-        FieldColumn<float>          surface_h;          // orthometric height of sea surface at each photon location
-        FieldColumn<float>          ortho_h;            // geoid corrected height of photon, calculated from h_ph and geoid
-        FieldColumn<float>          ellipse_h;          // height of photon with respect to reference ellipsoid
-        FieldColumn<float>          sigma_thu;          // total horizontal uncertainty
-        FieldColumn<float>          sigma_tvu;          // total vertical uncertainty
-        FieldColumn<uint32_t>       processing_flags;   // bit mask of flags for capturing errors and warnings
-        FieldColumn<uint8_t>        yapc_score;         // atl03 density estimate (Yet Another Photon Classifier)
-        FieldColumn<int8_t>         max_signal_conf;    // maximum value in the atl03 confidence table
-        FieldColumn<int8_t>         quality_ph;         // atl03 quality flags
-        FieldColumn<int8_t>         class_ph;           // photon classification
-        FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>> predictions; // photon classification from each of the classifiers
-        FieldColumn<float>          wind_v;             // wind speed (in meters/second)            
-        FieldColumn<float>          ref_el;             // reference elevation
-        FieldColumn<float>          ref_az;             // reference aziumth
-        FieldColumn<float>          sigma_across;       // across track aerial uncertainty
-        FieldColumn<float>          sigma_along;        // along track aerial uncertainty
-        FieldColumn<float>          sigma_h;            // vertical aerial uncertainty
+        GranuleMetaData              granuleMetaData;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            BathyDataFrame              (lua_State* L, const string& beam_str, BathyFields* _parms, const char* rqstq_name);
+                            BathyDataFrame              (lua_State* L,
+                                                         BathyFields* _parms,
+                                                         BathyClassifier** _classifiers,
+                                                         BathyRefractionCorrector* _refraction,
+                                                         BathyUncertaintyCalculator* _uncertainty,
+                                                         GeoParms* _hls,
+                                                         const char* outq_name,
+                                                         const char* shared_directory,
+                                                         bool read_sdp_variables,
+                                                         bool _send_terminator);
                             ~BathyDataFrame             (void) override;
 
         static void*        subsettingThread            (void* parm);
-        static double       calculateBackground         (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03);
-        static void         getResourceVersion          (const char* resource, int& version);
-        void                findSeaSurface              (void);
 
-        static int          luaIsValid                  (lua_State* L);
+        static double       calculateBackground         (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03);
+        static void         parseResource               (const char* resource, TimeLib::date_t& date,
+                                                         uint16_t& rgt, uint8_t& cycle, uint8_t& region,
+                                                         uint8_t& version);
+
+        void                readStandardData            (GranuleMetaData& granule_meta_data, H5Coro::Context* context, int timeout)
+        void                findSeaSurface              (BathyFields::extent_t& extent);
+        void                writeCSV                    (const vector<BathyFields::extent_t*>& extents, int spot, const BathyStats& local_stats);
+
 };
 
 #endif  /* __bathy_data_frame__ */

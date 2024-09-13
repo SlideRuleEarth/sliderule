@@ -88,7 +88,7 @@ FieldDictionary& FieldDictionary::operator= (const FieldDictionary& dictionary)
     if(this == &dictionary) return *this;
     fields = dictionary.fields;
     provided = dictionary.provided;
-    initialiezd = dictionary.initialized;
+    initialized = dictionary.initialized;
     return *this;
 }
 
@@ -157,5 +157,23 @@ void FieldDictionary::fromLua (lua_State* L, int index)
         provided = true; // even if no element within table are set, presence of table is sufficient
         initialized = true;
     }
+}
+
+/*----------------------------------------------------------------------------
+ * toLua
+ *----------------------------------------------------------------------------*/
+int FieldDictionary::toLua (lua_State* L, const string& key) const
+{
+    try
+    {
+        const entry_t& entry = fields[key.c_str()];
+        entry.field->toLua(L);
+    }
+    catch(const RunTimeException& e)
+    {
+        (void)e;
+        lua_pushnil(L);
+    }
+    return 1;
 }
 

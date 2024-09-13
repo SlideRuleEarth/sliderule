@@ -90,6 +90,18 @@ class Field
         virtual int     toLua       (lua_State* L) const = 0;
         virtual void    fromLua     (lua_State* L, int index) = 0;
 
+        virtual int toLua (lua_State* L, long key) const {
+            (void)key;
+            lua_pushnil(L);
+            return 1;
+        };
+
+        virtual int toLua (lua_State* L, const string& key) const {
+            (void)key;
+            lua_pushnil(L);
+            return 1;
+        };
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
