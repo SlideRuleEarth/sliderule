@@ -33,27 +33,70 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "BathyClassifier.h"
-#include "BathyFields.h"
+#include "OsApi.h"
+#include "GeoLib.h"
+#include "BathyMask.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* BathyClassifier::OBJECT_TYPE = "BathyClassifier";
-const char* BathyClassifier::LUA_META_NAME = "BathyClassifier";
-const struct luaL_Reg BathyClassifier::LUA_META_TABLE[] = {
+const char* BathyMask::GLOBAL_BATHYMETRY_MASK_FILE_PATH = "/data/ATL24_Mask_v5_Raster.tif";
+const double BathyMask::GLOBAL_BATHYMETRY_MASK_MAX_LAT = 84.25;
+const double BathyMask::GLOBAL_BATHYMETRY_MASK_MIN_LAT = -79.0;
+const double BathyMask::GLOBAL_BATHYMETRY_MASK_MAX_LON = 180.0;
+const double BathyMask::GLOBAL_BATHYMETRY_MASK_MIN_LON = -180.0;
+const double BathyMask::GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE = 0.25;
+const uint32_t BathyMask::GLOBAL_BATHYMETRY_MASK_OFF_VALUE = 0xFFFFFFFF;
+
+const char* BathyMask::OBJECT_TYPE = "BathyMask";
+const char* BathyMask::LUA_META_NAME = "BathyMask";
+const struct luaL_Reg BathyMask::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
 /******************************************************************************
- * BATHY CLASSIFIER CLASS
+ * ATL03 READER CLASS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * luaCreate - create(...)
+ *----------------------------------------------------------------------------*/
+int BathyMask::luaCreate (lua_State* L)
+{
+    try
+    {
+        return createLuaObject(L, new BathyMask(L));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating BathyMask: %s", e.what());
+        return returnLuaStatus(L, false);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * includes
+ *----------------------------------------------------------------------------*/
+bool BathyMask::includes (double lon, double lat)
+{
+    const double degrees_of_latitude = lat - GLOBAL_BATHYMETRY_MASK_MIN_LAT;
+    const double latitude_pixels = degrees_of_latitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
+    const uint32_t y = static_cast<uint32_t>(latitude_pixels);
+
+    const double degrees_of_longitude =  lon - GLOBAL_BATHYMETRY_MASK_MIN_LON;
+    const double longitude_pixels = degrees_of_longitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
+    const uint32_t x = static_cast<uint32_t>(longitude_pixels);
+
+    const GeoLib::TIFFImage::val_t pixel = getPixel(x, y);
+    return pixel.u32 == GLOBAL_BATHYMETRY_MASK_OFF_VALUE;
+}
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyClassifier::BathyClassifier (lua_State* L, BathyFields::classifier_t _classifier):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
+BathyMask::BathyMask (lua_State* L):
+    GeoLib::TIFFImage(L, GLOBAL_BATHYMETRY_MASK_FILE_PATH)
 {
 }
+

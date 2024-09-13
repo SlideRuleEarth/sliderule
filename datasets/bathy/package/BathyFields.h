@@ -122,11 +122,6 @@ class BathyFields: public Icesat2Fields
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* phRecType;
-        static const RecordObject::fieldDef_t phRecDef[];
-        static const char* exRecType;
-        static const RecordObject::fieldDef_t exRecDef[];
-
         inline static const char* QTREES_NAME           = "qtrees";
         inline static const char* COASTNET_NAME         = "coastnet";
         inline static const char* OPENOCEANSPP_NAME     = "openoceanspp";
@@ -176,7 +171,6 @@ class BathyFields: public Icesat2Fields
          *--------------------------------------------------------------------*/
 
         static int  luaCreate   (lua_State* L);
-        static void init        (void);
 
         /*--------------------------------------------------------------------
          * Data

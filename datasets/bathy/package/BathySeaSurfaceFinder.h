@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __bathy_refraction_corrector__
-#define __bathy_refraction_corrector__
+#ifndef __bathy_sea_surface_finder__
+#define __bathy_sea_surface_finder__
 
 #include "OsApi.h"
 #include "LuaObject.h"
@@ -41,7 +41,7 @@
  * CLASS
  ******************************************************************************/
 
-class BathyRefractionCorrector: public LuaObject
+class BathySeaSurfaceFinder: public LuaObject
 {
     public:
 
@@ -49,15 +49,7 @@ class BathyRefractionCorrector: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* GLOBAL_WATER_RI_MASK;
-        static const double GLOBAL_WATER_RI_MASK_MAX_LAT;
-        static const double GLOBAL_WATER_RI_MASK_MIN_LAT;
-        static const double GLOBAL_WATER_RI_MASK_MAX_LON;
-        static const double GLOBAL_WATER_RI_MASK_MIN_LON;
-        static const double GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
-
         static const char* OBJECT_TYPE;
-
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
@@ -66,8 +58,6 @@ class BathyRefractionCorrector: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int      luaCreate   (lua_State* L);
-        static int      getSubAqPh  (lua_State* L);
-        static void*    runThread   (void* parm);
 
     private:
 
@@ -75,18 +65,18 @@ class BathyRefractionCorrector: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathyRefractionCorrector    (lua_State* L, BathyFields* _parms, BathyDataFrame* _dataframe);
-        ~BathyRefractionCorrector   (void) override;
+        BathySeaSurfaceFinder    (lua_State* L, BathyFields* _parms, BathyDataFrame* _dataframe);
+        ~BathySeaSurfaceFinder   (void) override;
+
+        static void* runThread   (void* parm);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        BathyFields*        parms;
-        BathyDataFrame*     dataframe;
-        GeoLib::TIFFImage*  waterRiMask;
-        uint64_t            subaqueousPhotons;
-        Thread*             pid;
+        BathyFields*    parms;
+        BathyDataFrame* dataframe;
+        Thread*         pid;
 };
 
 #endif

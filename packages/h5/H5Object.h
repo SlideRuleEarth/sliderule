@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, University of Texas
+ * Copyright (c) 2021, University of Washington
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,14 +12,14 @@
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
  *
- * 3. Neither the name of the University of Texas nor the names of its
+ * 3. Neither the name of the University of Washington nor the names of its
  *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF TEXAS AND CONTRIBUTORS
+ * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
  * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF TEXAS OR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
@@ -29,19 +29,22 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __bathy_refraction_corrector__
-#define __bathy_refraction_corrector__
+#ifndef __h5_object__
+#define __h5_object__
 
-#include "OsApi.h"
+/******************************************************************************
+ * INCLUDES
+ ******************************************************************************/
+
 #include "LuaObject.h"
-#include "BathyDataFrame.h"
-#include "BathyFields.h"
+#include "OsApi.h"
+#include "H5Coro.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class BathyRefractionCorrector: public LuaObject
+class H5Object: public LuaObject, public H5Coro::Context
 {
     public:
 
@@ -49,15 +52,7 @@ class BathyRefractionCorrector: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* GLOBAL_WATER_RI_MASK;
-        static const double GLOBAL_WATER_RI_MASK_MAX_LAT;
-        static const double GLOBAL_WATER_RI_MASK_MIN_LAT;
-        static const double GLOBAL_WATER_RI_MASK_MAX_LON;
-        static const double GLOBAL_WATER_RI_MASK_MIN_LON;
-        static const double GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
-
         static const char* OBJECT_TYPE;
-
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
@@ -65,28 +60,16 @@ class BathyRefractionCorrector: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int      luaCreate   (lua_State* L);
-        static int      getSubAqPh  (lua_State* L);
-        static void*    runThread   (void* parm);
-
+        static int  luaCreate   (lua_State* L);
+        
     private:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathyRefractionCorrector    (lua_State* L, BathyFields* _parms, BathyDataFrame* _dataframe);
-        ~BathyRefractionCorrector   (void) override;
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        BathyFields*        parms;
-        BathyDataFrame*     dataframe;
-        GeoLib::TIFFImage*  waterRiMask;
-        uint64_t            subaqueousPhotons;
-        Thread*             pid;
+        H5Object    (lua_State* L, const Asset* asset, const char* resource);
+        ~H5Object   (void) override = default;
 };
 
-#endif
+#endif  /* __h5_object__ */

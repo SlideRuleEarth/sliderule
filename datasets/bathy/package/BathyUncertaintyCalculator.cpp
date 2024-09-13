@@ -40,7 +40,8 @@
 #include "OsApi.h"
 #include "GeoLib.h"
 #include "BathyUncertaintyCalculator.h"
-#include "BathyParms.h"
+#include "BathyFields.h"
+#include "BathyDataFrame.h"
 
 /******************************************************************************
  * DATA
@@ -175,14 +176,16 @@ void BathyUncertaintyCalculator::init (void)
  *----------------------------------------------------------------------------*/
 int BathyUncertaintyCalculator::luaCreate (lua_State* L)
 {
-    BathyParms* parms = NULL;
+    BathyFields* parms = NULL;
+    BathyDataFrame* dataframe = NULL;
 
     try
     {
-        parms = dynamic_cast<BathyParms*>(getLuaObject(L, 1, BathyParms::OBJECT_TYPE));
-        if(!parms->uncertainty.assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no asset provided");
-        else if(!parms->uncertainty.resourceKd) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no filename provided");
-        return createLuaObject(L, new BathyUncertaintyCalculator(L, parms));
+        parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
+        dataframe = dynamic_cast<BathyDataFrame*>(getLuaObject(L, 2, BathyDataFrame::OBJECT_TYPE));
+        if(!parms->uncertainty.value.assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no asset provided");
+        else if(parms->uncertainty.value.resourceKd.value.empty()) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no filename provided");
+        return createLuaObject(L, new BathyUncertaintyCalculator(L, parms, dataframe));
     }
     catch(const RunTimeException& e)
     {
@@ -195,15 +198,17 @@ int BathyUncertaintyCalculator::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyUncertaintyCalculator::BathyUncertaintyCalculator (lua_State* L, BathyParms* _parms):
+BathyUncertaintyCalculator::BathyUncertaintyCalculator (lua_State* L, BathyFields* _parms, BathyDataFrame* _dataframe):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
+    dataframe(_dataframe),
     context(NULL),
-    Kd_490(NULL)
+    Kd_490(NULL),
+    pid(NULL)
 {
     try
     {
-        context = new H5Coro::Context(parms->uncertainty.assetKd, parms->uncertainty.resourceKd);
+        context = new H5Coro::Context(parms->uncertainty.value.assetKd, parms->uncertainty.value.resourceKd.value.c_str());
         Kd_490 = new H5Array<int16_t>(context, "Kd_490", H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS);
     }
     catch (const RunTimeException& e)
@@ -212,6 +217,8 @@ BathyUncertaintyCalculator::BathyUncertaintyCalculator (lua_State* L, BathyParms
         delete Kd_490;
         throw;
     }
+
+    pid = new Thread(runThread, this);
 }
 
 /*----------------------------------------------------------------------------
@@ -219,65 +226,71 @@ BathyUncertaintyCalculator::BathyUncertaintyCalculator (lua_State* L, BathyParms
  *----------------------------------------------------------------------------*/
 BathyUncertaintyCalculator::~BathyUncertaintyCalculator (void)
 {
+    delete pid;
     delete Kd_490;
     delete context;
+    if(parms) parms->releaseLuaObject();
+    if(dataframe) dataframe->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
- * uncertainty calculation
+ * runThread
  *----------------------------------------------------------------------------*/
-void BathyUncertaintyCalculator::run (BathyParms::extent_t& extent,
-                                      const H5Array<float>& sigma_across,
-                                      const H5Array<float>& sigma_along,
-                                      const H5Array<float>& sigma_h,
-                                      const H5Array<float>& ref_el) const
+void* BathyUncertaintyCalculator::runThread (void* parm)
 {
-    if(extent.photon_count == 0) return; // nothing to do
+    BathyUncertaintyCalculator* uncertainty_calculator = static_cast<BathyUncertaintyCalculator*>(parm);
+    BathyDataFrame& df = *uncertainty_calculator->dataframe;
+    const UncertaintyFields& parms = uncertainty_calculator->parms->uncertainty.value;
+
+    /* run uncertainty calculation*/
+    if(df.length() == 0) return; // nothing to do
 
     /* join kd resource read */
-    Kd_490->join(parms->read_timeout * 1000, true);
-
-    /* get y offset */
-    const double degrees_of_latitude = extent.photons[0].lat_ph + 90.0;
-    const double latitude_pixels = degrees_of_latitude * 24.0;
-    const int32_t y = static_cast<int32_t>(latitude_pixels);
-
-    /* get x offset */
-    const double degrees_of_longitude =  extent.photons[0].lat_ph + 180.0;
-    const double longitude_pixels = degrees_of_longitude * 24.0;
-    const int32_t x = static_cast<int32_t>(longitude_pixels);
-
-    /* calculate total offset */
-    if(y < 0 || y >= 4320 || x < 0 || x >= 8640)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid Kd coordinates: %d, %d | %lf, %lf", y, x, degrees_of_latitude, degrees_of_longitude);
-    }
-    const long offset = (x * 4320) + y;
-    const double kd = static_cast<double>((*Kd_490)[offset]) * 0.0002;
+    uncertainty_calculator->Kd_490->join(uncertainty_calculator->parms->readTimeout.value * 1000, true);
 
     /* segment level variables */
     int32_t previous_segment = -1;
     float pointing_angle = 0.0;
+    double kd = 0.0;
 
     /* for each photon in extent */
-    BathyParms::photon_t* photons = extent.photons;
-    for(uint32_t i = 0; i < extent.photon_count; i++)
+    for(long i = 0; i < df.length(); i++)
     {
-        const int32_t s = extent.photons[i].index_seg;
-
-        /* calculate pointing angle */
-        if(previous_segment != s)
+        /* calculate segment level variables */
+        if(previous_segment != df.index_seg[i])
         {
-            previous_segment = s;
-            pointing_angle = 90.0 - ((180.0 / M_PI) * ref_el[s]);
+            previous_segment = df.index_seg[i];
+
+            /* calculate pointing angle */
+            pointing_angle = 90.0 - ((180.0 / M_PI) * df.ref_el[i]);
+
+            /* get y offset */
+            const double degrees_of_latitude = df.lat_ph[i] + 90.0;
+            const double latitude_pixels = degrees_of_latitude * 24.0;
+            const int32_t y = static_cast<int32_t>(latitude_pixels);
+
+            /* get x offset */
+            const double degrees_of_longitude =  df.lon_ph[i] + 180.0;
+            const double longitude_pixels = degrees_of_longitude * 24.0;
+            const int32_t x = static_cast<int32_t>(longitude_pixels);
+
+            /* calculate total offset */
+            if(y < 0 || y >= 4320 || x < 0 || x >= 8640)
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid Kd coordinates: %d, %d | %lf, %lf", y, x, degrees_of_latitude, degrees_of_longitude);
+            }
+            const long offset = (x * 4320) + y;
+            
+            /* get kd */
+            kd = static_cast<double>((*uncertainty_calculator->Kd_490)[offset]) * 0.0002;
         }
 
         /* initialize total uncertainty to aerial uncertainty */
-        photons[i].sigma_thu = sqrtf((sigma_across[s] * sigma_across[s]) + (sigma_along[s] * sigma_along[s]));
-        photons[i].sigma_tvu = sigma_h[s];
+        df.sigma_thu[i] = sqrtf((df.sigma_across[i] * df.sigma_across[i]) + (df.sigma_along[i] * df.sigma_along[i]));
+        df.sigma_tvu[i] = df.sigma_h[i];
         
         /* calculate subaqueous uncertainty */
-        const double depth = photons[i].surface_h - photons[i].ortho_h;
+        const double depth = df.surface_h[i] - df.ortho_h[i];
         if(depth > 0.0)
         {
             /* get pointing angle index */
@@ -286,7 +299,7 @@ void BathyUncertaintyCalculator::run (BathyParms::extent_t& extent,
             else if(pointing_angle_index >= NUM_POINTING_ANGLES) pointing_angle_index = NUM_POINTING_ANGLES - 1;
 
             /* get wind speed index */
-            int wind_speed_index = static_cast<int>(roundf(extent.wind_v)) - 1;
+            int wind_speed_index = static_cast<int>(roundf(df.wind_v[i])) - 1;
             if(wind_speed_index < 0) wind_speed_index = 0;
             else if(wind_speed_index >= NUM_WIND_SPEEDS) wind_speed_index = NUM_WIND_SPEEDS - 1;
 
@@ -306,8 +319,8 @@ void BathyUncertaintyCalculator::run (BathyParms::extent_t& extent,
             const double subaqueous_vertical_uncertainty = (vertical_coeff.b * depth) + vertical_coeff.c;
 
             /* add subaqueous uncertainties to total uncertainties */
-            photons[i].sigma_thu += subaqueous_horizontal_uncertainty;
-            photons[i].sigma_tvu += subaqueous_vertical_uncertainty;
+            df.sigma_thu[i] += subaqueous_horizontal_uncertainty;
+            df.sigma_tvu[i] += subaqueous_vertical_uncertainty;
 
             /* set maximum sensor depth processing flag */
             if(kd > 0)
@@ -315,9 +328,13 @@ void BathyUncertaintyCalculator::run (BathyParms::extent_t& extent,
                 const double max_sensor_depth = 1.8 / kd;
                 if(depth > max_sensor_depth)
                 {
-                    photons[i].processing_flags |= BathyParms::SENSOR_DEPTH_EXCEEDED;
+                    df.processing_flags[i] = df.processing_flags[i] | BathyFields::SENSOR_DEPTH_EXCEEDED;
                 }
             }
         }
     }
+
+    /* mark completion */
+    uncertainty_calculator->signalComplete();
+    return NULL;
 }

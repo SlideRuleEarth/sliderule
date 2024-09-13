@@ -42,23 +42,15 @@
 #include "OsApi.h"
 #include "MsgQ.h"
 #include "H5Coro.h"
+#include "H5Object.h"
 #include "BathyDataFrame.h"
 #include "GeoLib.h"
 #include "BathyFields.h"
-#include "BathyStats.h"
+#include "BathyMask.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
-
-const char* BathyDataFrame::OUTPUT_FILE_PREFIX = "bathy_spot";
-const char* BathyDataFrame::GLOBAL_BATHYMETRY_MASK_FILE_PATH = "/data/ATL24_Mask_v5_Raster.tif";
-const double BathyDataFrame::GLOBAL_BATHYMETRY_MASK_MAX_LAT = 84.25;
-const double BathyDataFrame::GLOBAL_BATHYMETRY_MASK_MIN_LAT = -79.0;
-const double BathyDataFrame::GLOBAL_BATHYMETRY_MASK_MAX_LON = 180.0;
-const double BathyDataFrame::GLOBAL_BATHYMETRY_MASK_MIN_LON = -180.0;
-const double BathyDataFrame::GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE = 0.25;
-const uint32_t BathyDataFrame::GLOBAL_BATHYMETRY_MASK_OFF_VALUE = 0xFFFFFFFF;
 
 const char* BathyDataFrame::LUA_META_NAME = "BathyDataFrame";
 const struct luaL_Reg BathyDataFrame::LUA_META_TABLE[] = {
@@ -76,20 +68,29 @@ const struct luaL_Reg BathyDataFrame::LUA_META_TABLE[] = {
 int BathyDataFrame::luaCreate (lua_State* L)
 {
     BathyFields* _parms = NULL;
+    BathyMask* _mask = NULL;
+    H5Object* _hdf03 = NULL;
+    H5Object* _hdf09 = NULL;
 
     try
     {
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
         _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 2, BathyFields::OBJECT_TYPE));
-        const char* rqstq_name = getLuaString(L, 3);
+        _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE));
+        _hdf09 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE));
+        const char* rqstq_name = getLuaString(L, 5);
+        _mask = dynamic_cast<BathyMask*>(getLuaObject(L, 6, GeoLib::TIFFImage::OBJECT_TYPE, true, NULL));
 
         /* Return Reader Object */
-        return createLuaObject(L, new BathyDataFrame(L, string(beam_str), _parms, rqstq_name));
+        return createLuaObject(L, new BathyDataFrame(L, string(beam_str), _parms, _hdf03, _hdf09, rqstq_name, _mask));
     }
     catch(const RunTimeException& e)
     {
         if(_parms) _parms->releaseLuaObject();
+        if(_mask) _mask->releaseLuaObject();
+        if(_hdf03) _hdf03->releaseLuaObject();
+        if(_hdf09) _hdf09->releaseLuaObject();
         mlog(e.level(), "Error creating BathyDataFrame: %s", e.what());
         return returnLuaStatus(L, false);
     }
@@ -98,7 +99,7 @@ int BathyDataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyDataFrame::BathyDataFrame (lua_State* L, const string& beam_str, BathyFields* _parms, const char* rqstq_name):
+BathyDataFrame::BathyDataFrame (lua_State* L, const string& beam_str, BathyFields* _parms, H5Object* _hdf03, H5Object* _hdf09, const char* rqstq_name, BathyMask* _mask):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {   
         {"time_ns",             &time_ns},
@@ -134,15 +135,17 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const string& beam_str, BathyField
         {"spot",                &spot},
         {"beam",                &beam},
         {"track",               &track},
-        {"pair",                &pair} 
+        {"pair",                &pair},
+        {"utm_zone",            &utm_zone},
+        {"utm_is_north"         &utm_is_north}
     }),
     parmsPtr(_parms),
     parms(*_parms),
+    bathyMask(_mask),
+    hdf03(_hdf03),
+    hdf09(_hdf09),
     rqstQ(rqstq_name),
     readTimeoutMs(parms.readTimeout.value * 1000),
-    context(NULL),
-    context09(NULL),
-    bathyMask(NULL),
     beam(beam_str),
     valid(true)
 {
@@ -163,18 +166,12 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const string& beam_str, BathyField
             signalConfColIndex = static_cast<int>(parms.surfaceType.value);
         }
 
-        /* Create Global Bathymetry Mask */
-        if(parms.useBathyMask.value)
-        {
-            bathyMask = new GeoLib::TIFFImage(NULL, GLOBAL_BATHYMETRY_MASK_FILE_PATH);
-        }
+        /* Set Track and Pair ( gt<track><pair> - e.g. gt1l )*/
+        track = static_cast<int>(beam.value[2]) - 0x30;
+        pair = beam.value[3] == 'l' ? Icesat2Fields::RPT_L : Icesat2Fields::RPT_R;
 
         /* Set Thread Specific Trace ID for H5Coro */
         EventLib::stashId (traceId);
-
-        /* Create H5Coro Contexts */
-        context = new H5Coro::Context(parms.asset, parms.resource.value.c_str());
-        context09 = new H5Coro::Context(parms.asset09, parms.atl09Resource.value.c_str());
 
         /* Create Reader */
         active = true;
@@ -201,18 +198,18 @@ BathyDataFrame::~BathyDataFrame (void)
 
     delete context;
     delete context09;
-    delete bathyMask;
 
     parmsPtr->releaseLuaObject();
+    bathyMask->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
 BathyDataFrame::Region::Region (const BathyDataFrame& dataframe):
-    segment_lat    (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/reference_photon_lat").c_str()),
-    segment_lon    (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/reference_photon_lon").c_str()),
-    segment_ph_cnt (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/segment_ph_cnt").c_str()),
+    segment_lat    (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/reference_photon_lat").c_str()),
+    segment_lon    (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/reference_photon_lon").c_str()),
+    segment_ph_cnt (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/segment_ph_cnt").c_str()),
     inclusion_mask {NULL},
     inclusion_ptr  {NULL}
 {
@@ -425,29 +422,29 @@ void BathyDataFrame::Region::rasterregion (const BathyDataFrame& dataframe)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Region& region):
-    sc_orient           (dataframe.context,                                "/orbit_info/sc_orient"),
-    velocity_sc         (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/velocity_sc").c_str(),     H5Coro::ALL_COLS, region.first_segment, region.num_segments),
-    segment_delta_time  (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/delta_time").c_str(),      0, region.first_segment, region.num_segments),
-    segment_dist_x      (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/segment_dist_x").c_str(),  0, region.first_segment, region.num_segments),
-    solar_elevation     (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/solar_elevation").c_str(), 0, region.first_segment, region.num_segments),
-    sigma_h             (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/sigma_h").c_str(),         0, region.first_segment, region.num_segments),
-    sigma_along         (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/sigma_along").c_str(),     0, region.first_segment, region.num_segments),
-    sigma_across        (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/sigma_across").c_str(),    0, region.first_segment, region.num_segments),
-    ref_azimuth         (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/ref_azimuth").c_str(),     0, region.first_segment, region.num_segments),
-    ref_elev            (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/ref_elev").c_str(),        0, region.first_segment, region.num_segments),
-    geoid               (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "geophys_corr/geoid").c_str(),          0, region.first_segment, region.num_segments),
-    dem_h               (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "geophys_corr/dem_h").c_str(),          0, region.first_segment, region.num_segments),
-    dist_ph_along       (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "heights/dist_ph_along").c_str(),       0, region.first_photon,  region.num_photons),
-    dist_ph_across      (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "heights/dist_ph_across").c_str(),      0, region.first_photon,  region.num_photons),
-    h_ph                (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "heights/h_ph").c_str(),                0, region.first_photon,  region.num_photons),
-    signal_conf_ph      (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "heights/signal_conf_ph").c_str(),      dataframe.signalConfColIndex, region.first_photon,  region.num_photons),
-    quality_ph          (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "heights/quality_ph").c_str(),          0, region.first_photon,  region.num_photons),
-    weight_ph           (dataframe.sdpVersion >= 6 ? dataframe.context : NULL, FString("%s/%s", dataframe.beam.value.c_str(), "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
-    lat_ph              (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "heights/lat_ph").c_str(),              0, region.first_photon,  region.num_photons),
-    lon_ph              (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "heights/lon_ph").c_str(),              0, region.first_photon,  region.num_photons),
-    delta_time          (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "heights/delta_time").c_str(),          0, region.first_photon,  region.num_photons),
-    bckgrd_delta_time   (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/delta_time").c_str()),
-    bckgrd_rate         (dataframe.context, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/bckgrd_rate").c_str())
+    sc_orient           (dataframe.hdf03,                                                "/orbit_info/sc_orient"),
+    velocity_sc         (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/velocity_sc").c_str(),     H5Coro::ALL_COLS, region.first_segment, region.num_segments),
+    segment_delta_time  (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/delta_time").c_str(),      0, region.first_segment, region.num_segments),
+    segment_dist_x      (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/segment_dist_x").c_str(),  0, region.first_segment, region.num_segments),
+    solar_elevation     (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/solar_elevation").c_str(), 0, region.first_segment, region.num_segments),
+    sigma_h             (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/sigma_h").c_str(),         0, region.first_segment, region.num_segments),
+    sigma_along         (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/sigma_along").c_str(),     0, region.first_segment, region.num_segments),
+    sigma_across        (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/sigma_across").c_str(),    0, region.first_segment, region.num_segments),
+    ref_azimuth         (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/ref_azimuth").c_str(),     0, region.first_segment, region.num_segments),
+    ref_elev            (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/ref_elev").c_str(),        0, region.first_segment, region.num_segments),
+    geoid               (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geophys_corr/geoid").c_str(),          0, region.first_segment, region.num_segments),
+    dem_h               (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geophys_corr/dem_h").c_str(),          0, region.first_segment, region.num_segments),
+    dist_ph_along       (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/dist_ph_along").c_str(),       0, region.first_photon,  region.num_photons),
+    dist_ph_across      (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/dist_ph_across").c_str(),      0, region.first_photon,  region.num_photons),
+    h_ph                (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/h_ph").c_str(),                0, region.first_photon,  region.num_photons),
+    signal_conf_ph      (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/signal_conf_ph").c_str(),      dataframe.signalConfColIndex, region.first_photon,  region.num_photons),
+    quality_ph          (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/quality_ph").c_str(),          0, region.first_photon,  region.num_photons),
+    weight_ph           (dataframe.sdpVersion >= 6 ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam.value.c_str(), "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
+    lat_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/lat_ph").c_str(),              0, region.first_photon,  region.num_photons),
+    lon_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/lon_ph").c_str(),              0, region.first_photon,  region.num_photons),
+    delta_time          (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/delta_time").c_str(),          0, region.first_photon,  region.num_photons),
+    bckgrd_delta_time   (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/delta_time").c_str()),
+    bckgrd_rate         (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/bckgrd_rate").c_str())
 {
     sc_orient.join(dataframe.readTimeoutMs, true);
     velocity_sc.join(dataframe.readTimeoutMs, true);
@@ -479,9 +476,9 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
  *----------------------------------------------------------------------------*/
 BathyDataFrame::Atl09Class::Atl09Class (const BathyDataFrame& dataframe):
     valid       (false),
-    met_u10m    (dataframe.context09, FString("profile_%d/low_rate/met_u10m", dataframe.track).c_str()),
-    met_v10m    (dataframe.context09, FString("profile_%d/low_rate/met_v10m", dataframe.track).c_str()),
-    delta_time  (dataframe.context09, FString("profile_%d/low_rate/delta_time", dataframe.track).c_str())
+    met_u10m    (dataframe.hdf09, FString("profile_%d/low_rate/met_u10m", dataframe.track).c_str()),
+    met_v10m    (dataframe.hdf09, FString("profile_%d/low_rate/met_v10m", dataframe.track).c_str()),
+    delta_time  (dataframe.hdf09, FString("profile_%d/low_rate/delta_time", dataframe.track).c_str())
 {
     try
     {
@@ -507,7 +504,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
     const BathyFields& parms = dataframe.parms;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "atl03_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms.asset->getName(), parms.resource, dataframe.track);
+    const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms.asset->getName(), parms.resource, dataframe.track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -529,10 +526,14 @@ void* BathyDataFrame::subsettingThread (void* parm)
         float wind_v = 0.0; // segment level wind speed
         bool on_boundary = true; // true when a spatial subsetting boundary is encountered
 
-        /* Get Dataset Level Parameters */
-        GeoLib::UTMTransform utm_transform(region.segment_lat[0], region.segment_lon[0]);
-        const uint8_t spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], (Icesat2Fields::track_t)dataframe.track.value, dataframe.pair.value);
+        /* Set Spot*/
+        dataframe.spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], (Icesat2Fields::track_t)dataframe.track.value, dataframe.pair.value);
 
+        /* Get UTM Transformation and Set UTM Zone */
+        GeoLib::UTMTransform utm_transform(region.segment_lat[0], region.segment_lon[0]);
+        dataframe.utm_zone = utm_transform.zone;
+        dataframe.utm_is_north = region.segment_lat[0] >= 0.0;
+        
         /* Traverse All Photons In Dataset */
         while(dataframe.active && (current_photon < atl03.dist_ph_along.size))
         {
@@ -557,16 +558,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 /* Check Global Bathymetry Mask */
                 if(dataframe.bathyMask)
                 {
-                    const double degrees_of_latitude = region.segment_lat[current_segment] - GLOBAL_BATHYMETRY_MASK_MIN_LAT;
-                    const double latitude_pixels = degrees_of_latitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
-                    const uint32_t y = static_cast<uint32_t>(latitude_pixels);
-
-                    const double degrees_of_longitude =  region.segment_lon[current_segment] - GLOBAL_BATHYMETRY_MASK_MIN_LON;
-                    const double longitude_pixels = degrees_of_longitude / GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
-                    const uint32_t x = static_cast<uint32_t>(longitude_pixels);
-
-                    const GeoLib::TIFFImage::val_t pixel = dataframe.bathyMask->getPixel(x, y);
-                    if(pixel.u32 == GLOBAL_BATHYMETRY_MASK_OFF_VALUE)
+                    if(dataframe.bathyMask->includes(region.segment_lon[current_segment], region.segment_lat[current_segment]));
                     {
                         on_boundary = true;
                         break;
@@ -684,6 +676,14 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 dataframe.quality_ph.append(quality_ph);
                 dataframe.processing_flags.append(on_boundary ? BathyFields::ON_BOUNDARY : 0x00);
 
+                /* Add Additional Photon Data to DataFrame */
+                dataframe.wind_v.append(wind_v);
+                dataframe.ref_el.append(atl03.ref_elev[current_segment]);
+                dataframe.ref_az.append(atl03.ref_azimuth[current_segment]);
+                dataframe.sigma_across.append(atl03.sigma_across[current_segment]);
+                dataframe.sigma_along.append(atl03.sigma_along[current_segment]);
+                dataframe.sigma_h.append(atl03.sigma_h[current_segment]);
+
                 /* Reset Boundary Termination */
                 on_boundary = false;
 
@@ -700,12 +700,6 @@ void* BathyDataFrame::subsettingThread (void* parm)
         dataframe.sigma_thu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
         dataframe.sigma_tvu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
         dataframe.predictions.initialize(dataframe.length(), {0, 0, 0, 0, 0, 0, 0, 0});
-
-        /* Find Sea Surface (if selection) */
-        if(parms.findSeaSurface.value)
-        {
-            dataframe.findSeaSurface();
-        }
     }
     catch(const RunTimeException& e)
     {
@@ -794,228 +788,6 @@ void BathyDataFrame::getResourceVersion (const char* _resource, int& version)
     else
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse version from resource %s: %s", _resource, version_str);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * findSeaSurface
- *----------------------------------------------------------------------------*/
-void BathyDataFrame::findSeaSurface (void)
-{
-    const SurfaceFields& surface_parms = parms.surface.value;
-
-    /* for each extent (p0 = start photon) */
-    for(long p0 = 0; p0 < length(); p0 += parms.phInExtent.value)
-    {
-        /* calculate last photon in extent */
-        long p1 = MIN(length(), p0 + parms.phInExtent.value);
-
-        try
-        {
-            /* initialize stats on photons */
-            double min_h = std::numeric_limits<double>::max();
-            double max_h = std::numeric_limits<double>::min();
-            double min_t = std::numeric_limits<double>::max();
-            double max_t = std::numeric_limits<double>::min();
-            double avg_bckgnd = 0.0;
-
-            /* build list photon heights */
-            vector<double> heights;
-            for(long i = p0; i < p1; i++)
-            {
-                const double height = ortho_h[i];
-                const double time_secs = static_cast<double>(time_ns[i]) / 1000000000.0;
-
-                /* get min and max height */
-                if(height < min_h) min_h = height;
-                if(height > max_h) max_h = height;
-
-                /* get min and max time */
-                if(time_secs < min_t) min_t = time_secs;
-                if(time_secs > max_t) max_t = time_secs;
-
-                /* accumulate background (divided out below) */
-                avg_bckgnd = background_rate[i];
-
-                /* add to list of photons to process */
-                heights.push_back(height);
-            }
-
-            /* check if photons are left to process */
-            if(heights.empty())
-            {
-                throw RunTimeException(WARNING, RTE_INFO, "No valid photons when determining sea surface");
-            }
-
-            /* calculate and check range */
-            const double range_h = max_h - min_h;
-            if(range_h <= 0 || range_h > surface_parms.maxRange.value)
-            {
-                throw RunTimeException(ERROR, RTE_ERROR, "Invalid range <%lf> when determining sea surface", range_h);
-            }
-
-            /* calculate and check number of bins in histogram
-            *  - the number of bins is increased by 1 in case the ceiling and the floor
-            *    of the max range is both the same number */
-            const long num_bins = static_cast<long>(std::ceil(range_h / surface_parms.binSize.value)) + 1;
-            if(num_bins <= 0 || num_bins > surface_parms.maxBins.value)
-            {
-                throw RunTimeException(ERROR, RTE_ERROR, "Invalid combination of range <%lf> and bin size <%lf> produced out of range histogram size <%ld>", range_h, surface_parms.bin_size, num_bins);
-            }
-
-            /* calculate average background */
-            avg_bckgnd /= heights.size();
-
-            /* build histogram of photon heights */
-            vector<long> histogram(num_bins);
-            std::for_each (std::begin(heights), std::end(heights), [&](const double h) {
-                const long bin = static_cast<long>(std::floor((h - min_h) / surface_parms.binSize.value));
-                histogram[bin]++;
-            });
-
-            /* calculate mean and standard deviation of histogram */
-            double bckgnd = 0.0;
-            double stddev = 0.0;
-            if(surface_parms.modelAsPoisson.value)
-            {
-                const long num_shots = std::round((max_t - min_t) / 0.0001);
-                const double bin_t = surface_parms.binSize.value * 0.00000002 / 3.0; // bin size from meters to seconds
-                const double bin_pe = bin_t * num_shots * avg_bckgnd; // expected value
-                bckgnd = bin_pe;
-                stddev = sqrt(bin_pe);
-            }
-            else
-            {
-                const double bin_avg = static_cast<double>(heights.size()) / static_cast<double>(num_bins);
-                double accum = 0.0;
-                std::for_each (std::begin(histogram), std::end(histogram), [&](const double h) {
-                    accum += (h - bin_avg) * (h - bin_avg);
-                });
-                bckgnd = bin_avg;
-                stddev = sqrt(accum / heights.size());
-            }
-
-            /* build guassian kernel (from -k to k)*/
-            const double kernel_size = 6.0 * stddev + 1.0;
-            const long k = (static_cast<long>(std::ceil(kernel_size / surface_parms.binSize.value)) & ~0x1) / 2;
-            const long kernel_bins = 2 * k + 1;
-            double kernel_sum = 0.0;
-            vector<double> kernel(kernel_bins);
-            for(long x = -k; x <= k; x++)
-            {
-                const long i = x + k;
-                const double r = x / stddev;
-                kernel[i] = exp(-0.5 * r * r);
-                kernel_sum += kernel[i];
-            }
-            for(int i = 0; i < kernel_bins; i++)
-            {
-                kernel[i] /= kernel_sum;
-            }
-
-            /* build filtered histogram */
-            vector<double> smoothed_histogram(num_bins);
-            for(long i = 0; i < num_bins; i++)
-            {
-                double output = 0.0;
-                long num_samples = 0;
-                for(long j = -k; j <= k; j++)
-                {
-                    const long index = i + k;
-                    if(index >= 0 && index < num_bins)
-                    {
-                        output += kernel[j + k] * static_cast<double>(histogram[index]);
-                        num_samples++;
-                    }
-                }
-                smoothed_histogram[i] = output * static_cast<double>(kernel_bins) / static_cast<double>(num_samples);
-            }
-
-            /* find highest peak */
-            long highest_peak_bin = 0;
-            double highest_peak = smoothed_histogram[0];
-            for(int i = 1; i < num_bins; i++)
-            {
-                if(smoothed_histogram[i] > highest_peak)
-                {
-                    highest_peak = smoothed_histogram[i];
-                    highest_peak_bin = i;
-                }
-            }
-
-            /* find second highest peak */
-            const long peak_separation_in_bins = static_cast<long>(std::ceil(surface_parms.minPeakSeparation.value / surface_parms.binSize.value));
-            long second_peak_bin = -1; // invalid
-            double second_peak = std::numeric_limits<double>::min();
-            for(int i = 0; i < num_bins; i++)
-            {
-                if(std::abs(i - highest_peak_bin) > peak_separation_in_bins)
-                {
-                    if(smoothed_histogram[i] > second_peak)
-                    {
-                        second_peak = smoothed_histogram[i];
-                        second_peak_bin = i;
-                    }
-                }
-            }
-
-            /* determine which peak is sea surface */
-            if( (second_peak_bin != -1) &&
-                (second_peak * surface_parms.highestPeakRatio.value >= highest_peak) ) // second peak is close in size to highest peak
-            {
-                /* select peak that is highest in elevation */
-                if(highest_peak_bin < second_peak_bin)
-                {
-                    highest_peak = second_peak;
-                    highest_peak_bin = second_peak_bin;
-                }
-            }
-
-            /* check if sea surface signal is significant */
-            const double signal_threshold = bckgnd + (stddev * surface_parms.signalThreshold.value);
-            if(highest_peak < signal_threshold)
-            {
-                throw RunTimeException(WARNING, RTE_INFO, "Unable to determine sea surface (%lf < %lf)", highest_peak, signal_threshold);
-            }
-
-            /* calculate width of highest peak */
-            const double peak_above_bckgnd = smoothed_histogram[highest_peak_bin] - bckgnd;
-            const double peak_half_max = (peak_above_bckgnd * 0.4) + bckgnd;
-            long peak_width = 1;
-            for(long i = highest_peak_bin + 1; i < num_bins; i++)
-            {
-                if(smoothed_histogram[i] > peak_half_max) peak_width++;
-                else break;
-            }
-            for(long i = highest_peak_bin - 1; i >= 0; i--)
-            {
-                if(smoothed_histogram[i] > peak_half_max) peak_width++;
-                else break;
-            }
-            const double peak_stddev = (peak_width * surface_parms.binSize.value) / 2.35;
-
-            /* calculate sea surface height and label sea surface photons */
-            const float cur_surface_h = min_h + (highest_peak_bin * surface_parms.binSize.value) + (surface_parms.binSize.value / 2.0);
-            const double min_surface_h = cur_surface_h - (peak_stddev * surface_parms.surfaceWidth.value);
-            const double max_surface_h = cur_surface_h + (peak_stddev * surface_parms.surfaceWidth.value);
-            for(long i = p0; i < p1; i++)
-            {
-                surface_h[i] = cur_surface_h;
-                if( ortho_h[i] >= min_surface_h &&
-                    ortho_h[i] <= max_surface_h )
-                {
-                    class_ph[i] = BathyFields::SEA_SURFACE;
-                }
-            }
-        }
-        catch(const RunTimeException& e)
-        {
-            mlog(e.level(), "Failed to find sea surface for beam %s at photon %ld: %s", beam.value.c_str(), p0, e.what());
-            for(long i = p0; i < p1; i++)
-            {
-                processing_flags[i] = processing_flags[i] | BathyFields::SEA_SURFACE_UNDETECTED;
-            }
-        }
     }
 }
 

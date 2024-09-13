@@ -5,15 +5,15 @@ target_compile_definitions (slideruleLib PUBLIC __bathy__)
 target_sources (slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/bathy.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyClassifier.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyDataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyFields.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyParms.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyReader.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyStats.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyGranule.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyMask.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyRefractionCorrector.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathySeaSurfaceFinder.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyStats.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyUncertaintyCalculator.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.cpp
 )
 
 target_include_directories (slideruleLib
@@ -25,15 +25,15 @@ target_include_directories (slideruleLib
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/bathy.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyClassifier.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyDataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyFields.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyParms.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyReader.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyStats.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyGranule.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyMask.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyRefractionCorrector.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathySeaSurfaceFinder.cphp
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyStats.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyUncertaintyCalculator.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.h
     DESTINATION
         ${INCDIR}/bathy
 )

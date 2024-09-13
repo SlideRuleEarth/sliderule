@@ -33,27 +33,54 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "BathyClassifier.h"
-#include "BathyFields.h"
+#include "OsApi.h"
+#include "H5Coro.h"
+#include "H5Object.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* BathyClassifier::OBJECT_TYPE = "BathyClassifier";
-const char* BathyClassifier::LUA_META_NAME = "BathyClassifier";
-const struct luaL_Reg BathyClassifier::LUA_META_TABLE[] = {
+const char* H5Object::OBJECT_TYPE = "H5Object";
+const char* H5Object::LUA_META_NAME = "H5Object";
+const struct luaL_Reg H5Object::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
 /******************************************************************************
- * BATHY CLASSIFIER CLASS
+ * ATL03 READER CLASS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * luaCreate - create(...)
+ *----------------------------------------------------------------------------*/
+int H5Object::luaCreate (lua_State* L)
+{
+    Asset* asset = NULL;
+    try
+    {
+        const char* asset_name = getLuaString(L, 1);
+        const char* resource = getLuaString(L, 2);
+
+        asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
+        if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", asset_name);
+
+        return createLuaObject(L, new H5Object(L, asset, resource));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating H5Object: %s", e.what());
+        if(asset) asset->releaseLuaObject();
+        return returnLuaStatus(L, false);
+    }
+}
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyClassifier::BathyClassifier (lua_State* L, BathyFields::classifier_t _classifier):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
+H5Object::H5Object (lua_State* L, const Asset* asset, const char* resource):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
+    H5Coro::Context(asset, resource)
 {
 }
+

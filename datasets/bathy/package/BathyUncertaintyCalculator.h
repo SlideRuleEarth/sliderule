@@ -36,10 +36,10 @@
 #include "LuaObject.h"
 #include "H5Coro.h"
 #include "H5Array.h"
-#include "BathyParms.h"
+#include "BathyFields.h"
 
 /******************************************************************************
- * BATHY OPENOCEANS
+ * CLASS
  ******************************************************************************/
 
 class BathyUncertaintyCalculator: public LuaObject
@@ -61,11 +61,7 @@ class BathyUncertaintyCalculator: public LuaObject
 
         static void     init        (void);
         static int      luaCreate   (lua_State* L);
-        void            run         (BathyParms::extent_t& extent, 
-                                     const H5Array<float>& sigma_across,
-                                     const H5Array<float>& sigma_along,
-                                     const H5Array<float>& sigma_h,
-                                     const H5Array<float>& ref_el) const;
+        static void*    runThread   (void* parm);
 
     private:
 
@@ -89,7 +85,7 @@ class BathyUncertaintyCalculator: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
         
-        BathyUncertaintyCalculator  (lua_State* L, BathyParms* _parms);
+        BathyUncertaintyCalculator  (lua_State* L, BathyFields* _parms, BathyDataFrame* _dataframe);
         ~BathyUncertaintyCalculator (void) override;
 
         /*--------------------------------------------------------------------
@@ -111,9 +107,11 @@ class BathyUncertaintyCalculator: public LuaObject
 
         static uncertainty_coeff_t  UNCERTAINTY_COEFF_MAP[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES][NUM_WIND_SPEEDS][NUM_KD_RANGES];
 
-        BathyParms*                 parms;
+        BathyFields*                parms;
+        BathyDataFrame*             dataframe;
         H5Coro::Context*            context;
         H5Array<int16_t>*           Kd_490;
+        Thread*                     pid;
 };
 
 #endif

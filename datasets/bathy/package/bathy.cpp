@@ -67,7 +67,15 @@ int bathy_open (lua_State *L)
     luaL_newlib(L, bathy_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrStr(L, "BATHY_PREFIX", BathyReader::OUTPUT_FILE_PREFIX);
+    LuaEngine::setAttrInt(L, BathyFields::QTREES_NAME, BathyFields::QTREES);
+    LuaEngine::setAttrInt(L, BathyFields::COASTNET_NAME, BathyFields::COASTNET);
+    LuaEngine::setAttrInt(L, BathyFields::OPENOCEANSPP_NAME, BathyFields::OPENOCEANSPP);
+    LuaEngine::setAttrInt(L, BathyFields::MEDIANFILTER_NAME, BathyFields::MEDIANFILTER);
+    LuaEngine::setAttrInt(L, BathyFields::CSHELPH_NAME, BathyFields::CSHELPH);
+    LuaEngine::setAttrInt(L, BathyFields::BATHYPATHFINDER_NAME, BathyFields::BATHYPATHFINDER);
+    LuaEngine::setAttrInt(L, BathyFields::POINTNET_NAME, BathyFields::POINTNET);
+    LuaEngine::setAttrInt(L, BathyFields::OPENOCEANS_NAME, BathyFields::OPENOCEANS);
+    LuaEngine::setAttrInt(L, BathyFields::ENSEMBLE_NAME, BathyFields::ENSEMBLE);
 
     return 1;
 }

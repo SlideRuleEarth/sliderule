@@ -61,18 +61,6 @@ class BathyDataFrame: public GeoDataFrame
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int32_t INVALID_INDICE = -1;
-
-        static const char* OUTPUT_FILE_PREFIX;
-
-        static const char* GLOBAL_BATHYMETRY_MASK_FILE_PATH;
-        static const double GLOBAL_BATHYMETRY_MASK_MAX_LAT;
-        static const double GLOBAL_BATHYMETRY_MASK_MIN_LAT;
-        static const double GLOBAL_BATHYMETRY_MASK_MAX_LON;
-        static const double GLOBAL_BATHYMETRY_MASK_MIN_LON;
-        static const double GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
-        static const uint32_t GLOBAL_BATHYMETRY_MASK_OFF_VALUE;
-
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
@@ -81,6 +69,48 @@ class BathyDataFrame: public GeoDataFrame
          *--------------------------------------------------------------------*/
 
         static int  luaCreate   (lua_State* L);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        /* Meta Data */
+        FieldElement<string>        beam;               // ATL03 beam (i.e. gt1l, gt1r, gt2l, gt2r, gt3l, gt3r)
+        FieldElement<int>           track;              // ATL03 track (i.e. 1, 2, 3)
+        FieldElement<int>           pair;               // ATL03 pair (i.e. left, right)
+        FieldElement<int>           spot;               // ATL03 spot (1, 2, 3, 4, 5, 6)
+        FieldElement<int>           utm_zone;
+        FieldElement<bool>          utm_is_north;
+
+        /* Column Data */
+        FieldColumn<int64_t>        time_ns;            // nanoseconds since GPS epoch
+        FieldColumn<int32_t>        index_ph;           // unique index of photon in granule
+        FieldColumn<int32_t>        index_seg;          // index into segment level groups in source ATL03 granule
+        FieldColumn<double>         lat_ph;             // latitude of photon (EPSG 7912)
+        FieldColumn<double>         lon_ph;             // longitude of photon (EPSG 7912)
+        FieldColumn<double>         x_ph;               // the easting coordinate in meters of the photon for the given UTM zone
+        FieldColumn<double>         y_ph;               // the northing coordinate in meters of the photon for the given UTM zone
+        FieldColumn<double>         x_atc;              // along track distance calculated from segment_dist_x and dist_ph_along
+        FieldColumn<double>         y_atc;              // dist_ph_across
+        FieldColumn<double>         background_rate;    // PE per second
+        FieldColumn<float>          delta_h;            // refraction correction of height
+        FieldColumn<float>          surface_h;          // orthometric height of sea surface at each photon location
+        FieldColumn<float>          ortho_h;            // geoid corrected height of photon, calculated from h_ph and geoid
+        FieldColumn<float>          ellipse_h;          // height of photon with respect to reference ellipsoid
+        FieldColumn<float>          sigma_thu;          // total horizontal uncertainty
+        FieldColumn<float>          sigma_tvu;          // total vertical uncertainty
+        FieldColumn<uint32_t>       processing_flags;   // bit mask of flags for capturing errors and warnings
+        FieldColumn<uint8_t>        yapc_score;         // atl03 density estimate (Yet Another Photon Classifier)
+        FieldColumn<int8_t>         max_signal_conf;    // maximum value in the atl03 confidence table
+        FieldColumn<int8_t>         quality_ph;         // atl03 quality flags
+        FieldColumn<int8_t>         class_ph;           // photon classification
+        FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>> predictions; // photon classification from each of the classifiers
+        FieldColumn<float>          wind_v;             // wind speed (in meters/second)            
+        FieldColumn<float>          ref_el;             // reference elevation
+        FieldColumn<float>          ref_az;             // reference aziumth
+        FieldColumn<float>          sigma_across;       // across track aerial uncertainty
+        FieldColumn<float>          sigma_along;        // along track aerial uncertainty
+        FieldColumn<float>          sigma_h;            // vertical aerial uncertainty
 
     private:
 
@@ -172,58 +202,21 @@ class BathyDataFrame: public GeoDataFrame
         Thread*                     pid;
         BathyFields*                parmsPtr;
         const BathyFields&          parms;
+        BathyMask*                  bathyMask;
+        H5Object*                   hdf03;      // atl03 granule
+        H5Object*                   hdf09;      // atl09 granule
+        H5Object*                   atl03File;
         Publisher                   rqstQ;
         int                         signalConfColIndex;
         int                         readTimeoutMs;
         int                         sdpVersion;
         bool                        valid;
 
-
-        H5Coro::Context*            context; // for ATL03 file
-        H5Coro::Context*            context09; // for ATL09 file
-        GeoLib::TIFFImage*          bathyMask;
-
-        /* Meta Data */
-        FieldElement<string>        beam;               // ATL03 beam (i.e. gt1l, gt1r, gt2l, gt2r, gt3l, gt3r)
-        FieldElement<int>           track;              // ATL03 track (i.e. 1, 2, 3)
-        FieldElement<int>           pair;               // ATL03 pair (i.e. left, right)
-        FieldElement<int>           spot;               // ATL03 spot (1, 2, 3, 4, 5, 6)
-
-        /* Column Data */
-        FieldColumn<int64_t>        time_ns;            // nanoseconds since GPS epoch
-        FieldColumn<int32_t>        index_ph;           // unique index of photon in granule
-        FieldColumn<int32_t>        index_seg;          // index into segment level groups in source ATL03 granule
-        FieldColumn<double>         lat_ph;             // latitude of photon (EPSG 7912)
-        FieldColumn<double>         lon_ph;             // longitude of photon (EPSG 7912)
-        FieldColumn<double>         x_ph;               // the easting coordinate in meters of the photon for the given UTM zone
-        FieldColumn<double>         y_ph;               // the northing coordinate in meters of the photon for the given UTM zone
-        FieldColumn<double>         x_atc;              // along track distance calculated from segment_dist_x and dist_ph_along
-        FieldColumn<double>         y_atc;              // dist_ph_across
-        FieldColumn<double>         background_rate;    // PE per second
-        FieldColumn<float>          delta_h;            // refraction correction of height
-        FieldColumn<float>          surface_h;          // orthometric height of sea surface at each photon location
-        FieldColumn<float>          ortho_h;            // geoid corrected height of photon, calculated from h_ph and geoid
-        FieldColumn<float>          ellipse_h;          // height of photon with respect to reference ellipsoid
-        FieldColumn<float>          sigma_thu;          // total horizontal uncertainty
-        FieldColumn<float>          sigma_tvu;          // total vertical uncertainty
-        FieldColumn<uint32_t>       processing_flags;   // bit mask of flags for capturing errors and warnings
-        FieldColumn<uint8_t>        yapc_score;         // atl03 density estimate (Yet Another Photon Classifier)
-        FieldColumn<int8_t>         max_signal_conf;    // maximum value in the atl03 confidence table
-        FieldColumn<int8_t>         quality_ph;         // atl03 quality flags
-        FieldColumn<int8_t>         class_ph;           // photon classification
-        FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>> predictions; // photon classification from each of the classifiers
-        FieldColumn<float>          wind_v;             // wind speed (in meters/second)            
-        FieldColumn<float>          ref_el;             // reference elevation
-        FieldColumn<float>          ref_az;             // reference aziumth
-        FieldColumn<float>          sigma_across;       // across track aerial uncertainty
-        FieldColumn<float>          sigma_along;        // along track aerial uncertainty
-        FieldColumn<float>          sigma_h;            // vertical aerial uncertainty
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            BathyDataFrame              (lua_State* L, const string& beam_str, BathyFields* _parms, const char* rqstq_name);
+                            BathyDataFrame              (lua_State* L, const string& beam_str, BathyFields* _parms, H5Object* _hdf03, H5Object* _hdf09, const char* rqstq_name, BathyMask* _mask);
                             ~BathyDataFrame             (void) override;
 
         static void*        subsettingThread            (void* parm);
