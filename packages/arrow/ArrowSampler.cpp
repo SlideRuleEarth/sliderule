@@ -165,35 +165,33 @@ void* ArrowSampler::mainThread(void* parm)
     {
         if(s->active)
         {
-            double t0 = TimeLib::latchtime();
+            const double t = TimeLib::latchtime();
             sampler->robj->getSamples(sampler->obj->points, sampler->samples);
-            double t1 = TimeLib::latchtime();
-            print2term("\nFromArrowSampler getSamples for %s took: %6.3lf\n", sampler->rkey, t1 - t0);
+            mlog(INFO, "getSamples time: %.3lf", TimeLib::latchtime() - t);
 
+#if 0
             print2term("\n%s: sllist len: %u\n", sampler->rkey, sampler->samples.length());
             uint32_t cnt = 0;
             for(int32_t i = 0; i < sampler->samples.length(); i++)
             {
                 sample_list_t* samples = sampler->samples[i];
-                // print2term("%d - slist len: %u\n", i, samples->length());
+                print2term("%d - slist len: %u\n", i, samples->length());
                 for(int32_t j = 0; j < samples->length(); j++)
                 {
                     RasterSample* sample = samples->get(j);
                     if(sample)
                     {
                         cnt++;
-                        // const char* rname = sampler->robj->fileDictGetFile(sample->fileId);
-                        // print2term("Sample: %s %s %f\n", sampler->rkey, rname, sample->value);
-                        // print2term("Sample: %s\n", sample->toString());
+                        const char* rname = sampler->robj->fileDictGetFile(sample->fileId);
+                        print2term("%10.4lf: %s\n", sample->value, rname);
                     }
                 }
             }
-
+            print2term("%s: samplesCnt: %u\n", sampler->rkey, cnt);
+#endif
             /* batchSampling can take minutes, check active again */
             if(s->active)
                 s->impl->processSamples(sampler);
-
-            // print2term("%s: samplesCnt: %u\n", sampler->rkey, cnt);
         }
 
         /* Release since not needed anymore */

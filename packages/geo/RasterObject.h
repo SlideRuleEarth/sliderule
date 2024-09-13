@@ -142,6 +142,7 @@ class RasterObject: public LuaObject
         }
 
         void        stopSampling    (void);
+        bool        isSampling      (void) {return sampling;};
         uint64_t    fileDictAdd     (const std::string& fileName);
         const char* fileDictGetFile (uint64_t fileId);
 

@@ -67,7 +67,6 @@ class GeoIndexedRaster: public RasterObject
          * Typedefs
          *--------------------------------------------------------------------*/
 
-
         typedef struct {
             OGRPoint                    point;
             int64_t                     index;
@@ -210,6 +209,18 @@ class GeoIndexedRaster: public RasterObject
         uint32_t                ssErrors;
 
     private:
+
+        /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            double        findRastersTime;
+            double        findUniqueRastersTime;
+            double        findPointsForUniqueRastersTime;
+            double        getSamplesTime;
+            double        popluateSamplesListTime;
+        } perf_stats_t;
 
         /*--------------------------------------------------------------------
          * Constants

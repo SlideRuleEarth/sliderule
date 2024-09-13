@@ -245,223 +245,6 @@ bool LandsatHlsRaster::findRasters(finder_t* finder)
 }
 
 
-/*----------------------------------------------------------------------------
- * getBatchGroupSamples
- *----------------------------------------------------------------------------*/
-uint32_t LandsatHlsRaster::getBatchGroupSamples (const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx)
-{
-    uint32_t errors = SS_NO_ERRORS;
-
-    /* Which group is it? Landsat8 or Sentinel2 */
-    bool isL8 = false;
-    bool isS2 = false;
-    std::size_t pos;
-
-    pos = rgroup->id.find("HLS.L30");
-    if(pos != std::string::npos) isL8 = true;
-
-    pos = rgroup->id.find("HLS.S30");
-    if(pos != std::string::npos) isS2 = true;
-
-    if(!isL8 && !isS2)
-        throw RunTimeException(DEBUG, RTE_ERROR, "Could not find valid Landsat8/Sentinel2 groupId");
-
-    const double invalid = -999999.0;
-    double green;
-    double red;
-    double nir08;
-    double swir16;
-    green = red = nir08 = swir16 = invalid;
-
-    /* Collect samples for all rasters */
-    for(const auto& rinfo: rgroup->infovect)
-    {
-        /* This is the unique raster we are looking for, it cannot be NULL */
-        unique_raster_t* ur = rinfo.uraster;
-        assert(ur);
-
-        /* Get the sample for this point from unique raster */
-        for(const point_sample_t& ps : ur->pointSamples)
-        {
-            if(ps.pointInfo.index == pointIndx)
-            {
-                /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
-                if(ps.sample == NULL) break;
-
-                /* Is this band's sample to be returned to the user? */
-                bool returnBandSample = false;
-                const char* bandName  = rinfo.tag.c_str();
-                if(bandsDict.find(bandName, &returnBandSample))
-                {
-                    if(returnBandSample)
-                    {
-                        /* Create a copy of the sample and add it to the list */
-                        RasterSample* sample = new RasterSample(*ps.sample);
-
-                        /* Set flags for this sample */
-                        sample->flags = flags;
-                        slist->add(sample);
-                    }
-                }
-                errors |= ps.ssErrors;
-
-                /* green and red bands are the same for L8 and S2 */
-                if(rinfo.tag == "B03") green = ps.sample->value;
-                if(rinfo.tag == "B04") red   = ps.sample->value;
-
-                if(isL8)
-                {
-                    if(rinfo.tag == "B05") nir08  = ps.sample->value;
-                    if(rinfo.tag == "B06") swir16 = ps.sample->value;
-                }
-                else /* Must be Sentinel2 */
-                {
-                    if(rinfo.tag == "B8A") nir08  = ps.sample->value;
-                    if(rinfo.tag == "B11") swir16 = ps.sample->value;
-                }
-                break;
-            }
-        }
-    }
-
-    const double groupTime = rgroup->gpsTime / 1000;
-    const std::string groupName = rgroup->id + " {\"algo\": \"";
-
-    /* Calculate algos - make sure that all the necessary bands were read */
-    if(ndsi)
-    {
-        RasterSample* sample = new RasterSample(groupTime, fileDictAdd(groupName + "NDSI\"}"));
-        if((green != invalid) && (swir16 != invalid))
-            sample->value = (green - swir16) / (green + swir16);
-        else sample->value = invalid;
-        slist->add(sample);
-    }
-
-    if(ndvi)
-    {
-        RasterSample* sample = new RasterSample(groupTime, fileDictAdd(groupName + "NDVI\"}"));
-        if((red != invalid) && (nir08 != invalid))
-            sample->value = (nir08 - red) / (nir08 + red);
-        else sample->value = invalid;
-        slist->add(sample);
-    }
-
-    if(ndwi)
-    {
-        RasterSample* sample = new RasterSample(groupTime, fileDictAdd(groupName + "NDWI\"}"));
-        if((nir08 != invalid) && (swir16 != invalid))
-            sample->value = (nir08 - swir16) / (nir08 + swir16);
-        else sample->value = invalid;
-        slist->add(sample);
-    }
-
-    return errors;
-}
-
-
-
-/*----------------------------------------------------------------------------
- * getGroupSamples
- *----------------------------------------------------------------------------*/
-void LandsatHlsRaster::getGroupSamples (const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags)
-{
-    /* Which group is it? Landsat8 or Sentinel2 */
-    bool isL8 = false;
-    bool isS2 = false;
-    std::size_t pos;
-
-    pos = rgroup->id.find("HLS.L30");
-    if(pos != std::string::npos) isL8 = true;
-
-    pos = rgroup->id.find("HLS.S30");
-    if(pos != std::string::npos) isS2 = true;
-
-    if(!isL8 && !isS2)
-        throw RunTimeException(DEBUG, RTE_ERROR, "Could not find valid Landsat8/Sentinel2 groupId");
-
-    const double invalid = -999999.0;
-    double green;
-    double red;
-    double nir08;
-    double swir16;
-    green = red = nir08 = swir16 = invalid;
-
-    /* Collect samples for all rasters */
-    for(const auto& rinfo: rgroup->infovect)
-    {
-        const char* key = rinfo.fileName.c_str();
-        cacheitem_t* item;
-        if(cache.find(key, &item))
-        {
-            RasterSample* sample = item->sample;
-            if(sample)
-            {
-                sample->flags  = flags;
-
-                /* Is this band's sample to be returned to the user? */
-                bool returnBandSample = false;
-                const char* bandName  = rinfo.tag.c_str();
-                if(bandsDict.find(bandName, &returnBandSample))
-                {
-                    if(returnBandSample)
-                    {
-                        slist.add(sample);
-                        item->sample = NULL;
-                    }
-                }
-
-                /* green and red bands are the same for L8 and S2 */
-                if(rinfo.tag == "B03") green = sample->value;
-                if(rinfo.tag == "B04") red = sample->value;
-
-                if(isL8)
-                {
-                    if(rinfo.tag == "B05") nir08 = sample->value;
-                    if(rinfo.tag == "B06") swir16 = sample->value;
-                }
-                else /* Must be Sentinel2 */
-                {
-                    if(rinfo.tag == "B8A") nir08 = sample->value;
-                    if(rinfo.tag == "B11") swir16 = sample->value;
-                }
-            }
-        }
-    }
-
-    const double groupTime = rgroup->gpsTime / 1000;
-    const std::string groupName = rgroup->id + " {\"algo\": \"";
-
-    /* Calculate algos - make sure that all the necessary bands were read */
-    if(ndsi)
-    {
-        RasterSample* sample = new RasterSample(groupTime, fileDictAdd(groupName + "NDSI\"}"));
-        if((green != invalid) && (swir16 != invalid))
-            sample->value = (green - swir16) / (green + swir16);
-        else sample->value = invalid;
-        slist.add(sample);
-    }
-
-    if(ndvi)
-    {
-        RasterSample* sample = new RasterSample(groupTime, fileDictAdd(groupName + "NDVI\"}"));
-        if((red != invalid) && (nir08 != invalid))
-            sample->value = (nir08 - red) / (nir08 + red);
-        else sample->value = invalid;
-        slist.add(sample);
-    }
-
-    if(ndwi)
-    {
-        RasterSample* sample = new RasterSample(groupTime, fileDictAdd(groupName + "NDWI\"}"));
-        if((nir08 != invalid) && (swir16 != invalid))
-            sample->value = (nir08 - swir16) / (nir08 + swir16);
-        else sample->value = invalid;
-        slist.add(sample);
-    }
-}
-
-
-
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
@@ -502,4 +285,166 @@ bool LandsatHlsRaster::validateBand(band_type_t type, const char* bandName)
     }
 
     return false;
+}
+
+
+uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_group_t* rgroup,
+                                            List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx)
+{
+    uint32_t errors = SS_NO_ERRORS;
+
+    /* Which group is it? Landsat8 or Sentinel2 */
+    bool isL8 = false;
+    bool isS2 = false;
+    std::size_t pos;
+
+    pos = rgroup->id.find("HLS.L30");
+    if(pos != std::string::npos) isL8 = true;
+
+    pos = rgroup->id.find("HLS.S30");
+    if(pos != std::string::npos) isS2 = true;
+
+    if(!isL8 && !isS2)
+        throw RunTimeException(DEBUG, RTE_ERROR, "Could not find valid Landsat8/Sentinel2 groupId");
+
+    const double invalid = -999999.0;
+    double green;
+    double red;
+    double nir08;
+    double swir16;
+    green = red = nir08 = swir16 = invalid;
+
+    /* Collect samples for all rasters */
+    if(mode == SERIAL)
+    {
+        for(const auto& rinfo : rgroup->infovect)
+        {
+            const char* key = rinfo.fileName.c_str();
+            cacheitem_t* item;
+            if(cache.find(key, &item))
+            {
+                RasterSample* sample = item->sample;
+                if(sample)
+                {
+                    sample->flags = flags;
+
+                    /* Is this band's sample to be returned to the user? */
+                    bool returnBandSample = false;
+                    const char* bandName = rinfo.tag.c_str();
+                    if(bandsDict.find(bandName, &returnBandSample))
+                    {
+                        if(returnBandSample)
+                        {
+                            slist->add(sample);
+                            item->sample = NULL;
+                        }
+                    }
+
+                    /* green and red bands are the same for L8 and S2 */
+                    if(rinfo.tag == "B03") green = sample->value;
+                    if(rinfo.tag == "B04") red = sample->value;
+
+                    if(isL8)
+                    {
+                        if(rinfo.tag == "B05") nir08 = sample->value;
+                        if(rinfo.tag == "B06") swir16 = sample->value;
+                    }
+                    else /* Must be Sentinel2 */
+                    {
+                        if(rinfo.tag == "B8A") nir08 = sample->value;
+                        if(rinfo.tag == "B11") swir16 = sample->value;
+                    }
+                }
+            }
+        }
+    }
+    else if(mode == BATCH)
+    {
+        for(const auto& rinfo : rgroup->infovect)
+        {
+            /* This is the unique raster we are looking for, it cannot be NULL */
+            unique_raster_t* ur = rinfo.uraster;
+            assert(ur);
+
+            /* Get the sample for this point from unique raster */
+            for(const point_sample_t& ps : ur->pointSamples)
+            {
+                if(ps.pointInfo.index == pointIndx)
+                {
+                    /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
+                    if(ps.sample == NULL) break;
+
+                    /* Is this band's sample to be returned to the user? */
+                    bool returnBandSample = false;
+                    const char* bandName = rinfo.tag.c_str();
+                    if(bandsDict.find(bandName, &returnBandSample))
+                    {
+                        if(returnBandSample)
+                        {
+                            /* Create a copy of the sample and add it to the list */
+                            RasterSample* sample = new RasterSample(*ps.sample);
+
+                            /* Set flags for this sample */
+                            sample->flags = flags;
+                            slist->add(sample);
+                        }
+                    }
+                    errors |= ps.ssErrors;
+
+                    /* green and red bands are the same for L8 and S2 */
+                    if(rinfo.tag == "B03") green = ps.sample->value;
+                    if(rinfo.tag == "B04") red = ps.sample->value;
+
+                    if(isL8)
+                    {
+                        if(rinfo.tag == "B05") nir08 = ps.sample->value;
+                        if(rinfo.tag == "B06") swir16 = ps.sample->value;
+                    }
+                    else /* Must be Sentinel2 */
+                    {
+                        if(rinfo.tag == "B8A") nir08 = ps.sample->value;
+                        if(rinfo.tag == "B11") swir16 = ps.sample->value;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+    else
+    {
+        throw RunTimeException(DEBUG, RTE_ERROR, "Invalid sample mode");
+    }
+
+    const double groupTime = rgroup->gpsTime / 1000;
+    const std::string groupName = rgroup->id + " {\"algo\": \"";
+
+    /* Calculate algos - make sure that all the necessary bands were read */
+    if(ndsi)
+    {
+        RasterSample* sample = new RasterSample(groupTime, fileDictAdd(groupName + "NDSI\"}"));
+        if((green != invalid) && (swir16 != invalid))
+            sample->value = (green - swir16) / (green + swir16);
+        else sample->value = invalid;
+        slist->add(sample);
+    }
+
+    if(ndvi)
+    {
+        RasterSample* sample = new RasterSample(groupTime, fileDictAdd(groupName + "NDVI\"}"));
+        if((red != invalid) && (nir08 != invalid))
+            sample->value = (nir08 - red) / (nir08 + red);
+        else sample->value = invalid;
+        slist->add(sample);
+    }
+
+    if(ndwi)
+    {
+        RasterSample* sample = new RasterSample(groupTime, fileDictAdd(groupName + "NDWI\"}"));
+        if((nir08 != invalid) && (swir16 != invalid))
+            sample->value = (nir08 - swir16) / (nir08 + swir16);
+        else sample->value = invalid;
+        slist->add(sample);
+    }
+
+    return errors;
 }

@@ -76,6 +76,15 @@ class LandsatHlsRaster: public GeoIndexedRaster
     protected:
 
         /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef enum {
+            BATCH,
+            SERIAL,
+        } sample_mode_t;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -84,11 +93,19 @@ class LandsatHlsRaster: public GeoIndexedRaster
 
         void     getIndexFile        (const OGRGeometry* geo, std::string& file) final;
         bool     findRasters         (finder_t* finder) final;
-        void     getGroupSamples     (const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags) final;
-        uint32_t getBatchGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx) final;
+
+        void     getGroupSamples     (const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags) final
+                                     { _getGroupSamples(SERIAL, rgroup, &slist, flags);}
+
+        uint32_t getBatchGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx) final
+                                     { return _getGroupSamples(BATCH, rgroup, slist, flags, pointIndx);}
 
 
     private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
         static bool validateBand   (band_type_t type, const char* bandName);
 
@@ -96,6 +113,9 @@ class LandsatHlsRaster: public GeoIndexedRaster
         static bool isValidS2Band   (const char* bandName) {return validateBand(SENTINEL2,bandName);}
         static bool isValidAlgoBand (const char* bandName) {return validateBand(ALGOBAND, bandName);}
         static bool isValidAlgoName (const char* bandName) {return validateBand(ALGONAME, bandName);}
+
+        uint32_t _getGroupSamples(sample_mode_t mode, const rasters_group_t* rgroup,
+                                  List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx=0);
 
         /*--------------------------------------------------------------------
          * Data
@@ -109,6 +129,7 @@ class LandsatHlsRaster: public GeoIndexedRaster
         bool ndsi;
         bool ndvi;
         bool ndwi;
+
 };
 
 #endif  /* __landsat_hls_raster__ */
