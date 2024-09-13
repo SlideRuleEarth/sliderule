@@ -203,6 +203,8 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
     // Call the base class function
     // return RasterObject::getSamples(points, sllist, param);
 
+    const event_level_t gsLevel = INFO;
+
     perf_stats_t stats = {0.0, 0.0, 0.0, 0.0, 0.0};
 
     /* cast away constness because of List [] operator */
@@ -222,7 +224,7 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
         double tstart;
 
         /* Find raster groups for each point */
-        mlog(INFO, "Finding rasters groups");
+        mlog(gsLevel, "Finding rasters groups");
 
         /* For all points from the caller, create a vector of raster group lists */
         tstart = TimeLib::latchtime();
@@ -239,10 +241,9 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
             pointGroups.emplace_back(point_groups_t{{ogr_point, i}, groupList});
         }
         stats.findRastersTime = TimeLib::latchtime() - tstart;
-        mlog(INFO, "groups: %zu, time: %.3lf", pointGroups.size(), stats.findRastersTime);
 
         /* Create vector of unique rasters. */
-        mlog(INFO, "Finding unique rasters");
+        mlog(gsLevel, "Finding unique rasters");
         tstart = TimeLib::latchtime();
         for(const point_groups_t& pg : pointGroups)
         {
@@ -280,7 +281,7 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
             }
         }
         stats.findUniqueRastersTime = TimeLib::latchtime() - tstart;
-        mlog(INFO, "rasters: %zu, time: %.3lf", uiniqueRasters.size(), stats.findUniqueRastersTime);
+        mlog(gsLevel, "rasters: %zu, time: %.3lf", uiniqueRasters.size(), stats.findUniqueRastersTime);
 
 #if 0
         /*
@@ -296,7 +297,7 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
 
        if(uiniqueRasters.size() <= 2 && pointGroups.size() > 10000)
        {
-           mlog(INFO, "Special case: Using base class function to sample points");
+           mlog(gsLevel, "Special case: Using base class function to sample points");
 
            /* Clean up */
            for(const point_groups_t& pg : pointGroups) delete pg.groupList;
@@ -310,8 +311,7 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
         /*
          * For each unique raster, find the points that belong to it
          */
-        mlog(INFO, "Finding points for unique rasters");
-        uint64_t allPoints = 0;
+        mlog(gsLevel, "Finding points for unique rasters");
         tstart = TimeLib::latchtime();
         for(unique_raster_t* ur : uiniqueRasters)
         {
@@ -332,7 +332,6 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
                             /* Found rasterName in this group of rasters, add this point */
                             const point_sample_t pointSample = {pg.pointInfo, NULL, SS_NO_ERRORS};
                             ur->pointSamples.push_back(pointSample);
-                            allPoints++;
                             break;
                         }
                     }
@@ -340,7 +339,6 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
             }
         }
         stats.findPointsForUniqueRastersTime = TimeLib::latchtime() - tstart;
-        mlog(INFO, "points: %lu, time: %.3lf", allPoints, stats.findPointsForUniqueRastersTime);
 
 #if 0
         uint32_t totalSamples = 0;
@@ -353,7 +351,7 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
 #endif
 
         /* Create batch reader threads */
-        const uint32_t maxThreads = MAX_READER_THREADS;
+        const uint32_t maxThreads = 100;
         createBatchReaderThreads(maxThreads);
 
         /* Sample points for each raster */
@@ -374,7 +372,7 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
             /* Calculate how many rasters we can process in this batch */
             const uint32_t batchSize = std::min(maxThreads, numRasters - currentRaster);
 
-            mlog(INFO, "Sampling batch %u with %u rasters", batchCnt++, batchSize);
+            mlog(gsLevel, "Sampling batch %u with %u rasters", batchCnt++, batchSize);
             const double bt0 = TimeLib::latchtime();
 
             /* Signal threads to process rasters in the current batch */
@@ -403,13 +401,12 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
                 }
                 breader->sync.unlock();
             }
-            mlog(INFO, "time: %.3lf", TimeLib::latchtime() - bt0);
+            mlog(DEBUG, "time: %.3lf", TimeLib::latchtime() - bt0);
 
             /* Move to the next batch of rasters */
             currentRaster += batchSize;
         }
         stats.getSamplesTime = TimeLib::latchtime() - tstart;
-        mlog(INFO, "Total sampling time: %.3lf, batches: %u", stats.getSamplesTime, batchCnt);
 
 
         /*
@@ -417,7 +414,7 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
          */
         if(isSampling())
         {
-            mlog(INFO, "Populating sllist with samples");
+            mlog(gsLevel, "Populating sllist with samples");
             tstart = TimeLib::latchtime();
             for(uint32_t pointIndx = 0; pointIndx < pointGroups.size(); pointIndx++)
             {
@@ -442,7 +439,6 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
                 sllist.add(slist);
             }
             stats.popluateSamplesListTime = TimeLib::latchtime() - tstart;
-            mlog(INFO, "time: %.3lf", stats.popluateSamplesListTime);
         }
         else
         {
@@ -473,12 +469,12 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
     unlockSampling();
 
     /* Print performance stats */
-    mlog(INFO, "Performance stats:");
-    mlog(INFO, "  findRastersTime: %.3lf", stats.findRastersTime);
-    mlog(INFO, "  findUniqueRastersTime: %.3lf", stats.findUniqueRastersTime);
-    mlog(INFO, "  findPointsForUniqueRastersTime: %.3lf", stats.findPointsForUniqueRastersTime);
-    mlog(INFO, "  getSamplesTime: %.3lf", stats.getSamplesTime);
-    mlog(INFO, "  popluateSamplesListTime: %.3lf", stats.popluateSamplesListTime);
+    mlog(gsLevel, "Performance Stats:");
+    mlog(gsLevel, "findingRasers: %12.3lf", stats.findRastersTime);
+    mlog(gsLevel, "uniqueRasters: %12.3lf", stats.findUniqueRastersTime);
+    mlog(gsLevel, "uinqueRPoints: %12.3lf", stats.findPointsForUniqueRastersTime);
+    mlog(gsLevel, "sampling:      %12.3lf", stats.getSamplesTime);
+    mlog(gsLevel, "listCreation:  %12.3lf", stats.popluateSamplesListTime);
 
     return ssErrors;
 }
@@ -1188,7 +1184,7 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
             unique_raster_t* ur = breader->uraster;
             GdalRaster* raster = new GdalRaster(breader->obj->parms,
                                                 ur->rinfo.fileName,
-                                                ur->gpsTime,
+                                                static_cast<double>(ur->gpsTime / 1000),
                                                 ur->fileId,
                                                 ur->rinfo.dataIsElevation,
                                                 breader->obj->crscb);
@@ -1280,7 +1276,7 @@ bool GeoIndexedRaster::createBatchReaderThreads(uint32_t cnt)
         mlog(CRITICAL, "Failed to create batch reader threads");
     }
 
-    mlog(INFO, "Created %d batch reader threads", batchReaders.length());
+    mlog(DEBUG, "Created %d batch reader threads", batchReaders.length());
     return batchReaders.length() == static_cast<int>(cnt);
 }
 
