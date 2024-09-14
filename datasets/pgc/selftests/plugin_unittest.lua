@@ -40,7 +40,7 @@ lon = -178.0
 lat =   51.7
 lon_incr = 0.0001
 lat_incr = 0.0001
-pointCount = 5
+pointCount = 10
 
 print('\n------------------\nTest03 RasterSampler::arcticdem-mosaic\n------------------')
 demType = "arcticdem-mosaic"

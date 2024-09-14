@@ -203,6 +203,8 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
     // Call the base class function
     // return RasterObject::getSamples(points, sllist, param);
 
+    lockSampling();
+
     const event_level_t gsLevel = INFO;
 
     perf_stats_t stats = {0.0, 0.0, 0.0, 0.0, 0.0};
@@ -210,13 +212,11 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
     /* cast away constness because of List [] operator */
     List<point_info_t*>& _points = const_cast<List<point_info_t*>&>(points);
 
-    lockSampling();
-
     /* Vector of points and their associated raster groups */
     std::vector<point_groups_t> pointGroups;
 
     /* Vector of rasters and all points they contain */
-    std::vector<unique_raster_t*> uiniqueRasters;
+    std::vector<unique_raster_t*> uniqueRasters;
 
     try
     {
@@ -241,6 +241,7 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
             pointGroups.emplace_back(point_groups_t{{ogr_point, i}, groupList});
         }
         stats.findRastersTime = TimeLib::latchtime() - tstart;
+        mlog(gsLevel, "time: %.3lf", stats.findRastersTime);
 
         /* Create vector of unique rasters. */
         mlog(gsLevel, "Finding unique rasters");
@@ -255,7 +256,7 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
                 {
                     /* Is this raster already in the list of unique rasters? */
                     bool addNewRaster = true;
-                    for(unique_raster_t* ur : uiniqueRasters)
+                    for(unique_raster_t* ur : uniqueRasters)
                     {
                         if(ur->rinfo.fileName == rinfo.fileName)
                         {
@@ -272,7 +273,7 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
                         ur->rinfo = rinfo;
                         ur->gpsTime = rgroup->gpsTime;
                         ur->fileId = fileDictAdd(rinfo.fileName);
-                        uiniqueRasters.push_back(ur);
+                        uniqueRasters.push_back(ur);
 
                         /* Set pointer in rinfo to this new unique raster */
                         rinfo.uraster = ur;
@@ -281,39 +282,14 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
             }
         }
         stats.findUniqueRastersTime = TimeLib::latchtime() - tstart;
-        mlog(gsLevel, "rasters: %zu, time: %.3lf", uiniqueRasters.size(), stats.findUniqueRastersTime);
-
-#if 0
-        /*
-        * Special case: if there are only one or two unique rasters but many points,
-        * it would be more efficient to call the base class function to sample all points using multiple RasterObjects.
-        * In the current implementation, only one thread is created per unique raster, leading to inefficient
-        * utilization of multi-core systems when processing large numbers of points.
-        * The base class implementation creates multiple RasterObjects, each with its own threads, to sample all points concurrently.
-        * GDAL cache is shared, so when multiple threads read the same raster, the data will be cached, avoiding redundant reads.
-        * Although GDAL’s internal cache mutexes will be contended, this approach is still likely to be more efficient on multi-core systems.
-        * Tests have shown that reading many points from one raster in one thread is slower than using multiple threads, even with mutex contention.
-        */
-
-       if(uiniqueRasters.size() <= 2 && pointGroups.size() > 10000)
-       {
-           mlog(gsLevel, "Special case: Using base class function to sample points");
-
-           /* Clean up */
-           for(const point_groups_t& pg : pointGroups) delete pg.groupList;
-           for(unique_raster_t* ur : uiniqueRasters) delete ur;
-
-           unlockSampling();
-           return RasterObject::getSamples(points, sllist, param);
-       }
-#endif
+        mlog(gsLevel, "rasters: %zu, time: %.3lf", uniqueRasters.size(), stats.findUniqueRastersTime);
 
         /*
          * For each unique raster, find the points that belong to it
          */
         mlog(gsLevel, "Finding points for unique rasters");
         tstart = TimeLib::latchtime();
-        for(unique_raster_t* ur : uiniqueRasters)
+        for(unique_raster_t* ur : uniqueRasters)
         {
             const std::string& rasterName = ur->rinfo.fileName;
 
@@ -339,75 +315,90 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
             }
         }
         stats.findPointsForUniqueRastersTime = TimeLib::latchtime() - tstart;
+        mlog(gsLevel, "time: %.3lf", stats.findPointsForUniqueRastersTime);
 
-#if 0
-        uint32_t totalSamples = 0;
-        for(const unique_raster_t* ur: uiniqueRasters)
-        {
-            print2term("%6zu  -- %s\n", ur->pointSamples.size(), ur->rinfo.fileName.c_str());
-            totalSamples += ur->pointSamples.size();
-        }
-        print2term("Total samples: %u in %zu rasters.\n", totalSamples, uiniqueRasters.size());
-#endif
 
         /* Create batch reader threads */
-        const uint32_t maxThreads = 100;
-        createBatchReaderThreads(maxThreads);
+        const uint32_t numRasters = uniqueRasters.size();
 
-        /* Sample points for each raster */
-        const uint32_t numRasters = uiniqueRasters.size();
+        /* Testing has shown that 20 threads performs twice as fast on a 8 core system than 100 threads.
+         */
+        const uint32_t maxThreads = 20;
+        createBatchReaderThreads(std::min(maxThreads, numRasters));
+
+        const uint32_t numThreads = batchReaders.length();
+        mlog(gsLevel, "Sampling %u rasters with %u threads", numRasters, numThreads);
+
+        /* Sample unique rasters utilizing numThreads */
         uint32_t currentRaster = 0;
-        uint32_t batchCnt = 0;
 
         tstart = TimeLib::latchtime();
         while(currentRaster < numRasters)
         {
-            /* Check if sampling has been stopped (lua object is being deleted) */
-            if(isSampling() == false)
-            {
-                mlog(WARNING, "Sampling stopped");
-                break;
-            }
-
             /* Calculate how many rasters we can process in this batch */
-            const uint32_t batchSize = std::min(maxThreads, numRasters - currentRaster);
+            const uint32_t batchSize = std::min(numThreads, numRasters - currentRaster);
 
-            mlog(gsLevel, "Sampling batch %u with %u rasters", batchCnt++, batchSize);
-            const double bt0 = TimeLib::latchtime();
+            /* Keep track of how many threads have been assigned work */
+            uint32_t activeReaders = 0;
 
-            /* Signal threads to process rasters in the current batch */
-            for(uint32_t i = 0; i < batchSize; i++)
+            /* Assign rasters to batch readers as soon as they are free */
+            while(currentRaster < numRasters || activeReaders > 0)
             {
-                unique_raster_t* ur = uiniqueRasters[currentRaster + i];
-                BatchReader* breader = batchReaders[i];
-
-                breader->sync.lock();
+                for(uint32_t i = 0; i < batchSize; i++)
                 {
-                    breader->uraster = ur;
-                    breader->sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
-                }
-                breader->sync.unlock();
-            }
+                    BatchReader* breader = batchReaders[i];
 
-            /* Wait for batch readers to finish sampling for this batch */
-            for(uint32_t i = 0; i < batchSize; i++)
+                    breader->sync.lock();
+                    {
+                        /* If this thread is done with its previous raster, assign a new one */
+                        if(breader->uraster == NULL && currentRaster < numRasters)
+                        {
+                            breader->uraster = uniqueRasters[currentRaster++];
+                            breader->sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
+                            activeReaders++;
+                        }
+                    }
+                    breader->sync.unlock();
+
+                    if(!isSampling())
+                    {
+                        /* Sampling has been stopped, stop assigning new rasters */
+                        activeReaders = 0;
+                        currentRaster = numRasters;
+                        break;
+                    }
+
+                    /* Check if the current breader has completed its work */
+                    breader->sync.lock();
+                    {
+                        if(breader->uraster == NULL && activeReaders > 0)
+                        {
+                            /* Mark one reader as free */
+                            activeReaders--;
+                        }
+                    }
+                    breader->sync.unlock();
+                }
+
+                /* Short wait before checking again to avoid busy waiting */
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+        }
+
+        /* Wait for all batch readers to finish sampling */
+        for(int32_t i = 0; i < batchReaders.length(); i++)
+        {
+            BatchReader* breader = batchReaders[i];
+
+            breader->sync.lock();
             {
-                BatchReader* breader = batchReaders[i];
-
-                breader->sync.lock();
-                {
-                    while(breader->uraster != NULL)
-                        breader->sync.wait(DATA_SAMPLED, SYS_TIMEOUT);
-                }
-                breader->sync.unlock();
+                while(breader->uraster != NULL)
+                    breader->sync.wait(DATA_SAMPLED, SYS_TIMEOUT);
             }
-            mlog(DEBUG, "time: %.3lf", TimeLib::latchtime() - bt0);
-
-            /* Move to the next batch of rasters */
-            currentRaster += batchSize;
+            breader->sync.unlock();
         }
         stats.getSamplesTime = TimeLib::latchtime() - tstart;
-
+        mlog(gsLevel, "time: %.3lf", stats.getSamplesTime);
 
         /*
          * Populate sllist with samples
@@ -451,14 +442,11 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
         mlog(e.level(), "Error getting samples: %s", e.what());
     }
 
-    /* batchReaders are no longer needed */
-    batchReaders.clear();
-
     /* Clean up */
     for(const point_groups_t& pg : pointGroups)
         delete pg.groupList;
 
-    for(unique_raster_t* ur : uiniqueRasters)
+    for(unique_raster_t* ur : uniqueRasters)
     {
         for(const point_sample_t& ps : ur->pointSamples)
             delete ps.sample;
@@ -1167,8 +1155,6 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
 {
     batch_reader_t *breader = static_cast<batch_reader_t*>(param);
 
-    GDALSetCacheMax(0);  // Disable cache for a particular thread or dataset
-
     while(breader->run)
     {
         breader->sync.lock();
@@ -1260,11 +1246,18 @@ bool GeoIndexedRaster::createReaderThreads(uint32_t rasters2sample)
 /*----------------------------------------------------------------------------
  * createBatchReaderThreads
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::createBatchReaderThreads(uint32_t cnt)
+bool GeoIndexedRaster::createBatchReaderThreads(uint32_t rasters2sample)
 {
+    const int threadsNeeded = rasters2sample;
+    const int threadsNow    = batchReaders.length();
+    const int newThreadsCnt = threadsNeeded - threadsNow;
+
+    if(threadsNeeded <= threadsNow)
+        return true;
+
     try
     {
-        for(uint32_t i = 0; i < cnt; i++)
+        for(int i = 0; i < newThreadsCnt; i++)
         {
             BatchReader* r = new BatchReader(this);
             batchReaders.add(r);
@@ -1276,8 +1269,7 @@ bool GeoIndexedRaster::createBatchReaderThreads(uint32_t cnt)
         mlog(CRITICAL, "Failed to create batch reader threads");
     }
 
-    mlog(DEBUG, "Created %d batch reader threads", batchReaders.length());
-    return batchReaders.length() == static_cast<int>(cnt);
+    return batchReaders.length() == threadsNeeded;
 }
 
 /*----------------------------------------------------------------------------

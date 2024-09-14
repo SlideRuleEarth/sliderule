@@ -260,7 +260,7 @@ class GeoIndexedRaster: public RasterObject
 
         bool            createFinderThreads (void);
         bool            createReaderThreads (uint32_t  rasters2sample);
-        bool            createBatchReaderThreads (uint32_t cnt);
+        bool            createBatchReaderThreads(uint32_t rasters2sample);
         bool            updateCache         (uint32_t& rasters2sample, const GroupOrdering* groupList);
         bool            filterRasters       (int64_t gps, GroupOrdering* groupList);
         void            setFindersRange     (void);

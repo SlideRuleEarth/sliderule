@@ -33,7 +33,7 @@ local  lon = -179.0
 local  lat = 51.0
 
 local lon_incr = 0.01
-local lat_incr = 0.01
+local lat_incr = 0.00
 local pointCount = 100
 
 print(string.format("\n-------------------------------------------------\nLandsat Plugin test (NDVI)\n-------------------------------------------------"))
