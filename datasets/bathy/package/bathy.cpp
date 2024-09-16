@@ -34,8 +34,8 @@
  ******************************************************************************/
 
 #include "bathy.h"
-#include "BathyReader.h"
 #include "BathyViewer.h"
+#include "BathyDataFrame.h"
 #include "BathyRefractionCorrector.h"
 #include "BathyUncertaintyCalculator.h"
 
@@ -55,8 +55,8 @@
 int bathy_open (lua_State *L)
 {
     static const struct luaL_Reg bathy_functions[] = {
-        {"parms",               BathyParms::luaCreate},
-        {"reader",              BathyReader::luaCreate},
+        {"parms",               BathyFields::luaCreate},
+        {"dataframe",           BathyDataFrame::luaCreate},
         {"viewer",              BathyViewer::luaCreate},
         {"refraction",          BathyRefractionCorrector::luaCreate},
         {"uncertainty",         BathyUncertaintyCalculator::luaCreate},
@@ -88,11 +88,7 @@ extern "C" {
 void initbathy (void)
 {
     /* Initialize Modules */
-    BathyParms::init();
-    BathyClassifier::init();
-    BathyRefractionCorrector::init();
     BathyUncertaintyCalculator::init();
-    BathyReader::init();
     BathyViewer::init();
 
     /* Extend Lua */

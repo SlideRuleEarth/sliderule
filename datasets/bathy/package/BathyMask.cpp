@@ -49,14 +49,8 @@ const double BathyMask::GLOBAL_BATHYMETRY_MASK_MIN_LON = -180.0;
 const double BathyMask::GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE = 0.25;
 const uint32_t BathyMask::GLOBAL_BATHYMETRY_MASK_OFF_VALUE = 0xFFFFFFFF;
 
-const char* BathyMask::OBJECT_TYPE = "BathyMask";
-const char* BathyMask::LUA_META_NAME = "BathyMask";
-const struct luaL_Reg BathyMask::LUA_META_TABLE[] = {
-    {NULL,          NULL}
-};
-
 /******************************************************************************
- * ATL03 READER CLASS
+ * CLASS METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------

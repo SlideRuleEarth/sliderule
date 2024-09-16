@@ -215,7 +215,7 @@ void FieldList<T>::fromLua (lua_State* L, int index)
 template <class T>
 int FieldList<T>::toLua (lua_State* L, long key) const
 {
-    if(key >= 0 && key < values.size())
+    if(key >= 0 && key < static_cast<long>(values.size()))
     {
         convertToLua(L, values[key]);
     }

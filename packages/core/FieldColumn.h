@@ -150,7 +150,7 @@ FieldColumn<T>::FieldColumn(const FieldColumn<T>& column):
     }
     // base class
     provided = column.provided;
-    initalized = column.initalized;
+    initialized = column.initialized;
 }
 
 /*----------------------------------------------------------------------------
@@ -328,7 +328,7 @@ int FieldColumn<T>::toLua (lua_State* L, long key) const
 {
     if(key >= 0 && key < numElements)
     {
-        convertToLua(L, this->operator[](i));
+        convertToLua(L, this->operator[](key));
     }
     else
     {

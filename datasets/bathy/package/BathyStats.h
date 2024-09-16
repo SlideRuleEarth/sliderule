@@ -59,10 +59,10 @@ struct BathyStats: public LuaObject, public FieldDictionary
      * Methods
      *--------------------------------------------------------------------*/
 
-            BathyStats  (lua_State* L);
-            ~BathyStats (void) override = default;
+    explicit    BathyStats  (lua_State* L);
+                ~BathyStats (void) override = default;
 
-    void    update      (const BathyStats& stats);
+    void        update      (const BathyStats& stats);  
 
     /*--------------------------------------------------------------------
      * Data
@@ -70,7 +70,7 @@ struct BathyStats: public LuaObject, public FieldDictionary
 
     FieldElement<bool>      valid                   {true};
     FieldElement<uint64_t>  photonCount             {0};
-    FieldElement<uint64_t>  subaqueousPhotons       {0.0};
+    FieldElement<uint64_t>  subaqueousPhotons       {0};
     FieldElement<double>    correctionsDuration     {0.0};
     FieldElement<double>    qtreesDuration          {0.0};
     FieldElement<double>    coastnetDuration        {0.0};

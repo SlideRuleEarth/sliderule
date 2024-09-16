@@ -68,7 +68,7 @@ class FieldDictionary: public Field
          *--------------------------------------------------------------------*/
 
                         FieldDictionary (std::initializer_list<entry_t> init_list, int hash_table_size=DEFAULT_INITIAL_HASH_TABLE_SIZE);
-                        FieldDictionary (int hash_table_size=DEFAULT_INITIAL_HASH_TABLE_SIZE);
+        explicit        FieldDictionary (int hash_table_size=DEFAULT_INITIAL_HASH_TABLE_SIZE);
                         FieldDictionary (const FieldDictionary& dictionary);                        
                         ~FieldDictionary(void) override = default;
 

@@ -202,23 +202,12 @@ BathyUncertaintyCalculator::BathyUncertaintyCalculator (lua_State* L, BathyField
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
     dataframe(_dataframe),
-    context(NULL),
     Kd_490(NULL),
     pid(NULL)
 {
-    try
-    {
-        context = new H5Coro::Context(parms->uncertainty.value.assetKd, parms->uncertainty.value.resourceKd.value.c_str());
-        Kd_490 = new H5Array<int16_t>(context, "Kd_490", H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS);
-    }
-    catch (const RunTimeException& e)
-    {
-        delete context;
-        delete Kd_490;
-        throw;
-    }
-
-    pid = new Thread(runThread, this);
+    H5Coro::Context context(parms->uncertainty.value.assetKd, parms->uncertainty.value.resourceKd.value.c_str());
+    Kd_490 = new H5Array<int16_t>(&context, "Kd_490", H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS);
+    pid = new Thread(runThread, this); // assume this does not throw
 }
 
 /*----------------------------------------------------------------------------
@@ -228,7 +217,6 @@ BathyUncertaintyCalculator::~BathyUncertaintyCalculator (void)
 {
     delete pid;
     delete Kd_490;
-    delete context;
     if(parms) parms->releaseLuaObject();
     if(dataframe) dataframe->releaseLuaObject();
 }
@@ -240,10 +228,9 @@ void* BathyUncertaintyCalculator::runThread (void* parm)
 {
     BathyUncertaintyCalculator* uncertainty_calculator = static_cast<BathyUncertaintyCalculator*>(parm);
     BathyDataFrame& df = *uncertainty_calculator->dataframe;
-    const UncertaintyFields& parms = uncertainty_calculator->parms->uncertainty.value;
 
     /* run uncertainty calculation*/
-    if(df.length() == 0) return; // nothing to do
+    if(df.length() == 0) return NULL; // nothing to do
 
     /* join kd resource read */
     uncertainty_calculator->Kd_490->join(uncertainty_calculator->parms->readTimeout.value * 1000, true);

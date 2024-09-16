@@ -83,7 +83,7 @@ int BathyDataFrame::luaCreate (lua_State* L)
         _mask = dynamic_cast<BathyMask*>(getLuaObject(L, 6, GeoLib::TIFFImage::OBJECT_TYPE, true, NULL));
 
         /* Return Reader Object */
-        return createLuaObject(L, new BathyDataFrame(L, string(beam_str), _parms, _hdf03, _hdf09, rqstq_name, _mask));
+        return createLuaObject(L, new BathyDataFrame(L, beam_str, _parms, _hdf03, _hdf09, rqstq_name, _mask));
     }
     catch(const RunTimeException& e)
     {
@@ -99,13 +99,13 @@ int BathyDataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyDataFrame::BathyDataFrame (lua_State* L, const string& beam_str, BathyFields* _parms, H5Object* _hdf03, H5Object* _hdf09, const char* rqstq_name, BathyMask* _mask):
+BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields* _parms, H5Object* _hdf03, H5Object* _hdf09, const char* rqstq_name, BathyMask* _mask):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {   
         {"time_ns",             &time_ns},
         {"index_ph",            &index_ph},
         {"index_seg",           &index_seg},
-        {"lat_ph",              lat_ph},
+        {"lat_ph",              &lat_ph},
         {"lon_ph",              &lon_ph},
         {"x_ph",                &x_ph},
         {"y_ph",                &y_ph},
@@ -137,8 +137,10 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const string& beam_str, BathyField
         {"track",               &track},
         {"pair",                &pair},
         {"utm_zone",            &utm_zone},
-        {"utm_is_north"         &utm_is_north}
-    }),
+        {"utm_is_north",        &utm_is_north},
+    },
+    time_ns, lon_ph, lat_ph, ortho_h),
+    beam(beam_str),
     parmsPtr(_parms),
     parms(*_parms),
     bathyMask(_mask),
@@ -146,7 +148,6 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const string& beam_str, BathyField
     hdf09(_hdf09),
     rqstQ(rqstq_name),
     readTimeoutMs(parms.readTimeout.value * 1000),
-    beam(beam_str),
     valid(true)
 {
     assert(rqstq_name);
@@ -180,8 +181,8 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const string& beam_str, BathyField
     catch(const RunTimeException& e)
     {
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, &rqstQ, &active, "Failure on resource %s: %s", parms.resource, e.what());
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, &rqstQ, &active, "Failure on resource %s: %s", parms.resource, e.what());
+        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, &rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
+        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, &rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
 
         /* Indicate End of Data */
         signalComplete();
@@ -196,8 +197,8 @@ BathyDataFrame::~BathyDataFrame (void)
     active = false;
     delete pid;
 
-    delete context;
-    delete context09;
+    hdf03->releaseLuaObject();
+    hdf09->releaseLuaObject();
 
     parmsPtr->releaseLuaObject();
     bathyMask->releaseLuaObject();
@@ -476,9 +477,9 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
  *----------------------------------------------------------------------------*/
 BathyDataFrame::Atl09Class::Atl09Class (const BathyDataFrame& dataframe):
     valid       (false),
-    met_u10m    (dataframe.hdf09, FString("profile_%d/low_rate/met_u10m", dataframe.track).c_str()),
-    met_v10m    (dataframe.hdf09, FString("profile_%d/low_rate/met_v10m", dataframe.track).c_str()),
-    delta_time  (dataframe.hdf09, FString("profile_%d/low_rate/delta_time", dataframe.track).c_str())
+    met_u10m    (dataframe.hdf09, FString("profile_%d/low_rate/met_u10m", dataframe.track.value).c_str()),
+    met_v10m    (dataframe.hdf09, FString("profile_%d/low_rate/met_v10m", dataframe.track.value).c_str()),
+    delta_time  (dataframe.hdf09, FString("profile_%d/low_rate/delta_time", dataframe.track.value).c_str())
 {
     try
     {
@@ -504,7 +505,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
     const BathyFields& parms = dataframe.parms;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms.asset->getName(), parms.resource, dataframe.track);
+    const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms.asset->getName(), parms.resource.value.c_str(), dataframe.track.value);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -549,7 +550,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
             /* Check Current Segment */
             if(current_segment >= atl03.segment_dist_x.size)
             {
-                mlog(ERROR, "Photons with no segments are detected in %s/%s (%d %ld %ld)!", parms.resource.value.c_str(), parms.beam.value.c_str(), current_segment, atl03.segment_dist_x.size, region.num_segments);
+                mlog(ERROR, "Photons with no segments are detected in %s/%s (%d %ld %ld)!", parms.resource.value.c_str(), dataframe.beam.value.c_str(), current_segment, atl03.segment_dist_x.size, region.num_segments);
                 break;
             }
 
@@ -558,7 +559,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 /* Check Global Bathymetry Mask */
                 if(dataframe.bathyMask)
                 {
-                    if(dataframe.bathyMask->includes(region.segment_lon[current_segment], region.segment_lat[current_segment]));
+                    if(dataframe.bathyMask->includes(region.segment_lon[current_segment], region.segment_lat[current_segment]))
                     {
                         on_boundary = true;
                         break;
@@ -658,18 +659,18 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 }
 
                 /* Add Photon to DataFrame */
-                dataframe.addRow(); // starts new row in dataframe
-                dataframe.time_ns.append(Icesat2Fields::deltatime2timestamp(current_delta_time));
+                dataframe.addRow( // start new row in dataframe
+                    Icesat2Fields::deltatime2timestamp(current_delta_time),     // time_ns
+                    longitude,                                                  // lon_ph
+                    latitude,                                                   // lat_ph
+                    atl03.h_ph[current_photon] - atl03.geoid[current_segment]); // ortho_h
                 dataframe.index_ph.append(static_cast<int32_t>(region.first_photon) + current_photon);
                 dataframe.index_seg.append(static_cast<int32_t>(region.first_segment) + current_segment);
-                dataframe.lat_ph.append(latitude);
-                dataframe.lon_ph.append(longitude);
                 dataframe.x_ph.append(coord.x);
                 dataframe.y_ph.append(coord.y);
                 dataframe.x_atc.append(atl03.segment_dist_x[current_segment] + atl03.dist_ph_along[current_photon]);
                 dataframe.y_atc.append(atl03.dist_ph_across[current_photon]);
                 dataframe.background_rate.append(calculateBackground(current_segment, bckgrd_index, atl03));
-                dataframe.ortho_h.append(atl03.h_ph[current_photon] - atl03.geoid[current_segment]);
                 dataframe.ellipse_h.append(atl03.h_ph[current_photon]);
                 dataframe.yapc_score.append(yapc_score);
                 dataframe.max_signal_conf.append(atl03_cnf);
@@ -703,12 +704,12 @@ void* BathyDataFrame::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), &dataframe.rqstQ, &dataframe.active, "Failure on resource %s track %d.%d: %s", parms.resource, dataframe.track, dataframe.pair, e.what());
+        alert(e.level(), e.code(), &dataframe.rqstQ, &dataframe.active, "Failure on resource %s track %d.%d: %s", parms.resource.value.c_str(), dataframe.track.value, dataframe.pair.value, e.what());
         dataframe.valid = false;
     }
 
     /* Mark Completion */
-    mlog(INFO, "Completed processing resource %s", parms.resource);
+    mlog(INFO, "Completed processing resource %s", parms.resource.value.c_str());
     dataframe.signalComplete();
 
     /* Stop Trace */

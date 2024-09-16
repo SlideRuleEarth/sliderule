@@ -57,7 +57,7 @@ const double BathyRefractionCorrector::GLOBAL_WATER_RI_MASK_PIXEL_SIZE = 0.25;
 const char* BathyRefractionCorrector::OBJECT_TYPE = "BathyRefractionCorrector";
 const char* BathyRefractionCorrector::LUA_META_NAME = "BathyRefractionCorrector";
 const struct luaL_Reg BathyRefractionCorrector::LUA_META_TABLE[] = {
-    {"subaqueous", getSubAqPh}
+    {"subaqueous", getSubAqPh},
     {NULL,  NULL}
 };
 
@@ -185,7 +185,7 @@ void* BathyRefractionCorrector::runThread(void* parm)
     const RefractionFields& parms = refraction_corrector->parms->refraction.value;
 
     /* Get UTM Transformation */
-    GeoLib::UTMTransform transform(df.utm_zone.value, df.utm_is_north);
+    GeoLib::UTMTransform transform(df.utm_zone.value, df.utm_is_north.value);
 
     /* Run Refraction Correction */
     for(long i = 0; i < df.length(); i++)

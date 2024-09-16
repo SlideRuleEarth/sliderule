@@ -85,7 +85,7 @@ template <class T>
 FieldElement<T>::FieldElement(T default_value):
     value(default_value)
 {
-    initialized = element.initialized;
+    initialized = true;
 }
 
 /*----------------------------------------------------------------------------

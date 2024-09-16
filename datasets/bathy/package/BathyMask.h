@@ -63,11 +63,6 @@ class BathyMask: public GeoLib::TIFFImage
         static const double GLOBAL_BATHYMETRY_MASK_PIXEL_SIZE;
         static const uint32_t GLOBAL_BATHYMETRY_MASK_OFF_VALUE;
 
-        static const char* OBJECT_TYPE;
-
-        static const char* LUA_META_NAME;
-        static const struct luaL_Reg LUA_META_TABLE[];
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -82,8 +77,8 @@ class BathyMask: public GeoLib::TIFFImage
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathyMask    (lua_State* L);
-        ~BathyMask   (void) override = default;
+        explicit BathyMask (lua_State* L);
+        ~BathyMask (void) override = default;
 };
 
 #endif  /* __bathy_mask__ */

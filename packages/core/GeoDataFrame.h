@@ -73,10 +73,10 @@ class GeoDataFrame: public LuaObject, public Field
 
             static int luaGetData (lua_State* L);
 
-            FrameColumn(lua_State* L, const Field* _column);
+            FrameColumn(lua_State* L, const Field& _column);
             ~FrameColumn(void) override = default;
 
-            const Field* column;
+            const Field& column;
         };
 
         /*--------------------------------------------------------------------
@@ -89,16 +89,11 @@ class GeoDataFrame: public LuaObject, public Field
         static int              luaGetMetaData  (lua_State* L);
 
         long                    length          (void);
-        long                    addRow          (void);
+        long                    addRow          (int64_t time, double x, double y, double z=0.0);
         void                    addColumnData   (const char* name, Field* column);
         Field*                  getColumnData   (const char* name);
         void                    addMetaData     (const char* name, Field* column);
         Field*                  getMetaData     (const char* name);
-
-        void                    setTimeColumn   (const char* name, FieldColumn<int64_t>* time_column = NULL);
-        void                    setXColumn      (const char* name, FieldColumn<double>* x_column = NULL);
-        void                    setYColumn      (const char* name, FieldColumn<double>* y_column = NULL);
-        void                    setZColumn      (const char* name, FieldColumn<double>* z_column = NULL);
 
         FieldColumn<int64_t>&   getTimeColumn   (void);
         FieldColumn<double>&    getXColumn      (void);
@@ -116,10 +111,8 @@ class GeoDataFrame: public LuaObject, public Field
                          const struct luaL_Reg meta_table[],
                          const std::initializer_list<FieldDictionary::entry_t>& column_list, 
                          const std::initializer_list<FieldDictionary::entry_t>& meta_list,
-                         FieldColumn<int64_t>* time_column = NULL,
-                         FieldColumn<double>* x_column = NULL,
-                         FieldColumn<double>* y_column = NULL,
-                         FieldColumn<double>* z_column = NULL);
+                         FieldColumn<int64_t>& time_column, 
+                         FieldColumn<double>& x_column, FieldColumn<double>& y_column, FieldColumn<double>& z_column);
         ~GeoDataFrame   (void) override = default;
 
         int     toLua   (lua_State* L) const override;
@@ -129,14 +122,14 @@ class GeoDataFrame: public LuaObject, public Field
          * Data
          *--------------------------------------------------------------------*/
 
-        vector<long> index;
+        vector<long> indexColumn;
         FieldDictionary columnFields;
         FieldDictionary metaFields;
 
-        FieldColumn<int64_t>* timeColumn;
-        FieldColumn<double>* xColumn;
-        FieldColumn<double>* yColumn;
-        FieldColumn<double>* zColumn;
+        FieldColumn<int64_t>& timeColumn;
+        FieldColumn<double>& xColumn;
+        FieldColumn<double>& yColumn;
+        FieldColumn<double>& zColumn;
 };
 
 #endif  /* __geo_data_frame__ */

@@ -42,12 +42,13 @@
 #include "GeoLib.h"
 #include "H5Array.h"
 #include "H5Element.h"
+#include "H5Object.h"
 #include "BathyFields.h"
 #include "FieldElement.h"
 #include "FieldArray.h"
 #include "FieldColumn.h"
 #include "GeoDataFrame.h"
-#include "BathyStats.h"
+#include "BathyMask.h"
 
 /******************************************************************************
  * CLASS
@@ -95,7 +96,7 @@ class BathyDataFrame: public GeoDataFrame
         FieldColumn<double>         background_rate;    // PE per second
         FieldColumn<float>          delta_h;            // refraction correction of height
         FieldColumn<float>          surface_h;          // orthometric height of sea surface at each photon location
-        FieldColumn<float>          ortho_h;            // geoid corrected height of photon, calculated from h_ph and geoid
+        FieldColumn<double>         ortho_h;            // geoid corrected height of photon, calculated from h_ph and geoid
         FieldColumn<float>          ellipse_h;          // height of photon with respect to reference ellipsoid
         FieldColumn<float>          sigma_thu;          // total horizontal uncertainty
         FieldColumn<float>          sigma_tvu;          // total vertical uncertainty
@@ -216,7 +217,7 @@ class BathyDataFrame: public GeoDataFrame
          * Methods
          *--------------------------------------------------------------------*/
 
-                            BathyDataFrame              (lua_State* L, const string& beam_str, BathyFields* _parms, H5Object* _hdf03, H5Object* _hdf09, const char* rqstq_name, BathyMask* _mask);
+                            BathyDataFrame              (lua_State* L, const char* beam_str, BathyFields* _parms, H5Object* _hdf03, H5Object* _hdf09, const char* rqstq_name, BathyMask* _mask);
                             ~BathyDataFrame             (void) override;
 
         static void*        subsettingThread            (void* parm);

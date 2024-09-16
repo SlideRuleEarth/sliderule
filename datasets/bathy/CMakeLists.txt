@@ -30,7 +30,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyGranule.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyMask.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyRefractionCorrector.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathySeaSurfaceFinder.cphp
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathySeaSurfaceFinder.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyStats.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyUncertaintyCalculator.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.h

@@ -110,7 +110,7 @@ void* BathySeaSurfaceFinder::runThread(void* parm)
     for(long p0 = 0; p0 < df.length(); p0 += parms.phInExtent.value)
     {
         /* calculate last photon in extent */
-        long p1 = MIN(df.length(), p0 + parms.phInExtent.value);
+        const long p1 = MIN(df.length(), p0 + parms.phInExtent.value);
 
         try
         {
@@ -162,7 +162,7 @@ void* BathySeaSurfaceFinder::runThread(void* parm)
             const long num_bins = static_cast<long>(std::ceil(range_h / surface_parms.binSize.value)) + 1;
             if(num_bins <= 0 || num_bins > surface_parms.maxBins.value)
             {
-                throw RunTimeException(ERROR, RTE_ERROR, "Invalid combination of range <%lf> and bin size <%lf> produced out of range histogram size <%ld>", range_h, surface_parms.bin_size, num_bins);
+                throw RunTimeException(ERROR, RTE_ERROR, "Invalid combination of range <%lf> and bin size <%lf> produced out of range histogram size <%ld>", range_h, surface_parms.binSize.value, num_bins);
             }
 
             /* calculate average background */

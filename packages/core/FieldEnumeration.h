@@ -267,8 +267,8 @@ void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
 template <class T, int N>
 int FieldEnumeration<T,N>::toLua (lua_State* L, long key) const
 {
-    T selection = static_cast<T>(key);
-    int index = convertToIndex(selection);
+    const T selection = static_cast<T>(key);
+    const int index = convertToIndex(selection);
     if(index >= 0 && index < N)
     {
         if(values[index])

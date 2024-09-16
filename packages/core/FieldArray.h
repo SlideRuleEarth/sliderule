@@ -149,7 +149,6 @@ template <class T, int N>
 FieldArray<T,N>& FieldArray<T,N>::operator=(std::initializer_list<T> init_list)
 {
     assert(N == init_list.size());
-    if(this == &array) return *this;
     std::copy(init_list.begin(), init_list.end(), values);
     initialized = true;
     return *this;

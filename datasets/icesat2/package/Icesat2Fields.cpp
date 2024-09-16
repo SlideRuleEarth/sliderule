@@ -474,7 +474,7 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::spot_t& v)
 {
     if(lua_isinteger(L, index))
     {
-        int i = LuaObject::getLuaInteger(L, index);
+        const int i = LuaObject::getLuaInteger(L, index);
         if(i >= 1 && i <= Icesat2Fields::NUM_SPOTS)
         {
             v = static_cast<Icesat2Fields::spot_t>(i);

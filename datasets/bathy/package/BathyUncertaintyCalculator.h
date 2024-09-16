@@ -37,6 +37,7 @@
 #include "H5Coro.h"
 #include "H5Array.h"
 #include "BathyFields.h"
+#include "BathyDataFrame.h"
 
 /******************************************************************************
  * CLASS
@@ -109,7 +110,6 @@ class BathyUncertaintyCalculator: public LuaObject
 
         BathyFields*                parms;
         BathyDataFrame*             dataframe;
-        H5Coro::Context*            context;
         H5Array<int16_t>*           Kd_490;
         Thread*                     pid;
 };
