@@ -131,8 +131,8 @@ inline uint32_t toEncoding(FieldArray<float, N>& v)    { (void)v; return Field::
 template <int N>
 inline uint32_t toEncoding(FieldArray<double, N>& v)   { (void)v; return Field::NESTED_ARRAY | Field::DOUBLE; };
 
-//template <int N>
-//inline uint32_t toEncoding(FieldArray`<time8_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::TIME8;  };
+template <int N>
+inline uint32_t toEncoding(FieldArray<time8_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::TIME8;  };
 
 template <int N>
 inline uint32_t toEncoding(FieldArray<string, N>& v)   { (void)v; return Field::NESTED_ARRAY | Field::STRING; };

@@ -212,7 +212,7 @@ const char* GediParms::surface2str(surface_t filter)
 /*----------------------------------------------------------------------------
  * deltatime2timestamp - returns nanoseconds since Unix epoch, no leap seconds
  *----------------------------------------------------------------------------*/
-int64_t GediParms::deltatime2timestamp (double delta_time)
+time8_t GediParms::deltatime2timestamp (double delta_time)
 {
     return TimeLib::gps2systimeex(delta_time + (double)GEDI_SDP_EPOCH_GPS);
 }

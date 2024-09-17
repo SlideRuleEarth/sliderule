@@ -94,7 +94,7 @@ class GeoDataFrame: public LuaObject, public Field
         void                    addMetaData     (const char* name, Field* column);
         Field*                  getMetaData     (const char* name);
 
-        const FieldColumn<int64_t>* getTimeColumn   (void) const;
+        const FieldColumn<time8_t>* getTimeColumn   (void) const;
         const FieldColumn<double>*  getXColumn      (void) const;
         const FieldColumn<double>*  getYColumn      (void) const;
         const FieldColumn<double>*  getZColumn      (void) const;

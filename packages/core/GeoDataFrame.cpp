@@ -239,7 +239,7 @@ Field* GeoDataFrame::getMetaData (const char* name)
 /*----------------------------------------------------------------------------
  * getTimeColumn
  *----------------------------------------------------------------------------*/
-const FieldColumn<int64_t>* GeoDataFrame::getTimeColumn (void) const
+const FieldColumn<time8_t>* GeoDataFrame::getTimeColumn (void) const
 {
     return timeColumn;
 }

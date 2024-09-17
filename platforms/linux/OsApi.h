@@ -136,7 +136,14 @@ typedef enum {
 typedef unsigned long okey_t;
 
 /* Extended System Time - nanoseconds since Unix epoch, no leap seconds */
-typedef int64_t time8_t;
+typedef struct Time8 {
+    int64_t nanoseconds;
+    Time8(void): nanoseconds(0) {};
+    Time8(int64_t value): nanoseconds(value) {};
+    Time8(const Time8& v): nanoseconds(v.nanoseconds) {};
+    Time8& operator= (const Time8& v) {nanoseconds = v.nanoseconds; return *this;};
+    Time8& operator= (const int64_t& v) {nanoseconds = v; return *this; };
+} time8_t;
 
 /* File */
 typedef FILE* fileptr_t;

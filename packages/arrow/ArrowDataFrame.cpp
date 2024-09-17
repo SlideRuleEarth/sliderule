@@ -86,7 +86,7 @@ void encode(const FieldColumn<time8_t>* field_column, vector<shared_ptr<arrow::A
     (void)builder.Reserve(num_rows);
     for(int i = 0; i < num_rows; i++)
     {
-        builder.UnsafeAppend((*field_column)[i]);
+        builder.UnsafeAppend((*field_column)[i].nanoseconds);
     }
 
     shared_ptr<arrow::Array> arrow_column;
@@ -136,7 +136,7 @@ void encodeArray(const FieldColumn<FieldColumn<time8_t>>* field_column, vector<s
         (void)list_builder.Append();
         for(int element = 0; element < num_elements; element++)
         {
-            (void)builder->Append(field[element]);
+            (void)builder->Append(field[element].nanoseconds);
         }
     }
 

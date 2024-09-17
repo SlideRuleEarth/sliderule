@@ -126,7 +126,7 @@ void* BathySeaSurfaceFinder::runThread(void* parm)
             for(long i = p0; i < p1; i++)
             {
                 const double height = df.ortho_h[i];
-                const double time_secs = static_cast<double>(df.time_ns[i]) / 1000000000.0;
+                const double time_secs = static_cast<double>(df.time_ns[i].nanoseconds) / 1000000000.0;
 
                 /* get min and max height */
                 if(height < min_h) min_h = height;
