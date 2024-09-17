@@ -118,7 +118,7 @@ class GeoIndexedRaster: public RasterObject
             Thread*             thread;
             Cond                sync;
             bool                run;
-            explicit BatchReader(GeoIndexedRaster* raster);
+            explicit BatchReader(GeoIndexedRaster* _obj);
             ~BatchReader(void);
         } batch_reader_t;
 
@@ -138,26 +138,33 @@ class GeoIndexedRaster: public RasterObject
             cacheitem_t*        entry;
             Cond                sync;
             bool                run;
-            explicit Reader(GeoIndexedRaster* raster);
+            explicit Reader(GeoIndexedRaster* _obj);
             ~Reader(void);
         } reader_t;
 
-        typedef struct {
-            uint32_t            start_indx;
-            uint32_t            end_indx;
-        } finder_range_t;
-
+        typedef RasterObject::range_t range_t;
         typedef struct Finder {
             GeoIndexedRaster*             obj;
             OGRGeometry*                  geo;
-            finder_range_t                range;
+            range_t                       range;
             std::vector<rasters_group_t*> rasterGroups;
             Thread*                       thread;
             Cond                          sync;
             bool                          run;
-            explicit Finder(GeoIndexedRaster* raster);
-            ~Finder(void);
+            explicit Finder(GeoIndexedRaster* _obj);
+                    ~Finder(void);
         } finder_t;
+
+        typedef struct UnionMaker {
+            GeoIndexedRaster*             obj;
+            range_t                       range;
+            // const List<point_info_t*>*    points;
+            std::vector<point_info_t*>*   points;
+            OGRGeometry*                  unionPolyA;
+            OGRGeometry*                  unionPolyB;
+
+            explicit UnionMaker (GeoIndexedRaster* _obj, const List<point_info_t*>* _points);
+        } union_maker_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -191,7 +198,7 @@ class GeoIndexedRaster: public RasterObject
         uint32_t         getGroupFlags         (const rasters_group_t* rgroup);
 
         static double    getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
-        virtual bool     openGeoIndex          (const OGRGeometry* geo);
+        virtual bool     openGeoIndex          (const OGRGeometry* geo, const List<point_info_t*>* points=NULL);
         virtual bool     getFeatureDate        (const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate);
         virtual void     getIndexFile          (const OGRGeometry* geo, std::string& file) = 0;
         virtual bool     findRasters           (finder_t* finder) = 0;
@@ -203,10 +210,10 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        CacheDictionary         cache;
-        vector<OGRFeature*>     featuresList;
-        OGRPolygon              geoIndexPoly;
-        uint32_t                ssErrors;
+        CacheDictionary          cache;
+        std::vector<OGRFeature*> featuresList;
+        OGRPolygon               geoIndexPoly;
+        uint32_t                 ssErrors;
 
     private:
 
@@ -234,8 +241,7 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        uint32_t                  numFinders;
-        finder_range_t*           findersRange;
+        std::vector<range_t>      findersRange;
         List<finder_t*>           finders;
         List<reader_t*>           readers;
         List<batch_reader_t*>     batchReaders;
@@ -257,14 +263,17 @@ class GeoIndexedRaster: public RasterObject
         static void*    finderThread        (void *param);
         static void*    readerThread        (void *param);
         static void*    batchReaderThread   (void *param);
+        static void*    unionThread         (void* parm);
 
         bool            createFinderThreads (void);
         bool            createReaderThreads (uint32_t  rasters2sample);
         bool            createBatchReaderThreads(uint32_t rasters2sample);
+
         bool            updateCache         (uint32_t& rasters2sample, const GroupOrdering* groupList);
         bool            filterRasters       (int64_t gps, GroupOrdering* groupList);
-        void            setFindersRange     (void);
-        bool            findRastersParallel (OGRGeometry* geo, GroupOrdering* groupList);
+        bool            findRastersParallel (OGRGeometry* geo, GroupOrdering* groupList, const List<point_info_t*>* points=NULL);
+        OGRGeometry*    getConvexHull       (const List<point_info_t*>* points);
+        OGRGeometry*    getBufferedPoints   (const List<point_info_t*>* points);
 };
 
 #endif  /* __geo_indexed_raster__ */

@@ -169,26 +169,6 @@ void* ArrowSampler::mainThread(void* parm)
             sampler->robj->getSamples(sampler->obj->points, sampler->samples);
             mlog(INFO, "getSamples time: %.3lf", TimeLib::latchtime() - t);
 
-#if 0
-            print2term("\n%s: sllist len: %u\n", sampler->rkey, sampler->samples.length());
-            uint32_t cnt = 0;
-            for(int32_t i = 0; i < sampler->samples.length(); i++)
-            {
-                sample_list_t* samples = sampler->samples[i];
-                print2term("%d - slist len: %u\n", i, samples->length());
-                for(int32_t j = 0; j < samples->length(); j++)
-                {
-                    RasterSample* sample = samples->get(j);
-                    if(sample)
-                    {
-                        cnt++;
-                        const char* rname = sampler->robj->fileDictGetFile(sample->fileId);
-                        print2term("%10.4lf: %s\n", sample->value, rname);
-                    }
-                }
-            }
-            print2term("%s: samplesCnt: %u\n", sampler->rkey, cnt);
-#endif
             /* batchSampling can take minutes, check active again */
             if(s->active)
                 s->impl->processSamples(sampler);

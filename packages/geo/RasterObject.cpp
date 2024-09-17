@@ -195,12 +195,12 @@ uint32_t RasterObject::getSamples(const List<point_info_t*>& points, List<sample
         const uint32_t maxNumThreads = getMaxBatchThreads();
 
         /* Get readers ranges */
-        std::vector<points_range_t> ranges;
-        getRanges(ranges, points.length(), maxNumThreads);
+        std::vector<range_t> ranges;
+        getRanges(ranges, points.length(), 5, maxNumThreads);
 
         for(uint32_t i = 0; i < ranges.size(); i++)
         {
-            const points_range_t& range = ranges[i];
+            const range_t& range = ranges[i];
             mlog(DEBUG, "ragne-%u: %u to %u\n", i, range.start, range.end);
         }
 
@@ -369,6 +369,46 @@ const char* RasterObject::fileDictGetFile (uint64_t fileId)
             return iterator[i].key;
     }
     return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * getRanges
+ *----------------------------------------------------------------------------*/
+void RasterObject::getRanges(std::vector<range_t>& ranges, uint32_t num,
+                             uint32_t minPerThread, uint32_t maxNumThreads)
+{
+    ranges.clear();
+
+    /* Determine how many threads to use */
+    if(num <= minPerThread)
+    {
+        ranges.emplace_back(range_t{0, num});
+        return;
+    }
+
+    uint32_t numThreads = std::min(maxNumThreads, num / minPerThread);
+
+    /* Ensure at least two threads if num > minPerThread */
+    if(numThreads == 1 && maxNumThreads > 1)
+    {
+        numThreads = 2;
+    }
+
+    const uint32_t pointsPerThread = num / numThreads;
+    uint32_t remainingPoints = num % numThreads;
+
+    uint32_t start = 0;
+    for(uint32_t i = 0; i < numThreads; i++)
+    {
+        const uint32_t end = start + pointsPerThread + (remainingPoints > 0 ? 1 : 0);
+        ranges.emplace_back(range_t{start, end});
+
+        start = end;
+        if(remainingPoints > 0)
+        {
+            remainingPoints--;
+        }
+    }
 }
 
 /******************************************************************************
@@ -633,7 +673,7 @@ void* RasterObject::readerThread(void* parm)
 /*----------------------------------------------------------------------------
  * readSamples
  *----------------------------------------------------------------------------*/
-uint32_t RasterObject::readSamples(RasterObject* robj, const points_range_t& range,
+uint32_t RasterObject::readSamples(RasterObject* robj, const range_t& range,
                                    const List<point_info_t*>& points, std::vector<sample_list_t*>& samples)
 {
     uint32_t ssErrors = SS_NO_ERRORS;
@@ -678,55 +718,5 @@ uint32_t RasterObject::readSamples(RasterObject* robj, const points_range_t& ran
     }
 
     return ssErrors;
-}
-
-/*----------------------------------------------------------------------------
- * getRanges
- *----------------------------------------------------------------------------*/
-void RasterObject::getRanges(std::vector<points_range_t>& ranges, uint32_t numPoints, uint32_t maxNumThreads)
-{
-    /*
-     * If points are geographically dispersed and fall into different data blocks of a raster,
-     * the initial read operation from the AWS S3 bucket can takes the longest time due
-     * to network latency and data retrieval time. Subsequent reads from the same data blocks
-     * are significantly faster due to caching mechanisms.
-     *
-     * To optimize performance and balance the overhead of creating new RasterObjects and
-     * managing multiple threads, a threshold of 5 minPointsPerThread is used. This value
-     * determines when to initiate multiple threads for parallel processing. By doing so,
-     * we aim to enhance efficiency and reduce overall processing time.
-     */
-    const uint32_t minPointsPerThread = 5;
-
-    /* Determine how many reader threads to use and index range for each */
-    if(numPoints <= minPointsPerThread)
-    {
-        ranges.emplace_back(points_range_t{0, numPoints});
-        return;
-    }
-
-    uint32_t numThreads = std::min(maxNumThreads, numPoints / minPointsPerThread);
-
-    /* Ensure at least two threads if numPoints > minPointsPerThread */
-    if(numThreads == 1 && maxNumThreads > 1)
-    {
-        numThreads = 2;
-    }
-
-    const uint32_t pointsPerThread = numPoints / numThreads;
-    uint32_t remainingPoints = numPoints % numThreads;
-
-    uint32_t start = 0;
-    for(uint32_t i = 0; i < numThreads; i++)
-    {
-        const uint32_t end = start + pointsPerThread + (remainingPoints > 0 ? 1 : 0);
-        ranges.emplace_back(points_range_t{start, end});
-
-        start = end;
-        if(remainingPoints > 0)
-        {
-            remainingPoints--;
-        }
-    }
 }
 

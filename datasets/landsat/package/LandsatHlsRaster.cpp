@@ -168,13 +168,13 @@ void LandsatHlsRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
  *----------------------------------------------------------------------------*/
 bool LandsatHlsRaster::findRasters(finder_t* finder)
 {
-    const OGRGeometry* geo    = finder->geo;
-    const uint32_t start_indx = finder->range.start_indx;
-    const uint32_t end_indx   = finder->range.end_indx;
+    const OGRGeometry* geo = finder->geo;
+    const uint32_t start   = finder->range.start;
+    const uint32_t end      = finder->range.end;
 
     try
     {
-        for(uint32_t i = start_indx; i < end_indx; i++)
+        for(uint32_t i = start; i < end; i++)
         {
             OGRFeature* feature = featuresList[i];
             OGRGeometry *rastergeo = feature->GetGeometryRef();

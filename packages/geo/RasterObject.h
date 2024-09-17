@@ -79,13 +79,13 @@ class RasterObject: public LuaObject
         {
             uint32_t   start;
             uint32_t   end;
-        } points_range_t;
+        } range_t;
 
         typedef List<RasterSample*> sample_list_t;
         typedef struct Reader
         {
             RasterObject*                robj;
-            points_range_t               range;
+            range_t                      range;
             const List<point_info_t*>&   points;
             std::vector<sample_list_t*>  samples;  /* Must be vector, not a List */
             uint32_t                     ssErrors;
@@ -145,6 +145,8 @@ class RasterObject: public LuaObject
         bool        isSampling      (void) {return sampling;};
         uint64_t    fileDictAdd     (const std::string& fileName);
         const char* fileDictGetFile (uint64_t fileId);
+        static void getRanges       (std::vector<range_t>& ranges, uint32_t num,
+                                     uint32_t minPerThread, uint32_t maxNumThreads);
 
     protected:
 
@@ -172,10 +174,9 @@ class RasterObject: public LuaObject
         static int      slist2table  (const List<RasterSubset*>& slist, uint32_t errors, lua_State* L);
 
         static void*    readerThread (void* parm);
-        static uint32_t readSamples  (RasterObject* robj, const points_range_t& range,
+        static uint32_t readSamples  (RasterObject* robj, const range_t& range,
                                       const List<point_info_t*>& points, std::vector<sample_list_t*>& samples);
 
-        static void     getRanges    (std::vector<points_range_t>& ranges, uint32_t numPoints, uint32_t maxNumThreads);
 
         /*--------------------------------------------------------------------
          * Data

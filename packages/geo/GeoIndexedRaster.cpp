@@ -59,8 +59,8 @@ const char* GeoIndexedRaster::DATE_TAG  = "datetime";
 /*----------------------------------------------------------------------------
  * Reader Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::Reader::Reader (GeoIndexedRaster* raster):
-    obj(raster),
+GeoIndexedRaster::Reader::Reader (GeoIndexedRaster* _obj):
+    obj(_obj),
     geo(NULL),
     entry(NULL),
     sync(NUM_SYNC_SIGNALS),
@@ -90,8 +90,8 @@ GeoIndexedRaster::Reader::~Reader (void)
 /*----------------------------------------------------------------------------
  * Finder Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::Finder::Finder (GeoIndexedRaster* raster):
-    obj(raster),
+GeoIndexedRaster::Finder::Finder (GeoIndexedRaster* _obj):
+    obj(_obj),
     geo(NULL),
     range{0, 0},
     sync(NUM_SYNC_SIGNALS),
@@ -116,6 +116,19 @@ GeoIndexedRaster::Finder::~Finder (void)
 
     /* geometry geo is cloned not 'newed' on GDAL heap. Use this call to free it */
     OGRGeometryFactory::destroyGeometry(geo);
+}
+
+/*----------------------------------------------------------------------------
+ * UnionMaker Constructor
+ *----------------------------------------------------------------------------*/
+GeoIndexedRaster::UnionMaker::UnionMaker(GeoIndexedRaster* _obj, const List<point_info_t*>* _points):
+    obj(_obj),
+    range({0, 0}),
+    // points(_points),
+    points(NULL),
+    unionPolyA(NULL),
+    unionPolyB(NULL)
+{
 }
 
 /*----------------------------------------------------------------------------
@@ -235,7 +248,7 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
             OGRPoint ogr_point(pinfo->point.x, pinfo->point.y, pinfo->point.z);
 
             GroupOrdering* groupList = new GroupOrdering();
-            findRastersParallel(&ogr_point, groupList);
+            findRastersParallel(&ogr_point, groupList, &points);
             filterRasters(gps, groupList);
 
             pointGroups.emplace_back(point_groups_t{{ogr_point, i}, groupList});
@@ -317,7 +330,8 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
         stats.findPointsForUniqueRastersTime = TimeLib::latchtime() - tstart;
         mlog(gsLevel, "time: %.3lf", stats.findPointsForUniqueRastersTime);
 
-
+//HACK disable reading for now, we are debugging
+#if 1
         /* Create batch reader threads */
         const uint32_t numRasters = uniqueRasters.size();
 
@@ -325,7 +339,6 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
          */
         const uint32_t maxThreads = 20;
         createBatchReaderThreads(std::min(maxThreads, numRasters));
-
         const uint32_t numThreads = batchReaders.length();
         mlog(gsLevel, "Sampling %u rasters with %u threads", numRasters, numThreads);
 
@@ -436,6 +449,7 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
             /* Sampling has been stopped, return empty sllist */
             sllist.clear();
         }
+#endif
     }
     catch (const RunTimeException &e)
     {
@@ -507,7 +521,6 @@ uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t g
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::~GeoIndexedRaster(void)
 {
-    delete [] findersRange;
     emptyFeaturesList();
 }
 
@@ -518,8 +531,8 @@ GeoIndexedRaster::~GeoIndexedRaster(void)
 /*----------------------------------------------------------------------------
  * BatchReader Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::BatchReader::BatchReader (GeoIndexedRaster* raster):
-    obj(raster),
+GeoIndexedRaster::BatchReader::BatchReader (GeoIndexedRaster* _obj):
+    obj(_obj),
     uraster(NULL),
     sync(NUM_SYNC_SIGNALS),
     run(true)
@@ -549,8 +562,6 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
     RasterObject    (L, _parms),
     cache           (MAX_READER_THREADS),
     ssErrors        (SS_NO_ERRORS),
-    numFinders      (0),
-    findersRange    (NULL),
     crscb           (cb),
     bbox            {0, 0, 0, 0},
     rows            (0),
@@ -791,7 +802,7 @@ bool GeoIndexedRaster::getFeatureDate(const OGRFeature* feature, TimeLib::gmt_ti
 /*----------------------------------------------------------------------------
  * openGeoIndex
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
+bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const List<point_info_t*>* points)
 {
     std::string newFile;
     getIndexFile(geo, newFile);
@@ -817,6 +828,21 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
         indexFile = newFile;
         OGRLayer* layer = dset->GetLayer(0);
         CHECKPTR(layer);
+
+        /* If caller provided points, use spatial filter to reduce number of features */
+        if(points)
+        {
+            mlog(INFO, "Filtering features using spatial filter");
+            mlog(INFO, "Features before spatial filter: %lld", layer->GetFeatureCount());
+
+            OGRGeometry* filter = getBufferedPoints(points);
+            if(filter)
+            {
+                layer->SetSpatialFilter(filter);
+                OGRGeometryFactory::destroyGeometry(filter);
+            }
+            mlog(INFO, "Features after spatial filter:  %lld", layer->GetFeatureCount());
+        }
 
         /*
          * Clone features and store them for performance/speed of feature lookup
@@ -861,7 +887,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo)
         }
 
         GDALClose((GDALDatasetH)dset);
-        mlog(DEBUG, "Loaded %lu raster index file", featuresList.size());
+        mlog(INFO, "Loaded index file with %ld features", featuresList.size());
     }
     catch (const RunTimeException &e)
     {
@@ -1196,6 +1222,137 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
 }
 
 /*----------------------------------------------------------------------------
+ * batchReaderThread
+ *----------------------------------------------------------------------------*/
+void* GeoIndexedRaster::unionThread(void* parm)
+{
+    union_maker_t* um = static_cast<union_maker_t*>(parm);
+
+    /* cast away constness because of List [] operator */
+    // List<point_info_t*>* _points = const_cast<List<point_info_t*>*>(um->points);
+
+    /* Create an empty geometry collection to hold all points */
+    OGRGeometryCollection geometryCollection;
+
+    const double distance  = 0.001;   /* Aproxiately 100 meters at equator */
+    const double tolerance = 0.0005;  /* Simplification tolerance          */
+
+    /*
+    * Create geometry collection from the bounding boxes around each point.
+    * NOTE: Using buffered points is significantly more computationally
+    *       expensive than bounding boxes (10x slower).
+    */
+    // mlog(INFO, "Creating collection of bboxes from %d points", _points->length());
+    mlog(INFO, "Creating collection of bboxes from %d points, range: %d - %d", um->range.end - um->range.start, um->range.start, um->range.end);
+    double startTime = TimeLib::latchtime();
+
+    const uint32_t start = um->range.start;
+    const uint32_t end   = um->range.end;
+
+    for(uint32_t i = start; i < end; i++)
+    {
+        // const point_info_t* point_info = _points->get(i);
+        const point_info_t* point_info = um->points->at(i);
+        const double lon = point_info->point.x;
+        const double lat = point_info->point.y;
+
+        /* Create a linear ring representing the bounding box */
+        OGRLinearRing ring;
+        ring.addPoint(lon - distance, lat - distance);  /* Lower-left corner  */
+        ring.addPoint(lon + distance, lat - distance);  /* Lower-right corner */
+        ring.addPoint(lon + distance, lat + distance);  /* Upper-right corner */
+        ring.addPoint(lon - distance, lat + distance);  /* Upper-left corner  */
+        ring.closeRings();
+
+        /* Create a polygon from the ring */
+        OGRPolygon* bboxPoly = new OGRPolygon();
+        bboxPoly->addRing(&ring);
+
+        /* Add the polygon to the geometry collection */
+        geometryCollection.addGeometry(bboxPoly);
+
+        /* Clean up the bounding box */
+        OGRGeometryFactory::destroyGeometry(bboxPoly);
+    }
+    double elapsed = TimeLib::latchtime() - startTime;
+    mlog(INFO, "Creating collection took %.3lf seconds", elapsed);
+
+    /*
+     * Union the bounding boxes in batches to reduce computational complexity.
+     * NOTE: Union call fails with large number of geometries - must use batch union.
+     */
+    const int batchSize = 100;
+    OGRGeometry* unionPolygon = NULL;
+
+    mlog(INFO, "Unioning all point geometries using batch size: %d", batchSize);
+    startTime = TimeLib::latchtime();
+    for(int i = 0; i < geometryCollection.getNumGeometries(); i += batchSize)
+    {
+        OGRGeometry* batchUnion = NULL;
+        for(int j = i; j < std::min(i + batchSize, geometryCollection.getNumGeometries()); ++j)
+        {
+            OGRGeometry* geo = geometryCollection.getGeometryRef(j);
+            if(batchUnion == NULL)
+            {
+                batchUnion = geo->clone();
+            }
+            else
+            {
+                OGRGeometry* newUnion = batchUnion->Union(geo);
+                OGRGeometryFactory::destroyGeometry(batchUnion);
+                batchUnion = newUnion;
+            }
+        }
+
+        /* Combine the batch union with the overall union polygon */
+        if(batchUnion)
+        {
+            /* Simplify the batch union to reduce complexity */
+            OGRGeometry* simplifiedBatchUnion = batchUnion->Simplify(tolerance);
+            OGRGeometryFactory::destroyGeometry(batchUnion);
+            batchUnion = simplifiedBatchUnion;
+
+            if(unionPolygon == NULL)
+            {
+                /* Initial union polygon */
+                unionPolygon = batchUnion;
+            }
+            else
+            {
+                OGRGeometry* newUnionPolygon = unionPolygon->Union(batchUnion);
+                OGRGeometryFactory::destroyGeometry(unionPolygon);
+                unionPolygon = newUnionPolygon;
+                OGRGeometryFactory::destroyGeometry(batchUnion);
+            }
+        }
+    }
+    elapsed = TimeLib::latchtime() - startTime;
+    mlog(INFO, "Unioning all geometries took %.3lf seconds", elapsed);
+
+
+    if(unionPolygon == NULL)
+    {
+        mlog(ERROR, "Unioning geometries failed");
+        return NULL;
+    }
+
+    /* Simplify the final union polygon to reduce complexity */
+    OGRGeometry* simplifiedPolygon = unionPolygon->Simplify(tolerance);
+    OGRGeometryFactory::destroyGeometry(unionPolygon);
+    unionPolygon = simplifiedPolygon;
+    if(simplifiedPolygon == NULL)
+    {
+        mlog(ERROR, "Failed to simplify polygon");
+    }
+
+    /* Set the unioned polygon in the union maker object */
+    um->unionPolyA = unionPolygon;
+
+    /* Exit Thread */
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------
  * createFinderThreads
  *----------------------------------------------------------------------------*/
 bool GeoIndexedRaster::createFinderThreads(void)
@@ -1207,9 +1364,6 @@ bool GeoIndexedRaster::createFinderThreads(void)
         Finder* f = new Finder(this);
         finders.add(f);
     }
-
-    /* Array of ranges for each thread */
-    findersRange = new finder_range_t[MAX_FINDER_THREADS];
 
     return finders.length() == MAX_FINDER_THREADS;
 }
@@ -1459,64 +1613,27 @@ bool GeoIndexedRaster::filterRasters(int64_t gps, GroupOrdering* groupList)
 }
 
 /*----------------------------------------------------------------------------
- * setFindersRange
- *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::setFindersRange(void)
-{
-    const uint32_t minFeaturesPerThread = MIN_FEATURES_PER_FINDER_THREAD;
-    const uint32_t features = featuresList.size();
-
-    /* Determine how many finder threads to use and index range for each */
-    if(features <= minFeaturesPerThread)
-    {
-        numFinders = 1;
-        findersRange[0].start_indx = 0;
-        findersRange[0].end_indx = features;
-        return;
-    }
-
-    numFinders = std::min(static_cast<uint32_t>(MAX_FINDER_THREADS), features / minFeaturesPerThread);
-
-    /* Ensure at least two threads if features > minFeaturesPerThread */
-    if(numFinders == 1)
-    {
-        numFinders = 2;
-    }
-
-    const uint32_t featuresPerThread = features / numFinders;
-    uint32_t remainingFeatures = features % numFinders;
-
-    uint32_t start = 0;
-    for(uint32_t i = 0; i < numFinders; i++)
-    {
-        findersRange[i].start_indx = start;
-        findersRange[i].end_indx = start + featuresPerThread + (remainingFeatures > 0 ? 1 : 0);
-        start = findersRange[i].end_indx;
-        if(remainingFeatures > 0)
-        {
-            remainingFeatures--;
-        }
-    }
-}
-
-
-/*----------------------------------------------------------------------------
  * findRastersParallel
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::findRastersParallel(OGRGeometry* geo, GroupOrdering* groupList)
+bool GeoIndexedRaster::findRastersParallel(OGRGeometry* geo, GroupOrdering* groupList, const List<point_info_t*>* points)
 {
     /* For AOI always open new index file, for POI it depends... */
     const bool openNewFile = GdalRaster::ispoly(geo) || geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo);
     if(openNewFile)
     {
-        if(!openGeoIndex(geo))
+        if(!openGeoIndex(geo, points))
             return false;
 
-        setFindersRange();
+        /* Update findersRange with new featuresList */
+        getRanges(findersRange, featuresList.size(), MIN_FEATURES_PER_FINDER_THREAD, MAX_FINDER_THREADS);
+        mlog(DEBUG, "Using %ld finder threads to search %ld features", findersRange.size(), featuresList.size());
     }
+
+    const uint32_t numFinders = findersRange.size();
 
     /* Start finder threads to find rasters intersecting with point/polygon */
     uint32_t signaledFinders = 0;
+
     for(uint32_t i = 0; i < numFinders; i++)
     {
         Finder* finder = finders[i];
@@ -1556,4 +1673,138 @@ bool GeoIndexedRaster::findRastersParallel(OGRGeometry* geo, GroupOrdering* grou
     }
 
     return (!groupList->empty());
+}
+
+
+/*----------------------------------------------------------------------------
+ * getConvexHull
+ *----------------------------------------------------------------------------*/
+OGRGeometry* GeoIndexedRaster::getConvexHull(const List<point_info_t*>* points)
+{
+    if(points->empty())
+        return NULL;
+
+    /* cast away constness because of List [] operator */
+    List<point_info_t*>* _points = const_cast<List<point_info_t*>*>(points);
+
+    /* Create an empty geometry collection to hold all points */
+    OGRGeometryCollection geometryCollection;
+
+    /* Collect all points into a geometry collection */
+    mlog(INFO, "Creating convex hull from %d points", points->length());
+    for(int i = 0; i < points->length(); i++)
+    {
+        const point_info_t* point_info = _points->get(i);
+        double lon = point_info->point.x;
+        double lat = point_info->point.y;
+
+        OGRPoint* point = new OGRPoint(lon, lat);
+        geometryCollection.addGeometryDirectly(point);
+    }
+
+    /* Create a convex hull that wraps around all the points */
+    OGRGeometry* convexHull = geometryCollection.ConvexHull();
+    if(convexHull == NULL)
+    {
+        mlog(ERROR, "Failed to create a convex hull around points.");
+    }
+
+    return convexHull;
+}
+
+/*----------------------------------------------------------------------------
+ * getBufferedPoints
+ *----------------------------------------------------------------------------*/
+OGRGeometry* GeoIndexedRaster::getBufferedPoints(const List<point_info_t*>* points)
+{
+    if(points->empty())
+        return NULL;
+
+    /* Start geometry union threads */
+    std::vector<Thread*> pids;
+    std::vector<union_maker_t*> unionMakers;
+
+    const uint32_t numMaxThreads = std::thread::hardware_concurrency();
+    const uint32_t minPointsPerThread = 100;
+
+    std::vector<range_t> ranges;
+    getRanges(ranges, points->length(), minPointsPerThread, numMaxThreads);
+
+    const uint32_t numThreads = ranges.size();
+    for(uint32_t i = 0; i < numThreads; i++)
+    {
+        const range_t& range = ranges[i];
+        mlog(INFO, "Range[%d]: %d - %d", i, range.start, range.end);
+    }
+
+    /* cast away constness because of List [] operator */
+    List<point_info_t*>* _points = const_cast<List<point_info_t*>*>(points);
+
+    //TEMP HACK: convert List to vector
+    //           multithreading with List is not working, need to investigate
+    //           I should be able to use List with multiple threads if I am not changing the list and only readign from it
+    //           but it is not working(corrupted memory detected by sanitizer)
+    //           so I am converting it to vector for now.
+    //           I had similar issue with Dictionary. I use it in Landast code and multiple threads reading from it were crashing.
+    //           I had to use mutex to protect it. I will investigate this issue later.
+    std::vector<point_info_t*> vectPoints;
+    for(int i = 0; i < points->length(); i++)
+    {
+        vectPoints.push_back(_points->get(i));
+    }
+
+    for(uint32_t i = 0; i < numThreads; i++)
+    {
+        union_maker_t* um = new union_maker_t(this, points);
+        um->range = ranges[i];
+        um->points = &vectPoints;
+        // um->points = points;
+        unionMakers.push_back(um);
+        Thread* pid = new Thread(unionThread, um);
+        pids.push_back(pid);
+    }
+
+    /* Wait for all union maker threads to finish */
+    for(Thread* pid : pids)
+    {
+        delete pid;
+    }
+
+
+    /* Combine results from all union maker threads */
+    OGRGeometry* unionPolygon = NULL;
+
+    for(union_maker_t* um : unionMakers)
+    {
+        if(um->unionPolyA == NULL)
+        {
+            mlog(WARNING, "Union polygon is NULL");
+            continue;
+        }
+
+        if(unionPolygon == NULL)
+        {
+            unionPolygon = um->unionPolyA;
+        }
+        else
+        {
+            OGRGeometry* newUnionPolygon = unionPolygon->Union(um->unionPolyA);
+            OGRGeometryFactory::destroyGeometry(unionPolygon);
+            unionPolygon = newUnionPolygon;
+            OGRGeometryFactory::destroyGeometry(um->unionPolyA);
+        }
+
+        const double tolerance = 0.0005;  /* Simplification tolerance          */
+        OGRGeometry* simplifiedPolygon = unionPolygon->Simplify(tolerance);
+        OGRGeometryFactory::destroyGeometry(unionPolygon);
+        unionPolygon = simplifiedPolygon;
+        if(simplifiedPolygon == NULL)
+        {
+            mlog(ERROR, "Failed to simplify polygon");
+        }
+
+        delete um;
+    }
+
+    return unionPolygon;
 }

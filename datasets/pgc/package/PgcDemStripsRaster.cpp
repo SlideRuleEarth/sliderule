@@ -84,11 +84,11 @@ bool PgcDemStripsRaster::getFeatureDate(const OGRFeature* feature, TimeLib::gmt_
 /*----------------------------------------------------------------------------
  * openGeoIndex
  *----------------------------------------------------------------------------*/
-bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo)
+bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo, const List<point_info_t*>* points)
 {
     /* For point call parent class */
     if(GdalRaster::ispoint(geo))
-        return GeoIndexedRaster::openGeoIndex(geo);
+        return GeoIndexedRaster::openGeoIndex(geo, points);
 
     /*
      * Create a list of minx, miny  1° x 1° geocell points contained in AOI
@@ -195,9 +195,9 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
 bool PgcDemStripsRaster::findRasters(finder_t* finder)
 {
 
-    const OGRGeometry* geo    = finder->geo;
-    const uint32_t start_indx = finder->range.start_indx;
-    const uint32_t end_indx   = finder->range.end_indx;
+    const OGRGeometry* geo = finder->geo;
+    const uint32_t start   = finder->range.start;
+    const uint32_t end     = finder->range.end;
 
     /*
      * Find rasters and their dates.
@@ -213,7 +213,7 @@ bool PgcDemStripsRaster::findRasters(finder_t* finder)
      */
     try
     {
-        for(uint32_t i = start_indx; i < end_indx; i++)
+        for(uint32_t i = start; i < end; i++)
         {
             OGRFeature* feature = featuresList[i];
             OGRGeometry* rastergeo = feature->GetGeometryRef();
