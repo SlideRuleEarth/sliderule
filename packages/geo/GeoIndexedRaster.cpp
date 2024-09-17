@@ -37,6 +37,8 @@
 #include "GeoIndexedRaster.h"
 
 #include <algorithm>
+#include <unordered_map>
+#include <set>
 #include <gdal.h>
 #include <gdalwarper.h>
 #include <gdal_priv.h>
@@ -235,6 +237,9 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         /* Find raster groups for each point */
         mlog(gsLevel, "Finding rasters groups");
 
+        /* Map raster file names to a set of ordered unique points */
+        std::unordered_map<std::string, std::set<uint32_t>> rasterToPointsMap;
+
         /* For all points from the caller, create a vector of raster group lists */
         startTime = TimeLib::latchtime();
         for(uint32_t i = 0; i < points.size(); i++)
@@ -248,9 +253,20 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
             filterRasters(gps, groupList);
 
             pointGroups.emplace_back(point_groups_t{{ogr_point, i}, groupList});
+
+            /* Add raster file names from this groupList to rasterToPointsMap */
+            const GroupOrdering::Iterator iter(*groupList);
+            for(int j = 0; j < iter.length; j++)
+            {
+                const rasters_group_t* rgroup = iter[j].value;
+                for(const raster_info_t& rinfo : rgroup->infovect)
+                {
+                    rasterToPointsMap[rinfo.fileName].insert(i);
+                }
+            }
         }
         stats.findRastersTime = TimeLib::latchtime() - startTime;
-        mlog(gsLevel, "time: %.3lf", stats.findRastersTime);
+        mlog(gsLevel, "Finding rasters groups time: %.3lf", stats.findRastersTime);
 
         /* Create vector of unique rasters. */
         mlog(gsLevel, "Finding unique rasters");
@@ -291,7 +307,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
             }
         }
         stats.findUniqueRastersTime = TimeLib::latchtime() - startTime;
-        mlog(gsLevel, "rasters: %zu, time: %.3lf", uniqueRasters.size(), stats.findUniqueRastersTime);
+        mlog(gsLevel, "Found unique rasters: %zu time: %.3lf", uniqueRasters.size(), stats.findUniqueRastersTime);
 
         /*
          * For each unique raster, find the points that belong to it
@@ -302,28 +318,18 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         {
             const std::string& rasterName = ur->rinfo.fileName;
 
-            /* Is this raster in the group of rasters for this point? */
-            for(uint32_t pointIndx = 0; pointIndx < pointGroups.size(); pointIndx++)
+            auto it = rasterToPointsMap.find(rasterName);
+            if(it != rasterToPointsMap.end())
             {
-                const point_groups_t& pg = pointGroups[pointIndx];
-                const GroupOrdering::Iterator iter(*pg.groupList);
-                for(int i = 0; i < iter.length; i++)
+                for(const uint32_t pointIndx : it->second)
                 {
-                    const rasters_group_t* rgroup = iter[i].value;
-                    for(const auto& ri : rgroup->infovect)
-                    {
-                        if(ri.fileName == rasterName)
-                        {
-                            /* Found rasterName in this group of rasters, add this point */
-                            ur->pointSamples.push_back({pg.pointInfo, NULL, SS_NO_ERRORS});
-                            break;
-                        }
-                    }
+                    const point_groups_t& pg = pointGroups[pointIndx];
+                    ur->pointSamples.push_back({pg.pointInfo, NULL, SS_NO_ERRORS});
                 }
             }
         }
         stats.findPointsForUniqueRastersTime = TimeLib::latchtime() - startTime;
-        mlog(gsLevel, "time: %.3lf", stats.findPointsForUniqueRastersTime);
+        mlog(gsLevel, "Points for unique rasters time: %.3lf", stats.findPointsForUniqueRastersTime);
 
 //HACK disable reading for now, we are debugging
 #if 1
@@ -883,7 +889,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
         }
 
         GDALClose((GDALDatasetH)dset);
-        mlog(INFO, "Loaded index file with %ld features", featuresList.size());
+        mlog(DEBUG, "Loaded index file with %ld features", featuresList.size());
     }
     catch (const RunTimeException &e)
     {
@@ -1772,14 +1778,14 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>
     }
 
     const double elapsedTime = TimeLib::latchtime() - startTime;
-    mlog(INFO, "Unioning all geometries took %.3lf seconds", elapsedTime);
+    mlog(INFO, "Unioning point geometries took %.3lf", elapsedTime);
 
     /* Log stats and cleanup */
     for(uint32_t i = 0; i < unionMakers.size(); i++)
     {
         union_maker_t* um = unionMakers[i];
 
-        mlog(INFO, "Thread[%d]: %10d - %-10d p2poly: %.3lf, unioning: %.3lf",
+        mlog(DEBUG, "Thread[%d]: %10d - %-10d p2poly: %.3lf, unioning: %.3lf",
              i, um->range.start, um->range.end, um->stats.points2polyTime, um->stats.unioningTime);
 
         delete um;
