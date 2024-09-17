@@ -162,17 +162,17 @@ static headers_t buildReadHeadersV2 (const char* bucket, const char* key, Creden
     if(credentials && credentials->provided)
     {
         /* Build SecurityToken Header */
-        FString securityTokenHeader("x-amz-security-token:%s", credentials->sessionToken);
+        FString securityTokenHeader("x-amz-security-token:%s", credentials->sessionToken.value.c_str());
         headers = curl_slist_append(headers, securityTokenHeader.c_str());
 
         /* Build Authorization Header */
         FString stringToSign("GET\n\n\n%s\n%s\n/%s/%s", date.c_str(), securityTokenHeader.c_str(), bucket, key);
         unsigned char hash[EVP_MAX_MD_SIZE];
         unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
-        HMAC(EVP_sha1(), reinterpret_cast<const unsigned char*>(credentials->secretAccessKey), StringLib::size(credentials->secretAccessKey), reinterpret_cast<const unsigned char*>(stringToSign.c_str()), stringToSign.size(), hash, &hash_size);
+        HMAC(EVP_sha1(), reinterpret_cast<const unsigned char*>(credentials->secretAccessKey.value.c_str()), StringLib::size(credentials->secretAccessKey.value.c_str()), reinterpret_cast<const unsigned char*>(stringToSign.c_str()), stringToSign.size(), hash, &hash_size);
         int encoded_hash_size = static_cast<int>(hash_size);
         const char* encodedHash = StringLib::b64encode(hash, &encoded_hash_size);
-        FString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId, encodedHash);
+        FString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId.value.c_str(), encodedHash);
         headers = curl_slist_append(headers, authorizationHeader.c_str());
         delete [] encodedHash;
     }
@@ -211,17 +211,17 @@ static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const
     if(credentials && credentials->provided)
     {
         /* Build SecurityToken Header */
-        FString securityTokenHeader("x-amz-security-token:%s", credentials->sessionToken);
+        FString securityTokenHeader("x-amz-security-token:%s", credentials->sessionToken.value.c_str());
         headers = curl_slist_append(headers, securityTokenHeader.c_str());
 
         /* Build Authorization Header */
         FString stringToSign("PUT\n\n%s\n%s\n%s\n/%s/%s", contentType.c_str(), date.c_str(), securityTokenHeader.c_str(), bucket, key);
         unsigned char hash[EVP_MAX_MD_SIZE];
         unsigned int hash_size = EVP_MAX_MD_SIZE; // set below with actual size
-        HMAC(EVP_sha1(), reinterpret_cast<const unsigned char*>(credentials->secretAccessKey), StringLib::size(credentials->secretAccessKey), reinterpret_cast<const unsigned char*>(stringToSign.c_str()), stringToSign.length(), hash, &hash_size);
+        HMAC(EVP_sha1(), reinterpret_cast<const unsigned char*>(credentials->secretAccessKey.value.c_str()), StringLib::size(credentials->secretAccessKey.value.c_str()), reinterpret_cast<const unsigned char*>(stringToSign.c_str()), stringToSign.length(), hash, &hash_size);
         int encoded_hash_size = static_cast<int>(hash_size);
         const char* encodedHash = StringLib::b64encode(hash, &encoded_hash_size);
-        FString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId, encodedHash);
+        FString authorizationHeader("Authorization: AWS %s:%s", credentials->accessKeyId.value.c_str(), encodedHash);
         headers = curl_slist_append(headers, authorizationHeader.c_str());
         delete [] encodedHash;
     }
@@ -256,7 +256,7 @@ static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const
     /* Build Canonical Request */
     char canonical_request_hash[SHA256_HEX_STR_SIZE];
     FString canonical_request("PUT\n/%s\n\ncontent-length:%ld\ndate:%s\nhost:%s.s3.amazonaws.com\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:%s\nx-amz-security-token:%s\n\ncontent-length;date;host;x-amz-content-sha256;x-amz-date;x-amz-security-token\nUNSIGNED-PAYLOAD",
-                                    key, content_length, timestamp.c_str(), bucket, timestamp.c_str(), credentials->sessionToken);
+                                    key, content_length, timestamp.c_str(), bucket, timestamp.c_str(), credentials->sessionToken.value.c_str());
     sha256hash(canonical_request.c_str(), canonical_request.length(), canonical_request_hash);
 
     /* Build String To Sign */
@@ -265,7 +265,7 @@ static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const
     FString str2sign("AWS4-HMAC-SHA256\n%s\n%s\n%s", timestamp.c_str(), scope.c_str(), canonical_request_hash);
 
     /* Calculate Signature */
-    FString secret_access_key_str2sign("AWS4%s", credentials->secretAccessKey);
+    FString secret_access_key_str2sign("AWS4%s", credentials->secretAccessKey.value.c_str());
 
     unsigned char date_key[EVP_MAX_MD_SIZE];
     unsigned int date_key_size = EVP_MAX_MD_SIZE; // set below with actual size
@@ -303,7 +303,7 @@ static headers_t buildWriteHeadersV4 (const char* bucket, const char* key, const
     headers = curl_slist_append(headers, auth_hdr.c_str());
     FString amz_date_hdr("x-amz-date: %s", timestamp.c_str());
     headers = curl_slist_append(headers, amz_date_hdr.c_str());
-    FString amz_token_hdr("x-amz-security-token: %s", credentials->sessionToken);
+    FString amz_token_hdr("x-amz-security-token: %s", credentials->sessionToken.value.c_str());
     headers = curl_slist_append(headers, amz_date_hdr.c_str());
     FString amz_content_sha256_hdr("x-amz-content-sha256: %s", "UNSIGNED-PAYLOAD");
     headers = curl_slist_append(headers, amz_content_sha256_hdr.c_str());

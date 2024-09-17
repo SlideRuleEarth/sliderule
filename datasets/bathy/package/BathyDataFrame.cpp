@@ -658,7 +658,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 }
 
                 /* Add Photon to DataFrame */
-                dataframe.addRow()l // start new row in dataframe
+                dataframe.addRow(); // start new row in dataframe
                 dataframe.time_ns.append(Icesat2Fields::deltatime2timestamp(current_delta_time));
                 dataframe.index_ph.append(static_cast<int32_t>(region.first_photon) + current_photon);
                 dataframe.index_seg.append(static_cast<int32_t>(region.first_segment) + current_segment);

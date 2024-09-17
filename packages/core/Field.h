@@ -148,7 +148,7 @@ inline int convertToLua(lua_State* L, const uint32_t& v) { lua_pushinteger(L, v)
 inline int convertToLua(lua_State* L, const uint64_t& v) { lua_pushinteger(L, v); return 1; }
 inline int convertToLua(lua_State* L, const float& v)    { lua_pushnumber(L, v);  return 1; }
 inline int convertToLua(lua_State* L, const double& v)   { lua_pushnumber(L, v);  return 1; }
-inline int convertToLua(lua_State* L, const time8_t& v)  { lua_pushinteger(L, static_cast<int64_t>(v));  return 1; }
+//inline int convertToLua(lua_State* L, const time8_t& v)  { lua_pushinteger(L, static_cast<int64_t>(v));  return 1; }
 inline int convertToLua(lua_State* L, const string& v)   { lua_pushstring(L, v.c_str()); return 1; }
 
 // fromlua
@@ -163,7 +163,7 @@ inline void convertFromLua(lua_State* L, int index, uint32_t& v) { v = static_ca
 inline void convertFromLua(lua_State* L, int index, uint64_t& v) { v = static_cast<uint64_t>(LuaObject::getLuaInteger(L, index)); }
 inline void convertFromLua(lua_State* L, int index, float& v)    { v = static_cast<float>(LuaObject::getLuaFloat(L, index)); }
 inline void convertFromLua(lua_State* L, int index, double& v)   { v = LuaObject::getLuaFloat(L, index); }
-inline void convertFromLua(lua_State* L, int index, time8_t& v)  { v = static_cast<time8_t>(LuaObject::getLuaInteger(L, index)); }
+//inline void convertFromLua(lua_State* L, int index, time8_t& v)  { v = static_cast<time8_t>(LuaObject::getLuaInteger(L, index)); }
 inline void convertFromLua(lua_State* L, int index, string& v)   { v = LuaObject::getLuaString(L, index); }
 
 // encoding
@@ -178,7 +178,7 @@ inline uint32_t toEncoding(uint32_t& v) { (void)v; return Field::UINT32; };
 inline uint32_t toEncoding(uint64_t& v) { (void)v; return Field::UINT64; };
 inline uint32_t toEncoding(float& v)    { (void)v; return Field::FLOAT;  };
 inline uint32_t toEncoding(double& v)   { (void)v; return Field::DOUBLE; };
-inline uint32_t toEncoding(time8_t& v)  { (void)v; return Field::TIME8;  };
+//inline uint32_t toEncoding(time8_t& v)  { (void)v; return Field::TIME8;  };
 inline uint32_t toEncoding(string& v)   { (void)v; return Field::STRING; };
 
 // encoding

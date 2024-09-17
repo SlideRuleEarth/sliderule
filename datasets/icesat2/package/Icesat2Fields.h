@@ -381,4 +381,14 @@ void convertFromIndex(int index, Icesat2Fields::spot_t& v);
 int convertToLua(lua_State* L, const Icesat2Fields::surface_type_t& v);
 void convertFromLua(lua_State* L, int index, Icesat2Fields::surface_type_t& v);
 
+inline uint32_t toEncoding(Icesat2Fields::surface_type_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Fields::spot_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Fields::gt_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Fields::atl08_class_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Fields::quality_ph_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Icesat2Fields::signal_conf_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(PhorealFields::phoreal_geoloc_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(PhorealFields& v) { (void)v; return Field::USER; }
+inline uint32_t toEncoding(YapcFields& v) { (void)v; return Field::USER; }
+
 #endif  /* __icesat2_fields__ */

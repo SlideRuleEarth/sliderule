@@ -114,7 +114,7 @@ inline uint32_t toEncoding(FieldColumn<uint32_t>& v) { (void)v; return Field::NE
 inline uint32_t toEncoding(FieldColumn<uint64_t>& v) { (void)v; return Field::NESTED_COLUMN | Field::UINT64; };
 inline uint32_t toEncoding(FieldColumn<float>& v)    { (void)v; return Field::NESTED_COLUMN | Field::FLOAT;  };
 inline uint32_t toEncoding(FieldColumn<double>& v)   { (void)v; return Field::NESTED_COLUMN | Field::DOUBLE; };
-inline uint32_t toEncoding(FieldColumn<time8_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::TIME8;  };
+//inline uint32_t toEncoding(FieldColumn<time8_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::TIME8;  };
 inline uint32_t toEncoding(FieldColumn<string>& v)   { (void)v; return Field::NESTED_COLUMN | Field::STRING; };
 
 /******************************************************************************

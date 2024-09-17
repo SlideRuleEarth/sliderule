@@ -97,6 +97,46 @@ inline void convertFromLua(lua_State* L, int index, FieldArray<T, N>& v) {
     v.fromLua(L, index);
 }
 
+// encoding
+template <int N>
+inline uint32_t toEncoding(FieldArray<bool, N>& v)     { (void)v; return Field::NESTED_ARRAY | Field::BOOL;   };
+
+template <int N>
+inline uint32_t toEncoding(FieldArray<int8_t, N>& v)   { (void)v; return Field::NESTED_ARRAY | Field::INT8;   };
+
+template <int N>
+inline uint32_t toEncoding(FieldArray<int16_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::INT16;  };
+
+template <int N>
+inline uint32_t toEncoding(FieldArray<int32_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::INT32;  };
+
+template <int N>
+inline uint32_t toEncoding(FieldArray<int64_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::INT64;  };
+
+template <int N>
+inline uint32_t toEncoding(FieldArray<uint8_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::UINT8;  };
+
+template <int N>
+inline uint32_t toEncoding(FieldArray<uint16_t, N>& v) { (void)v; return Field::NESTED_ARRAY | Field::UINT16; };
+
+template <int N>
+inline uint32_t toEncoding(FieldArray<uint32_t, N>& v) { (void)v; return Field::NESTED_ARRAY | Field::UINT32; };
+
+template <int N>
+inline uint32_t toEncoding(FieldArray<uint64_t, N>& v) { (void)v; return Field::NESTED_ARRAY | Field::UINT64; };
+
+template <int N>
+inline uint32_t toEncoding(FieldArray<float, N>& v)    { (void)v; return Field::NESTED_ARRAY | Field::FLOAT;  };
+
+template <int N>
+inline uint32_t toEncoding(FieldArray<double, N>& v)   { (void)v; return Field::NESTED_ARRAY | Field::DOUBLE; };
+
+//template <int N>
+//inline uint32_t toEncoding(FieldArray`<time8_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::TIME8;  };
+
+template <int N>
+inline uint32_t toEncoding(FieldArray<string, N>& v)   { (void)v; return Field::NESTED_ARRAY | Field::STRING; };
+
 /******************************************************************************
  * METHODS
  ******************************************************************************/

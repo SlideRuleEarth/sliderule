@@ -211,4 +211,9 @@ void convertFromLua(lua_State* L, int index, BathyFields::classifier_t& v);
 int convertToIndex(const BathyFields::classifier_t& v);
 void convertFromIndex(int index, BathyFields::classifier_t& v);
 
+inline uint32_t toEncoding(BathyFields::classifier_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(SurfaceFields& v) { (void)v; return Field::USER; }
+inline uint32_t toEncoding(UncertaintyFields& v) { (void)v; return Field::USER; }
+inline uint32_t toEncoding(RefractionFields& v) { (void)v; return Field::USER; }
+
 #endif  /* __bathy_fields__ */

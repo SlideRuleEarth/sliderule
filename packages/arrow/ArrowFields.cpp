@@ -43,7 +43,7 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArrowFields::ArrowFields (lua_State* L, int index):
+ArrowFields::ArrowFields (void):
     FieldDictionary ({
         {"path",                &path},
         {"format",              &format},

@@ -44,7 +44,7 @@
 #include "TimeLib.h"
 
 /******************************************************************************
- * AWS S3 LIBRARY CLASS
+ * CLASS
  ******************************************************************************/
 
 class CredentialStore
@@ -112,7 +112,10 @@ class CredentialStore
                 }
             };
 
-            Credential(const Credential& c) {
+            Credential(const Credential& c):
+                FieldDictionary()
+            {
+                fields = c.fields;
                 expirationGps = c.expirationGps;
             };
 
@@ -149,5 +152,11 @@ class CredentialStore
         static Dictionary<Credential> credentialStore;
         static Dictionary<int32_t> metricIds;
 };
+
+/******************************************************************************
+ * FUNCTIONS
+ ******************************************************************************/
+
+inline uint32_t toEncoding(CredentialStore::Credential& v) { (void)v; return Field::USER; }
 
 #endif  /* __credential_store__ */

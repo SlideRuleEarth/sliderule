@@ -78,7 +78,7 @@ void encode(const FieldColumn<T>* field_column, vector<shared_ptr<arrow::Array>>
 /*----------------------------------------------------------------------------
 * encode - time8_t
 *----------------------------------------------------------------------------*/
-void encode(const FieldColumn<time8_t>* field_column, vector<shared_ptr<arrow::Array>>& columns ) 
+void encode(const FieldColumn<time8_t>* field_column, vector<shared_ptr<arrow::Array>>& columns) 
 {
     arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
 
@@ -308,7 +308,7 @@ void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata
 /*----------------------------------------------------------------------------
 * appendServerMetaData
 *----------------------------------------------------------------------------*/
-void appendServerMetaData (const GeoDataFrame& dataframe, const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
+void appendServerMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
 {
     /* Build Launch Time String */
     const int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
@@ -355,7 +355,7 @@ void appendServerMetaData (const GeoDataFrame& dataframe, const std::shared_ptr<
         durationstr.c_str(),
         packagestr.c_str(),
         BUILDINFO,
-        timestr.c_str()));
+        timestr.c_str()).c_str());
 
     /* Clean Up JSON String */
     metastr = std::regex_replace(metastr, std::regex("    "), "");
@@ -502,7 +502,7 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const ArrowFie
                 case Field::NESTED_COLUMN | Field::STRING: encodeArray<string,   arrow::StringBuilder> (dynamic_cast<const FieldColumn<FieldColumn<string>>*>(field), columns);   break;
                 case Field::NESTED_COLUMN | Field::TIME8:  encodeArray(dynamic_cast<const FieldColumn<FieldColumn<time8_t>>*>(field), columns); break;
 
-                default: mlog(DEBUG, "Skipping column %s with encoding", name, static_cast<int>(field->encoding)); break;
+                default: mlog(DEBUG, "Skipping column %s with encoding %d", name, static_cast<int>(field->encoding)); break;
             }
         }
         else
@@ -518,18 +518,10 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const ArrowFie
     stop_trace(INFO, geo_trace_id);
 }
 
-/*----------------------------------------------------------------------------
-* createWriter
-*----------------------------------------------------------------------------*/
-void createWriter (const ArrowFields& parms, const GeoDataFrame& dataframe)
-{
-}
-
 /******************************************************************************
  * CLASS DATA
  ******************************************************************************/
 
-const char* ArrowDataFrame::OBJECT_TYPE = "ArrowDataFrame";
 const char* ArrowDataFrame::OBJECT_TYPE = "ArrowDataFrame";
 const char* ArrowDataFrame::LUA_META_NAME = "ArrowDataFrame";
 const struct luaL_Reg ArrowDataFrame::LUA_META_TABLE[] = {
@@ -573,6 +565,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
     try
     {
         ArrowDataFrame* lua_obj = dynamic_cast<ArrowDataFrame*>(getLuaSelf(L, 1));
+        (void)lua_obj;
         lua_pushboolean(L, true);
     }
     catch(const RunTimeException& e)
@@ -593,6 +586,7 @@ int ArrowDataFrame::luaImport (lua_State* L)
     try
     {
         ArrowDataFrame* lua_obj = dynamic_cast<ArrowDataFrame*>(getLuaSelf(L, 1));
+        (void)lua_obj;
     }
     catch(const RunTimeException& e)
     {
@@ -613,7 +607,7 @@ ArrowDataFrame::ArrowDataFrame(lua_State* L, RequestFields* _parms, GeoDataFrame
 {
     assert(parms);
     assert(dataframe);
-    
+
     // start trace
     const uint32_t parent_trace_id = EventLib::grabId();
     const uint32_t trace_id = start_trace(INFO, parent_trace_id, "ArrowDataFrame", "{\"num_rows\": %d}", dataframe.length());
@@ -654,7 +648,7 @@ ArrowDataFrame::ArrowDataFrame(lua_State* L, RequestFields* _parms, GeoDataFrame
             // set metadata
             auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
             if(arrow_parms.asGeo.value) appendGeoMetaData(metadata);
-            appendServerMetaData(*dataframe, metadata);
+            appendServerMetaData(metadata);
             appendPandasMetaData(dataframe->getTimeColumnName().c_str(), metadata, schema);
             schema = schema->WithMetadata(metadata);
 
@@ -717,7 +711,7 @@ ArrowDataFrame::ArrowDataFrame(lua_State* L, RequestFields* _parms, GeoDataFrame
     }
     else
     {
-        mlog(CRITICAL, "Unsupported format: %d", arrow_parms.format);
+        mlog(CRITICAL, "Unsupported format: %d", arrow_parms.format.value);
     }
     stop_trace(INFO, write_trace_id);
 

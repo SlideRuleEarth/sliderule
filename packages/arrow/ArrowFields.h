@@ -85,8 +85,8 @@ class ArrowFields: public FieldDictionary
         * Methods
         *--------------------------------------------------------------------*/
 
-        ArrowFields     (lua_State* L, int index);
-        ~ArrowFields    (void) override;
+        ArrowFields     (void);
+        ~ArrowFields    (void) override = default;
 };
 
 /******************************************************************************
@@ -98,5 +98,9 @@ void convertFromLua(lua_State* L, int index, ArrowFields& v);
 
 int convertToLua(lua_State* L, const ArrowFields::format_t& v);
 void convertFromLua(lua_State* L, int index, ArrowFields::format_t& v);
+
+inline uint32_t toEncoding(ArrowFields& v) { (void)v; return Field::USER; }
+inline uint32_t toEncoding(ArrowFields::format_t& v) { (void)v; return Field::INT32; }
+
 
 #endif  /* __arrow_fields__ */

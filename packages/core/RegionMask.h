@@ -100,6 +100,6 @@ class RegionMask: public FieldDictionary
 
 int convertToLua(lua_State* L, const RegionMask& v);
 void convertFromLua(lua_State* L, int index, RegionMask& v);
-
+inline uint32_t toEncoding(RegionMask& v) { (void)v; return Field::USER; }
 
 #endif  /* __region_mask__ */
