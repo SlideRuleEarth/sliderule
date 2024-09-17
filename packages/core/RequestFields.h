@@ -42,8 +42,11 @@
 #include "FieldElement.h"
 #include "FieldColumn.h"
 #include "RegionMask.h"
-#include "List.h"
 #include "MathLib.h"
+
+#ifdef __arrow__
+#include "ArrowFields.h"
+#endif
 
 /******************************************************************************
  * CLASS
@@ -93,6 +96,10 @@ class RequestFields: public LuaObject, public FieldDictionary
         FieldElement<int>               clusterSizeHint     {DEFAULT_CLUSTER_SIZE_HINT};
         FieldElement<RegionMask>        regionMask;
         
+        #ifdef __arrow__
+        FieldElement<ArrowFields>       output;
+        #endif
+
         MathLib::point_t*               projectedPolygon    {NULL};
 
     protected:

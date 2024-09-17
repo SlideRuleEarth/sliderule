@@ -81,7 +81,7 @@ class Atl06Reader: public LuaObject
         /* Elevation Measurement */
         typedef struct {
             uint64_t        extent_id;              // unique identifier
-            int64_t         time_ns;                // nanoseconds from GPS epoch
+            time8_t         time_ns;                // nanoseconds from GPS epoch
             uint32_t        segment_id;             // closest atl06 segment
             uint16_t        rgt;                    // reference ground track
             uint16_t        cycle;                  // cycle number

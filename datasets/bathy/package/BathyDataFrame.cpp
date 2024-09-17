@@ -138,8 +138,7 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"pair",                &pair},
         {"utm_zone",            &utm_zone},
         {"utm_is_north",        &utm_is_north},
-    },
-    time_ns, lon_ph, lat_ph, ortho_h),
+    }),
     beam(beam_str),
     parmsPtr(_parms),
     parms(*_parms),
@@ -659,18 +658,18 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 }
 
                 /* Add Photon to DataFrame */
-                dataframe.addRow( // start new row in dataframe
-                    Icesat2Fields::deltatime2timestamp(current_delta_time),     // time_ns
-                    longitude,                                                  // lon_ph
-                    latitude,                                                   // lat_ph
-                    atl03.h_ph[current_photon] - atl03.geoid[current_segment]); // ortho_h
+                dataframe.addRow()l // start new row in dataframe
+                dataframe.time_ns.append(Icesat2Fields::deltatime2timestamp(current_delta_time));
                 dataframe.index_ph.append(static_cast<int32_t>(region.first_photon) + current_photon);
                 dataframe.index_seg.append(static_cast<int32_t>(region.first_segment) + current_segment);
+                dataframe.lat_ph.append(latitude);
+                dataframe.lon_ph.append(longitude);
                 dataframe.x_ph.append(coord.x);
                 dataframe.y_ph.append(coord.y);
                 dataframe.x_atc.append(atl03.segment_dist_x[current_segment] + atl03.dist_ph_along[current_photon]);
                 dataframe.y_atc.append(atl03.dist_ph_across[current_photon]);
                 dataframe.background_rate.append(calculateBackground(current_segment, bckgrd_index, atl03));
+                dataframe.ortho_h.append(atl03.h_ph[current_photon] - atl03.geoid[current_segment]);
                 dataframe.ellipse_h.append(atl03.h_ph[current_photon]);
                 dataframe.yapc_score.append(yapc_score);
                 dataframe.max_signal_conf.append(atl03_cnf);

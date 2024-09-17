@@ -135,6 +135,9 @@ typedef enum {
 /* Ordered Key */
 typedef unsigned long okey_t;
 
+/* Extended System Time - nanoseconds since Unix epoch, no leap seconds */
+typedef int64_t time8_t;
+
 /* File */
 typedef FILE* fileptr_t;
 

@@ -54,7 +54,7 @@ class FieldElement: public Field
          *--------------------------------------------------------------------*/
 
         explicit        FieldElement    (T default_value);
-                        FieldElement    (void) = default;
+                        FieldElement    (void);
                         FieldElement    (const FieldElement<T>& element);
                         ~FieldElement   (void) override = default;
 
@@ -83,16 +83,27 @@ class FieldElement: public Field
  *----------------------------------------------------------------------------*/
 template <class T>
 FieldElement<T>::FieldElement(T default_value):
+    Field(ELEMENT, getImpliedEncoding<T>()),
     value(default_value)
 {
     initialized = true;
 }
 
 /*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+FieldElement<T>::FieldElement():
+    Field(ELEMENT, getImpliedEncoding<T>())
+{
+}
+
+/*----------------------------------------------------------------------------
  * Copy Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldElement<T>::FieldElement(const FieldElement<T>& element)
+FieldElement<T>::FieldElement(const FieldElement<T>& element):
+    Field(ELEMENT, getImpliedEncoding<T>())
 {
     value = element.value;
     provided = element.provided;
@@ -106,6 +117,7 @@ template <class T>
 FieldElement<T>& FieldElement<T>::operator=(const FieldElement<T>& element)
 {
     value = element.value;
+    encoding = element.encoding;
     provided = element.provided;
     initialized = element.initialized;
     return *this;

@@ -36,6 +36,10 @@
 #include "OsApi.h"
 #include "arrow.h"
 #include "ArrowCommon.h"
+#include "ArrowFields.h"
+#include "ArrowBuilder.h"
+#include "ArrowSampler.h"
+#include "ArrowDataFrame.h"
 
 /******************************************************************************
  * DEFINES
@@ -53,18 +57,14 @@
 int arrow_open (lua_State* L)
 {
     static const struct luaL_Reg arrow_functions[] = {
-        {"builder",     ArrowBuilder::luaCreate},
+        {"dataframe",   ArrowDataFrame::luaCreate},
         {"sampler",     ArrowSampler::luaCreate},
-        {"parms",       ArrowParms::luaCreate},
         {"send2user",   ArrowCommon::luaSend2User},
         {NULL,          NULL}
     };
 
     /* Set Library */
     luaL_newlib(L, arrow_functions);
-
-    /* Set Globals */
-    LuaEngine::setAttrStr(L, "PARMS", ArrowParms::SELF);
 
     return 1;
 }

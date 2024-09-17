@@ -105,7 +105,7 @@ Icesat2Fields::Icesat2Fields(lua_State* L, int index, const std::initializer_lis
     if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", assetName.value.c_str());
 
     // handle signal confidence options
-    if(atl03Cnf.provided && atl03Cnf.asSingle)
+    if(atl03Cnf.provided && atl03Cnf.providedAsSingle)
     {        
         // when signal confidence is supplied as a single option
         // instead of setting only that option, treat it as a level

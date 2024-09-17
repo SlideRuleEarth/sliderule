@@ -93,7 +93,7 @@ class BathyParms: public Icesat2Parms
 
         /* Photon Fields */
         typedef struct {
-            int64_t         time_ns;                // nanoseconds since GPS epoch
+            time8_t         time_ns;                // nanoseconds since GPS epoch
             int32_t         index_ph;               // unique index of photon in granule
             int32_t         index_seg;              // index into segment level groups in source ATL03 granule
             double          lat_ph;                 // latitude of photon (EPSG 7912)

@@ -165,7 +165,7 @@ int GeoDataFrame::luaGetMetaData  (lua_State* L)
 /*----------------------------------------------------------------------------
  * length
  *----------------------------------------------------------------------------*/
-long GeoDataFrame::length(void)
+long GeoDataFrame::length(void) const
 {
     return static_cast<long>(indexColumn.size());
 }
@@ -173,17 +173,11 @@ long GeoDataFrame::length(void)
 /*----------------------------------------------------------------------------
  * addRow
  *----------------------------------------------------------------------------*/
-long GeoDataFrame::addRow(int64_t time, double x, double y, double z)
+long GeoDataFrame::addRow(void)
 {
     // update index
     const long len = static_cast<long>(indexColumn.size());
     indexColumn.push_back(len);
-
-    // updata geo fields
-    timeColumn.append(time);
-    xColumn.append(x);
-    yColumn.append(y);
-    zColumn.append(z);
 
     // return size of dataframe
     return len + 1;
@@ -199,9 +193,26 @@ void GeoDataFrame::addColumnData (const char* name, Field* column)
 }
 
 /*----------------------------------------------------------------------------
+ * getColumnNames
+ *----------------------------------------------------------------------------*/
+vector<string> GeoDataFrame::getColumnNames(void) const
+{
+    vector<string> names;
+    char** keys = NULL;
+    int num_keys = columnFields.fields.getKeys(&keys);
+    for(int i = 0; i < num_keys; i++)
+    {
+        names.emplace_back(string(keys[i]));
+        delete [] keys[i];
+    }
+    delete [] keys;
+    return names;
+}
+
+/*----------------------------------------------------------------------------
  * getColumnData
  *----------------------------------------------------------------------------*/
-Field* GeoDataFrame::getColumnData (const char* name)
+Field* GeoDataFrame::getColumnData (const char* name) const
 {
     const FieldDictionary::entry_t entry = columnFields.fields[name];
     return entry.field;
@@ -228,7 +239,7 @@ Field* GeoDataFrame::getMetaData (const char* name)
 /*----------------------------------------------------------------------------
  * getTimeColumn
  *----------------------------------------------------------------------------*/
-FieldColumn<int64_t>& GeoDataFrame::getTimeColumn (void)
+const FieldColumn<int64_t>* GeoDataFrame::getTimeColumn (void) const
 {
     return timeColumn;
 }
@@ -236,7 +247,7 @@ FieldColumn<int64_t>& GeoDataFrame::getTimeColumn (void)
 /*----------------------------------------------------------------------------
  * getXColumn
  *----------------------------------------------------------------------------*/ 
-FieldColumn<double>& GeoDataFrame::getXColumn (void)
+const FieldColumn<double>* GeoDataFrame::getXColumn (void) const
 {
     return xColumn;
 }
@@ -244,7 +255,7 @@ FieldColumn<double>& GeoDataFrame::getXColumn (void)
 /*----------------------------------------------------------------------------
  * getYColumn
  *----------------------------------------------------------------------------*/
-FieldColumn<double>& GeoDataFrame::getYColumn (void)
+const FieldColumn<double>* GeoDataFrame::getYColumn (void) const
 {
     return yColumn;
 }
@@ -252,9 +263,57 @@ FieldColumn<double>& GeoDataFrame::getYColumn (void)
 /*----------------------------------------------------------------------------
  * getZColumn
  *----------------------------------------------------------------------------*/
-FieldColumn<double>& GeoDataFrame::getZColumn (void)
+const FieldColumn<double>* GeoDataFrame::getZColumn (void) const
 {
     return zColumn;
+}
+
+/*----------------------------------------------------------------------------
+ * getTimeColumnName
+ *----------------------------------------------------------------------------*/
+const string& GeoDataFrame::getTimeColumnName (void) const
+{
+    return timeColumnName;
+}
+
+/*----------------------------------------------------------------------------
+ * getXColumnName
+ *----------------------------------------------------------------------------*/ 
+const string& GeoDataFrame::getXColumnName (void) const
+{
+    return xColumnName;
+}
+
+/*----------------------------------------------------------------------------
+ * getYColumnName
+ *----------------------------------------------------------------------------*/ 
+const string& GeoDataFrame::getYColumnName (void) const
+{
+    return yColumnName;
+}
+
+/*----------------------------------------------------------------------------
+ * getZColumnName
+ *----------------------------------------------------------------------------*/ 
+const string& GeoDataFrame::getZColumnName (void) const
+{
+    return zColumnName;
+}
+
+/*----------------------------------------------------------------------------
+ * getColumns
+ *----------------------------------------------------------------------------*/
+const Dictionary<FieldDictionary::entry_t>& GeoDataFrame::getColumns(void) const
+{
+    return columnFields.fields;
+}
+
+/*----------------------------------------------------------------------------
+ * getMeta
+ *----------------------------------------------------------------------------*/
+const Dictionary<FieldDictionary::entry_t>& GeoDataFrame::getMeta(void) const
+{
+    return metaFields.fields;
 }
 
 /*----------------------------------------------------------------------------
@@ -264,21 +323,63 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
                             const char* meta_name,
                             const struct luaL_Reg meta_table[],
                             const std::initializer_list<FieldDictionary::entry_t>& column_list, 
-                            const std::initializer_list<FieldDictionary::entry_t>& meta_list,
-                            FieldColumn<int64_t>& time_column, 
-                            FieldColumn<double>& x_column, FieldColumn<double>& y_column, FieldColumn<double>& z_column ):
+                            const std::initializer_list<FieldDictionary::entry_t>& meta_list):
     LuaObject (L, OBJECT_TYPE, meta_name, meta_table),
+    Field(DATAFRAME, 0),
     columnFields (column_list),
     metaFields (meta_list),
-    timeColumn(time_column),
-    xColumn(x_column),
-    yColumn(y_column),
-    zColumn(z_column)
+    timeColumn(NULL),
+    xColumn(NULL),
+    yColumn(NULL),
+    zColumn(NULL)
 {
+    // populate geo columns
+    Dictionary<FieldDictionary::entry_t>::Iterator iter(columnFields.fields);
+    for(int f = 0; f < iter.length; f++)
+    {
+        const char* name = iter[f].key;
+        const Field* field = iter[f].value.field;
+
+        if(field->encoding & TIME_COLUMN)
+        {
+            assert(field->type == COLUMN);
+            assert(field->getValueEncoding() == TIME8);
+            timeColumn = dynamic_cast<const FieldColumn<time8_t>*>(field);
+            timeColumnName = name;
+        }
+
+        if(field->encoding & X_COLUMN)
+        {
+            assert(field->type == COLUMN);
+            assert(field->getValueEncoding() == DOUBLE);
+            xColumn = dynamic_cast<const FieldColumn<double>*>(field);
+            xColumnName = name;
+        }
+
+        if(field->encoding & Y_COLUMN)
+        {
+            assert(field->type == COLUMN);
+            assert(field->getValueEncoding() == DOUBLE);
+            yColumn = dynamic_cast<const FieldColumn<double>*>(field);
+            yColumnName = name;
+        }
+
+        if(field->encoding & Z_COLUMN)
+        {
+            assert(field->type == COLUMN);
+            assert(field->getValueEncoding() == DOUBLE);
+            zColumn = dynamic_cast<const FieldColumn<double>*>(field);
+            zColumnName = name;
+        }
+    }
+
+    // set lua functions
     LuaEngine::setAttrFunc(L, "export",     luaExport);
     LuaEngine::setAttrFunc(L, "import",     luaImport);
     LuaEngine::setAttrFunc(L, "__index",    luaGetColumnData);
     LuaEngine::setAttrFunc(L, "meta",       luaGetMetaData);
+    
+    // initialized
     initialized = true;
 }
 

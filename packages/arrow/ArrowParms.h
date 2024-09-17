@@ -32,14 +32,6 @@
 #ifndef __arrow_parms__
 #define __arrow_parms__
 
-/*
- * ArrowParms works on batches of records.  It expects the `rec_type` passed
- * into the constructor to be the type that defines each of the column headings,
- * then it expects to receive records that are arrays (or batches) of that record
- * type.  The field defined as an array is transparent to this class - it just
- * expects the record to be a single array.
- */
-
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/

@@ -29,18 +29,57 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arrowpkg__
-#define __arrowpkg__
+#ifndef __arrow_data_frame__
+#define __arrow_data_frame__
 
 /******************************************************************************
- * PROTOTYPES
+ * INCLUDES
  ******************************************************************************/
 
-extern "C" {
-void initarrow (void);
-void deinitarrow (void);
-}
+#include "OsApi.h"
+#include "LuaObject.h"
+#include "RequestFields.h"
+#include "GeoDataFrame.h"
 
-#endif  /* __arrowpkg__ */
+/******************************************************************************
+ * CLASS
+ ******************************************************************************/
 
+class ArrowDataFrame: public LuaObject
+{
+    public:
 
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const char* OBJECT_TYPE;
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static int  luaCreate   (lua_State* L);
+        static int  luaExport   (lua_State* L);
+        static int  luaImport   (lua_State* L);
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        ArrowDataFrame  (lua_State* L, RequestFields* _parms, GeoDataFrame* _dataframe);
+        ~ArrowDataFrame (void) override;
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        RequestFields* parms;
+        GeoDataFrame* dataframe;
+};
+
+#endif  /* __arrow_data_frame__ */

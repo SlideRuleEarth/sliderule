@@ -187,15 +187,20 @@ bool RequestFields::maskIncludes (double lon, double lat) const
  *----------------------------------------------------------------------------*/
 RequestFields::RequestFields(lua_State* L, int index, const std::initializer_list<entry_t>& init_list):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    FieldDictionary ({  {"polygon",             &polygon},
-                        {"projection",          &projection},
-                        {"points_in_polygon",   &pointsInPolygon},
-                        {"timeout",             &timeout},
-                        {"rqst_timeout",        &rqstTimeout},
-                        {"node_timeout",        &nodeTimeout},
-                        {"read_timeout",        &readTimeout},
-                        {"cluster_size_hint",   &clusterSizeHint},
-                        {"region_mask",         &regionMask} })
+    FieldDictionary ({  
+        {"polygon",             &polygon},
+        {"projection",          &projection},
+        {"points_in_polygon",   &pointsInPolygon},
+        {"timeout",             &timeout},
+        {"rqst_timeout",        &rqstTimeout},
+        {"node_timeout",        &nodeTimeout},
+        {"read_timeout",        &readTimeout},
+        {"cluster_size_hint",   &clusterSizeHint},
+        {"region_mask",         &regionMask},
+        #ifdef __arrow__
+        {"output",              &output},
+        #endif
+    })
 {
     // add additional fields to dictionary
     for(const entry_t elem: init_list) 

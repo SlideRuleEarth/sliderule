@@ -38,12 +38,10 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
+#include "TimeLib.h"
+#include "Field.h"
 #include "FieldDictionary.h"
-#include "FieldElement.h"
 #include "FieldColumn.h"
-#include "RegionMask.h"
-#include "List.h"
-#include "MathLib.h"
 
 /******************************************************************************
  * CLASS
@@ -88,17 +86,26 @@ class GeoDataFrame: public LuaObject, public Field
         static int              luaGetColumnData(lua_State* L);
         static int              luaGetMetaData  (lua_State* L);
 
-        long                    length          (void);
-        long                    addRow          (int64_t time, double x, double y, double z=0.0);
+        long                    length          (void) const;
+        long                    addRow          (void);
+        vector<string>          getColumnNames  (void) const;
         void                    addColumnData   (const char* name, Field* column);
-        Field*                  getColumnData   (const char* name);
+        Field*                  getColumnData   (const char* name) const;
         void                    addMetaData     (const char* name, Field* column);
         Field*                  getMetaData     (const char* name);
 
-        FieldColumn<int64_t>&   getTimeColumn   (void);
-        FieldColumn<double>&    getXColumn      (void);
-        FieldColumn<double>&    getYColumn      (void);
-        FieldColumn<double>&    getZColumn      (void);
+        const FieldColumn<int64_t>* getTimeColumn   (void) const;
+        const FieldColumn<double>*  getXColumn      (void) const;
+        const FieldColumn<double>*  getYColumn      (void) const;
+        const FieldColumn<double>*  getZColumn      (void) const;
+
+        const string&           getTimeColumnName   (void) const;
+        const string&           getXColumnName      (void) const;
+        const string&           getYColumnName      (void) const;
+        const string&           getZColumnName      (void) const;
+
+        const Dictionary<FieldDictionary::entry_t>& getColumns(void) const;
+        const Dictionary<FieldDictionary::entry_t>& getMeta(void) const;
 
     protected:
 
@@ -110,9 +117,7 @@ class GeoDataFrame: public LuaObject, public Field
                          const char* meta_name,
                          const struct luaL_Reg meta_table[],
                          const std::initializer_list<FieldDictionary::entry_t>& column_list, 
-                         const std::initializer_list<FieldDictionary::entry_t>& meta_list,
-                         FieldColumn<int64_t>& time_column, 
-                         FieldColumn<double>& x_column, FieldColumn<double>& y_column, FieldColumn<double>& z_column);
+                         const std::initializer_list<FieldDictionary::entry_t>& meta_list);
         ~GeoDataFrame   (void) override = default;
 
         int     toLua   (lua_State* L) const override;
@@ -126,10 +131,15 @@ class GeoDataFrame: public LuaObject, public Field
         FieldDictionary columnFields;
         FieldDictionary metaFields;
 
-        FieldColumn<int64_t>& timeColumn;
-        FieldColumn<double>& xColumn;
-        FieldColumn<double>& yColumn;
-        FieldColumn<double>& zColumn;
+        const FieldColumn<time8_t>* timeColumn;
+        const FieldColumn<double>* xColumn;
+        const FieldColumn<double>* yColumn;
+        const FieldColumn<double>* zColumn;
+
+        string timeColumnName;
+        string xColumnName;
+        string yColumnName;
+        string zColumnName;
 };
 
 #endif  /* __geo_data_frame__ */

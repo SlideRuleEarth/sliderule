@@ -74,7 +74,7 @@ class FieldEnumeration: public Field
          *--------------------------------------------------------------------*/
 
         bool values[N];
-        bool asSingle;  // provided as a single value as opposed to an array
+        bool providedAsSingle;  // provided as a single value as opposed to an array
 
     private:
 
@@ -108,7 +108,8 @@ inline void convertFromLua(lua_State* L, int index, FieldEnumeration<T, N>& v) {
  *----------------------------------------------------------------------------*/
 template <class T, int N>
 FieldEnumeration<T,N>::FieldEnumeration(std::initializer_list<bool> init_list):
-    asSingle(false)
+    Field(ENUMERATION, getImpliedEncoding<T>()),
+    providedAsSingle(false)
 {
     assert(N > 0);
     std::copy(init_list.begin(), init_list.end(), values);
@@ -120,7 +121,8 @@ FieldEnumeration<T,N>::FieldEnumeration(std::initializer_list<bool> init_list):
  *----------------------------------------------------------------------------*/
 template <class T, int N>
 FieldEnumeration<T,N>::FieldEnumeration(void):
-    asSingle(false)
+    Field(ENUMERATION, getImpliedEncoding<T>()),
+    providedAsSingle(false)
 {
     assert(N > 0);
 }
@@ -237,7 +239,7 @@ void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
             }
         }
 
-        asSingle = false;
+        providedAsSingle = false;
     }
     else // provided as a single selection
     {
@@ -253,7 +255,7 @@ void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
             throw RunTimeException(CRITICAL, RTE_ERROR, "selection outside of bounds: %d", selection);
         }
 
-        asSingle = true;
+        providedAsSingle = true;
     }
 
     // set provided
@@ -298,7 +300,8 @@ void FieldEnumeration<T,N>::copy(const FieldEnumeration<T,N>& array)
     {
         values[i] = array.values[i];
     }
-    asSingle = array.asSingle;
+    providedAsSingle = array.providedAsSingle;
+    encoding = array.encoding;
     provided = array.provided;
     initialized = array.initialized;
 }

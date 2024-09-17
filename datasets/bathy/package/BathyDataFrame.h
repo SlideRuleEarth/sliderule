@@ -84,11 +84,11 @@ class BathyDataFrame: public GeoDataFrame
         FieldElement<bool>          utm_is_north;
 
         /* Column Data */
-        FieldColumn<int64_t>        time_ns;            // nanoseconds since GPS epoch
+        FieldColumn<time8_t>        time_ns {Field::TIME_COLUMN}; // nanoseconds since GPS epoch
         FieldColumn<int32_t>        index_ph;           // unique index of photon in granule
         FieldColumn<int32_t>        index_seg;          // index into segment level groups in source ATL03 granule
-        FieldColumn<double>         lat_ph;             // latitude of photon (EPSG 7912)
-        FieldColumn<double>         lon_ph;             // longitude of photon (EPSG 7912)
+        FieldColumn<double>         lat_ph {Field::Y_COLUMN}; // latitude of photon (EPSG 7912)
+        FieldColumn<double>         lon_ph {Field::X_COLUMN}; // longitude of photon (EPSG 7912)
         FieldColumn<double>         x_ph;               // the easting coordinate in meters of the photon for the given UTM zone
         FieldColumn<double>         y_ph;               // the northing coordinate in meters of the photon for the given UTM zone
         FieldColumn<double>         x_atc;              // along track distance calculated from segment_dist_x and dist_ph_along
@@ -96,7 +96,7 @@ class BathyDataFrame: public GeoDataFrame
         FieldColumn<double>         background_rate;    // PE per second
         FieldColumn<float>          delta_h;            // refraction correction of height
         FieldColumn<float>          surface_h;          // orthometric height of sea surface at each photon location
-        FieldColumn<double>         ortho_h;            // geoid corrected height of photon, calculated from h_ph and geoid
+        FieldColumn<double>         ortho_h {Field::Z_COLUMN}; // geoid corrected height of photon, calculated from h_ph and geoid
         FieldColumn<float>          ellipse_h;          // height of photon with respect to reference ellipsoid
         FieldColumn<float>          sigma_thu;          // total horizontal uncertainty
         FieldColumn<float>          sigma_tvu;          // total vertical uncertainty

@@ -45,6 +45,7 @@
  * Constructor
  *----------------------------------------------------------------------------*/
 FieldDictionary::FieldDictionary(std::initializer_list<entry_t> init_list, int hash_table_size):
+    Field(DICTIONARY, 0),
     fields(hash_table_size)
 {
     for(const entry_t elem: init_list) 
@@ -58,6 +59,7 @@ FieldDictionary::FieldDictionary(std::initializer_list<entry_t> init_list, int h
  * Constructor
  *----------------------------------------------------------------------------*/
 FieldDictionary::FieldDictionary(int hash_table_size):
+    Field(DICTIONARY, 0),
     fields(hash_table_size)
 {
 }
@@ -66,6 +68,7 @@ FieldDictionary::FieldDictionary(int hash_table_size):
  * Copy Constructor
  *----------------------------------------------------------------------------*/
 FieldDictionary::FieldDictionary(const FieldDictionary& dictionary):
+    Field(DICTIONARY, 0),
     fields(dictionary.fields)
 {
     provided = dictionary.provided;

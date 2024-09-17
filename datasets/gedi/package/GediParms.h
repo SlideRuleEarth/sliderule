@@ -133,7 +133,7 @@ class GediParms: public RequestParms
         static const char*  l4quality2str       (l4_quality_t filter);
         static const char*  surface2str         (surface_t filter);
 
-        static int64_t      deltatime2timestamp (double delta_time);
+        static time8_t      deltatime2timestamp (double delta_time);
         const char*         tojson              (void) const override;
 
         /*--------------------------------------------------------------------

@@ -53,7 +53,7 @@ class FieldList: public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-                        FieldList   (void) = default;
+                        FieldList   (void);
                         FieldList   (const FieldList<T>& array);
                         ~FieldList  (void) override = default;
 
@@ -104,10 +104,20 @@ inline void convertFromLua(lua_State* L, int index, FieldList<T>& v) {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+FieldList<T>::FieldList():
+    Field(LIST, getImpliedEncoding<T>())
+{
+}
+
+/*----------------------------------------------------------------------------
  * Copy Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldList<T>::FieldList(const FieldList<T>& array)
+FieldList<T>::FieldList(const FieldList<T>& array):
+    Field(LIST, getImpliedEncoding<T>())
 {
     copy(array);
 }
@@ -236,7 +246,9 @@ void FieldList<T>::copy(const FieldList<T>& array)
     {
         values[i] = array.values[i];
     }
+    encoding = array.encoding;
     provided = array.provided;
+    initialized = array.initialized;
 }
 
 #endif  /* __field_list__ */

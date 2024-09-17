@@ -78,7 +78,7 @@ int SwotParms::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * deltatime2timestamp - returns nanoseconds since Unix epoch, no leap seconds
  *----------------------------------------------------------------------------*/
-int64_t SwotParms::deltatime2timestamp (double delta_time)
+time8_t SwotParms::deltatime2timestamp (double delta_time)
 {
     return TimeLib::gps2systimeex(delta_time + (double)SWOT_SDP_EPOCH_GPS);
 }

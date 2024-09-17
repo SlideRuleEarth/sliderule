@@ -228,7 +228,7 @@ class Icesat2Fields: public RequestFields
          *--------------------------------------------------------------------*/
 
         // returns nanoseconds since Unix epoch, no leap seconds
-        static int64_t deltatime2timestamp (double delta_time)
+        static time8_t deltatime2timestamp (double delta_time)
         {
             return TimeLib::gps2systimeex(delta_time + (double)ATLAS_SDP_EPOCH_GPS);
         }

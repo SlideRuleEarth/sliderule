@@ -59,7 +59,7 @@ class FieldColumn: public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit        FieldColumn     (long _chunk_size=DEFAULT_CHUNK_SIZE);
+        explicit        FieldColumn     (uint32_t encoding_mask=0, long _chunk_size=DEFAULT_CHUNK_SIZE);
                         FieldColumn     (const FieldColumn<T>& column);
                         ~FieldColumn    (void) override;
 
@@ -102,6 +102,21 @@ inline void convertFromLua(lua_State* L, int index, FieldColumn<T>& v) {
     v.fromLua(L, index);
 }
 
+// encoding
+inline uint32_t toEncoding(FieldColumn<bool>& v)     { (void)v; return Field::NESTED_COLUMN | Field::BOOL;   };
+inline uint32_t toEncoding(FieldColumn<int8_t>& v)   { (void)v; return Field::NESTED_COLUMN | Field::INT8;   };
+inline uint32_t toEncoding(FieldColumn<int16_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::INT16;  };
+inline uint32_t toEncoding(FieldColumn<int32_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::INT32;  };
+inline uint32_t toEncoding(FieldColumn<int64_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::INT64;  };
+inline uint32_t toEncoding(FieldColumn<uint8_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::UINT8;  };
+inline uint32_t toEncoding(FieldColumn<uint16_t>& v) { (void)v; return Field::NESTED_COLUMN | Field::UINT16; };
+inline uint32_t toEncoding(FieldColumn<uint32_t>& v) { (void)v; return Field::NESTED_COLUMN | Field::UINT32; };
+inline uint32_t toEncoding(FieldColumn<uint64_t>& v) { (void)v; return Field::NESTED_COLUMN | Field::UINT64; };
+inline uint32_t toEncoding(FieldColumn<float>& v)    { (void)v; return Field::NESTED_COLUMN | Field::FLOAT;  };
+inline uint32_t toEncoding(FieldColumn<double>& v)   { (void)v; return Field::NESTED_COLUMN | Field::DOUBLE; };
+inline uint32_t toEncoding(FieldColumn<time8_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::TIME8;  };
+inline uint32_t toEncoding(FieldColumn<string>& v)   { (void)v; return Field::NESTED_COLUMN | Field::STRING; };
+
 /******************************************************************************
  * METHODS
  ******************************************************************************/
@@ -110,7 +125,8 @@ inline void convertFromLua(lua_State* L, int index, FieldColumn<T>& v) {
  * Constructor
  *----------------------------------------------------------------------------*/
 template<class T>
-FieldColumn<T>::FieldColumn(long _chunk_size):
+FieldColumn<T>::FieldColumn(uint32_t encoding_mask, long _chunk_size):
+    Field(COLUMN, getImpliedEncoding<T>() & encoding_mask),
     currChunk(-1),
     currChunkOffset(_chunk_size),
     numElements(0),
@@ -123,6 +139,7 @@ FieldColumn<T>::FieldColumn(long _chunk_size):
  *----------------------------------------------------------------------------*/
 template<class T>
 FieldColumn<T>::FieldColumn(const FieldColumn<T>& column):
+    Field(COLUMN, getImpliedEncoding<T>()),
     currChunk(column.currChunk),
     currChunkOffset(column.currChunkOffset),
     numElements(column.numElements),
@@ -249,6 +266,7 @@ FieldColumn<T>& FieldColumn<T>::operator= (const FieldColumn<T>& column)
         append(column[i]);
     }
 
+    encoding = column.encoding;
     provided = column.provided;
     initialized = column.provided;
 

@@ -57,7 +57,7 @@
 
 typedef struct {
     uint64_t        shot_number;
-    int64_t         time_ns;
+    time8_t         time_ns;
     double          latitude;
     double          longitude;
     double          elevation_start;

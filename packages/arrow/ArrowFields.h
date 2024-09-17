@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __swot_parms__
-#define __swot_parms__
+#ifndef __arrow_fields__
+#define __arrow_fields__
 
 /******************************************************************************
  * INCLUDES
@@ -38,56 +38,65 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "List.h"
-#include "RequestParms.h"
+#include "FieldDictionary.h"
+#include "FieldElement.h"
+#include "Asset.h"
+
+#ifdef __aws__
+#include "aws.h"
+#endif
 
 /******************************************************************************
- * SWOT PARAMETERS
+ * ARROW PARAMETERS CLASS
  ******************************************************************************/
 
-class SwotParms: public RequestParms
+class ArrowFields: public FieldDictionary
 {
     public:
 
         /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const char* _SELF;
-        static const char* VARIABLES;
-        static const int64_t SWOT_SDP_EPOCH_GPS = 630720013; // seconds to add to SWOT times to get GPS times
-        static const int EXPECTED_NUM_FIELDS = 16;
-
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef List<string> string_list_t;
+        * Typedefs
+        *--------------------------------------------------------------------*/
+        typedef enum {
+            NATIVE = 0,
+            FEATHER = 1,
+            PARQUET = 2,
+            GEOPARQUET = 3,
+            CSV = 4
+        } format_t;
 
         /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+        * Data
+        *--------------------------------------------------------------------*/
 
-        static int      luaCreate           (lua_State* L);
-        static time8_t  deltatime2timestamp (double delta_time);
-        const char*     tojson              (void) const override;
+        FieldElement<string>    path;                       // file system path to the file (includes filename)
+        FieldElement<format_t>  format {NATIVE};            // format of the file
+        FieldElement<bool>      openOnComplete {false};     // flag to client to open file on completion
+        FieldElement<bool>      asGeo {false};              // whether to create a standard geo-based formatted file
+        FieldElement<bool>      withChecksum {false};       // whether to perform checksum on file and send EOF record
+        FieldElement<string>    assetName;
+        FieldElement<string>    region;
+
+        #ifdef __aws__
+        FieldElement<CredentialStore::Credential> credentials;
+        #endif
 
         /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
+        * Methods
+        *--------------------------------------------------------------------*/
 
-        string_list_t       variables;
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                            SwotParms           (lua_State* L, int index);
-                            ~SwotParms          (void) override;
-        void                cleanup             (void);
-        static void         get_lua_string_list (lua_State* L, int index, string_list_t& string_list, bool* provided);
+        ArrowFields     (lua_State* L, int index);
+        ~ArrowFields    (void) override;
 };
 
-#endif  /* __swot_parms__ */
+/******************************************************************************
+ * FUNCTIONS
+ ******************************************************************************/
+
+int convertToLua(lua_State* L, const ArrowFields& v);
+void convertFromLua(lua_State* L, int index, ArrowFields& v);
+
+int convertToLua(lua_State* L, const ArrowFields::format_t& v);
+void convertFromLua(lua_State* L, int index, ArrowFields::format_t& v);
+
+#endif  /* __arrow_fields__ */

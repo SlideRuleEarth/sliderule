@@ -80,7 +80,7 @@ class Atl03Reader: public LuaObject
 
         /* Photon Fields */
         typedef struct {
-            int64_t         time_ns;        // nanoseconds since GPS epoch
+            time8_t         time_ns;        // nanoseconds since GPS epoch
             double          latitude;
             double          longitude;
             float           x_atc;          // float[]: dist_ph_along

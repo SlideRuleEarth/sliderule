@@ -105,7 +105,8 @@ inline void convertFromLua(lua_State* L, int index, FieldArray<T, N>& v) {
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T, int N>
-FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list)
+FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list):
+    Field(ARRAY, getImpliedEncoding<T>())
 {
     assert(N == init_list.size());
     std::copy(init_list.begin(), init_list.end(), values);
@@ -116,7 +117,8 @@ FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list)
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T, int N>
-FieldArray<T,N>::FieldArray(void)
+FieldArray<T,N>::FieldArray(void):
+    Field(ARRAY, getImpliedEncoding<T>())
 {
     assert(N > 0);
 }
@@ -125,7 +127,8 @@ FieldArray<T,N>::FieldArray(void)
  * Copy Constructor
  *----------------------------------------------------------------------------*/
 template <class T, int N>
-FieldArray<T,N>::FieldArray(const FieldArray<T,N>& array)
+FieldArray<T,N>::FieldArray(const FieldArray<T,N>& array):
+    Field(ARRAY, getImpliedEncoding<T>())
 {
     assert(N > 0);
     copy(array);
@@ -242,6 +245,8 @@ void FieldArray<T,N>::copy(const FieldArray<T,N>& array)
     {
         values[i] = array.values[i];
     }
+    type = array.type;
+    encoding = array.encoding;
     provided = array.provided;
     initialized = array.initialized;
 }
