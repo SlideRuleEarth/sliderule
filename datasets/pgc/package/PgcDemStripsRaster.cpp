@@ -88,9 +88,11 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<
 {
     if(GdalRaster::ispoint(geo))
     {
-        /* For geo being point call parent class if points are not provided */
         if(points == NULL)
+        {
+            /* For geo being a point call parent class if points are not provided */
             return GeoIndexedRaster::openGeoIndex(geo, points);
+        }
         else
         {
             //TODO: Implement this:
@@ -98,8 +100,11 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<
             //      Change poly case to find/open each geojson file from the bbox and create new geojson file
             //      in vsimem which is the union of all the geojson files.
             //      Then call parent class with the new geojson file.
-            mlog(ERROR, "Not implemented yet");
-            return false;
+            // mlog(ERROR, "Not implemented yet");
+            // return false;
+
+            /* For now call parent class with points set to NULL */
+            return GeoIndexedRaster::openGeoIndex(geo, NULL);
         }
     }
 

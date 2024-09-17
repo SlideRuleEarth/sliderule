@@ -125,7 +125,8 @@ GeoIndexedRaster::UnionMaker::UnionMaker(GeoIndexedRaster* _obj, const std::vect
     obj(_obj),
     range({0, 0}),
     points(_points),
-    unionPolygon(NULL)
+    unionPolygon(NULL),
+    stats({0.0, 0.0})
 {
 }
 
@@ -229,13 +230,13 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
     try
     {
         ssErrors = SS_NO_ERRORS;
-        double tstart;
+        double startTime;
 
         /* Find raster groups for each point */
         mlog(gsLevel, "Finding rasters groups");
 
         /* For all points from the caller, create a vector of raster group lists */
-        tstart = TimeLib::latchtime();
+        startTime = TimeLib::latchtime();
         for(uint32_t i = 0; i < points.size(); i++)
         {
             const point_info_t& pinfo = points[i];
@@ -248,12 +249,12 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
 
             pointGroups.emplace_back(point_groups_t{{ogr_point, i}, groupList});
         }
-        stats.findRastersTime = TimeLib::latchtime() - tstart;
+        stats.findRastersTime = TimeLib::latchtime() - startTime;
         mlog(gsLevel, "time: %.3lf", stats.findRastersTime);
 
         /* Create vector of unique rasters. */
         mlog(gsLevel, "Finding unique rasters");
-        tstart = TimeLib::latchtime();
+        startTime = TimeLib::latchtime();
         for(const point_groups_t& pg : pointGroups)
         {
             const GroupOrdering::Iterator iter(*pg.groupList);
@@ -289,14 +290,14 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
                 }
             }
         }
-        stats.findUniqueRastersTime = TimeLib::latchtime() - tstart;
+        stats.findUniqueRastersTime = TimeLib::latchtime() - startTime;
         mlog(gsLevel, "rasters: %zu, time: %.3lf", uniqueRasters.size(), stats.findUniqueRastersTime);
 
         /*
          * For each unique raster, find the points that belong to it
          */
         mlog(gsLevel, "Finding points for unique rasters");
-        tstart = TimeLib::latchtime();
+        startTime = TimeLib::latchtime();
         for(unique_raster_t* ur : uniqueRasters)
         {
             const std::string& rasterName = ur->rinfo.fileName;
@@ -321,7 +322,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
                 }
             }
         }
-        stats.findPointsForUniqueRastersTime = TimeLib::latchtime() - tstart;
+        stats.findPointsForUniqueRastersTime = TimeLib::latchtime() - startTime;
         mlog(gsLevel, "time: %.3lf", stats.findPointsForUniqueRastersTime);
 
 //HACK disable reading for now, we are debugging
@@ -339,7 +340,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         /* Sample unique rasters utilizing numThreads */
         uint32_t currentRaster = 0;
 
-        tstart = TimeLib::latchtime();
+        startTime = TimeLib::latchtime();
         while(currentRaster < numRasters)
         {
             /* Calculate how many rasters we can process in this batch */
@@ -404,7 +405,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
             }
             breader->sync.unlock();
         }
-        stats.getSamplesTime = TimeLib::latchtime() - tstart;
+        stats.getSamplesTime = TimeLib::latchtime() - startTime;
         mlog(gsLevel, "time: %.3lf", stats.getSamplesTime);
 
         /*
@@ -413,7 +414,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         if(isSampling())
         {
             mlog(gsLevel, "Populating sllist with samples");
-            tstart = TimeLib::latchtime();
+            startTime = TimeLib::latchtime();
             for(uint32_t pointIndx = 0; pointIndx < pointGroups.size(); pointIndx++)
             {
                 const point_groups_t& pg = pointGroups[pointIndx];
@@ -436,7 +437,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
 
                 sllist.add(slist);
             }
-            stats.popluateSamplesListTime = TimeLib::latchtime() - tstart;
+            stats.popluateSamplesListTime = TimeLib::latchtime() - startTime;
         }
         else
         {
@@ -835,6 +836,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
                 layer->SetSpatialFilter(filter);
                 OGRGeometryFactory::destroyGeometry(filter);
             }
+
             mlog(INFO, "Features after spatial filter:  %lld", layer->GetFeatureCount());
         }
 
@@ -1222,22 +1224,18 @@ void* GeoIndexedRaster::unionThread(void* parm)
 {
     union_maker_t* um = static_cast<union_maker_t*>(parm);
 
-    /* cast away constness because of List [] operator */
-    // List<point_info_t*>* _points = const_cast<List<point_info_t*>*>(um->points);
-
     /* Create an empty geometry collection to hold all points */
     OGRGeometryCollection geometryCollection;
 
-    const double distance  = 0.001;   /* Aproxiately 100 meters at equator */
-    const double tolerance = 0.0005;  /* Simplification tolerance          */
+    const double distance  = 0.01;        /* Aproxiately 1km at equator */
+    const double tolerance = distance;    /* Tolerance for simplification */
 
     /*
     * Create geometry collection from the bounding boxes around each point.
     * NOTE: Using buffered points is significantly more computationally
     *       expensive than bounding boxes (10x slower).
     */
-    // mlog(INFO, "Creating collection of bboxes from %d points", _points->length());
-    mlog(INFO, "Creating collection of bboxes from %d points, range: %d - %d", um->range.end - um->range.start, um->range.start, um->range.end);
+    mlog(DEBUG, "Creating collection of bboxes from %d points, range: %d - %d", um->range.end - um->range.start, um->range.start, um->range.end);
     double startTime = TimeLib::latchtime();
 
     const uint32_t start = um->range.start;
@@ -1267,17 +1265,17 @@ void* GeoIndexedRaster::unionThread(void* parm)
         /* Clean up the bounding box */
         OGRGeometryFactory::destroyGeometry(bboxPoly);
     }
-    double elapsed = TimeLib::latchtime() - startTime;
-    mlog(INFO, "Creating collection took %.3lf seconds", elapsed);
+    um->stats.points2polyTime = TimeLib::latchtime() - startTime;
+    mlog(DEBUG, "Creating collection took %.3lf seconds", um->stats.points2polyTime);
 
     /*
      * Union the bounding boxes in batches to reduce computational complexity.
      * NOTE: Union call fails with large number of geometries - must use batch union.
      */
-    const int batchSize = 100;
+    const int batchSize = 60;  /* Sweet spot for performance based on my testing */
     OGRGeometry* unionPolygon = NULL;
 
-    mlog(INFO, "Unioning all point geometries using batch size: %d", batchSize);
+    mlog(DEBUG, "Unioning point geometries using batch size: %d", batchSize);
     startTime = TimeLib::latchtime();
     for(int i = 0; i < geometryCollection.getNumGeometries(); i += batchSize)
     {
@@ -1319,13 +1317,11 @@ void* GeoIndexedRaster::unionThread(void* parm)
             }
         }
     }
-    elapsed = TimeLib::latchtime() - startTime;
-    mlog(INFO, "Unioning all geometries took %.3lf seconds", elapsed);
-
 
     if(unionPolygon == NULL)
     {
         mlog(ERROR, "Unioning geometries failed");
+        um->stats.unioningTime = TimeLib::latchtime() - startTime;
         return NULL;
     }
 
@@ -1337,6 +1333,10 @@ void* GeoIndexedRaster::unionThread(void* parm)
     {
         mlog(ERROR, "Failed to simplify polygon");
     }
+
+    um->stats.unioningTime = TimeLib::latchtime() - startTime;
+    mlog(DEBUG, "Unioning all geometries took %.3lf seconds", um->stats.unioningTime);
+
 
     /* Set the unioned polygon in the union maker object */
     um->unionPolygon = unionPolygon;
@@ -1618,7 +1618,7 @@ bool GeoIndexedRaster::findRastersParallel(OGRGeometry* geo, GroupOrdering* grou
             return false;
 
         /* Update findersRange with new featuresList */
-        getRanges(findersRange, featuresList.size(), MIN_FEATURES_PER_FINDER_THREAD, MAX_FINDER_THREADS);
+        getThreadsRanges(findersRange, featuresList.size(), MIN_FEATURES_PER_FINDER_THREAD, MAX_FINDER_THREADS);
         mlog(DEBUG, "Using %ld finder threads to search %ld features", findersRange.size(), featuresList.size());
     }
 
@@ -1683,10 +1683,10 @@ OGRGeometry* GeoIndexedRaster::getConvexHull(const std::vector<point_info_t>* po
     mlog(INFO, "Creating convex hull from %zu points", points->size());
 
     /* Collect all points into a geometry collection */
-    for(point_info_t point_info : *points)
+    for(const point_info_t& point_info : *points)
     {
-        double lon = point_info.point.x;
-        double lat = point_info.point.y;
+        const double lon = point_info.point.x;
+        const double lat = point_info.point.y;
 
         OGRPoint* point = new OGRPoint(lon, lat);
         geometryCollection.addGeometryDirectly(point);
@@ -1718,14 +1718,10 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>
     const uint32_t minPointsPerThread = 100;
 
     std::vector<range_t> ranges;
-    getRanges(ranges, points->size(), minPointsPerThread, numMaxThreads);
+    getThreadsRanges(ranges, points->size(), minPointsPerThread, numMaxThreads);
 
     const uint32_t numThreads = ranges.size();
-    for(uint32_t i = 0; i < numThreads; i++)
-    {
-        const range_t& range = ranges[i];
-        mlog(INFO, "Range[%d]: %d - %d", i, range.start, range.end);
-    }
+    const double startTime = TimeLib::latchtime();
 
     for(uint32_t i = 0; i < numThreads; i++)
     {
@@ -1741,7 +1737,6 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>
     {
         delete pid;
     }
-
 
     /* Combine results from all union maker threads */
     OGRGeometry* unionPolygon = NULL;
@@ -1774,6 +1769,18 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>
         {
             mlog(ERROR, "Failed to simplify polygon");
         }
+    }
+
+    const double elapsedTime = TimeLib::latchtime() - startTime;
+    mlog(INFO, "Unioning all geometries took %.3lf seconds", elapsedTime);
+
+    /* Log stats and cleanup */
+    for(uint32_t i = 0; i < unionMakers.size(); i++)
+    {
+        union_maker_t* um = unionMakers[i];
+
+        mlog(INFO, "Thread[%d]: %10d - %-10d p2poly: %.3lf, unioning: %.3lf",
+             i, um->range.start, um->range.end, um->stats.points2polyTime, um->stats.unioningTime);
 
         delete um;
     }

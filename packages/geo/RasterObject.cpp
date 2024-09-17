@@ -196,7 +196,7 @@ uint32_t RasterObject::getSamples(const std::vector<point_info_t>& points, List<
 
         /* Get readers ranges */
         std::vector<range_t> ranges;
-        getRanges(ranges, points.size(), 5, maxNumThreads);
+        getThreadsRanges(ranges, points.size(), 5, maxNumThreads);
 
         for(uint32_t i = 0; i < ranges.size(); i++)
         {
@@ -372,10 +372,10 @@ const char* RasterObject::fileDictGetFile (uint64_t fileId)
 }
 
 /*----------------------------------------------------------------------------
- * getRanges
+ * getThreadsRanges
  *----------------------------------------------------------------------------*/
-void RasterObject::getRanges(std::vector<range_t>& ranges, uint32_t num,
-                             uint32_t minPerThread, uint32_t maxNumThreads)
+void RasterObject::getThreadsRanges(std::vector<range_t>& ranges, uint32_t num,
+                                    uint32_t minPerThread, uint32_t maxNumThreads)
 {
     ranges.clear();
 

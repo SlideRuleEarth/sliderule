@@ -155,11 +155,18 @@ class GeoIndexedRaster: public RasterObject
                     ~Finder(void);
         } finder_t;
 
+
+        typedef struct {
+            double        points2polyTime;
+            double        unioningTime;
+        } union_maker_stats_t;
+
         typedef struct UnionMaker {
             GeoIndexedRaster*                obj;
             range_t                          range;
             const std::vector<point_info_t>* points;
             OGRGeometry*                     unionPolygon;
+            union_maker_stats_t              stats;
 
             explicit UnionMaker (GeoIndexedRaster* _obj, const std::vector<point_info_t>* _points);
         } union_maker_t;
@@ -270,8 +277,8 @@ class GeoIndexedRaster: public RasterObject
         bool            updateCache         (uint32_t& rasters2sample, const GroupOrdering* groupList);
         bool            filterRasters       (int64_t gps, GroupOrdering* groupList);
         bool            findRastersParallel (OGRGeometry* geo, GroupOrdering* groupList, const std::vector<point_info_t>* points=NULL);
-        OGRGeometry*    getConvexHull       (const std::vector<point_info_t>* points);
         OGRGeometry*    getBufferedPoints   (const std::vector<point_info_t>* points);
+        static OGRGeometry* getConvexHull   (const std::vector<point_info_t>* points);
 };
 
 #endif  /* __geo_indexed_raster__ */

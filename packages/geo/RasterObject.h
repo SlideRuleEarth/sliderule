@@ -145,7 +145,7 @@ class RasterObject: public LuaObject
         bool        isSampling      (void) {return sampling;};
         uint64_t    fileDictAdd     (const std::string& fileName);
         const char* fileDictGetFile (uint64_t fileId);
-        static void getRanges       (std::vector<range_t>& ranges, uint32_t num,
+        static void getThreadsRanges(std::vector<range_t>& ranges, uint32_t num,
                                      uint32_t minPerThread, uint32_t maxNumThreads);
 
     protected:
