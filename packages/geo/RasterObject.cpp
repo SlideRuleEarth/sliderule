@@ -183,7 +183,7 @@ bool RasterObject::registerRaster (const char* _name, factory_f create)
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-uint32_t RasterObject::getSamples(const List<point_info_t*>& points, List<sample_list_t*>& sllist, void* param)
+uint32_t RasterObject::getSamples(const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param)
 {
     static_cast<void>(param);
     uint32_t ssErrors = SS_NO_ERRORS;
@@ -196,7 +196,7 @@ uint32_t RasterObject::getSamples(const List<point_info_t*>& points, List<sample
 
         /* Get readers ranges */
         std::vector<range_t> ranges;
-        getRanges(ranges, points.length(), 5, maxNumThreads);
+        getRanges(ranges, points.size(), 5, maxNumThreads);
 
         for(uint32_t i = 0; i < ranges.size(); i++)
         {
@@ -588,7 +588,7 @@ int RasterObject::luaSubsets(lua_State *L)
 /*----------------------------------------------------------------------------
  * Reader Constructor
  *----------------------------------------------------------------------------*/
-RasterObject::Reader::Reader(RasterObject* _robj, const List<RasterObject::point_info_t*>& _points) :
+RasterObject::Reader::Reader(RasterObject* _robj, const std::vector<RasterObject::point_info_t>& _points) :
     robj(_robj),
     range({0, 0}),
     points(_points),
@@ -674,12 +674,10 @@ void* RasterObject::readerThread(void* parm)
  * readSamples
  *----------------------------------------------------------------------------*/
 uint32_t RasterObject::readSamples(RasterObject* robj, const range_t& range,
-                                   const List<point_info_t*>& points, std::vector<sample_list_t*>& samples)
+                                   const std::vector<point_info_t>& points,
+                                   std::vector<sample_list_t*>& samples)
 {
     uint32_t ssErrors = SS_NO_ERRORS;
-
-    /* cast away constness because of List [] operator */
-    List<point_info_t*>& _points = const_cast<List<point_info_t*>&>(points);
 
     for(uint32_t i = range.start; i < range.end; i++)
     {
@@ -690,9 +688,9 @@ uint32_t RasterObject::readSamples(RasterObject* robj, const range_t& range,
             break;
         }
 
-        const RasterObject::point_info_t* pinfo = _points[i];
-        const MathLib::point_3d_t& point = pinfo->point;
-        const int64_t gps = robj->usePOItime() ? pinfo->gps : 0.0;
+        const RasterObject::point_info_t& pinfo = points[i];
+        const MathLib::point_3d_t& point = pinfo.point;
+        const int64_t gps = robj->usePOItime() ? pinfo.gps : 0.0;
 
         sample_list_t* slist = new sample_list_t;
         bool listvalid = true;

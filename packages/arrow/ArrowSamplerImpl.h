@@ -66,7 +66,7 @@ class ArrowSamplerImpl
         explicit ArrowSamplerImpl (ArrowSampler* _sampler);
         ~ArrowSamplerImpl         (void);
 
-        void processInputFile     (const char* file_path, List<point_info_t*>& points);
+        void processInputFile     (const char* file_path, std::vector<point_info_t>& points);
         bool processSamples       (ArrowSampler::batch_sampler_t* sampler);
         void createOutpuFiles     (void);
 
@@ -102,9 +102,9 @@ class ArrowSamplerImpl
          *--------------------------------------------------------------------*/
 
         void                          getMetadata             (void);
-        void                          getPoints               (List<point_info_t*>& points);
-        void                          getXYPoints             (List<point_info_t*>& points);
-        void                          getGeoPoints            (List<point_info_t*>& points);
+        void                          getPoints               (std::vector<point_info_t>& points);
+        void                          getXYPoints             (std::vector<point_info_t>& points);
+        void                          getGeoPoints            (std::vector<point_info_t>& points);
         std::shared_ptr<arrow::Table> inputFileToTable        (const std::vector<const char*>& columnNames = {});
         std::shared_ptr<arrow::Table> addNewColumns           (const std::shared_ptr<arrow::Table>& table);
         bool                          makeColumnsWithLists    (ArrowSampler::batch_sampler_t* sampler);

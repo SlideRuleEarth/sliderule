@@ -123,7 +123,7 @@ class ArrowSampler: public LuaObject
         Thread*                       mainPid;
         ArrowParms*                   parms;
         Publisher*                    outQ;
-        List<point_info_t*>           points;
+        std::vector<point_info_t>     points;
         std::vector<batch_sampler_t*> batchSamplers;
         ArrowSamplerImpl*             impl;
         const char*                   dataFile;           // used locally to build parquet file

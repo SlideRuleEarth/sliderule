@@ -87,7 +87,7 @@ ArrowSamplerImpl::~ArrowSamplerImpl (void)
 /*----------------------------------------------------------------------------
 * processInputFile
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::processInputFile(const char* file_path, List<point_info_t*>& points)
+void ArrowSamplerImpl::processInputFile(const char* file_path, std::vector<point_info_t>& points)
 {
     try
     {
@@ -276,7 +276,7 @@ void ArrowSamplerImpl::getMetadata(void)
 /*----------------------------------------------------------------------------
 * getPoints
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getPoints(List<point_info_t*>& points)
+void ArrowSamplerImpl::getPoints(std::vector<point_info_t>& points)
 {
     if(asGeo)
         getGeoPoints(points);
@@ -294,7 +294,7 @@ void ArrowSamplerImpl::getPoints(List<point_info_t*>& points)
 
         /* Update gps time for each point */
         for(int64_t i = 0; i < time_column->length(); i++)
-            points[i]->gps = time_column->Value(i);
+            points[i].gps = time_column->Value(i);
     }
     else mlog(DEBUG, "Time column not found.");
 }
@@ -302,7 +302,7 @@ void ArrowSamplerImpl::getPoints(List<point_info_t*>& points)
 /*----------------------------------------------------------------------------
 * getXYPoints
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getXYPoints(List<point_info_t*>& points)
+void ArrowSamplerImpl::getXYPoints(std::vector<point_info_t>& points)
 {
     const std::vector<const char*> columnNames = {xKey, yKey};
 
@@ -322,16 +322,15 @@ void ArrowSamplerImpl::getXYPoints(List<point_info_t*>& points)
         const double x = x_column->Value(i);
         const double y = y_column->Value(i);
 
-        point_info_t* pinfo = new point_info_t({{x, y, 0.0}, 0.0});
-        points.add(pinfo);
+        points.emplace_back(point_info_t({{x, y, 0.0}, 0.0}));
     }
-    mlog(DEBUG, "Read %d points from file", points.length());
+    mlog(DEBUG, "Read %zu points from file", points.size());
 }
 
 /*----------------------------------------------------------------------------
 * getGeoPoints
 *----------------------------------------------------------------------------*/
-void ArrowSamplerImpl::getGeoPoints(List<point_info_t*>& points)
+void ArrowSamplerImpl::getGeoPoints(std::vector<point_info_t>& points)
 {
     const char* geocol  = "geometry";
     const std::vector<const char*> columnNames = {geocol};
@@ -351,10 +350,10 @@ void ArrowSamplerImpl::getGeoPoints(List<point_info_t*>& points)
     {
         const std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
         const ArrowCommon::wkbpoint_t point = convertWKBToPoint(wkb_data);
-        point_info_t* pinfo = new point_info_t({{point.x, point.y, 0.0}, 0.0});
-        points.add(pinfo);
+
+        points.emplace_back(point_info_t({{point.x, point.y, 0.0}, 0.0}));
     }
-    mlog(INFO, "Read %d geo points from file", points.length());
+    mlog(INFO, "Read %zu geo points from file", points.size());
 }
 
 /*----------------------------------------------------------------------------

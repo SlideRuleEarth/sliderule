@@ -121,13 +121,11 @@ GeoIndexedRaster::Finder::~Finder (void)
 /*----------------------------------------------------------------------------
  * UnionMaker Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::UnionMaker::UnionMaker(GeoIndexedRaster* _obj, const List<point_info_t*>* _points):
+GeoIndexedRaster::UnionMaker::UnionMaker(GeoIndexedRaster* _obj, const std::vector<point_info_t>* _points):
     obj(_obj),
     range({0, 0}),
-    // points(_points),
-    points(NULL),
-    unionPolyA(NULL),
-    unionPolyB(NULL)
+    points(_points),
+    unionPolygon(NULL)
 {
 }
 
@@ -209,7 +207,7 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sample_list_t*>& sllist, void* param)
+uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param)
 {
     static_cast<void>(param);
 
@@ -221,9 +219,6 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
     const event_level_t gsLevel = INFO;
 
     perf_stats_t stats = {0.0, 0.0, 0.0, 0.0, 0.0};
-
-    /* cast away constness because of List [] operator */
-    List<point_info_t*>& _points = const_cast<List<point_info_t*>&>(points);
 
     /* Vector of points and their associated raster groups */
     std::vector<point_groups_t> pointGroups;
@@ -241,11 +236,11 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
 
         /* For all points from the caller, create a vector of raster group lists */
         tstart = TimeLib::latchtime();
-        for(int64_t i = 0; i < _points.length(); i++)
+        for(uint32_t i = 0; i < points.size(); i++)
         {
-            const point_info_t* pinfo = _points[i];
-            const int64_t gps = usePOItime() ? pinfo->gps : 0.0;
-            OGRPoint ogr_point(pinfo->point.x, pinfo->point.y, pinfo->point.z);
+            const point_info_t& pinfo = points[i];
+            const int64_t gps = usePOItime() ? pinfo.gps : 0.0;
+            OGRPoint ogr_point(pinfo.point.x, pinfo.point.y, pinfo.point.z);
 
             GroupOrdering* groupList = new GroupOrdering();
             findRastersParallel(&ogr_point, groupList, &points);
@@ -319,8 +314,7 @@ uint32_t GeoIndexedRaster::getSamples(const List<point_info_t*>& points, List<sa
                         if(ri.fileName == rasterName)
                         {
                             /* Found rasterName in this group of rasters, add this point */
-                            const point_sample_t pointSample = {pg.pointInfo, NULL, SS_NO_ERRORS};
-                            ur->pointSamples.push_back(pointSample);
+                            ur->pointSamples.push_back({pg.pointInfo, NULL, SS_NO_ERRORS});
                             break;
                         }
                     }
@@ -802,7 +796,7 @@ bool GeoIndexedRaster::getFeatureDate(const OGRFeature* feature, TimeLib::gmt_ti
 /*----------------------------------------------------------------------------
  * openGeoIndex
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const List<point_info_t*>* points)
+bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<point_info_t>* points)
 {
     std::string newFile;
     getIndexFile(geo, newFile);
@@ -1251,10 +1245,9 @@ void* GeoIndexedRaster::unionThread(void* parm)
 
     for(uint32_t i = start; i < end; i++)
     {
-        // const point_info_t* point_info = _points->get(i);
-        const point_info_t* point_info = um->points->at(i);
-        const double lon = point_info->point.x;
-        const double lat = point_info->point.y;
+        const point_info_t& point_info = um->points->at(i);
+        const double lon = point_info.point.x;
+        const double lat = point_info.point.y;
 
         /* Create a linear ring representing the bounding box */
         OGRLinearRing ring;
@@ -1346,7 +1339,7 @@ void* GeoIndexedRaster::unionThread(void* parm)
     }
 
     /* Set the unioned polygon in the union maker object */
-    um->unionPolyA = unionPolygon;
+    um->unionPolygon = unionPolygon;
 
     /* Exit Thread */
     return NULL;
@@ -1615,7 +1608,7 @@ bool GeoIndexedRaster::filterRasters(int64_t gps, GroupOrdering* groupList)
 /*----------------------------------------------------------------------------
  * findRastersParallel
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::findRastersParallel(OGRGeometry* geo, GroupOrdering* groupList, const List<point_info_t*>* points)
+bool GeoIndexedRaster::findRastersParallel(OGRGeometry* geo, GroupOrdering* groupList, const std::vector<point_info_t>* points)
 {
     /* For AOI always open new index file, for POI it depends... */
     const bool openNewFile = GdalRaster::ispoly(geo) || geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo);
@@ -1679,24 +1672,21 @@ bool GeoIndexedRaster::findRastersParallel(OGRGeometry* geo, GroupOrdering* grou
 /*----------------------------------------------------------------------------
  * getConvexHull
  *----------------------------------------------------------------------------*/
-OGRGeometry* GeoIndexedRaster::getConvexHull(const List<point_info_t*>* points)
+OGRGeometry* GeoIndexedRaster::getConvexHull(const std::vector<point_info_t>* points)
 {
     if(points->empty())
         return NULL;
 
-    /* cast away constness because of List [] operator */
-    List<point_info_t*>* _points = const_cast<List<point_info_t*>*>(points);
-
     /* Create an empty geometry collection to hold all points */
     OGRGeometryCollection geometryCollection;
 
+    mlog(INFO, "Creating convex hull from %zu points", points->size());
+
     /* Collect all points into a geometry collection */
-    mlog(INFO, "Creating convex hull from %d points", points->length());
-    for(int i = 0; i < points->length(); i++)
+    for(point_info_t point_info : *points)
     {
-        const point_info_t* point_info = _points->get(i);
-        double lon = point_info->point.x;
-        double lat = point_info->point.y;
+        double lon = point_info.point.x;
+        double lat = point_info.point.y;
 
         OGRPoint* point = new OGRPoint(lon, lat);
         geometryCollection.addGeometryDirectly(point);
@@ -1715,7 +1705,7 @@ OGRGeometry* GeoIndexedRaster::getConvexHull(const List<point_info_t*>* points)
 /*----------------------------------------------------------------------------
  * getBufferedPoints
  *----------------------------------------------------------------------------*/
-OGRGeometry* GeoIndexedRaster::getBufferedPoints(const List<point_info_t*>* points)
+OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>* points)
 {
     if(points->empty())
         return NULL;
@@ -1728,7 +1718,7 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const List<point_info_t*>* poin
     const uint32_t minPointsPerThread = 100;
 
     std::vector<range_t> ranges;
-    getRanges(ranges, points->length(), minPointsPerThread, numMaxThreads);
+    getRanges(ranges, points->size(), minPointsPerThread, numMaxThreads);
 
     const uint32_t numThreads = ranges.size();
     for(uint32_t i = 0; i < numThreads; i++)
@@ -1737,28 +1727,10 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const List<point_info_t*>* poin
         mlog(INFO, "Range[%d]: %d - %d", i, range.start, range.end);
     }
 
-    /* cast away constness because of List [] operator */
-    List<point_info_t*>* _points = const_cast<List<point_info_t*>*>(points);
-
-    //TEMP HACK: convert List to vector
-    //           multithreading with List is not working, need to investigate
-    //           I should be able to use List with multiple threads if I am not changing the list and only readign from it
-    //           but it is not working(corrupted memory detected by sanitizer)
-    //           so I am converting it to vector for now.
-    //           I had similar issue with Dictionary. I use it in Landast code and multiple threads reading from it were crashing.
-    //           I had to use mutex to protect it. I will investigate this issue later.
-    std::vector<point_info_t*> vectPoints;
-    for(int i = 0; i < points->length(); i++)
-    {
-        vectPoints.push_back(_points->get(i));
-    }
-
     for(uint32_t i = 0; i < numThreads; i++)
     {
         union_maker_t* um = new union_maker_t(this, points);
         um->range = ranges[i];
-        um->points = &vectPoints;
-        // um->points = points;
         unionMakers.push_back(um);
         Thread* pid = new Thread(unionThread, um);
         pids.push_back(pid);
@@ -1776,7 +1748,7 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const List<point_info_t*>* poin
 
     for(union_maker_t* um : unionMakers)
     {
-        if(um->unionPolyA == NULL)
+        if(um->unionPolygon == NULL)
         {
             mlog(WARNING, "Union polygon is NULL");
             continue;
@@ -1784,14 +1756,14 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const List<point_info_t*>* poin
 
         if(unionPolygon == NULL)
         {
-            unionPolygon = um->unionPolyA;
+            unionPolygon = um->unionPolygon;
         }
         else
         {
-            OGRGeometry* newUnionPolygon = unionPolygon->Union(um->unionPolyA);
+            OGRGeometry* newUnionPolygon = unionPolygon->Union(um->unionPolygon);
             OGRGeometryFactory::destroyGeometry(unionPolygon);
             unionPolygon = newUnionPolygon;
-            OGRGeometryFactory::destroyGeometry(um->unionPolyA);
+            OGRGeometryFactory::destroyGeometry(um->unionPolygon);
         }
 
         const double tolerance = 0.0005;  /* Simplification tolerance          */

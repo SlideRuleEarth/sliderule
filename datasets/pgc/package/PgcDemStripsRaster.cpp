@@ -84,11 +84,28 @@ bool PgcDemStripsRaster::getFeatureDate(const OGRFeature* feature, TimeLib::gmt_
 /*----------------------------------------------------------------------------
  * openGeoIndex
  *----------------------------------------------------------------------------*/
-bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo, const List<point_info_t*>* points)
+bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<point_info_t>* points)
 {
-    /* For point call parent class */
     if(GdalRaster::ispoint(geo))
-        return GeoIndexedRaster::openGeoIndex(geo, points);
+    {
+        /* For geo being point call parent class if points are not provided */
+        if(points == NULL)
+            return GeoIndexedRaster::openGeoIndex(geo, points);
+        else
+        {
+            //TODO: Implement this:
+            //      Code should get the bbox for all points, and do the poly case
+            //      Change poly case to find/open each geojson file from the bbox and create new geojson file
+            //      in vsimem which is the union of all the geojson files.
+            //      Then call parent class with the new geojson file.
+            mlog(ERROR, "Not implemented yet");
+            return false;
+        }
+    }
+
+    /* Code below is for geo being a polygon */
+    if(!GdalRaster::ispoly(geo))
+        return false;
 
     /*
      * Create a list of minx, miny  1° x 1° geocell points contained in AOI

@@ -123,16 +123,16 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
         const long pointsCnt = getLuaInteger(L, 6);
 
         /* Create  of points to sample */
-        List<RasterObject::point_info_t*> points2sample;
+        std::vector<RasterObject::point_info_t> points2sample;
         for(long i = 0; i < pointsCnt; i++)
         {
-            RasterObject::point_info_t* point = new RasterObject::point_info_t();
-            point->point.x = lon;
-            point->point.y = lat;
-            point->point.z = 0.0;
-            point->gps = 0.0;
+            RasterObject::point_info_t point;
+            point.point.x = lon;
+            point.point.y = lat;
+            point.point.z = 0.0;
+            point.gps = 0.0;
 
-            points2sample.add(point);
+            points2sample.push_back(point);
 
             lon += lonIncr;
             lat += latIncr;
@@ -145,10 +145,10 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
         print2term("Getting samples using serial method\n");
         List<RasterObject::sample_list_t*> serial_sllist;
         const double serialStartTime = TimeLib::latchtime();
-        for(int i = 0; i < points2sample.length(); i++)
+        for(uint32_t i = 0; i < points2sample.size(); i++)
         {
             RasterObject::sample_list_t* slist = new RasterObject::sample_list_t();
-            lua_obj->raster->getSamples(points2sample[i]->point, 0, *slist, NULL);
+            lua_obj->raster->getSamples(points2sample[i].point, 0, *slist, NULL);
 
             /* Add to list */
             serial_sllist.add(slist);
