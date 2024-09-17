@@ -103,8 +103,8 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<
             // mlog(ERROR, "Not implemented yet");
             // return false;
 
-            /* For now call parent class with points set to NULL */
-            return GeoIndexedRaster::openGeoIndex(geo, NULL);
+            /* For now call parent class */
+            return GeoIndexedRaster::openGeoIndex(geo, points);
         }
     }
 
