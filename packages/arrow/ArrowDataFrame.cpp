@@ -63,7 +63,7 @@ void encode(const FieldColumn<T>* field_column, vector<shared_ptr<arrow::Array>>
 {
     B builder;
 
-    long num_rows = field_column->length();
+    const long num_rows = field_column->length();
     (void)builder.Reserve(num_rows);
     for(int i = 0; i < num_rows; i++)
     {
@@ -82,7 +82,7 @@ void encode(const FieldColumn<time8_t>* field_column, vector<shared_ptr<arrow::A
 {
     arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
 
-    long num_rows = field_column->length();
+    const long num_rows = field_column->length();
     (void)builder.Reserve(num_rows);
     for(int i = 0; i < num_rows; i++)
     {
@@ -102,12 +102,12 @@ void encodeArray(const FieldColumn<FieldColumn<T>>* field_column, vector<shared_
 {
     auto builder = make_shared<B>();
 
-    long num_rows = field_column->length();
+    const long num_rows = field_column->length();
     arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
     for(int i = 0; i < num_rows; i++)
     {
         const FieldColumn<T>& field = (*field_column)[i];
-        long num_elements = field.length();
+        const long num_elements = field.length();
         (void)list_builder.Append();
         for(int element = 0; element < num_elements; element++)
         {
@@ -127,12 +127,12 @@ void encodeArray(const FieldColumn<FieldColumn<time8_t>>* field_column, vector<s
 {
     auto builder = make_shared<arrow::TimestampBuilder>(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
 
-    long num_rows = field_column->length();
+    const long num_rows = field_column->length();
     arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
     for(int i = 0; i < num_rows; i++)
     {
         const FieldColumn<time8_t>& field = (*field_column)[i];
-        long num_elements = field.length();
+        const long num_elements = field.length();
         (void)list_builder.Append();
         for(int element = 0; element < num_elements; element++)
         {
@@ -150,7 +150,7 @@ void encodeArray(const FieldColumn<FieldColumn<time8_t>>* field_column, vector<s
 *----------------------------------------------------------------------------*/
 void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Array>>& columns ) 
 {
-    long num_rows = dataframe.length();
+    const long num_rows = dataframe.length();
     const FieldColumn<double>* x = dataframe.getXColumn();
     const FieldColumn<double>* y = dataframe.getYColumn();
 
@@ -186,7 +186,7 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
 void buildFieldList (vector<shared_ptr<arrow::Field>>& fields, const ArrowFields& parms, const GeoDataFrame& dataframe)
 {
     // loop through columns in data frame
-    vector<string> column_names = dataframe.getColumnNames();
+    const vector<string> column_names = dataframe.getColumnNames();
     for(const string& name: column_names)
     {
         Field* field = dataframe.getColumnData(name.c_str());
@@ -610,7 +610,7 @@ ArrowDataFrame::ArrowDataFrame(lua_State* L, RequestFields* _parms, GeoDataFrame
 
     // start trace
     const uint32_t parent_trace_id = EventLib::grabId();
-    const uint32_t trace_id = start_trace(INFO, parent_trace_id, "ArrowDataFrame", "{\"num_rows\": %d}", dataframe.length());
+    const uint32_t trace_id = start_trace(INFO, parent_trace_id, "ArrowDataFrame", "{\"num_rows\": %ld}", dataframe->length());
 
     // get arrow parameters
     const ArrowFields& arrow_parms = parms->output.value;
@@ -680,7 +680,7 @@ ArrowDataFrame::ArrowDataFrame(lua_State* L, RequestFields* _parms, GeoDataFrame
         if(result.ok())
         {
             // write table
-            shared_ptr<arrow::io::FileOutputStream> feather_writer = result.ValueOrDie();
+            const shared_ptr<arrow::io::FileOutputStream> feather_writer = result.ValueOrDie();
             const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
             const arrow::Status s = arrow::ipc::feather::WriteTable(*table, feather_writer.get());
             if(!s.ok()) mlog(CRITICAL, "Failed to write feather table: %s", s.CodeAsString().c_str());
@@ -698,7 +698,7 @@ ArrowDataFrame::ArrowDataFrame(lua_State* L, RequestFields* _parms, GeoDataFrame
         if(result.ok())
         {
             // write table
-            shared_ptr<arrow::io::FileOutputStream> csv_writer = result.ValueOrDie();
+            const shared_ptr<arrow::io::FileOutputStream> csv_writer = result.ValueOrDie();
             const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
             const arrow::Status s = arrow::csv::WriteCSV(*table, arrow::csv::WriteOptions::Defaults(), csv_writer.get());
             if(!s.ok()) mlog(CRITICAL, "Failed to write CSV table: %s", s.CodeAsString().c_str());

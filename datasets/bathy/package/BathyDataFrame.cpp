@@ -167,8 +167,8 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         }
 
         /* Set Track and Pair ( gt<track><pair> - e.g. gt1l )*/
-        track = static_cast<int>(beam.value[2]) - 0x30;
-        pair = beam.value[3] == 'l' ? Icesat2Fields::RPT_L : Icesat2Fields::RPT_R;
+        track.value = static_cast<int>(beam.value[2]) - 0x30;
+        pair.value = beam.value[3] == 'l' ? Icesat2Fields::RPT_L : Icesat2Fields::RPT_R;
 
         /* Set Thread Specific Trace ID for H5Coro */
         EventLib::stashId (traceId);

@@ -214,6 +214,10 @@ void convertFromIndex(int index, ut_field_enum_t& v) {
     v = static_cast<ut_field_enum_t>(index * 10);
 }
 
+inline uint32_t toEncoding(ut_field_enum_t& v) { 
+    (void)v; return Field::INT32;
+};
+
 int UT_Field::testEnumeration(lua_State* L)
 {
     UT_Field* lua_obj = NULL;

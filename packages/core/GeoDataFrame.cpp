@@ -199,10 +199,10 @@ vector<string> GeoDataFrame::getColumnNames(void) const
 {
     vector<string> names;
     char** keys = NULL;
-    int num_keys = columnFields.fields.getKeys(&keys);
+    const int num_keys = columnFields.fields.getKeys(&keys);
     for(int i = 0; i < num_keys; i++)
     {
-        names.emplace_back(string(keys[i]));
+        names.emplace_back(keys[i]);
         delete [] keys[i];
     }
     delete [] keys;

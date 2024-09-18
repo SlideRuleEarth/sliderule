@@ -212,10 +212,10 @@ RequestFields::RequestFields(lua_State* L, int index, const std::initializer_lis
     fromLua(L, index);
 
     // set timeouts (if necessary)
-    if(timeout == TIMEOUT_UNSET)        timeout = DEFAULT_TIMEOUT;    
-    if(rqstTimeout == TIMEOUT_UNSET)    rqstTimeout = timeout;
-    if(nodeTimeout == TIMEOUT_UNSET)    nodeTimeout = timeout;
-    if(readTimeout == TIMEOUT_UNSET)    readTimeout = timeout;
+    if(timeout.value == TIMEOUT_UNSET)      timeout.value = DEFAULT_TIMEOUT;    
+    if(rqstTimeout.value == TIMEOUT_UNSET)  rqstTimeout.value = timeout.value;
+    if(nodeTimeout.value == TIMEOUT_UNSET)  nodeTimeout.value = timeout.value;
+    if(readTimeout.value == TIMEOUT_UNSET)  readTimeout.value = timeout.value;
 
     // project polygon (if necessary)
     pointsInPolygon = polygon.length();
