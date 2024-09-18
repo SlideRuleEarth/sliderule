@@ -203,13 +203,14 @@ class GeoIndexedRaster: public RasterObject
         uint32_t         getGroupFlags         (const rasters_group_t* rgroup);
 
         static double    getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
-        virtual bool     openGeoIndex          (const OGRGeometry* geo, const std::vector<point_info_t>* points=NULL);
+        bool             openGeoIndex          (const OGRGeometry* geo, const std::vector<point_info_t>* points);
         virtual bool     getFeatureDate        (const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate);
-        virtual void     getIndexFile          (const OGRGeometry* geo, std::string& file) = 0;
+        virtual void     getIndexFile          (const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points=NULL) = 0;
         virtual bool     findRasters           (finder_t* finder) = 0;
         void             sampleRasters         (OGRGeometry* geo);
         bool             sample                (OGRGeometry* geo, int64_t gps, GroupOrdering* groupList);
         void             emptyFeaturesList     (void);
+        static OGRGeometry* getConvexHull      (const std::vector<point_info_t>* points);
 
         /*--------------------------------------------------------------------
          * Data
@@ -278,7 +279,6 @@ class GeoIndexedRaster: public RasterObject
         bool            filterRasters       (int64_t gps, GroupOrdering* groupList);
         bool            findRastersParallel (OGRGeometry* geo, GroupOrdering* groupList, const std::vector<point_info_t>* points=NULL);
         OGRGeometry*    getBufferedPoints   (const std::vector<point_info_t>* points);
-        static OGRGeometry* getConvexHull   (const std::vector<point_info_t>* points);
 };
 
 #endif  /* __geo_indexed_raster__ */

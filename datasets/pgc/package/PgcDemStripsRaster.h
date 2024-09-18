@@ -53,12 +53,12 @@ class PgcDemStripsRaster: public GeoIndexedRaster
                  PgcDemStripsRaster (lua_State* L, GeoParms* _parms, const char* dem_name, const char* geo_suffix, GdalRaster::overrideCRS_t cb);
                 ~PgcDemStripsRaster (void) override;
         bool     getFeatureDate     (const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate) final;
-        bool     openGeoIndex       (const OGRGeometry* geo, const std::vector<point_info_t>* points=NULL) final;
-        void     getIndexFile       (const OGRGeometry* geo, std::string& file) final;
+        void     getIndexFile       (const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points) final;
         bool     findRasters        (finder_t* finder) final;
 
     private:
         void    _getIndexFile       (double lon, double lat, std::string& file);
+        bool    combineGeoJSONFiles (OGRGeometry* convexHull, const std::vector<std::string>& inputFiles);
 
         /*--------------------------------------------------------------------
          * Data
@@ -66,6 +66,8 @@ class PgcDemStripsRaster: public GeoIndexedRaster
         std::string filePath;
         std::string demName;
         std::string path2geocells;
+        std::string combinedGeoJSON;
+
 };
 
 #endif  /* __pgcdem_strips_raster__ */

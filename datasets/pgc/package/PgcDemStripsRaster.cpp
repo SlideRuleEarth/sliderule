@@ -59,7 +59,14 @@ PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const cha
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-PgcDemStripsRaster::~PgcDemStripsRaster(void) = default;
+PgcDemStripsRaster::~PgcDemStripsRaster(void)
+{
+    /* Remove combined geojson file */
+    if(!combinedGeoJSON.empty())
+    {
+        VSIUnlink(combinedGeoJSON.c_str());
+    }
+}
 
 
 /*----------------------------------------------------------------------------
@@ -82,42 +89,69 @@ bool PgcDemStripsRaster::getFeatureDate(const OGRFeature* feature, TimeLib::gmt_
 
 
 /*----------------------------------------------------------------------------
- * openGeoIndex
+ * getIndexFile
  *----------------------------------------------------------------------------*/
-bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<point_info_t>* points)
+void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points)
 {
-    if(GdalRaster::ispoint(geo))
-    {
-        if(points == NULL)
-        {
-            /* For geo being a point call parent class if points are not provided */
-            return GeoIndexedRaster::openGeoIndex(geo, points);
-        }
-        else
-        {
-            //TODO: Implement this:
-            //      Code should get the bbox for all points, and do the poly case
-            //      Change poly case to find/open each geojson file from the bbox and create new geojson file
-            //      in vsimem which is the union of all the geojson files.
-            //      Then call parent class with the new geojson file.
-            // mlog(ERROR, "Not implemented yet");
-            // return false;
+    const OGRPolygon* poly = NULL;
+    OGRGeometry* convexHull = NULL;
 
-            /* For now call parent class */
-            return GeoIndexedRaster::openGeoIndex(geo, points);
+    if(geo == NULL && points == NULL)
+    {
+        mlog(ERROR, "Both geo and points are NULL");
+        ssErrors |= SS_INDEX_FILE_ERROR;
+        return;
+    }
+
+    /* Determine if we have a point */
+    if(geo && GdalRaster::ispoint(geo))
+    {
+        /* Only one index file for a point from one of the geocells */
+        const OGRPoint* poi = geo->toPoint();
+        _getIndexFile(poi->getX(), poi->getY(), file);
+        return;
+    }
+
+    /*
+     * Below we are dealing with polygons only, either from geo or created from points.
+     */
+
+    /* Determine if we have a polygon */
+    if(geo && GdalRaster::ispoly(geo))
+    {
+        poly = geo->toPolygon();
+    }
+
+    /* Create convex hull from points */
+    if(points != NULL)
+    {
+        convexHull = getConvexHull(points);
+        if(convexHull == NULL)
+        {
+            mlog(ERROR, "Error creating convex hull");
+            ssErrors |= SS_INDEX_FILE_ERROR;
+            return;
         }
     }
 
-    /* Code below is for geo being a polygon */
-    if(!GdalRaster::ispoly(geo))
-        return false;
+    /* If we don't have a polygon and we don't have a convex hull, we have an error */
+    if(poly == NULL && convexHull == NULL)
+    {
+        mlog(ERROR, "Invalid geometry");
+        ssErrors |= SS_INDEX_FILE_ERROR;
+        return;
+    }
+
+    /* We don't have a polygon, but we have a convex hull */
+    if(poly == NULL && convexHull != NULL)
+    {
+        poly = convexHull->toPolygon();
+    }
 
     /*
-     * Create a list of minx, miny  1° x 1° geocell points contained in AOI
-     * For each point get geojson file
-     * Open file, get list of features.
+     * Find all geojson files that intersect the polygon
      */
-    const OGRPolygon* poly = geo->toPolygon();
+
     OGREnvelope env;
     poly->getEnvelope(&env);
 
@@ -126,10 +160,11 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<
     const double maxx = ceil(env.MaxX);
     const double maxy = ceil(env.MaxY);
 
-    /* Create poly geometry for all index files */
+    /* Create polygon geometry for all index files for 1° x 1° geocell grid */
     geoIndexPoly = GdalRaster::makeRectangle(minx, miny, maxx, maxy);
 
-    emptyFeaturesList();
+    /* Create a vector holding all geojson files from all geocells */
+    std::vector<std::string> files;
 
     for(long ix = minx; ix < maxx; ix++ )
     {
@@ -137,78 +172,46 @@ bool PgcDemStripsRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<
         {
             std::string newFile;
             _getIndexFile(ix, iy, newFile);
-
-            GDALDataset* dset = NULL;
-            try
+            if(!newFile.empty())
             {
-                /* Open new vector data set*/
-                dset = static_cast<GDALDataset*>(GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL));
-                if(dset == NULL)
-                {
-                    /* If index file for this ix, iy does not exist, continue */
-                    mlog(DEBUG, "Failed to open geojson index file: %s:", newFile.c_str());
-                    continue;
-                }
-
-                OGRLayer* layer = dset->GetLayer(0);
-                CHECKPTR(layer);
-
-                /*
-                 * Clone all features and store them for performance/speed of feature lookup
-                 */
-                layer->ResetReading();
-                while(OGRFeature* feature = layer->GetNextFeature())
-                {
-                    /* Temporal filter */
-                    TimeLib::gmt_time_t gmtDate;
-                    if(parms->filter_time && getFeatureDate(feature, gmtDate))
-                    {
-                        /* Check if feature is in time range */
-                        if(!TimeLib::gmtinrange(gmtDate, parms->start_time, parms->stop_time))
-                        {
-                            OGRFeature::DestroyFeature(feature);
-                            continue;
-                        }
-                    }
-
-                    /* Clone feature and store it */
-                    OGRFeature* fp = feature->Clone();
-                    featuresList.push_back(fp);
-                    OGRFeature::DestroyFeature(feature);
-                }
-
-                mlog(DEBUG, "Loaded %lu index file features/rasters from: %s", featuresList.size(), newFile.c_str());
-                GDALClose((GDALDatasetH)dset);
-            }
-            catch(const RunTimeException& e)
-            {
-                /* If geocell does not have a geojson index file, ignore it and don't count it as error */
-                if(dset) GDALClose((GDALDatasetH)dset);
+                files.push_back(newFile);
             }
         }
     }
 
-    if(featuresList.empty())
+    /* Check for geojson files found in geocells */
+    if(files.empty())
     {
-        /* All geocells were 'empty' */
-        geoIndexPoly.empty();
+        mlog(ERROR, "No geojson files found");
         ssErrors |= SS_INDEX_FILE_ERROR;
-        return false;
+        OGRGeometryFactory::destroyGeometry(convexHull);
+        return;
     }
 
-    return true;
-}
-
-/*----------------------------------------------------------------------------
- * getIndexFile
- *----------------------------------------------------------------------------*/
-void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
-{
-    if(GdalRaster::ispoint(geo))
+    /* If we have only one file and no convex hull to use as spatial filter, we are done */
+    if(convexHull == NULL && files.size() == 1)
     {
-        const OGRPoint* poi = geo->toPoint();
-        _getIndexFile(poi->getX(), poi->getY(), file);
+        file = files[0];
+        OGRGeometryFactory::destroyGeometry(convexHull);
+        return;
     }
+
+    /* Combine all geojson files into a single file stored in vsimem */
+    if(!combinedGeoJSON.empty())
+    {
+        /* Remove previous combined geojson file */
+        VSIUnlink(combinedGeoJSON.c_str());
+    }
+
+    combinedGeoJSON = "/vsimem/" + GdalRaster::getUUID() + "_combined.geojson";
+    if(combineGeoJSONFiles(convexHull, files))
+    {
+        /* Set the combined geojson file as the index file */
+        file = combinedGeoJSON;
+    }
+
+    /* Cleanup convex hull */
+    OGRGeometryFactory::destroyGeometry(convexHull);
 }
 
 /*----------------------------------------------------------------------------
@@ -358,3 +361,113 @@ void PgcDemStripsRaster::_getIndexFile(double lon, double lat, std::string& file
     mlog(DEBUG, "Using %s", file.c_str());
 }
 
+
+/*----------------------------------------------------------------------------
+ * combineGeoJSONFiles
+ *----------------------------------------------------------------------------*/
+bool PgcDemStripsRaster::combineGeoJSONFiles(OGRGeometry* convexHull, const std::vector<std::string>& inputFiles)
+{
+    /* Create an in-memory data source for the output */
+    GDALDriver* memDriver   = GetGDALDriverManager()->GetDriverByName("Memory");
+    GDALDataset* memDataset = memDriver->Create("memory", 0, 0, 0, GDT_Unknown, NULL);
+
+    if (memDataset == NULL)
+    {
+        mlog(ERROR, "Failed to create in-memory dataset.");
+        return false;
+    }
+
+    OGRLayer* combinedLayer = NULL;
+
+    for (const auto& infile : inputFiles)
+    {
+        GDALDataset* inputDataset = static_cast<GDALDataset*>(GDALOpenEx(infile.c_str(), GDAL_OF_VECTOR, NULL, NULL, NULL));
+        if (inputDataset == NULL)
+        {
+            mlog(DEBUG, "Failed to open input file: %s", infile.c_str());
+            continue;
+        }
+
+        /* Assuming that each file has a single layer */
+        OGRLayer* inputLayer = inputDataset->GetLayer(0);
+        if (inputLayer == NULL)
+        {
+            mlog(ERROR, "No layer found in file: %s", infile.c_str());
+            GDALClose(inputDataset);
+            continue;
+        }
+
+        /* Set spatial filter to the convex hull */
+        if(convexHull != NULL)
+        {
+            inputLayer->SetSpatialFilter(convexHull);
+        }
+
+        /* If this is the first file, create the combined layer in the memory dataset */
+        if (combinedLayer == NULL)
+        {
+            combinedLayer = memDataset->CreateLayer(inputLayer->GetName(), inputLayer->GetSpatialRef(), inputLayer->GetGeomType(), NULL);
+            if (combinedLayer == NULL)
+            {
+                mlog(ERROR, "Failed to create combined layer in memory dataset.");
+                GDALClose(inputDataset);
+                GDALClose(memDataset);
+                return false;
+            }
+
+            /* Copy the fields from the input layer to the combined layer */
+            OGRFeatureDefn* inputFeatureDefn = inputLayer->GetLayerDefn();
+            for (int i = 0; i < inputFeatureDefn->GetFieldCount(); i++)
+                combinedLayer->CreateField(inputFeatureDefn->GetFieldDefn(i));
+        }
+
+        /* Copy features from the input layer to the combined layer */
+        inputLayer->ResetReading();
+        OGRFeature* inputFeature = NULL;
+        while ((inputFeature = inputLayer->GetNextFeature()) != NULL)
+        {
+            OGRErr err = OGRERR_NONE;
+            OGRFeature* combinedFeature = OGRFeature::CreateFeature(combinedLayer->GetLayerDefn());
+            err |= combinedFeature->SetFrom(inputFeature);
+            err |= combinedLayer->CreateFeature(combinedFeature);
+            if(err != OGRERR_NONE)
+            {
+                mlog(ERROR, "Failed to copy feature from input layer to combined layer.");
+                OGRFeature::DestroyFeature(inputFeature);
+                OGRFeature::DestroyFeature(combinedFeature);
+                GDALClose(inputDataset);
+                GDALClose(memDataset);
+                return false;
+            }
+            OGRFeature::DestroyFeature(inputFeature);
+            OGRFeature::DestroyFeature(combinedFeature);
+        }
+
+        GDALClose(inputDataset);
+    }
+
+    /* Write the combined layer to a GeoJSON file in the /vsimem filesystem */
+    GDALDriver* jsonDriver = GetGDALDriverManager()->GetDriverByName("GeoJSON");
+    if (jsonDriver == NULL)
+    {
+        mlog(ERROR, "GeoJSON driver not available.");
+        GDALClose(memDataset);
+        return false;
+    }
+
+    GDALDataset* vsiDataset = jsonDriver->CreateCopy(combinedGeoJSON.c_str(), memDataset, FALSE, NULL, NULL, NULL);
+    if (vsiDataset == NULL)
+    {
+        mlog(ERROR, "Failed to create GeoJSON in /vsimem.");
+    }
+    else
+    {
+        mlog(INFO, "GeoJSON successfully created in /vsimem at %s", combinedGeoJSON.c_str());
+    }
+
+    /* Cleanup */
+    GDALClose(vsiDataset);
+    GDALClose(memDataset);
+
+    return true;
+}

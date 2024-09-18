@@ -240,6 +240,11 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         /* Map raster file names to a set of ordered unique points */
         std::unordered_map<std::string, std::set<uint32_t>> rasterToPointsMap;
 
+#if 0
+        /* Open the index file for all points */
+        openGeoIndex(NULL, &points);
+#endif
+
         /* For all points from the caller, create a vector of raster group lists */
         startTime = TimeLib::latchtime();
         for(uint32_t i = 0; i < points.size(); i++)
@@ -249,7 +254,21 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
             OGRPoint ogr_point(pinfo.point.x, pinfo.point.y, pinfo.point.z);
 
             GroupOrdering* groupList = new GroupOrdering();
+#if 1
             findRastersParallel(&ogr_point, groupList, &points);
+#else
+            Finder finder(this);
+            finder.geo = ogr_point.clone();
+            uint32_t size = points.size();
+            finder.range = {0, size};
+            findRasters(&finder);
+
+            for(uint32_t j = 0; j < finder.rasterGroups.size(); j++)
+            {
+                rasters_group_t* rgroup = finder.rasterGroups[j];
+                groupList->add(groupList->length(), rgroup);
+            }
+#endif
             filterRasters(gps, groupList);
 
             pointGroups.emplace_back(point_groups_t{{ogr_point, i}, groupList});
@@ -806,7 +825,7 @@ bool GeoIndexedRaster::getFeatureDate(const OGRFeature* feature, TimeLib::gmt_ti
 bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<point_info_t>* points)
 {
     std::string newFile;
-    getIndexFile(geo, newFile);
+    getIndexFile(geo, newFile, points);
 
     /* Trying to open the same file? */
     if(!featuresList.empty() && newFile == indexFile)
@@ -889,7 +908,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
         }
 
         GDALClose((GDALDatasetH)dset);
-        mlog(DEBUG, "Loaded index file with %ld features", featuresList.size());
+        mlog(INFO, "Loaded %ld features from: %s", featuresList.size(), newFile.c_str());
     }
     catch (const RunTimeException &e)
     {
@@ -1616,8 +1635,7 @@ bool GeoIndexedRaster::filterRasters(int64_t gps, GroupOrdering* groupList)
  *----------------------------------------------------------------------------*/
 bool GeoIndexedRaster::findRastersParallel(OGRGeometry* geo, GroupOrdering* groupList, const std::vector<point_info_t>* points)
 {
-    /* For AOI always open new index file, for POI it depends... */
-    const bool openNewFile = GdalRaster::ispoly(geo) || geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo);
+    const bool openNewFile = geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo);
     if(openNewFile)
     {
         if(!openGeoIndex(geo, points))

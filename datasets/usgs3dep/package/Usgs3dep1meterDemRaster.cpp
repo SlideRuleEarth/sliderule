@@ -83,9 +83,10 @@ Usgs3dep1meterDemRaster::~Usgs3dep1meterDemRaster(void)
 /*----------------------------------------------------------------------------
  * getIndexFile
  *----------------------------------------------------------------------------*/
-void Usgs3dep1meterDemRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
+void Usgs3dep1meterDemRaster::getIndexFile(const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points)
 {
     static_cast<void>(geo);
+    static_cast<void>(points);
     file = indexFile;
     mlog(DEBUG, "Using %s", file.c_str());
 }
