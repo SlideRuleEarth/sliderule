@@ -70,10 +70,6 @@ class RegionMask: public FieldDictionary
                     RegionMask          (void);
                     ~RegionMask         (void) override;
 
-        RegionMask& operator=           (const RegionMask v);
-        bool        operator==          (const RegionMask& v) const;
-        bool        operator!=          (const RegionMask& v) const;
-
         bool        includes            (double lon, double lat) const;
 
         /*--------------------------------------------------------------------

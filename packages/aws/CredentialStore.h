@@ -86,7 +86,6 @@ class CredentialStore
             FieldElement<string>    secretAccessKey;
             FieldElement<string>    sessionToken;
             FieldElement<string>    expiration;
-            int64_t                 expirationGps;
 
             Credential(void): FieldDictionary({
                 {ACCESS_KEY_ID_STR, &accessKeyId},
@@ -103,26 +102,42 @@ class CredentialStore
 
                 {EXPIRATION_STR, &expiration},
                 {EXPIRATION_STR1, &expiration}
+            }) {};
+
+            Credential(const Credential& c): FieldDictionary({
+                {ACCESS_KEY_ID_STR, &accessKeyId},
+                {ACCESS_KEY_ID_STR1, &accessKeyId},
+                {ACCESS_KEY_ID_STR2, &accessKeyId},
+
+                {SECRET_ACCESS_KEY_STR, &secretAccessKey},
+                {SECRET_ACCESS_KEY_STR1, &secretAccessKey},
+                {SECRET_ACCESS_KEY_STR2, &secretAccessKey},
+
+                {SESSION_TOKEN_STR, &sessionToken},
+                {SESSION_TOKEN_STR1, &sessionToken},
+                {SESSION_TOKEN_STR2, &sessionToken},
+
+                {EXPIRATION_STR, &expiration},
+                {EXPIRATION_STR1, &expiration}
             }) {
-                if(!expiration.value.empty()) {
-                    expirationGps = TimeLib::str2gpstime(expiration.value.c_str());
-                }
-                else {
-                    expirationGps = 0;
-                }
+                accessKeyId = c.accessKeyId;
+                secretAccessKey = c.secretAccessKey;
+                sessionToken = c.sessionToken;
+                expiration = c.expiration;
+                provided = c.provided;
+                initialized = c.initialized;
             };
-
-            Credential(const Credential& c):
-                FieldDictionary()
-            {
-                fields = c.fields;
-                expirationGps = c.expirationGps;
-            };
-
+            
             Credential& operator=(const Credential& c) {
                 if(this != &c) {
-                    expirationGps = c.expirationGps;
-                }
+                    accessKeyId = c.accessKeyId;
+                    secretAccessKey = c.secretAccessKey;
+                    sessionToken = c.sessionToken;
+                    expiration = c.expiration;
+                    provided = c.provided;
+                    initialized = c.initialized;
+                } 
+
                 return *this;
             };
 
@@ -133,14 +148,14 @@ class CredentialStore
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void         init    (void);
-        static void         deinit  (void);
+        static void                 init    (void);
+        static void                 deinit  (void);
 
-        static Credential   get     (const char* identity);
-        static bool         put     (const char* identity, const Credential& credential);
+        static const Credential&    get     (const char* identity);
+        static bool                 put     (const char* identity, const Credential& credential);
 
-        static int          luaGet  (lua_State* L);
-        static int          luaPut  (lua_State* L);
+        static int                  luaGet  (lua_State* L);
+        static int                  luaPut  (lua_State* L);
 
     private:
 
@@ -150,7 +165,7 @@ class CredentialStore
 
         static Mutex credentialLock;
         static Dictionary<Credential> credentialStore;
-        static Dictionary<int32_t> metricIds;
+        static Credential emptyCredentials;
 };
 
 /******************************************************************************

@@ -60,6 +60,7 @@ int arrow_open (lua_State* L)
         {"dataframe",   ArrowDataFrame::luaCreate},
         {"sampler",     ArrowSampler::luaCreate},
         {"send2user",   ArrowCommon::luaSend2User},
+        {"parms",       ArrowParms::luaCreate},
         {NULL,          NULL}
     };
 

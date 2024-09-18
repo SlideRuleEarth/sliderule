@@ -95,7 +95,9 @@ class Field
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Field       (type_t _type, uint32_t _encoding): type(_type), encoding(_encoding) {};
+                        Field       (type_t _type, uint32_t _encoding): 
+                                    type(_type), encoding(_encoding), provided(false), initialized(false) {};
+
         virtual         ~Field      (void) = default;
         
         virtual int     toLua       (lua_State* L) const = 0;
@@ -121,15 +123,10 @@ class Field
          * Data
          *--------------------------------------------------------------------*/
 
-        type_t type;
-
-        // encoding = 0xn0000vv
-        //  n - upper bits for nested types
-        //  vv - <value type>
-        uint32_t encoding;
-
-        bool provided {false};      // whether the field has been populated by the fromLua function
-        bool initialized {false};   // whether the field has been initialized by any means
+        type_t type;        // child class type (dictionary, column, etc)
+        uint32_t encoding;  // encoding = 0xn0000vv; n: upper bits for nested types; vv: <value type>
+        bool provided;      // whether the field has been populated by the fromLua function
+        bool initialized;   // whether the field has been initialized by any means
 };
 
 /******************************************************************************

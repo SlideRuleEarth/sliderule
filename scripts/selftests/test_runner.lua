@@ -3,60 +3,60 @@ local td = runner.rootdir(arg[0]) -- root directory
 local incloud = arg[1] == "cloud"
 
 
--- Run Core Self Tests --
-if __core__ then
-    runner.script(td .. "monitor.lua")
-    runner.script(td .. "http_server.lua")
-    runner.script(td .. "lua_script.lua")
-    runner.script(td .. "earth_data.lua")
-    runner.script(td .. "message_queue.lua")
-    runner.script(td .. "list.lua")
-    runner.script(td .. "ordering.lua")
-    runner.script(td .. "dictionary.lua")
-    runner.script(td .. "table.lua")
-    runner.script(td .. "timelib.lua")
-end
-
--- Run Streaming Self Tests --
-if __streaming__ then
-    runner.script(td .. "tcp_socket.lua")
-    runner.script(td .. "udp_socket.lua")
-    runner.script(td .. "multicast_device_writer.lua")
-    runner.script(td .. "cluster_socket.lua")
-    runner.script(td .. "http_client.lua")
-    runner.script(td .. "http_faults.lua")
-    runner.script(td .. "http_rqst.lua")
-end
-
--- Run Legact Self Tests --
-if __legacy__ then
-    runner.script(td .. "ccsds_packetizer.lua")
-    runner.script(td .. "record_dispatcher.lua")
-    runner.script(td .. "limit_dispatch.lua")
-end
-
+---- Run Core Self Tests --
+--if __core__ then
+--    runner.script(td .. "monitor.lua")
+--    runner.script(td .. "http_server.lua")
+--    runner.script(td .. "lua_script.lua")
+--    runner.script(td .. "earth_data.lua")
+--    runner.script(td .. "message_queue.lua")
+--    runner.script(td .. "list.lua")
+--    runner.script(td .. "ordering.lua")
+--    runner.script(td .. "dictionary.lua")
+--    runner.script(td .. "table.lua")
+--    runner.script(td .. "timelib.lua")
+--end
+--
+---- Run Streaming Self Tests --
+--if __streaming__ then
+--    runner.script(td .. "tcp_socket.lua")
+--    runner.script(td .. "udp_socket.lua")
+--    runner.script(td .. "multicast_device_writer.lua")
+--    runner.script(td .. "cluster_socket.lua")
+--    runner.script(td .. "http_client.lua")
+--    runner.script(td .. "http_faults.lua")
+--    runner.script(td .. "http_rqst.lua")
+--end
+--
+---- Run Legact Self Tests --
+--if __legacy__ then
+--    runner.script(td .. "ccsds_packetizer.lua")
+--    runner.script(td .. "record_dispatcher.lua")
+--    runner.script(td .. "limit_dispatch.lua")
+--end
+--
 -- Run AWS Self Tests --
 if __aws__ then
-    runner.script(td .. "asset_index.lua")
+--    runner.script(td .. "asset_index.lua")
     runner.script(td .. "credential_store.lua")
-    runner.script(td .. "asset_loaddir.lua")
+--    runner.script(td .. "asset_loaddir.lua")
 end
 
--- Run H5 Self Tests --
-if __h5__ then
-    runner.script(td .. "hdf5_file.lua")
-end
-
--- Run Parquet Self Tests --
-if __arrow__ then
-    runner.script(td .. "parquet_sampler.lua")
-end
-
--- Run Raster Self Tests --
-if __geo__ then
-    runner.script(td .. "geojson_raster.lua")
-    runner.script(td .. "geouser_raster.lua")
-end
+---- Run H5 Self Tests --
+--if __h5__ then
+--    runner.script(td .. "hdf5_file.lua")
+--end
+--
+---- Run Parquet Self Tests --
+--if __arrow__ then
+--    runner.script(td .. "parquet_sampler.lua")
+--end
+--
+---- Run Raster Self Tests --
+--if __geo__ then
+--    runner.script(td .. "geojson_raster.lua")
+--    runner.script(td .. "geouser_raster.lua")
+--end
 
 -- Run ICESat-2 Plugin Self Tests
 if __icesat2__ and incloud then

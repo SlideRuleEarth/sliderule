@@ -95,52 +95,6 @@ bool RegionMask::includes(double lon, double lat) const
     return false;
 }
 
-/*----------------------------------------------------------------------------
- * operator=
- *----------------------------------------------------------------------------*/
-RegionMask& RegionMask::operator= (const RegionMask v)
-{
-    if(this == &v) return *this;
-    
-    geojson = v.geojson;
-    cellSize = v.cellSize;
-    cols = v.cols;
-    rows = v.rows;
-    lonMin = v.lonMin;
-    latMin = v.latMin;
-    lonMax = v.lonMax;
-    latMax = v.latMax;
-    data = NULL;
-
-    delete [] data;
-    const long size = cols.value * rows.value;
-    if(v.data && size > 0)
-    {
-        data = new uint8_t [size];
-        memcpy(data, v.data, size);
-    }
-
-    return *this;
-}
-
-/*----------------------------------------------------------------------------
- * operator== 
- *----------------------------------------------------------------------------*/
-bool RegionMask::operator== (const RegionMask& v) const
-{
-    (void)v;
-    return false;
-}
-
-/*----------------------------------------------------------------------------
- * operator!=
- *----------------------------------------------------------------------------*/
-bool RegionMask::operator!= (const RegionMask& v) const
-{
-    (void)v;
-    return false;
-}
-
 /******************************************************************************
  * FUNCTIONS
  ******************************************************************************/

@@ -52,7 +52,6 @@ FieldDictionary::FieldDictionary(std::initializer_list<entry_t> init_list, int h
     {
         fields.add(elem.name, elem);
     }
-    initialized = true;
 }
 
 /*----------------------------------------------------------------------------

@@ -217,6 +217,7 @@ void FieldList<T>::fromLua (lua_State* L, int index)
 
     // set provided
     provided = true;
+    initialized = true;
 }
 
 /*----------------------------------------------------------------------------

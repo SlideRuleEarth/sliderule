@@ -20,6 +20,8 @@ end
 
 local geojsonfile = td.."../data/hls_trimmed.geojson"
 local f = io.open(geojsonfile, "r")
+runner.check(f, "failed to open geojson file")
+if not f then return end
 local contents = f:read("*all")
 f:close()
 
