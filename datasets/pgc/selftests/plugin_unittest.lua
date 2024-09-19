@@ -54,6 +54,8 @@ runner.check(status, "Failed sampling test")
 ut = nil
 
 
+pointCount = 2
+lon_incr = 2.0
 print('\n------------------\nTest04 RasterSampler::arcticdem-strips\n------------------')
 demType = "arcticdem-strips"
 dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true}))

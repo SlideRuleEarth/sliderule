@@ -173,13 +173,14 @@ bool LandsatHlsRaster::findRasters(finder_t* finder)
     const uint32_t start   = finder->range.start;
     const uint32_t end      = finder->range.end;
 
+    const std::vector<OGRFeature*>* featuresList = finder->featuresList;
+
     try
     {
         for(uint32_t i = start; i < end; i++)
         {
-            OGRFeature* feature = featuresList[i];
+            OGRFeature* feature = featuresList->at(i);
             OGRGeometry *rastergeo = feature->GetGeometryRef();
-            CHECKPTR(geo);
 
             if (!rastergeo->Intersects(geo)) continue;
 

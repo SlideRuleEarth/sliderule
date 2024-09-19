@@ -37,8 +37,6 @@
 #include "GeoIndexedRaster.h"
 
 #include <algorithm>
-#include <unordered_map>
-#include <set>
 #include <gdal.h>
 #include <gdalwarper.h>
 #include <gdal_priv.h>
@@ -68,7 +66,7 @@ GeoIndexedRaster::Reader::Reader (GeoIndexedRaster* _obj):
     sync(NUM_SYNC_SIGNALS),
     run(true)
 {
-    thread = new Thread(GeoIndexedRaster::readerThread, this);
+    thread = new Thread(readerThread, this);
 }
 
 /*----------------------------------------------------------------------------
@@ -92,17 +90,18 @@ GeoIndexedRaster::Reader::~Reader (void)
 /*----------------------------------------------------------------------------
  * Finder Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::Finder::Finder (GeoIndexedRaster* _obj, bool _fake):
+GeoIndexedRaster::Finder::Finder (GeoIndexedRaster* _obj, std::vector<OGRFeature*>* _featuresList, bool _fake):
     obj(_obj),
     geo(NULL),
     range{0, 0},
+    featuresList(_featuresList),
     sync(NUM_SYNC_SIGNALS),
     run(true),
     fake(_fake)
 {
     if(!fake)
     {
-        thread = new Thread(GeoIndexedRaster::finderThread, this);
+        thread = new Thread(finderThread, this);
     }
 }
 
@@ -132,10 +131,20 @@ GeoIndexedRaster::Finder::~Finder (void)
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::UnionMaker::UnionMaker(GeoIndexedRaster* _obj, const std::vector<point_info_t>* _points):
     obj(_obj),
-    range({0, 0}),
+    pointsRange({0, 0}),
     points(_points),
     unionPolygon(NULL),
     stats({0.0, 0.0})
+{
+}
+
+/*----------------------------------------------------------------------------
+ * RastersGroupsFinder Constructor
+ *----------------------------------------------------------------------------*/
+GeoIndexedRaster::RastersGroupsFinder::RastersGroupsFinder(GeoIndexedRaster* _obj, const std::vector<point_info_t>* _points):
+    obj(_obj),
+    pointsRange({0, 0}),
+    points(_points)
 {
 }
 
@@ -231,7 +240,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
     perf_stats_t stats = {0.0, 0.0, 0.0, 0.0, 0.0};
 
     /* Vector of points and their associated raster groups */
-    std::vector<point_groups_t> pointGroups;
+    std::vector<point_groups_t> pointsGroups;
 
     /* Vector of rasters and all points they contain */
     std::vector<unique_raster_t*> uniqueRasters;
@@ -244,56 +253,69 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         /* Find raster groups for each point */
         mlog(gsLevel, "Finding rasters groups");
 
-        /* Map raster file names to a set of ordered unique points */
-        std::unordered_map<std::string, std::set<uint32_t>> rasterToPointsMap;
-
         /* Open the index file for all points */
         openGeoIndex(NULL, &points);
 
         /* For all points from the caller, create a vector of raster group lists */
         startTime = TimeLib::latchtime();
-        for(uint32_t i = 0; i < points.size(); i++)
+
+        /* Start rasters groups finder threads */
+        std::vector<Thread*> pids;
+        std::vector<rasters_groups_finder_t*> rgroupFinders;
+
+        const uint32_t numMaxThreads = std::thread::hardware_concurrency();
+        const uint32_t minPointsPerThread = 100;
+
+        std::vector<range_t> pointsRanges;
+        getThreadsRanges(pointsRanges, points.size(), minPointsPerThread, numMaxThreads);
+        uint32_t numThreads = pointsRanges.size();
+
+        for(uint32_t i = 0; i < numThreads; i++)
         {
-            const point_info_t& pinfo = points[i];
-            const int64_t gps = usePOItime() ? pinfo.gps : 0.0;
-            OGRPoint ogr_point(pinfo.point.x, pinfo.point.y, pinfo.point.z);
-
-            GroupOrdering* groupList = new GroupOrdering();
-
-            Finder finder(this, true);
-            finder.geo = &ogr_point;
-            // uint32_t size = points.size();
-            uint32_t size = featuresList.size();
-            finder.range = {0, size};
-            findRasters(&finder);
-
-            for(uint32_t j = 0; j < finder.rasterGroups.size(); j++)
-            {
-                rasters_group_t* rgroup = finder.rasterGroups[j];
-                groupList->add(groupList->length(), rgroup);
-            }
-
-            filterRasters(gps, groupList);
-            pointGroups.emplace_back(point_groups_t{{ogr_point, i}, groupList});
-
-            /* Add raster file names from this groupList to rasterToPointsMap */
-            const GroupOrdering::Iterator iter(*groupList);
-            for(int j = 0; j < iter.length; j++)
-            {
-                const rasters_group_t* rgroup = iter[j].value;
-                for(const raster_info_t& rinfo : rgroup->infovect)
-                {
-                    rasterToPointsMap[rinfo.fileName].insert(i);
-                }
-            }
+            rasters_groups_finder_t* rgf = new rasters_groups_finder_t(this, &points);
+            rgf->pointsRange = pointsRanges[i];
+            rgroupFinders.push_back(rgf);
+            Thread* pid = new Thread(groupsFinderThread, rgf);
+            pids.push_back(pid);
         }
+
+        /* Wait for all groups finder threads to finish */
+        for(Thread* pid : pids)
+        {
+            delete pid;
+        }
+
+        /* Rasters to points map */
+        raster_points_map_t rasterToPointsMap;
+
+        for(rasters_groups_finder_t* rgf : rgroupFinders)
+        {
+            /* Merge the pointGroups for each thread */
+            pointsGroups.insert(pointsGroups.end(), rgf->pointsGroups.begin(), rgf->pointsGroups.end());
+
+            /* Merge the rasterToPointsMap for each thread */
+            for(const raster_points_map_t::value_type& pair : rgf->rasterToPointsMap)
+            {
+                rasterToPointsMap[pair.first].insert(pair.second.begin(), pair.second.end());
+            }
+
+            delete rgf;
+        }
+
+        /* Verify that the number of points groups is the same as the number of points */
+        if(pointsGroups.size() != points.size())
+        {
+            mlog(ERROR, "Number of points groups: %zu does not match number of points: %zu", pointsGroups.size(), points.size());
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Number of points groups does not match number of points");
+        }
+
         stats.findRastersTime = TimeLib::latchtime() - startTime;
         mlog(gsLevel, "Finding rasters groups time: %.3lf", stats.findRastersTime);
 
         /* Create vector of unique rasters. */
         mlog(gsLevel, "Finding unique rasters");
         startTime = TimeLib::latchtime();
-        for(const point_groups_t& pg : pointGroups)
+        for(const point_groups_t& pg : pointsGroups)
         {
             const GroupOrdering::Iterator iter(*pg.groupList);
             for(int64_t i = 0; i < iter.length; i++)
@@ -345,7 +367,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
             {
                 for(const uint32_t pointIndx : it->second)
                 {
-                    const point_groups_t& pg = pointGroups[pointIndx];
+                    const point_groups_t& pg = pointsGroups[pointIndx];
                     ur->pointSamples.push_back({pg.pointInfo, NULL, SS_NO_ERRORS});
                 }
             }
@@ -362,7 +384,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
          */
         const uint32_t maxThreads = 20;
         createBatchReaderThreads(std::min(maxThreads, numRasters));
-        const uint32_t numThreads = batchReaders.length();
+        numThreads = batchReaders.length();
         mlog(gsLevel, "Sampling %u rasters with %u threads", numRasters, numThreads);
 
         /* Sample unique rasters utilizing numThreads */
@@ -443,9 +465,9 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         {
             mlog(gsLevel, "Populating sllist with samples");
             startTime = TimeLib::latchtime();
-            for(uint32_t pointIndx = 0; pointIndx < pointGroups.size(); pointIndx++)
+            for(uint32_t pointIndx = 0; pointIndx < pointsGroups.size(); pointIndx++)
             {
-                const point_groups_t& pg = pointGroups[pointIndx];
+                const point_groups_t& pg = pointsGroups[pointIndx];
                 const GroupOrdering::Iterator iter(*pg.groupList);
 
                 /* Allocate a new sample list for groupList */
@@ -480,7 +502,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
     }
 
     /* Clean up */
-    for(const point_groups_t& pg : pointGroups)
+    for(const point_groups_t& pg : pointsGroups)
         delete pg.groupList;
 
     for(unique_raster_t* ur : uniqueRasters)
@@ -1246,11 +1268,11 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
 }
 
 /*----------------------------------------------------------------------------
- * batchReaderThread
+ * unionThread
  *----------------------------------------------------------------------------*/
-void* GeoIndexedRaster::unionThread(void* parm)
+void* GeoIndexedRaster::unionThread(void* param)
 {
-    union_maker_t* um = static_cast<union_maker_t*>(parm);
+    union_maker_t* um = static_cast<union_maker_t*>(param);
 
     /* Create an empty geometry collection to hold all points */
     OGRGeometryCollection geometryCollection;
@@ -1263,11 +1285,11 @@ void* GeoIndexedRaster::unionThread(void* parm)
     * NOTE: Using buffered points is significantly more computationally
     *       expensive than bounding boxes (10x slower).
     */
-    mlog(DEBUG, "Creating collection of bboxes from %d points, range: %d - %d", um->range.end - um->range.start, um->range.start, um->range.end);
+    mlog(DEBUG, "Creating collection of bboxes from %d points, range: %d - %d", um->pointsRange.end - um->pointsRange.start, um->pointsRange.start, um->pointsRange.end);
     double startTime = TimeLib::latchtime();
 
-    const uint32_t start = um->range.start;
-    const uint32_t end   = um->range.end;
+    const uint32_t start = um->pointsRange.start;
+    const uint32_t end   = um->pointsRange.end;
 
     for(uint32_t i = start; i < end; i++)
     {
@@ -1374,6 +1396,75 @@ void* GeoIndexedRaster::unionThread(void* parm)
 }
 
 /*----------------------------------------------------------------------------
+ * groupsFinderThread
+ *----------------------------------------------------------------------------*/
+void* GeoIndexedRaster::groupsFinderThread(void *param)
+{
+    rasters_groups_finder_t* rgf = static_cast<rasters_groups_finder_t*>(param);
+
+    /* Find groups of rasters for each point in range.
+     * NOTE: cannot filter rasters here, must be done in one thread
+     */
+    const uint32_t start = rgf->pointsRange.start;
+    const uint32_t end   = rgf->pointsRange.end;
+
+    for(uint32_t i = start; i < end; i++)
+    {
+        const point_info_t& pinfo = rgf->points->at(i);
+        OGRPoint ogr_point(pinfo.point.x, pinfo.point.y, pinfo.point.z);
+
+        GroupOrdering* groupList = new GroupOrdering();
+
+        /* Clone features list for this thread (OGRFeature objects are not thread save, must copy) */
+        const uint32_t size = rgf->obj->featuresList.size();
+
+        std::vector<OGRFeature*> featuresList;
+        for(uint32_t j = 0; j < size; j++)
+        {
+            featuresList.push_back(rgf->obj->featuresList[j]->Clone());
+        }
+
+        /* Set finder for the whole range of features */
+        Finder finder(rgf->obj, &featuresList, true);
+        finder.geo = &ogr_point;
+        finder.range = { 0, size };
+
+        /* Find rasters intersecting with ogr_point */
+        rgf->obj->findRasters(&finder);
+
+        /* Cleanup cloned features */
+        for(OGRFeature* feature : featuresList)
+        {
+            OGRFeature::DestroyFeature(feature);
+        }
+        featuresList.clear();
+
+        /* Filter rasters based on gps time */
+        const int64_t gps = rgf->obj->usePOItime() ? pinfo.gps : 0.0;
+        rgf->obj->filterRasters(gps, groupList);
+
+        for(uint32_t j = 0; j < finder.rasterGroups.size(); j++)
+        {
+            rasters_group_t* rgroup = finder.rasterGroups[j];
+            groupList->add(groupList->length(), rgroup);
+        }
+        rgf->pointsGroups.emplace_back(point_groups_t{ {ogr_point, i}, groupList });
+
+        /* Add raster file names from this groupList to raster to points map */
+        const GroupOrdering::Iterator iter(*groupList);
+        for(int j = 0; j < iter.length; j++)
+        {
+            const rasters_group_t* rgroup = iter[j].value;
+            for(const raster_info_t& rinfo : rgroup->infovect)
+            {
+                rgf->rasterToPointsMap[rinfo.fileName].insert(i);
+            }
+        }
+    }
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------
  * createFinderThreads
  *----------------------------------------------------------------------------*/
 bool GeoIndexedRaster::createFinderThreads(void)
@@ -1382,7 +1473,7 @@ bool GeoIndexedRaster::createFinderThreads(void)
 
     for(int i = 0; i < MAX_FINDER_THREADS; i++)
     {
-        Finder* f = new Finder(this);
+        Finder* f = new Finder(this, &featuresList);
         finders.add(f);
     }
 
@@ -1645,12 +1736,12 @@ bool GeoIndexedRaster::findRastersParallel(OGRGeometry* geo, GroupOrdering* grou
             return false;
 
         /* Update findersRange with new featuresList */
-        getThreadsRanges(findersRange, featuresList.size(), MIN_FEATURES_PER_FINDER_THREAD, MAX_FINDER_THREADS);
-        mlog(INFO, "Using %ld finder threads to search %ld features", findersRange.size(), featuresList.size());
+        getThreadsRanges(findersRanges, featuresList.size(), MIN_FEATURES_PER_FINDER_THREAD, MAX_FINDER_THREADS);
+        mlog(DEBUG, "Using %ld finder threads to search %ld features", findersRanges.size(), featuresList.size());
     }
 
 
-    const uint32_t numFinders = findersRange.size();
+    const uint32_t numFinders = findersRanges.size();
 
     /* Start finder threads to find rasters intersecting with point/polygon */
     uint32_t signaledFinders = 0;
@@ -1662,7 +1753,7 @@ bool GeoIndexedRaster::findRastersParallel(OGRGeometry* geo, GroupOrdering* grou
         {
             OGRGeometryFactory::destroyGeometry(finder->geo);
             finder->geo = geo->clone();
-            finder->range = findersRange[i];
+            finder->range = findersRanges[i];
             finder->rasterGroups.clear();
             finder->sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
             signaledFinders++;
@@ -1745,16 +1836,17 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>
     const uint32_t numMaxThreads = std::thread::hardware_concurrency();
     const uint32_t minPointsPerThread = 100;
 
-    std::vector<range_t> ranges;
-    getThreadsRanges(ranges, points->size(), minPointsPerThread, numMaxThreads);
+    std::vector<range_t> pointsRanges;
+    getThreadsRanges(pointsRanges, points->size(), minPointsPerThread, numMaxThreads);
+    mlog(INFO, "Using %ld groupfinder threads to search for %ld points", pointsRanges.size(), points->size());
 
-    const uint32_t numThreads = ranges.size();
+    const uint32_t numThreads = pointsRanges.size();
     const double startTime = TimeLib::latchtime();
 
     for(uint32_t i = 0; i < numThreads; i++)
     {
         union_maker_t* um = new union_maker_t(this, points);
-        um->range = ranges[i];
+        um->pointsRange = pointsRanges[i];
         unionMakers.push_back(um);
         Thread* pid = new Thread(unionThread, um);
         pids.push_back(pid);
@@ -1808,7 +1900,7 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>
         union_maker_t* um = unionMakers[i];
 
         mlog(DEBUG, "Thread[%d]: %10d - %-10d p2poly: %.3lf, unioning: %.3lf",
-             i, um->range.start, um->range.end, um->stats.points2polyTime, um->stats.unioningTime);
+             i, um->pointsRange.start, um->pointsRange.end, um->stats.points2polyTime, um->stats.unioningTime);
 
         delete um;
     }

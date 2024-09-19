@@ -34,6 +34,8 @@
  ******************************************************************************/
 
 #include "PgcDemStripsRaster.h"
+#include <algorithm>
+
 
 /******************************************************************************
  * PROTECTED METHODS
@@ -111,12 +113,6 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file,
         return;
     }
 
-    /* Determine if we have a polygon */
-    if(geo && GdalRaster::ispoly(geo))
-    {
-        poly = geo->toPolygon();
-    }
-
     /* Vector holding all geojson files from all geocells */
     std::vector<std::string> files;
 
@@ -127,14 +123,10 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file,
         poly = geo->toPolygon();
         poly->getEnvelope(&env);
 
-        double minx = floor(env.MinX);
-        double miny = floor(env.MinY);
-        double maxx = ceil(env.MaxX);
-        double maxy = ceil(env.MaxY);
-
-        /* Make sure we have a valid bounding box for the geocell grid */
-        if(minx == maxx) maxx++;
-        if(miny == maxy) maxy++;
+        const double minx = floor(env.MinX);
+        const double miny = floor(env.MinY);
+        const double maxx = ceil(env.MaxX);
+        const double maxy = ceil(env.MaxY);
 
         for(long ix = minx; ix < maxx; ix++)
         {
@@ -166,6 +158,10 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file,
         mlog(INFO, "Found %zu geojson files with %zu points", files.size(), points->size());
     }
 
+    /* Remove any duplicate files */
+    std::sort(files.begin(), files.end());
+    files.erase(std::unique(files.begin(), files.end()), files.end());
+
     /* Combine all geojson files into a single file stored in vsimem */
     if(!combinedGeoJSON.empty())
     {
@@ -191,6 +187,8 @@ bool PgcDemStripsRaster::findRasters(finder_t* finder)
     const uint32_t start   = finder->range.start;
     const uint32_t end     = finder->range.end;
 
+    const std::vector<OGRFeature*>* featuresList = finder->featuresList;
+
     /*
      * Find rasters and their dates.
      * geojson index file contains two dates: 'start_date' and 'end_date'
@@ -207,7 +205,7 @@ bool PgcDemStripsRaster::findRasters(finder_t* finder)
     {
         for(uint32_t i = start; i < end; i++)
         {
-            OGRFeature* feature = featuresList[i];
+            OGRFeature* feature = featuresList->at(i);
             OGRGeometry* rastergeo = feature->GetGeometryRef();
 
             if (!rastergeo->Intersects(geo)) continue;

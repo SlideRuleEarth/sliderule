@@ -39,6 +39,8 @@
 #include "GdalRaster.h"
 #include "RasterObject.h"
 #include "Ordering.h"
+#include <unordered_map>
+#include <set>
 
 
 /******************************************************************************
@@ -107,11 +109,6 @@ class GeoIndexedRaster: public RasterObject
 
         typedef Ordering<rasters_group_t*, unsigned long> GroupOrdering;
 
-        typedef struct {
-            ogr_point_info_t            pointInfo;
-            GroupOrdering*              groupList;
-        } point_groups_t;
-
         typedef struct BatchReader {
             GeoIndexedRaster*   obj;
             unique_raster_t*    uraster;
@@ -147,12 +144,13 @@ class GeoIndexedRaster: public RasterObject
             GeoIndexedRaster*             obj;
             OGRGeometry*                  geo;
             range_t                       range;
+            std::vector<OGRFeature*>*     featuresList;
             std::vector<rasters_group_t*> rasterGroups;
             Thread*                       thread;
             Cond                          sync;
             bool                          run;
             bool                          fake;
-            explicit Finder(GeoIndexedRaster* _obj, bool _fake=false);
+            explicit Finder(GeoIndexedRaster* _obj, std::vector<OGRFeature*>* _featuresList, bool _fake=false);
                     ~Finder(void);
         } finder_t;
 
@@ -164,13 +162,31 @@ class GeoIndexedRaster: public RasterObject
 
         typedef struct UnionMaker {
             GeoIndexedRaster*                obj;
-            range_t                          range;
+            range_t                          pointsRange;
             const std::vector<point_info_t>* points;
             OGRGeometry*                     unionPolygon;
             union_maker_stats_t              stats;
 
             explicit UnionMaker (GeoIndexedRaster* _obj, const std::vector<point_info_t>* _points);
         } union_maker_t;
+
+        typedef struct {
+            ogr_point_info_t   pointInfo;
+            GroupOrdering*     groupList;
+        } point_groups_t;
+
+        /* Typedef for the global map (raster file name -> set of unique point IDs) */
+        typedef std::unordered_map<std::string, std::set<uint32_t>> raster_points_map_t;
+
+        typedef struct RastersGroupsFinder {
+            GeoIndexedRaster*                obj;
+            range_t                          pointsRange;
+            const std::vector<point_info_t>* points;
+            std::vector<point_groups_t>      pointsGroups;
+            raster_points_map_t              rasterToPointsMap;
+
+            explicit RastersGroupsFinder (GeoIndexedRaster* _obj, const std::vector<point_info_t>* _points);
+        } rasters_groups_finder_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -248,7 +264,7 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        std::vector<range_t>      findersRange;
+        std::vector<range_t>      findersRanges;
         List<finder_t*>           finders;
         List<reader_t*>           readers;
         List<batch_reader_t*>     batchReaders;
@@ -270,7 +286,8 @@ class GeoIndexedRaster: public RasterObject
         static void*    finderThread        (void *param);
         static void*    readerThread        (void *param);
         static void*    batchReaderThread   (void *param);
-        static void*    unionThread         (void* parm);
+        static void*    unionThread         (void* param);
+        static void*    groupsFinderThread  (void *param);
 
         bool            createFinderThreads (void);
         bool            createReaderThreads (uint32_t  rasters2sample);
