@@ -363,34 +363,41 @@ class Icesat2Fields: public RequestFields
  * FUNCTIONS
  ******************************************************************************/
 
+string convertToJson(const PhorealFields::phoreal_geoloc_t& v);
 int convertToLua(lua_State* L, const PhorealFields::phoreal_geoloc_t& v);
 void convertFromLua(lua_State* L, int index, PhorealFields::phoreal_geoloc_t& v);
 
+string convertToJson(const Icesat2Fields::signal_conf_t& v);
 int convertToLua(lua_State* L, const Icesat2Fields::signal_conf_t& v);
 void convertFromLua(lua_State* L, int index, Icesat2Fields::signal_conf_t& v);
 int convertToIndex(const Icesat2Fields::signal_conf_t& v);
 void convertFromIndex(int index, Icesat2Fields::signal_conf_t& v);
 
+string convertToJson(const Icesat2Fields::quality_ph_t& v);
 int convertToLua(lua_State* L, const Icesat2Fields::quality_ph_t& v);
 void convertFromLua(lua_State* L, int index, Icesat2Fields::quality_ph_t& v);
 int convertToIndex(const Icesat2Fields::quality_ph_t& v);
 void convertFromIndex(int index, Icesat2Fields::quality_ph_t& v);
 
+string convertToJson(const Icesat2Fields::atl08_class_t& v);
 int convertToLua(lua_State* L, const Icesat2Fields::atl08_class_t& v);
 void convertFromLua(lua_State* L, int index, Icesat2Fields::atl08_class_t& v);
 int convertToIndex(const Icesat2Fields::atl08_class_t& v);
 void convertFromIndex(int index, Icesat2Fields::atl08_class_t& v);
 
+string convertToJson(const Icesat2Fields::gt_t& v);
 int convertToLua(lua_State* L, const Icesat2Fields::gt_t& v);
 void convertFromLua(lua_State* L, int index, Icesat2Fields::gt_t& v);
 int convertToIndex(const Icesat2Fields::gt_t& v);
 void convertFromIndex(int index, Icesat2Fields::gt_t& v);
 
+string convertToJson(const Icesat2Fields::spot_t& v);
 int convertToLua(lua_State* L, const Icesat2Fields::spot_t& v);
 void convertFromLua(lua_State* L, int index, Icesat2Fields::spot_t& v);
 int convertToIndex(const Icesat2Fields::spot_t& v);
 void convertFromIndex(int index, Icesat2Fields::spot_t& v);
 
+string convertToJson(const Icesat2Fields::surface_type_t& v);
 int convertToLua(lua_State* L, const Icesat2Fields::surface_type_t& v);
 void convertFromLua(lua_State* L, int index, Icesat2Fields::surface_type_t& v);
 

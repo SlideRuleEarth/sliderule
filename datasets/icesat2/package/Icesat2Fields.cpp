@@ -308,6 +308,20 @@ void Icesat2Fields::parseResource (void)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * convertToJson - phoreal_geoloc_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const PhorealFields::phoreal_geoloc_t& v)
+{
+    switch(v)
+    {
+        case PhorealFields::MEAN:   return "\"mean\"";
+        case PhorealFields::MEDIAN: return "\"median\"";
+        case PhorealFields::CENTER: return "\"center\"";
+        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid PhoREAL geolocation: %d", static_cast<int>(v));
+    }
+}
+
+/*----------------------------------------------------------------------------
  * convertToLua - phoreal_geoloc_t
  *----------------------------------------------------------------------------*/
 int convertToLua(lua_State* L, const PhorealFields::phoreal_geoloc_t& v)
@@ -343,6 +357,24 @@ void convertFromLua(lua_State* L, int index, PhorealFields::phoreal_geoloc_t& v)
     else if(!lua_isnil(L, index))
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "geolocation is an invalid type:%d", lua_type(L, index));
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertToJson - signal_conf_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const Icesat2Fields::signal_conf_t& v)
+{
+    switch(v)
+    {
+        case Icesat2Fields::CNF_POSSIBLE_TEP:   return "\"atl03_tep\"";
+        case Icesat2Fields::CNF_NOT_CONSIDERED: return "\"atl03_not_considered\"";
+        case Icesat2Fields::CNF_BACKGROUND:     return "\"atl03_background\"";
+        case Icesat2Fields::CNF_WITHIN_10M:     return "\"atl03_within_10m\"";
+        case Icesat2Fields::CNF_SURFACE_LOW:    return "\"atl03_low\"";
+        case Icesat2Fields::CNF_SURFACE_MEDIUM: return "\"atl03_medium\"";
+        case Icesat2Fields::CNF_SURFACE_HIGH:   return "\"atl03_high\"";
+        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid signal confidence: %d", static_cast<int>(v));
     }
 }
 
@@ -410,6 +442,21 @@ void convertFromIndex(int index, Icesat2Fields::signal_conf_t& v)
 }
 
 /*----------------------------------------------------------------------------
+ * convertToJson - quality_ph_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const Icesat2Fields::quality_ph_t& v)
+{
+    switch(v)
+    {
+        case Icesat2Fields::QUALITY_NOMINAL:                    return "\"atl03_quality_nominal\"";
+        case Icesat2Fields::QUALITY_POSSIBLE_AFTERPULSE:        return "\"atl03_quality_afterpulse\"";
+        case Icesat2Fields::QUALITY_POSSIBLE_IMPULSE_RESPONSE:  return "\"atl03_quality_impulse_response\"";
+        case Icesat2Fields::QUALITY_POSSIBLE_TEP:               return "\"atl03_quality_tep\"";
+        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid photon quality: %d", static_cast<int>(v));
+    }
+}
+
+/*----------------------------------------------------------------------------
  * convertToLua - quality_ph_t
  *----------------------------------------------------------------------------*/
 int convertToLua(lua_State* L, const Icesat2Fields::quality_ph_t& v)
@@ -464,6 +511,22 @@ int convertToIndex(const Icesat2Fields::quality_ph_t& v)
 void convertFromIndex(int index, Icesat2Fields::quality_ph_t& v)
 {
     v = static_cast<Icesat2Fields::quality_ph_t>(index);
+}
+
+/*----------------------------------------------------------------------------
+ * convertToJson - atl08_class_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const Icesat2Fields::atl08_class_t& v)
+{
+    switch(v)
+    {
+        case Icesat2Fields::ATL08_NOISE:            return "\"atl08_noise\"";
+        case Icesat2Fields::ATL08_GROUND:           return "\"atl08_ground\"";
+        case Icesat2Fields::ATL08_CANOPY:           return "\"atl08_canopy\"";
+        case Icesat2Fields::ATL08_TOP_OF_CANOPY:    return "\"atl08_top_of_canopy\"";
+        case Icesat2Fields::ATL08_UNCLASSIFIED:     return "\"atl08_unclassified\"";
+        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl08 classification: %d", static_cast<int>(v));
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -523,6 +586,23 @@ int convertToIndex(const Icesat2Fields::atl08_class_t& v)
 void convertFromIndex(int index, Icesat2Fields::atl08_class_t& v)
 {
     v = static_cast<Icesat2Fields::atl08_class_t>(index);
+}
+
+/*----------------------------------------------------------------------------
+ * convertToJson - gt_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const Icesat2Fields::gt_t& v)
+{
+    switch(v)
+    {
+        case Icesat2Fields::GT1L:   return "\"gt1l\"";
+        case Icesat2Fields::GT1R:   return "\"gt1r\"";
+        case Icesat2Fields::GT2L:   return "\"gt2l\"";
+        case Icesat2Fields::GT2R:   return "\"gt2r\"";
+        case Icesat2Fields::GT3L:   return "\"gt3l\"";
+        case Icesat2Fields::GT3R:   return "\"gt3r\"";
+        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid ground track: %d", static_cast<int>(v));
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -587,6 +667,23 @@ void convertFromIndex(int index, Icesat2Fields::gt_t& v)
 }
 
 /*----------------------------------------------------------------------------
+ * convertToJson - spot_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const Icesat2Fields::spot_t& v)
+{
+    switch(v)
+    {
+        case Icesat2Fields::SPOT_1:   return "1";
+        case Icesat2Fields::SPOT_2:   return "2";
+        case Icesat2Fields::SPOT_3:   return "3";
+        case Icesat2Fields::SPOT_4:   return "4";
+        case Icesat2Fields::SPOT_5:   return "5";
+        case Icesat2Fields::SPOT_6:   return "6";
+        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid spot: %d", static_cast<int>(v));
+    }
+}
+
+/*----------------------------------------------------------------------------
  * convertToLua - spot_t
  *----------------------------------------------------------------------------*/
 int convertToLua(lua_State* L, const Icesat2Fields::spot_t& v)
@@ -645,18 +742,35 @@ void convertFromIndex(int index, Icesat2Fields::spot_t& v)
 }
 
 /*----------------------------------------------------------------------------
+ * convertToJson - surface_type_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const Icesat2Fields::surface_type_t& v)
+{
+    switch(v)
+    {
+        case Icesat2Fields::SRT_DYNAMIC:        return "\"dynamic\"";
+        case Icesat2Fields::SRT_LAND:           return "\"land\"";
+        case Icesat2Fields::SRT_OCEAN:          return "\"ocean\"";
+        case Icesat2Fields::SRT_SEA_ICE:        return "\"sea_ice\"";
+        case Icesat2Fields::SRT_LAND_ICE:       return "\"land_ice\"";
+        case Icesat2Fields::SRT_INLAND_WATER:   return "\"inland_water\"";
+        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid surface type: %d", static_cast<int>(v));
+    }
+}
+
+/*----------------------------------------------------------------------------
  * convertToLua - surface_type_t
  *----------------------------------------------------------------------------*/
 int convertToLua(lua_State* L, const Icesat2Fields::surface_type_t& v)
 {
     switch(v)
     {
-        case Icesat2Fields::SRT_DYNAMIC:        lua_pushstring(L, "SRT_DYNAMIC");       break;
-        case Icesat2Fields::SRT_LAND:           lua_pushstring(L, "SRT_LAND");          break;
-        case Icesat2Fields::SRT_OCEAN:          lua_pushstring(L, "SRT_OCEAN");         break;
-        case Icesat2Fields::SRT_SEA_ICE:        lua_pushstring(L, "SRT_SEA_ICE");       break;
-        case Icesat2Fields::SRT_LAND_ICE:       lua_pushstring(L, "SRT_LAND_ICE");      break;
-        case Icesat2Fields::SRT_INLAND_WATER:   lua_pushstring(L, "SRT_INLAND_WATER");  break;
+        case Icesat2Fields::SRT_DYNAMIC:        lua_pushstring(L, "dynamic");       break;
+        case Icesat2Fields::SRT_LAND:           lua_pushstring(L, "land");          break;
+        case Icesat2Fields::SRT_OCEAN:          lua_pushstring(L, "ocean");         break;
+        case Icesat2Fields::SRT_SEA_ICE:        lua_pushstring(L, "sea_ice");       break;
+        case Icesat2Fields::SRT_LAND_ICE:       lua_pushstring(L, "land_ice");      break;
+        case Icesat2Fields::SRT_INLAND_WATER:   lua_pushstring(L, "inland_water");  break;
         default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid surface type: %d", static_cast<int>(v));
     }
 
@@ -675,12 +789,12 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::surface_type_t& v)
     else if(lua_isstring(L, index))
     {
         const char* str = LuaObject::getLuaString(L, index);
-        if     (StringLib::match(str, "SRT_DYNAMIC"))       v = Icesat2Fields::SRT_DYNAMIC;
-        else if(StringLib::match(str, "SRT_LAND"))          v = Icesat2Fields::SRT_LAND;
-        else if(StringLib::match(str, "SRT_OCEAN"))         v = Icesat2Fields::SRT_OCEAN;
-        else if(StringLib::match(str, "SRT_SEA_ICE"))       v = Icesat2Fields::SRT_SEA_ICE;
-        else if(StringLib::match(str, "SRT_LAND_ICE"))      v = Icesat2Fields::SRT_LAND_ICE;
-        else if(StringLib::match(str, "SRT_INLAND_WATER"))  v = Icesat2Fields::SRT_INLAND_WATER;
+        if     (StringLib::match(str, "dynamic"))       v = Icesat2Fields::SRT_DYNAMIC;
+        else if(StringLib::match(str, "land"))          v = Icesat2Fields::SRT_LAND;
+        else if(StringLib::match(str, "ocean"))         v = Icesat2Fields::SRT_OCEAN;
+        else if(StringLib::match(str, "sea_ice"))       v = Icesat2Fields::SRT_SEA_ICE;
+        else if(StringLib::match(str, "land_ice"))      v = Icesat2Fields::SRT_LAND_ICE;
+        else if(StringLib::match(str, "inland_water"))  v = Icesat2Fields::SRT_INLAND_WATER;
         else throw RunTimeException(CRITICAL, RTE_ERROR, "surface type is an invalid value: %d", static_cast<int>(v));
     }
     else if(!lua_isnil(L, index))

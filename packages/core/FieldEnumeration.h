@@ -64,10 +64,10 @@ class FieldEnumeration: public Field
         bool                    operator[]          (T i) const;
         bool&                   operator[]          (T i);
 
+        string                  toJson              (void) const override;
         int                     toLua               (lua_State* L) const override;
-        void                    fromLua             (lua_State* L, int index) override;
-
         int                     toLua               (lua_State* L, long key) const override;
+        void                    fromLua             (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
          * Data
@@ -88,6 +88,11 @@ class FieldEnumeration: public Field
 /******************************************************************************
  * FUNCTIONS
  ******************************************************************************/
+
+template <class T, int N>
+inline string convertToJson(const FieldEnumeration<T, N>& v) {
+    return v.toJson();
+}
 
 template <class T, int N>
 inline int convertToLua(lua_State* L, const FieldEnumeration<T, N>& v) {
@@ -190,6 +195,27 @@ bool& FieldEnumeration<T,N>::operator[](T i)
 }
 
 /*----------------------------------------------------------------------------
+ * toJson
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+string FieldEnumeration<T,N>::toJson (void) const
+{
+    string str("[");
+    for(int i = 0; i < N; i++)
+    {
+        if(values[i])
+        {
+            T selection;
+            convertFromIndex(i, selection);
+            str += convertToJson(selection);
+            str += ",";
+        }
+    }
+    str += "]";
+    return str;
+}
+
+/*----------------------------------------------------------------------------
  * toLua
  *----------------------------------------------------------------------------*/
 template <class T, int N>
@@ -205,6 +231,32 @@ int FieldEnumeration<T,N>::toLua (lua_State* L) const
             convertToLua(L, selection);
             lua_rawseti(L, -2, i + 1);
         }
+    }
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * toLua
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+int FieldEnumeration<T,N>::toLua (lua_State* L, long key) const
+{
+    const T selection = static_cast<T>(key);
+    const int index = convertToIndex(selection);
+    if(index >= 0 && index < N)
+    {
+        if(values[index])
+        {
+            convertToLua(L, selection);
+        }
+        else
+        {
+            lua_pushnil(L);
+        }
+    }
+    else
+    {
+        lua_pushnil(L);
     }
     return 1;
 }
@@ -261,32 +313,6 @@ void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
     // set provided
     provided = true;
     initialized = true;
-}
-
-/*----------------------------------------------------------------------------
- * toLua
- *----------------------------------------------------------------------------*/
-template <class T, int N>
-int FieldEnumeration<T,N>::toLua (lua_State* L, long key) const
-{
-    const T selection = static_cast<T>(key);
-    const int index = convertToIndex(selection);
-    if(index >= 0 && index < N)
-    {
-        if(values[index])
-        {
-            convertToLua(L, selection);
-        }
-        else
-        {
-            lua_pushnil(L);
-        }
-    }
-    else
-    {
-        lua_pushnil(L);
-    }
-    return 1;
 }
 
 /*----------------------------------------------------------------------------

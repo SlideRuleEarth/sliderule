@@ -63,6 +63,14 @@ ArrowFields::ArrowFields (void):
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * convertToJson
+ *----------------------------------------------------------------------------*/
+string convertToJson(const ArrowFields& v)
+{
+    return v.toJson();
+}
+
+/*----------------------------------------------------------------------------
  * convertToLua
  *----------------------------------------------------------------------------*/
 int convertToLua(lua_State* L, const ArrowFields& v)
@@ -100,6 +108,21 @@ void convertFromLua(lua_State* L, int index, ArrowFields& v)
         asset->releaseLuaObject();
     }
     #endif
+}
+
+/*----------------------------------------------------------------------------
+ * convertToJson
+ *----------------------------------------------------------------------------*/
+string convertToJson(const ArrowFields::format_t& v)
+{
+    switch(v)
+    {
+        case ArrowFields::FEATHER:      return "\"feather\"";
+        case ArrowFields::PARQUET:      return "\"parquet\"";
+        case ArrowFields::GEOPARQUET:   return "\"geoparquet\"";
+        case ArrowFields::CSV:          return "\"csv\"";
+        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid format: %d", static_cast<int>(v));
+    }
 }
 
 /*----------------------------------------------------------------------------

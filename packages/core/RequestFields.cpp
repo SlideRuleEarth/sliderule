@@ -279,6 +279,14 @@ RequestFields::~RequestFields(void)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * convertToJson - MathLib::coord_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const MathLib::coord_t& v) 
+{
+    return FString("{\"lon\":%lf,\"lat\":%lf}", v.lon, v.lat).c_str();
+}
+
+/*----------------------------------------------------------------------------
  * convertToLua - MathLib::coord_t
  *----------------------------------------------------------------------------*/
 int convertToLua(lua_State* L, const MathLib::coord_t& v) 
@@ -315,6 +323,14 @@ void convertFromLua(lua_State* L, int index, MathLib::coord_t& v)
 }
 
 /*----------------------------------------------------------------------------
+ * convertToJson - MathLib::point_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const MathLib::point_t& v) 
+{
+    return FString("{\"x\":%lf,\"y\":%lf}", v.x, v.y).c_str();
+}
+
+/*----------------------------------------------------------------------------
  * convertToLua - MathLib::point_t
  *----------------------------------------------------------------------------*/
 int convertToLua(lua_State* L, const MathLib::point_t& v)
@@ -348,6 +364,20 @@ void convertFromLua(lua_State* L, int index, MathLib::point_t& v)
     lua_pop(L, 1);
 }
 
+/*----------------------------------------------------------------------------
+ * convertToJson - MathLib::proj_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const MathLib::proj_t& v) 
+{
+    switch(v)
+    {
+        case MathLib::AUTOMATIC:    return "\"auto\"";
+        case MathLib::PLATE_CARREE: return "\"plate_carree\"";
+        case MathLib::NORTH_POLAR:  return "\"north_polar\"";
+        case MathLib::SOUTH_POLAR:  return "\"south_polar\"";
+        default:                    return "\"unknown\"";
+    }
+}
 
 /*----------------------------------------------------------------------------
  * convertToLua - MathLib::proj_t

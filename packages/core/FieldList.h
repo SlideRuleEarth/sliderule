@@ -65,10 +65,10 @@ class FieldList: public Field
         T               operator[]  (int i) const;
         T&              operator[]  (int i);
 
+        string          toJson      (void) const override;
         int             toLua       (lua_State* L) const override;
-        void            fromLua     (lua_State* L, int index) override;
-
         int             toLua       (lua_State* L, long key) const override;
+        void            fromLua     (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
          * Data
@@ -88,6 +88,11 @@ class FieldList: public Field
 /******************************************************************************
  * FUNCTIONS
  ******************************************************************************/
+
+template <class T>
+inline string convertToJson(const FieldList<T>& v) {
+    return v.convertToJson();
+}
 
 template <class T>
 inline int convertToLua(lua_State* L, const FieldList<T>& v) {
@@ -180,6 +185,27 @@ T& FieldList<T>::operator[](int i)
 }
 
 /*----------------------------------------------------------------------------
+ * toJson
+ *----------------------------------------------------------------------------*/
+template <class T>
+string FieldList<T>::toJson (void) const
+{
+    size_t size = values.size();
+    string str("[");
+    for(size_t i = 0; i < size-1; i++)
+    {
+        str += convertToJson(values[i]);
+        str += ",";
+    }
+    if(size > 0)
+    {
+        str += convertToJson(values[size-1]);
+    }
+    str += "]";
+    return str;
+}
+
+/*----------------------------------------------------------------------------
  * toLua
  *----------------------------------------------------------------------------*/
 template <class T>
@@ -190,6 +216,23 @@ int FieldList<T>::toLua (lua_State* L) const
     {
         convertToLua(L, values[i]);
         lua_rawseti(L, -2, i + 1);
+    }
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * toLua
+ *----------------------------------------------------------------------------*/
+template <class T>
+int FieldList<T>::toLua (lua_State* L, long key) const
+{
+    if(key >= 0 && key < static_cast<long>(values.size()))
+    {
+        convertToLua(L, values[key]);
+    }
+    else
+    {
+        lua_pushnil(L);
     }
     return 1;
 }
@@ -218,23 +261,6 @@ void FieldList<T>::fromLua (lua_State* L, int index)
     // set provided
     provided = true;
     initialized = true;
-}
-
-/*----------------------------------------------------------------------------
- * toLua
- *----------------------------------------------------------------------------*/
-template <class T>
-int FieldList<T>::toLua (lua_State* L, long key) const
-{
-    if(key >= 0 && key < static_cast<long>(values.size()))
-    {
-        convertToLua(L, values[key]);
-    }
-    else
-    {
-        lua_pushnil(L);
-    }
-    return 1;
 }
 
 /*----------------------------------------------------------------------------

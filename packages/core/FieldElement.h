@@ -64,6 +64,7 @@ class FieldElement: public Field
         bool            operator==      (const T& v) const;
         bool            operator!=      (const T& v) const;
 
+        string          toJson          (void) const override;
         int             toLua           (lua_State* L) const override;
         void            fromLua         (lua_State* L, int index) override;
 
@@ -149,6 +150,15 @@ template <class T>
 bool FieldElement<T>::operator!=(const T& v) const
 {
     return value != v;
+}
+
+/*----------------------------------------------------------------------------
+ * toJson
+ *----------------------------------------------------------------------------*/
+template <class T>
+string FieldElement<T>::toJson (void) const
+{
+    return convertToJson(value);
 }
 
 /*----------------------------------------------------------------------------

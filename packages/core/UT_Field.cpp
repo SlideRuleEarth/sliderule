@@ -183,6 +183,15 @@ typedef enum {
     NUM_UT_FIELD_ENUMS = 3
 } ut_field_enum_t;
 
+string convertToJson(const ut_field_enum_t& v) {
+    switch(v) {
+        case UT_FIELD_ENUM_0:   return "\"enum0\"";
+        case UT_FIELD_ENUM_1:   return "\"enum1\"";
+        case UT_FIELD_ENUM_2:   return "\"enum2\"";
+        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid enumeration: %d", static_cast<int>(v));
+    }
+}
+
 int convertToLua(lua_State* L, const ut_field_enum_t& v) {
     switch(v) {
         case UT_FIELD_ENUM_0:   lua_pushstring(L, "enum0");  break;

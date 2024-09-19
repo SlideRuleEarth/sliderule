@@ -78,10 +78,10 @@ class FieldDictionary: public Field
         Field*          operator[]      (const char* key) const;
         Field&          operator[]      (const char* key);
 
+        string          toJson          (void) const override;
         int             toLua           (lua_State* L) const override;
-        void            fromLua         (lua_State* L, int index) override;
-
         int             toLua           (lua_State* L, const string& key) const override;
+        void            fromLua         (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
          * Data
@@ -93,6 +93,10 @@ class FieldDictionary: public Field
 /******************************************************************************
  * FUNCTIONS
  ******************************************************************************/
+
+inline string convertToJson(const FieldDictionary& v) {
+    return v.toJson();
+}
 
 inline int convertToLua(lua_State* L, const FieldDictionary& v) {
     return v.toLua(L);

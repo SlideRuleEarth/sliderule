@@ -412,6 +412,14 @@ void* GeoDataFrame::runThread (void* parm)
 }
 
 /*----------------------------------------------------------------------------
+ * toJson
+ *----------------------------------------------------------------------------*/
+string GeoDataFrame::toJson (void) const
+{
+    return FString("{\"meta\":%s,\"gdf\":%s}", metaFields.toJson().c_str(), columnFields.toJson().c_str()).c_str();
+}
+
+/*----------------------------------------------------------------------------
  * toLua
  *----------------------------------------------------------------------------*/
 int GeoDataFrame::toLua (lua_State* L) const

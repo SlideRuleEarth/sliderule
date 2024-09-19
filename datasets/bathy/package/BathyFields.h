@@ -206,6 +206,7 @@ class BathyFields: public Icesat2Fields
  * FUNCTIONS
  ******************************************************************************/
 
+string convertToJson(const BathyFields::classifier_t& v);
 int convertToLua(lua_State* L, const BathyFields::classifier_t& v);
 void convertFromLua(lua_State* L, int index, BathyFields::classifier_t& v);
 int convertToIndex(const BathyFields::classifier_t& v);

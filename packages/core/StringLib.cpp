@@ -98,7 +98,7 @@ StringLib::FormattedString::~FormattedString(void)
 /*----------------------------------------------------------------------------
  * c_str
  *----------------------------------------------------------------------------*/
-const char* StringLib::FormattedString::c_str(bool duplicate)
+const char* StringLib::FormattedString::c_str(bool duplicate) const
 {
     if(duplicate)
     {

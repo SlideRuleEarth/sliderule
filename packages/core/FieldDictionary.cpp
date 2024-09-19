@@ -111,6 +111,29 @@ Field& FieldDictionary::operator[](const char* key)
 }
 
 /*----------------------------------------------------------------------------
+ * toJson
+ *----------------------------------------------------------------------------*/
+string FieldDictionary::toJson (void) const
+{
+    Dictionary<entry_t>::Iterator iter(fields);
+    string str("{");
+    for(int i = 0; i < iter.length; i++)
+    {
+        const Dictionary<entry_t>::kv_t kv = iter[i];
+        if(kv.value.field->initialized)
+        {
+            str += "\"";
+            str += kv.value.name;
+            str += "\":";
+            str += kv.value.field->toJson();
+            if(i < iter.length - 1) str += ",";
+        }
+    }
+    str += "}";
+    return str;
+}
+
+/*----------------------------------------------------------------------------
  * toLua
  *----------------------------------------------------------------------------*/
 int FieldDictionary::toLua (lua_State* L) const
@@ -131,9 +154,27 @@ int FieldDictionary::toLua (lua_State* L) const
 }
 
 /*----------------------------------------------------------------------------
+ * toLua
+ *----------------------------------------------------------------------------*/
+int FieldDictionary::toLua (lua_State* L, const string& key) const
+{
+    try
+    {
+        const entry_t& entry = fields[key.c_str()];
+        entry.field->toLua(L);
+    }
+    catch(const RunTimeException& e)
+    {
+        (void)e;
+        lua_pushnil(L);
+    }
+    return 1;
+}
+
+
+/*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
-
 void FieldDictionary::fromLua (lua_State* L, int index) 
 {
     if(lua_istable(L, index))
@@ -160,22 +201,3 @@ void FieldDictionary::fromLua (lua_State* L, int index)
         initialized = true;
     }
 }
-
-/*----------------------------------------------------------------------------
- * toLua
- *----------------------------------------------------------------------------*/
-int FieldDictionary::toLua (lua_State* L, const string& key) const
-{
-    try
-    {
-        const entry_t& entry = fields[key.c_str()];
-        entry.field->toLua(L);
-    }
-    catch(const RunTimeException& e)
-    {
-        (void)e;
-        lua_pushnil(L);
-    }
-    return 1;
-}
-

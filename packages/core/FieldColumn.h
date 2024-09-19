@@ -72,10 +72,10 @@ class FieldColumn: public Field
         T               operator[]      (int i) const;
         T&              operator[]      (int i);
 
+        string          toJson          (void) const override;
         int             toLua           (lua_State* L) const override;
-        void            fromLua         (lua_State* L, int index) override;
-
         int             toLua           (lua_State* L, long key) const override;
+        void            fromLua         (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
          * Data
@@ -91,6 +91,11 @@ class FieldColumn: public Field
 /******************************************************************************
  * FUNCTIONS
  ******************************************************************************/
+
+template <class T>
+inline string convertToJson(const FieldColumn<T>& v) {
+    return v.toJson();
+}
 
 template <class T>
 inline int convertToLua(lua_State* L, const FieldColumn<T>& v) {
@@ -296,6 +301,26 @@ T& FieldColumn<T>::operator[](int i)
 }
 
 /*----------------------------------------------------------------------------
+ * toJson
+ *----------------------------------------------------------------------------*/
+template <class T>
+string FieldColumn<T>::toJson (void) const
+{
+    string str("[");
+    for(int i = 0; i < numElements-1; i++)
+    {
+        str += convertToJson(this->operator[](i));
+        str += ",";
+    }
+    if(numElements > 0)
+    {
+        str += convertToJson(this->operator[](numElements-1));
+    }
+    str += "]";
+    return str;
+}
+
+/*----------------------------------------------------------------------------
  * toLua
  *----------------------------------------------------------------------------*/
 template<class T>
@@ -306,6 +331,23 @@ int FieldColumn<T>::toLua (lua_State* L) const
     {
         convertToLua(L, this->operator[](i));
         lua_rawseti(L, -2, i + 1);
+    }
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * toLua
+ *----------------------------------------------------------------------------*/
+template <class T>
+int FieldColumn<T>::toLua (lua_State* L, long key) const
+{
+    if(key >= 0 && key < numElements)
+    {
+        convertToLua(L, this->operator[](key));
+    }
+    else
+    {
+        lua_pushnil(L);
     }
     return 1;
 }
@@ -336,23 +378,6 @@ void FieldColumn<T>::fromLua (lua_State* L, int index)
         provided = true;
         initialized = true;
     }
-}
-
-/*----------------------------------------------------------------------------
- * toLua
- *----------------------------------------------------------------------------*/
-template <class T>
-int FieldColumn<T>::toLua (lua_State* L, long key) const
-{
-    if(key >= 0 && key < numElements)
-    {
-        convertToLua(L, this->operator[](key));
-    }
-    else
-    {
-        lua_pushnil(L);
-    }
-    return 1;
 }
 
 #endif  /* __field_column__ */

@@ -125,12 +125,15 @@ class RequestFields: public LuaObject, public FieldDictionary
  * FUNCTIONS
  ******************************************************************************/
 
+string convertToJson(const MathLib::coord_t& v);
 int convertToLua(lua_State* L, const MathLib::coord_t& v);
 void convertFromLua(lua_State* L, int index, MathLib::coord_t& v);
 
+string convertToJson(const MathLib::point_t& v);
 int convertToLua(lua_State* L, const MathLib::point_t& v);
 void convertFromLua(lua_State* L, int index, MathLib::point_t& v);
 
+string convertToJson(const MathLib::proj_t& v);
 int convertToLua(lua_State* L, const MathLib::proj_t& v);
 void convertFromLua(lua_State* L, int index, MathLib::proj_t& v);
 

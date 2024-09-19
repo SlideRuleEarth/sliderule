@@ -92,9 +92,11 @@ class ArrowFields: public FieldDictionary
  * FUNCTIONS
  ******************************************************************************/
 
+string convertToJson(const ArrowFields& v);
 int convertToLua(lua_State* L, const ArrowFields& v);
 void convertFromLua(lua_State* L, int index, ArrowFields& v);
 
+string convertToJson(const ArrowFields::format_t& v);
 int convertToLua(lua_State* L, const ArrowFields::format_t& v);
 void convertFromLua(lua_State* L, int index, ArrowFields::format_t& v);
 

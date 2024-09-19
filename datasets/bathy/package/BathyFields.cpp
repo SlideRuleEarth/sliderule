@@ -88,6 +88,26 @@ BathyFields::BathyFields(lua_State* L, int index):
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * convertToJson - classifier_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const BathyFields::classifier_t& v)
+{
+    switch(v)
+    {
+        case BathyFields::QTREES:           return FString("\"%s\"", BathyFields::QTREES_NAME).c_str();
+        case BathyFields::COASTNET:         return FString("\"%s\"", BathyFields::COASTNET_NAME).c_str();
+        case BathyFields::OPENOCEANSPP:     return FString("\"%s\"", BathyFields::OPENOCEANSPP_NAME).c_str();
+        case BathyFields::MEDIANFILTER:     return FString("\"%s\"", BathyFields::MEDIANFILTER_NAME).c_str();
+        case BathyFields::CSHELPH:          return FString("\"%s\"", BathyFields::CSHELPH_NAME).c_str();
+        case BathyFields::BATHYPATHFINDER:  return FString("\"%s\"", BathyFields::BATHYPATHFINDER_NAME).c_str();
+        case BathyFields::POINTNET:         return FString("\"%s\"", BathyFields::POINTNET_NAME).c_str();
+        case BathyFields::OPENOCEANS:       return FString("\"%s\"", BathyFields::OPENOCEANS_NAME).c_str();
+        case BathyFields::ENSEMBLE:         return FString("\"%s\"", BathyFields::ENSEMBLE_NAME).c_str();
+        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid classifier: %d", static_cast<int>(v));
+    }
+}
+
+/*----------------------------------------------------------------------------
  * convertToLua - classifier_t
  *----------------------------------------------------------------------------*/
 int convertToLua(lua_State* L, const BathyFields::classifier_t& v)

@@ -39,6 +39,7 @@
 #include "OsApi.h"
 #include "LuaEngine.h"
 #include "LuaObject.h"
+#include "TimeLib.h"
 
 /******************************************************************************
  * CLASS
@@ -100,6 +101,7 @@ class Field
 
         virtual         ~Field      (void) = default;
         
+        virtual string  toJson      (void) const = 0;
         virtual int     toLua       (lua_State* L) const = 0;
         virtual void    fromLua     (lua_State* L, int index) = 0;
 
@@ -132,6 +134,28 @@ class Field
 /******************************************************************************
  * FUNCTIONS
  ******************************************************************************/
+
+// tojson
+inline static string convertToJson(const bool& v)     { if(v) return string("true"); else return string("false"); }
+inline static string convertToJson(const int8_t& v)   { return std::to_string(v);       }
+inline static string convertToJson(const int16_t& v)  { return std::to_string(v);       }
+inline static string convertToJson(const int32_t& v)  { return std::to_string(v);       }
+inline static string convertToJson(const int64_t& v)  { return std::to_string(v);       }
+inline static string convertToJson(const uint8_t& v)  { return std::to_string(v);       }
+inline static string convertToJson(const uint16_t& v) { return std::to_string(v);       }
+inline static string convertToJson(const uint32_t& v) { return std::to_string(v);       }
+inline static string convertToJson(const uint64_t& v) { return std::to_string(v);       }
+inline static string convertToJson(const float& v)    { return std::to_string(v);       }
+inline static string convertToJson(const double& v)   { return std::to_string(v);       }
+inline static string convertToJson(const time8_t& v)  { 
+    const int64_t gps = TimeLib::sysex2gpstime(v); 
+    const TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(gps);
+    const TimeLib::date_t date = TimeLib::gmt2date(gmt);
+    const double seconds = (double)gmt.second + ((double)gmt.millisecond / 1000.0);
+    const FString str("%04d-%02d-%02dT%02d:%02d:%.03lfZ ", date.year, date.month, date.day, gmt.hour, gmt.minute, seconds);
+    return str.c_str();
+}
+inline static string convertToJson(const string& v)   { return "\"" + string(v) + "\""; }
 
 // tolua
 inline int convertToLua(lua_State* L, const bool& v)     { lua_pushinteger(L, v); return 1; }
