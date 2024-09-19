@@ -82,11 +82,39 @@ class GeoDataFrame: public LuaObject, public Field
         {
             static const char* OBJECT_TYPE;
 
+            static int luaGetRunTime (lua_State* L) {
+                try
+                {
+                    FrameRunner* lua_obj = dynamic_cast<FrameRunner*>(getLuaSelf(L, 1));
+                    lua_pushnumber(L, lua_obj->runtime);
+                }
+                catch(const RunTimeException& e)
+                {
+                    lua_pushnumber(L, 0.0);
+                }
+                return 1;
+            };
+
             virtual bool run(GeoDataFrame* dataframe) = 0;
 
+            void updateRunTime(double duration) {
+                m.lock();
+                {
+                    runtime += duration;
+                }
+                m.unlock();
+            };
+
             FrameRunner(lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]):
-                LuaObject(L, OBJECT_TYPE, meta_name, meta_table) {};
+                LuaObject(L, OBJECT_TYPE, meta_name, meta_table),
+                runtime(0.0) {
+                LuaEngine::setAttrFunc(L, "runtime", luaGetRunTime);
+            };
+
             ~FrameRunner(void) override = default;
+
+            Mutex m;
+            double runtime;
         };
 
         /*--------------------------------------------------------------------
@@ -117,6 +145,14 @@ class GeoDataFrame: public LuaObject, public Field
         const Dictionary<FieldDictionary::entry_t>& getColumns(void) const;
         const Dictionary<FieldDictionary::entry_t>& getMeta(void) const;
 
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        vector<long>                indexColumn;
+        FieldDictionary             columnFields;
+        FieldDictionary             metaFields;
+
     protected:
 
         /*--------------------------------------------------------------------
@@ -146,10 +182,6 @@ class GeoDataFrame: public LuaObject, public Field
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-
-        vector<long>                indexColumn;
-        FieldDictionary             columnFields;
-        FieldDictionary             metaFields;
 
         const FieldColumn<time8_t>* timeColumn;
         const FieldColumn<double>*  xColumn;

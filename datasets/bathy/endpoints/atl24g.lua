@@ -1,40 +1,6 @@
 --
 -- ENDPOINT:    /source/atl24g
 --
--------------------------------------------------------
--- table of files being processed
---  {
---      "spot_photons": {
---          [1]: "/share/bathy_spot_1.csv",
---          [2]: "/share/bathy_spot_2.csv",
---          ...
---      }   
---      "spot_granule": {
---          [1]: "/share/bathy_spot_1.json",
---          [2]: "/share/bathy_spot_2.json",
---          ...
---      }
---      "classifiers": {
---          "openoceans": {
---              [1]: "/share/openoceans_1.csv",
---              [2]: "/share/openoceans_2.csv",
---              ...
---          }   
---          "medianfilter": {
---              [1]: "/share/medianfilter_1.csv",
---              [2]: "/share/medianfilter_2.csv",
---              ...
---          }   
---          ...
---          "ensemble": {
---              [1]: "/share/ensemble_1.csv",
---              [2]: "/share/ensemble_2.csv",
---              ...
---          }
---      }
---  }
--------------------------------------------------------
-
 local json          = require("json")
 local earthdata     = require("earth_data_query")
 local runner        = require("container_runtime")
@@ -45,22 +11,8 @@ local resource      = parms["resource"]
 local timeout       = parms["node_timeout"]
 local rqsttime      = time.gps()
 local userlog       = msg.publish(rspq) -- create user log publisher (alerts)
-local output_files  = { spot_photons={}, spot_granule={}, classifiers={} }
-local profile       = {} -- initialize timing profiling table
-
--------------------------------------------------------
--- function: get_input_filename
--------------------------------------------------------
-local function get_input_filename(_crenv, spot)
-    return string.format("%s/%s_%d.csv", _crenv.container_sandbox_mount, bathy.BATHY_PREFIX, spot) -- e.g. /share/bathy_spot_3.csv
-end
-
--------------------------------------------------------
--- function: get_info_filename
--------------------------------------------------------
-local function get_info_filename(_crenv, spot)
-    return string.format("%s/%s_%d.json", _crenv.container_sandbox_mount, bathy.BATHY_PREFIX, spot)   -- e.g. /share/bathy_spot_3.json
-end
+local outputs       = {} -- table of all outputs that go into atl24 writer
+local profile       = {} -- timing profiling table
 
 -------------------------------------------------------
 -- function: cleanup 
@@ -71,42 +23,12 @@ local function cleanup(_crenv, _transaction_id)
 end
 
 -------------------------------------------------------
--- function: run classifier
+-- function: ctimeout
 -------------------------------------------------------
-local function runclassifier(_crenv, output_table, container_timeout, name, in_parallel, command_override)
-    local start_time = time.gps()
-    output_table["classifiers"][name] = {}
-    local container_list = {}
-    for i = 1,icesat2.NUM_SPOTS do
-        local spot_key = string.format("spot_%d", i)
-        local settings_filename = string.format("%s/%s.json", _crenv.container_sandbox_mount, name) -- e.g. /share/openoceans.json
-        local parameters_filename = get_info_filename(_crenv, i)
-        local input_filename = get_input_filename(_crenv, i)
-        local output_filename = string.format("%s/%s_%d.csv", _crenv.container_sandbox_mount, name, i) -- e.g. /share/openoceans_3.csv
-        local container_command = command_override or string.format("/env/bin/python /%s/runner.py", name)
-        local container_parms = {
-            image =  "oceaneyes",
-            name = name.."_"..spot_key,
-            command = string.format("%s %s %s %s %s", container_command, settings_filename, parameters_filename, input_filename, output_filename),
-            timeout = container_timeout,
-            parms = { [name..".json"] = parms[name] or {void=true} }
-        }
-        local container = runner.execute(_crenv, container_parms, rspq)
-        table.insert(container_list, container)
-        output_table["classifiers"][name][spot_key] = output_filename
-        if not in_parallel then
-            runner.wait(container, container_timeout)
-        end
-    end
-    if in_parallel then
-        for _,container in ipairs(container_list) do
-            runner.wait(container, container_timeout)
-        end
-    end
-    local stop_time = time.gps()
-    local duration = (stop_time - start_time) / 1000.0
-    userlog:alert(core.INFO, core.RTE_INFO, string.format("%s executed in %f seconds", name, duration))
-    return duration
+local function ctimeout()
+    local current_timeout = (timeout * 1000) - (time.gps() - rqsttime)
+    if current_timeout < 0 then current_timeout = 0 end
+    return current_timeout
 end
 
 -------------------------------------------------------
@@ -249,14 +171,20 @@ if not crenv.host_sandbox_directory then
 end
 
 -------------------------------------------------------
--- build dataframes for each beam
+-- create classifier mask
 -------------------------------------------------------
+local classifiers = {}
+for _,classifier in ipairs(parms["classifiers"]) do
+    classifiers[classifier] = true
+end
 
+-------------------------------------------------------
 -- create dataframe inputs
-local granule = (parms["output"]["format"] == "h5") and bathy.granule(parms, rspq) or nil
+-------------------------------------------------------
 local bathymask = bathy.mask()
 local atl03h5 = h5.object(parms["asset"], resource)
 local atl09h5 = h5.object(parms["asset09"], resource09)
+local granule = (parms["output"]["format"] == "h5") and bathy.granule(parms, atl03h5, rspq) or nil
 local kd490 = bathy.kd(parms, viirs_filename)
 local seasurface = bathy.seasurface(parms)
 local refraction = bathy.refraction(parms)
@@ -265,91 +193,111 @@ local qtrees = qtrees.classifier(qtrees.parms(parms["qtrees"]))
 local coastnet = coastnet.classifier(coastnet.parms(parms["coastnet"]))
 local openoceanspp = openoceanspp.classifier(openoceanspp.parms(parms["openoceanspp"]))
 
--- create dataframe and run pipeline
+-------------------------------------------------------
+-- build dataframes for each beam
+-------------------------------------------------------
 local dataframes = {}
-for index, beam in ipairs({"gt1l", "gt1r", "gt2l", "gt2r", "gt3l", "gt3r"}) do
+for _, beam in ipairs(parms["beams"]) do
     dataframes[beam] = bathy.dataframe(beam, parms, bathymask, atl03h5, atl09h5, rspq)
     if not dataframes[beam] then
-        userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> on resource %s failed to create bathy dataframe for beam %s", rspq, resource, beam))
+        userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> on %s failed to create bathy dataframe for beam %s", rspq, resource, beam))
     elseif not dataframes[beam]:isvalid() then
-        userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on resource %s failed to create valid bathy dataframe for beam %s", rspq, resource, beam))
+        userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create valid bathy dataframe for beam %s", rspq, resource, beam))
     elseif dataframes[beam]:length() <= 0 then
-        userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on resource %s created an empty bathy dataframe for beam %s", rspq, resource, beam))
+        userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s created an empty bathy dataframe for beam %s", rspq, resource, beam))
     else
-        dataframes[beam].run(seasurface)
+        if parms["find_sea_surface"] then dataframes[beam].run(seasurface) end
+        if classifiers["qtrees"] then dataframes[beam].run(qtrees) end
+        if classifiers["coastnet"] then dataframes[beam].run(coastnet) end
+        if classifiers["openoceanspp"] then dataframes[beam].run(openoceanspp) end
         dataframes[beam].run(refraction)
         dataframes[beam].run(uncertainty)
-        dataframes[beam].run(qtrees)
-        dataframes[beam].run(coastnet)
-        dataframes[beam].run(openoceanspp)
         dataframes[beam].run(nil)
     end
 end
 
--- wait for dataframes to complete
-if granule then granule:waiton(timeout * 1000, rspq) end
+-------------------------------------------------------
+-- wait for dataframes to complete and write to file
+-------------------------------------------------------
 for beam,dataframe in pairs(dataframes) do
-    dataframe.waiton(timeout * 1000, rspq)
-    local spot_file = arrow.dataframe(parms, dataframe)
-    spot_file:export(string.format("%s/%s_%d.parquet", crenv.container_sandbox_mount, bathy.BATHY_PREFIX, dataframe:meta("spot"), arrow.PARQUET) -- e.g. /share/bathy_spot_3.parquet)
+    if dataframe.waiton(ctimeout(), rspq) then
+        outputs[beam] = string.format("%s/%s_%d.parquet", crenv.container_sandbox_mount, bathy.BATHY_PREFIX, dataframe:meta("spot"))
+        if not arrow.dataframe(parms, dataframe):export(outputs[beam], arrow.PARQUET) then -- e.g. /share/bathy_spot_3.parquet)
+            userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> failed to write dataframe for %s", rspq, resource))
+            cleanup(crenv, transaction_id)
+            return
+        end
+    else
+        userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> timed out waiting for dataframe to complete on %s", rspq, resource))
+        cleanup(crenv, transaction_id)
+        return
+    end
 end
+
+-------------------------------------------------------
+-- wait for granule to complete and write to file
+-------------------------------------------------------
+if granule then
+    outputs["granule"] = string.format("%s/%s_granule.json", crenv.container_sandbox_mount, bathy.BATHY_PREFIX, "w")
+    local f = io.open(outputs["granule"])
+    if f then
+        if granule:waiton(ctimeout(), rspq) then
+            f:write(json.encode(granule:export()))
+            f:close()
+        else
+            userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> timed out waiting for granule to complete on %s", rspq, resource))
+            cleanup(crenv, transaction_id)
+            return
+        end
+    else
+        userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to write granule json for %s", rspq, resource))
+        cleanup(crenv, transaction_id)
+        return
+    end
+end
+
+-------------------------------------------------------
+-- get profiles
+-------------------------------------------------------
+profile["seasurface"] = seasurface:runtime()
+profile["refraction"] = refraction:runtime()
+profile["uncertainty"] = uncertainty:runtime()
+profile["qtrees"] = qtrees:runtime()
+profile["coastnet"] = coastnet:runtime()
+profile["openoceanspp"] = openoceanspp:runtime()
 
 -- clean up object to cut down on memory usage
 atl03h5:destroy()
 atl09h5:destroy()
 kd490:destroy()
 
--- execute python classifiers
-local in_parallel = true
-runclassifier(crenv, output_files, timeout, "medianfilter", in_parallel)
-runclassifier(crenv, output_files, timeout, "cshelph", in_parallel)
-runclassifier(crenv, output_files, timeout, "bathypathfinder", in_parallel)
-runclassifier(crenv, output_files, timeout, "pointnet", false, "bash /pointnet/runner.sh")
-profile["atl24_endpoint"] = (time.gps() - rqsttime) / 1000.0 -- capture endpoint timing
-userlog:alert(core.INFO, core.RTE_INFO, string.format("atl24 endpoint executed in %f seconds", profile["atl24_endpoint"]))
-
-local spot_mask = {} -- build spot mask using defaults/parsing from bathyreader (because reader will be destroyed)
-for spot = 1,icesat2.NUM_SPOTS do
-    spot_mask[spot] = reader:spoton(spot)
-    if spot_mask[spot] then
-        output_files["spot_photons"][string.format("spot_%d", spot)] = get_input_filename(crenv, spot)
-        output_files["spot_granule"][string.format("spot_%d", spot)] = get_info_filename(crenv, spot)
-    end
-end
-
-
-profile["reader"] = {
-    stats = bathy_stats,
-    total_duration = (time.gps() - rqsttime) / 1000.0 -- capture setup time
-}
-userlog:alert(core.INFO, core.RTE_INFO, string.format("sliderule setup executed in %f seconds", profile["reader"]["total_duration"]))
-
 -------------------------------------------------------
--- build final output
+-- run oceaneyes
 -------------------------------------------------------
-local writer_parms = {
-    image =  "oceaneyes",
-    name = "writer",
-    command = string.format("/env/bin/python /atl24writer/runner.py %s/writer_settings.json %s/writer_ancillary.json %s/writer_orbit.json", crenv.container_sandbox_mount, crenv.container_sandbox_mount, crenv.container_sandbox_mount),
-    timeout = timeout,
-    parms = { 
-        ["writer_settings.json"] = {
-            input_files = output_files,
-            output_parms = output_parms,
-            atl24_filename = crenv.container_sandbox_mount.."/atl24.bin",
+local tmp_atl24_filename = "atl24.bin"
+local container_parms = {
+    image = "oceaneyes",
+    name = "oceaneyes",
+    command = string.format("/env/bin/python /runner.py %s/settings.json", crenv.container_sandbox_mount),
+    timeout = ctimeout(),
+    parms = {
+        ["settings.json"] = {
+            input_files = outputs,
+            format = parms["output"]["format"],
+            atl24_filename = crenv.container_sandbox_mount.."/"..tmp_atl24_filename,
             profile = profile,
+            duration = (time.gps() - rqsttime) / 1000.0
         }
     }
 }
-local container = runner.execute(crenv, writer_parms, rspq)
+local container = runner.execute(crenv, container_parms, rspq)
 runner.wait(container, timeout)
 
 -------------------------------------------------------
 -- send final output to user
 -------------------------------------------------------
-arrow.send2user(crenv.host_sandbox_directory.."/atl24.bin", arrow.parms(output_parms), rspq)
-output_parms["path"] = output_parms["path"]..".json"
-arrow.send2user(crenv.host_sandbox_directory.."/atl24.bin.json", arrow.parms(output_parms), rspq)
+arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_atl24_filename, arrow.parms(parms["output"]), rspq)
+arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_atl24_filename..".json", arrow.parms(parms["output"]), rspq, parms["output"]["path"]..".json")
 
 -------------------------------------------------------
 -- exit 

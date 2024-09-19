@@ -306,66 +306,6 @@ void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata
 }
 
 /*----------------------------------------------------------------------------
-* appendServerMetaData
-*----------------------------------------------------------------------------*/
-void appendServerMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
-{
-    /* Build Launch Time String */
-    const int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
-    const TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
-    const TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
-    FString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
-
-    /* Build Duration String */
-    const int64_t duration = TimeLib::gpstime() - launch_time_gps;
-    FString durationstr("%ld", duration);
-
-    /* Build Package String */
-    const char** pkg_list = LuaEngine::getPkgList();
-    string packagestr("[");
-    if(pkg_list)
-    {
-        int index = 0;
-        while(pkg_list[index])
-        {
-            packagestr += FString("\"%s\"", pkg_list[index]).c_str();
-            if(pkg_list[index + 1]) packagestr += ", ";
-            delete [] pkg_list[index];
-            index++;
-        }
-    }
-    packagestr += "]";
-    delete [] pkg_list;
-
-    /* Initialize Meta Data String */
-    string metastr(FString(R"json({
-        "server":
-        {
-            "environment":"%s",
-            "version":"%s",
-            "duration":%s,
-            "packages":%s,
-            "commit":"%s",
-            "launch":"%s"
-        }
-    })json",
-//        rqststr, // TODO: RequestFields::toJson()
-        OsApi::getEnvVersion(),
-        LIBID,
-        durationstr.c_str(),
-        packagestr.c_str(),
-        BUILDINFO,
-        timestr.c_str()).c_str());
-
-    /* Clean Up JSON String */
-    metastr = std::regex_replace(metastr, std::regex("    "), "");
-    metastr = std::regex_replace(metastr, std::regex("\n"), " ");
-
-    /* Append Meta String */
-    metadata->Append("sliderule", metastr);
-}
-
-/*----------------------------------------------------------------------------
 * appendPandasMetaData
 *----------------------------------------------------------------------------*/
 void appendPandasMetaData (const char* index_column_name, const shared_ptr<arrow::KeyValueMetadata>& metadata, const shared_ptr<arrow::Schema>& schema)
@@ -562,6 +502,8 @@ int ArrowDataFrame::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 int ArrowDataFrame::luaExport (lua_State* L)
 {
+    bool status = false;
+
     try
     {
         // get lua parameters
@@ -610,8 +552,9 @@ int ArrowDataFrame::luaExport (lua_State* L)
                 // set metadata
                 auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
                 if(arrow_parms.asGeo.value) appendGeoMetaData(metadata);
-                appendServerMetaData(metadata);
                 appendPandasMetaData(dataframe.getTimeColumnName().c_str(), metadata, schema);
+                metadata->Append("sliderule", parms.toJson());
+                metadata->Append("meta", dataframe.metaFields.toJson());
                 schema = schema->WithMetadata(metadata);
 
                 // create parquet writer
@@ -622,8 +565,15 @@ int ArrowDataFrame::luaExport (lua_State* L)
                     unique_ptr<parquet::arrow::FileWriter> parquet_writer = std::move(result).ValueOrDie();
                     const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
                     const arrow::Status s = parquet_writer->WriteTable(*table, dataframe.length());
-                    if(!s.ok()) mlog(CRITICAL, "Failed to write parquet table: %s", s.CodeAsString().c_str());
                     (void)parquet_writer->Close();
+                    if(s.ok())
+                    {
+                        status = true;
+                    }
+                    else 
+                    {
+                        mlog(CRITICAL, "Failed to write parquet table: %s", s.CodeAsString().c_str());
+                    }
                 }
                 else
                 {
@@ -645,8 +595,15 @@ int ArrowDataFrame::luaExport (lua_State* L)
                 const shared_ptr<arrow::io::FileOutputStream> feather_writer = result.ValueOrDie();
                 const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
                 const arrow::Status s = arrow::ipc::feather::WriteTable(*table, feather_writer.get());
-                if(!s.ok()) mlog(CRITICAL, "Failed to write feather table: %s", s.CodeAsString().c_str());
                 (void)feather_writer->Close();
+                if(s.ok()) 
+                {
+                    status = true;
+                }
+                else
+                {
+                    mlog(CRITICAL, "Failed to write feather table: %s", s.CodeAsString().c_str());
+                }
             }
             else
             {
@@ -663,8 +620,15 @@ int ArrowDataFrame::luaExport (lua_State* L)
                 const shared_ptr<arrow::io::FileOutputStream> csv_writer = result.ValueOrDie();
                 const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
                 const arrow::Status s = arrow::csv::WriteCSV(*table, arrow::csv::WriteOptions::Defaults(), csv_writer.get());
-                if(!s.ok()) mlog(CRITICAL, "Failed to write CSV table: %s", s.CodeAsString().c_str());
                 (void)csv_writer->Close();
+                if(s.ok())
+                {
+                    status = true;
+                }
+                else
+                {
+                    mlog(CRITICAL, "Failed to write CSV table: %s", s.CodeAsString().c_str());
+                }
             }
             else
             {
@@ -677,18 +641,16 @@ int ArrowDataFrame::luaExport (lua_State* L)
         }
         stop_trace(INFO, write_trace_id);
 
-        // return filename     
-        lua_pushstring(L, filename);
-
         // stop trace
         stop_trace(INFO, trace_id);
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error exporting %s: %s", OBJECT_TYPE, e.what());
-        lua_pushnil(L);
     }
 
+    // return status     
+    lua_pushboolean(L, status);
     return 1;
 }
 

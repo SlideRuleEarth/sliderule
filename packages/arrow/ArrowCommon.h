@@ -70,7 +70,7 @@ namespace ArrowCommon
     bool        send2Client(const char* fileName, const char* outPath,
                             const ArrowParms* parms, Publisher* outQ);
 
-    const char* getOutputPath(ArrowParms* parms);
+    const char* getOutputPath(ArrowParms* parms, const char* output_filename=NULL);
     const char* getUniqueFileName(const char* id = NULL);
     char*       createMetadataFileName(const char* fileName);
 

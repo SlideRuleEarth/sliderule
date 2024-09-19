@@ -40,6 +40,7 @@
 #include "MsgQ.h"
 #include "OsApi.h"
 #include "H5Coro.h"
+#include "H5Object.h"
 #include "BathyFields.h"
 
 /******************************************************************************
@@ -66,19 +67,9 @@ class BathyGranule: public LuaObject, public FieldDictionary
         static int  luaCreate   (lua_State* L);
         static int  luaExport   (lua_State* L);
 
-    private:
-
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-
-        bool                        active;
-        Thread*                     pid;
-        BathyFields*                parmsPtr;
-        const BathyFields&          parms;
-        Publisher                   rqstQ;
-        int                         readTimeoutMs;
-        H5Coro::Context*            context; // for ATL03 file
 
         FieldElement<double>        atlas_sdp_gps_epoch;
         FieldElement<string>        data_end_utc;
@@ -103,11 +94,25 @@ class BathyGranule: public LuaObject, public FieldDictionary
         FieldElement<int8_t>        sc_orient;
         FieldElement<double>        sc_orient_time;
 
+    private:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        bool                        active;
+        Thread*                     pid;
+        BathyFields*                parmsPtr;
+        const BathyFields&          parms;
+        Publisher                   rqstQ;
+        int                         readTimeoutMs;
+        H5Object*                   hdf03; // ATL03 file
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        BathyGranule    (lua_State* L, BathyFields* _parms, const char* rqstq_name);
+                        BathyGranule    (lua_State* L, BathyFields* _parms, H5Object* _hdf03, const char* rqstq_name);
                         ~BathyGranule   (void) override;
 
         static void*    readingThread   (void* parm);

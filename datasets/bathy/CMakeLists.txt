@@ -12,7 +12,6 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyMask.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyRefractionCorrector.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathySeaSurfaceFinder.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyStats.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyUncertaintyCalculator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.cpp
 )
@@ -33,7 +32,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyMask.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyRefractionCorrector.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathySeaSurfaceFinder.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyStats.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyUncertaintyCalculator.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.h
     DESTINATION

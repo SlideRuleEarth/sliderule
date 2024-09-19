@@ -67,19 +67,22 @@ const struct luaL_Reg BathyGranule::LUA_META_TABLE[] = {
 int BathyGranule::luaCreate (lua_State* L)
 {
     BathyFields* _parms = NULL;
+    H5Object* _hdf03 = NULL;
 
     try
     {
         /* Get Parameters */
         _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
-        const char* rqstq_name = getLuaString(L, 2);
+        _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 2, H5Object::OBJECT_TYPE));
+        const char* rqstq_name = getLuaString(L, 3);
 
         /* Return Reader Object */
-        return createLuaObject(L, new BathyGranule(L, _parms, rqstq_name));
+        return createLuaObject(L, new BathyGranule(L, _parms, _hdf03, rqstq_name));
     }
     catch(const RunTimeException& e)
     {
         if(_parms) _parms->releaseLuaObject();
+        if(_hdf03) _hdf03->releaseLuaObject();
         mlog(e.level(), "Error creating BathyGranule: %s", e.what());
         return returnLuaStatus(L, false);
     }
@@ -107,7 +110,7 @@ int BathyGranule::luaExport (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyGranule::BathyGranule (lua_State* L, BathyFields* _parms, const char* rqstq_name):
+BathyGranule::BathyGranule (lua_State* L, BathyFields* _parms, H5Object* _hdf03, const char* rqstq_name):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     FieldDictionary({
         {"atlas_sdp_gps_epoch", &atlas_sdp_gps_epoch},
@@ -137,15 +140,12 @@ BathyGranule::BathyGranule (lua_State* L, BathyFields* _parms, const char* rqstq
     parms(*_parms),
     rqstQ(rqstq_name),
     readTimeoutMs(parms.readTimeout.value * 1000),
-    context(NULL)
+    hdf03(_hdf03)
 {
     try
     {
         /* Set Thread Specific Trace ID for H5Coro */
         EventLib::stashId (traceId);
-
-        /* Create H5Coro Contexts */
-        context = new H5Coro::Context(parms.asset, parms.resource.value.c_str());
         
         /* Start Reader Thread */
         active = true;
@@ -169,8 +169,8 @@ BathyGranule::~BathyGranule (void)
 {
     active = false;
     delete pid;
-    delete context;
-    if(parmsPtr) parmsPtr->releaseLuaObject();
+    hdf03->releaseLuaObject();
+    parmsPtr->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -188,29 +188,29 @@ void* BathyGranule::readingThread (void* parm)
 
     try
     {
-        H5Element<double>       atlas_sdp_gps_epoch (granule.context, "/ancillary_data/atlas_sdp_gps_epoch");
-        H5Element<const char*>  data_end_utc        (granule.context, "/ancillary_data/data_end_utc");
-        H5Element<const char*>  data_start_utc      (granule.context, "/ancillary_data/data_start_utc");
-        H5Element<double>       end_delta_time      (granule.context, "/ancillary_data/end_delta_time");
-        H5Element<int32_t>      end_geoseg          (granule.context, "/ancillary_data/end_geoseg");
-        H5Element<double>       end_gpssow          (granule.context, "/ancillary_data/end_gpssow");
-        H5Element<int32_t>      end_gpsweek         (granule.context, "/ancillary_data/end_gpsweek");
-        H5Element<int32_t>      end_orbit           (granule.context, "/ancillary_data/end_orbit");
-        H5Element<const char*>  release             (granule.context, "/ancillary_data/release");
-        H5Element<const char*>  granule_end_utc     (granule.context, "/ancillary_data/granule_end_utc");
-        H5Element<const char*>  granule_start_utc   (granule.context, "/ancillary_data/granule_start_utc");
-        H5Element<double>       start_delta_time    (granule.context, "/ancillary_data/start_delta_time");
-        H5Element<int32_t>      start_geoseg        (granule.context, "/ancillary_data/start_geoseg");
-        H5Element<double>       start_gpssow        (granule.context, "/ancillary_data/start_gpssow");
-        H5Element<int32_t>      start_gpsweek       (granule.context, "/ancillary_data/start_gpsweek");
-        H5Element<int32_t>      start_orbit         (granule.context, "/ancillary_data/start_orbit");
-        H5Element<const char*>  version             (granule.context, "/ancillary_data/version");
+        H5Element<double>       atlas_sdp_gps_epoch (granule.hdf03, "/ancillary_data/atlas_sdp_gps_epoch");
+        H5Element<const char*>  data_end_utc        (granule.hdf03, "/ancillary_data/data_end_utc");
+        H5Element<const char*>  data_start_utc      (granule.hdf03, "/ancillary_data/data_start_utc");
+        H5Element<double>       end_delta_time      (granule.hdf03, "/ancillary_data/end_delta_time");
+        H5Element<int32_t>      end_geoseg          (granule.hdf03, "/ancillary_data/end_geoseg");
+        H5Element<double>       end_gpssow          (granule.hdf03, "/ancillary_data/end_gpssow");
+        H5Element<int32_t>      end_gpsweek         (granule.hdf03, "/ancillary_data/end_gpsweek");
+        H5Element<int32_t>      end_orbit           (granule.hdf03, "/ancillary_data/end_orbit");
+        H5Element<const char*>  release             (granule.hdf03, "/ancillary_data/release");
+        H5Element<const char*>  granule_end_utc     (granule.hdf03, "/ancillary_data/granule_end_utc");
+        H5Element<const char*>  granule_start_utc   (granule.hdf03, "/ancillary_data/granule_start_utc");
+        H5Element<double>       start_delta_time    (granule.hdf03, "/ancillary_data/start_delta_time");
+        H5Element<int32_t>      start_geoseg        (granule.hdf03, "/ancillary_data/start_geoseg");
+        H5Element<double>       start_gpssow        (granule.hdf03, "/ancillary_data/start_gpssow");
+        H5Element<int32_t>      start_gpsweek       (granule.hdf03, "/ancillary_data/start_gpsweek");
+        H5Element<int32_t>      start_orbit         (granule.hdf03, "/ancillary_data/start_orbit");
+        H5Element<const char*>  version             (granule.hdf03, "/ancillary_data/version");
 
-        H5Element<double>       crossing_time       (granule.context, "/orbit_info/crossing_time");
-        H5Element<double>       lan                 (granule.context, "/orbit_info/lan"); 
-        H5Element<int16_t>      orbit_number        (granule.context, "/orbit_info/orbit_number");
-        H5Element<int8_t>       sc_orient           (granule.context, "/orbit_info/sc_orient");
-        H5Element<double>       sc_orient_time      (granule.context, "/orbit_info/sc_orient_time");
+        H5Element<double>       crossing_time       (granule.hdf03, "/orbit_info/crossing_time");
+        H5Element<double>       lan                 (granule.hdf03, "/orbit_info/lan"); 
+        H5Element<int16_t>      orbit_number        (granule.hdf03, "/orbit_info/orbit_number");
+        H5Element<int8_t>       sc_orient           (granule.hdf03, "/orbit_info/sc_orient");
+        H5Element<double>       sc_orient_time      (granule.hdf03, "/orbit_info/sc_orient_time");
 
         atlas_sdp_gps_epoch.join(granule.readTimeoutMs, true);
         data_end_utc.join(granule.readTimeoutMs, true);

@@ -171,6 +171,8 @@ BathyRefractionCorrector::~BathyRefractionCorrector (void)
  *----------------------------------------------------------------------------*/
 bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
 {
+    const double start = TimeLib::latchtime();
+
     BathyDataFrame& df = *dynamic_cast<BathyDataFrame*>(dataframe);
     const RefractionFields& refraction_parms = parms->refraction.value;
 
@@ -233,5 +235,6 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
     }
 
     /* Mark Completion */
+    updateRunTime(start - TimeLib::latchtime());
     return true;
 }
