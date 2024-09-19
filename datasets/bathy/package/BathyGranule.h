@@ -80,12 +80,6 @@ class BathyGranule: public LuaObject, public FieldDictionary
         int                         readTimeoutMs;
         H5Coro::Context*            context; // for ATL03 file
 
-        FieldElement<int>           year;
-        FieldElement<int>           month;
-        FieldElement<int>           day;
-        FieldElement<int>           rgt;
-        FieldElement<int>           cycle;
-        FieldElement<int>           region;
         FieldElement<double>        atlas_sdp_gps_epoch;
         FieldElement<string>        data_end_utc;
         FieldElement<string>        data_start_utc;
@@ -117,8 +111,6 @@ class BathyGranule: public LuaObject, public FieldDictionary
                         ~BathyGranule   (void) override;
 
         static void*    readingThread   (void* parm);
-        static void     parseResource   (const char* resource, TimeLib::date_t& date,
-                                         uint16_t& rgt, uint8_t& cycle, uint8_t& region);
 };
 
 #endif  /* __bathy_granule__ */

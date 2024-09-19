@@ -526,7 +526,7 @@ const char* ArrowDataFrame::OBJECT_TYPE = "ArrowDataFrame";
 const char* ArrowDataFrame::LUA_META_NAME = "ArrowDataFrame";
 const struct luaL_Reg ArrowDataFrame::LUA_META_TABLE[] = {
     {"export",  luaExport},
-    {"import",  luaImport},
+    {"import",  luaImport}, // TODO
     {NULL,      NULL}
 };
 
@@ -564,9 +564,124 @@ int ArrowDataFrame::luaExport (lua_State* L)
 {
     try
     {
+        // get lua parameters
         ArrowDataFrame* lua_obj = dynamic_cast<ArrowDataFrame*>(getLuaSelf(L, 1));
-        (void)lua_obj;
-        lua_pushboolean(L, true);
+        const char* filename = getLuaString(L, 2, true, ArrowCommon::getUniqueFileName(NULL));
+        ArrowFields::format_t format = static_cast<ArrowFields::format_t>(getLuaInteger(L, 3, true, lua_obj->parms->output.value.format.value));
+
+        // get references
+        const RequestFields& parms = *lua_obj->parms;
+        const GeoDataFrame& dataframe = *lua_obj->dataframe;
+        const ArrowFields& arrow_parms = parms.output.value;
+          
+        // start trace
+        const uint32_t parent_trace_id = EventLib::grabId();
+        const uint32_t trace_id = start_trace(INFO, parent_trace_id, "ArrowDataFrame", "{\"num_rows\": %ld}", dataframe->length());
+
+        // process dataframe to arrow array
+        vector<shared_ptr<arrow::Array>> columns;
+        processDataFrame(columns, arrow_parms, dataframe, trace_id);
+
+        // create schema
+        vector<shared_ptr<arrow::Field>> field_list;
+        buildFieldList(field_list, arrow_parms, dataframe);
+        shared_ptr<arrow::Schema> schema = make_shared<arrow::Schema>(field_list);
+
+        // write out table
+        const uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
+        if(format == ArrowFields::PARQUET)
+        {
+            // set arrow output stream
+            shared_ptr<arrow::io::FileOutputStream> file_output_stream;
+            auto _result = arrow::io::FileOutputStream::Open(filename);
+            if(_result.ok())
+            {
+                file_output_stream = _result.ValueOrDie();
+
+                // set writer properties
+                parquet::WriterProperties::Builder writer_props_builder;
+                writer_props_builder.compression(parquet::Compression::SNAPPY);
+                writer_props_builder.version(parquet::ParquetVersion::PARQUET_2_6);
+                const shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
+
+                // set arrow writer properties
+                auto arrow_writer_props = parquet::ArrowWriterProperties::Builder().store_schema()->build();
+
+                // set metadata
+                auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
+                if(arrow_parms.asGeo.value) appendGeoMetaData(metadata);
+                appendServerMetaData(metadata);
+                appendPandasMetaData(dataframe.getTimeColumnName().c_str(), metadata, schema);
+                schema = schema->WithMetadata(metadata);
+
+                // create parquet writer
+                auto result = parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props);
+                if(result.ok())
+                {
+                    // writer table
+                    unique_ptr<parquet::arrow::FileWriter> parquet_writer = std::move(result).ValueOrDie();
+                    const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
+                    const arrow::Status s = parquet_writer->WriteTable(*table, dataframe.length());
+                    if(!s.ok()) mlog(CRITICAL, "Failed to write parquet table: %s", s.CodeAsString().c_str());
+                    (void)parquet_writer->Close();
+                }
+                else
+                {
+                    mlog(CRITICAL, "Failed to open parquet writer: %s", result.status().ToString().c_str());
+                }
+            }
+            else
+            {
+                mlog(CRITICAL, "Failed to open file output stream: %s", _result.status().ToString().c_str());
+            }
+        }
+        else if(format == ArrowFields::FEATHER)
+        {
+            // create feather writer
+            auto result = arrow::io::FileOutputStream::Open(filename);
+            if(result.ok())
+            {
+                // write table
+                const shared_ptr<arrow::io::FileOutputStream> feather_writer = result.ValueOrDie();
+                const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
+                const arrow::Status s = arrow::ipc::feather::WriteTable(*table, feather_writer.get());
+                if(!s.ok()) mlog(CRITICAL, "Failed to write feather table: %s", s.CodeAsString().c_str());
+                (void)feather_writer->Close();
+            }
+            else
+            {
+                mlog(CRITICAL, "Failed to open feather writer: %s", result.status().ToString().c_str());
+            }
+        }
+        else if(format == ArrowFields::CSV)
+        {
+            // create csv writer
+            auto result = arrow::io::FileOutputStream::Open(filename);
+            if(result.ok())
+            {
+                // write table
+                const shared_ptr<arrow::io::FileOutputStream> csv_writer = result.ValueOrDie();
+                const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
+                const arrow::Status s = arrow::csv::WriteCSV(*table, arrow::csv::WriteOptions::Defaults(), csv_writer.get());
+                if(!s.ok()) mlog(CRITICAL, "Failed to write CSV table: %s", s.CodeAsString().c_str());
+                (void)csv_writer->Close();
+            }
+            else
+            {
+                mlog(CRITICAL, "Failed to open csv writer: %s", result.status().ToString().c_str());
+            }
+        }
+        else
+        {
+            mlog(CRITICAL, "Unsupported format: %d", format);
+        }
+        stop_trace(INFO, write_trace_id);
+
+        // return filename     
+        lua_pushstring(L, filename);
+
+        // stop trace
+        stop_trace(INFO, trace_id);
     }
     catch(const RunTimeException& e)
     {
@@ -607,116 +722,6 @@ ArrowDataFrame::ArrowDataFrame(lua_State* L, RequestFields* _parms, GeoDataFrame
 {
     assert(parms);
     assert(dataframe);
-
-    // start trace
-    const uint32_t parent_trace_id = EventLib::grabId();
-    const uint32_t trace_id = start_trace(INFO, parent_trace_id, "ArrowDataFrame", "{\"num_rows\": %ld}", dataframe->length());
-
-    // get arrow parameters
-    const ArrowFields& arrow_parms = parms->output.value;
-    const char* filename = ArrowCommon::getUniqueFileName(NULL);
-
-    // process dataframe to arrow array
-    vector<shared_ptr<arrow::Array>> columns;
-    processDataFrame(columns, arrow_parms, *dataframe, trace_id);
-
-    // create schema
-    vector<shared_ptr<arrow::Field>> field_list;
-    buildFieldList(field_list, arrow_parms, *dataframe);
-    shared_ptr<arrow::Schema> schema = make_shared<arrow::Schema>(field_list);
-
-    // write out table
-    const uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
-    if(arrow_parms.format == ArrowFields::PARQUET)
-    {
-        // set arrow output stream
-        shared_ptr<arrow::io::FileOutputStream> file_output_stream;
-        auto _result = arrow::io::FileOutputStream::Open(filename);
-        if(_result.ok())
-        {
-            file_output_stream = _result.ValueOrDie();
-
-            // set writer properties
-            parquet::WriterProperties::Builder writer_props_builder;
-            writer_props_builder.compression(parquet::Compression::SNAPPY);
-            writer_props_builder.version(parquet::ParquetVersion::PARQUET_2_6);
-            const shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
-
-            // set arrow writer properties
-            auto arrow_writer_props = parquet::ArrowWriterProperties::Builder().store_schema()->build();
-
-            // set metadata
-            auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-            if(arrow_parms.asGeo.value) appendGeoMetaData(metadata);
-            appendServerMetaData(metadata);
-            appendPandasMetaData(dataframe->getTimeColumnName().c_str(), metadata, schema);
-            schema = schema->WithMetadata(metadata);
-
-            // create parquet writer
-            auto result = parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props);
-            if(result.ok())
-            {
-                // writer table
-                unique_ptr<parquet::arrow::FileWriter> parquet_writer = std::move(result).ValueOrDie();
-                const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
-                const arrow::Status s = parquet_writer->WriteTable(*table, dataframe->length());
-                if(!s.ok()) mlog(CRITICAL, "Failed to write parquet table: %s", s.CodeAsString().c_str());
-                (void)parquet_writer->Close();
-            }
-            else
-            {
-                mlog(CRITICAL, "Failed to open parquet writer: %s", result.status().ToString().c_str());
-            }
-        }
-        else
-        {
-            mlog(CRITICAL, "Failed to open file output stream: %s", _result.status().ToString().c_str());
-        }
-    }
-    else if(arrow_parms.format == ArrowFields::FEATHER)
-    {
-        // create feather writer
-        auto result = arrow::io::FileOutputStream::Open(filename);
-        if(result.ok())
-        {
-            // write table
-            const shared_ptr<arrow::io::FileOutputStream> feather_writer = result.ValueOrDie();
-            const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
-            const arrow::Status s = arrow::ipc::feather::WriteTable(*table, feather_writer.get());
-            if(!s.ok()) mlog(CRITICAL, "Failed to write feather table: %s", s.CodeAsString().c_str());
-            (void)feather_writer->Close();
-        }
-        else
-        {
-            mlog(CRITICAL, "Failed to open feather writer: %s", result.status().ToString().c_str());
-        }
-    }
-    else if(arrow_parms.format == ArrowFields::CSV)
-    {
-        // create csv writer
-        auto result = arrow::io::FileOutputStream::Open(filename);
-        if(result.ok())
-        {
-            // write table
-            const shared_ptr<arrow::io::FileOutputStream> csv_writer = result.ValueOrDie();
-            const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
-            const arrow::Status s = arrow::csv::WriteCSV(*table, arrow::csv::WriteOptions::Defaults(), csv_writer.get());
-            if(!s.ok()) mlog(CRITICAL, "Failed to write CSV table: %s", s.CodeAsString().c_str());
-            (void)csv_writer->Close();
-        }
-        else
-        {
-            mlog(CRITICAL, "Failed to open csv writer: %s", result.status().ToString().c_str());
-        }
-    }
-    else
-    {
-        mlog(CRITICAL, "Unsupported format: %d", arrow_parms.format.value);
-    }
-    stop_trace(INFO, write_trace_id);
-
-    // stop trace
-    stop_trace(INFO, trace_id);
 }
 
 /*----------------------------------------------------------------------------

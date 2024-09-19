@@ -206,11 +206,9 @@ class BathyDataFrame: public GeoDataFrame
         BathyMask*                  bathyMask;
         H5Object*                   hdf03;      // atl03 granule
         H5Object*                   hdf09;      // atl09 granule
-        H5Object*                   atl03File;
         Publisher                   rqstQ;
         int                         signalConfColIndex;
         int                         readTimeoutMs;
-        int                         sdpVersion;
         bool                        valid;
 
         /*--------------------------------------------------------------------
@@ -222,10 +220,9 @@ class BathyDataFrame: public GeoDataFrame
 
         static void*        subsettingThread            (void* parm);
         static double       calculateBackground         (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03);
-        static void         getResourceVersion          (const char* resource, int& version);
-        void                findSeaSurface              (void);
 
         static int          luaIsValid                  (lua_State* L);
+        static int          luaLength                   (lua_State* L);
 };
 
 #endif  /* __bathy_data_frame__ */

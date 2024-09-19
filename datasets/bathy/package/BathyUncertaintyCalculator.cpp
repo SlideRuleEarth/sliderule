@@ -47,7 +47,6 @@
  * DATA
  ******************************************************************************/
 
-const char* BathyUncertaintyCalculator::OBJECT_TYPE = "BathyUncertaintyCalculator";
 const char* BathyUncertaintyCalculator::LUA_META_NAME = "BathyUncertaintyCalculator";
 const struct luaL_Reg BathyUncertaintyCalculator::LUA_META_TABLE[] = {
     {NULL,          NULL}
@@ -176,20 +175,19 @@ void BathyUncertaintyCalculator::init (void)
  *----------------------------------------------------------------------------*/
 int BathyUncertaintyCalculator::luaCreate (lua_State* L)
 {
-    BathyFields* parms = NULL;
-    BathyDataFrame* dataframe = NULL;
+    BathyFields* _parms = NULL;
+    BathyKd* _kd = NULL;
 
     try
     {
-        parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
-        dataframe = dynamic_cast<BathyDataFrame*>(getLuaObject(L, 2, BathyDataFrame::OBJECT_TYPE));
-        if(!parms->uncertainty.value.assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no asset provided");
-        else if(parms->uncertainty.value.resourceKd.value.empty()) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no filename provided");
-        return createLuaObject(L, new BathyUncertaintyCalculator(L, parms, dataframe));
+        _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
+        _kd = dynamic_cast<BathyKd*>(getLuaObject(L, 2, BathyKd::OBJECT_TYPE));
+        return createLuaObject(L, new BathyUncertaintyCalculator(L, _parms, _kd));
     }
     catch(const RunTimeException& e)
     {
-        if(parms) parms->releaseLuaObject();
+        if(_parms) _parms->releaseLuaObject();
+        if(_kd) _kd->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", OBJECT_TYPE, e.what());
         return returnLuaStatus(L, false);
     }
@@ -198,16 +196,11 @@ int BathyUncertaintyCalculator::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyUncertaintyCalculator::BathyUncertaintyCalculator (lua_State* L, BathyFields* _parms, BathyDataFrame* _dataframe):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
+BathyUncertaintyCalculator::BathyUncertaintyCalculator (lua_State* L, BathyFields* _parms, BathyKd* _kd):
+    GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
-    dataframe(_dataframe),
-    Kd_490(NULL),
-    pid(NULL)
+    kd490(_kd)
 {
-    H5Coro::Context context(parms->uncertainty.value.assetKd, parms->uncertainty.value.resourceKd.value.c_str());
-    Kd_490 = new H5Array<int16_t>(&context, "Kd_490", H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS);
-    pid = new Thread(runThread, this); // assume this does not throw
 }
 
 /*----------------------------------------------------------------------------
@@ -215,25 +208,22 @@ BathyUncertaintyCalculator::BathyUncertaintyCalculator (lua_State* L, BathyField
  *----------------------------------------------------------------------------*/
 BathyUncertaintyCalculator::~BathyUncertaintyCalculator (void)
 {
-    delete pid;
-    delete Kd_490;
     if(parms) parms->releaseLuaObject();
-    if(dataframe) dataframe->releaseLuaObject();
+    if(kd490) kd490->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
- * runThread
+ * run
  *----------------------------------------------------------------------------*/
-void* BathyUncertaintyCalculator::runThread (void* parm)
+bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
 {
-    BathyUncertaintyCalculator* uncertainty_calculator = static_cast<BathyUncertaintyCalculator*>(parm);
-    BathyDataFrame& df = *uncertainty_calculator->dataframe;
+    BathyDataFrame& df = *dynamic_cast<BathyDataFrame*>(dataframe);
 
     /* run uncertainty calculation*/
     if(df.length() == 0) return NULL; // nothing to do
 
     /* join kd resource read */
-    uncertainty_calculator->Kd_490->join(uncertainty_calculator->parms->readTimeout.value * 1000, true);
+    kd490->join(parms->readTimeout.value * 1000);
 
     /* segment level variables */
     int32_t previous_segment = -1;
@@ -251,25 +241,8 @@ void* BathyUncertaintyCalculator::runThread (void* parm)
             /* calculate pointing angle */
             pointing_angle = 90.0 - ((180.0 / M_PI) * df.ref_el[i]);
 
-            /* get y offset */
-            const double degrees_of_latitude = df.lat_ph[i] + 90.0;
-            const double latitude_pixels = degrees_of_latitude * 24.0;
-            const int32_t y = static_cast<int32_t>(latitude_pixels);
-
-            /* get x offset */
-            const double degrees_of_longitude =  df.lon_ph[i] + 180.0;
-            const double longitude_pixels = degrees_of_longitude * 24.0;
-            const int32_t x = static_cast<int32_t>(longitude_pixels);
-
-            /* calculate total offset */
-            if(y < 0 || y >= 4320 || x < 0 || x >= 8640)
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid Kd coordinates: %d, %d | %lf, %lf", y, x, degrees_of_latitude, degrees_of_longitude);
-            }
-            const long offset = (x * 4320) + y;
-            
             /* get kd */
-            kd = static_cast<double>((*uncertainty_calculator->Kd_490)[offset]) * 0.0002;
+            kd = kd490->getKd(df.lon_ph[i], df.lat_ph[i]);
         }
 
         /* initialize total uncertainty to aerial uncertainty */
@@ -322,6 +295,5 @@ void* BathyUncertaintyCalculator::runThread (void* parm)
     }
 
     /* mark completion */
-    uncertainty_calculator->signalComplete();
-    return NULL;
+    return true;
 }

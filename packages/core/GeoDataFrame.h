@@ -38,6 +38,7 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
+#include "MsgQ.h"
 #include "TimeLib.h"
 #include "Field.h"
 #include "FieldDictionary.h"
@@ -77,32 +78,41 @@ class GeoDataFrame: public LuaObject, public Field
             const Field& column;
         };
 
+        struct FrameRunner: public LuaObject
+        {
+            static const char* OBJECT_TYPE;
+
+            virtual bool run(GeoDataFrame* dataframe) = 0;
+
+            FrameRunner(lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]):
+                LuaObject(L, OBJECT_TYPE, meta_name, meta_table) {};
+            ~FrameRunner(void) override = default;
+        };
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int              luaExport       (lua_State* L);
-        static int              luaImport       (lua_State* L);
-        static int              luaGetColumnData(lua_State* L);
-        static int              luaGetMetaData  (lua_State* L);
+        long                        length              (void) const;
+        long                        addRow              (void);
+        vector<string>              getColumnNames      (void) const;
+        void                        addColumnData       (const char* name, Field* column);
+        Field*                      getColumnData       (const char* name) const;
+        void                        addMetaData         (const char* name, Field* column);
+        Field*                      getMetaData         (const char* name);
 
-        long                    length          (void) const;
-        long                    addRow          (void);
-        vector<string>          getColumnNames  (void) const;
-        void                    addColumnData   (const char* name, Field* column);
-        Field*                  getColumnData   (const char* name) const;
-        void                    addMetaData     (const char* name, Field* column);
-        Field*                  getMetaData     (const char* name);
+        const FieldColumn<time8_t>* getTimeColumn       (void) const;
+        const FieldColumn<double>*  getXColumn          (void) const;
+        const FieldColumn<double>*  getYColumn          (void) const;
+        const FieldColumn<double>*  getZColumn          (void) const;
 
-        const FieldColumn<time8_t>* getTimeColumn   (void) const;
-        const FieldColumn<double>*  getXColumn      (void) const;
-        const FieldColumn<double>*  getYColumn      (void) const;
-        const FieldColumn<double>*  getZColumn      (void) const;
+        const string&               getTimeColumnName   (void) const;
+        const string&               getXColumnName      (void) const;
+        const string&               getYColumnName      (void) const;
+        const string&               getZColumnName      (void) const;
 
-        const string&           getTimeColumnName   (void) const;
-        const string&           getXColumnName      (void) const;
-        const string&           getYColumnName      (void) const;
-        const string&           getZColumnName      (void) const;
+        bool                        waitRunComplete     (int timeout);
+        void                        signalRunComplete   (void);
 
         const Dictionary<FieldDictionary::entry_t>& getColumns(void) const;
         const Dictionary<FieldDictionary::entry_t>& getMeta(void) const;
@@ -118,28 +128,44 @@ class GeoDataFrame: public LuaObject, public Field
                          const struct luaL_Reg meta_table[],
                          const std::initializer_list<FieldDictionary::entry_t>& column_list, 
                          const std::initializer_list<FieldDictionary::entry_t>& meta_list);
-        ~GeoDataFrame   (void) override = default;
+        ~GeoDataFrame   (void) override;
 
-        int     toLua   (lua_State* L) const override;
-        void    fromLua (lua_State* L, int index) override;
+        static void*    runThread           (void* parm);
+
+        int             toLua               (lua_State* L) const override;
+        void            fromLua             (lua_State* L, int index) override;
+
+        static int      luaExport           (lua_State* L);
+        static int      luaImport           (lua_State* L);
+        static int      luaGetColumnData    (lua_State* L);
+        static int      luaGetMetaData      (lua_State* L);
+        static int      luaRun              (lua_State* L);
+        static int      luaRunComplete      (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        vector<long> indexColumn;
-        FieldDictionary columnFields;
-        FieldDictionary metaFields;
+        vector<long>                indexColumn;
+        FieldDictionary             columnFields;
+        FieldDictionary             metaFields;
 
         const FieldColumn<time8_t>* timeColumn;
-        const FieldColumn<double>* xColumn;
-        const FieldColumn<double>* yColumn;
-        const FieldColumn<double>* zColumn;
+        const FieldColumn<double>*  xColumn;
+        const FieldColumn<double>*  yColumn;
+        const FieldColumn<double>*  zColumn;
 
-        string timeColumnName;
-        string xColumnName;
-        string yColumnName;
-        string zColumnName;
+        string                      timeColumnName;
+        string                      xColumnName;
+        string                      yColumnName;
+        string                      zColumnName;
+
+        bool                        active;
+        Thread*                     pid;
+        Publisher                   pubRunQ;
+        Subscriber                  subRunQ;
+        Cond                        runSignal;
+        bool                        runComplete;
 };
 
 #endif  /* __geo_data_frame__ */

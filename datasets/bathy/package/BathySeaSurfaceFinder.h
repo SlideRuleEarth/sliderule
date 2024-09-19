@@ -33,7 +33,7 @@
 #define __bathy_sea_surface_finder__
 
 #include "OsApi.h"
-#include "LuaObject.h"
+#include "GeoDataFrame.h"
 #include "BathyDataFrame.h"
 #include "BathyFields.h"
 
@@ -41,7 +41,7 @@
  * CLASS
  ******************************************************************************/
 
-class BathySeaSurfaceFinder: public LuaObject
+class BathySeaSurfaceFinder: public GeoDataFrame::FrameRunner
 {
     public:
 
@@ -49,7 +49,6 @@ class BathySeaSurfaceFinder: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
@@ -57,7 +56,7 @@ class BathySeaSurfaceFinder: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int      luaCreate   (lua_State* L);
+        static int luaCreate (lua_State* L);
 
     private:
 
@@ -65,18 +64,16 @@ class BathySeaSurfaceFinder: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathySeaSurfaceFinder    (lua_State* L, BathyFields* _parms, BathyDataFrame* _dataframe);
+        BathySeaSurfaceFinder    (lua_State* L, BathyFields* _parms);
         ~BathySeaSurfaceFinder   (void) override;
 
-        static void* runThread   (void* parm);
+        bool run (GeoDataFrame* dataframe) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         BathyFields*    parms;
-        BathyDataFrame* dataframe;
-        Thread*         pid;
 };
 
 #endif

@@ -67,7 +67,9 @@ struct SurfaceFields: public FieldDictionary
                           {"min_peak_separation", &minPeakSeparation},
                           {"highest_peak_ration", &highestPeakRatio},
                           {"surace_width",        &surfaceWidth},
-                          {"model_as_poisoon",    &modelAsPoisson} }) {};
+                          {"model_as_poisoon",    &modelAsPoisson} }) {
+        initialized = true;
+    };
 
     ~SurfaceFields(void) override = default;
 };
@@ -84,7 +86,9 @@ struct RefractionFields: public FieldDictionary
     RefractionFields(void): 
         FieldDictionary({ {"use_water_ri_mask", &useWaterRIMask},
                           {"ri_air",            &RIAir}, 
-                          {"ri_water",          &RIAir} }) {};
+                          {"ri_water",          &RIAir} }) {
+        initialized = true;
+    };
 
     ~RefractionFields(void) override = default;
 };
@@ -95,15 +99,14 @@ struct RefractionFields: public FieldDictionary
 struct UncertaintyFields: public FieldDictionary 
 {
     FieldElement<string>    assetKdName {"viirsj1-s3"}; // global water refractive index mask downloaded in atl24 init lua routine
-    FieldElement<string>    resourceKd;                 // refraction index of air
     
     Asset* assetKd {NULL};
 
     UncertaintyFields(void): 
-        FieldDictionary({ {"asset_kd",      &assetKdName},
-                          {"resource_kd",   &resourceKd} }) {
+        FieldDictionary({ {"asset_kd",      &assetKdName} }) {
         assetKd = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(assetKdName.value.c_str(), Asset::OBJECT_TYPE));
         if(!assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", assetKdName.value.c_str());
+        initialized = true;
     };
 
     ~UncertaintyFields(void) override {
@@ -176,8 +179,7 @@ class BathyFields: public Icesat2Fields
          * Data
          *--------------------------------------------------------------------*/
 
-        FieldElement<string>                            atl09AssetName;             // name of the asset in the asset directory for the ATL09 granules
-        FieldElement<string>                            atl09Resource {"icesat2"};  // name of the ATL09 granule (including extension)
+        FieldElement<string>                            atl09AssetName {"icesat2"}; // name of the asset in the asset directory for the ATL09 granules
         FieldElement<double>                            maxDemDelta {50.0};         // initial filter of heights against DEM (For removing things like clouds)
         FieldElement<double>                            minDemDelta {-100.0};       // initial filter of heights against DEM (For removing things like clouds)
         FieldElement<int>                               phInExtent {8192};          // number of photons in each extent
@@ -190,8 +192,6 @@ class BathyFields: public Icesat2Fields
         FieldElement<RefractionFields>                  refraction;                 // refraction correction fields
         FieldElement<UncertaintyFields>                 uncertainty;                // uncertaintly calculation fields
 
-        Asset* asset09 {NULL}; // asset for ATL09 resources
-
     protected:
 
         /*--------------------------------------------------------------------
@@ -199,7 +199,7 @@ class BathyFields: public Icesat2Fields
          *--------------------------------------------------------------------*/
 
         BathyFields     (lua_State* L, int index);
-        ~BathyFields    (void) override;
+        ~BathyFields    (void) override = default;
 };
 
 /******************************************************************************

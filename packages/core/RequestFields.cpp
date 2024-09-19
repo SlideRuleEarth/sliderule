@@ -43,11 +43,12 @@
 const char* RequestFields::OBJECT_TYPE = "RequestFields";
 const char* RequestFields::LUA_META_NAME = "RequestFields";
 const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
-    {"export",  luaExport},
-    {"poly",    luaProjectedPolygonIncludes},
-    {"mask",    luaRegionMaskIncludes},
-    {"__index", luaGetField},
-    {NULL,      NULL}
+    {"export",      luaExport},
+    {"poly",        luaProjectedPolygonIncludes},
+    {"mask",        luaRegionMaskIncludes},
+    {"__index",     luaGetField},
+    {"__newindex",  luaSetField},
+    {NULL,          NULL}
 };
 
 /******************************************************************************
@@ -156,6 +157,25 @@ int RequestFields::luaGetField (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * luaSetField - [<field_name>]
+ *----------------------------------------------------------------------------*/
+int RequestFields::luaSetField (lua_State* L)
+{
+    try
+    {
+        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        const char* field_name = getLuaString(L, 2);
+        lua_obj->fields[field_name].field->fromLua(L, 3);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "error retrieving field: %s", e.what());
+    }
+
+    return 0;
+}
+
+/*----------------------------------------------------------------------------
  * polyIncludes
  *----------------------------------------------------------------------------*/
 bool RequestFields::polyIncludes (double lon, double lat) const
@@ -197,6 +217,9 @@ RequestFields::RequestFields(lua_State* L, int index, const std::initializer_lis
         {"read_timeout",        &readTimeout},
         {"cluster_size_hint",   &clusterSizeHint},
         {"region_mask",         &regionMask},
+        {"sliderule_version",   &slideruleVersion},
+        {"build_information",   &buildInformation},
+        {"environment_version", &environmentVersion},
         #ifdef __arrow__
         {"output",              &output},
         #endif
@@ -212,10 +235,10 @@ RequestFields::RequestFields(lua_State* L, int index, const std::initializer_lis
     fromLua(L, index);
 
     // set timeouts (if necessary)
-    if(timeout.value == TIMEOUT_UNSET)      timeout.value = DEFAULT_TIMEOUT;    
-    if(rqstTimeout.value == TIMEOUT_UNSET)  rqstTimeout.value = timeout.value;
-    if(nodeTimeout.value == TIMEOUT_UNSET)  nodeTimeout.value = timeout.value;
-    if(readTimeout.value == TIMEOUT_UNSET)  readTimeout.value = timeout.value;
+    if(timeout == INVALID_TIMEOUT)      timeout = DEFAULT_TIMEOUT;    
+    if(rqstTimeout == INVALID_TIMEOUT)  rqstTimeout = timeout;
+    if(nodeTimeout == INVALID_TIMEOUT)  nodeTimeout = timeout;
+    if(readTimeout == INVALID_TIMEOUT)  readTimeout = timeout;
 
     // project polygon (if necessary)
     pointsInPolygon = polygon.length();
@@ -236,6 +259,11 @@ RequestFields::RequestFields(lua_State* L, int index, const std::initializer_lis
             projectedPolygon[i] = MathLib::coord2point(polygon[i], projection.value);
         }
     }
+
+    // version info
+    slideruleVersion = LIBID;
+    buildInformation = BUILDINFO;
+    environmentVersion = OsApi::getEnvVersion();
 }
 
 /*----------------------------------------------------------------------------

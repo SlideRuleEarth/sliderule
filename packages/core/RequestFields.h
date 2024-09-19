@@ -60,13 +60,18 @@ class RequestFields: public LuaObject, public FieldDictionary
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int DEFAULT_TIMEOUT            = 600; // seconds
-        static const int TIMEOUT_UNSET              = -1;
-        static const int DEFAULT_CLUSTER_SIZE_HINT  = 0; // dynamic
-
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
+
+        /*--------------------------------------------------------------------
+         * Types
+         *--------------------------------------------------------------------*/
+
+        typedef enum {
+            DEFAULT_TIMEOUT = 600, // seconds
+            INVALID_TIMEOUT = -2
+        } timeout_settings_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -78,6 +83,7 @@ class RequestFields: public LuaObject, public FieldDictionary
         static int luaProjectedPolygonIncludes (lua_State* L) ;
         static int luaRegionMaskIncludes (lua_State* L);
         static int luaGetField (lua_State* L);
+        static int luaSetField (lua_State* L);
 
         bool polyIncludes (double lon, double lat) const;
         bool maskIncludes (double lon, double lat) const;
@@ -89,12 +95,15 @@ class RequestFields: public LuaObject, public FieldDictionary
         FieldColumn<MathLib::coord_t>   polygon;
         FieldElement<MathLib::proj_t>   projection          {MathLib::AUTOMATIC};
         FieldElement<int>               pointsInPolygon     {0};
-        FieldElement<int>               timeout             {TIMEOUT_UNSET}; // global timeout
-        FieldElement<int>               rqstTimeout         {TIMEOUT_UNSET};
-        FieldElement<int>               nodeTimeout         {TIMEOUT_UNSET};
-        FieldElement<int>               readTimeout         {TIMEOUT_UNSET};
-        FieldElement<int>               clusterSizeHint     {DEFAULT_CLUSTER_SIZE_HINT};
+        FieldElement<int>               timeout             {INVALID_TIMEOUT}; // global timeout
+        FieldElement<int>               rqstTimeout         {INVALID_TIMEOUT};
+        FieldElement<int>               nodeTimeout         {INVALID_TIMEOUT};
+        FieldElement<int>               readTimeout         {INVALID_TIMEOUT};
+        FieldElement<int>               clusterSizeHint     {0};
         FieldElement<RegionMask>        regionMask;
+        FieldElement<string>            slideruleVersion;
+        FieldElement<string>            buildInformation;
+        FieldElement<string>            environmentVersion;
         
         #ifdef __arrow__
         FieldElement<ArrowFields>       output;

@@ -47,7 +47,6 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* BathySeaSurfaceFinder::OBJECT_TYPE = "BathySeaSurfaceFinder";
 const char* BathySeaSurfaceFinder::LUA_META_NAME = "BathySeaSurfaceFinder";
 const struct luaL_Reg BathySeaSurfaceFinder::LUA_META_TABLE[] = {
     {NULL,  NULL}
@@ -59,17 +58,14 @@ const struct luaL_Reg BathySeaSurfaceFinder::LUA_META_TABLE[] = {
 int BathySeaSurfaceFinder::luaCreate (lua_State* L)
 {
     BathyFields* _parms = NULL;
-    BathyDataFrame* _dataframe = NULL;
     try
     {
         _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
-        _dataframe = dynamic_cast<BathyDataFrame*>(getLuaObject(L, 2, BathyDataFrame::OBJECT_TYPE));
-        return createLuaObject(L, new BathySeaSurfaceFinder(L, _parms, _dataframe));
+        return createLuaObject(L, new BathySeaSurfaceFinder(L, _parms));
     }
     catch(const RunTimeException& e)
     {
         if(_parms) _parms->releaseLuaObject();
-        if(_dataframe) _dataframe->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", OBJECT_TYPE, e.what());
         return returnLuaStatus(L, false);
     }
@@ -78,12 +74,10 @@ int BathySeaSurfaceFinder::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathySeaSurfaceFinder::BathySeaSurfaceFinder (lua_State* L, BathyFields* _parms, BathyDataFrame* _dataframe):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    parms(_parms),
-    dataframe(_dataframe)
+BathySeaSurfaceFinder::BathySeaSurfaceFinder (lua_State* L, BathyFields* _parms):
+    GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
+    parms(_parms)
 {
-    pid = new Thread(runThread, this);
 }
 
 /*----------------------------------------------------------------------------
@@ -91,26 +85,22 @@ BathySeaSurfaceFinder::BathySeaSurfaceFinder (lua_State* L, BathyFields* _parms,
  *----------------------------------------------------------------------------*/
 BathySeaSurfaceFinder::~BathySeaSurfaceFinder (void)
 {
-    delete pid;
     if(parms) parms->releaseLuaObject();
-    if(dataframe) dataframe->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
- * runThread
+ * run
  *----------------------------------------------------------------------------*/
-void* BathySeaSurfaceFinder::runThread(void* parm)
+bool BathySeaSurfaceFinder::run(GeoDataFrame* dataframe)
 {
-    BathySeaSurfaceFinder* sea_surface_finder = static_cast<BathySeaSurfaceFinder*>(parm);
-    BathyDataFrame& df = *sea_surface_finder->dataframe;
-    const BathyFields& parms = *sea_surface_finder->parms;
-    const SurfaceFields& surface_parms = sea_surface_finder->parms->surface.value;
+    BathyDataFrame& df = *dynamic_cast<BathyDataFrame*>(dataframe);
+    const SurfaceFields& surface_parms = parms->surface.value;
 
     /* for each extent (p0 = start photon) */
-    for(long p0 = 0; p0 < df.length(); p0 += parms.phInExtent.value)
+    for(long p0 = 0; p0 < df.length(); p0 += parms->phInExtent.value)
     {
         /* calculate last photon in extent */
-        const long p1 = MIN(df.length(), p0 + parms.phInExtent.value);
+        const long p1 = MIN(df.length(), p0 + parms->phInExtent.value);
 
         try
         {
@@ -321,6 +311,5 @@ void* BathySeaSurfaceFinder::runThread(void* parm)
     }
 
     /* Mark Completion */
-    sea_surface_finder->signalComplete();
-    return NULL;
+    return true;
 }

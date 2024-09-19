@@ -55,6 +55,7 @@
 const char* BathyDataFrame::LUA_META_NAME = "BathyDataFrame";
 const struct luaL_Reg BathyDataFrame::LUA_META_TABLE[] = {
     {"isvalid",     luaIsValid},
+    {"length",      luaLength},
     {NULL,          NULL}
 };
 
@@ -77,10 +78,10 @@ int BathyDataFrame::luaCreate (lua_State* L)
         /* Get Parameters */
         const char* beam_str = getLuaString(L, 1);
         _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 2, BathyFields::OBJECT_TYPE));
-        _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE));
-        _hdf09 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE));
-        const char* rqstq_name = getLuaString(L, 5);
-        _mask = dynamic_cast<BathyMask*>(getLuaObject(L, 6, GeoLib::TIFFImage::OBJECT_TYPE, true, NULL));
+        _mask = dynamic_cast<BathyMask*>(getLuaObject(L, 3, GeoLib::TIFFImage::OBJECT_TYPE, true, NULL));
+        _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE));
+        _hdf09 = dynamic_cast<H5Object*>(getLuaObject(L, 5, H5Object::OBJECT_TYPE));
+        const char* rqstq_name = getLuaString(L, 6);
 
         /* Return Reader Object */
         return createLuaObject(L, new BathyDataFrame(L, beam_str, _parms, _hdf03, _hdf09, rqstq_name, _mask));
@@ -153,9 +154,6 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
 
     try
     {
-        /* Get Standard Data Product Version for ATL03 */
-        getResourceVersion(parms.resource.value.c_str(), sdpVersion);
-
         /* Set Signal Confidence Index */
         if(parms.surfaceType == Icesat2Fields::SRT_DYNAMIC)
         {
@@ -167,8 +165,8 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         }
 
         /* Set Track and Pair ( gt<track><pair> - e.g. gt1l )*/
-        track.value = static_cast<int>(beam.value[2]) - 0x30;
-        pair.value = beam.value[3] == 'l' ? Icesat2Fields::RPT_L : Icesat2Fields::RPT_R;
+        track = static_cast<int>(beam.value[2]) - 0x30;
+        pair = beam.value[3] == 'l' ? Icesat2Fields::RPT_L : Icesat2Fields::RPT_R;
 
         /* Set Thread Specific Trace ID for H5Coro */
         EventLib::stashId (traceId);
@@ -439,7 +437,7 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     h_ph                (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/h_ph").c_str(),                0, region.first_photon,  region.num_photons),
     signal_conf_ph      (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/signal_conf_ph").c_str(),      dataframe.signalConfColIndex, region.first_photon,  region.num_photons),
     quality_ph          (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/quality_ph").c_str(),          0, region.first_photon,  region.num_photons),
-    weight_ph           (dataframe.sdpVersion >= 6 ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam.value.c_str(), "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
+    weight_ph           (dataframe.parms.version.value >= 6 ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam.value.c_str(), "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
     lat_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/lat_ph").c_str(),              0, region.first_photon,  region.num_photons),
     lon_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/lon_ph").c_str(),              0, region.first_photon,  region.num_photons),
     delta_time          (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/delta_time").c_str(),          0, region.first_photon,  region.num_photons),
@@ -463,7 +461,7 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     h_ph.join(dataframe.readTimeoutMs, true);
     signal_conf_ph.join(dataframe.readTimeoutMs, true);
     quality_ph.join(dataframe.readTimeoutMs, true);
-    if(dataframe.sdpVersion >= 6) weight_ph.join(dataframe.readTimeoutMs, true);
+    if(dataframe.parms.version.value >= 6) weight_ph.join(dataframe.readTimeoutMs, true);
     lat_ph.join(dataframe.readTimeoutMs, true);
     lon_ph.join(dataframe.readTimeoutMs, true);
     delta_time.join(dataframe.readTimeoutMs, true);
@@ -489,7 +487,7 @@ BathyDataFrame::Atl09Class::Atl09Class (const BathyDataFrame& dataframe):
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "ATL09 data unavailable <%s>", dataframe.parms.atl09Resource.value.c_str());
+        mlog(CRITICAL, "ATL09 data unavailable for <%s>", dataframe.parms.resource.value.c_str());
     }
 }
 
@@ -612,7 +610,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
 
                 /* Set and Check YAPC Score */
                 uint8_t yapc_score = 0;
-                if(dataframe.sdpVersion >= 6)
+                if(parms.version.value >= 6)
                 {
                     yapc_score = atl03.weight_ph[current_photon];
                     if(yapc_score < parms.yapc.value.score.value)
@@ -758,40 +756,6 @@ double BathyDataFrame::calculateBackground (int32_t current_segment, int32_t& bc
 }
 
 /*----------------------------------------------------------------------------
- * getResourceVersion
- *
- *  ATL0x_YYYYMMDDHHMMSS_ttttccrr_vvv_ee
- *      YYYY    - year
- *      MM      - month
- *      DD      - day
- *      HH      - hour
- *      MM      - minute
- *      SS      - second
- *      tttt    - reference ground track
- *      cc      - cycle
- *      rr      - region
- *      vvv     - version
- *      ee      - revision
- *----------------------------------------------------------------------------*/
-void BathyDataFrame::getResourceVersion (const char* _resource, int& version)
-{
-    long val;
-    char version_str[4];
-    version_str[0] = _resource[30];
-    version_str[1] = _resource[31];
-    version_str[2] = _resource[32];
-    version_str[3] = '\0';
-    if(StringLib::str2long(version_str, &val, 10))
-    {
-        version = static_cast<uint8_t>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse version from resource %s: %s", _resource, version_str);
-    }
-}
-
-/*----------------------------------------------------------------------------
  * luaIsValid
  *----------------------------------------------------------------------------*/
 int BathyDataFrame::luaIsValid (lua_State* L)
@@ -808,4 +772,23 @@ int BathyDataFrame::luaIsValid (lua_State* L)
     }
 
     return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaLength
+ *----------------------------------------------------------------------------*/
+int BathyDataFrame::luaLength (lua_State* L)
+{
+    try
+    {
+        BathyDataFrame* lua_obj = dynamic_cast<BathyDataFrame*>(getLuaSelf(L, 1));
+        lua_pushinteger(L, lua_obj->length());
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting length of %s: %s", OBJECT_TYPE, e.what());
+        lua_pushinteger(L, 0);
+    }
+
+    return 1;
 }

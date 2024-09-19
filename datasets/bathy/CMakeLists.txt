@@ -8,6 +8,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyDataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyFields.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyGranule.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyKd.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyMask.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyRefractionCorrector.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathySeaSurfaceFinder.cpp
@@ -28,6 +29,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyDataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyFields.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyGranule.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/BathyKd.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyMask.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyRefractionCorrector.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathySeaSurfaceFinder.h

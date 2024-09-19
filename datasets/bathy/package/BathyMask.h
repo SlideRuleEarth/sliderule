@@ -36,12 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaObject.h"
-#include "MsgQ.h"
-#include "OsApi.h"
-#include "H5Coro.h"
-#include "BathyFields.h"
 #include "GeoLib.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * CLASS

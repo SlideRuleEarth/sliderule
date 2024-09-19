@@ -33,25 +33,24 @@
 #define __bathy_uncertainty_calculator__
 
 #include "OsApi.h"
-#include "LuaObject.h"
+#include "GeoDataFrame.h"
 #include "H5Coro.h"
 #include "H5Array.h"
 #include "BathyFields.h"
 #include "BathyDataFrame.h"
+#include "BathyKd.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class BathyUncertaintyCalculator: public LuaObject
+class BathyUncertaintyCalculator: public GeoDataFrame::FrameRunner
 {
     public:
 
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-
-        static const char* OBJECT_TYPE;
 
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
@@ -62,7 +61,8 @@ class BathyUncertaintyCalculator: public LuaObject
 
         static void     init        (void);
         static int      luaCreate   (lua_State* L);
-        static void*    runThread   (void* parm);
+        
+        bool            run         (GeoDataFrame* dataframe) override;
 
     private:
 
@@ -86,7 +86,7 @@ class BathyUncertaintyCalculator: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
         
-        BathyUncertaintyCalculator  (lua_State* L, BathyFields* _parms, BathyDataFrame* _dataframe);
+        BathyUncertaintyCalculator  (lua_State* L, BathyFields* _parms, BathyKd* _kd);
         ~BathyUncertaintyCalculator (void) override;
 
         /*--------------------------------------------------------------------
@@ -109,9 +109,7 @@ class BathyUncertaintyCalculator: public LuaObject
         static uncertainty_coeff_t  UNCERTAINTY_COEFF_MAP[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES][NUM_WIND_SPEEDS][NUM_KD_RANGES];
 
         BathyFields*                parms;
-        BathyDataFrame*             dataframe;
-        H5Array<int16_t>*           Kd_490;
-        Thread*                     pid;
+        BathyKd*                    kd490;
 };
 
 #endif

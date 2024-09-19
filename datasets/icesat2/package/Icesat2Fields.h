@@ -115,9 +115,6 @@ class Icesat2Fields: public RequestFields
          *--------------------------------------------------------------------*/
 
         static const int NUM_SPOTS                  = 6;
-        static const int NUM_PAIR_TRACKS            = 2;
-        static const int RPT_L                      = 0;
-        static const int RPT_R                      = 1;
         static const int EXTENT_ID_PHOTONS          = 0x0;
         static const int EXTENT_ID_ELEVATION        = 0x2;
         static const int EXPECTED_NUM_FIELDS        = 8; // a typical number of ancillary fields requested
@@ -127,6 +124,13 @@ class Icesat2Fields: public RequestFields
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
+
+        /* Single Tracks */
+        typedef enum {
+            RPT_L = 0,
+            RPT_R = 1,
+            NUM_PAIR_TRACKS = 2
+        } rpt_t;
 
         /* Pair Tracks */
         typedef enum {
@@ -332,6 +336,13 @@ class Icesat2Fields: public RequestFields
         FieldList<string>                                   atl06Fields;                                            // list of ATL06 fields to associate with an ATL06 subsetting request
         FieldList<string>                                   atl08Fields;                                            // list of ATL08 fields to associate with an extent
         FieldList<string>                                   atl13Fields;                                            // list of ATL13 fields to associate with an extent
+        FieldElement<int>                                   year;                                                   // ATL03 granule observation date - year
+        FieldElement<int>                                   month;                                                  // ATL03 granule observation date - month
+        FieldElement<int>                                   day;                                                    // ATL03 granule observation date - day
+        FieldElement<int>                                   rgt;                                                    // ATL03 granule reference ground track
+        FieldElement<int>                                   cycle;                                                  // ATL03 granule cycle
+        FieldElement<int>                                   region;                                                 // ATL03 granule region
+        FieldElement<int>                                   version;                                                // ATL03 granule version
 
         Asset* asset {NULL};
         bool stages[NUM_STAGES] = {true, false, false, false};
@@ -344,6 +355,8 @@ class Icesat2Fields: public RequestFields
 
         Icesat2Fields   (lua_State* L, int index, const std::initializer_list<FieldDictionary::entry_t>& init_list);
         ~Icesat2Fields  (void) override;
+
+        void parseResource (void);
 };
 
 /******************************************************************************

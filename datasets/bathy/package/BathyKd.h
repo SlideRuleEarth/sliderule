@@ -29,31 +29,56 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef __bathy_kd__
+#define __bathy_kd__
+
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "BathyClassifier.h"
+#include "OsApi.h"
+#include "H5Array.h"
 #include "BathyFields.h"
 
 /******************************************************************************
- * STATIC DATA
+ * CLASS
  ******************************************************************************/
 
-const char* BathyClassifier::OBJECT_TYPE = "BathyClassifier";
-const char* BathyClassifier::LUA_META_NAME = "BathyClassifier";
-const struct luaL_Reg BathyClassifier::LUA_META_TABLE[] = {
-    {NULL,          NULL}
+class BathyKd: public LuaObject
+{
+    public:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+        
+        static const char* OBJECT_TYPE;
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static int  luaCreate   (lua_State* L);
+
+        void        join        (int timeout);
+        double      getKd       (double lon, double lat);
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        explicit BathyKd (lua_State* L, const UncertaintyFields& parms, const char* resource_kd);
+        ~BathyKd (void) override;
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        H5Array<int16_t>* array;
 };
 
-/******************************************************************************
- * BATHY CLASSIFIER CLASS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-BathyClassifier::BathyClassifier (lua_State* L, BathyFields::classifier_t _classifier):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
-{
-}
+#endif  /* __bathy_kd__ */

@@ -177,27 +177,18 @@ with open(atl24_filename + ".json", "w") as file:
 # #####################
 
 # Arrow
-if output_parms["format"] != "hdf5" and output_parms["format"] != "h5":
+if output_parms["format"] == "parquet":
 
-    # CSV
-    if output_parms["format"] == "csv":
-        
-        df.to_csv(atl24_filename, index=False)
-        print("CSV file written: " + atl24_filename)
-    
-    # parquet
-    elif output_parms["format"] == "parquet":
-
-        import pyarrow as pa
-        import pyarrow.parquet as pq
-        table = pa.Table.from_pandas(df, preserve_index=False)
-        schema = table.schema.with_metadata({"sliderule": json.dumps(metadata)})
-        table = table.replace_schema_metadata(schema.metadata)
-        pq.write_table(table, atl24_filename)
-        print("Writing Parquet file: " + atl24_filename)
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    table = pa.Table.from_pandas(df, preserve_index=False)
+    schema = table.schema.with_metadata({"sliderule": json.dumps(metadata)})
+    table = table.replace_schema_metadata(schema.metadata)
+    pq.write_table(table, atl24_filename)
+    print("Writing Parquet file: " + atl24_filename)
 
 # HDF5
-else:
+elif output_parms["format"] == "hdf5" or output_parms["format"] == "h5":
 
     def add_variable(group, name, data, dtype, attrs):
         dataset = group.create_dataset(name, data=data, dtype=dtype)

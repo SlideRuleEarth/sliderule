@@ -54,7 +54,6 @@ const double BathyRefractionCorrector::GLOBAL_WATER_RI_MASK_MAX_LON = 180.0;
 const double BathyRefractionCorrector::GLOBAL_WATER_RI_MASK_MIN_LON = -180.0;
 const double BathyRefractionCorrector::GLOBAL_WATER_RI_MASK_PIXEL_SIZE = 0.25;
 
-const char* BathyRefractionCorrector::OBJECT_TYPE = "BathyRefractionCorrector";
 const char* BathyRefractionCorrector::LUA_META_NAME = "BathyRefractionCorrector";
 const struct luaL_Reg BathyRefractionCorrector::LUA_META_TABLE[] = {
     {"subaqueous", getSubAqPh},
@@ -71,18 +70,15 @@ const struct luaL_Reg BathyRefractionCorrector::LUA_META_TABLE[] = {
 int BathyRefractionCorrector::luaCreate (lua_State* L)
 {
     BathyFields* _parms = NULL;
-    BathyDataFrame* _dataframe = NULL;
 
     try
     {
         _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
-        _dataframe = dynamic_cast<BathyDataFrame*>(getLuaObject(L, 2, BathyDataFrame::OBJECT_TYPE));
-        return createLuaObject(L, new BathyRefractionCorrector(L, _parms, _dataframe));
+        return createLuaObject(L, new BathyRefractionCorrector(L, _parms));
     }
     catch(const RunTimeException& e)
     {
         if(_parms) _parms->releaseLuaObject();
-        if(_dataframe) _dataframe->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", OBJECT_TYPE, e.what());
         return returnLuaStatus(L, false);
     }
@@ -110,10 +106,9 @@ int BathyRefractionCorrector::getSubAqPh (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyRefractionCorrector::BathyRefractionCorrector (lua_State* L, BathyFields* _parms, BathyDataFrame* _dataframe):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
+BathyRefractionCorrector::BathyRefractionCorrector (lua_State* L, BathyFields* _parms):
+    GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
-    dataframe(_dataframe),
     waterRiMask(NULL),
     subaqueousPhotons(0)
 {
@@ -121,8 +116,6 @@ BathyRefractionCorrector::BathyRefractionCorrector (lua_State* L, BathyFields* _
     {
         waterRiMask = new GeoLib::TIFFImage(NULL, GLOBAL_WATER_RI_MASK, GeoLib::TIFFImage::GDAL_DRIVER);
     }
-
-    pid = new Thread(runThread, this);
 }
 
 /*----------------------------------------------------------------------------
@@ -130,14 +123,12 @@ BathyRefractionCorrector::BathyRefractionCorrector (lua_State* L, BathyFields* _
  *----------------------------------------------------------------------------*/
 BathyRefractionCorrector::~BathyRefractionCorrector (void)
 {
-    delete pid;
     delete waterRiMask;
     if(parms) parms->releaseLuaObject();
-    if(dataframe) dataframe->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
- * photon_refraction -
+ * run -
  *
  * ICESat-2 refraction correction implemented as outlined in Parrish, et al.
  * 2019 for correcting photon depth data. Reference elevations are to geoid datum
@@ -178,11 +169,10 @@ BathyRefractionCorrector::~BathyRefractionCorrector (void)
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *----------------------------------------------------------------------------*/
-void* BathyRefractionCorrector::runThread(void* parm)
+bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
 {
-    BathyRefractionCorrector* refraction_corrector = static_cast<BathyRefractionCorrector*>(parm);
-    BathyDataFrame& df = *refraction_corrector->dataframe;
-    const RefractionFields& parms = refraction_corrector->parms->refraction.value;
+    BathyDataFrame& df = *dynamic_cast<BathyDataFrame*>(dataframe);
+    const RefractionFields& refraction_parms = parms->refraction.value;
 
     /* Get UTM Transformation */
     GeoLib::UTMTransform transform(df.utm_zone.value, df.utm_is_north.value);
@@ -191,18 +181,18 @@ void* BathyRefractionCorrector::runThread(void* parm)
     for(long i = 0; i < df.length(); i++)
     {
         /* Get Refraction Index of Water */
-        double ri_water = parms.RIWater.value;
-        if(refraction_corrector->waterRiMask)
+        double ri_water = refraction_parms.RIWater.value;
+        if(waterRiMask)
         {
             const double degrees_of_latitude = df.lat_ph[i] - GLOBAL_WATER_RI_MASK_MIN_LAT;
             const double latitude_pixels = degrees_of_latitude / GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
-            const uint32_t y = refraction_corrector->waterRiMask->getHeight() - static_cast<uint32_t>(latitude_pixels); // flipped image
+            const uint32_t y = waterRiMask->getHeight() - static_cast<uint32_t>(latitude_pixels); // flipped image
 
             const double degrees_of_longitude =  df.lon_ph[i] - GLOBAL_WATER_RI_MASK_MIN_LON;
             const double longitude_pixels = degrees_of_longitude / GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
             const uint32_t x = static_cast<uint32_t>(longitude_pixels);
 
-            const GeoLib::TIFFImage::val_t pixel = refraction_corrector->waterRiMask->getPixel(x, y);
+            const GeoLib::TIFFImage::val_t pixel = waterRiMask->getPixel(x, y);
             ri_water = pixel.f64;
         }
 
@@ -211,10 +201,10 @@ void* BathyRefractionCorrector::runThread(void* parm)
         if(depth > 0)
         {
             /* Count Subaqueous Photons */
-            refraction_corrector->subaqueousPhotons++;
+            subaqueousPhotons++;
 
             /* Calculate Refraction Corrections */
-            const double n1 = parms.RIAir.value;
+            const double n1 = refraction_parms.RIAir.value;
             const double n2 = ri_water;
             const double theta_1 = (M_PI / 2.0) - df.ref_el[i];              // angle of incidence (without Earth curvature)
             const double theta_2 = asin(n1 * sin(theta_1) / n2);                    // angle of refraction
@@ -243,6 +233,5 @@ void* BathyRefractionCorrector::runThread(void* parm)
     }
 
     /* Mark Completion */
-    refraction_corrector->signalComplete();
-    return NULL;
+    return true;
 }

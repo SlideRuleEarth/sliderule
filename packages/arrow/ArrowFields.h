@@ -58,7 +58,6 @@ class ArrowFields: public FieldDictionary
         * Typedefs
         *--------------------------------------------------------------------*/
         typedef enum {
-            NATIVE = 0,
             FEATHER = 1,
             PARQUET = 2,
             GEOPARQUET = 3,
@@ -70,7 +69,7 @@ class ArrowFields: public FieldDictionary
         *--------------------------------------------------------------------*/
 
         FieldElement<string>    path;                       // file system path to the file (includes filename)
-        FieldElement<format_t>  format {NATIVE};            // format of the file
+        FieldElement<format_t>  format {PARQUET};           // format of the file
         FieldElement<bool>      openOnComplete {false};     // flag to client to open file on completion
         FieldElement<bool>      asGeo {false};              // whether to create a standard geo-based formatted file
         FieldElement<bool>      withChecksum {false};       // whether to perform checksum on file and send EOF record

@@ -33,7 +33,7 @@
 #define __bathy_refraction_corrector__
 
 #include "OsApi.h"
-#include "LuaObject.h"
+#include "GeoDataFrame.h"
 #include "BathyDataFrame.h"
 #include "BathyFields.h"
 
@@ -41,7 +41,7 @@
  * CLASS
  ******************************************************************************/
 
-class BathyRefractionCorrector: public LuaObject
+class BathyRefractionCorrector: public GeoDataFrame::FrameRunner
 {
     public:
 
@@ -56,8 +56,6 @@ class BathyRefractionCorrector: public LuaObject
         static const double GLOBAL_WATER_RI_MASK_MIN_LON;
         static const double GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
 
-        static const char* OBJECT_TYPE;
-
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
@@ -67,7 +65,8 @@ class BathyRefractionCorrector: public LuaObject
 
         static int      luaCreate   (lua_State* L);
         static int      getSubAqPh  (lua_State* L);
-        static void*    runThread   (void* parm);
+
+        bool            run         (GeoDataFrame* dataframe) override;
 
     private:
 
@@ -75,7 +74,7 @@ class BathyRefractionCorrector: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathyRefractionCorrector    (lua_State* L, BathyFields* _parms, BathyDataFrame* _dataframe);
+        BathyRefractionCorrector    (lua_State* L, BathyFields* _parms);
         ~BathyRefractionCorrector   (void) override;
 
         /*--------------------------------------------------------------------
@@ -83,10 +82,8 @@ class BathyRefractionCorrector: public LuaObject
          *--------------------------------------------------------------------*/
 
         BathyFields*        parms;
-        BathyDataFrame*     dataframe;
         GeoLib::TIFFImage*  waterRiMask;
         uint64_t            subaqueousPhotons;
-        Thread*             pid;
 };
 
 #endif

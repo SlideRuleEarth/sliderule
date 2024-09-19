@@ -35,6 +35,7 @@
 
 #include "OsApi.h"
 #include "GeoDataFrame.h"
+#include "MsgQ.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -50,6 +51,8 @@ const struct luaL_Reg GeoDataFrame::FrameColumn::LUA_META_TABLE[] = {
     {"__index", luaGetData},
     {NULL,      NULL}
 };
+
+const char* GeoDataFrame::FrameRunner::OBJECT_TYPE = "FrameRunner";
 
 /******************************************************************************
  * CLASS METHODS
@@ -78,84 +81,6 @@ int GeoDataFrame::FrameColumn::luaGetData (lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error exporting %s: %s", OBJECT_TYPE, e.what());
-        lua_pushnil(L);
-    }
-
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * luaExport - export() --> lua table 
- *----------------------------------------------------------------------------*/
-int GeoDataFrame::luaExport (lua_State* L)
-{
-    try
-    {
-        GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
-        return lua_obj->toLua(L);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error exporting %s: %s", OBJECT_TYPE, e.what());
-        lua_pushnil(L);
-    }
-
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * luaImport - import(<lua table>) 
- *----------------------------------------------------------------------------*/
-int GeoDataFrame::luaImport (lua_State* L)
-{
-    bool status = true;
-    try
-    {
-        GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
-        lua_obj->fromLua(L, 2);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error importing %s: %s", OBJECT_TYPE, e.what());
-        status = false;
-    }
-
-    return returnLuaStatus(L, status);
-}
-
-/*----------------------------------------------------------------------------
- * luaGetColumnData - [<column name>]
- *----------------------------------------------------------------------------*/
-int GeoDataFrame::luaGetColumnData(lua_State* L)
-{
-    try
-    {
-        GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
-        const char* column_name = getLuaString(L, 2);
-        const Field& column_field = lua_obj->columnFields[column_name];
-        return createLuaObject(L, new FrameColumn(L, column_field));
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", FrameColumn::LUA_META_NAME, e.what());
-        return returnLuaStatus(L, false);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * luaGetMetaData - meta(<field name>)
- *----------------------------------------------------------------------------*/
-int GeoDataFrame::luaGetMetaData  (lua_State* L)
-{
-    try
-    {
-        GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
-        const char* field_name = getLuaString(L, 2);
-        return lua_obj->metaFields[field_name].toLua(L);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error getting metadata: %s", e.what());
         lua_pushnil(L);
     }
 
@@ -301,6 +226,40 @@ const string& GeoDataFrame::getZColumnName (void) const
 }
 
 /*----------------------------------------------------------------------------
+ * waitRunComplete
+ *----------------------------------------------------------------------------*/
+bool GeoDataFrame::waitRunComplete (int timeout)
+{
+    bool status = false;
+    runSignal.lock();
+    {
+        if(!runComplete)
+        {
+            runSignal.wait(SIGNAL_COMPLETE, timeout);
+        }
+        status = runComplete;
+    }
+    runSignal.unlock();
+    return status;
+}
+
+/*----------------------------------------------------------------------------
+ * signalRunComplete
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::signalRunComplete (void)
+{
+    runSignal.lock();
+    {
+        if(!runComplete)
+        {
+            runSignal.signal(SIGNAL_COMPLETE);
+        }
+        runComplete = true;
+    }
+    runSignal.unlock();
+}
+
+/*----------------------------------------------------------------------------
  * getColumns
  *----------------------------------------------------------------------------*/
 const Dictionary<FieldDictionary::entry_t>& GeoDataFrame::getColumns(void) const
@@ -331,7 +290,12 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     timeColumn(NULL),
     xColumn(NULL),
     yColumn(NULL),
-    zColumn(NULL)
+    zColumn(NULL),
+    active(true),
+    pid(NULL),
+    pubRunQ(NULL),
+    subRunQ(pubRunQ),
+    runComplete(false)
 {
     // populate geo columns
     Dictionary<FieldDictionary::entry_t>::Iterator iter(columnFields.fields);
@@ -378,9 +342,73 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     LuaEngine::setAttrFunc(L, "import",     luaImport);
     LuaEngine::setAttrFunc(L, "__index",    luaGetColumnData);
     LuaEngine::setAttrFunc(L, "meta",       luaGetMetaData);
+    LuaEngine::setAttrFunc(L, "run",        luaRun);
     
     // initialized
     initialized = true;
+
+    // start runner
+    pid = new Thread(runThread, this);
+}
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+GeoDataFrame::~GeoDataFrame(void)
+{
+    active = false;
+    delete pid;
+
+    // release pending frame runners
+    int recv_status = MsgQ::STATE_OKAY;
+    while(recv_status > 0)
+    {
+        GeoDataFrame::FrameRunner* runner;
+        recv_status = subRunQ.receiveCopy(&runner, sizeof(runner), SYS_TIMEOUT);
+        if(recv_status > 0) runner->releaseLuaObject();
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * runThread
+ *----------------------------------------------------------------------------*/
+void* GeoDataFrame::runThread (void* parm)
+{
+    assert(parm);
+    GeoDataFrame* dataframe = static_cast<GeoDataFrame*>(parm);
+    bool complete = false;
+    while(dataframe->active)
+    {
+        if(!complete)
+        {
+            complete = dataframe->waitComplete(SYS_TIMEOUT);
+        }
+        else
+        {
+            GeoDataFrame::FrameRunner* runner = NULL;
+            const int recv_status = dataframe->subRunQ.receiveCopy(&runner, sizeof(runner), SYS_TIMEOUT);
+            if(recv_status > 0)
+            {
+                // execute frame runner
+                if(!runner)
+                {
+                    // exit loop on termination
+                    dataframe->active = false;
+                }
+                else if(!runner->run(dataframe))
+                {
+                    // exit loop on error
+                    mlog(CRITICAL, "error encountered in frame runner: %s", runner->getName());
+                    dataframe->active = false;
+                }
+
+                // release frame runner
+                runner->releaseLuaObject();
+            }
+        }
+    }
+    dataframe->signalRunComplete();
+    return NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -419,4 +447,164 @@ void GeoDataFrame::fromLua (lua_State* L, int index)
         provided = true; // even if no element within table are set, presence of table is sufficient
         initialized = true;
     }
+}
+
+/*----------------------------------------------------------------------------
+ * luaExport - export() --> lua table 
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaExport (lua_State* L)
+{
+    try
+    {
+        GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        return lua_obj->toLua(L);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error exporting %s: %s", OBJECT_TYPE, e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaImport - import(<lua table>) 
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaImport (lua_State* L)
+{
+    bool status = true;
+    try
+    {
+        GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        lua_obj->fromLua(L, 2);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error importing %s: %s", OBJECT_TYPE, e.what());
+        status = false;
+    }
+
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaGetColumnData - [<column name>]
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaGetColumnData(lua_State* L)
+{
+    try
+    {
+        GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        const char* column_name = getLuaString(L, 2);
+        const Field& column_field = lua_obj->columnFields[column_name];
+        return createLuaObject(L, new FrameColumn(L, column_field));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", FrameColumn::LUA_META_NAME, e.what());
+        return returnLuaStatus(L, false);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * luaGetMetaData - meta(<field name>)
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaGetMetaData (lua_State* L)
+{
+    try
+    {
+        GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        const char* field_name = getLuaString(L, 2);
+        return lua_obj->metaFields[field_name].toLua(L);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting metadata: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaRun
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaRun  (lua_State* L)
+{
+    bool status = true;
+    GeoDataFrame::FrameRunner* _runner = NULL;
+    
+    try
+    {
+        GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        _runner = dynamic_cast<GeoDataFrame::FrameRunner*>(getLuaObject(L, 2, GeoDataFrame::FrameRunner::OBJECT_TYPE, true, NULL));
+        int post_state = lua_obj->pubRunQ.postCopy(&_runner, sizeof(_runner));
+        if(post_state != MsgQ::STATE_OKAY)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "run queue post failed: %d", post_state);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error attaching runner: %s", e.what());
+        _runner->releaseLuaObject();
+        status = false;
+    }
+
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaRunComplete - :finished([<timeout is milliseconds>])
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaRunComplete(lua_State* L)
+{
+    bool status = false;
+
+    try
+    {
+        /* Get Self */
+        GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+
+        /* Get Parameters */
+        const int timeout = getLuaInteger(L, 2, true, IO_PEND);
+        const char* rspq = getLuaString(L, 3, true, NULL);
+        int interval = getLuaInteger(L, 4, true, DEFAULT_WAIT_INTERVAL);
+
+        /* Wait On Signal */
+        if(rspq && timeout > 0)
+        {
+            Publisher pub(rspq);
+            int duration = 0;
+            interval = MIN(interval, timeout);
+            while(pub.getSubCnt() > 0)
+            {
+                status = lua_obj->waitRunComplete(interval);
+                if(!status)
+                {
+                    if(duration < timeout)
+                    {
+                        duration += interval;
+                        alert(INFO, RTE_TIMEOUT, &pub, NULL, "request <%s> ... continuing to read after %d seconds", rspq, duration / 1000);
+                    }
+                    else
+                    {
+                        alert(ERROR, RTE_TIMEOUT, &pub, NULL, "request <%s> timed-out after %d seconds", rspq, duration);
+                    }
+                }
+            }
+        }
+        else
+        {
+            status = lua_obj->waitRunComplete(timeout);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error waiting for run completion: %s", e.what());
+    }
+
+    /* Return Completion Status */
+    return returnLuaStatus(L, status);
 }

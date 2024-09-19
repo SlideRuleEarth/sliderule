@@ -69,7 +69,6 @@ int BathyFields::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 BathyFields::BathyFields(lua_State* L, int index):
     Icesat2Fields (L, index, {  {"asset09",             &atl09AssetName},
-                                {"resource09",          &atl09Resource},
                                 {"max_dem_delta",       &maxDemDelta},
                                 {"min_dem_delta",       &minDemDelta},
                                 {"ph_in_extent",        &phInExtent},
@@ -82,17 +81,6 @@ BathyFields::BathyFields(lua_State* L, int index):
                                 {"refraction",          &refraction},
                                 {"uncertainty",         &uncertainty} })
 {
-    /* ATL09 asset */
-    asset09 = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(atl09AssetName.value.c_str(), Asset::OBJECT_TYPE));
-    if(!asset09) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", atl09AssetName.value.c_str());
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-BathyFields::~BathyFields (void)
-{
-    if(asset09) asset09->releaseLuaObject();
 }
 
 /******************************************************************************

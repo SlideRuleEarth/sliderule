@@ -109,14 +109,29 @@ int BathyGranule::luaExport (lua_State* L)
  *----------------------------------------------------------------------------*/
 BathyGranule::BathyGranule (lua_State* L, BathyFields* _parms, const char* rqstq_name):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    FieldDictionary( 
-    {   
-        {"year",                    &year},
-        {"month",                   &month},
-        {"day",                     &day},
-        {"rgt",                     &rgt},
-        {"cycle",                   &cycle},
-        {"region",                  &region}
+    FieldDictionary({
+        {"atlas_sdp_gps_epoch", &atlas_sdp_gps_epoch},
+        {"data_end_utc",        &data_end_utc},
+        {"data_start_utc",      &data_start_utc},
+        {"end_delta_time",      &end_delta_time},
+        {"end_geoseg",          &end_geoseg},
+        {"end_gpssow",          &end_gpssow},
+        {"end_gpsweek",         &end_gpsweek},
+        {"end_orbit",           &end_orbit},
+        {"release",             &release},
+        {"granule_end_utc",     &granule_end_utc},
+        {"granule_start_utc",   &granule_start_utc},
+        {"start_delta_time",    &start_delta_time},
+        {"start_geoseg",        &start_geoseg},
+        {"start_gpssow",        &start_gpssow},
+        {"start_gpsweek",       &start_gpsweek},
+        {"start_orbit",         &start_orbit},
+        {"version",             &version},
+        {"crossing_time",       &crossing_time},
+        {"lan",                 &lan},
+        {"orbit_number",        &orbit_number},
+        {"sc_orient",           &sc_orient},
+        {"sc_orient_time",      &sc_orient_time}
     }),
     parmsPtr(_parms),
     parms(*_parms),
@@ -131,19 +146,6 @@ BathyGranule::BathyGranule (lua_State* L, BathyFields* _parms, const char* rqstq
 
         /* Create H5Coro Contexts */
         context = new H5Coro::Context(parms.asset, parms.resource.value.c_str());
-
-        /* Parse Globals (throws) */
-        TimeLib::date_t granule_date;
-        uint16_t granule_rgt;
-        uint8_t granule_cycle;
-        uint8_t granule_region;
-        parseResource(parms.resource.value.c_str(), granule_date, granule_rgt, granule_cycle, granule_region);
-        year = granule_date.year;
-        month = granule_date.month;
-        day = granule_date.day;
-        rgt = granule_rgt;
-        cycle = granule_cycle;
-        region = granule_region;
         
         /* Start Reader Thread */
         active = true;
@@ -271,124 +273,4 @@ void* BathyGranule::readingThread (void* parm)
 
     /* Return */
     return NULL;
-}
-
-/*----------------------------------------------------------------------------
- * parseResource
- *
- *  ATL0x_YYYYMMDDHHMMSS_ttttccrr_vvv_ee
- *      YYYY    - year
- *      MM      - month
- *      DD      - day
- *      HH      - hour
- *      MM      - minute
- *      SS      - second
- *      tttt    - reference ground track
- *      cc      - cycle
- *      rr      - region
- *      vvv     - version
- *      ee      - revision
- *----------------------------------------------------------------------------*/
-void BathyGranule::parseResource (const char* _resource, TimeLib::date_t& date, uint16_t& rgt, uint8_t& cycle, uint8_t& region)
-{
-    long val;
-
-    if(StringLib::size(_resource) < 29)
-    {
-        rgt = 0;
-        cycle = 0;
-        region = 0;
-        date.year = 0;
-        date.month = 0;
-        date.day = 0;
-        return; // early exit on error
-    }
-
-    /* get year */
-    char year_str[5];
-    year_str[0] = _resource[6];
-    year_str[1] = _resource[7];
-    year_str[2] = _resource[8];
-    year_str[3] = _resource[9];
-    year_str[4] = '\0';
-    if(StringLib::str2long(year_str, &val, 10))
-    {
-        date.year = static_cast<int>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse year from resource %s: %s", _resource, year_str);
-    }
-
-    /* get month */
-    char month_str[3];
-    month_str[0] = _resource[10];
-    month_str[1] = _resource[11];
-    month_str[2] = '\0';
-    if(StringLib::str2long(month_str, &val, 10))
-    {
-        date.month = static_cast<int>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse month from resource %s: %s", _resource, month_str);
-    }
-
-    /* get month */
-    char day_str[3];
-    day_str[0] = _resource[12];
-    day_str[1] = _resource[13];
-    day_str[2] = '\0';
-    if(StringLib::str2long(day_str, &val, 10))
-    {
-        date.day = static_cast<int>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse day from resource %s: %s", _resource, day_str);
-    }
-
-    /* get RGT */
-    char rgt_str[5];
-    rgt_str[0] = _resource[21];
-    rgt_str[1] = _resource[22];
-    rgt_str[2] = _resource[23];
-    rgt_str[3] = _resource[24];
-    rgt_str[4] = '\0';
-    if(StringLib::str2long(rgt_str, &val, 10))
-    {
-        rgt = static_cast<uint16_t>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse RGT from resource %s: %s", _resource, rgt_str);
-    }
-
-    /* get cycle */
-    char cycle_str[3];
-    cycle_str[0] = _resource[25];
-    cycle_str[1] = _resource[26];
-    cycle_str[2] = '\0';
-    if(StringLib::str2long(cycle_str, &val, 10))
-    {
-        cycle = static_cast<uint8_t>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse cycle from resource %s: %s", _resource, cycle_str);
-    }
-
-    /* get region */
-    char region_str[3];
-    region_str[0] = _resource[27];
-    region_str[1] = _resource[28];
-    region_str[2] = '\0';
-    if(StringLib::str2long(region_str, &val, 10))
-    {
-        region = static_cast<uint8_t>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse region from resource %s: %s", _resource, region_str);
-    }
 }
