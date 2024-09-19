@@ -58,7 +58,7 @@ class PgcDemStripsRaster: public GeoIndexedRaster
 
     private:
         void    _getIndexFile       (double lon, double lat, std::string& file);
-        bool    combineGeoJSONFiles (OGRGeometry* convexHull, const std::vector<std::string>& inputFiles);
+        bool    combineGeoJSONFiles (const std::vector<std::string>& inputFiles);
 
         /*--------------------------------------------------------------------
          * Data

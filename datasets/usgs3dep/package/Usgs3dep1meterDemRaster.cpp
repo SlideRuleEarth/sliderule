@@ -108,7 +108,6 @@ bool Usgs3dep1meterDemRaster::findRasters(finder_t* finder)
         {
             OGRFeature* feature = featuresList[i];
             OGRGeometry *rastergeo = feature->GetGeometryRef();
-            CHECKPTR(geo);
 
             if (!rastergeo->Intersects(geo)) continue;
 

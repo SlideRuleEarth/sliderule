@@ -151,7 +151,8 @@ class GeoIndexedRaster: public RasterObject
             Thread*                       thread;
             Cond                          sync;
             bool                          run;
-            explicit Finder(GeoIndexedRaster* _obj);
+            bool                          fake;
+            explicit Finder(GeoIndexedRaster* _obj, bool _fake=false);
                     ~Finder(void);
         } finder_t;
 

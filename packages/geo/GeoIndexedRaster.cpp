@@ -92,14 +92,18 @@ GeoIndexedRaster::Reader::~Reader (void)
 /*----------------------------------------------------------------------------
  * Finder Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::Finder::Finder (GeoIndexedRaster* _obj):
+GeoIndexedRaster::Finder::Finder (GeoIndexedRaster* _obj, bool _fake):
     obj(_obj),
     geo(NULL),
     range{0, 0},
     sync(NUM_SYNC_SIGNALS),
-    run(true)
+    run(true),
+    fake(_fake)
 {
-    thread = new Thread(GeoIndexedRaster::finderThread, this);
+    if(!fake)
+    {
+        thread = new Thread(GeoIndexedRaster::finderThread, this);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -107,17 +111,20 @@ GeoIndexedRaster::Finder::Finder (GeoIndexedRaster* _obj):
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::Finder::~Finder (void)
 {
-    sync.lock();
+    if(!fake)
     {
-        run = false; /* Set run flag to false */
-        sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
+        sync.lock();
+        {
+            run = false; /* Set run flag to false */
+            sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
+        }
+        sync.unlock();
+
+        delete thread; /* delete thread waits on thread to join */
+
+        /* geometry geo is cloned not 'newed' on GDAL heap. Use this call to free it */
+        OGRGeometryFactory::destroyGeometry(geo);
     }
-    sync.unlock();
-
-    delete thread; /* delete thread waits on thread to join */
-
-    /* geometry geo is cloned not 'newed' on GDAL heap. Use this call to free it */
-    OGRGeometryFactory::destroyGeometry(geo);
 }
 
 /*----------------------------------------------------------------------------
@@ -240,10 +247,8 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         /* Map raster file names to a set of ordered unique points */
         std::unordered_map<std::string, std::set<uint32_t>> rasterToPointsMap;
 
-#if 0
         /* Open the index file for all points */
         openGeoIndex(NULL, &points);
-#endif
 
         /* For all points from the caller, create a vector of raster group lists */
         startTime = TimeLib::latchtime();
@@ -254,12 +259,11 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
             OGRPoint ogr_point(pinfo.point.x, pinfo.point.y, pinfo.point.z);
 
             GroupOrdering* groupList = new GroupOrdering();
-#if 1
-            findRastersParallel(&ogr_point, groupList, &points);
-#else
-            Finder finder(this);
-            finder.geo = ogr_point.clone();
-            uint32_t size = points.size();
+
+            Finder finder(this, true);
+            finder.geo = &ogr_point;
+            // uint32_t size = points.size();
+            uint32_t size = featuresList.size();
             finder.range = {0, size};
             findRasters(&finder);
 
@@ -268,9 +272,8 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
                 rasters_group_t* rgroup = finder.rasterGroups[j];
                 groupList->add(groupList->length(), rgroup);
             }
-#endif
-            filterRasters(gps, groupList);
 
+            filterRasters(gps, groupList);
             pointGroups.emplace_back(point_groups_t{{ogr_point, i}, groupList});
 
             /* Add raster file names from this groupList to rasterToPointsMap */
@@ -1643,8 +1646,9 @@ bool GeoIndexedRaster::findRastersParallel(OGRGeometry* geo, GroupOrdering* grou
 
         /* Update findersRange with new featuresList */
         getThreadsRanges(findersRange, featuresList.size(), MIN_FEATURES_PER_FINDER_THREAD, MAX_FINDER_THREADS);
-        mlog(DEBUG, "Using %ld finder threads to search %ld features", findersRange.size(), featuresList.size());
+        mlog(INFO, "Using %ld finder threads to search %ld features", findersRange.size(), featuresList.size());
     }
+
 
     const uint32_t numFinders = findersRange.size();
 

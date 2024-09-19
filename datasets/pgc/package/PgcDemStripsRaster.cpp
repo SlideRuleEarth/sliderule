@@ -94,7 +94,6 @@ bool PgcDemStripsRaster::getFeatureDate(const OGRFeature* feature, TimeLib::gmt_
 void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points)
 {
     const OGRPolygon* poly = NULL;
-    OGRGeometry* convexHull = NULL;
 
     if(geo == NULL && points == NULL)
     {
@@ -112,88 +111,59 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file,
         return;
     }
 
-    /*
-     * Below we are dealing with polygons only, either from geo or created from points.
-     */
-
     /* Determine if we have a polygon */
     if(geo && GdalRaster::ispoly(geo))
     {
         poly = geo->toPolygon();
     }
 
-    /* Create convex hull from points */
-    if(points != NULL)
-    {
-        convexHull = getConvexHull(points);
-        if(convexHull == NULL)
-        {
-            mlog(ERROR, "Error creating convex hull");
-            ssErrors |= SS_INDEX_FILE_ERROR;
-            return;
-        }
-    }
-
-    /* If we don't have a polygon and we don't have a convex hull, we have an error */
-    if(poly == NULL && convexHull == NULL)
-    {
-        mlog(ERROR, "Invalid geometry");
-        ssErrors |= SS_INDEX_FILE_ERROR;
-        return;
-    }
-
-    /* We don't have a polygon, but we have a convex hull */
-    if(poly == NULL && convexHull != NULL)
-    {
-        poly = convexHull->toPolygon();
-    }
-
-    /*
-     * Find all geojson files that intersect the polygon
-     */
-
-    OGREnvelope env;
-    poly->getEnvelope(&env);
-
-    const double minx = floor(env.MinX);
-    const double miny = floor(env.MinY);
-    const double maxx = ceil(env.MaxX);
-    const double maxy = ceil(env.MaxY);
-
-    /* Create polygon geometry for all index files for 1° x 1° geocell grid */
-    geoIndexPoly = GdalRaster::makeRectangle(minx, miny, maxx, maxy);
-
-    /* Create a vector holding all geojson files from all geocells */
+    /* Vector holding all geojson files from all geocells */
     std::vector<std::string> files;
 
-    for(long ix = minx; ix < maxx; ix++ )
+    /* Determine if we have a polygon */
+    if(geo && GdalRaster::ispoly(geo))
     {
-        for(long iy = miny; iy < maxy; iy++)
+        OGREnvelope env;
+        poly = geo->toPolygon();
+        poly->getEnvelope(&env);
+
+        double minx = floor(env.MinX);
+        double miny = floor(env.MinY);
+        double maxx = ceil(env.MaxX);
+        double maxy = ceil(env.MaxY);
+
+        /* Make sure we have a valid bounding box for the geocell grid */
+        if(minx == maxx) maxx++;
+        if(miny == maxy) maxy++;
+
+        for(long ix = minx; ix < maxx; ix++)
+        {
+            for(long iy = miny; iy < maxy; iy++)
+            {
+                std::string newFile;
+                _getIndexFile(ix, iy, newFile);
+                if(!newFile.empty())
+                {
+                    files.push_back(newFile);
+                }
+            }
+        }
+        mlog(INFO, "Found %ld geojson files in polygon", files.size());
+    }
+
+    /* If we don't have a polygon but we have points get all files for the points */
+    if(poly == NULL && points != NULL)
+    {
+        for(const auto& p : *points)
         {
             std::string newFile;
-            _getIndexFile(ix, iy, newFile);
+            _getIndexFile(p.point.x, p.point.y, newFile);
             if(!newFile.empty())
             {
                 files.push_back(newFile);
             }
         }
-    }
-
-    /* Check for geojson files found in geocells */
-    if(files.empty())
-    {
-        mlog(ERROR, "No geojson files found");
-        ssErrors |= SS_INDEX_FILE_ERROR;
-        OGRGeometryFactory::destroyGeometry(convexHull);
-        return;
-    }
-
-    /* If we have only one file and no convex hull to use as spatial filter, we are done */
-    if(convexHull == NULL && files.size() == 1)
-    {
-        file = files[0];
-        OGRGeometryFactory::destroyGeometry(convexHull);
-        return;
+        mlog(INFO, "Found %zu geojson files with %zu points", files.size(), points->size());
     }
 
     /* Combine all geojson files into a single file stored in vsimem */
@@ -204,14 +174,11 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file,
     }
 
     combinedGeoJSON = "/vsimem/" + GdalRaster::getUUID() + "_combined.geojson";
-    if(combineGeoJSONFiles(convexHull, files))
+    if(combineGeoJSONFiles(files))
     {
         /* Set the combined geojson file as the index file */
         file = combinedGeoJSON;
     }
-
-    /* Cleanup convex hull */
-    OGRGeometryFactory::destroyGeometry(convexHull);
 }
 
 /*----------------------------------------------------------------------------
@@ -242,7 +209,6 @@ bool PgcDemStripsRaster::findRasters(finder_t* finder)
         {
             OGRFeature* feature = featuresList[i];
             OGRGeometry* rastergeo = feature->GetGeometryRef();
-            CHECKPTR(geo);
 
             if (!rastergeo->Intersects(geo)) continue;
 
@@ -365,7 +331,7 @@ void PgcDemStripsRaster::_getIndexFile(double lon, double lat, std::string& file
 /*----------------------------------------------------------------------------
  * combineGeoJSONFiles
  *----------------------------------------------------------------------------*/
-bool PgcDemStripsRaster::combineGeoJSONFiles(OGRGeometry* convexHull, const std::vector<std::string>& inputFiles)
+bool PgcDemStripsRaster::combineGeoJSONFiles(const std::vector<std::string>& inputFiles)
 {
     /* Create an in-memory data source for the output */
     GDALDriver* memDriver   = GetGDALDriverManager()->GetDriverByName("Memory");
@@ -395,12 +361,6 @@ bool PgcDemStripsRaster::combineGeoJSONFiles(OGRGeometry* convexHull, const std:
             mlog(ERROR, "No layer found in file: %s", infile.c_str());
             GDALClose(inputDataset);
             continue;
-        }
-
-        /* Set spatial filter to the convex hull */
-        if(convexHull != NULL)
-        {
-            inputLayer->SetSpatialFilter(convexHull);
         }
 
         /* If this is the first file, create the combined layer in the memory dataset */
@@ -462,7 +422,7 @@ bool PgcDemStripsRaster::combineGeoJSONFiles(OGRGeometry* convexHull, const std:
     }
     else
     {
-        mlog(INFO, "GeoJSON successfully created in /vsimem at %s", combinedGeoJSON.c_str());
+        mlog(DEBUG, "GeoJSON successfully created: %s", combinedGeoJSON.c_str());
     }
 
     /* Cleanup */
