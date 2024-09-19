@@ -288,6 +288,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         /* Rasters to points map */
         raster_points_map_t rasterToPointsMap;
 
+        mlog(gsLevel, "Merging rasters groups");
         for(rasters_groups_finder_t* rgf : rgroupFinders)
         {
             /* Merge the pointGroups for each thread */
@@ -301,6 +302,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
 
             delete rgf;
         }
+        mlog(gsLevel, "Done merging rasters groups");
 
         /* Verify that the number of points groups is the same as the number of points */
         if(pointsGroups.size() != points.size())
@@ -1408,21 +1410,20 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
     const uint32_t start = rgf->pointsRange.start;
     const uint32_t end   = rgf->pointsRange.end;
 
+    /* Clone features list for this thread (OGRFeature objects are not thread save, must copy) */
+    const uint32_t size = rgf->obj->featuresList.size();
+    std::vector<OGRFeature*> featuresList;
+    for(uint32_t j = 0; j < size; j++)
+    {
+        featuresList.push_back(rgf->obj->featuresList[j]->Clone());
+    }
+
     for(uint32_t i = start; i < end; i++)
     {
         const point_info_t& pinfo = rgf->points->at(i);
         OGRPoint ogr_point(pinfo.point.x, pinfo.point.y, pinfo.point.z);
 
         GroupOrdering* groupList = new GroupOrdering();
-
-        /* Clone features list for this thread (OGRFeature objects are not thread save, must copy) */
-        const uint32_t size = rgf->obj->featuresList.size();
-
-        std::vector<OGRFeature*> featuresList;
-        for(uint32_t j = 0; j < size; j++)
-        {
-            featuresList.push_back(rgf->obj->featuresList[j]->Clone());
-        }
 
         /* Set finder for the whole range of features */
         Finder finder(rgf->obj, &featuresList, true);
@@ -1431,13 +1432,6 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
 
         /* Find rasters intersecting with ogr_point */
         rgf->obj->findRasters(&finder);
-
-        /* Cleanup cloned features */
-        for(OGRFeature* feature : featuresList)
-        {
-            OGRFeature::DestroyFeature(feature);
-        }
-        featuresList.clear();
 
         /* Filter rasters based on gps time */
         const int64_t gps = rgf->obj->usePOItime() ? pinfo.gps : 0.0;
@@ -1461,6 +1455,13 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
             }
         }
     }
+
+    /* Cleanup cloned features */
+    for(OGRFeature* feature : featuresList)
+    {
+        OGRFeature::DestroyFeature(feature);
+    }
+
     return NULL;
 }
 
