@@ -123,8 +123,7 @@ class LandsatHlsRaster: public GeoIndexedRaster
 
         std::string filePath;
         std::string indexFile;
-        Mutex bandsDictMutex;
-        Dictionary<bool> bandsDict;
+        std::unordered_map<std::string, bool> bandsDict;
 
         bool ndsi;
         bool ndvi;

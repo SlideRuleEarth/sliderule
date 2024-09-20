@@ -226,7 +226,6 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         ssErrors = SS_NO_ERRORS;
         double startTime;
 
-        /* Find raster groups for each point */
         mlog(gsLevel, "Finding rasters groups");
 
         /* Open the index file for all points */
@@ -982,14 +981,13 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps, GroupOrdering* grou
     if(!findRasters(&finder))
         return false;
 
-    /* Copy rasters to groupList */
+    /* Copy finder's raster groups to groupList */
     for(uint32_t j = 0; j < finder.rasterGroups.size(); j++)
     {
         rasters_group_t* rgroup = finder.rasterGroups[j];
         groupList->add(groupList->length(), rgroup);
     }
 
-    /* Filter rasters - must be done in one thread (uses Lists and Orderings) */
     if(!filterRasters(gps, groupList))
         return false;
 

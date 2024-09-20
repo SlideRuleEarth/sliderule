@@ -100,17 +100,15 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
     VSIFCloseL(fp);
 
     /* Create dictionary of bands and algo names to process */
-    bool returnBandSample;
     for(int i = 0; i < _parms->bands->length; i++)
     {
         const char* name = (*_parms->bands)[i].c_str();
         if( isValidL8Band(name) || isValidS2Band(name) || isValidAlgoName(name))
         {
-            if(!bandsDict.find(name, &returnBandSample))
-            {
-                returnBandSample = true;
-                bandsDict.add(name, returnBandSample);
-            }
+            /* Add band to dictionary of bands but don't override if already there */
+            auto it = bandsDict.find(name);
+            if(it == bandsDict.end())
+                bandsDict[name] = true;
 
             if(strcasecmp((*_parms->bands)[i].c_str(), "NDSI") == 0) ndsi = true;
             if(strcasecmp((*_parms->bands)[i].c_str(), "NDVI") == 0) ndvi = true;
@@ -123,24 +121,22 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
     {
         for (unsigned i=0; i<ALGO_bandCnt; i++)
         {
+            /* Add band to dictionary of bands but don't override if already there */
             const char* band = ALGO_bands[i];
-            if(!bandsDict.find(band, &returnBandSample))
-            {
-                returnBandSample = false;
-                bandsDict.add(band, returnBandSample);
-            }
+            auto it = bandsDict.find(band);
+            if(it == bandsDict.end())
+                bandsDict[band] = false;
         }
     }
 
     /* If user specified flags, add group's Fmask to dictionary of bands */
     if(_parms->flags_file)
     {
+        /* Add band to dictionary of bands but don't override if already there */
         const char* band = "Fmask";
-        if(!bandsDict.find(band, &returnBandSample))
-        {
-            returnBandSample = false;
-            bandsDict.add(band, returnBandSample);
-        }
+        auto it = bandsDict.find(band);
+        if(it == bandsDict.end())
+            bandsDict[band] = false;
     }
 }
 
@@ -190,18 +186,13 @@ bool LandsatHlsRaster::findRasters(finder_t* finder)
             rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
 
             /* Find each requested band in the index file */
-            bool val;
-
-            bandsDictMutex.lock();
-            const char* bandName = bandsDict.first(&val);
-            while(bandName != NULL)
+            for(auto it = bandsDict.begin(); it != bandsDict.end(); it++)
             {
-                /* skip algo names (NDIS, etc) */
-                if(isValidAlgoName(bandName))
-                {
-                    bandName = bandsDict.next(&val);
+                const char* bandName = it->first.c_str();
+
+                /* skip algo names (NDIS, etc) and invalid bands (user error) */
+                if(!isValidL8Band(bandName) && !isValidS2Band(bandName) && !isValidAlgoName(bandName))
                     continue;
-                }
 
                 const char* fname = feature->GetFieldAsString(bandName);
                 if(fname && strlen(fname) > 0)
@@ -228,10 +219,7 @@ bool LandsatHlsRaster::findRasters(finder_t* finder)
                         rgroup->infovect.push_back(rinfo);
                     }
                 }
-                bandName = bandsDict.next(&val);
             }
-            bandsDictMutex.unlock();
-
             mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
             finder->rasterGroups.push_back(rgroup);
         }
@@ -330,10 +318,11 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
                     sample->flags = flags;
 
                     /* Is this band's sample to be returned to the user? */
-                    bool returnBandSample = false;
                     const char* bandName = rinfo.tag.c_str();
-                    if(bandsDict.find(bandName, &returnBandSample))
+                    auto it = bandsDict.find(bandName);
+                    if(it != bandsDict.end())
                     {
+                        const bool returnBandSample = it->second;
                         if(returnBandSample)
                         {
                             slist->add(sample);
@@ -376,10 +365,12 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
                     if(ps.sample == NULL) break;
 
                     /* Is this band's sample to be returned to the user? */
-                    bool returnBandSample = false;
                     const char* bandName = rinfo.tag.c_str();
-                    if(bandsDict.find(bandName, &returnBandSample))
+
+                    auto it = bandsDict.find(bandName);
+                    if(it != bandsDict.end())
                     {
+                        const bool returnBandSample = it->second;
                         if(returnBandSample)
                         {
                             /* Create a copy of the sample and add it to the list */
