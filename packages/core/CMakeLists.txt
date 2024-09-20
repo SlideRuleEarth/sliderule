@@ -20,7 +20,7 @@ target_include_directories (slideruleLib PUBLIC ${CURL_INCLUDE_DIR})
 target_include_directories (slideruleLib PUBLIC ${RapidJSON_INCLUDE_DIR})
 
 # readline
-target_compile_definitions (slideruleLib PUBLIC LUA_USE_READLINE)
+target_compile_definitions (slideruleLib PUBLIC "$<$<CONFIG:Release>:LUA_USE_READLINE>")
 target_link_libraries (slideruleLib PUBLIC ${READLINE_LIB})
 
 # sources

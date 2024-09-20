@@ -47,6 +47,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "-readability-suspicious-call-argument,"
         "-readability-isolate-declaration,"
         "-readability-misleading-indentation,"
+        "-readability-container-contains,"
 
         "misc-*,"
         "-misc-non-private-member-variables-in-classes,"
