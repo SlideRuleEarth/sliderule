@@ -58,9 +58,6 @@ class GeoIndexedRaster: public RasterObject
         static const int   MAX_CACHE_SIZE     =  20;
         static const int   MAX_READER_THREADS = 200;
 
-        static const int   MAX_FINDER_THREADS = 16;
-        static const int   MIN_FEATURES_PER_FINDER_THREAD = 20;
-
         static const char* FLAGS_TAG;
         static const char* VALUE_TAG;
         static const char* DATE_TAG;
@@ -141,16 +138,10 @@ class GeoIndexedRaster: public RasterObject
 
         typedef RasterObject::range_t range_t;
         typedef struct Finder {
-            GeoIndexedRaster*             obj;
             OGRGeometry*                  geo;
-            range_t                       range;
             std::vector<OGRFeature*>*     featuresList;
             std::vector<rasters_group_t*> rasterGroups;
-            Thread*                       thread;
-            Cond                          sync;
-            bool                          run;
-            bool                          fake;
-            explicit Finder(GeoIndexedRaster* _obj, std::vector<OGRFeature*>* _featuresList, bool _fake=false);
+            explicit Finder(OGRGeometry* geo, std::vector<OGRFeature*>* _featuresList);
                     ~Finder(void);
         } finder_t;
 
@@ -178,15 +169,15 @@ class GeoIndexedRaster: public RasterObject
         /* Typedef for the global map (raster file name -> set of unique point IDs) */
         typedef std::unordered_map<std::string, std::set<uint32_t>> raster_points_map_t;
 
-        typedef struct RastersGroupsFinder {
+        typedef struct GroupsFinder {
             GeoIndexedRaster*                obj;
             range_t                          pointsRange;
             const std::vector<point_info_t>* points;
             std::vector<point_groups_t>      pointsGroups;
             raster_points_map_t              rasterToPointsMap;
 
-            explicit RastersGroupsFinder (GeoIndexedRaster* _obj, const std::vector<point_info_t>* _points);
-        } rasters_groups_finder_t;
+            explicit GroupsFinder (GeoIndexedRaster* _obj, const std::vector<point_info_t>* _points);
+        } groups_finder_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -234,8 +225,6 @@ class GeoIndexedRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
         CacheDictionary          cache;
-        std::vector<OGRFeature*> featuresList;
-        OGRPolygon               geoIndexPoly;
         uint32_t                 ssErrors;
 
     private:
@@ -264,8 +253,9 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        std::vector<range_t>      findersRanges;
-        List<finder_t*>           finders;
+        std::vector<OGRFeature*> featuresList;
+        OGRPolygon               geoIndexPoly;
+
         List<reader_t*>           readers;
         List<batch_reader_t*>     batchReaders;
         GdalRaster::overrideCRS_t crscb;
@@ -283,19 +273,16 @@ class GeoIndexedRaster: public RasterObject
         static int      luaBoundingBox      (lua_State* L);
         static int      luaCellSize         (lua_State* L);
 
-        static void*    finderThread        (void *param);
         static void*    readerThread        (void *param);
         static void*    batchReaderThread   (void *param);
         static void*    unionThread         (void* param);
         static void*    groupsFinderThread  (void *param);
 
-        bool            createFinderThreads (void);
         bool            createReaderThreads (uint32_t  rasters2sample);
         bool            createBatchReaderThreads(uint32_t rasters2sample);
 
         bool            updateCache         (uint32_t& rasters2sample, const GroupOrdering* groupList);
         bool            filterRasters       (int64_t gps, GroupOrdering* groupList);
-        bool            findRastersParallel (OGRGeometry* geo, GroupOrdering* groupList, const std::vector<point_info_t>* points=NULL);
         OGRGeometry*    getBufferedPoints   (const std::vector<point_info_t>* points);
 };
 

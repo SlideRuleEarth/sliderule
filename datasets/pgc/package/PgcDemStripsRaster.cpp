@@ -182,12 +182,10 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file,
  *----------------------------------------------------------------------------*/
 bool PgcDemStripsRaster::findRasters(finder_t* finder)
 {
-
+    const std::vector<OGRFeature*>* flist = finder->featuresList;
     const OGRGeometry* geo = finder->geo;
-    const uint32_t start   = finder->range.start;
-    const uint32_t end     = finder->range.end;
-
-    const std::vector<OGRFeature*>* featuresList = finder->featuresList;
+    const uint32_t start   = 0;
+    const uint32_t end     = flist->size();
 
     /*
      * Find rasters and their dates.
@@ -205,7 +203,7 @@ bool PgcDemStripsRaster::findRasters(finder_t* finder)
     {
         for(uint32_t i = start; i < end; i++)
         {
-            OGRFeature* feature = featuresList->at(i);
+            OGRFeature* feature = flist->at(i);
             OGRGeometry* rastergeo = feature->GetGeometryRef();
 
             if (!rastergeo->Intersects(geo)) continue;
