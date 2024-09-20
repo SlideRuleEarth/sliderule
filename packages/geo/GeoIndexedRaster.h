@@ -233,12 +233,14 @@ class GeoIndexedRaster: public RasterObject
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef struct {
-            double        findRastersTime;
-            double        findUniqueRastersTime;
-            double        findPointsForUniqueRastersTime;
-            double        getSamplesTime;
-            double        popluateSamplesListTime;
+        typedef struct PerfStats {
+            double  spatialFilterTime;
+            double  findRastersTime;
+            double  findUniqueRastersTime;
+            double  samplesTime;
+
+            PerfStats(void) : spatialFilterTime(0), findRastersTime(0), findUniqueRastersTime(0), samplesTime(0) {}
+            void clear(void) { spatialFilterTime = 0; findRastersTime = 0; findUniqueRastersTime = 0; samplesTime = 0;}
         } perf_stats_t;
 
         /*--------------------------------------------------------------------
@@ -258,6 +260,7 @@ class GeoIndexedRaster: public RasterObject
 
         List<reader_t*>           readers;
         List<batch_reader_t*>     batchReaders;
+        perf_stats_t              perfStats;
         GdalRaster::overrideCRS_t crscb;
 
         std::string               indexFile;
@@ -284,6 +287,16 @@ class GeoIndexedRaster: public RasterObject
         bool            updateCache         (uint32_t& rasters2sample, const GroupOrdering* groupList);
         bool            filterRasters       (int64_t gps, GroupOrdering* groupList);
         OGRGeometry*    getBufferedPoints   (const std::vector<point_info_t>* points);
+
+        bool            findAllGroups       (const std::vector<point_info_t>* points,
+                                             std::vector<point_groups_t>& pointsGroups,
+                                             raster_points_map_t& rasterToPointsMap);
+
+        bool            findUniqueRasters   (std::vector<unique_raster_t*>& uniqueRasters,
+                                             const std::vector<point_groups_t>& pointsGroups,
+                                             raster_points_map_t& rasterToPointsMap);
+
+        bool            sampleUniqueRasters (const std::vector<unique_raster_t*>& uniqueRasters);
 };
 
 #endif  /* __geo_indexed_raster__ */

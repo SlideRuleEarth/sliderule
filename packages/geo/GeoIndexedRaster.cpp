@@ -211,9 +211,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
 
     lockSampling();
 
-    const event_level_t gsLevel = INFO;
-
-    perf_stats_t stats = {0.0, 0.0, 0.0, 0.0, 0.0};
+    perfStats.clear();
 
     /* Vector of points and their associated raster groups */
     std::vector<point_groups_t> pointsGroups;
@@ -224,224 +222,37 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
     try
     {
         ssErrors = SS_NO_ERRORS;
-        double startTime;
-
-        mlog(gsLevel, "Finding rasters groups");
 
         /* Open the index file for all points */
         openGeoIndex(NULL, &points);
 
-        /* For all points from the caller, create a vector of raster group lists */
-        startTime = TimeLib::latchtime();
-
-        /* Start rasters groups finder threads */
-        std::vector<Thread*> pids;
-        std::vector<groups_finder_t*> rgroupFinders;
-
-        const uint32_t numMaxThreads = std::thread::hardware_concurrency();
-        const uint32_t minPointsPerThread = 100;
-
-        std::vector<range_t> pointsRanges;
-        getThreadsRanges(pointsRanges, points.size(), minPointsPerThread, numMaxThreads);
-        uint32_t numThreads = pointsRanges.size();
-
-        for(uint32_t i = 0; i < numThreads; i++)
-        {
-            groups_finder_t* gf = new groups_finder_t(this, &points);
-            gf->pointsRange = pointsRanges[i];
-            rgroupFinders.push_back(gf);
-            Thread* pid = new Thread(groupsFinderThread, gf);
-            pids.push_back(pid);
-        }
-
-        /* Wait for all groups finder threads to finish */
-        for(Thread* pid : pids)
-        {
-            delete pid;
-        }
-
         /* Rasters to points map */
         raster_points_map_t rasterToPointsMap;
 
-        mlog(gsLevel, "Merging rasters groups");
-        for(groups_finder_t* gf : rgroupFinders)
+        /* For all points from the caller, create a vector of raster group lists */
+        if(!findAllGroups(&points, pointsGroups, rasterToPointsMap))
         {
-            /* Merge the pointGroups for each thread */
-            pointsGroups.insert(pointsGroups.end(), gf->pointsGroups.begin(), gf->pointsGroups.end());
-
-            /* Merge the rasterToPointsMap for each thread */
-            for(const raster_points_map_t::value_type& pair : gf->rasterToPointsMap)
-            {
-                rasterToPointsMap[pair.first].insert(pair.second.begin(), pair.second.end());
-            }
-
-            delete gf;
-        }
-        mlog(gsLevel, "Done merging rasters groups");
-
-        /* Verify that the number of points groups is the same as the number of points */
-        if(pointsGroups.size() != points.size())
-        {
-            mlog(ERROR, "Number of points groups: %zu does not match number of points: %zu", pointsGroups.size(), points.size());
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Number of points groups does not match number of points");
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Error creating groups");
         }
 
-        stats.findRastersTime = TimeLib::latchtime() - startTime;
-        mlog(gsLevel, "Finding rasters groups time: %.3lf", stats.findRastersTime);
-
-        /* Create vector of unique rasters. */
-        mlog(gsLevel, "Finding unique rasters");
-        startTime = TimeLib::latchtime();
-        for(const point_groups_t& pg : pointsGroups)
+        /* For all points from the caller, create a vector of unique rasters */
+        if(!findUniqueRasters(uniqueRasters, pointsGroups, rasterToPointsMap))
         {
-            const GroupOrdering::Iterator iter(*pg.groupList);
-            for(int64_t i = 0; i < iter.length; i++)
-            {
-                rasters_group_t* rgroup = iter[i].value;
-                for(raster_info_t& rinfo : rgroup->infovect)
-                {
-                    /* Is this raster already in the list of unique rasters? */
-                    bool addNewRaster = true;
-                    for(unique_raster_t* ur : uniqueRasters)
-                    {
-                        if(ur->rinfo.fileName == rinfo.fileName)
-                        {
-                            /* already in unique rasters list, set pointer in rinfo to this raster */
-                            rinfo.uraster = ur;
-                            addNewRaster = false;
-                            break;
-                        }
-                    }
-
-                    if(addNewRaster)
-                    {
-                        unique_raster_t* ur = new unique_raster_t();
-                        ur->rinfo = rinfo;
-                        ur->gpsTime = rgroup->gpsTime;
-                        ur->fileId = fileDictAdd(rinfo.fileName);
-                        uniqueRasters.push_back(ur);
-
-                        /* Set pointer in rinfo to this new unique raster */
-                        rinfo.uraster = ur;
-                    }
-                }
-            }
-        }
-        stats.findUniqueRastersTime = TimeLib::latchtime() - startTime;
-        mlog(gsLevel, "Found unique rasters: %zu time: %.3lf", uniqueRasters.size(), stats.findUniqueRastersTime);
-
-        /*
-         * For each unique raster, find the points that belong to it
-         */
-        mlog(gsLevel, "Finding points for unique rasters");
-        startTime = TimeLib::latchtime();
-        for(unique_raster_t* ur : uniqueRasters)
-        {
-            const std::string& rasterName = ur->rinfo.fileName;
-
-            auto it = rasterToPointsMap.find(rasterName);
-            if(it != rasterToPointsMap.end())
-            {
-                for(const uint32_t pointIndx : it->second)
-                {
-                    const point_groups_t& pg = pointsGroups[pointIndx];
-                    ur->pointSamples.push_back({pg.pointInfo, NULL, SS_NO_ERRORS});
-                }
-            }
-        }
-        stats.findPointsForUniqueRastersTime = TimeLib::latchtime() - startTime;
-        mlog(gsLevel, "Points for unique rasters time: %.3lf", stats.findPointsForUniqueRastersTime);
-
-//HACK for disabling reading for debugging, only 'finding' code executes
-#if 1
-        /* Create batch reader threads */
-        const uint32_t numRasters = uniqueRasters.size();
-
-        /* Testing has shown that 20 threads performs twice as fast on a 8 core system than 100 threads.
-         */
-        const uint32_t maxThreads = 20;
-        createBatchReaderThreads(std::min(maxThreads, numRasters));
-        numThreads = batchReaders.length();
-        mlog(gsLevel, "Sampling %u rasters with %u threads", numRasters, numThreads);
-
-        /* Sample unique rasters utilizing numThreads */
-        uint32_t currentRaster = 0;
-
-        startTime = TimeLib::latchtime();
-        while(currentRaster < numRasters)
-        {
-            /* Calculate how many rasters we can process in this batch */
-            const uint32_t batchSize = std::min(numThreads, numRasters - currentRaster);
-
-            /* Keep track of how many threads have been assigned work */
-            uint32_t activeReaders = 0;
-
-            /* Assign rasters to batch readers as soon as they are free */
-            while(currentRaster < numRasters || activeReaders > 0)
-            {
-                for(uint32_t i = 0; i < batchSize; i++)
-                {
-                    BatchReader* breader = batchReaders[i];
-
-                    breader->sync.lock();
-                    {
-                        /* If this thread is done with its previous raster, assign a new one */
-                        if(breader->uraster == NULL && currentRaster < numRasters)
-                        {
-                            breader->uraster = uniqueRasters[currentRaster++];
-                            breader->sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
-                            activeReaders++;
-                        }
-                    }
-                    breader->sync.unlock();
-
-                    if(!isSampling())
-                    {
-                        /* Sampling has been stopped, stop assigning new rasters */
-                        activeReaders = 0;
-                        currentRaster = numRasters;
-                        break;
-                    }
-
-                    /* Check if the current breader has completed its work */
-                    breader->sync.lock();
-                    {
-                        if(breader->uraster == NULL && activeReaders > 0)
-                        {
-                            /* Mark one reader as free */
-                            activeReaders--;
-                        }
-                    }
-                    breader->sync.unlock();
-                }
-
-                /* Short wait before checking again to avoid busy waiting */
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            }
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Error finding unique rasters");
         }
 
-        /* Wait for all batch readers to finish sampling */
-        for(int32_t i = 0; i < batchReaders.length(); i++)
+        /* For all unique rasters, sample them */
+        if(!sampleUniqueRasters(uniqueRasters))
         {
-            BatchReader* breader = batchReaders[i];
-
-            breader->sync.lock();
-            {
-                while(breader->uraster != NULL)
-                    breader->sync.wait(DATA_SAMPLED, SYS_TIMEOUT);
-            }
-            breader->sync.unlock();
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Error sampling unique rasters");
         }
-        stats.getSamplesTime = TimeLib::latchtime() - startTime;
-        mlog(gsLevel, "time: %.3lf", stats.getSamplesTime);
 
         /*
          * Populate sllist with samples
          */
         if(isSampling())
         {
-            mlog(gsLevel, "Populating sllist with samples");
-            startTime = TimeLib::latchtime();
+            mlog(DEBUG, "Populating sllist with samples");
             for(uint32_t pointIndx = 0; pointIndx < pointsGroups.size(); pointIndx++)
             {
                 const point_groups_t& pg = pointsGroups[pointIndx];
@@ -464,14 +275,12 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
 
                 sllist.add(slist);
             }
-            stats.popluateSamplesListTime = TimeLib::latchtime() - startTime;
         }
         else
         {
             /* Sampling has been stopped, return empty sllist */
             sllist.clear();
         }
-#endif
     }
     catch (const RunTimeException &e)
     {
@@ -493,12 +302,11 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
     unlockSampling();
 
     /* Print performance stats */
-    mlog(gsLevel, "Performance Stats:");
-    mlog(gsLevel, "findingRasers: %12.3lf", stats.findRastersTime);
-    mlog(gsLevel, "uniqueRasters: %12.3lf", stats.findUniqueRastersTime);
-    mlog(gsLevel, "uinqueRPoints: %12.3lf", stats.findPointsForUniqueRastersTime);
-    mlog(gsLevel, "sampling:      %12.3lf", stats.getSamplesTime);
-    mlog(gsLevel, "listCreation:  %12.3lf", stats.popluateSamplesListTime);
+    mlog(INFO, "Performance Stats:");
+    mlog(INFO, "spatialFilter: %12.3lf", perfStats.spatialFilterTime);
+    mlog(INFO, "findingRasters:%12.3lf", perfStats.findRastersTime);
+    mlog(INFO, "findingUnique: %12.3lf", perfStats.findUniqueRastersTime);
+    mlog(INFO, "sampling:      %12.3lf", perfStats.samplesTime);
 
     return ssErrors;
 }
@@ -851,8 +659,8 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
         /* If caller provided points, use spatial filter to reduce number of features */
         if(points)
         {
-            mlog(INFO, "Filtering features using spatial filter");
             mlog(INFO, "Features before spatial filter: %lld", layer->GetFeatureCount());
+            const double startTime = TimeLib::latchtime();
 
             OGRGeometry* filter = getBufferedPoints(points);
             if(filter)
@@ -860,8 +668,9 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
                 layer->SetSpatialFilter(filter);
                 OGRGeometryFactory::destroyGeometry(filter);
             }
+            perfStats.spatialFilterTime = TimeLib::latchtime() - startTime;
 
-            mlog(INFO, "Features after spatial filter:  %lld", layer->GetFeatureCount());
+            mlog(INFO, "Features after spatial filter: %lld", layer->GetFeatureCount());
         }
 
         /*
@@ -907,7 +716,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
         }
 
         GDALClose((GDALDatasetH)dset);
-        mlog(INFO, "Loaded %ld features from: %s", featuresList.size(), newFile.c_str());
+        mlog(DEBUG, "Loaded %ld features from: %s", featuresList.size(), newFile.c_str());
     }
     catch (const RunTimeException &e)
     {
@@ -1240,7 +1049,7 @@ void* GeoIndexedRaster::unionThread(void* param)
     * NOTE: Using buffered points is significantly more computationally
     *       expensive than bounding boxes (10x slower).
     */
-    mlog(INFO, "Creating collection of bboxes from %d points, range: %d - %d",
+    mlog(DEBUG, "Creating collection of bboxes from %d points, range: %d - %d",
          um->pointsRange.end - um->pointsRange.start, um->pointsRange.start, um->pointsRange.end);
 
     double startTime = TimeLib::latchtime();
@@ -1282,10 +1091,17 @@ void* GeoIndexedRaster::unionThread(void* param)
     const int batchSize = 60;  /* Sweet spot for performance based on my testing */
     OGRGeometry* unionPolygon = NULL;
 
-    mlog(INFO, "Unioning point geometries using batch size: %d", batchSize);
+    mlog(DEBUG, "Unioning point geometries using batch size: %d", batchSize);
     startTime = TimeLib::latchtime();
     for(int i = 0; i < geometryCollection.getNumGeometries(); i += batchSize)
     {
+        if(!um->obj->isSampling())
+        {
+            mlog(WARNING, "Sampling has been stopped, exiting union thread");
+            OGRGeometryFactory::destroyGeometry(unionPolygon);
+            return NULL;
+        }
+
         OGRGeometry* batchUnion = NULL;
         for(int j = i; j < std::min(i + batchSize, geometryCollection.getNumGeometries()); ++j)
         {
@@ -1342,7 +1158,7 @@ void* GeoIndexedRaster::unionThread(void* param)
     }
 
     um->stats.unioningTime = TimeLib::latchtime() - startTime;
-    mlog(INFO, "Unioning all geometries took %.3lf seconds", um->stats.unioningTime);
+    mlog(DEBUG, "Unioning all geometries took %.3lf seconds", um->stats.unioningTime);
 
 
     /* Set the unioned polygon in the union maker object */
@@ -1375,6 +1191,12 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
 
     for(uint32_t i = start; i < end; i++)
     {
+        if(!gf->obj->isSampling())
+        {
+            mlog(WARNING, "Sampling has been stopped, exiting groups finder thread");
+            break;
+        }
+
         const point_info_t& pinfo = gf->points->at(i);
         OGRPoint* ogr_point = new OGRPoint(pinfo.point.x, pinfo.point.y, pinfo.point.z);
 
@@ -1712,7 +1534,7 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>
 
     std::vector<range_t> pointsRanges;
     getThreadsRanges(pointsRanges, points->size(), minPointsPerThread, numMaxThreads);
-    mlog(INFO, "Using %ld groupfinder threads to search for %ld points", pointsRanges.size(), points->size());
+    mlog(DEBUG, "Using %ld groupfinder threads to search for %ld points", pointsRanges.size(), points->size());
 
     const uint32_t numThreads = pointsRanges.size();
     const double startTime = TimeLib::latchtime();
@@ -1755,7 +1577,7 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>
             OGRGeometryFactory::destroyGeometry(um->unionPolygon);
         }
 
-        const double tolerance = 0.0005;  /* Simplification tolerance          */
+        const double tolerance = 0.0005;  /* Simplification tolerance */
         OGRGeometry* simplifiedPolygon = unionPolygon->Simplify(tolerance);
         OGRGeometryFactory::destroyGeometry(unionPolygon);
         unionPolygon = simplifiedPolygon;
@@ -1766,7 +1588,7 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>
     }
 
     const double elapsedTime = TimeLib::latchtime() - startTime;
-    mlog(INFO, "Unioning point geometries took %.3lf", elapsedTime);
+    mlog(DEBUG, "Unioning point geometries took %.3lf", elapsedTime);
 
     /* Log stats and cleanup */
     for(uint32_t i = 0; i < unionMakers.size(); i++)
@@ -1781,3 +1603,261 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>
 
     return unionPolygon;
 }
+
+/*----------------------------------------------------------------------------
+ * findAllGroups
+ *----------------------------------------------------------------------------*/
+bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
+                                     std::vector<point_groups_t>& pointsGroups,
+                                     raster_points_map_t& rasterToPointsMap)
+{
+    bool status = false;
+    const double startTime = TimeLib::latchtime();
+
+    try
+    {
+        mlog(DEBUG, "Finding rasters groups for all points");
+
+        /* Start rasters groups finder threads */
+        std::vector<Thread*> pids;
+        std::vector<GroupsFinder*> rgroupFinders;
+
+        const uint32_t numMaxThreads = std::thread::hardware_concurrency();
+        const uint32_t minPointsPerThread = 100;
+
+        std::vector<range_t> pointsRanges;
+        getThreadsRanges(pointsRanges, points->size(), minPointsPerThread, numMaxThreads);
+        const uint32_t numThreads = pointsRanges.size();
+
+        for(uint32_t i = 0; i < numThreads; i++)
+        {
+            GroupsFinder* gf = new GroupsFinder(this, points);
+            gf->pointsRange = pointsRanges[i];
+            rgroupFinders.push_back(gf);
+            Thread* pid = new Thread(groupsFinderThread, gf);
+            pids.push_back(pid);
+        }
+
+        /* Wait for all groups finder threads to finish */
+        for(Thread* pid : pids)
+        {
+            delete pid;
+        }
+
+        /* Merge the pointGroups for each thread */
+        for(GroupsFinder* gf : rgroupFinders)
+        {
+            pointsGroups.insert(pointsGroups.end(), gf->pointsGroups.begin(), gf->pointsGroups.end());
+
+            /* Merge the rasterToPointsMap for each thread */
+            for(const raster_points_map_t::value_type& pair : gf->rasterToPointsMap)
+            {
+                rasterToPointsMap[pair.first].insert(pair.second.begin(), pair.second.end());
+            }
+
+            delete gf;
+        }
+
+        /* Verify that the number of points groups is the same as the number of points */
+        if(pointsGroups.size() != points->size())
+        {
+            mlog(ERROR, "Number of points groups: %zu does not match number of points: %zu", pointsGroups.size(), points->size());
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Number of points groups does not match number of points");
+        }
+
+        status = true;
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error creating groups: %s", e.what());
+    }
+
+    perfStats.findRastersTime = TimeLib::latchtime() - startTime;
+    return status;
+}
+
+
+/*----------------------------------------------------------------------------
+ * findUniqueRasters
+ *----------------------------------------------------------------------------*/
+bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRasters,
+                                         const std::vector<point_groups_t>& pointsGroups,
+                                         raster_points_map_t& rasterToPointsMap)
+{
+    bool status = false;
+    const double startTime = TimeLib::latchtime();
+
+    try
+    {
+        /* Create vector of unique rasters. */
+        mlog(DEBUG, "Finding unique rasters");
+        for(const point_groups_t& pg : pointsGroups)
+        {
+            const GroupOrdering::Iterator iter(*pg.groupList);
+            for(int64_t i = 0; i < iter.length; i++)
+            {
+                rasters_group_t* rgroup = iter[i].value;
+                for(raster_info_t& rinfo : rgroup->infovect)
+                {
+                    /* Is this raster already in the list of unique rasters? */
+                    bool addNewRaster = true;
+                    for(unique_raster_t* ur : uniqueRasters)
+                    {
+                        if(ur->rinfo.fileName == rinfo.fileName)
+                        {
+                            /* already in unique rasters list, set pointer in rinfo to this raster */
+                            rinfo.uraster = ur;
+                            addNewRaster = false;
+                            break;
+                        }
+                    }
+
+                    if(addNewRaster)
+                    {
+                        unique_raster_t* ur = new unique_raster_t();
+                        ur->rinfo = rinfo;
+                        ur->gpsTime = rgroup->gpsTime;
+                        ur->fileId = fileDictAdd(rinfo.fileName);
+                        uniqueRasters.push_back(ur);
+
+                        /* Set pointer in rinfo to this new unique raster */
+                        rinfo.uraster = ur;
+                    }
+                }
+            }
+        }
+
+        /*
+         * For each unique raster, find the points that belong to it
+         */
+        mlog(DEBUG, "Finding points for unique rasters");
+        for(unique_raster_t* ur : uniqueRasters)
+        {
+            const std::string& rasterName = ur->rinfo.fileName;
+
+            auto it = rasterToPointsMap.find(rasterName);
+            if(it != rasterToPointsMap.end())
+            {
+                for(const uint32_t pointIndx : it->second)
+                {
+                    const point_groups_t& pg = pointsGroups[pointIndx];
+                    ur->pointSamples.push_back({ pg.pointInfo, NULL, SS_NO_ERRORS });
+                }
+            }
+        }
+
+        status = true;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating groups: %s", e.what());
+    }
+
+    perfStats.findUniqueRastersTime = TimeLib::latchtime() - startTime;
+    return status;
+}
+
+
+/*----------------------------------------------------------------------------
+ * sampleUniqueRasters
+ *----------------------------------------------------------------------------*/
+bool GeoIndexedRaster::sampleUniqueRasters(const std::vector<unique_raster_t*>& uniqueRasters)
+{
+    bool status = false;
+    const double startTime = TimeLib::latchtime();
+
+    try
+    {
+        /* Testing has shown that 20 threads performs twice as fast on a 8 core system than 50 or 100 threads. */
+        const uint32_t maxThreads = 20;
+
+        /* Create batch reader threads */
+        const uint32_t numRasters = uniqueRasters.size();
+        createBatchReaderThreads(std::min(maxThreads, numRasters));
+
+        const uint32_t numThreads = batchReaders.length();
+        mlog(DEBUG, "Sampling %u rasters with %u threads", numRasters, numThreads);
+
+        /* Sample unique rasters utilizing numThreads */
+        uint32_t currentRaster = 0;
+
+        while(currentRaster < numRasters)
+        {
+            /* Calculate how many rasters we can process in this batch */
+            const uint32_t batchSize = std::min(numThreads, numRasters - currentRaster);
+
+            /* Keep track of how many threads have been assigned work */
+            uint32_t activeReaders = 0;
+
+            /* Assign rasters to batch readers as soon as they are free */
+            while(currentRaster < numRasters || activeReaders > 0)
+            {
+                for(uint32_t i = 0; i < batchSize; i++)
+                {
+                    BatchReader* breader = batchReaders[i];
+
+                    breader->sync.lock();
+                    {
+                        /* If this thread is done with its previous raster, assign a new one */
+                        if(breader->uraster == NULL && currentRaster < numRasters)
+                        {
+                            breader->uraster = uniqueRasters[currentRaster++];
+                            breader->sync.signal(DATA_TO_SAMPLE, Cond::NOTIFY_ONE);
+                            activeReaders++;
+                        }
+                    }
+                    breader->sync.unlock();
+
+                    if(!isSampling())
+                    {
+                        /* Sampling has been stopped, stop assigning new rasters */
+                        activeReaders = 0;
+                        currentRaster = numRasters;
+                        break;
+                    }
+
+                    /* Check if the current breader has completed its work */
+                    breader->sync.lock();
+                    {
+                        if(breader->uraster == NULL && activeReaders > 0)
+                        {
+                            /* Mark one reader as free */
+                            activeReaders--;
+                        }
+                    }
+                    breader->sync.unlock();
+                }
+
+                /* Short wait before checking again to avoid busy waiting */
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+        }
+
+        /* Wait for all batch readers to finish sampling */
+        for(int32_t i = 0; i < batchReaders.length(); i++)
+        {
+            BatchReader* breader = batchReaders[i];
+
+            breader->sync.lock();
+            {
+                while(breader->uraster != NULL)
+                    breader->sync.wait(DATA_SAMPLED, SYS_TIMEOUT);
+            }
+            breader->sync.unlock();
+        }
+
+        status = true;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating groups: %s", e.what());
+    }
+
+    perfStats.samplesTime = TimeLib::latchtime() - startTime;
+    return status;
+}
+
+
+
+
+
