@@ -52,37 +52,15 @@ class BathyQtreesClassifier: public GeoDataFrame::FrameRunner
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-
-        static const char* CLASSIFIER_NAME;
-        static const char* QTREES_PARMS;
-        static const char* DEFAULT_QTREES_MODEL;
-
+        
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
-
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        struct parms_t {
-            string model;       // filename for xgboost model
-            bool set_class;     // whether to update class_ph in extent
-            bool set_surface;   // whether to update surface_h in extent
-            bool verbose;       // verbose settin gin XGBoost library
-            parms_t(): 
-                model (DEFAULT_QTREES_MODEL),
-                set_class (false),
-                set_surface (true),
-                verbose (true) {};
-            ~parms_t() {};
-        };
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate   (lua_State* L);
-
+        static int luaCreate (lua_State* L);
         bool run (GeoDataFrame* dataframe) override;
 
     protected:
@@ -91,14 +69,15 @@ class BathyQtreesClassifier: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathyQtreesClassifier (lua_State* L, int index);
-        ~BathyQtreesClassifier (void) override = default;
+        BathyQtreesClassifier (lua_State* L, BathyFields* _fields);
+        ~BathyQtreesClassifier (void) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        parms_t parms;
+        BathyFields* fieldsPtr;
+        const QtreesFields& parms;
 };
 
 #endif  /* __bathy_qtrees_classifier__ */

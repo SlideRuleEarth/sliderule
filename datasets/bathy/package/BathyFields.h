@@ -114,6 +114,98 @@ struct UncertaintyFields: public FieldDictionary
     };
 };
 
+/*******************/
+/* Coastnet Fields */
+/*******************/
+struct CoastnetFields: public FieldDictionary 
+{
+    FieldElement<string>  model             {"/data/coastnet_model-20240628.json"};
+    FieldElement<bool>    setClass          {true};
+    FieldElement<bool>    usePredictions    {false};
+    FieldElement<bool>    verbose           {true};
+    
+    CoastnetFields(void): 
+        FieldDictionary({ {"model",             &model},
+                          {"set_class",         &setClass}, 
+                          {"use_predictions",   &usePredictions}, 
+                          {"verbose",           &verbose} }) {
+        initialized = true;
+    };
+
+    ~CoastnetFields(void) override = default;
+};
+
+/***********************/
+/* OpenOceansPP Fields */
+/***********************/
+struct OpenOceansPPFields: public FieldDictionary 
+{
+    FieldElement<bool>      setClass                   {false};
+    FieldElement<bool>      setSurface                 {false};
+    FieldElement<bool>      usePredictions             {false};
+    FieldElement<bool>      verbose                     {true};
+    FieldElement<double>    xResolution                {10.0};
+    FieldElement<double>    zResolution                {0.2};
+    FieldElement<double>    zMin                       {-50};
+    FieldElement<double>    zMax                       {30};
+    FieldElement<double>    surfaceZMin               {-20};
+    FieldElement<double>    surfaceZMax               {20};
+    FieldElement<double>    bathyMinDepth             {0.5};
+    FieldElement<double>    verticalSmoothingSigma    {0.5};
+    FieldElement<double>    surfaceSmoothingSigma     {200.0};
+    FieldElement<double>    bathySmoothingSigma       {100.0};
+    FieldElement<double>    minPeakProminence         {0.01};
+    FieldElement<size_t>    minPeakDistance           {2};
+    
+    size_t                  minSurfacePhotonsPerWindow;
+    size_t                  minBathyPhotonsPerWindow;
+    
+    OpenOceansPPFields(void): 
+        FieldDictionary({ {"set_class",                 &setClass},
+                          {"set_surface",               &setSurface}, 
+                          {"use_predictions",           &usePredictions}, 
+                          {"verbose",                   &verbose}, 
+                          {"x_resolution",              &xResolution}, 
+                          {"z_resolution",              &zResolution}, 
+                          {"z_min",                     &zMin}, 
+                          {"z_max",                     &zMax}, 
+                          {"surface_z_min",             &surfaceZMin}, 
+                          {"surface_z_max",             &surfaceZMax}, 
+                          {"bathy_min_depth",           &bathyMinDepth}, 
+                          {"vertical_smoothing_sigma",  &verticalSmoothingSigma}, 
+                          {"surface_smoothing_sigma",   &surfaceSmoothingSigma}, 
+                          {"bathy_smoothing_sigma",     &bathySmoothingSigma}, 
+                          {"min_peak_prominence",       &minPeakProminence}, 
+                          {"min_peak_distance",         &minPeakDistance} }) {
+        minSurfacePhotonsPerWindow = (xResolution.value / 0.7) / 3;
+        minBathyPhotonsPerWindow = (xResolution.value / 0.7) / 3;
+        initialized = true;
+    };
+
+    ~OpenOceansPPFields(void) override = default;
+};
+
+/*****************/
+/* Qtrees Fields */
+/*****************/
+struct QtreesFields: public FieldDictionary 
+{
+    FieldElement<string>  model         {"/data/qtrees_model-20240607.json"};
+    FieldElement<bool>    setClass      {false};
+    FieldElement<bool>    setSurface    {true};
+    FieldElement<bool>    verbose       {true};
+    
+    QtreesFields(void): 
+        FieldDictionary({ {"model",         &model},
+                          {"set_class",     &setClass}, 
+                          {"set_surface",   &setSurface}, 
+                          {"verbose",       &verbose} }) {
+        initialized = true;
+    };
+
+    ~QtreesFields(void) override = default;
+};
+
 /****************/
 /* Bathy Fields */
 /****************/
@@ -191,6 +283,9 @@ class BathyFields: public Icesat2Fields
         FieldElement<SurfaceFields>                     surface;                    // surface finding fields
         FieldElement<RefractionFields>                  refraction;                 // refraction correction fields
         FieldElement<UncertaintyFields>                 uncertainty;                // uncertaintly calculation fields
+        FieldElement<CoastnetFields>                    coastnet;                   // coastnet fields
+        FieldElement<OpenOceansPPFields>                openoceanspp;               // openoceans++ fields
+        FieldElement<QtreesFields>                      qtrees;                     // qtrees fields
 
     protected:
 
@@ -216,5 +311,8 @@ inline uint32_t toEncoding(BathyFields::classifier_t& v) { (void)v; return Field
 inline uint32_t toEncoding(SurfaceFields& v) { (void)v; return Field::USER; }
 inline uint32_t toEncoding(UncertaintyFields& v) { (void)v; return Field::USER; }
 inline uint32_t toEncoding(RefractionFields& v) { (void)v; return Field::USER; }
+inline uint32_t toEncoding(CoastnetFields& v) { (void)v; return Field::USER; }
+inline uint32_t toEncoding(OpenOceansPPFields& v) { (void)v; return Field::USER; }
+inline uint32_t toEncoding(QtreesFields& v) { (void)v; return Field::USER; }
 
 #endif  /* __bathy_fields__ */

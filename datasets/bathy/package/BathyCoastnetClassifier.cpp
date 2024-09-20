@@ -46,17 +46,8 @@ using namespace std;
 using namespace ATL24_coastnet;
 
 /******************************************************************************
- * DATA
+ * STATIC DATA
  ******************************************************************************/
-
-const char* BathyCoastnetClassifier::CLASSIFIER_NAME = "coastnet";
-const char* BathyCoastnetClassifier::COASTNET_PARMS = "coastnet";
-const char* BathyCoastnetClassifier::DEFAULT_COASTNET_MODEL = "/data/coastnet_model-20240628.json";
-
-static const char* COASTNET_PARM_MODEL = "model";
-static const char* COASTNET_PARM_SET_CLASS = "set_class";
-static const char* COASTNET_PARM_USE_PREDICTIONS = "use_predictions";
-static const char* COASTNET_PARM_VERBOSE = "verbose";
 
 const char* BathyCoastnetClassifier::LUA_META_NAME = "BathyCoastnetClassifier";
 const struct luaL_Reg BathyCoastnetClassifier::LUA_META_TABLE[] = {
@@ -64,7 +55,7 @@ const struct luaL_Reg BathyCoastnetClassifier::LUA_META_TABLE[] = {
 };
 
 /******************************************************************************
- * METHODS
+ * CLASS METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -72,13 +63,16 @@ const struct luaL_Reg BathyCoastnetClassifier::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int BathyCoastnetClassifier::luaCreate (lua_State* L)
 {
+    BathyFields* _parms = NULL;
     try
     {
-        return createLuaObject(L, new BathyCoastnetClassifier(L, 1));
+        _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
+        return createLuaObject(L, new BathyCoastnetClassifier(L, _parms));
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating BathyCoastnetClassifier: %s", e.what());
+        if(_parms) _parms->releaseLuaObject();
         return returnLuaStatus(L, false);
     }
 }
@@ -86,32 +80,19 @@ int BathyCoastnetClassifier::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyCoastnetClassifier::BathyCoastnetClassifier (lua_State* L, int index):
-    GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE)
+BathyCoastnetClassifier::BathyCoastnetClassifier (lua_State* L, BathyFields* _fields):
+    GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
+    fieldsPtr(_fields),
+    parms(_fields->coastnet.value)
 {
-    /* Build Parameters */
-    if(lua_istable(L, index))
-    {
-        /* model */
-        lua_getfield(L, index, COASTNET_PARM_MODEL);
-        parms.model = LuaObject::getLuaString(L, -1, true, parms.model.c_str());
-        lua_pop(L, 1);
+}
 
-        /* set class */
-        lua_getfield(L, index, COASTNET_PARM_SET_CLASS);
-        parms.set_class = LuaObject::getLuaBoolean(L, -1, true, parms.set_class);
-        lua_pop(L, 1);
-
-        /* use predictions */
-        lua_getfield(L, index, COASTNET_PARM_USE_PREDICTIONS);
-        parms.use_predictions = LuaObject::getLuaBoolean(L, -1, true, parms.use_predictions);
-        lua_pop(L, 1);
-
-        /* verbose */
-        lua_getfield(L, index, COASTNET_PARM_VERBOSE);
-        parms.verbose = LuaObject::getLuaBoolean(L, -1, true, parms.verbose);
-        lua_pop(L, 1);
-    }
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+BathyCoastnetClassifier::~BathyCoastnetClassifier (void)
+{
+    fieldsPtr->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -128,7 +109,7 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
 
         // Preallocate samples and predictions vector
         const size_t number_of_samples = dataframe->length();
-        std::vector<ATL24_coastnet::classified_point2d> samples;
+        vector<ATL24_coastnet::classified_point2d> samples;
         samples.reserve(number_of_samples);
         mlog(INFO, "Building %ld photon samples", number_of_samples);
 
@@ -148,7 +129,7 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
             samples.push_back(p);
 
             // Clear classification (if necessary)
-            if(parms.set_class)
+            if(parms.setClass.value)
             {
                 class_ph[i] = BathyFields::UNCLASSIFIED;
             }
@@ -156,9 +137,9 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
 
         // Build arguments
         struct cmd::args args;
-        args.verbose = parms.verbose;
-        args.use_predictions = parms.use_predictions;
-        args.model_filename = parms.model;
+        args.verbose = parms.verbose.value;
+        args.use_predictions = parms.usePredictions.value;
+        args.model_filename = parms.model.value;
 
         // Run classification
         const auto results = classify (samples, args);
@@ -166,7 +147,7 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
         // Update extents
         for(size_t i = 0; i < number_of_samples; i++)
         {
-            if(parms.set_class) class_ph[i] = results[i].prediction;
+            if(parms.setClass.value) class_ph[i] = results[i].prediction;
             predictions[i][BathyFields::COASTNET] = results[i].prediction;
         }
     }

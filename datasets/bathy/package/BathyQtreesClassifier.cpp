@@ -47,17 +47,8 @@ using namespace std;
 using namespace ATL24_qtrees;
 
 /******************************************************************************
- * DATA
+ * STATIC DATA
  ******************************************************************************/
-
-const char* BathyQtreesClassifier::CLASSIFIER_NAME = "qtrees";
-const char* BathyQtreesClassifier::QTREES_PARMS = "qtrees";
-const char* BathyQtreesClassifier::DEFAULT_QTREES_MODEL = "/data/qtrees_model-20240607.json";
-
-static const char* QTREES_PARM_MODEL = "model";
-static const char* QTREES_PARM_SET_CLASS = "set_class";
-static const char* QTREES_PARM_SET_SURFACE = "set_surface";
-static const char* QTREES_PARM_VERBOSE = "verbose";
 
 const char* BathyQtreesClassifier::LUA_META_NAME = "BathyQtreesClassifier";
 const struct luaL_Reg BathyQtreesClassifier::LUA_META_TABLE[] = {
@@ -65,7 +56,7 @@ const struct luaL_Reg BathyQtreesClassifier::LUA_META_TABLE[] = {
 };
 
 /******************************************************************************
- * METHODS
+ * CLASS METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -73,13 +64,16 @@ const struct luaL_Reg BathyQtreesClassifier::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int BathyQtreesClassifier::luaCreate (lua_State* L)
 {
+    BathyFields* _parms = NULL;
     try
     {
-        return createLuaObject(L, new BathyQtreesClassifier(L, 1));
+        _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
+        return createLuaObject(L, new BathyQtreesClassifier(L, _parms));
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating BathyQtreesClassifier: %s", e.what());
+        if(_parms) _parms->releaseLuaObject();
         return returnLuaStatus(L, false);
     }
 }
@@ -87,32 +81,19 @@ int BathyQtreesClassifier::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyQtreesClassifier::BathyQtreesClassifier (lua_State* L, int index):
-    GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE)
+BathyQtreesClassifier::BathyQtreesClassifier (lua_State* L, BathyFields* _fields):
+    GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
+    fieldsPtr(_fields),
+    parms(_fields->qtrees.value)
 {
-    /* Build Parameters */
-    if(lua_istable(L, index))
-    {
-        /* model */
-        lua_getfield(L, index, QTREES_PARM_MODEL);
-        parms.model = LuaObject::getLuaString(L, -1, true, parms.model.c_str());
-        lua_pop(L, 1);
+}
 
-        /* set class */
-        lua_getfield(L, index, QTREES_PARM_SET_CLASS);
-        parms.set_class = LuaObject::getLuaBoolean(L, -1, true, parms.set_class);
-        lua_pop(L, 1);
-
-        /* set surface */
-        lua_getfield(L, index, QTREES_PARM_SET_SURFACE);
-        parms.set_surface = LuaObject::getLuaBoolean(L, -1, true, parms.set_surface);
-        lua_pop(L, 1);
-
-        /* verbose */
-        lua_getfield(L, index, QTREES_PARM_VERBOSE);
-        parms.verbose = LuaObject::getLuaBoolean(L, -1, true, parms.verbose);
-        lua_pop(L, 1);
-    }
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+BathyQtreesClassifier::~BathyQtreesClassifier (void)
+{
+    fieldsPtr->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -130,7 +111,7 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
 
         // Preallocate samples vector
         const size_t number_of_samples = dataframe->length();
-        std::vector<utils::sample> samples;
+        vector<utils::sample> samples;
         samples.reserve(number_of_samples);
         mlog(INFO, "Building %ld photon samples", number_of_samples);
 
@@ -151,7 +132,7 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
             samples.push_back(s);
 
             // Clear classification (if necessary)
-            if(parms.set_class)
+            if(parms.setClass.value)
             {
                 class_ph[i] = BathyFields::UNCLASSIFIED;
             }
@@ -159,8 +140,8 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
 
         // Build arguments
         struct cmd::args args;
-        args.verbose = parms.verbose;
-        args.model_filename = parms.model;
+        args.verbose = parms.verbose.value;
+        args.model_filename = parms.model.value;
 
         // Run classification
         classify(args, samples);
@@ -168,8 +149,8 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
         // Update extents
         for(size_t i = 0; i < number_of_samples; i++)
         {
-            if(parms.set_surface) surface_h[i] = samples[i].surface_elevation;
-            if(parms.set_class) class_ph[i] = samples[i].prediction;
+            if(parms.setSurface.value) surface_h[i] = samples[i].surface_elevation;
+            if(parms.setClass.value) class_ph[i] = samples[i].prediction;
             predictions[i][BathyFields::QTREES] = samples[i].prediction;
         }
     }

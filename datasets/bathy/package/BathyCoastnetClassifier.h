@@ -39,6 +39,7 @@
 #include "LuaObject.h"
 #include "OsApi.h"
 #include "GeoDataFrame.h"
+#include "BathyFields.h"
 
 /******************************************************************************
  * CLASS
@@ -52,35 +53,14 @@ class BathyCoastnetClassifier: public GeoDataFrame::FrameRunner
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* CLASSIFIER_NAME;
-        static const char* COASTNET_PARMS;
-        static const char* DEFAULT_COASTNET_MODEL;
-
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
-
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        struct parms_t {
-            string model;           // filename for xgboost model
-            bool set_class;         // whether to update class_ph in extent
-            bool use_predictions;   // only classify photons that are marked unclassified
-            bool verbose;           // verbose settin gin XGBoost library
-            parms_t(): 
-                model (DEFAULT_COASTNET_MODEL),
-                set_class (true),
-                use_predictions (false),
-                verbose (true) {};
-            ~parms_t() = default;
-        };
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate   (lua_State* L);
+        static int luaCreate (lua_State* L);
 
         bool run (GeoDataFrame* dataframe) override;
 
@@ -90,15 +70,15 @@ class BathyCoastnetClassifier: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathyCoastnetClassifier (lua_State* L, int index);
-        ~BathyCoastnetClassifier (void) override = default;
+        BathyCoastnetClassifier (lua_State* L, BathyFields* _fields);
+        ~BathyCoastnetClassifier (void) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        parms_t parms;
-
+        BathyFields* fieldsPtr;
+        const CoastnetFields& parms;
 };
 
 #endif  /* __bathy_coastnet_classifier__ */
