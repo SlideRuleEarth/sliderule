@@ -88,13 +88,13 @@ const char* ProvisioningSystemLib::login (const char* username, const char* pass
     try
     {
         /* Build API URL */
-        FString url_str("%s/api/org_token/", URL);
+        const FString url_str("%s/api/org_token/", URL);
 
         /* Build Bearer Token Header */
-        FString hdr_str("Content-Type: application/json");
+        const FString hdr_str("Content-Type: application/json");
 
         /* Initialize Request */
-        FString data_str("{\"username\":\"%s\",\"password\":\"%s\",\"org_name\":\"%s\"}", username, password, organization);
+        const FString data_str("{\"username\":\"%s\",\"password\":\"%s\",\"org_name\":\"%s\"}", username, password, organization);
 
         /* Initialize Response */
         List<data_t> rsps_set;
@@ -182,10 +182,10 @@ bool ProvisioningSystemLib::validate (const char* access_token, bool verbose)
     try
     {
         /* Build API URL */
-        FString url_str("%s/api/membership_status/%s/", URL, Organization);
+        const FString url_str("%s/api/membership_status/%s/", URL, Organization);
 
         /* Build Bearer Token Header */
-        FString hdr_str("Authorization: Bearer %s", access_token);
+        const FString hdr_str("Authorization: Bearer %s", access_token);
 
         /* Initialize cURL */
         CURL* curl = curl_easy_init();

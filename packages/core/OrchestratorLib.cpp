@@ -74,7 +74,7 @@ void OrchestratorLib::deinit (void)
 OrchestratorLib::rsps_t OrchestratorLib::request (EndpointObject::verb_t verb, const char* resource, const char* data)
 {
     rsps_t rsps;
-    FString path("%s%s", URL, resource);
+    const FString path("%s%s", URL, resource);
     rsps.code = CurlLib::request(verb, path.c_str(), data, &rsps.response, &rsps.size);
     return rsps;
 }
@@ -86,7 +86,7 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
 {
     bool status = true;
 
-    FString rqst("{\"service\":\"%s\", \"lifetime\": %d, \"address\": \"%s\", \"reset\": %s}", service, lifetime, address, initial_registration ? "true" : "false");
+    const FString rqst("{\"service\":\"%s\", \"lifetime\": %d, \"address\": \"%s\", \"reset\": %s}", service, lifetime, address, initial_registration ? "true" : "false");
     const rsps_t rsps = request(EndpointObject::POST, "/discovery/register", rqst.c_str());
     if(rsps.code == EndpointObject::OK)
     {
@@ -130,7 +130,7 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
 long OrchestratorLib::selflock (const char* service, int timeout_secs, int locks_per_node, bool verbose)
 {
     long transaction = INVALID_TX_ID;
-    FString rqst("{\"service\":\"%s\", \"address\": \"http://%s:9081\", \"timeout\": %d, \"locksPerNode\": %d}", service, SockLib::sockipv4(), timeout_secs, locks_per_node);
+    const FString rqst("{\"service\":\"%s\", \"address\": \"http://%s:9081\", \"timeout\": %d, \"locksPerNode\": %d}", service, SockLib::sockipv4(), timeout_secs, locks_per_node);
     const rsps_t rsps = request(EndpointObject::POST, "/discovery/selflock", rqst.c_str());
     if(rsps.code == EndpointObject::OK)
     {
@@ -167,7 +167,7 @@ vector<OrchestratorLib::Node*>* OrchestratorLib::lock (const char* service, int 
 {
     vector<Node*>* nodes = NULL;
 
-    FString rqst("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d, \"locksPerNode\": %d}", service, nodes_needed, timeout_secs, locks_per_node);
+    const FString rqst("{\"service\":\"%s\", \"nodesNeeded\": %d, \"timeout\": %d, \"locksPerNode\": %d}", service, nodes_needed, timeout_secs, locks_per_node);
     const rsps_t rsps = request(EndpointObject::POST, "/discovery/lock", rqst.c_str());
     if(rsps.code == EndpointObject::OK)
     {
@@ -448,7 +448,7 @@ int OrchestratorLib::luaLock(lua_State* L)
         lua_newtable(L);
         for(unsigned i = 0; i < nodes->size(); i++)
         {
-            FString txidstr("%ld", nodes->at(i)->transaction);
+            const FString txidstr("%ld", nodes->at(i)->transaction);
             LuaEngine::setAttrStr(L, txidstr.c_str(), nodes->at(i)->member);
             delete nodes->at(i); // free node after using it
         }

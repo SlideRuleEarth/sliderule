@@ -181,7 +181,7 @@ void BathyParms::surface_t::fromLua (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 const char* BathyParms::surface_t::toJson (void) const
 {
-    FString json_contents(R"({)"
+    const FString json_contents(R"({)"
     R"("%s":%lf,)"
     R"("%s":%lf,)"
     R"("%s":"%ld,")"
@@ -236,7 +236,7 @@ void BathyParms::refraction_t::fromLua (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 const char* BathyParms::refraction_t::toJson (void) const
 {
-    FString json_contents(R"({)"
+    const FString json_contents(R"({)"
     R"("%s":%d,)"
     R"("%s":%lf,)"
     R"("%s":"%lf")"
@@ -278,7 +278,7 @@ void BathyParms::uncertainty_t::fromLua (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 const char* BathyParms::uncertainty_t::toJson (void) const
 {
-    FString json_contents(R"({)"
+    const FString json_contents(R"({)"
     R"("%s":%s,)"
     R"("%s":%s)"
     R"(})",
@@ -325,7 +325,7 @@ void BathyParms::init (void)
  *----------------------------------------------------------------------------*/
 const char* BathyParms::tojson (void) const
 {
-    FString json_contents(R"({)"
+    const FString json_contents(R"({)"
     R"("%s":%s,)"
     R"("%s":%s,)"
     R"("%s":"%s")"

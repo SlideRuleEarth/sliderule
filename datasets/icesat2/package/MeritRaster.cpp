@@ -150,7 +150,7 @@ uint32_t MeritRaster::getSamples (const MathLib::point_3d_t& point, int64_t gps,
     }
 
     /* Build Dataset Name */
-    FString dataset("%c%02d%c%03d_MERITdem_wgs84", char4lat, upper_lat, char4lon, left_lon);
+    const FString dataset("%c%02d%c%03d_MERITdem_wgs84", char4lat, upper_lat, char4lon, left_lon);
 
     try
     {

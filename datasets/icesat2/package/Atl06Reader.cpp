@@ -443,7 +443,7 @@ Atl06Reader::Atl06Data::Atl06Data (const info_t* info, const Region& region):
         for(int i = 0; i < anc_fields->length(); i++)
         {
             const char* field_name = (*anc_fields)[i].field.c_str();
-            FString dataset_name("%s/land_ice_segments/%s", info->prefix, field_name);
+            const FString dataset_name("%s/land_ice_segments/%s", info->prefix, field_name);
             H5DArray* array = new H5DArray(info->reader->context, dataset_name.c_str(), 0, region.first_segment, region.num_segments);
             const bool status = anc_data.add(field_name, array);
             if(!status) delete array;

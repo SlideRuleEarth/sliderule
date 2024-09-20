@@ -192,7 +192,7 @@ long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char*
         else
         {
             /* Unable to Perform cURL Call */
-            FString error_msg("%s", curl_easy_strerror(res));
+            const FString error_msg("%s", curl_easy_strerror(res));
             if(response) *response = error_msg.c_str(true);
             http_code = EndpointObject::Service_Unavailable;
         }

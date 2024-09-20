@@ -64,54 +64,54 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import sys
-import copy
-import importlib
-import pandas as pd
+def run():
 
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
+    import sys
+    import copy
+    import pandas as pd
 
-sys.path.append('/cshelph')
-MODEL = importlib.import_module('c_shelph')
+    import warnings
+    warnings.simplefilter(action='ignore', category=FutureWarning)
 
-##############
-# READ INPUTS
-##############
+    from . import c_shelph as MODEL
 
-# process command line
-sys.path.append('../utils')
-from command_line_processor import process_command_line
-settings, beam_info, point_cloud, output_csv, info_json = process_command_line(sys.argv, columns=["lat_ph", "lon_ph", "ortho_h", "index_ph", "class_ph"])
+    ##############
+    # READ INPUTS
+    ##############
 
-# set configuration
-surface_buffer  = settings.get('surface_buffer', -0.5) 
-h_res           = settings.get('h_res', 0.5)
-lat_res         = settings.get('lat_res', 0.001)
-thresh          = settings.get('thresh', 0.5)
-min_buffer      = settings.get('min_buffer', -80)
-max_buffer      = settings.get('max_buffer', 5)
+    # process command line
+    sys.path.append('../utils')
+    from command_line_processor import process_command_line
+    settings, beam_info, point_cloud, output_csv, info_json = process_command_line(sys.argv, columns=["lat_ph", "lon_ph", "ortho_h", "index_ph", "class_ph"])
 
-##################
-# RUN MODEL
-##################
+    # set configuration
+    surface_buffer  = settings.get('surface_buffer', -0.5) 
+    h_res           = settings.get('h_res', 0.5)
+    lat_res         = settings.get('lat_res', 0.001)
+    thresh          = settings.get('thresh', 0.5)
+    min_buffer      = settings.get('min_buffer', -80)
+    max_buffer      = settings.get('max_buffer', 5)
 
-results = MODEL.c_shelph_classification(copy.deepcopy(point_cloud), 
-                                        surface_buffer=surface_buffer,
-                                        h_res=h_res, lat_res=lat_res, thresh=thresh,
-                                        min_buffer=min_buffer, max_buffer=max_buffer,
-                                        sea_surface_label=41,
-                                        bathymetry_label=40)
+    ##################
+    # RUN MODEL
+    ##################
 
-################
-# WRITE OUTPUTS
-################
+    results = MODEL.c_shelph_classification(copy.deepcopy(point_cloud), 
+                                            surface_buffer=surface_buffer,
+                                            h_res=h_res, lat_res=lat_res, thresh=thresh,
+                                            min_buffer=min_buffer, max_buffer=max_buffer,
+                                            sea_surface_label=41,
+                                            bathymetry_label=40)
 
-df = pd.DataFrame()
-df["index_ph"] = point_cloud['index_ph']
-df["class_ph"] = results['classification']
+    ################
+    # WRITE OUTPUTS
+    ################
 
-if output_csv != None:
-    df.to_csv(output_csv, index=False, columns=["index_ph", "class_ph"])
-else:
-    print(df.to_string(index=False, header=True, columns=['index_ph', 'class_ph']))
+    df = pd.DataFrame()
+    df["index_ph"] = point_cloud['index_ph']
+    df["class_ph"] = results['classification']
+
+    if output_csv != None:
+        df.to_csv(output_csv, index=False, columns=["index_ph", "class_ph"])
+    else:
+        print(df.to_string(index=False, header=True, columns=['index_ph', 'class_ph']))

@@ -42,6 +42,11 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 ATLAS_GPS_EPOCH = 1198800018
 RELEASE = "1"
 
+
+import cshelph.runner as cshelph
+cshelph.run()
+sys.exit()
+
 # #####################
 # Command Line Inputs
 # #####################

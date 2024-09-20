@@ -463,11 +463,11 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
     const int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
     const TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
     const TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
-    FString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
+    const FString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
 
     /* Build Duration String */
     const int64_t duration = TimeLib::gpstime() - launch_time_gps;
-    FString durationstr("%ld", duration);
+    const FString durationstr("%ld", duration);
 
     /* Build Package String */
     const char** pkg_list = LuaEngine::getPkgList();
@@ -487,7 +487,7 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
     delete [] pkg_list;
 
     /* Build rqst String */
-    FString rqststr("{\"endpoint\": \"%s\", \"parms\": %s}", arrowBuilder->getEndpoint(), arrowBuilder->getParmsAsString());
+    const FString rqststr("{\"endpoint\": \"%s\", \"parms\": %s}", arrowBuilder->getEndpoint(), arrowBuilder->getParmsAsString());
 
     /* Initialize Meta Data String */
     string metastr(FString(R"json({

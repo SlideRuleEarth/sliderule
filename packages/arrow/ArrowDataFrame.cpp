@@ -509,7 +509,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
         // get lua parameters
         ArrowDataFrame* lua_obj = dynamic_cast<ArrowDataFrame*>(getLuaSelf(L, 1));
         const char* filename = getLuaString(L, 2, true, ArrowCommon::getUniqueFileName(NULL));
-        ArrowFields::format_t format = static_cast<ArrowFields::format_t>(getLuaInteger(L, 3, true, lua_obj->parms->output.value.format.value));
+        const ArrowFields::format_t format = static_cast<ArrowFields::format_t>(getLuaInteger(L, 3, true, lua_obj->parms->output.value.format.value));
 
         // get references
         const RequestFields& parms = *lua_obj->parms;
@@ -518,7 +518,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
           
         // start trace
         const uint32_t parent_trace_id = EventLib::grabId();
-        const uint32_t trace_id = start_trace(INFO, parent_trace_id, "ArrowDataFrame", "{\"num_rows\": %ld}", dataframe->length());
+        const uint32_t trace_id = start_trace(INFO, parent_trace_id, "ArrowDataFrame", "{\"num_rows\": %ld}", dataframe.length());
 
         // process dataframe to arrow array
         vector<shared_ptr<arrow::Array>> columns;

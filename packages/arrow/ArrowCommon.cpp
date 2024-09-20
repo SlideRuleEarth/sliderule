@@ -388,7 +388,7 @@ const char* getOutputPath(ArrowParms* parms, const char* output_filename)
         }
         else
         {
-            FString path_name("%s.%016lX%s", OsApi::getCluster(), OsApi::time(OsApi::CPU_CLK), path_suffix);
+            const FString path_name("%s.%016lX%s", OsApi::getCluster(), OsApi::time(OsApi::CPU_CLK), path_suffix);
             outputPath = FString("%s%s/%s", path_prefix, asset->getPath(), path_name.c_str()).c_str(true);             
         }
         asset->releaseLuaObject();

@@ -83,6 +83,7 @@ class Field
          *--------------------------------------------------------------------*/
 
         typedef enum {
+            FIELD         = -1,
             ELEMENT       = 0,
             ARRAY         = 1,
             ENUMERATION   = 2,

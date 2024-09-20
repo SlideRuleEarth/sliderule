@@ -361,8 +361,8 @@ void* EndpointProxy::proxyThread (void* parm)
                 {
                     try
                     {
-                        FString url("%s/source/%s", node->member, proxy->endpoint);
-                        FString data("{\"resource\": \"%s\", \"parms\": %s, \"timeout\": %d, \"shard\": %d}", resource, proxy->parameters, proxy->timeout, current_resource);
+                        const FString url("%s/source/%s", node->member, proxy->endpoint);
+                        const FString data("{\"resource\": \"%s\", \"parms\": %s, \"timeout\": %d, \"shard\": %d}", resource, proxy->parameters, proxy->timeout, current_resource);
                         const long http_code = CurlLib::postAsRecord(url.c_str(), data.c_str(), proxy->outQ, false, proxy->timeout, &proxy->active);
                         if(http_code == EndpointObject::OK) valid = true;
                         else throw RunTimeException(CRITICAL, RTE_ERROR, "Error code returned from request to %s: %d", node->member, (int)http_code);

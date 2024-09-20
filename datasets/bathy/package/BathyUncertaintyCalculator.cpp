@@ -222,7 +222,7 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
     BathyDataFrame& df = *dynamic_cast<BathyDataFrame*>(dataframe);
 
     /* run uncertainty calculation*/
-    if(df.length() == 0) return NULL; // nothing to do
+    if(df.length() == 0) return true; // nothing to do
 
     /* join kd resource read */
     kd490->join(parms->readTimeout.value * 1000);

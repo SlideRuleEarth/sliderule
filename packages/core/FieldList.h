@@ -190,7 +190,7 @@ T& FieldList<T>::operator[](int i)
 template <class T>
 string FieldList<T>::toJson (void) const
 {
-    size_t size = values.size();
+    const size_t size = values.size();
     string str("[");
     for(size_t i = 0; i < size-1; i++)
     {

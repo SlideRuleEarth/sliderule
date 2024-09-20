@@ -137,9 +137,11 @@ vector<string> GeoDataFrame::getColumnNames(void) const
 /*----------------------------------------------------------------------------
  * getColumnData
  *----------------------------------------------------------------------------*/
-Field* GeoDataFrame::getColumnData (const char* name) const
+Field* GeoDataFrame::getColumnData (const char* name, Field::type_t _type) const
 {
     const FieldDictionary::entry_t entry = columnFields.fields[name];
+    if(!entry.field) throw RunTimeException(CRITICAL, RTE_ERROR, "%s field is null", name);
+    if(_type != Field::FIELD && _type != entry.field->type) throw RunTimeException(CRITICAL, RTE_ERROR, "%s is incorrect type: %d", name, static_cast<int>(entry.field->type));
     return entry.field;
 }
 
@@ -155,9 +157,11 @@ void GeoDataFrame::addMetaData (const char* name, Field* column)
 /*----------------------------------------------------------------------------
  * getMetaData
  *----------------------------------------------------------------------------*/
-Field* GeoDataFrame::getMetaData (const char* name)
+Field* GeoDataFrame::getMetaData (const char* name, Field::type_t _type)
 {
     const FieldDictionary::entry_t entry = metaFields.fields[name];
+    if(!entry.field) throw RunTimeException(CRITICAL, RTE_ERROR, "%s field is null", name);
+    if(_type != Field::FIELD && _type != entry.field->type) throw RunTimeException(CRITICAL, RTE_ERROR, "%s is incorrect type: %d", name, static_cast<int>(entry.field->type));
     return entry.field;
 }
 
@@ -389,21 +393,24 @@ void* GeoDataFrame::runThread (void* parm)
             const int recv_status = dataframe->subRunQ.receiveCopy(&runner, sizeof(runner), SYS_TIMEOUT);
             if(recv_status > 0)
             {
-                // execute frame runner
-                if(!runner)
+                if(runner)
+                {
+                    // execute frame runner
+                    if(!runner->run(dataframe))
+                    {
+                        // exit loop on error
+                        mlog(CRITICAL, "error encountered in frame runner: %s", runner->getName());
+                        dataframe->active = false;
+                    }
+
+                    // release frame runner
+                    runner->releaseLuaObject();
+                }
+                else
                 {
                     // exit loop on termination
                     dataframe->active = false;
                 }
-                else if(!runner->run(dataframe))
-                {
-                    // exit loop on error
-                    mlog(CRITICAL, "error encountered in frame runner: %s", runner->getName());
-                    dataframe->active = false;
-                }
-
-                // release frame runner
-                runner->releaseLuaObject();
             }
         }
     }
@@ -547,7 +554,7 @@ int GeoDataFrame::luaRun  (lua_State* L)
     {
         GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
         _runner = dynamic_cast<GeoDataFrame::FrameRunner*>(getLuaObject(L, 2, GeoDataFrame::FrameRunner::OBJECT_TYPE, true, NULL));
-        int post_state = lua_obj->pubRunQ.postCopy(&_runner, sizeof(_runner));
+        const int post_state = lua_obj->pubRunQ.postCopy(&_runner, sizeof(_runner));
         if(post_state != MsgQ::STATE_OKAY)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "run queue post failed: %d", post_state);
@@ -556,7 +563,7 @@ int GeoDataFrame::luaRun  (lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error attaching runner: %s", e.what());
-        _runner->releaseLuaObject();
+        if(_runner) _runner->releaseLuaObject();
         status = false;
     }
 

@@ -247,13 +247,13 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
         if(verb != EndpointObject::RAW)
         {
             /* Build Request Header */
-            FString rqst_hdr("%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: sliderule/%s\r\nAccept: */*\r\n%sContent-Length: %d\r\n\r\n",
-                                EndpointObject::verb2str(verb),
-                                resource,
-                                getIpAddr(),
-                                LIBID,
-                                keep_alive_header,
-                                content_length);
+            const FString rqst_hdr("%s %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: sliderule/%s\r\nAccept: */*\r\n%sContent-Length: %d\r\n\r\n",
+                EndpointObject::verb2str(verb),
+                resource,
+                getIpAddr(),
+                LIBID,
+                keep_alive_header,
+                content_length);
 
             /* Build Request */
             const int hdr_len = rqst_hdr.length();

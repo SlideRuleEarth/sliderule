@@ -522,7 +522,7 @@ Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
             {
                 group_name = "geophys_corr";
             }
-            FString dataset_name("%s/%s", group_name, field_name);
+            const FString dataset_name("%s/%s", group_name, field_name);
             H5DArray* array = new H5DArray(info->reader->context, FString("%s/%s", info->prefix, dataset_name.c_str()).c_str(), 0, region.first_segment, region.num_segments);
             const bool status = anc_geo_data->add(field_name, array);
             if(!status) delete array;
@@ -537,7 +537,7 @@ Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
         for(int i = 0; i < photon_fields->length(); i++)
         {
             const char* field_name = (*photon_fields)[i].field.c_str();
-            FString dataset_name("heights/%s", field_name);
+            const FString dataset_name("heights/%s", field_name);
             H5DArray* array = new H5DArray(info->reader->context, FString("%s/%s", info->prefix, dataset_name.c_str()).c_str(), 0, region.first_photon,  region.num_photons);
             const bool status = anc_ph_data->add(field_name, array);
             if(!status) delete array;
@@ -632,7 +632,7 @@ Atl03Reader::Atl08Class::Atl08Class (const info_t* info):
             for(int i = 0; i < atl08_fields->length(); i++)
             {
                 const char* field_name = (*atl08_fields)[i].field.c_str();
-                FString dataset_name("%s/land_segments/%s", info->prefix, field_name);
+                const FString dataset_name("%s/land_segments/%s", info->prefix, field_name);
                 H5DArray* array = new H5DArray(info->reader->context08, dataset_name.c_str());
                 const bool status = anc_seg_data->add(field_name, array);
                 if(!status) delete array;

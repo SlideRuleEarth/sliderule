@@ -101,12 +101,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
     # Join checks into a single string parameter
     list(JOIN CLANG_TIDY_CHECKS "" CLANG_TIDY_CHECKS_PARM)
 
-    set (CMAKE_CXX_CLANG_TIDY
-       clang-tidy;
-       -header-filter=.;
-       -checks=${CLANG_TIDY_CHECKS_PARM};
-       -warnings-as-errors=*;
-    )
+    set (CMAKE_CXX_CLANG_TIDY "clang-tidy;-header-filter='^((?!ATL24_coastnet/).)*$';-checks=${CLANG_TIDY_CHECKS_PARM};-warnings-as-errors=*")
 
     # cppcheck, tested with version 2.13.0
     find_program (CMAKE_CXX_CPPCHECK NAMES cppcheck)
@@ -139,6 +134,8 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=constParameterReference:*/BathyRefractionCorrector.cpp" # in run() param extent cannot be const
         "--suppress=constParameterPointer:*/CcsdsPayloadDispatch.cpp"   # Not trivial to fix, would have to change DispachObject class as well.
         "--suppress=knownConditionTrueFalse"                            # -1 < 0 etc
+
+        "--suppress=*:*/coastnet.h"                                     # suppress all checks for coastnet
     )
 
 endif()
@@ -200,7 +197,8 @@ string(REPLACE "v" "" LIBVER ${TGTVER})
 
 # C++ Version #
 
-set(CXX_VERSION 17) # required if using pistache package
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 20)
 
 # Platform #
 
@@ -243,7 +241,6 @@ endif()
 set_target_properties (slideruleLib PROPERTIES VERSION ${LIBVER})
 set_target_properties (slideruleLib PROPERTIES OUTPUT_NAME sliderule)
 set_target_properties (slideruleLib PROPERTIES ENABLE_EXPORTS true)
-set_target_properties (slideruleLib PROPERTIES CXX_STANDARD ${CXX_VERSION})
 
 # Compile Definitions #
 
