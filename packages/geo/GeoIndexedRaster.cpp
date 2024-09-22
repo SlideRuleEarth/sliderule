@@ -287,14 +287,21 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         mlog(e.level(), "Error getting samples: %s", e.what());
     }
 
-    /* Clean up */
+    /* Clean up pointsGroups */
     for(const point_groups_t& pg : pointsGroups)
         delete pg.groupList;
 
+    /* Clean up unique rasters */
     for(unique_raster_t* ur : uniqueRasters)
     {
         for(const point_sample_t& ps : ur->pointSamples)
-            delete ps.sample;
+        {
+            /* Delete samples which have not been returned (quality masks, etc) */
+            if(!ps.sampleReturned)
+            {
+                delete ps.sample;
+            }
+        }
 
         delete ur;
     }
@@ -426,18 +433,25 @@ uint32_t GeoIndexedRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
         assert(ur);
 
         /* Get the sample for this point from unique raster */
-        for(const point_sample_t& ps : ur->pointSamples)
+        for(point_sample_t& ps : ur->pointSamples)
         {
             if(ps.pointInfo.index == pointIndx)
             {
                 /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
                 if(ps.sample == NULL) break;
 
-                /*
-                * A copy of the sample must be made. The sample is owned by the unique raster,
-                * and the same sample may be returned by multiple rasters that reference the same unique raster.
-                */
-                RasterSample* s = new RasterSample(*ps.sample);
+                RasterSample* s;
+
+                if(!ps.sampleReturned)
+                {
+                    ps.sampleReturned = true;
+                    s = ps.sample;
+                }
+                else
+                {
+                    /* Sample has already been returned, must create a copy */
+                    s = new RasterSample(*ps.sample);
+                }
 
                 /* Set flags for this sample, add it to the list */
                 s->flags = flags;
@@ -1741,7 +1755,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                 for(const uint32_t pointIndx : it->second)
                 {
                     const point_groups_t& pg = pointsGroups[pointIndx];
-                    ur->pointSamples.push_back({ pg.pointInfo, NULL, SS_NO_ERRORS });
+                    ur->pointSamples.push_back({ pg.pointInfo, NULL, false, SS_NO_ERRORS });
                 }
             }
         }

@@ -74,6 +74,7 @@ class GeoIndexedRaster: public RasterObject
         typedef struct {
             ogr_point_info_t            pointInfo;
             RasterSample*               sample;
+            bool                        sampleReturned;
             uint32_t                    ssErrors;
         } point_sample_t;
 
