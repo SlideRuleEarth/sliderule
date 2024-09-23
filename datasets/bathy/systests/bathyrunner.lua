@@ -7,10 +7,13 @@ local prettyprint = require("prettyprint")
 console.monitor:config(core.LOG, core.INFO)
 sys.setlvl(core.LOG, core.INFO)
 
+-- load asset directory
+local assets = asset.loaddir()
 
 
-local parms = core.parms()
-prettyprint:display(parms)
+local parms = bathy.parms()
+local ptable = parms:export()
+prettyprint.display(ptable)
 
 do return end
 
@@ -36,11 +39,6 @@ local parms = {
     generate_ndwi = true,
     use_bathy_mask = true,
 }
-
-
--- load asset directory
-local assets = asset.loaddir()
-local nsidc_s3 = core.getbyname(parms["asset"])
 
 -- get credentials for icesat2 asset
 local nsidc_parms = {earthdata="https://data.nsidc.earthdatacloud.nasa.gov/s3credentials", identity="nsidc-cloud"}

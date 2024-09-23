@@ -48,13 +48,6 @@ int BathyFields::luaCreate (lua_State* L)
 {
     try
     {
-        /* Check if Lua Table */
-        if(lua_type(L, 1) != LUA_TTABLE)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Requests parameters must be supplied as a lua table");
-        }
-
-        /* Return Request Parameter Object */
         return createLuaObject(L, new BathyFields(L, 1));
     }
     catch(const RunTimeException& e)

@@ -159,7 +159,7 @@ inline static string convertToJson(const time8_t& v)  {
 inline static string convertToJson(const string& v)   { return "\"" + string(v) + "\""; }
 
 // tolua
-inline int convertToLua(lua_State* L, const bool& v)     { lua_pushinteger(L, v); return 1; }
+inline int convertToLua(lua_State* L, const bool& v)     { lua_pushboolean(L, v); return 1; }
 inline int convertToLua(lua_State* L, const int8_t& v)   { lua_pushinteger(L, v); return 1; }
 inline int convertToLua(lua_State* L, const int16_t& v)  { lua_pushinteger(L, v); return 1; }
 inline int convertToLua(lua_State* L, const int32_t& v)  { lua_pushinteger(L, v); return 1; }
