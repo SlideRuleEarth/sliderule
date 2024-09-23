@@ -13,7 +13,7 @@ local rqsttime      = time.gps()
 local userlog       = msg.publish(rspq) -- create user log publisher (alerts)
 local outputs       = {} -- table of all outputs that go into atl24 writer
 local profile       = {} -- timing profiling table
-
+do return end
 -------------------------------------------------------
 -- function: cleanup 
 -------------------------------------------------------

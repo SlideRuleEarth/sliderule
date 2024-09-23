@@ -46,13 +46,17 @@
  *----------------------------------------------------------------------------*/
 int BathyFields::luaCreate (lua_State* L)
 {
+    BathyFields* bathy_fields = NULL;
     try
     {
-        return createLuaObject(L, new BathyFields(L, 1));
+        bathy_fields = new BathyFields(L);
+        bathy_fields->fromLua(L, 1);
+        return createLuaObject(L, bathy_fields);
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        delete bathy_fields;
         return returnLuaStatus(L, false);
     }
 }
@@ -60,19 +64,19 @@ int BathyFields::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyFields::BathyFields(lua_State* L, int index):
-    Icesat2Fields (L, index, {  {"asset09",             &atl09AssetName},
-                                {"max_dem_delta",       &maxDemDelta},
-                                {"min_dem_delta",       &minDemDelta},
-                                {"ph_in_extent",        &phInExtent},
-                                {"generate_ndwi",       &generateNdwi},
-                                {"use_bathy_mask",      &useBathyMask},
-                                {"find_sea_surface",    &findSeaSurface},
-                                {"classifiers",         &classifiers},
-                                {"spots",               &spots},
-                                {"surface",             &surface},
-                                {"refraction",          &refraction},
-                                {"uncertainty",         &uncertainty} })
+BathyFields::BathyFields(lua_State* L):
+    Icesat2Fields (L, { {"asset09",             &atl09AssetName},
+                        {"max_dem_delta",       &maxDemDelta},
+                        {"min_dem_delta",       &minDemDelta},
+                        {"ph_in_extent",        &phInExtent},
+                        {"generate_ndwi",       &generateNdwi},
+                        {"use_bathy_mask",      &useBathyMask},
+                        {"find_sea_surface",    &findSeaSurface},
+                        {"classifiers",         &classifiers},
+                        {"spots",               &spots},
+                        {"surface",             &surface},
+                        {"refraction",          &refraction},
+                        {"uncertainty",         &uncertainty} })
 {
 }
 

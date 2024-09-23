@@ -117,7 +117,7 @@ class RequestFields: public LuaObject, public FieldDictionary
          * Methods
          *--------------------------------------------------------------------*/
 
-        RequestFields   (lua_State* L, int index, const std::initializer_list<entry_t>& init_list);
+        RequestFields   (lua_State* L, const std::initializer_list<entry_t>& init_list);
         ~RequestFields  (void) override;
 };
 

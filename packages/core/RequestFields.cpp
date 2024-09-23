@@ -60,13 +60,17 @@ const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int RequestFields::luaCreate (lua_State* L)
 {
+    RequestFields* request_fields = NULL;
     try
     {
-        return createLuaObject(L, new RequestFields(L, 1, {}));
+        request_fields = new RequestFields(L, {});
+        request_fields->fromLua(L, 1);
+        return createLuaObject(L, request_fields);
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        delete request_fields;
         return returnLuaStatus(L, false);
     }
 }
@@ -214,7 +218,7 @@ bool RequestFields::maskIncludes (double lon, double lat) const
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RequestFields::RequestFields(lua_State* L, int index, const std::initializer_list<entry_t>& init_list):
+RequestFields::RequestFields(lua_State* L, const std::initializer_list<entry_t>& init_list):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     FieldDictionary ({  
         {"polygon",             &polygon},
@@ -234,14 +238,12 @@ RequestFields::RequestFields(lua_State* L, int index, const std::initializer_lis
         #endif
     })
 {
+
     // add additional fields to dictionary
     for(const entry_t elem: init_list) 
     {
         fields.add(elem.name, elem);
     }
-
-    // read in from Lua
-    fromLua(L, index);
 
     // set timeouts (if necessary)
     if(timeout == INVALID_TIMEOUT)      timeout = DEFAULT_TIMEOUT;    

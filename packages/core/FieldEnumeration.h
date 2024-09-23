@@ -269,10 +269,9 @@ void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
 {
     T selection;
 
-    memset(values, 0, sizeof(values)); // set all to false
-
     if(lua_istable(L, index)) // provided as a table
     {
+        memset(values, 0, sizeof(values)); // set all to false
         const int num_elements = lua_rawlen(L, index);
         for(int i = 0; i < num_elements; i++)
         {
@@ -292,11 +291,13 @@ void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
         }
 
         providedAsSingle = false;
+        provided = true;
+        initialized = true;
     }
-    else // provided as a single selection
+    else if(!lua_isnil(L, index))// provided as a single selection
     {
-        convertFromLua(L, -1, selection);
-
+        convertFromLua(L, index, selection); // throws on error
+        memset(values, 0, sizeof(values)); // set all to false
         const int selection_index = convertToIndex(selection);
         if(selection_index >= 0 && selection_index < N)
         {
@@ -308,11 +309,9 @@ void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
         }
 
         providedAsSingle = true;
+        provided = true;
+        initialized = true;
     }
-
-    // set provided
-    provided = true;
-    initialized = true;
 }
 
 /*----------------------------------------------------------------------------

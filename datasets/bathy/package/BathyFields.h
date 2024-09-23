@@ -293,7 +293,7 @@ class BathyFields: public Icesat2Fields
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathyFields     (lua_State* L, int index);
+        BathyFields     (lua_State* L);
         ~BathyFields    (void) override = default;
 };
 
