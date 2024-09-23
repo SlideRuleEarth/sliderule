@@ -102,7 +102,7 @@ class RequestFields: public LuaObject, public FieldDictionary
         FieldElement<int>               nodeTimeout         {INVALID_TIMEOUT};
         FieldElement<int>               readTimeout         {INVALID_TIMEOUT};
         FieldElement<int>               clusterSizeHint     {0};
-        FieldElement<RegionMask>        regionMask;
+        RegionMask                      regionMask;
         FieldElement<string>            slideruleVersion;
         FieldElement<string>            buildInformation;
         FieldElement<string>            environmentVersion;

@@ -78,6 +78,43 @@ RegionMask::~RegionMask(void)
 }
 
 /*----------------------------------------------------------------------------
+ * toLua
+ *----------------------------------------------------------------------------*/
+string RegionMask::toJson (void) const
+{
+    return FieldDictionary::toJson();
+}
+
+/*----------------------------------------------------------------------------
+ * toLua
+ *----------------------------------------------------------------------------*/
+int RegionMask::toLua (lua_State* L) const
+{
+    return FieldDictionary::toLua(L);
+}
+
+/*----------------------------------------------------------------------------
+ * fromLua
+ *----------------------------------------------------------------------------*/
+void RegionMask::fromLua (lua_State* L, int index)
+{
+    FieldDictionary::fromLua(L, index);    
+    provided = true;
+    if(cellSize.value > 0.0 && !geojson.value.empty())
+    {
+        if(RegionMask::burnMask) 
+        {
+            RegionMask::burnMask(*this);
+            initialized = true;
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "unable to rasterize geojson - function unregistered");
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
  * includes
  *----------------------------------------------------------------------------*/
 bool RegionMask::includes(double lon, double lat) const
@@ -93,45 +130,4 @@ bool RegionMask::includes(double lon, double lat) const
         }
     }
     return false;
-}
-
-/******************************************************************************
- * FUNCTIONS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * convertToJson
- *----------------------------------------------------------------------------*/
-string convertToJson(const RegionMask& v)
-{
-    return v.toJson();
-}
-
-/*----------------------------------------------------------------------------
- * convertToLua
- *----------------------------------------------------------------------------*/
-int convertToLua(lua_State* L, const RegionMask& v)
-{
-    return v.toLua(L);
-}
-
-/*----------------------------------------------------------------------------
- * convertFromLua
- *----------------------------------------------------------------------------*/
-void convertFromLua(lua_State* L, int index, RegionMask& v)
-{
-    v.fromLua(L, index);    
-    v.provided = true;
-    if(v.cellSize.value > 0.0 && !v.geojson.value.empty())
-    {
-        if(RegionMask::burnMask) 
-        {
-            RegionMask::burnMask(v);
-            v.initialized = true;
-        }
-        else
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "unable to rasterize geojson - function unregistered");
-        }
-    }
 }

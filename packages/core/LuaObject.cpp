@@ -724,19 +724,26 @@ int LuaObject::luaWaitOn(lua_State* L)
             Publisher pub(rspq);
             int duration = 0;
             interval = MIN(interval, timeout);
-            while(pub.getSubCnt() > 0)
+
+            while(!status)
             {
                 status = lua_obj->waitComplete(interval);
                 if(!status)
                 {
-                    if(duration < timeout)
+                    if(pub.getSubCnt() > 0)
                     {
-                        duration += interval;
-                        alert(INFO, RTE_TIMEOUT, &pub, NULL, "request <%s> ... continuing to read after %d seconds", rspq, duration / 1000);
+                        alert(ERROR, RTE_TIMEOUT, &pub, NULL, "request <%s> terminated while waiting", rspq);
+                        break;
+                    }
+                    else if(duration >= timeout)
+                    {
+                        alert(ERROR, RTE_TIMEOUT, &pub, NULL, "request <%s> timed-out after %d seconds", rspq, duration);
+                        break;
                     }
                     else
                     {
-                        alert(ERROR, RTE_TIMEOUT, &pub, NULL, "request <%s> timed-out after %d seconds", rspq, duration);
+                        duration += interval;
+                        alert(INFO, RTE_TIMEOUT, &pub, NULL, "request <%s> ... continuing to read after %d seconds", rspq, duration / 1000);
                     }
                 }
             }

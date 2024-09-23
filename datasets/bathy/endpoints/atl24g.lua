@@ -14,6 +14,9 @@ local userlog       = msg.publish(rspq) -- create user log publisher (alerts)
 local outputs       = {} -- table of all outputs that go into atl24 writer
 local profile       = {} -- timing profiling table
 
+local prettyprint = require("prettyprint")
+prettyprint.display(parms:export())
+do return end
 -------------------------------------------------------
 -- function: cleanup 
 -------------------------------------------------------

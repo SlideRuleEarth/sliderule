@@ -212,7 +212,7 @@ bool RequestFields::polyIncludes (double lon, double lat) const
  *----------------------------------------------------------------------------*/
 bool RequestFields::maskIncludes (double lon, double lat) const
 {
-    return regionMask.value.includes(lon, lat);
+    return regionMask.includes(lon, lat);
 }
 
 /*----------------------------------------------------------------------------

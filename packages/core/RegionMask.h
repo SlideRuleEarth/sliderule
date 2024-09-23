@@ -70,6 +70,10 @@ class RegionMask: public FieldDictionary
                     RegionMask          (void);
                     ~RegionMask         (void) override;
 
+        string      toJson              (void) const override;
+        int         toLua               (lua_State* L) const override;
+        void        fromLua             (lua_State* L, int index) override;
+
         bool        includes            (double lon, double lat) const;
 
         /*--------------------------------------------------------------------
@@ -89,14 +93,5 @@ class RegionMask: public FieldDictionary
         
         uint8_t*                data{NULL};
 };
-
-/******************************************************************************
- * FUNCTIONS
- ******************************************************************************/
-
-string convertToJson(const RegionMask& v);
-int convertToLua(lua_State* L, const RegionMask& v);
-void convertFromLua(lua_State* L, int index, RegionMask& v);
-inline uint32_t toEncoding(RegionMask& v) { (void)v; return Field::USER; }
 
 #endif  /* __region_mask__ */
