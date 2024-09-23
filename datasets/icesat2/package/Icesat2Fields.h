@@ -226,6 +226,7 @@ class Icesat2Fields: public RequestFields
          *--------------------------------------------------------------------*/
 
         static int luaCreate (lua_State* L);
+        virtual void fromLua (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
          * Inline Methods

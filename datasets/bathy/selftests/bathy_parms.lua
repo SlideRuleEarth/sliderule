@@ -51,7 +51,7 @@ parms = bathy.parms(rqst_parms)
 ptable = parms:export()
 prettyprint.display(ptable)
 
--- check some defaults
+-- check some values
 runner.check(ptable["beams"][1] == 'gt1l')
 runner.check(ptable["classifiers"][1] == 'qtrees')
 runner.check(ptable["classifiers"][2] == 'coastnet')
@@ -71,6 +71,10 @@ runner.check(parms["output"]["path"] == "myfile.bin")
 runner.check(parms["output"]["format"] == "parquet")
 runner.check(parms["output"]["with_checksum"] == false)
 
+-- check time fields
+runner.check(parms["year"] == 2023)
+runner.check(parms["month"] == 2)
+runner.check(parms["day"] == 13)
 
 -- report results
 runner.report()

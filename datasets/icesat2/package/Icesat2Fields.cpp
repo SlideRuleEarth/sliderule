@@ -63,46 +63,11 @@ int Icesat2Fields::luaCreate (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * Constructor
+ * fromLua
  *----------------------------------------------------------------------------*/
-Icesat2Fields::Icesat2Fields(lua_State* L, const std::initializer_list<FieldDictionary::entry_t>& init_list):
-    RequestFields (L, { {"asset",               &assetName},
-                        {"resource",            &resource},
-                        {"srt",                 &surfaceType},
-                        {"pass_invalid",        &passInvalid},
-                        {"dist_in_seg",         &distInSeg},
-                        {"cnf",                 &atl03Cnf},
-                        {"quality_ph",          &qualityPh},
-                        {"atl08_class",         &atl08Class},
-                        {"beams",               &beams},
-                        {"yapc",                &yapc},
-                        {"track",               &track},
-                        {"maxi",                &maxIterations},
-                        {"cnt",                 &minPhotonCount},
-                        {"ats",                 &alongTrackSpread},
-                        {"H_min_win",           &minWindow},
-                        {"sigma_r_max",         &maxRobustDispersion},
-                        {"len",                 &extentLength},
-                        {"res",                 &extentStep},
-                        {"phoreal",             &phoreal},
-                        {"atl03_geo_fields",    &atl03GeoFields},
-                        {"atl03_ph_fields",     &atl03PhFields},
-                        {"atl06_fields",        &atl06Fields},
-                        {"atl08_fields",        &atl08Fields},
-                        {"atl13_fields",        &atl13Fields},
-                        {"year",                &year},
-                        {"month",               &month},
-                        {"day",                 &day},
-                        {"rgt",                 &rgt},
-                        {"cycle",               &cycle},
-                        {"region",              &region},
-                        {"version",             &version} })
+void Icesat2Fields::fromLua (lua_State* L, int index)
 {
-    // add additional fields to dictionary
-    for(const FieldDictionary::entry_t elem: init_list) 
-    {
-        fields.add(elem.name, elem);
-    }
+    RequestFields::fromLua(L, index);
 
     // handle asset
     asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(assetName.value.c_str(), Asset::OBJECT_TYPE));
@@ -165,6 +130,49 @@ Icesat2Fields::Icesat2Fields(lua_State* L, const std::initializer_list<FieldDict
 }
 
 /*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+Icesat2Fields::Icesat2Fields(lua_State* L, const std::initializer_list<FieldDictionary::entry_t>& init_list):
+    RequestFields (L, { {"asset",               &assetName},
+                        {"resource",            &resource},
+                        {"srt",                 &surfaceType},
+                        {"pass_invalid",        &passInvalid},
+                        {"dist_in_seg",         &distInSeg},
+                        {"cnf",                 &atl03Cnf},
+                        {"quality_ph",          &qualityPh},
+                        {"atl08_class",         &atl08Class},
+                        {"beams",               &beams},
+                        {"yapc",                &yapc},
+                        {"track",               &track},
+                        {"maxi",                &maxIterations},
+                        {"cnt",                 &minPhotonCount},
+                        {"ats",                 &alongTrackSpread},
+                        {"H_min_win",           &minWindow},
+                        {"sigma_r_max",         &maxRobustDispersion},
+                        {"len",                 &extentLength},
+                        {"res",                 &extentStep},
+                        {"phoreal",             &phoreal},
+                        {"atl03_geo_fields",    &atl03GeoFields},
+                        {"atl03_ph_fields",     &atl03PhFields},
+                        {"atl06_fields",        &atl06Fields},
+                        {"atl08_fields",        &atl08Fields},
+                        {"atl13_fields",        &atl13Fields},
+                        {"year",                &year},
+                        {"month",               &month},
+                        {"day",                 &day},
+                        {"rgt",                 &rgt},
+                        {"cycle",               &cycle},
+                        {"region",              &region},
+                        {"version",             &version} })
+{
+    // add additional fields to dictionary
+    for(const FieldDictionary::entry_t elem: init_list) 
+    {
+        fields.add(elem.name, elem);
+    }
+}
+
+/*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
 Icesat2Fields::~Icesat2Fields(void)
@@ -192,7 +200,7 @@ void Icesat2Fields::parseResource (void)
 {
     long val;
 
-    if(resource.value.size() < 29)
+    if(resource.value.size() < 33)
     {
         return; // early exit on error
     }

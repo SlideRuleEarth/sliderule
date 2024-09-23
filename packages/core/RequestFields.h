@@ -88,6 +88,8 @@ class RequestFields: public LuaObject, public FieldDictionary
         bool polyIncludes (double lon, double lat) const;
         bool maskIncludes (double lon, double lat) const;
 
+        virtual void fromLua (lua_State* L, int index) override;
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/

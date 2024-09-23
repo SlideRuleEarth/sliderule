@@ -13,7 +13,7 @@ local rqsttime      = time.gps()
 local userlog       = msg.publish(rspq) -- create user log publisher (alerts)
 local outputs       = {} -- table of all outputs that go into atl24 writer
 local profile       = {} -- timing profiling table
-do return end
+
 -------------------------------------------------------
 -- function: cleanup 
 -------------------------------------------------------
@@ -42,6 +42,11 @@ end
 -------------------------------------------------------
 -- get Kd resource filename
 -------------------------------------------------------
+
+
+print("parms >> ", parms["year"], parms["month"], parms["day"])
+
+
 local rdate         = string.format("%04d-%02d-%02dT00:00:00Z", parms["year"], parms["month"], parms["day"])
 local rgps          = time.gmt2gps(rdate)
 local _,doy         = time.gps2gmt(rgps)

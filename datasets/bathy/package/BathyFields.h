@@ -266,6 +266,7 @@ class BathyFields: public Icesat2Fields
          *--------------------------------------------------------------------*/
 
         static int  luaCreate   (lua_State* L);
+        void        fromLua     (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
          * Data
