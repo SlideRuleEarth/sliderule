@@ -83,9 +83,10 @@ Usgs3dep1meterDemRaster::~Usgs3dep1meterDemRaster(void)
 /*----------------------------------------------------------------------------
  * getIndexFile
  *----------------------------------------------------------------------------*/
-void Usgs3dep1meterDemRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
+void Usgs3dep1meterDemRaster::getIndexFile(const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points)
 {
     static_cast<void>(geo);
+    static_cast<void>(points);
     file = indexFile;
     mlog(DEBUG, "Using %s", file.c_str());
 }
@@ -96,18 +97,18 @@ void Usgs3dep1meterDemRaster::getIndexFile(const OGRGeometry* geo, std::string& 
  *----------------------------------------------------------------------------*/
 bool Usgs3dep1meterDemRaster::findRasters(finder_t* finder)
 {
-    const OGRGeometry* geo    = finder->geo;
-    const uint32_t start_indx = finder->range.start_indx;
-    const uint32_t end_indx   = finder->range.end_indx;
+    const std::vector<OGRFeature*>* flist = finder->featuresList;
+    const OGRGeometry* geo = finder->geo;
+    const uint32_t start   = 0;
+    const uint32_t end     = flist->size();
 
     try
     {
         /* Linearly search through feature list */
-        for(uint32_t i = start_indx; i < end_indx; i++)
+        for(uint32_t i = start; i < end; i++)
         {
-            OGRFeature* feature = featuresList[i];
+            OGRFeature* feature = flist->at(i);
             OGRGeometry *rastergeo = feature->GetGeometryRef();
-            CHECKPTR(geo);
 
             if (!rastergeo->Intersects(geo)) continue;
 

@@ -102,6 +102,7 @@ end
 -- Run Landsat Plugin Self Tests
 if __landsat__ and incloud then
     local landsat_td = td .. "../../datasets/landsat/selftests/"
+    runner.script(landsat_td .. "plugin_unittest.lua")
     runner.script(landsat_td .. "landsat_reader.lua")
 end
 

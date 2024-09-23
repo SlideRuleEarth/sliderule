@@ -37,6 +37,7 @@
 
 #ifdef __unittesting__
 #include "UT_RasterSubset.h"
+#include "UT_RasterSample.h"
 #endif
 
 #include "GeoRaster.h"
@@ -254,7 +255,8 @@ int geo_open (lua_State* L)
         {"calcutm",     GeoLib::luaCalcUTM},
         {"tiff",        GeoLib::TIFFImage::luaCreate},
 #ifdef __unittesting__
-        {"ut_subset",       UT_RasterSubset::luaCreate},
+        {"ut_subset",  UT_RasterSubset::luaCreate},
+        {"ut_sample",  UT_RasterSample::luaCreate},
 #endif
         {NULL,          NULL}
     };

@@ -78,6 +78,13 @@ public:
     {
     }
 
+    RasterSample(const RasterSample& sample): RasterSample(sample.time, sample.fileId, sample.verticalShift)
+    {
+        value = sample.value;
+        flags = sample.flags;
+        stats = sample.stats;
+    }
+
     std::string toString(void) const
     {
         char buffer[1024];

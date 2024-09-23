@@ -187,7 +187,7 @@ local tstrOverride  = "2000:2:4:23:3:0"
 local expectedGroup = "T01UCS.2021001T225941.v2.0"
 
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter Override:  closest_time=%s\n--------------------------------", demType, tstrOverride, tstr))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true,  closest_time=tstr, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents }))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, closest_time=tstr, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents }))
 runner.check(dem ~= nil)
 tbl, err = dem:sample(lon, lat, height, tstrOverride)
 runner.check(err == 0)

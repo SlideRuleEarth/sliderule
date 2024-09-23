@@ -54,7 +54,6 @@ class RasterObject: public LuaObject
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-        static const int   MAX_BATCH_THREADS = 16;
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
@@ -65,9 +64,35 @@ class RasterObject: public LuaObject
 
         typedef RasterObject* (*factory_f) (lua_State* L, GeoParms* _parms);
 
-        typedef struct {
+        typedef struct
+        {
             factory_f   create;
         } factory_t;
+
+        typedef struct
+        {
+            MathLib::point_3d_t point;
+            double              gps;
+        } point_info_t;
+
+        typedef struct
+        {
+            uint32_t   start;
+            uint32_t   end;
+        } range_t;
+
+        typedef List<RasterSample*> sample_list_t;
+        typedef struct Reader
+        {
+            RasterObject*                     robj;
+            range_t                           range;
+            const std::vector<point_info_t>&  points;
+            std::vector<sample_list_t*>       samples;
+            uint32_t                          ssErrors;
+
+            explicit Reader (RasterObject* _robj, const std::vector<point_info_t>& _points);
+                    ~Reader (void);
+        } reader_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -80,22 +105,23 @@ class RasterObject: public LuaObject
         static RasterObject* cppCreate       (const RasterObject* obj);
         static bool          registerRaster  (const char* _name, factory_f create);
         virtual uint32_t     getSamples      (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) = 0;
+        virtual uint32_t     getSamples      (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL);
         virtual uint32_t     getSubsets      (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) = 0;
         virtual uint8_t*     getPixels       (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, void* param=NULL);
         virtual uint32_t     getMaxBatchThreads(void);
                             ~RasterObject    (void) override;
 
-        bool hasZonalStats (void)
+        bool hasZonalStats (void) const
         {
             return parms->zonal_stats;
         }
 
-        bool hasFlags (void)
+        bool hasFlags (void) const
         {
             return parms->flags_file;
         }
 
-        bool usePOItime(void)
+        bool usePOItime(void) const
         {
             return parms->use_poi_time;
         }
@@ -105,8 +131,22 @@ class RasterObject: public LuaObject
             return fileDict;
         }
 
+        void lockSampling(void)
+        {
+            samplingMut.lock();
+        }
+
+        void unlockSampling(void)
+        {
+            samplingMut.unlock();
+        }
+
+        void        stopSampling    (void);
+        bool        isSampling      (void) {return sampling;};
         uint64_t    fileDictAdd     (const std::string& fileName);
         const char* fileDictGetFile (uint64_t fileId);
+        static void getThreadsRanges(std::vector<range_t>& ranges, uint32_t num,
+                                     uint32_t minPerThread, uint32_t maxNumThreads);
 
     protected:
 
@@ -131,7 +171,12 @@ class RasterObject: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int slist2table(const List<RasterSubset*>& slist, uint32_t errors, lua_State* L);
+        static int      slist2table  (const List<RasterSubset*>& slist, uint32_t errors, lua_State* L);
+
+        static void*    readerThread (void* parm);
+        static uint32_t readSamples  (RasterObject* robj, const range_t& range,
+                                      const std::vector<point_info_t>& points, std::vector<sample_list_t*>& samples);
+
 
         /*--------------------------------------------------------------------
          * Data
@@ -140,6 +185,11 @@ class RasterObject: public LuaObject
         static Mutex                    factoryMut;
         static Dictionary<factory_t>    factories;
         Dictionary<uint64_t>            fileDict;
+
+        Mutex                           readersMut;
+        Mutex                           samplingMut;
+        std::atomic<bool>               sampling;  /* Used by batch getSample code */
+        std::vector<reader_t*>          readers;
 };
 
 #endif  /* __raster_object__ */

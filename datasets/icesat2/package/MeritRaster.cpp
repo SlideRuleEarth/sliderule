@@ -117,6 +117,8 @@ uint32_t MeritRaster::getSamples (const MathLib::point_3d_t& point, int64_t gps,
     (void)param;
     (void)gps;
 
+    lockSampling();
+
     /* Determine Upper Left Coordinates */
     int left_lon = ((int)floor(point.x / 5.0)) * 5;
     int upper_lat = ((int)ceil(point.y / 5.0)) * 5;
@@ -202,6 +204,8 @@ uint32_t MeritRaster::getSamples (const MathLib::point_3d_t& point, int64_t gps,
     {
         mlog(ERROR, "Failed to sample dataset: %s", dataset.c_str());
     }
+
+    unlockSampling();
 
     return SS_NO_ERRORS;
 }

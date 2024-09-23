@@ -71,7 +71,7 @@ class GebcoBathyRaster: public GeoIndexedRaster
                 GebcoBathyRaster (lua_State* L, GeoParms* _parms);
                ~GebcoBathyRaster (void) override;
 
-        void    getIndexFile     (const OGRGeometry* geo, std::string& file) final;
+        void    getIndexFile     (const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points) final;
         bool    findRasters      (finder_t* finder) final;
 
         /*--------------------------------------------------------------------

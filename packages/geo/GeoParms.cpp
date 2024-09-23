@@ -399,6 +399,61 @@ const char* GeoParms::tojson(void) const
 }
 
 /*----------------------------------------------------------------------------
+ * sserror2str
+ *----------------------------------------------------------------------------*/
+std::string GeoParms::sserror2str(uint32_t error)
+{
+    std::string errorStr;
+
+    if(error == SS_NO_ERRORS)
+    {
+        errorStr = "SS_NO_ERRORS";
+        return errorStr;
+    }
+
+    if(error & SS_THREADS_LIMIT_ERROR)
+    {
+        errorStr += "SS_THREADS_LIMIT_ERROR, ";
+    }
+    if(error & SS_MEMPOOL_ERROR)
+    {
+        errorStr += "SS_MEMPOOL_ERROR, ";
+    }
+    if(error & SS_OUT_OF_BOUNDS_ERROR)
+    {
+        errorStr += "SS_OUT_OF_BOUNDS_ERROR, ";
+    }
+    if(error & SS_READ_ERROR)
+    {
+        errorStr += "SS_READ_ERROR, ";
+    }
+    if(error & SS_WRITE_ERROR)
+    {
+        errorStr += "SS_WRITE_ERROR, ";
+    }
+    if(error & SS_SUBRASTER_ERROR)
+    {
+        errorStr += "SS_SUBRASTER_ERROR, ";
+    }
+    if(error & SS_INDEX_FILE_ERROR)
+    {
+        errorStr += "SS_INDEX_FILE_ERROR, ";
+    }
+    if(error & SS_RESOURCE_LIMIT_ERROR)
+    {
+        errorStr += "SS_RESOURCE_LIMIT_ERROR, ";
+    }
+
+    /* Remove the last ", " if it exists */
+    if (errorStr.size() >= 2 && errorStr[errorStr.size() - 2] == ',')
+    {
+        errorStr.resize(errorStr.size() - 2);
+    }
+    return errorStr;
+}
+
+
+/*----------------------------------------------------------------------------
  * cleanup
  *----------------------------------------------------------------------------*/
 void GeoParms::cleanup (void)

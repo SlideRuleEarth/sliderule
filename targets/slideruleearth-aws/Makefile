@@ -313,8 +313,8 @@ distclean: ## fully remove all non-version controlled files and directories
 ########################
 
 TEST ?= $(ROOT)/scripts/selftests/test_runner.lua cloud
-MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/plugins/pgc/systests/arcticdem_mosaic_perf.lua
-STRIPS_PERFORMANCE_TEST ?=  $(ROOT)/plugins/pgc/systests/arcticdem_strips_perf.lua
+MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arcticdem_mosaic_perf.lua
+STRIPS_PERFORMANCE_TEST ?=  $(ROOT)/datasets/pgc/systests/arcticdem_strips_perf.lua
 SUBSET_PERFORMANCE_TEST ?=  $(ROOT)/scripts/systests/subset_perf_test.lua
 
 selftest: ## run the self test on the server code
