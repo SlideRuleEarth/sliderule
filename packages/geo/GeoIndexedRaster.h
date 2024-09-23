@@ -219,7 +219,6 @@ class GeoIndexedRaster: public RasterObject
         void             sampleRasters         (OGRGeometry* geo);
         bool             sample                (OGRGeometry* geo, int64_t gps, GroupOrdering* groupList);
         void             emptyFeaturesList     (void);
-        static OGRGeometry* getConvexHull      (const std::vector<point_info_t>* points);
 
         /*--------------------------------------------------------------------
          * Data
@@ -287,7 +286,9 @@ class GeoIndexedRaster: public RasterObject
 
         bool            updateCache         (uint32_t& rasters2sample, const GroupOrdering* groupList);
         bool            filterRasters       (int64_t gps, GroupOrdering* groupList);
+        static OGRGeometry* getConvexHull   (const std::vector<point_info_t>* points);
         OGRGeometry*    getBufferedPoints   (const std::vector<point_info_t>* points);
+        void            applySpatialFilter  (OGRLayer* layer, const std::vector<point_info_t>* points);
 
         bool            findAllGroups       (const std::vector<point_info_t>* points,
                                              std::vector<point_groups_t>& pointsGroups,

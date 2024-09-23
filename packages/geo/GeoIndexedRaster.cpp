@@ -673,18 +673,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
         /* If caller provided points, use spatial filter to reduce number of features */
         if(points)
         {
-            mlog(INFO, "Features before spatial filter: %lld", layer->GetFeatureCount());
-            const double startTime = TimeLib::latchtime();
-
-            OGRGeometry* filter = getBufferedPoints(points);
-            if(filter)
-            {
-                layer->SetSpatialFilter(filter);
-                OGRGeometryFactory::destroyGeometry(filter);
-            }
-            perfStats.spatialFilterTime = TimeLib::latchtime() - startTime;
-
-            mlog(INFO, "Features after spatial filter: %lld", layer->GetFeatureCount());
+            applySpatialFilter(layer, points);
         }
 
         /*
@@ -1616,6 +1605,31 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>
     }
 
     return unionPolygon;
+}
+
+/*----------------------------------------------------------------------------
+ * applySpatialFilter
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::applySpatialFilter(OGRLayer* layer, const std::vector<point_info_t>* points)
+{
+    mlog(INFO, "Features before spatial filter: %lld", layer->GetFeatureCount());
+
+    const double startTime = TimeLib::latchtime();
+
+    OGRGeometry* filter = getBufferedPoints(points);
+    if(filter != NULL)
+    {
+        layer->SetSpatialFilter(filter);
+        OGRGeometryFactory::destroyGeometry(filter);
+    }
+    else
+    {
+        mlog(ERROR, "Failed to create union polygon for spatial filter");
+    }
+    perfStats.spatialFilterTime = TimeLib::latchtime() - startTime;
+
+    mlog(INFO, "Features after spatial filter: %lld", layer->GetFeatureCount());
+    mlog(INFO, "Spatial filter time: %.3lf", perfStats.spatialFilterTime);
 }
 
 /*----------------------------------------------------------------------------
