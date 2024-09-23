@@ -354,8 +354,8 @@ class Icesat2Fields: public RequestFields
          * Methods
          *--------------------------------------------------------------------*/
 
-        Icesat2Fields   (lua_State* L, const std::initializer_list<FieldDictionary::entry_t>& init_list);
-        ~Icesat2Fields  (void) override;
+                Icesat2Fields   (lua_State* L, const std::initializer_list<FieldDictionary::entry_t>& init_list);
+        virtual ~Icesat2Fields  (void) override;
 
         void parseResource (void);
 };

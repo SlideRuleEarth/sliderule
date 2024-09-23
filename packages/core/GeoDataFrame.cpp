@@ -44,6 +44,7 @@
 const char* GeoDataFrame::OBJECT_TYPE = "GeoDataFrame";
 const char* GeoDataFrame::GDF = "gdf";
 const char* GeoDataFrame::META = "meta";
+const char* GeoDataFrame::TERMINATE = "terminate";
 
 const char* GeoDataFrame::FrameColumn::OBJECT_TYPE = "FrameColumn";
 const char* GeoDataFrame::FrameColumn::LUA_META_NAME = "FrameColumn";
@@ -310,45 +311,6 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     subRunQ(pubRunQ),
     runComplete(false)
 {
-    // populate geo columns
-    Dictionary<FieldDictionary::entry_t>::Iterator iter(columnFields.fields);
-    for(int f = 0; f < iter.length; f++)
-    {
-        const char* name = iter[f].key;
-        const Field* field = iter[f].value.field;
-
-        if(field->encoding & TIME_COLUMN)
-        {
-            assert(field->type == COLUMN);
-            assert(field->getValueEncoding() == TIME8);
-            timeColumn = dynamic_cast<const FieldColumn<time8_t>*>(field);
-            timeColumnName = name;
-        }
-
-        if(field->encoding & X_COLUMN)
-        {
-            assert(field->type == COLUMN);
-            assert(field->getValueEncoding() == DOUBLE);
-            xColumn = dynamic_cast<const FieldColumn<double>*>(field);
-            xColumnName = name;
-        }
-
-        if(field->encoding & Y_COLUMN)
-        {
-            assert(field->type == COLUMN);
-            assert(field->getValueEncoding() == DOUBLE);
-            yColumn = dynamic_cast<const FieldColumn<double>*>(field);
-            yColumnName = name;
-        }
-
-        if(field->encoding & Z_COLUMN)
-        {
-            assert(field->type == COLUMN);
-            assert(field->getValueEncoding() == DOUBLE);
-            zColumn = dynamic_cast<const FieldColumn<double>*>(field);
-            zColumnName = name;
-        }
-    }
 
     // set lua functions
     LuaEngine::setAttrFunc(L, "export",     luaExport);
@@ -356,6 +318,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     LuaEngine::setAttrFunc(L, "__index",    luaGetColumnData);
     LuaEngine::setAttrFunc(L, "meta",       luaGetMetaData);
     LuaEngine::setAttrFunc(L, "run",        luaRun);
+    LuaEngine::setAttrFunc(L, "finished",   luaRunComplete);
     
     // initialized
     initialized = true;
@@ -425,6 +388,52 @@ void* GeoDataFrame::runThread (void* parm)
     }
     dataframe->signalRunComplete();
     return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * populateGeoColumn
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::populateGeoColumns (void)
+{
+    // populate geo columns
+    Dictionary<FieldDictionary::entry_t>::Iterator iter(columnFields.fields);
+    for(int f = 0; f < iter.length; f++)
+    {
+        const char* name = iter[f].key;
+        const Field* field = iter[f].value.field;
+
+        if(field->encoding & TIME_COLUMN)
+        {
+            assert(field->type == COLUMN);
+            assert(field->getValueEncoding() == TIME8);
+            timeColumn = dynamic_cast<const FieldColumn<time8_t>*>(field);
+            timeColumnName = name;
+        }
+
+        if(field->encoding & X_COLUMN)
+        {
+            assert(field->type == COLUMN);
+            assert(field->getValueEncoding() == DOUBLE);
+            xColumn = dynamic_cast<const FieldColumn<double>*>(field);
+            xColumnName = name;
+        }
+
+        if(field->encoding & Y_COLUMN)
+        {
+            assert(field->type == COLUMN);
+            assert(field->getValueEncoding() == DOUBLE);
+            yColumn = dynamic_cast<const FieldColumn<double>*>(field);
+            yColumnName = name;
+        }
+
+        if(field->encoding & Z_COLUMN)
+        {
+            assert(field->type == COLUMN);
+            assert(field->getValueEncoding() == DOUBLE);
+            zColumn = dynamic_cast<const FieldColumn<double>*>(field);
+            zColumnName = name;
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -566,22 +575,43 @@ int GeoDataFrame::luaGetMetaData (lua_State* L)
 int GeoDataFrame::luaRun  (lua_State* L)
 {
     bool status = true;
-    GeoDataFrame::FrameRunner* _runner = NULL;
+    bool pass_to_runner = false;
+    GeoDataFrame::FrameRunner* runner = NULL;
     
     try
     {
         GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
-        _runner = dynamic_cast<GeoDataFrame::FrameRunner*>(getLuaObject(L, 2, GeoDataFrame::FrameRunner::OBJECT_TYPE, true, NULL));
-        const int post_state = lua_obj->pubRunQ.postCopy(&_runner, sizeof(_runner));
-        if(post_state != MsgQ::STATE_OKAY)
+        
+        try
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "run queue post failed: %d", post_state);
+            // try to get a FrameRunner object
+            runner = dynamic_cast<GeoDataFrame::FrameRunner*>(getLuaObject(L, 2, GeoDataFrame::FrameRunner::OBJECT_TYPE));
+            pass_to_runner = true;
+        }
+        catch(const RunTimeException& e)
+        {
+            (void)e;
+            // try to get the termination string
+            const char* termination_string = getLuaString(L, 2, true, NULL);
+            if(termination_string && StringLib::match(termination_string, TERMINATE))
+            {
+                pass_to_runner = true;
+            }
+        }
+        
+        if(pass_to_runner)
+        {
+            const int post_state = lua_obj->pubRunQ.postCopy(&runner, sizeof(runner));
+            if(post_state != MsgQ::STATE_OKAY)
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "run queue post failed: %d", post_state);
+            }
         }
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error attaching runner: %s", e.what());
-        if(_runner) _runner->releaseLuaObject();
+        if(runner) runner->releaseLuaObject();
         status = false;
     }
 

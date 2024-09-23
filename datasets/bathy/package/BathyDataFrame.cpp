@@ -152,6 +152,9 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
 {
     assert(rqstq_name);
 
+    /* Call Parent Class Initialization of GeoColumns */
+    populateGeoColumns();
+
     try
     {
         /* Set Signal Confidence Index */

@@ -71,7 +71,7 @@ struct SurfaceFields: public FieldDictionary
         initialized = true;
     };
 
-    ~SurfaceFields(void) override = default;
+    virtual ~SurfaceFields(void) override = default;
 };
 
 /*********************/
@@ -90,7 +90,7 @@ struct RefractionFields: public FieldDictionary
         initialized = true;
     };
 
-    ~RefractionFields(void) override = default;
+    virtual ~RefractionFields(void) override = default;
 };
 
 /**********************/
@@ -109,7 +109,7 @@ struct UncertaintyFields: public FieldDictionary
         initialized = true;
     };
 
-    ~UncertaintyFields(void) override {
+    virtual ~UncertaintyFields(void) override {
         if(assetKd) assetKd->releaseLuaObject();
     };
 };
@@ -132,7 +132,7 @@ struct CoastnetFields: public FieldDictionary
         initialized = true;
     };
 
-    ~CoastnetFields(void) override = default;
+    virtual ~CoastnetFields(void) override = default;
 };
 
 /***********************/
@@ -182,7 +182,7 @@ struct OpenOceansPPFields: public FieldDictionary
         initialized = true;
     };
 
-    ~OpenOceansPPFields(void) override = default;
+    virtual ~OpenOceansPPFields(void) override = default;
 };
 
 /*****************/
@@ -203,7 +203,7 @@ struct QtreesFields: public FieldDictionary
         initialized = true;
     };
 
-    ~QtreesFields(void) override = default;
+    virtual ~QtreesFields(void) override = default;
 };
 
 /****************/
@@ -265,8 +265,9 @@ class BathyFields: public Icesat2Fields
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate   (lua_State* L);
-        void        fromLua     (lua_State* L, int index) override;
+        static int  luaCreate       (lua_State* L);
+        static int  luaClassifier   (lua_State* L);
+        void        fromLua         (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
          * Data
@@ -294,8 +295,8 @@ class BathyFields: public Icesat2Fields
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathyFields     (lua_State* L);
-        ~BathyFields    (void) override = default;
+                BathyFields     (lua_State* L);
+        virtual ~BathyFields    (void) override = default;
 };
 
 /******************************************************************************

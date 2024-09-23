@@ -39,6 +39,10 @@
 #include "BathyFields.h"
 #include "BathyMask.h"
 #include "BathyGranule.h"
+#include "BathyKd.h"
+#include "BathyCoastnetClassifier.h"
+#include "BathyQtreesClassifier.h"
+#include "BathyOpenOceansPPClassifier.h"
 #include "BathySeaSurfaceFinder.h"
 #include "BathyRefractionCorrector.h"
 #include "BathyUncertaintyCalculator.h"
@@ -62,8 +66,12 @@ int bathy_open (lua_State *L)
         {"parms",               BathyFields::luaCreate},
         {"dataframe",           BathyDataFrame::luaCreate},
         {"mask",                BathyMask::luaCreate},
+        {"kd",                  BathyKd::luaCreate},
         {"granule",             BathyGranule::luaCreate},
         {"viewer",              BathyViewer::luaCreate},
+        {"coastnet",            BathyCoastnetClassifier::luaCreate},
+        {"qtrees",              BathyQtreesClassifier::luaCreate},
+        {"openoceanspp",        BathyOpenOceansPPClassifier::luaCreate},
         {"seasurface",          BathySeaSurfaceFinder::luaCreate},
         {"refraction",          BathyRefractionCorrector::luaCreate},
         {"uncertainty",         BathyUncertaintyCalculator::luaCreate},
@@ -74,15 +82,15 @@ int bathy_open (lua_State *L)
     luaL_newlib(L, bathy_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrInt(L, BathyFields::QTREES_NAME,          BathyFields::QTREES);
-    LuaEngine::setAttrInt(L, BathyFields::COASTNET_NAME,        BathyFields::COASTNET);
-    LuaEngine::setAttrInt(L, BathyFields::OPENOCEANSPP_NAME,    BathyFields::OPENOCEANSPP);
-    LuaEngine::setAttrInt(L, BathyFields::MEDIANFILTER_NAME,    BathyFields::MEDIANFILTER);
-    LuaEngine::setAttrInt(L, BathyFields::CSHELPH_NAME,         BathyFields::CSHELPH);
-    LuaEngine::setAttrInt(L, BathyFields::BATHYPATHFINDER_NAME, BathyFields::BATHYPATHFINDER);
-    LuaEngine::setAttrInt(L, BathyFields::POINTNET_NAME,        BathyFields::POINTNET);
-    LuaEngine::setAttrInt(L, BathyFields::OPENOCEANS_NAME,      BathyFields::OPENOCEANS);
-    LuaEngine::setAttrInt(L, BathyFields::ENSEMBLE_NAME,        BathyFields::ENSEMBLE);
+    LuaEngine::setAttrInt(L, "QTREES",          BathyFields::QTREES);
+    LuaEngine::setAttrInt(L, "COASTNET",        BathyFields::COASTNET);
+    LuaEngine::setAttrInt(L, "OPENOCEANSPP",    BathyFields::OPENOCEANSPP);
+    LuaEngine::setAttrInt(L, "MEDIANFILTER",    BathyFields::MEDIANFILTER);
+    LuaEngine::setAttrInt(L, "CSHELPH",         BathyFields::CSHELPH);
+    LuaEngine::setAttrInt(L, "BATHYPATHFINDER", BathyFields::BATHYPATHFINDER);
+    LuaEngine::setAttrInt(L, "POINTNET",        BathyFields::POINTNET);
+    LuaEngine::setAttrInt(L, "OPENOCEANS",      BathyFields::OPENOCEANS);
+    LuaEngine::setAttrInt(L, "ENSEMBLE",        BathyFields::ENSEMBLE);
 
     return 1;
 }

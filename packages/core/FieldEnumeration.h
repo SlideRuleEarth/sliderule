@@ -56,7 +56,7 @@ class FieldEnumeration: public Field
                                 FieldEnumeration    (std::initializer_list<bool> init_list);
                                 FieldEnumeration    (void);
                                 FieldEnumeration    (const FieldEnumeration<T,N>& array);
-                                ~FieldEnumeration   (void) override = default;
+        virtual                 ~FieldEnumeration   (void) override = default;
 
         bool                    get                 (int i) const;
 

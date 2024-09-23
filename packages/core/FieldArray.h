@@ -56,7 +56,7 @@ class FieldArray: public Field
                             FieldArray      (std::initializer_list<T> init_list);
                             FieldArray      (void);
                             FieldArray      (const FieldArray<T,N>& array);
-                            ~FieldArray     (void) override = default;
+        virtual             ~FieldArray     (void) override = default;
 
         FieldArray<T,N>&    operator=       (const FieldArray<T,N>& array);
         FieldArray<T,N>&    operator=       (std::initializer_list<T> init_list);

@@ -113,7 +113,7 @@ class BathyGranule: public LuaObject, public FieldDictionary
          *--------------------------------------------------------------------*/
 
                         BathyGranule    (lua_State* L, BathyFields* _parms, H5Object* _hdf03, const char* rqstq_name);
-                        ~BathyGranule   (void) override;
+        virtual         ~BathyGranule   (void) override;
 
         static void*    readingThread   (void* parm);
 };

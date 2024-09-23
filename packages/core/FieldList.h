@@ -55,7 +55,7 @@ class FieldList: public Field
 
                         FieldList   (void);
                         FieldList   (const FieldList<T>& array);
-                        ~FieldList  (void) override = default;
+        virtual         ~FieldList  (void) override = default;
 
         long            append      (const T& v);
         void            clear       (void);

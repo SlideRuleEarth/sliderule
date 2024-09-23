@@ -56,7 +56,7 @@ class FieldElement: public Field
         explicit        FieldElement    (T default_value);
                         FieldElement    (void);
                         FieldElement    (const FieldElement<T>& element);
-                        ~FieldElement   (void) override = default;
+        virtual         ~FieldElement   (void) override = default;
 
         FieldElement&   operator=       (const FieldElement<T>& element);
 

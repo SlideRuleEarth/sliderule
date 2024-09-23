@@ -28,7 +28,7 @@ end
 local function ctimeout()
     local current_timeout = (timeout * 1000) - (time.gps() - rqsttime)
     if current_timeout < 0 then current_timeout = 0 end
-    return current_timeout
+    return math.tointeger(current_timeout)
 end
 
 -------------------------------------------------------
@@ -42,11 +42,6 @@ end
 -------------------------------------------------------
 -- get Kd resource filename
 -------------------------------------------------------
-
-
-print("parms >> ", parms["year"], parms["month"], parms["day"])
-
-
 local rdate         = string.format("%04d-%02d-%02dT00:00:00Z", parms["year"], parms["month"], parms["day"])
 local rgps          = time.gmt2gps(rdate)
 local _,doy         = time.gps2gmt(rgps)
@@ -67,15 +62,17 @@ local viirs_filename = string.format("JPSS1_VIIRS.%04d%02d%02d_%04d%02d%02d.L3m.
 )
 
 -------------------------------------------------------
+-- build time range (needed for NDWI and ATL09)
+-------------------------------------------------------
+local rdelta = 5 * 24 * 60 * 60 * 1000 -- 5 days * (24 hours/day * 60 minutes/hour * 60 seconds/minute * 1000 milliseconds/second)
+local t0 = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps - rdelta))
+local t1 = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps + rdelta))
+
+-------------------------------------------------------
 -- get geoparms for NDWI (if requested)
 -------------------------------------------------------
 local geo_parms = nil
 if parms["generate_ndwi"] then
-
-    -- build time range
-    local rdelta = 5 * 24 * 60 * 60 * 1000 -- 5 days * (24 hours/day * 60 minutes/hour * 60 seconds/minute * 1000 milliseconds/second)
-    local t0 = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps - rdelta))
-    local t1 = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps + rdelta))
 
     -- build hls polygon
     local hls_polygon_cmr_start_time = time.gps()
@@ -119,9 +116,9 @@ local resource09 = nil
 local atl09_cmr_start_time = time.gps()
 local atl09_parms = {
     asset = "icesat2-atl09",
-    t0 = parms["t0"],
-    t1 = parms["t1"],
-    name_filter = '*_'..resource:sub(22,25)..'????_*' -- rgt
+    t0 = t0,
+    t1 = t1,
+    name_filter = '*_' .. string.format("%04d", parms["rgt"]) .. '????_*'
 }
 local atl09_max_retries = 3
 local atl09_attempt = 1
@@ -176,14 +173,6 @@ if not crenv.host_sandbox_directory then
 end
 
 -------------------------------------------------------
--- create classifier mask
--------------------------------------------------------
-local classifiers = {}
-for _,classifier in ipairs(parms["classifiers"]) do
-    classifiers[classifier] = true
-end
-
--------------------------------------------------------
 -- create dataframe inputs
 -------------------------------------------------------
 local bathymask = bathy.mask()
@@ -191,12 +180,12 @@ local atl03h5 = h5.object(parms["asset"], resource)
 local atl09h5 = h5.object(parms["asset09"], resource09)
 local granule = (parms["output"]["format"] == "h5") and bathy.granule(parms, atl03h5, rspq) or nil
 local kd490 = bathy.kd(parms, viirs_filename)
-local seasurface = bathy.seasurface(parms)
 local refraction = bathy.refraction(parms)
 local uncertainty = bathy.uncertainty(parms, kd490)
-local qtrees = qtrees.classifier(qtrees.parms(parms["qtrees"]))
-local coastnet = coastnet.classifier(coastnet.parms(parms["coastnet"]))
-local openoceanspp = openoceanspp.classifier(openoceanspp.parms(parms["openoceanspp"]))
+local seasurface = parms["find_sea_surface"] and bathy.seasurface(parms) or nil
+local qtrees = parms:classifier(bathy.QTREES) and bathy.qtrees(parms) or nil
+local coastnet = parms:classifier(bathy.QTREES) and bathy.coastnet(parms) or nil
+local openoceanspp = parms:classifier(bathy.QTREES) and bathy.openoceanspp(parms) or nil
 
 -------------------------------------------------------
 -- build dataframes for each beam
@@ -206,18 +195,14 @@ for _, beam in ipairs(parms["beams"]) do
     dataframes[beam] = bathy.dataframe(beam, parms, bathymask, atl03h5, atl09h5, rspq)
     if not dataframes[beam] then
         userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> on %s failed to create bathy dataframe for beam %s", rspq, resource, beam))
-    elseif not dataframes[beam]:isvalid() then
-        userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create valid bathy dataframe for beam %s", rspq, resource, beam))
-    elseif dataframes[beam]:length() <= 0 then
-        userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s created an empty bathy dataframe for beam %s", rspq, resource, beam))
     else
-        if parms["find_sea_surface"] then dataframes[beam].run(seasurface) end
-        if classifiers["qtrees"] then dataframes[beam].run(qtrees) end
-        if classifiers["coastnet"] then dataframes[beam].run(coastnet) end
-        if classifiers["openoceanspp"] then dataframes[beam].run(openoceanspp) end
-        dataframes[beam].run(refraction)
-        dataframes[beam].run(uncertainty)
-        dataframes[beam].run(nil)
+        dataframes[beam]:run(seasurface)
+--        dataframes[beam]:run(qtrees)
+--        dataframes[beam]:run(coastnet)
+--        dataframes[beam]:run(openoceanspp)
+--        dataframes[beam]:run(refraction)
+--        dataframes[beam]:run(uncertainty)
+        dataframes[beam]:run(core.TERMINATE)
     end
 end
 
@@ -225,12 +210,20 @@ end
 -- wait for dataframes to complete and write to file
 -------------------------------------------------------
 for beam,dataframe in pairs(dataframes) do
-    if dataframe.waiton(ctimeout(), rspq) then
-        outputs[beam] = string.format("%s/%s_%d.parquet", crenv.container_sandbox_mount, bathy.BATHY_PREFIX, dataframe:meta("spot"))
-        if not arrow.dataframe(parms, dataframe):export(outputs[beam], arrow.PARQUET) then -- e.g. /share/bathy_spot_3.parquet)
-            userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> failed to write dataframe for %s", rspq, resource))
+    if dataframe:finished(ctimeout(), rspq) then
+        if dataframes[beam]:length() <= 0 then
+            userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s created an empty bathy dataframe for beam %s", rspq, resource, beam))
+        elseif not dataframes[beam]:isvalid() then
+            userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create valid bathy dataframe for beam %s", rspq, resource, beam))
             cleanup(crenv, transaction_id)
             return
+        else
+            outputs[beam] = string.format("%s/%s_%d.parquet", crenv.container_sandbox_mount, bathy.BATHY_PREFIX, dataframe:meta("spot"))
+            if not arrow.dataframe(parms, dataframe):export(outputs[beam], arrow.PARQUET) then -- e.g. /share/bathy_spot_3.parquet)
+                userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> failed to write dataframe for %s", rspq, resource))
+                cleanup(crenv, transaction_id)
+                return
+            end
         end
     else
         userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> timed out waiting for dataframe to complete on %s", rspq, resource))
@@ -264,12 +257,12 @@ end
 -------------------------------------------------------
 -- get profiles
 -------------------------------------------------------
-profile["seasurface"] = seasurface:runtime()
-profile["refraction"] = refraction:runtime()
-profile["uncertainty"] = uncertainty:runtime()
-profile["qtrees"] = qtrees:runtime()
-profile["coastnet"] = coastnet:runtime()
-profile["openoceanspp"] = openoceanspp:runtime()
+profile["seasurface"] = seasurface and seasurface:runtime() or 0.0
+profile["refraction"] = refraction and refraction:runtime() or 0.0
+profile["uncertainty"] = uncertainty and uncertainty:runtime() or 0.0
+profile["qtrees"] = qtrees and qtrees:runtime() or 0.0
+profile["coastnet"] = coastnet and coastnet:runtime() or 0.0
+profile["openoceanspp"] = openoceanspp and openoceanspp:runtime() or 0.0
 
 -- clean up object to cut down on memory usage
 atl03h5:destroy()

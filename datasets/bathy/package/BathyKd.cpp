@@ -113,8 +113,8 @@ double BathyKd::getKd (double lon, double lat)
 BathyKd::BathyKd (lua_State* L, const UncertaintyFields& parms, const char* resource_kd):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
-    H5Coro::Context context(parms.assetKd, resource_kd);
-    array = new H5Array<int16_t>(&context, "Kd_490", H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS);
+    context = new H5Coro::Context(parms.assetKd, resource_kd);
+    array = new H5Array<int16_t>(context, "Kd_490", H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS);
 }
 
 /*----------------------------------------------------------------------------
@@ -123,4 +123,5 @@ BathyKd::BathyKd (lua_State* L, const UncertaintyFields& parms, const char* reso
 BathyKd::~BathyKd (void)
 {
     delete array;
+    delete context;
 }

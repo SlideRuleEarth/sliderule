@@ -59,6 +59,7 @@ class GeoDataFrame: public LuaObject, public Field
         static const char* OBJECT_TYPE;
         static const char* GDF;
         static const char* META;
+        static const char* TERMINATE;
 
         /*--------------------------------------------------------------------
          * Subclasses
@@ -159,14 +160,15 @@ class GeoDataFrame: public LuaObject, public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-        GeoDataFrame    (lua_State* L, 
-                         const char* meta_name,
-                         const struct luaL_Reg meta_table[],
-                         const std::initializer_list<FieldDictionary::entry_t>& column_list, 
-                         const std::initializer_list<FieldDictionary::entry_t>& meta_list);
-        ~GeoDataFrame   (void) override;
+                GeoDataFrame    (lua_State* L, 
+                                 const char* meta_name,
+                                 const struct luaL_Reg meta_table[],
+                                 const std::initializer_list<FieldDictionary::entry_t>& column_list, 
+                                 const std::initializer_list<FieldDictionary::entry_t>& meta_list);
+        virtual ~GeoDataFrame   (void) override;
 
         static void*    runThread           (void* parm);
+        void            populateGeoColumns  (void);
 
         string          toJson              (void) const override;
         int             toLua               (lua_State* L) const override;

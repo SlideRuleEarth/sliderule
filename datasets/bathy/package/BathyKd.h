@@ -79,6 +79,7 @@ class BathyKd: public LuaObject
          *--------------------------------------------------------------------*/
 
         H5Array<int16_t>* array;
+        H5Coro::Context* context;
 };
 
 #endif  /* __bathy_kd__ */

@@ -61,7 +61,7 @@ class FieldColumn: public Field
 
         explicit        FieldColumn     (uint32_t encoding_mask=0, long _chunk_size=DEFAULT_CHUNK_SIZE);
                         FieldColumn     (const FieldColumn<T>& column);
-                        ~FieldColumn    (void) override;
+        virtual         ~FieldColumn    (void) override;
 
         long            append          (const T& v);
         void            initialize      (long size, const T& v);

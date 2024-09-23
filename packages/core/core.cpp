@@ -42,6 +42,7 @@
 #include "EventLib.h"
 #include "PointIndex.h"
 #include "FileIODriver.h"
+#include "GeoDataFrame.h"
 #include "HttpServer.h"
 #include "List.h"
 #include "LuaEndpoint.h"
@@ -210,6 +211,7 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "CLUSTER_SIZE_HINT",        RequestParms::DEFAULT_CLUSTER_SIZE_HINT);
     LuaEngine::setAttrInt   (L, "MAX_LOCKS_PER_NODE",       OrchestratorLib::MAX_LOCKS_PER_NODE);
     LuaEngine::setAttrInt   (L, "INVALID_TX_ID",            OrchestratorLib::INVALID_TX_ID);
+    LuaEngine::setAttrStr   (L, "TERMINATE",                GeoDataFrame::TERMINATE);
 
 #ifdef __unittesting__
     LuaEngine::setAttrBool(L, "UNITTEST",                   true);

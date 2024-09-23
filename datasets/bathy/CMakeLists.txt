@@ -7,6 +7,7 @@ target_compile_definitions (slideruleLib PUBLIC __bathy__)
 
 target_compile_options (slideruleLib PUBLIC ${OpenMP_CXX_FLAGS})
 target_link_libraries(slideruleLib PUBLIC xgboost::xgboost)
+target_link_libraries(slideruleLib PUBLIC OpenMP::OpenMP_CXX)
 
 # CoastNet
 set (COASTNETDIR ${PROJECT_SOURCE_DIR}/../ut-ATL24-coastnet CACHE STRING "Coastnet application source directory")

@@ -62,6 +62,26 @@ int BathyFields::luaCreate (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * luaCreate - classifier(<index>)
+ *----------------------------------------------------------------------------*/
+int BathyFields::luaClassifier (lua_State* L)
+{
+    try
+    {
+        BathyFields* lua_obj = dynamic_cast<BathyFields*>(getLuaSelf(L, 1));
+        const classifier_t classifier = static_cast<classifier_t>(getLuaInteger(L, 2));
+        lua_pushboolean(L, lua_obj->classifiers[classifier]);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting classifier state: %s", e.what());
+        lua_pushboolean(L, false);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
 void BathyFields::fromLua (lua_State* L, int index)
@@ -86,6 +106,7 @@ BathyFields::BathyFields(lua_State* L):
                         {"refraction",          &refraction},
                         {"uncertainty",         &uncertainty} })
 {
+    LuaEngine::setAttrFunc(L, "classifier", luaClassifier);
 }
 
 /******************************************************************************
