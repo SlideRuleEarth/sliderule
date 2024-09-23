@@ -145,6 +145,15 @@ int RequestFields::luaGetField (lua_State* L)
     {
         RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
         const char* field_name = getLuaString(L, 2);
+
+        // check the metatable for the key (to support functions)
+        luaL_getmetatable(L, LUA_META_NAME);
+        lua_pushstring(L, field_name);
+        lua_rawget(L, -2);
+        if (!lua_isnil(L, -1))  return 1;
+        else lua_pop(L, 1); 
+
+        // handle field access
         return lua_obj->fields[field_name].field->toLua(L);
     }
     catch(const RunTimeException& e)

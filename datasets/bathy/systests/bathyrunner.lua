@@ -1,7 +1,18 @@
 local console = require("console")
-local earthdata = require("earth_data_query")
 local asset = require("asset")
 local json = require("json")
+local prettyprint = require("prettyprint")
+
+-- configure logging
+console.monitor:config(core.LOG, core.INFO)
+sys.setlvl(core.LOG, core.INFO)
+
+
+
+local parms = core.parms()
+prettyprint:display(parms)
+
+do return end
 
 -- get command line parameters
 local resource = arg[1] or "ATL03_20190604044922_10220307_006_02.h5"
@@ -24,12 +35,8 @@ local parms = {
     pass_invalid = true,
     generate_ndwi = true,
     use_bathy_mask = true,
-    beam_file_prefix = "/tmp/bathy_"
 }
 
--- configure logging
-console.monitor:config(core.LOG, core.INFO)
-sys.setlvl(core.LOG, core.INFO)
 
 -- load asset directory
 local assets = asset.loaddir()
@@ -43,61 +50,13 @@ while not aws.csget("nsidc-cloud") do
     sys.wait(1)
 end
 
--- get credentials for icesat2 asset
+-- get credentials for landsat asset
 local lpdaac_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"}
-local lpdaac_script = core.script("earth_data_auth", json.encode(lpdaac_parms))
+local lpdaac_script = core.script("earth_data_auth", json.encode(lpdaac_parms)):name("LpdaacAuthScript")
 while not aws.csget("lpdaac-cloud") do
     print("Waiting to authenticate to LPDAAC...")
     sys.wait(1)
 end
-
--- atl09 granules
-local rc, rsps = earthdata.search({ poly = poly, asset = "icesat2-atl09" })
-if rc == earthdata.SUCCESS then parms["resource09"] = rsps end
-
--- build hls raster object
-local year      = resource:sub(7,10)
-local month     = resource:sub(11,12)
-local day       = resource:sub(13,14)
-local rdate     = string.format("%04d-%02d-%02dT00:00:00Z", year, month, day)
-local rgps      = time.gmt2gps(rdate)
-local rdelta    = 5 * 24 * 60 * 60 * 1000 -- 5 days * (24 hours/day * 60 minutes/hour * 60 seconds/minute * 1000 milliseconds/second)
-local t0        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps - rdelta))
-local t1        = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps + rdelta))
-local hls_parms = {
-    asset = "landsat-hls",
-    t0 = t0,
-    t1 = t1,
-    use_poi_time = true,
-    bands = {"NDWI"},
-    poly = poly
-}
-rc, rsps = earthdata.stac(hls_parms)
-hls_parms["catalog"] = (rc == earthdata.SUCCESS) and json.encode(rsps) or nil
-local hls_parms_obj = geo.parms(hls_parms)
-
--- create bathy reader
-local starttime = time.latch();
-local bathy_parms = icesat2.bathyparms(parms)
-local reader = icesat2.bathyreader(nsidc_s3, resource, "resultq", bathy_parms, hls_parms_obj, false)
-
--- wait until bathy reader completes
-local timeout = parms["node_timeout"] or parms["timeout"] or core.NODE_TIMEOUT
-local duration = 0
-local interval = 10 < timeout and 10 or timeout -- seconds
-while not reader:waiton(interval * 1000) do
-    duration = duration + interval
-    if timeout >= 0 and duration >= timeout then
-        sys.log(core.ERROR, string.format("bathy reader for %s timed-out after %d seconds", resource, duration))
-        do return false end
-    end
-    sys.log(core.INFO, string.format("bathy reader continuing to read %s (after %d seconds)", resource, duration))
-end
-
-local stoptime = time.latch();
-local dtime = stoptime - starttime
-print(string.format("\nBathyReader run time: %.4f", dtime))
-
 
 -- exit
 sys.quit()

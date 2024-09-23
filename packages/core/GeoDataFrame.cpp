@@ -76,6 +76,15 @@ int GeoDataFrame::FrameColumn::luaGetData (lua_State* L)
     {
         GeoDataFrame::FrameColumn* lua_obj = dynamic_cast<GeoDataFrame::FrameColumn*>(getLuaSelf(L, 1));
         const long index = getLuaInteger(L, 2);
+
+        // check the metatable for the key (to support functions)
+        luaL_getmetatable(L, lua_obj->LuaMetaName);
+        lua_pushinteger(L, index);
+        lua_rawget(L, -2);
+        if (!lua_isnil(L, -1))  return 1;
+        else lua_pop(L, 1); 
+
+        // handle field access
         return lua_obj->column.toLua(L, index);
     }
     catch(const RunTimeException& e)
@@ -512,6 +521,15 @@ int GeoDataFrame::luaGetColumnData(lua_State* L)
     {
         GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
         const char* column_name = getLuaString(L, 2);
+
+        // check the metatable for the key (to support functions)
+        luaL_getmetatable(L, lua_obj->LuaMetaName);
+        lua_pushstring(L, column_name);
+        lua_rawget(L, -2);
+        if (!lua_isnil(L, -1))  return 1;
+        else lua_pop(L, 1); 
+
+        // handle column access
         const Field& column_field = lua_obj->columnFields[column_name];
         return createLuaObject(L, new FrameColumn(L, column_field));
     }
