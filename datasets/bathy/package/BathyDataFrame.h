@@ -77,9 +77,9 @@ class BathyDataFrame: public GeoDataFrame
 
         /* Meta Data */
         FieldElement<string>        beam;               // ATL03 beam (i.e. gt1l, gt1r, gt2l, gt2r, gt3l, gt3r)
-        FieldElement<int>           track;              // ATL03 track (i.e. 1, 2, 3)
+        FieldElement<int>           track {0};          // ATL03 track (i.e. 1, 2, 3)
         FieldElement<int>           pair;               // ATL03 pair (i.e. left, right)
-        FieldElement<int>           spot;               // ATL03 spot (1, 2, 3, 4, 5, 6)
+        FieldElement<int>           spot {0};           // ATL03 spot (1, 2, 3, 4, 5, 6)
         FieldElement<int>           utm_zone;
         FieldElement<bool>          utm_is_north;
 
@@ -206,7 +206,7 @@ class BathyDataFrame: public GeoDataFrame
         BathyMask*                  bathyMask;
         H5Object*                   hdf03;      // atl03 granule
         H5Object*                   hdf09;      // atl09 granule
-        Publisher                   rqstQ;
+        Publisher*                  rqstQ;
         int                         signalConfColIndex;
         int                         readTimeoutMs;
         bool                        valid;

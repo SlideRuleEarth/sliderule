@@ -69,15 +69,14 @@ class BathyQtreesClassifier: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathyQtreesClassifier (lua_State* L, BathyFields* _fields);
+        BathyQtreesClassifier (lua_State* L, BathyFields* _parms);
         ~BathyQtreesClassifier (void) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        BathyFields* fieldsPtr;
-        const QtreesFields& parms;
+        BathyFields* parms;
 };
 
 #endif  /* __bathy_qtrees_classifier__ */

@@ -225,12 +225,11 @@ template <class T, int N>
 string FieldArray<T,N>::toJson (void) const
 {
     string str("[");
-    for(int i = 0; i < N-1; i++)
+    for(int i = 0; i < N; i++)
     {
         str += convertToJson(values[i]);
-        str += ",";
+        if(i < N - 1) str += ",";
     }
-    str += convertToJson(values[N-1]);
     str += "]";
     return str;
 }

@@ -192,14 +192,10 @@ string FieldList<T>::toJson (void) const
 {
     const size_t size = values.size();
     string str("[");
-    for(size_t i = 0; i < size-1; i++)
+    for(size_t i = 0; i < size; i++)
     {
         str += convertToJson(values[i]);
-        str += ",";
-    }
-    if(size > 0)
-    {
-        str += convertToJson(values[size-1]);
+        if(i < size - 1) str += ",";
     }
     str += "]";
     return str;

@@ -77,8 +77,7 @@ class BathyCoastnetClassifier: public GeoDataFrame::FrameRunner
          * Data
          *--------------------------------------------------------------------*/
 
-        BathyFields* fieldsPtr;
-        const CoastnetFields& parms;
+        BathyFields* parms;
 };
 
 #endif  /* __bathy_coastnet_classifier__ */

@@ -87,6 +87,10 @@ class CredentialStore
             FieldElement<string>    sessionToken;
             FieldElement<string>    expiration;
 
+            string toJson(void) const override {
+                return "{}"; // do not export credentials for security reasons
+            };
+
             Credential(void): FieldDictionary({
                 {ACCESS_KEY_ID_STR, &accessKeyId},
                 {ACCESS_KEY_ID_STR1, &accessKeyId},

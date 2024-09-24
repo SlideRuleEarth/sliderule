@@ -380,12 +380,18 @@ int UT_Field::testDictionary(lua_State* L)
 
         FieldColumn<bool> cc1;
         cc1.append(true);
-        cc1.append(true);
+        cc1.append(false);
         bye.cc.append(cc1);
         FieldColumn<bool> cc2;
         cc2.append(true);
         cc2.append(true);
         bye.cc.append(cc2);
+
+        // output to json
+        const string json = bye.toJson();
+
+        // check output
+        ut_assert(lua_obj, json == "{\"a\":[true,false],\"cc\":[[true,false],[true,true]],\"e\":true,\"c\":[true,false,true]}", "json output was incorrect: %s", json.c_str());
 
         // return status
         lua_pushboolean(L, ut_status(lua_obj));

@@ -207,7 +207,7 @@ string FieldEnumeration<T,N>::toJson (void) const
             T selection;
             convertFromIndex(i, selection);
             str += convertToJson(selection);
-            str += ",";
+            if(i < N - 1) str += ",";
         }
     }
     str += "]";

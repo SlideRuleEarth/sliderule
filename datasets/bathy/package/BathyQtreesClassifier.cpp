@@ -81,11 +81,11 @@ int BathyQtreesClassifier::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyQtreesClassifier::BathyQtreesClassifier (lua_State* L, BathyFields* _fields):
+BathyQtreesClassifier::BathyQtreesClassifier (lua_State* L, BathyFields* _parms):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
-    fieldsPtr(_fields),
-    parms(_fields->qtrees)
+    parms(_parms)
 {
+    assert(parms);
 }
 
 /*----------------------------------------------------------------------------
@@ -93,7 +93,7 @@ BathyQtreesClassifier::BathyQtreesClassifier (lua_State* L, BathyFields* _fields
  *----------------------------------------------------------------------------*/
 BathyQtreesClassifier::~BathyQtreesClassifier (void)
 {
-    fieldsPtr->releaseLuaObject();
+    parms->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -103,6 +103,7 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
 {
     try
     {
+        const QtreesFields& qparms = parms->qtrees;
         const FieldColumn<double>& x_atc = *dynamic_cast<FieldColumn<double>*>(dataframe->getColumnData("x_atc"));
         const FieldColumn<double>& ortho_h = *dynamic_cast<FieldColumn<double>*>(dataframe->getColumnData("ortho_h"));
         FieldColumn<int8_t>& class_ph = *dynamic_cast<FieldColumn<int8_t>*>(dataframe->getColumnData("class_ph"));
@@ -132,7 +133,7 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
             samples.push_back(s);
 
             // Clear classification (if necessary)
-            if(parms.setClass.value)
+            if(qparms.setClass.value)
             {
                 class_ph[i] = BathyFields::UNCLASSIFIED;
             }
@@ -140,8 +141,8 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
 
         // Build arguments
         struct cmd::args args;
-        args.verbose = parms.verbose.value;
-        args.model_filename = parms.model.value;
+        args.verbose = qparms.verbose.value;
+        args.model_filename = qparms.model.value;
 
         // Run classification
         classify(args, samples);
@@ -149,8 +150,8 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
         // Update extents
         for(size_t i = 0; i < number_of_samples; i++)
         {
-            if(parms.setSurface.value) surface_h[i] = samples[i].surface_elevation;
-            if(parms.setClass.value) class_ph[i] = samples[i].prediction;
+            if(qparms.setSurface.value) surface_h[i] = samples[i].surface_elevation;
+            if(qparms.setClass.value) class_ph[i] = samples[i].prediction;
             predictions[i][BathyFields::QTREES] = samples[i].prediction;
         }
     }

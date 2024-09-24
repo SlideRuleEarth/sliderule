@@ -71,7 +71,7 @@ class BathyKd: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit BathyKd (lua_State* L, const UncertaintyFields& parms, const char* resource_kd);
+        explicit BathyKd (lua_State* L, H5Coro::Context* _context);
         ~BathyKd (void) override;
 
         /*--------------------------------------------------------------------

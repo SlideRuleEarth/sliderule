@@ -81,7 +81,7 @@ int BathyDataFrame::luaCreate (lua_State* L)
         _mask = dynamic_cast<BathyMask*>(getLuaObject(L, 3, GeoLib::TIFFImage::OBJECT_TYPE, true, NULL));
         _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE));
         _hdf09 = dynamic_cast<H5Object*>(getLuaObject(L, 5, H5Object::OBJECT_TYPE));
-        const char* rqstq_name = getLuaString(L, 6);
+        const char* rqstq_name = getLuaString(L, 6, true, NULL);
 
         /* Return Reader Object */
         return createLuaObject(L, new BathyDataFrame(L, beam_str, _parms, _hdf03, _hdf09, rqstq_name, _mask));
@@ -146,11 +146,12 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     bathyMask(_mask),
     hdf03(_hdf03),
     hdf09(_hdf09),
-    rqstQ(rqstq_name),
+    rqstQ(NULL),
     readTimeoutMs(parms.readTimeout.value * 1000),
     valid(true)
 {
-    assert(rqstq_name);
+    /* Create Request Queue Publisher (if supplied) */
+    if(rqstq_name) rqstQ = new Publisher(rqstq_name);
 
     /* Call Parent Class Initialization of GeoColumns */
     populateGeoColumns();
@@ -181,8 +182,8 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     catch(const RunTimeException& e)
     {
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, &rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, &rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
+        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
+        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, rqstQ, &active, "Failure on resource %s: %s", parms.resource.value.c_str(), e.what());
 
         /* Indicate End of Data */
         signalComplete();
@@ -196,6 +197,8 @@ BathyDataFrame::~BathyDataFrame (void)
 {
     active = false;
     delete pid;
+    
+    delete rqstQ;
 
     hdf03->releaseLuaObject();
     hdf09->releaseLuaObject();
@@ -700,16 +703,16 @@ void* BathyDataFrame::subsettingThread (void* parm)
         dataframe.surface_h.initialize(dataframe.length(), 0.0); // populated by sea surface finder
         dataframe.sigma_thu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
         dataframe.sigma_tvu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
-        dataframe.predictions.initialize(dataframe.length(), {0, 0, 0, 0, 0, 0, 0, 0});
+        dataframe.predictions.initialize(dataframe.length(), {0, 0, 0, 0, 0, 0, 0, 0, 0});
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), &dataframe.rqstQ, &dataframe.active, "Failure on resource %s track %d.%d: %s", parms.resource.value.c_str(), dataframe.track.value, dataframe.pair.value, e.what());
+        alert(e.level(), e.code(), dataframe.rqstQ, &dataframe.active, "Failure on resource %s track %d.%d: %s", parms.resource.value.c_str(), dataframe.track.value, dataframe.pair.value, e.what());
         dataframe.valid = false;
     }
 
     /* Mark Completion */
-    mlog(INFO, "Completed processing resource %s", parms.resource.value.c_str());
+    mlog(INFO, "Completed processing spot %d for resource %s (%ld rows)", dataframe.spot.value, parms.resource.value.c_str(), dataframe.length());
     dataframe.signalComplete();
 
     /* Stop Trace */

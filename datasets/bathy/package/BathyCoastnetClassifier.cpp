@@ -80,11 +80,11 @@ int BathyCoastnetClassifier::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyCoastnetClassifier::BathyCoastnetClassifier (lua_State* L, BathyFields* _fields):
+BathyCoastnetClassifier::BathyCoastnetClassifier (lua_State* L, BathyFields* _parms):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
-    fieldsPtr(_fields),
-    parms(_fields->coastnet)
+    parms(_parms)
 {
+    assert(parms);
 }
 
 /*----------------------------------------------------------------------------
@@ -92,7 +92,7 @@ BathyCoastnetClassifier::BathyCoastnetClassifier (lua_State* L, BathyFields* _fi
  *----------------------------------------------------------------------------*/
 BathyCoastnetClassifier::~BathyCoastnetClassifier (void)
 {
-    fieldsPtr->releaseLuaObject();
+    parms->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -102,6 +102,7 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
 {
     try
     {
+        const CoastnetFields& cparms = parms->coastnet;
         const FieldColumn<double>& x_atc = *dynamic_cast<FieldColumn<double>*>(dataframe->getColumnData("x_atc"));
         const FieldColumn<double>& ortho_h = *dynamic_cast<FieldColumn<double>*>(dataframe->getColumnData("ortho_h"));
         FieldColumn<int8_t>& class_ph = *dynamic_cast<FieldColumn<int8_t>*>(dataframe->getColumnData("class_ph"));
@@ -129,7 +130,7 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
             samples.push_back(p);
 
             // Clear classification (if necessary)
-            if(parms.setClass.value)
+            if(cparms.setClass.value)
             {
                 class_ph[i] = BathyFields::UNCLASSIFIED;
             }
@@ -137,9 +138,9 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
 
         // Build arguments
         struct cmd::args args;
-        args.verbose = parms.verbose.value;
-        args.use_predictions = parms.usePredictions.value;
-        args.model_filename = parms.model.value;
+        args.verbose = cparms.verbose.value;
+        args.use_predictions = cparms.usePredictions.value;
+        args.model_filename = cparms.model.value;
 
         // Run classification
         const auto results = classify (samples, args);
@@ -147,7 +148,7 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
         // Update extents
         for(size_t i = 0; i < number_of_samples; i++)
         {
-            if(parms.setClass.value) class_ph[i] = results[i].prediction;
+            if(cparms.setClass.value) class_ph[i] = results[i].prediction;
             predictions[i][BathyFields::COASTNET] = results[i].prediction;
         }
     }

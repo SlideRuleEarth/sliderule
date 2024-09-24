@@ -69,15 +69,14 @@ class BathyOpenOceansPPClassifier: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathyOpenOceansPPClassifier (lua_State* L, BathyFields* _fields);
+        BathyOpenOceansPPClassifier (lua_State* L, BathyFields* _parms);
         ~BathyOpenOceansPPClassifier (void) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        BathyFields* fieldsPtr;
-        const OpenOceansPPFields& parms;
+        BathyFields* parms;
 };
 
 #endif  /* __bathy_openoceanspp_classifier__ */

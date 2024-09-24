@@ -136,10 +136,12 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
         // when signal confidence is supplied as a single option
         // instead of setting only that option, treat it as a level
         // where every selection that is that option or above is set
-        for(int i = 1; i < NUM_SIGNAL_CONF; i++)
+        bool selection = false;
+        for(int i = 0; i < NUM_SIGNAL_CONF; i++)
         {
             // set every element true after the first one found that is set to true
-            atl03Cnf.values[i] = atl03Cnf.values[i - 1]; 
+            atl03Cnf.values[i] = selection || atl03Cnf.values[i];
+            selection = atl03Cnf.values[i];
         }
     }
 

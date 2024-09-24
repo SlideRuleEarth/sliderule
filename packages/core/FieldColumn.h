@@ -131,7 +131,7 @@ inline uint32_t toEncoding(FieldColumn<string>& v)   { (void)v; return Field::NE
  *----------------------------------------------------------------------------*/
 template<class T>
 FieldColumn<T>::FieldColumn(uint32_t encoding_mask, long _chunk_size):
-    Field(COLUMN, getImpliedEncoding<T>() & encoding_mask),
+    Field(COLUMN, getImpliedEncoding<T>() | encoding_mask),
     currChunk(-1),
     currChunkOffset(_chunk_size),
     numElements(0),
@@ -223,6 +223,7 @@ void FieldColumn<T>::initialize(long size, const T& v)
         chunk[i] = v;
     }
     chunks.push_back(chunk);
+    numElements = size;
 }
 
 /*----------------------------------------------------------------------------
@@ -301,14 +302,10 @@ template <class T>
 string FieldColumn<T>::toJson (void) const
 {
     string str("[");
-    for(int i = 0; i < numElements-1; i++)
+    for(int i = 0; i < numElements; i++)
     {
         str += convertToJson(this->operator[](i));
-        str += ",";
-    }
-    if(numElements > 0)
-    {
-        str += convertToJson(this->operator[](numElements-1));
+        if(i < numElements - 1) str += ",";
     }
     str += "]";
     return str;

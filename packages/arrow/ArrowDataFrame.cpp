@@ -59,7 +59,7 @@
 * encode - T: field column type, B: arrow builder type
 *----------------------------------------------------------------------------*/
 template<class T, class B>
-void encode(const FieldColumn<T>* field_column, vector<shared_ptr<arrow::Array>>& columns ) 
+void encode(const FieldColumn<T>* field_column, vector<shared_ptr<arrow::Array>>& columns) 
 {
     B builder;
 
@@ -98,7 +98,7 @@ void encode(const FieldColumn<time8_t>* field_column, vector<shared_ptr<arrow::A
 * encodeArray - T: field column type, B: arrow builder type
 *----------------------------------------------------------------------------*/
 template<class T, class B>
-void encodeArray(const FieldColumn<FieldColumn<T>>* field_column, vector<shared_ptr<arrow::Array>>& columns ) 
+void encodeArray(const FieldColumn<FieldColumn<T>>* field_column, vector<shared_ptr<arrow::Array>>& columns) 
 {
     auto builder = make_shared<B>();
 
@@ -123,7 +123,7 @@ void encodeArray(const FieldColumn<FieldColumn<T>>* field_column, vector<shared_
 /*----------------------------------------------------------------------------
 * encodeArray - time8_t
 *----------------------------------------------------------------------------*/
-void encodeArray(const FieldColumn<FieldColumn<time8_t>>* field_column, vector<shared_ptr<arrow::Array>>& columns ) 
+void encodeArray(const FieldColumn<FieldColumn<time8_t>>* field_column, vector<shared_ptr<arrow::Array>>& columns) 
 {
     auto builder = make_shared<arrow::TimestampBuilder>(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
 
@@ -148,7 +148,7 @@ void encodeArray(const FieldColumn<FieldColumn<time8_t>>* field_column, vector<s
 /*----------------------------------------------------------------------------
 * encodeGeometry
 *----------------------------------------------------------------------------*/
-void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Array>>& columns ) 
+void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Array>>& columns) 
 {
     const long num_rows = dataframe.length();
     const FieldColumn<double>* x = dataframe.getXColumn();
@@ -409,7 +409,7 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const ArrowFie
             // geometry columns will be encoded below
             continue;
         }
-             
+
         // encode field to arrow
         const uint32_t field_trace_id = start_trace(INFO, trace_id, "encodeFields", "{\"field\": %s}", name);
         if(field->type == Field::COLUMN) 
@@ -481,10 +481,9 @@ int ArrowDataFrame::luaCreate (lua_State* L)
 {
     RequestFields* _parms = NULL;
     GeoDataFrame* _dataframe = NULL;
-
     try
     {
-        _parms = dynamic_cast<RequestFields*>(getLuaObject(L, 2, RequestFields::OBJECT_TYPE));
+        _parms = dynamic_cast<RequestFields*>(getLuaObject(L, 1, RequestFields::OBJECT_TYPE));
         _dataframe = dynamic_cast<GeoDataFrame*>(getLuaObject(L, 2, GeoDataFrame::OBJECT_TYPE));
         return createLuaObject(L, new ArrowDataFrame(L, _parms, _dataframe));
     }
@@ -503,12 +502,13 @@ int ArrowDataFrame::luaCreate (lua_State* L)
 int ArrowDataFrame::luaExport (lua_State* L)
 {
     bool status = false;
+    const char* unique_filename = ArrowCommon::getUniqueFileName(NULL);
 
     try
     {
         // get lua parameters
         ArrowDataFrame* lua_obj = dynamic_cast<ArrowDataFrame*>(getLuaSelf(L, 1));
-        const char* filename = getLuaString(L, 2, true, ArrowCommon::getUniqueFileName(NULL));
+        const char* filename = getLuaString(L, 2, true, unique_filename);
         const ArrowFields::format_t format = static_cast<ArrowFields::format_t>(getLuaInteger(L, 3, true, lua_obj->parms->output.format.value));
 
         // get references
@@ -648,6 +648,9 @@ int ArrowDataFrame::luaExport (lua_State* L)
     {
         mlog(e.level(), "Error exporting %s: %s", OBJECT_TYPE, e.what());
     }
+
+    // clean up
+    delete [] unique_filename;
 
     // return status     
     lua_pushboolean(L, status);

@@ -78,11 +78,11 @@ int BathyOpenOceansPPClassifier::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyOpenOceansPPClassifier::BathyOpenOceansPPClassifier (lua_State* L, BathyFields* _fields):
+BathyOpenOceansPPClassifier::BathyOpenOceansPPClassifier (lua_State* L, BathyFields* _parms):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
-    fieldsPtr(_fields),
-    parms(_fields->openoceanspp)
+    parms(_parms)
 {
+    assert(parms);
 }
 
 /*----------------------------------------------------------------------------
@@ -90,7 +90,7 @@ BathyOpenOceansPPClassifier::BathyOpenOceansPPClassifier (lua_State* L, BathyFie
  *----------------------------------------------------------------------------*/
 BathyOpenOceansPPClassifier::~BathyOpenOceansPPClassifier (void)
 {
-    fieldsPtr->releaseLuaObject();
+    parms->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -100,6 +100,7 @@ bool BathyOpenOceansPPClassifier::run (GeoDataFrame* dataframe)
 {
     try
     {
+        const OpenOceansPPFields& oparms = parms->openoceanspp;
         const FieldColumn<double>& x_atc = *dynamic_cast<FieldColumn<double>*>(dataframe->getColumnData("x_atc"));
         const FieldColumn<double>& ortho_h = *dynamic_cast<FieldColumn<double>*>(dataframe->getColumnData("ortho_h"));
         FieldColumn<int8_t>& class_ph = *dynamic_cast<FieldColumn<int8_t>*>(dataframe->getColumnData("class_ph"));
@@ -128,7 +129,7 @@ bool BathyOpenOceansPPClassifier::run (GeoDataFrame* dataframe)
             samples.push_back(photon);
 
             // Clear classification (if necessary)
-            if(parms.setClass.value)
+            if(oparms.setClass.value)
             {
                 class_ph[i] = BathyFields::UNCLASSIFIED;
             }
@@ -136,32 +137,32 @@ bool BathyOpenOceansPPClassifier::run (GeoDataFrame* dataframe)
 
         // Initialize Parameters
         oopp::params params = {
-            .x_resolution = parms.xResolution.value,
-            .z_resolution = parms.zResolution.value,
-            .z_min = parms.zMin.value,
-            .z_max = parms.zMax.value,
-            .surface_z_min = parms.surfaceZMin.value,
-            .surface_z_max = parms.surfaceZMax.value,
-            .bathy_min_depth = parms.bathyMinDepth.value,
-            .vertical_smoothing_sigma = parms.verticalSmoothingSigma.value,
-            .surface_smoothing_sigma = parms.surfaceSmoothingSigma.value,
-            .bathy_smoothing_sigma = parms.bathySmoothingSigma.value,
-            .min_peak_prominence = parms.minPeakProminence.value,
-            .min_peak_distance = parms.minPeakDistance.value,
-            .min_surface_photons_per_window = parms.minSurfacePhotonsPerWindow,
-            .min_bathy_photons_per_window = parms.minBathyPhotonsPerWindow,
+            .x_resolution = oparms.xResolution.value,
+            .z_resolution = oparms.zResolution.value,
+            .z_min = oparms.zMin.value,
+            .z_max = oparms.zMax.value,
+            .surface_z_min = oparms.surfaceZMin.value,
+            .surface_z_max = oparms.surfaceZMax.value,
+            .bathy_min_depth = oparms.bathyMinDepth.value,
+            .vertical_smoothing_sigma = oparms.verticalSmoothingSigma.value,
+            .surface_smoothing_sigma = oparms.surfaceSmoothingSigma.value,
+            .bathy_smoothing_sigma = oparms.bathySmoothingSigma.value,
+            .min_peak_prominence = oparms.minPeakProminence.value,
+            .min_peak_distance = oparms.minPeakDistance.value,
+            .min_surface_photons_per_window = oparms.minSurfacePhotonsPerWindow,
+            .min_bathy_photons_per_window = oparms.minBathyPhotonsPerWindow,
             .surface_n_stddev = 3.0,
             .bathy_n_stddev = 3.0
         }; 
 
         // Run classification
-        samples = classify (samples, params, parms.usePredictions.value);
+        samples = classify (samples, params, oparms.usePredictions.value);
 
         // Update extents
         for(size_t i = 0; i < number_of_samples; i++)
         {
-            if(parms.setSurface.value) surface_h[i] = samples[i].surface_elevation;
-            if(parms.setClass.value) class_ph[i] = samples[i].prediction;
+            if(oparms.setSurface.value) surface_h[i] = samples[i].surface_elevation;
+            if(oparms.setClass.value) class_ph[i] = samples[i].prediction;
             predictions[i][BathyFields::OPENOCEANSPP] = samples[i].prediction;
         }
     }

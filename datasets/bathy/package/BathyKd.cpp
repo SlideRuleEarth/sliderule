@@ -56,18 +56,22 @@ const struct luaL_Reg BathyKd::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int BathyKd::luaCreate (lua_State* L)
 {
-    BathyFields* _parms = NULL;
+    BathyFields* parms = NULL;
+    H5Coro::Context* _context = NULL;
     try
     {
-        _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
+        parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
         const char* resource_kd = getLuaString(L, 2);
-        if(!_parms->uncertainty.assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no asset provided");
-        return createLuaObject(L, new BathyKd(L, _parms->uncertainty, resource_kd));
+        if(!parms->uncertainty.assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no asset provided");
+        _context = new H5Coro::Context(parms->uncertainty.assetKd, resource_kd);
+        parms->releaseLuaObject();
+        return createLuaObject(L, new BathyKd(L, _context));
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating BathyKd: %s", e.what());
-        if(_parms) _parms->releaseLuaObject();
+        if(parms) parms->releaseLuaObject();
+        delete _context;
         return returnLuaStatus(L, false);
     }
 }
@@ -110,10 +114,11 @@ double BathyKd::getKd (double lon, double lat)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyKd::BathyKd (lua_State* L, const UncertaintyFields& parms, const char* resource_kd):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
+BathyKd::BathyKd (lua_State* L, H5Coro::Context* _context):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
+    context(_context)
 {
-    context = new H5Coro::Context(parms.assetKd, resource_kd);
+    assert(context);
     array = new H5Array<int16_t>(context, "Kd_490", H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS);
 }
 
