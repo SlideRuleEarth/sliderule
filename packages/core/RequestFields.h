@@ -108,7 +108,7 @@ class RequestFields: public LuaObject, public FieldDictionary
         FieldElement<string>            environmentVersion;
         
         #ifdef __arrow__
-        FieldElement<ArrowFields>       output;
+        ArrowFields                     output;
         #endif
 
         MathLib::point_t*               projectedPolygon    {NULL};

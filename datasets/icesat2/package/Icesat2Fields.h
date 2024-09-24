@@ -65,14 +65,12 @@ struct YapcFields: public FieldDictionary
     FieldElement<double>    win_h {6.0};    // window height (overrides calculated value if non-zero)
     FieldElement<double>    win_x {15.0};   // window width
     
-    YapcFields(void): 
-        FieldDictionary({ {"score",     &score},
-                          {"version",   &version}, 
-                          {"knn",       &knn},
-                          {"min_knn",   &min_knn},
-                          {"win_h",     &win_h},
-                          {"win_x",     &win_x} }) {};
+    YapcFields(void);
     ~YapcFields(void) override = default;
+
+    virtual void fromLua (lua_State* L, int index) override;
+
+    bool provided;
 };
 
 /******************/
@@ -92,15 +90,12 @@ struct PhorealFields: public FieldDictionary
     FieldElement<bool>              send_waveform {false};      // include the waveform in the results
     FieldElement<bool>              above_classifier {false};   // use the ABoVE classification algorithm
 
-    PhorealFields(void): 
-        FieldDictionary({ {"binsize",           &binsize},
-                          {"geoloc",            &geoloc},
-                          {"use_abs_h",         &use_abs_h},
-                          {"send_waveform",     &send_waveform},
-                          {"above_classifier",  &above_classifier} }) {
-            if(binsize.value <= 0.0) throw RunTimeException(CRITICAL, RTE_ERROR, "invalid binsize: %lf", binsize.value);
-        };
+    PhorealFields(void);
     ~PhorealFields(void) override = default;
+
+    virtual void fromLua (lua_State* L, int index) override;
+
+    bool provided;
 };
 
 /*******************/
@@ -322,7 +317,7 @@ class Icesat2Fields: public RequestFields
         FieldEnumeration<quality_ph_t,NUM_PHOTON_QUALITY>   qualityPh {true, false, false, false};                  // list of desired photon quality levels from atl03
         FieldEnumeration<atl08_class_t,NUM_ATL08_CLASSES>   atl08Class {false, false, false, false, false};         // list of surface classifications to use (leave empty to skip)
         FieldEnumeration<gt_t,NUM_SPOTS>                    beams {true, true, true, true, true, true};             // list of which beams (gt[l|r][1|2|3])
-        FieldElement<YapcFields>                            yapc;                                                   // settings used in YAPC algorithm
+        YapcFields                                          yapc;                                                   // settings used in YAPC algorithm
         FieldElement<int>                                   track {ALL_TRACKS};                                     // reference pair track number (1, 2, 3, or 0 for all tracks)
         FieldElement<int>                                   maxIterations {5};                                      // least squares fit iterations
         FieldElement<int>                                   minPhotonCount {10};                                    // PE
@@ -331,7 +326,7 @@ class Icesat2Fields: public RequestFields
         FieldElement<double>                                maxRobustDispersion {5.0};                              // sigma_r
         FieldElement<double>                                extentLength {40.0};                                    // length of ATL06 extent (meters or segments if dist_in_seg is true)
         FieldElement<double>                                extentStep {20.0};                                      // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
-        FieldElement<PhorealFields>                         phoreal;                                                // phoreal algorithm settings
+        PhorealFields                                       phoreal;                                                // phoreal algorithm settings
         FieldList<string>                                   atl03GeoFields;                                         // list of geolocation and geophys_corr fields to associate with an extent
         FieldList<string>                                   atl03PhFields;                                          // list of per-photon fields to associate with an extent
         FieldList<string>                                   atl06Fields;                                            // list of ATL06 fields to associate with an ATL06 subsetting request
@@ -409,7 +404,5 @@ inline uint32_t toEncoding(Icesat2Fields::atl08_class_t& v) { (void)v; return Fi
 inline uint32_t toEncoding(Icesat2Fields::quality_ph_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(Icesat2Fields::signal_conf_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(PhorealFields::phoreal_geoloc_t& v) { (void)v; return Field::INT32; }
-inline uint32_t toEncoding(PhorealFields& v) { (void)v; return Field::USER; }
-inline uint32_t toEncoding(YapcFields& v) { (void)v; return Field::USER; }
 
 #endif  /* __icesat2_fields__ */

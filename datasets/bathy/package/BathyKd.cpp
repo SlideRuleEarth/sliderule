@@ -61,8 +61,8 @@ int BathyKd::luaCreate (lua_State* L)
     {
         _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
         const char* resource_kd = getLuaString(L, 2);
-        if(!_parms->uncertainty.value.assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no asset provided");
-        return createLuaObject(L, new BathyKd(L, _parms->uncertainty.value, resource_kd));
+        if(!_parms->uncertainty.assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no asset provided");
+        return createLuaObject(L, new BathyKd(L, _parms->uncertainty, resource_kd));
     }
     catch(const RunTimeException& e)
     {

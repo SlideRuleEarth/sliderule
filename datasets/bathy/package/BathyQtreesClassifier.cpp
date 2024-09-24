@@ -84,7 +84,7 @@ int BathyQtreesClassifier::luaCreate (lua_State* L)
 BathyQtreesClassifier::BathyQtreesClassifier (lua_State* L, BathyFields* _fields):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     fieldsPtr(_fields),
-    parms(_fields->qtrees.value)
+    parms(_fields->qtrees)
 {
 }
 

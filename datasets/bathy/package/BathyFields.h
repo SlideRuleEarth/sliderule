@@ -68,7 +68,6 @@ struct SurfaceFields: public FieldDictionary
                           {"highest_peak_ration", &highestPeakRatio},
                           {"surace_width",        &surfaceWidth},
                           {"model_as_poisoon",    &modelAsPoisson} }) {
-        initialized = true;
     };
 
     virtual ~SurfaceFields(void) override = default;
@@ -87,7 +86,6 @@ struct RefractionFields: public FieldDictionary
         FieldDictionary({ {"use_water_ri_mask", &useWaterRIMask},
                           {"ri_air",            &RIAir}, 
                           {"ri_water",          &RIAir} }) {
-        initialized = true;
     };
 
     virtual ~RefractionFields(void) override = default;
@@ -106,7 +104,6 @@ struct UncertaintyFields: public FieldDictionary
         FieldDictionary({ {"asset_kd",      &assetKdName} }) {
         assetKd = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(assetKdName.value.c_str(), Asset::OBJECT_TYPE));
         if(!assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", assetKdName.value.c_str());
-        initialized = true;
     };
 
     virtual ~UncertaintyFields(void) override {
@@ -129,7 +126,6 @@ struct CoastnetFields: public FieldDictionary
                           {"set_class",         &setClass}, 
                           {"use_predictions",   &usePredictions}, 
                           {"verbose",           &verbose} }) {
-        initialized = true;
     };
 
     virtual ~CoastnetFields(void) override = default;
@@ -179,7 +175,6 @@ struct OpenOceansPPFields: public FieldDictionary
                           {"min_peak_distance",         &minPeakDistance} }) {
         minSurfacePhotonsPerWindow = (xResolution.value / 0.7) / 3;
         minBathyPhotonsPerWindow = (xResolution.value / 0.7) / 3;
-        initialized = true;
     };
 
     virtual ~OpenOceansPPFields(void) override = default;
@@ -200,7 +195,6 @@ struct QtreesFields: public FieldDictionary
                           {"set_class",     &setClass}, 
                           {"set_surface",   &setSurface}, 
                           {"verbose",       &verbose} }) {
-        initialized = true;
     };
 
     virtual ~QtreesFields(void) override = default;
@@ -282,12 +276,12 @@ class BathyFields: public Icesat2Fields
         FieldElement<bool>                              findSeaSurface {false};     // locally implemented sea surface finder
         FieldEnumeration<classifier_t, NUM_CLASSIFIERS> classifiers {true, true, true, true, true, true, true, true, true}; // which bathymetry classifiers to run
         FieldEnumeration<spot_t, NUM_SPOTS>             spots = {true, true, true, true, true, true}; // only used by downstream algorithms
-        FieldElement<SurfaceFields>                     surface;                    // surface finding fields
-        FieldElement<RefractionFields>                  refraction;                 // refraction correction fields
-        FieldElement<UncertaintyFields>                 uncertainty;                // uncertaintly calculation fields
-        FieldElement<CoastnetFields>                    coastnet;                   // coastnet fields
-        FieldElement<OpenOceansPPFields>                openoceanspp;               // openoceans++ fields
-        FieldElement<QtreesFields>                      qtrees;                     // qtrees fields
+        SurfaceFields                                   surface;                    // surface finding fields
+        RefractionFields                                refraction;                 // refraction correction fields
+        UncertaintyFields                               uncertainty;                // uncertaintly calculation fields
+        CoastnetFields                                  coastnet;                   // coastnet fields
+        OpenOceansPPFields                              openoceanspp;               // openoceans++ fields
+        QtreesFields                                    qtrees;                     // qtrees fields
 
     protected:
 
@@ -310,11 +304,5 @@ int convertToIndex(const BathyFields::classifier_t& v);
 void convertFromIndex(int index, BathyFields::classifier_t& v);
 
 inline uint32_t toEncoding(BathyFields::classifier_t& v) { (void)v; return Field::INT32; }
-inline uint32_t toEncoding(SurfaceFields& v) { (void)v; return Field::USER; }
-inline uint32_t toEncoding(UncertaintyFields& v) { (void)v; return Field::USER; }
-inline uint32_t toEncoding(RefractionFields& v) { (void)v; return Field::USER; }
-inline uint32_t toEncoding(CoastnetFields& v) { (void)v; return Field::USER; }
-inline uint32_t toEncoding(OpenOceansPPFields& v) { (void)v; return Field::USER; }
-inline uint32_t toEncoding(QtreesFields& v) { (void)v; return Field::USER; }
 
 #endif  /* __bathy_fields__ */

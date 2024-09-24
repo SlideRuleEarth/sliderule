@@ -136,7 +136,7 @@ int CredentialStore::luaGet(lua_State* L)
         const Credential& credential = CredentialStore::get(identity);
 
         /* Return Credentials */
-        if(credential.initialized)
+        if(!credential.expiration.value.empty())
         {
             return credential.toLua(L);
         }
@@ -164,12 +164,14 @@ int CredentialStore::luaPut(lua_State* L)
 
         /* Get Credentials */
         Credential credential;
-        credential.fromLua(L, 2);
-        if(!credential.provided)
+        if(lua_istable(L, 2))
+        {
+            credential.fromLua(L, 2);
+        }
+        else
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "must supply table for credentials");
         }
-
         /* Put Credentials */
         status = CredentialStore::put(asset, credential);
     }

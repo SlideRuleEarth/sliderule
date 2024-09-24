@@ -124,8 +124,6 @@ class CredentialStore
                 secretAccessKey = c.secretAccessKey;
                 sessionToken = c.sessionToken;
                 expiration = c.expiration;
-                provided = c.provided;
-                initialized = c.initialized;
             };
             
             Credential& operator=(const Credential& c) {
@@ -134,8 +132,6 @@ class CredentialStore
                     secretAccessKey = c.secretAccessKey;
                     sessionToken = c.sessionToken;
                     expiration = c.expiration;
-                    provided = c.provided;
-                    initialized = c.initialized;
                 } 
 
                 return *this;

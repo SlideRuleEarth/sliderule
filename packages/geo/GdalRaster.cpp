@@ -457,7 +457,7 @@ void GdalRaster::initAwsAccess(GeoParms* _parms)
         const char* path = _parms->asset->getPath();
         const char* identity = _parms->asset->getIdentity();
         const CredentialStore::Credential credentials = CredentialStore::get(identity);
-        if(credentials.provided)
+        if(!credentials.expiration.value.empty())
         {
             VSISetPathSpecificOption(path, "AWS_ACCESS_KEY_ID", credentials.accessKeyId.value.c_str());
             VSISetPathSpecificOption(path, "AWS_SECRET_ACCESS_KEY", credentials.secretAccessKey.value.c_str());

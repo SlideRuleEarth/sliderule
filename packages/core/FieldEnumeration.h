@@ -118,7 +118,6 @@ FieldEnumeration<T,N>::FieldEnumeration(std::initializer_list<bool> init_list):
 {
     assert(N > 0);
     std::copy(init_list.begin(), init_list.end(), values);
-    initialized = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -291,8 +290,6 @@ void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
         }
 
         providedAsSingle = false;
-        provided = true;
-        initialized = true;
     }
     else if(!lua_isnil(L, index))// provided as a single selection
     {
@@ -309,8 +306,6 @@ void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
         }
 
         providedAsSingle = true;
-        provided = true;
-        initialized = true;
     }
 }
 
@@ -327,8 +322,6 @@ void FieldEnumeration<T,N>::copy(const FieldEnumeration<T,N>& array)
     }
     providedAsSingle = array.providedAsSingle;
     encoding = array.encoding;
-    provided = array.provided;
-    initialized = array.initialized;
 }
 
 #endif  /* __field_enumeration__ */

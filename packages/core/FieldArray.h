@@ -155,7 +155,6 @@ FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list):
 {
     assert(N == init_list.size());
     std::copy(init_list.begin(), init_list.end(), values);
-    initialized = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -198,7 +197,6 @@ FieldArray<T,N>& FieldArray<T,N>::operator=(std::initializer_list<T> init_list)
 {
     assert(N == init_list.size());
     std::copy(init_list.begin(), init_list.end(), values);
-    initialized = true;
     return *this;
 }
 
@@ -290,12 +288,7 @@ void FieldArray<T,N>::fromLua (lua_State* L, int index)
         convertFromLua(L, -1, values[i]);
         lua_pop(L, 1);
     }
-
-    // set provided
-    provided = true;
-    initialized = true;
 }
-
 
 /*----------------------------------------------------------------------------
  * copy
@@ -310,8 +303,6 @@ void FieldArray<T,N>::copy(const FieldArray<T,N>& array)
     }
     type = array.type;
     encoding = array.encoding;
-    provided = array.provided;
-    initialized = array.initialized;
 }
 
 #endif  /* __field_array__ */

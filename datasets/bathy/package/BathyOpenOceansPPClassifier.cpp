@@ -81,7 +81,7 @@ int BathyOpenOceansPPClassifier::luaCreate (lua_State* L)
 BathyOpenOceansPPClassifier::BathyOpenOceansPPClassifier (lua_State* L, BathyFields* _fields):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     fieldsPtr(_fields),
-    parms(_fields->openoceanspp.value)
+    parms(_fields->openoceanspp)
 {
 }
 

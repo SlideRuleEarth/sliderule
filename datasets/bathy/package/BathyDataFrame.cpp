@@ -228,7 +228,7 @@ BathyDataFrame::Region::Region (const BathyDataFrame& dataframe):
         num_photons = H5Coro::ALL_ROWS;
 
         /* Determine Spatial Extent */
-        if(dataframe.parms.regionMask.provided)
+        if(dataframe.parms.regionMask.cellSize.value > 0.0)
         {
             rasterregion(dataframe);
         }
@@ -616,7 +616,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 if(parms.version.value >= 6)
                 {
                     yapc_score = atl03.weight_ph[current_photon];
-                    if(yapc_score < parms.yapc.value.score.value)
+                    if(yapc_score < parms.yapc.score.value)
                     {
                         break;
                     }

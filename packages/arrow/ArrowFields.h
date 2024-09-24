@@ -77,7 +77,7 @@ class ArrowFields: public FieldDictionary
         FieldElement<string>    region;
 
         #ifdef __aws__
-        FieldElement<CredentialStore::Credential> credentials;
+        CredentialStore::Credential credentials;
         #endif
 
         /*--------------------------------------------------------------------
@@ -86,15 +86,13 @@ class ArrowFields: public FieldDictionary
 
         ArrowFields     (void);
         ~ArrowFields    (void) override = default;
+
+        void fromLua    (lua_State* L, int index) override;
 };
 
 /******************************************************************************
  * FUNCTIONS
  ******************************************************************************/
-
-string convertToJson(const ArrowFields& v);
-int convertToLua(lua_State* L, const ArrowFields& v);
-void convertFromLua(lua_State* L, int index, ArrowFields& v);
 
 string convertToJson(const ArrowFields::format_t& v);
 int convertToLua(lua_State* L, const ArrowFields::format_t& v);

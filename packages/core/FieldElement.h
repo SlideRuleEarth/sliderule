@@ -87,7 +87,6 @@ FieldElement<T>::FieldElement(T default_value):
     Field(ELEMENT, getImpliedEncoding<T>()),
     value(default_value)
 {
-    initialized = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -107,8 +106,6 @@ FieldElement<T>::FieldElement(const FieldElement<T>& element):
     Field(ELEMENT, getImpliedEncoding<T>())
 {
     value = element.value;
-    provided = element.provided;
-    initialized = element.initialized;
 }
 
 /*----------------------------------------------------------------------------
@@ -119,8 +116,6 @@ FieldElement<T>& FieldElement<T>::operator=(const FieldElement<T>& element)
 {
     value = element.value;
     encoding = element.encoding;
-    provided = element.provided;
-    initialized = element.initialized;
     return *this;
 }
 
@@ -177,8 +172,6 @@ template <class T>
 void FieldElement<T>::fromLua (lua_State* L, int index) 
 {
     convertFromLua(L, index, value);
-    provided = true;
-    initialized = true;
 }
 
 #endif  /* __field_element__ */

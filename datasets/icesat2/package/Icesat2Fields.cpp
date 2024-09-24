@@ -43,6 +43,63 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * Constructor - YapcFields
+ *----------------------------------------------------------------------------*/
+YapcFields::YapcFields(): 
+    FieldDictionary({ {"score",     &score},
+                      {"version",   &version}, 
+                      {"knn",       &knn},
+                      {"min_knn",   &min_knn},
+                      {"win_h",     &win_h},
+                      {"win_x",     &win_x} }),
+    provided(false)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * fromLua - YapcFields
+ *----------------------------------------------------------------------------*/
+void YapcFields::fromLua (lua_State* L, int index)
+{
+    if(lua_istable(L, index))
+    {
+        FieldDictionary::fromLua(L, index);
+        provided = true;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor - PhorealFields
+ *----------------------------------------------------------------------------*/
+PhorealFields::PhorealFields(): 
+    FieldDictionary({ {"binsize",           &binsize},
+                      {"geoloc",            &geoloc},
+                      {"use_abs_h",         &use_abs_h},
+                      {"send_waveform",     &send_waveform},
+                      {"above_classifier",  &above_classifier} }),
+    provided(false) 
+{
+}
+
+/*----------------------------------------------------------------------------
+ * fromLua - PhorealFields
+ *----------------------------------------------------------------------------*/
+void PhorealFields::fromLua (lua_State* L, int index)
+{
+    if(lua_istable(L, index))
+    {
+        FieldDictionary::fromLua(L, index);
+
+        if(binsize.value <= 0.0)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid binsize: %lf", binsize.value);
+        }
+
+        provided = true;
+    }
+}
+
+/*----------------------------------------------------------------------------
  * luaCreate - create(<parameter table>)
  *----------------------------------------------------------------------------*/
 int Icesat2Fields::luaCreate (lua_State* L)
@@ -74,7 +131,7 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
     if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", assetName.value.c_str());
 
     // handle signal confidence options
-    if(atl03Cnf.provided && atl03Cnf.providedAsSingle)
+    if(atl03Cnf.providedAsSingle)
     {        
         // when signal confidence is supplied as a single option
         // instead of setting only that option, treat it as a level
@@ -110,7 +167,7 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
     }
 
     // handle ATL08 fields
-    if(atl08Fields.provided)
+    if(!atl08Fields.values.empty())
     {
         if(!stages[STAGE_ATL08])
         {

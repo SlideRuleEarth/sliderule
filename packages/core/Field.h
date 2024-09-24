@@ -77,7 +77,6 @@ class Field
         static const uint32_t Y_COLUMN      = 0x20000000;
         static const uint32_t Z_COLUMN      = 0x10000000;
 
-
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
@@ -98,7 +97,7 @@ class Field
          *--------------------------------------------------------------------*/
 
                         Field       (type_t _type, uint32_t _encoding): 
-                                    type(_type), encoding(_encoding), provided(false), initialized(false) {};
+                                    type(_type), encoding(_encoding) {};
 
         virtual         ~Field      (void) = default;
         
@@ -128,8 +127,6 @@ class Field
 
         type_t type;        // child class type (dictionary, column, etc)
         uint32_t encoding;  // encoding = 0xn0000vv; n: upper bits for nested types; vv: <value type>
-        bool provided;      // whether the field has been populated by the fromLua function
-        bool initialized;   // whether the field has been initialized by any means
 };
 
 /******************************************************************************

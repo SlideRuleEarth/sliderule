@@ -170,9 +170,6 @@ FieldColumn<T>::FieldColumn(const FieldColumn<T>& column):
         }
         chunks.push_back(chunk);
     }
-    // base class
-    provided = column.provided;
-    initialized = column.initialized;
 }
 
 /*----------------------------------------------------------------------------
@@ -226,7 +223,6 @@ void FieldColumn<T>::initialize(long size, const T& v)
         chunk[i] = v;
     }
     chunks.push_back(chunk);
-    initialized = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -272,8 +268,6 @@ FieldColumn<T>& FieldColumn<T>::operator= (const FieldColumn<T>& column)
     }
 
     encoding = column.encoding;
-    provided = column.provided;
-    initialized = column.provided;
 
     return *this;
 }
@@ -370,13 +364,6 @@ void FieldColumn<T>::fromLua (lua_State* L, int index)
         convertFromLua(L, -1, value);
         lua_pop(L, 1);
         append(value);
-    }
-
-    // set provided
-    if(num_elements > 0)
-    {
-        provided = true;
-        initialized = true;
     }
 }
 

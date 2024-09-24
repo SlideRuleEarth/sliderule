@@ -179,7 +179,7 @@ ArrowParms::ArrowParms (lua_State* L, int index):
 
                 /* Credentials */
                 credentials = CredentialStore::get(asset->getIdentity());
-                if(credentials.provided) mlog(DEBUG, "Setting %s from asset %s", CREDENTIALS, asset_name);
+                if(!credentials.expiration.value.empty()) mlog(DEBUG, "Setting %s from asset %s", CREDENTIALS, asset_name);
                 else mlog(ERROR, "Failed to get credentials from asset %s", asset_name);
 
                 /* Release Asset */
@@ -196,7 +196,7 @@ ArrowParms::ArrowParms (lua_State* L, int index):
                 /* AWS Credentials */
                 lua_getfield(L, index, CREDENTIALS);
                 credentials.fromLua(L, -1);
-                if(credentials.provided) mlog(DEBUG, "Setting %s from user", CREDENTIALS);
+                if(!credentials.expiration.value.empty()) mlog(DEBUG, "Setting %s from user", CREDENTIALS);
                 lua_pop(L, 1);
             }
             #endif
@@ -250,7 +250,7 @@ const char* ArrowParms::tojson (void) const
     doc.AddMember("ancillary_fields", ancillary, allocator);
 
     #ifdef __aws__
-    doc.AddMember("credentials", rapidjson::Value(credentials.provided ? "provided" : "not provided", allocator), allocator);
+    doc.AddMember("credentials", rapidjson::Value(!credentials.expiration.value.empty() ? "provided" : "not provided", allocator), allocator);
     #endif
 
     rapidjson::StringBuffer buffer;

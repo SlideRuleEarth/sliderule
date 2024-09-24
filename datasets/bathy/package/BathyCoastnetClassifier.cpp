@@ -83,7 +83,7 @@ int BathyCoastnetClassifier::luaCreate (lua_State* L)
 BathyCoastnetClassifier::BathyCoastnetClassifier (lua_State* L, BathyFields* _fields):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     fieldsPtr(_fields),
-    parms(_fields->coastnet.value)
+    parms(_fields->coastnet)
 {
 }
 

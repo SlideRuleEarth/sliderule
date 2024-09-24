@@ -320,9 +320,6 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     LuaEngine::setAttrFunc(L, "run",        luaRun);
     LuaEngine::setAttrFunc(L, "finished",   luaRunComplete);
     
-    // initialized
-    initialized = true;
-
     // start runner
     pid = new Thread(runThread, this);
 }
@@ -476,9 +473,6 @@ void GeoDataFrame::fromLua (lua_State* L, int index)
         lua_getfield(L, index, GDF);
         columnFields.fromLua(L, -1);                
         lua_pop(L, 1);
-        
-        provided = true; // even if no element within table are set, presence of table is sufficient
-        initialized = true;
     }
 }
 

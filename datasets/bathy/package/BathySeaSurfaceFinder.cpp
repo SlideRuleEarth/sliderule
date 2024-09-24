@@ -96,7 +96,7 @@ bool BathySeaSurfaceFinder::run(GeoDataFrame* dataframe)
     const double start = TimeLib::latchtime();
 
     BathyDataFrame& df = *dynamic_cast<BathyDataFrame*>(dataframe);
-    const SurfaceFields& surface_parms = parms->surface.value;
+    const SurfaceFields& surface_parms = parms->surface;
 
     /* for each extent (p0 = start photon) */
     for(long p0 = 0; p0 < df.length(); p0 += parms->phInExtent.value)

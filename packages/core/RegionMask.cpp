@@ -99,13 +99,11 @@ int RegionMask::toLua (lua_State* L) const
 void RegionMask::fromLua (lua_State* L, int index)
 {
     FieldDictionary::fromLua(L, index);    
-    provided = true;
     if(cellSize.value > 0.0 && !geojson.value.empty())
     {
         if(RegionMask::burnMask) 
         {
             RegionMask::burnMask(*this);
-            initialized = true;
         }
         else
         {

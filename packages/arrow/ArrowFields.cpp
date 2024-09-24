@@ -58,57 +58,40 @@ ArrowFields::ArrowFields (void):
     })
 {
 }
-/******************************************************************************
- * FUNCTIONS
- ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * convertToJson
+ * fromLua
  *----------------------------------------------------------------------------*/
-string convertToJson(const ArrowFields& v)
+void ArrowFields::fromLua (lua_State* L, int index)
 {
-    return v.toJson();
-}
-
-/*----------------------------------------------------------------------------
- * convertToLua
- *----------------------------------------------------------------------------*/
-int convertToLua(lua_State* L, const ArrowFields& v)
-{
-    return v.toLua(L);
-}
-
-/*----------------------------------------------------------------------------
- * convertFromLua
- *----------------------------------------------------------------------------*/
-void convertFromLua(lua_State* L, int index, ArrowFields& v)
-{
-    v.fromLua(L, index);    
-    v.provided = true;
-    v.initialized = true;
+    FieldDictionary::fromLua(L, index);    
 
     // check format
-    if(v.format.value == ArrowFields::PARQUET && v.asGeo.value)
+    if(format.value == ArrowFields::PARQUET && asGeo.value)
     {
-        v.format.value = ArrowFields::GEOPARQUET;
+        format.value = ArrowFields::GEOPARQUET;
     }
-    else if(v.format.value == ArrowFields::GEOPARQUET && !v.asGeo.value)
+    else if(format.value == ArrowFields::GEOPARQUET && !asGeo.value)
     {
-        v.asGeo = true;
+        asGeo = true;
     }
 
     // handle asset
     #ifdef __aws__
-    if(!v.assetName.value.empty())
+    if(!assetName.value.empty())
     {
         /* Get Asset */
-        Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(v.assetName.value.c_str(), Asset::OBJECT_TYPE));
-        v.region = StringLib::duplicate(asset->getRegion());
-        v.credentials = CredentialStore::get(asset->getIdentity());
+        Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(assetName.value.c_str(), Asset::OBJECT_TYPE));
+        region = StringLib::duplicate(asset->getRegion());
+        credentials = CredentialStore::get(asset->getIdentity());
         asset->releaseLuaObject();
     }
     #endif
 }
+
+/******************************************************************************
+ * FUNCTIONS
+ ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * convertToJson

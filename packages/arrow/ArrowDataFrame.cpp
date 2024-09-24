@@ -509,12 +509,12 @@ int ArrowDataFrame::luaExport (lua_State* L)
         // get lua parameters
         ArrowDataFrame* lua_obj = dynamic_cast<ArrowDataFrame*>(getLuaSelf(L, 1));
         const char* filename = getLuaString(L, 2, true, ArrowCommon::getUniqueFileName(NULL));
-        const ArrowFields::format_t format = static_cast<ArrowFields::format_t>(getLuaInteger(L, 3, true, lua_obj->parms->output.value.format.value));
+        const ArrowFields::format_t format = static_cast<ArrowFields::format_t>(getLuaInteger(L, 3, true, lua_obj->parms->output.format.value));
 
         // get references
         const RequestFields& parms = *lua_obj->parms;
         const GeoDataFrame& dataframe = *lua_obj->dataframe;
-        const ArrowFields& arrow_parms = parms.output.value;
+        const ArrowFields& arrow_parms = parms.output;
           
         // start trace
         const uint32_t parent_trace_id = EventLib::grabId();

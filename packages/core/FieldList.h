@@ -257,10 +257,6 @@ void FieldList<T>::fromLua (lua_State* L, int index)
         lua_pop(L, 1);
         values.push_back(value);
     }
-
-    // set provided
-    provided = true;
-    initialized = true;
 }
 
 /*----------------------------------------------------------------------------
@@ -274,8 +270,6 @@ void FieldList<T>::copy(const FieldList<T>& array)
         values[i] = array.values[i];
     }
     encoding = array.encoding;
-    provided = array.provided;
-    initialized = array.initialized;
 }
 
 #endif  /* __field_list__ */

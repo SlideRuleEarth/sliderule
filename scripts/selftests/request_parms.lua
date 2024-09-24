@@ -22,8 +22,8 @@ runner.check(ptable["node_timeout"] == core.NODE_TIMEOUT)
 runner.check(ptable["read_timeout"] == core.READ_TIMEOUT)
 runner.check(ptable["cluster_size_hint"] == 0)
 runner.check(ptable["points_in_polygon"] == 0)
-runner.check(ptable["region_mask"] == nil)
-runner.check(ptable["region_mask"] == nil)
+runner.check(ptable["region_mask"]["rows"] == 0)
+runner.check(ptable["region_mask"]["cols"] == 0)
 
 prettyprint.display(ptable)
 
