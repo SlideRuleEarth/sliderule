@@ -18,7 +18,7 @@ local profile       = {} -- timing profiling table
 -- function: cleanup 
 -------------------------------------------------------
 local function cleanup(_crenv, _transaction_id)
---    runner.cleanup(_crenv) -- container runtime environment
+    runner.cleanup(_crenv) -- container runtime environment
     core.orchunlock({_transaction_id}) -- unlock transaction
 end
 
@@ -28,7 +28,6 @@ end
 local function ctimeout()
     local current_timeout = (timeout * 1000) - (time.gps() - rqsttime)
     if current_timeout < 0 then current_timeout = 0 end
-    print("CTIMEOUT", math.tointeger(current_timeout))
     return math.tointeger(current_timeout)
 end
 
@@ -225,7 +224,7 @@ for beam,dataframe in pairs(dataframes) do
                 userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create arrow dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
                 cleanup(crenv, transaction_id)
                 return
-            elseif not arrow_dataframe:export(outputs[beam], arrow.CSV) then
+            elseif not arrow_dataframe:export(outputs[beam], arrow.PARQUET) then
                 userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to write dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
                 cleanup(crenv, transaction_id)
                 return

@@ -640,7 +640,7 @@ int GeoDataFrame::luaRunComplete(lua_State* L)
                 status = lua_obj->waitRunComplete(interval);
                 if(!status)
                 {
-                    if(pub.getSubCnt() > 0)
+                    if(pub.getSubCnt() <= 0)
                     {
                         alert(ERROR, RTE_TIMEOUT, &pub, NULL, "request <%s> terminated while waiting", rspq);
                         break;

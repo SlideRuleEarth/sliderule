@@ -550,12 +550,12 @@ int ArrowDataFrame::luaExport (lua_State* L)
                 auto arrow_writer_props = parquet::ArrowWriterProperties::Builder().store_schema()->build();
 
                 // set metadata
-                auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-                if(arrow_parms.asGeo.value) appendGeoMetaData(metadata);
-                appendPandasMetaData(dataframe.getTimeColumnName().c_str(), metadata, schema);
-                metadata->Append("sliderule", parms.toJson());
-                metadata->Append("meta", dataframe.metaFields.toJson());
-                schema = schema->WithMetadata(metadata);
+//                auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
+//                if(arrow_parms.asGeo.value) appendGeoMetaData(metadata);
+//                appendPandasMetaData(dataframe.getTimeColumnName().c_str(), metadata, schema);
+//                metadata->Append("sliderule", parms.toJson());
+//                metadata->Append("meta", dataframe.metaFields.toJson());
+//                schema = schema->WithMetadata(metadata);
 
                 // create parquet writer
                 auto result = parquet::arrow::FileWriter::Open(*schema, ::arrow::default_memory_pool(), file_output_stream, writer_props, arrow_writer_props);

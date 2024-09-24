@@ -730,7 +730,7 @@ int LuaObject::luaWaitOn(lua_State* L)
                 status = lua_obj->waitComplete(interval);
                 if(!status)
                 {
-                    if(pub.getSubCnt() > 0)
+                    if(pub.getSubCnt() <= 0)
                     {
                         alert(ERROR, RTE_TIMEOUT, &pub, NULL, "request <%s> terminated while waiting", rspq);
                         break;
