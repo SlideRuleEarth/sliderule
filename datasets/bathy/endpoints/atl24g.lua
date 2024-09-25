@@ -197,11 +197,11 @@ for _, beam in ipairs(parms["beams"]) do
         userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> on %s failed to create bathy dataframe for beam %s", rspq, resource, beam))
     else
         dataframes[beam]:run(seasurface)
---        dataframes[beam]:run(qtrees)
---        dataframes[beam]:run(coastnet)
---        dataframes[beam]:run(openoceanspp)
---        dataframes[beam]:run(refraction)
---        dataframes[beam]:run(uncertainty)
+        dataframes[beam]:run(qtrees)
+        dataframes[beam]:run(coastnet)
+        dataframes[beam]:run(openoceanspp)
+        dataframes[beam]:run(refraction)
+        dataframes[beam]:run(uncertainty)
         dataframes[beam]:run(core.TERMINATE)
     end
 end

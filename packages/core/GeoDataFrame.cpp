@@ -653,7 +653,7 @@ int GeoDataFrame::luaRunComplete(lua_State* L)
                     else
                     {
                         duration += interval;
-                        alert(INFO, RTE_TIMEOUT, &pub, NULL, "request <%s> ... continuing to read after %d seconds", rspq, duration / 1000);
+                        alert(INFO, RTE_TIMEOUT, &pub, NULL, "request <%s> ... still running after %d seconds", rspq, duration / 1000);
                     }
                 }
             }
