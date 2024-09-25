@@ -737,13 +737,13 @@ int LuaObject::luaWaitOn(lua_State* L)
                     }
                     else if(duration >= timeout)
                     {
-                        alert(ERROR, RTE_TIMEOUT, &pub, NULL, "request <%s> timed-out after %d seconds", rspq, duration);
+                        alert(ERROR, RTE_TIMEOUT, &pub, NULL, "request <%s> timed-out after %d seconds", rspq, timeout);
                         break;
                     }
                     else
                     {
                         duration += interval;
-                        alert(INFO, RTE_TIMEOUT, &pub, NULL, "request <%s> ... still running after %d seconds", rspq, duration / 1000);
+                        alert(INFO, RTE_TIMEOUT, &pub, NULL, "request <%s> ... %s still running after %d seconds", rspq, lua_obj->getName(), duration / 1000);
                     }
                 }
             }
