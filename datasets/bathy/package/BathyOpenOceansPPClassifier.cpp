@@ -98,6 +98,8 @@ BathyOpenOceansPPClassifier::~BathyOpenOceansPPClassifier (void)
  *----------------------------------------------------------------------------*/
 bool BathyOpenOceansPPClassifier::run (GeoDataFrame* dataframe)
 {
+    const double start = TimeLib::latchtime();
+
     try
     {
         const OpenOceansPPFields& oparms = parms->openoceanspp;
@@ -172,6 +174,7 @@ bool BathyOpenOceansPPClassifier::run (GeoDataFrame* dataframe)
         return false;
     }
 
+    updateRunTime(TimeLib::latchtime() - start);
     return true;
 }
 

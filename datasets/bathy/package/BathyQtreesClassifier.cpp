@@ -101,6 +101,8 @@ BathyQtreesClassifier::~BathyQtreesClassifier (void)
  *----------------------------------------------------------------------------*/
 bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
 {
+    const double start = TimeLib::latchtime();
+
     try
     {
         const QtreesFields& qparms = parms->qtrees;
@@ -161,6 +163,7 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
         return false;
     }
 
+    updateRunTime(TimeLib::latchtime() - start);
     return true;
 }
 

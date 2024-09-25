@@ -235,6 +235,6 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
     }
 
     /* Mark Completion */
-    updateRunTime(start - TimeLib::latchtime());
+    updateRunTime(TimeLib::latchtime() - start);
     return true;
 }

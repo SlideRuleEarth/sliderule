@@ -11,14 +11,15 @@ local resource      = parms["resource"]
 local timeout       = parms["node_timeout"]
 local rqsttime      = time.gps()
 local userlog       = msg.publish(rspq) -- create user log publisher (alerts)
-local outputs       = {} -- table of all outputs that go into atl24 writer
+local tmp_filename  = "atl24.bin"
+local outputs       = {} -- table of all outputs that go into oceaneyes
 local profile       = {} -- timing profiling table
 
 -------------------------------------------------------
 -- function: cleanup 
 -------------------------------------------------------
 local function cleanup(_crenv, _transaction_id)
-    runner.cleanup(_crenv) -- container runtime environment
+--    runner.cleanup(_crenv) -- container runtime environment
     core.orchunlock({_transaction_id}) -- unlock transaction
 end
 
@@ -218,17 +219,19 @@ for beam,dataframe in pairs(dataframes) do
             cleanup(crenv, transaction_id)
             return
         else
-            outputs[beam] = string.format("%s/bathy_spot_%d.parquet", crenv.host_sandbox_directory, dataframe:meta("spot"))
+            local spot = dataframe:meta("spot")
+            local output_filename = string.format("%s/bathy_spot_%d.parquet", crenv.host_sandbox_directory, spot)
             local arrow_dataframe = arrow.dataframe(parms, dataframe)
             if not arrow_dataframe then
                 userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create arrow dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
                 cleanup(crenv, transaction_id)
                 return
-            elseif not arrow_dataframe:export(outputs[beam], arrow.PARQUET) then
+            elseif not arrow_dataframe:export(output_filename, arrow.PARQUET) then
                 userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to write dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
                 cleanup(crenv, transaction_id)
                 return
             end
+            outputs[beam] = string.format("%s/bathy_spot_%d.parquet", crenv.container_sandbox_mount, spot)
         end
     else
         userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> on %s timed out waiting for dataframe to complete on spot %d", rspq, resource, dataframe:meta("spot")))
@@ -260,6 +263,13 @@ if granule then
 end
 
 -------------------------------------------------------
+-- clean up object to cut down on memory usage
+-------------------------------------------------------
+atl03h5:destroy()
+atl09h5:destroy()
+kd490:destroy()
+
+-------------------------------------------------------
 -- get profiles
 -------------------------------------------------------
 profile["seasurface"] = seasurface and seasurface:runtime() or 0.0
@@ -268,30 +278,24 @@ profile["uncertainty"] = uncertainty and uncertainty:runtime() or 0.0
 profile["qtrees"] = qtrees and qtrees:runtime() or 0.0
 profile["coastnet"] = coastnet and coastnet:runtime() or 0.0
 profile["openoceanspp"] = openoceanspp and openoceanspp:runtime() or 0.0
+profile["duration"] = (time.gps() - rqsttime) / 1000.0
 
--- clean up object to cut down on memory usage
-atl03h5:destroy()
-atl09h5:destroy()
-kd490:destroy()
+-------------------------------------------------------
+-- set additional outputs
+-------------------------------------------------------
+outputs["profile"] = profile
+outputs["format"] = parms["output"]["format"]
+outputs["filename"] = crenv.container_sandbox_mount.."/"..tmp_filename
 
 -------------------------------------------------------
 -- run oceaneyes
 -------------------------------------------------------
-local tmp_atl24_filename = "atl24.bin"
 local container_parms = {
     image = "oceaneyes",
     name = "oceaneyes",
     command = string.format("/env/bin/python /runner.py %s/settings.json", crenv.container_sandbox_mount),
     timeout = ctimeout(),
-    parms = {
-        ["settings.json"] = {
-            input_files = outputs,
-            format = parms["output"]["format"],
-            atl24_filename = crenv.container_sandbox_mount.."/"..tmp_atl24_filename,
-            profile = profile,
-            duration = (time.gps() - rqsttime) / 1000.0
-        }
-    }
+    parms = { ["settings.json"] = outputs }
 }
 local container = runner.execute(crenv, container_parms, rspq)
 runner.wait(container, timeout)
@@ -299,8 +303,8 @@ runner.wait(container, timeout)
 -------------------------------------------------------
 -- send final output to user
 -------------------------------------------------------
-arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_atl24_filename, arrow.parms(parms["output"]), rspq)
-arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_atl24_filename..".json", arrow.parms(parms["output"]), rspq, parms["output"]["path"]..".json")
+arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_filename, arrow.parms(parms["output"]), rspq)
+arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_filename..".json", arrow.parms(parms["output"]), rspq, parms["output"]["path"]..".json")
 
 -------------------------------------------------------
 -- exit 

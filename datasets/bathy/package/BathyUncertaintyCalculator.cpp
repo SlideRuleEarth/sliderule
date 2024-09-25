@@ -297,6 +297,6 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
     }
 
     /* mark completion */
-    updateRunTime(start - TimeLib::latchtime());
+    updateRunTime(TimeLib::latchtime() - start);
     return true;
 }

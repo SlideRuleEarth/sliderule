@@ -100,6 +100,8 @@ BathyCoastnetClassifier::~BathyCoastnetClassifier (void)
  *----------------------------------------------------------------------------*/
 bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
 {
+    const double start = TimeLib::latchtime();
+
     try
     {
         const CoastnetFields& cparms = parms->coastnet;
@@ -158,6 +160,7 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
         return false;
     }
 
+    updateRunTime(TimeLib::latchtime() - start);
     return true;
 }
 
