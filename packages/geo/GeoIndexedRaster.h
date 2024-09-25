@@ -55,6 +55,9 @@ class GeoIndexedRaster: public RasterObject
          * Constants
          *--------------------------------------------------------------------*/
 
+        static const double DISTANCE;
+        static const double TOLERANCE;
+
         static const int   MAX_CACHE_SIZE     =  20;
         static const int   MAX_READER_THREADS = 200;
 

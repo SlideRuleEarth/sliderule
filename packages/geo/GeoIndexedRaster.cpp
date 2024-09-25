@@ -48,6 +48,9 @@
  * STATIC DATA
  ******************************************************************************/
 
+const double GeoIndexedRaster::DISTANCE  = 0.01;         /* Aproxiately 1000 meters at equator */
+const double GeoIndexedRaster::TOLERANCE = DISTANCE/10;  /* Tolerance for simplification */
+
 const char* GeoIndexedRaster::FLAGS_TAG = "Fmask";
 const char* GeoIndexedRaster::VALUE_TAG = "Value";
 const char* GeoIndexedRaster::DATE_TAG  = "datetime";
@@ -1044,9 +1047,6 @@ void* GeoIndexedRaster::unionThread(void* param)
     /* Create an empty geometry collection to hold all points */
     OGRGeometryCollection geometryCollection;
 
-    const double distance  = 0.01;        /* Aproxiately 1km at equator */
-    const double tolerance = distance;    /* Tolerance for simplification */
-
     /*
     * Create geometry collection from the bounding boxes around each point.
     * NOTE: Using buffered points is significantly more computationally
@@ -1055,7 +1055,7 @@ void* GeoIndexedRaster::unionThread(void* param)
     mlog(DEBUG, "Creating collection of bboxes from %d points, range: %d - %d",
          um->pointsRange.end - um->pointsRange.start, um->pointsRange.start, um->pointsRange.end);
 
-    double startTime = TimeLib::latchtime();
+    const double startTime = TimeLib::latchtime();
 
     const uint32_t start = um->pointsRange.start;
     const uint32_t end   = um->pointsRange.end;
@@ -1068,91 +1068,38 @@ void* GeoIndexedRaster::unionThread(void* param)
 
         /* Create a linear ring representing the bounding box */
         OGRLinearRing ring;
-        ring.addPoint(lon - distance, lat - distance);  /* Lower-left corner  */
-        ring.addPoint(lon + distance, lat - distance);  /* Lower-right corner */
-        ring.addPoint(lon + distance, lat + distance);  /* Upper-right corner */
-        ring.addPoint(lon - distance, lat + distance);  /* Upper-left corner  */
+        ring.addPoint(lon - DISTANCE, lat - DISTANCE);  /* Lower-left corner  */
+        ring.addPoint(lon + DISTANCE, lat - DISTANCE);  /* Lower-right corner */
+        ring.addPoint(lon + DISTANCE, lat + DISTANCE);  /* Upper-right corner */
+        ring.addPoint(lon - DISTANCE, lat + DISTANCE);  /* Upper-left corner  */
         ring.closeRings();
 
         /* Create a polygon from the ring */
         OGRPolygon* bboxPoly = new OGRPolygon();
         bboxPoly->addRing(&ring);
 
-        /* Add the polygon to the geometry collection */
-        geometryCollection.addGeometry(bboxPoly);
-
-        /* Clean up the bounding box */
-        OGRGeometryFactory::destroyGeometry(bboxPoly);
+        /* Add the bboxPoly to the geometry collection, collection takes ownership of bboxPoly */
+        geometryCollection.addGeometryDirectly(bboxPoly);
     }
     um->stats.points2polyTime = TimeLib::latchtime() - startTime;
     mlog(DEBUG, "Creating collection took %.3lf seconds", um->stats.points2polyTime);
 
-    /*
-     * Union the bounding boxes in batches to reduce computational complexity.
-     * NOTE: Union call fails with large number of geometries - must use batch union.
-     */
-    const int batchSize = 60;  /* Sweet spot for performance based on my testing */
-    OGRGeometry* unionPolygon = NULL;
-
-    mlog(DEBUG, "Unioning point geometries using batch size: %d", batchSize);
-    startTime = TimeLib::latchtime();
-    for(int i = 0; i < geometryCollection.getNumGeometries(); i += batchSize)
-    {
-        if(!um->obj->isSampling())
-        {
-            mlog(WARNING, "Sampling has been stopped, exiting union thread");
-            OGRGeometryFactory::destroyGeometry(unionPolygon);
-            return NULL;
-        }
-
-        OGRGeometry* batchUnion = NULL;
-        for(int j = i; j < std::min(i + batchSize, geometryCollection.getNumGeometries()); ++j)
-        {
-            OGRGeometry* geo = geometryCollection.getGeometryRef(j);
-            if(batchUnion == NULL)
-            {
-                batchUnion = geo->clone();
-            }
-            else
-            {
-                OGRGeometry* newUnion = batchUnion->Union(geo);
-                OGRGeometryFactory::destroyGeometry(batchUnion);
-                batchUnion = newUnion;
-            }
-        }
-
-        /* Combine the batch union with the overall union polygon */
-        if(batchUnion)
-        {
-            /* Simplify the batch union to reduce complexity */
-            OGRGeometry* simplifiedBatchUnion = batchUnion->Simplify(tolerance);
-            OGRGeometryFactory::destroyGeometry(batchUnion);
-            batchUnion = simplifiedBatchUnion;
-
-            if(unionPolygon == NULL)
-            {
-                /* Initial union polygon */
-                unionPolygon = batchUnion;
-            }
-            else
-            {
-                OGRGeometry* newUnionPolygon = unionPolygon->Union(batchUnion);
-                OGRGeometryFactory::destroyGeometry(unionPolygon);
-                unionPolygon = newUnionPolygon;
-                OGRGeometryFactory::destroyGeometry(batchUnion);
-            }
-        }
-    }
-
+    CPLErrorReset();
+    OGRGeometry* unionPolygon = geometryCollection.UnaryUnion();
     if(unionPolygon == NULL)
     {
-        mlog(ERROR, "Unioning geometries failed");
+        const char *msg = CPLGetLastErrorMsg();
+        const CPLErr errType = CPLGetLastErrorType();
+        if(errType == CE_Failure || errType == CE_Fatal)
+        {
+            mlog(ERROR, "UnaryUnion error: %s", msg);
+        }
         um->stats.unioningTime = TimeLib::latchtime() - startTime;
         return NULL;
     }
 
     /* Simplify the final union polygon to reduce complexity */
-    OGRGeometry* simplifiedPolygon = unionPolygon->Simplify(tolerance);
+    OGRGeometry* simplifiedPolygon = unionPolygon->Simplify(TOLERANCE);
     OGRGeometryFactory::destroyGeometry(unionPolygon);
     unionPolygon = simplifiedPolygon;
     if(simplifiedPolygon == NULL)
@@ -1162,7 +1109,6 @@ void* GeoIndexedRaster::unionThread(void* param)
 
     um->stats.unioningTime = TimeLib::latchtime() - startTime;
     mlog(DEBUG, "Unioning all geometries took %.3lf seconds", um->stats.unioningTime);
-
 
     /* Set the unioned polygon in the union maker object */
     um->unionPolygon = unionPolygon;
@@ -1537,7 +1483,7 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>
 
     std::vector<range_t> pointsRanges;
     getThreadsRanges(pointsRanges, points->size(), minPointsPerThread, numMaxThreads);
-    mlog(DEBUG, "Using %ld groupfinder threads to search for %ld points", pointsRanges.size(), points->size());
+    mlog(DEBUG, "Using %ld unionMaker threads to union %ld point's envelopes", pointsRanges.size(), points->size());
 
     const uint32_t numThreads = pointsRanges.size();
     const double startTime = TimeLib::latchtime();
@@ -1580,8 +1526,7 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>
             OGRGeometryFactory::destroyGeometry(um->unionPolygon);
         }
 
-        const double tolerance = 0.0005;  /* Simplification tolerance */
-        OGRGeometry* simplifiedPolygon = unionPolygon->Simplify(tolerance);
+        OGRGeometry* simplifiedPolygon = unionPolygon->Simplify(TOLERANCE);
         OGRGeometryFactory::destroyGeometry(unionPolygon);
         unionPolygon = simplifiedPolygon;
         if(simplifiedPolygon == NULL)
