@@ -200,14 +200,16 @@ template <class T, int N>
 string FieldEnumeration<T,N>::toJson (void) const
 {
     string str("[");
+    bool first = true;
     for(int i = 0; i < N; i++)
     {
         if(values[i])
         {
             T selection;
+            if(!first) str += ",";
+            else first = false;
             convertFromIndex(i, selection);
             str += convertToJson(selection);
-            if(i < N - 1) str += ",";
         }
     }
     str += "]";

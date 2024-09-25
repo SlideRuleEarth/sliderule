@@ -104,7 +104,7 @@ bool BathyOpenOceansPPClassifier::run (GeoDataFrame* dataframe)
     {
         const OpenOceansPPFields& oparms = parms->openoceanspp;
         const FieldColumn<double>& x_atc = *dynamic_cast<FieldColumn<double>*>(dataframe->getColumnData("x_atc"));
-        const FieldColumn<double>& ortho_h = *dynamic_cast<FieldColumn<double>*>(dataframe->getColumnData("ortho_h"));
+        const FieldColumn<float>& geoid_corr_h = *dynamic_cast<FieldColumn<float>*>(dataframe->getColumnData("geoid_corr_h"));
         FieldColumn<int8_t>& class_ph = *dynamic_cast<FieldColumn<int8_t>*>(dataframe->getColumnData("class_ph"));
         FieldColumn<float>& surface_h = *dynamic_cast<FieldColumn<float>*>(dataframe->getColumnData("surface_h"));
         FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>>& predictions = *dynamic_cast<FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>>*>(dataframe->getColumnData("predictions"));
@@ -122,7 +122,7 @@ bool BathyOpenOceansPPClassifier::run (GeoDataFrame* dataframe)
             oopp::photon photon = {
                 .h5_index = 0,
                 .x = x_atc[i],
-                .z = ortho_h[i],
+                .z = geoid_corr_h[i],
                 .cls = 0,
                 .prediction = static_cast<unsigned>(class_ph[i]),
                 .surface_elevation = 0.0,

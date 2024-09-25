@@ -9,6 +9,7 @@ export THP_MEM_ALLOC_ENABLE=1
 # memory allocations
 export LRU_CACHE_CAPACITY=1024
 
-# Run pointnet
-#/env/bin/python /pointnet/runner.py $1 $2 $3 $4
-/magic/bin/python /pointnet/runner.py $1 $2 $3 $4
+# Run OceanEyes
+#/env/bin/python /runner.py $1
+#/magic/bin/python /runner.py $1
+python runner.py $1

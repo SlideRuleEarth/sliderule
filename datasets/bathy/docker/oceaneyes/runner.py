@@ -35,7 +35,13 @@ import xgboost as xgb
 import multiprocessing
 import h5py
 import sys
+import time
 import json
+
+from cshelph import c_shelph as CSHELPH
+from medianfilter import medianmodel as MEDIANFILTER
+from bathypathfinder.BathyPathFinder import BathyPathSearch
+from pointnet.pointnet2 import PointNet2
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -61,9 +67,8 @@ with open(settings_json, 'r') as json_file:
     settings = json.load(json_file)
 
 # get setttings
-ensemble_model_filename     = settings.get('ensemble_model_filename', 'track_stacker_model.json')
-profile                     = settings.get('profile', {})
-format                      = settings.get('format', 'parquet')
+profile = settings.get('profile', {})
+format  = settings.get('format', 'parquet')
 
 # #####################
 # Read In Data
@@ -78,7 +83,6 @@ for beam in BEAMS:
         parquet_file = pq.ParquetFile(settings[beam])
         beam_meta = json.loads(parquet_file.metadata.metadata[b'meta'])
         beam_df = pd.read_parquet(settings[beam])
-        beam_df.set_index('index_ph', inplace=True)
         beam_df["spot"] = beam_meta["spot"]
         classifiers_2d = np.stack(beam_df['predictions'].values)
         for i in range(len(CLASSIFIERS)):
@@ -93,12 +97,116 @@ for beam in BEAMS:
             rqst_parms = json.loads(parquet_file.metadata.metadata[b'sliderule'])
 
 # #####################
-# Run Ensemble
+# CShelph
 # #####################
 
-# worker function
+def cshelph(beam, df):
+    print(f'Running cshelph on {beam}')
+    parms = settings.get('cshelph', {})
+    results = CSHELPH.c_shelph_classification(
+        df[["lat_ph", "lon_ph", "ortho_h", "index_ph", "class_ph"]], 
+        surface_buffer      = parms.get('surface_buffer', -0.5),
+        h_res               = parms.get('h_res', 0.5), 
+        lat_res             = parms.get('lat_res', 0.001), 
+        thresh              = parms.get('thresh', 0.5),
+        min_buffer          = parms.get('min_buffer', -80), 
+        max_buffer          = parms.get('max_buffer', 5),
+        sea_surface_label   = 41,
+        bathymetry_label    = 40 )
+    print(f'Completed cshelph on {beam}')
+    return results['classification']
+
+# #####################
+# MedianFilter
+# #####################
+
+def medianfilter(beam, df):
+    print(f'Running medianfilter on {beam}')
+    parms = settings.get('medianfilter', {})
+    results = MEDIANFILTER.rolling_median_bathy_classification(
+        point_cloud         = df[["lat_ph", "lon_ph", "ortho_h", "index_ph", "class_ph"]],
+        window_sizes        = parms.get('window_sizes', [51, 30, 7]) ,
+        kdiff               = parms.get('kdiff', 0.75),
+        kstd                = parms.get('kstd', 1.75),
+        high_low_buffer     = parms.get('high_low_buffer', 4),
+        min_photons         = parms.get('min_photons', 14),
+        segment_length      = parms.get('segment_length', 0.001),
+        compress_heights    = parms.get('compress_heights', None),
+        compress_lats       = parms.get('compress_lats', None))
+    print(f'Completed medianfilter on {beam}')
+    return results['classification']
+
+# #####################
+# BathyPathFinder
+# #####################
+
+def bathypathfinder(beam, df):
+    print(f'Running bathypathfinder on {beam}')
+    
+    # get parameters
+    parms           = settings.get('bathypathfinder', {})
+    tau             = parms.get('tau', 0.5) 
+    k               = parms.get('k', 15)
+    n               = parms.get('n', 99)
+    find_surface    = parms.get('find_surface', False)
+    
+    # build dataframe to process
+    bathy_df = pd.DataFrame()
+    bathy_df['x_atc'] = df['x_atc'].values
+    bathy_df['geoid_corr_h'] = df['geoid_corr_h'].values
+    bathy_df['class_ph'] = df['class_ph'].values
+
+    # keep only photons below sea surface
+    if not find_surface:
+        sea_surface_df = bathy_df[bathy_df['class_ph'] == 41]
+        sea_surface_bottom = sea_surface_df['geoid_corr_h'].min()
+        data_df = bathy_df.loc[bathy_df['geoid_corr_h'] < sea_surface_bottom] # remove sea photons and above
+    else:
+        data_df = bathy_df
+
+    # run bathy pathfinder
+    bps = BathyPathSearch(tau, k, n)
+    bps.fit(data_df['x_atc'], data_df['geoid_corr_h'], find_surface)
+    
+    # write bathy classifications to spot df
+    bathy_df['bathypathfinder'] = 0
+    bathy_df.loc[bps.bathy_photons.index, 'bathypathfinder'] = 40
+    if not find_surface:
+        bathy_df.loc[sea_surface_df.index, 'bathypathfinder'] = 41
+    else:
+        bathy_df.loc[bps.sea_surface_photons.index, 'bathypathfinder'] = 41
+    
+    print(f'Completed bathypathfinder on {beam}')
+    return bathy_df['bathypathfinder']
+
+# #####################
+# PointNet2
+# #####################
+
+def pointnet(beam, df):
+    print(f'Running pointet on {beam}')
+    parms = settings.get('pointnet', {})
+    results = PointNet2(df[['index_ph', 'x_ph', 'y_ph', 'geoid_corr_h', 'max_signal_conf', 'class_ph', 'surface_h']],
+        model_filename          = parms.get('model_filename', '/data/pointnet2_model.pth'),
+        maxElev                 = parms.get('maxElev', 10),
+        minElev                 = parms.get('minElev', -50),
+        minSignalConf           = parms.get('minSignalConf', 3),
+        gpu                     = parms.get('gpu', "0"),
+        num_point               = parms.get('num_point', 8192),
+        batch_size              = parms.get('batch_size', 8),
+        num_votes               = parms.get('num_votes', 10),
+        threshold               = parms.get('threshold', 0.5),
+        model_seed              = parms.get('model_seed', 24),
+        seaSurfaceDecimation    = parms.get('seaSurfaceDecimation', 0.8)) # removes 80% of sea surface
+    print(f'Completed pointet on {beam}')
+    return results
+
+# #####################
+# Ensemble
+# #####################
+
 def ensemble(beam, df):
-    global ensemble_model_filename
+    ensemble_model_filename = settings.get('ensemble_model_filename', 'track_stacker_model.json')
     print(f'Running ensemble on {beam}')
     df = df[['ortho_h', 'qtrees', 'cshelph', 'medianfilter', 'bathypathfinder', 'openoceans', 'openoceanspp', 'coastnet', 'pointnet']]    
     clf = xgb.XGBClassifier(device='cpu')
@@ -106,18 +214,36 @@ def ensemble(beam, df):
     p = clf.predict(df)
     p[p == 1] = 40
     p[p == 2] = 41
+    df['ensemble'] = p
     print(f'Completed ensemble on {beam}')
-    return p
 
-# run ensemble on each spot's dataframe
-pool = multiprocessing.Pool(processes=6)
-predictions = pool.starmap(ensemble, [(beam, beam_table[beam]) for beam in beam_list])
-pool.close()
-pool.join()
+# #####################
+# Run Classifiers
+# #####################
 
-# write ensemble results into dataframe
-for i in range(len(beam_list)):
-    beam_table[beam_list[i]]['ensemble'] = predictions[i]
+# runner function
+def runClassifier(classifier, classifier_func, num_processes=6):
+    global beam_list, beam_table, rqst_parms
+    start = time.time()
+    if classifier in rqst_parms["classifiers"]:
+        if num_processes > 1:
+            pool = multiprocessing.Pool(processes=num_processes)
+            results = pool.starmap(classifier_func, [(beam, beam_table[beam]) for beam in beam_list])
+            pool.close()
+            pool.join()
+            for i in range(len(beam_list)):
+                beam_table[beam_list[i]][classifier] = results[i]
+        else:
+            for beam in beam_list:
+                beam_table[beam][classifier] = classifier_func(beam, beam_table[beam])
+    return time.time() - start
+
+# call runners
+profile["cshelph"] = runClassifier("cshelph", cshelph)
+profile["medianfilter"] = runClassifier("medianfilter", medianfilter)
+profile["bathypathfinder"] = runClassifier("bathypathfinder", bathypathfinder)
+profile["pointnet"] = runClassifier("pointnet", pointnet, num_processes=1)
+profile["ensemble"] = runClassifier("ensemble", ensemble)
 
 # #####################
 # DataFrame & MetaData

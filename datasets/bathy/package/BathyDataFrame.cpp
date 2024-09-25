@@ -113,7 +113,6 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"x_atc",               &x_atc},
         {"y_atc",               &y_atc},
         {"background_rate",     &background_rate},
-        {"delta_h",             &delta_h},
         {"surface_h",           &surface_h},
         {"ortho_h",             &ortho_h},
         {"ellipse_h",           &ellipse_h},
@@ -125,6 +124,7 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"quality_ph",          &quality_ph},
         {"class_ph",            &class_ph},
         {"predictions",         &predictions},
+        {"geoid_corr_h",        &geoid_corr_h},
         {"wind_v",              &wind_v},
         {"ref_el",              &ref_el},
         {"ref_az",              &ref_az},
@@ -666,21 +666,21 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 dataframe.time_ns.append(Icesat2Fields::deltatime2timestamp(current_delta_time));
                 dataframe.index_ph.append(static_cast<int32_t>(region.first_photon) + current_photon);
                 dataframe.index_seg.append(static_cast<int32_t>(region.first_segment) + current_segment);
-                dataframe.lat_ph.append(latitude);
-                dataframe.lon_ph.append(longitude);
+                dataframe.lat_ph.append(latitude);  // corrected by refraction correction
+                dataframe.lon_ph.append(longitude);  // corrected by refraction correction
                 dataframe.x_ph.append(coord.x);
                 dataframe.y_ph.append(coord.y);
                 dataframe.x_atc.append(atl03.segment_dist_x[current_segment] + atl03.dist_ph_along[current_photon]);
                 dataframe.y_atc.append(atl03.dist_ph_across[current_photon]);
                 dataframe.background_rate.append(calculateBackground(current_segment, bckgrd_index, atl03));
-                dataframe.ortho_h.append(atl03.h_ph[current_photon] - atl03.geoid[current_segment]);
-                dataframe.ellipse_h.append(atl03.h_ph[current_photon]);
+                dataframe.ellipse_h.append(atl03.h_ph[current_photon]); // corrected by refraction correction
                 dataframe.yapc_score.append(yapc_score);
                 dataframe.max_signal_conf.append(atl03_cnf);
                 dataframe.quality_ph.append(quality_ph);
                 dataframe.processing_flags.append(on_boundary ? BathyFields::ON_BOUNDARY : 0x00);
 
                 /* Add Additional Photon Data to DataFrame */
+                dataframe.geoid_corr_h.append(atl03.h_ph[current_photon] - atl03.geoid[current_segment]);
                 dataframe.wind_v.append(wind_v);
                 dataframe.ref_el.append(atl03.ref_elev[current_segment]);
                 dataframe.ref_az.append(atl03.ref_azimuth[current_segment]);
@@ -698,8 +698,8 @@ void* BathyDataFrame::subsettingThread (void* parm)
         }
 
         /* Initialize Additional DataFrame Columns (populated later) */
+        dataframe.ortho_h.initialize(dataframe.length(), 0.0); // populated by refraction correction
         dataframe.class_ph.initialize(dataframe.length(), static_cast<uint8_t>(BathyFields::UNCLASSIFIED));
-        dataframe.delta_h.initialize(dataframe.length(), 0.0); // populated by refraction correction
         dataframe.surface_h.initialize(dataframe.length(), 0.0); // populated by sea surface finder
         dataframe.sigma_thu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
         dataframe.sigma_tvu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation

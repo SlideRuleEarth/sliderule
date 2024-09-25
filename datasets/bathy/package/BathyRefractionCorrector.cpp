@@ -222,8 +222,9 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
             const double dE = dY * sin(static_cast<double>(df.ref_az[i]));   // UTM offsets
             const double dN = dY * cos(static_cast<double>(df.ref_az[i]));
 
-            /* Save Refraction Height Correction */
-            df.delta_h[i] = dZ;
+            /* Apply Refraction Correction */
+            df.ortho_h[i] = df.geoid_corr_h[i] + dZ;
+            df.ellipse_h[i] = df.ellipse_h[i] + dZ;
 
             /* Correct Latitude and Longitude */
             const double corr_x_ph = df.x_ph[i] + dE;

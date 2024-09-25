@@ -94,7 +94,6 @@ class BathyDataFrame: public GeoDataFrame
         FieldColumn<double>         x_atc;              // along track distance calculated from segment_dist_x and dist_ph_along
         FieldColumn<double>         y_atc;              // dist_ph_across
         FieldColumn<double>         background_rate;    // PE per second
-        FieldColumn<float>          delta_h;            // refraction correction of height
         FieldColumn<float>          surface_h;          // orthometric height of sea surface at each photon location
         FieldColumn<double>         ortho_h {Field::Z_COLUMN}; // geoid corrected height of photon, calculated from h_ph and geoid
         FieldColumn<float>          ellipse_h;          // height of photon with respect to reference ellipsoid
@@ -106,6 +105,7 @@ class BathyDataFrame: public GeoDataFrame
         FieldColumn<int8_t>         quality_ph;         // atl03 quality flags
         FieldColumn<int8_t>         class_ph;           // photon classification
         FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>> predictions; // photon classification from each of the classifiers
+        FieldColumn<float>          geoid_corr_h;       // orthometric height without refraction correction (passed to classifiers)
         FieldColumn<float>          wind_v;             // wind speed (in meters/second)            
         FieldColumn<float>          ref_el;             // reference elevation
         FieldColumn<float>          ref_az;             // reference aziumth

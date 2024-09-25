@@ -39,7 +39,7 @@ Date: Jul 2023
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
-from pointnet2_utils import PointNetSetAbstractionMsg,PointNetSetAbstraction,PointNetFeaturePropagation
+from .pointnet2_utils import PointNetSetAbstractionMsg,PointNetSetAbstraction,PointNetFeaturePropagation
 
 
 class get_model(nn.Module):
