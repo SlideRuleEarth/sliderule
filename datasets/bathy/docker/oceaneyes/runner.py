@@ -28,6 +28,8 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 import numpy as np
 import xgboost as xgb
 import multiprocessing
@@ -41,11 +43,8 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 # constants
 ATLAS_GPS_EPOCH = 1198800018
 RELEASE = "1"
-
-
-import cshelph.runner as cshelph
-cshelph.run()
-sys.exit()
+CLASSIFIERS = ['qtrees', 'coastnet', 'openoceanspp', 'medianfilter', 'cshelph', 'bathypathfinder', 'pointnet', 'openoceans', 'ensemble']
+BEAMS = ["gt1l", "gt1r", "gt2l", "gt2r", "gt3l", "gt3r"]
 
 # #####################
 # Command Line Inputs
@@ -53,154 +52,116 @@ sys.exit()
 
 # check command line parameters
 if len(sys.argv) <= 1:
-    print("Not enough parameters: python runner.py <control json file> [<ancillary json file> <orbit json file>]")
+    print("Not enough parameters: python runner.py <settings json file>")
     sys.exit()
 
-# read control json
-control_json = sys.argv[1]
-with open(control_json, 'r') as json_file:
-    control = json.load(json_file)
+# read settings json
+settings_json = sys.argv[1]
+with open(settings_json, 'r') as json_file:
+    settings = json.load(json_file)
 
-# get inputs from control
-input_files = control["input_files"]
-output_parms = control["output_parms"]
-atl24_filename = control["atl24_filename"]
-version = control["version"]
-commit = control["commit"]
-environment = control["environment"]
-resource = control["resource"]
-
-# get ensemble filename
-ensemble_model_filename  = control.get('ensemble_model_filename', 'track_stacker_model.json')
+# get setttings
+ensemble_model_filename     = settings.get('ensemble_model_filename', 'track_stacker_model.json')
+profile                     = settings.get('profile', {})
+format                      = settings.get('format', 'parquet')
 
 # #####################
 # Read In Data
 # #####################
 
-# initialize spot table
-spot_table = {}
-
-# read in photons as dataframe from csv file
-for spot in input_files["spot_photons"]:
-    if spot not in spot_table:
-        spot_table[spot] = {}
-    spot_table[spot]["df"] = pd.read_csv(input_files["spot_photons"][spot], engine='pyarrow')
-print("Read photon data into dataframes")
-
-# read in granule info as dictionary from json file and add as necessary to dataframes
-for spot in input_files["spot_granule"]:
-    spot_table[spot]["info"] = json.load(open(input_files["spot_granule"][spot], 'r'))
-    spot_table[spot]["df"]["spot"] = spot_table[spot]["info"]["spot"] # add spot info to dataframe
-    spot_table[spot]["df"].set_index('index_ph', inplace=True)
-
-# read in photon classifications as dataframe from csv file and merge into dataframes
-for classifier in input_files["classifiers"]:
-    for spot in input_files["classifiers"][classifier]:
-        classifier_df = pd.read_csv(input_files["classifiers"][classifier][spot], engine='pyarrow')
-        classifier_df.rename(columns={'class_ph': classifier}, inplace=True)
-        classifier_df.set_index('index_ph', inplace=True)
-        spot_table[spot]["df"] = classifier_df.combine_first(spot_table[spot]["df"])
-print("Added photon classifications to dataframes")
-
-# #####################
-# Corrections
-# #####################
-
-# for each spot in the spot table
-for spot in spot_table:
-    spot_table[spot]["df"] = spot_table[spot]["df"].reset_index()
-    spot_df = spot_table[spot]["df"]
-
-    # apply refraction correction
-    spot_df["ellipse_h"] += spot_df["delta_h"]
-    spot_df["ortho_h"] += spot_df["delta_h"]
-
-    # calculate depth
-    spot_df["depth"] = 0.0
-    subaqueous = spot_df["ortho_h"] < spot_df["surface_h"]
-    spot_df.loc[subaqueous, 'depth'] = spot_df.loc[subaqueous, 'surface_h'] - spot_df.loc[subaqueous, 'ortho_h']
+beam_list = []
+beam_table = {}
+rqst_parms = {}
+for beam in BEAMS:
+    if beam in settings:
+        # read input data
+        parquet_file = pq.ParquetFile(settings[beam])
+        beam_meta = json.loads(parquet_file.metadata.metadata[b'meta'])
+        beam_df = pd.read_parquet(settings[beam])
+        beam_df.set_index('index_ph', inplace=True)
+        beam_df["spot"] = beam_meta["spot"]
+        classifiers_2d = np.stack(beam_df['predictions'].values)
+        for i in range(len(CLASSIFIERS)):
+            beam_df[CLASSIFIERS[i]] = classifiers_2d[:, i]
+        # set beam list
+        beam_list.append(beam)
+        # set beam table
+        beam_table[beam] = {}
+        beam_table[beam] = beam_df
+        # set request parameters
+        if len(rqst_parms) == 0:
+            rqst_parms = json.loads(parquet_file.metadata.metadata[b'sliderule'])
 
 # #####################
 # Run Ensemble
 # #####################
 
 # worker function
-def ensemble(spot, df):
+def ensemble(beam, df):
     global ensemble_model_filename
-    print(f'Running ensemble on {spot}')
+    print(f'Running ensemble on {beam}')
     df = df[['ortho_h', 'qtrees', 'cshelph', 'medianfilter', 'bathypathfinder', 'openoceans', 'openoceanspp', 'coastnet', 'pointnet']]    
     clf = xgb.XGBClassifier(device='cpu')
     clf.load_model("/data/" + ensemble_model_filename)
     p = clf.predict(df)
     p[p == 1] = 40
     p[p == 2] = 41
-    print(f'Completed ensemble on {spot}')
+    print(f'Completed ensemble on {beam}')
     return p
-
-# concatenate (vertically) all dataframes
-spot_dfs = [spot_table[spot]["df"] for spot in spot_table]
-spots = [spot for spot in spot_table]
 
 # run ensemble on each spot's dataframe
 pool = multiprocessing.Pool(processes=6)
-predictions = pool.starmap(ensemble, list(zip(spots, spot_dfs)))
+predictions = pool.starmap(ensemble, [(beam, beam_table[beam]) for beam in beam_list])
 pool.close()
 pool.join()
 
 # write ensemble results into dataframe
-for i in range(len(spot_dfs)):
-    spot_dfs[i]['ensemble'] = predictions[i]
+for i in range(len(beam_list)):
+    beam_table[beam_list[i]]['ensemble'] = predictions[i]
 
 # #####################
-# Metadata
+# DataFrame & MetaData
 # #####################
 
 # create one large dataframe of all spots
-df = pd.concat(spot_dfs)
+df = pd.concat([beam_table[beam] for beam in beam_list])
 print("Concatenated data frames into a single data frame")
 
 # build metadata table
-metadata = {spot: spot_table[spot]["info"] for spot in spot_table}
-metadata["profile"] = control["profile"]
-metadata["granule"] = {
+stats = {
     "total_photons": len(df),
     "sea_surface_photons": len(df[df["class_ph"] == 41]),
     "bathy_photons": len(df[df["class_ph"] == 40]),
     "subaqueous_photons": len(df[df["ortho_h"] < df["surface_h"]])
 }
-metadata["version"] = version
-metadata["commit"] = commit
-metadata["environment"] = environment
-metadata["resource"] = resource
-
-# write metadata to json file
-with open(atl24_filename + ".json", "w") as file:
-    file.write(json.dumps(metadata, indent=2))
 
 # #####################
 # Write Output
 # #####################
 
 # Arrow
-if output_parms["format"] == "parquet":
+if format == "parquet":
 
-    import pyarrow as pa
-    import pyarrow.parquet as pq
     table = pa.Table.from_pandas(df, preserve_index=False)
-    schema = table.schema.with_metadata({"sliderule": json.dumps(metadata)})
+    schema_metadata = {
+        "sliderule": json.dumps(rqst_parms),
+        "profile": json.dumps(profile),
+        "stats": json.dumps(stats)
+    }
+    schema = table.schema.with_metadata(schema_metadata)
     table = table.replace_schema_metadata(schema.metadata)
-    pq.write_table(table, atl24_filename)
-    print("Writing Parquet file: " + atl24_filename)
+    pq.write_table(table, settings["filename"])
+    print("Writing Parquet file: " + settings["filename"])
 
 # HDF5
-elif output_parms["format"] == "hdf5" or output_parms["format"] == "h5":
+elif format == "hdf5" or format == "h5":
 
     def add_variable(group, name, data, dtype, attrs):
         dataset = group.create_dataset(name, data=data, dtype=dtype)
         for key in attrs:
             dataset.attrs[key] = attrs[key]
 
-    with h5py.File(atl24_filename, 'w') as hf:
+    with h5py.File(settings["filename"], 'w') as hf:
 
         if len(sys.argv) > 3:
 
@@ -294,25 +255,25 @@ elif output_parms["format"] == "hdf5" or output_parms["format"] == "h5":
                          'long_name':'Release Number', 
                          'source':'Operations', 
                          'units':'1'})
-            add_variable(ancillary_group, "resource",            resource,                         h5py.string_dtype(encoding='utf-8'),
+            add_variable(ancillary_group, "resource",            rqst_parms["resource"],           h5py.string_dtype(encoding='utf-8'),
                         {'contentType':'auxiliaryInformation', 
                          'description':'ATL03 granule used to produce this granule', 
                          'long_name':'ATL03 Resource', 
                          'source':'Operations', 
                          'units':'1'})
-            add_variable(ancillary_group, "sliderule_version",   version,                          h5py.string_dtype(encoding='utf-8'),
+            add_variable(ancillary_group, "sliderule_version",   rqst_parms["sliderule_version"],  h5py.string_dtype(encoding='utf-8'),
                         {'contentType':'auxiliaryInformation', 
                          'description':'Version of SlideRule software used to generate this granule', 
                          'long_name':'SlideRule Version', 
                          'source':'Operations', 
                          'units':'1'})
-            add_variable(ancillary_group, "sliderule_commit",    commit,                           h5py.string_dtype(encoding='utf-8'),
+            add_variable(ancillary_group, "sliderule_commit",    rqst_parms["build_information"],  h5py.string_dtype(encoding='utf-8'),
                         {'contentType':'auxiliaryInformation', 
                          'description':'Git commit ID (https://github.com/SlideRuleEarth/sliderule.git) of SlideRule software used to generate this granule', 
                          'long_name':'SlideRule Commit', 
                          'source':'Operations', 
                          'units':'1'})
-            add_variable(ancillary_group, "sliderule_environment",   environment,                  h5py.string_dtype(encoding='utf-8'),
+            add_variable(ancillary_group, "sliderule_environment", rqst_parms["environment_version"], h5py.string_dtype(encoding='utf-8'),
                         {'contentType':'auxiliaryInformation', 
                          'description':'Git commit ID (https://github.com/SlideRuleEarth/sliderule.git) of SlideRule environment used to generate this granule', 
                          'long_name':'SlideRule Environment', 
@@ -524,4 +485,4 @@ elif output_parms["format"] == "hdf5" or output_parms["format"] == "h5":
                          'units':'scalar'})
 
 
-    print("HDF5 file written: " + atl24_filename)
+    print("HDF5 file written: " + settings["filename"])
