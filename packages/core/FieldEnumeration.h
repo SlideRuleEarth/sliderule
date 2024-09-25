@@ -58,7 +58,7 @@ class FieldEnumeration: public Field
                                 FieldEnumeration    (const FieldEnumeration<T,N>& array);
         virtual                 ~FieldEnumeration   (void) override = default;
 
-        bool                    get                 (int i) const;
+        bool                    enabled             (int i) const;
 
         FieldEnumeration<T,N>&  operator=           (const FieldEnumeration<T,N>& array);
         bool                    operator[]          (T i) const;
@@ -142,10 +142,10 @@ FieldEnumeration<T,N>::FieldEnumeration(const FieldEnumeration<T,N>& array)
 }
 
 /*----------------------------------------------------------------------------
- * get
+ * enabled
  *----------------------------------------------------------------------------*/
 template <class T, int N>
-bool FieldEnumeration<T,N>::get(int i) const
+bool FieldEnumeration<T,N>::enabled(int i) const
 {
     if(i < 0 || i >= N)
     {

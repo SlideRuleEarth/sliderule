@@ -54,6 +54,7 @@ class Field
          *--------------------------------------------------------------------*/
 
         // encodings - values
+        static const uint32_t VALUE_MASK    = 0x00FF;
         static const uint32_t BOOL          = 0x0001;
         static const uint32_t INT8          = 0x0002;
         static const uint32_t INT16         = 0x0003;
@@ -68,8 +69,9 @@ class Field
         static const uint32_t TIME8         = 0x000C;
         static const uint32_t STRING        = 0x000D;
         static const uint32_t USER          = 0x000E;
+        static const uint32_t NESTED_ARRAY  = 0x2000;
+        static const uint32_t NESTED_LIST   = 0x4000;
         static const uint32_t NESTED_COLUMN = 0x8000;
-        static const uint32_t NESTED_ARRAY  = 0x4000;
 
         // encodings - columns
         static const uint32_t TIME_COLUMN   = 0x80000000;
@@ -96,14 +98,25 @@ class Field
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Field       (type_t _type, uint32_t _encoding): 
-                                    type(_type), encoding(_encoding) {};
+        Field (type_t _type, uint32_t _encoding): 
+            type(_type), encoding(_encoding) {};
 
-        virtual         ~Field      (void) = default;
+        virtual ~Field (void) = default;
         
-        virtual string  toJson      (void) const = 0;
-        virtual int     toLua       (lua_State* L) const = 0;
-        virtual void    fromLua     (lua_State* L, int index) = 0;
+        virtual const Field* get (long i) const {
+            (void)i;
+            return NULL;
+        }
+
+        virtual long length (void) const {
+            return 0;
+        }
+
+        virtual string toJson (void) const = 0;
+
+        virtual int toLua (lua_State* L) const = 0;
+
+        virtual void fromLua (lua_State* L, int index) = 0;
 
         virtual int toLua (lua_State* L, long key) const {
             (void)key;

@@ -73,6 +73,7 @@ class ArrowFields: public FieldDictionary
         FieldElement<bool>      openOnComplete {false};     // flag to client to open file on completion
         FieldElement<bool>      asGeo {false};              // whether to create a standard geo-based formatted file
         FieldElement<bool>      withChecksum {false};       // whether to perform checksum on file and send EOF record
+        FieldElement<bool>      withValidation {false};     // whether to validate the arrow structure before outputing
         FieldElement<string>    assetName;
         FieldElement<string>    region;
 

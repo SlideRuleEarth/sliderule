@@ -129,7 +129,7 @@ bool BathyOpenOceansPPClassifier::run (GeoDataFrame* dataframe)
             samples.push_back(photon);
 
             // Clear classification (if necessary)
-            if(oparms.setClass.value)
+            if(oparms.setClass)
             {
                 class_ph[i] = BathyFields::UNCLASSIFIED;
             }
@@ -156,13 +156,13 @@ bool BathyOpenOceansPPClassifier::run (GeoDataFrame* dataframe)
         }; 
 
         // Run classification
-        samples = classify (samples, params, oparms.usePredictions.value);
+        samples = classify (samples, params, oparms.usePredictions);
 
         // Update extents
         for(size_t i = 0; i < number_of_samples; i++)
         {
-            if(oparms.setSurface.value) surface_h[i] = samples[i].surface_elevation;
-            if(oparms.setClass.value) class_ph[i] = samples[i].prediction;
+            if(oparms.setSurface) surface_h[i] = samples[i].surface_elevation;
+            if(oparms.setClass) class_ph[i] = samples[i].prediction;
             predictions[i][BathyFields::OPENOCEANSPP] = samples[i].prediction;
         }
     }

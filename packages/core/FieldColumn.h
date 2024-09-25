@@ -66,11 +66,13 @@ class FieldColumn: public Field
         long            append          (const T& v);
         void            initialize      (long size, const T& v);
         void            clear           (void);
-        long            length          (void) const;
+
+        long            length          (void) const override;
+        const Field*    get             (long i) const override;
 
         FieldColumn<T>& operator=       (const FieldColumn<T>& column);
-        T               operator[]      (int i) const;
-        T&              operator[]      (int i);
+        T               operator[]      (long i) const;
+        T&              operator[]      (long i);
 
         string          toJson          (void) const override;
         int             toLua           (lua_State* L) const override;
@@ -255,6 +257,17 @@ long FieldColumn<T>::length(void) const
 }
 
 /*----------------------------------------------------------------------------
+ * get
+ *----------------------------------------------------------------------------*/
+template<class T>
+const Field* FieldColumn<T>::get(long i) const
+{
+    const long chunk_index = i / chunkSize;
+    const long chunk_offset = i % chunkSize;
+    return reinterpret_cast<const Field*>(&chunks[chunk_index][chunk_offset]);
+}
+
+/*----------------------------------------------------------------------------
  * operator=
  *----------------------------------------------------------------------------*/
 template<class T>
@@ -277,7 +290,7 @@ FieldColumn<T>& FieldColumn<T>::operator= (const FieldColumn<T>& column)
  * operator[] - rvalue
  *----------------------------------------------------------------------------*/
 template<class T>
-T FieldColumn<T>::operator[](int i) const
+T FieldColumn<T>::operator[](long i) const
 {
     const long chunk_index = i / chunkSize;
     const long chunk_offset = i % chunkSize;
@@ -288,7 +301,7 @@ T FieldColumn<T>::operator[](int i) const
  * operator[] - lvalue
  *----------------------------------------------------------------------------*/
 template<class T>
-T& FieldColumn<T>::operator[](int i)
+T& FieldColumn<T>::operator[](long i)
 {
     const long chunk_index = i / chunkSize;
     const long chunk_offset = i % chunkSize;

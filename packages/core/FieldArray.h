@@ -41,11 +41,33 @@
 #include "Field.h"
 
 /******************************************************************************
- * CLASS
+ * CLASSES
  ******************************************************************************/
 
+template <class T>
+struct FieldUnsafeArray: public Field
+{
+    FieldUnsafeArray (T* _memPtr, int _size):
+        Field(ARRAY, getImpliedEncoding<T>()), 
+        memPtr(_memPtr),
+        size(_size) {};
+
+    ~FieldUnsafeArray (void) = default;
+
+    virtual long length (void) const override {
+        return size;
+    }
+
+    virtual const Field* get (long i) const override {
+        return reinterpret_cast<const Field*>(&memPtr[i]);
+    }
+
+    const T* memPtr;
+    const int size;
+};
+
 template <class T, int N>
-class FieldArray: public Field
+class FieldArray: public FieldUnsafeArray<T>
 {
     public:
 
@@ -57,6 +79,9 @@ class FieldArray: public Field
                             FieldArray      (void);
                             FieldArray      (const FieldArray<T,N>& array);
         virtual             ~FieldArray     (void) override = default;
+
+        long                length          (void) const override;
+        const Field*        get             (long i) const override;
 
         FieldArray<T,N>&    operator=       (const FieldArray<T,N>& array);
         FieldArray<T,N>&    operator=       (std::initializer_list<T> init_list);
@@ -102,45 +127,19 @@ inline void convertFromLua(lua_State* L, int index, FieldArray<T, N>& v) {
     v.fromLua(L, index);
 }
 
-// encoding
-template <int N>
-inline uint32_t toEncoding(FieldArray<bool, N>& v)     { (void)v; return Field::NESTED_ARRAY | Field::BOOL;   };
-
-template <int N>
-inline uint32_t toEncoding(FieldArray<int8_t, N>& v)   { (void)v; return Field::NESTED_ARRAY | Field::INT8;   };
-
-template <int N>
-inline uint32_t toEncoding(FieldArray<int16_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::INT16;  };
-
-template <int N>
-inline uint32_t toEncoding(FieldArray<int32_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::INT32;  };
-
-template <int N>
-inline uint32_t toEncoding(FieldArray<int64_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::INT64;  };
-
-template <int N>
-inline uint32_t toEncoding(FieldArray<uint8_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::UINT8;  };
-
-template <int N>
-inline uint32_t toEncoding(FieldArray<uint16_t, N>& v) { (void)v; return Field::NESTED_ARRAY | Field::UINT16; };
-
-template <int N>
-inline uint32_t toEncoding(FieldArray<uint32_t, N>& v) { (void)v; return Field::NESTED_ARRAY | Field::UINT32; };
-
-template <int N>
-inline uint32_t toEncoding(FieldArray<uint64_t, N>& v) { (void)v; return Field::NESTED_ARRAY | Field::UINT64; };
-
-template <int N>
-inline uint32_t toEncoding(FieldArray<float, N>& v)    { (void)v; return Field::NESTED_ARRAY | Field::FLOAT;  };
-
-template <int N>
-inline uint32_t toEncoding(FieldArray<double, N>& v)   { (void)v; return Field::NESTED_ARRAY | Field::DOUBLE; };
-
-template <int N>
-inline uint32_t toEncoding(FieldArray<time8_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::TIME8;  };
-
-template <int N>
-inline uint32_t toEncoding(FieldArray<string, N>& v)   { (void)v; return Field::NESTED_ARRAY | Field::STRING; };
+template <int N> inline uint32_t toEncoding(FieldArray<bool, N>& v)     { (void)v; return Field::NESTED_ARRAY | Field::BOOL;   };
+template <int N> inline uint32_t toEncoding(FieldArray<int8_t, N>& v)   { (void)v; return Field::NESTED_ARRAY | Field::INT8;   };
+template <int N> inline uint32_t toEncoding(FieldArray<int16_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::INT16;  };
+template <int N> inline uint32_t toEncoding(FieldArray<int32_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::INT32;  };
+template <int N> inline uint32_t toEncoding(FieldArray<int64_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::INT64;  };
+template <int N> inline uint32_t toEncoding(FieldArray<uint8_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::UINT8;  };
+template <int N> inline uint32_t toEncoding(FieldArray<uint16_t, N>& v) { (void)v; return Field::NESTED_ARRAY | Field::UINT16; };
+template <int N> inline uint32_t toEncoding(FieldArray<uint32_t, N>& v) { (void)v; return Field::NESTED_ARRAY | Field::UINT32; };
+template <int N> inline uint32_t toEncoding(FieldArray<uint64_t, N>& v) { (void)v; return Field::NESTED_ARRAY | Field::UINT64; };
+template <int N> inline uint32_t toEncoding(FieldArray<float, N>& v)    { (void)v; return Field::NESTED_ARRAY | Field::FLOAT;  };
+template <int N> inline uint32_t toEncoding(FieldArray<double, N>& v)   { (void)v; return Field::NESTED_ARRAY | Field::DOUBLE; };
+template <int N> inline uint32_t toEncoding(FieldArray<time8_t, N>& v)  { (void)v; return Field::NESTED_ARRAY | Field::TIME8;  };
+template <int N> inline uint32_t toEncoding(FieldArray<string, N>& v)   { (void)v; return Field::NESTED_ARRAY | Field::STRING; };
 
 /******************************************************************************
  * METHODS
@@ -151,9 +150,8 @@ inline uint32_t toEncoding(FieldArray<string, N>& v)   { (void)v; return Field::
  *----------------------------------------------------------------------------*/
 template <class T, int N>
 FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list):
-    Field(ARRAY, getImpliedEncoding<T>())
+    FieldUnsafeArray<T>(&values[0], N)
 {
-    assert(N == init_list.size());
     std::copy(init_list.begin(), init_list.end(), values);
 }
 
@@ -162,9 +160,8 @@ FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list):
  *----------------------------------------------------------------------------*/
 template <class T, int N>
 FieldArray<T,N>::FieldArray(void):
-    Field(ARRAY, getImpliedEncoding<T>())
+    FieldUnsafeArray<T>(&values[0], N)
 {
-    assert(N > 0);
 }
 
 /*----------------------------------------------------------------------------
@@ -172,11 +169,29 @@ FieldArray<T,N>::FieldArray(void):
  *----------------------------------------------------------------------------*/
 template <class T, int N>
 FieldArray<T,N>::FieldArray(const FieldArray<T,N>& array):
-    Field(ARRAY, getImpliedEncoding<T>())
+    FieldUnsafeArray<T>(&values[0], N)
 {
-    assert(N > 0);
     copy(array);
 }
+
+/*----------------------------------------------------------------------------
+ * length
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+long FieldArray<T,N>::length (void) const
+{
+    return N;
+}
+
+/*----------------------------------------------------------------------------
+ * get
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+const Field* FieldArray<T,N>::get(long i) const
+{
+    return reinterpret_cast<const Field*>(&values[i]);
+}
+
 
 /*----------------------------------------------------------------------------
  * operator=
@@ -300,8 +315,8 @@ void FieldArray<T,N>::copy(const FieldArray<T,N>& array)
     {
         values[i] = array.values[i];
     }
-    type = array.type;
-    encoding = array.encoding;
+    this->type = array.type;
+    this->encoding = array.encoding;
 }
 
 #endif  /* __field_array__ */

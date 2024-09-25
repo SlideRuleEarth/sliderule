@@ -50,6 +50,7 @@ ArrowFields::ArrowFields (void):
         {"open_on_complete",    &openOnComplete},
         {"as_geo",              &asGeo},
         {"with_checksum",       &withChecksum},
+        {"with_validation",     &withValidation},
         {"asset_name",          &assetName},
         {"region",              &region},
         #ifdef __aws__
@@ -67,11 +68,11 @@ void ArrowFields::fromLua (lua_State* L, int index)
     FieldDictionary::fromLua(L, index);    
 
     // check format
-    if(format.value == ArrowFields::PARQUET && asGeo.value)
+    if(format.value == ArrowFields::PARQUET && asGeo)
     {
         format.value = ArrowFields::GEOPARQUET;
     }
-    else if(format.value == ArrowFields::GEOPARQUET && !asGeo.value)
+    else if(format.value == ArrowFields::GEOPARQUET && !asGeo)
     {
         asGeo = true;
     }

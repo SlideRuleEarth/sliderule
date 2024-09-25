@@ -130,7 +130,7 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
             samples.push_back(p);
 
             // Clear classification (if necessary)
-            if(cparms.setClass.value)
+            if(cparms.setClass)
             {
                 class_ph[i] = BathyFields::UNCLASSIFIED;
             }
@@ -148,7 +148,7 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
         // Update extents
         for(size_t i = 0; i < number_of_samples; i++)
         {
-            if(cparms.setClass.value) class_ph[i] = results[i].prediction;
+            if(cparms.setClass) class_ph[i] = results[i].prediction;
             predictions[i][BathyFields::COASTNET] = results[i].prediction;
         }
     }

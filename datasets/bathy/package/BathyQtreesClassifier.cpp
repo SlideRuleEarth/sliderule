@@ -133,7 +133,7 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
             samples.push_back(s);
 
             // Clear classification (if necessary)
-            if(qparms.setClass.value)
+            if(qparms.setClass)
             {
                 class_ph[i] = BathyFields::UNCLASSIFIED;
             }
@@ -150,8 +150,8 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
         // Update extents
         for(size_t i = 0; i < number_of_samples; i++)
         {
-            if(qparms.setSurface.value) surface_h[i] = samples[i].surface_elevation;
-            if(qparms.setClass.value) class_ph[i] = samples[i].prediction;
+            if(qparms.setSurface) surface_h[i] = samples[i].surface_elevation;
+            if(qparms.setClass) class_ph[i] = samples[i].prediction;
             predictions[i][BathyFields::QTREES] = samples[i].prediction;
         }
     }

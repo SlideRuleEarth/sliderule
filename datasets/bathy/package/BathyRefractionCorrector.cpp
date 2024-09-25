@@ -112,7 +112,7 @@ BathyRefractionCorrector::BathyRefractionCorrector (lua_State* L, BathyFields* _
     waterRiMask(NULL),
     subaqueousPhotons(0)
 {
-    if(parms->refraction.useWaterRIMask.value)
+    if(parms->refraction.useWaterRIMask)
     {
         waterRiMask = new GeoLib::TIFFImage(NULL, GLOBAL_WATER_RI_MASK, GeoLib::TIFFImage::GDAL_DRIVER);
     }
@@ -177,7 +177,7 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
     const RefractionFields& refraction_parms = parms->refraction;
 
     /* Get UTM Transformation */
-    GeoLib::UTMTransform transform(df.utm_zone.value, df.utm_is_north.value);
+    GeoLib::UTMTransform transform(df.utm_zone.value, df.utm_is_north);
 
     /* Run Refraction Correction */
     for(long i = 0; i < df.length(); i++)

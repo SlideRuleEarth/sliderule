@@ -54,14 +54,19 @@ class FieldList: public Field
          *--------------------------------------------------------------------*/
 
                         FieldList   (void);
-                        FieldList   (const FieldList<T>& array);
+                        FieldList   (std::initializer_list<T> init_list);
+                        FieldList   (size_t size, T default_value);
+                        FieldList   (const FieldList<T>& list);
         virtual         ~FieldList  (void) override = default;
 
         long            append      (const T& v);
         void            clear       (void);
-        long            length      (void) const;
 
-        FieldList<T>&   operator=   (const FieldList<T>& array);
+        long            length      (void) const override;
+        const Field*    get         (long i) const override;
+
+        FieldList<T>&   operator=   (const FieldList<T>& list);
+        FieldList<T>&   operator=   (std::initializer_list<T> init_list);
         T               operator[]  (int i) const;
         T&              operator[]  (int i);
 
@@ -82,7 +87,7 @@ class FieldList: public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-        void copy (const FieldList<T>& array);
+        void copy (const FieldList<T>& list);
 };
 
 /******************************************************************************
@@ -91,7 +96,7 @@ class FieldList: public Field
 
 template <class T>
 inline string convertToJson(const FieldList<T>& v) {
-    return v.convertToJson();
+    return v.toJson();
 }
 
 template <class T>
@@ -103,6 +108,20 @@ template <class T>
 inline void convertFromLua(lua_State* L, int index, FieldList<T>& v) {
     v.fromLua(L, index);
 }
+
+inline uint32_t toEncoding(FieldList<bool>& v)     { (void)v; return Field::NESTED_LIST | Field::BOOL;   };
+inline uint32_t toEncoding(FieldList<int8_t>& v)   { (void)v; return Field::NESTED_LIST | Field::INT8;   };
+inline uint32_t toEncoding(FieldList<int16_t>& v)  { (void)v; return Field::NESTED_LIST | Field::INT16;  };
+inline uint32_t toEncoding(FieldList<int32_t>& v)  { (void)v; return Field::NESTED_LIST | Field::INT32;  };
+inline uint32_t toEncoding(FieldList<int64_t>& v)  { (void)v; return Field::NESTED_LIST | Field::INT64;  };
+inline uint32_t toEncoding(FieldList<uint8_t>& v)  { (void)v; return Field::NESTED_LIST | Field::UINT8;  };
+inline uint32_t toEncoding(FieldList<uint16_t>& v) { (void)v; return Field::NESTED_LIST | Field::UINT16; };
+inline uint32_t toEncoding(FieldList<uint32_t>& v) { (void)v; return Field::NESTED_LIST | Field::UINT32; };
+inline uint32_t toEncoding(FieldList<uint64_t>& v) { (void)v; return Field::NESTED_LIST | Field::UINT64; };
+inline uint32_t toEncoding(FieldList<float>& v)    { (void)v; return Field::NESTED_LIST | Field::FLOAT;  };
+inline uint32_t toEncoding(FieldList<double>& v)   { (void)v; return Field::NESTED_LIST | Field::DOUBLE; };
+inline uint32_t toEncoding(FieldList<time8_t>& v)  { (void)v; return Field::NESTED_LIST | Field::TIME8;  };
+inline uint32_t toEncoding(FieldList<string>& v)   { (void)v; return Field::NESTED_LIST | Field::STRING; };
 
 /******************************************************************************
  * METHODS
@@ -118,13 +137,36 @@ FieldList<T>::FieldList():
 }
 
 /*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+FieldList<T>::FieldList(std::initializer_list<T> init_list):
+    Field(LIST, getImpliedEncoding<T>())
+{
+    for(T element: init_list)
+    {
+        values.push_back(element);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+FieldList<T>::FieldList(size_t size, T default_value):
+    Field(LIST, getImpliedEncoding<T>()),
+    values(size, default_value)
+{
+}
+
+/*----------------------------------------------------------------------------
  * Copy Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldList<T>::FieldList(const FieldList<T>& array):
+FieldList<T>::FieldList(const FieldList<T>& list):
     Field(LIST, getImpliedEncoding<T>())
 {
-    copy(array);
+    copy(list);
 }
 
 /*----------------------------------------------------------------------------
@@ -156,13 +198,36 @@ long FieldList<T>::length(void) const
 }
 
 /*----------------------------------------------------------------------------
+ * get
+ *----------------------------------------------------------------------------*/
+template<class T>
+const Field* FieldList<T>::get(long i) const
+{
+    return reinterpret_cast<const Field*>(&values[i]);
+}
+
+/*----------------------------------------------------------------------------
  * operator=
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldList<T>& FieldList<T>::operator=(const FieldList<T>& array)
+FieldList<T>& FieldList<T>::operator=(const FieldList<T>& list)
 {
-    if(this == &array) return *this;
-    copy(array);
+    if(this == &list) return *this;
+    copy(list);
+    return *this;
+}
+
+/*----------------------------------------------------------------------------
+ * operator=
+ *----------------------------------------------------------------------------*/
+template <class T>
+FieldList<T>& FieldList<T>::operator=(std::initializer_list<T> init_list)
+{
+    values.clear();
+    for(T element: init_list)
+    {
+        values.push_back(element);
+    }
     return *this;
 }
 
@@ -259,13 +324,13 @@ void FieldList<T>::fromLua (lua_State* L, int index)
  * copy
  *----------------------------------------------------------------------------*/
 template <class T>
-void FieldList<T>::copy(const FieldList<T>& array)
+void FieldList<T>::copy(const FieldList<T>& list)
 {
     for(size_t i = 0; i < values.size(); i++)
     {
-        values[i] = array.values[i];
+        values[i] = list.values[i];
     }
-    encoding = array.encoding;
+    encoding = list.encoding;
 }
 
 #endif  /* __field_list__ */
