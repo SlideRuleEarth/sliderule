@@ -68,8 +68,14 @@ class H5Object: public LuaObject, public H5Coro::Context
          * Methods
          *--------------------------------------------------------------------*/
 
-        H5Object    (lua_State* L, const Asset* asset, const char* resource);
-        ~H5Object   (void) override = default;
+        H5Object    (lua_State* L, Asset* _asset, const char* resource);
+        ~H5Object   (void) override;
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        Asset* asset;
 };
 
 #endif  /* __h5_object__ */

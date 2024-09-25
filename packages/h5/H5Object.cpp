@@ -56,21 +56,21 @@ const struct luaL_Reg H5Object::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int H5Object::luaCreate (lua_State* L)
 {
-    Asset* asset = NULL;
+    Asset* _asset = NULL;
     try
     {
         const char* asset_name = getLuaString(L, 1);
         const char* resource = getLuaString(L, 2);
 
-        asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
-        if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", asset_name);
+        _asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
+        if(!_asset) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", asset_name);
 
-        return createLuaObject(L, new H5Object(L, asset, resource));
+        return createLuaObject(L, new H5Object(L, _asset, resource));
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating H5Object: %s", e.what());
-        if(asset) asset->releaseLuaObject();
+        if(_asset) _asset->releaseLuaObject();
         return returnLuaStatus(L, false);
     }
 }
@@ -78,9 +78,17 @@ int H5Object::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5Object::H5Object (lua_State* L, const Asset* asset, const char* resource):
+H5Object::H5Object (lua_State* L, Asset* _asset, const char* resource):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    H5Coro::Context(asset, resource)
+    H5Coro::Context(_asset, resource),
+    asset(_asset)
 {
 }
 
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+H5Object::~H5Object (void)
+{
+    asset->releaseLuaObject();
+}
