@@ -114,7 +114,7 @@ def cshelph(spot, df):
         sea_surface_label   = 41,
         bathymetry_label    = 40 )
     print(f'cshelph completed spot {spot}')
-    return results['classification']
+    return results['classification'].astype(np.int8)
 
 # #####################
 # MedianFilter
@@ -133,7 +133,7 @@ def medianfilter(spot, df):
         compress_heights    = parms.get('compress_heights', None),
         compress_lats       = parms.get('compress_lats', None))
     print(f'medianfilter completed spot {spot}')
-    return results['classification']
+    return results['classification'].astype(np.int8)
 
 # #####################
 # BathyPathFinder
@@ -174,7 +174,7 @@ def bathypathfinder(spot, df):
         bathy_df.loc[bps.sea_surface_photons.index, 'bathypathfinder'] = 41
     
     print(f'bathypathfinder completed spot {spot}')
-    return bathy_df['bathypathfinder']
+    return bathy_df['bathypathfinder'].to_numpy()
 
 # #####################
 # PointNet2
@@ -226,8 +226,8 @@ def ensemble(spot, df):
     p = clf.predict(df)
     p[p == 1] = 40
     p[p == 2] = 41
-    df['ensemble'] = p
     print(f'ensemble completed spot {spot}')
+    return p
 
 # #####################
 # Run Classifiers
@@ -275,6 +275,10 @@ stats = {
     "bathy_photons": len(df[df["class_ph"] == 40]),
     "subaqueous_photons": len(df[df["ortho_h"] < df["surface_h"]])
 }
+
+# update profile
+profile["total_duration"] = time.time() - settings["latch"]
+print(f'ATL24 total duration is {profile["total_duration"]:.03f} seconds')
 
 # build metadata table
 metadata = {

@@ -232,5 +232,5 @@ def PointNet2(df,*,
     output_df = output_df.combine_first(df)                 # df overwriten with pointnet's output_df and returned as new output_df
     sea_surface_df.set_index('index_ph', inplace=True)      # make index the same as output_df
     output_df.loc[sea_surface_df.index, 'pointnet'] = 41    # restore sea surface where it was overwritten
-    return output_df["pointnet"]
+    return output_df["pointnet"].to_numpy()
 

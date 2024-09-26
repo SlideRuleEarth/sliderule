@@ -1,25 +1,25 @@
 --
 -- ENDPOINT:    /source/atl24g
 --
+local latch         = time.sys() -- used for calculating duration of processing
 local json          = require("json")
 local earthdata     = require("earth_data_query")
 local runner        = require("container_runtime")
-
 local rqst          = json.decode(arg[1])
 local parms         = bathy.parms(rqst["parms"])
 local resource      = parms["resource"]
 local timeout       = parms["node_timeout"]
-local rqsttime      = time.gps()
 local userlog       = msg.publish(rspq) -- create user log publisher (alerts)
 local tmp_filename  = "atl24.bin"
 local outputs       = {} -- table of all outputs that go into oceaneyes
 local profile       = {} -- timing profiling table
+local start_time    = time.gps() -- used for timeout handling
 
 -------------------------------------------------------
 -- function: cleanup 
 -------------------------------------------------------
 local function cleanup(_crenv, _transaction_id)
---    runner.cleanup(_crenv) -- container runtime environment
+    runner.cleanup(_crenv) -- container runtime environment
     core.orchunlock({_transaction_id}) -- unlock transaction
 end
 
@@ -27,7 +27,7 @@ end
 -- function: ctimeout
 -------------------------------------------------------
 local function ctimeout()
-    local current_timeout = (timeout * 1000) - (time.gps() - rqsttime)
+    local current_timeout = (timeout * 1000) - (time.gps() - start_time)
     if current_timeout < 0 then current_timeout = 0 end
     return math.tointeger(current_timeout)
 end
@@ -152,7 +152,7 @@ local transaction_id = core.INVALID_TX_ID
 while transaction_id == core.INVALID_TX_ID do
     transaction_id = core.orchselflock("sliderule", timeout, 3)
     if transaction_id == core.INVALID_TX_ID then
-        local lock_retry_wait_time = (time.gps() - rqsttime) / 1000.0
+        local lock_retry_wait_time = (time.gps() - start_time) / 1000.0
         if lock_retry_wait_time >= timeout then
             userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> failed to acquire lock... exiting", rspq))
             return -- nothing yet to clean up
@@ -280,7 +280,8 @@ profile["uncertainty"] = uncertainty and uncertainty:runtime() or 0.0
 profile["qtrees"] = qtrees and qtrees:runtime() or 0.0
 profile["coastnet"] = coastnet and coastnet:runtime() or 0.0
 profile["openoceanspp"] = openoceanspp and openoceanspp:runtime() or 0.0
-profile["duration"] = (time.gps() - rqsttime) / 1000.0
+profile["duration"] = (time.gps() - start_time) / 1000.0
+sys.log(core.CRITICAL, string.format("ATL24 runtime at %0.3f", profile["duration"]))
 
 -------------------------------------------------------
 -- set additional outputs
@@ -288,6 +289,7 @@ profile["duration"] = (time.gps() - rqsttime) / 1000.0
 outputs["profile"] = profile
 outputs["format"] = parms["output"]["format"]
 outputs["filename"] = crenv.container_sandbox_mount.."/"..tmp_filename
+outputs["latch"] = latch
 
 -------------------------------------------------------
 -- run oceaneyes

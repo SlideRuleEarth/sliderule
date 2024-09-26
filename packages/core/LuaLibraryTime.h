@@ -73,6 +73,7 @@ class LuaLibraryTime
 
         static int      ltime_latch         (lua_State* L);
         static int      ltime_getgps        (lua_State* L);
+        static int      ltime_getsys        (lua_State* L);
         static int      ltime_getgmt        (lua_State* L);
         static int      ltime_gps2gmt       (lua_State* L);
         static int      ltime_cds2gmt       (lua_State* L);

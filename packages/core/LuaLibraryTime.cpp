@@ -47,6 +47,7 @@ const char* LuaLibraryTime::LUA_TIMELIBNAME = "time";
 const struct luaL_Reg LuaLibraryTime::timeLibs [] = {
     {"latch",    LuaLibraryTime::ltime_latch},
     {"gps",      LuaLibraryTime::ltime_getgps},
+    {"sys",      LuaLibraryTime::ltime_getsys},
     {"gmt",      LuaLibraryTime::ltime_getgmt},
     {"gps2gmt",  LuaLibraryTime::ltime_gps2gmt},
     {"cds2gmt",  LuaLibraryTime::ltime_cds2gmt},
@@ -93,7 +94,7 @@ int LuaLibraryTime::ltime_latch (lua_State* L)
  * ltime_getgps - now = time.gps()
  *
  *  now: returns number of milliseconds since GPS epoch as provided by the linux
- *        system time (CLOCK_REALTIME)
+ *       system time (CLOCK_REALTIME)
  *----------------------------------------------------------------------------*/
 int LuaLibraryTime::ltime_getgps (lua_State* L)
 {
@@ -103,6 +104,21 @@ int LuaLibraryTime::ltime_getgps (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * ltime_getsys - now = time.sys()
+ *
+ *  now: returns number of seconds since the unix epoch with microsecond
+ *       precision; no leap seconds.
+ *----------------------------------------------------------------------------*/
+int LuaLibraryTime::ltime_getsys (lua_State* L)
+{
+    const int64_t gps_time = TimeLib::gpstime();
+    const int64_t sys_time = TimeLib::gps2systime(gps_time);
+    const double t = static_cast<double>(sys_time) / 1000000.0;
+    lua_pushnumber(L, t); /* push "t" as result */
+    return 1;             /* one result */
+}
+/*----------------------------------------------------------------------------
+
  * ltime_getgmt - year, day, hour, minute, second, millisecond = time.gmt()
  *
  *  returns list specifying GMT time as provided by the linux system time
