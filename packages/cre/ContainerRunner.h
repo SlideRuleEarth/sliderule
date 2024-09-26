@@ -61,7 +61,6 @@ class ContainerRunner: public LuaObject
         static const int WAIT_TIMEOUT = 30;
 
         static const char* SANDBOX_MOUNT;
-        static const char* HOST_MOUNT;
         static const char* HOST_DIRECTORY;
 
         /*--------------------------------------------------------------------

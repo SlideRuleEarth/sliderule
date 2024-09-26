@@ -162,7 +162,7 @@ int RequestFields::luaGetField (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "error retrieving field: %s", e.what());
+        mlog(WARNING, "error retrieving field: %s", e.what());
         lua_pushnil(L);
     }
 

@@ -57,7 +57,6 @@ const struct luaL_Reg ContainerRunner::LUA_META_TABLE[] = {
 };
 
 const char* ContainerRunner::SANDBOX_MOUNT = "/share";
-const char* ContainerRunner::HOST_MOUNT = "/data";
 const char* ContainerRunner::HOST_DIRECTORY = "/data";
 
 const char* ContainerRunner::REGISTRY = NULL;

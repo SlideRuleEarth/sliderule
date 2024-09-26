@@ -91,6 +91,10 @@ int bathy_open (lua_State *L)
     LuaEngine::setAttrInt(L, "POINTNET",        BathyFields::POINTNET);
     LuaEngine::setAttrInt(L, "OPENOCEANS",      BathyFields::OPENOCEANS);
     LuaEngine::setAttrInt(L, "ENSEMBLE",        BathyFields::ENSEMBLE);
+    LuaEngine::setAttrStr(L, "COASTNET_MODEL",  COASTNET_MODEL);
+    LuaEngine::setAttrStr(L, "QTREES_MODEL",    QTREES_MODEL);
+    LuaEngine::setAttrStr(L, "ENSEMBLE_MODEL",  ENSEMBLE_MODEL);
+    LuaEngine::setAttrStr(L, "POINTNET_MODEL",  POINTNET_MODEL);
 
     return 1;
 }

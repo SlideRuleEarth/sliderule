@@ -37,6 +37,7 @@
 
 #include COASTNET_INCLUDE
 
+#include "ContainerRunner.h"
 #include "FieldColumn.h"
 #include "FieldArray.h"
 #include "BathyCoastnetClassifier.h"
@@ -142,7 +143,7 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
         struct cmd::args args;
         args.verbose = cparms.verbose.value;
         args.use_predictions = cparms.usePredictions.value;
-        args.model_filename = cparms.model.value;
+        args.model_filename = FString("%s/%s", ContainerRunner::HOST_DIRECTORY, cparms.model.value.c_str()).c_str();
 
         // Run classification
         const auto results = classify (samples, args);

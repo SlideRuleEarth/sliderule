@@ -42,6 +42,15 @@
 #include "RecordObject.h"
 
 /******************************************************************************
+ * INCLUDES
+ ******************************************************************************/
+
+#define COASTNET_MODEL  "coastnet_model-20240917.json"
+#define QTREES_MODEL    "qtrees_model-20240916.json"
+#define ENSEMBLE_MODEL  "track_stacker_model.json" // "ensemble_model-20240919.json"
+#define POINTNET_MODEL  "pointnet2_model.pth"
+
+/******************************************************************************
  * CLASSES
  ******************************************************************************/
 
@@ -116,7 +125,7 @@ struct UncertaintyFields: public FieldDictionary
 /*******************/
 struct CoastnetFields: public FieldDictionary 
 {
-    FieldElement<string>  model             {"/data/coastnet_model-20240917.json"};
+    FieldElement<string>  model             {COASTNET_MODEL};
     FieldElement<bool>    setClass          {true};
     FieldElement<bool>    usePredictions    {false};
     FieldElement<bool>    verbose           {true};
@@ -194,7 +203,7 @@ struct OpenOceansPPFields: public FieldDictionary
 /*****************/
 struct QtreesFields: public FieldDictionary 
 {
-    FieldElement<string>  model         {"/data/qtrees_model-20240916.json"};
+    FieldElement<string>  model         {QTREES_MODEL};
     FieldElement<bool>    setClass      {false};
     FieldElement<bool>    setSurface    {true};
     FieldElement<bool>    verbose       {true};

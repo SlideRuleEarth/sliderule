@@ -333,7 +333,7 @@ perfsubsetest: ## run subset performance test
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
 
 OCEANEYES_SHARE=/data/AppServer.1
-oceaneyestest: ## run oceaneyes
+oceaneyes-test: ## run oceaneyes
 	docker run -it --rm -v /data:/data -v $(OCEANEYES_SHARE):/share --name oceaneyes $(ECR)/oceaneyes:$(VERSION) /bin/bash /runner.sh $(OCEANEYES_SHARE)/settings.json
 
 ########################

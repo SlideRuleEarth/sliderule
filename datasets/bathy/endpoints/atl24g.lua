@@ -291,6 +291,7 @@ userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ATL24 runtim
 outputs["profile"] = profile
 outputs["format"] = parms["output"]["format"]
 outputs["filename"] = crenv.container_sandbox_mount.."/"..tmp_filename
+outputs["ensemble"] = parms["ensemble"] or {ensemble_model_filename=string.format("%s/%s", cre.HOST_DIRECTORY, bathy.ENSEMBLE_MODEL)}
 outputs["latch"] = latch
 
 -------------------------------------------------------

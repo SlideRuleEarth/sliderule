@@ -38,6 +38,7 @@
 #include QTREES_INCLUDE
 
 #include "BathyQtreesClassifier.h"
+#include "ContainerRunner.h"
 #include "BathyFields.h"
 #include "GeoDataFrame.h"
 #include "FieldColumn.h"
@@ -144,7 +145,7 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
         // Build arguments
         struct cmd::args args;
         args.verbose = qparms.verbose.value;
-        args.model_filename = qparms.model.value;
+        args.model_filename = FString("%s/%s", ContainerRunner::HOST_DIRECTORY, qparms.model.value.c_str()).c_str();
 
         // Run classification
         classify(args, samples);

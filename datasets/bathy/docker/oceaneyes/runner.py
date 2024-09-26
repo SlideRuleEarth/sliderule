@@ -223,11 +223,14 @@ def openoceans(spot, df):
 # #####################
 
 def ensemble(spot, df):
-    ensemble_model_filename = settings.get('ensemble_model_filename', 'ensemble_model-20240919.json')
-    df = df[['geoid_corr_h', 'surface_h', 'qtrees', 'cshelph', 'medianfilter', 'bathypathfinder', 'openoceanspp', 'coastnet', 'pointnet']]    
+    ensemble_model_filename = settings['ensemble']['ensemble_model_filename']
+    print(f'loading ensemble model: {ensemble_model_filename}')
+#    df = df[['geoid_corr_h', 'surface_h', 'qtrees', 'cshelph', 'medianfilter', 'bathypathfinder', 'openoceanspp', 'coastnet', 'pointnet']]    
+    df = df[['ortho_h', 'qtrees', 'cshelph', 'medianfilter', 'bathypathfinder', 'openoceans', 'openoceanspp', 'coastnet', 'pointnet']]    
     clf = xgb.XGBClassifier(device='cpu')
-    clf.load_model("/data/" + ensemble_model_filename)
-    p = clf.predict(df)
+    clf.load_model(ensemble_model_filename)
+    x = df.to_numpy()
+    p = clf.predict(x)
     p[p == 1] = 40
     p[p == 2] = 41
     print(f'ensemble completed spot {spot}')
