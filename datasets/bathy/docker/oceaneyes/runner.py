@@ -86,10 +86,13 @@ for beam in BEAMS:
         parquet_file = pq.ParquetFile(settings[beam])
         beam_meta = json.loads(parquet_file.metadata.metadata[b'meta'])
         beam_df = pd.read_parquet(settings[beam])
+        # create spot column
+        beam_df["spot"] = beam_meta["spot"]
         # expand predictions column
         classifiers_2d = np.stack(beam_df['predictions'].values)
         for i in range(len(CLASSIFIERS)):
             beam_df[CLASSIFIERS[i]] = classifiers_2d[:, i]
+        beam_df.drop(columns='predictions', inplace=True)
         # set global variables
         beam_list.append(beam)
         beam_table[beam] = beam_df

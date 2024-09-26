@@ -143,7 +143,7 @@ while true do
     end
 end
 profile["atl09_cmr"] = (time.gps() - atl09_cmr_start_time) / 1000.0
-userlog:alert(core.INFO, core.RTE_INFO, string.format("ATL09 CMR search executed in %f seconds", profile["atl09_cmr"]))
+userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ATL09 CMR search executed in %f seconds", rspq, profile["atl09_cmr"]))
 
 -------------------------------------------------------
 -- acquire lock for processing granule (because this is not proxied)
@@ -187,6 +187,7 @@ local seasurface = parms["find_sea_surface"] and bathy.seasurface(parms) or nil
 local qtrees = parms:classifier(bathy.QTREES) and bathy.qtrees(parms) or nil
 local coastnet = parms:classifier(bathy.COASTNET) and bathy.coastnet(parms) or nil
 local openoceanspp = parms:classifier(bathy.OPENOCEANSPP) and bathy.openoceanspp(parms) or nil
+userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> creating dataframes...", rspq))
 
 -------------------------------------------------------
 -- build dataframes for each beam
@@ -231,6 +232,7 @@ for beam,dataframe in pairs(dataframes) do
                 cleanup(crenv, transaction_id)
                 return
             end
+            userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> dataframe for %s created", rspq, beam))
             outputs[beam] = string.format("%s/bathy_spot_%d.parquet", crenv.container_sandbox_mount, spot)
             dataframe:destroy()
         end
@@ -281,7 +283,7 @@ profile["qtrees"] = qtrees and qtrees:runtime() or 0.0
 profile["coastnet"] = coastnet and coastnet:runtime() or 0.0
 profile["openoceanspp"] = openoceanspp and openoceanspp:runtime() or 0.0
 profile["duration"] = (time.gps() - start_time) / 1000.0
-sys.log(core.CRITICAL, string.format("ATL24 runtime at %0.3f", profile["duration"]))
+userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ATL24 runtime at %0.3f", rspq, profile["duration"]))
 
 -------------------------------------------------------
 -- set additional outputs
