@@ -11,5 +11,4 @@ export LRU_CACHE_CAPACITY=1024
 
 # Run OceanEyes
 #/env/bin/python /runner.py $1
-#/magic/bin/python /runner.py $1
-python runner.py $1
+/magic/bin/python /runner.py $1

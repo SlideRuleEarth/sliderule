@@ -232,6 +232,7 @@ for beam,dataframe in pairs(dataframes) do
                 return
             end
             outputs[beam] = string.format("%s/bathy_spot_%d.parquet", crenv.container_sandbox_mount, spot)
+            dataframe:destroy()
         end
     else
         userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> on %s timed out waiting for dataframe to complete on spot %d", rspq, resource, dataframe:meta("spot")))
@@ -250,6 +251,7 @@ if granule then
         if granule:waiton(ctimeout(), rspq) then
             f:write(json.encode(granule:export()))
             f:close()
+            granule:destroy()
         else
             userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> timed out waiting for granule to complete on %s", rspq, resource))
             cleanup(crenv, transaction_id)
@@ -263,7 +265,7 @@ if granule then
 end
 
 -------------------------------------------------------
--- clean up object to cut down on memory usage
+-- clean up objects to cut down on memory usage
 -------------------------------------------------------
 atl03h5:destroy()
 atl09h5:destroy()
@@ -293,7 +295,7 @@ outputs["filename"] = crenv.container_sandbox_mount.."/"..tmp_filename
 local container_parms = {
     image = "oceaneyes",
     name = "oceaneyes",
-    command = string.format("/env/bin/python /runner.py %s/settings.json", crenv.container_sandbox_mount),
+    command = string.format("/runner.sh %s/settings.json", crenv.container_sandbox_mount),
     timeout = ctimeout(),
     parms = { ["settings.json"] = outputs }
 }
@@ -304,7 +306,6 @@ runner.wait(container, timeout)
 -- send final output to user
 -------------------------------------------------------
 arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_filename, arrow.parms(parms["output"]), rspq)
-arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_filename..".json", arrow.parms(parms["output"]), rspq, parms["output"]["path"]..".json")
 
 -------------------------------------------------------
 -- exit 

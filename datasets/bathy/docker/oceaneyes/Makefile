@@ -1,10 +1,13 @@
-ROOT = $(shell pwd)/..
+ROOT = $(shell pwd)/../../../..
 STAGE = $(ROOT)/stage
 
 OCEANEYES_CONTAINER_STAGE_DIR = $(STAGE)/oceaneyes
 OCEANEYES_CONTAINER_NAME ?= oceaneyes
 
-MAGIC_PYTORCH_DIR = $(ROOT)/../miniconda3/envs/pointnet2
+CSHELPH_SOURCE_FILE ?= $(ROOT)/../ut-ATL24-C-shelph/c_shelph.py
+MEDIANFILTER_SOURCE_FILE ?= $(ROOT)/../ut-ATL24-medianfilter/medianmodel.py
+
+MAGIC_PYTORCH_DIR = $(ROOT)/../../miniconda3/envs/pointnet2
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -27,13 +30,14 @@ prep: clean
 	mkdir -p $(OCEANEYES_CONTAINER_STAGE_DIR)
 	cp Dockerfile $(OCEANEYES_CONTAINER_STAGE_DIR)
 	cp conda-* $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R atl24writer $(OCEANEYES_CONTAINER_STAGE_DIR)
+	cp runner.* $(OCEANEYES_CONTAINER_STAGE_DIR)
+	mkdir $(OCEANEYES_CONTAINER_STAGE_DIR)/cshelph
+	cp $(CSHELPH_SOURCE_FILE) $(OCEANEYES_CONTAINER_STAGE_DIR)/cshelph
+	mkdir $(OCEANEYES_CONTAINER_STAGE_DIR)/medianfilter
+	cp $(MEDIANFILTER_SOURCE_FILE) $(OCEANEYES_CONTAINER_STAGE_DIR)/medianfilter
 	cp -R bathypathfinder $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R cshelph $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R medianfilter $(OCEANEYES_CONTAINER_STAGE_DIR)
 	cp -R pointnet $(OCEANEYES_CONTAINER_STAGE_DIR)
 	cp -R openoceans $(OCEANEYES_CONTAINER_STAGE_DIR)
-	cp -R utils $(OCEANEYES_CONTAINER_STAGE_DIR)
 	mkdir $(OCEANEYES_CONTAINER_STAGE_DIR)/magic_pytorch_env
 	rsync -a $(MAGIC_PYTORCH_DIR)/* $(OCEANEYES_CONTAINER_STAGE_DIR)/magic_pytorch_env
 
