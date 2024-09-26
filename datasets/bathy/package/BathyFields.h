@@ -116,7 +116,7 @@ struct UncertaintyFields: public FieldDictionary
 /*******************/
 struct CoastnetFields: public FieldDictionary 
 {
-    FieldElement<string>  model             {"/data/coastnet_model-20240628.json"};
+    FieldElement<string>  model             {"/data/coastnet_model-20240917.json"};
     FieldElement<bool>    setClass          {true};
     FieldElement<bool>    usePredictions    {false};
     FieldElement<bool>    verbose           {true};
@@ -136,26 +136,36 @@ struct CoastnetFields: public FieldDictionary
 /***********************/
 struct OpenOceansPPFields: public FieldDictionary 
 {
-    FieldElement<bool>      setClass                   {false};
-    FieldElement<bool>      setSurface                 {false};
-    FieldElement<bool>      usePredictions             {false};
-    FieldElement<bool>      verbose                     {true};
-    FieldElement<double>    xResolution                {10.0};
-    FieldElement<double>    zResolution                {0.2};
-    FieldElement<double>    zMin                       {-50};
-    FieldElement<double>    zMax                       {30};
-    FieldElement<double>    surfaceZMin               {-20};
-    FieldElement<double>    surfaceZMax               {20};
-    FieldElement<double>    bathyMinDepth             {0.5};
-    FieldElement<double>    verticalSmoothingSigma    {0.5};
-    FieldElement<double>    surfaceSmoothingSigma     {200.0};
-    FieldElement<double>    bathySmoothingSigma       {100.0};
-    FieldElement<double>    minPeakProminence         {0.01};
-    FieldElement<size_t>    minPeakDistance           {2};
+    FieldElement<bool>      setClass                {false};
+    FieldElement<bool>      setSurface              {false};
+    FieldElement<bool>      usePredictions          {false};
+    FieldElement<bool>      verbose                 {true};
+    FieldElement<double>    xResolution             {10.0};
+    FieldElement<double>    zResolution             {0.2};
+    FieldElement<double>    zMin                    {-50};
+    FieldElement<double>    zMax                    {30};
+    FieldElement<double>    surfaceZMin             {-20};
+    FieldElement<double>    surfaceZMax             {20};
+    FieldElement<double>    bathyMinDepth           {0.5};
+    FieldElement<double>    verticalSmoothingSigma  {0.5};
+    FieldElement<double>    surfaceSmoothingSigma   {200.0};
+    FieldElement<double>    bathySmoothingSigma     {100.0};
+    FieldElement<double>    minPeakProminence       {0.01};
+    FieldElement<size_t>    minPeakDistance         {2};
     
     size_t                  minSurfacePhotonsPerWindow;
     size_t                  minBathyPhotonsPerWindow;
     
+    void updatePhotonsPerWindow(void) {
+        minSurfacePhotonsPerWindow = 0.25 * (xResolution.value / 0.7);
+        minBathyPhotonsPerWindow = 0.25 * (xResolution.value / 0.7);
+    }
+
+    void fromLua (lua_State* L, int index) override {
+        FieldDictionary::fromLua(L, index);
+        updatePhotonsPerWindow();
+    }
+
     OpenOceansPPFields(void): 
         FieldDictionary({ {"set_class",                 &setClass},
                           {"set_surface",               &setSurface}, 
@@ -173,11 +183,10 @@ struct OpenOceansPPFields: public FieldDictionary
                           {"bathy_smoothing_sigma",     &bathySmoothingSigma}, 
                           {"min_peak_prominence",       &minPeakProminence}, 
                           {"min_peak_distance",         &minPeakDistance} }) {
-        minSurfacePhotonsPerWindow = (xResolution.value / 0.7) / 3;
-        minBathyPhotonsPerWindow = (xResolution.value / 0.7) / 3;
+        updatePhotonsPerWindow();
     };
 
-    virtual ~OpenOceansPPFields(void) override = default;
+    virtual ~OpenOceansPPFields(void) override = default;    
 };
 
 /*****************/
@@ -185,7 +194,7 @@ struct OpenOceansPPFields: public FieldDictionary
 /*****************/
 struct QtreesFields: public FieldDictionary 
 {
-    FieldElement<string>  model         {"/data/qtrees_model-20240607.json"};
+    FieldElement<string>  model         {"/data/qtrees_model-20240916.json"};
     FieldElement<bool>    setClass      {false};
     FieldElement<bool>    setSurface    {true};
     FieldElement<bool>    verbose       {true};

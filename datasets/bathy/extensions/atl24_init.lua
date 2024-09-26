@@ -49,18 +49,18 @@ while sys.alive() and ( (not bathy_mask_complete) or
     pointnet_model_complete = sys.fileexists(pointnet_model_local) or aws.s3download("sliderule", pointnet_model_remote, aws.DEFAULT_REGION, aws.DEFAULT_IDENTITY, pointnet_model_local)
 
     -- qtrees model
-    local qtrees_model_local = cre.HOST_DIRECTORY.."/qtrees_model-20240607.json"
+    local qtrees_model_local = cre.HOST_DIRECTORY.."/qtrees_model-20240916.json"
     local qtrees_model_remote = "config/qtrees_model-20240607.json"
     qtrees_model_complete = sys.fileexists(qtrees_model_local) or aws.s3download("sliderule", qtrees_model_remote, aws.DEFAULT_REGION, aws.DEFAULT_IDENTITY, qtrees_model_local)
 
     -- coastnet model
-    local coastnet_model_local = cre.HOST_DIRECTORY.."/coastnet_model-20240628.json"
+    local coastnet_model_local = cre.HOST_DIRECTORY.."/coastnet_model-20240917.json"
     local coastnet_model_remote = "config/coastnet_model-20240628.json"
     coastnet_model_complete = sys.fileexists(coastnet_model_local) or aws.s3download("sliderule", coastnet_model_remote, aws.DEFAULT_REGION, aws.DEFAULT_IDENTITY, coastnet_model_local)
 
     -- ensemble model
-    local ensemble_model_local = cre.HOST_DIRECTORY.."/track_stacker_model.json"
-    local ensemble_model_remote = "config/track_stacker_model.json"
+    local ensemble_model_local = cre.HOST_DIRECTORY.."/ensemble_model-20240919.json"
+    local ensemble_model_remote = "config/ensemble_model-20240919.json"
     ensemble_model_complete = sys.fileexists(ensemble_model_local) or aws.s3download("sliderule", ensemble_model_remote, aws.DEFAULT_REGION, aws.DEFAULT_IDENTITY, ensemble_model_local)
 
     -- check for completeness

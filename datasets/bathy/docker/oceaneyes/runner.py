@@ -107,13 +107,14 @@ for beam in BEAMS:
 def cshelph(spot, df):
     parms = settings.get('cshelph', {})
     results = CSHELPH.c_shelph_classification(
-        df[["lat_ph", "lon_ph", "ortho_h", "index_ph", "class_ph"]], 
+        df[["lat_ph", "lon_ph", "geoid_corr_h", "index_ph", "class_ph"]], 
         surface_buffer      = parms.get('surface_buffer', -0.5),
         h_res               = parms.get('h_res', 0.5), 
         lat_res             = parms.get('lat_res', 0.001), 
-        thresh              = parms.get('thresh', 0.5),
-        min_buffer          = parms.get('min_buffer', -80), 
+        thresh              = parms.get('thresh', 25),
+        min_buffer          = parms.get('min_buffer', -80),
         max_buffer          = parms.get('max_buffer', 5),
+        min_photons_per_bin = parms.get('min_photons_per_bin', 5),
         sea_surface_label   = 41,
         bathymetry_label    = 40 )
     print(f'cshelph completed spot {spot}')
@@ -126,7 +127,7 @@ def cshelph(spot, df):
 def medianfilter(spot, df):
     parms = settings.get('medianfilter', {})
     results = MEDIANFILTER.rolling_median_bathy_classification(
-        point_cloud         = df[["lat_ph", "lon_ph", "ortho_h", "index_ph", "class_ph"]],
+        point_cloud         = df[["lat_ph", "lon_ph", "geoid_corr_h", "index_ph", "class_ph"]],
         window_sizes        = parms.get('window_sizes', [51, 30, 7]) ,
         kdiff               = parms.get('kdiff', 0.75),
         kstd                = parms.get('kstd', 1.75),
@@ -222,8 +223,8 @@ def openoceans(spot, df):
 # #####################
 
 def ensemble(spot, df):
-    ensemble_model_filename = settings.get('ensemble_model_filename', 'track_stacker_model.json')
-    df = df[['ortho_h', 'qtrees', 'cshelph', 'medianfilter', 'bathypathfinder', 'openoceans', 'openoceanspp', 'coastnet', 'pointnet']]    
+    ensemble_model_filename = settings.get('ensemble_model_filename', 'ensemble_model-20240919.json')
+    df = df[['geoid_corr_h', 'surface_h', 'qtrees', 'cshelph', 'medianfilter', 'bathypathfinder', 'openoceanspp', 'coastnet', 'pointnet']]    
     clf = xgb.XGBClassifier(device='cpu')
     clf.load_model("/data/" + ensemble_model_filename)
     p = clf.predict(df)
