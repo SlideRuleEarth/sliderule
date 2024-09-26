@@ -85,22 +85,15 @@ class Profile:
 # OPEN OCEANS
 ##################
 
-def OpenOceans(df,*,
-               spot):
-
-
-# set configuration
-res_along_track = settings.get('res_along_track', 10) 
-res_z           = settings.get('res_z', 0.2)
-window_size     = settings.get('window_size', 11) # 3x overlap is not enough to filter bad daytime noise
-range_z         = settings.get('range_z', [-50, 30]) # include at least a few meters more than 5m above the surface for noise estimation, key for daytime case noise filtering
-verbose         = settings.get('verbose', False) # not really fully integrated, it's still going to print some recent debugging statements
-parallel        = settings.get('parallel', True)
-chunk_size      = settings.get('chunk_size', 65536) # number of photons to process at one time
-
-
-
-
+def OpenOceans( df,*,
+                spot,
+                res_along_track,
+                res_z,
+                window_size,
+                range_z,
+                verbose,
+                chunk_size):
+    
     ph_data = pd.DataFrame()
 
     ph_data["photon_index"] = df["index_ph"] # integer position of photon within the h5 file

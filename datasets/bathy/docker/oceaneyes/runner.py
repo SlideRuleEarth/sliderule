@@ -101,8 +101,7 @@ for beam in BEAMS:
 # CShelph
 # #####################
 
-def cshelph(beam, df):
-    print(f'Running cshelph on {beam}')
+def cshelph(spot, df):
     parms = settings.get('cshelph', {})
     results = CSHELPH.c_shelph_classification(
         df[["lat_ph", "lon_ph", "ortho_h", "index_ph", "class_ph"]], 
@@ -114,15 +113,14 @@ def cshelph(beam, df):
         max_buffer          = parms.get('max_buffer', 5),
         sea_surface_label   = 41,
         bathymetry_label    = 40 )
-    print(f'Completed cshelph on {beam}')
+    print(f'cshelph completed spot {spot}')
     return results['classification']
 
 # #####################
 # MedianFilter
 # #####################
 
-def medianfilter(beam, df):
-    print(f'Running medianfilter on {beam}')
+def medianfilter(spot, df):
     parms = settings.get('medianfilter', {})
     results = MEDIANFILTER.rolling_median_bathy_classification(
         point_cloud         = df[["lat_ph", "lon_ph", "ortho_h", "index_ph", "class_ph"]],
@@ -134,7 +132,7 @@ def medianfilter(beam, df):
         segment_length      = parms.get('segment_length', 0.001),
         compress_heights    = parms.get('compress_heights', None),
         compress_lats       = parms.get('compress_lats', None))
-    print(f'Completed medianfilter on {beam}')
+    print(f'medianfilter completed spot {spot}')
     return results['classification']
 
 # #####################
@@ -142,8 +140,6 @@ def medianfilter(beam, df):
 # #####################
 
 def bathypathfinder(spot, df):
-    print(f'Running bathypathfinder on {spot}')
-    
     # get parameters
     parms           = settings.get('bathypathfinder', {})
     tau             = parms.get('tau', 0.5) 
@@ -177,7 +173,7 @@ def bathypathfinder(spot, df):
     else:
         bathy_df.loc[bps.sea_surface_photons.index, 'bathypathfinder'] = 41
     
-    print(f'Completed bathypathfinder on {spot}')
+    print(f'bathypathfinder completed spot {spot}')
     return bathy_df['bathypathfinder']
 
 # #####################
@@ -185,7 +181,6 @@ def bathypathfinder(spot, df):
 # #####################
 
 def pointnet(spot, df):
-    print(f'Running pointnet on {spot}')
     parms = settings.get('pointnet', {})
     results = PointNet2(df[['index_ph', 'x_ph', 'y_ph', 'geoid_corr_h', 'max_signal_conf', 'class_ph', 'surface_h']],
         model_filename          = parms.get('model_filename', '/data/pointnet2_model.pth'),
@@ -199,7 +194,7 @@ def pointnet(spot, df):
         threshold               = parms.get('threshold', 0.5),
         model_seed              = parms.get('model_seed', 24),
         seaSurfaceDecimation    = parms.get('seaSurfaceDecimation', 0.8)) # removes 80% of sea surface
-    print(f'Completed pointnet on {spot}')
+    print(f'pointnet completed spot {spot}')
     return results
 
 # #####################
@@ -207,7 +202,6 @@ def pointnet(spot, df):
 # #####################
 
 def openoceans(spot, df):
-    print(f'Running openoceans on {spot}')
     parms = settings.get('openoceans', {})
     results = OpenOceans(df[['index_ph', 'x_ph', 'y_ph', 'geoid_corr_h', 'max_signal_conf', 'class_ph', 'surface_h']],
         spot            = spot,
@@ -216,9 +210,8 @@ def openoceans(spot, df):
         window_size     = parms.get('window_size', 11), # 3x overlap is not enough to filter bad daytime noise
         range_z         = parms.get('range_z', [-50, 30]), # include at least a few meters more than 5m above the surface for noise estimation, key for daytime case noise filtering
         verbose         = parms.get('verbose', False), # not really fully integrated, it's still going to print some recent debugging statements
-        parallel        = parms.get('parallel', True),
         chunk_size      = parms.get('chunk_size', 65536)) # number of photons to process at one time
-    print(f'Completed openoceans on {spot}')
+    print(f'openoceans completed spot {spot}')
     return results
 
 # #####################
@@ -227,7 +220,6 @@ def openoceans(spot, df):
 
 def ensemble(spot, df):
     ensemble_model_filename = settings.get('ensemble_model_filename', 'track_stacker_model.json')
-    print(f'Running ensemble on {spot}')
     df = df[['ortho_h', 'qtrees', 'cshelph', 'medianfilter', 'bathypathfinder', 'openoceans', 'openoceanspp', 'coastnet', 'pointnet']]    
     clf = xgb.XGBClassifier(device='cpu')
     clf.load_model("/data/" + ensemble_model_filename)
@@ -235,7 +227,7 @@ def ensemble(spot, df):
     p[p == 1] = 40
     p[p == 2] = 41
     df['ensemble'] = p
-    print(f'Completed ensemble on {spot}')
+    print(f'ensemble completed spot {spot}')
 
 # #####################
 # Run Classifiers
@@ -244,11 +236,12 @@ def ensemble(spot, df):
 # runner function
 def runClassifier(classifier, classifier_func, num_processes=6):
     global beam_list, beam_table, spot_table, rqst_parms
+    print(f'running classifier {classifier}...')
     start = time.time()
     if classifier in rqst_parms["classifiers"]:
         if num_processes > 1:
             pool = multiprocessing.Pool(processes=num_processes)
-            results = pool.starmap(classifier_func, [(beam, beam_table[beam]) for beam in beam_list])
+            results = pool.starmap(classifier_func, [(spot_table[beam], beam_table[beam]) for beam in beam_list])
             pool.close()
             pool.join()
             for i in range(len(beam_list)):
@@ -256,7 +249,9 @@ def runClassifier(classifier, classifier_func, num_processes=6):
         else:
             for beam in beam_list:
                 beam_table[beam][classifier] = classifier_func(spot_table[beam], beam_table[beam])
-    return time.time() - start
+    duration = time.time() - start
+    print(f'{classifier} finished in {duration:.03f} seconds')
+    return duration
 
 # call runners
 profile["cshelph"] = runClassifier("cshelph", cshelph)

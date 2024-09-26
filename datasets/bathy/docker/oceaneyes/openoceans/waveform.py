@@ -37,7 +37,7 @@ from scipy.signal import find_peaks, peak_widths
 from scipy.stats import norm
 from sklearn.mixture import GaussianMixture
 
-from parms import Bathy, CLASS_LABELS
+from .parms import Bathy, CLASS_LABELS
 
 pd.options.mode.chained_assignment = None
 

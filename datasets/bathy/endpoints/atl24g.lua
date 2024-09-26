@@ -295,7 +295,7 @@ outputs["filename"] = crenv.container_sandbox_mount.."/"..tmp_filename
 local container_parms = {
     image = "oceaneyes",
     name = "oceaneyes",
-    command = string.format("/runner.sh %s/settings.json", crenv.container_sandbox_mount),
+    command = string.format("/bin/bash /runner.sh %s/settings.json", crenv.container_sandbox_mount),
     timeout = ctimeout(),
     parms = { ["settings.json"] = outputs }
 }

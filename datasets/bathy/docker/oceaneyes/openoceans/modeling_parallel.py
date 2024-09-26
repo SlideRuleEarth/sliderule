@@ -41,8 +41,8 @@ from pathos import (
 from scipy.ndimage import gaussian_filter1d
 from tqdm import tqdm
 
-from waveform import Waveform
-from parms import Bathy
+from .waveform import Waveform
+from .parms import Bathy
 
 # note parallelization provided via M. Holwill at UT Austin 3DGL    
 

@@ -56,6 +56,8 @@ STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
 OCEANEYES_SRC_DIR = $(ROOT)/datasets/bathy/docker/oceaneyes
 OCEANEYES_STAGE_DIR = $(STAGE)/oceaneyes
 MAGIC_PYTORCH_DIR = $(ROOT)/../../miniconda3/envs/pointnet2
+CSHELPH_SOURCE_FILE ?= $(ROOT)/../ut-ATL24-C-shelph/c_shelph.py
+MEDIANFILTER_SOURCE_FILE ?= $(ROOT)/../ut-ATL24-medianfilter/medianmodel.py
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 
@@ -163,21 +165,22 @@ static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
 oceaneyes-lock:
-	conda-lock -p linux-$(ARCH) -f environment.yml
-	conda-lock render -p linux-$(ARCH)
+	cd $(OCEANEYES_SRC_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd $(OCEANEYES_SRC_DIR) && conda-lock render -p linux-$(ARCH)
 
 oceaneyes-docker:
 	-rm -Rf $(OCEANEYES_STAGE_DIR)
 	mkdir -p $(OCEANEYES_STAGE_DIR)
 	cp $(OCEANEYES_SRC_DIR)/Dockerfile $(OCEANEYES_STAGE_DIR)
 	cp $(OCEANEYES_SRC_DIR)/conda-* $(OCEANEYES_STAGE_DIR)
-	cp -R $(OCEANEYES_SRC_DIR)/atl24writer $(OCEANEYES_STAGE_DIR)
+	cp $(OCEANEYES_SRC_DIR)/runner.* $(OCEANEYES_STAGE_DIR)
+	mkdir $(OCEANEYES_STAGE_DIR)/cshelph
+	cp $(CSHELPH_SOURCE_FILE) $(OCEANEYES_STAGE_DIR)/cshelph
+	mkdir $(OCEANEYES_STAGE_DIR)/medianfilter
+	cp $(MEDIANFILTER_SOURCE_FILE) $(OCEANEYES_STAGE_DIR)/medianfilter
 	cp -R $(OCEANEYES_SRC_DIR)/bathypathfinder $(OCEANEYES_STAGE_DIR)
-	cp -R $(OCEANEYES_SRC_DIR)/cshelph $(OCEANEYES_STAGE_DIR)
-	cp -R $(OCEANEYES_SRC_DIR)/medianfilter $(OCEANEYES_STAGE_DIR)
 	cp -R $(OCEANEYES_SRC_DIR)/pointnet $(OCEANEYES_STAGE_DIR)
 	cp -R $(OCEANEYES_SRC_DIR)/openoceans $(OCEANEYES_STAGE_DIR)
-	cp -R $(OCEANEYES_SRC_DIR)/utils $(OCEANEYES_STAGE_DIR)
 	mkdir $(OCEANEYES_STAGE_DIR)/magic_pytorch_env
 	rsync -a $(MAGIC_PYTORCH_DIR)/* $(OCEANEYES_STAGE_DIR)/magic_pytorch_env
 	cd $(OCEANEYES_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/oceaneyes:latest $(DOCKER_PLATFORM) .
@@ -328,6 +331,10 @@ perfstest: ## run strips performance test on the server code
 
 perfsubsetest: ## run subset performance test
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
+
+OCEANEYES_SHARE=/data/AppServer.1
+oceaneyestest: ## run oceaneyes
+	docker run -it --rm -v /data:/data -v $(OCEANEYES_SHARE):/share --name oceaneyes $(ECR)/oceaneyes:$(VERSION) /bin/bash /runner.sh $(OCEANEYES_SHARE)/settings.json
 
 ########################
 # Help Target
