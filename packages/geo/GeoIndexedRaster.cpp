@@ -48,7 +48,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const double GeoIndexedRaster::DISTANCE  = 0.01;         /* Aproxiately 1000 meters at equator */
+const double GeoIndexedRaster::DISTANCE  = 0.01;         /* Aproximately 1000 meters at equator */
 const double GeoIndexedRaster::TOLERANCE = DISTANCE/10;  /* Tolerance for simplification */
 
 const char* GeoIndexedRaster::FLAGS_TAG = "Fmask";
@@ -1504,7 +1504,7 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>
     }
 
     /* Combine results from all union maker threads */
-    OGRGeometry* unionPolygon = NULL;
+    OGRGeometryCollection geometryCollection;
 
     for(union_maker_t* um : unionMakers)
     {
@@ -1514,26 +1514,36 @@ OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>
             continue;
         }
 
-        if(unionPolygon == NULL)
-        {
-            unionPolygon = um->unionPolygon;
-        }
-        else
-        {
-            OGRGeometry* newUnionPolygon = unionPolygon->Union(um->unionPolygon);
-            OGRGeometryFactory::destroyGeometry(unionPolygon);
-            unionPolygon = newUnionPolygon;
-            OGRGeometryFactory::destroyGeometry(um->unionPolygon);
-        }
-
-        OGRGeometry* simplifiedPolygon = unionPolygon->Simplify(TOLERANCE);
-        OGRGeometryFactory::destroyGeometry(unionPolygon);
-        unionPolygon = simplifiedPolygon;
-        if(simplifiedPolygon == NULL)
-        {
-            mlog(ERROR, "Failed to simplify polygon");
-        }
+        /* Add the union polygon from each thread directly to the geometry collection */
+        geometryCollection.addGeometryDirectly(um->unionPolygon);
     }
+
+    /* Perform UnaryUnion on the entire collection */
+    CPLErrorReset();
+    OGRGeometry* unionPolygon = geometryCollection.UnaryUnion();
+    if(unionPolygon == NULL)
+    {
+        const char *msg = CPLGetLastErrorMsg();
+        const CPLErr errType = CPLGetLastErrorType();
+        if(errType == CE_Failure || errType == CE_Fatal)
+        {
+            mlog(ERROR, "UnaryUnion error: %s", msg);
+        }
+        return NULL;
+    }
+
+    /* Simplify the final union polygon */
+    OGRGeometry* simplifiedPolygon = unionPolygon->Simplify(TOLERANCE);
+    if(simplifiedPolygon == NULL)
+    {
+        mlog(ERROR, "Failed to simplify polygon");
+        OGRGeometryFactory::destroyGeometry(unionPolygon);
+        return NULL;
+    }
+
+    /* Clean up the unsimplified union polygon, use the simplified version */
+    OGRGeometryFactory::destroyGeometry(unionPolygon);
+    unionPolygon = simplifiedPolygon;
 
     const double elapsedTime = TimeLib::latchtime() - startTime;
     mlog(DEBUG, "Unioning point geometries took %.3lf", elapsedTime);
