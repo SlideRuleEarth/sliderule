@@ -262,9 +262,11 @@ bool PgcDemStripsRaster::findRasters(finder_t* finder)
                 rgroup->gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
                 rgroup->gpsTime = static_cast<int64_t>(gps);
                 rgroup->infovect.push_back(demRinfo);
+                rgroup->infovect.shrink_to_fit();
                 finder->rasterGroups.push_back(rgroup);
             }
         }
+        finder->rasterGroups.shrink_to_fit();
         mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
     }
     catch (const RunTimeException &e)

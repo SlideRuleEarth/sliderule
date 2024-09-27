@@ -703,6 +703,9 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
             OGRFeature::DestroyFeature(feature);
         }
 
+        /* Reduce memory footprint */
+        featuresList.shrink_to_fit();
+
         cols = dset->GetRasterXSize();
         rows = dset->GetRasterYSize();
 
@@ -1138,6 +1141,8 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         localFeaturesList.push_back(gf->obj->featuresList[j]->Clone());
     }
 
+    mlog(DEBUG, "Finding groups for %zu points, range: %u - %u, features cloned: %u", gf->points->size(), start, end, size);
+
     for(uint32_t i = start; i < end; i++)
     {
         if(!gf->obj->isSampling())
@@ -1149,8 +1154,6 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         const point_info_t& pinfo = gf->points->at(i);
         OGRPoint* ogr_point = new OGRPoint(pinfo.point.x, pinfo.point.y, pinfo.point.z);
 
-        GroupOrdering* groupList = new GroupOrdering();
-
         /* Set finder for the whole range of features */
         Finder finder(ogr_point, &localFeaturesList);
 
@@ -1158,6 +1161,7 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         gf->obj->findRasters(&finder);
 
         /* Filter rasters based on gps time */
+        GroupOrdering* groupList = new GroupOrdering();
         const int64_t gps = gf->obj->usePOItime() ? pinfo.gps : 0.0;
         gf->obj->filterRasters(gps, groupList);
 
@@ -1461,9 +1465,17 @@ OGRGeometry* GeoIndexedRaster::getConvexHull(const std::vector<point_info_t>* po
     if(convexHull == NULL)
     {
         mlog(ERROR, "Failed to create a convex hull around points.");
+        return NULL;
     }
 
-    return convexHull;
+    /* Add a buffer around the convex hull to avoid missing edge points */
+    OGRGeometry* bufferedConvexHull = convexHull->Buffer(DISTANCE);
+    if(bufferedConvexHull)
+    {
+        OGRGeometryFactory::destroyGeometry(convexHull);
+    }
+
+    return bufferedConvexHull;
 }
 
 /*----------------------------------------------------------------------------
@@ -1572,6 +1584,7 @@ void GeoIndexedRaster::applySpatialFilter(OGRLayer* layer, const std::vector<poi
     const double startTime = TimeLib::latchtime();
 
     OGRGeometry* filter = getBufferedPoints(points);
+    // OGRGeometry* filter = getConvexHull(points);
     if(filter != NULL)
     {
         layer->SetSpatialFilter(filter);
@@ -1647,6 +1660,10 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
             mlog(ERROR, "Number of points groups: %zu does not match number of points: %zu", pointsGroups.size(), points->size());
             throw RunTimeException(CRITICAL, RTE_ERROR, "Number of points groups does not match number of points");
         }
+
+        /* Reduce memory usage */
+        pointsGroups.shrink_to_fit();
+        rasterToPointsMap.rehash(rasterToPointsMap.size());
 
         status = true;
     }
@@ -1726,8 +1743,12 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                     const point_groups_t& pg = pointsGroups[pointIndx];
                     ur->pointSamples.push_back({ pg.pointInfo, NULL, false, SS_NO_ERRORS });
                 }
+                ur->pointSamples.shrink_to_fit();
             }
         }
+
+        /* Reduce memory usage */
+        uniqueRasters.shrink_to_fit();
 
         status = true;
     }

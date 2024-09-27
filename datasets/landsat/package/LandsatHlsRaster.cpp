@@ -181,7 +181,6 @@ bool LandsatHlsRaster::findRasters(finder_t* finder)
 
             /* Set raster group time and group id */
             rasters_group_t* rgroup = new rasters_group_t;
-            rgroup->infovect.reserve(MAX_LANDSAT_RASTER_GROUP_SIZE);
             rgroup->id = feature->GetFieldAsString("id");
             rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
 
@@ -220,10 +219,13 @@ bool LandsatHlsRaster::findRasters(finder_t* finder)
                     }
                 }
             }
-            mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
+            rgroup->infovect.shrink_to_fit();
+
+            // mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
             finder->rasterGroups.push_back(rgroup);
         }
-        mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
+        finder->rasterGroups.shrink_to_fit();
+        // mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
     }
     catch (const RunTimeException &e)
     {

@@ -99,7 +99,6 @@ bool GebcoBathyRaster::findRasters(finder_t* finder)
             if (!rastergeo->Intersects(geo)) continue;
 
             rasters_group_t* rgroup = new rasters_group_t;
-            rgroup->infovect.reserve(1);
             rgroup->id = feature->GetFieldAsString("id");
             rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
 
@@ -125,6 +124,7 @@ bool GebcoBathyRaster::findRasters(finder_t* finder)
                     rgroup->infovect.push_back(rinfo);
                 }
             }
+            rgroup->infovect.shrink_to_fit();
 
             mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
             for(unsigned j = 0; j < rgroup->infovect.size(); j++)
@@ -133,6 +133,8 @@ bool GebcoBathyRaster::findRasters(finder_t* finder)
             // Add the group
             finder->rasterGroups.push_back(rgroup);
         }
+        finder->rasterGroups.shrink_to_fit();
+
         mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
     }
     catch (const RunTimeException &e)

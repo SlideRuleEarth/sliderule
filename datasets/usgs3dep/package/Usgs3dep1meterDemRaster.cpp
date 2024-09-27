@@ -113,7 +113,6 @@ bool Usgs3dep1meterDemRaster::findRasters(finder_t* finder)
             if (!rastergeo->Intersects(geo)) continue;
 
             rasters_group_t* rgroup = new rasters_group_t;
-            rgroup->infovect.reserve(1);
             rgroup->id = feature->GetFieldAsString("id");
             rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
 
@@ -129,10 +128,12 @@ bool Usgs3dep1meterDemRaster::findRasters(finder_t* finder)
                 rinfo.fileName        = filePath + fileName.substr(pos);
                 rgroup->infovect.push_back(rinfo);
             }
+            rgroup->infovect.shrink_to_fit();
 
             mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
             finder->rasterGroups.push_back(rgroup);
         }
+        finder->rasterGroups.shrink_to_fit();
         mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
     }
     catch (const RunTimeException &e)
