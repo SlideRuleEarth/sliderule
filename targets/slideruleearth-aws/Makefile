@@ -56,8 +56,12 @@ STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
 OCEANEYES_SRC_DIR = $(ROOT)/datasets/bathy/docker/oceaneyes
 OCEANEYES_STAGE_DIR = $(STAGE)/oceaneyes
 MAGIC_PYTORCH_DIR = $(ROOT)/../../miniconda3/envs/pointnet2
-CSHELPH_SOURCE_FILE ?= $(ROOT)/../ut-ATL24-C-shelph/c_shelph.py
-MEDIANFILTER_SOURCE_FILE ?= $(ROOT)/../ut-ATL24-medianfilter/medianmodel.py
+CSHELPH_SOURCE_DIR ?= $(ROOT)/../ut-ATL24-C-shelph
+CSHELPH_SOURCE_FILE = $(CSHELPH_SOURCE_DIR)/c_shelph.py
+CSHELPH_VERSION = $(shell git --work-tree ${CSHELPH_SOURCE_DIR} --git-dir ${CSHELPH_SOURCE_DIR}/.git describe --abbrev --dirty --always --tags --long)
+MEDIANFILTER_SOURCE_DIR ?= $(ROOT)/../ut-ATL24-medianfilter
+MEDIANFILTER_SOURCE_FILE = $(MEDIANFILTER_SOURCE_DIR)/medianmodel.py
+MEDIANFILTER_VERSION = $(shell git --work-tree ${MEDIANFILTER_SOURCE_DIR} --git-dir ${MEDIANFILTER_SOURCE_DIR}/.git describe --abbrev --dirty --always --tags --long)
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 
@@ -176,8 +180,10 @@ oceaneyes-docker:
 	cp $(OCEANEYES_SRC_DIR)/runner.* $(OCEANEYES_STAGE_DIR)
 	mkdir $(OCEANEYES_STAGE_DIR)/cshelph
 	cp $(CSHELPH_SOURCE_FILE) $(OCEANEYES_STAGE_DIR)/cshelph
+	@echo $(CSHELPH_VERSION) > $(OCEANEYES_STAGE_DIR)/cshelph/cshelph_version.txt
 	mkdir $(OCEANEYES_STAGE_DIR)/medianfilter
 	cp $(MEDIANFILTER_SOURCE_FILE) $(OCEANEYES_STAGE_DIR)/medianfilter
+	@echo $(MEDIANFILTER_VERSION) > $(OCEANEYES_STAGE_DIR)/medianfilter/medianfilter_version.txt
 	cp -R $(OCEANEYES_SRC_DIR)/bathypathfinder $(OCEANEYES_STAGE_DIR)
 	cp -R $(OCEANEYES_SRC_DIR)/pointnet $(OCEANEYES_STAGE_DIR)
 	cp -R $(OCEANEYES_SRC_DIR)/openoceans $(OCEANEYES_STAGE_DIR)

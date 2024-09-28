@@ -47,7 +47,7 @@
 
 #define COASTNET_MODEL  "coastnet_model-20240917.json"
 #define QTREES_MODEL    "qtrees_model-20240916.json"
-#define ENSEMBLE_MODEL  "track_stacker_model.json" // "ensemble_model-20240919.json"
+#define ENSEMBLE_MODEL  "ensemble_model-20240919.json"
 #define POINTNET_MODEL  "pointnet2_model.pth"
 
 /******************************************************************************
@@ -300,6 +300,9 @@ class BathyFields: public Icesat2Fields
         CoastnetFields                                  coastnet;                   // coastnet fields
         OpenOceansPPFields                              openoceanspp;               // openoceans++ fields
         QtreesFields                                    qtrees;                     // qtrees fields
+        FieldElement<string>                            coastnetVersion {COASTNETINFO}; // git commit information for coastnet repo
+        FieldElement<string>                            qtreesVersion {QTREESINFO}; // git commit information for qtrees repo
+        FieldElement<string>                            openoceansppVersion {OPENOCEANSPPINFO}; // git commit information for openoceans repo
 
     protected:
 

@@ -225,8 +225,7 @@ def openoceans(spot, df):
 def ensemble(spot, df):
     ensemble_model_filename = settings['ensemble']['ensemble_model_filename']
     print(f'loading ensemble model: {ensemble_model_filename}')
-#    df = df[['geoid_corr_h', 'surface_h', 'qtrees', 'cshelph', 'medianfilter', 'bathypathfinder', 'openoceanspp', 'coastnet', 'pointnet']]    
-    df = df[['ortho_h', 'qtrees', 'cshelph', 'medianfilter', 'bathypathfinder', 'openoceans', 'openoceanspp', 'coastnet', 'pointnet']]    
+    df = df[['ortho_h', 'surface_h', 'qtrees', 'cshelph', 'medianfilter', 'bathypathfinder', 'openoceanspp', 'coastnet', 'pointnet']]    
     clf = xgb.XGBClassifier(device='cpu')
     clf.load_model(ensemble_model_filename)
     x = df.to_numpy()
@@ -283,6 +282,12 @@ stats = {
     "subaqueous_photons": len(df[df["ortho_h"] < df["surface_h"]])
 }
 
+# read versions
+with open("cshelph/cshelph_version.txt") as file:
+    cshelph_version = file.read()
+with open("medianfilter/medianfilter_version.txt") as file:
+    medianfilter_version = file.read()
+
 # update profile
 profile["total_duration"] = time.time() - settings["latch"]
 print(f'ATL24 total duration is {profile["total_duration"]:.03f} seconds')
@@ -291,7 +296,9 @@ print(f'ATL24 total duration is {profile["total_duration"]:.03f} seconds')
 metadata = {
     "sliderule": json.dumps(rqst_parms),
     "profile": json.dumps(profile),
-    "stats": json.dumps(stats)
+    "stats": json.dumps(stats),
+    "cshelph": cshelph_version,
+    "medianfilter": medianfilter_version
 }
 
 # #####################

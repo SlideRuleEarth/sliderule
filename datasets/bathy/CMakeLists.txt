@@ -27,9 +27,9 @@ target_compile_definitions (slideruleLib PUBLIC QTREESINFO="${QTREESINFO}")
 # OpenOceansPP
 set (OPENOCEANSPPDIR ${PROJECT_SOURCE_DIR}/../ut-ATL24-oopp CACHE STRING "OpenOceans++ application source directory")
 target_compile_definitions (slideruleLib PUBLIC OPENOCEANSPP_INCLUDE="${OPENOCEANSPPDIR}/apps/classify_inc.h")
-execute_process (COMMAND git --work-tree ${OPENOCEANSPPDIR} --git-dir ${OPENOCEANSPPDIR}/.git describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE OPENOCEANSINFO)
-string(REGEX REPLACE "\n$" "" OPENOCEANSINFO "${OPENOCEANSINFO}")
-target_compile_definitions (slideruleLib PUBLIC OPENOCEANSINFO="${OPENOCEANSINFO}")
+execute_process (COMMAND git --work-tree ${OPENOCEANSPPDIR} --git-dir ${OPENOCEANSPPDIR}/.git describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE OPENOCEANSPPINFO)
+string(REGEX REPLACE "\n$" "" OPENOCEANSPPINFO "${OPENOCEANSPPINFO}")
+target_compile_definitions (slideruleLib PUBLIC OPENOCEANSPPINFO="${OPENOCEANSPPINFO}")
 
 target_sources (slideruleLib
     PRIVATE

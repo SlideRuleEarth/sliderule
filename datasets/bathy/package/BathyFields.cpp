@@ -104,7 +104,10 @@ BathyFields::BathyFields(lua_State* L):
                         {"spots",               &spots},
                         {"surface",             &surface},
                         {"refraction",          &refraction},
-                        {"uncertainty",         &uncertainty} })
+                        {"uncertainty",         &uncertainty},
+                        {"coastnet_version",    &coastnetVersion},
+                        {"qtrees_version",      &qtreesVersion},
+                        {"openoceanspp_version",&openoceansppVersion} })
 {
     LuaEngine::setAttrFunc(L, "classifier", luaClassifier);
 }
