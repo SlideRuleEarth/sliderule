@@ -32,7 +32,7 @@
     local startrow = 0
     local numrows = core.ALL_ROWS
     
-    f2 = h5.dataset(core.READER, 
+    f2 = h5.dataset(streaming.READER, 
                     asset, 
                     resource_path, 
                     dataset_name, 
@@ -43,7 +43,7 @@
                     startrow, 
                     numrows)
     
-    r2 = core.reader(f2, dataq)
+    r2 = streaming.reader(f2, dataq)
     vals = rsps2:recvstring(3000) -- read out from listner
     e1 = string.unpack('d', vals)
     print("RESULT latitude_of_projection_origin: " .. e1)
@@ -61,7 +61,7 @@
     dataset_name = "/goes_imager_projection/semi_major_axis"
     dtype = core.DYNAMIC
     
-    f3 = h5.dataset(core.READER, 
+    f3 = h5.dataset(streaming.READER, 
                     asset2, 
                     resource_path, 
                     dataset_name, 
@@ -72,7 +72,7 @@
                     startrow, 
                     numrows)
     
-    r3 = core.reader(f3, dataq)
+    r3 = streaming.reader(f3, dataq)
     vals = rsps2s2:recvstring(3000) -- read out from listner
     e1 = string.unpack('d', vals)
     print("RESULT latitude_of_projection_origin: " .. e1)

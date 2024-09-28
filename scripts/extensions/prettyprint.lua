@@ -14,6 +14,8 @@ local function _display (var, indent)
 
         if (type(v) == "number") then
             toprint = toprint .. v .. ",\r\n"
+        elseif (type(v) == "boolean") then
+            toprint = toprint .. tostring(v) .. ",\r\n"
         elseif (type(v) == "string") then
             toprint = toprint .. "\"" .. v .. "\",\r\n"
         elseif (type(v) == "table") then

@@ -33,12 +33,17 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaLibrarySys.h"
-#include "LuaEngine.h"
-#include "core.h"
-
 #include <unistd.h>
 #include <filesystem>
+
+#include "LuaLibrarySys.h"
+#include "LuaEngine.h"
+#include "OsApi.h"
+#include "TimeLib.h"
+#include "LuaObject.h"
+#include "RecordObject.h"
+#include "DeviceObject.h"
+#include "core.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -107,7 +112,7 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     const int64_t launch_time_gps = TimeLib::sys2gpstime(OsApi::getLaunchTime());
     const TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(launch_time_gps);
     const TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
-    FString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
+    const FString timestr("%04d-%02d-%02dT%02d:%02d:%02dZ", timeinfo.year, dateinfo.month, dateinfo.day, timeinfo.hour, timeinfo.minute, timeinfo.second);
     const int64_t duration = TimeLib::gpstime() - launch_time_gps;
     const char** pkg_list = LuaEngine::getPkgList();
 

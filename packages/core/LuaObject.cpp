@@ -37,6 +37,7 @@
 #include "LuaEngine.h"
 #include "EventLib.h"
 #include "StringLib.h"
+#include "MsgQ.h"
 #include "OsApi.h"
 
 /******************************************************************************
@@ -382,9 +383,23 @@ bool LuaObject::releaseLuaObject (void)
     return is_delete_pending;
 }
 
-/******************************************************************************
- * PROTECTED METHODS
- ******************************************************************************/
+/*----------------------------------------------------------------------------
+ * waitComplete
+ *----------------------------------------------------------------------------*/
+bool LuaObject::waitComplete (int timeout)
+{
+    bool status = false;
+    objSignal.lock();
+    {
+        if(!objComplete)
+        {
+            objSignal.wait(SIGNAL_COMPLETE, timeout);
+        }
+        status = objComplete;
+    }
+    objSignal.unlock();
+    return status;
+}
 
 /*----------------------------------------------------------------------------
  * Constructor
@@ -417,6 +432,112 @@ LuaObject::LuaObject (lua_State* L, const char* object_type, const char* meta_na
 
     /* Start Trace */
     traceId = start_trace(DEBUG, engine_trace_id, "lua_object", "{\"object_type\":\"%s\", \"meta_name\":\"%s\"}", object_type, meta_name);
+}
+
+/*----------------------------------------------------------------------------
+ * signalComplete
+ *----------------------------------------------------------------------------*/
+void LuaObject::signalComplete (void)
+{
+    objSignal.lock();
+    {
+        if(!objComplete)
+        {
+            objSignal.signal(SIGNAL_COMPLETE);
+        }
+        objComplete = true;
+    }
+    objSignal.unlock();
+}
+
+/*----------------------------------------------------------------------------
+ * associateMetaTable
+ *----------------------------------------------------------------------------*/
+void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[])
+{
+    if(luaL_newmetatable(L, meta_name))
+    {
+        /* Add Child Class Functions */
+        lua_pushvalue(L, -1);
+        lua_setfield(L, -2, "__index");
+        luaL_setfuncs(L, meta_table, 0);
+
+        /* Add Base Class Functions */
+        LuaEngine::setAttrFunc(L, "name", luaName);
+        LuaEngine::setAttrFunc(L, "getbyname", luaGetByName);
+        LuaEngine::setAttrFunc(L, "waiton", luaWaitOn);
+        LuaEngine::setAttrFunc(L, "destroy", luaDestroy);
+        LuaEngine::setAttrFunc(L, "__gc", luaDelete);
+        LuaEngine::setAttrFunc(L, "tojson", lua2json);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * createLuaObject
+ *
+ *  Note: if object is an alias, all calls into it from Lua must be thread safe
+ *----------------------------------------------------------------------------*/
+int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
+{
+    /* Create Lua User Data Object */
+    lua_obj->userData = static_cast<luaUserData_t*>(lua_newuserdata(L, sizeof(luaUserData_t)));
+    if(!lua_obj->userData)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to allocate new user data");
+    }
+
+    /* Bump Reference Count */
+    lua_obj->referenceCount++;
+
+    /* Return User Data to Lua */
+    lua_obj->userData->luaObj = lua_obj;
+    luaL_getmetatable(L, lua_obj->LuaMetaName);
+    lua_setmetatable(L, -2);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * getLuaSelf
+ *----------------------------------------------------------------------------*/
+LuaObject* LuaObject::getLuaSelf (lua_State* L, int parm)
+{
+    luaUserData_t* user_data = static_cast<luaUserData_t*>(lua_touserdata(L, parm));
+    if(user_data)
+    {
+        if(user_data->luaObj)
+        {
+            if(luaL_testudata(L, parm, user_data->luaObj->LuaMetaName))
+            {
+                return user_data->luaObj;
+            }
+
+            throw RunTimeException(CRITICAL, RTE_ERROR, "object method called from inconsistent type <%s>", user_data->luaObj->LuaMetaName);
+        }
+
+        throw RunTimeException(CRITICAL, RTE_ERROR, "object method called on emtpy object");
+    }
+
+    throw RunTimeException(CRITICAL, RTE_ERROR, "calling object method from something not an object");
+}
+
+/*----------------------------------------------------------------------------
+ * referenceLuaObject
+ *----------------------------------------------------------------------------*/
+void LuaObject::referenceLuaObject (LuaObject* lua_obj)
+{
+    globalMut.lock();
+    {
+        lua_obj->referenceCount++;
+    }
+    globalMut.unlock();
+}
+
+/*----------------------------------------------------------------------------
+ * tojson
+ *----------------------------------------------------------------------------*/
+const char* LuaObject::tojson(void) const
+{
+    return StringLib::duplicate("{}");
 }
 
 /*----------------------------------------------------------------------------
@@ -594,21 +715,47 @@ int LuaObject::luaWaitOn(lua_State* L)
 
         /* Get Parameters */
         const int timeout = getLuaInteger(L, 2, true, IO_PEND);
+        const char* rspq = getLuaString(L, 3, true, NULL);
+        int interval = getLuaInteger(L, 4, true, DEFAULT_WAIT_INTERVAL);
 
         /* Wait On Signal */
-        lua_obj->objSignal.lock();
+        if(rspq && timeout > 0)
         {
-            if(!lua_obj->objComplete)
+            Publisher pub(rspq);
+            int duration = 0;
+            interval = MIN(interval, timeout);
+
+            while(!status)
             {
-                lua_obj->objSignal.wait(SIGNAL_COMPLETE, timeout);
+                status = lua_obj->waitComplete(interval);
+                if(!status)
+                {
+                    if(pub.getSubCnt() <= 0)
+                    {
+                        alert(ERROR, RTE_TIMEOUT, &pub, NULL, "request <%s> terminated while waiting", rspq);
+                        break;
+                    }
+                    else if(duration >= timeout)
+                    {
+                        alert(ERROR, RTE_TIMEOUT, &pub, NULL, "request <%s> timed-out after %d seconds", rspq, timeout);
+                        break;
+                    }
+                    else
+                    {
+                        duration += interval;
+                        alert(INFO, RTE_TIMEOUT, &pub, NULL, "request <%s> ... %s still running after %d seconds", rspq, lua_obj->getName(), duration / 1000);
+                    }
+                }
             }
-            status = lua_obj->objComplete;
         }
-        lua_obj->objSignal.unlock();
+        else
+        {
+            status = lua_obj->waitComplete(timeout);
+        }
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error locking object: %s", e.what());
+        mlog(e.level(), "Error waiting on object: %s", e.what());
     }
 
     /* Return Completion Status */
@@ -637,111 +784,5 @@ int LuaObject::lua2json(lua_State* L)
     lua_pushstring(L, json_str);
     delete [] json_str;
     return 1;
-}
-
-/*----------------------------------------------------------------------------
- * signalComplete
- *----------------------------------------------------------------------------*/
-void LuaObject::signalComplete (void)
-{
-    objSignal.lock();
-    {
-        if(!objComplete)
-        {
-            objSignal.signal(SIGNAL_COMPLETE);
-        }
-        objComplete = true;
-    }
-    objSignal.unlock();
-}
-
-/*----------------------------------------------------------------------------
- * associateMetaTable
- *----------------------------------------------------------------------------*/
-void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[])
-{
-    if(luaL_newmetatable(L, meta_name))
-    {
-        /* Add Child Class Functions */
-        lua_pushvalue(L, -1);
-        lua_setfield(L, -2, "__index");
-        luaL_setfuncs(L, meta_table, 0);
-
-        /* Add Base Class Functions */
-        LuaEngine::setAttrFunc(L, "name", luaName);
-        LuaEngine::setAttrFunc(L, "getbyname", luaGetByName);
-        LuaEngine::setAttrFunc(L, "waiton", luaWaitOn);
-        LuaEngine::setAttrFunc(L, "destroy", luaDestroy);
-        LuaEngine::setAttrFunc(L, "__gc", luaDelete);
-        LuaEngine::setAttrFunc(L, "tojson", lua2json);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * createLuaObject
- *
- *  Note: if object is an alias, all calls into it from Lua must be thread safe
- *----------------------------------------------------------------------------*/
-int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
-{
-    /* Create Lua User Data Object */
-    lua_obj->userData = static_cast<luaUserData_t*>(lua_newuserdata(L, sizeof(luaUserData_t)));
-    if(!lua_obj->userData)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to allocate new user data");
-    }
-
-    /* Bump Reference Count */
-    lua_obj->referenceCount++;
-
-    /* Return User Data to Lua */
-    lua_obj->userData->luaObj = lua_obj;
-    luaL_getmetatable(L, lua_obj->LuaMetaName);
-    lua_setmetatable(L, -2);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * getLuaSelf
- *----------------------------------------------------------------------------*/
-LuaObject* LuaObject::getLuaSelf (lua_State* L, int parm)
-{
-    luaUserData_t* user_data = static_cast<luaUserData_t*>(lua_touserdata(L, parm));
-    if(user_data)
-    {
-        if(user_data->luaObj)
-        {
-            if(luaL_testudata(L, parm, user_data->luaObj->LuaMetaName))
-            {
-                return user_data->luaObj;
-            }
-
-            throw RunTimeException(CRITICAL, RTE_ERROR, "object method called from inconsistent type <%s>", user_data->luaObj->LuaMetaName);
-        }
-
-        throw RunTimeException(CRITICAL, RTE_ERROR, "object method called on emtpy object");
-    }
-
-    throw RunTimeException(CRITICAL, RTE_ERROR, "calling object method from something not an object");
-}
-
-/*----------------------------------------------------------------------------
- * referenceLuaObject
- *----------------------------------------------------------------------------*/
-void LuaObject::referenceLuaObject (LuaObject* lua_obj)
-{
-    globalMut.lock();
-    {
-        lua_obj->referenceCount++;
-    }
-    globalMut.unlock();
-}
-
-/*----------------------------------------------------------------------------
- * tojson
- *----------------------------------------------------------------------------*/
-const char* LuaObject::tojson(void) const
-{
-    return StringLib::duplicate("{}");
 }
 

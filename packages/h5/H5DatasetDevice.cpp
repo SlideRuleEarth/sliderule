@@ -33,7 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
+#include "OsApi.h"
 #include "H5DatasetDevice.h"
 #include "H5Coro.h"
 

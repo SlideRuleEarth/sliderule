@@ -34,13 +34,13 @@
  ******************************************************************************/
 
 #include "UT_Dictionary.h"
-#include "core.h"
+#include "UnitTest.h"
+#include "OsApi.h"
+#include "TimeLib.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
-
-const char* UT_Dictionary::OBJECT_TYPE = "UT_Dictionary";
 
 const char* UT_Dictionary::LUA_META_NAME = "UT_Dictionary";
 const struct luaL_Reg UT_Dictionary::LUA_META_TABLE[] = {
@@ -75,14 +75,9 @@ int UT_Dictionary::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 UT_Dictionary::UT_Dictionary (lua_State* L):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
+    UnitTest(L, LUA_META_NAME, LUA_META_TABLE)
 {
 }
-
-/*----------------------------------------------------------------------------
- * Destructor  -
- *----------------------------------------------------------------------------*/
-UT_Dictionary::~UT_Dictionary(void) = default;
 
 /*----------------------------------------------------------------------------
  * functionalUnitTestCmd  -
@@ -98,7 +93,7 @@ int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        print2term("Failed to get lua parameters: %s", e.what());
+        mlog(CRITICAL, "Failed to get lua parameters: %s", e.what());
         lua_pushboolean(L, false);
         return 1;
     }
@@ -110,7 +105,7 @@ int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
     int max_chain;
     int num_entries;
 
-    bool failure=false;
+    ut_initialize(lua_obj);
 
     /* Start Timer */
     const int64_t start_time = TimeLib::gpstime();
@@ -122,15 +117,15 @@ int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
         wordlist_ptr = lua_obj->wordsets[wordset_name];
         if(wordlist_ptr->empty())
         {
-            print2term("[%d] ERROR: word set %s is empty!\n", __LINE__, wordset_name);
-            lua_pushboolean(L, false);
+            ut_assert(lua_obj, false, "ERROR: word set %s is empty!\n", wordset_name);
+            lua_pushboolean(L, ut_status(lua_obj));
             return 1;
         }
     }
     catch(RunTimeException& e)
     {
-        print2term("[%d] ERROR: unable to locate word set %s: %s\n", __LINE__, wordset_name, e.what());
-        lua_pushboolean(L, false);
+        ut_assert(lua_obj, false, "ERROR: unable to locate word set %s: %s\n", wordset_name, e.what());
+        lua_pushboolean(L, ut_status(lua_obj));
         return 1;
     }
 
@@ -144,8 +139,7 @@ int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
         seq = i;
         if(!d1.add(wordset[i].c_str(), seq))
         {
-            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i].c_str());
-            failure = true;
+            ut_assert(lua_obj, false, "ERROR: failed to add %s\n", wordset[i].c_str());
         }
     }
 
@@ -154,8 +148,7 @@ int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
     {
         if(!d1.find(wordset[i].c_str()))
         {
-            print2term("[%d] ERROR: failed to find %s\n", __LINE__, wordset[i].c_str());
-            failure = true;
+            ut_assert(lua_obj, false, "ERROR: failed to find %s\n", wordset[i].c_str());
         }
     }
 
@@ -167,14 +160,12 @@ int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
             const long data = d1.get(wordset[i].c_str());
             if(data != i)
             {
-                print2term("[%d] ERROR: failed to read back value, %ld != %d, for word: %s\n", __LINE__, data, i, wordset[i].c_str());
-                failure = true;
+                ut_assert(lua_obj, false, "ERROR: failed to read back value, %ld != %d, for word: %s\n", data, i, wordset[i].c_str());
             }
         }
         catch(RunTimeException& e)
         {
-            print2term("[%d] ERROR: failed to get %s: %s\n", __LINE__, wordset[i].c_str(), e.what());
-            failure = true;
+            ut_assert(lua_obj, false, "ERROR: failed to get %s: %s\n", wordset[i].c_str(), e.what());
         }
     }
 
@@ -185,8 +176,7 @@ int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
     print2term("Hash Size, Max Chain, Num Entries, %d, %d, %d\n", hash_size, max_chain,  num_entries);
     if(num_entries != numwords)
     {
-        print2term("[%d] ERROR: incorrect number of entries %d != %d\n", __LINE__, num_entries, numwords);
-        failure = true;
+        ut_assert(lua_obj, false, "ERROR: incorrect number of entries %d != %d\n", num_entries, numwords);
     }
 
     /* Get Keys */
@@ -196,8 +186,7 @@ int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
         const int num_keys = d1.getKeys(&key_list);
         if(num_keys != numwords)
         {
-            print2term("[%d] ERROR: retrieved the wrong number of keys %d != %d\n", __LINE__, num_keys, numwords);
-            failure = true;
+            ut_assert(lua_obj, false, "ERROR: retrieved the wrong number of keys %d != %d\n", num_keys, numwords);
         }
 
         const char** true_list = new const char* [numwords];
@@ -225,8 +214,7 @@ int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
                 }
                 if(!found)
                 {
-                    print2term("[%d] ERROR: failed to retrieve the correct key, %s\n", __LINE__, wordset[i].c_str());
-                    failure = true;
+                    ut_assert(lua_obj, false, "ERROR: failed to retrieve the correct key, %s\n", wordset[i].c_str());
                 }
 
                 delete [] key_list[i]; // NOLINT(clang-analyzer-core.CallAndMessage)
@@ -241,8 +229,7 @@ int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
     {
         if(d1.remove(wordset[i].c_str()) != true)
         {
-            print2term("[%d] ERROR: failed to remove %s, %d\n", __LINE__, wordset[i].c_str(), i);
-            failure = true;
+            ut_assert(lua_obj, false, "ERROR: failed to remove %s, %d\n", wordset[i].c_str(), i);
         }
     }
 
@@ -253,8 +240,7 @@ int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
     print2term("Hash Size, Max Chain, Num Entries, %d, %d, %d\n", hash_size, max_chain,  num_entries);
     if(num_entries != 0)
     {
-        print2term("[%d] ERROR: incorrect number of entries %d != 0\n", __LINE__, num_entries);
-        failure = true;
+        ut_assert(lua_obj, false, "ERROR: incorrect number of entries %d != 0\n", num_entries);
     }
 
     /* Set Entries */
@@ -263,8 +249,7 @@ int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
         seq = i;
         if(!d1.add(wordset[i].c_str(), seq))
         {
-            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i].c_str());
-            failure = true;
+            ut_assert(lua_obj, false, "ERROR: failed to add %s\n", wordset[i].c_str());
         }
     }
 
@@ -276,8 +261,7 @@ int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
     {
         if(d1.find(wordset[i].c_str()))
         {
-            print2term("[%d] ERROR: found entry that should have been cleared %s\n", __LINE__, wordset[i].c_str());
-            failure = true;
+            ut_assert(lua_obj, false, "ERROR: found entry that should have been cleared %s\n", wordset[i].c_str());
         }
     }
 
@@ -288,8 +272,7 @@ int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
     print2term("Hash Size, Max Chain, Num Entries, %d, %d, %d\n", hash_size, max_chain,  num_entries);
     if(num_entries != 0)
     {
-        print2term("[%d] ERROR: incorrect number of entries %d != 0\n", __LINE__, num_entries);
-        failure = true;
+        ut_assert(lua_obj, false, "ERROR: incorrect number of entries %d != 0\n", num_entries);
     }
 
     /* Start Timer */
@@ -298,7 +281,7 @@ int UT_Dictionary::functionalUnitTestCmd (lua_State* L)
     print2term("Time to complete: %lf seconds\n", elapsed_time);
 
     /* Return Status */
-    lua_pushboolean(L, !failure);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -316,13 +299,14 @@ int UT_Dictionary::iteratorUnitTestCmd (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        print2term("Failed to get lua parameters: %s", e.what());
+        mlog(CRITICAL, "Failed to get lua parameters: %s", e.what());
         lua_pushboolean(L, false);
         return 1;
     }
 
     Dictionary<long> d1;
-    bool failure=false;
+
+    ut_initialize(lua_obj);
 
     /* Get Word List */
     vector<string>* wordlist_ptr;
@@ -331,15 +315,15 @@ int UT_Dictionary::iteratorUnitTestCmd (lua_State* L)
         wordlist_ptr = lua_obj->wordsets[wordset_name];
         if(wordlist_ptr->empty())
         {
-            print2term("[%d] ERROR: word set %s is empty!\n", __LINE__, wordset_name);
-            lua_pushboolean(L, false);
+            ut_assert(lua_obj, false, "ERROR: word set %s is empty!\n", wordset_name);
+            lua_pushboolean(L, ut_status(lua_obj));
             return 1;
         }
     }
     catch(RunTimeException& e)
     {
-        print2term("[%d] ERROR: unable to locate word set %s: %s\n", __LINE__, wordset_name, e.what());
-        lua_pushboolean(L, false);
+        ut_assert(lua_obj, false, "ERROR: unable to locate word set %s: %s\n", wordset_name, e.what());
+        lua_pushboolean(L, ut_status(lua_obj));
         return 1;
     }
 
@@ -355,8 +339,7 @@ int UT_Dictionary::iteratorUnitTestCmd (lua_State* L)
         sum += i;
         if(!d1.add(wordset[i].c_str(), seq))
         {
-            print2term("[%d] ERROR: failed to add %s\n", __LINE__, wordset[i].c_str());
-            failure = true;
+            ut_assert(lua_obj, false, "ERROR: failed to add %s\n", wordset[i].c_str());
         }
     }
 
@@ -378,8 +361,7 @@ int UT_Dictionary::iteratorUnitTestCmd (lua_State* L)
     /* Check Forward Iteration Results */
     if(tsum != sum)
     {
-        print2term("[%d] ERROR: the values did not correctly sum, %ld != %ld\n", __LINE__, tsum, sum);
-        failure = true;
+        ut_assert(lua_obj, false, "ERROR: the values did not correctly sum, %ld != %ld\n", tsum, sum);
     }
 
     /* Iterate Backwards Through Dictionary */
@@ -396,8 +378,7 @@ int UT_Dictionary::iteratorUnitTestCmd (lua_State* L)
     /* Check Backward Iteration Results */
     if(tsum != sum)
     {
-        print2term("[%d] ERROR: the values did not correctly sum, %ld != %ld\n", __LINE__, tsum, sum);
-        failure = true;
+        ut_assert(lua_obj, false, "ERROR: the values did not correctly sum, %ld != %ld\n", tsum, sum);
     }
 
     /* Iterate via Iterator Through Dictionary */
@@ -413,8 +394,7 @@ int UT_Dictionary::iteratorUnitTestCmd (lua_State* L)
     /* Check Iterator Iteration Results */
     if(tsum != sum)
     {
-        print2term("[%d] ERROR: the values did not correctly sum, %ld != %ld\n", __LINE__, tsum, sum);
-        failure = true;
+        ut_assert(lua_obj, false, "ERROR: the values did not correctly sum, %ld != %ld\n", tsum, sum);
     }
 
     /* Iterate via Iterator Backward Through Dictionary */
@@ -430,12 +410,11 @@ int UT_Dictionary::iteratorUnitTestCmd (lua_State* L)
     /* Check Backward Iterator Iteration Results */
     if(tsum != sum)
     {
-        print2term("[%d] ERROR: the values did not correctly sum, %ld != %ld\n", __LINE__, tsum, sum);
-        failure = true;
+        ut_assert(lua_obj, false, "ERROR: the values did not correctly sum, %ld != %ld\n", tsum, sum);
     }
 
     /* Return Status */
-    lua_pushboolean(L, !failure);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -458,14 +437,16 @@ int UT_Dictionary::addWordSetCmd (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        print2term("Failed to get lua parameters: %s", e.what());
+        mlog(CRITICAL, "Failed to get lua parameters: %s", e.what());
         lua_pushboolean(L, false);
         return 1;
     }
 
+    ut_initialize(lua_obj);
     const int numwords = lua_obj->createWordSet(setname, filename);
+    ut_assert(lua_obj, numwords == size, "Incorrect number of words: %d != %d", numwords, size);
 
-    lua_pushboolean(L, numwords == size);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -477,7 +458,7 @@ int UT_Dictionary::createWordSet (const char* name, const char* filename)
     FILE* wordfile = fopen(filename, "r");
     if(wordfile == NULL)
     {
-       print2term("[%d] ERROR: Unable to open word list file: %s\n", __LINE__, filename);
+       mlog(CRITICAL, "ERROR: Unable to open word list file: %s\n", filename);
        return -1;
     }
 

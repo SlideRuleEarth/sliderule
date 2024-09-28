@@ -80,7 +80,7 @@ class Atl03Viewer: public LuaObject
 
         /* Segment Fields */
         typedef struct {
-            int64_t         time_ns;        // nanoseconds since GPS epoch
+            time8_t         time_ns;        // nanoseconds since GPS epoch
             uint64_t        extent_id;
             double          latitude;
             double          longitude;

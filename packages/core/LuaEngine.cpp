@@ -33,9 +33,10 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaEngine.h"
-#include "core.h"
 #include <regex>
+
+#include "LuaEngine.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -373,7 +374,7 @@ const char* LuaEngine::sanitize (const char* filename)
 {
     char* safe_filename = StringLib::duplicate(filename);
     StringLib::replace(safe_filename, PATH_DELIMETER, '_');
-    FString safe_pathname("%s%c%s%c%s.lua", CONFDIR, PATH_DELIMETER, "api", PATH_DELIMETER, safe_filename);
+    const FString safe_pathname("%s%c%s%c%s.lua", CONFDIR, PATH_DELIMETER, "api", PATH_DELIMETER, safe_filename);
     delete [] safe_filename;
     return safe_pathname.c_str(true);
 }
@@ -671,7 +672,7 @@ lua_State* LuaEngine::createState(luaStepHook hook)
     lua_setglobal(l, LUA_CONFDIR);
 
     /* Set Starting Lua Path */
-    FString lpath("%s/?.lua;%s/api/?.lua", CONFDIR, CONFDIR);
+    const FString lpath("%s/?.lua;%s/api/?.lua", CONFDIR, CONFDIR);
     lua_getglobal(l, "package" );
     lua_getfield(l, -1, "path" ); // get field "path" from table at top of stack (-1)
     lua_pop(l, 1 ); // get rid of the string on the stack we just pushed on line 5

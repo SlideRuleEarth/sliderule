@@ -33,7 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
+#include "OsApi.h"
 #include "geo.h"
 #include "RasterSampler.h"
 #include "GeoIndexedRaster.h"
@@ -266,7 +266,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
         {
             const long time_val = record->getValueInteger(time_field);
             time_field.offset += (batchRecordSizeBytes * 8);
-            gps = TimeLib::sysex2gpstime(time_val);
+            gps = TimeLib::sysex2gpstime(static_cast<time8_t>(time_val));
         }
 
         /* Get Height */

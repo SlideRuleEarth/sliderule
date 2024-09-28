@@ -38,8 +38,8 @@
 #include <algorithm>
 #include <stdarg.h>
 
-#include "core.h"
 #include "icesat2.h"
+#include "OsApi.h"
 #include "H5Coro.h"
 #include "H5Array.h"
 #include "GeoLib.h"

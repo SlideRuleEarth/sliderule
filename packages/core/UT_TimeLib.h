@@ -36,15 +36,15 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaObject.h"
+#include "UnitTest.h"
 #include "TimeLib.h"
 #include "OsApi.h"
 
 /******************************************************************************
- * UNIT TEST TIME LIBRARY CLASS
+ * CLASS
  ******************************************************************************/
 
-class UT_TimeLib: public LuaObject
+class UT_TimeLib: public UnitTest
 {
     public:
 
@@ -54,8 +54,6 @@ class UT_TimeLib: public LuaObject
 
         static const int64_t Truth_Times[39][2];
         static const int UNIX_Epoch_Start;
-
-        static const char* OBJECT_TYPE;
 
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
@@ -80,7 +78,7 @@ class UT_TimeLib: public LuaObject
          *--------------------------------------------------------------------*/
 
     explicit    UT_TimeLib          (lua_State* L);
-                ~UT_TimeLib         (void) override;
+                ~UT_TimeLib         (void) override = default;
 	static int  CheckGmt2GpsCmd     (lua_State* L);
 	static int  CheckGps2GmtCmd     (lua_State* L);
 	static int  CheckGetCountCmd    (lua_State* L);

@@ -33,21 +33,15 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <stdlib.h>
 #include "UT_Table.h"
-#include "core.h"
-
-/******************************************************************************
- * MACROS
- ******************************************************************************/
-
-#define ut_assert(e,...)    lua_obj->_ut_assert(e,__FILE__,__LINE__,__VA_ARGS__)
+#include "Table.h"
+#include "UnitTest.h"
+#include "TimeLib.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
-
-const char* UT_Table::OBJECT_TYPE = "UT_Table";
 
 const char* UT_Table::LUA_META_NAME = "UT_Table";
 const struct luaL_Reg UT_Table::LUA_META_TABLE[] = {
@@ -86,57 +80,8 @@ int UT_Table::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 UT_Table::UT_Table (lua_State* L):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    failures(0)
+    UnitTest(L, LUA_META_NAME, LUA_META_TABLE)
 {
-}
-
-/*----------------------------------------------------------------------------
- * Destructor  -
- *----------------------------------------------------------------------------*/
-UT_Table::~UT_Table(void) = default;
-
-/*--------------------------------------------------------------------------------------
- * _ut_assert - called via ut_assert macro
- *--------------------------------------------------------------------------------------*/
-bool UT_Table::_ut_assert(bool e, const char* file, int line, const char* fmt, ...)
-{
-    if(!e)
-    {
-        char formatted_string[UT_MAX_ASSERT];
-        char log_message[UT_MAX_ASSERT];
-        va_list args;
-        int vlen, msglen;
-        char* pathptr;
-
-        /* Build Formatted String */
-        va_start(args, fmt);
-        vlen = vsnprintf(formatted_string, UT_MAX_ASSERT - 1, fmt, args);
-        msglen = vlen < UT_MAX_ASSERT - 1 ? vlen : UT_MAX_ASSERT - 1;
-        va_end(args);
-        if (msglen < 0) formatted_string[0] = '\0';
-        else            formatted_string[msglen] = '\0';
-
-        /* Chop Path in Filename */
-        pathptr = StringLib::find(file, '/', false);
-        if(pathptr) pathptr++;
-        else pathptr = const_cast<char*>(file);
-
-        /* Create Log Message */
-        msglen = snprintf(log_message, UT_MAX_ASSERT, "Failure at %s:%d:%s", pathptr, line, formatted_string);
-        if(msglen > (UT_MAX_ASSERT - 1))
-        {
-            log_message[UT_MAX_ASSERT - 1] = '#';
-        }
-
-        /* Display Log Message */
-        print2term("%s", log_message);
-
-        /* Count Error */
-        failures++;
-    }
-
-    return e;
 }
 
 /*--------------------------------------------------------------------------------------
@@ -160,32 +105,32 @@ int UT_Table::testAddRemove(lua_State* L)
     const int size = 8;
     Table<int,int> mytable(size);
 
-    lua_obj->failures = 0;
+    ut_initialize(lua_obj);
 
     /* Add Initial Set */
     for(key = 0; key < size; key++)
     {
-        ut_assert(mytable.add(key, key, true), "Failed to add entry %d\n", key);
+        ut_assert(lua_obj, mytable.add(key, key, true), "Failed to add entry %d\n", key);
     }
 
     /* Check Size */
-    ut_assert(mytable.length() == 8, "Failed to get hash size of 8\n");
+    ut_assert(lua_obj, mytable.length() == 8, "Failed to get hash size of 8\n");
 
     /* Transverse Set */
     key = mytable.first(&data);
     while(key != (int)INVALID_KEY)
     {
-        ut_assert(data == key, "Failed to get next key %d\n", key);
-        ut_assert(mytable.remove(key), "Failed to remove key %d\n", key);
-        ut_assert(mytable.length() == size - key - 1, "Failed to get size\n");
+        ut_assert(lua_obj, data == key, "Failed to get next key %d\n", key);
+        ut_assert(lua_obj, mytable.remove(key), "Failed to remove key %d\n", key);
+        ut_assert(lua_obj, mytable.length() == size - key - 1, "Failed to get size\n");
         key = mytable.first(&data);
     }
 
     /* Check Empty */
-    ut_assert(mytable.first(&data) == (int)INVALID_KEY, "Failed to get error\n");
-    ut_assert(mytable.length() == 0, "Failed to remove all entries\n");
+    ut_assert(lua_obj, mytable.first(&data) == (int)INVALID_KEY, "Failed to get error\n");
+    ut_assert(lua_obj, mytable.length() == 0, "Failed to remove all entries\n");
 
-    lua_pushboolean(L, lua_obj->failures == 0);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -211,29 +156,29 @@ int UT_Table::testChaining(lua_State* L)
     Table<int,int> mytable(size);
     const int test_data[8] = {0,1,2,3,8,9,10,11};
 
-    lua_obj->failures = 0;
+    ut_initialize(lua_obj);
 
     /* Add Initial Set */
     for(int i = 0; i < size; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, true), "Failed to add entry %d\n", key);
+        ut_assert(lua_obj, mytable.add(key, key, true), "Failed to add entry %d\n", key);
     }
 
     /* Transverse Set */
     for(int i = 0; i < size; i++)
     {
         key = mytable.first(&data);
-        ut_assert(test_data[i] == key, "Failed to get next key %d\n", key);
-        ut_assert(mytable.remove(key), "Failed to remove key %d\n", key);
-        ut_assert(mytable.length() == size - i - 1, "Failed to get size\n");
+        ut_assert(lua_obj, test_data[i] == key, "Failed to get next key %d\n", key);
+        ut_assert(lua_obj, mytable.remove(key), "Failed to remove key %d\n", key);
+        ut_assert(lua_obj, mytable.length() == size - i - 1, "Failed to get size\n");
     }
 
     /* Check Empty */
-    ut_assert(mytable.first(&data) == (int)INVALID_KEY, "Failed to get error\n");
-    ut_assert(mytable.length() == 0, "Failed to remove all entries\n");
+    ut_assert(lua_obj, mytable.first(&data) == (int)INVALID_KEY, "Failed to get error\n");
+    ut_assert(lua_obj, mytable.length() == 0, "Failed to remove all entries\n");
 
-    lua_pushboolean(L, lua_obj->failures == 0);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -262,29 +207,29 @@ int UT_Table::testRemoving(lua_State* L)
     const int remove_order[16] = {0, 16, 32, 17, 33,  1, 34, 18,  2,  3,  4,  5,  6,  7,  8,  9};
     const int check_order[16]  = {0, 16, 32,  1,  1,  1,  2,  2,   2,  3,  4,  5,  6,  7,  8,  9};
 
-    lua_obj->failures = 0;
+    ut_initialize(lua_obj);
 
     /* Add Initial Set */
     for(int i = 0; i < size; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, true), "Failed to add entry %d\n", key);
+        ut_assert(lua_obj, mytable.add(key, key, true), "Failed to add entry %d\n", key);
     }
 
     /* Transverse Set */
     for(int i = 0; i < size; i++)
     {
         key = mytable.first(&data);
-        ut_assert(check_order[i] == key, "Failed to get next key %d != %d, %d\n", check_order[i], key, i);
-        ut_assert(mytable.remove(remove_order[i]), "Failed to remove key %d\n", remove_order[i]);
-        ut_assert(mytable.length() == size - i - 1, "Failed to get size\n");
+        ut_assert(lua_obj, check_order[i] == key, "Failed to get next key %d != %d, %d\n", check_order[i], key, i);
+        ut_assert(lua_obj, mytable.remove(remove_order[i]), "Failed to remove key %d\n", remove_order[i]);
+        ut_assert(lua_obj, mytable.length() == size - i - 1, "Failed to get size\n");
     }
 
     /* Check Empty */
-    ut_assert(mytable.first(&data) == (int)INVALID_KEY, "Failed to get error\n");
-    ut_assert(mytable.length() == 0, "Failed to remove all entries\n");
+    ut_assert(lua_obj, mytable.first(&data) == (int)INVALID_KEY, "Failed to get error\n");
+    ut_assert(lua_obj, mytable.length() == 0, "Failed to remove all entries\n");
 
-    lua_pushboolean(L, lua_obj->failures == 0);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -310,51 +255,51 @@ int UT_Table::testDuplicates(lua_State* L)
     Table<int,int> mytable(size);
     const int test_data[16] = {0,16,32,1,17,33,2,18,34,3,4,5,6,7,8,9};
 
-    lua_obj->failures = 0;
+    ut_initialize(lua_obj);
 
     /* Add Initial Set */
     for(int i = 0; i < 9; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, true), "Failed to add key %d\n", key);
+        ut_assert(lua_obj, mytable.add(key, key, true), "Failed to add key %d\n", key);
     }
 
     /* Add Duplicate Set */
     for(int i = 0; i < 9; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, true) == false, "Failed to reject duplicate key %d\n", key);
+        ut_assert(lua_obj, mytable.add(key, key, true) == false, "Failed to reject duplicate key %d\n", key);
     }
 
     /* Overwrite Duplicate Set */
     for(int i = 0; i < 9; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, false), "Failed to overwrite duplicate key %d\n", key);
+        ut_assert(lua_obj, mytable.add(key, key, false), "Failed to overwrite duplicate key %d\n", key);
     }
 
     /* Add Rest of Set */
     for(int i = 9; i < size; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, true), "Failed to add key %d\n", key);
+        ut_assert(lua_obj, mytable.add(key, key, true), "Failed to add key %d\n", key);
     }
 
     /* Overwrite Entire Duplicate Set */
     for(int i = 0; i < size; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, false), "Failed to overwrite duplicate key %d\n", key);
+        ut_assert(lua_obj, mytable.add(key, key, false), "Failed to overwrite duplicate key %d\n", key);
     }
 
     /* Attempt to Add to Full Hash */
     key = 35;
-    ut_assert(mytable.add(key, key, false) == false, "Failed to detect full table\n");
+    ut_assert(lua_obj, mytable.add(key, key, false) == false, "Failed to detect full table\n");
 
     /* Check Size */
-    ut_assert(mytable.length() == size, "Failed to rget size of table\n");
+    ut_assert(lua_obj, mytable.length() == size, "Failed to rget size of table\n");
 
-    lua_pushboolean(L, lua_obj->failures == 0);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -380,51 +325,51 @@ int UT_Table::testFullTable(lua_State* L)
     Table<int,int> mytable(size);
     const int test_data[8] = {0,1,2,3,4,5,6,7};
 
-    lua_obj->failures = 0;
+    ut_initialize(lua_obj);
 
     /* Add Initial Set */
     for(int i = 0; i < size; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, true), "Failed to add key %d\n", key);
+        ut_assert(lua_obj, mytable.add(key, key, true), "Failed to add key %d\n", key);
     }
 
     /* Fail to Add on Full Table */
-    key = 0; ut_assert(mytable.add(key, key, true) == false, "Failed to error on adding key to full table, %d\n", key);
-    key = 8; ut_assert(mytable.add(key, key, true) == false, "Failed to error on adding key to full table, %d\n", key);
-    key = 9; ut_assert(mytable.add(key, key, true) == false, "Failed to error on adding key to full table, %d\n", key);
+    key = 0; ut_assert(lua_obj, mytable.add(key, key, true) == false, "Failed to error on adding key to full table, %d\n", key);
+    key = 8; ut_assert(lua_obj, mytable.add(key, key, true) == false, "Failed to error on adding key to full table, %d\n", key);
+    key = 9; ut_assert(lua_obj, mytable.add(key, key, true) == false, "Failed to error on adding key to full table, %d\n", key);
 
     /* Fail to Add on Changing Full Table */
     for(key = 0; key < size; key++)
     {
-        ut_assert(mytable.add(key, key, true) == false, "Failed to error on adding key to full table %d\n", key);
-        ut_assert(mytable.remove(key), "Failed to remove key %d\n", key);
+        ut_assert(lua_obj, mytable.add(key, key, true) == false, "Failed to error on adding key to full table %d\n", key);
+        ut_assert(lua_obj, mytable.remove(key), "Failed to remove key %d\n", key);
 
-        ut_assert(mytable.add(key, key, true), "Failed to add key %d\n", key);
+        ut_assert(lua_obj, mytable.add(key, key, true), "Failed to add key %d\n", key);
 
         const int new1_key = key + size;
-        ut_assert(mytable.add(new1_key, new1_key, true) == false, "Failed to error on adding key to full table %d\n", new1_key);
+        ut_assert(lua_obj, mytable.add(new1_key, new1_key, true) == false, "Failed to error on adding key to full table %d\n", new1_key);
 
         const int new2_key = key + size + 1;
-        ut_assert(mytable.add(new2_key, new2_key, true) == false, "Failed to error on adding key to full table %d\n", new2_key);
+        ut_assert(lua_obj, mytable.add(new2_key, new2_key, true) == false, "Failed to error on adding key to full table %d\n", new2_key);
     }
 
     /* Fail to Add on Overwritten Full Table */
     for(key = 0; key < size; key++)
     {
-        ut_assert(mytable.add(key, key, true) == false, "Failed to error on adding key to full table %d\n", key);
-        ut_assert(mytable.add(key, key, false), "Failed to overwrite key %d\n", key);
+        ut_assert(lua_obj, mytable.add(key, key, true) == false, "Failed to error on adding key to full table %d\n", key);
+        ut_assert(lua_obj, mytable.add(key, key, false), "Failed to overwrite key %d\n", key);
 
-        ut_assert(mytable.add(key, key, true) == false, "Failed to error on adding key to full table %d\n", key);
+        ut_assert(lua_obj, mytable.add(key, key, true) == false, "Failed to error on adding key to full table %d\n", key);
 
         const int new1_key = key + size;
-        ut_assert(mytable.add(new1_key, new1_key, true) == false, "Failed to error on adding key to full table %d\n", new1_key);
+        ut_assert(lua_obj, mytable.add(new1_key, new1_key, true) == false, "Failed to error on adding key to full table %d\n", new1_key);
 
         const int new2_key = key + size + 1;
-        ut_assert(mytable.add(new2_key, new2_key, true) == false, "Failed to error on adding key to full table %d\n", new2_key);
+        ut_assert(lua_obj, mytable.add(new2_key, new2_key, true) == false, "Failed to error on adding key to full table %d\n", new2_key);
     }
 
-    lua_pushboolean(L, lua_obj->failures == 0);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -452,29 +397,29 @@ int UT_Table::testCollisions(lua_State* L)
     const int remove_order[16] =  {0,16,32,17,33, 1,34,18, 2,40,50,66,48,35, 8, 9};
     const int check_order[16]  =  {0,16,32, 1, 1, 1, 2, 2, 2,40,50,66,48,35, 8, 9};
 
-    lua_obj->failures = 0;
+    ut_initialize(lua_obj);
 
     /* Add Initial Set */
     for(int i = 0; i < size; i++)
     {
         key = test_data[i];
-        ut_assert(mytable.add(key, key, false), "Failed to add entry %d\n", key);
+        ut_assert(lua_obj, mytable.add(key, key, false), "Failed to add entry %d\n", key);
     }
 
     /* Transverse Set */
     for(int i = 0; i < size; i++)
     {
         key = mytable.first(&data);
-        ut_assert(check_order[i] == key, "Failed to get next key %d != %d\n", check_order[i], key);
-        ut_assert(mytable.remove(remove_order[i]), "Failed to remove key %d\n", remove_order[i]);
-        ut_assert(mytable.length() == size - i - 1, "Failed to get size\n");
+        ut_assert(lua_obj, check_order[i] == key, "Failed to get next key %d != %d\n", check_order[i], key);
+        ut_assert(lua_obj, mytable.remove(remove_order[i]), "Failed to remove key %d\n", remove_order[i]);
+        ut_assert(lua_obj, mytable.length() == size - i - 1, "Failed to get size\n");
     }
 
     /* Check Empty */
-    ut_assert(mytable.first(&data) == (int)INVALID_KEY, "Failed to get error\n");
-    ut_assert(mytable.length() == 0, "Failed to remove all entries\n");
+    ut_assert(lua_obj, mytable.first(&data) == (int)INVALID_KEY, "Failed to get error\n");
+    ut_assert(lua_obj, mytable.length() == 0, "Failed to remove all entries\n");
 
-    lua_pushboolean(L, lua_obj->failures == 0);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }
 
@@ -502,7 +447,7 @@ int UT_Table::testStress(lua_State* L)
     const int key_range = 0xFFFFFFFF;
     Table<int,int> mytable(size);
 
-    lua_obj->failures = 0;
+    ut_initialize(lua_obj);
 
     /* Seed Random Number */
     srand((unsigned int)TimeLib::latchtime());
@@ -529,17 +474,17 @@ int UT_Table::testStress(lua_State* L)
             key = data_order[i];
 
             mytable.first(&data);
-            ut_assert(data == key, "Failed to get next key %d != %d\n", data, key);
+            ut_assert(lua_obj, data == key, "Failed to get next key %d != %d\n", data, key);
             mytable.first(&data);
-            ut_assert(data == key, "Failed to get same key %d != %d\n", data, key);
-            ut_assert(mytable.remove(key), "Failed to remove key %d\n", key);
+            ut_assert(lua_obj, data == key, "Failed to get same key %d != %d\n", data, key);
+            ut_assert(lua_obj, mytable.remove(key), "Failed to remove key %d\n", key);
         }
 
         /* Check Empty */
-        ut_assert(mytable.first(&data) == (int)INVALID_KEY, "Failed to get error\n");
-        ut_assert(mytable.length() == 0, "Failed to remove all entries\n");
+        ut_assert(lua_obj, mytable.first(&data) == (int)INVALID_KEY, "Failed to get error\n");
+        ut_assert(lua_obj, mytable.length() == 0, "Failed to remove all entries\n");
     }
 
-    lua_pushboolean(L, lua_obj->failures == 0);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }

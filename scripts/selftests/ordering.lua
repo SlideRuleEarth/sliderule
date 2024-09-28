@@ -4,6 +4,9 @@ local console = require("console")
 --console.monitor:config(core.LOG, core.DEBUG)
 --sys.setlvl(core.LOG, core.DEBUG)
 
+-- Check If Present --
+if not core.UNITTEST then return end
+
 -- Unit Test --
 
 local ut_ordering = core.ut_ordering()

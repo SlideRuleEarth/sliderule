@@ -35,7 +35,7 @@
 
 #include "Atl13IODriver.h"
 #include "S3CurlIODriver.h"
-#include "core.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -83,7 +83,7 @@ Atl13IODriver::Atl13IODriver (const Asset* _asset, const char* resource):
     memcpy(&month[0], &date[4], 3);
     month[2] = '\0';
 
-    FString resourcepath("%s/ATLAS/%s/%s/%s/%s/%s", asset->getPath(), product, version, year, month, resource);
+    const FString resourcepath("%s/ATLAS/%s/%s/%s/%s/%s", asset->getPath(), product, version, year, month, resource);
 
     /*
      * Determine ioBucket and ioKey

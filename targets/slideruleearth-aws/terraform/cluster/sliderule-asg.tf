@@ -50,8 +50,6 @@ resource "aws_launch_template" "sliderule_template" {
   }
 }
 
-
-
 resource "aws_autoscaling_group" "sliderule-cluster" {
   capacity_rebalance    = true
   desired_capacity      = var.node_asg_desired_capacity

@@ -35,7 +35,7 @@
 
 #include "CcsdsPacketInterleaver.h"
 #include "CcsdsPacket.h"
-#include "core.h"
+#include "OsApi.h"
 #include <float.h>
 
 /******************************************************************************

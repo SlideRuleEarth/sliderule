@@ -36,7 +36,7 @@
 
 #include "LuaScript.h"
 #include "LuaEngine.h"
-#include "core.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -87,7 +87,7 @@ LuaScript::LuaScript(lua_State* L, const char* script, const char* arg):
     if(script[0] != ' ' && script[0] != '/')
     {
         const char* safe_filename = StringLib::replace(script, "..", "_");
-        FString safe_pathname("%s%c%s.lua", CONFDIR, PATH_DELIMETER, safe_filename);
+        const FString safe_pathname("%s%c%s.lua", CONFDIR, PATH_DELIMETER, safe_filename);
         engine = new LuaEngine(safe_pathname.c_str(), arg, traceId, LuaEngine::abortHook, false);
         delete [] safe_filename;
     }

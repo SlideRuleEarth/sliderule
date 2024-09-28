@@ -1,6 +1,9 @@
 local runner = require("test_executive")
 local console = require("console")
 
+-- Check If Present --
+if not core.UNITTEST then return end
+
 -- Unit Test --
 
 local ut_table = core.ut_table()

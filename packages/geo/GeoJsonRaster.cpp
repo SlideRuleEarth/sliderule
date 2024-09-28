@@ -94,6 +94,16 @@ GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
     return new GeoJsonRaster(L, _parms, geojstr, cellsize);
 }
 
+/*----------------------------------------------------------------------------
+ * create
+ *----------------------------------------------------------------------------*/
+GeoJsonRaster* GeoJsonRaster::create (const string& geojson, double cellsize)
+{
+    /* Get Geo Parameters */
+    GeoParms* _parms = new GeoParms(NULL, 0, true);
+    LuaObject::referenceLuaObject(_parms); // GeoJsonRaster expects a LuaObject created from a Lua script
+    return new GeoJsonRaster(NULL, _parms, geojson.c_str(), cellsize);
+}
 
 /*----------------------------------------------------------------------------
  * includes

@@ -11,11 +11,11 @@ local identity = parm["identity"] or "iam-role"
 
 -- make aws api request
 local function aws_api_rqst(url)
-    local token, status1 = netsvc.put(aws_token_url,"",{"X-aws-ec2-metadata-token-ttl-seconds: 3600"})
+    local token, status1 = core.put(aws_token_url,"",{"X-aws-ec2-metadata-token-ttl-seconds: 3600"})
     if not status1 then
         sys.log(core.CRITICAL, "Unable to get AWS API token from "..aws_token_url)
     end
-    local rsp, status2 = netsvc.get(url,"",{string.format("X-aws-ec2-metadata-token: %s",token)})
+    local rsp, status2 = core.get(url,"",{string.format("X-aws-ec2-metadata-token: %s",token)})
     if not status2 then
         sys.log(core.CRITICAL, "Unable to make AWS API request to "..url)
     end

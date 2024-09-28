@@ -26,7 +26,7 @@ local userlog = msg.publish(rspq)
 local rqst = json.decode(arg[1])
 local atl03_asset = rqst["asset"] or "atlas-local"
 local resources = rqst["resources"]
-local timeout = rqst["timeout"] or netsvc.RQST_TIMEOUT
+local timeout = rqst["timeout"] or core.RQST_TIMEOUT
 
 -- Post Initial Status Progress --
 userlog:alert(core.DEBUG, core.RTE_INFO, string.format("atl03 indexing initiated on %s data...", atl03_asset))

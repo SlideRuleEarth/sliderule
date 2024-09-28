@@ -37,7 +37,7 @@
 #include <float.h>
 #include <stdarg.h>
 
-#include "core.h"
+#include "OsApi.h"
 #include "h5.h"
 #include "icesat2.h"
 
@@ -51,7 +51,7 @@ const RecordObject::fieldDef_t Atl03Viewer::segRecDef[] = {
     {"extent_id",       RecordObject::UINT64,   offsetof(segment_t, extent_id),      1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
     {"latitude",        RecordObject::DOUBLE,   offsetof(segment_t, latitude),       1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
     {"longitude",       RecordObject::DOUBLE,   offsetof(segment_t, longitude),      1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
-    {"segment_dist_x",  RecordObject::FLOAT,    offsetof(segment_t, dist_x),         1,  NULL, NATIVE_FLAGS},
+    {"segment_dist_x",  RecordObject::DOUBLE,   offsetof(segment_t, dist_x),         1,  NULL, NATIVE_FLAGS},
     {"segment_id",      RecordObject::UINT32,   offsetof(segment_t, id),             1,  NULL, NATIVE_FLAGS},
     {"segment_ph_cnt",  RecordObject::UINT32,   offsetof(segment_t, ph_cnt),         1,  NULL, NATIVE_FLAGS}
 };
@@ -492,7 +492,7 @@ void* Atl03Viewer::subsettingThread (void* parm)
                 /* Populate Segments */
                 for(int32_t i = 0; i < segments.length(); i++)
                 {
-                    extent->segments[i] = segments[i];
+                    extent->segments[i] = segments.get(i);
                 }
 
                 reader->postRecord(record, local_stats);

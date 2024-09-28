@@ -4,7 +4,7 @@ local json = require("json")
 
 -- Unit Test --
 
-script = core.script("api/health", "")
+local script = core.script("api/health", "")
 
 local total_time_allowed = 5
 while script:active() and total_time_allowed > 0 do
@@ -12,7 +12,7 @@ while script:active() and total_time_allowed > 0 do
     total_time_allowed = total_time_allowed - 1
 end
 
-result = json.decode(script:result())
+local result = json.decode(script:result())
 
 runner.check(result.healthy == true, "Failed to retrieve results of script")
 

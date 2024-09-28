@@ -35,7 +35,7 @@
 
 #include <gdal.h>
 
-#include "core.h"
+#include "OsApi.h"
 #include "GeoParms.h"
 
 #include "rapidjson/document.h"
@@ -139,7 +139,7 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
     try
     {
         /* Must be a Table */
-        if(lua_istable(L, index))
+        if(L && lua_istable(L, index))
         {
             bool field_provided = false;
 

@@ -35,7 +35,7 @@
 
 
 #include "CredentialStore.h"
-#include "core.h"
+#include "OsApi.h"
 
 #include <assert.h>
 
@@ -45,6 +45,7 @@
 
 Mutex CredentialStore::credentialLock;
 Dictionary<CredentialStore::Credential> CredentialStore::credentialStore(STARTING_STORE_SIZE);
+CredentialStore::Credential CredentialStore::emptyCredentials;
 
 const char* CredentialStore::LIBRARY_NAME = "CredentialStore";
 const char* CredentialStore::EXPIRATION_GPS_METRIC = "exp_gps";
@@ -84,15 +85,15 @@ void CredentialStore::deinit (void)
 /*----------------------------------------------------------------------------
  * get
  *----------------------------------------------------------------------------*/
-CredentialStore::Credential CredentialStore::get (const char* identity)
+const CredentialStore::Credential& CredentialStore::get (const char* identity)
 {
-    Credential credential;
-
     credentialLock.lock();
     {
         try
         {
-            credential = credentialStore[identity];
+            const Credential& credential = credentialStore[identity];
+            credentialLock.unlock();
+            return credential;
         }
         catch(const RunTimeException& e)
         {
@@ -101,7 +102,7 @@ CredentialStore::Credential CredentialStore::get (const char* identity)
     }
     credentialLock.unlock();
 
-    return credential;
+    return emptyCredentials;
 }
 
 /*----------------------------------------------------------------------------
@@ -129,17 +130,15 @@ int CredentialStore::luaGet(lua_State* L)
     try
     {
         /* Get Host */
-        const char* host = LuaObject::getLuaString(L, 1);
+        const char* identity = LuaObject::getLuaString(L, 1);
 
         /* Get Credentials */
-        const Credential credential = CredentialStore::get(host);
+        const Credential& credential = CredentialStore::get(identity);
 
         /* Return Credentials */
-        if(credential.provided)
+        if(!credential.expiration.value.empty())
         {
-            credential.toLua(L);
-            lua_pushboolean(L, true);
-            return 2;
+            return credential.toLua(L);
         }
     }
     catch(const RunTimeException& e)
@@ -147,7 +146,7 @@ int CredentialStore::luaGet(lua_State* L)
         mlog(e.level(), "Error getting credential: %s", e.what());
     }
 
-    lua_pushboolean(L, false);
+    lua_pushnil(L);
     return 1;
 }
 
@@ -165,12 +164,14 @@ int CredentialStore::luaPut(lua_State* L)
 
         /* Get Credentials */
         Credential credential;
-        credential.fromLua(L, 2);
-        if(!credential.provided)
+        if(lua_istable(L, 2))
+        {
+            credential.fromLua(L, 2);
+        }
+        else
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "must supply table for credentials");
         }
-
         /* Put Credentials */
         status = CredentialStore::put(asset, credential);
     }

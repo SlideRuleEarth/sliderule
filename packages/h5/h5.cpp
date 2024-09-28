@@ -33,7 +33,7 @@
  *INCLUDES
  ******************************************************************************/
 
-#include "core.h"
+#include "OsApi.h"
 
 #include "H5Coro.h"
 #include "H5Array.h"
@@ -41,6 +41,7 @@
 #include "H5Element.h"
 #include "H5File.h"
 #include "H5DatasetDevice.h"
+#include "H5Object.h"
 
 /******************************************************************************
  * DEFINES
@@ -185,6 +186,7 @@ int h5_open (lua_State *L)
     static const struct luaL_Reg h5_functions[] = {
         {"file",        H5File::luaCreate},
         {"dataset",     H5DatasetDevice::luaCreate},
+        {"object",      H5Object::luaCreate},
         {"read",        h5_read},
         {NULL,          NULL}
     };

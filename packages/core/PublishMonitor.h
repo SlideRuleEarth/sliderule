@@ -70,7 +70,7 @@ class PublishMonitor: public Monitor
          * Methods
          *--------------------------------------------------------------------*/
 
-        PublishMonitor  (lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* outq_name);
+        PublishMonitor  (lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* eventq_name, const char* outq_name);
         ~PublishMonitor (void) override;
 
         /*--------------------------------------------------------------------

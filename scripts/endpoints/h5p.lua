@@ -42,6 +42,12 @@ if not asset then
 end
 
 local f = h5.file(asset, resource)
+if not f then
+    local userlog = msg.publish(rspq)
+    userlog:alert(core.INFO, core.RTE_ERROR, string.format("failed to open resource: %s", resource))
+    return
+end
+
 f:read(datasets, rspq)
 
 return

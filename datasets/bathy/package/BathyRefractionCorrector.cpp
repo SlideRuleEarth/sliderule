@@ -39,6 +39,7 @@
 
 #include "OsApi.h"
 #include "GeoLib.h"
+#include "BathyFields.h"
 #include "BathyRefractionCorrector.h"
 
 
@@ -53,48 +54,65 @@ const double BathyRefractionCorrector::GLOBAL_WATER_RI_MASK_MAX_LON = 180.0;
 const double BathyRefractionCorrector::GLOBAL_WATER_RI_MASK_MIN_LON = -180.0;
 const double BathyRefractionCorrector::GLOBAL_WATER_RI_MASK_PIXEL_SIZE = 0.25;
 
-const char* BathyRefractionCorrector::OBJECT_TYPE = "BathyRefractionCorrector";
 const char* BathyRefractionCorrector::LUA_META_NAME = "BathyRefractionCorrector";
 const struct luaL_Reg BathyRefractionCorrector::LUA_META_TABLE[] = {
-    {NULL,          NULL}
+    {"subaqueous", getSubAqPh},
+    {NULL,  NULL}
 };
+
+/******************************************************************************
+ * METHODS
+ ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * luaCreate - create(<parms>)
  *----------------------------------------------------------------------------*/
 int BathyRefractionCorrector::luaCreate (lua_State* L)
 {
-    BathyParms* parms = NULL;
+    BathyFields* _parms = NULL;
 
     try
     {
-        parms = dynamic_cast<BathyParms*>(getLuaObject(L, 1, BathyParms::OBJECT_TYPE));
-        return createLuaObject(L, new BathyRefractionCorrector(L, parms));
+        _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
+        return createLuaObject(L, new BathyRefractionCorrector(L, _parms));
     }
     catch(const RunTimeException& e)
     {
-        if(parms) parms->releaseLuaObject();
+        if(_parms) _parms->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", OBJECT_TYPE, e.what());
         return returnLuaStatus(L, false);
     }
 }
 
 /*----------------------------------------------------------------------------
- * init
+ * getSubAqPh - subaqueous(<parms>)
  *----------------------------------------------------------------------------*/
-void BathyRefractionCorrector::init (void)
+int BathyRefractionCorrector::getSubAqPh (lua_State* L)
 {
+    try
+    {
+        BathyRefractionCorrector* lua_obj = dynamic_cast<BathyRefractionCorrector*>(getLuaSelf(L, 1));
+        lua_pushinteger(L, lua_obj->subaqueousPhotons);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting subaqueous photons from %s: %s", OBJECT_TYPE, e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyRefractionCorrector::BathyRefractionCorrector (lua_State* L, BathyParms* _parms):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
+BathyRefractionCorrector::BathyRefractionCorrector (lua_State* L, BathyFields* _parms):
+    GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
-    waterRiMask(NULL)
+    waterRiMask(NULL),
+    subaqueousPhotons(0)
 {
-    if(parms->refraction.use_water_ri_mask)
+    if(parms->refraction.useWaterRIMask)
     {
         waterRiMask = new GeoLib::TIFFImage(NULL, GLOBAL_WATER_RI_MASK, GeoLib::TIFFImage::GDAL_DRIVER);
     }
@@ -106,10 +124,11 @@ BathyRefractionCorrector::BathyRefractionCorrector (lua_State* L, BathyParms* _p
 BathyRefractionCorrector::~BathyRefractionCorrector (void)
 {
     delete waterRiMask;
+    if(parms) parms->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
- * photon_refraction -
+ * run -
  *
  * ICESat-2 refraction correction implemented as outlined in Parrish, et al.
  * 2019 for correcting photon depth data. Reference elevations are to geoid datum
@@ -150,26 +169,28 @@ BathyRefractionCorrector::~BathyRefractionCorrector (void)
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *----------------------------------------------------------------------------*/
-uint64_t BathyRefractionCorrector::run( BathyParms::extent_t& extent,
-                                        const H5Array<float>& ref_el,
-                                        const H5Array<float>& ref_az ) const
+bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
 {
-    uint64_t subaqueous_photons = 0;
+    const double start = TimeLib::latchtime();
 
-    GeoLib::UTMTransform transform(extent.utm_zone, extent.region < 8);
+    BathyDataFrame& df = *dynamic_cast<BathyDataFrame*>(dataframe);
+    const RefractionFields& refraction_parms = parms->refraction;
 
-    BathyParms::photon_t* photons = extent.photons;
-    for(uint32_t i = 0; i < extent.photon_count; i++)
+    /* Get UTM Transformation */
+    GeoLib::UTMTransform transform(df.utm_zone.value, df.utm_is_north);
+
+    /* Run Refraction Correction */
+    for(long i = 0; i < df.length(); i++)
     {
         /* Get Refraction Index of Water */
-        double ri_water = parms->refraction.ri_water;
+        double ri_water = refraction_parms.RIWater.value;
         if(waterRiMask)
         {
-            const double degrees_of_latitude = photons[i].lat_ph - GLOBAL_WATER_RI_MASK_MIN_LAT;
+            const double degrees_of_latitude = df.lat_ph[i] - GLOBAL_WATER_RI_MASK_MIN_LAT;
             const double latitude_pixels = degrees_of_latitude / GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
             const uint32_t y = waterRiMask->getHeight() - static_cast<uint32_t>(latitude_pixels); // flipped image
 
-            const double degrees_of_longitude =  photons[i].lon_ph - GLOBAL_WATER_RI_MASK_MIN_LON;
+            const double degrees_of_longitude =  df.lon_ph[i] - GLOBAL_WATER_RI_MASK_MIN_LON;
             const double longitude_pixels = degrees_of_longitude / GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
             const uint32_t x = static_cast<uint32_t>(longitude_pixels);
 
@@ -178,41 +199,43 @@ uint64_t BathyRefractionCorrector::run( BathyParms::extent_t& extent,
         }
 
         /* Correct All Subaqueous Photons */
-        const double depth = photons[i].surface_h - photons[i].ortho_h; // compute un-refraction-corrected depths
+        const double depth = df.surface_h[i] - df.ortho_h[i]; // compute un-refraction-corrected depths
         if(depth > 0)
         {
             /* Count Subaqueous Photons */
-            subaqueous_photons++;
+            subaqueousPhotons++;
 
             /* Calculate Refraction Corrections */
-            const int32_t seg = extent.photons[i].index_seg;
-            const double n1 = parms->refraction.ri_air;
+            const double n1 = refraction_parms.RIAir.value;
             const double n2 = ri_water;
-            const double theta_1 = (M_PI / 2.0) - ref_el[seg];              // angle of incidence (without Earth curvature)
-            const double theta_2 = asin(n1 * sin(theta_1) / n2);            // angle of refraction
+            const double theta_1 = (M_PI / 2.0) - df.ref_el[i];              // angle of incidence (without Earth curvature)
+            const double theta_2 = asin(n1 * sin(theta_1) / n2);                    // angle of refraction
             const double phi = theta_1 - theta_2;
-            const double s = depth / cos(theta_1);                          // uncorrected slant range to the uncorrected seabed photon location
-            const double r = s * n1 / n2;                                   // corrected slant range
+            const double s = depth / cos(theta_1);                                  // uncorrected slant range to the uncorrected seabed photon location
+            const double r = s * n1 / n2;                                           // corrected slant range
             const double p = sqrt((r*r) + (s*s) - (2*r*s*cos(theta_1 - theta_2)));
             const double gamma = (M_PI / 2.0) - theta_1;
             const double alpha = asin(r * sin(phi) / p);
             const double beta = gamma - alpha;
-            const double dZ = p * sin(beta);                                // vertical offset
-            const double dY = p * cos(beta);                                // cross-track offset
-            const double dE = dY * sin(static_cast<double>(ref_az[seg]));   // UTM offsets
-            const double dN = dY * cos(static_cast<double>(ref_az[seg]));
+            const double dZ = p * sin(beta);                                        // vertical offset
+            const double dY = p * cos(beta);                                        // cross-track offset
+            const double dE = dY * sin(static_cast<double>(df.ref_az[i]));   // UTM offsets
+            const double dN = dY * cos(static_cast<double>(df.ref_az[i]));
 
-            /* Save Refraction Height Correction */
-            photons[i].delta_h = dZ;
+            /* Apply Refraction Correction */
+            df.ortho_h[i] = df.geoid_corr_h[i] + dZ;
+            df.ellipse_h[i] = df.ellipse_h[i] + dZ;
 
             /* Correct Latitude and Longitude */
-            const double corr_x_ph = photons[i].x_ph + dE;
-            const double corr_y_ph = photons[i].y_ph + dN;
+            const double corr_x_ph = df.x_ph[i] + dE;
+            const double corr_y_ph = df.y_ph[i] + dN;
             const GeoLib::point_t point = transform.calculateCoordinates(corr_x_ph, corr_y_ph);
-            photons[i].lat_ph = point.x;
-            photons[i].lon_ph = point.y;
+            df.lat_ph[i] = point.x;
+            df.lon_ph[i] = point.y;
         }
     }
 
-    return subaqueous_photons;
+    /* Mark Completion */
+    updateRunTime(TimeLib::latchtime() - start);
+    return true;
 }

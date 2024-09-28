@@ -42,6 +42,7 @@
  * STATIC DATA
  ******************************************************************************/
 
+const char* Monitor::OBJECT_TYPE = "Monitor";
 const char* Monitor::LUA_META_NAME = "Monitor";
 const struct luaL_Reg Monitor::LUA_META_TABLE[] = {
     {"config",      luaConfig},
@@ -55,7 +56,7 @@ const struct luaL_Reg Monitor::LUA_META_TABLE[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create([<type mask>], [<level>], [<output format>])
+ * luaCreate - create([<type mask>], [<level>], [<output format>], [<eventq name>])
  *----------------------------------------------------------------------------*/
 int Monitor::luaCreate (lua_State* L)
 {
@@ -65,9 +66,10 @@ int Monitor::luaCreate (lua_State* L)
         const uint8_t type_mask = (uint8_t)getLuaInteger(L, 1, true, (long)EventLib::LOG);
         const event_level_t level = (event_level_t)getLuaInteger(L, 2, true, CRITICAL);
         const format_t format = (format_t)getLuaInteger(L, 3, true, RECORD);
+        const char* eventq_name = getLuaString(L, 4, true, EVENTQ);
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new Monitor(L, type_mask, level, format));
+        return createLuaObject(L, new Monitor(L, type_mask, level, format, eventq_name));
     }
     catch(const RunTimeException& e)
     {
@@ -91,16 +93,21 @@ void Monitor::processEvent(const unsigned char* event_buf_ptr, int event_size)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Monitor::Monitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t format):
-    DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
+Monitor::Monitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* eventq_name):
+    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
-    /* Initialize Event Monitor */
+    /* Initialize Event Monitor Data */
     eventTypeMask   = type_mask;
     eventLevel      = level;
     outputFormat    = format;
     eventTailArray  = NULL;
     eventTailSize   = 0;
     eventTailIndex  = 0;
+
+    /* Initialize Event Monitor Thread*/
+    active = true;
+    inQ = new Subscriber(eventq_name);
+    pid = new Thread(monitorThread, this);
 }
 
 /*----------------------------------------------------------------------------
@@ -108,6 +115,9 @@ Monitor::Monitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t 
  *----------------------------------------------------------------------------*/
 Monitor::~Monitor(void)
 {
+    active = false;
+    delete pid;
+    delete inQ;
     delete [] eventTailArray;
 }
 
@@ -116,62 +126,104 @@ Monitor::~Monitor(void)
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * processRecord
+ * processEvent
  *----------------------------------------------------------------------------*/
-bool Monitor::processRecord (RecordObject* record, okey_t key, recVec_t* records)
+void* Monitor::monitorThread (void* parm)
 {
-    (void)key;
-    (void)records;
+    Monitor* monitor = static_cast<Monitor*>(parm);
 
     int event_size;
     char event_buffer[MAX_EVENT_SIZE];
     unsigned char* event_buf_ptr = reinterpret_cast<unsigned char*>(&event_buffer[0]);
 
-    /* Pull Out Log Message */
-    EventLib::event_t* event = reinterpret_cast<EventLib::event_t*>(record->getRecordData());
+    /* Loop Forever */
+    while(monitor->active)
+    {
+        /* Receive Message */
+        Subscriber::msgRef_t ref;
+        const int recv_status = monitor->inQ->receiveRef(ref, SYS_TIMEOUT);
+        if(recv_status > 0)
+        {
+            unsigned char* msg = reinterpret_cast<unsigned char*>(ref.data);
+            const int len = ref.size;
+            if(len > 0)
+            {
+                try
+                {
+                    /* Process Event Record */
+                    RecordInterface record(msg, len);
+                    if(StringLib::match(record.getRecordType(), EventLib::eventRecType))
+                    {
+                        /* Pull Out Log Message */
+                        EventLib::event_t* event = reinterpret_cast<EventLib::event_t*>(record.getRecordData());
 
-    /* Filter Events */
-    if( ((event->type & eventTypeMask) == 0) ||
-        (event->level < eventLevel) )
-    {
-        return true;
+                        /* Filter Events */
+                        if( ((event->type & monitor->eventTypeMask) == 0) ||
+                            (event->level < monitor->eventLevel) )
+                        {
+                            throw RunTimeException(DEBUG, RTE_INFO, "event <%d.%d> filtered", event->type, event->level);
+                        }
+
+                        /* Format Event */
+                        if(monitor->outputFormat == RECORD)
+                        {
+                            event_size = record.serialize(&event_buf_ptr, RecordObject::REFERENCE);
+                            event_size = MIN(event_size, MAX_EVENT_SIZE);
+                        }
+                        else if(monitor->outputFormat == CLOUD)
+                        {
+                            event_size = cloudOutput(event, event_buffer);
+                        }
+                        else if(monitor->outputFormat == TEXT)
+                        {
+                            event_size = textOutput(event, event_buffer);
+                        }
+                        else if(monitor->outputFormat == JSON)
+                        {
+                            event_size = jsonOutput(event, event_buffer);
+                        }
+                        else // unsupported format
+                        {
+                            event_size = 0;
+                        }
+
+                        /* (Optionally) Tail Event */
+                        if(monitor->eventTailArray && monitor->eventTailSize > 0)
+                        {
+                            memcpy(&monitor->eventTailArray[monitor->eventTailIndex * MAX_EVENT_SIZE], event_buf_ptr, event_size);
+                            monitor->eventTailIndex = (monitor->eventTailIndex + 1) % monitor->eventTailSize;
+                        }
+
+                        /* Child-Class Process Event */
+                        monitor->processEvent(event_buf_ptr, event_size);
+                    }
+                }
+                catch (const RunTimeException& e)
+                {
+                    // pass silently
+                }
+            }
+            else
+            {
+                /* Terminating Message */
+                mlog(DEBUG, "Terminator received on %s, exiting monitor", monitor->inQ->getName());
+                monitor->active = false; // breaks out of loop
+            }
+
+            /* Dereference Message */
+            monitor->inQ->dereference(ref);
+        }
+        else if(recv_status != MsgQ::STATE_TIMEOUT)
+        {
+            /* Break Out on Failure */
+            mlog(CRITICAL, "Failed queue receive on %s with error %d", monitor->inQ->getName(), recv_status);
+            monitor->active = false; // breaks out of loop
+        }
     }
 
-    /* Format Event */
-    if(outputFormat == RECORD)
-    {
-        event_size = record->serialize(&event_buf_ptr, RecordObject::REFERENCE);
-        event_size = MIN(event_size, MAX_EVENT_SIZE);
-    }
-    else if(outputFormat == CLOUD)
-    {
-        event_size = cloudOutput(event, event_buffer);
-    }
-    else if(outputFormat == TEXT)
-    {
-        event_size = textOutput(event, event_buffer);
-    }
-    else if(outputFormat == JSON)
-    {
-        event_size = jsonOutput(event, event_buffer);
-    }
-    else
-    {
-        return false;
-    }
-
-    /* (Optionally) Tail Event */
-    if(eventTailArray)
-    {
-        memcpy(&eventTailArray[eventTailIndex * MAX_EVENT_SIZE], event_buf_ptr, event_size);
-        eventTailIndex = (eventTailIndex + 1) % eventTailSize;
-    }
-
-    /* Post Event */
-    processEvent(event_buf_ptr, event_size);
-
-    /* Return Success */
-    return true;
+    /* Signal Completion */
+    monitor->signalComplete();
+    return NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -312,8 +364,8 @@ int Monitor::luaTail (lua_State* L)
         /* Create Event Tail */
         char* event_tail = new char [tail_size * MAX_EVENT_SIZE];
         memset(event_tail, 0, tail_size * MAX_EVENT_SIZE);
-        lua_obj->eventTailArray = event_tail;
         lua_obj->eventTailSize = tail_size;
+        lua_obj->eventTailArray = event_tail;
 
         /* Set return Status */
         status = true;

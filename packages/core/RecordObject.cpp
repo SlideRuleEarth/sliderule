@@ -1207,7 +1207,7 @@ unsigned int RecordObject::str2flags (const char* str)
     List<string*>* flaglist = StringLib::split(str, strlen(str), '|');
     for(int i = 0; i < flaglist->length(); i++)
     {
-        const char* flag = (*flaglist)[i]->c_str();
+        const char* flag = flaglist->get(i)->c_str();
         if(StringLib::match(flag, "NATIVE"))        flags = NATIVE_FLAGS;
         else if(StringLib::match(flag, "LE"))       flags &= ~BIGENDIAN;
         else if(StringLib::match(flag, "BE"))       flags |= BIGENDIAN;
@@ -1789,7 +1789,7 @@ void RecordObject::scanDefinition (definition_t* def, const char* field_prefix, 
     for(int i = 0; i < field_iter.length; i++)
     {
         const Dictionary<field_t>::kv_t kv = field_iter[i];
-        FString field_name("%s%s%s", field_prefix, strlen(field_prefix) == 0 ? "" : ".", kv.key);
+        const FString field_name("%s%s%s", field_prefix, strlen(field_prefix) == 0 ? "" : ".", kv.key);
         const field_t& _field = kv.value;
 
         /* Check for Marked Field */

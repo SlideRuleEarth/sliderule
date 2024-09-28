@@ -81,34 +81,32 @@ if __geo__ then
     print_jsonstr()
 end
 
-if __netsvc__ then
-    print(string.format("\n--------------------------------\nDefault netsvc.parms.tojson\n--------------------------------"))
-    jsonstr = netsvc.parms({}):tojson()
-    runner.check(string.len(jsonstr) > 0)
-    print_jsonstr()
+print(string.format("\n--------------------------------\nDefault core.parms.tojson\n--------------------------------"))
+jsonstr = core.parms({}):tojson()
+runner.check(string.len(jsonstr) > 0)
+print_jsonstr()
 
-    print(string.format("\n--------------------------------\nUserSet 'polygon' netsvc.parms.tojson\n--------------------------------"))
-    jsonstr = netsvc.parms({poly=poly}):tojson()
-    js = json.decode(jsonstr)
-    runner.check(js.polygon[1].lat == 0.73734824791566, js.polygon[1].lat)
-    runner.check(js.polygon[1].lon == 172.51715474926,  js.polygon[1].lon)
-    runner.check(js.polygon[2].lat == 0.73734824791566, js.polygon[2].lat)
-    runner.check(js.polygon[2].lon == 173.47569646684,  js.polygon[2].lon)
-    runner.check(js.polygon[3].lat == 2.1059226076334,  js.polygon[3].lat)
-    runner.check(js.polygon[3].lon == 173.47569646684,  js.polygon[3].lon)
-    runner.check(js.polygon[4].lat == 2.1059226076334,  js.polygon[4].lat)
-    runner.check(js.polygon[4].lon == 172.51715474926,  js.polygon[4].lon)
-    runner.check(js.polygon[5].lat == 0.73734824791566, js.polygon[5].lat)
-    runner.check(js.polygon[5].lon == 172.51715474926,  js.polygon[5].lon)
-    print_jsonstr()
+print(string.format("\n--------------------------------\nUserSet 'polygon' core.parms.tojson\n--------------------------------"))
+jsonstr = core.parms({poly=poly}):tojson()
+js = json.decode(jsonstr)
+runner.check(js.polygon[1].lat == 0.73734824791566, js.polygon[1].lat)
+runner.check(js.polygon[1].lon == 172.51715474926,  js.polygon[1].lon)
+runner.check(js.polygon[2].lat == 0.73734824791566, js.polygon[2].lat)
+runner.check(js.polygon[2].lon == 173.47569646684,  js.polygon[2].lon)
+runner.check(js.polygon[3].lat == 2.1059226076334,  js.polygon[3].lat)
+runner.check(js.polygon[3].lon == 173.47569646684,  js.polygon[3].lon)
+runner.check(js.polygon[4].lat == 2.1059226076334,  js.polygon[4].lat)
+runner.check(js.polygon[4].lon == 172.51715474926,  js.polygon[4].lon)
+runner.check(js.polygon[5].lat == 0.73734824791566, js.polygon[5].lat)
+runner.check(js.polygon[5].lon == 172.51715474926,  js.polygon[5].lon)
+print_jsonstr()
 
-    print(string.format("\n--------------------------------\nUserSet 'raster' netsvc.parms.tojson\n--------------------------------"))
-    jsonstr = netsvc.parms({raster={data=vectorfile, cellsize=0.01}}):tojson()
-    raster = json.decode(jsonstr).raster
-    geojsonFile = json.decode(raster)  -- raster is another json string (geojson file content)
-    runner.check(geojsonFile.name == "grand_mesa_poly", geojsonFile.name)
-    print_jsonstr()
-end
+print(string.format("\n--------------------------------\nUserSet 'raster' core.parms.tojson\n--------------------------------"))
+jsonstr = core.parms({raster={data=vectorfile, cellsize=0.01}}):tojson()
+raster = json.decode(jsonstr).raster
+geojsonFile = json.decode(raster)  -- raster is another json string (geojson file content)
+runner.check(geojsonFile.name == "grand_mesa_poly", geojsonFile.name)
+print_jsonstr()
 
 if __swot__ then
     print(string.format("\n--------------------------------\nDefault swot.parms.tojson\n--------------------------------"))

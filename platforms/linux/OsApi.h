@@ -57,6 +57,10 @@
 #define CONFDIR "."
 #endif
 
+#ifndef PLUGINDIR
+#define PLUGINDIR "."
+#endif
+
 /******************************************************************************
  * MACROS
  ******************************************************************************/
@@ -100,6 +104,10 @@
 #define MAX_STR_SIZE 1024
 #endif
 
+#ifndef EVENTQ
+#define EVENTQ  "eventq"
+#endif
+
 /******************************************************************************
  * TYPEDEFS
  ******************************************************************************/
@@ -126,6 +134,14 @@ typedef enum {
 
 /* Ordered Key */
 typedef unsigned long okey_t;
+
+/* Extended System Time - nanoseconds since Unix epoch, no leap seconds */
+typedef struct Time8 {
+    int64_t nanoseconds;
+    Time8(void): nanoseconds(0) {};
+    explicit Time8(int64_t value): nanoseconds(value) {};
+    Time8& operator= (const int64_t& v) {nanoseconds = v; return *this; };
+} time8_t;
 
 /* File */
 typedef FILE* fileptr_t;

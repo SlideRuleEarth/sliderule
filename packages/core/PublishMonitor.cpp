@@ -54,10 +54,11 @@ int PublishMonitor::luaCreate (lua_State* L)
         const uint8_t type_mask = (uint8_t)getLuaInteger(L, 1, true, (long)EventLib::LOG);
         const event_level_t level = (event_level_t)getLuaInteger(L, 2, true, CRITICAL);
         const format_t format = (format_t)getLuaInteger(L, 3, true, RECORD);
-        const char* outq_name = getLuaString(L, 4, true, NULL);
+        const char* eventq_name = getLuaString(L, 4, true, EVENTQ);
+        const char* outq_name = getLuaString(L, 5, true, NULL);
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new PublishMonitor(L, type_mask, level, format, outq_name));
+        return createLuaObject(L, new PublishMonitor(L, type_mask, level, format, eventq_name, outq_name));
     }
     catch(const RunTimeException& e)
     {
@@ -85,8 +86,8 @@ void PublishMonitor::processEvent(const unsigned char* event_buf_ptr, int event_
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-PublishMonitor::PublishMonitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* outq_name):
-    Monitor(L, type_mask, level, format)
+PublishMonitor::PublishMonitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* eventq_name, const char* outq_name):
+    Monitor(L, type_mask, level, format, eventq_name)
 {
     outQ = new Publisher(outq_name);
 }

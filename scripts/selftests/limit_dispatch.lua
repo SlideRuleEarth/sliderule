@@ -7,11 +7,11 @@ runner.command("DEFINE test.rec id 8")
 runner.command("ADD_FIELD test.rec id INT32 0 1 NATIVE")
 runner.command("ADD_FIELD test.rec counter INT32 4 1 NATIVE")
 
-local idlimit = core.limit("id", nil, 50, 150, nil, "limit_limitq"):name("idlimit")
+local idlimit = streaming.limit("id", nil, 50, 150, nil, "limit_limitq"):name("idlimit")
 
-local counterlimit = core.limit("counter", 50, 11, 10000, nil, "limit_limitq"):name("counterlimit")
+local counterlimit = streaming.limit("counter", 50, 11, 10000, nil, "limit_limitq"):name("counterlimit")
 
-local r = core.dispatcher("limit_inputq"):name("dispatcher")
+local r = streaming.dispatcher("limit_inputq"):name("dispatcher")
 r:attach(idlimit, "test.rec"):attach(counterlimit, "test.rec"):run()
 
 local inputq = msg.publish("limit_inputq")

@@ -35,7 +35,7 @@
 
 #include "GediIODriver.h"
 #include "S3CurlIODriver.h"
-#include "core.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -84,7 +84,7 @@ GediIODriver::GediIODriver (const Asset* _asset, const char* resource):
     resource_buffer[54] = '\0';
     const char* subdirectory = resource_buffer;
 
-    FString resourcepath("%s/%s_%s.%s/%s/%s", asset->getPath(), product, level, version, subdirectory, resource);
+    const FString resourcepath("%s/%s_%s.%s/%s/%s", asset->getPath(), product, level, version, subdirectory, resource);
 
     /*
      * Determine ioBucket and ioKey

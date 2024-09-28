@@ -81,9 +81,9 @@ def initialize_client(args):
         "profile":                  True,
         "verbose":                  True,
         "timeout":                  0,
-        "rqst-timeout":             0,
-        "node-timeout":             0,
-        "read-timeout":             0,
+        "rqst_timeout":             0,
+        "node_timeout":             0,
+        "read_timeout":             0,
         "output.path":              None,
         "output.format":            "native",
         "output.open_on_complete":  False
@@ -135,15 +135,15 @@ def initialize_client(args):
     # Provide Timeouts
     if cfg["timeout"] > 0:
         parms["timeout"] = cfg["timeout"]
-        parms["rqst-timeout"] = cfg["timeout"]
-        parms["node-timeout"] = cfg["timeout"]
-        parms["read-timeout"] = cfg["timeout"]
-    if cfg["rqst-timeout"] > 0:
-        parms["rqst-timeout"] = cfg["rqst-timeout"]
-    if cfg["node-timeout"] > 0:
-        parms["node-timeout"] = cfg["node-timeout"]
-    if cfg["read-timeout"] > 0:
-        parms["read-timeout"] = cfg["read-timeout"]
+        parms["rqst_timeout"] = cfg["timeout"]
+        parms["node_timeout"] = cfg["timeout"]
+        parms["read_timeout"] = cfg["timeout"]
+    if cfg["rqst_timeout"] > 0:
+        parms["rqst_timeout"] = cfg["rqst_timeout"]
+    if cfg["node_timeout"] > 0:
+        parms["node_timeout"] = cfg["node_timeout"]
+    if cfg["read_timeout"] > 0:
+        parms["read_timeout"] = cfg["read_timeout"]
 
     # Add Output Options
     if cfg["output.path"]:

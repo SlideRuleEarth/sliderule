@@ -53,13 +53,17 @@ TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
 STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
+OCEANEYES_SRC_DIR = $(ROOT)/datasets/bathy/docker/oceaneyes
+OCEANEYES_STAGE_DIR = $(STAGE)/oceaneyes
+MAGIC_PYTORCH_DIR = $(ROOT)/../../miniconda3/envs/pointnet2
+CSHELPH_SOURCE_DIR ?= $(ROOT)/../ut-ATL24-C-shelph
+CSHELPH_SOURCE_FILE = $(CSHELPH_SOURCE_DIR)/c_shelph.py
+CSHELPH_VERSION = $(shell git --work-tree ${CSHELPH_SOURCE_DIR} --git-dir ${CSHELPH_SOURCE_DIR}/.git describe --abbrev --dirty --always --tags --long)
+MEDIANFILTER_SOURCE_DIR ?= $(ROOT)/../ut-ATL24-medianfilter
+MEDIANFILTER_SOURCE_FILE = $(MEDIANFILTER_SOURCE_DIR)/medianmodel.py
+MEDIANFILTER_VERSION = $(shell git --work-tree ${MEDIANFILTER_SOURCE_DIR} --git-dir ${MEDIANFILTER_SOURCE_DIR}/.git describe --abbrev --dirty --always --tags --long)
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
-
-QTREES_SOURCE_DIR = $(ROOT)/../qtrees
-COASTNET_SOURCE_DIR = $(ROOT)/../coastnet
-OPENOCEANS_SOURCE_DIR = $(ROOT)/../openoceans
-OCEANEYES_SOURCE_DIR = $(ROOT)/../oceaneyes
 
 VERSION ?= latest
 VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
@@ -78,7 +82,6 @@ USERCFG ?=
 DISTRIBUTION_ID = $(shell aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" --output text)
 
 CLANG_VER ?= ""
-CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
 
 DEBUG_CFG := -DCMAKE_BUILD_TYPE=Debug
@@ -129,24 +132,6 @@ manager-destroy: ## destroy manager using terraform; needs DOMAIN
 	cd terraform/manager && terraform workspace select $(DOMAIN)-manager|| terraform workspace new $(DOMAIN)-manager
 	cd terraform/manager && terraform destroy
 
-qtrees-plugin:
-	make -C $(QTREES_SOURCE_DIR)/plugin config INSTALLDIR=$(INSTALLDIR)
-	make -C $(QTREES_SOURCE_DIR)/plugin
-	make -C $(QTREES_SOURCE_DIR)/plugin install
-
-coastnet-plugin:
-	make -C $(COASTNET_SOURCE_DIR)/plugin config INSTALLDIR=$(INSTALLDIR)
-	make -C $(COASTNET_SOURCE_DIR)/plugin
-	make -C $(COASTNET_SOURCE_DIR)/plugin install
-
-openoceans-plugin:
-	make -C $(OPENOCEANS_SOURCE_DIR)/plugin config INSTALLDIR=$(INSTALLDIR)
-	make -C $(OPENOCEANS_SOURCE_DIR)/plugin
-	make -C $(OPENOCEANS_SOURCE_DIR)/plugin install
-
-oceaneyes-docker:
-	make -C $(OCEANEYES_SOURCE_DIR) docker
-
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
 	mkdir -p $(STATIC_WEB_STAGE_DIR)
@@ -183,7 +168,34 @@ static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
 	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
-sliderule-local: sliderule qtrees-plugin coastnet-plugin openoceans-plugin ## build sliderule locally with all plugins
+oceaneyes-lock:
+	cd $(OCEANEYES_SRC_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd $(OCEANEYES_SRC_DIR) && conda-lock render -p linux-$(ARCH)
+
+oceaneyes-docker:
+	-rm -Rf $(OCEANEYES_STAGE_DIR)
+	mkdir -p $(OCEANEYES_STAGE_DIR)
+	cp $(OCEANEYES_SRC_DIR)/Dockerfile $(OCEANEYES_STAGE_DIR)
+	cp $(OCEANEYES_SRC_DIR)/conda-* $(OCEANEYES_STAGE_DIR)
+	cp $(OCEANEYES_SRC_DIR)/runner.* $(OCEANEYES_STAGE_DIR)
+	mkdir $(OCEANEYES_STAGE_DIR)/cshelph
+	cp $(CSHELPH_SOURCE_FILE) $(OCEANEYES_STAGE_DIR)/cshelph
+	@echo $(CSHELPH_VERSION) > $(OCEANEYES_STAGE_DIR)/cshelph/cshelph_version.txt
+	mkdir $(OCEANEYES_STAGE_DIR)/medianfilter
+	cp $(MEDIANFILTER_SOURCE_FILE) $(OCEANEYES_STAGE_DIR)/medianfilter
+	@echo $(MEDIANFILTER_VERSION) > $(OCEANEYES_STAGE_DIR)/medianfilter/medianfilter_version.txt
+	cp -R $(OCEANEYES_SRC_DIR)/bathypathfinder $(OCEANEYES_STAGE_DIR)
+	cp -R $(OCEANEYES_SRC_DIR)/pointnet $(OCEANEYES_STAGE_DIR)
+	cp -R $(OCEANEYES_SRC_DIR)/openoceans $(OCEANEYES_STAGE_DIR)
+	mkdir $(OCEANEYES_STAGE_DIR)/magic_pytorch_env
+	rsync -a $(MAGIC_PYTORCH_DIR)/* $(OCEANEYES_STAGE_DIR)/magic_pytorch_env
+	cd $(OCEANEYES_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/oceaneyes:latest $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/oceaneyes:latest $(ECR)/oceaneyes:$(VERSION)
+	docker tag $(ECR)/oceaneyes:latest $(ECR)/oceaneyes:$(MAJOR_VERSION)
+
+oceaneyes-push:
+	docker push $(ECR)/oceaneyes:$(VERSION)
+	docker push $(ECR)/oceaneyes:$(MAJOR_VERSION)
 
 sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
@@ -203,9 +215,6 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 	-rm -Rf $(SLIDERULE_STAGE_DIR)
 	mkdir -p $(SLIDERULE_STAGE_DIR)
 	rsync -a $(ROOT) $(SLIDERULE_STAGE_DIR)/sliderule --exclude build --exclude stage
-	rsync -a $(QTREES_SOURCE_DIR)/* $(SLIDERULE_STAGE_DIR)/qtrees --exclude build
-	rsync -a $(COASTNET_SOURCE_DIR)/* $(SLIDERULE_STAGE_DIR)/coastnet --exclude build
-	rsync -a $(OPENOCEANS_SOURCE_DIR)/* $(SLIDERULE_STAGE_DIR)/openoceans --exclude build
 	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/config.json $(SLIDERULE_STAGE_DIR)
 	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest $(DOCKER_PLATFORM) .
@@ -328,6 +337,10 @@ perfstest: ## run strips performance test on the server code
 
 perfsubsetest: ## run subset performance test
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
+
+OCEANEYES_SHARE=/data/AppServer.1
+oceaneyes-test: ## run oceaneyes
+	docker run -it --rm -v /data:/data -v $(OCEANEYES_SHARE):/share --name oceaneyes $(ECR)/oceaneyes:$(VERSION) /bin/bash /runner.sh $(OCEANEYES_SHARE)/settings.json
 
 ########################
 # Help Target

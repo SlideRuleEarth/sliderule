@@ -211,7 +211,7 @@ void AssetIndex<T>::build (void)
 template <class T>
 T AssetIndex<T>::get (int index)
 {
-    return spans[index];
+    return spans.get(index);
 }
 
 /*----------------------------------------------------------------------------
@@ -379,7 +379,7 @@ void AssetIndex<T>::buildtree (node_t* root, int* maxdepth)
         for(int j = 0; j < root_size; j++)
         {
             const int resource_index = root->ril->get(j);
-            T& resource_span = spans[resource_index];
+            T& resource_span = spans.get(resource_index);
 
             if(intersect(lspan, resource_span))
             {
