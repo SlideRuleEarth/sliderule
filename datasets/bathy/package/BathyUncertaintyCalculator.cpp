@@ -84,9 +84,32 @@ BathyUncertaintyCalculator::uncertainty_coeff_t BathyUncertaintyCalculator::UNCE
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * init
+ * luaCreate - create(<parms>)
  *----------------------------------------------------------------------------*/
-void BathyUncertaintyCalculator::init (void)
+int BathyUncertaintyCalculator::luaCreate (lua_State* L)
+{
+    BathyFields* _parms = NULL;
+    BathyKd* _kd = NULL;
+
+    try
+    {
+        _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
+        _kd = dynamic_cast<BathyKd*>(getLuaObject(L, 2, BathyKd::OBJECT_TYPE));
+        return createLuaObject(L, new BathyUncertaintyCalculator(L, _parms, _kd));
+    }
+    catch(const RunTimeException& e)
+    {
+        if(_parms) _parms->releaseLuaObject();
+        if(_kd) _kd->releaseLuaObject();
+        mlog(e.level(), "Error creating %s: %s", OBJECT_TYPE, e.what());
+        return returnLuaStatus(L, false);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * luaInit
+ *----------------------------------------------------------------------------*/
+int BathyUncertaintyCalculator::luaInit (lua_State* L)
 {
     /*************************/
     /* UNCERTAINTY_COEFF_MAP */
@@ -100,6 +123,7 @@ void BathyUncertaintyCalculator::init (void)
         {
             /* get uncertainty filename */
             const char* uncertainty_filename = TU_FILENAMES[tu_dimension_index][pointing_angle_index];
+            mlog(INFO, "Processing uncertainty file: %s", uncertainty_filename);
 
             /* open csv file */
             fileptr_t file = fopen(uncertainty_filename, "r");
@@ -107,21 +131,23 @@ void BathyUncertaintyCalculator::init (void)
             {
                 char err_buf[256];
                 mlog(CRITICAL, "Failed to open file %s with error: %s", uncertainty_filename, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
-                return;
+                lua_pushboolean(L, false);
+                return 1;
             }
 
             /* read header line */
-            char columns[4][10];
-            if(fscanf(file, "%9s,%9s,%9s,%9s\n", columns[0], columns[1], columns[2], columns[3]) != 5)
+            char header[40];
+            if(fscanf(file, "%39s\n", header) <= 0)
             {
-                mlog(CRITICAL, "Failed to read header from uncertainty file: %s", uncertainty_filename);
-                return;
+                mlog(CRITICAL, "Failed to read header from uncertainty file %s", uncertainty_filename);
+                lua_pushboolean(L, false);
+                return 1;
             }
 
             /* read all rows */
             vector<uncertainty_entry_t> tu(INITIAL_UNCERTAINTY_ROWS);
             uncertainty_entry_t entry;
-            while(fscanf(file, "%d,%lf,%lf,%lf\n", &entry.Wind, &entry.Kd, &entry.b, &entry.c) == 5)
+            while(fscanf(file, "%d,%lf,%lf,%lf\n", &entry.Wind, &entry.Kd, &entry.b, &entry.c) == 4)
             {
                 tu.push_back(entry);
             }
@@ -157,7 +183,8 @@ void BathyUncertaintyCalculator::init (void)
                     if(count <= 0)
                     {
                         mlog(CRITICAL, "Failed to average coefficients from uncertainty file: %s", uncertainty_filename);
-                        return;
+                        lua_pushboolean(L, false);
+                        return 1;
                     }
 
                     /* set average coefficients */
@@ -168,29 +195,9 @@ void BathyUncertaintyCalculator::init (void)
             }
         }
     }
-}
 
-/*----------------------------------------------------------------------------
- * luaCreate - create(<parms>)
- *----------------------------------------------------------------------------*/
-int BathyUncertaintyCalculator::luaCreate (lua_State* L)
-{
-    BathyFields* _parms = NULL;
-    BathyKd* _kd = NULL;
-
-    try
-    {
-        _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
-        _kd = dynamic_cast<BathyKd*>(getLuaObject(L, 2, BathyKd::OBJECT_TYPE));
-        return createLuaObject(L, new BathyUncertaintyCalculator(L, _parms, _kd));
-    }
-    catch(const RunTimeException& e)
-    {
-        if(_parms) _parms->releaseLuaObject();
-        if(_kd) _kd->releaseLuaObject();
-        mlog(e.level(), "Error creating %s: %s", OBJECT_TYPE, e.what());
-        return returnLuaStatus(L, false);
-    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
@@ -245,6 +252,12 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
 
             /* get kd */
             kd = kd490->getKd(df.lon_ph[i], df.lat_ph[i]);
+        }
+
+        /* set processing flags */
+        if(kd < 0)
+        {
+            df.processing_flags[i] = df.processing_flags[i] | BathyFields::INVALID_KD;
         }
 
         /* initialize total uncertainty to aerial uncertainty */

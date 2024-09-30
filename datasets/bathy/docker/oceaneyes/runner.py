@@ -274,6 +274,9 @@ profile["ensemble"] = runClassifier("ensemble", ensemble)
 df = pd.concat([beam_table[beam] for beam in beam_list])
 print("Concatenated data frames into a single data frame")
 
+# set processing flags
+df["processing_flags"] = df["processing_flags"] + ((df["cshelph"] == 40) * 2**28) + ((df["medianfilter"] == 40) * 2**27) + ((df["bathypathfinder"] == 40) * 2**29) + ((df["pointnet"] == 40) * 2**30)
+
 # build stats table
 stats = {
     "total_photons": len(df),

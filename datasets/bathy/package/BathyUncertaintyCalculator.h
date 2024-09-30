@@ -59,8 +59,9 @@ class BathyUncertaintyCalculator: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void     init        (void);
         static int      luaCreate   (lua_State* L);
+        static int      luaInit     (lua_State* L);
+
         
         bool            run         (GeoDataFrame* dataframe) override;
 

@@ -268,9 +268,18 @@ class BathyFields: public Icesat2Fields
 
         /* Processing Flags */
         typedef enum {
-            SENSOR_DEPTH_EXCEEDED   = 0x01,
-            SEA_SURFACE_UNDETECTED  = 0x02,
-            ON_BOUNDARY             = 0x03  // set if photon is first after a spatial boundary
+            ON_BOUNDARY             = 0x01, // set if photon is first after a spatial boundary
+            SENSOR_DEPTH_EXCEEDED   = 0x02,
+            SEA_SURFACE_UNDETECTED  = 0x04,
+            INVALID_KD              = 0x08,
+            BATHY_QTREES            = 0x01000000,
+            BATHY_COASTNET          = 0x02000000,
+            BATHY_OPENOCEANSPP      = 0x04000000,
+            BATHY_MEDIANFILTER      = 0x08000000,
+            BATHY_CSHELPH           = 0x10000000,
+            BATHY_BATHYPATHFINDER   = 0x20000000,
+            BATHY_POINTNET          = 0x40000000,
+            BATHY_OPENOCEANS        = 0x80000000
         } flags_t;
 
         /*--------------------------------------------------------------------

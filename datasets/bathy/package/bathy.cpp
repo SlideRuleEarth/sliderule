@@ -75,6 +75,7 @@ int bathy_open (lua_State *L)
         {"seasurface",          BathySeaSurfaceFinder::luaCreate},
         {"refraction",          BathyRefractionCorrector::luaCreate},
         {"uncertainty",         BathyUncertaintyCalculator::luaCreate},
+        {"inituncertainty",     BathyUncertaintyCalculator::luaInit},
         {NULL,                  NULL}
     };
 
@@ -107,7 +108,6 @@ extern "C" {
 void initbathy (void)
 {
     /* Initialize Modules */
-    BathyUncertaintyCalculator::init();
     BathyViewer::init();
 
     /* Extend Lua */

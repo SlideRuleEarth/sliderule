@@ -1,9 +1,11 @@
 --
 -- Initialize the environment needed for ATL24 processing
 --
---  NOTES:  1. Downloads the ATL24 bathy mask from S3
---          2. Downloads the ATL24 uncertainty lookup tables from S3
+--  NOTES:  1. Downloads all external files needed for bathy processing
+--          2. Runs uncertainty calculation initialization (uses downloaded files)
 --
+
+local status = true
 
 local bathy_mask_complete = false
 local water_ri_mask_complete = false
@@ -84,4 +86,13 @@ while sys.alive() and ( (not bathy_mask_complete) or
 
 end
 
-sys.log(core.INFO, "Successfully initialized ATL24 processing environment")
+-- initialize uncertainty tables
+if sys.alive() then
+    status = bathy.inituncertainty()
+end
+
+if status then
+    sys.log(core.INFO, "Successfully initialized ATL24 processing environment")
+else
+    sys.log(core.INFO, "Failed to initialize ATL24 processing environment")
+end

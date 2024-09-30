@@ -14,13 +14,17 @@ Version description of the v4.7.1 release of SlideRule Earth.
 * MedianFilter and C-Shelph are pulled directly from the ut-ATL24-medianfilter and ut-ATL24-C-shelph repositories
 * Version information is included in for all external classifiers (CoastNet, QTrees, OpenOceans++, MedianFilter, C-Shelph)
 * Metadata is now provided inside the Parquet and HDF5 files instead of as separate json files.
+* Uncertainty calculation fixed (migration from python to C and the update to a linear model introduced a few regressions)
 
-## Known Issues
+## Known Issues and Remaining Tasks
 
+* Current ensemble model is trained on refraction corrected heights though the inputs are not corrected
+* Pointnet is identifying very low rates of bathymetry with respect to the other classifiers - we are still working through possible causes
 
 ## Development Updates
 
-
+* The ATL03 photons are stored in a table in memory and operated on in place instead of streamed
+* The Python classifiers are all executed from a single Python script that uses multiprocessing instead of having the data transferred to and from disk
 
 ## Getting This Release
 

@@ -112,6 +112,7 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
         FieldColumn<int8_t>& class_ph = *dynamic_cast<FieldColumn<int8_t>*>(dataframe->getColumnData("class_ph"));
         FieldColumn<float>& surface_h = *dynamic_cast<FieldColumn<float>*>(dataframe->getColumnData("surface_h"));
         FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>>& predictions = *dynamic_cast<FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>>*>(dataframe->getColumnData("predictions"));
+        FieldColumn<uint32_t>& processing_flags = *dynamic_cast<FieldColumn<uint32_t>*>(dataframe->getColumnData("processing_flags"));
 
         // Preallocate samples vector
         const size_t number_of_samples = dataframe->length();
@@ -156,6 +157,10 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
             if(qparms.setSurface) surface_h[i] = samples[i].surface_elevation;
             if(qparms.setClass) class_ph[i] = samples[i].prediction;
             predictions[i][BathyFields::QTREES] = samples[i].prediction;
+            if(samples[i].prediction == BathyFields::BATHYMETRY)
+            {
+                processing_flags[i] = processing_flags[i] | BathyFields::BATHY_QTREES;
+            }
         }
     }
     catch (const std::exception &e)
