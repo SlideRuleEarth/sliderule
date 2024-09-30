@@ -95,7 +95,7 @@ double BathyKd::getKd (double lon, double lat)
     const int32_t y = static_cast<int32_t>(latitude_pixels);
 
     /* get x offset */
-    const double degrees_of_longitude =  lon + 180.0;
+    const double degrees_of_longitude = lon + 180.0;
     const double longitude_pixels = degrees_of_longitude * 24.0;
     const int32_t x = static_cast<int32_t>(longitude_pixels);
 
@@ -105,7 +105,7 @@ double BathyKd::getKd (double lon, double lat)
         throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid Kd coordinates: %d, %d | %lf, %lf", y, x, degrees_of_latitude, degrees_of_longitude);
     }
     const long offset = (x * 4320) + y;
-    
+
     /* get kd */
     return static_cast<double>((*array)[offset]) * 0.0002;
 

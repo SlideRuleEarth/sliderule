@@ -163,7 +163,15 @@ ArrowParms::ArrowParms (lua_State* L, int index):
             /* Asset */
             lua_getfield(L, index, ASSET);
             asset_name = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, NULL, &field_provided));
-            if(field_provided) mlog(DEBUG, "Setting %s to %s", ASSET, asset_name);
+            if(field_provided && asset_name != NULL)
+            {
+                mlog(DEBUG, "Setting %s to %s", ASSET, asset_name);
+                if(StringLib::size(asset_name) == 0)
+                {
+                    delete [] asset_name;
+                    asset_name = NULL;
+                }
+            }
             lua_pop(L, 1);
 
             #ifdef __aws__
@@ -171,6 +179,7 @@ ArrowParms::ArrowParms (lua_State* L, int index):
             {
                 /* Get Asset */
                 Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
+                if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to find asset: %s", asset_name);
 
                 /* Region */
                 region = StringLib::duplicate(asset->getRegion());

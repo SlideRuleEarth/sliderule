@@ -1,7 +1,7 @@
 arrow: apache-arrow-15.0.2-0-ge03105efc
 gdal: v3.9.2-0-g3aae5b4cf3
-geos: 3.13.0beta2-0-g24ac4f1e5
+geos: 3.13.0-0-gd7957246c
 libgeotiff: 1.7.3-0-gd2c72db
-PROJ: 9.4.1-0-g875a485f
-rapidjson: v1.1.0-753-g7c73dd7d
+PROJ: 9.5.0-0-g0a407325
+rapidjson: v1.1.0-755-g815e6e7e
 xgboost: v2.1.1-0-g9c9db1259-dirty

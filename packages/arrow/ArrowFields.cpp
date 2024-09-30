@@ -51,7 +51,7 @@ ArrowFields::ArrowFields (void):
         {"as_geo",              &asGeo},
         {"with_checksum",       &withChecksum},
         {"with_validation",     &withValidation},
-        {"asset_name",          &assetName},
+        {"asset",               &assetName},
         {"region",              &region},
         #ifdef __aws__
         {"credentials",         &credentials},
@@ -83,7 +83,7 @@ void ArrowFields::fromLua (lua_State* L, int index)
     {
         /* Get Asset */
         Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(assetName.value.c_str(), Asset::OBJECT_TYPE));
-        region = StringLib::duplicate(asset->getRegion());
+        region = asset->getRegion();
         credentials = CredentialStore::get(asset->getIdentity());
         asset->releaseLuaObject();
     }
