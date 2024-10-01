@@ -189,8 +189,8 @@ bool LandsatHlsRaster::findRasters(finder_t* finder)
             {
                 const char* bandName = it->first.c_str();
 
-                /* skip algo names (NDIS, etc) and invalid bands (user error) */
-                if(!isValidL8Band(bandName) && !isValidS2Band(bandName) && !isValidAlgoName(bandName))
+                /* skip algo names (NDIS, etc) */
+                if(isValidAlgoName(bandName))
                     continue;
 
                 const char* fname = feature->GetFieldAsString(bandName);

@@ -175,6 +175,11 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file,
         /* Set the combined geojson file as the index file */
         file = combinedGeoJSON;
     }
+    else
+    {
+        mlog(ERROR, "Failed to combine geojson files");
+        ssErrors |= SS_INDEX_FILE_ERROR;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -402,6 +407,13 @@ bool PgcDemStripsRaster::combineGeoJSONFiles(const std::vector<std::string>& inp
         }
 
         GDALClose(inputDataset);
+    }
+
+    if (combinedLayer == NULL || combinedLayer->GetFeatureCount() == 0)
+    {
+        mlog(ERROR, "No features found in combined layer.");
+        GDALClose(memDataset);
+        return false;
     }
 
     /* Write the combined layer to a GeoJSON file in the /vsimem filesystem */

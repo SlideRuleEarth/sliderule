@@ -227,7 +227,10 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         ssErrors = SS_NO_ERRORS;
 
         /* Open the index file for all points */
-        openGeoIndex(NULL, &points);
+        if(!openGeoIndex(NULL, &points))
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Error opening index file");
+        }
 
         /* Rasters to points map */
         raster_points_map_t rasterToPointsMap;
