@@ -33,7 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
+#include "OsApi.h"
 #include "ArrowParms.h"
 
 #include "rapidjson/document.h"
@@ -163,7 +163,15 @@ ArrowParms::ArrowParms (lua_State* L, int index):
             /* Asset */
             lua_getfield(L, index, ASSET);
             asset_name = StringLib::duplicate(LuaObject::getLuaString(L, -1, true, NULL, &field_provided));
-            if(field_provided) mlog(DEBUG, "Setting %s to %s", ASSET, asset_name);
+            if(field_provided && asset_name != NULL)
+            {
+                mlog(DEBUG, "Setting %s to %s", ASSET, asset_name);
+                if(StringLib::size(asset_name) == 0)
+                {
+                    delete [] asset_name;
+                    asset_name = NULL;
+                }
+            }
             lua_pop(L, 1);
 
             #ifdef __aws__
@@ -171,6 +179,7 @@ ArrowParms::ArrowParms (lua_State* L, int index):
             {
                 /* Get Asset */
                 Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
+                if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to find asset: %s", asset_name);
 
                 /* Region */
                 region = StringLib::duplicate(asset->getRegion());
@@ -179,7 +188,7 @@ ArrowParms::ArrowParms (lua_State* L, int index):
 
                 /* Credentials */
                 credentials = CredentialStore::get(asset->getIdentity());
-                if(credentials.provided) mlog(DEBUG, "Setting %s from asset %s", CREDENTIALS, asset_name);
+                if(!credentials.expiration.value.empty()) mlog(DEBUG, "Setting %s from asset %s", CREDENTIALS, asset_name);
                 else mlog(ERROR, "Failed to get credentials from asset %s", asset_name);
 
                 /* Release Asset */
@@ -196,7 +205,7 @@ ArrowParms::ArrowParms (lua_State* L, int index):
                 /* AWS Credentials */
                 lua_getfield(L, index, CREDENTIALS);
                 credentials.fromLua(L, -1);
-                if(credentials.provided) mlog(DEBUG, "Setting %s from user", CREDENTIALS);
+                if(!credentials.expiration.value.empty()) mlog(DEBUG, "Setting %s from user", CREDENTIALS);
                 lua_pop(L, 1);
             }
             #endif
@@ -250,7 +259,7 @@ const char* ArrowParms::tojson (void) const
     doc.AddMember("ancillary_fields", ancillary, allocator);
 
     #ifdef __aws__
-    doc.AddMember("credentials", rapidjson::Value(credentials.provided ? "provided" : "not provided", allocator), allocator);
+    doc.AddMember("credentials", rapidjson::Value(!credentials.expiration.value.empty() ? "provided" : "not provided", allocator), allocator);
     #endif
 
     rapidjson::StringBuffer buffer;

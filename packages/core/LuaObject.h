@@ -70,6 +70,7 @@ class LuaObject
 
         static const char* BASE_OBJECT_TYPE;
         static const int SIGNAL_COMPLETE = 0;
+        static const int DEFAULT_WAIT_INTERVAL = 10000;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -109,6 +110,7 @@ class LuaObject
 
         static LuaObject*   getLuaObjectByName  (const char* name, const char* object_type);
         bool                releaseLuaObject    (void); // pairs with getLuaObject(..) and getLuaObjectByName(..), returns whether object was deleted
+        bool                waitComplete        (int timeout);
 
     protected:
 

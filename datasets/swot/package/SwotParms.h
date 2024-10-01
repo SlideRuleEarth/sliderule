@@ -38,15 +38,14 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "GeoJsonRaster.h"
 #include "List.h"
-#include "NetsvcParms.h"
+#include "RequestParms.h"
 
 /******************************************************************************
  * SWOT PARAMETERS
  ******************************************************************************/
 
-class SwotParms: public NetsvcParms
+class SwotParms: public RequestParms
 {
     public:
 
@@ -69,9 +68,9 @@ class SwotParms: public NetsvcParms
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int          luaCreate           (lua_State* L);
-        static int64_t      deltatime2timestamp (double delta_time);
-        const char*         tojson              (void) const override;
+        static int      luaCreate           (lua_State* L);
+        static time8_t  deltatime2timestamp (double delta_time);
+        const char*     tojson              (void) const override;
 
         /*--------------------------------------------------------------------
          * Data

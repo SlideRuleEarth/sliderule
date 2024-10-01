@@ -68,9 +68,6 @@ Options include:
    -DINSTALLDIR=[prefix]               location to install sliderule
                                        default: /usr/local
 
-   -DRUNTIMEDIR=[directory]            location for run-time files like plugins, configuration files, and lua scripts
-                                       default: /usr/local/etc/sliderule
-
    -DSHARED_LIBRARY=[ON|OFF]           build sliderule as a shared library (overrides all other targets)
                                        default: OFF
 
@@ -173,7 +170,7 @@ Contains a project or mission specific extension to the SlideRule framework that
 
 In order to build a plugin for SlideRule, the plugin code must compile down to a shared object that exposes a single function defined as `void init{plugin}(void)` where _{plugin}_ is the name of the plugin.  Note that if developing the plugin in C++ the initialization function must be externed as C in order to prevent the mangling of the exported symbol.
 
-Once the shared object is built, the build system must copy the shared object into the SlideRule configuration directory (specified by the `RUNTIMEDIR` option in the CMakeLists.txt file) with the name _{plugin}.so_.  On startup, the _sliderule_ application scans the configuration directory and loads all plugins present.
+Once the shared object is built, the build system must copy the shared object into the SlideRule plugin directory (specified by the `PLUGINDIR` option in the CMakeLists.txt file) with the name _{plugin}.so_.  On startup, the _sliderule_ application scans the configuration directory and loads all plugins present.
 
 
 ## VI. Delivering the Code

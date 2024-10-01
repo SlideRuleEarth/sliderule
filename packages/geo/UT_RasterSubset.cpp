@@ -33,7 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
+#include "OsApi.h"
 #include "GdalRaster.h"
 #include "UT_RasterSubset.h"
 

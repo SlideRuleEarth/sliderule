@@ -3,6 +3,9 @@ FROM $repo/sliderule-buildenv:latest AS buildenv
 
 # copy sliderule source repository
 COPY sliderule /sliderule
+COPY ut-ATL24-coastnet /ut-ATL24-coastnet
+COPY ut-ATL24-qtrees /ut-ATL24-qtrees 
+COPY ut-ATL24-oopp /ut-ATL24-oopp
 
 # build and install sliderule application
 WORKDIR /sliderule/targets/slideruleearth-aws
@@ -10,21 +13,6 @@ RUN make config-release INSTALLDIR=/usr/local && make
 
 # install project specific files
 COPY config.json /usr/local/etc/sliderule/
-
-### Qtrees Plugin ###
-COPY qtrees /qtrees
-WORKDIR /qtrees/plugin
-RUN make config INSTALLDIR=/usr/local && make && make install
-
-### CoastNet Plugin ###
-COPY coastnet /coastnet
-WORKDIR /coastnet/plugin
-RUN make config INSTALLDIR=/usr/local && make && make install
-
-### OpenOceans++ Plugin ###
-COPY openoceans /openoceans
-WORKDIR /openoceans/plugin
-RUN make config INSTALLDIR=/usr/local && make && make install
 
 # install runtime dependencies
 FROM amazonlinux:2023 AS runtime

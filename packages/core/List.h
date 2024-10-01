@@ -99,7 +99,9 @@ class List
         bool    empty       (void) const;
         void    clear       (void);
         void    sort        (void);
+        T*      array       (void);
 
+        T       operator[]  (int index) const;
         T&      operator[]  (int index);
         List&   operator=   (const List& l1);
 
@@ -455,7 +457,6 @@ void List<T>::clear(void)
     initialize();
 }
 
-
 /*----------------------------------------------------------------------------
  * sort
  *----------------------------------------------------------------------------*/
@@ -503,7 +504,60 @@ void List<T>::sort(void)
 }
 
 /*----------------------------------------------------------------------------
- * []
+ * array
+ *----------------------------------------------------------------------------*/
+template <class T>
+T* List<T>::array(void)
+{
+    /* Allocate Array */
+    T* data = new T[len];
+
+    /* Build Array */
+    list_node_t* curr = &head;
+    int items_remaining = len;
+    int index = 0;
+    while(items_remaining > 0)
+    {
+        const int items_to_copy = MIN(items_remaining, listBlockSize);
+        for(int i = 0; i < items_to_copy; i++)
+        {
+            data[index++] = curr->data[i];
+        }
+        items_remaining -= items_to_copy;
+        curr = curr->next;
+    }
+
+    /* Return Array */
+    return data;
+  }
+
+/*----------------------------------------------------------------------------
+ * [] - rvalue
+ *----------------------------------------------------------------------------*/
+template <class T>
+T List<T>::operator[](int index) const
+{
+    if( (index < len) && (index >= 0) )
+    {
+        const int node_block = index / listBlockSize;
+        const int node_offset = index % listBlockSize;
+
+        const list_node_t* curr = &head;
+        for(int i = 0; i < node_block; i++) 
+        { 
+            assert(curr); 
+            curr = curr->next; 
+        }
+
+        assert(curr);
+        return curr->data[node_offset];
+    }
+
+    throw RunTimeException(CRITICAL, RTE_ERROR, "List::get index out of range");
+}
+
+/*----------------------------------------------------------------------------
+ * [] - lvalue
  *----------------------------------------------------------------------------*/
 template <class T>
 T& List<T>::operator[](int index)

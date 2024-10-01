@@ -3,14 +3,14 @@ local console = require("console")
 
 -- TcpSocket Unit Test --
 
-server = core.tcp("127.0.0.1", 35505, core.SERVER):name("server") 
-client = core.tcp("127.0.0.1", 35505, core.CLIENT):name("client")
+local server = streaming.tcp("127.0.0.1", 35505, streaming.SERVER):name("server") 
+local client = streaming.tcp("127.0.0.1", 35505, streaming.CLIENT):name("client")
 
 sys.wait(2)
 
-expected_message = "Hello World"
+local expected_message = "Hello World"
 runner.check(client:send(expected_message), "Failed to send message")
-actual_message = server:receive()
+local actual_message = server:receive()
 
 print("Message: ", actual_message)
 runner.check(expected_message == actual_message, "Failed to match messages")

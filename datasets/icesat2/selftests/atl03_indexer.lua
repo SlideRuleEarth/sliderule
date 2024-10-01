@@ -17,7 +17,7 @@ local name, identity, driver = nsidc_s3:info()
 local creds = aws.csget(identity)
 if not creds then
     local earthdata_url = "https://data.nsidc.earthdatacloud.nasa.gov/s3credentials"
-    local response, _ = netsvc.get(earthdata_url)
+    local response, _ = core.get(earthdata_url)
     local _, credential = pcall(json.decode, response)
     aws.csput(identity, credential)
 end
@@ -34,13 +34,13 @@ local name, identity, driver, path, index_filename, region, endpoint, status = n
 runner.check(status)
 
 -- setup index file writer
-local asset_index_file = core.file(core.WRITER, core.TEXT, index_filename)
-local writer = core.writer(asset_index_file, "indexq"):name("writer")
+local asset_index_file = streaming.file(streaming.WRITER, streaming.TEXT, index_filename)
+local writer = streaming.writer(asset_index_file, "indexq"):name("writer")
 
 -- setup csv dispatch
 local indexrecq = msg.subscribe("indexrecq")
-local dispatcher = core.dispatcher("indexrecq"):name("dispatcher")
-local csvdispatch = core.csv({"name", "t0", "t1", "lat0", "lon0", "lat1", "lon1", "cycle", "rgt"}, "indexq"):name("csvdispatch")
+local dispatcher = streaming.dispatcher("indexrecq"):name("dispatcher")
+local csvdispatch = streaming.csv({"name", "t0", "t1", "lat0", "lon0", "lat1", "lon1", "cycle", "rgt"}, "indexq"):name("csvdispatch")
 dispatcher:attach(csvdispatch, "atl03rec.index")
 dispatcher:run()
 

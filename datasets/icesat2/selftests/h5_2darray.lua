@@ -18,7 +18,7 @@ local resource = "ATL03_20190218011204_07880205_006_02.h5"
 local creds = aws.csget(identity)
 if not creds then
     local earthdata_url = "https://data.nsidc.earthdatacloud.nasa.gov/s3credentials"
-    local response, _ = netsvc.get(earthdata_url)
+    local response, _ = core.get(earthdata_url)
     local _, credential = pcall(json.decode, response)
     aws.csput(identity, credential)
 end

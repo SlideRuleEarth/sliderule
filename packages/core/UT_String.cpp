@@ -33,21 +33,13 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <stdlib.h>
 #include "UT_String.h"
-#include "core.h"
-
-/******************************************************************************
- * MACROS
- ******************************************************************************/
-
-#define ut_assert(e,...)    lua_obj->_ut_assert(e,__FILE__,__LINE__,__VA_ARGS__)
+#include "UnitTest.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
-
-const char* UT_String::OBJECT_TYPE = "UT_String";
 
 const char* UT_String::LUA_META_NAME = "UT_String";
 const struct luaL_Reg UT_String::LUA_META_TABLE[] = {
@@ -80,57 +72,8 @@ int UT_String::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 UT_String::UT_String (lua_State* L):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    failures(0)
+    UnitTest(L, LUA_META_NAME, LUA_META_TABLE)
 {
-}
-
-/*----------------------------------------------------------------------------
- * Destructor  -
- *----------------------------------------------------------------------------*/
-UT_String::~UT_String(void) = default;
-
-/*--------------------------------------------------------------------------------------
- * _ut_assert - called via ut_assert macro
- *--------------------------------------------------------------------------------------*/
-bool UT_String::_ut_assert(bool e, const char* file, int line, const char* fmt, ...)
-{
-    if(!e)
-    {
-        char formatted_string[UT_MAX_ASSERT];
-        char log_message[UT_MAX_ASSERT];
-        va_list args;
-        int vlen, msglen;
-        char* pathptr;
-
-        /* Build Formatted String */
-        va_start(args, fmt);
-        vlen = vsnprintf(formatted_string, UT_MAX_ASSERT - 1, fmt, args);
-        msglen = vlen < UT_MAX_ASSERT - 1 ? vlen : UT_MAX_ASSERT - 1;
-        va_end(args);
-        if (msglen < 0) formatted_string[0] = '\0';
-        else            formatted_string[msglen] = '\0';
-
-        /* Chop Path in Filename */
-        pathptr = StringLib::find(file, '/', false);
-        if(pathptr) pathptr++;
-        else pathptr = const_cast<char*>(file);
-
-        /* Create Log Message */
-        msglen = snprintf(log_message, UT_MAX_ASSERT, "Failure at %s:%d:%s", pathptr, line, formatted_string);
-        if(msglen > (UT_MAX_ASSERT - 1))
-        {
-            log_message[UT_MAX_ASSERT - 1] = '#';
-        }
-
-        /* Display Log Message */
-        print2term("%s", log_message);
-
-        /* Count Error */
-        failures++;
-    }
-
-    return e;
 }
 
 /*--------------------------------------------------------------------------------------
@@ -150,25 +93,25 @@ int UT_String::testReplace(lua_State* L)
         return 1;
     }
 
-    lua_obj->failures = 0;
+    ut_initialize(lua_obj);
 
     // 1) Replace Single Character
     char* test1 = StringLib::replace("Hello World", "o", "X");
-    ut_assert(StringLib::match(test1, "HellX WXrld"), "Failed single character test: %s", test1);
+    ut_assert(lua_obj, StringLib::match(test1, "HellX WXrld"), "Failed single character test: %s", test1);
     delete [] test1;
     // 2) Replace String
     char* test2 = StringLib::replace("Hello World", "ello", "eal");
-    ut_assert(StringLib::match(test2, "Heal World"), "Failed to replace string: %s", test2);
+    ut_assert(lua_obj, StringLib::match(test2, "Heal World"), "Failed to replace string: %s", test2);
     delete [] test2;
 
     // 3) Replace Strings
     const char* oldtxt[2] = { "$1", "$2" };
     const char* newtxt[2] = { "sentence", "not" };
     char* test3 = StringLib::replace("This is a long $1 and I am $2 sure if this $1 will work or $2", oldtxt, newtxt, 2);
-    ut_assert(StringLib::match(test3, "This is a long sentence and I am not sure if this sentence will work or not"), "Failed multiple replacements: %s", test3);
+    ut_assert(lua_obj, StringLib::match(test3, "This is a long sentence and I am not sure if this sentence will work or not"), "Failed multiple replacements: %s", test3);
     delete [] test3;
 
     // return success or failure
-    lua_pushboolean(L, lua_obj->failures == 0);
+    lua_pushboolean(L, ut_status(lua_obj));
     return 1;
 }

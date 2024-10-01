@@ -35,7 +35,7 @@
 
 #include "CcsdsPayloadDispatch.h"
 #include "CcsdsPacket.h"
-#include "core.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA

@@ -33,10 +33,17 @@
  *INCLUDES
  ******************************************************************************/
 
-#include "core.h"
 #include "bathy.h"
-#include "BathyReader.h"
 #include "BathyViewer.h"
+#include "BathyDataFrame.h"
+#include "BathyFields.h"
+#include "BathyMask.h"
+#include "BathyGranule.h"
+#include "BathyKd.h"
+#include "BathyCoastnetClassifier.h"
+#include "BathyQtreesClassifier.h"
+#include "BathyOpenOceansPPClassifier.h"
+#include "BathySeaSurfaceFinder.h"
 #include "BathyRefractionCorrector.h"
 #include "BathyUncertaintyCalculator.h"
 
@@ -56,11 +63,19 @@
 int bathy_open (lua_State *L)
 {
     static const struct luaL_Reg bathy_functions[] = {
-        {"parms",               BathyParms::luaCreate},
-        {"reader",              BathyReader::luaCreate},
+        {"parms",               BathyFields::luaCreate},
+        {"dataframe",           BathyDataFrame::luaCreate},
+        {"mask",                BathyMask::luaCreate},
+        {"kd",                  BathyKd::luaCreate},
+        {"granule",             BathyGranule::luaCreate},
         {"viewer",              BathyViewer::luaCreate},
+        {"coastnet",            BathyCoastnetClassifier::luaCreate},
+        {"qtrees",              BathyQtreesClassifier::luaCreate},
+        {"openoceanspp",        BathyOpenOceansPPClassifier::luaCreate},
+        {"seasurface",          BathySeaSurfaceFinder::luaCreate},
         {"refraction",          BathyRefractionCorrector::luaCreate},
         {"uncertainty",         BathyUncertaintyCalculator::luaCreate},
+        {"inituncertainty",     BathyUncertaintyCalculator::luaInit},
         {NULL,                  NULL}
     };
 
@@ -68,7 +83,19 @@ int bathy_open (lua_State *L)
     luaL_newlib(L, bathy_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrStr(L, "BATHY_PREFIX", BathyReader::OUTPUT_FILE_PREFIX);
+    LuaEngine::setAttrInt(L, "QTREES",          BathyFields::QTREES);
+    LuaEngine::setAttrInt(L, "COASTNET",        BathyFields::COASTNET);
+    LuaEngine::setAttrInt(L, "OPENOCEANSPP",    BathyFields::OPENOCEANSPP);
+    LuaEngine::setAttrInt(L, "MEDIANFILTER",    BathyFields::MEDIANFILTER);
+    LuaEngine::setAttrInt(L, "CSHELPH",         BathyFields::CSHELPH);
+    LuaEngine::setAttrInt(L, "BATHYPATHFINDER", BathyFields::BATHYPATHFINDER);
+    LuaEngine::setAttrInt(L, "POINTNET",        BathyFields::POINTNET);
+    LuaEngine::setAttrInt(L, "OPENOCEANS",      BathyFields::OPENOCEANS);
+    LuaEngine::setAttrInt(L, "ENSEMBLE",        BathyFields::ENSEMBLE);
+    LuaEngine::setAttrStr(L, "COASTNET_MODEL",  COASTNET_MODEL);
+    LuaEngine::setAttrStr(L, "QTREES_MODEL",    QTREES_MODEL);
+    LuaEngine::setAttrStr(L, "ENSEMBLE_MODEL",  ENSEMBLE_MODEL);
+    LuaEngine::setAttrStr(L, "POINTNET_MODEL",  POINTNET_MODEL);
 
     return 1;
 }
@@ -81,11 +108,6 @@ extern "C" {
 void initbathy (void)
 {
     /* Initialize Modules */
-    BathyParms::init();
-    BathyClassifier::init();
-    BathyRefractionCorrector::init();
-    BathyUncertaintyCalculator::init();
-    BathyReader::init();
     BathyViewer::init();
 
     /* Extend Lua */

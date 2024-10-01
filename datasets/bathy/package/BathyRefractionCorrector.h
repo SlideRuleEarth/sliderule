@@ -33,15 +33,15 @@
 #define __bathy_refraction_corrector__
 
 #include "OsApi.h"
-#include "LuaObject.h"
-#include "H5Array.h"
-#include "BathyParms.h"
+#include "GeoDataFrame.h"
+#include "BathyDataFrame.h"
+#include "BathyFields.h"
 
 /******************************************************************************
- * BATHY OPENOCEANS
+ * CLASS
  ******************************************************************************/
 
-class BathyRefractionCorrector: public LuaObject
+class BathyRefractionCorrector: public GeoDataFrame::FrameRunner
 {
     public:
 
@@ -56,8 +56,6 @@ class BathyRefractionCorrector: public LuaObject
         static const double GLOBAL_WATER_RI_MASK_MIN_LON;
         static const double GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
 
-        static const char* OBJECT_TYPE;
-
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
@@ -66,26 +64,26 @@ class BathyRefractionCorrector: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int      luaCreate   (lua_State* L);
-        static void     init        (void);
-        uint64_t        run         (BathyParms::extent_t& extent,
-                                     const H5Array<float>& ref_el,
-                                     const H5Array<float>& ref_az) const;
+        static int      getSubAqPh  (lua_State* L);
+
+        bool            run         (GeoDataFrame* dataframe) override;
+
     private:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathyRefractionCorrector    (lua_State* L, BathyParms* _parms);
+        BathyRefractionCorrector    (lua_State* L, BathyFields* _parms);
         ~BathyRefractionCorrector   (void) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        BathyParms*         parms;
+        BathyFields*        parms;
         GeoLib::TIFFImage*  waterRiMask;
-
+        uint64_t            subaqueousPhotons;
 };
 
 #endif

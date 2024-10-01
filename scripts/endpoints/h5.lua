@@ -37,9 +37,9 @@ if not asset then
     return
 end
 
-local f = h5.dataset(core.READER, asset, resource, dataset, id, false, datatype, col, startrow, numrows)
+local f = h5.dataset(streaming.READER, asset, resource, dataset, id, false, datatype, col, startrow, numrows)
 if f:connected() then
-    local r = core.reader(f, rspq)
+    local r = streaming.reader(f, rspq)
     r:waiton() -- waits until reader completes
 end
 

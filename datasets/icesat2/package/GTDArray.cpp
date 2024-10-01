@@ -35,7 +35,7 @@
 
 #include "GTDArray.h"
 #include "Icesat2Parms.h"
-#include "core.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA

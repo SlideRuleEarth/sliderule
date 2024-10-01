@@ -34,22 +34,20 @@
 
 #include "StringLib.h"
 #include "Dictionary.h"
-#include "LuaObject.h"
+#include "UnitTest.h"
 #include "OsApi.h"
 
 /******************************************************************************
  * UNIT TEST DICTIONARY CLASS
  ******************************************************************************/
 
-class UT_Dictionary: public LuaObject
+class UT_Dictionary: public UnitTest
 {
     public:
 
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-
-        static const char* OBJECT_TYPE;
 
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
@@ -73,7 +71,7 @@ class UT_Dictionary: public LuaObject
          *--------------------------------------------------------------------*/
 
         explicit UT_Dictionary (lua_State* L);
-        ~UT_Dictionary (void) override;
+        ~UT_Dictionary (void) override = default;
 
         static int  functionalUnitTestCmd   (lua_State* L);
         static int  iteratorUnitTestCmd     (lua_State* L);

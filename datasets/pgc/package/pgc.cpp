@@ -33,7 +33,7 @@
  *INCLUDES
  ******************************************************************************/
 
-#include "core.h"
+#include "OsApi.h"
 #include "pgc.h"
 #include "PgcWkt.h"
 

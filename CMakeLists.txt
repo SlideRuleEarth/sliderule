@@ -47,6 +47,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "-readability-suspicious-call-argument,"
         "-readability-isolate-declaration,"
         "-readability-misleading-indentation,"
+        "-readability-container-contains,"
 
         "misc-*,"
         "-misc-non-private-member-variables-in-classes,"
@@ -102,12 +103,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
     # Join checks into a single string parameter
     list(JOIN CLANG_TIDY_CHECKS "" CLANG_TIDY_CHECKS_PARM)
 
-    set (CMAKE_CXX_CLANG_TIDY
-       clang-tidy;
-       -header-filter=.;
-       -checks=${CLANG_TIDY_CHECKS_PARM};
-       -warnings-as-errors=*;
-    )
+    set (CMAKE_CXX_CLANG_TIDY "clang-tidy;-header-filter='^((?!ATL24_coastnet/).)*$';-checks=${CLANG_TIDY_CHECKS_PARM};-warnings-as-errors=*")
 
     # cppcheck, tested with version 2.13.0
     find_program (CMAKE_CXX_CPPCHECK NAMES cppcheck)
@@ -142,6 +138,8 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=knownConditionTrueFalse"                            # -1 < 0 etc
         "--suppress=constVariableReference:*/RasterObject.cpp"          # List [] const issue
         "--suppress=constVariableReference:*/GeoIndexedRaster.cpp"      # List [] const issue
+
+        "--suppress=*:*/coastnet.h"                                     # suppress all checks for coastnet
     )
 
 endif()
@@ -169,10 +167,11 @@ option (ENABLE_GDAL_ERROR_REPORTING "Log GDAL errors to message log" OFF)
 option (USE_ARROW_PACKAGE "Include the Apache Arrow package" ON)
 option (USE_AWS_PACKAGE "Include the AWS package" ON)
 option (USE_CCSDS_PACKAGE "Include the CCSDS package" OFF)
-option (USE_CRE_PACKAGE "Include the CRE package" ON)
-option (USE_GEO_PACKAGE "Include the GEO package" ON)
-option (USE_H5_PACKAGE "Include the HDF5 package" ON)
-option (USE_NETSVC_PACKAGE "Include the Network Services package" ON)
+option (USE_CRE_PACKAGE "Include the container runtime environment package" ON)
+option (USE_GEO_PACKAGE "Include the geospatial library (GDAL) package" ON)
+option (USE_H5_PACKAGE "Include the HDF5 (H5Coro) package" ON)
+option (USE_LEGACY_PACKAGE "Include the legacy (CommandProcessor) package" OFF)
+option (USE_STREAMING_PACKAGE "Include the streaming (RecordDispatcher) package" ON)
 
 # Platform Options #
 
@@ -191,6 +190,10 @@ option (USE_PGC_DATASET "Include the PGC dataset" ON)
 option (USE_SWOT_DATASET "Include the SWOT dataset" ON)
 option (USE_USGS3DEP_DATASET "Include the USDS 3DEP dataset" ON)
 
+# Target Options #
+
+option (USE_SLIDERULEEARTH_TARGET "Include slideruleearth.io target configuration" ON)
+
 # Version Information #
 
 file(STRINGS ${CMAKE_CURRENT_LIST_DIR}/version.txt TGTVER)
@@ -198,7 +201,8 @@ string(REPLACE "v" "" LIBVER ${TGTVER})
 
 # C++ Version #
 
-set(CXX_VERSION 17) # required if using pistache package
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 20)
 
 # Platform #
 
@@ -211,13 +215,12 @@ if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
     LINK_DIRECTORIES(/usr/local/lib /usr/local/lib64)
 
     # Set Environment Variables
-    set (INSTALLDIR /usr/local CACHE STRING "Installation directory for library and executables")
+    set (INSTALLDIR /usr/local CACHE STRING "Installation prefix directory for sliderule application")
     set (CONFDIR ${INSTALLDIR}/etc/sliderule)
     set (INCDIR ${INSTALLDIR}/include/sliderule)
+    set (PLUGINDIR ${INSTALLDIR}/lib/sliderule)
 
 endif()
-
-set (RUNTIMEDIR ${CONFDIR} CACHE STRING "Runtime directory for plugins and configuration scripts")
 
 #####################
 # Target: SlideRule #
@@ -242,7 +245,6 @@ endif()
 set_target_properties (slideruleLib PROPERTIES VERSION ${LIBVER})
 set_target_properties (slideruleLib PROPERTIES OUTPUT_NAME sliderule)
 set_target_properties (slideruleLib PROPERTIES ENABLE_EXPORTS true)
-set_target_properties (slideruleLib PROPERTIES CXX_STANDARD ${CXX_VERSION})
 
 # Compile Definitions #
 
@@ -284,7 +286,8 @@ endif ()
 # Platform File #
 
 set_property(GLOBAL APPEND PROPERTY platform "#define LIBID \"${TGTVER}\"\n")
-set_property(GLOBAL APPEND PROPERTY platform "#define CONFDIR \"${RUNTIMEDIR}\"\n")
+set_property(GLOBAL APPEND PROPERTY platform "#define CONFDIR \"${CONFDIR}\"\n")
+set_property(GLOBAL APPEND PROPERTY platform "#define PLUGINDIR \"${PLUGINDIR}\"\n")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set_property(GLOBAL APPEND PROPERTY platform "#define __unittesting__\n")
@@ -345,8 +348,12 @@ if(${USE_H5_PACKAGE})
     add_subdirectory (packages/h5)
 endif()
 
-if(${USE_NETSVC_PACKAGE})
-    add_subdirectory (packages/netsvc)
+if(${USE_LEGACY_PACKAGE})
+    add_subdirectory (packages/legacy)
+endif()
+
+if(${USE_STREAMING_PACKAGE})
+    add_subdirectory (packages/streaming)
 endif()
 
 # Datasets #
@@ -385,6 +392,12 @@ endif()
 
 if(${USE_USGS3DEP_DATASET})
     add_subdirectory (datasets/usgs3dep)
+endif()
+
+# Targets #
+
+if(${USE_SLIDERULEEARTH_TARGET})
+    add_subdirectory (targets/slideruleearth-aws)
 endif()
 
 # Scripts #

@@ -3,10 +3,10 @@ local console = require("console")
 
 -- Cluster Socket Unit Test --
 
-local server = core.cluster(core.WRITER, core.QUEUE, "127.0.0.1", 34503, core.SERVER, "inq"):name("clusterServer")
-local client = core.cluster(core.READER, core.QUEUE, "127.0.0.1", 34503, core.CLIENT, "outq"):name("clusterClient")
-local writer = core.writer(server):name("clusterWriter")
-local reader = core.reader(client):name("clusterReader")
+local server = streaming.cluster(streaming.WRITER, streaming.QUEUE, "127.0.0.1", 34503, streaming.SERVER, "inq"):name("clusterServer")
+local client = streaming.cluster(streaming.READER, streaming.QUEUE, "127.0.0.1", 34503, streaming.CLIENT, "outq"):name("clusterClient")
+local writer = streaming.writer(server):name("clusterWriter")
+local reader = streaming.reader(client):name("clusterReader")
 
 
 reader:block(true)

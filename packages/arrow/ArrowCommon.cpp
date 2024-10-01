@@ -33,11 +33,12 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "core.h"
-#include "ArrowCommon.h"
-
 #include <filesystem>
 #include <uuid/uuid.h>
+
+#include "OsApi.h"
+#include "ArrowCommon.h"
+#include "RecordObject.h"
 
 #ifdef __aws__
 #include "aws.h"
@@ -127,7 +128,7 @@ void init(void)
 }
 
 /*----------------------------------------------------------------------------
- * send2user
+ * send2User
  *----------------------------------------------------------------------------*/
 bool send2User (const char* fileName, const char* outputPath,
                 uint32_t traceId, ArrowParms* parms, Publisher* outQ)
@@ -208,11 +209,23 @@ bool send2S3 (const char* fileName, const char* s3dst, const char* outputPath,
         /* Send Initial Status */
         alert(INFO, RTE_INFO, outQ, NULL, "Initiated upload of results to S3, bucket = %s, key = %s", bucket, key);
 
-        try
+        /* Upload to S3 */
+        int attempt = 0;
+        int64_t bytes_uploaded = 0;
+        while(bytes_uploaded == 0 && attempt++ < S3CurlIODriver::ATTEMPTS_PER_REQUEST)
         {
-            /* Upload to S3 */
-            const int64_t bytes_uploaded = S3CurlIODriver::put(fileName, bucket, key, parms->region, &parms->credentials);
+            try
+            {
+                bytes_uploaded = S3CurlIODriver::put(fileName, bucket, key, parms->region, &parms->credentials);
+            }
+            catch(const RunTimeException& e)
+            {
+                alert(e.level(), RTE_ERROR, outQ, NULL, "S3 PUT failed attempt %d, bucket = %s, key = %s, error = %s", attempt, bucket, key, e.what());
+            }
+        }
 
+        if(bytes_uploaded > 0)
+        {
             /* Send Successful Status */
             alert(INFO, RTE_INFO, outQ, NULL, "Upload to S3 completed, bucket = %s, key = %s, size = %ld", bucket, key, bytes_uploaded);
 
@@ -226,12 +239,13 @@ bool send2S3 (const char* fileName, const char* s3dst, const char* outputPath,
                 mlog(CRITICAL, "Failed to send remote record back to user for %s", outputPath);
             }
         }
-        catch(const RunTimeException& e)
+        else
         {
+            /* Set Error Status */
             status = false;
 
             /* Send Error Status */
-            alert(e.level(), RTE_ERROR, outQ, NULL, "Upload to S3 failed, bucket = %s, key = %s, error = %s", bucket, key, e.what());
+            alert(CRITICAL, RTE_ERROR, outQ, NULL, "Upload to S3 failed, bucket = %s, key = %s", bucket, key);
         }
     }
 
@@ -346,7 +360,7 @@ bool send2Client (const char* fileName, const char* outPath, const ArrowParms* p
 /*----------------------------------------------------------------------------
  * getOutputPath
  *----------------------------------------------------------------------------*/
-const char* getOutputPath(ArrowParms* parms)
+const char* getOutputPath(ArrowParms* parms, const char* output_filename)
 {
     const char* outputPath = NULL;
 
@@ -356,16 +370,33 @@ const char* getOutputPath(ArrowParms* parms)
         Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(parms->asset_name, Asset::OBJECT_TYPE));
         const char* path_prefix = StringLib::match(asset->getDriver(), "s3") ? "s3://" : "";
         const char* path_suffix = "bin";
-        if(parms->format == ArrowParms::PARQUET) path_suffix = parms->as_geo ? ".geoparquet" : ".parquet";
-        else if(parms->format == ArrowParms::CSV) path_suffix = ".csv";
-        FString path_name("%s.%016lX%s", OsApi::getCluster(), OsApi::time(OsApi::CPU_CLK), path_suffix);
-        const bool use_provided_path = ((parms->path != NULL) && (parms->path[0] != '\0'));
-        FString path_str("%s%s/%s", path_prefix, asset->getPath(), use_provided_path ? parms->path : path_name.c_str());
+        if(parms->format == ArrowParms::PARQUET)
+        {
+            path_suffix = parms->as_geo ? ".geoparquet" : ".parquet";
+        }
+        else if(parms->format == ArrowParms::CSV)
+        {
+            path_suffix = ".csv";
+        }
+        if(output_filename)
+        {
+            outputPath = FString("%s%s/%s", path_prefix, asset->getPath(), output_filename).c_str(true);             
+        }
+        else if((parms->path != NULL) && (parms->path[0] != '\0'))
+        {
+            outputPath = FString("%s%s/%s", path_prefix, asset->getPath(), parms->path).c_str(true);             
+        }
+        else
+        {
+            const FString path_name("%s.%016lX%s", OsApi::getCluster(), OsApi::time(OsApi::CPU_CLK), path_suffix);
+            outputPath = FString("%s%s/%s", path_prefix, asset->getPath(), path_name.c_str()).c_str(true);             
+        }
         asset->releaseLuaObject();
-
-        /* Set Output Path */
-        outputPath = path_str.c_str(true);
         mlog(INFO, "Generating unique path: %s", outputPath);
+    }
+    else if(output_filename) // override the parameters
+    {
+        outputPath = StringLib::duplicate(output_filename);
     }
     else if((parms->path == NULL) || (parms->path[0] == '\0'))
     {
@@ -469,9 +500,10 @@ int luaSend2User (lua_State* L)
         const char* filename = LuaObject::getLuaString(L, 1);
         _parms = dynamic_cast<ArrowParms*>(LuaObject::getLuaObject(L, 2, ArrowParms::OBJECT_TYPE));
         const char* outq_name = LuaObject::getLuaString(L, 3);
+        const char* output_filename = LuaObject::getLuaString(L, 4, true, NULL); // optional override
 
         /* Get Output Path */
-        outputpath = getOutputPath(_parms);
+        outputpath = getOutputPath(_parms, output_filename);
 
         /* Get Trace from Lua Engine */
         lua_getglobal(L, LuaEngine::LUA_TRACEID);

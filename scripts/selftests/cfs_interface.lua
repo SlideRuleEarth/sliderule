@@ -10,8 +10,8 @@ runner.command("cfsif::DROP_INVALID FALSE")
 local ground_tlmq = msg.subscribe("cfstlmq")
 local ground_cmdq = msg.publish("cfscmdq")
 
-local flight_tlmsock = core.udp("127.0.0.1", 5001, core.CLIENT)
-local flight_cmdsock = core.udp("127.0.0.1", 5002, core.SERVER)
+local flight_tlmsock = streaming.udp("127.0.0.1", 5001, streaming.CLIENT)
+local flight_cmdsock = streaming.udp("127.0.0.1", 5002, streaming.SERVER)
 
 --[[
 *****************************

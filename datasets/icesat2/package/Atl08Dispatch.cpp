@@ -38,7 +38,8 @@
 #include <map>
 #include <limits>
 
-#include "core.h"
+#include "OsApi.h"
+#include "ContainerRecord.h"
 #include "icesat2.h"
 
 using std::numeric_limits;
@@ -398,12 +399,12 @@ void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegeta
         double x_atc_max = -DBL_MAX;
         for(uint32_t i = 0; i < num_ph; i++)
         {
-            if(ph[i].time_ns    < time_ns_min)      time_ns_min     = ph[i].time_ns;
+            if(ph[i].time_ns.nanoseconds < time_ns_min) time_ns_min = ph[i].time_ns.nanoseconds;
             if(ph[i].latitude   < latitude_min)     latitude_min    = ph[i].latitude;
             if(ph[i].longitude  < longitude_min)    longitude_min   = ph[i].longitude;
             if(ph[i].x_atc      < x_atc_min)        x_atc_min       = ph[i].x_atc;
 
-            if(ph[i].time_ns    > time_ns_max)      time_ns_max     = ph[i].time_ns;
+            if(ph[i].time_ns.nanoseconds > time_ns_max) time_ns_max = ph[i].time_ns.nanoseconds;
             if(ph[i].latitude   > latitude_max)     latitude_max    = ph[i].latitude;
             if(ph[i].longitude  > longitude_max)    longitude_max   = ph[i].longitude;
             if(ph[i].x_atc      > x_atc_max)        x_atc_max       = ph[i].x_atc;
@@ -424,7 +425,7 @@ void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegeta
         double sum_x_atc = 0.0;
         for(uint32_t i = 0; i < num_ph; i++)
         {
-            sum_time_ns += ph[i].time_ns;
+            sum_time_ns += ph[i].time_ns.nanoseconds;
             sum_latitude += ph[i].latitude;
             sum_longitude += ph[i].longitude;
             sum_x_atc += ph[i].x_atc + extent->segment_distance;
@@ -448,7 +449,7 @@ void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegeta
         }
         else // Even Number of Photons
         {
-            result.time_ns = (ph[center_ph].time_ns + ph[center_ph - 1].time_ns) / 2;
+            result.time_ns = (ph[center_ph].time_ns.nanoseconds + ph[center_ph - 1].time_ns.nanoseconds) / 2;
             result.latitude = (ph[center_ph].latitude + ph[center_ph - 1].latitude) / 2;
             result.longitude = (ph[center_ph].longitude + ph[center_ph - 1].longitude) / 2;
             result.x_atc = ((ph[center_ph].x_atc + ph[center_ph - 1].x_atc) / 2) + extent->segment_distance;
@@ -474,8 +475,8 @@ void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegeta
         uint32_t center_ph = 0;
         double diff_min = DBL_MAX;
         for(uint32_t i = 0; i < num_ph; i++)
-        {
-            const double diff = abs(ph[i].time_ns - result.time_ns);
+        {            
+            const double diff = abs(ph[i].time_ns.nanoseconds - result.time_ns.nanoseconds);
             if(diff < diff_min)
             {
                 diff_min = diff;

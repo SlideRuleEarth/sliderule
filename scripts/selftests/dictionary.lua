@@ -1,6 +1,9 @@
 local runner = require("test_executive")
 local td = runner.rootdir(arg[0])
 
+-- Check If Present --
+if not core.UNITTEST then return end
+
 -- Dictionary Unit Test --
 
 local ut = core.ut_dictionary()

@@ -98,7 +98,7 @@ StringLib::FormattedString::~FormattedString(void)
 /*----------------------------------------------------------------------------
  * c_str
  *----------------------------------------------------------------------------*/
-const char* StringLib::FormattedString::c_str(bool duplicate)
+const char* StringLib::FormattedString::c_str(bool duplicate) const
 {
     if(duplicate)
     {
@@ -501,30 +501,14 @@ int StringLib::getLine(char* str, int* ret_len, int max_str_size, FILE* fptr)
  *----------------------------------------------------------------------------*/
 bool StringLib::str2bool(const char* str, bool* val)
 {
-    if(str == NULL) return false;
-
-    if(StringLib::match(str, "ENABLE") || StringLib::match(str, "enable"))
-    {
-        *val = true;
-    }
-    else if(StringLib::match(str, "DISABLE") || StringLib::match(str, "disable"))
-    {
-        *val = false;
-    }
-    else if(StringLib::match(str, "TRUE") || StringLib::match(str, "true"))
-    {
-        *val = true;
-    }
-    else if(StringLib::match(str, "FALSE") || StringLib::match(str, "false"))
-    {
-        *val = false;
-    }
-    else
-    {
-        return false;
-    }
-
-    return true;
+    bool status = true;
+    char* s = duplicate(str);
+    convertLower(s);
+    if(match(s, "true")) *val = true;
+    else if(match(s, "false")) *val = false;
+    else status = false;
+    delete [] s;
+    return status;
 }
 
 /*----------------------------------------------------------------------------

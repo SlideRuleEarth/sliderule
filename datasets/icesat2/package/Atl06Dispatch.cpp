@@ -70,7 +70,8 @@
 #include <math.h>
 #include <float.h>
 
-#include "core.h"
+#include "OsApi.h"
+#include "ContainerRecord.h"
 #include "icesat2.h"
 
 /******************************************************************************
@@ -769,7 +770,7 @@ Atl06Dispatch::lsf_t Atl06Dispatch::lsf (Atl03Reader::extent_t* extent, result_t
                 /* Calculate m */
                 latitude += gig_1 * ph->latitude;
                 longitude += gig_1 * ph_longitude;
-                time_ns += gig_1 * ph->time_ns;
+                time_ns += gig_1 * ph->time_ns.nanoseconds;
                 y_atc += gig_1 * ph->y_atc;
             }
 

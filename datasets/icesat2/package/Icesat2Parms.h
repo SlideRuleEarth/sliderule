@@ -39,17 +39,17 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "EndpointProxy.h"
-#include "GeoJsonRaster.h"
 #include "List.h"
 #include "MathLib.h"
-#include "NetsvcParms.h"
+#include "RequestParms.h"
 #include "AncillaryFields.h"
+#include "TimeLib.h"
 
 /******************************************************************************
  * REQUEST PARAMETERS
  ******************************************************************************/
 
-class Icesat2Parms: public NetsvcParms
+class Icesat2Parms: public RequestParms
 {
     public:
 
@@ -258,7 +258,7 @@ class Icesat2Parms: public NetsvcParms
          *--------------------------------------------------------------------*/
 
         // returns nanoseconds since Unix epoch, no leap seconds
-        static int64_t deltatime2timestamp (double delta_time)
+        static time8_t deltatime2timestamp (double delta_time)
         {
             return TimeLib::gps2systimeex(delta_time + (double)ATLAS_SDP_EPOCH_GPS);
         }

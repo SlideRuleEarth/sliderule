@@ -441,7 +441,7 @@ int Publisher::post(void* data, unsigned int mask, const void* secondary_data, u
             {
                 if(!msgQ->locknblock->wait(READY2POST, timeout))
                 {
-                    post_state = MsgQ::STATE_TIMEOUT;
+                    post_state = STATE_TIMEOUT;
                     break;
                 }
             }
@@ -738,7 +738,7 @@ int Subscriber::receive(msgRef_t& ref, int size, int timeout, bool copy)
             {
                 if(!msgQ->locknblock->wait(READY2RECV, timeout))
                 {
-                    ref.state = MsgQ::STATE_TIMEOUT;
+                    ref.state = STATE_TIMEOUT;
                     break;
                 }
             }

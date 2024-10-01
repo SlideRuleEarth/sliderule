@@ -252,7 +252,7 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
     /* Build Cache Filename */
     char* cache_filename = StringLib::duplicate(key);
     StringLib::replace(cache_filename, PATH_DELIMETER, '#');
-    FString cache_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, cache_filename);
+    const FString cache_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, cache_filename);
     delete [] cache_filename;
 
     /* Log Operation */
@@ -286,7 +286,7 @@ bool S3CacheIODriver::fileGet (const char* bucket, const char* key, const char**
                 /* Delete File in Local File System */
                 char* oldest_filename = StringLib::duplicate(oldest_key->c_str());
                 StringLib::replace(oldest_filename, PATH_DELIMETER, '#');
-                FString oldest_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, oldest_filename);
+                const FString oldest_filepath("%s%c%s", cacheRoot, PATH_DELIMETER, oldest_filename);
                 remove(oldest_filepath.c_str());
                 cacheFiles.remove(index);
                 delete [] oldest_filename;

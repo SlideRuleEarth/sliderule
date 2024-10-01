@@ -188,11 +188,11 @@ int64_t TimeLib::gps2systime (int64_t gpsnow)
  *
  *  converts gps time (seconds) to extended precision system time (nanoseconds)
  *----------------------------------------------------------------------------*/
-int64_t TimeLib::gps2systimeex (double gps_secs)
+time8_t TimeLib::gps2systimeex (double gps_secs)
 {
     double sys_secs = GPS_TO_SYS_EX(gps_secs);
     sys_secs -= getleapsecs((uint64_t)(sys_secs * 1000000.0), GPS_EPOCH_START);
-    return (int64_t)(sys_secs * 1000000000.0);
+    return Time8(sys_secs * 1000000000.0);
 }
 
 /*----------------------------------------------------------------------------
@@ -200,10 +200,10 @@ int64_t TimeLib::gps2systimeex (double gps_secs)
  *
  *  converts extended precision system time (nanoseconds) to gps time (milliseconds)
  *----------------------------------------------------------------------------*/
-int64_t TimeLib::sysex2gpstime (int64_t sysex)
+int64_t TimeLib::sysex2gpstime (time8_t sysex)
 {
-    const int64_t sysnow = sysex / 1000;
-    return(sys2gpstime(sysnow));
+    const int64_t sysnow = sysex.nanoseconds / 1000;
+    return sys2gpstime(sysnow);
 }
 
 /*----------------------------------------------------------------------------
@@ -902,6 +902,6 @@ void TimeLib::parsenistfile(void)
     /* Populate Leap Second Array - Convert from NTP to UNIX epoch */
     for (int i = 0; i < leapCount; i++)
     {
-        leapSeconds[i]  = NTP_TO_SYS(ntp_leap_seconds[i]);
+        leapSeconds[i]  = NTP_TO_SYS(ntp_leap_seconds.get(i));
     }
 }

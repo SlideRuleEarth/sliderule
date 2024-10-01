@@ -44,6 +44,7 @@
 #include "GeoIndexedRaster.h"
 #include "GeoJsonRaster.h"
 #include "GeoUserRaster.h"
+#include "RegionMask.h"
 
 #include <gdal.h>
 #include <cpl_conv.h>
@@ -324,6 +325,9 @@ void initgeo (void)
 #else
     CPLSetErrorHandler(NULL);
 #endif
+
+    /* Register Region Mask Rasterizer */
+    RegionMask::registerRasterizer(GeoLib::burnGeoJson);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_GEO_LIBNAME, geo_open);

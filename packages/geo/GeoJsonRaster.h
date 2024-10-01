@@ -71,6 +71,7 @@ class GeoJsonRaster: public GeoRaster
 
         static int            luaCreate      (lua_State* L);
         static GeoJsonRaster* create         (lua_State* L, int index);
+        static GeoJsonRaster* create         (const string& geojson, double cellsize);
 
         bool                  includes       (double lon, double lat, double height=0);
                              ~GeoJsonRaster  (void) override;
@@ -84,6 +85,12 @@ class GeoJsonRaster: public GeoRaster
         {
             return static_cast<int>(data[(row * cols) + col]) == RASTER_PIXEL_ON;
         }
+
+        uint8_t* getRasterData (void) { return data; }
+        uint32_t getRasterCols (void) const { return cols; }
+        uint32_t getRasterRows (void) const { return rows; }
+        bbox_t   getRasterBbox (void) const { return bbox; }
+
 
     protected:
 
