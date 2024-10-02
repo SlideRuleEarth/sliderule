@@ -83,7 +83,7 @@ int GeoDataFrame::FrameColumn::luaGetData (lua_State* L)
         lua_pushinteger(L, index);
         lua_rawget(L, -2);
         if (!lua_isnil(L, -1))  return 1;
-        else lua_pop(L, 1); 
+        else lua_pop(L, 1);
 
         // handle field access
         return lua_obj->column.toLua(L, index);
@@ -185,7 +185,7 @@ const FieldColumn<time8_t>* GeoDataFrame::getTimeColumn (void) const
 
 /*----------------------------------------------------------------------------
  * getXColumn
- *----------------------------------------------------------------------------*/ 
+ *----------------------------------------------------------------------------*/
 const FieldColumn<double>* GeoDataFrame::getXColumn (void) const
 {
     return xColumn;
@@ -217,7 +217,7 @@ const string& GeoDataFrame::getTimeColumnName (void) const
 
 /*----------------------------------------------------------------------------
  * getXColumnName
- *----------------------------------------------------------------------------*/ 
+ *----------------------------------------------------------------------------*/
 const string& GeoDataFrame::getXColumnName (void) const
 {
     return xColumnName;
@@ -225,7 +225,7 @@ const string& GeoDataFrame::getXColumnName (void) const
 
 /*----------------------------------------------------------------------------
  * getYColumnName
- *----------------------------------------------------------------------------*/ 
+ *----------------------------------------------------------------------------*/
 const string& GeoDataFrame::getYColumnName (void) const
 {
     return yColumnName;
@@ -233,7 +233,7 @@ const string& GeoDataFrame::getYColumnName (void) const
 
 /*----------------------------------------------------------------------------
  * getZColumnName
- *----------------------------------------------------------------------------*/ 
+ *----------------------------------------------------------------------------*/
 const string& GeoDataFrame::getZColumnName (void) const
 {
     return zColumnName;
@@ -292,10 +292,10 @@ const Dictionary<FieldDictionary::entry_t>& GeoDataFrame::getMeta(void) const
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoDataFrame::GeoDataFrame( lua_State* L, 
+GeoDataFrame::GeoDataFrame( lua_State* L,
                             const char* meta_name,
                             const struct luaL_Reg meta_table[],
-                            const std::initializer_list<FieldDictionary::entry_t>& column_list, 
+                            const std::initializer_list<FieldDictionary::entry_t>& column_list,
                             const std::initializer_list<FieldDictionary::entry_t>& meta_list):
     LuaObject (L, OBJECT_TYPE, meta_name, meta_table),
     Field(DATAFRAME, 0),
@@ -319,7 +319,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     LuaEngine::setAttrFunc(L, "meta",       luaGetMetaData);
     LuaEngine::setAttrFunc(L, "run",        luaRun);
     LuaEngine::setAttrFunc(L, "finished",   luaRunComplete);
-    
+
     // start runner
     pid = new Thread(runThread, this);
 }
@@ -447,43 +447,43 @@ string GeoDataFrame::toJson (void) const
 int GeoDataFrame::toLua (lua_State* L) const
 {
     lua_newtable(L);
-    
+
     lua_pushstring(L, META);
     metaFields.toLua(L);
     lua_settable(L, -3);
-    
+
     lua_pushstring(L, GDF);
     columnFields.toLua(L);
     lua_settable(L, -3);
-    
+
     return 1;
 }
 
 /*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
-void GeoDataFrame::fromLua (lua_State* L, int index) 
+void GeoDataFrame::fromLua (lua_State* L, int index)
 {
     if(lua_istable(L, index))
     {
         lua_getfield(L, index, META);
-        metaFields.fromLua(L, -1);                
+        metaFields.fromLua(L, -1);
         lua_pop(L, 1);
-        
+
         lua_getfield(L, index, GDF);
-        columnFields.fromLua(L, -1);                
+        columnFields.fromLua(L, -1);
         lua_pop(L, 1);
     }
 }
 
 /*----------------------------------------------------------------------------
- * luaExport - export() --> lua table 
+ * luaExport - export() --> lua table
  *----------------------------------------------------------------------------*/
 int GeoDataFrame::luaExport (lua_State* L)
 {
     try
     {
-        GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        const GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
         return lua_obj->toLua(L);
     }
     catch(const RunTimeException& e)
@@ -496,7 +496,7 @@ int GeoDataFrame::luaExport (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaImport - import(<lua table>) 
+ * luaImport - import(<lua table>)
  *----------------------------------------------------------------------------*/
 int GeoDataFrame::luaImport (lua_State* L)
 {
@@ -530,7 +530,7 @@ int GeoDataFrame::luaGetColumnData(lua_State* L)
         lua_pushstring(L, column_name);
         lua_rawget(L, -2);
         if (!lua_isnil(L, -1))  return 1;
-        else lua_pop(L, 1); 
+        else lua_pop(L, 1);
 
         // handle column access
         const Field& column_field = lua_obj->columnFields[column_name];
@@ -569,13 +569,13 @@ int GeoDataFrame::luaGetMetaData (lua_State* L)
 int GeoDataFrame::luaRun  (lua_State* L)
 {
     bool status = true;
-    bool pass_to_runner = false;
     GeoDataFrame::FrameRunner* runner = NULL;
-    
+
     try
     {
         GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
-        
+        bool pass_to_runner = false;
+
         try
         {
             // try to get a FrameRunner object
@@ -592,7 +592,7 @@ int GeoDataFrame::luaRun  (lua_State* L)
                 pass_to_runner = true;
             }
         }
-        
+
         if(pass_to_runner)
         {
             const int post_state = lua_obj->pubRunQ.postCopy(&runner, sizeof(runner));

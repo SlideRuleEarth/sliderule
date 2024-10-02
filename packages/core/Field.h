@@ -98,11 +98,11 @@ class Field
          * Methods
          *--------------------------------------------------------------------*/
 
-        Field (type_t _type, uint32_t _encoding): 
+        Field (type_t _type, uint32_t _encoding):
             type(_type), encoding(_encoding) {};
 
         virtual ~Field (void) = default;
-        
+
         virtual const Field* get (long i) const {
             (void)i;
             return NULL;
@@ -130,8 +130,8 @@ class Field
             return 1;
         };
 
-        uint32_t getValueEncoding(void) const { 
-            return encoding & 0xFFFF; 
+        uint32_t getValueEncoding(void) const {
+            return encoding & 0xFFFF;
         };
 
         /*--------------------------------------------------------------------
@@ -158,8 +158,8 @@ inline static string convertToJson(const uint32_t& v) { return std::to_string(v)
 inline static string convertToJson(const uint64_t& v) { return std::to_string(v);       }
 inline static string convertToJson(const float& v)    { return std::to_string(v);       }
 inline static string convertToJson(const double& v)   { return std::to_string(v);       }
-inline static string convertToJson(const time8_t& v)  { 
-    const int64_t gps = TimeLib::sysex2gpstime(v); 
+inline static string convertToJson(const time8_t& v)  {
+    const int64_t gps = TimeLib::sysex2gpstime(v);
     const TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(gps);
     const TimeLib::date_t date = TimeLib::gmt2date(gmt);
     const double seconds = (double)gmt.second + ((double)gmt.millisecond / 1000.0);
@@ -199,24 +199,24 @@ inline void convertFromLua(lua_State* L, int index, time8_t& v)  { v = static_ca
 inline void convertFromLua(lua_State* L, int index, string& v)   { v = LuaObject::getLuaString(L, index); }
 
 // encoding
-inline uint32_t toEncoding(bool& v)     { (void)v; return Field::BOOL;   };
-inline uint32_t toEncoding(int8_t& v)   { (void)v; return Field::INT8;   };
-inline uint32_t toEncoding(int16_t& v)  { (void)v; return Field::INT16;  };
-inline uint32_t toEncoding(int32_t& v)  { (void)v; return Field::INT32;  };
-inline uint32_t toEncoding(int64_t& v)  { (void)v; return Field::INT64;  };
-inline uint32_t toEncoding(uint8_t& v)  { (void)v; return Field::UINT8;  };
-inline uint32_t toEncoding(uint16_t& v) { (void)v; return Field::UINT16; };
-inline uint32_t toEncoding(uint32_t& v) { (void)v; return Field::UINT32; };
-inline uint32_t toEncoding(uint64_t& v) { (void)v; return Field::UINT64; };
-inline uint32_t toEncoding(float& v)    { (void)v; return Field::FLOAT;  };
-inline uint32_t toEncoding(double& v)   { (void)v; return Field::DOUBLE; };
-inline uint32_t toEncoding(time8_t& v)  { (void)v; return Field::TIME8;  };
-inline uint32_t toEncoding(string& v)   { (void)v; return Field::STRING; };
+inline uint32_t toEncoding(const bool& v)     { (void)v; return Field::BOOL;   };
+inline uint32_t toEncoding(const int8_t& v)   { (void)v; return Field::INT8;   };
+inline uint32_t toEncoding(const int16_t& v)  { (void)v; return Field::INT16;  };
+inline uint32_t toEncoding(const int32_t& v)  { (void)v; return Field::INT32;  };
+inline uint32_t toEncoding(const int64_t& v)  { (void)v; return Field::INT64;  };
+inline uint32_t toEncoding(const uint8_t& v)  { (void)v; return Field::UINT8;  };
+inline uint32_t toEncoding(const uint16_t& v) { (void)v; return Field::UINT16; };
+inline uint32_t toEncoding(const uint32_t& v) { (void)v; return Field::UINT32; };
+inline uint32_t toEncoding(const uint64_t& v) { (void)v; return Field::UINT64; };
+inline uint32_t toEncoding(const float& v)    { (void)v; return Field::FLOAT;  };
+inline uint32_t toEncoding(const double& v)   { (void)v; return Field::DOUBLE; };
+inline uint32_t toEncoding(const time8_t& v)  { (void)v; return Field::TIME8;  };
+inline uint32_t toEncoding(const string& v)   { (void)v; return Field::STRING; };
 
 // encoding
 template<class T>
 inline uint32_t getImpliedEncoding(void) {
-    T dummy;
+    T dummy = T();
     return toEncoding(dummy);
 }
 

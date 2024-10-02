@@ -57,7 +57,7 @@
 /******************/
 /* Surface Fields */
 /******************/
-struct SurfaceFields: public FieldDictionary 
+struct SurfaceFields: public FieldDictionary
 {
     FieldElement<double>    binSize             {0.5};      // meters
     FieldElement<double>    maxRange            {1000.0};   // meters
@@ -67,10 +67,10 @@ struct SurfaceFields: public FieldDictionary
     FieldElement<double>    highestPeakRatio    {1.2};
     FieldElement<double>    surfaceWidth        {3.0};      // standard deviations
     FieldElement<bool>      modelAsPoisson      {true};
-    
-    SurfaceFields(void): 
+
+    SurfaceFields(void):
         FieldDictionary({ {"bin_size",            &binSize},
-                          {"max_range",           &maxRange}, 
+                          {"max_range",           &maxRange},
                           {"max_bins",            &maxBins},
                           {"signal_threshold",    &signalThreshold},
                           {"min_peak_separation", &minPeakSeparation},
@@ -85,15 +85,15 @@ struct SurfaceFields: public FieldDictionary
 /*********************/
 /* Refraction Fields */
 /*********************/
-struct RefractionFields: public FieldDictionary 
+struct RefractionFields: public FieldDictionary
 {
     FieldElement<bool>      useWaterRIMask  {true};     // global water refractive index mask downloaded in atl24 init lua routine
     FieldElement<double>    RIAir           {1.00029};  // refraction index of air
     FieldElement<double>    RIWater         {1.34116};  // refraction index of water
-    
-    RefractionFields(void): 
+
+    RefractionFields(void):
         FieldDictionary({ {"use_water_ri_mask", &useWaterRIMask},
-                          {"ri_air",            &RIAir}, 
+                          {"ri_air",            &RIAir},
                           {"ri_water",          &RIAir} }) {
     };
 
@@ -103,13 +103,13 @@ struct RefractionFields: public FieldDictionary
 /**********************/
 /* Uncertainty Fields */
 /**********************/
-struct UncertaintyFields: public FieldDictionary 
+struct UncertaintyFields: public FieldDictionary
 {
     FieldElement<string>    assetKdName {"viirsj1-s3"}; // global water refractive index mask downloaded in atl24 init lua routine
-    
+
     Asset* assetKd {NULL};
 
-    UncertaintyFields(void): 
+    UncertaintyFields(void):
         FieldDictionary({ {"asset_kd",      &assetKdName} }) {
         assetKd = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(assetKdName.value.c_str(), Asset::OBJECT_TYPE));
         if(!assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", assetKdName.value.c_str());
@@ -123,17 +123,17 @@ struct UncertaintyFields: public FieldDictionary
 /*******************/
 /* Coastnet Fields */
 /*******************/
-struct CoastnetFields: public FieldDictionary 
+struct CoastnetFields: public FieldDictionary
 {
     FieldElement<string>  model             {COASTNET_MODEL};
     FieldElement<bool>    setClass          {true};
     FieldElement<bool>    usePredictions    {false};
     FieldElement<bool>    verbose           {true};
-    
-    CoastnetFields(void): 
+
+    CoastnetFields(void):
         FieldDictionary({ {"model",             &model},
-                          {"set_class",         &setClass}, 
-                          {"use_predictions",   &usePredictions}, 
+                          {"set_class",         &setClass},
+                          {"use_predictions",   &usePredictions},
                           {"verbose",           &verbose} }) {
     };
 
@@ -143,7 +143,7 @@ struct CoastnetFields: public FieldDictionary
 /***********************/
 /* OpenOceansPP Fields */
 /***********************/
-struct OpenOceansPPFields: public FieldDictionary 
+struct OpenOceansPPFields: public FieldDictionary
 {
     FieldElement<bool>      setClass                {false};
     FieldElement<bool>      setSurface              {false};
@@ -161,10 +161,10 @@ struct OpenOceansPPFields: public FieldDictionary
     FieldElement<double>    bathySmoothingSigma     {100.0};
     FieldElement<double>    minPeakProminence       {0.01};
     FieldElement<size_t>    minPeakDistance         {2};
-    
+
     size_t                  minSurfacePhotonsPerWindow;
     size_t                  minBathyPhotonsPerWindow;
-    
+
     void updatePhotonsPerWindow(void) {
         minSurfacePhotonsPerWindow = 0.25 * (xResolution.value / 0.7);
         minBathyPhotonsPerWindow = 0.25 * (xResolution.value / 0.7);
@@ -175,43 +175,43 @@ struct OpenOceansPPFields: public FieldDictionary
         updatePhotonsPerWindow();
     }
 
-    OpenOceansPPFields(void): 
+    OpenOceansPPFields(void):
         FieldDictionary({ {"set_class",                 &setClass},
-                          {"set_surface",               &setSurface}, 
-                          {"use_predictions",           &usePredictions}, 
-                          {"verbose",                   &verbose}, 
-                          {"x_resolution",              &xResolution}, 
-                          {"z_resolution",              &zResolution}, 
-                          {"z_min",                     &zMin}, 
-                          {"z_max",                     &zMax}, 
-                          {"surface_z_min",             &surfaceZMin}, 
-                          {"surface_z_max",             &surfaceZMax}, 
-                          {"bathy_min_depth",           &bathyMinDepth}, 
-                          {"vertical_smoothing_sigma",  &verticalSmoothingSigma}, 
-                          {"surface_smoothing_sigma",   &surfaceSmoothingSigma}, 
-                          {"bathy_smoothing_sigma",     &bathySmoothingSigma}, 
-                          {"min_peak_prominence",       &minPeakProminence}, 
+                          {"set_surface",               &setSurface},
+                          {"use_predictions",           &usePredictions},
+                          {"verbose",                   &verbose},
+                          {"x_resolution",              &xResolution},
+                          {"z_resolution",              &zResolution},
+                          {"z_min",                     &zMin},
+                          {"z_max",                     &zMax},
+                          {"surface_z_min",             &surfaceZMin},
+                          {"surface_z_max",             &surfaceZMax},
+                          {"bathy_min_depth",           &bathyMinDepth},
+                          {"vertical_smoothing_sigma",  &verticalSmoothingSigma},
+                          {"surface_smoothing_sigma",   &surfaceSmoothingSigma},
+                          {"bathy_smoothing_sigma",     &bathySmoothingSigma},
+                          {"min_peak_prominence",       &minPeakProminence},
                           {"min_peak_distance",         &minPeakDistance} }) {
         updatePhotonsPerWindow();
     };
 
-    virtual ~OpenOceansPPFields(void) override = default;    
+    virtual ~OpenOceansPPFields(void) override = default;
 };
 
 /*****************/
 /* Qtrees Fields */
 /*****************/
-struct QtreesFields: public FieldDictionary 
+struct QtreesFields: public FieldDictionary
 {
     FieldElement<string>  model         {QTREES_MODEL};
     FieldElement<bool>    setClass      {false};
     FieldElement<bool>    setSurface    {true};
     FieldElement<bool>    verbose       {true};
-    
-    QtreesFields(void): 
+
+    QtreesFields(void):
         FieldDictionary({ {"model",         &model},
-                          {"set_class",     &setClass}, 
-                          {"set_surface",   &setSurface}, 
+                          {"set_class",     &setClass},
+                          {"set_surface",   &setSurface},
                           {"verbose",       &verbose} }) {
     };
 
@@ -319,7 +319,7 @@ class BathyFields: public Icesat2Fields
          * Methods
          *--------------------------------------------------------------------*/
 
-                BathyFields     (lua_State* L);
+        explicit BathyFields    (lua_State* L);
         virtual ~BathyFields    (void) override = default;
 };
 

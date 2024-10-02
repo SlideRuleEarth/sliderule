@@ -129,14 +129,14 @@ class CredentialStore
                 sessionToken = c.sessionToken;
                 expiration = c.expiration;
             };
-            
+
             Credential& operator=(const Credential& c) {
                 if(this != &c) {
                     accessKeyId = c.accessKeyId;
                     secretAccessKey = c.secretAccessKey;
                     sessionToken = c.sessionToken;
                     expiration = c.expiration;
-                } 
+                }
 
                 return *this;
             };
@@ -172,6 +172,6 @@ class CredentialStore
  * FUNCTIONS
  ******************************************************************************/
 
-inline uint32_t toEncoding(CredentialStore::Credential& v) { (void)v; return Field::USER; }
+inline uint32_t toEncoding(const CredentialStore::Credential& v) { (void)v; return Field::USER; }
 
 #endif  /* __credential_store__ */

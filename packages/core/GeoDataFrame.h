@@ -160,10 +160,10 @@ class GeoDataFrame: public LuaObject, public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-                GeoDataFrame    (lua_State* L, 
+                GeoDataFrame    (lua_State* L,
                                  const char* meta_name,
                                  const struct luaL_Reg meta_table[],
-                                 const std::initializer_list<FieldDictionary::entry_t>& column_list, 
+                                 const std::initializer_list<FieldDictionary::entry_t>& column_list,
                                  const std::initializer_list<FieldDictionary::entry_t>& meta_list);
         virtual ~GeoDataFrame   (void) override;
 

@@ -55,7 +55,7 @@ class FieldList: public Field
 
                         FieldList   (void);
                         FieldList   (std::initializer_list<T> init_list);
-                        FieldList   (size_t size, T default_value);
+                        FieldList   (size_t size, const T& default_value);
                         FieldList   (const FieldList<T>& list);
         virtual         ~FieldList  (void) override = default;
 
@@ -109,19 +109,19 @@ inline void convertFromLua(lua_State* L, int index, FieldList<T>& v) {
     v.fromLua(L, index);
 }
 
-inline uint32_t toEncoding(FieldList<bool>& v)     { (void)v; return Field::NESTED_LIST | Field::BOOL;   };
-inline uint32_t toEncoding(FieldList<int8_t>& v)   { (void)v; return Field::NESTED_LIST | Field::INT8;   };
-inline uint32_t toEncoding(FieldList<int16_t>& v)  { (void)v; return Field::NESTED_LIST | Field::INT16;  };
-inline uint32_t toEncoding(FieldList<int32_t>& v)  { (void)v; return Field::NESTED_LIST | Field::INT32;  };
-inline uint32_t toEncoding(FieldList<int64_t>& v)  { (void)v; return Field::NESTED_LIST | Field::INT64;  };
-inline uint32_t toEncoding(FieldList<uint8_t>& v)  { (void)v; return Field::NESTED_LIST | Field::UINT8;  };
-inline uint32_t toEncoding(FieldList<uint16_t>& v) { (void)v; return Field::NESTED_LIST | Field::UINT16; };
-inline uint32_t toEncoding(FieldList<uint32_t>& v) { (void)v; return Field::NESTED_LIST | Field::UINT32; };
-inline uint32_t toEncoding(FieldList<uint64_t>& v) { (void)v; return Field::NESTED_LIST | Field::UINT64; };
-inline uint32_t toEncoding(FieldList<float>& v)    { (void)v; return Field::NESTED_LIST | Field::FLOAT;  };
-inline uint32_t toEncoding(FieldList<double>& v)   { (void)v; return Field::NESTED_LIST | Field::DOUBLE; };
-inline uint32_t toEncoding(FieldList<time8_t>& v)  { (void)v; return Field::NESTED_LIST | Field::TIME8;  };
-inline uint32_t toEncoding(FieldList<string>& v)   { (void)v; return Field::NESTED_LIST | Field::STRING; };
+inline uint32_t toEncoding(const FieldList<bool>& v)     { (void)v; return Field::NESTED_LIST | Field::BOOL;   };
+inline uint32_t toEncoding(const FieldList<int8_t>& v)   { (void)v; return Field::NESTED_LIST | Field::INT8;   };
+inline uint32_t toEncoding(const FieldList<int16_t>& v)  { (void)v; return Field::NESTED_LIST | Field::INT16;  };
+inline uint32_t toEncoding(const FieldList<int32_t>& v)  { (void)v; return Field::NESTED_LIST | Field::INT32;  };
+inline uint32_t toEncoding(const FieldList<int64_t>& v)  { (void)v; return Field::NESTED_LIST | Field::INT64;  };
+inline uint32_t toEncoding(const FieldList<uint8_t>& v)  { (void)v; return Field::NESTED_LIST | Field::UINT8;  };
+inline uint32_t toEncoding(const FieldList<uint16_t>& v) { (void)v; return Field::NESTED_LIST | Field::UINT16; };
+inline uint32_t toEncoding(const FieldList<uint32_t>& v) { (void)v; return Field::NESTED_LIST | Field::UINT32; };
+inline uint32_t toEncoding(const FieldList<uint64_t>& v) { (void)v; return Field::NESTED_LIST | Field::UINT64; };
+inline uint32_t toEncoding(const FieldList<float>& v)    { (void)v; return Field::NESTED_LIST | Field::FLOAT;  };
+inline uint32_t toEncoding(const FieldList<double>& v)   { (void)v; return Field::NESTED_LIST | Field::DOUBLE; };
+inline uint32_t toEncoding(const FieldList<time8_t>& v)  { (void)v; return Field::NESTED_LIST | Field::TIME8;  };
+inline uint32_t toEncoding(const FieldList<string>& v)   { (void)v; return Field::NESTED_LIST | Field::STRING; };
 
 /******************************************************************************
  * METHODS
@@ -153,7 +153,7 @@ FieldList<T>::FieldList(std::initializer_list<T> init_list):
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldList<T>::FieldList(size_t size, T default_value):
+FieldList<T>::FieldList(size_t size, const T& default_value):
     Field(LIST, getImpliedEncoding<T>()),
     values(size, default_value)
 {
@@ -203,7 +203,22 @@ long FieldList<T>::length(void) const
 template<class T>
 const Field* FieldList<T>::get(long i) const
 {
-    return reinterpret_cast<const Field*>(&values[i]);
+    if constexpr(std::is_same<T, bool>::value)
+    {
+        /*
+         * The problem with std::vector<bool> is that it doesn't return a reference to a bool when you use the [] operator.
+         * Instead, it returns a proxy object that acts like a bool, but isn't a real bool.
+         * This is because the proxy object is a reference to a single bit, not a byte.
+         * std::vector<bool> packs multiple bool values into a smaller memory footprint, usually packing 8 bool values into a single byte.
+         * This is for space efficiency.
+         */
+
+        return NULL; // I propose we don't support bools in FieldList, use int_8 instead
+    }
+    else
+    {
+        return reinterpret_cast<const Field*>(&values[i]);  // For non-bool types
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -302,7 +317,7 @@ int FieldList<T>::toLua (lua_State* L, long key) const
  * fromLua
  *----------------------------------------------------------------------------*/
 template <class T>
-void FieldList<T>::fromLua (lua_State* L, int index) 
+void FieldList<T>::fromLua (lua_State* L, int index)
 {
     T value;
 

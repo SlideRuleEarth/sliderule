@@ -106,7 +106,7 @@ class RequestFields: public LuaObject, public FieldDictionary
         FieldElement<string>            slideruleVersion;
         FieldElement<string>            buildInformation;
         FieldElement<string>            environmentVersion;
-        
+
         #ifdef __arrow__
         ArrowFields                     output;
         #endif
@@ -139,8 +139,8 @@ string convertToJson(const MathLib::proj_t& v);
 int convertToLua(lua_State* L, const MathLib::proj_t& v);
 void convertFromLua(lua_State* L, int index, MathLib::proj_t& v);
 
-inline uint32_t toEncoding(MathLib::coord_t& v) { (void)v; return Field::USER; }
-inline uint32_t toEncoding(MathLib::point_t& v) { (void)v; return Field::USER; };
-inline uint32_t toEncoding(MathLib::proj_t& v) { (void)v; return Field::USER; };
+inline uint32_t toEncoding(const MathLib::coord_t& v) { (void)v; return Field::USER; }
+inline uint32_t toEncoding(const MathLib::point_t& v) { (void)v; return Field::USER; };
+inline uint32_t toEncoding(const MathLib::proj_t& v) { (void)v; return Field::USER; };
 
 #endif  /* __request_fields__ */

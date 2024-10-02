@@ -48,7 +48,7 @@ template <class T>
 struct FieldUnsafeArray: public Field
 {
     FieldUnsafeArray (T* _memPtr, int _size):
-        Field(ARRAY, getImpliedEncoding<T>()), 
+        Field(ARRAY, getImpliedEncoding<T>()),
         memPtr(_memPtr),
         size(_size) {};
 
@@ -160,7 +160,8 @@ FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list):
  *----------------------------------------------------------------------------*/
 template <class T, int N>
 FieldArray<T,N>::FieldArray(void):
-    FieldUnsafeArray<T>(&values[0], N)
+    FieldUnsafeArray<T>(&values[0], N),
+    values()
 {
 }
 
@@ -285,7 +286,7 @@ int FieldArray<T,N>::toLua (lua_State* L, long key) const
  * fromLua
  *----------------------------------------------------------------------------*/
 template <class T, int N>
-void FieldArray<T,N>::fromLua (lua_State* L, int index) 
+void FieldArray<T,N>::fromLua (lua_State* L, int index)
 {
     const int num_elements = lua_rawlen(L, index);
 
