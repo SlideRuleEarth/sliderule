@@ -95,7 +95,7 @@ class BathyDataFrame: public GeoDataFrame
         FieldColumn<double>         y_atc;              // dist_ph_across
         FieldColumn<double>         background_rate;    // PE per second
         FieldColumn<float>          surface_h;          // orthometric height of sea surface at each photon location
-        FieldColumn<double>         ortho_h {Field::Z_COLUMN}; // geoid corrected height of photon, calculated from h_ph and geoid
+        FieldColumn<double>         ortho_h {Field::Z_COLUMN}; // refraction corrected, geoid corrected height of photon
         FieldColumn<float>          ellipse_h;          // height of photon with respect to reference ellipsoid
         FieldColumn<float>          sigma_thu;          // total horizontal uncertainty
         FieldColumn<float>          sigma_tvu;          // total vertical uncertainty

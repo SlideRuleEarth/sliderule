@@ -277,12 +277,22 @@ print("Concatenated data frames into a single data frame")
 # set processing flags
 df["processing_flags"] = df["processing_flags"] + ((df["cshelph"] == 40) * 2**28) + ((df["medianfilter"] == 40) * 2**27) + ((df["bathypathfinder"] == 40) * 2**29) + ((df["pointnet"] == 40) * 2**30)
 
+# get dataframe of only bathy points to calculate bathymetry statistics
+bathy_df = df[df["ensemble"] == 40]
+bathy_df["depth"] = bathy_df["surface_h"] - bathy_df["ortho_h"]
+
 # build stats table
 stats = {
     "total_photons": len(df),
-    "sea_surface_photons": len(df[df["class_ph"] == 41]),
-    "bathy_photons": len(df[df["class_ph"] == 40]),
-    "subaqueous_photons": len(df[df["ortho_h"] < df["surface_h"]])
+    "sea_surface_photons": len(df[df.ensemble == 41]),
+    "subaqueous_photons": len(df[df.ortho_h < df.surface_h]),
+    "bathy_photons": len(bathy_df),
+    "bathy_strong_photons": len(bathy_df[bathy_df.spot.isin([1,3,5])]),
+    "bathy_linear_coverage":  bathy_df.index_seg.nunique() * 20.0, # number of unique segments with bathymetry X size of each segment in meters
+    "bathy_mean_depth": bathy_df.depth.mean(),
+    "bathy_min_depth": bathy_df.depth.min(),
+    "bathy_max_depth": bathy_df.depth.max(),
+    "bathy_std_depth": bathy_df.depth.std()
 }
 
 # read versions

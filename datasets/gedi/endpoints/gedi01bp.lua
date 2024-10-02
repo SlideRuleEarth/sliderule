@@ -9,4 +9,4 @@ local rqst = json.decode(arg[1])
 local resources = rqst["resources"]
 local parms = rqst["parms"]
 
-proxy.proxy(resources, parms, "gedi01b", "gedi01b")
+proxy.proxy(resources, parms, "gedi01b", "gedi01brec")
