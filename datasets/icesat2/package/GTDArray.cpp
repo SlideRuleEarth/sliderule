@@ -34,15 +34,15 @@
  ******************************************************************************/
 
 #include "GTDArray.h"
-#include "Icesat2Parms.h"
+#include "Icesat2Fields.h"
 #include "OsApi.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const long GTDArray::DefaultStartRow[Icesat2Parms::NUM_PAIR_TRACKS] = {0, 0};
-const long GTDArray::DefaultNumRows[Icesat2Parms::NUM_PAIR_TRACKS] = {H5Coro::ALL_ROWS, H5Coro::ALL_ROWS};
+const long GTDArray::DefaultStartRow[Icesat2Fields::NUM_PAIR_TRACKS] = {0, 0};
+const long GTDArray::DefaultNumRows[Icesat2Fields::NUM_PAIR_TRACKS] = {H5Coro::ALL_ROWS, H5Coro::ALL_ROWS};
 
 /******************************************************************************
  * GT DYNAMIC ARRAY CLASS
@@ -52,8 +52,8 @@ const long GTDArray::DefaultNumRows[Icesat2Parms::NUM_PAIR_TRACKS] = {H5Coro::AL
  * Constructor
  *----------------------------------------------------------------------------*/
 GTDArray::GTDArray(H5Coro::Context* context, int track, const char* gt_dataset, long col, const long* prt_startrow, const long* prt_numrows):
-    gt{ H5DArray(context, FString("/gt%dl/%s", track, gt_dataset).c_str(), col, prt_startrow[Icesat2Parms::RPT_L], prt_numrows[Icesat2Parms::RPT_L]),
-        H5DArray(context, FString("/gt%dr/%s", track, gt_dataset).c_str(), col, prt_startrow[Icesat2Parms::RPT_R], prt_numrows[Icesat2Parms::RPT_R]) }
+    gt{ H5DArray(context, FString("/gt%dl/%s", track, gt_dataset).c_str(), col, prt_startrow[Icesat2Fields::RPT_L], prt_numrows[Icesat2Fields::RPT_L]),
+        H5DArray(context, FString("/gt%dr/%s", track, gt_dataset).c_str(), col, prt_startrow[Icesat2Fields::RPT_R], prt_numrows[Icesat2Fields::RPT_R]) }
 {
 }
 
@@ -67,7 +67,7 @@ GTDArray::~GTDArray(void) = default;
  *----------------------------------------------------------------------------*/
 bool GTDArray::join(int timeout, bool throw_exception)
 {
-    return (gt[Icesat2Parms::RPT_L].join(timeout, throw_exception) && gt[Icesat2Parms::RPT_R].join(timeout, throw_exception));
+    return (gt[Icesat2Fields::RPT_L].join(timeout, throw_exception) && gt[Icesat2Fields::RPT_R].join(timeout, throw_exception));
 }
 
 /*----------------------------------------------------------------------------
@@ -75,6 +75,6 @@ bool GTDArray::join(int timeout, bool throw_exception)
  *----------------------------------------------------------------------------*/
 uint64_t GTDArray::serialize (uint8_t* buffer, const int32_t* start_element, const uint32_t* num_elements)
 {
-    const uint64_t bytes_written = gt[Icesat2Parms::RPT_L].serialize(&buffer[0], start_element[Icesat2Parms::RPT_L], num_elements[Icesat2Parms::RPT_L]);
-    return gt[Icesat2Parms::RPT_L].serialize(&buffer[bytes_written], start_element[Icesat2Parms::RPT_R], num_elements[Icesat2Parms::RPT_R]);
+    const uint64_t bytes_written = gt[Icesat2Fields::RPT_L].serialize(&buffer[0], start_element[Icesat2Fields::RPT_L], num_elements[Icesat2Fields::RPT_L]);
+    return gt[Icesat2Fields::RPT_L].serialize(&buffer[bytes_written], start_element[Icesat2Fields::RPT_R], num_elements[Icesat2Fields::RPT_R]);
 }

@@ -849,7 +849,7 @@ Atl03Reader::YapcScore::YapcScore (const info_t* info, const Region& region, con
     }
     else if(info->reader->parms->yapc.version != 0) // read from file
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid YAPC version specified: %d", info->reader->parms->yapc.version);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid YAPC version specified: %d", info->reader->parms->yapc.version.value);
     }
 }
 
