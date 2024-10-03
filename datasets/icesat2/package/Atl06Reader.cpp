@@ -131,8 +131,8 @@ int Atl06Reader::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void Atl06Reader::init (void)
 {
-    RECDEF(elRecType,       elRecDef,       sizeof(elevation_t),    NULL /* "extent_id" */);
-    RECDEF(atRecType,       atRecDef,       sizeof(atl06_t),        NULL);
+    RECDEF(elRecType,       elRecDef,       sizeof(elevation_t),            NULL /* "extent_id" */);
+    RECDEF(atRecType,       atRecDef,       offsetof(atl06_t, elevation),   NULL);
 }
 
 /*----------------------------------------------------------------------------
@@ -532,7 +532,7 @@ void* Atl06Reader::subsettingThread (void* parm)
             /* Create Elevation Batch Record */
             if(!batch_record)
             {
-                batch_record = new RecordObject(atRecType);
+                batch_record = new RecordObject(atRecType, sizeof(atl06_t));
                 atl06_data = reinterpret_cast<atl06_t*>(batch_record->getRecordData());
                 rec_vec.push_back(batch_record);
             }
