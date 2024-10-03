@@ -13,10 +13,25 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    
+
     steps:
     - name: Checkout SlideRule Repository
       uses: actions/checkout@v3
+
+    - name: Checkout CoastNet
+      uses: actions/checkout@v3
+      with:
+        repository: SlideRuleEarth/ut-ATL24-coastnet
+
+    - name: Checkout Qtrees
+      uses: actions/checkout@v3
+      with:
+        repository: SlideRuleEarth/ut-ATL24-qtrees
+
+    - name: Checkout OpenOceans++
+      uses: actions/checkout@v3
+      with:
+        repository: SlideRuleEarth/ut-ATL24-oopp
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v2
@@ -30,7 +45,7 @@ jobs:
        make cluster-upload-terraform
 
     - name: Set Up Docker Buildx
-      uses: docker/setup-buildx-action@v3    
+      uses: docker/setup-buildx-action@v3
 
     - name: Setup Docker Environment
       run: |

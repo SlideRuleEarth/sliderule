@@ -56,7 +56,7 @@
 /***************/
 /* YAPC Fields */
 /***************/
-struct YapcFields: public FieldDictionary 
+struct YapcFields: public FieldDictionary
 {
     FieldElement<uint8_t>   score {0};      // minimum allowed weight of photon using yapc algorithm
     FieldElement<int>       version {3};    // version of the yapc algorithm to run
@@ -64,7 +64,7 @@ struct YapcFields: public FieldDictionary
     FieldElement<int>       min_knn {5};    // (version 3 only) minimum number of k-nearest neighors
     FieldElement<double>    win_h {6.0};    // window height (overrides calculated value if non-zero)
     FieldElement<double>    win_x {15.0};   // window width
-    
+
     YapcFields(void);
     ~YapcFields(void) override = default;
 
@@ -76,7 +76,7 @@ struct YapcFields: public FieldDictionary
 /******************/
 /* PhoREAL Fields */
 /******************/
-struct PhorealFields: public FieldDictionary 
+struct PhorealFields: public FieldDictionary
 {
     typedef enum {
         MEAN = 0,
@@ -115,6 +115,7 @@ class Icesat2Fields: public RequestFields
         static const int EXPECTED_NUM_FIELDS        = 8; // a typical number of ancillary fields requested
         static const uint8_t INVALID_FLAG           = 0xFF;
         static const int64_t ATLAS_SDP_EPOCH_GPS    = 1198800018; // seconds to add to ATLAS delta times to get GPS times
+        static const int8_t MIN_ATL03_CNF           = -128;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -215,6 +216,14 @@ class Icesat2Fields: public RequestFields
             STAGE_PHOREAL = 3,  // atl08 vegetation science
             NUM_STAGES = 4
         } atl06_stages_t;
+
+        /* Ancillary Field Types */
+        typedef enum {
+            PHOTON_ANC_TYPE     = 0,
+            EXTENT_ANC_TYPE     = 1,
+            ATL08_ANC_TYPE      = 2,
+            ATL06_ANC_TYPE      = 3
+        } anc_type_t;
 
         /*--------------------------------------------------------------------
          * Methods

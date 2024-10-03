@@ -32,6 +32,21 @@ jobs:
     - name: Checkout sliderule repository
       uses: actions/checkout@v3
 
+    - name: Checkout CoastNet
+      uses: actions/checkout@v3
+      with:
+        repository: SlideRuleEarth/ut-ATL24-coastnet
+
+    - name: Checkout Qtrees
+      uses: actions/checkout@v3
+      with:
+        repository: SlideRuleEarth/ut-ATL24-qtrees
+
+    - name: Checkout OpenOceans++
+      uses: actions/checkout@v3
+      with:
+        repository: SlideRuleEarth/ut-ATL24-oopp
+
     - name: Build sliderule
       run: |
        cd targets/slideruleearth-aws

@@ -47,7 +47,7 @@
 
 #include "H5Array.h"
 #include "H5DArray.h"
-#include "Icesat2Parms.h"
+#include "Icesat2Fields.h"
 
 /******************************************************************************
  * ATL03 VIEWER
@@ -177,7 +177,7 @@ class Atl03Viewer: public LuaObject
          *--------------------------------------------------------------------*/
 
         bool                active;
-        Thread*             readerPid[Icesat2Parms::NUM_SPOTS];
+        Thread*             readerPid[Icesat2Fields::NUM_SPOTS];
         Mutex               threadMut;
         int                 threadCount;
         int                 numComplete;
@@ -186,7 +186,7 @@ class Atl03Viewer: public LuaObject
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
-        Icesat2Parms*       parms;
+        Icesat2Fields*      parms;
         stats_t             stats;
 
         H5Coro::Context*    context; // for ATL03 file
@@ -199,7 +199,7 @@ class Atl03Viewer: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Viewer                 (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator=true);
+                            Atl03Viewer                 (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator=true);
                             ~Atl03Viewer                (void) override;
 
         static void*        subsettingThread            (void* parm);
@@ -208,9 +208,6 @@ class Atl03Viewer: public LuaObject
         static void         parseResource               (const char* resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region);
 
         static int          luaStats                    (lua_State* L);
-
-        /* Unit Tests */
-        // friend class UT_Atl03Reader;
 };
 
 #endif  /* __atl03_viewer__ */

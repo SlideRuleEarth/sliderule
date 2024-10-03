@@ -40,7 +40,11 @@
 
 #include "OsApi.h"
 #include "ContainerRecord.h"
-#include "icesat2.h"
+#include "Atl08Dispatch.h"
+#include "LuaObject.h"
+#include "RecordObject.h"
+#include "Icesat2Fields.h"
+#include "AncillaryFields.h"
 
 using std::numeric_limits;
 
@@ -112,19 +116,19 @@ const double Atl08Dispatch::PercentileInterval[NUM_PERCENTILES] = {
  *----------------------------------------------------------------------------*/
 int Atl08Dispatch::luaCreate (lua_State* L)
 {
-    Icesat2Parms* parms = NULL;
+    Icesat2Fields* _parms = NULL;
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        parms = dynamic_cast<Icesat2Parms*>(getLuaObject(L, 2, Icesat2Parms::OBJECT_TYPE));
+        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
 
         /* Create ATL06 Dispatch */
-        return createLuaObject(L, new Atl08Dispatch(L, outq_name, parms));
+        return createLuaObject(L, new Atl08Dispatch(L, outq_name, _parms));
     }
     catch(const RunTimeException& e)
     {
-        if(parms) parms->releaseLuaObject();
+        if(_parms) _parms->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
@@ -153,7 +157,7 @@ void Atl08Dispatch::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl08Dispatch::Atl08Dispatch (lua_State* L, const char* outq_name, Icesat2Parms* _parms):
+Atl08Dispatch::Atl08Dispatch (lua_State* L, const char* outq_name, Icesat2Fields* _parms):
     DispatchObject(L, LUA_META_NAME, LUA_META_TABLE),
     batchData(NULL),
     batchIndex(0),
@@ -200,7 +204,7 @@ bool Atl08Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     geolocateResult(extent, result);
 
     /* Execute Algorithm Stages */
-    if(parms->stages[Icesat2Parms::STAGE_PHOREAL])
+    if(parms->stages[Icesat2Fields::STAGE_PHOREAL])
     {
         phorealAlgorithm(extent, result);
     }
@@ -251,8 +255,10 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (const Atl03Reader::extent_t* 
         /* Get ATL03 Ancillary Record's Element Array */
         AncillaryFields::element_array_t* atl03_anc_rec = reinterpret_cast<AncillaryFields::element_array_t*>(records->at(i)->getRecordData());
 
-        /* Find Ancillary Field in Parameters */
-        const AncillaryFields::entry_t& entry = parms->atl08_fields->get(atl03_anc_rec->field_index);
+        /* Get Ancillary Field Definition */
+        AncillaryFields::estimation_t estimation = AncillaryFields::NEAREST_NEIGHBOR;
+        const string& anc_field = parms->atl08Fields[atl03_anc_rec->field_index];
+        if(anc_field.back() == '%') estimation = AncillaryFields::INTERPOLATION;
 
         /* Initialize Field */
         AncillaryFields::field_t field;
@@ -264,7 +270,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (const Atl03Reader::extent_t* 
         {
             AncillaryFields::setValueAsDouble(&field, 0.0);
             double* values = AncillaryFields::extractAsDoubles(atl03_anc_rec); // `new` memory allocated here
-            if(entry.estimation == AncillaryFields::NEAREST_NEIGHBOR)
+            if(estimation == AncillaryFields::NEAREST_NEIGHBOR)
             {
                 std::map<double, int> counts;
                 for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
@@ -287,7 +293,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (const Atl03Reader::extent_t* 
                 }
                 AncillaryFields::setValueAsDouble(&field, nearest);
             }
-            else if(entry.estimation == AncillaryFields::INTERPOLATION)
+            else if(estimation == AncillaryFields::INTERPOLATION)
             {
                 double average = 0.0;
                 int samples = 0;
@@ -311,7 +317,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (const Atl03Reader::extent_t* 
         {
             AncillaryFields::setValueAsInteger(&field, 0);
             int64_t* values = AncillaryFields::extractAsIntegers(atl03_anc_rec); // `new` memory allocated here
-            if(entry.estimation == AncillaryFields::NEAREST_NEIGHBOR)
+            if(estimation == AncillaryFields::NEAREST_NEIGHBOR)
             {
                 std::map<int64_t, int> counts;
                 for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
@@ -331,7 +337,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (const Atl03Reader::extent_t* 
                 }
                 AncillaryFields::setValueAsInteger(&field, nearest);
             }
-            else if(entry.estimation == AncillaryFields::INTERPOLATION)
+            else if(estimation == AncillaryFields::INTERPOLATION)
             {
                 int64_t average = 0;
                 for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
@@ -352,7 +358,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (const Atl03Reader::extent_t* 
     }
 
     /* Return Ancillary Record */
-    return AncillaryFields::createFieldArrayRecord(extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION, field_vec);
+    return AncillaryFields::createFieldArrayRecord(extent->extent_id | Icesat2Fields::EXTENT_ID_ELEVATION, field_vec);
 }
 
 /*----------------------------------------------------------------------------
@@ -361,16 +367,16 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (const Atl03Reader::extent_t* 
 void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegetation_t& result)
 {
     /* Get Orbit Info */
-    const Icesat2Parms::sc_orient_t sc_orient = (Icesat2Parms::sc_orient_t)extent->spacecraft_orientation;
-    const Icesat2Parms::track_t track = (Icesat2Parms::track_t)extent->track;
+    const Icesat2Fields::sc_orient_t sc_orient = (Icesat2Fields::sc_orient_t)extent->spacecraft_orientation;
+    const Icesat2Fields::track_t track = (Icesat2Fields::track_t)extent->track;
 
     /* Extent Attributes */
-    result.extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION;
+    result.extent_id = extent->extent_id | Icesat2Fields::EXTENT_ID_ELEVATION;
     result.segment_id = extent->segment_id;
     result.rgt = extent->reference_ground_track;
     result.cycle = extent->cycle;
-    result.spot = Icesat2Parms::getSpotNumber(sc_orient, track, extent->pair);
-    result.gt = Icesat2Parms::getGroundTrack(sc_orient, track, extent->pair);
+    result.spot = Icesat2Fields::getSpotNumber(sc_orient, track, extent->pair);
+    result.gt = Icesat2Fields::getGroundTrack(sc_orient, track, extent->pair);
     result.photon_count = extent->photon_count;
     result.solar_elevation = extent->solar_elevation;
 
@@ -386,7 +392,7 @@ void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegeta
         result.longitude = 0.0;
         result.x_atc = extent->segment_distance;
     }
-    else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_CENTER)
+    else if(parms->phoreal.geoloc == PhorealFields::CENTER)
     {
         /* Calculate Sums */
         double time_ns_min = DBL_MAX;
@@ -416,7 +422,7 @@ void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegeta
         result.longitude = (longitude_min + longitude_max) / 2.0;
         result.x_atc = ((x_atc_min + x_atc_max) / 2.0) + extent->segment_distance;
     }
-    else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_MEAN)
+    else if(parms->phoreal.geoloc == PhorealFields::MEAN)
     {
         /* Calculate Sums */
         double sum_time_ns = 0.0;
@@ -437,7 +443,7 @@ void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegeta
         result.longitude = sum_longitude / num_ph;
         result.x_atc = sum_x_atc / num_ph;
     }
-    else if(parms->phoreal.geoloc == Icesat2Parms::PHOREAL_MEDIAN)
+    else if(parms->phoreal.geoloc == PhorealFields::MEDIAN)
     {
         const uint32_t center_ph = num_ph / 2;
         if(num_ph % 2 == 1) // Odd Number of Photons
@@ -466,8 +472,8 @@ void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegeta
     /* Land and Snow Cover Flags */
     if(num_ph == 0)
     {
-        result.landcover = Icesat2Parms::INVALID_FLAG;
-        result.snowcover = Icesat2Parms::INVALID_FLAG;
+        result.landcover = Icesat2Fields::INVALID_FLAG;
+        result.snowcover = Icesat2Fields::INVALID_FLAG;
     }
     else
     {
@@ -475,7 +481,7 @@ void Atl08Dispatch::geolocateResult (const Atl03Reader::extent_t* extent, vegeta
         uint32_t center_ph = 0;
         double diff_min = DBL_MAX;
         for(uint32_t i = 0; i < num_ph; i++)
-        {            
+        {
             const double diff = abs(ph[i].time_ns.nanoseconds - result.time_ns.nanoseconds);
             if(diff < diff_min)
             {
@@ -603,7 +609,7 @@ void Atl08Dispatch::phorealAlgorithm (const Atl03Reader::extent_t* extent, veget
         const int recsize = offsetof(waveform_t, waveform) + (num_bins * sizeof(float));
         RecordObject waverec(waveRecType, recsize, false);
         waveform_t* data = reinterpret_cast<waveform_t*>(waverec.getRecordData());
-        data->extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION;
+        data->extent_id = extent->extent_id | Icesat2Fields::EXTENT_ID_ELEVATION;
         data->num_bins = num_bins;
         data->binsize = parms->phoreal.binsize;
         for(int b = 0; b < num_bins; b++)

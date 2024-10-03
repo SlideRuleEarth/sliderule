@@ -47,7 +47,7 @@
 
 #include "H5Array.h"
 #include "H5DArray.h"
-#include "Icesat2Parms.h"
+#include "Icesat2Fields.h"
 
 /******************************************************************************
  * ATL06 READER
@@ -200,7 +200,7 @@ class Atl06Reader: public LuaObject
          *--------------------------------------------------------------------*/
 
         bool                active;
-        Thread*             readerPid[Icesat2Parms::NUM_SPOTS];
+        Thread*             readerPid[Icesat2Fields::NUM_SPOTS];
         Mutex               threadMut;
         int                 threadCount;
         int                 numComplete;
@@ -209,7 +209,7 @@ class Atl06Reader: public LuaObject
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
-        Icesat2Parms*       parms;
+        Icesat2Fields*      parms;
         stats_t             stats;
 
         H5Coro::Context*    context; // for ATL06 file
@@ -222,7 +222,7 @@ class Atl06Reader: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl06Reader                 (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator=true);
+                            Atl06Reader                 (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator=true);
                             ~Atl06Reader                (void) override;
 
         static void*        subsettingThread            (void* parm);

@@ -41,7 +41,6 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyKd.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyMask.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyOpenOceansPPClassifier.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyParms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyQtreesClassifier.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyRefractionCorrector.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathySeaSurfaceFinder.cpp
@@ -65,7 +64,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyKd.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyMask.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyOpenOceansPPClassifier.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyParms.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyQtreesClassifier.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyRefractionCorrector.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathySeaSurfaceFinder.h

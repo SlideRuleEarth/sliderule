@@ -102,7 +102,7 @@ int BathyDataFrame::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields* _parms, H5Object* _hdf03, H5Object* _hdf09, const char* rqstq_name, BathyMask* _mask):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
-    {   
+    {
         {"time_ns",             &time_ns},
         {"index_ph",            &index_ph},
         {"index_seg",           &index_seg},
@@ -124,7 +124,7 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"class_ph",            &class_ph},
         {"predictions",         &predictions},
         {"geoid_corr_h",        &geoid_corr_h},
-    }, 
+    },
     {
         {"spot",                &spot},
         {"beam",                &beam},
@@ -190,7 +190,7 @@ BathyDataFrame::~BathyDataFrame (void)
 {
     active = false;
     delete pid;
-    
+
     delete rqstQ;
 
     hdf03->releaseLuaObject();
@@ -224,7 +224,7 @@ BathyDataFrame::Region::Region (const BathyDataFrame& dataframe):
         num_photons = H5Coro::ALL_ROWS;
 
         /* Determine Spatial Extent */
-        if(dataframe.parms.regionMask.cellSize.value > 0.0)
+        if(dataframe.parms.regionMask.valid())
         {
             rasterregion(dataframe);
         }
@@ -530,7 +530,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
         GeoLib::UTMTransform utm_transform(region.segment_lat[0], region.segment_lon[0]);
         dataframe.utm_zone = utm_transform.zone;
         dataframe.utm_is_north = region.segment_lat[0] >= 0.0;
-        
+
         /* Traverse All Photons In Dataset */
         while(dataframe.active && (current_photon < atl03.dist_ph_along.size))
         {
@@ -670,7 +670,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 dataframe.yapc_score.append(yapc_score);
                 dataframe.max_signal_conf.append(atl03_cnf);
                 dataframe.quality_ph.append(quality_ph);
-                dataframe.processing_flags.append(on_boundary ? BathyFields::ON_BOUNDARY : 0x00);
+                dataframe.processing_flags.append(on_boundary ? BathyFields::ON_BOUNDARY : BathyFields::FLAGS_CLEAR);
 
                 /* Add Additional Photon Data to DataFrame */
                 dataframe.geoid_corr_h.append(atl03.h_ph[current_photon] - atl03.geoid[current_segment]);

@@ -43,7 +43,8 @@
 #include "OsApi.h"
 
 #include "Atl03Reader.h"
-#include "Icesat2Parms.h"
+#include "AncillaryFields.h"
+#include "Icesat2Fields.h"
 
 /******************************************************************************
  * ATL06 DISPATCH CLASS
@@ -165,14 +166,14 @@ class Atl06Dispatch: public DispatchObject
         int                 elevationIndex;
         int                 ancillaryIndex;
 
-        Icesat2Parms*       parms;
+        Icesat2Fields*      parms;
         stats_t             stats;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl06Dispatch                   (lua_State* L, const char* outq_name, Icesat2Parms* _parms);
+                        Atl06Dispatch                   (lua_State* L, const char* outq_name, Icesat2Fields* _parms);
                         ~Atl06Dispatch                  (void) override;
 
         bool            processRecord                   (RecordObject* record, okey_t key, recVec_t* records) override;

@@ -36,7 +36,17 @@
 #include "LuaEngine.h"
 #include "RasterObject.h"
 #include "Asset.h"
-#include "icesat2.h"
+#include "Icesat2Fields.h"
+#include "Atl03Reader.h"
+#include "Atl03Viewer.h"
+#include "Atl03Indexer.h"
+#include "Atl06Reader.h"
+#include "Atl06Dispatch.h"
+#include "Atl08Dispatch.h"
+#include "Atl13Reader.h"
+#include "Atl13IODriver.h"
+#include "CumulusIODriver.h"
+#include "MeritRaster.h"
 
 /******************************************************************************
  * DEFINES
@@ -54,7 +64,7 @@
 int icesat2_open (lua_State *L)
 {
     static const struct luaL_Reg icesat2_functions[] = {
-        {"parms",               Icesat2Parms::luaCreate},
+        {"parms",               Icesat2Fields::luaCreate},
         {"atl03s",              Atl03Reader::luaCreate},
         {"atl03v",              Atl03Viewer::luaCreate},
         {"atl03indexer",        Atl03Indexer::luaCreate},
@@ -72,34 +82,33 @@ int icesat2_open (lua_State *L)
     luaL_newlib(L, icesat2_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrStr(L, "PARMS",                       Icesat2Parms::ICESAT2_PARMS);
-    LuaEngine::setAttrInt(L, "CNF_POSSIBLE_TEP",            Icesat2Parms::CNF_POSSIBLE_TEP);
-    LuaEngine::setAttrInt(L, "CNF_NOT_CONSIDERED",          Icesat2Parms::CNF_NOT_CONSIDERED);
-    LuaEngine::setAttrInt(L, "CNF_BACKGROUND",              Icesat2Parms::CNF_BACKGROUND);
-    LuaEngine::setAttrInt(L, "CNF_WITHIN_10M",              Icesat2Parms::CNF_WITHIN_10M);
-    LuaEngine::setAttrInt(L, "CNF_SURFACE_LOW",             Icesat2Parms::CNF_SURFACE_LOW);
-    LuaEngine::setAttrInt(L, "CNF_SURFACE_MEDIUM",          Icesat2Parms::CNF_SURFACE_MEDIUM);
-    LuaEngine::setAttrInt(L, "CNF_SURFACE_HIGH",            Icesat2Parms::CNF_SURFACE_HIGH);
-    LuaEngine::setAttrInt(L, "QUALITY_NOMINAL",             Icesat2Parms::QUALITY_NOMINAL);
-    LuaEngine::setAttrInt(L, "QUALITY_AFTERPULSE",          Icesat2Parms::QUALITY_POSSIBLE_AFTERPULSE);
-    LuaEngine::setAttrInt(L, "QUALITY_IMPULSE_RESPONSE",    Icesat2Parms::QUALITY_POSSIBLE_IMPULSE_RESPONSE);
-    LuaEngine::setAttrInt(L, "QUALITY_POSSIBLE_TEP",        Icesat2Parms::QUALITY_POSSIBLE_TEP);
-    LuaEngine::setAttrInt(L, "SRT_LAND",                    Icesat2Parms::SRT_LAND);
-    LuaEngine::setAttrInt(L, "SRT_OCEAN",                   Icesat2Parms::SRT_OCEAN);
-    LuaEngine::setAttrInt(L, "SRT_SEA_ICE",                 Icesat2Parms::SRT_SEA_ICE);
-    LuaEngine::setAttrInt(L, "SRT_LAND_ICE",                Icesat2Parms::SRT_LAND_ICE);
-    LuaEngine::setAttrInt(L, "SRT_INLAND_WATER",            Icesat2Parms::SRT_INLAND_WATER);
-    LuaEngine::setAttrInt(L, "ALL_TRACKS",                  Icesat2Parms::ALL_TRACKS);
-    LuaEngine::setAttrInt(L, "RPT_1",                       Icesat2Parms::RPT_1);
-    LuaEngine::setAttrInt(L, "RPT_2",                       Icesat2Parms::RPT_2);
-    LuaEngine::setAttrInt(L, "RPT_3",                       Icesat2Parms::RPT_3);
-    LuaEngine::setAttrInt(L, "NUM_TRACKS",                  Icesat2Parms::NUM_TRACKS);
-    LuaEngine::setAttrInt(L, "NUM_SPOTS",                   Icesat2Parms::NUM_SPOTS);
-    LuaEngine::setAttrInt(L, "ATL08_NOISE",                 Icesat2Parms::ATL08_NOISE);
-    LuaEngine::setAttrInt(L, "ATL08_GROUND",                Icesat2Parms::ATL08_GROUND);
-    LuaEngine::setAttrInt(L, "ATL08_CANOPY",                Icesat2Parms::ATL08_CANOPY);
-    LuaEngine::setAttrInt(L, "ATL08_TOP_OF_CANOPY",         Icesat2Parms::ATL08_TOP_OF_CANOPY);
-    LuaEngine::setAttrInt(L, "ATL08_UNCLASSIFIED",          Icesat2Parms::ATL08_UNCLASSIFIED);
+    LuaEngine::setAttrInt(L, "CNF_POSSIBLE_TEP",            Icesat2Fields::CNF_POSSIBLE_TEP);
+    LuaEngine::setAttrInt(L, "CNF_NOT_CONSIDERED",          Icesat2Fields::CNF_NOT_CONSIDERED);
+    LuaEngine::setAttrInt(L, "CNF_BACKGROUND",              Icesat2Fields::CNF_BACKGROUND);
+    LuaEngine::setAttrInt(L, "CNF_WITHIN_10M",              Icesat2Fields::CNF_WITHIN_10M);
+    LuaEngine::setAttrInt(L, "CNF_SURFACE_LOW",             Icesat2Fields::CNF_SURFACE_LOW);
+    LuaEngine::setAttrInt(L, "CNF_SURFACE_MEDIUM",          Icesat2Fields::CNF_SURFACE_MEDIUM);
+    LuaEngine::setAttrInt(L, "CNF_SURFACE_HIGH",            Icesat2Fields::CNF_SURFACE_HIGH);
+    LuaEngine::setAttrInt(L, "QUALITY_NOMINAL",             Icesat2Fields::QUALITY_NOMINAL);
+    LuaEngine::setAttrInt(L, "QUALITY_AFTERPULSE",          Icesat2Fields::QUALITY_POSSIBLE_AFTERPULSE);
+    LuaEngine::setAttrInt(L, "QUALITY_IMPULSE_RESPONSE",    Icesat2Fields::QUALITY_POSSIBLE_IMPULSE_RESPONSE);
+    LuaEngine::setAttrInt(L, "QUALITY_POSSIBLE_TEP",        Icesat2Fields::QUALITY_POSSIBLE_TEP);
+    LuaEngine::setAttrInt(L, "SRT_LAND",                    Icesat2Fields::SRT_LAND);
+    LuaEngine::setAttrInt(L, "SRT_OCEAN",                   Icesat2Fields::SRT_OCEAN);
+    LuaEngine::setAttrInt(L, "SRT_SEA_ICE",                 Icesat2Fields::SRT_SEA_ICE);
+    LuaEngine::setAttrInt(L, "SRT_LAND_ICE",                Icesat2Fields::SRT_LAND_ICE);
+    LuaEngine::setAttrInt(L, "SRT_INLAND_WATER",            Icesat2Fields::SRT_INLAND_WATER);
+    LuaEngine::setAttrInt(L, "ALL_TRACKS",                  Icesat2Fields::ALL_TRACKS);
+    LuaEngine::setAttrInt(L, "RPT_1",                       Icesat2Fields::RPT_1);
+    LuaEngine::setAttrInt(L, "RPT_2",                       Icesat2Fields::RPT_2);
+    LuaEngine::setAttrInt(L, "RPT_3",                       Icesat2Fields::RPT_3);
+    LuaEngine::setAttrInt(L, "NUM_TRACKS",                  Icesat2Fields::NUM_TRACKS);
+    LuaEngine::setAttrInt(L, "NUM_SPOTS",                   Icesat2Fields::NUM_SPOTS);
+    LuaEngine::setAttrInt(L, "ATL08_NOISE",                 Icesat2Fields::ATL08_NOISE);
+    LuaEngine::setAttrInt(L, "ATL08_GROUND",                Icesat2Fields::ATL08_GROUND);
+    LuaEngine::setAttrInt(L, "ATL08_CANOPY",                Icesat2Fields::ATL08_CANOPY);
+    LuaEngine::setAttrInt(L, "ATL08_TOP_OF_CANOPY",         Icesat2Fields::ATL08_TOP_OF_CANOPY);
+    LuaEngine::setAttrInt(L, "ATL08_UNCLASSIFIED",          Icesat2Fields::ATL08_UNCLASSIFIED);
 
     return 1;
 }

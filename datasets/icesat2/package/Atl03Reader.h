@@ -44,10 +44,11 @@
 #include "MsgQ.h"
 #include "OsApi.h"
 #include "StringLib.h"
+#include "FieldList.h"
 
 #include "H5Array.h"
 #include "H5DArray.h"
-#include "Icesat2Parms.h"
+#include "Icesat2Fields.h"
 
 /******************************************************************************
  * ATL03 READER
@@ -298,14 +299,14 @@ class Atl03Reader: public LuaObject
          *--------------------------------------------------------------------*/
 
         bool                active;
-        Thread*             readerPid[Icesat2Parms::NUM_SPOTS];
+        Thread*             readerPid[Icesat2Fields::NUM_SPOTS];
         Mutex               threadMut;
         int                 threadCount;
         int                 numComplete;
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
-        Icesat2Parms*       parms;
+        Icesat2Fields*      parms;
         int                 signalConfColIndex;
         stats_t             stats;
 
@@ -322,7 +323,7 @@ class Atl03Reader: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Reader                 (lua_State* L, Asset* _asset, const char* resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator=true);
+                            Atl03Reader                 (lua_State* L, Asset* _asset, const char* resource, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator=true);
                             ~Atl03Reader                (void) override;
 
         static void*        subsettingThread            (void* parm);
@@ -330,7 +331,7 @@ class Atl03Reader: public LuaObject
         static double       calculateBackground         (TrackState& state, const Atl03Data& atl03);
         uint32_t            calculateSegmentId          (const TrackState& state, const Atl03Data& atl03);
         void                generateExtentRecord        (uint64_t extent_id, const info_t* info, TrackState& state, const Atl03Data& atl03, vector<RecordObject*>& rec_list, int& total_size);
-        static void         generateAncillaryRecords    (uint64_t extent_id, AncillaryFields::list_t* field_list, H5DArrayDictionary* field_dict, Icesat2Parms::anc_type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
+        static void         generateAncillaryRecords    (uint64_t extent_id, const FieldList<string>& field_list, H5DArrayDictionary* field_dict, Icesat2Fields::anc_type_t type, List<int32_t>* indices, vector<RecordObject*>& rec_list, int& total_size);
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
         static void         parseResource               (const char* resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region, uint8_t& version);
 
