@@ -128,12 +128,10 @@ bool Usgs3dep1meterDemRaster::findRasters(finder_t* finder)
                 rinfo.fileName        = filePath + fileName.substr(pos);
                 rgroup->infovect.push_back(rinfo);
             }
-            rgroup->infovect.shrink_to_fit();
 
             mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
             finder->rasterGroups.push_back(rgroup);
         }
-        finder->rasterGroups.shrink_to_fit();
         mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
     }
     catch (const RunTimeException &e)

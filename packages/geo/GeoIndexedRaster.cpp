@@ -1017,10 +1017,10 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
         {
             unique_raster_t* ur = breader->uraster;
             GdalRaster* raster = new GdalRaster(breader->obj->parms,
-                                                ur->rinfo.fileName,
+                                                ur->rinfo->fileName,
                                                 static_cast<double>(ur->gpsTime / 1000),
                                                 ur->fileId,
-                                                ur->rinfo.dataIsElevation,
+                                                ur->rinfo->dataIsElevation,
                                                 breader->obj->crscb);
 
             /* Sample all points for this raster */
@@ -1139,12 +1139,12 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
     /* Clone features list for this thread (OGRFeature objects are not thread save, must copy/clone) */
     const uint32_t size = gf->obj->featuresList.size();
     std::vector<OGRFeature*> localFeaturesList;
-    for(uint32_t j = 0; j < size; j++)
+    for(uint32_t i = 0; i < size; i++)
     {
-        localFeaturesList.push_back(gf->obj->featuresList[j]->Clone());
+        localFeaturesList.push_back(gf->obj->featuresList[i]->Clone()); // NOLINT(clang-analyzer-cplusplus.NewDelete)
     }
 
-    mlog(DEBUG, "Finding groups for %zu points, range: %u - %u, features cloned: %u", gf->points->size(), start, end, size);
+    mlog(DEBUG, "Finding groups for points range: %u - %u, features cloned: %u", start, end, size);
 
     for(uint32_t i = start; i < end; i++)
     {
@@ -1165,8 +1165,6 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
 
         /* Filter rasters based on gps time */
         GroupOrdering* groupList = new GroupOrdering();
-        const int64_t gps = gf->obj->usePOItime() ? pinfo.gps : 0.0;
-        gf->obj->filterRasters(gps, groupList);
 
         /* Copy from finder to pointGroups */
         for(rasters_group_t* rgroup : finder.rasterGroups)
@@ -1174,6 +1172,10 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
             groupList->add(groupList->length(), rgroup);
         }
         gf->pointsGroups.emplace_back(point_groups_t{ {*ogr_point, i}, groupList });
+
+        /* Filter rasters based on POI time */
+        const int64_t gps = gf->obj->usePOItime() ? pinfo.gps : 0.0;
+        gf->obj->filterRasters(gps, groupList);
 
         /* Add raster file names from this groupList to raster to points map */
         const GroupOrdering::Iterator iter(*groupList);
@@ -1644,6 +1646,7 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
         }
 
         /* Merge the pointGroups for each thread */
+        mlog(DEBUG, "Merging point groups from all threads");
         for(GroupsFinder* gf : rgroupFinders)
         {
             pointsGroups.insert(pointsGroups.end(), gf->pointsGroups.begin(), gf->pointsGroups.end());
@@ -1706,7 +1709,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                     bool addNewRaster = true;
                     for(unique_raster_t* ur : uniqueRasters)
                     {
-                        if(ur->rinfo.fileName == rinfo.fileName)
+                        if(ur->rinfo->fileName == rinfo.fileName)
                         {
                             /* already in unique rasters list, set pointer in rinfo to this raster */
                             rinfo.uraster = ur;
@@ -1718,7 +1721,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                     if(addNewRaster)
                     {
                         unique_raster_t* ur = new unique_raster_t();
-                        ur->rinfo = rinfo;
+                        ur->rinfo = &rinfo;
                         ur->gpsTime = rgroup->gpsTime;
                         ur->fileId = fileDictAdd(rinfo.fileName);
                         uniqueRasters.push_back(ur);
@@ -1736,7 +1739,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
         mlog(DEBUG, "Finding points for unique rasters");
         for(unique_raster_t* ur : uniqueRasters)
         {
-            const std::string& rasterName = ur->rinfo.fileName;
+            const std::string& rasterName = ur->rinfo->fileName;
 
             auto it = rasterToPointsMap.find(rasterName);
             if(it != rasterToPointsMap.end())
@@ -1761,6 +1764,8 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
     }
 
     perfStats.findUniqueRastersTime = TimeLib::latchtime() - startTime;
+    mlog(DEBUG, "Unique rasters time: %lf", perfStats.findUniqueRastersTime);
+
     return status;
 }
 

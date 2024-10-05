@@ -92,7 +92,7 @@ class GeoIndexedRaster: public RasterObject
         } raster_info_t;
 
         typedef struct unique_raster_t {
-            raster_info_t               rinfo;
+            raster_info_t*              rinfo;
             double                      gpsTime;
             uint64_t                    fileId;
             std::vector<point_sample_t> pointSamples;
