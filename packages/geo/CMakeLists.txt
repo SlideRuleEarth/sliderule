@@ -10,6 +10,9 @@ find_library(LIBUUID_LIBRARY libuuid.so)
 # Find TIFF Library
 find_package(TIFF REQUIRED)
 
+# Find GEOS Library
+find_library(GEOS_LIBRARY libgeos_c.so)
+
 # Build package
 if (GDAL_FOUND AND PROJ_FOUND AND TIFF_FOUND)
 
@@ -17,7 +20,7 @@ if (GDAL_FOUND AND PROJ_FOUND AND TIFF_FOUND)
 
     target_compile_definitions (slideruleLib PUBLIC __geo__)
 
-    target_link_libraries (slideruleLib PUBLIC ${GDAL_LIBRARIES} ${PROJ_LIBRARIES} ${LIBUUID_LIBRARY})
+    target_link_libraries (slideruleLib PUBLIC ${GDAL_LIBRARIES} ${PROJ_LIBRARIES} ${LIBUUID_LIBRARY} ${GEOS_LIBRARY})
     target_link_libraries(slideruleLib PUBLIC ${TIFF_LIBRARIES})
     target_include_directories (slideruleLib PUBLIC ${GDAL_INCLUDE_DIRS} ${PROJ_INCLUDE_DIRS})
     target_include_directories(slideruleLib PUBLIC ${TIFF_INCLUDE_DIR})

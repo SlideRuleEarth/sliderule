@@ -156,12 +156,12 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
     try
     {
         GroupOrdering groupList;
-        OGRPoint      ogr_point(point.x, point.y, point.z);
+        OGRPoint      ogrPoint(point.x, point.y, point.z);
 
         ssErrors = SS_NO_ERRORS;
 
         /* Sample Rasters */
-        if(sample(&ogr_point, gps, &groupList))
+        if(sample(&ogrPoint, gps, &groupList))
         {
             /* Populate Return Vector of Samples (slist) */
             const GroupOrdering::Iterator iter(groupList);
@@ -1120,6 +1120,51 @@ void* GeoIndexedRaster::unionThread(void* param)
     return NULL;
 }
 
+
+/*----------------------------------------------------------------------------
+ * queryCallback
+ *----------------------------------------------------------------------------*/
+void GeoIndexedRaster::queryCallback(void* item, void* userdata)
+{
+    /* 'item' is a pointer to the OGRFeature in the R-tree */
+    OGRFeature* feature = static_cast<OGRFeature*>(item);
+    std::vector<OGRFeature*>* resultFeatures = static_cast<std::vector<OGRFeature*>*>(userdata);
+    resultFeatures->push_back(feature);
+}
+
+/*----------------------------------------------------------------------------
+ * queryRTreeWithPoint
+ *----------------------------------------------------------------------------*/
+std::vector<OGRFeature*> GeoIndexedRaster::queryRTreeWithPoint(OGRPoint* ogrPoint, GEOSSTRtree* rtree, GEOSContextHandle_t geosContext)
+{
+    /* List of OGRFeature* that contain or intersect the point */
+    std::vector<OGRFeature*> resultFeatures;
+
+    /* Convert OGRPoint to GEOSGeometry */
+    GEOSGeometry* geosPoint = ogrPoint->exportToGEOS(geosContext);
+    if (geosPoint == NULL)
+    {
+        return resultFeatures;
+    }
+
+    /* Get the envelope of the GEOS point for the R-tree query */
+    GEOSGeometry* geosEnvelope = GEOSEnvelope_r(geosContext, geosPoint);
+    if (geosEnvelope == NULL)
+    {
+        GEOSGeom_destroy_r(geosContext, geosPoint);
+        return resultFeatures;
+    }
+
+    /* Query the R-tree using the envelope of the point */
+    GEOSSTRtree_query_r(geosContext, rtree, geosEnvelope, queryCallback, &resultFeatures);
+
+    /* Cleanup */
+    GEOSGeom_destroy_r(geosContext, geosPoint);
+    GEOSGeom_destroy_r(geosContext, geosEnvelope);
+
+    return resultFeatures;
+}
+
 /*----------------------------------------------------------------------------
  * groupsFinderThread
  *----------------------------------------------------------------------------*/
@@ -1127,20 +1172,56 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
 {
     groups_finder_t* gf = static_cast<groups_finder_t*>(param);
 
-    /* Find groups of rasters for each point in range.
-     * NOTE: cannot filter rasters here, must be done in one thread
-     */
-    const uint32_t start = gf->pointsRange.start;
-    const uint32_t end   = gf->pointsRange.end;
+    /* Find groups of rasters for each point in range. */
+    GEOSContextHandle_t geosContext = NULL;
+    GEOSSTRtree* rtree = NULL;
+    std::vector<GEOSGeometry*> geosGeometries;  // To store geometries for later cleanup
+    std::vector<OGRFeature*> localFeaturesList; // To store cloned features for later cleanup
 
-    /* Clone features list for this thread (OGRFeature objects are not thread save, must copy/clone) */
+    /* OGRFeature objects are not thread save, must clone them for each thread */
+
     const uint32_t size = gf->obj->featuresList.size();
-    std::vector<OGRFeature*> localFeaturesList;
-    for(uint32_t i = 0; i < size; i++)
+
+    /* The overhead of creating an R-tree is not worth it for small number of features */
+    const bool useRTree = size > 100;
+    if(useRTree)
     {
-        localFeaturesList.push_back(gf->obj->featuresList[i]->Clone()); // NOLINT(clang-analyzer-cplusplus.NewDelete)
+        /* Create a spatial index R-tree for the features */
+        geosContext = initGEOS_r(NULL, NULL);
+        rtree = GEOSSTRtree_create_r(geosContext, 10);  // Bucket size = 10
+
+        for(uint32_t i = 0; i < size; i++)
+        {
+            /* Create a bounding box polygon from the feature's polygon, this is more efficient for R-tree queries */
+            OGREnvelope envelope;
+            OGRFeature* feature = gf->obj->featuresList[i]->Clone();
+            feature->GetGeometryRef()->getEnvelope(&envelope);
+            const OGRPolygon bbox = GdalRaster::makeRectangle(envelope.MinX, envelope.MinY, envelope.MaxX, envelope.MaxY);
+
+            /* Convert OGRGeometry to GEOSGeometry */
+            GEOSGeometry* geosBbox = bbox.exportToGEOS(geosContext);
+            if(geosBbox != NULL)
+            {
+                /* Insert the bounding box into the R-tree, use the feature as the item */
+                GEOSSTRtree_insert_r(geosContext, rtree, geosBbox, static_cast<void*>(feature));
+                geosGeometries.push_back(geosBbox);
+            }
+
+            localFeaturesList.push_back(feature);
+        }
+    }
+    else
+    {
+        /* Clone all features for this thread */
+        for(uint32_t i = 0; i < size; i++)
+        {
+            OGRFeature* feature = gf->obj->featuresList[i]->Clone();
+            localFeaturesList.push_back(feature);
+        }
     }
 
+    const uint32_t start = gf->pointsRange.start;
+    const uint32_t end = gf->pointsRange.end;
     mlog(DEBUG, "Finding groups for points range: %u - %u, features cloned: %u", start, end, size);
 
     for(uint32_t i = start; i < end; i++)
@@ -1152,23 +1233,41 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         }
 
         const point_info_t& pinfo = gf->points->at(i);
-        OGRPoint* ogr_point = new OGRPoint(pinfo.point.x, pinfo.point.y, pinfo.point.z);
+        OGRPoint* ogrPoint = new OGRPoint(pinfo.point.x, pinfo.point.y, pinfo.point.z);
+
+        std::vector<OGRFeature*>* flist;
+        std::vector<OGRFeature*> foundFeatures;
+        if(useRTree)
+        {
+            /* Query the R-tree with the OGRPoint and get the result features */
+            foundFeatures = queryRTreeWithPoint(ogrPoint, rtree, geosContext);
+            if(foundFeatures.empty())
+            {
+                delete ogrPoint;
+                continue;
+            }
+            flist = &foundFeatures;
+        }
+        else
+        {
+            flist = &localFeaturesList;
+        }
 
         /* Set finder for the whole range of features */
-        Finder finder(ogr_point, &localFeaturesList);
+        Finder finder(ogrPoint, flist);
 
-        /* Find rasters intersecting with ogr_point */
+        // mlog(INFO, "Found %zu features for point %u", foundFeatures.size(), i);
+
+        /* Find rasters intersecting with ogrPoint */
         gf->obj->findRasters(&finder);
 
-        /* Filter rasters based on gps time */
-        GroupOrdering* groupList = new GroupOrdering();
-
         /* Copy from finder to pointGroups */
+        GroupOrdering* groupList = new GroupOrdering();
         for(rasters_group_t* rgroup : finder.rasterGroups)
         {
             groupList->add(groupList->length(), rgroup);
         }
-        gf->pointsGroups.emplace_back(point_groups_t{ {*ogr_point, i}, groupList });
+        gf->pointsGroups.emplace_back(point_groups_t{ {*ogrPoint, i}, groupList });
 
         /* Filter rasters based on POI time */
         const int64_t gps = gf->obj->usePOItime() ? pinfo.gps : 0.0;
@@ -1186,7 +1285,18 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         }
     }
 
-    /* Cleanup cloned features */
+    /* Cleanup GEOS geometries */
+    if(useRTree)
+    {
+        for(GEOSGeometry* geom : geosGeometries)
+        {
+            GEOSGeom_destroy_r(geosContext, geom);
+        }
+        GEOSSTRtree_destroy_r(geosContext, rtree);
+        finishGEOS_r(geosContext);
+    }
+
+    /* Cleanup local features list */
     for(OGRFeature* feature : localFeaturesList)
     {
         OGRFeature::DestroyFeature(feature);
@@ -1585,8 +1695,10 @@ void GeoIndexedRaster::applySpatialFilter(OGRLayer* layer, const std::vector<poi
 
     const double startTime = TimeLib::latchtime();
 
-    OGRGeometry* filter = getBufferedPoints(points);
-    // OGRGeometry* filter = getConvexHull(points);
+    /* Buffered points generates more detailed filter polygon but is much slower than
+     * convex hull, especially for large number of points.
+     */
+    OGRGeometry* filter = getConvexHull(points);
     if(filter != NULL)
     {
         layer->SetSpatialFilter(filter);
@@ -1594,7 +1706,7 @@ void GeoIndexedRaster::applySpatialFilter(OGRLayer* layer, const std::vector<poi
     }
     else
     {
-        mlog(ERROR, "Failed to create union polygon for spatial filter");
+        mlog(ERROR, "Failed to create polygon for spatial filter");
     }
     perfStats.spatialFilterTime = TimeLib::latchtime() - startTime;
 
