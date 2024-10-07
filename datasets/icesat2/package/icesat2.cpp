@@ -47,6 +47,9 @@
 #include "Atl13IODriver.h"
 #include "CumulusIODriver.h"
 #include "MeritRaster.h"
+#ifdef __unittesting__
+#include "UT_Atl06Dispatch.h"
+#endif
 
 /******************************************************************************
  * DEFINES

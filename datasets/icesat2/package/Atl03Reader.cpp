@@ -509,7 +509,7 @@ Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
         anc_geo_data = new H5DArrayDictionary(Icesat2Fields::EXPECTED_NUM_FIELDS);
         for(int i = 0; i < geo_fields.length(); i++)
         {
-            const char* field_name = geo_fields[i].c_str();
+            const string& field_name = geo_fields[i];
             const char* group_name = "geolocation";
             if( (field_name[0] == 't' && field_name[1] == 'i' && field_name[2] == 'd') ||
                 (field_name[0] == 'g' && field_name[1] == 'e' && field_name[2] == 'o') ||
@@ -518,9 +518,9 @@ Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
             {
                 group_name = "geophys_corr";
             }
-            const FString dataset_name("%s/%s", group_name, field_name);
+            const FString dataset_name("%s/%s", group_name, field_name.c_str());
             H5DArray* array = new H5DArray(info->reader->context, FString("%s/%s", info->prefix, dataset_name.c_str()).c_str(), 0, region.first_segment, region.num_segments);
-            const bool status = anc_geo_data->add(field_name, array);
+            const bool status = anc_geo_data->add(field_name.c_str(), array);
             if(!status) delete array;
             assert(status); // the dictionary add should never fail
         }
@@ -532,10 +532,10 @@ Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
         anc_ph_data = new H5DArrayDictionary(Icesat2Fields::EXPECTED_NUM_FIELDS);
         for(int i = 0; i < photon_fields.length(); i++)
         {
-            const char* field_name = photon_fields[i].c_str();
-            const FString dataset_name("heights/%s", field_name);
+            const string& field_name = photon_fields[i];
+            const FString dataset_name("heights/%s", field_name.c_str());
             H5DArray* array = new H5DArray(info->reader->context, FString("%s/%s", info->prefix, dataset_name.c_str()).c_str(), 0, region.first_photon,  region.num_photons);
-            const bool status = anc_ph_data->add(field_name, array);
+            const bool status = anc_ph_data->add(field_name.c_str(), array);
             if(!status) delete array;
             assert(status); // the dictionary add should never fail
         }
@@ -873,7 +873,7 @@ void Atl03Reader::YapcScore::yapcV2 (const info_t* info, const Region& region, c
     double nearest_neighbors[MAX_KNN];
 
     /* Shortcut to Settings */
-    YapcFields& settings = info->reader->parms->yapc;
+    const YapcFields& settings = info->reader->parms->yapc;
 
     /* Score Photons
      *
@@ -1038,7 +1038,7 @@ void Atl03Reader::YapcScore::yapcV2 (const info_t* info, const Region& region, c
 void Atl03Reader::YapcScore::yapcV3 (const info_t* info, const Region& region, const Atl03Data& atl03)
 {
     /* YAPC Parameters */
-    YapcFields settings = info->reader->parms->yapc;
+    const YapcFields settings = info->reader->parms->yapc;
     const double hWX = settings.win_x / 2; // meters
     const double hWZ = settings.win_h / 2; // meters
 
@@ -1209,7 +1209,7 @@ void* Atl03Reader::subsettingThread (void* parm)
     List<int32_t>* atl08_indices = NULL;      // used for ancillary data
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_subsetter", "{\"context\":\"%s\", \"track\":%d}", info->reader->context->name, info->track.value);
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_subsetter", "{\"context\":\"%s\", \"track\":%d}", info->reader->context->name, info->track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -1441,7 +1441,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                             .snowcover = snowcover_flag,
                             .atl08_class = static_cast<uint8_t>(atl08_class),
                             .atl03_cnf = atl03_cnf,
-                            .quality_ph = quality_ph,
+                            .quality_ph = static_cast<int8_t>(quality_ph),
                             .yapc_score = yapc_score
                         };
                         state.extent_photons.add(ph);

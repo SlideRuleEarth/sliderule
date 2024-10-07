@@ -414,10 +414,10 @@ Atl13Reader::Atl13Data::Atl13Data (const info_t* info, const Region& region):
     {
         for(int i = 0; i < anc_fields.length(); i++)
         {
-            const char* field_name = anc_fields[i].c_str();
-            const FString dataset_name("%s/%s", info->prefix, field_name);
+            const string& field_name = anc_fields[i];
+            const FString dataset_name("%s/%s", info->prefix, field_name.c_str());
             H5DArray* array = new H5DArray(info->reader->context, dataset_name.c_str(), 0, region.first_segment, region.num_segments);
-            const bool status = anc_data.add(field_name, array);
+            const bool status = anc_data.add(field_name.c_str(), array);
             if(!status) delete array;
             assert(status); // the dictionary add should never fail
         }
@@ -537,13 +537,13 @@ void* Atl13Reader::subsettingThread (void* parm)
                 vector<AncillaryFields::field_t> field_vec;
                 for(int i = 0; i < parms->atl13Fields.length(); i++)
                 {
-                    const char* field_name = parms->atl13Fields[i].c_str();
+                    const string& field_name = parms->atl13Fields[i];
 
                     AncillaryFields::field_t field;
                     field.anc_type = Icesat2Fields::ATL06_ANC_TYPE;
                     field.field_index = i;
-                    field.data_type = atl13.anc_data[field_name]->elementType();
-                    atl13.anc_data[field_name]->serialize(&field.value[0], segment, 1);
+                    field.data_type = atl13.anc_data[field_name.c_str()]->elementType();
+                    atl13.anc_data[field_name.c_str()]->serialize(&field.value[0], segment, 1);
 
                     field_vec.push_back(field);
                 }
