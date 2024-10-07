@@ -1058,8 +1058,6 @@ void* GeoIndexedRaster::unionThread(void* param)
     * NOTE: Using buffered points is significantly more computationally
     *       expensive than bounding boxes (10x slower).
     */
-    mlog(DEBUG, "Creating collection of bboxes from %d points, range: %d - %d",
-         um->pointsRange.end - um->pointsRange.start, um->pointsRange.start, um->pointsRange.end);
 
     const double startTime = TimeLib::latchtime();
 
@@ -1088,7 +1086,6 @@ void* GeoIndexedRaster::unionThread(void* param)
         geometryCollection.addGeometryDirectly(bboxPoly);
     }
     um->stats.points2polyTime = TimeLib::latchtime() - startTime;
-    mlog(DEBUG, "Creating collection took %.3lf seconds", um->stats.points2polyTime);
 
     CPLErrorReset();
     OGRGeometry* unionPolygon = geometryCollection.UnaryUnion();
@@ -1114,7 +1111,7 @@ void* GeoIndexedRaster::unionThread(void* param)
     }
 
     um->stats.unioningTime = TimeLib::latchtime() - startTime;
-    mlog(DEBUG, "Unioning all geometries took %.3lf seconds", um->stats.unioningTime);
+    // mlog(DEBUG, "Unioning geometries took %.3lf seconds", um->stats.unioningTime);
 
     /* Set the unioned polygon in the union maker object */
     um->unionPolygon = unionPolygon;
