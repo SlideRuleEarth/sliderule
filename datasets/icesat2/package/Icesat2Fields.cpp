@@ -45,9 +45,9 @@
 /*----------------------------------------------------------------------------
  * Constructor - YapcFields
  *----------------------------------------------------------------------------*/
-YapcFields::YapcFields(): 
+YapcFields::YapcFields():
     FieldDictionary({ {"score",     &score},
-                      {"version",   &version}, 
+                      {"version",   &version},
                       {"knn",       &knn},
                       {"min_knn",   &min_knn},
                       {"win_h",     &win_h},
@@ -71,13 +71,13 @@ void YapcFields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor - PhorealFields
  *----------------------------------------------------------------------------*/
-PhorealFields::PhorealFields(): 
+PhorealFields::PhorealFields():
     FieldDictionary({ {"binsize",           &binsize},
                       {"geoloc",            &geoloc},
                       {"use_abs_h",         &use_abs_h},
                       {"send_waveform",     &send_waveform},
                       {"above_classifier",  &above_classifier} }),
-    provided(false) 
+    provided(false)
 {
 }
 
@@ -105,10 +105,15 @@ void PhorealFields::fromLua (lua_State* L, int index)
 int Icesat2Fields::luaCreate (lua_State* L)
 {
     Icesat2Fields* icesat2_fields = NULL;
+
     try
     {
-        icesat2_fields = new Icesat2Fields(L, {});
+        const char* default_asset_name = LuaObject::getLuaString(L, 2, true, NULL);
+        const char* default_resource = LuaObject::getLuaString(L, 3, true, NULL);
+
+        icesat2_fields = new Icesat2Fields(L, default_asset_name, default_resource, {});
         icesat2_fields->fromLua(L, 1);
+
         return createLuaObject(L, icesat2_fields);
     }
     catch(const RunTimeException& e)
@@ -126,13 +131,9 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
 {
     RequestFields::fromLua(L, index);
 
-    // handle asset
-    asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(assetName.value.c_str(), Asset::OBJECT_TYPE));
-    if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", assetName.value.c_str());
-
     // handle signal confidence options
     if(atl03Cnf.providedAsSingle)
-    {        
+    {
         // when signal confidence is supplied as a single option
         // instead of setting only that option, treat it as a level
         // where every selection that is that option or above is set
@@ -191,8 +192,8 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Icesat2Fields::Icesat2Fields(lua_State* L, const std::initializer_list<FieldDictionary::entry_t>& init_list):
-    RequestFields (L, { {"asset",               &assetName},
+Icesat2Fields::Icesat2Fields(lua_State* L, const char* default_asset_name, const char* default_resource, const std::initializer_list<FieldDictionary::entry_t>& init_list):
+    RequestFields (L, { {"asset",               &asset},
                         {"resource",            &resource},
                         {"srt",                 &surfaceType},
                         {"pass_invalid",        &passInvalid},
@@ -222,21 +223,15 @@ Icesat2Fields::Icesat2Fields(lua_State* L, const std::initializer_list<FieldDict
                         {"rgt",                 &rgt},
                         {"cycle",               &cycle},
                         {"region",              &region},
-                        {"version",             &version} })
+                        {"version",             &version} }),
+    asset(default_asset_name),
+    resource(default_resource)
 {
     // add additional fields to dictionary
-    for(const FieldDictionary::entry_t elem: init_list) 
+    for(const FieldDictionary::entry_t elem: init_list)
     {
         fields.add(elem.name, elem);
     }
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-Icesat2Fields::~Icesat2Fields(void)
-{
-    if(asset) asset->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -409,7 +404,7 @@ void convertFromLua(lua_State* L, int index, PhorealFields::phoreal_geoloc_t& v)
     if(lua_isinteger(L, index))
     {
         v = static_cast<PhorealFields::phoreal_geoloc_t>(LuaObject::getLuaInteger(L, index));
-    }    
+    }
     else if(lua_isstring(L, index))
     {
         const char* fmt_str = LuaObject::getLuaString(L, index);
@@ -470,7 +465,7 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::signal_conf_t& v)
     if(lua_isinteger(L, index))
     {
         v = static_cast<Icesat2Fields::signal_conf_t>(LuaObject::getLuaInteger(L, index));
-    }    
+    }
     else if(lua_isstring(L, index))
     {
         const char* str = LuaObject::getLuaString(L, index);
@@ -545,7 +540,7 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::quality_ph_t& v)
     if(lua_isinteger(L, index))
     {
         v = static_cast<Icesat2Fields::quality_ph_t>(LuaObject::getLuaInteger(L, index));
-    }    
+    }
     else if(lua_isstring(L, index))
     {
         const char* str = LuaObject::getLuaString(L, index);
@@ -619,7 +614,7 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::atl08_class_t& v)
     if(lua_isinteger(L, index))
     {
         v = static_cast<Icesat2Fields::atl08_class_t>(LuaObject::getLuaInteger(L, index));
-    }    
+    }
     else if(lua_isstring(L, index))
     {
         const char* str = LuaObject::getLuaString(L, index);
@@ -696,7 +691,7 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::gt_t& v)
     if(lua_isinteger(L, index))
     {
         v = static_cast<Icesat2Fields::gt_t>(LuaObject::getLuaInteger(L, index));
-    }    
+    }
     else if(lua_isstring(L, index))
     {
         const char* str = LuaObject::getLuaString(L, index);
@@ -782,7 +777,7 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::spot_t& v)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid spot: %d", i);
         }
-    }    
+    }
     else if(!lua_isnil(L, index))
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "spot is an invalid type: %d", lua_type(L, index));
@@ -849,7 +844,7 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::surface_type_t& v)
     if(lua_isinteger(L, index))
     {
         v = static_cast<Icesat2Fields::surface_type_t>(LuaObject::getLuaInteger(L, index));
-    }    
+    }
     else if(lua_isstring(L, index))
     {
         const char* str = LuaObject::getLuaString(L, index);

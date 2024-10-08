@@ -29,16 +29,48 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __swot_plugin__
-#define __swot_plugin__
-
 /******************************************************************************
- * PROTOTYPES
+ * INCLUDE
  ******************************************************************************/
 
-extern "C" {
-void initswot (void);
-void deinitswot (void);
+#include "OsApi.h"
+#include "SwotFields.h"
+
+/******************************************************************************
+ * CLASS METHODS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * luaCreate - create(<parameter table>)
+ *----------------------------------------------------------------------------*/
+int SwotFields::luaCreate (lua_State* L)
+{
+    try
+    {
+        /* Check if Lua Table */
+        if(lua_type(L, 1) != LUA_TTABLE)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "SWOT parameters must be supplied as a lua table");
+        }
+
+        /* Return Request Parameter Object */
+        return createLuaObject(L, new SwotFields(L, 1));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        return returnLuaStatus(L, false);
+    }
 }
 
-#endif  /* __swot_plugin__ */
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+SwotFields::SwotFields(lua_State* L, int index):
+    RequestFields(L, {
+        {"asset",       &asset},
+        {"resource",    &resource},
+        {"variables",   &variables}
+    })
+{
+}

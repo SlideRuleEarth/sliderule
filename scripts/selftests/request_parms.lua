@@ -14,7 +14,7 @@ sys.setlvl(core.LOG, core.DEBUG)
 
 print('---------- Defaults ----------')
 
-local parms = core.rqstparms()
+local parms = core.parms()
 local ptable = parms:export()
 
 runner.check(ptable["rqst_timeout"] == core.RQST_TIMEOUT)
@@ -31,14 +31,14 @@ prettyprint.display(ptable)
 
 print('---------- Timeouts ----------')
 
-parms = core.rqstparms({timeout=400})
+parms = core.parms({timeout=400})
 ptable = parms:export()
 
 runner.check(ptable["rqst_timeout"] == 400)
 runner.check(ptable["node_timeout"] == 400)
 runner.check(ptable["read_timeout"] == 400)
 
-parms = core.rqstparms({rqst_timeout=400})
+parms = core.parms({rqst_timeout=400})
 ptable = parms:export()
 
 runner.check(ptable["rqst_timeout"] == 400)
@@ -49,7 +49,7 @@ runner.check(ptable["read_timeout"] == core.READ_TIMEOUT)
 
 print('---------- Cluster Size Hint ----------')
 
-parms = core.rqstparms({cluster_size_hint=9})
+parms = core.parms({cluster_size_hint=9})
 ptable = parms:export()
 
 runner.check(ptable["cluster_size_hint"] == 9)
@@ -64,11 +64,11 @@ local grandmesa = { {lon=-108.3435200747503, lat=38.89102961045247},
                     {lon=-108.3605610678553, lat=39.25086131372244},
                     {lon=-108.3435200747503, lat=38.89102961045247} }
 
-parms = core.rqstparms({polygon=grandmesa})
+parms = core.parms({poly=grandmesa})
 ptable = parms:export()
 
-runner.check(math.abs(ptable["polygon"][1]["lon"] - grandmesa[1]["lon"]) < 0.001)
-runner.check(math.abs(ptable["polygon"][1]["lat"] - grandmesa[1]["lat"]) < 0.001)
+runner.check(math.abs(ptable["poly"][1]["lon"] - grandmesa[1]["lon"]) < 0.001)
+runner.check(math.abs(ptable["poly"][1]["lat"] - grandmesa[1]["lat"]) < 0.001)
 
 runner.check(parms:poly(-108.0, 39.0))
 runner.check(not parms:poly(-110, 40.0))
@@ -79,7 +79,7 @@ print('---------- Region Mask ----------')
 
 local dicksonfjord = '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"coordinates":[[[-27.324285913258706,72.91303911622592],[-27.678594995289217,72.80131917669064],[-27.313299585132967,72.60615538614448],[-26.434393335133166,72.69461098330294],[-26.173468042164387,72.83782721550836],[-26.448126245289757,72.942067469947],[-27.324285913258706,72.91303911622592]]],"type":"Polygon"}}]}'
 
-parms = core.rqstparms({region_mask={geojson=dicksonfjord, cellsize=0.001}})
+parms = core.parms({region_mask={geojson=dicksonfjord, cellsize=0.001}})
 ptable = parms:export()
 
 runner.check(ptable["region_mask"]["rows"] == 335)

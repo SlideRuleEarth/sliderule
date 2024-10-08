@@ -105,19 +105,13 @@ struct RefractionFields: public FieldDictionary
 /**********************/
 struct UncertaintyFields: public FieldDictionary
 {
-    FieldElement<string>    assetKdName {"viirsj1-s3"}; // global water refractive index mask downloaded in atl24 init lua routine
-
-    Asset* assetKd {NULL};
+    AssetField assetKd {"viirsj1-s3"}; // global water refractive index mask downloaded in atl24 init lua routine
 
     UncertaintyFields(void):
-        FieldDictionary({ {"asset_kd",      &assetKdName} }) {
-        assetKd = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(assetKdName.value.c_str(), Asset::OBJECT_TYPE));
-        if(!assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", assetKdName.value.c_str());
+        FieldDictionary({ {"asset_kd", &assetKd} }) {
     };
 
-    virtual ~UncertaintyFields(void) override {
-        if(assetKd) assetKd->releaseLuaObject();
-    };
+    virtual ~UncertaintyFields(void) override = default;
 };
 
 /*******************/
@@ -320,7 +314,7 @@ class BathyFields: public Icesat2Fields
          * Methods
          *--------------------------------------------------------------------*/
 
-                BathyFields     (lua_State* L);
+                BathyFields     (lua_State* L, const char* default_asset_name, const char* default_resource);
         virtual ~BathyFields    (void) override = default;
 };
 

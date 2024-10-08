@@ -28,6 +28,7 @@ target_sources (slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/core.cpp
         ${CMAKE_CURRENT_LIST_DIR}/Asset.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/AssetField.cpp
         ${CMAKE_CURRENT_LIST_DIR}/CurlLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/EndpointProxy.cpp
@@ -55,7 +56,6 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/RegionMask.cpp
         ${CMAKE_CURRENT_LIST_DIR}/RequestFields.cpp
         ${CMAKE_CURRENT_LIST_DIR}/RequestMetrics.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/RequestParms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/SpatialIndex.cpp
         ${CMAKE_CURRENT_LIST_DIR}/StringLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/IntervalIndex.cpp
@@ -83,6 +83,7 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/core.h
         ${CMAKE_CURRENT_LIST_DIR}/Asset.h
+        ${CMAKE_CURRENT_LIST_DIR}/AssetField.h
         ${CMAKE_CURRENT_LIST_DIR}/AssetIndex.h
         ${CMAKE_CURRENT_LIST_DIR}/CurlLib.h
         ${CMAKE_CURRENT_LIST_DIR}/Dictionary.h
@@ -120,7 +121,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/RegionMask.h
         ${CMAKE_CURRENT_LIST_DIR}/RequestFields.h
         ${CMAKE_CURRENT_LIST_DIR}/RequestMetrics.h
-        ${CMAKE_CURRENT_LIST_DIR}/RequestParms.h
         ${CMAKE_CURRENT_LIST_DIR}/SpatialIndex.h
         ${CMAKE_CURRENT_LIST_DIR}/StringLib.h
         ${CMAKE_CURRENT_LIST_DIR}/Table.h

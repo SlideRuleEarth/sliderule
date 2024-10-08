@@ -38,14 +38,15 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "List.h"
-#include "RequestParms.h"
+#include "RequestFields.h"
+#include "AssetField.h"
+#include "FieldList.h"
 
 /******************************************************************************
- * SWOT PARAMETERS
+ * CLASS
  ******************************************************************************/
 
-class SwotParms: public RequestParms
+class SwotFields: public RequestFields
 {
     public:
 
@@ -53,30 +54,27 @@ class SwotParms: public RequestParms
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* _SELF;
-        static const char* VARIABLES;
         static const int64_t SWOT_SDP_EPOCH_GPS = 630720013; // seconds to add to SWOT times to get GPS times
-        static const int EXPECTED_NUM_FIELDS = 16;
-
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef List<string> string_list_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int      luaCreate           (lua_State* L);
-        static time8_t  deltatime2timestamp (double delta_time);
-        const char*     tojson              (void) const override;
+        static int luaCreate (lua_State* L);
+
+        // returns nanoseconds since Unix epoch, no leap seconds
+        inline time8_t deltatime2timestamp (double delta_time)
+        {
+            return TimeLib::gps2systimeex(delta_time + (double)SWOT_SDP_EPOCH_GPS);
+        }
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        string_list_t       variables;
+        AssetField              asset;
+        FieldElement<string>    resource;
+        FieldList<string>       variables;
 
     private:
 
@@ -84,10 +82,8 @@ class SwotParms: public RequestParms
          * Methods
          *--------------------------------------------------------------------*/
 
-                            SwotParms           (lua_State* L, int index);
-                            ~SwotParms          (void) override;
-        void                cleanup             (void);
-        static void         get_lua_string_list (lua_State* L, int index, string_list_t& string_list, bool* provided);
+        SwotFields  (lua_State* L, int index);
+        ~SwotFields (void) override = default;
 };
 
 #endif  /* __swot_parms__ */

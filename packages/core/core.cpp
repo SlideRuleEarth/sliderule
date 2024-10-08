@@ -64,7 +64,7 @@
 #include "RegionMask.h"
 #include "RequestFields.h"
 #include "RequestMetrics.h"
-#include "RequestParms.h"
+#include "RequestFields.h"
 #include "SpatialIndex.h"
 #include "StringLib.h"
 #include "Table.h"
@@ -142,8 +142,7 @@ static int core_open (lua_State *L)
         {"psauth",          ProvisioningSystemLib::Authenticator::luaCreate},
         {"pmonitor",        PublishMonitor::luaCreate},
         {"mmonitor",        MetricMonitor::luaCreate},
-        {"rqstparms",       RequestFields::luaCreate},
-        {"parms",           RequestParms::luaCreate},
+        {"parms",           RequestFields::luaCreate},
 #ifdef __unittesting__
         {"ut_dictionary",   UT_Dictionary::luaCreate},
         {"ut_field",        UT_Field::luaCreate},
@@ -204,11 +203,10 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "TIME8",                    RecordObject::TIME8);
     LuaEngine::setAttrInt   (L, "STRING",                   RecordObject::STRING);
     LuaEngine::setAttrInt   (L, "USER",                     RecordObject::USER);
-    LuaEngine::setAttrStr   (L, "PARMS",                    RequestParms::SELF);
-    LuaEngine::setAttrInt   (L, "RQST_TIMEOUT",             RequestParms::DEFAULT_RQST_TIMEOUT);
-    LuaEngine::setAttrInt   (L, "NODE_TIMEOUT",             RequestParms::DEFAULT_NODE_TIMEOUT);
-    LuaEngine::setAttrInt   (L, "READ_TIMEOUT",             RequestParms::DEFAULT_READ_TIMEOUT);
-    LuaEngine::setAttrInt   (L, "CLUSTER_SIZE_HINT",        RequestParms::DEFAULT_CLUSTER_SIZE_HINT);
+    LuaEngine::setAttrInt   (L, "RQST_TIMEOUT",             RequestFields::DEFAULT_TIMEOUT);
+    LuaEngine::setAttrInt   (L, "NODE_TIMEOUT",             RequestFields::DEFAULT_TIMEOUT);
+    LuaEngine::setAttrInt   (L, "READ_TIMEOUT",             RequestFields::DEFAULT_TIMEOUT);
+    LuaEngine::setAttrInt   (L, "CLUSTER_SIZE_HINT",        0);
     LuaEngine::setAttrInt   (L, "MAX_LOCKS_PER_NODE",       OrchestratorLib::MAX_LOCKS_PER_NODE);
     LuaEngine::setAttrInt   (L, "INVALID_TX_ID",            OrchestratorLib::INVALID_TX_ID);
     LuaEngine::setAttrStr   (L, "TERMINATE",                GeoDataFrame::TERMINATE);
@@ -249,7 +247,7 @@ void initcore (void)
     ProvisioningSystemLib::init();
 #ifdef __unittesting__
     UT_TimeLib::init();
-#endif    
+#endif
 
     /* Register IO Drivers */
     Asset::registerDriver("nil", Asset::IODriver::create);

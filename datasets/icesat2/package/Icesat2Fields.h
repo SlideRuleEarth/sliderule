@@ -39,7 +39,7 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "EndpointProxy.h"
-#include "List.h"
+#include "AssetField.h"
 #include "MathLib.h"
 #include "RequestFields.h"
 #include "FieldElement.h"
@@ -317,7 +317,7 @@ class Icesat2Fields: public RequestFields
          * Data
          *--------------------------------------------------------------------*/
 
-        FieldElement<string>                                assetName {"icesat2"};                                  // name of Asset in asset dictionary to user for granules
+        AssetField                                          asset;                                                  // name of Asset in asset dictionary to use for granules
         FieldElement<string>                                resource;                                               // granule name (including file extension)
         FieldElement<surface_type_t>                        surfaceType {SRT_LAND_ICE};                             // surface reference type (used to select signal confidence column)
         FieldElement<bool>                                  passInvalid {false};                                    // post extent even if each pair is invalid
@@ -349,7 +349,6 @@ class Icesat2Fields: public RequestFields
         FieldElement<int>                                   region;                                                 // ATL03 granule region
         FieldElement<int>                                   version;                                                // ATL03 granule version
 
-        Asset* asset {NULL};
         bool stages[NUM_STAGES] = {true, false, false, false};
 
     protected:
@@ -358,8 +357,8 @@ class Icesat2Fields: public RequestFields
          * Methods
          *--------------------------------------------------------------------*/
 
-                Icesat2Fields   (lua_State* L, const std::initializer_list<FieldDictionary::entry_t>& init_list);
-        virtual ~Icesat2Fields  (void) override;
+                Icesat2Fields   (lua_State* L, const char* default_asset_name, const char* default_resource, const std::initializer_list<FieldDictionary::entry_t>& init_list);
+        virtual ~Icesat2Fields  (void) override = default;
 
         void parseResource (void);
 };

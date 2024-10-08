@@ -149,7 +149,7 @@ bool FieldEnumeration<T,N>::enabled(int i) const
 {
     if(i < 0 || i >= N)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "index out of bounds: %d", index);
+        return false;
     }
     return values[i];
 }
@@ -266,7 +266,7 @@ int FieldEnumeration<T,N>::toLua (lua_State* L, long key) const
  * fromLua
  *----------------------------------------------------------------------------*/
 template <class T, int N>
-void FieldEnumeration<T,N>::fromLua (lua_State* L, int index) 
+void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
 {
     T selection;
 

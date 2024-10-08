@@ -117,8 +117,6 @@ class BathyViewer: public LuaObject
         Mutex               threadMut;
         int                 threadCount;
         int                 numComplete;
-        Asset*              asset;
-        const char*         resource;
         const int           read_timeout_ms;
         Icesat2Fields*      parms;
 
@@ -136,7 +134,7 @@ class BathyViewer: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            BathyViewer            (lua_State* L, Asset* _asset, const char* _resource, Icesat2Fields* _parms);
+                            BathyViewer            (lua_State* L, Icesat2Fields* _parms);
                             ~BathyViewer           (void) override;
 
         static void*        subsettingThread        (void* parm);

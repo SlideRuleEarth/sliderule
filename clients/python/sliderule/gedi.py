@@ -41,9 +41,6 @@ from sliderule import earthdata, logger
 # profiling times for each major function
 profiles = {}
 
-# gedi parameters
-ALL_BEAMS = -1
-
 ###############################################################################
 # LOCAL FUNCTIONS
 ###############################################################################

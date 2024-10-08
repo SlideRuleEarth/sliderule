@@ -372,7 +372,6 @@ class TestParquet:
             "poly": region["poly"],
             "degrade_flag": 0,
             "l2_quality_flag": 1,
-            "beam": gedi.ALL_BEAMS,
             "output": { "path": "testfile12.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = gedi.gedi02ap(parms, resources=[resource])
         os.remove("testfile12.parquet")
@@ -388,7 +387,6 @@ class TestParquet:
             "poly": region["poly"],
             "degrade_flag": 0,
             "l2_quality_flag": 1,
-            "beam": gedi.ALL_BEAMS,
             "output": { "path": "testfile13.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = gedi.gedi04ap(parms, resources=[resource])
         os.remove("testfile13.parquet")

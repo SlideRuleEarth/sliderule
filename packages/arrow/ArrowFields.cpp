@@ -65,7 +65,7 @@ ArrowFields::ArrowFields (void):
  *----------------------------------------------------------------------------*/
 void ArrowFields::fromLua (lua_State* L, int index)
 {
-    FieldDictionary::fromLua(L, index);    
+    FieldDictionary::fromLua(L, index);
 
     // check format
     if(format.value == ArrowFields::PARQUET && asGeo)
@@ -83,9 +83,12 @@ void ArrowFields::fromLua (lua_State* L, int index)
     {
         /* Get Asset */
         Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(assetName.value.c_str(), Asset::OBJECT_TYPE));
-        region = asset->getRegion();
-        credentials = CredentialStore::get(asset->getIdentity());
-        asset->releaseLuaObject();
+        if(asset)
+        {
+            region = asset->getRegion();
+            credentials = CredentialStore::get(asset->getIdentity());
+            asset->releaseLuaObject();
+        }
     }
     #endif
 }
@@ -134,7 +137,7 @@ void convertFromLua(lua_State* L, int index, ArrowFields::format_t& v)
     if(lua_isinteger(L, index))
     {
         v = static_cast<ArrowFields::format_t>(LuaObject::getLuaInteger(L, index));
-    }    
+    }
     else if(lua_isstring(L, index))
     {
         const char* str = LuaObject::getLuaString(L, index);

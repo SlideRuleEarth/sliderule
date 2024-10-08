@@ -29,76 +29,45 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __aoi_metrics__
-#define __aoi_metrics__
+#ifndef __asset_field__
+#define __asset_field__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "MathLib.h"
-#include "RequestFields.h"
+#include "Asset.h"
+#include "Field.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class RequestMetrics
+class AssetField: public Field
 {
     public:
 
         /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const int MAX_POINTS_IN_POLY = 10;
-
-         /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef enum {
-            REGION_CONTINENTAL_US = 0,
-            REGION_ALASKA = 1,
-            REGION_CANADA = 2,
-            REGION_GREENLAND = 3,
-            REGION_CENTRAL_AMERICA = 4,
-            REGION_SOUTH_AMERICA = 5,
-            REGION_AFRICA = 6,
-            REGION_MIDDLE_EAST = 7,
-            REGION_EUROPE = 8,
-            REGION_NORTH_ASIA = 9,
-            REGION_SOUTH_ASIA = 10,
-            REGION_OCEANIA = 11,
-            REGION_ANTARCTICA = 12,
-            REGION_UNKNOWN = 13,
-            NUM_REGIONS = 14
-        } regions_t;
-
-        typedef struct {
-            const char* name;
-            MathLib::proj_t proj;
-            MathLib::coord_t coords[MAX_POINTS_IN_POLY];
-            MathLib::point_t points[MAX_POINTS_IN_POLY];
-            int num_points;
-        } region_t;
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static bool         init            (void);
-        static regions_t    getRegion       (RequestFields* parms);
+                    AssetField          (void);
+                    AssetField          (const char* asset_name);
+                    ~AssetField         (void) override;
 
-    private:
+        const char* getName             (void) const;
+
+        string      toJson              (void) const override;
+        int         toLua               (lua_State* L) const override;
+        void        fromLua             (lua_State* L, int index) override;
+
 
         /*--------------------------------------------------------------------
-         * Methods
+         * Data
          *--------------------------------------------------------------------*/
 
-        static region_t*    region2struct   (regions_t region);
-        static bool         checkRegion     (MathLib::coord_t coord, regions_t r);
+        Asset* asset;
 };
 
-#endif  /* __aoi_metrics__ */
+#endif  /* __asset_field__ */

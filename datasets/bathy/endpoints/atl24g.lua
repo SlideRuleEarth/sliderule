@@ -6,7 +6,7 @@ local json          = require("json")
 local earthdata     = require("earth_data_query")
 local runner        = require("container_runtime")
 local rqst          = json.decode(arg[1])
-local parms         = bathy.parms(rqst["parms"])
+local parms         = bathy.parms(rqst["parms"], "icesat2", rqst["resource"])
 local resource      = parms["resource"]
 local timeout       = parms["node_timeout"]
 local userlog       = msg.publish(rspq) -- create user log publisher (alerts)
@@ -16,7 +16,7 @@ local profile       = {} -- timing profiling table
 local start_time    = time.gps() -- used for timeout handling
 
 -------------------------------------------------------
--- function: cleanup 
+-- function: cleanup
 -------------------------------------------------------
 local function cleanup(_crenv, _transaction_id)
     runner.cleanup(_crenv) -- container runtime environment
@@ -313,7 +313,7 @@ runner.wait(container, timeout)
 arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_filename, arrow.parms(parms["output"]), rspq)
 
 -------------------------------------------------------
--- exit 
+-- exit
 -------------------------------------------------------
 cleanup(crenv, transaction_id)
 
