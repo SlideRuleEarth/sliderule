@@ -286,8 +286,6 @@ class GeoIndexedRaster: public RasterObject
         static void*    batchReaderThread   (void *param);
         static void*    unionThread         (void* param);
 
-        static void     queryCallback       (void* item, void* userdata);
-        static std::vector<OGRFeature*> queryRTreeWithPoint(OGRPoint* ogrPoint, GEOSSTRtree* rtree, GEOSContextHandle_t geosContext);
         static void*    groupsFinderThread  (void *param);
 
         bool            createReaderThreads (uint32_t  rasters2sample);
