@@ -39,6 +39,7 @@
 #include "GdalRaster.h"
 #include "RasterObject.h"
 #include "Ordering.h"
+#include "GeoRtree.h"
 #include <unordered_map>
 #include <set>
 
@@ -74,11 +75,7 @@ class GeoIndexedRaster: public RasterObject
 
         typedef struct {
             OGRPoint                    point;
-            int64_t                     index;
-        } ogr_point_info_t;
-
-        typedef struct {
-            ogr_point_info_t            pointInfo;
+                     int64_t            pointIndex;
             RasterSample*               sample;
             bool                        sampleReturned;
             uint32_t                    ssErrors;
@@ -145,11 +142,10 @@ class GeoIndexedRaster: public RasterObject
 
         typedef RasterObject::range_t range_t;
         typedef struct Finder {
-            OGRGeometry*                  geo;
-            std::vector<OGRFeature*>*     featuresList;
-            std::vector<rasters_group_t*> rasterGroups;
-            explicit Finder(OGRGeometry* geo, std::vector<OGRFeature*>* _featuresList);
-                    ~Finder(void);
+            const OGRGeometry*              geo;
+            const std::vector<OGRFeature*>* featuresList;
+            std::vector<rasters_group_t*>   rasterGroups;
+            explicit Finder(const OGRGeometry* geo, const std::vector<OGRFeature*>* _featuresList);
         } finder_t;
 
 
@@ -169,7 +165,8 @@ class GeoIndexedRaster: public RasterObject
         } union_maker_t;
 
         typedef struct {
-            ogr_point_info_t   pointInfo;
+            OGRPoint           point;
+            int64_t            pointIndex;
             GroupOrdering*     groupList;
         } point_groups_t;
 
@@ -195,7 +192,6 @@ class GeoIndexedRaster: public RasterObject
         uint32_t        getSamples        (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) final;
         uint32_t        getSamples        (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) final;
         uint32_t        getSubsets        (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) final;
-                       ~GeoIndexedRaster  (void) override;
 
     protected:
 
@@ -224,7 +220,6 @@ class GeoIndexedRaster: public RasterObject
         virtual bool     findRasters           (finder_t* finder) = 0;
         void             sampleRasters         (OGRGeometry* geo);
         bool             sample                (OGRGeometry* geo, int64_t gps, GroupOrdering* groupList);
-        void             emptyFeaturesList     (void);
 
         /*--------------------------------------------------------------------
          * Data
@@ -261,7 +256,7 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        std::vector<OGRFeature*> featuresList;
+        GeoRtree                 geoRtree;
         OGRPolygon               geoIndexPoly;
 
         List<reader_t*>           readers;

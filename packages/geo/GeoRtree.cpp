@@ -35,7 +35,7 @@
 
 #include "GeoRtree.h"
 #include "GdalRaster.h"
-
+#include <algorithm>
 
 /******************************************************************************
  * STATIC DATA
@@ -85,47 +85,67 @@ GeoRtree::~GeoRtree(void)
 /*----------------------------------------------------------------------------
  * query
  *----------------------------------------------------------------------------*/
-void GeoRtree::query(const OGRPoint* ogrPoint, std::vector<OGRFeature*>& resultFeatures)
+void GeoRtree::query(const OGRGeometry* geo, std::vector<OGRFeature*>& resultFeatures, bool sorted)
 {
     /* Use the default GEOS context */
-    query(ogrPoint, geosContext, resultFeatures);
+    query(geo, geosContext, resultFeatures, sorted);
 }
 
 /*----------------------------------------------------------------------------
  * query
  *----------------------------------------------------------------------------*/
-void GeoRtree::query(const OGRPoint* ogrPoint, GEOSContextHandle_t context,
-                     std::vector<OGRFeature*>& resultFeatures)
+void GeoRtree::query(const OGRGeometry* geo, GEOSContextHandle_t context,
+                     std::vector<OGRFeature*>& resultFeatures, bool sorted)
 {
-    /* Convert OGRPoint to GEOSGeometry */
-    GEOSGeometry* geosPoint = ogrPoint->exportToGEOS(context);
-    if (geosPoint == NULL)
+    /* Convert OGRGeometry to GEOSGeometry */
+    GEOSGeometry* geos = geo->exportToGEOS(context);
+    if (geos == NULL)
     {
         mlog(ERROR, "Failed to convert OGRPoint to GEOSGeometry");
         return;
     }
 
-    /* Get the envelope of the GEOS point for the R-tree query */
-    GEOSGeometry* geosEnvelope = GEOSEnvelope_r(context, geosPoint);
+    /* Get the envelope of the GEOS geometry for the R-tree query */
+    GEOSGeometry* geosEnvelope = GEOSEnvelope_r(context, geos);
     if (geosEnvelope == NULL)
     {
         mlog(ERROR, "Failed to get envelope of GEOS point");
-        GEOSGeom_destroy_r(context, geosPoint);
+        GEOSGeom_destroy_r(context, geos);
         return;
     }
 
+
     /* Query the R-tree using the envelope of the point */
-    GEOSSTRtree_query_r(context, rtree, geosEnvelope, queryCallback, &resultFeatures);
+    std::vector<FeatureIndexPair*> resultPairs;
+    GEOSSTRtree_query_r(context, rtree, geosEnvelope, queryCallback, &resultPairs);
+
+    // mlog(DEBUG, "Found %zu features for query", resultPairs.size());
+
+    if(sorted)
+    {
+        /*
+         * The pairs are sorted by index and features are returned in the same order as they were inserted into the R-tree.
+         * Testing showed that supported data sets return 1 or 2 features per query for a point geometry
+         */
+        std::sort(resultPairs.begin(), resultPairs.end(),
+            [](const FeatureIndexPair* a, const FeatureIndexPair* b) { return a->index < b->index; });
+    }
+
+    /* Extract the features from the sorted pairs */
+    for (FeatureIndexPair* pair : resultPairs)
+    {
+        resultFeatures.push_back(pair->feature);
+    }
 
     /* Cleanup */
-    GEOSGeom_destroy_r(context, geosPoint);
+    GEOSGeom_destroy_r(context, geos);
     GEOSGeom_destroy_r(context, geosEnvelope);
 }
 
 /*----------------------------------------------------------------------------
  * insert
  *----------------------------------------------------------------------------*/
-bool GeoRtree::insert(OGRFeature* feature, bool asBbox)
+bool GeoRtree::insert(OGRFeature* feature)
 {
     /* Clone the feature */
     OGRFeature* clonedFeature = feature->Clone();
@@ -148,63 +168,33 @@ bool GeoRtree::insert(OGRFeature* feature, bool asBbox)
         mlog(DEBUG, "Created R-tree with node capacity: %u", nodeCapacity);
     }
 
-    /* Get the geometry of the cloned feature */
-    OGRGeometry* geometry = clonedFeature->GetGeometryRef();
-    if(geometry == NULL)
+
+    /* Create a bounding box polygon from the feature's polygon
+     * This is more efficient for R-tree queries but less accurate
+     */
+    OGREnvelope envelope;
+    clonedFeature->GetGeometryRef()->getEnvelope(&envelope);
+    const OGRPolygon bbox = GdalRaster::makeRectangle(envelope.MinX, envelope.MinY, envelope.MaxX, envelope.MaxY);
+
+    /* Convert OGRGeometry to GEOSGeometry */
+    GEOSGeometry* geosBbox = bbox.exportToGEOS(geosContext);
+    if(geosBbox == NULL)
     {
+        mlog(CRITICAL, "Failed to convert OGRPolygon to GEOSGeometry");
         OGRFeature::DestroyFeature(clonedFeature);
-        mlog(ERROR, "Feature has no geometry");
         return false;
     }
 
-    bool status = false;
+    /* Insert the bounding box into the R-tree, use the feature index pair as the item */
+    FeatureIndexPair* featurePair = new FeatureIndexPair(clonedFeature, ogrFeaturePairs.size());
+    GEOSSTRtree_insert_r(geosContext, rtree, geosBbox, static_cast<void*>(featurePair));
+    geosGeometries.push_back(geosBbox);
+    ogrFeaturePairs.push_back(featurePair);
 
-    if(asBbox)
-    {
-        /* Create a bounding box polygon from the feature's polygon
-         * This is more efficient for R-tree queries but less accurate
-         */
-        OGREnvelope envelope;
-        clonedFeature->GetGeometryRef()->getEnvelope(&envelope);
-        const OGRPolygon bbox = GdalRaster::makeRectangle(envelope.MinX, envelope.MinY, envelope.MaxX, envelope.MaxY);
+    /* Number of geos geometries should match number of ogr feature pairs */
+    assert(geosGeometries.size() == ogrFeaturePairs.size());
 
-        /* Convert OGRGeometry to GEOSGeometry */
-        GEOSGeometry* geosBbox = bbox.exportToGEOS(geosContext);
-        if(geosBbox != NULL)
-        {
-            /* Insert the bounding box into the R-tree, use the feature as the item */
-            GEOSSTRtree_insert_r(geosContext, rtree, geosBbox, static_cast<void*>(clonedFeature));
-            geosGeometries.push_back(geosBbox);
-            ogrFeatures.push_back(clonedFeature);
-            status = true;
-        }
-    }
-    else
-    {
-        /* Use the feature's geometry */
-        GEOSGeometry* geosGeometry = geometry->exportToGEOS(geosContext);
-        if(geosGeometry != NULL)
-        {
-            /* Insert the geometry into the R-tree, use the feature as the item */
-            GEOSSTRtree_insert_r(geosContext, rtree, geosGeometry, static_cast<void*>(clonedFeature));
-
-            /* Save the geometry and feature for later cleanup */
-            geosGeometries.push_back(geosGeometry);
-            ogrFeatures.push_back(clonedFeature);
-            status = true;
-        }
-    }
-
-    if(status == false)
-    {
-        mlog(ERROR, "Failed to insert feature into R-tree");
-        OGRFeature::DestroyFeature(clonedFeature);
-    }
-
-    /* Number of geos geometries should match number of ogr features */
-    assert(geosGeometries.size() == ogrFeatures.size());
-
-    return status;
+    return true;
 }
 
 /*----------------------------------------------------------------------------
@@ -223,12 +213,13 @@ void GeoRtree::clear(void)
     GEOSSTRtree_destroy_r(geosContext, rtree);
     rtree = NULL;
 
-    /* Cleanup ogr features list */
-    for(OGRFeature* feature : ogrFeatures)
+    /* Cleanup ogr feature pairs */
+    for(FeatureIndexPair* fp : ogrFeaturePairs)
     {
-        OGRFeature::DestroyFeature(feature);
+        OGRFeature::DestroyFeature(fp->feature);
+        delete fp;
     }
-    ogrFeatures.clear();
+    ogrFeaturePairs.clear();
 }
 
 /*----------------------------------------------------------------------------
@@ -240,8 +231,7 @@ bool GeoRtree::empty(void)
      * vectors are used to keep track of the geometries and features
      * inserted into the R-tree, they must be the same size
      */
-    assert(geosGeometries.size() == ogrFeatures.size());
-
+    assert(geosGeometries.size() == ogrFeaturePairs.size());
     return geosGeometries.empty();
 }
 
@@ -254,8 +244,10 @@ bool GeoRtree::empty(void)
  *----------------------------------------------------------------------------*/
 void GeoRtree::queryCallback(void* item, void* userdata)
 {
-    /* 'item' is a pointer to the OGRFeature in the R-tree */
-    OGRFeature* feature = static_cast<OGRFeature*>(item);
-    std::vector<OGRFeature*>* resultFeatures = static_cast<std::vector<OGRFeature*>*>(userdata);
-    resultFeatures->push_back(feature);
+    /* 'item' is a pointer to the FeatureIndexPair in the R-tree */
+    FeatureIndexPair* featurePair = static_cast<FeatureIndexPair*>(item);
+
+    /* Cast userdata to a vector of FeatureIndexPair* and store the pair */
+    std::vector<FeatureIndexPair*>* resultPairs = static_cast<std::vector<FeatureIndexPair*>*>(userdata);
+    resultPairs->push_back(featurePair);
 }

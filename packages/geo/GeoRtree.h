@@ -64,25 +64,36 @@ public:
     explicit GeoRtree(uint32_t nodeCapacity = 10);
             ~GeoRtree(void);
 
-    void query(const OGRPoint* ogrPoint, std::vector<OGRFeature*>& resultFeatures);
-    void query(const OGRPoint* ogrPoint, GEOSContextHandle_t geosContext, std::vector<OGRFeature*>& resultFeatures);
+    void query (const OGRGeometry* geo, std::vector<OGRFeature*>& resultFeatures, bool sorted = true);
+    void query (const OGRGeometry* geo, GEOSContextHandle_t geosContext, std::vector<OGRFeature*>& resultFeatures, bool sorted = true);
 
-    bool insert(OGRFeature* feature, bool asBbox = true);
-    void clear(void);
-    bool empty(void);
+    bool insert(OGRFeature* feature);
+    void clear (void);
+    bool empty (void);
+    uint32_t size(void) const { return geosGeometries.size(); }
 
 
 private:
+
+    /*--------------------------------------------------------------------
+     * Typedefs
+     *--------------------------------------------------------------------*/
+    struct FeatureIndexPair {
+        OGRFeature* feature;
+        uint32_t    index;
+
+        FeatureIndexPair(OGRFeature* _feature, uint32_t _index) : feature(_feature), index(_index) {}
+    };
 
     /*--------------------------------------------------------------------
     * Data
     *--------------------------------------------------------------------*/
 
     GEOSSTRtree* rtree;
-    GEOSContextHandle_t        geosContext;
-    std::vector<GEOSGeometry*> geosGeometries;
-    std::vector<OGRFeature*>   ogrFeatures;
-    uint32_t                   nodeCapacity;
+    GEOSContextHandle_t            geosContext;
+    std::vector<GEOSGeometry*>     geosGeometries;
+    std::vector<FeatureIndexPair*> ogrFeaturePairs;
+    uint32_t                       nodeCapacity;
 
     /*--------------------------------------------------------------------
     * Methods

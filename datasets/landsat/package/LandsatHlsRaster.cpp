@@ -359,7 +359,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
             /* Get the sample for this point from unique raster */
             for(const point_sample_t& ps : ur->pointSamples)
             {
-                if(ps.pointInfo.index == pointIndx)
+                if(ps.pointIndex == pointIndx)
                 {
                     /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
                     if(ps.sample == NULL) break;

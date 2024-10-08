@@ -35,7 +35,6 @@
 
 #include "GeoRaster.h"
 #include "GeoIndexedRaster.h"
-#include "GeoRtree.h"
 
 #include <algorithm>
 #include <gdal.h>
@@ -94,19 +93,10 @@ GeoIndexedRaster::Reader::~Reader (void)
 /*----------------------------------------------------------------------------
  * Finder Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::Finder::Finder (OGRGeometry* _geo, std::vector<OGRFeature*>* _featuresList):
+GeoIndexedRaster::Finder::Finder (const OGRGeometry* _geo, const std::vector<OGRFeature*>* _featuresList):
     geo(_geo),
     featuresList(_featuresList)
 {
-}
-
-/*----------------------------------------------------------------------------
- * Finder Destructor
- *----------------------------------------------------------------------------*/
-GeoIndexedRaster::Finder::~Finder (void)
-{
-    /* geometry geo is cloned not 'newed' on GDAL heap. Use this call to free it */
-    OGRGeometryFactory::destroyGeometry(geo);
 }
 
 /*----------------------------------------------------------------------------
@@ -360,14 +350,6 @@ uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t g
     return ssErrors;
 }
 
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-GeoIndexedRaster::~GeoIndexedRaster(void)
-{
-    emptyFeaturesList();
-}
-
 /******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
@@ -442,7 +424,7 @@ uint32_t GeoIndexedRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
         /* Get the sample for this point from unique raster */
         for(point_sample_t& ps : ur->pointSamples)
         {
-            if(ps.pointInfo.index == pointIndx)
+            if(ps.pointIndex == pointIndx)
             {
                 /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
                 if(ps.sample == NULL) break;
@@ -493,7 +475,7 @@ uint32_t GeoIndexedRaster::getBatchGroupFlags(const rasters_group_t* rgroup, uin
         /* Get the sample for this point from unique raster */
         for(const point_sample_t& ps : ur->pointSamples)
         {
-            if(ps.pointInfo.index == pointIndx)
+            if(ps.pointIndex == pointIndx)
             {
                 /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
                 if(ps.sample)
@@ -656,13 +638,13 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
     getIndexFile(geo, newFile, points);
 
     /* Trying to open the same file? */
-    if(!featuresList.empty() && newFile == indexFile)
+    if(!geoRtree.empty() && newFile == indexFile)
         return true;
 
     GDALDataset* dset = NULL;
     try
     {
-        emptyFeaturesList();
+        geoRtree.clear();
         geoIndexPoly.empty();
 
         /* Open new vector data set*/
@@ -684,7 +666,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
         }
 
         /*
-         * Clone features and store them for performance/speed of feature lookup
+         * Insert features into R-tree after applying temporal filter
          */
         layer->ResetReading();
         while(OGRFeature* feature = layer->GetNextFeature())
@@ -701,14 +683,12 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
                 }
             }
 
-            /* Clone feature and store it */
-            OGRFeature* fp = feature->Clone();
-            featuresList.push_back(fp);
+            /* Insert feature into tree */
+            geoRtree.insert(feature);
+
+            /* Destroy feature, R-tree has its own copy */
             OGRFeature::DestroyFeature(feature);
         }
-
-        /* Reduce memory footprint */
-        featuresList.shrink_to_fit();
 
         cols = dset->GetRasterXSize();
         rows = dset->GetRasterYSize();
@@ -728,13 +708,13 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
             mlog(DEBUG, "index file extent/bbox: (%.6lf, %.6lf), (%.6lf, %.6lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
         }
 
+        mlog(DEBUG, "Loaded %lld features from: %s", layer->GetFeatureCount(), newFile.c_str());
         GDALClose((GDALDatasetH)dset);
-        mlog(DEBUG, "Loaded %ld features from: %s", featuresList.size(), newFile.c_str());
     }
     catch (const RunTimeException &e)
     {
         if(dset) GDALClose((GDALDatasetH)dset);
-        emptyFeaturesList();
+        geoRtree.clear();
         ssErrors |= SS_INDEX_FILE_ERROR;
         return false;
     }
@@ -799,7 +779,12 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps, GroupOrdering* grou
     }
 
     /* Find rasters that intersect with the geometry */
-    finder_t finder(geo->clone(), &featuresList);
+    std::vector<OGRFeature*> foundFeatures;
+
+    /* Query the R-tree with the OGRPoint and get the result features */
+    geoRtree.query(geo, foundFeatures);
+
+    finder_t finder(geo, &foundFeatures);
     if(!findRasters(&finder))
         return false;
 
@@ -826,21 +811,6 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps, GroupOrdering* grou
     return true;
 }
 
-
-/*----------------------------------------------------------------------------
- * emptyFeaturesList
- *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::emptyFeaturesList(void)
-{
-    if(featuresList.empty()) return;
-
-    for(unsigned i = 0; i < featuresList.size(); i++)
-    {
-        OGRFeature* feature = featuresList[i];
-        OGRFeature::DestroyFeature(feature);
-    }
-    featuresList.clear();
-}
 
 /******************************************************************************
  * PRIVATE METHODS
@@ -1027,7 +997,7 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
             /* Sample all points for this raster */
             for(point_sample_t& ps : ur->pointSamples)
             {
-                ps.sample = raster->samplePOI(&ps.pointInfo.point);
+                ps.sample = raster->samplePOI(&ps.point);
                 ps.ssErrors |= raster->getSSerror();
             }
 
@@ -1129,18 +1099,13 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
 {
     groups_finder_t* gf = static_cast<groups_finder_t*>(param);
 
-    /* Create an R-tree for the features */
-    GeoRtree rtree;
-    const uint32_t size = gf->obj->featuresList.size();
-    for(uint32_t i = 0; i < size; i++)
-    {
-        OGRFeature* feature = gf->obj->featuresList[i];
-        rtree.insert(feature);
-    }
+    /* Thread must initialize GEOS context */
+    GEOSContextHandle_t threadGeosContext = GeoRtree::init();
 
     const uint32_t start = gf->pointsRange.start;
     const uint32_t end = gf->pointsRange.end;
-    mlog(DEBUG, "Finding groups for points range: %u - %u, features cloned: %u", start, end, size);
+
+    mlog(DEBUG, "Finding groups for points range: %u - %u", start, end);
 
     for(uint32_t i = start; i < end; i++)
     {
@@ -1151,19 +1116,34 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         }
 
         const point_info_t& pinfo = gf->points->at(i);
-        OGRPoint* ogrPoint = new OGRPoint(pinfo.point.x, pinfo.point.y, pinfo.point.z);
+        const OGRPoint ogrPoint(pinfo.point.x, pinfo.point.y, pinfo.point.z);
 
-        std::vector<OGRFeature*> foundFeatures;
 
         /* Query the R-tree with the OGRPoint and get the result features */
-        rtree.query(ogrPoint, foundFeatures);
+        std::vector<OGRFeature*> foundFeatures;
+        gf->obj->geoRtree.query(&ogrPoint, threadGeosContext, foundFeatures);
         // mlog(DEBUG, "Found %zu features for point %u", foundFeatures.size(), i);
 
+        /* Clone found features since OGRFeature is not thread safe */
+        std::vector<OGRFeature*> localFeatures;
+        localFeatures.reserve(foundFeatures.size());
+
+        for(OGRFeature* feature : foundFeatures)
+        {
+            localFeatures.push_back(feature->Clone());
+        }
+
         /* Set finder for the found features */
-        Finder finder(ogrPoint, &foundFeatures);
+        Finder finder(&ogrPoint, &localFeatures);
 
         /* Find rasters intersecting with ogrPoint */
         gf->obj->findRasters(&finder);
+
+        /* Destroy cloned features */
+        for(OGRFeature* feature : localFeatures)
+        {
+            OGRFeature::DestroyFeature(feature);
+        }
 
         /* Copy from finder to pointGroups */
         GroupOrdering* groupList = new GroupOrdering();
@@ -1171,7 +1151,7 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         {
             groupList->add(groupList->length(), rgroup);
         }
-        gf->pointsGroups.emplace_back(point_groups_t{ {*ogrPoint, i}, groupList });
+        gf->pointsGroups.emplace_back(point_groups_t{ogrPoint, i, groupList});
 
         /* Filter rasters based on POI time */
         const int64_t gps = gf->obj->usePOItime() ? pinfo.gps : 0.0;
@@ -1190,6 +1170,9 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
     }
 
     mlog(DEBUG, "Found   groups for points range: %u - %u", start, end);
+
+    /* Thread must initialize GEOS context */
+    GeoRtree::deinit(threadGeosContext);
 
     return NULL;
 }
@@ -1643,6 +1626,8 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
             delete pid;
         }
 
+        mlog(DEBUG, "All groups finders time: %lf", TimeLib::latchtime() - startTime);
+
         /* Merge the pointGroups for each thread */
         mlog(DEBUG, "Merging point groups from all threads");
         for(GroupsFinder* gf : rgroupFinders)
@@ -1745,7 +1730,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                 for(const uint32_t pointIndx : it->second)
                 {
                     const point_groups_t& pg = pointsGroups[pointIndx];
-                    ur->pointSamples.push_back({ pg.pointInfo, NULL, false, SS_NO_ERRORS });
+                    ur->pointSamples.push_back({ pg.point, pg.pointIndex, NULL, false, SS_NO_ERRORS });
                 }
                 ur->pointSamples.shrink_to_fit();
             }
