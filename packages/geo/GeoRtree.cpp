@@ -123,10 +123,6 @@ void GeoRtree::query(const OGRGeometry* geo, GEOSContextHandle_t context,
 
     if(sorted)
     {
-        /*
-         * The pairs are sorted by index and features are returned in the same order as they were inserted into the R-tree.
-         * Testing showed that supported data sets return 1 or 2 features per query for a point geometry
-         */
         std::sort(resultPairs.begin(), resultPairs.end(),
             [](const FeatureIndexPair* a, const FeatureIndexPair* b) { return a->index < b->index; });
     }
