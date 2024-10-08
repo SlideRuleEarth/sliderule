@@ -76,7 +76,7 @@ int RequestFields::luaCreate (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaExport - export() --> lua table 
+ * luaExport - export() --> lua table
  *----------------------------------------------------------------------------*/
 int RequestFields::luaExport (lua_State* L)
 {
@@ -155,7 +155,7 @@ int RequestFields::luaGetField (lua_State* L)
         lua_pushstring(L, field_name);
         lua_rawget(L, -2);
         if (!lua_isnil(L, -1))  return 1;
-        else lua_pop(L, 1); 
+        else lua_pop(L, 1);
 
         // handle field access
         return lua_obj->fields[field_name].field->toLua(L);
@@ -223,7 +223,7 @@ void RequestFields::fromLua (lua_State* L, int index)
     FieldDictionary::fromLua(L, index);
 
     // set timeouts (if necessary)
-    if(timeout == INVALID_TIMEOUT)      timeout = DEFAULT_TIMEOUT;    
+    if(timeout == INVALID_TIMEOUT)      timeout = DEFAULT_TIMEOUT;
     if(rqstTimeout == INVALID_TIMEOUT)  rqstTimeout = timeout;
     if(nodeTimeout == INVALID_TIMEOUT)  nodeTimeout = timeout;
     if(readTimeout == INVALID_TIMEOUT)  readTimeout = timeout;
@@ -259,8 +259,8 @@ void RequestFields::fromLua (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 RequestFields::RequestFields(lua_State* L, const std::initializer_list<entry_t>& init_list):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    FieldDictionary ({  
-        {"polygon",             &polygon},
+    FieldDictionary ({
+        {"poly",                &polygon},
         {"projection",          &projection},
         {"points_in_polygon",   &pointsInPolygon},
         {"timeout",             &timeout},
@@ -277,9 +277,8 @@ RequestFields::RequestFields(lua_State* L, const std::initializer_list<entry_t>&
         #endif
     })
 {
-
     // add additional fields to dictionary
-    for(const entry_t elem: init_list) 
+    for(const entry_t elem: init_list)
     {
         fields.add(elem.name, elem);
     }
@@ -300,7 +299,7 @@ RequestFields::~RequestFields(void)
 /*----------------------------------------------------------------------------
  * convertToJson - MathLib::coord_t
  *----------------------------------------------------------------------------*/
-string convertToJson(const MathLib::coord_t& v) 
+string convertToJson(const MathLib::coord_t& v)
 {
     return FString("{\"lon\":%lf,\"lat\":%lf}", v.lon, v.lat).c_str();
 }
@@ -308,7 +307,7 @@ string convertToJson(const MathLib::coord_t& v)
 /*----------------------------------------------------------------------------
  * convertToLua - MathLib::coord_t
  *----------------------------------------------------------------------------*/
-int convertToLua(lua_State* L, const MathLib::coord_t& v) 
+int convertToLua(lua_State* L, const MathLib::coord_t& v)
 {
     lua_newtable(L);
 
@@ -328,7 +327,7 @@ int convertToLua(lua_State* L, const MathLib::coord_t& v)
 /*----------------------------------------------------------------------------
  * convertFromLua - MathLib::coord_t
  *----------------------------------------------------------------------------*/
-void convertFromLua(lua_State* L, int index, MathLib::coord_t& v) 
+void convertFromLua(lua_State* L, int index, MathLib::coord_t& v)
 {
     // longitude
     lua_getfield(L, index, "lon");
@@ -344,7 +343,7 @@ void convertFromLua(lua_State* L, int index, MathLib::coord_t& v)
 /*----------------------------------------------------------------------------
  * convertToJson - MathLib::point_t
  *----------------------------------------------------------------------------*/
-string convertToJson(const MathLib::point_t& v) 
+string convertToJson(const MathLib::point_t& v)
 {
     return FString("{\"x\":%lf,\"y\":%lf}", v.x, v.y).c_str();
 }
@@ -386,7 +385,7 @@ void convertFromLua(lua_State* L, int index, MathLib::point_t& v)
 /*----------------------------------------------------------------------------
  * convertToJson - MathLib::proj_t
  *----------------------------------------------------------------------------*/
-string convertToJson(const MathLib::proj_t& v) 
+string convertToJson(const MathLib::proj_t& v)
 {
     switch(v)
     {
