@@ -245,7 +245,7 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
     int wind_speed_index = 0;
     int kd_range_index = 0;
     uint32_t processing_flags = BathyFields::INVALID_KD;
-    double max_sensor_depth = fabs(parms->minDemDelta);
+    double max_sensor_depth = fabs(parms->minDemDelta.value);
 
     /* for each photon in extent */
     for(long i = 0; i < df.length(); i++)
@@ -262,7 +262,7 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
             else if(pointing_angle_index >= NUM_POINTING_ANGLES) pointing_angle_index = NUM_POINTING_ANGLES - 1;
 
             /* get wind speed index */
-            int wind_speed = static_cast<int>(roundf(df.wind_v[i]));
+            const int wind_speed = static_cast<int>(roundf(df.wind_v[i]));
             wind_speed_index = 0;
             while( (wind_speed_index < (NUM_WIND_SPEED_RANGES - 1)) && (wind_speed > WIND_SPEED_RANGES[wind_speed_index + 1][0]) )
             {

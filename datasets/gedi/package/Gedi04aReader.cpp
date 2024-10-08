@@ -165,7 +165,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, reader->traceId, "gedi04a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", parms->asset->getName(), parms->resource.value.c_str(), static_cast<int>(info->beam));
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "gedi04a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", parms->asset.getName(), parms->resource.value.c_str(), static_cast<int>(info->beam));
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try

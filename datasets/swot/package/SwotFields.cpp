@@ -47,14 +47,7 @@ int SwotFields::luaCreate (lua_State* L)
 {
     try
     {
-        /* Check if Lua Table */
-        if(lua_type(L, 1) != LUA_TTABLE)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "SWOT parameters must be supplied as a lua table");
-        }
-
-        /* Return Request Parameter Object */
-        return createLuaObject(L, new SwotFields(L, 1));
+        return createLuaObject(L, new SwotFields(L));
     }
     catch(const RunTimeException& e)
     {
@@ -66,7 +59,7 @@ int SwotFields::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-SwotFields::SwotFields(lua_State* L, int index):
+SwotFields::SwotFields(lua_State* L):
     RequestFields(L, {
         {"asset",       &asset},
         {"resource",    &resource},

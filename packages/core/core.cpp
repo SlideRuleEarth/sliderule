@@ -64,7 +64,6 @@
 #include "RegionMask.h"
 #include "RequestFields.h"
 #include "RequestMetrics.h"
-#include "RequestFields.h"
 #include "SpatialIndex.h"
 #include "StringLib.h"
 #include "Table.h"
