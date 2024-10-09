@@ -48,6 +48,7 @@ const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {"mask",        luaRegionMaskIncludes},
     {"__index",     luaGetField},
     {"__newindex",  luaSetField},
+    {"hasoutput",   luaWithArrowOutput},
     {NULL,          NULL}
 };
 
@@ -189,6 +190,25 @@ int RequestFields::luaSetField (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * luaWith ArrowOutput
+ *----------------------------------------------------------------------------*/
+int RequestFields::luaWithArrowOutput (lua_State* L)
+{
+    try
+    {
+        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        lua_pushboolean(L, !lua_obj->output.path.value.empty());
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "error retrieving field: %s", e.what());
+        lua_pushboolean(L, false);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * polyIncludes
  *----------------------------------------------------------------------------*/
 bool RequestFields::polyIncludes (double lon, double lat) const
@@ -260,7 +280,7 @@ void RequestFields::fromLua (lua_State* L, int index)
 RequestFields::RequestFields(lua_State* L, const std::initializer_list<entry_t>& init_list):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     FieldDictionary ({
-        {"polygon",             &polygon},
+        {"poly",                &polygon},
         {"projection",          &projection},
         {"points_in_polygon",   &pointsInPolygon},
         {"timeout",             &timeout},
@@ -277,7 +297,6 @@ RequestFields::RequestFields(lua_State* L, const std::initializer_list<entry_t>&
         #endif
     })
 {
-
     // add additional fields to dictionary
     for(const entry_t elem: init_list)
     {

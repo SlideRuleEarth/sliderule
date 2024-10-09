@@ -38,6 +38,21 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
+    - name: Checkout CoastNet
+      uses: actions/checkout@v3
+      with:
+        repository: SlideRuleEarth/ut-ATL24-coastnet
+
+    - name: Checkout Qtrees
+      uses: actions/checkout@v3
+      with:
+        repository: SlideRuleEarth/ut-ATL24-qtrees
+
+    - name: Checkout OpenOceans++
+      uses: actions/checkout@v3
+      with:
+        repository: SlideRuleEarth/ut-ATL24-oopp
+
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v2

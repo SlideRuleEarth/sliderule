@@ -47,10 +47,15 @@
 int BathyFields::luaCreate (lua_State* L)
 {
     BathyFields* bathy_fields = NULL;
+
     try
     {
-        bathy_fields = new BathyFields(L);
+        const char* default_asset_name = LuaObject::getLuaString(L, 2, true, "icesat2");
+        const char* default_resource = LuaObject::getLuaString(L, 3, true, NULL);
+
+        bathy_fields = new BathyFields(L, default_asset_name, default_resource);
         bathy_fields->fromLua(L, 1);
+
         return createLuaObject(L, bathy_fields);
     }
     catch(const RunTimeException& e)
@@ -92,22 +97,23 @@ void BathyFields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyFields::BathyFields(lua_State* L):
-    Icesat2Fields (L, { {"asset09",             &atl09AssetName},
-                        {"max_dem_delta",       &maxDemDelta},
-                        {"min_dem_delta",       &minDemDelta},
-                        {"ph_in_extent",        &phInExtent},
-                        {"generate_ndwi",       &generateNdwi},
-                        {"use_bathy_mask",      &useBathyMask},
-                        {"find_sea_surface",    &findSeaSurface},
-                        {"classifiers",         &classifiers},
-                        {"spots",               &spots},
-                        {"surface",             &surface},
-                        {"refraction",          &refraction},
-                        {"uncertainty",         &uncertainty},
-                        {"coastnet_version",    &coastnetVersion},
-                        {"qtrees_version",      &qtreesVersion},
-                        {"openoceanspp_version",&openoceansppVersion} })
+BathyFields::BathyFields(lua_State* L, const char* default_asset_name, const char* default_resource):
+    Icesat2Fields (L, default_asset_name, default_resource,
+        { {"asset09",             &atl09AssetName},
+          {"max_dem_delta",       &maxDemDelta},
+          {"min_dem_delta",       &minDemDelta},
+          {"ph_in_extent",        &phInExtent},
+          {"generate_ndwi",       &generateNdwi},
+          {"use_bathy_mask",      &useBathyMask},
+          {"find_sea_surface",    &findSeaSurface},
+          {"classifiers",         &classifiers},
+          {"spots",               &spots},
+          {"surface",             &surface},
+          {"refraction",          &refraction},
+          {"uncertainty",         &uncertainty},
+          {"coastnet_version",    &coastnetVersion},
+          {"qtrees_version",      &qtreesVersion},
+          {"openoceanspp_version",&openoceansppVersion} })
 {
     LuaEngine::setAttrFunc(L, "classifier", luaClassifier);
 }
@@ -166,7 +172,7 @@ void convertFromLua(lua_State* L, int index, BathyFields::classifier_t& v)
     if(lua_isinteger(L, index))
     {
         v = static_cast<BathyFields::classifier_t>(LuaObject::getLuaInteger(L, index));
-    }    
+    }
     else if(lua_isstring(L, index))
     {
         const char* str = LuaObject::getLuaString(L, index);

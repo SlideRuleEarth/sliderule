@@ -57,7 +57,7 @@ const struct luaL_Reg ArrowSampler::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int ArrowSampler::luaCreate(lua_State* L)
 {
-    ArrowParms* _parms = NULL;
+    RequestFields* rqst_parms = NULL;
     const char* input_file = NULL;
     const char* outq_name =  NULL;
     std::vector<raster_info_t> user_rasters;
@@ -65,7 +65,7 @@ int ArrowSampler::luaCreate(lua_State* L)
     /* Get Parameters */
     try
     {
-        _parms      = dynamic_cast<ArrowParms*>(getLuaObject(L, 1, ArrowParms::OBJECT_TYPE));
+        rqst_parms  = dynamic_cast<RequestFields*>(getLuaObject(L, 1, RequestFields::OBJECT_TYPE));
         input_file  = getLuaString(L, 2);
         outq_name   = getLuaString(L, 3);
 
@@ -94,7 +94,7 @@ int ArrowSampler::luaCreate(lua_State* L)
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
 
         /* Release Lua Parameters Objects */
-        if(_parms) _parms->releaseLuaObject();
+        if(rqst_parms) rqst_parms->releaseLuaObject();
         for(raster_info_t& raster : user_rasters)
         {
             raster.robj->releaseLuaObject();
@@ -105,7 +105,7 @@ int ArrowSampler::luaCreate(lua_State* L)
     /* Create Dispatch */
     try
     {
-        return createLuaObject(L, new ArrowSampler(L, _parms, input_file, outq_name, user_rasters));
+        return createLuaObject(L, new ArrowSampler(L, rqst_parms, input_file, outq_name, user_rasters));
     }
     catch(const RunTimeException& e)
     {
@@ -186,12 +186,12 @@ void* ArrowSampler::mainThread(void* parm)
             s->impl->createOutpuFiles();
 
             /* Send Data File to User */
-            ArrowCommon::send2User(s->dataFile, s->outputPath, trace_id, s->parms, s->outQ);
+            ArrowCommon::send2User(s->dataFile, s->parms.path.value.c_str(), trace_id, &s->parms, s->outQ);
 
             /* Send Metadata File to User */
             if(ArrowCommon::fileExists(s->metadataFile))
             {
-                ArrowCommon::send2User(s->metadataFile, s->outputMetadataPath, trace_id, s->parms, s->outQ);
+                ArrowCommon::send2User(s->metadataFile, s->outputMetadataPath, trace_id, &s->parms, s->outQ);
             }
         }
     }
@@ -213,9 +213,9 @@ void* ArrowSampler::mainThread(void* parm)
 /*----------------------------------------------------------------------------
  * getParms
  *----------------------------------------------------------------------------*/
-const ArrowParms* ArrowSampler::getParms(void)
+const ArrowFields* ArrowSampler::getParms(void)
 {
-    return parms;
+    return &parms;
 }
 
 /*----------------------------------------------------------------------------
@@ -249,21 +249,20 @@ const std::vector<ArrowSampler::batch_sampler_t*>& ArrowSampler::getBatchSampler
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArrowSampler::ArrowSampler(lua_State* L, ArrowParms* _parms, const char* input_file,
+ArrowSampler::ArrowSampler(lua_State* L, RequestFields* rqst_parms, const char* input_file,
                            const char* outq_name, const std::vector<raster_info_t>& user_rasters):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     active(false),
     mainPid(NULL),
-    parms(_parms),
+    rqstParms(rqst_parms),
+    parms(rqstParms->output),
     outQ(NULL),
     impl(NULL),
     dataFile(NULL),
     metadataFile(NULL),
-    outputPath(NULL),
     outputMetadataPath(NULL)
 {
     /* Validate Parameters */
-    assert(parms);
     assert(input_file);
     assert(outq_name);
 
@@ -283,8 +282,7 @@ ArrowSampler::ArrowSampler(lua_State* L, ArrowParms* _parms, const char* input_f
         impl = new ArrowSamplerImpl(this);
 
         /* Get Paths */
-        outputPath = ArrowCommon::getOutputPath(parms);
-        outputMetadataPath = ArrowCommon::createMetadataFileName(outputPath);
+        outputMetadataPath = ArrowCommon::createMetadataFileName(parms.path.value.c_str());
 
         /* Create Unique Temporary Filenames */
         dataFile = ArrowCommon::getUniqueFileName();
@@ -332,10 +330,9 @@ void ArrowSampler::Delete(void)
 
     delete [] dataFile;
     delete [] metadataFile;
-    delete [] outputPath;
     delete [] outputMetadataPath;
     delete outQ;
     delete impl;
 
-    parms->releaseLuaObject();
+    rqstParms->releaseLuaObject();
 }

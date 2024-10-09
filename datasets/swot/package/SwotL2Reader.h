@@ -46,7 +46,7 @@
 #include "StringLib.h"
 #include "H5Array.h"
 
-#include "SwotParms.h"
+#include "SwotFields.h"
 
 /******************************************************************************
  * SWOT L2 READER
@@ -130,12 +130,12 @@ class SwotL2Reader: public LuaObject
         /* Region Subclass */
         struct Region
         {
-            Region              (H5Coro::Context* context, const SwotParms* _parms);
+            Region              (H5Coro::Context* context, const SwotFields* _parms);
             ~Region             (void);
 
             void cleanup        (void) const;
-            void polyregion     (const SwotParms* _parms);
-            void rasterregion   (const SwotParms* _parms);
+            void polyregion     (const SwotFields* _parms);
+            void rasterregion   (const SwotFields* _parms);
 
             H5Array<int32_t>    lat;
             H5Array<int32_t>    lon;
@@ -163,15 +163,14 @@ class SwotL2Reader: public LuaObject
         const char*             resource;
         bool                    sendTerminator;
         Publisher*              outQ;
-        SwotParms*              parms;
+        SwotFields*              parms;
         stats_t                 stats;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        SwotL2Reader        (lua_State* L, Asset* _asset, const char* _resource,
-                                             const char* outq_name, SwotParms* _parms, bool _send_terminator=true);
+                        SwotL2Reader        (lua_State* L, const char* outq_name, SwotFields* _parms, bool _send_terminator=true);
                         ~SwotL2Reader       (void) override;
         void            checkComplete       (void);
         static void*    varThread           (void* parm);

@@ -34,7 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "RequestParms.h"
+#include "RequestFields.h"
 #include "RequestMetrics.h"
 
 /******************************************************************************
@@ -288,10 +288,10 @@ bool RequestMetrics::init (void)
 /*----------------------------------------------------------------------------
  * getRegion
  *----------------------------------------------------------------------------*/
-RequestMetrics::regions_t RequestMetrics::getRegion (RequestParms* parms)
+RequestMetrics::regions_t RequestMetrics::getRegion (RequestFields* parms)
 {
     regions_t region_found = REGION_UNKNOWN;
-    if(!parms->polygon.empty())
+    if(parms->pointsInPolygon.value > 0)
     {
         const MathLib::coord_t coord = parms->polygon[0];
         if(coord.lat > -60)

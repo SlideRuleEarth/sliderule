@@ -39,7 +39,7 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "EndpointProxy.h"
-#include "List.h"
+#include "AssetField.h"
 #include "MathLib.h"
 #include "RequestFields.h"
 #include "FieldElement.h"
@@ -56,7 +56,7 @@
 /***************/
 /* YAPC Fields */
 /***************/
-struct YapcFields: public FieldDictionary 
+struct YapcFields: public FieldDictionary
 {
     FieldElement<uint8_t>   score {0};      // minimum allowed weight of photon using yapc algorithm
     FieldElement<int>       version {3};    // version of the yapc algorithm to run
@@ -64,7 +64,7 @@ struct YapcFields: public FieldDictionary
     FieldElement<int>       min_knn {5};    // (version 3 only) minimum number of k-nearest neighors
     FieldElement<double>    win_h {6.0};    // window height (overrides calculated value if non-zero)
     FieldElement<double>    win_x {15.0};   // window width
-    
+
     YapcFields(void);
     ~YapcFields(void) override = default;
 
@@ -76,7 +76,7 @@ struct YapcFields: public FieldDictionary
 /******************/
 /* PhoREAL Fields */
 /******************/
-struct PhorealFields: public FieldDictionary 
+struct PhorealFields: public FieldDictionary
 {
     typedef enum {
         MEAN = 0,
@@ -115,6 +115,7 @@ class Icesat2Fields: public RequestFields
         static const int EXPECTED_NUM_FIELDS        = 8; // a typical number of ancillary fields requested
         static const uint8_t INVALID_FLAG           = 0xFF;
         static const int64_t ATLAS_SDP_EPOCH_GPS    = 1198800018; // seconds to add to ATLAS delta times to get GPS times
+        static const int8_t MIN_ATL03_CNF           = -128;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -216,6 +217,14 @@ class Icesat2Fields: public RequestFields
             NUM_STAGES = 4
         } atl06_stages_t;
 
+        /* Ancillary Field Types */
+        typedef enum {
+            PHOTON_ANC_TYPE     = 0,
+            EXTENT_ANC_TYPE     = 1,
+            ATL08_ANC_TYPE      = 2,
+            ATL06_ANC_TYPE      = 3
+        } anc_type_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -304,11 +313,14 @@ class Icesat2Fields: public RequestFields
             return static_cast<uint8_t>(lookup_table[index]);
         }
 
+        // returns resource as a string
+        const char* getResource (void) const { return resource.value.c_str(); }
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        FieldElement<string>                                assetName {"icesat2"};                                  // name of Asset in asset dictionary to user for granules
+        AssetField                                          asset;                                                  // name of Asset in asset dictionary to use for granules
         FieldElement<string>                                resource;                                               // granule name (including file extension)
         FieldElement<surface_type_t>                        surfaceType {SRT_LAND_ICE};                             // surface reference type (used to select signal confidence column)
         FieldElement<bool>                                  passInvalid {false};                                    // post extent even if each pair is invalid
@@ -340,7 +352,6 @@ class Icesat2Fields: public RequestFields
         FieldElement<int>                                   region;                                                 // ATL03 granule region
         FieldElement<int>                                   version;                                                // ATL03 granule version
 
-        Asset* asset {NULL};
         bool stages[NUM_STAGES] = {true, false, false, false};
 
     protected:
@@ -349,8 +360,8 @@ class Icesat2Fields: public RequestFields
          * Methods
          *--------------------------------------------------------------------*/
 
-                Icesat2Fields   (lua_State* L, const std::initializer_list<FieldDictionary::entry_t>& init_list);
-        virtual ~Icesat2Fields  (void) override;
+                Icesat2Fields   (lua_State* L, const char* default_asset_name, const char* default_resource, const std::initializer_list<FieldDictionary::entry_t>& init_list);
+        virtual ~Icesat2Fields  (void) override = default;
 
         void parseResource (void);
 };

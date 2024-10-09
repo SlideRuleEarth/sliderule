@@ -376,28 +376,3 @@ int Asset::luaLoad (lua_State* L)
     /* Return Status */
     return returnLuaStatus(L, status);
 }
-
-/*----------------------------------------------------------------------------
- * tojson
- *----------------------------------------------------------------------------*/
-const char* Asset::tojson(void) const
-{
-    rapidjson::Document doc;
-    doc.SetObject();
-    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
-
-    /* Asset attribute strings don't need to be checked for NULL */
-    doc.AddMember("name",     rapidjson::Value(attributes.name, allocator), allocator);
-    doc.AddMember("identity", rapidjson::Value(attributes.identity, allocator), allocator);
-    doc.AddMember("driver",   rapidjson::Value(attributes.driver, allocator), allocator);
-    doc.AddMember("path",     rapidjson::Value(attributes.path, allocator), allocator);
-    doc.AddMember("index",    rapidjson::Value(attributes.index, allocator), allocator);
-    doc.AddMember("region",   rapidjson::Value(attributes.region, allocator), allocator);
-    doc.AddMember("endpoint", rapidjson::Value(attributes.endpoint, allocator), allocator);
-
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc.Accept(writer);
-
-    return StringLib::duplicate(buffer.GetString());
-}

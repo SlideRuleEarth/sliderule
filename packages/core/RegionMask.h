@@ -70,6 +70,8 @@ class RegionMask: public FieldDictionary
                     RegionMask          (void);
                     ~RegionMask         (void) override;
 
+        bool        valid               (void) const;
+
         void        fromLua             (lua_State* L, int index) override;
 
         bool        includes            (double lon, double lat) const;

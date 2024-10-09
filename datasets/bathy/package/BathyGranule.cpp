@@ -183,7 +183,7 @@ void* BathyGranule::readingThread (void* parm)
     const BathyFields& parms = granule.parms;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, granule.traceId, "bathy_granule", "{\"asset\":\"%s\", \"resource\":\"%s\"}", parms.asset->getName(), parms.resource.value.c_str());
+    const uint32_t trace_id = start_trace(INFO, granule.traceId, "bathy_granule", "{\"asset\":\"%s\", \"resource\":\"%s\"}", parms.asset.getName(), parms.resource.value.c_str());
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try

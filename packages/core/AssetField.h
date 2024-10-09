@@ -29,67 +29,45 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __cre_parms__
-#define __cre_parms__
+#ifndef __asset_field__
+#define __asset_field__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "LuaObject.h"
+#include "Asset.h"
+#include "Field.h"
 
 /******************************************************************************
- * CRE PARAMETERS CLASS
+ * CLASS
  ******************************************************************************/
 
-class CreParms: public LuaObject
+class AssetField: public Field
 {
     public:
 
         /*--------------------------------------------------------------------
-        * Constants
-        *--------------------------------------------------------------------*/
+         * Methods
+         *--------------------------------------------------------------------*/
 
-        static const char* SELF;
-        static const char* PARMS;
-        static const char* IMAGE;
-        static const char* NAME;
-        static const char* COMMAND;
-        static const char* TIMEOUT;
+                    AssetField          (void);
+                    AssetField          (const char* asset_name);
+                    ~AssetField         (void) override;
 
-        static const char* OBJECT_TYPE;
-        static const char* LUA_META_NAME;
-        static const struct luaL_Reg LUA_META_TABLE[];
+        const char* getName             (void) const;
 
-        static const int DEFAULT_TIMEOUT = 600;
+        string      toJson              (void) const override;
+        int         toLua               (lua_State* L) const override;
+        void        fromLua             (lua_State* L, int index) override;
+
 
         /*--------------------------------------------------------------------
-        * Data
-        *--------------------------------------------------------------------*/
+         * Data
+         *--------------------------------------------------------------------*/
 
-        const char* image; // container image
-        const char* name; // container name
-        const char* command; // container command
-        int timeout; // on requests to docker daemon
-
-        /*--------------------------------------------------------------------
-        * Methods
-        *--------------------------------------------------------------------*/
-
-        static int  luaCreate           (lua_State* L);
-                    CreParms            (lua_State* L, int index);
-                    ~CreParms           (void) override;
-        const char* tojson              (void) const override;
-
-    private:
-
-        /*--------------------------------------------------------------------
-        * Methods
-        *--------------------------------------------------------------------*/
-
-        void            cleanup             (void);
-        static int      luaImage            (lua_State* L);
+        Asset* asset;
 };
 
-#endif  /* __cre_parms__ */
+#endif  /* __asset_field__ */

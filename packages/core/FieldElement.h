@@ -73,7 +73,11 @@ class FieldElement: public Field
          *--------------------------------------------------------------------*/
 
         operator bool() const {
-            return value != 0; // Object is "true" if value is non-zero
+            return value != 0;
+        }
+
+        operator string() const {
+            return toJson();
         }
 
         /*--------------------------------------------------------------------

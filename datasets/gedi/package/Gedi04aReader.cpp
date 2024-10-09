@@ -38,8 +38,10 @@
 #include <stdarg.h>
 
 #include "OsApi.h"
-#include "h5.h"
-#include "gedi.h"
+#include "H5Coro.h"
+#include "RecordObject.h"
+#include "FootprintReader.h"
+#include "Gedi04aReader.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -64,34 +66,29 @@ const RecordObject::fieldDef_t Gedi04aReader::batchRecDef[] = {
     {"footprint",       RecordObject::USER,     offsetof(batch_t, footprint),         0,  fpRecType, NATIVE_FLAGS | RecordObject::BATCH}
 };
 
-
 /******************************************************************************
- * GEDIT L4A READER CLASS
+ * CLASS METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>, <send terminator>)
+ * luaCreate - create(<outq_name>, <parms>, <send terminator>)
  *----------------------------------------------------------------------------*/
 int Gedi04aReader::luaCreate (lua_State* L)
 {
-    Asset* asset = NULL;
-    GediParms* parms = NULL;
+    GediFields* parms = NULL;
 
     try
     {
         /* Get Parameters */
-        asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
-        const char* resource = getLuaString(L, 2);
-        const char* outq_name = getLuaString(L, 3);
-        parms = dynamic_cast<GediParms*>(getLuaObject(L, 4, GediParms::OBJECT_TYPE));
-        const bool send_terminator = getLuaBoolean(L, 5, true, true);
+        const char* outq_name = getLuaString(L, 1);
+        parms = dynamic_cast<GediFields*>(getLuaObject(L, 2, GediFields::OBJECT_TYPE));
+        const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Return Reader Object */
-        return createLuaObject(L, new Gedi04aReader(L, asset, resource, outq_name, parms, send_terminator));
+        return createLuaObject(L, new Gedi04aReader(L, outq_name, parms, send_terminator));
     }
     catch(const RunTimeException& e)
     {
-        if(asset) asset->releaseLuaObject();
         if(parms) parms->releaseLuaObject();
         mlog(e.level(), "Error creating Gedi04aReader: %s", e.what());
         return returnLuaStatus(L, false);
@@ -110,9 +107,8 @@ void Gedi04aReader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Gedi04aReader::Gedi04aReader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, GediParms* _parms, bool _send_terminator):
-    FootprintReader<g04a_footprint_t>(L, _asset, _resource,
-                                      outq_name, _parms, _send_terminator,
+Gedi04aReader::Gedi04aReader (lua_State* L, const char* outq_name, GediFields* _parms, bool _send_terminator):
+    FootprintReader<g04a_footprint_t>(L, outq_name, _parms, _send_terminator,
                                       batchRecType, "lat_lowestmode", "lon_lowestmode",
                                       Gedi04aReader::subsettingThread)
 {
@@ -127,16 +123,16 @@ Gedi04aReader::~Gedi04aReader (void) = default;
  * Gedi04a::Constructor
  *----------------------------------------------------------------------------*/
 Gedi04aReader::Gedi04a::Gedi04a (const info_t* info, const Region& region):
-    shot_number     (info->reader->context, FString("%s/shot_number",      GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    delta_time      (info->reader->context, FString("%s/delta_time",       GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    agbd            (info->reader->context, FString("%s/agbd",             GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    elev_lowestmode (info->reader->context, FString("%s/elev_lowestmode",  GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    solar_elevation (info->reader->context, FString("%s/solar_elevation",  GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    sensitivity     (info->reader->context, FString("%s/sensitivity",      GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    degrade_flag    (info->reader->context, FString("%s/degrade_flag",     GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    l2_quality_flag (info->reader->context, FString("%s/l2_quality_flag",  GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    l4_quality_flag (info->reader->context, FString("%s/l4_quality_flag",  GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    surface_flag    (info->reader->context, FString("%s/surface_flag",     GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints)
+    shot_number     (info->reader->context, FString("%s/shot_number",     info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    delta_time      (info->reader->context, FString("%s/delta_time",      info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    agbd            (info->reader->context, FString("%s/agbd",            info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    elev_lowestmode (info->reader->context, FString("%s/elev_lowestmode", info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    solar_elevation (info->reader->context, FString("%s/solar_elevation", info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    sensitivity     (info->reader->context, FString("%s/sensitivity",     info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    degrade_flag    (info->reader->context, FString("%s/degrade_flag",    info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    l2_quality_flag (info->reader->context, FString("%s/l2_quality_flag", info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    l4_quality_flag (info->reader->context, FString("%s/l4_quality_flag", info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    surface_flag    (info->reader->context, FString("%s/surface_flag",    info->group).c_str(), 0, region.first_footprint, region.num_footprints)
 {
 
     /* Join Hardcoded Reads */
@@ -165,11 +161,11 @@ void* Gedi04aReader::subsettingThread (void* parm)
     /* Get Thread Info */
     const info_t* info = static_cast<info_t*>(parm);
     Gedi04aReader* reader = reinterpret_cast<Gedi04aReader*>(info->reader);
-    const GediParms* parms = reader->parms;
+    const GediFields* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, reader->traceId, "gedi04a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", reader->asset->getName(), reader->resource, info->beam);
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "gedi04a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", parms->asset.getName(), parms->getResource(), static_cast<int>(info->beam));
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -187,9 +183,9 @@ void* Gedi04aReader::subsettingThread (void* parm)
         for(long footprint = 0; reader->active && footprint < region.num_footprints; footprint++)
         {
             /* Check Degrade Filter */
-            if(parms->degrade_filter != GediParms::DEGRADE_UNFILTERED)
+            if(parms->degrade_filter)
             {
-                if(gedi04a.degrade_flag[footprint] != parms->degrade_filter)
+                if(gedi04a.degrade_flag[footprint])
                 {
                     local_stats.footprints_filtered++;
                     continue;
@@ -197,9 +193,9 @@ void* Gedi04aReader::subsettingThread (void* parm)
             }
 
             /* Check L2 Quality Filter */
-            if(parms->l2_quality_filter != GediParms::L2QLTY_UNFILTERED)
+            if(parms->l2_quality_filter)
             {
-                if(gedi04a.l2_quality_flag[footprint] != parms->l2_quality_filter)
+                if(!gedi04a.l2_quality_flag[footprint])
                 {
                     local_stats.footprints_filtered++;
                     continue;
@@ -207,9 +203,9 @@ void* Gedi04aReader::subsettingThread (void* parm)
             }
 
             /* Check L4 Quality Filter */
-            if(parms->l4_quality_filter != GediParms::L4QLTY_UNFILTERED)
+            if(parms->l4_quality_filter)
             {
-                if(gedi04a.l4_quality_flag[footprint] != parms->l4_quality_filter)
+                if(!gedi04a.l4_quality_flag[footprint])
                 {
                     local_stats.footprints_filtered++;
                     continue;
@@ -217,9 +213,9 @@ void* Gedi04aReader::subsettingThread (void* parm)
             }
 
             /* Check Surface Filter */
-            if(parms->surface_filter != GediParms::SURFACE_UNFILTERED)
+            if(parms->surface_filter)
             {
-                if(gedi04a.surface_flag[footprint] != parms->surface_filter)
+                if(!gedi04a.surface_flag[footprint])
                 {
                     local_stats.footprints_filtered++;
                     continue;
@@ -240,19 +236,19 @@ void* Gedi04aReader::subsettingThread (void* parm)
                 /* Populate Entry in Batch Structure */
                 g04a_footprint_t* fp = &reader->batchData->footprint[reader->batchIndex];
                 fp->shot_number     = gedi04a.shot_number[footprint];
-                fp->time_ns         = GediParms::deltatime2timestamp(gedi04a.delta_time[footprint]);
+                fp->time_ns         = GediFields::deltatime2timestamp(gedi04a.delta_time[footprint]);
                 fp->latitude        = region.lat[footprint];
                 fp->longitude       = region.lon[footprint];
                 fp->agbd            = gedi04a.agbd[footprint];
                 fp->elevation       = gedi04a.elev_lowestmode[footprint];
                 fp->solar_elevation = gedi04a.solar_elevation[footprint];
                 fp->sensitivity     = gedi04a.sensitivity[footprint];
-                fp->beam            = info->beam;
+                fp->beam            = static_cast<int>(info->beam);
                 fp->flags           = 0;
-                if(gedi04a.degrade_flag[footprint])     fp->flags |= GediParms::DEGRADE_FLAG_MASK;
-                if(gedi04a.l2_quality_flag[footprint])  fp->flags |= GediParms::L2_QUALITY_FLAG_MASK;
-                if(gedi04a.l4_quality_flag[footprint])  fp->flags |= GediParms::L4_QUALITY_FLAG_MASK;
-                if(gedi04a.surface_flag[footprint])     fp->flags |= GediParms::SURFACE_FLAG_MASK;
+                if(gedi04a.degrade_flag[footprint])     fp->flags |= GediFields::DEGRADE_FLAG_MASK;
+                if(gedi04a.l2_quality_flag[footprint])  fp->flags |= GediFields::L2_QUALITY_FLAG_MASK;
+                if(gedi04a.l4_quality_flag[footprint])  fp->flags |= GediFields::L4_QUALITY_FLAG_MASK;
+                if(gedi04a.surface_flag[footprint])     fp->flags |= GediFields::SURFACE_FLAG_MASK;
 
                 /* Send Record */
                 reader->batchIndex++;
@@ -267,7 +263,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s beam %d: %s", reader->resource, info->beam, e.what());
+        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s beam %d: %s", parms->getResource(), static_cast<int>(info->beam), e.what());
     }
 
     /* Handle Global Reader Updates */
@@ -279,7 +275,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
         /* Send Final Record Batch */
         if(reader->numComplete == reader->threadCount)
         {
-            mlog(INFO, "Completed processing resource %s", info->reader->resource);
+            mlog(INFO, "Completed processing resource %s", parms->getResource());
             if(reader->batchIndex > 0)
             {
                 reader->postRecordBatch(&local_stats);
@@ -304,12 +300,12 @@ void* Gedi04aReader::subsettingThread (void* parm)
                     status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
                     if(status < 0)
                     {
-                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, info->reader->resource);
+                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, parms->getResource());
                         break;
                     }
                     else if(status == MsgQ::STATE_TIMEOUT)
                     {
-                        mlog(INFO, "Timeout posting terminator for %s ... trying again", info->reader->resource);
+                        mlog(INFO, "Timeout posting terminator for %s ... trying again", parms->getResource());
                     }
                 }
             }

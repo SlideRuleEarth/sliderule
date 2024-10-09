@@ -38,8 +38,10 @@
 #include <stdarg.h>
 
 #include "OsApi.h"
-#include "h5.h"
-#include "icesat2.h"
+#include "LuaObject.h"
+#include "RecordObject.h"
+#include "Icesat2Fields.h"
+#include "Atl03Viewer.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -79,29 +81,25 @@ const struct luaL_Reg Atl03Viewer::LUA_META_TABLE[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>, <send terminator>)
+ * luaCreate - create(<outq_name>, <parms>, <send terminator>)
  *----------------------------------------------------------------------------*/
 int Atl03Viewer::luaCreate (lua_State* L)
 {
-    Asset* asset = NULL;
-    Icesat2Parms* parms = NULL;
+    Icesat2Fields* _parms = NULL;
 
     try
     {
         /* Get Parameters */
-        asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
-        const char* resource = getLuaString(L, 2);
-        const char* outq_name = getLuaString(L, 3);
-        parms = dynamic_cast<Icesat2Parms*>(getLuaObject(L, 4, Icesat2Parms::OBJECT_TYPE));
-        const bool send_terminator = getLuaBoolean(L, 5, true, true);
+        const char* outq_name = getLuaString(L, 1);
+        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
+        const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Return Viewer Object */
-        return createLuaObject(L, new Atl03Viewer(L, asset, resource, outq_name, parms, send_terminator));
+        return createLuaObject(L, new Atl03Viewer(L, outq_name, _parms, send_terminator));
     }
     catch(const RunTimeException& e)
     {
-        if(asset) asset->releaseLuaObject();
-        if(parms) parms->releaseLuaObject();
+        if(_parms) _parms->releaseLuaObject();
         mlog(e.level(), "Error creating Atl03Viewer: %s", e.what());
         return returnLuaStatus(L, false);
     }
@@ -119,13 +117,11 @@ void Atl03Viewer::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03Viewer::Atl03Viewer (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator):
+Atl03Viewer::Atl03Viewer (lua_State* L, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    read_timeout_ms(_parms->read_timeout * 1000),
+    read_timeout_ms(_parms->readTimeout.value * 1000),
     context(NULL)
 {
-    assert(_asset);
-    assert(_resource);
     assert(outq_name);
     assert(_parms);
 
@@ -133,8 +129,6 @@ Atl03Viewer::Atl03Viewer (lua_State* L, Asset* _asset, const char* _resource, co
     threadCount = 0;
 
     /* Save Info */
-    asset = _asset;
-    resource = StringLib::duplicate(_resource);
     parms = _parms;
 
     /* Create Publisher */
@@ -159,18 +153,15 @@ Atl03Viewer::Atl03Viewer (lua_State* L, Asset* _asset, const char* _resource, co
     try
     {
         /* Create H5Coro Context */
-        context = new H5Coro::Context(asset, resource);
-
-        /* Parse Globals (throws) */
-        parseResource(resource, start_rgt, start_cycle, start_region);
+        context = new H5Coro::Context(parms->asset.asset, parms->getResource());
 
         /* Create Readers */
-        for(int track = 1; track <= Icesat2Parms::NUM_TRACKS; track++)
+        for(int track = 1; track <= Icesat2Fields::NUM_TRACKS; track++)
         {
-            for(int pair = 0; pair < Icesat2Parms::NUM_PAIR_TRACKS; pair++)
+            for(int pair = 0; pair < Icesat2Fields::NUM_PAIR_TRACKS; pair++)
             {
                 const int gt_index = (2 * (track - 1)) + pair;
-                if(parms->beams[gt_index] && (parms->track == Icesat2Parms::ALL_TRACKS || track == parms->track))
+                if(parms->beams.values[gt_index] && (parms->track == Icesat2Fields::ALL_TRACKS || track == parms->track))
                 {
                     info_t* info = new info_t;
                     info->reader = this;
@@ -185,14 +176,14 @@ Atl03Viewer::Atl03Viewer (lua_State* L, Asset* _asset, const char* _resource, co
         /* Check if Readers Created */
         if(threadCount == 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "No reader threads were created, invalid track specified: %d\n", parms->track);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "No reader threads were created, invalid track specified: %d\n", parms->track.value);
         }
     }
     catch(const RunTimeException& e)
     {
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "Failure on resource %s: %s", resource, e.what());
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "Failure on resource %s: %s", resource, e.what());
+        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "Failure on resource %s: %s", parms->getResource(), e.what());
+        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "Failure on resource %s: %s", parms->getResource(), e.what());
 
         /* Indicate End of Data */
         if(sendTerminator) outQ->postCopy("", 0, SYS_TIMEOUT);
@@ -217,10 +208,6 @@ Atl03Viewer::~Atl03Viewer (void)
     parms->releaseLuaObject();
 
     delete context;
-
-    delete [] resource;
-
-    asset->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -245,11 +232,11 @@ Atl03Viewer::Region::Region (const info_t* info):
         num_segments = H5Coro::ALL_ROWS;
 
         /* Determine Spatial Extent */
-        if(info->reader->parms->raster.valid())
+        if(info->reader->parms->regionMask.valid())
         {
             rasterregion(info);
         }
-        else if(info->reader->parms->points_in_poly > 0)
+        else if(info->reader->parms->pointsInPolygon.value > 0)
         {
             polyregion(info);
         }
@@ -303,17 +290,8 @@ void Atl03Viewer::Region::polyregion (const info_t* info)
     int segment = 0;
     while(segment < segment_lat.size)
     {
-        bool inclusion = false;
-
-        /* Project Segment Coordinate */
-        const MathLib::coord_t segment_coord = {segment_lon[segment], segment_lat[segment]};
-        const MathLib::point_t segment_point = MathLib::coord2point(segment_coord, info->reader->parms->projection);
-
         /* Test Inclusion */
-        if(MathLib::inpoly(info->reader->parms->projected_poly, info->reader->parms->points_in_poly, segment_point))
-        {
-            inclusion = true;
-        }
+        const bool inclusion = info->reader->parms->polyIncludes(segment_lon[segment], segment_lat[segment]);
 
         /* Segments with zero photon count may contain invalid coordinates,
            making them unsuitable for inclusion in polygon tests. */
@@ -373,7 +351,7 @@ void Atl03Viewer::Region::rasterregion (const info_t* info)
     while(segment < segment_lat.size)
     {
         /* Check Inclusion */
-        const bool inclusion = info->reader->parms->raster.includes(segment_lon[segment], segment_lat[segment]);
+        const bool inclusion = info->reader->parms->maskIncludes(segment_lon[segment], segment_lat[segment]);
         inclusion_mask[segment] = inclusion;
 
         /* Check For First Segment */
@@ -433,10 +411,11 @@ void* Atl03Viewer::subsettingThread (void* parm)
     /* Get Thread Info */
     const info_t* info = static_cast<info_t*>(parm);
     Atl03Viewer* reader = info->reader;
+    Icesat2Fields* parms = info->reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_viewsubsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl03_viewsubsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms->asset.getName(), parms->getResource(), info->track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -461,8 +440,8 @@ void* Atl03Viewer::subsettingThread (void* parm)
             if(region.segment_ph_cnt[s] == 0) continue;
 
             const segment_t segment = {
-                .time_ns   = Icesat2Parms::deltatime2timestamp(atl03.segment_delta_time[s]),
-                .extent_id = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, s),
+                .time_ns   = Icesat2Fields::deltatime2timestamp(atl03.segment_delta_time[s]),
+                .extent_id = Icesat2Fields::generateExtentId(parms->rgt.value, parms->cycle.value, parms->region.value, info->track, info->pair, s),
                 .latitude  = region.segment_lat[s],
                 .longitude = region.segment_lon[s],
                 .dist_x    = atl03.segment_dist_x[s],
@@ -481,13 +460,13 @@ void* Atl03Viewer::subsettingThread (void* parm)
                 /* Initialize Extent Record */
                 RecordObject record (batchRecType, batch_bytes);
                 extent_t* extent = reinterpret_cast<extent_t*>(record.getRecordData());
-                extent->region = reader->start_region;
+                extent->region = parms->region.value;
                 extent->track = info->track;
                 extent->pair = info->pair;
-                extent->spot = Icesat2Parms::getSpotNumber(static_cast<Icesat2Parms::sc_orient_t>(atl03.sc_orient[0]),
-                                                           static_cast<Icesat2Parms::track_t>(info->track), info->pair);
-                extent->reference_ground_track = reader->start_rgt;
-                extent->cycle = reader->start_cycle;
+                extent->spot = Icesat2Fields::getSpotNumber(static_cast<Icesat2Fields::sc_orient_t>(atl03.sc_orient[0]),
+                                                           static_cast<Icesat2Fields::track_t>(info->track), info->pair);
+                extent->reference_ground_track = parms->rgt.value;
+                extent->cycle = parms->cycle.value;
 
                 /* Populate Segments */
                 for(int32_t i = 0; i < segments.length(); i++)
@@ -504,7 +483,7 @@ void* Atl03Viewer::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d.%d: %s", info->reader->resource, info->track, info->pair, e.what());
+        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d.%d: %s", parms->getResource(), info->track, info->pair, e.what());
     }
 
     /* Handle Global Reader Updates */
@@ -521,7 +500,7 @@ void* Atl03Viewer::subsettingThread (void* parm)
         reader->numComplete++;
         if(reader->numComplete == reader->threadCount)
         {
-            mlog(INFO, "Completed processing resource %s track %d.%d (r: %u, s: %u)", info->reader->resource, info->track, info->pair, local_stats.segments_read, local_stats.extents_sent);
+            mlog(INFO, "Completed processing resource %s track %d.%d (r: %u, s: %u)", parms->getResource(), info->track, info->pair, local_stats.segments_read, local_stats.extents_sent);
 
             /* Indicate End of Data */
             if(reader->sendTerminator)
@@ -532,12 +511,12 @@ void* Atl03Viewer::subsettingThread (void* parm)
                     status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
                     if(status < 0)
                     {
-                        mlog(CRITICAL, "Failed (%d) to post terminator for %s track %d.%d", status, info->reader->resource, info->track, info->pair);
+                        mlog(CRITICAL, "Failed (%d) to post terminator for %s track %d.%d", status, parms->getResource(), info->track, info->pair);
                         break;
                     }
                     else if(status == MsgQ::STATE_TIMEOUT)
                     {
-                        mlog(INFO, "Timeout posting terminator for %s track %d.%d ... trying again", info->reader->resource, info->track, info->pair);
+                        mlog(INFO, "Timeout posting terminator for %s track %d.%d ... trying again", parms->getResource(), info->track, info->pair);
                     }
                 }
             }
@@ -578,75 +557,6 @@ void Atl03Viewer::postRecord (RecordObject& record, stats_t& local_stats)
     {
         mlog(DEBUG, "Atl03 reader failed to post %s to stream %s: %d", record.getRecordType(), outQ->getName(), post_status);
         local_stats.extents_dropped++;
-    }
-}
-
-/*----------------------------------------------------------------------------
- * parseResource
- *
- *  ATL0x_YYYYMMDDHHMMSS_ttttccrr_vvv_ee
- *      YYYY    - year
- *      MM      - month
- *      DD      - day
- *      HH      - hour
- *      MM      - minute
- *      SS      - second
- *      tttt    - reference ground track
- *      cc      - cycle
- *      rr      - region
- *      vvv     - version
- *      ee      - revision
- *----------------------------------------------------------------------------*/
-void Atl03Viewer::parseResource (const char* _resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region)
-{
-    if(StringLib::size(_resource) < 29)
-    {
-        rgt = 0;
-        cycle = 0;
-        region = 0;
-        return; // early exit on error
-    }
-
-    long val;
-    char rgt_str[5];
-    rgt_str[0] = _resource[21];
-    rgt_str[1] = _resource[22];
-    rgt_str[2] = _resource[23];
-    rgt_str[3] = _resource[24];
-    rgt_str[4] = '\0';
-    if(StringLib::str2long(rgt_str, &val, 10))
-    {
-        rgt = static_cast<uint16_t>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse RGT from resource %s: %s", _resource, rgt_str);
-    }
-
-    char cycle_str[3];
-    cycle_str[0] = _resource[25];
-    cycle_str[1] = _resource[26];
-    cycle_str[2] = '\0';
-    if(StringLib::str2long(cycle_str, &val, 10))
-    {
-        cycle = static_cast<uint8_t>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Cycle from resource %s: %s", _resource, cycle_str);
-    }
-
-    char region_str[3];
-    region_str[0] = _resource[27];
-    region_str[1] = _resource[28];
-    region_str[2] = '\0';
-    if(StringLib::str2long(region_str, &val, 10))
-    {
-        region = static_cast<uint8_t>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Region from resource %s: %s", _resource, region_str);
     }
 }
 

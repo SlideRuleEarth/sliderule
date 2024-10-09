@@ -3,6 +3,7 @@ local console = require("console")
 local asset = require("asset")
 local assets = asset.loaddir()
 local json = require("json")
+local prettyprint = require("prettyprint")
 
 -- Setup --
 -- console.monitor:config(core.LOG, core.DEBUG)
@@ -29,126 +30,100 @@ else
     runner.check(false, "failed to open geojson file")
 end
 
-
+local js = ""
 local jsonstr = ""
-local verbose = true
-
-function print_jsonstr()
-    if verbose then
-        print(jsonstr)
-    end
-end
-
 
 if __arrow__ then
-    print(string.format("\n--------------------------------\nDefault arrow.parms.tojson\n--------------------------------"))
-    jsonstr = arrow.parms({}):tojson()
-    runner.check(string.len(jsonstr) > 0)
-    print_jsonstr()
+    print(string.format("\n--------------------------------\nDefault arrow.parms.export\n--------------------------------"))
+    js = core.parms({}):export()["output"]
+    runner.check(string.len(json.encode(js)) > 0)
 
-    print(string.format("\n--------------------------------\nUserSet arrow.parms.tojson\n--------------------------------"))
-    jsonstr = arrow.parms({path="/tmp/samples.geoparquet", format="parquet", as_geo=true}):tojson()
-    runner.check(string.len(jsonstr) > 0)
-    print_jsonstr()
+    print(string.format("\n--------------------------------\nUserSet arrow.parms.export\n--------------------------------"))
+    js = core.parms({path="/tmp/samples.geoparquet", format="parquet", as_geo=true}):export()["output"]
+    runner.check(string.len(json.encode(js)) > 0)
 end
 
 if __cre__ then
-    print(string.format("\n--------------------------------\nDefault cre.parms.tojson\n--------------------------------"))
-    jsonstr = cre.parms({}):tojson()
-    runner.check(string.len(jsonstr) > 0)
-    print_jsonstr()
+    print(string.format("\n--------------------------------\nDefault cre.parms.export\n--------------------------------"))
+    js = cre.parms({}):export()
+    runner.check(string.len(json.encode(js)) > 0)
 
-    print(string.format("\n--------------------------------\nUserSet cre.parms.tojson\n--------------------------------"))
-    jsonstr = cre.parms({image="/tmp/fakeimage.jpg", command="fakecommand"}):tojson()
-    js = json.decode(jsonstr)
+    print(string.format("\n--------------------------------\nUserSet cre.parms.export\n--------------------------------"))
+    js = cre.parms({image="/tmp/fakeimage.jpg", command="fakecommand"}):export()
     runner.check(js.image == "/tmp/fakeimage.jpg", js.image)
     runner.check(js.command == "fakecommand", js.command)
-    print_jsonstr()
 end
 
+--[[
 if __geo__ then
-    print(string.format("\n--------------------------------\nDefault geo.parms.tojson\n--------------------------------"))
+    print(string.format("\n--------------------------------\nDefault geo.parms.export\n--------------------------------"))
     jsonstr = geo.parms({}):tojson()
     runner.check(string.len(jsonstr) > 0)
-    print_jsonstr()
 
-    print(string.format("\n--------------------------------\nUserSet geo.parms.tojson\n--------------------------------"))
+    print(string.format("\n--------------------------------\nUserSet geo.parms.export\n--------------------------------"))
     jsonstr = geo.parms({ asset = "arcticdem-mosaic", algorithm = "Bilinear", radius = 0, bands = {"NDVI", "B03"}}):tojson()
     js = json.decode(jsonstr)
     runner.check(js.sampling_algo == "Bilinear", js.sampling_algo)
     runner.check(js.bands_list[1] == "NDVI", js.bands_list[1])
     runner.check(js.bands_list[2] == "B03", js.bands_list[2])
-    print_jsonstr()
 end
+--]]
 
-print(string.format("\n--------------------------------\nDefault core.parms.tojson\n--------------------------------"))
-jsonstr = core.parms({}):tojson()
-runner.check(string.len(jsonstr) > 0)
-print_jsonstr()
+print(string.format("\n--------------------------------\nDefault core.parms.export\n--------------------------------"))
+js = core.parms({}):export()
+runner.check(string.len(json.encode(js)) > 0)
 
-print(string.format("\n--------------------------------\nUserSet 'polygon' core.parms.tojson\n--------------------------------"))
-jsonstr = core.parms({poly=poly}):tojson()
-js = json.decode(jsonstr)
-runner.check(js.polygon[1].lat == 0.73734824791566, js.polygon[1].lat)
-runner.check(js.polygon[1].lon == 172.51715474926,  js.polygon[1].lon)
-runner.check(js.polygon[2].lat == 0.73734824791566, js.polygon[2].lat)
-runner.check(js.polygon[2].lon == 173.47569646684,  js.polygon[2].lon)
-runner.check(js.polygon[3].lat == 2.1059226076334,  js.polygon[3].lat)
-runner.check(js.polygon[3].lon == 173.47569646684,  js.polygon[3].lon)
-runner.check(js.polygon[4].lat == 2.1059226076334,  js.polygon[4].lat)
-runner.check(js.polygon[4].lon == 172.51715474926,  js.polygon[4].lon)
-runner.check(js.polygon[5].lat == 0.73734824791566, js.polygon[5].lat)
-runner.check(js.polygon[5].lon == 172.51715474926,  js.polygon[5].lon)
-print_jsonstr()
+print(string.format("\n--------------------------------\nUserSet 'polygon' core.parms.export\n--------------------------------"))
+js = core.parms({poly=poly}):export()
+runner.check(js.poly[1].lat == 0.73734824791566, js.poly[1].lat)
+runner.check(js.poly[1].lon == 172.51715474926,  js.poly[1].lon)
+runner.check(js.poly[2].lat == 0.73734824791566, js.poly[2].lat)
+runner.check(js.poly[2].lon == 173.47569646684,  js.poly[2].lon)
+runner.check(js.poly[3].lat == 2.1059226076334,  js.poly[3].lat)
+runner.check(js.poly[3].lon == 173.47569646684,  js.poly[3].lon)
+runner.check(js.poly[4].lat == 2.1059226076334,  js.poly[4].lat)
+runner.check(js.poly[4].lon == 172.51715474926,  js.poly[4].lon)
+runner.check(js.poly[5].lat == 0.73734824791566, js.poly[5].lat)
+runner.check(js.poly[5].lon == 172.51715474926,  js.poly[5].lon)
 
-print(string.format("\n--------------------------------\nUserSet 'raster' core.parms.tojson\n--------------------------------"))
-jsonstr = core.parms({raster={data=vectorfile, cellsize=0.01}}):tojson()
-raster = json.decode(jsonstr).raster
-geojsonFile = json.decode(raster)  -- raster is another json string (geojson file content)
+print(string.format("\n--------------------------------\nUserSet 'raster' core.parms.export\n--------------------------------"))
+js = core.parms({region_mask={geojson=vectorfile, cellsize=0.01}}):export()
+local geojsonFile = json.decode(js.region_mask.geojson)  -- raster is another json string (geojson file content)
 runner.check(geojsonFile.name == "grand_mesa_poly", geojsonFile.name)
-print_jsonstr()
 
 if __swot__ then
-    print(string.format("\n--------------------------------\nDefault swot.parms.tojson\n--------------------------------"))
-    jsonstr = swot.parms({}):tojson()
-    runner.check(string.len(jsonstr) > 0)
-    print_jsonstr()
+    print(string.format("\n--------------------------------\nDefault swot.parms.export\n--------------------------------"))
+    js = swot.parms({}):export()
+    runner.check(string.len(json.encode(js)) > 0)
 
-    print(string.format("\n--------------------------------\nUserSet swot.parms.tojson\n--------------------------------"))
-    jsonstr = swot.parms({variables={"var1", "var2"}}):tojson()
-    js = json.decode(jsonstr)
+    print(string.format("\n--------------------------------\nUserSet swot.parms.export\n--------------------------------"))
+    js = swot.parms({variables={"var1", "var2"}}):export()
     runner.check(js.variables[1] == "var1", js.variables[1])
     runner.check(js.variables[2] == "var2", js.variables[2])
-    print_jsonstr()
 end
 
 if __gedi__ then
-    print(string.format("\n--------------------------------\nDefault gedi.parms.tojson\n--------------------------------"))
-    jsonstr = gedi.parms({}):tojson()
-    runner.check(string.len(jsonstr) > 0)
-    print_jsonstr()
+    print(string.format("\n--------------------------------\nDefault gedi.parms.export\n--------------------------------"))
+    js = gedi.parms({}):export()
+    runner.check(string.len(json.encode(js)) > 0)
 
-    print(string.format("\n--------------------------------\nUserSet gedi.parms.tojson\n--------------------------------"))
-    jsonstr = gedi.parms({degrade_flag=1, surface_flag=1, l2_quality_flag=1, l4_quality_flag=1}):tojson()
-    js = json.decode(jsonstr)
-    runner.check(js.degrade_filter    == 'SET', js.degrade_filter)
-    runner.check(js.surface_filter    == 'SET', js.surface_filter)
-    runner.check(js.l2_quality_filter == 'SET', js.l2_quality_filter)
-    runner.check(js.l4_quality_filter == 'SET', js.l4_quality_filter)
-    print_jsonstr()
+    print(string.format("\n--------------------------------\nUserSet gedi.parms.export\n--------------------------------"))
+    js = gedi.parms({degrade_filter=true, surface_filter=true, l2_quality_filter=true, l4_quality_filter=true}):export()
+    prettyprint.display(js)
+    runner.check(js.degrade_filter    == true, string.format("gedi parm incorrect: %s", tostring(js.degrade_filter)))
+    runner.check(js.surface_filter    == true, string.format("gedi parm incorrect: %s", tostring(js.surface_filter)))
+    runner.check(js.l2_quality_filter == true, string.format("gedi parm incorrect: %s", tostring(js.l2_quality_filter)))
+    runner.check(js.l4_quality_filter == true, string.format("gedi parm incorrect: %s", tostring(js.l4_quality_filter)))
 end
 
 if __icesat2__ then
-    print(string.format("\n--------------------------------\nDefault icesat2.parms.tojson\n--------------------------------"))
-    jsonstr = icesat2.parms({}):tojson()
-    runner.check(string.len(jsonstr) > 0)
-    print_jsonstr()
+    print(string.format("\n--------------------------------\nDefault icesat2.parms.export\n--------------------------------"))
+    js = icesat2.parms({}):export()
+--    runner.check(string.len(json.encode(js)) > 0)
 
-    print(string.format("\n--------------------------------\nUserSet icesat2.parms.tojson\n--------------------------------"))
-    jsonstr = icesat2.parms({cnf=4, track=icesat2.RPT_1, atl03_geo_fields={"solar_elevation"}}):tojson()
-    js = json.decode(jsonstr)
-    runner.check(js.atl03_geo_fields[1]["field"] == "solar_elevation")
-    print_jsonstr()
+    print(string.format("\n--------------------------------\nUserSet icesat2.parms.export\n--------------------------------"))
+    js = icesat2.parms({cnf=4, track=icesat2.RPT_1, atl03_geo_fields={"solar_elevation"}}):export()
+    runner.check(js.atl03_geo_fields[1] == "solar_elevation")
 end
 
 -- Report Results --

@@ -38,7 +38,7 @@
 
 #include "OsApi.h"
 #include "MsgQ.h"
-#include "ArrowParms.h"
+#include "ArrowFields.h"
 
 
 /******************************************************************************
@@ -64,13 +64,12 @@ namespace ArrowCommon
 
     void        init       (void);
     bool        send2User  (const char* fileName, const char* outputPath,
-                            uint32_t traceId, ArrowParms* parms, Publisher* outQ);
+                            uint32_t traceId, const ArrowFields* parms, Publisher* outQ);
     bool        send2S3    (const char* fileName, const char* s3dst, const char* outputPath,
-                            ArrowParms* parms, Publisher* outQ);
+                            const ArrowFields* parms, Publisher* outQ);
     bool        send2Client(const char* fileName, const char* outPath,
-                            const ArrowParms* parms, Publisher* outQ);
+                            const ArrowFields* parms, Publisher* outQ);
 
-    const char* getOutputPath(ArrowParms* parms, const char* output_filename=NULL);
     const char* getUniqueFileName(const char* id = NULL);
     char*       createMetadataFileName(const char* fileName);
 

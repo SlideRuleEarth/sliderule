@@ -34,99 +34,111 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "BathyFields.h"
-#include "BathyKd.h"
+#include "CreFields.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* BathyKd::OBJECT_TYPE = "BathyKd";
-const char* BathyKd::LUA_META_NAME = "BathyKd";
-const struct luaL_Reg BathyKd::LUA_META_TABLE[] = {
-    {NULL,  NULL}
+const char* CreFields::OBJECT_TYPE = "CreFields";
+const char* CreFields::LUA_META_NAME = "CreFields";
+const struct luaL_Reg CreFields::LUA_META_TABLE[] = {
+    {"image",       luaImage},
+    {"export",      luaExport},
+    {NULL,          NULL}
 };
 
 /******************************************************************************
- * CLASS METHODS
+ * PUBLIC METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(...)
+ * luaCreate - create(<parameter table>)
  *----------------------------------------------------------------------------*/
-int BathyKd::luaCreate (lua_State* L)
+int CreFields::luaCreate (lua_State* L)
 {
-    BathyFields* parms = NULL;
-    H5Coro::Context* _context = NULL;
+    CreFields* cre_fields = NULL;
     try
     {
-        parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
-        const char* resource_kd = getLuaString(L, 2);
-        if(!parms->uncertainty.assetKd.asset) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no asset provided");
-        _context = new H5Coro::Context(parms->uncertainty.assetKd.asset, resource_kd);
-        parms->releaseLuaObject();
-        return createLuaObject(L, new BathyKd(L, _context));
+        cre_fields = new CreFields(L);
+        cre_fields->fromLua(L, 1);
+        return createLuaObject(L, cre_fields);
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error creating BathyKd: %s", e.what());
-        if(parms) parms->releaseLuaObject();
-        delete _context;
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        delete cre_fields;
         return returnLuaStatus(L, false);
     }
 }
 
 /*----------------------------------------------------------------------------
- * join
+ * luaExport - export() --> lua table
  *----------------------------------------------------------------------------*/
-void BathyKd::join (int timeout)
+int CreFields::luaExport (lua_State* L)
 {
-    array->join(timeout, true);
+    int num_rets = 1;
+
+    try
+    {
+        CreFields* lua_obj = dynamic_cast<CreFields*>(getLuaSelf(L, 1));
+        num_rets = lua_obj->toLua(L);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error exporting %s: %s", OBJECT_TYPE, e.what());
+        lua_pushnil(L);
+    }
+
+    return num_rets;
 }
 
 /*----------------------------------------------------------------------------
- * getKd
+ * fromLua
  *----------------------------------------------------------------------------*/
-double BathyKd::getKd (double lon, double lat)
+void CreFields::fromLua (lua_State* L, int index)
 {
-    /* get y offset */
-    const double degrees_of_latitude = lat + 90.0;
-    const double latitude_pixels = degrees_of_latitude * 24.0;
-    const int32_t y = static_cast<int32_t>(latitude_pixels);
+    FieldDictionary::fromLua(L, index);
 
-    /* get x offset */
-    const double degrees_of_longitude = lon + 180.0;
-    const double longitude_pixels = degrees_of_longitude * 24.0;
-    const int32_t x = static_cast<int32_t>(longitude_pixels);
-
-    /* calculate total offset */
-    if(y < 0 || y >= 4320 || x < 0 || x >= 8640)
+    // check image for ONLY legal characters
+    for (auto c_iter = image.value.begin(); c_iter < image.value.end(); ++c_iter)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid Kd coordinates: %d, %d | %lf, %lf", y, x, degrees_of_latitude, degrees_of_longitude);
+        const int c = *c_iter;
+        if(!isalnum(c) && (c != '/') && (c != '.') && (c != ':') && (c != '-'))
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid character found in image name: %c", c);
+        }
     }
-    const long offset = (x * 4320) + y;
-
-    /* get kd */
-    return static_cast<double>((*array)[offset]) * 0.0002;
-
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyKd::BathyKd (lua_State* L, H5Coro::Context* _context):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    context(_context)
+CreFields::CreFields (lua_State* L):
+    LuaObject           (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
+    FieldDictionary ({
+        {"image",   &image},
+        {"name",    &name},
+        {"command", &command},
+        {"timeout", &timeout},
+    })
 {
-    assert(context);
-    array = new H5Array<int16_t>(context, "Kd_490", H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS);
 }
 
 /*----------------------------------------------------------------------------
- * Destructor
+ * luaImage
  *----------------------------------------------------------------------------*/
-BathyKd::~BathyKd (void)
+int CreFields::luaImage (lua_State* L)
 {
-    delete array;
-    delete context;
+    try
+    {
+        const CreFields* lua_obj = dynamic_cast<CreFields*>(getLuaSelf(L, 1));
+        if(!lua_obj->image.value.empty()) lua_pushstring(L, lua_obj->image.value.c_str());
+        else lua_pushnil(L);
+        return 1;
+    }
+    catch(const RunTimeException& e)
+    {
+        return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
+    }
 }

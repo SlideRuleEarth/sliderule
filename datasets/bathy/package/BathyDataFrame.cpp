@@ -224,7 +224,7 @@ BathyDataFrame::Region::Region (const BathyDataFrame& dataframe):
         num_photons = H5Coro::ALL_ROWS;
 
         /* Determine Spatial Extent */
-        if(dataframe.parms.regionMask.cellSize.value > 0.0)
+        if(dataframe.parms.regionMask.valid())
         {
             rasterregion(dataframe);
         }
@@ -501,7 +501,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
     const BathyFields& parms = dataframe.parms;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms.asset->getName(), parms.resource.value.c_str(), dataframe.track.value);
+    const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms.asset.getName(), parms.getResource(), dataframe.track.value);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -666,7 +666,8 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 dataframe.x_atc.append(atl03.segment_dist_x[current_segment] + atl03.dist_ph_along[current_photon]);
                 dataframe.y_atc.append(atl03.dist_ph_across[current_photon]);
                 dataframe.background_rate.append(calculateBackground(current_segment, bckgrd_index, atl03));
-                dataframe.ellipse_h.append(atl03.h_ph[current_photon]); // corrected by refraction correction
+                dataframe.ellipse_h.append(atl03.h_ph[current_photon]); // later corrected by refraction correction
+                dataframe.ortho_h.append(atl03.h_ph[current_photon] - atl03.geoid[current_segment]); // later corrected by refraction correction
                 dataframe.yapc_score.append(yapc_score);
                 dataframe.max_signal_conf.append(atl03_cnf);
                 dataframe.quality_ph.append(quality_ph);
@@ -691,7 +692,6 @@ void* BathyDataFrame::subsettingThread (void* parm)
         }
 
         /* Initialize Additional DataFrame Columns (populated later) */
-        dataframe.ortho_h.initialize(dataframe.length(), 0.0); // populated by refraction correction
         dataframe.class_ph.initialize(dataframe.length(), static_cast<uint8_t>(BathyFields::UNCLASSIFIED));
         dataframe.surface_h.initialize(dataframe.length(), 0.0); // populated by sea surface finder
         dataframe.sigma_thu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation

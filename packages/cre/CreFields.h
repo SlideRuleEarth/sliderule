@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arrow_parms__
-#define __arrow_parms__
+#ifndef __cre_fields__
+#define __cre_fields__
 
 /******************************************************************************
  * INCLUDES
@@ -38,92 +38,54 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "Asset.h"
-
-#ifdef __aws__
-#include "aws.h"
-#endif
+#include "FieldElement.h"
+#include "FieldDictionary.h"
 
 /******************************************************************************
- * ARROW PARAMETERS CLASS
+ * CLASS
  ******************************************************************************/
 
-class ArrowParms: public LuaObject
+class CreFields: public LuaObject, public FieldDictionary
 {
     public:
-
-        /*--------------------------------------------------------------------
-        * Typedefs
-        *--------------------------------------------------------------------*/
-        typedef enum {
-            NATIVE = 0,
-            FEATHER = 1,
-            PARQUET = 2,
-            CSV = 3,
-            UNSUPPORTED = 4
-        } format_t;
 
         /*--------------------------------------------------------------------
         * Constants
         *--------------------------------------------------------------------*/
 
-        static const char* SELF;
-        static const char* PATH;
-        static const char* FORMAT;
-        static const char* OPEN_ON_COMPLETE;
-        static const char* AS_GEO;
-        static const char* WITH_CHECKSUM;
-        static const char* ANCILLARY;
-        static const char* ASSET;
-        static const char* REGION;
-        static const char* CREDENTIALS;
-
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
+
+        static const int DEFAULT_TIMEOUT = 600;
 
         /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
 
-        const char*     path;                           // file system path to the file (includes filename)
-        format_t        format;                         // format of the file
-        bool            open_on_complete;               // flag to client to open file on completion
-        bool            as_geo;                         // whether to create a standard geo-based formatted file
-        bool            with_checksum;                  // whether to perform checksum on file and send EOF record
-        const char*     asset_name;
-        const char*     region;
-        vector<string>  ancillary_fields;
-
-        #ifdef __aws__
-        CredentialStore::Credential credentials;
-        #endif
+        FieldElement<string>    image; // container image
+        FieldElement<string>    name; // container name
+        FieldElement<string>    command; // container command
+        FieldElement<int>       timeout {DEFAULT_TIMEOUT}; // on requests to docker daemon
 
         /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
 
-        static int  luaCreate           (lua_State* L);
-                    ArrowParms          (lua_State* L, int index);
-                    ~ArrowParms         (void) override;
-        const char* tojson              (void) const override;
+        static int  luaCreate   (lua_State* L);
+        static int  luaExport   (lua_State* L);
+        static int  luaImage    (lua_State* L);
 
-    private:
+        virtual void fromLua    (lua_State* L, int index) override;
+
+    protected:
 
         /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
 
-        void            cleanup             (void);
-        static format_t str2outputformat    (const char* fmt_str);
-        static int      luaIsNative         (lua_State* L);
-        static int      luaIsFeather        (lua_State* L);
-        static int      luaIsParquet        (lua_State* L);
-        static int      luaIsCSV            (lua_State* L);
-        static int      luaIsArrow          (lua_State* L);
-        static int      luaPath             (lua_State* L);
-        void            luaGetAncillary     (lua_State* L, int index, bool* provided);
-        static const char*format2str        (format_t fmt);
+        CreFields    (lua_State* L);
+        ~CreFields   (void) override = default;
 };
 
-#endif  /* __arrow_parms__ */
+#endif  /* __cre_fields__ */

@@ -199,7 +199,7 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
         }
 
         /* Correct All Subaqueous Photons */
-        const double depth = df.surface_h[i] - df.ortho_h[i]; // compute un-refraction-corrected depths
+        const double depth = df.surface_h[i] - df.geoid_corr_h[i]; // compute un-refraction-corrected depths
         if(depth > 0)
         {
             /* Count Subaqueous Photons */
@@ -208,7 +208,7 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
             /* Calculate Refraction Corrections */
             const double n1 = refraction_parms.RIAir.value;
             const double n2 = ri_water;
-            const double theta_1 = (M_PI / 2.0) - df.ref_el[i];              // angle of incidence (without Earth curvature)
+            const double theta_1 = (M_PI / 2.0) - df.ref_el[i];                     // angle of incidence (without Earth curvature)
             const double theta_2 = asin(n1 * sin(theta_1) / n2);                    // angle of refraction
             const double phi = theta_1 - theta_2;
             const double s = depth / cos(theta_1);                                  // uncorrected slant range to the uncorrected seabed photon location
@@ -219,11 +219,11 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
             const double beta = gamma - alpha;
             const double dZ = p * sin(beta);                                        // vertical offset
             const double dY = p * cos(beta);                                        // cross-track offset
-            const double dE = dY * sin(static_cast<double>(df.ref_az[i]));   // UTM offsets
+            const double dE = dY * sin(static_cast<double>(df.ref_az[i]));          // UTM offsets
             const double dN = dY * cos(static_cast<double>(df.ref_az[i]));
 
             /* Apply Refraction Correction */
-            df.ortho_h[i] = df.geoid_corr_h[i] + dZ;
+            df.ortho_h[i] = df.ortho_h[i] + dZ;
             df.ellipse_h[i] = df.ellipse_h[i] + dZ;
 
             /* Correct Latitude and Longitude */

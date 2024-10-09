@@ -30,103 +30,93 @@
  */
 
 /******************************************************************************
- * INCLUDES
+ * INCLUDE
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "BathyFields.h"
-#include "BathyKd.h"
-
-/******************************************************************************
- * STATIC DATA
- ******************************************************************************/
-
-const char* BathyKd::OBJECT_TYPE = "BathyKd";
-const char* BathyKd::LUA_META_NAME = "BathyKd";
-const struct luaL_Reg BathyKd::LUA_META_TABLE[] = {
-    {NULL,  NULL}
-};
+#include "AssetField.h"
 
 /******************************************************************************
  * CLASS METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(...)
+ * Constructor - AssetField
  *----------------------------------------------------------------------------*/
-int BathyKd::luaCreate (lua_State* L)
+AssetField::AssetField(void):
+    Field(ELEMENT, Field::STRING),
+    asset(NULL)
 {
-    BathyFields* parms = NULL;
-    H5Coro::Context* _context = NULL;
-    try
-    {
-        parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
-        const char* resource_kd = getLuaString(L, 2);
-        if(!parms->uncertainty.assetKd.asset) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no asset provided");
-        _context = new H5Coro::Context(parms->uncertainty.assetKd.asset, resource_kd);
-        parms->releaseLuaObject();
-        return createLuaObject(L, new BathyKd(L, _context));
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating BathyKd: %s", e.what());
-        if(parms) parms->releaseLuaObject();
-        delete _context;
-        return returnLuaStatus(L, false);
-    }
 }
 
 /*----------------------------------------------------------------------------
- * join
+ * Constructor - AssetField
  *----------------------------------------------------------------------------*/
-void BathyKd::join (int timeout)
+AssetField::AssetField(const char* asset_name):
+    Field(ELEMENT, Field::STRING),
+    asset(NULL)
 {
-    array->join(timeout, true);
-}
-
-/*----------------------------------------------------------------------------
- * getKd
- *----------------------------------------------------------------------------*/
-double BathyKd::getKd (double lon, double lat)
-{
-    /* get y offset */
-    const double degrees_of_latitude = lat + 90.0;
-    const double latitude_pixels = degrees_of_latitude * 24.0;
-    const int32_t y = static_cast<int32_t>(latitude_pixels);
-
-    /* get x offset */
-    const double degrees_of_longitude = lon + 180.0;
-    const double longitude_pixels = degrees_of_longitude * 24.0;
-    const int32_t x = static_cast<int32_t>(longitude_pixels);
-
-    /* calculate total offset */
-    if(y < 0 || y >= 4320 || x < 0 || x >= 8640)
+    // only initialize if provided
+    if(asset_name)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid Kd coordinates: %d, %d | %lf, %lf", y, x, degrees_of_latitude, degrees_of_longitude);
+        // get asset
+        asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
+
+        // throw error on asset not found
+        if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", asset_name);
     }
-    const long offset = (x * 4320) + y;
-
-    /* get kd */
-    return static_cast<double>((*array)[offset]) * 0.0002;
-
-}
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-BathyKd::BathyKd (lua_State* L, H5Coro::Context* _context):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    context(_context)
-{
-    assert(context);
-    array = new H5Array<int16_t>(context, "Kd_490", H5Coro::ALL_COLS, 0, H5Coro::ALL_ROWS);
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-BathyKd::~BathyKd (void)
+AssetField::~AssetField(void)
 {
-    delete array;
-    delete context;
+    if(asset) asset->releaseLuaObject();
+}
+
+/*----------------------------------------------------------------------------
+ * getName
+ *----------------------------------------------------------------------------*/
+const char* AssetField::getName (void) const
+{
+    if(asset) return asset->getName();
+    else return "<nil>";
+}
+
+/*----------------------------------------------------------------------------
+ * toLua
+ *----------------------------------------------------------------------------*/
+string AssetField::toJson (void) const
+{
+    return getName();
+}
+
+/*----------------------------------------------------------------------------
+ * toLua
+ *----------------------------------------------------------------------------*/
+int AssetField::toLua (lua_State* L) const
+{
+    if(asset) lua_pushstring(L, asset->getName());
+    else lua_pushnil(L);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * fromLua
+ *----------------------------------------------------------------------------*/
+void AssetField::fromLua (lua_State* L, int index)
+{
+    // get asset name (or throw if not provided)
+    const char* asset_name = LuaObject::getLuaString(L, index);
+
+     // if we successfully got a name then release asset if already set
+    if(asset) asset->releaseLuaObject();
+    asset = NULL;
+
+   // get asset
+    asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
+
+    // throw error on asset not found
+    if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", asset_name);
 }

@@ -38,14 +38,16 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "List.h"
-#include "RequestParms.h"
+#include "AssetField.h"
+#include "FieldEnumeration.h"
+#include "FieldElement.h"
+#include "RequestFields.h"
 
 /******************************************************************************
- * GEDI PARAMETERS
+ * CLASS
  ******************************************************************************/
 
-class GediParms: public RequestParms
+class GediFields: public RequestFields
 {
     public:
 
@@ -55,8 +57,6 @@ class GediParms: public RequestParms
 
         /* Beams */
         typedef enum {
-            UNKNOWN_BEAM = -2,
-            ALL_BEAMS = -1,
             BEAM0000 = 0,
             BEAM0001 = 1,
             BEAM0010 = 2,
@@ -67,34 +67,6 @@ class GediParms: public RequestParms
             BEAM1011 = 11,
             NUM_BEAMS = 8
         } beam_t;
-
-        /* Degrade Flag */
-        typedef enum {
-            DEGRADE_UNFILTERED = -1,
-            DEGRADE_UNSET = 0,
-            DEGRADE_SET = 1
-        } degrade_t;
-
-        /* L2 Quality Flag */
-        typedef enum {
-            L2QLTY_UNFILTERED = -1,
-            L2QLTY_UNSET = 0,
-            L2QLTY_SET = 1
-        } l2_quality_t;
-
-        /* L4 Quality Flag */
-        typedef enum {
-            L4QLTY_UNFILTERED = -1,
-            L4QLTY_UNSET = 0,
-            L4QLTY_SET = 1
-        } l4_quality_t;
-
-        /* Surface Flag */
-        typedef enum {
-            SURFACE_UNFILTERED = -1,
-            SURFACE_UNSET = 0,
-            SURFACE_SET = 1
-        } surface_t;
 
         /* Flags */
         typedef enum {
@@ -108,43 +80,55 @@ class GediParms: public RequestParms
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* _SELF;
-        static const char* DEGRADE_FLAG;
-        static const char* L2_QUALITY_FLAG;
-        static const char* L4_QUALITY_FLAG;
-        static const char* SURFACE_FLAG;
-        static const char* BEAM;
-
-        static const int64_t GEDI_SDP_EPOCH_GPS     = 1198800018; // seconds to add to GEDI delta times to get GPS times
-
-        static const uint8_t BEAM_NUMBER[NUM_BEAMS];
+        static const int64_t GEDI_SDP_EPOCH_GPS = 1198800018; // seconds to add to GEDI delta times to get GPS times
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int          luaCreate           (lua_State* L);
-        static const char*  beam2group          (int beam);
-        static int          group2beam          (const char* group);
-        static int          beam2index          (int beam);
-        static const char*  index2group         (int index);
-        static const char*  degrade2str         (degrade_t filter);
-        static const char*  l2quality2str       (l2_quality_t filter);
-        static const char*  l4quality2str       (l4_quality_t filter);
-        static const char*  surface2str         (surface_t filter);
+        static int luaCreate (lua_State* L);
 
-        static time8_t      deltatime2timestamp (double delta_time);
-        const char*         tojson              (void) const override;
+        /*--------------------------------------------------------------------
+         * Inline Methods
+         *--------------------------------------------------------------------*/
+
+        // returns nanoseconds since Unix epoch, no leap seconds
+        static time8_t deltatime2timestamp (double delta_time)
+        {
+            return TimeLib::gps2systimeex(delta_time + (double)GEDI_SDP_EPOCH_GPS);
+        }
+
+        // returns group name in h5 file given beam
+        static const char* beam2group (int beam_index)
+        {
+            switch(beam_index)
+            {
+                case 0:  return "BEAM0000";
+                case 1:  return "BEAM0001";
+                case 2:  return "BEAM0010";
+                case 3:  return "BEAM0011";
+                case 4:  return "BEAM0101";
+                case 5:  return "BEAM0110";
+                case 6:  return "BEAM1000";
+                case 7:  return "BEAM1011";
+                default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam index: %d", beam_index);
+            }
+        }
+
+        // returns resource as a string
+        const char* getResource (void) const { return resource.value.c_str(); }
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                    beams[NUM_BEAMS];
-        degrade_t               degrade_filter;
-        l2_quality_t            l2_quality_filter;
-        l4_quality_t            l4_quality_filter;
-        surface_t               surface_filter;
+        AssetField                              asset;      // name of Asset in asset dictionary to use for granules
+        FieldElement<string>                    resource;   // granule name (including file extension)
+        FieldEnumeration<beam_t, NUM_BEAMS>     beams {true, true, true, true, true, true, true, true};
+        FieldElement<bool>                      degrade_filter {false};
+        FieldElement<bool>                      l2_quality_filter {false};
+        FieldElement<bool>                      l4_quality_filter {false};
+        FieldElement<bool>                      surface_filter {false};
 
     private:
 
@@ -152,11 +136,20 @@ class GediParms: public RequestParms
          * Methods
          *--------------------------------------------------------------------*/
 
-                                GediParms        (lua_State* L, int index);
-                                ~GediParms       (void) override;
-        void                    cleanup          (void);
-        bool                    set_beam         (int beam);
-        void                    get_lua_beams    (lua_State* L, int index, bool* provided);
+        GediFields  (lua_State* L, const char* default_asset_name, const char* default_resource);
+        ~GediFields (void) override = default;
 };
+
+/******************************************************************************
+ * FUNCTIONS
+ ******************************************************************************/
+
+string convertToJson(const GediFields::beam_t& v);
+int convertToLua(lua_State* L, const GediFields::beam_t& v);
+void convertFromLua(lua_State* L, int index, GediFields::beam_t& v);
+int convertToIndex(const GediFields::beam_t& v);
+void convertFromIndex(int index, GediFields::beam_t& v);
+
+inline uint32_t toEncoding(GediFields::beam_t& v) { (void)v; return Field::INT32; }
 
 #endif  /* __gedi_parms__ */

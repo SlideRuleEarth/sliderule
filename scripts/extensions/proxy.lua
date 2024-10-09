@@ -35,20 +35,17 @@ local function proxy(resources, parms, endpoint, rec)
     local arrow_parms = nil
     local arrow_file = nil
     local arrow_metafile = nil
-    if parms[arrow.PARMS] then
-        arrow_parms = arrow.parms(parms[arrow.PARMS])
+    if parms:hasoutput() then
         -- Determine if Keeping Local File (needed for later ArrowSampler) --
         local keep_local = parms[geo.PARMS] ~= nil
         -- Arrow Builder --
-        if arrow_parms:isarrow() then
-            local parms_str = json.encode(parms)
-            arrow_builder = arrow.builder(arrow_parms, rspq, rspq .. "-builder", rec, rqstid, parms_str, endpoint, keep_local)
-            if arrow_builder then
-                rsps_from_nodes = rspq .. "-builder"
-                terminate_proxy_stream = true
-                if keep_local then
-                    arrow_file, arrow_metafile = arrow_builder:filenames()
-                end
+        local parms_str = json.encode(parms)
+        arrow_builder = arrow.builder(parms, rspq, rspq .. "-builder", rec, rqstid, parms_str, endpoint, keep_local)
+        if arrow_builder then
+            rsps_from_nodes = rspq .. "-builder"
+            terminate_proxy_stream = true
+            if keep_local then
+                arrow_file, arrow_metafile = arrow_builder:filenames()
             end
         end
     end
@@ -128,7 +125,7 @@ local function proxy(resources, parms, endpoint, rec)
         -- Handle Arrow Sampler --
         if georasters then
             -- Create Arrow Sampler and Sample Rasters --
-            local arrow_sampler = arrow.sampler(arrow_parms, arrow_file, rspq, georasters)
+            local arrow_sampler = arrow.sampler(parms, arrow_file, rspq, georasters)
 
             -- Wait Until Arrow Sampler Completion --
             while (userlog:numsubs() > 0) and not arrow_sampler:waiton(interval * 1000) do

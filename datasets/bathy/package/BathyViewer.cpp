@@ -67,7 +67,7 @@ const struct luaL_Reg BathyViewer::LUA_META_TABLE[] = {
 };
 
 /******************************************************************************
- * ATL03 READER CLASS
+ * CLASS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -75,23 +75,19 @@ const struct luaL_Reg BathyViewer::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int BathyViewer::luaCreate (lua_State* L)
 {
-    Asset* asset = NULL;
-    Icesat2Parms* parms = NULL;
+    Icesat2Fields* _parms = NULL;
 
     try
     {
         /* Get Parameters */
-        asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
-        const char* resource = getLuaString(L, 2);
-        parms = dynamic_cast<Icesat2Parms*>(getLuaObject(L, 3, Icesat2Parms::OBJECT_TYPE));
+        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 1, Icesat2Fields::OBJECT_TYPE));
 
         /* Return Reader Object */
-        return createLuaObject(L, new BathyViewer(L, asset, resource, parms));
+        return createLuaObject(L, new BathyViewer(L, _parms));
     }
     catch(const RunTimeException& e)
     {
-        if(asset) asset->releaseLuaObject();
-        if(parms) parms->releaseLuaObject();
+        if(_parms) _parms->releaseLuaObject();
         mlog(e.level(), "Error creating BathyViewer: %s", e.what());
         return returnLuaStatus(L, false);
     }
@@ -107,9 +103,9 @@ void BathyViewer::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyViewer::BathyViewer (lua_State* L, Asset* _asset, const char* _resource, Icesat2Parms* _parms):
+BathyViewer::BathyViewer (lua_State* L, Icesat2Fields* _parms):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    read_timeout_ms(_parms->read_timeout * 1000),
+    read_timeout_ms(_parms->readTimeout.value * 1000),
     context(NULL),
     bathyMask(NULL),
     totalPhotons(0),
@@ -118,16 +114,12 @@ BathyViewer::BathyViewer (lua_State* L, Asset* _asset, const char* _resource, Ic
     totalSegmentsInMask(0),
     totalErrors(0)
 {
-    assert(_asset);
-    assert(_resource);
     assert(_parms);
 
     /* Initialize Thread Count */
     threadCount = 0;
 
     /* Save Info */
-    asset = _asset;
-    resource = StringLib::duplicate(_resource);
     parms = _parms;
     bathyMask = new GeoLib::TIFFImage(NULL, GLOBAL_BATHYMETRY_MASK_FILE_PATH);
 
@@ -140,50 +132,40 @@ BathyViewer::BathyViewer (lua_State* L, Asset* _asset, const char* _resource, Ic
     try
     {
         /* Create H5Coro Context */
-        context = new H5Coro::Context(asset, resource);
+        context = new H5Coro::Context(parms->asset.asset, parms->getResource());
 
-        /* Count Threads */
-        for(int track = 1; track <= Icesat2Parms::NUM_TRACKS; track++)
+        /* Create Readers */
+        threadMut.lock();
         {
-            for(int pair = 0; pair < Icesat2Parms::NUM_PAIR_TRACKS; pair++)
+            for(int track = 1; track <= Icesat2Fields::NUM_TRACKS; track++)
             {
-                const int gt_index = (2 * (track - 1)) + pair;
-                if(parms->beams[gt_index] && (parms->track == Icesat2Parms::ALL_TRACKS || track == parms->track))
+                for(int pair = 0; pair < Icesat2Fields::NUM_PAIR_TRACKS; pair++)
                 {
-                    threadCount++;
+                    const int gt_index = (2 * (track - 1)) + pair;
+                    if(parms->beams.values[gt_index] && (parms->track == Icesat2Fields::ALL_TRACKS || track == parms->track))
+                    {
+                        info_t* info = new info_t;
+                        info->reader = this;
+                        info->track = track;
+                        info->pair = pair;
+                        StringLib::format(info->prefix, 7, "/gt%d%c", info->track, info->pair == 0 ? 'l' : 'r');
+                        readerPid[threadCount++] = new Thread(subsettingThread, info);
+                    }
                 }
             }
         }
+        threadMut.unlock();
 
         /* Check if Readers Created */
         if(threadCount == 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "No reader threads were created, invalid track specified: %d\n", parms->track);
-        }
-
-        /* Create Readers */
-        int pid_cnt = 0;
-        for(int track = 1; track <= Icesat2Parms::NUM_TRACKS; track++)
-        {
-            for(int pair = 0; pair < Icesat2Parms::NUM_PAIR_TRACKS; pair++)
-            {
-                const int gt_index = (2 * (track - 1)) + pair;
-                if(parms->beams[gt_index] && (parms->track == Icesat2Parms::ALL_TRACKS || track == parms->track))
-                {
-                    info_t* info = new info_t;
-                    info->reader = this;
-                    info->track = track;
-                    info->pair = pair;
-                    StringLib::format(info->prefix, 7, "/gt%d%c", info->track, info->pair == 0 ? 'l' : 'r');
-                    readerPid[pid_cnt++] = new Thread(subsettingThread, info);
-                }
-            }
+            throw RunTimeException(CRITICAL, RTE_ERROR, "No reader threads were created, invalid track specified: %d\n", parms->track.value);
         }
     }
     catch(const RunTimeException& e)
     {
         /* Generate Exception Record */
-        mlog(e.level(), "Failure on resource %s: %s", resource, e.what());
+        mlog(e.level(), "Failure on resource %s: %s", parms->getResource(), e.what());
 
         /* Indicate End of Data */
         signalComplete();
@@ -207,10 +189,6 @@ BathyViewer::~BathyViewer (void)
     delete context;
 
     parms->releaseLuaObject();
-
-    delete [] resource;
-
-    asset->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -290,7 +268,7 @@ void* BathyViewer::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Failure on resource %s track %d.%d: %s", reader->resource, info->track, info->pair, e.what());
+        mlog(e.level(), "Failure on resource %s track %d.%d: %s", reader->parms->getResource(), info->track, info->pair, e.what());
     }
 
     /* Handle Global Reader Updates */
@@ -308,7 +286,7 @@ void* BathyViewer::subsettingThread (void* parm)
         if(reader->numComplete == reader->threadCount)
         {
             /* Indicate End of Data */
-            mlog(INFO, "Completed processing resource %s: %ld photons", reader->resource, reader->totalPhotons);
+            mlog(INFO, "Completed processing resource %s: %ld photons", reader->parms->getResource(), reader->totalPhotons);
             reader->signalComplete();
         }
     }

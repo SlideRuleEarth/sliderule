@@ -73,7 +73,7 @@
 ArrowBuilderImpl::ArrowBuilderImpl (ArrowBuilder* _builder):
     arrowBuilder(_builder),
     schema(NULL),
-    writerFormat(ArrowParms::UNSUPPORTED),
+    writerFormat(ArrowFields::PARQUET),
     fieldList(LIST_BLOCK_SIZE),
     firstTime(true)
 {
@@ -143,7 +143,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
         }
     }
 
-    if(writerFormat == ArrowParms::PARQUET)
+    if(writerFormat == ArrowFields::PARQUET)
     {
         /* Build and Write Table */
         const uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
@@ -159,7 +159,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
             (void)parquetWriter->Close();
         }
     }
-    else if(writerFormat == ArrowParms::FEATHER)
+    else if(writerFormat == ArrowFields::FEATHER)
     {
         /* Write the Table to a FEATHER file */
         const uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
@@ -175,7 +175,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
             (void)featherWriter->Close();
         }
     }
-    else if(writerFormat == ArrowParms::CSV)
+    else if(writerFormat == ArrowFields::CSV)
     {
         /* Write the Table to a CSV file */
         const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
@@ -211,7 +211,7 @@ bool ArrowBuilderImpl::createSchema (void)
     /* Create Schema */
     schema = make_shared<arrow::Schema>(fieldVector);
 
-    if(arrowBuilder->getParms()->format == ArrowParms::PARQUET)
+    if(arrowBuilder->getParms()->format == ArrowFields::PARQUET)
     {
         /* Set Arrow Output Stream */
         shared_ptr<arrow::io::FileOutputStream> file_output_stream;
@@ -241,7 +241,7 @@ bool ArrowBuilderImpl::createSchema (void)
             if(result.ok())
             {
                 parquetWriter = std::move(result).ValueOrDie();
-                writerFormat = ArrowParms::PARQUET;
+                writerFormat = ArrowFields::PARQUET;
             }
             else
             {
@@ -255,7 +255,7 @@ bool ArrowBuilderImpl::createSchema (void)
             status = false;
         }
     }
-    else if(arrowBuilder->getParms()->format == ArrowParms::FEATHER)
+    else if(arrowBuilder->getParms()->format == ArrowFields::FEATHER)
     {
         createMetadataFile();
 
@@ -264,7 +264,7 @@ bool ArrowBuilderImpl::createSchema (void)
         if(result.ok())
         {
             featherWriter = result.ValueOrDie();
-            writerFormat = ArrowParms::FEATHER;
+            writerFormat = ArrowFields::FEATHER;
         }
         else
         {
@@ -272,7 +272,7 @@ bool ArrowBuilderImpl::createSchema (void)
             status = false;
         }
     }
-    else if(arrowBuilder->getParms()->format == ArrowParms::CSV)
+    else if(arrowBuilder->getParms()->format == ArrowFields::CSV)
     {
         createMetadataFile();
 
@@ -281,7 +281,7 @@ bool ArrowBuilderImpl::createSchema (void)
         if(result.ok())
         {
             csvWriter = result.ValueOrDie();
-            writerFormat = ArrowParms::CSV;
+            writerFormat = ArrowFields::CSV;
         }
         else
         {
@@ -291,7 +291,7 @@ bool ArrowBuilderImpl::createSchema (void)
     }
     else
     {
-        mlog(CRITICAL, "Unsupported format: %d", arrowBuilder->getParms()->format);
+        mlog(CRITICAL, "Unsupported format: %d", arrowBuilder->getParms()->format.value);
         status = false;
     }
 
@@ -1360,16 +1360,16 @@ void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordOb
 *----------------------------------------------------------------------------*/
 void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>& columns, batch_list_t& record_batch)
 {
-    vector<string>& ancillary_fields = arrowBuilder->getParms()->ancillary_fields;
+    const FieldList<string>& ancillary_fields = arrowBuilder->getParms()->ancillaryFields;
     Dictionary<vector<AncillaryFields::field_t*>> field_table;
     Dictionary<RecordObject::fieldType_t> field_type_table;
 
     /* Initialize Field Table */
-    for(size_t i = 0; i < ancillary_fields.size(); i++)
+    for(long i = 0; i < ancillary_fields.length(); i++)
     {
-        const char* name = ancillary_fields[i].c_str();
+        const string& name = ancillary_fields[i];
         const vector<AncillaryFields::field_t*> field_vec;
-        field_table.add(name, field_vec);
+        field_table.add(name.c_str(), field_vec);
     }
 
     /* Populate Field Table */
@@ -1384,24 +1384,24 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
             for(uint32_t k = 0; k < field_array->num_fields; k++)
             {
                 /* Get Name */
-                const char* name = NULL;
+                string name;
                 const uint8_t field_index = field_array->fields[k].field_index;
-                if(field_index < ancillary_fields.size()) name = ancillary_fields[field_index].c_str();
+                if(field_index < ancillary_fields.length()) name = ancillary_fields[field_index];
                 else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid field index: %d", field_index);
 
                 /* Add to Field Table */
-                field_table[name].push_back(&(field_array->fields[k]));
-                field_type_table.add(name, static_cast<RecordObject::fieldType_t>(field_array->fields[k].data_type), false);
+                field_table[name.c_str()].push_back(&(field_array->fields[k]));
+                field_type_table.add(name.c_str(), static_cast<RecordObject::fieldType_t>(field_array->fields[k].data_type), false);
             }
         }
     }
 
     /* Loop Through Fields */
-    for(size_t i = 0; i < ancillary_fields.size(); i++)
+    for(long i = 0; i < ancillary_fields.length(); i++)
     {
-        const char* name = ancillary_fields[i].c_str();
-        vector<AncillaryFields::field_t*>& field_vec = field_table[name];
-        const RecordObject::fieldType_t type = field_type_table[name];
+        const string& name = ancillary_fields[i];
+        vector<AncillaryFields::field_t*>& field_vec = field_table[name.c_str()];
+        const RecordObject::fieldType_t type = field_type_table[name.c_str()];
         const int num_rows = field_vec.size();
 
         /* Populate Schema */
@@ -1599,16 +1599,16 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
 void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>>& columns, batch_list_t& record_batch)
 {
     int num_rows = 0;
-    vector<string>& ancillary_fields = arrowBuilder->getParms()->ancillary_fields;
+    const FieldList<string>& ancillary_fields = arrowBuilder->getParms()->ancillaryFields;
     Dictionary<vector<AncillaryFields::element_array_t*>> element_table;
     Dictionary<RecordObject::fieldType_t> element_type_table;
 
     /* Initialize Field Table */
-    for(size_t i = 0; i < ancillary_fields.size(); i++)
+    for(long i = 0; i < ancillary_fields.length(); i++)
     {
-        const char* name = ancillary_fields[i].c_str();
+        const string& name = ancillary_fields[i];
         const vector<AncillaryFields::element_array_t*> element_vec;
-        element_table.add(name, element_vec);
+        element_table.add(name.c_str(), element_vec);
     }
 
     /* Populate Field Table */
@@ -1622,23 +1622,23 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
             AncillaryFields::element_array_t* element_array = reinterpret_cast<AncillaryFields::element_array_t*>(batch->anc_records[j]->getRecordData());
 
             /* Get Name */
-            const char* name = NULL;
-            if(element_array->field_index < ancillary_fields.size()) name = ancillary_fields[element_array->field_index].c_str();
+            string name;
+            if(element_array->field_index < ancillary_fields.length()) name = ancillary_fields[element_array->field_index];
             else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid field index: %d", element_array->field_index);
 
             /* Add to Element Table */
-            element_table[name].push_back(element_array);
-            element_type_table.add(name, static_cast<RecordObject::fieldType_t>(element_array->data_type), false);
+            element_table[name.c_str()].push_back(element_array);
+            element_type_table.add(name.c_str(), static_cast<RecordObject::fieldType_t>(element_array->data_type), false);
             num_rows += element_array->num_elements;
         }
     }
 
     /* Loop Through Fields */
-    for(size_t i = 0; i < ancillary_fields.size(); i++)
+    for(long i = 0; i < ancillary_fields.length(); i++)
     {
-        const char* name = ancillary_fields[i].c_str();
-        vector<AncillaryFields::element_array_t*>& element_vec = element_table[name];
-        const RecordObject::fieldType_t type = element_type_table[name];
+        const string& name = ancillary_fields[i];
+        vector<AncillaryFields::element_array_t*>& element_vec = element_table[name.c_str()];
+        const RecordObject::fieldType_t type = element_type_table[name.c_str()];
 
         /* Populate Schema */
         if(firstTime)

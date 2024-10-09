@@ -38,8 +38,10 @@
 #include <stdarg.h>
 
 #include "OsApi.h"
-#include "h5.h"
-#include "gedi.h"
+#include "H5Coro.h"
+#include "RecordObject.h"
+#include "FootprintReader.h"
+#include "Gedi01bReader.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -72,28 +74,24 @@ const RecordObject::fieldDef_t Gedi01bReader::batchRecDef[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>, <send terminator>)
+ * luaCreate - create(<outq_name>, <parms>, <send terminator>)
  *----------------------------------------------------------------------------*/
 int Gedi01bReader::luaCreate (lua_State* L)
 {
-    Asset* asset = NULL;
-    GediParms* parms = NULL;
+    GediFields* parms = NULL;
 
     try
     {
         /* Get Parameters */
-        asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
-        const char* resource = getLuaString(L, 2);
-        const char* outq_name = getLuaString(L, 3);
-        parms = dynamic_cast<GediParms*>(getLuaObject(L, 4, GediParms::OBJECT_TYPE));
-        const bool send_terminator = getLuaBoolean(L, 5, true, true);
+        const char* outq_name = getLuaString(L, 1);
+        parms = dynamic_cast<GediFields*>(getLuaObject(L, 2, GediFields::OBJECT_TYPE));
+        const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Return Reader Object */
-        return createLuaObject(L, new Gedi01bReader(L, asset, resource, outq_name, parms, send_terminator));
+        return createLuaObject(L, new Gedi01bReader(L, outq_name, parms, send_terminator));
     }
     catch(const RunTimeException& e)
     {
-        if(asset) asset->releaseLuaObject();
         if(parms) parms->releaseLuaObject();
         mlog(e.level(), "Error creating Gedi01bReader: %s", e.what());
         return returnLuaStatus(L, false);
@@ -112,9 +110,8 @@ void Gedi01bReader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Gedi01bReader::Gedi01bReader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, GediParms* _parms, bool _send_terminator):
-    FootprintReader<g01b_footprint_t>(L, _asset, _resource,
-                                      outq_name, _parms, _send_terminator,
+Gedi01bReader::Gedi01bReader (lua_State* L, const char* outq_name, GediFields* _parms, bool _send_terminator):
+    FootprintReader<g01b_footprint_t>(L, outq_name, _parms, _send_terminator,
                                       batchRecType, "geolocation/latitude_bin0", "geolocation/longitude_bin0",
                                       Gedi01bReader::subsettingThread)
 {
@@ -129,16 +126,16 @@ Gedi01bReader::~Gedi01bReader (void) = default;
  * Gedi01b::Constructor
  *----------------------------------------------------------------------------*/
 Gedi01bReader::Gedi01b::Gedi01b (const info_t* info, const Region& region):
-    shot_number     (info->reader->context, FString("%s/shot_number",                  GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    delta_time      (info->reader->context, FString("%s/geolocation/delta_time",       GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    elev_bin0       (info->reader->context, FString("%s/geolocation/elevation_bin0",   GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    elev_lastbin    (info->reader->context, FString("%s/geolocation/elevation_lastbin",GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    solar_elevation (info->reader->context, FString("%s/geolocation/solar_elevation",  GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    degrade_flag    (info->reader->context, FString("%s/geolocation/degrade",          GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    tx_sample_count (info->reader->context, FString("%s/tx_sample_count",              GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    tx_start_index  (info->reader->context, FString("%s/tx_sample_start_index",        GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    rx_sample_count (info->reader->context, FString("%s/rx_sample_count",              GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints),
-    rx_start_index  (info->reader->context, FString("%s/rx_sample_start_index",        GediParms::beam2group(info->beam)).c_str(), 0, region.first_footprint, region.num_footprints)
+    shot_number     (info->reader->context, FString("%s/shot_number",                  info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    delta_time      (info->reader->context, FString("%s/geolocation/delta_time",       info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    elev_bin0       (info->reader->context, FString("%s/geolocation/elevation_bin0",   info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    elev_lastbin    (info->reader->context, FString("%s/geolocation/elevation_lastbin",info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    solar_elevation (info->reader->context, FString("%s/geolocation/solar_elevation",  info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    degrade_flag    (info->reader->context, FString("%s/geolocation/degrade",          info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    tx_sample_count (info->reader->context, FString("%s/tx_sample_count",              info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    tx_start_index  (info->reader->context, FString("%s/tx_sample_start_index",        info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    rx_sample_count (info->reader->context, FString("%s/rx_sample_count",              info->group).c_str(), 0, region.first_footprint, region.num_footprints),
+    rx_start_index  (info->reader->context, FString("%s/rx_sample_start_index",        info->group).c_str(), 0, region.first_footprint, region.num_footprints)
 {
     /* Join Hardcoded Reads */
     shot_number.join(info->reader->read_timeout_ms, true);
@@ -166,11 +163,11 @@ void* Gedi01bReader::subsettingThread (void* parm)
     /* Get Thread Info */
     const info_t* info = static_cast<info_t*>(parm);
     Gedi01bReader* reader = reinterpret_cast<Gedi01bReader*>(info->reader);
-    const GediParms* parms = reader->parms;
+    const GediFields* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, reader->traceId, "Gedi01b_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", reader->asset->getName(), reader->resource, info->beam);
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "Gedi01b_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", parms->asset.getName(), parms->getResource(), static_cast<int>(info->beam));
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -186,8 +183,8 @@ void* Gedi01bReader::subsettingThread (void* parm)
         const long txN = gedi01b.tx_start_index[region.num_footprints - 1] - 1 + gedi01b.tx_sample_count[region.num_footprints - 1] - tx0;
         const long rx0 = gedi01b.rx_start_index[0] - 1;
         const long rxN = gedi01b.rx_start_index[region.num_footprints - 1] - 1 + gedi01b.rx_sample_count[region.num_footprints - 1] - rx0;
-        H5Array<float> txwaveform(info->reader->context, FString("%s/txwaveform", GediParms::beam2group(info->beam)).c_str(), 0, tx0, txN);
-        H5Array<float> rxwaveform(info->reader->context, FString("%s/rxwaveform", GediParms::beam2group(info->beam)).c_str(), 0, rx0, rxN);
+        H5Array<float> txwaveform(info->reader->context, FString("%s/txwaveform", info->group).c_str(), 0, tx0, txN);
+        H5Array<float> rxwaveform(info->reader->context, FString("%s/rxwaveform", info->group).c_str(), 0, rx0, rxN);
         txwaveform.join(info->reader->read_timeout_ms, true);
         rxwaveform.join(info->reader->read_timeout_ms, true);
 
@@ -198,9 +195,9 @@ void* Gedi01bReader::subsettingThread (void* parm)
         for(long footprint = 0; reader->active && footprint < region.num_footprints; footprint++)
         {
             /* Check Degrade Filter */
-            if(parms->degrade_filter != GediParms::DEGRADE_UNFILTERED)
+            if(parms->degrade_filter)
             {
-                if(gedi01b.degrade_flag[footprint] != parms->degrade_filter)
+                if(gedi01b.degrade_flag[footprint])
                 {
                     local_stats.footprints_filtered++;
                     continue;
@@ -221,19 +218,19 @@ void* Gedi01bReader::subsettingThread (void* parm)
                 /* Populate Entry in Batch Structure */
                 g01b_footprint_t* fp        = &reader->batchData->footprint[reader->batchIndex];
                 fp->shot_number             = gedi01b.shot_number[footprint];
-                fp->time_ns                 = GediParms::deltatime2timestamp(gedi01b.delta_time[footprint]);
+                fp->time_ns                 = GediFields::deltatime2timestamp(gedi01b.delta_time[footprint]);
                 fp->latitude                = region.lat[footprint];
                 fp->longitude               = region.lon[footprint];
                 fp->elevation_start         = gedi01b.elev_bin0[footprint];
                 fp->elevation_stop          = gedi01b.elev_lastbin[footprint];
                 fp->solar_elevation         = gedi01b.solar_elevation[footprint];
-                fp->beam                    = info->beam;
+                fp->beam                    = static_cast<uint8_t>(info->beam);
                 fp->flags                   = 0;
                 fp->tx_size                 = gedi01b.tx_sample_count[footprint];
                 fp->rx_size                 = gedi01b.rx_sample_count[footprint];;
 
                 /* Set Flags */
-                if(gedi01b.degrade_flag[footprint]) fp->flags |= GediParms::DEGRADE_FLAG_MASK;
+                if(gedi01b.degrade_flag[footprint]) fp->flags |= GediFields::DEGRADE_FLAG_MASK;
 
                 /* Populate Tx Waveform */
                 const long tx_start_index = gedi01b.tx_start_index[footprint] - gedi01b.tx_start_index[0];
@@ -264,7 +261,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s beam %d: %s", reader->resource, info->beam, e.what());
+        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s beam %d: %s", parms->getResource(), static_cast<int>(info->beam), e.what());
     }
 
     /* Handle Global Reader Updates */
@@ -276,7 +273,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
         /* Send Final Record Batch */
         if(reader->numComplete == reader->threadCount)
         {
-            mlog(INFO, "Completed processing resource %s", info->reader->resource);
+            mlog(INFO, "Completed processing resource %s", parms->getResource());
             if(reader->batchIndex > 0)
             {
                 reader->postRecordBatch(&local_stats);
@@ -301,12 +298,12 @@ void* Gedi01bReader::subsettingThread (void* parm)
                     status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
                     if(status < 0)
                     {
-                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, info->reader->resource);
+                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, parms->getResource());
                         break;
                     }
                     else if(status == MsgQ::STATE_TIMEOUT)
                     {
-                        mlog(INFO, "Timeout posting terminator for %s ... trying again", info->reader->resource);
+                        mlog(INFO, "Timeout posting terminator for %s ... trying again", parms->getResource());
                     }
                 }
             }

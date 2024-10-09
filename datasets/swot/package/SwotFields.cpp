@@ -30,70 +30,46 @@
  */
 
 /******************************************************************************
- *INCLUDES
+ * INCLUDE
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "ContainerRunner.h"
-#include "CreFields.h"
+#include "SwotFields.h"
 
 /******************************************************************************
- * DEFINES
- ******************************************************************************/
-
-#define LUA_CRE_LIBNAME   "cre"
-
-/******************************************************************************
- * LOCAL FUNCTIONS
+ * CLASS METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * cre_open
+ * luaCreate - create(<parameter table>)
  *----------------------------------------------------------------------------*/
-int cre_open (lua_State* L)
+int SwotFields::luaCreate (lua_State* L)
 {
-    static const struct luaL_Reg cre_functions[] = {
-        {"container",   ContainerRunner::luaCreate},
-        {"list",        ContainerRunner::luaList},
-        {"setregistry", ContainerRunner::luaSetRegistry},
-        {"createunique",ContainerRunner::luaCreateUnique},
-        {"deleteunique",ContainerRunner::luaDeleteUnique},
-        {"parms",       CreFields::luaCreate},
-        {NULL,          NULL}
-    };
+    SwotFields* swot_fields = NULL;
 
-    /* Set Library */
-    luaL_newlib(L, cre_functions);
+    try
+    {
+        swot_fields = new SwotFields(L);
+        swot_fields->fromLua(L, 1);
 
-    /* Set Globals */
-    LuaEngine::setAttrStr(L, "SANDBOX_MOUNT", ContainerRunner::SANDBOX_MOUNT);
-    LuaEngine::setAttrStr(L, "HOST_DIRECTORY", ContainerRunner::HOST_DIRECTORY);
-
-    return 1;
+        return createLuaObject(L, swot_fields);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        delete swot_fields;
+        return returnLuaStatus(L, false);
+    }
 }
 
-/******************************************************************************
- * EXPORTED FUNCTIONS
- ******************************************************************************/
-
-extern "C" {
-void initcre (void)
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+SwotFields::SwotFields(lua_State* L):
+    RequestFields(L, {
+        {"asset",       &asset},
+        {"resource",    &resource},
+        {"variables",   &variables}
+    })
 {
-    /* Initialize Modules */
-    ContainerRunner::init();
-
-    /* Extend Lua */
-    LuaEngine::extend(LUA_CRE_LIBNAME, cre_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_CRE_LIBNAME, LIBID);
-
-    /* Display Status */
-    print2term("%s package initialized (%s)\n", LUA_CRE_LIBNAME, LIBID);
-}
-
-void deinitcre (void)
-{
-    ContainerRunner::deinit();
-}
 }

@@ -335,6 +335,9 @@ SUBSET_PERFORMANCE_TEST ?=  $(ROOT)/scripts/systests/subset_perf_test.lua
 selftest: ## run the self test on the server code
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
 
+shorttest: ## run the short form self test on the server code
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(ROOT)/scripts/selftests/test_runner.lua short
+
 perfmtest: ## run mosaics performance test on the server code
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
 

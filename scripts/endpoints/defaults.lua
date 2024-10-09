@@ -2,28 +2,19 @@
 -- ENDPOINT:    /source/defaults
 --
 -- INPUT:       none
+--
 -- OUTPUT:      json string of default parameters
 --
-local global = require("global")
+local json = require("json")
 
-local default_parms = {}
+local default_parms = {
+    core = core.parms():export(),
+    cre =  cre.parms():export(),
+    icesat2 = __icesat2__ and icesat2.parms():export() or nil,
+    gedi = __gedi__ and gedi.parms():export() or nil,
+    swot = __swot__ and swot.parms():export() or nil,
+    bathy = __bathy__ and bathy.parms():export() or nil
+}
 
-local function insert_package_defaults(tbl, pkg)
-    if pkg ~= "legacy" then
-        local key = global.eval("PARMS", pkg)
-        if key then
-            local value = global.eval("parms({})", pkg):tojson()
-            local json_str = string.format("\"%s\":%s", key, value)
-            table.insert(tbl, json_str)
-        end
-    end
-end
-
-local version, commit, environment, launch, duration, packages = sys.version()
-for _,package in ipairs(packages) do
-    insert_package_defaults(default_parms, package)
-end
-
-local json_str = "{"..table.concat(default_parms, ",").."}"
-return json_str
+return json.encode(default_parms)
 

@@ -46,7 +46,7 @@
 #include "StringLib.h"
 #include "H5Array.h"
 
-#include "GediParms.h"
+#include "GediFields.h"
 
 /******************************************************************************
  * FOOTPRINT READER
@@ -92,7 +92,8 @@ class FootprintReader: public LuaObject
         /* Thread Information */
         typedef struct {
             FootprintReader*    reader;
-            int                 beam;
+            char                group[9];
+            GediFields::beam_t  beam;
         } info_t;
 
         /* Region Subclass */
@@ -122,16 +123,14 @@ class FootprintReader: public LuaObject
          *--------------------------------------------------------------------*/
 
         bool                active;
-        Thread*             readerPid[GediParms::NUM_BEAMS];
+        Thread*             readerPid[GediFields::NUM_BEAMS];
         Mutex               threadMut;
         int                 threadCount;
         int                 numComplete;
-        Asset*              asset;
-        const char*         resource;
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
-        GediParms*          parms;
+        GediFields*         parms;
         stats_t             stats;
         H5Coro::Context*    context;
         RecordObject        batchRecord;
@@ -144,8 +143,7 @@ class FootprintReader: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            FootprintReader         (lua_State* L, Asset* _asset, const char* _resource,
-                                                     const char* outq_name, GediParms* _parms, bool _send_terminator,
+                            FootprintReader         (lua_State* L, const char* outq_name, GediFields* _parms, bool _send_terminator,
                                                      const char* batch_rec_type, const char* lat_name, const char* lon_name,
                                                      subset_func_t subsetter);
                             ~FootprintReader        (void) override;
@@ -177,26 +175,19 @@ const struct luaL_Reg FootprintReader<footprint_t>::LUA_META_TABLE[] = {
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class footprint_t>
-FootprintReader<footprint_t>::FootprintReader ( lua_State* L, Asset* _asset, const char* _resource,
-                                                const char* outq_name, GediParms* _parms, bool _send_terminator,
+FootprintReader<footprint_t>::FootprintReader ( lua_State* L, const char* outq_name, GediFields* _parms, bool _send_terminator,
                                                 const char* batch_rec_type, const char* lat_name, const char* lon_name,
                                                 subset_func_t subsetter ):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    read_timeout_ms(_parms->read_timeout * 1000),
+    read_timeout_ms(_parms->readTimeout.value * 1000),
+    parms(_parms),
     context(NULL),
-    batchRecord(batch_rec_type, sizeof(batch_t))
+    batchRecord(batch_rec_type, sizeof(batch_t)),
+    latName(StringLib::duplicate(lat_name)),
+    lonName(StringLib::duplicate(lon_name))
 {
-    assert(_asset);
-    assert(_resource);
     assert(outq_name);
     assert(_parms);
-
-    /* Save Info */
-    asset = _asset;
-    resource = StringLib::duplicate(_resource);
-    parms = _parms;
-    latName = StringLib::duplicate(lat_name);
-    lonName = StringLib::duplicate(lon_name);
 
     /* Create Publisher */
     outQ = new Publisher(outq_name);
@@ -216,50 +207,33 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, Asset* _asset, con
     /* Initialize Readers */
     active = true;
     numComplete = 0;
+    threadCount = 0;
     memset(readerPid, 0, sizeof(readerPid));
-
-    /* Count Number of Beams to Process */
-    int beam_count = 0;
-    int last_beam_index = -1;
-    for(int i = 0; i < GediParms::NUM_BEAMS; i++)
-    {
-        if(parms->beams[i])
-        {
-            beam_count++;
-            last_beam_index = i;
-        }
-    }
 
     /* Process Resource */
     try
     {
         /* Create H5Coro Context */
-        context = new H5Coro::Context(asset, resource);
+        context = new H5Coro::Context(parms->asset.asset, parms->getResource());
 
         /* Read Beam Data */
-        if(beam_count == 1)
+        threadMut.unlock();
         {
-            threadCount = 1;
-            info_t* info = new info_t;
-            info->reader = this;
-            info->beam = GediParms::BEAM_NUMBER[last_beam_index];
-            subsetter(info);
-        }
-        else if(beam_count > 0)
-        {
-            threadCount = beam_count;
-            for(int i = 0; i < GediParms::NUM_BEAMS; i++)
+            for(int i = 0; i < GediFields::NUM_BEAMS; i++)
             {
-                if(parms->beams[i])
+                if(parms->beams.enabled(i))
                 {
                     info_t* info = new info_t;
                     info->reader = this;
-                    info->beam = GediParms::BEAM_NUMBER[i];
-                    readerPid[i] = new Thread(subsetter, info);
+                    StringLib::format(info->group, 9, "%s", GediFields::beam2group(i));
+                    convertFromIndex(i, info->beam);
+                    readerPid[threadCount++] = new Thread(subsetter, info);
                 }
             }
         }
-        else
+        threadMut.unlock();
+
+        if(threadCount == 0)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "No valid beams specified, must be 0, 1, 2, 3, 5, 6, 8, 11, or -1 for all");
         }
@@ -267,8 +241,8 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, Asset* _asset, con
     catch(const RunTimeException& e)
     {
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "%s: (%s)", e.what(), resource);
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "%s: (%s)", e.what(), resource);
+        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "%s: (%s)", e.what(), parms->getResource());
+        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "%s: (%s)", e.what(), parms->getResource());
 
         /* Indicate End of Data */
         if(sendTerminator) outQ->postCopy("", 0, SYS_TIMEOUT);
@@ -284,7 +258,7 @@ FootprintReader<footprint_t>::~FootprintReader (void)
 {
     active = false;
 
-    for(int i = 0; i < GediParms::NUM_BEAMS; i++)
+    for(int i = 0; i < GediFields::NUM_BEAMS; i++)
     {
         if(readerPid[i]) delete readerPid[i];
     }
@@ -297,10 +271,6 @@ FootprintReader<footprint_t>::~FootprintReader (void)
     delete context;
 
     parms->releaseLuaObject();
-
-    delete [] resource;
-
-    asset->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -308,8 +278,8 @@ FootprintReader<footprint_t>::~FootprintReader (void)
  *----------------------------------------------------------------------------*/
 template <class footprint_t>
 FootprintReader<footprint_t>::Region::Region (const info_t* info):
-    lat             (info->reader->context, FString("%s/%s", GediParms::beam2group(info->beam), info->reader->latName).c_str()),
-    lon             (info->reader->context, FString("%s/%s", GediParms::beam2group(info->beam), info->reader->lonName).c_str()),
+    lat             (info->reader->context, FString("%s/%s", info->group, info->reader->latName).c_str()),
+    lon             (info->reader->context, FString("%s/%s", info->group, info->reader->lonName).c_str()),
     inclusion_mask  (NULL),
     inclusion_ptr   (NULL)
 {
@@ -322,11 +292,11 @@ FootprintReader<footprint_t>::Region::Region (const info_t* info):
     num_footprints = H5Coro::ALL_ROWS;
 
     /* Determine Spatial Extent */
-    if(info->reader->parms->raster.valid())
+    if(info->reader->parms->regionMask.valid())
     {
         rasterregion(info);
     }
-    else if(!info->reader->parms->polygon.empty())
+    else if(info->reader->parms->pointsInPolygon.value > 0)
     {
         polyregion(info);
     }
@@ -376,17 +346,8 @@ void FootprintReader<footprint_t>::Region::polyregion (const info_t* info)
     int footprint = 0;
     while(footprint < lat.size)
     {
-        bool inclusion = false;
-
-        /* Project Segment Coordinate */
-        const MathLib::coord_t footprint_coord = {lon[footprint], lat[footprint]};
-        const MathLib::point_t footprint_point = MathLib::coord2point(footprint_coord, info->reader->parms->projection);
-
         /* Test Inclusion */
-        if(MathLib::inpoly(info->reader->parms->projected_poly, info->reader->parms->points_in_poly, footprint_point))
-        {
-            inclusion = true;
-        }
+        const bool inclusion = info->reader->parms->polyIncludes(lon[footprint], lat[footprint]);
 
         /* Find First Footprint */
         if(!first_footprint_found && inclusion)
@@ -429,7 +390,7 @@ void FootprintReader<footprint_t>::Region::rasterregion (const info_t* info)
     while(footprint < lat.size)
     {
         /* Check Inclusion */
-        const bool inclusion = info->reader->parms->raster.includes(lon[footprint], lat[footprint]);
+        const bool inclusion = info->reader->parms->maskIncludes(lon[footprint], lat[footprint]);
         inclusion_mask[footprint] = inclusion;
 
         /* If Coordinate Is In Raster */

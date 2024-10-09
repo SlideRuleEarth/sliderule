@@ -10,7 +10,7 @@ import os.path
 import json
 import ctypes
 import sliderule
-from sliderule import icesat2
+from sliderule import icesat2, gedi
 
 TESTDIR = Path(__file__).parent
 
@@ -64,6 +64,31 @@ class TestParquet:
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405902
 
+    def test_atl06s(self, init):
+        resource = "ATL06_20190314093716_11600203_005_01.h5"
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+        parms = { "poly": region['poly'],
+                  "cnf": "atl03_high",
+                  "ats": 20.0,
+                  "cnt": 10,
+                  "len": 40.0,
+                  "res": 20.0,
+                  "maxi": 1,
+                  "output": { "path": "testfile3.parquet", "format": "parquet", "open_on_complete": True } }
+        gdf = icesat2.atl06sp(parms, resources=[resource])
+        metadata = pq.read_metadata("testfile3.parquet")
+        sliderule_metadata = ctypes.create_string_buffer(metadata.metadata[b'sliderule']).value.decode('ascii')
+        metadata_dict = json.loads(sliderule_metadata)
+        os.remove("testfile3.parquet")
+        assert init
+        assert len(gdf) == 1663
+        assert len(gdf.keys()) == 22
+        assert gdf["rgt"].iloc[0] == 1160
+        assert gdf["cycle"].iloc[0] == 2
+        assert metadata_dict["recordinfo"]["time"] == "time", f'invalid time column: {metadata_dict["recordinfo"]["time"]}'
+        assert metadata_dict["recordinfo"]["x"] == "longitude", f'invalid x column: {metadata_dict["recordinfo"]["x"]}'
+        assert metadata_dict["recordinfo"]["y"] == "latitude", f'invalid y column: {metadata_dict["recordinfo"]["y"]}'
+
     def test_atl03(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
@@ -74,9 +99,9 @@ class TestParquet:
                   "len": 40.0,
                   "res": 20.0,
                   "maxi": 1,
-                  "output": { "path": "testfile3.parquet", "format": "parquet", "open_on_complete": True } }
+                  "output": { "path": "testfile4.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = icesat2.atl03sp(parms, resources=[resource])
-        os.remove("testfile3.parquet")
+        os.remove("testfile4.parquet")
         assert init
         assert len(gdf) == 190491
         assert len(gdf.keys()) == 22
@@ -84,6 +109,23 @@ class TestParquet:
         assert gdf["cycle"].iloc[0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405902
+
+    def test_atl03v(self, init):
+        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+        parms = { "poly": region['poly'],
+                "cnf": "atl03_high",
+                "ats": 20.0,
+                "cnt": 10,
+                "len": 40.0,
+                "res": 20.0,
+                "maxi": 1,
+                "output": { "path": "testfile5.parquet", "format": "parquet", "open_on_complete": True } }
+        gdf = icesat2.atl03vp(parms, resources=[resource])
+        os.remove("testfile5.parquet")
+        assert len(gdf) == 1662
+        assert gdf.cycle.mean() == 2.0
+        assert init
 
     def test_atl06_index(self, init):
         resource = "ATL03_20181017222812_02950102_005_01.h5"
@@ -96,9 +138,9 @@ class TestParquet:
             "cnt": 10,
             "len": 40.0,
             "res": 20.0,
-            "output": { "path": "testfile4.parquet", "format": "parquet", "open_on_complete": True } }
+            "output": { "path": "testfile6.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = icesat2.atl06p(parms, resources=[resource])
-        os.remove("testfile4.parquet")
+        os.remove("testfile6.parquet")
         assert init
         assert len(gdf) == 265
 
@@ -159,9 +201,9 @@ class TestParquet:
             "cnt": 10,
             "len": 40.0,
             "res": 20.0,
-            "output": { "path": "testfile5.parquet", "format": "parquet", "open_on_complete": True } }
+            "output": { "path": "testfile7.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = icesat2.atl03sp(parms, resources=[resource])
-        os.remove("testfile5.parquet")
+        os.remove("testfile7.parquet")
         assert init
         assert len(gdf) == 20642
         assert gdf.index.values.min() == numpy.datetime64('2018-10-17T22:31:17.349347328')
@@ -188,7 +230,7 @@ class TestParquet:
             "atl08_fields": ancillary_fields,
             "phoreal": {"binsize": 1.0, "geoloc": "center", "above_classifier": True, "use_abs_h": False, "send_waveform": False},
             "output": {
-                "path": "testfile6.parquet",
+                "path": "testfile8.parquet",
                 "format": "parquet",
                 "as_geo": True,
                 "ancillary": ancillary_outputs,
@@ -208,7 +250,7 @@ class TestParquet:
         df = atl08_df.sort_values('extent_id')
 
         # Clean up
-        os.remove("testfile6.parquet")
+        os.remove("testfile8.parquet")
 
         # Compare Data Frames
         for i in range(len(ancillary_fields)):
@@ -235,17 +277,17 @@ class TestParquet:
                   "output": { "path": "", "format": "", "open_on_complete": True, "as_geo": False } }
 
         # create parquet file
-        parms["output"]["path"] = "testfile7.parquet"
+        parms["output"]["path"] = "testfile9.parquet"
         parms["output"]["format"] = "parquet"
         gdf_from_parquet = icesat2.atl06p(parms, resources=[resource], keep_id=True)
-        os.remove("testfile7.parquet")
+        os.remove("testfile9.parquet")
 
         # create csv file
-        parms["output"]["path"] = "testfile7.csv"
+        parms["output"]["path"] = "testfile9.csv"
         parms["output"]["format"] = "csv"
         gdf_from_csv = icesat2.atl06p(parms, resources=[resource], keep_id=True)
-        os.remove("testfile7.csv")
-        os.remove("testfile7_metadata.json")
+        os.remove("testfile9.csv")
+        os.remove("testfile9_metadata.json")
 
         # sort values
         gdf_from_parquet = gdf_from_parquet.sort_values('extent_id')
@@ -278,18 +320,18 @@ class TestParquet:
                   "output": { "path": "", "format": "", "open_on_complete": True, "as_geo": False } }
 
         # create parquet file
-        parms["output"]["path"] = "testfile8.parquet"
+        parms["output"]["path"] = "testfile10.parquet"
         parms["output"]["format"] = "parquet"
         gdf_from_parquet = icesat2.atl06p(parms, resources=[resource], keep_id=True)
-        os.remove("testfile8.parquet")
+        os.remove("testfile10.parquet")
 
         # create feather file
-        parms["output"]["path"] = "testfile8.feather"
+        parms["output"]["path"] = "testfile10.feather"
         parms["output"]["format"] = "feather"
         gdf_from_feather = icesat2.atl06p(parms, resources=[resource], keep_id=True)
         print(gdf_from_feather)
-        os.remove("testfile8.feather")
-        os.remove("testfile8_metadata.json")
+        os.remove("testfile10.feather")
+        os.remove("testfile10_metadata.json")
 
         # sort values
         gdf_from_parquet = gdf_from_parquet.sort_values('extent_id')
@@ -308,6 +350,48 @@ class TestParquet:
                 feather_val = gdf_from_feather[column].iloc[row]
                 assert abs(parquet_val - feather_val) < 0.0001, f'mismatch in column <{column}>: {parquet_val} != {feather_val}'
 
+    def test_gedi01b(self, init):
+        resource = 'GEDI01_B_2019109210809_O01988_03_T02056_02_005_01_V002.h5'
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        parms = {
+            "poly": region["poly"],
+            "beam": 0,
+            "output": { "path": "testfile11.parquet", "format": "parquet", "open_on_complete": True } }
+        gdf = gedi.gedi01bp(parms, resources=[resource])
+        os.remove("testfile11.parquet")
+        assert init
+        assert len(gdf) == 21
+        assert len(gdf.keys()) == 11
+        assert gdf["flags"].iloc[0] == 0
+        assert gdf["tx_size"].iloc[0] == 128
 
+    def test_gedi02a(self, init):
+        resource = 'GEDI02_A_2022243081308_O21052_02_T04087_02_003_02_V002.h5'
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        parms = {
+            "poly": region["poly"],
+            "degrade_flag": 0,
+            "l2_quality_flag": 1,
+            "output": { "path": "testfile12.parquet", "format": "parquet", "open_on_complete": True } }
+        gdf = gedi.gedi02ap(parms, resources=[resource])
+        os.remove("testfile12.parquet")
+        assert init
+        assert len(gdf) == 4825
+        assert len(gdf.keys()) == 8
+        assert gdf["flags"].mean() == 130.0
 
-### TODO: for CSV and Feather, check that the metadata files are created
+    def test_gedi04a(self, init):
+        resource = 'GEDI04_A_2019123154305_O02202_03_T00174_02_002_02_V002.h5'
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        parms = {
+            "poly": region["poly"],
+            "degrade_flag": 0,
+            "l2_quality_flag": 1,
+            "output": { "path": "testfile13.parquet", "format": "parquet", "open_on_complete": True } }
+        gdf = gedi.gedi04ap(parms, resources=[resource])
+        os.remove("testfile13.parquet")
+        assert init
+        assert len(gdf) == 4559
+        assert len(gdf.keys()) == 8
+        assert gdf["flags"].nunique() == 2
+        assert gdf["flags"].min() == 130

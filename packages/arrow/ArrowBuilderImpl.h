@@ -40,7 +40,7 @@
 #include "LuaObject.h"
 #include "Ordering.h"
 #include "RecordObject.h"
-#include "ArrowParms.h"
+#include "ArrowFields.h"
 #include "ArrowBuilder.h"
 #include "OsApi.h"
 #include "MsgQ.h"
@@ -94,7 +94,7 @@ class ArrowBuilderImpl
         unique_ptr<parquet::arrow::FileWriter>      parquetWriter;
         shared_ptr<arrow::io::FileOutputStream>     featherWriter;
         shared_ptr<arrow::io::FileOutputStream>     csvWriter;
-        ArrowParms::format_t                        writerFormat;
+        ArrowFields::format_t                       writerFormat;
         vector<shared_ptr<arrow::Field>>            fieldVector;
         field_list_t                                fieldList;
         bool                                        firstTime;
