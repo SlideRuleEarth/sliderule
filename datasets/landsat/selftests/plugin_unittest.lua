@@ -38,7 +38,7 @@ local pointCount = 100
 
 print(string.format("\n-------------------------------------------------\nLandsat Plugin test (NDVI)\n-------------------------------------------------"))
 local demType = "landsat-hls"
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog = contents }))
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog=contents, sort_by_index=true }))
 runner.check(dem ~= nil)
 
 ut = geo.ut_sample(dem)

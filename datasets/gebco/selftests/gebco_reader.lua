@@ -19,7 +19,7 @@ local expDepth = { -64,  -4933, -4072}
 local expFlags = {  70,     40,    44}
 
 print(string.format("\n--------------------------------\nTest: GEBCO Correct Values\n--------------------------------"))
-local dem = geo.raster(geo.parms({ asset = "gebco-bathy", algorithm = "NearestNeighbour", with_flags=true}))
+local dem = geo.raster(geo.parms({ asset = "gebco-bathy", algorithm = "NearestNeighbour", with_flags=true, sort_by_index = true }))
 runner.check(dem ~= nil)
 
 for j, lon in ipairs(lons) do

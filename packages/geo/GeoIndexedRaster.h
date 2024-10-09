@@ -39,8 +39,12 @@
 #include "GdalRaster.h"
 #include "RasterObject.h"
 #include "Ordering.h"
+#include "GeoRtree.h"
 #include <unordered_map>
 #include <set>
+
+/* GEOS C++ API is unstable, use C API */
+#include <geos_c.h>
 
 
 /******************************************************************************
@@ -71,11 +75,7 @@ class GeoIndexedRaster: public RasterObject
 
         typedef struct {
             OGRPoint                    point;
-            int64_t                     index;
-        } ogr_point_info_t;
-
-        typedef struct {
-            ogr_point_info_t            pointInfo;
+                     int64_t            pointIndex;
             RasterSample*               sample;
             bool                        sampleReturned;
             uint32_t                    ssErrors;
@@ -92,7 +92,7 @@ class GeoIndexedRaster: public RasterObject
         } raster_info_t;
 
         typedef struct unique_raster_t {
-            raster_info_t               rinfo;
+            raster_info_t*              rinfo;
             double                      gpsTime;
             uint64_t                    fileId;
             std::vector<point_sample_t> pointSamples;
@@ -142,11 +142,10 @@ class GeoIndexedRaster: public RasterObject
 
         typedef RasterObject::range_t range_t;
         typedef struct Finder {
-            OGRGeometry*                  geo;
-            std::vector<OGRFeature*>*     featuresList;
-            std::vector<rasters_group_t*> rasterGroups;
-            explicit Finder(OGRGeometry* geo, std::vector<OGRFeature*>* _featuresList);
-                    ~Finder(void);
+            const OGRGeometry*              geo;
+            const std::vector<OGRFeature*>* featuresList;
+            std::vector<rasters_group_t*>   rasterGroups;
+            explicit Finder(const OGRGeometry* geo, const std::vector<OGRFeature*>* _featuresList);
         } finder_t;
 
 
@@ -166,7 +165,8 @@ class GeoIndexedRaster: public RasterObject
         } union_maker_t;
 
         typedef struct {
-            ogr_point_info_t   pointInfo;
+            OGRPoint           point;
+            int64_t            pointIndex;
             GroupOrdering*     groupList;
         } point_groups_t;
 
@@ -192,7 +192,6 @@ class GeoIndexedRaster: public RasterObject
         uint32_t        getSamples        (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) final;
         uint32_t        getSamples        (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) final;
         uint32_t        getSubsets        (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) final;
-                       ~GeoIndexedRaster  (void) override;
 
     protected:
 
@@ -221,7 +220,6 @@ class GeoIndexedRaster: public RasterObject
         virtual bool     findRasters           (finder_t* finder) = 0;
         void             sampleRasters         (OGRGeometry* geo);
         bool             sample                (OGRGeometry* geo, int64_t gps, GroupOrdering* groupList);
-        void             emptyFeaturesList     (void);
 
         /*--------------------------------------------------------------------
          * Data
@@ -241,9 +239,19 @@ class GeoIndexedRaster: public RasterObject
             double  findRastersTime;
             double  findUniqueRastersTime;
             double  samplesTime;
+            double  collectSamplesTime;
 
-            PerfStats(void) : spatialFilterTime(0), findRastersTime(0), findUniqueRastersTime(0), samplesTime(0) {}
-            void clear(void) { spatialFilterTime = 0; findRastersTime = 0; findUniqueRastersTime = 0; samplesTime = 0;}
+            PerfStats (void) : spatialFilterTime(0), findRastersTime(0), findUniqueRastersTime(0), samplesTime(0), collectSamplesTime(0) {}
+            void clear(void) { spatialFilterTime = 0; findRastersTime = 0; findUniqueRastersTime = 0; samplesTime = 0; collectSamplesTime = 0; }
+            void log  (event_level_t lvl)
+            {
+                mlog(lvl, "Performance Stats:");
+                mlog(lvl, "spatialFilter: %12.3lf", spatialFilterTime);
+                mlog(lvl, "findingRasters:%12.3lf", findRastersTime);
+                mlog(lvl, "findingUnique: %12.3lf", findUniqueRastersTime);
+                mlog(lvl, "sampling:      %12.3lf", samplesTime);
+                mlog(lvl, "collecSamples: %12.3lf", collectSamplesTime);
+            }
         } perf_stats_t;
 
         /*--------------------------------------------------------------------
@@ -258,9 +266,6 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        std::vector<OGRFeature*> featuresList;
-        OGRPolygon               geoIndexPoly;
-
         List<reader_t*>           readers;
         List<batch_reader_t*>     batchReaders;
         perf_stats_t              perfStats;
@@ -270,6 +275,8 @@ class GeoIndexedRaster: public RasterObject
         GdalRaster::bbox_t        bbox;
         uint32_t                  rows;
         uint32_t                  cols;
+
+        GeoRtree                  geoRtree;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -282,6 +289,7 @@ class GeoIndexedRaster: public RasterObject
         static void*    readerThread        (void *param);
         static void*    batchReaderThread   (void *param);
         static void*    unionThread         (void* param);
+
         static void*    groupsFinderThread  (void *param);
 
         bool            createReaderThreads (uint32_t  rasters2sample);

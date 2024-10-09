@@ -219,12 +219,10 @@ bool LandsatHlsRaster::findRasters(finder_t* finder)
                     }
                 }
             }
-            rgroup->infovect.shrink_to_fit();
 
             // mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
             finder->rasterGroups.push_back(rgroup);
         }
-        finder->rasterGroups.shrink_to_fit();
         // mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
     }
     catch (const RunTimeException &e)
@@ -361,7 +359,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
             /* Get the sample for this point from unique raster */
             for(const point_sample_t& ps : ur->pointSamples)
             {
-                if(ps.pointInfo.index == pointIndx)
+                if(ps.pointIndex == pointIndx)
                 {
                     /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
                     if(ps.sample == NULL) break;
