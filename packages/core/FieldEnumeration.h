@@ -222,6 +222,7 @@ string FieldEnumeration<T,N>::toJson (void) const
 template <class T, int N>
 int FieldEnumeration<T,N>::toLua (lua_State* L) const
 {
+    int table_index = 1;
     lua_newtable(L);
     for(int i = 0; i < N; i++)
     {
@@ -230,7 +231,7 @@ int FieldEnumeration<T,N>::toLua (lua_State* L) const
             T selection;
             convertFromIndex(i, selection);
             convertToLua(L, selection);
-            lua_rawseti(L, -2, i + 1);
+            lua_rawseti(L, -2, table_index++);
         }
     }
     return 1;
