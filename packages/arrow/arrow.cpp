@@ -61,7 +61,6 @@ int arrow_open (lua_State* L)
         {"dataframe",   ArrowDataFrame::luaCreate},
         {"sampler",     ArrowSampler::luaCreate},
         {"send2user",   ArrowCommon::luaSend2User},
-        {"parms",       ArrowParms::luaCreate},
         {NULL,          NULL}
     };
 
@@ -69,7 +68,6 @@ int arrow_open (lua_State* L)
     luaL_newlib(L, arrow_functions);
 
     /* Set Attributes */
-    LuaEngine::setAttrStr(L, "PARMS",       ArrowParms::SELF);
     LuaEngine::setAttrInt(L, "PARQUET",     ArrowFields::PARQUET);
     LuaEngine::setAttrInt(L, "GEOPARQUET",  ArrowFields::GEOPARQUET);
     LuaEngine::setAttrInt(L, "FEATHER",     ArrowFields::FEATHER);

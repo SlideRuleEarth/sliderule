@@ -143,7 +143,7 @@ SwotL2Reader::SwotL2Reader (lua_State* L, const char* outq_name, SwotFields* _pa
     try
     {
         /* Create H5Coro Context */
-        context = new H5Coro::Context(parms->asset.asset, parms->resource.value.c_str());
+        context = new H5Coro::Context(parms->asset.asset, parms->getResource());
 
         /* Initialize Region */
         region = new Region(context, _parms);

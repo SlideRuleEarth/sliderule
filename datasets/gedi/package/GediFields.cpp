@@ -78,9 +78,12 @@ GediFields::GediFields(lua_State* L , const char* default_asset_name, const char
                         {"l2_quality_filter",   &l2_quality_filter},
                         {"l4_quality_filter",   &l4_quality_filter},
                         {"surface_filter",      &surface_filter} }),
-    asset(default_asset_name),
-    resource(default_resource)
+    asset(default_asset_name)
 {
+    if(default_resource)
+    {
+        resource = default_resource;
+    }
 }
 
 /******************************************************************************

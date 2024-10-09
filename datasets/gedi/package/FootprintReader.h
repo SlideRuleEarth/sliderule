@@ -214,7 +214,7 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, const char* outq_n
     try
     {
         /* Create H5Coro Context */
-        context = new H5Coro::Context(parms->asset.asset, parms->resource.value.c_str());
+        context = new H5Coro::Context(parms->asset.asset, parms->getResource());
 
         /* Read Beam Data */
         threadMut.unlock();
@@ -241,8 +241,8 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, const char* outq_n
     catch(const RunTimeException& e)
     {
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "%s: (%s)", e.what(), parms->resource.value.c_str());
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "%s: (%s)", e.what(), parms->resource.value.c_str());
+        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "%s: (%s)", e.what(), parms->getResource());
+        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "%s: (%s)", e.what(), parms->getResource());
 
         /* Indicate End of Data */
         if(sendTerminator) outQ->postCopy("", 0, SYS_TIMEOUT);

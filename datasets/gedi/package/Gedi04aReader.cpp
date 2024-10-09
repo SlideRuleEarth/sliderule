@@ -165,7 +165,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
     stats_t local_stats = {0, 0, 0, 0, 0};
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, reader->traceId, "gedi04a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", parms->asset.getName(), parms->resource.value.c_str(), static_cast<int>(info->beam));
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "gedi04a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", parms->asset.getName(), parms->getResource(), static_cast<int>(info->beam));
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -183,7 +183,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
         for(long footprint = 0; reader->active && footprint < region.num_footprints; footprint++)
         {
             /* Check Degrade Filter */
-            if(parms->degrade_filter.value)
+            if(parms->degrade_filter)
             {
                 if(gedi04a.degrade_flag[footprint])
                 {
@@ -193,7 +193,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
             }
 
             /* Check L2 Quality Filter */
-            if(parms->l2_quality_filter.value)
+            if(parms->l2_quality_filter)
             {
                 if(!gedi04a.l2_quality_flag[footprint])
                 {
@@ -203,7 +203,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
             }
 
             /* Check L4 Quality Filter */
-            if(parms->l4_quality_filter.value)
+            if(parms->l4_quality_filter)
             {
                 if(!gedi04a.l4_quality_flag[footprint])
                 {
@@ -213,7 +213,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
             }
 
             /* Check Surface Filter */
-            if(parms->surface_filter.value)
+            if(parms->surface_filter)
             {
                 if(!gedi04a.surface_flag[footprint])
                 {
@@ -263,7 +263,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s beam %d: %s", parms->resource.value.c_str(), static_cast<int>(info->beam), e.what());
+        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s beam %d: %s", parms->getResource(), static_cast<int>(info->beam), e.what());
     }
 
     /* Handle Global Reader Updates */
@@ -275,7 +275,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
         /* Send Final Record Batch */
         if(reader->numComplete == reader->threadCount)
         {
-            mlog(INFO, "Completed processing resource %s", parms->resource.value.c_str());
+            mlog(INFO, "Completed processing resource %s", parms->getResource());
             if(reader->batchIndex > 0)
             {
                 reader->postRecordBatch(&local_stats);
@@ -300,12 +300,12 @@ void* Gedi04aReader::subsettingThread (void* parm)
                     status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
                     if(status < 0)
                     {
-                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, parms->resource.value.c_str());
+                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, parms->getResource());
                         break;
                     }
                     else if(status == MsgQ::STATE_TIMEOUT)
                     {
-                        mlog(INFO, "Timeout posting terminator for %s ... trying again", parms->resource.value.c_str());
+                        mlog(INFO, "Timeout posting terminator for %s ... trying again", parms->getResource());
                     }
                 }
             }

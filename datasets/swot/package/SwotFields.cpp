@@ -45,13 +45,19 @@
  *----------------------------------------------------------------------------*/
 int SwotFields::luaCreate (lua_State* L)
 {
+    SwotFields* swot_fields = NULL;
+
     try
     {
-        return createLuaObject(L, new SwotFields(L));
+        swot_fields = new SwotFields(L);
+        swot_fields->fromLua(L, 1);
+
+        return createLuaObject(L, swot_fields);
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        delete swot_fields;
         return returnLuaStatus(L, false);
     }
 }

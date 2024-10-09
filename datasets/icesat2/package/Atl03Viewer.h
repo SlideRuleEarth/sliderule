@@ -181,8 +181,6 @@ class Atl03Viewer: public LuaObject
         Mutex               threadMut;
         int                 threadCount;
         int                 numComplete;
-        Asset*              asset;
-        const char*         resource;
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
@@ -191,22 +189,15 @@ class Atl03Viewer: public LuaObject
 
         H5Coro::Context*    context; // for ATL03 file
 
-        uint16_t            start_rgt;
-        uint8_t             start_cycle;
-        uint8_t             start_region;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03Viewer                 (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator=true);
+                            Atl03Viewer                 (lua_State* L, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator=true);
                             ~Atl03Viewer                (void) override;
 
         static void*        subsettingThread            (void* parm);
-
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
-        static void         parseResource               (const char* resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region);
-
         static int          luaStats                    (lua_State* L);
 };
 

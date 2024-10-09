@@ -132,7 +132,7 @@ BathyViewer::BathyViewer (lua_State* L, Icesat2Fields* _parms):
     try
     {
         /* Create H5Coro Context */
-        context = new H5Coro::Context(parms->asset.asset, parms->resource.value.c_str());
+        context = new H5Coro::Context(parms->asset.asset, parms->getResource());
 
         /* Create Readers */
         threadMut.lock();
@@ -165,7 +165,7 @@ BathyViewer::BathyViewer (lua_State* L, Icesat2Fields* _parms):
     catch(const RunTimeException& e)
     {
         /* Generate Exception Record */
-        mlog(e.level(), "Failure on resource %s: %s", parms->resource.value.c_str(), e.what());
+        mlog(e.level(), "Failure on resource %s: %s", parms->getResource(), e.what());
 
         /* Indicate End of Data */
         signalComplete();
@@ -268,7 +268,7 @@ void* BathyViewer::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Failure on resource %s track %d.%d: %s", reader->parms->resource.value.c_str(), info->track, info->pair, e.what());
+        mlog(e.level(), "Failure on resource %s track %d.%d: %s", reader->parms->getResource(), info->track, info->pair, e.what());
     }
 
     /* Handle Global Reader Updates */
@@ -286,7 +286,7 @@ void* BathyViewer::subsettingThread (void* parm)
         if(reader->numComplete == reader->threadCount)
         {
             /* Indicate End of Data */
-            mlog(INFO, "Completed processing resource %s: %ld photons", reader->parms->resource.value.c_str(), reader->totalPhotons);
+            mlog(INFO, "Completed processing resource %s: %ld photons", reader->parms->getResource(), reader->totalPhotons);
             reader->signalComplete();
         }
     }

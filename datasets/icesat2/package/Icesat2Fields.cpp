@@ -108,7 +108,7 @@ int Icesat2Fields::luaCreate (lua_State* L)
 
     try
     {
-        const char* default_asset_name = LuaObject::getLuaString(L, 2, true, NULL);
+        const char* default_asset_name = LuaObject::getLuaString(L, 2, true, "icesat2");
         const char* default_resource = LuaObject::getLuaString(L, 3, true, NULL);
 
         icesat2_fields = new Icesat2Fields(L, default_asset_name, default_resource, {});
@@ -224,9 +224,14 @@ Icesat2Fields::Icesat2Fields(lua_State* L, const char* default_asset_name, const
                         {"cycle",               &cycle},
                         {"region",              &region},
                         {"version",             &version} }),
-    asset(default_asset_name),
-    resource(default_resource)
+    asset(default_asset_name)
 {
+    // initialize resource (if provided)
+    if(default_resource)
+    {
+        resource = default_resource;
+    }
+
     // add additional fields to dictionary
     for(const FieldDictionary::entry_t elem: init_list)
     {

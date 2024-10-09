@@ -20,7 +20,6 @@ if (Arrow_FOUND AND Parquet_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/ArrowCommon.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ArrowDataFrame.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ArrowFields.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowParms.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ArrowSampler.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ArrowSamplerImpl.cpp
     )
@@ -39,7 +38,6 @@ if (Arrow_FOUND AND Parquet_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/ArrowCommon.h
             ${CMAKE_CURRENT_LIST_DIR}/ArrowDataFrame.h
             ${CMAKE_CURRENT_LIST_DIR}/ArrowFields.h
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowParms.h
             ${CMAKE_CURRENT_LIST_DIR}/ArrowSampler.h
             ${CMAKE_CURRENT_LIST_DIR}/ArrowSamplerImpl.h
         DESTINATION

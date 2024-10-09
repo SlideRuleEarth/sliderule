@@ -313,6 +313,9 @@ class Icesat2Fields: public RequestFields
             return static_cast<uint8_t>(lookup_table[index]);
         }
 
+        // returns resource as a string
+        const char* getResource (void) const { return resource.value.c_str(); }
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/

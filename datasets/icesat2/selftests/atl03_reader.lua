@@ -2,6 +2,10 @@ local runner = require("test_executive")
 local asset = require("asset")
 local json = require("json")
 
+local console = require("console")
+console.monitor:config(core.LOG, core.INFO)
+sys.setlvl(core.LOG, core.INFO)
+
 -- Setup --
 
 local assets = asset.loaddir()
@@ -21,19 +25,16 @@ end
 
 print('\n------------------\nTest01: Atl03 Reader \n------------------')
 
-local f1_0 = icesat2.atl03s(nsidc_s3, "missing_file", "tmpq", icesat2.parms({srt=icesat2.SRT_SEA_ICE, cnf=icesat2.CNF_NOT_CONSIDERED, track=icesat2.RPT_1}))
-
-local f1_1 = icesat2.atl03s(nsidc_s3, "missing_file", "tmpq", icesat2.parms({srt=icesat2.SRT_SEA_ICE, cnf={icesat2.CNF_NOT_CONSIDERED}, track=icesat2.RPT_1}))
-
-local f1_2 = icesat2.atl03s(nsidc_s3, "missing_file", "tmpq", icesat2.parms({srt=icesat2.SRT_SEA_ICE, cnf={"atl03_not_considered"}, track=icesat2.RPT_1}))
-
-local f1_3 = icesat2.atl03s(nsidc_s3, "missing_file", "tmpq",icesat2.parms({srt=icesat2.SRT_SEA_ICE, cnf={"atl03_low", "atl03_medium", "atl03_high"}, track=icesat2.RPT_1}))
+local f1_0 = icesat2.atl03s("tmpq", icesat2.parms({resource="missing_file", srt=icesat2.SRT_SEA_ICE, cnf=icesat2.CNF_NOT_CONSIDERED, track=icesat2.RPT_1}))
+local f1_1 = icesat2.atl03s("tmpq", icesat2.parms({resource="missing_file", srt=icesat2.SRT_SEA_ICE, cnf={icesat2.CNF_NOT_CONSIDERED}, track=icesat2.RPT_1}))
+local f1_2 = icesat2.atl03s("tmpq", icesat2.parms({resource="missing_file", srt=icesat2.SRT_SEA_ICE, cnf={"atl03_not_considered"}, track=icesat2.RPT_1}))
+local f1_3 = icesat2.atl03s("tmpq", icesat2.parms({resource="missing_file", srt=icesat2.SRT_SEA_ICE, cnf={"atl03_low", "atl03_medium", "atl03_high"}, track=icesat2.RPT_1}))
 
 print('\n------------------\nTest02: Atl03 Reader Extent Record\n------------------')
 
 local recq = msg.subscribe("atl03-reader-recq")
 local tstart = time.latch()
-local f2 = icesat2.atl03s(nsidc_s3, "ATL03_20200304065203_10470605_005_01.h5", "atl03-reader-recq", icesat2.parms({cnf=4, track=icesat2.RPT_1}))
+local f2 = icesat2.atl03s("atl03-reader-recq", icesat2.parms({resource="ATL03_20200304065203_10470605_005_01.h5", cnf=4, track=icesat2.RPT_1}))
 local extentrec = recq:recvrecord(15000)
 print("Time to execute: "..tostring(time.latch() - tstart))
 

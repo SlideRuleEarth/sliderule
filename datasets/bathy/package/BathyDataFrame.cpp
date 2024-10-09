@@ -501,7 +501,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
     const BathyFields& parms = dataframe.parms;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms.asset.getName(), parms.resource.value.c_str(), dataframe.track.value);
+    const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms.asset.getName(), parms.getResource(), dataframe.track.value);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try

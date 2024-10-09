@@ -48,6 +48,7 @@ const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {"mask",        luaRegionMaskIncludes},
     {"__index",     luaGetField},
     {"__newindex",  luaSetField},
+    {"hasoutput",   luaWithArrowOutput},
     {NULL,          NULL}
 };
 
@@ -186,6 +187,25 @@ int RequestFields::luaSetField (lua_State* L)
     }
 
     return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * luaWith ArrowOutput
+ *----------------------------------------------------------------------------*/
+int RequestFields::luaWithArrowOutput (lua_State* L)
+{
+    try
+    {
+        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        lua_pushboolean(L, !lua_obj->output.path.value.empty());
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "error retrieving field: %s", e.what());
+        lua_pushboolean(L, false);
+    }
+
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

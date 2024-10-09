@@ -30,93 +30,115 @@
  */
 
 /******************************************************************************
- * INCLUDE
+ * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "AssetField.h"
+#include "CreFields.h"
 
 /******************************************************************************
- * CLASS METHODS
+ * STATIC DATA
+ ******************************************************************************/
+
+const char* CreFields::OBJECT_TYPE = "CreFields";
+const char* CreFields::LUA_META_NAME = "CreFields";
+const struct luaL_Reg CreFields::LUA_META_TABLE[] = {
+    {"image",       luaImage},
+    {"export",      luaExport},
+    {NULL,          NULL}
+};
+
+/******************************************************************************
+ * PUBLIC METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Constructor - AssetField
+ * luaCreate - create(<parameter table>)
  *----------------------------------------------------------------------------*/
-AssetField::AssetField(void):
-    Field(ELEMENT, Field::STRING),
-    asset(NULL)
+int CreFields::luaCreate (lua_State* L)
 {
-}
-
-/*----------------------------------------------------------------------------
- * Constructor - AssetField
- *----------------------------------------------------------------------------*/
-AssetField::AssetField(const char* asset_name):
-    Field(ELEMENT, Field::STRING),
-    asset(NULL)
-{
-    // only initialize if provided
-    if(asset_name)
+    CreFields* cre_fields = NULL;
+    try
     {
-        // get asset
-        asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
-
-        // throw error on asset not found
-        if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", asset_name);
+        cre_fields = new CreFields(L);
+        cre_fields->fromLua(L, 1);
+        return createLuaObject(L, cre_fields);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        delete cre_fields;
+        return returnLuaStatus(L, false);
     }
 }
 
 /*----------------------------------------------------------------------------
- * Destructor
+ * luaExport - export() --> lua table
  *----------------------------------------------------------------------------*/
-AssetField::~AssetField(void)
+int CreFields::luaExport (lua_State* L)
 {
-    if(asset) asset->releaseLuaObject();
-}
+    int num_rets = 1;
 
-/*----------------------------------------------------------------------------
- * getName
- *----------------------------------------------------------------------------*/
-const char* AssetField::getName (void) const
-{
-    if(asset) return asset->getName();
-    else return "<nil>";
-}
+    try
+    {
+        CreFields* lua_obj = dynamic_cast<CreFields*>(getLuaSelf(L, 1));
+        num_rets = lua_obj->toLua(L);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error exporting %s: %s", OBJECT_TYPE, e.what());
+        lua_pushnil(L);
+    }
 
-/*----------------------------------------------------------------------------
- * toLua
- *----------------------------------------------------------------------------*/
-string AssetField::toJson (void) const
-{
-    return getName();
-}
-
-/*----------------------------------------------------------------------------
- * toLua
- *----------------------------------------------------------------------------*/
-int AssetField::toLua (lua_State* L) const
-{
-    if(asset) lua_pushstring(L, asset->getName());
-    else lua_pushnil(L);
-    return 1;
+    return num_rets;
 }
 
 /*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
-void AssetField::fromLua (lua_State* L, int index)
+void CreFields::fromLua (lua_State* L, int index)
 {
-    // get asset name (or throw if not provided)
-    const char* asset_name = LuaObject::getLuaString(L, index);
+    FieldDictionary::fromLua(L, index);
 
-     // if we successfully got a name then release asset if already set
-    if(asset) asset->releaseLuaObject();
-    asset = NULL;
+    // check image for ONLY legal characters
+    for (auto c_iter = image.value.begin(); c_iter < image.value.end(); ++c_iter)
+    {
+        const int c = *c_iter;
+        if(!isalnum(c) && (c != '/') && (c != '.') && (c != ':') && (c != '-'))
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid character found in image name: %c", c);
+        }
+    }
+}
 
-   // get asset
-    asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
+/*----------------------------------------------------------------------------
+ * Constructor
+ *----------------------------------------------------------------------------*/
+CreFields::CreFields (lua_State* L):
+    LuaObject           (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
+    FieldDictionary ({
+        {"image",   &image},
+        {"name",    &name},
+        {"command", &command},
+        {"timeout", &timeout},
+    })
+{
+}
 
-    // throw error on asset not found
-    if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", asset_name);
+/*----------------------------------------------------------------------------
+ * luaImage
+ *----------------------------------------------------------------------------*/
+int CreFields::luaImage (lua_State* L)
+{
+    try
+    {
+        const CreFields* lua_obj = dynamic_cast<CreFields*>(getLuaSelf(L, 1));
+        if(!lua_obj->image.value.empty()) lua_pushstring(L, lua_obj->image.value.c_str());
+        else lua_pushnil(L);
+        return 1;
+    }
+    catch(const RunTimeException& e)
+    {
+        return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
+    }
 }

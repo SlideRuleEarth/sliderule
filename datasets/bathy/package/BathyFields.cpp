@@ -50,7 +50,7 @@ int BathyFields::luaCreate (lua_State* L)
 
     try
     {
-        const char* default_asset_name = LuaObject::getLuaString(L, 2, true, NULL);
+        const char* default_asset_name = LuaObject::getLuaString(L, 2, true, "icesat2");
         const char* default_resource = LuaObject::getLuaString(L, 3, true, NULL);
 
         bathy_fields = new BathyFields(L, default_asset_name, default_resource);

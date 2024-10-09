@@ -1,12 +1,6 @@
 local runner = require("test_executive")
 local td = runner.rootdir(arg[0]) -- root directory
 local incloud = arg[1] == "cloud"
-local short = arg[1] == "short"
-
--- Configure Short Form Self Test
-if short then
-    incloud = true
-end
 
 -- Run Core Self Tests --
 if __core__ then
@@ -71,10 +65,10 @@ if __icesat2__ and incloud then
     runner.script(icesat2_td .. "atl03_viewer.lua")
     runner.script(icesat2_td .. "atl03_indexer.lua")
     runner.script(icesat2_td .. "atl03_ancillary.lua")
-    if not short then runner.script(icesat2_td .. "atl06_ancillary.lua") end
+    runner.script(icesat2_td .. "atl06_ancillary.lua")
     runner.script(icesat2_td .. "h5_file.lua")
     runner.script(icesat2_td .. "h5_element.lua")
-    if not short then runner.script(icesat2_td .. "h5_2darray.lua") end
+    runner.script(icesat2_td .. "h5_2darray.lua")
     runner.script(icesat2_td .. "s3_driver.lua")
 end
 
@@ -86,7 +80,7 @@ if __opendata__ and incloud then
 end
 
 -- Run PGC Plugin Self Tests
-if __pgc__ and incloud and not short then
+if __pgc__ and incloud then
     local pgc_td = td .. "../../datasets/pgc/selftests/"
     runner.script(pgc_td .. "plugin_unittest.lua")
     runner.script(pgc_td .. "arcticdem_reader.lua")
@@ -101,16 +95,16 @@ if __pgc__ and incloud and not short then
 end
 
 -- Run Landsat Plugin Self Tests
-if __landsat__ and incloud and not short then
+if __landsat__ and incloud then
     local landsat_td = td .. "../../datasets/landsat/selftests/"
     runner.script(landsat_td .. "plugin_unittest.lua")
     runner.script(landsat_td .. "landsat_reader.lua")
 end
 
 -- Run USGS3DEP Plugin Self Tests
-if __usgs3dep__ and incloud and not short then
+if __usgs3dep__ and incloud then
     local usg2dep_td = td .. "../../datasets/usgs3dep/selftests/"
-    if not short then runner.script(usg2dep_td .. "usgs3dep_reader.lua") end
+    runner.script(usg2dep_td .. "usgs3dep_reader.lua")
 end
 
 -- Run GEBCO Plugin Self Tests

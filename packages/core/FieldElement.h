@@ -73,7 +73,11 @@ class FieldElement: public Field
          *--------------------------------------------------------------------*/
 
         operator bool() const {
-            return value != 0;  // Object is "true" if value is non-zero
+            return value != 0;
+        }
+
+        operator string() const {
+            return toJson();
         }
 
         /*--------------------------------------------------------------------
@@ -131,7 +135,7 @@ FieldElement<T>& FieldElement<T>::operator=(const FieldElement<T>& element)
  * operator=
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldElement<T>& FieldElement<T>::operator=(const T& v) 
+FieldElement<T>& FieldElement<T>::operator=(const T& v)
 {
     value = v;
     return *this;
@@ -177,7 +181,7 @@ int FieldElement<T>::toLua (lua_State* L) const
  * fromLua
  *----------------------------------------------------------------------------*/
 template <class T>
-void FieldElement<T>::fromLua (lua_State* L, int index) 
+void FieldElement<T>::fromLua (lua_State* L, int index)
 {
     convertFromLua(L, index, value);
 }

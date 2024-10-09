@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __cre_parms__
-#define __cre_parms__
+#ifndef __cre_fields__
+#define __cre_fields__
 
 /******************************************************************************
  * INCLUDES
@@ -38,25 +38,20 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
+#include "FieldElement.h"
+#include "FieldDictionary.h"
 
 /******************************************************************************
- * CRE PARAMETERS CLASS
+ * CLASS
  ******************************************************************************/
 
-class CreParms: public LuaObject
+class CreFields: public LuaObject, public FieldDictionary
 {
     public:
 
         /*--------------------------------------------------------------------
         * Constants
         *--------------------------------------------------------------------*/
-
-        static const char* SELF;
-        static const char* PARMS;
-        static const char* IMAGE;
-        static const char* NAME;
-        static const char* COMMAND;
-        static const char* TIMEOUT;
 
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
@@ -68,28 +63,29 @@ class CreParms: public LuaObject
         * Data
         *--------------------------------------------------------------------*/
 
-        const char* image; // container image
-        const char* name; // container name
-        const char* command; // container command
-        int timeout; // on requests to docker daemon
+        FieldElement<string>    image; // container image
+        FieldElement<string>    name; // container name
+        FieldElement<string>    command; // container command
+        FieldElement<int>       timeout {DEFAULT_TIMEOUT}; // on requests to docker daemon
 
         /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
 
-        static int  luaCreate           (lua_State* L);
-                    CreParms            (lua_State* L, int index);
-                    ~CreParms           (void) override;
-        const char* tojson              (void) const override;
+        static int  luaCreate   (lua_State* L);
+        static int  luaExport   (lua_State* L);
+        static int  luaImage    (lua_State* L);
 
-    private:
+        virtual void fromLua    (lua_State* L, int index) override;
+
+    protected:
 
         /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
 
-        void            cleanup             (void);
-        static int      luaImage            (lua_State* L);
+        CreFields    (lua_State* L);
+        ~CreFields   (void) override = default;
 };
 
-#endif  /* __cre_parms__ */
+#endif  /* __cre_fields__ */

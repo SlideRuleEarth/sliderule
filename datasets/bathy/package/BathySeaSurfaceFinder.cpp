@@ -170,7 +170,7 @@ bool BathySeaSurfaceFinder::run(GeoDataFrame* dataframe)
             /* calculate mean and standard deviation of histogram */
             double bckgnd = 0.0;
             double stddev = 0.0;
-            if(surface_parms.modelAsPoisson.value)
+            if(surface_parms.modelAsPoisson)
             {
                 const long num_shots = std::round((max_t - min_t) / 0.0001);
                 const double bin_t = surface_parms.binSize.value * 0.00000002 / 3.0; // bin size from meters to seconds

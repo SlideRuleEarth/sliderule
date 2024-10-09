@@ -18,7 +18,7 @@ if (CURL_FOUND AND RapidJSON_FOUND)
     target_sources(slideruleLib
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/cre.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/CreParms.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/CreFields.cpp
             ${CMAKE_CURRENT_LIST_DIR}/ContainerRunner.cpp
     )
 
@@ -31,7 +31,7 @@ if (CURL_FOUND AND RapidJSON_FOUND)
     install (
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/cre.h
-            ${CMAKE_CURRENT_LIST_DIR}/CreParms.h
+            ${CMAKE_CURRENT_LIST_DIR}/CreFields.h
             ${CMAKE_CURRENT_LIST_DIR}/ContainerRunner.h
         DESTINATION
             ${INCDIR}

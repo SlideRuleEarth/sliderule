@@ -34,7 +34,8 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "cre.h"
+#include "ContainerRunner.h"
+#include "CreFields.h"
 
 /******************************************************************************
  * DEFINES
@@ -57,7 +58,7 @@ int cre_open (lua_State* L)
         {"setregistry", ContainerRunner::luaSetRegistry},
         {"createunique",ContainerRunner::luaCreateUnique},
         {"deleteunique",ContainerRunner::luaDeleteUnique},
-        {"parms",       CreParms::luaCreate},
+        {"parms",       CreFields::luaCreate},
         {NULL,          NULL}
     };
 
@@ -65,7 +66,6 @@ int cre_open (lua_State* L)
     luaL_newlib(L, cre_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrStr(L, "PARMS", CreParms::PARMS);
     LuaEngine::setAttrStr(L, "SANDBOX_MOUNT", ContainerRunner::SANDBOX_MOUNT);
     LuaEngine::setAttrStr(L, "HOST_DIRECTORY", ContainerRunner::HOST_DIRECTORY);
 

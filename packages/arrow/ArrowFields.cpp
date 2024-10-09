@@ -56,6 +56,7 @@ ArrowFields::ArrowFields (void):
         #ifdef __aws__
         {"credentials",         &credentials},
         #endif
+        {"ancillary",           &ancillaryFields}
     })
 {
 }
@@ -78,19 +79,50 @@ void ArrowFields::fromLua (lua_State* L, int index)
     }
 
     // handle asset
-    #ifdef __aws__
     if(!assetName.value.empty())
     {
-        /* Get Asset */
+        // get asset
         Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(assetName.value.c_str(), Asset::OBJECT_TYPE));
         if(asset)
         {
+            // set region
             region = asset->getRegion();
+
+            // set credentials
+            #ifdef __aws__
             credentials = CredentialStore::get(asset->getIdentity());
+            #endif
+
+            // set output path
+            const char* path_prefix = StringLib::match(asset->getDriver(), "s3") ? "s3://" : "";
+            const char* path_suffix = "bin";
+            if(format.value == PARQUET)
+            {
+                path_suffix = asGeo.value ? ".geoparquet" : ".parquet";
+            }
+            else if(format == CSV)
+            {
+                path_suffix = ".csv";
+            }
+            if(!path.value.empty() && (path.value[0] != '\0'))
+            {
+                path = FString("%s%s/%s", path_prefix, asset->getPath(), path.value.c_str()).c_str();
+            }
+            else
+            {
+                const FString path_name("%s.%016lX%s", OsApi::getCluster(), OsApi::time(OsApi::CPU_CLK), path_suffix);
+                path = FString("%s%s/%s", path_prefix, asset->getPath(), path_name.c_str()).c_str();
+            }
+            mlog(INFO, "Generating unique path: %s", path.value.c_str());
+
+            // release asset
             asset->releaseLuaObject();
         }
     }
-    #endif
+    else if(path.value.empty() || (path.value[0] == '\0'))
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to determine output path");
+    }
 }
 
 /******************************************************************************

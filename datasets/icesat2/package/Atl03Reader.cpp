@@ -98,24 +98,20 @@ const struct luaL_Reg Atl03Reader::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl03Reader::luaCreate (lua_State* L)
 {
-    Asset* _asset = NULL;
     Icesat2Fields* _parms = NULL;
 
     try
     {
         /* Get Parameters */
-        _asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
-        const char* resource = getLuaString(L, 2);
-        const char* outq_name = getLuaString(L, 3);
-        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 4, Icesat2Fields::OBJECT_TYPE));
-        const bool send_terminator = getLuaBoolean(L, 5, true, true);
+        const char* outq_name = getLuaString(L, 1);
+        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
+        const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Return Reader Object */
-        return createLuaObject(L, new Atl03Reader(L, _asset, resource, outq_name, _parms, send_terminator));
+        return createLuaObject(L, new Atl03Reader(L, outq_name, _parms, send_terminator));
     }
     catch(const RunTimeException& e)
     {
-        if(_asset) _asset->releaseLuaObject();
         if(_parms) _parms->releaseLuaObject();
         mlog(e.level(), "Error creating Atl03Reader: %s", e.what());
         return returnLuaStatus(L, false);
@@ -134,16 +130,13 @@ void Atl03Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* resource, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator):
+Atl03Reader::Atl03Reader (lua_State* L, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->readTimeout.value * 1000),
     parms(_parms),
-    asset(_asset),
     context(NULL),
     context08(NULL)
 {
-    assert(_asset);
-    assert(resource);
     assert(outq_name);
     assert(_parms);
 
@@ -161,7 +154,7 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* resource, con
     }
 
     /* Generate ATL08 Resource Name */
-    char* resource08 = StringLib::duplicate(resource);
+    char* resource08 = StringLib::duplicate(parms->getResource());
     resource08[4] = '8';
 
     /* Create Publisher */
@@ -187,11 +180,8 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* resource, con
     try
     {
         /* Create H5Coro Contexts */
-        context = new H5Coro::Context(asset, resource);
-        context08 = new H5Coro::Context(asset, resource08);
-
-        /* Parse Globals (throws) */
-        parseResource(resource, start_rgt, start_cycle, start_region, sdp_version);
+        context = new H5Coro::Context(parms->asset.asset, parms->getResource());
+        context08 = new H5Coro::Context(parms->asset.asset, resource08);
 
         /* Create Readers */
         threadMut.lock();
@@ -224,8 +214,8 @@ Atl03Reader::Atl03Reader (lua_State* L, Asset* _asset, const char* resource, con
     catch(const RunTimeException& e)
     {
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "Failure on resource %s: %s", resource, e.what());
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "Failure on resource %s: %s", resource, e.what());
+        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "Failure on resource %s: %s", parms->getResource(), e.what());
+        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "Failure on resource %s: %s", parms->getResource(), e.what());
 
         /* Indicate End of Data */
         if(sendTerminator) outQ->postCopy("", 0, SYS_TIMEOUT);
@@ -254,7 +244,6 @@ Atl03Reader::~Atl03Reader (void)
     delete context08;
 
     parms->releaseLuaObject();
-    asset->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -479,7 +468,7 @@ void Atl03Reader::Region::rasterregion (const info_t* info)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
-    read_yapc           (info->reader->parms->stages[Icesat2Fields::STAGE_YAPC] && (info->reader->parms->yapc.version == 0) && (info->reader->sdp_version >= 6)),
+    read_yapc           (info->reader->parms->stages[Icesat2Fields::STAGE_YAPC] && (info->reader->parms->yapc.version == 0) && (info->reader->parms->version.value >= 6)),
     sc_orient           (info->reader->context,                                "/orbit_info/sc_orient"),
     velocity_sc         (info->reader->context, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),      H5Coro::ALL_COLS, region.first_segment, region.num_segments),
     segment_delta_time  (info->reader->context, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),       0, region.first_segment, region.num_segments),
@@ -1237,7 +1226,7 @@ void* Atl03Reader::subsettingThread (void* parm)
 
         /* Calculate Length of Extent in Meters (used for distance) */
         state.extent_length = parms->extentLength.value;
-        if(parms->distInSeg.value) state.extent_length *= ATL03_SEGMENT_LENGTH;
+        if(parms->distInSeg) state.extent_length *= ATL03_SEGMENT_LENGTH;
 
         /* Initialize Extent Counter */
         uint32_t extent_counter = 0;
@@ -1485,7 +1474,7 @@ void* Atl03Reader::subsettingThread (void* parm)
             state.seg_distance = state.start_distance + (state.extent_length / 2.0);
 
             /* Add Step to Start Distance */
-            if(!parms->distInSeg.value)
+            if(!parms->distInSeg)
             {
                 state.start_distance += parms->extentStep.value; // step start distance
 
@@ -1525,10 +1514,10 @@ void* Atl03Reader::subsettingThread (void* parm)
             }
 
             /* Create Extent Record */
-            if(state.extent_valid || parms->passInvalid.value)
+            if(state.extent_valid || parms->passInvalid)
             {
                 /* Generate Extent ID */
-                const uint64_t extent_id = Icesat2Fields::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, extent_counter);
+                const uint64_t extent_id = Icesat2Fields::generateExtentId(parms->rgt.value, parms->cycle.value, parms->region.value, info->track, info->pair, extent_counter);
 
                 /* Build Extent and Ancillary Records */
                 vector<RecordObject*> rec_list;
@@ -1681,7 +1670,7 @@ uint32_t Atl03Reader::calculateSegmentId (const TrackState& state, const Atl03Da
 {
     /* Calculate Segment ID (attempt to arrive at closest ATL06 segment ID represented by extent) */
     double atl06_segment_id = (double)atl03.segment_id[state.extent_segment]; // start with first segment in extent
-    if(!parms->distInSeg.value)
+    if(!parms->distInSeg)
     {
         atl06_segment_id += state.start_seg_portion; // add portion of first segment that first photon is included
         atl06_segment_id += (int)((parms->extentLength.value / ATL03_SEGMENT_LENGTH) / 2.0); // add half the length of the extent
@@ -1708,12 +1697,12 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, const info_t* info, 
     RecordObject* record            = new RecordObject(exRecType, extent_bytes);
     extent_t* extent                = reinterpret_cast<extent_t*>(record->getRecordData());
     extent->extent_id               = extent_id;
-    extent->region                  = start_region;
+    extent->region                  = parms->region.value;
     extent->track                   = info->track;
     extent->pair                    = info->pair;
     extent->spacecraft_orientation  = atl03.sc_orient[0];
-    extent->reference_ground_track  = start_rgt;
-    extent->cycle                   = start_cycle;
+    extent->reference_ground_track  = parms->rgt.value;
+    extent->cycle                   = parms->cycle.value;
     extent->segment_id              = calculateSegmentId(state, atl03);
     extent->segment_distance        = state.seg_distance;
     extent->extent_length           = state.extent_length;
@@ -1812,90 +1801,6 @@ void Atl03Reader::postRecord (RecordObject& record, stats_t& local_stats)
     {
         mlog(DEBUG, "Atl03 reader failed to post %s to stream %s: %d", record.getRecordType(), outQ->getName(), post_status);
         local_stats.extents_dropped++;
-    }
-}
-
-/*----------------------------------------------------------------------------
- * parseResource
- *
- *  ATL0x_YYYYMMDDHHMMSS_ttttccrr_vvv_ee
- *      YYYY    - year
- *      MM      - month
- *      DD      - day
- *      HH      - hour
- *      MM      - minute
- *      SS      - second
- *      tttt    - reference ground track
- *      cc      - cycle
- *      rr      - region
- *      vvv     - version
- *      ee      - revision
- *----------------------------------------------------------------------------*/
-void Atl03Reader::parseResource (const char* _resource, uint16_t& rgt, uint8_t& cycle, uint8_t& region, uint8_t& version)
-{
-    if(StringLib::size(_resource) < 29)
-    {
-        rgt = 0;
-        cycle = 0;
-        region = 0;
-        return; // early exit on error
-    }
-
-    long val;
-    char rgt_str[5];
-    rgt_str[0] = _resource[21];
-    rgt_str[1] = _resource[22];
-    rgt_str[2] = _resource[23];
-    rgt_str[3] = _resource[24];
-    rgt_str[4] = '\0';
-    if(StringLib::str2long(rgt_str, &val, 10))
-    {
-        rgt = (uint16_t)val;
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse RGT from resource %s: %s", _resource, rgt_str);
-    }
-
-    char cycle_str[3];
-    cycle_str[0] = _resource[25];
-    cycle_str[1] = _resource[26];
-    cycle_str[2] = '\0';
-    if(StringLib::str2long(cycle_str, &val, 10))
-    {
-        cycle = (uint8_t)val;
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Cycle from resource %s: %s", _resource, cycle_str);
-    }
-
-    char region_str[3];
-    region_str[0] = _resource[27];
-    region_str[1] = _resource[28];
-    region_str[2] = '\0';
-    if(StringLib::str2long(region_str, &val, 10))
-    {
-        region = (uint8_t)val;
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Region from resource %s: %s", _resource, region_str);
-    }
-
-    /* get version */
-    char version_str[4];
-    version_str[0] = _resource[30];
-    version_str[1] = _resource[31];
-    version_str[2] = _resource[32];
-    version_str[3] = '\0';
-    if(StringLib::str2long(version_str, &val, 10))
-    {
-        version = static_cast<uint8_t>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Version from resource %s: %s", _resource, version_str);
     }
 }
 

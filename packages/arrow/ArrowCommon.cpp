@@ -37,6 +37,7 @@
 #include <uuid/uuid.h>
 
 #include "OsApi.h"
+#include "RequestFields.h"
 #include "ArrowCommon.h"
 #include "RecordObject.h"
 
@@ -131,7 +132,7 @@ void init(void)
  * send2User
  *----------------------------------------------------------------------------*/
 bool send2User (const char* fileName, const char* outputPath,
-                uint32_t traceId, ArrowParms* parms, Publisher* outQ)
+                uint32_t traceId, const ArrowFields* parms, Publisher* outQ)
 {
     bool status = false;
 
@@ -179,7 +180,7 @@ bool send2User (const char* fileName, const char* outputPath,
  * send2S3
  *----------------------------------------------------------------------------*/
 bool send2S3 (const char* fileName, const char* s3dst, const char* outputPath,
-              ArrowParms* parms, Publisher* outQ)
+              const ArrowFields* parms, Publisher* outQ)
 {
     #ifdef __aws__
 
@@ -216,7 +217,7 @@ bool send2S3 (const char* fileName, const char* s3dst, const char* outputPath,
         {
             try
             {
-                bytes_uploaded = S3CurlIODriver::put(fileName, bucket, key, parms->region, &parms->credentials);
+                bytes_uploaded = S3CurlIODriver::put(fileName, bucket, key, parms->region.value.c_str(), &parms->credentials);
             }
             catch(const RunTimeException& e)
             {
@@ -264,7 +265,7 @@ bool send2S3 (const char* fileName, const char* s3dst, const char* outputPath,
 /*----------------------------------------------------------------------------
  * send2Client
  *----------------------------------------------------------------------------*/
-bool send2Client (const char* fileName, const char* outPath, const ArrowParms* parms, Publisher* outQ)
+bool send2Client (const char* fileName, const char* outPath, const ArrowFields* parms, Publisher* outQ)
 {
     bool status = true;
 
@@ -313,7 +314,7 @@ bool send2Client (const char* fileName, const char* outPath, const ArrowParms* p
                 offset += bytes_read;
 
                 /* Calculate Checksum */
-                if(parms->with_checksum)
+                if(parms->withChecksum)
                 {
                     for(size_t i = 0; i < bytes_read; i++)
                     {
@@ -323,7 +324,7 @@ bool send2Client (const char* fileName, const char* outPath, const ArrowParms* p
             }
 
             /* Send EOF Record */
-            if(parms->with_checksum)
+            if(parms->withChecksum)
             {
                 RecordObject eof_record(eofRecType);
                 arrow_file_eof_t* eof = reinterpret_cast<arrow_file_eof_t*>(eof_record.getRecordData());
@@ -355,59 +356,6 @@ bool send2Client (const char* fileName, const char* outPath, const ArrowParms* p
 
     /* Return Status */
     return status;
-}
-
-/*----------------------------------------------------------------------------
- * getOutputPath
- *----------------------------------------------------------------------------*/
-const char* getOutputPath(ArrowParms* parms, const char* output_filename)
-{
-    const char* outputPath = NULL;
-
-    if(parms->asset_name)
-    {
-        /* Generate Output Path */
-        Asset* asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(parms->asset_name, Asset::OBJECT_TYPE));
-        const char* path_prefix = StringLib::match(asset->getDriver(), "s3") ? "s3://" : "";
-        const char* path_suffix = "bin";
-        if(parms->format == ArrowParms::PARQUET)
-        {
-            path_suffix = parms->as_geo ? ".geoparquet" : ".parquet";
-        }
-        else if(parms->format == ArrowParms::CSV)
-        {
-            path_suffix = ".csv";
-        }
-        if(output_filename)
-        {
-            outputPath = FString("%s%s/%s", path_prefix, asset->getPath(), output_filename).c_str(true);             
-        }
-        else if((parms->path != NULL) && (parms->path[0] != '\0'))
-        {
-            outputPath = FString("%s%s/%s", path_prefix, asset->getPath(), parms->path).c_str(true);             
-        }
-        else
-        {
-            const FString path_name("%s.%016lX%s", OsApi::getCluster(), OsApi::time(OsApi::CPU_CLK), path_suffix);
-            outputPath = FString("%s%s/%s", path_prefix, asset->getPath(), path_name.c_str()).c_str(true);             
-        }
-        asset->releaseLuaObject();
-        mlog(INFO, "Generating unique path: %s", outputPath);
-    }
-    else if(output_filename) // override the parameters
-    {
-        outputPath = StringLib::duplicate(output_filename);
-    }
-    else if((parms->path == NULL) || (parms->path[0] == '\0'))
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to determine output path");
-    }
-    else
-    {
-        outputPath = StringLib::duplicate(parms->path);
-    }
-
-    return outputPath;
 }
 
 /*----------------------------------------------------------------------------
@@ -490,7 +438,7 @@ bool fileExists(const char* fileName)
 int luaSend2User (lua_State* L)
 {
     bool status = false;
-    ArrowParms* _parms = NULL;
+    RequestFields* _parms = NULL;
     Publisher* outq = NULL;
     const char* outputpath = NULL;
 
@@ -498,12 +446,8 @@ int luaSend2User (lua_State* L)
     {
         /* Get Parameters */
         const char* filename = LuaObject::getLuaString(L, 1);
-        _parms = dynamic_cast<ArrowParms*>(LuaObject::getLuaObject(L, 2, ArrowParms::OBJECT_TYPE));
+        _parms = dynamic_cast<RequestFields*>(LuaObject::getLuaObject(L, 2, RequestFields::OBJECT_TYPE));
         const char* outq_name = LuaObject::getLuaString(L, 3);
-        const char* output_filename = LuaObject::getLuaString(L, 4, true, NULL); // optional override
-
-        /* Get Output Path */
-        outputpath = getOutputPath(_parms, output_filename);
 
         /* Get Trace from Lua Engine */
         lua_getglobal(L, LuaEngine::LUA_TRACEID);
@@ -513,7 +457,7 @@ int luaSend2User (lua_State* L)
         outq = new Publisher(outq_name);
 
         /* Call Utility to Send File */
-        status = send2User(filename, outputpath, trace_id, _parms, outq);
+        status = send2User(filename, _parms->output.path.value.c_str(), trace_id, &_parms->output, outq);
     }
     catch(const RunTimeException& e)
     {

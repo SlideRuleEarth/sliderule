@@ -45,7 +45,8 @@
  ******************************************************************************/
 
 #include "LuaObject.h"
-#include "ArrowParms.h"
+#include "ArrowFields.h"
+#include "RequestFields.h"
 #include "RasterObject.h"
 #include "OsApi.h"
 
@@ -104,7 +105,7 @@ class ArrowSampler: public LuaObject
         static int                           luaCreate       (lua_State* L);
         static void                          init            (void);
         static void                          deinit          (void);
-        const ArrowParms*                    getParms        (void);
+        const ArrowFields*                   getParms        (void);
         const char*                          getDataFile     (void);
         const char*                          getMetadataFile (void);
         const std::vector<batch_sampler_t*>& getBatchSamplers(void);
@@ -121,14 +122,14 @@ class ArrowSampler: public LuaObject
 
         bool                          active;
         Thread*                       mainPid;
-        ArrowParms*                   parms;
+        RequestFields*                rqstParms;
+        const ArrowFields&            parms;
         Publisher*                    outQ;
         std::vector<point_info_t>     points;
         std::vector<batch_sampler_t*> batchSamplers;
         ArrowSamplerImpl*             impl;
         const char*                   dataFile;           // used locally to build parquet file
         const char*                   metadataFile;       // used locally to build json metadata file
-        const char*                   outputPath;         // final destination of the data file
         const char*                   outputMetadataPath; // final destination of the metadata file
 
 
@@ -136,7 +137,7 @@ class ArrowSampler: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        ArrowSampler     (lua_State* L, ArrowParms* _parms, const char* input_file,
+                        ArrowSampler     (lua_State* L, RequestFields* rqst_parms, const char* input_file,
                                           const char* outq_name, const std::vector<raster_info_t>& rasters);
                         ~ArrowSampler    (void) override;
         void            Delete           (void);

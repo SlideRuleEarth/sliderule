@@ -115,6 +115,8 @@ class GediFields: public RequestFields
             }
         }
 
+        // returns resource as a string
+        const char* getResource (void) const { return resource.value.c_str(); }
 
         /*--------------------------------------------------------------------
          * Data
