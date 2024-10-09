@@ -54,6 +54,7 @@ if __cre__ then
     runner.check(js.command == "fakecommand", js.command)
 end
 
+--[[
 if __geo__ then
     print(string.format("\n--------------------------------\nDefault geo.parms.export\n--------------------------------"))
     jsonstr = geo.parms({}):tojson()
@@ -66,6 +67,7 @@ if __geo__ then
     runner.check(js.bands_list[1] == "NDVI", js.bands_list[1])
     runner.check(js.bands_list[2] == "B03", js.bands_list[2])
 end
+--]]
 
 print(string.format("\n--------------------------------\nDefault core.parms.export\n--------------------------------"))
 js = core.parms({}):export()

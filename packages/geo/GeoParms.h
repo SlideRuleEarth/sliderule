@@ -153,7 +153,6 @@ class GeoParms: public LuaObject
         static int  luaCreate   (lua_State* L);
                     GeoParms    (lua_State* L, int index, bool asset_required=true);
                     ~GeoParms   (void) override;
-        const char* tojson      (void) const override;
 
         static std::string sserror2str(uint32_t error);
 

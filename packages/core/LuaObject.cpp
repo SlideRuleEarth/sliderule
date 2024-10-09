@@ -468,7 +468,6 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
         LuaEngine::setAttrFunc(L, "waiton", luaWaitOn);
         LuaEngine::setAttrFunc(L, "destroy", luaDestroy);
         LuaEngine::setAttrFunc(L, "__gc", luaDelete);
-        LuaEngine::setAttrFunc(L, "tojson", lua2json);
     }
 }
 
@@ -530,14 +529,6 @@ void LuaObject::referenceLuaObject (LuaObject* lua_obj)
         lua_obj->referenceCount++;
     }
     globalMut.unlock();
-}
-
-/*----------------------------------------------------------------------------
- * tojson
- *----------------------------------------------------------------------------*/
-const char* LuaObject::tojson(void) const
-{
-    return StringLib::duplicate("{}");
 }
 
 /*----------------------------------------------------------------------------
@@ -760,29 +751,5 @@ int LuaObject::luaWaitOn(lua_State* L)
 
     /* Return Completion Status */
     return returnLuaStatus(L, status);
-}
-
-/*----------------------------------------------------------------------------
- * lua2json - :tojson()
- *----------------------------------------------------------------------------*/
-int LuaObject::lua2json(lua_State* L)
-{
-    const char* json_str = NULL;
-    try
-    {
-        /* Get Self */
-        const LuaObject* lua_obj = getLuaSelf(L, 1);
-
-        /* Convert object's default parameters to JSON */
-        json_str = lua_obj->tojson();
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error converting object's default parameters to json: %s", e.what());
-    }
-
-    lua_pushstring(L, json_str);
-    delete [] json_str;
-    return 1;
 }
 
