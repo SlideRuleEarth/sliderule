@@ -160,8 +160,7 @@ FieldArray<T,N>::FieldArray(std::initializer_list<T> init_list):
  *----------------------------------------------------------------------------*/
 template <class T, int N>
 FieldArray<T,N>::FieldArray(void):
-    FieldUnsafeArray<T>(&values[0], N),
-    values()
+    FieldUnsafeArray<T>(&values[0], N)
 {
 }
 

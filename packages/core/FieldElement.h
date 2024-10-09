@@ -73,7 +73,7 @@ class FieldElement: public Field
          *--------------------------------------------------------------------*/
 
         operator bool() const {
-            return static_cast<T>(value) != 0; // Object is "true" if value is non-zero
+            return value != 0; // Object is "true" if value is non-zero
         }
 
         /*--------------------------------------------------------------------
@@ -102,7 +102,7 @@ FieldElement<T>::FieldElement(const T& default_value):
  *----------------------------------------------------------------------------*/
 template <class T>
 FieldElement<T>::FieldElement():
-    Field(ELEMENT, getImpliedEncoding<T>()), value()
+    Field(ELEMENT, getImpliedEncoding<T>())
 {
 }
 
@@ -111,7 +111,8 @@ FieldElement<T>::FieldElement():
  *----------------------------------------------------------------------------*/
 template <class T>
 FieldElement<T>::FieldElement(const FieldElement<T>& element):
-    Field(ELEMENT, getImpliedEncoding<T>()), value(element.value)
+    Field(ELEMENT, getImpliedEncoding<T>()),
+    value(element.value)
 {
 }
 

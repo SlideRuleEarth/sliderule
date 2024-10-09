@@ -110,19 +110,19 @@ inline void convertFromLua(lua_State* L, int index, FieldColumn<T>& v) {
 }
 
 // encoding
-inline uint32_t toEncoding(const FieldColumn<bool>& v)     { (void)v; return Field::NESTED_COLUMN | Field::BOOL;   };
-inline uint32_t toEncoding(const FieldColumn<int8_t>& v)   { (void)v; return Field::NESTED_COLUMN | Field::INT8;   };
-inline uint32_t toEncoding(const FieldColumn<int16_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::INT16;  };
-inline uint32_t toEncoding(const FieldColumn<int32_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::INT32;  };
-inline uint32_t toEncoding(const FieldColumn<int64_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::INT64;  };
-inline uint32_t toEncoding(const FieldColumn<uint8_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::UINT8;  };
-inline uint32_t toEncoding(const FieldColumn<uint16_t>& v) { (void)v; return Field::NESTED_COLUMN | Field::UINT16; };
-inline uint32_t toEncoding(const FieldColumn<uint32_t>& v) { (void)v; return Field::NESTED_COLUMN | Field::UINT32; };
-inline uint32_t toEncoding(const FieldColumn<uint64_t>& v) { (void)v; return Field::NESTED_COLUMN | Field::UINT64; };
-inline uint32_t toEncoding(const FieldColumn<float>& v)    { (void)v; return Field::NESTED_COLUMN | Field::FLOAT;  };
-inline uint32_t toEncoding(const FieldColumn<double>& v)   { (void)v; return Field::NESTED_COLUMN | Field::DOUBLE; };
-inline uint32_t toEncoding(const FieldColumn<time8_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::TIME8;  };
-inline uint32_t toEncoding(const FieldColumn<string>& v)   { (void)v; return Field::NESTED_COLUMN | Field::STRING; };
+inline uint32_t toEncoding(FieldColumn<bool>& v)     { (void)v; return Field::NESTED_COLUMN | Field::BOOL;   };
+inline uint32_t toEncoding(FieldColumn<int8_t>& v)   { (void)v; return Field::NESTED_COLUMN | Field::INT8;   };
+inline uint32_t toEncoding(FieldColumn<int16_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::INT16;  };
+inline uint32_t toEncoding(FieldColumn<int32_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::INT32;  };
+inline uint32_t toEncoding(FieldColumn<int64_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::INT64;  };
+inline uint32_t toEncoding(FieldColumn<uint8_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::UINT8;  };
+inline uint32_t toEncoding(FieldColumn<uint16_t>& v) { (void)v; return Field::NESTED_COLUMN | Field::UINT16; };
+inline uint32_t toEncoding(FieldColumn<uint32_t>& v) { (void)v; return Field::NESTED_COLUMN | Field::UINT32; };
+inline uint32_t toEncoding(FieldColumn<uint64_t>& v) { (void)v; return Field::NESTED_COLUMN | Field::UINT64; };
+inline uint32_t toEncoding(FieldColumn<float>& v)    { (void)v; return Field::NESTED_COLUMN | Field::FLOAT;  };
+inline uint32_t toEncoding(FieldColumn<double>& v)   { (void)v; return Field::NESTED_COLUMN | Field::DOUBLE; };
+inline uint32_t toEncoding(FieldColumn<time8_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::TIME8;  };
+inline uint32_t toEncoding(FieldColumn<string>& v)   { (void)v; return Field::NESTED_COLUMN | Field::STRING; };
 
 /******************************************************************************
  * METHODS
@@ -282,7 +282,6 @@ FieldColumn<T>& FieldColumn<T>::operator= (const FieldColumn<T>& column)
     }
 
     encoding = column.encoding;
-    chunkSize = column.chunkSize;
 
     return *this;
 }

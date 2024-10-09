@@ -126,7 +126,6 @@ FieldEnumeration<T,N>::FieldEnumeration(std::initializer_list<bool> init_list):
 template <class T, int N>
 FieldEnumeration<T,N>::FieldEnumeration(void):
     Field(ENUMERATION, getImpliedEncoding<T>()),
-    values(),
     providedAsSingle(false)
 {
     assert(N > 0);

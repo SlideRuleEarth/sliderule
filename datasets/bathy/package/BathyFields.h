@@ -268,6 +268,7 @@ class BathyFields: public Icesat2Fields
 
         /* Processing Flags */
         typedef enum {
+            FLAGS_CLEAR             = 0x00,
             ON_BOUNDARY             = 0x01, // set if photon is first after a spatial boundary
             SENSOR_DEPTH_EXCEEDED   = 0x02,
             SEA_SURFACE_UNDETECTED  = 0x04,

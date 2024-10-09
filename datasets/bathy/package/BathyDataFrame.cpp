@@ -670,7 +670,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 dataframe.yapc_score.append(yapc_score);
                 dataframe.max_signal_conf.append(atl03_cnf);
                 dataframe.quality_ph.append(quality_ph);
-                dataframe.processing_flags.append(on_boundary ? BathyFields::ON_BOUNDARY : 0x00);
+                dataframe.processing_flags.append(on_boundary ? BathyFields::ON_BOUNDARY : BathyFields::FLAGS_CLEAR);
 
                 /* Add Additional Photon Data to DataFrame */
                 dataframe.geoid_corr_h.append(atl03.h_ph[current_photon] - atl03.geoid[current_segment]);

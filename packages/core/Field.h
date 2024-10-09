@@ -199,24 +199,24 @@ inline void convertFromLua(lua_State* L, int index, time8_t& v)  { v = static_ca
 inline void convertFromLua(lua_State* L, int index, string& v)   { v = LuaObject::getLuaString(L, index); }
 
 // encoding
-inline uint32_t toEncoding(const bool& v)     { (void)v; return Field::BOOL;   };
-inline uint32_t toEncoding(const int8_t& v)   { (void)v; return Field::INT8;   };
-inline uint32_t toEncoding(const int16_t& v)  { (void)v; return Field::INT16;  };
-inline uint32_t toEncoding(const int32_t& v)  { (void)v; return Field::INT32;  };
-inline uint32_t toEncoding(const int64_t& v)  { (void)v; return Field::INT64;  };
-inline uint32_t toEncoding(const uint8_t& v)  { (void)v; return Field::UINT8;  };
-inline uint32_t toEncoding(const uint16_t& v) { (void)v; return Field::UINT16; };
-inline uint32_t toEncoding(const uint32_t& v) { (void)v; return Field::UINT32; };
-inline uint32_t toEncoding(const uint64_t& v) { (void)v; return Field::UINT64; };
-inline uint32_t toEncoding(const float& v)    { (void)v; return Field::FLOAT;  };
-inline uint32_t toEncoding(const double& v)   { (void)v; return Field::DOUBLE; };
-inline uint32_t toEncoding(const time8_t& v)  { (void)v; return Field::TIME8;  };
-inline uint32_t toEncoding(const string& v)   { (void)v; return Field::STRING; };
+inline uint32_t toEncoding(bool& v)     { (void)v; return Field::BOOL;   };
+inline uint32_t toEncoding(int8_t& v)   { (void)v; return Field::INT8;   };
+inline uint32_t toEncoding(int16_t& v)  { (void)v; return Field::INT16;  };
+inline uint32_t toEncoding(int32_t& v)  { (void)v; return Field::INT32;  };
+inline uint32_t toEncoding(int64_t& v)  { (void)v; return Field::INT64;  };
+inline uint32_t toEncoding(uint8_t& v)  { (void)v; return Field::UINT8;  };
+inline uint32_t toEncoding(uint16_t& v) { (void)v; return Field::UINT16; };
+inline uint32_t toEncoding(uint32_t& v) { (void)v; return Field::UINT32; };
+inline uint32_t toEncoding(uint64_t& v) { (void)v; return Field::UINT64; };
+inline uint32_t toEncoding(float& v)    { (void)v; return Field::FLOAT;  };
+inline uint32_t toEncoding(double& v)   { (void)v; return Field::DOUBLE; };
+inline uint32_t toEncoding(time8_t& v)  { (void)v; return Field::TIME8;  };
+inline uint32_t toEncoding(string& v)   { (void)v; return Field::STRING; };
 
 // encoding
 template<class T>
 inline uint32_t getImpliedEncoding(void) {
-    T dummy = T();
+    T dummy;
     return toEncoding(dummy);
 }
 
