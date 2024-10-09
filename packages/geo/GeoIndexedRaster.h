@@ -239,9 +239,19 @@ class GeoIndexedRaster: public RasterObject
             double  findRastersTime;
             double  findUniqueRastersTime;
             double  samplesTime;
+            double  collectSamplesTime;
 
-            PerfStats(void) : spatialFilterTime(0), findRastersTime(0), findUniqueRastersTime(0), samplesTime(0) {}
-            void clear(void) { spatialFilterTime = 0; findRastersTime = 0; findUniqueRastersTime = 0; samplesTime = 0;}
+            PerfStats (void) : spatialFilterTime(0), findRastersTime(0), findUniqueRastersTime(0), samplesTime(0), collectSamplesTime(0) {}
+            void clear(void) { spatialFilterTime = 0; findRastersTime = 0; findUniqueRastersTime = 0; samplesTime = 0; collectSamplesTime = 0; }
+            void log  (event_level_t lvl)
+            {
+                mlog(lvl, "Performance Stats:");
+                mlog(lvl, "spatialFilter: %12.3lf", spatialFilterTime);
+                mlog(lvl, "findingRasters:%12.3lf", findRastersTime);
+                mlog(lvl, "findingUnique: %12.3lf", findUniqueRastersTime);
+                mlog(lvl, "sampling:      %12.3lf", samplesTime);
+                mlog(lvl, "collecSamples: %12.3lf", collectSamplesTime);
+            }
         } perf_stats_t;
 
         /*--------------------------------------------------------------------
@@ -267,7 +277,6 @@ class GeoIndexedRaster: public RasterObject
         uint32_t                  cols;
 
         GeoRtree                  geoRtree;
-        OGRPolygon                geoIndexPoly;
 
         /*--------------------------------------------------------------------
          * Methods

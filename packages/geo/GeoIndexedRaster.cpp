@@ -249,6 +249,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
          */
         if(isSampling())
         {
+            const double start = TimeLib::latchtime();
             mlog(DEBUG, "Populating sllist with samples");
             for(uint32_t pointIndx = 0; pointIndx < pointsGroups.size(); pointIndx++)
             {
@@ -272,6 +273,8 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
 
                 sllist.add(slist);
             }
+            perfStats.collectSamplesTime = TimeLib::latchtime() - start;
+            mlog(INFO, "Populated sllist with samples, time: %lf", perfStats.collectSamplesTime);
         }
         else
         {
@@ -306,11 +309,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
     unlockSampling();
 
     /* Print performance stats */
-    mlog(INFO, "Performance Stats:");
-    mlog(INFO, "spatialFilter: %12.3lf", perfStats.spatialFilterTime);
-    mlog(INFO, "findingRasters:%12.3lf", perfStats.findRastersTime);
-    mlog(INFO, "findingUnique: %12.3lf", perfStats.findUniqueRastersTime);
-    mlog(INFO, "sampling:      %12.3lf", perfStats.samplesTime);
+    perfStats.log(INFO);
 
     return ssErrors;
 }
@@ -401,9 +400,6 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
 
     /* Establish Credentials */
     GdalRaster::initAwsAccess(_parms);
-
-    /* Mark index file bbox/extent poly as empty */
-    geoIndexPoly.empty();
 }
 
 
@@ -646,7 +642,6 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
     try
     {
         geoRtree.clear();
-        geoIndexPoly.empty();
 
         /* Open new vector data set*/
         dset = static_cast<GDALDataset *>(GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL));
@@ -703,10 +698,6 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
             bbox.lat_min = env.MinY;
             bbox.lon_max = env.MaxX;
             bbox.lat_max = env.MaxY;
-
-            /* Create poly geometry for index file bbox/envelope */
-            geoIndexPoly = GdalRaster::makeRectangle(bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
-            mlog(DEBUG, "index file extent/bbox: (%.6lf, %.6lf), (%.6lf, %.6lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
         }
 
         mlog(DEBUG, "Loaded %lld features from: %s", layer->GetFeatureCount(), newFile.c_str());
@@ -772,12 +763,9 @@ void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
  *----------------------------------------------------------------------------*/
 bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps, GroupOrdering* groupList)
 {
-    const bool openNewFile = geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo);
-    if(openNewFile)
-    {
-        if(!openGeoIndex(geo, NULL))
-            return false;
-    }
+    /* Open the index file, if not already open */
+    if(!openGeoIndex(geo, NULL))
+        return false;
 
     /* Find rasters that intersect with the geometry */
     std::vector<OGRFeature*> foundFeatures;
