@@ -289,7 +289,7 @@ void ArrowSamplerImpl::getPoints(std::vector<point_info_t>& points)
     const int time_column_index = table->schema()->GetFieldIndex(timeKey);
     if(time_column_index > -1)
     {
-        auto time_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(time_column_index)->chunk(0));
+        auto time_column = std::static_pointer_cast<arrow::TimestampArray>(table->column(time_column_index)->chunk(0));
         mlog(DEBUG, "Time column elements: %ld", time_column->length());
 
         /* Update gps time for each point */

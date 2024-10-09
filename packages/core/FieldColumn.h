@@ -360,7 +360,7 @@ int FieldColumn<T>::toLua (lua_State* L, long key) const
  * fromLua
  *----------------------------------------------------------------------------*/
 template<class T>
-void FieldColumn<T>::fromLua (lua_State* L, int index) 
+void FieldColumn<T>::fromLua (lua_State* L, int index)
 {
     // clear out existing elements
     clear();

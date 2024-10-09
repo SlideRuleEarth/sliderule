@@ -47,7 +47,7 @@
 class RegionMask: public FieldDictionary
 {
     public:
-    
+
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
@@ -70,8 +70,6 @@ class RegionMask: public FieldDictionary
                     RegionMask          (void);
                     ~RegionMask         (void) override;
 
-        string      toJson              (void) const override;
-        int         toLua               (lua_State* L) const override;
         void        fromLua             (lua_State* L, int index) override;
 
         bool        includes            (double lon, double lat) const;
@@ -89,8 +87,8 @@ class RegionMask: public FieldDictionary
         FieldElement<double>    lonMin{0.0};
         FieldElement<double>    latMin{0.0};
         FieldElement<double>    lonMax{0.0};
-        FieldElement<double>    latMax{0.0};    
-        
+        FieldElement<double>    latMax{0.0};
+
         uint8_t*                data{NULL};
 };
 

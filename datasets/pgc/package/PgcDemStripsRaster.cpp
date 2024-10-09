@@ -271,8 +271,7 @@ bool PgcDemStripsRaster::findRasters(finder_t* finder)
                 finder->rasterGroups.push_back(rgroup);
             }
         }
-        finder->rasterGroups.shrink_to_fit();
-        mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
+        // mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
     }
     catch (const RunTimeException &e)
     {
@@ -327,7 +326,7 @@ void PgcDemStripsRaster::_getIndexFile(double lon, double lat, std::string& file
            lonStr +
            ".geojson";
 
-    mlog(DEBUG, "Using %s", file.c_str());
+    // mlog(DEBUG, "Using %s", file.c_str());
 }
 
 

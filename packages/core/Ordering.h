@@ -169,7 +169,7 @@ Ordering<T,K>::Iterator::Iterator(const Ordering& o):
     sorted_node_t* node_ptr = o.firstNode;
     while(node_ptr != NULL)
     {
-        values[j] = &node_ptr->data;
+        values[j] = &node_ptr->data; // NOLINT(clang-analyzer-cplusplus.NewDelete)
         keys[j] = node_ptr->key;
         j++;
         node_ptr = node_ptr->next;

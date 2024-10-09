@@ -89,13 +89,13 @@ int BathyGranule::luaCreate (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaExport - export() --> lua table 
+ * luaExport - export() --> lua table
  *----------------------------------------------------------------------------*/
 int BathyGranule::luaExport (lua_State* L)
 {
     try
     {
-        BathyGranule* lua_obj = dynamic_cast<BathyGranule*>(getLuaSelf(L, 1));
+        const BathyGranule* lua_obj = dynamic_cast<BathyGranule*>(getLuaSelf(L, 1));
         return lua_obj->toLua(L);
     }
     catch(const RunTimeException& e)
@@ -146,7 +146,7 @@ BathyGranule::BathyGranule (lua_State* L, BathyFields* _parms, H5Object* _hdf03,
     {
         /* Set Thread Specific Trace ID for H5Coro */
         EventLib::stashId (traceId);
-        
+
         /* Start Reader Thread */
         active = true;
         pid = new Thread(readingThread, this);
@@ -207,7 +207,7 @@ void* BathyGranule::readingThread (void* parm)
         H5Element<const char*>  version             (granule.hdf03, "/ancillary_data/version");
 
         H5Element<double>       crossing_time       (granule.hdf03, "/orbit_info/crossing_time");
-        H5Element<double>       lan                 (granule.hdf03, "/orbit_info/lan"); 
+        H5Element<double>       lan                 (granule.hdf03, "/orbit_info/lan");
         H5Element<int16_t>      orbit_number        (granule.hdf03, "/orbit_info/orbit_number");
         H5Element<int8_t>       sc_orient           (granule.hdf03, "/orbit_info/sc_orient");
         H5Element<double>       sc_orient_time      (granule.hdf03, "/orbit_info/sc_orient_time");

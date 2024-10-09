@@ -55,7 +55,7 @@ class FieldList: public Field
 
                         FieldList   (void);
                         FieldList   (std::initializer_list<T> init_list);
-                        FieldList   (size_t size, T default_value);
+                        FieldList   (size_t size, const T& default_value);
                         FieldList   (const FieldList<T>& list);
         virtual         ~FieldList  (void) override = default;
 
@@ -153,7 +153,7 @@ FieldList<T>::FieldList(std::initializer_list<T> init_list):
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldList<T>::FieldList(size_t size, T default_value):
+FieldList<T>::FieldList(size_t size, const T& default_value):
     Field(LIST, getImpliedEncoding<T>()),
     values(size, default_value)
 {
@@ -302,7 +302,7 @@ int FieldList<T>::toLua (lua_State* L, long key) const
  * fromLua
  *----------------------------------------------------------------------------*/
 template <class T>
-void FieldList<T>::fromLua (lua_State* L, int index) 
+void FieldList<T>::fromLua (lua_State* L, int index)
 {
     T value;
 

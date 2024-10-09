@@ -78,30 +78,14 @@ RegionMask::~RegionMask(void)
 }
 
 /*----------------------------------------------------------------------------
- * toLua
- *----------------------------------------------------------------------------*/
-string RegionMask::toJson (void) const
-{
-    return FieldDictionary::toJson();
-}
-
-/*----------------------------------------------------------------------------
- * toLua
- *----------------------------------------------------------------------------*/
-int RegionMask::toLua (lua_State* L) const
-{
-    return FieldDictionary::toLua(L);
-}
-
-/*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
 void RegionMask::fromLua (lua_State* L, int index)
 {
-    FieldDictionary::fromLua(L, index);    
+    FieldDictionary::fromLua(L, index);
     if(cellSize.value > 0.0 && !geojson.value.empty())
     {
-        if(RegionMask::burnMask) 
+        if(RegionMask::burnMask)
         {
             RegionMask::burnMask(*this);
         }
