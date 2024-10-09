@@ -34,7 +34,7 @@ for i = 1, #demTypes do
     print(string.format("\n--------------------------------\nTest: %s Using proj pipeline\n--------------------------------", demType))
     print(string.format("%s", pipeline))
     print(string.format("\n----------------------------------------------------------------------------------------------------------------------", demType))
-    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", proj_pipeline=pipeline}))
+    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", proj_pipeline=pipeline, sort_by_index=true}))
 
     for j, lon in ipairs(lons) do
         local sampleCnt = 0

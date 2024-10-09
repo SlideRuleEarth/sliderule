@@ -46,7 +46,7 @@ local expResults = {{2638.032147717071, 1289671725.0, '/vsis3/prd-tnm/StagedProd
                     {math.nan,          1289671872.0, '/vsis3/prd-tnm/StagedProducts/Elevation/1m/Projects/CO_MesaCo_QL2_UTM13_2015/TIFF/USGS_one_meter_x75y434_CO_MesaCo_QL2_UTM13_2015.tif'}}
 
 local demType = "usgs3dep-1meter-dem"
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents }))
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents, sort_by_index = true }))
 local tbl, err = dem:sample(lon, lat, height)
 runner.check(err == 0)
 runner.check(tbl ~= nil)

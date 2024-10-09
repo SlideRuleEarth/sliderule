@@ -391,7 +391,8 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
     crscb           (cb),
     bbox            {0, 0, 0, 0},
     rows            (0),
-    cols            (0)
+    cols            (0),
+    geoRtree        (_parms->sort_by_index)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);

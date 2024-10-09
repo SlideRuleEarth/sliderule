@@ -65,12 +65,14 @@ void GeoRtree::deinit (GEOSContextHandle_t geosContext)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoRtree::GeoRtree(uint32_t _nodeCapacity):
+GeoRtree::GeoRtree(bool _sort, uint32_t _nodeCapacity):
     rtree(NULL),
     geosContext(initGEOS_r(NULL, NULL)),
-    nodeCapacity(_nodeCapacity)
+    nodeCapacity(_nodeCapacity),
+    sort(_sort)
 {
     rtree = GEOSSTRtree_create_r(geosContext, nodeCapacity);
+    mlog(DEBUG, "Created R-tree with node capacity: %u, index sorting: %d", nodeCapacity, static_cast<int>(sort));
 }
 
 /*----------------------------------------------------------------------------
@@ -85,17 +87,17 @@ GeoRtree::~GeoRtree(void)
 /*----------------------------------------------------------------------------
  * query
  *----------------------------------------------------------------------------*/
-void GeoRtree::query(const OGRGeometry* geo, std::vector<OGRFeature*>& resultFeatures, bool sorted)
+void GeoRtree::query(const OGRGeometry* geo, std::vector<OGRFeature*>& resultFeatures)
 {
     /* Use the default GEOS context */
-    query(geo, geosContext, resultFeatures, sorted);
+    query(geo, geosContext, resultFeatures);
 }
 
 /*----------------------------------------------------------------------------
  * query
  *----------------------------------------------------------------------------*/
 void GeoRtree::query(const OGRGeometry* geo, GEOSContextHandle_t context,
-                     std::vector<OGRFeature*>& resultFeatures, bool sorted)
+                     std::vector<OGRFeature*>& resultFeatures)
 {
     /* Convert OGRGeometry to GEOSGeometry */
     GEOSGeometry* geos = geo->exportToGEOS(context);
@@ -121,7 +123,7 @@ void GeoRtree::query(const OGRGeometry* geo, GEOSContextHandle_t context,
 
     // mlog(DEBUG, "Found %zu features for query", resultPairs.size());
 
-    if(sorted)
+    if(sort)
     {
         std::sort(resultPairs.begin(), resultPairs.end(),
             [](const FeatureIndexPair* a, const FeatureIndexPair* b) { return a->index < b->index; });
@@ -161,7 +163,7 @@ bool GeoRtree::insert(OGRFeature* feature)
             OGRFeature::DestroyFeature(clonedFeature);
             return false;
         }
-        mlog(DEBUG, "Created R-tree with node capacity: %u", nodeCapacity);
+        mlog(DEBUG, "Created R-tree with node capacity: %u, index sorting: %d", nodeCapacity, static_cast<int>(sort));
     }
 
 

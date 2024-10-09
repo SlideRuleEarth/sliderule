@@ -256,9 +256,6 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        GeoRtree                 geoRtree;
-        OGRPolygon               geoIndexPoly;
-
         List<reader_t*>           readers;
         List<batch_reader_t*>     batchReaders;
         perf_stats_t              perfStats;
@@ -268,6 +265,9 @@ class GeoIndexedRaster: public RasterObject
         GdalRaster::bbox_t        bbox;
         uint32_t                  rows;
         uint32_t                  cols;
+
+        GeoRtree                  geoRtree;
+        OGRPolygon                geoIndexPoly;
 
         /*--------------------------------------------------------------------
          * Methods

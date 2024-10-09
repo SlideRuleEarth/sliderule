@@ -61,11 +61,11 @@ public:
     static GEOSContextHandle_t init(void);
     static void deinit(GEOSContextHandle_t geosContext);
 
-    explicit GeoRtree(uint32_t nodeCapacity = 10);
-            ~GeoRtree(void);
+    explicit  GeoRtree(bool sort, uint32_t nodeCapacity = 10);
+             ~GeoRtree(void);
 
-    void query (const OGRGeometry* geo, std::vector<OGRFeature*>& resultFeatures, bool sorted = true);
-    void query (const OGRGeometry* geo, GEOSContextHandle_t geosContext, std::vector<OGRFeature*>& resultFeatures, bool sorted = true);
+    void query (const OGRGeometry* geo, std::vector<OGRFeature*>& resultFeatures);
+    void query (const OGRGeometry* geo, GEOSContextHandle_t geosContext, std::vector<OGRFeature*>& resultFeatures);
 
     bool insert(OGRFeature* feature);
     void clear (void);
@@ -94,6 +94,7 @@ private:
     std::vector<GEOSGeometry*>     geosGeometries;
     std::vector<FeatureIndexPair*> ogrFeaturePairs;
     uint32_t                       nodeCapacity;
+    bool                           sort;
 
     /*--------------------------------------------------------------------
     * Methods

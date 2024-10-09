@@ -57,6 +57,7 @@ const char* GeoParms::URL_SUBSTRING         = "substr";
 const char* GeoParms::CLOSEST_TIME          = "closest_time";
 const char* GeoParms::USE_POI_TIME          = "use_poi_time";
 const char* GeoParms::DOY_RANGE             = "doy_range";
+const char* GeoParms::SORT_BY_INDEX         = "sort_by_index";
 const char* GeoParms::PROJ_PIPELINE         = "proj_pipeline";
 const char* GeoParms::AOI_BBOX              = "aoi_bbox";
 const char* GeoParms::CATALOG               = "catalog";
@@ -126,6 +127,7 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
     doy_keep_inrange    (true),
     doy_start           (0),
     doy_end             (0),
+    sort_by_index       (false),
     proj_pipeline       (NULL),
     aoi_bbox            {0, 0, 0, 0},
     catalog             (NULL),
@@ -157,19 +159,19 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
             lua_getfield(L, index, SAMPLING_RADIUS);
             sampling_radius = (int)LuaObject::getLuaInteger(L, -1, true, sampling_radius, &field_provided);
             if(sampling_radius < 0) throw RunTimeException(CRITICAL, RTE_ERROR, "invalid sampling radius: %d:", sampling_radius);
-            if(field_provided) mlog(DEBUG, "Setting %s to %d", SAMPLING_RADIUS, (int)sampling_radius);
+            if(field_provided) mlog(DEBUG, "Setting %s to %d", SAMPLING_RADIUS, static_cast<int>(sampling_radius));
             lua_pop(L, 1);
 
             /* Zonal Statistics */
             lua_getfield(L, index, ZONAL_STATS);
             zonal_stats = LuaObject::getLuaBoolean(L, -1, true, zonal_stats, &field_provided);
-            if(field_provided) mlog(DEBUG, "Setting %s to %d", ZONAL_STATS, (int)zonal_stats);
+            if(field_provided) mlog(DEBUG, "Setting %s to %d", ZONAL_STATS, static_cast<int>(zonal_stats));
             lua_pop(L, 1);
 
             /* Flags File */
             lua_getfield(L, index, FLAGS_FILE);
             flags_file = LuaObject::getLuaBoolean(L, -1, true, flags_file, &field_provided);
-            if(field_provided) mlog(DEBUG, "Setting %s to %d", FLAGS_FILE, (int)flags_file);
+            if(field_provided) mlog(DEBUG, "Setting %s to %d", FLAGS_FILE, static_cast<int>(flags_file));
             lua_pop(L, 1);
 
             /* Start Time */
@@ -239,7 +241,7 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
             /* Use Point of Interest Time */
             lua_getfield(L, index, USE_POI_TIME);
             use_poi_time = LuaObject::getLuaBoolean(L, -1, true, use_poi_time, &field_provided);
-            if(field_provided) mlog(DEBUG, "Setting %s to %d", USE_POI_TIME, (int)use_poi_time);
+            if(field_provided) mlog(DEBUG, "Setting %s to %d", USE_POI_TIME, static_cast<int>(use_poi_time));
             lua_pop(L, 1);
 
             /* Day Of Year Range Filter */
@@ -264,6 +266,12 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
                 filter_doy_range = true;
                 mlog(DEBUG, "Setting %s to %02d:%02d, doy_keep_inrange: %s", DOY_RANGE, doy_start, doy_end, doy_keep_inrange ? "true" : "false");
             }
+            lua_pop(L, 1);
+
+            /* Sort By Index */
+            lua_getfield(L, index, SORT_BY_INDEX);
+            sort_by_index = LuaObject::getLuaBoolean(L, -1, true, sort_by_index, &field_provided);
+            if(field_provided) mlog(DEBUG, "Setting %s to %d", SORT_BY_INDEX, static_cast<int>(sort_by_index));
             lua_pop(L, 1);
 
             /* PROJ pipeline for projection transform */
@@ -309,7 +317,7 @@ GeoParms::GeoParms (lua_State* L, int index, bool asset_required):
             /* Key Space */
             lua_getfield(L, index, KEY_SPACE);
             key_space = (uint64_t)LuaObject::getLuaInteger(L, -1, true, key_space, &field_provided);
-            if(field_provided) mlog(DEBUG, "Setting %s to %lu", KEY_SPACE, (unsigned long)key_space);
+            if(field_provided) mlog(DEBUG, "Setting %s to %lu", KEY_SPACE, static_cast<unsigned long>(key_space));
             lua_pop(L, 1);
         }
     }

@@ -21,7 +21,7 @@ local demTypes = {"rema-mosaic", "rema-strips"}
 
 for i = 1, #demTypes do
     local demType = demTypes[i];
-    local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0}))
+    local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, sort_by_index=true}))
     runner.check(dem ~= nil)
     print(string.format("\n--------------------------------\nTest: %s sample\n--------------------------------", demType))
     local tbl, err = dem:sample(lon, lat, height)
@@ -81,7 +81,7 @@ local expSamplesCnt = {10, 4, 6, 6}
 for i = 1, #demTypes do
     local demType = demTypes[i];
     print(string.format("\n--------------------------------\nTest: %s Correct Values\n--------------------------------", demType))
-    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour"}))
+    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", sort_by_index=true}))
 
     for j, lon in ipairs(lons) do
         local sampleCnt = 0
@@ -138,7 +138,7 @@ local expSamplesCnt = {6}
 for i = 1, #demTypes do
     local demType = demTypes[i];
     print(string.format("\n--------------------------------\nTest: %s Reading Correct Values with AOI box\n--------------------------------", demType))
-    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", aoi_bbox=extentbox}))
+    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", aoi_bbox=extentbox, sort_by_index=true}))
 
     for j, lon in ipairs(lons) do
         local sampleCnt = 0
