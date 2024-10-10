@@ -34,11 +34,11 @@ local js = ""
 local jsonstr = ""
 
 if __arrow__ then
-    print(string.format("\n--------------------------------\nDefault arrow.parms.export\n--------------------------------"))
+    print(string.format("\n--------------------------------\nDefault arrow parms.export\n--------------------------------"))
     js = core.parms({}):export()["output"]
     runner.check(string.len(json.encode(js)) > 0)
 
-    print(string.format("\n--------------------------------\nUserSet arrow.parms.export\n--------------------------------"))
+    print(string.format("\n--------------------------------\nUserSet arrow parms.export\n--------------------------------"))
     js = core.parms({path="/tmp/samples.geoparquet", format="parquet", as_geo=true}):export()["output"]
     runner.check(string.len(json.encode(js)) > 0)
 end

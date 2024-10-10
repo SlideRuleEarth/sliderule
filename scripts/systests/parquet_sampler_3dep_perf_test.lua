@@ -45,7 +45,7 @@ runner.check(robj_3dep ~= nil)
 
 print('\n--------------------------------------\nTest01: input/output parquet (x, y)\n--------------------------------------')
 local starttime = time.latch();
-parquet_sampler = arrow.sampler(arrow.parms({path=out_parquet, format="parquet"}), in_parquet, outq_name, {["3dep"] = robj_3dep})
+parquet_sampler = arrow.sampler(core.parms({output={path=out_parquet, format="parquet"}}), in_parquet, outq_name, {["3dep"] = robj_3dep})
 runner.check(parquet_sampler ~= nil)
 status = parquet_sampler:waiton()
 local stoptime = time.latch();

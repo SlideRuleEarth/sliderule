@@ -200,7 +200,7 @@ uint32_t RasterObject::getSamples(const std::vector<point_info_t>& points, List<
         for(uint32_t i = 0; i < ranges.size(); i++)
         {
             const range_t& range = ranges[i];
-            mlog(DEBUG, "ragne-%u: %u to %u", i, range.start, range.end);
+            mlog(DEBUG, "range-%u: %u to %u", i, range.start, range.end);
         }
 
         const uint32_t numThreads = ranges.size();

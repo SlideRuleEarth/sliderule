@@ -272,11 +272,10 @@ runner.wait(container, timeout)
 -------------------------------------------------------
 -- send final output to user
 -------------------------------------------------------
-arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_atl24_filename, arrow.parms(parms["output"]), rspq)
-arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_atl24_filename..".json", arrow.parms(parms["output"]), rspq, parms["output"]["path"]..".json")
+arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_atl24_filename, parms["output"], rspq)
 
 -------------------------------------------------------
--- exit 
+-- exit
 -------------------------------------------------------
 runner.cleanup(crenv)
 

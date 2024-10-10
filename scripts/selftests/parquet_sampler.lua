@@ -1,6 +1,6 @@
 local runner = require("test_executive")
-console = require("console")
-asset = require("asset")
+local console = require("console")
+local asset = require("asset")
 local assets = asset.loaddir()
 local td = runner.rootdir(arg[0])
 
@@ -27,7 +27,7 @@ local out_metadata   = prefix .. _out_metadata
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
-function getFileSize(filePath)
+local function getFileSize(filePath)
     local file = io.open(filePath, "rb")  -- 'rb' mode opens the file in binary mode
     if not file then
         print("Could not open file: " .. filePath .. " for reading\n")
@@ -45,7 +45,7 @@ local dem2 = geo.raster(geo.parms({asset="arcticdem-strips", algorithm="NearestN
 runner.check(dem2 ~= nil)
 
 print('\n--------------------------------------\nTest01: input/output geoparquet (geo)\n--------------------------------------')
-local parquet_sampler = arrow.sampler(arrow.parms({path=out_geoparquet, format="parquet"}), in_geoparquet, outq_name, {["mosaic"] = dem1})
+local parquet_sampler = arrow.sampler(core.parms({output={path=out_geoparquet, format="parquet"}}), in_geoparquet, outq_name, {["mosaic"] = dem1})
 runner.check(parquet_sampler ~= nil)
 
 local in_file_size = getFileSize(in_geoparquet);
@@ -57,7 +57,7 @@ print("Output geoparquet file size: " .. out_file_size .. " bytes")
 runner.check(out_file_size > in_file_size, "Output file size is not greater than input file size: ")
 
 print('\n--------------------------------------\nTest02: input/output parquet (x, y)\n--------------------------------------')
-parquet_sampler = arrow.sampler(arrow.parms({path=out_parquet, format="parquet"}), in_parquet, outq_name, {["mosaic"] = dem1})
+parquet_sampler = arrow.sampler(core.parms({output={path=out_parquet, format="parquet"}}), in_parquet, outq_name, {["mosaic"] = dem1})
 runner.check(parquet_sampler ~= nil)
 
 in_file_size = getFileSize(in_parquet);
@@ -71,7 +71,7 @@ runner.check(out_file_size > in_file_size, "Output file size is not greater than
 --NOTE: generated CSV and FEATHER files are much smaller than the input parquet/geoparquet files
 
 print('\n--------------------------------------\nTest03: input geoparquet, output feather\n--------------------------------------')
-parquet_sampler = arrow.sampler(arrow.parms({path=out_feather, format="feather"}), in_geoparquet, outq_name, {["mosaic"] = dem1})
+parquet_sampler = arrow.sampler(core.parms({output={path=out_feather, format="feather"}}), in_geoparquet, outq_name, {["mosaic"] = dem1})
 runner.check(parquet_sampler ~= nil)
 
 in_file_size = getFileSize(in_geoparquet);
@@ -88,7 +88,7 @@ os.remove(_out_metadata)
 
 
 print('\n--------------------------------------\nTest04: input parquet, output feather\n--------------------------------------')
-parquet_sampler = arrow.sampler(arrow.parms({path=out_feather, format="feather"}), in_parquet, outq_name, {["mosaic"] = dem1})
+parquet_sampler = arrow.sampler(core.parms({output={path=out_feather, format="feather"}}), in_parquet, outq_name, {["mosaic"] = dem1})
 runner.check(parquet_sampler ~= nil)
 
 in_file_size = getFileSize(in_parquet);
@@ -105,7 +105,7 @@ os.remove(_out_metadata)
 
 
 print('\n--------------------------------------\nTest05: input geoparquet, output CSV\n--------------------------------------')
-parquet_sampler = arrow.sampler(arrow.parms({path=out_csv, format="csv"}), in_geoparquet, outq_name, {["mosaic"] = dem1})
+parquet_sampler = arrow.sampler(core.parms({output={path=out_csv, format="csv"}}), in_geoparquet, outq_name, {["mosaic"] = dem1})
 runner.check(parquet_sampler ~= nil)
 
 in_file_size = getFileSize(in_geoparquet);
@@ -122,7 +122,7 @@ os.remove(_out_metadata)
 
 
 print('\n--------------------------------------\nTest06: input parquet, output CSV \n--------------------------------------')
-parquet_sampler = arrow.sampler(arrow.parms({path=out_csv, format="csv"}), in_parquet, outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
+parquet_sampler = arrow.sampler(core.parms({output={path=out_csv, format="csv"}}), in_parquet, outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.check(parquet_sampler ~= nil)
 
 in_file_size = getFileSize(in_parquet);
@@ -139,7 +139,7 @@ os.remove(_out_metadata)
 
 
 print('\n--------------------------------------\nTest07: input/output geoparquet (geo)\n--------------------------------------')
-parquet_sampler = arrow.sampler(arrow.parms({path=out_geoparquet, format="parquet"}), in_geoparquet, outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
+parquet_sampler = arrow.sampler(core.parms({output={path=out_geoparquet, format="parquet"}}), in_geoparquet, outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.check(parquet_sampler ~= nil)
 
 in_file_size = getFileSize(in_geoparquet);
@@ -153,19 +153,19 @@ runner.check(out_file_size > in_file_size, "Output file size is not greater than
 -- Negative tests
 
 print('\n--------------------------------------\nTest08: failed luaCreate bad arrow parms\n--------------------------------------\n')
-parquet_sampler = arrow.sampler(arrow.parms(), in_geoparquet, outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
+parquet_sampler = arrow.sampler(core.parms(), in_geoparquet, outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.check(parquet_sampler == nil)
 
 print('\n--------------------------------------\nTest09: failed constructor empty input file\n--------------------------------------\n')
-parquet_sampler = arrow.sampler(arrow.parms({path=out_geoparquet, format="parquet"}), "", outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
+parquet_sampler = arrow.sampler(core.parms({output={path=out_geoparquet, format="parquet"}}), "", outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.check(parquet_sampler == nil)
 
 print('\n--------------------------------------\nTest10: failed constructor nil input file\n--------------------------------------\n')
-parquet_sampler = arrow.sampler(arrow.parms({path=out_geoparquet, format="parquet"}), nil, outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
+parquet_sampler = arrow.sampler(core.parms({output={path=out_geoparquet, format="parquet"}}), nil, outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.check(parquet_sampler == nil)
 
 print('\n--------------------------------------\nTest10: failed constructor nil output queue\n--------------------------------------\n')
-parquet_sampler = arrow.sampler(arrow.parms({path=out_geoparquet, format="parquet"}), in_geoparquet, nil, {["mosaic"] = dem1, ["strips"] = dem2})
+parquet_sampler = arrow.sampler(core.parms({output={path=out_geoparquet, format="parquet"}}), in_geoparquet, nil, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.check(parquet_sampler == nil)
 
 -- There is no easy way to read parquet file in Lua, check the size of the output files

@@ -53,7 +53,7 @@ const struct luaL_Reg ArrowSampler::LUA_META_TABLE[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - :arrowsampler(input_file_path, output_file_path, {["mosaic"]: dem1, ["strips"]: dem2})
+ * luaCreate - :arrowsampler(request_parms, input_file_path, output_qname, {["mosaic"]: dem1, ["strips"]: dem2})
  *----------------------------------------------------------------------------*/
 int ArrowSampler::luaCreate(lua_State* L)
 {
@@ -69,7 +69,13 @@ int ArrowSampler::luaCreate(lua_State* L)
         input_file  = getLuaString(L, 2);
         outq_name   = getLuaString(L, 3);
 
-        /* Check if the parameter is a table */
+        /* check if output path is empty */
+        if(rqst_parms->output.path.value.empty())
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "output path must be set");
+        }
+
+        /* check if the parameter is a table */
         luaL_checktype(L, 4, LUA_TTABLE);
 
         /* first key for iteration */

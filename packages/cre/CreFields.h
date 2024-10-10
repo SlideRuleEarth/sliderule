@@ -40,6 +40,7 @@
 #include "LuaObject.h"
 #include "FieldElement.h"
 #include "FieldDictionary.h"
+#include "RequestFields.h"
 
 /******************************************************************************
  * CLASS
@@ -57,8 +58,6 @@ class CreFields: public LuaObject, public FieldDictionary
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
-        static const int DEFAULT_TIMEOUT = 600;
-
         /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
@@ -66,7 +65,7 @@ class CreFields: public LuaObject, public FieldDictionary
         FieldElement<string>    image; // container image
         FieldElement<string>    name; // container name
         FieldElement<string>    command; // container command
-        FieldElement<int>       timeout {DEFAULT_TIMEOUT}; // on requests to docker daemon
+        FieldElement<int>       timeout {RequestFields::DEFAULT_TIMEOUT}; // on requests to docker daemon
 
         /*--------------------------------------------------------------------
         * Methods

@@ -44,8 +44,7 @@ runner.check(dem2 ~= nil)
 
 print('\n--------------------------------------\nTest01: input/output parquet (x, y)\n--------------------------------------')
 local starttime = time.latch();
--- parquet_sampler = arrow.sampler(arrow.parms({path=out_parquet, format="parquet"}), in_parquet, outq_name, {["mosaic"] = dem1})
-parquet_sampler = arrow.sampler(arrow.parms({path=out_parquet, format="parquet"}), in_parquet, outq_name, {["strips"] = dem2})
+parquet_sampler = arrow.sampler(core.parms({output={path=out_parquet, format="parquet"}}), in_parquet, outq_name, {["strips"] = dem2})
 runner.check(parquet_sampler ~= nil)
 status = parquet_sampler:waiton()
 local stoptime = time.latch();

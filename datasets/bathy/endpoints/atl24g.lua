@@ -310,7 +310,7 @@ runner.wait(container, timeout)
 -------------------------------------------------------
 -- send final output to user
 -------------------------------------------------------
-arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_filename, arrow.parms(parms["output"]), rspq)
+arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_filename, parms, rspq)
 
 -------------------------------------------------------
 -- exit
