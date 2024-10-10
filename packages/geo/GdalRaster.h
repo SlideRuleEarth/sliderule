@@ -36,7 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "GeoParms.h"
+#include "GeoFields.h"
 #include "RasterSample.h"
 #include "RasterSubset.h"
 #include <ogrsf_frmts.h>
@@ -94,14 +94,14 @@ class GdalRaster
         *--------------------------------------------------------------------*/
         typedef OGRErr (*overrideCRS_t)(OGRSpatialReference& crs);
 
-        /* import bbox_t into this namespace from GeoParms.h */
-        using bbox_t=GeoParms::bbox_t;
+        /* import bbox_t into this namespace from GeoFields.h */
+        using bbox_t=GeoFields::bbox_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                           GdalRaster     (GeoParms* _parms, const std::string& _fileName, double _gpsTime, uint64_t _fileId, bool _dataIsElevation, overrideCRS_t cb);
+                           GdalRaster     (const GeoFields* _parms, const std::string& _fileName, double _gpsTime, uint64_t _fileId, bool _dataIsElevation, overrideCRS_t cb, bbox_t* aoi_bbox_override=NULL);
         virtual           ~GdalRaster     (void);
         void               open           (void);
         RasterSample*      samplePOI      (OGRPoint* poi);
@@ -123,7 +123,7 @@ class GdalRaster
 
         static void        setCRSfromWkt  (OGRSpatialReference& sref, const char* wkt);
         static std::string getUUID        (void);
-        static void        initAwsAccess  (GeoParms* _parms);
+        static void        initAwsAccess  (const GeoFields* _parms);
         static OGRPolygon  makeRectangle  (double minx, double miny, double maxx, double maxy);
         static bool        ispoint        (const OGRGeometry* geo) { return geo->getGeometryType() == wkbPoint25D; }
         static bool        ispoly         (const OGRGeometry* geo) { return geo->getGeometryType() == wkbPolygon; }
@@ -134,9 +134,9 @@ class GdalRaster
         * Data
         *--------------------------------------------------------------------*/
 
-        GeoParms*      parms;
-        double         gpsTime;  /* Time the raster data was collected and/or generated */
-        uint64_t       fileId;   /* unique identifier of raster file used for downstream processing */
+        const GeoFields*    parms;
+        double              gpsTime;  /* Time the raster data was collected and/or generated */
+        uint64_t            fileId;   /* unique identifier of raster file used for downstream processing */
 
         OGRCoordinateTransformation* transf;
         OGRSpatialReference sourceCRS;
@@ -151,6 +151,7 @@ class GdalRaster
         uint32_t        ysize;
         double          cellSize;
         bbox_t          bbox;
+        bbox_t          aoi_bbox; // override of parameters
         uint32_t        radiusInPixels;
         double          geoTransform[6];
         double          invGeoTransform[6];

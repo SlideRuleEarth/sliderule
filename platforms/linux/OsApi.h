@@ -211,12 +211,14 @@ CompileTimeAssert(sizeof(bool)==1, TypeboolWrongSize);
 #include <memory>
 #include <vector>
 #include <string>
+#include <map>
 
 using std::shared_ptr;
 using std::unique_ptr;
 using std::make_shared;
 using std::vector;
 using std::string;
+using std::map;
 
 /******************************************************************************
  * LIBRARY CLASS

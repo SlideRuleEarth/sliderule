@@ -57,17 +57,19 @@ const char* Usgs3dep1meterDemRaster::URL_str = "https://prd-tnm.s3.amazonaws.com
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State* L, GeoParms* _parms):
- GeoIndexedRaster(L, _parms, &overrideTargetCRS),
- filePath(_parms->asset->getPath()),
+Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
+ GeoIndexedRaster(L, rqst_parms, key, &overrideTargetCRS),
+ filePath(parms->asset.asset->getPath()),
  indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson")
 {
-    if(_parms->catalog == NULL)
+    if(parms->catalog.value.empty())
         throw RunTimeException(ERROR, RTE_ERROR, "Empty CATALOG/geojson index file received");
 
     /* Create in memory index file */
-    GByte* bytes = const_cast<GByte*>(reinterpret_cast<const GByte*>(_parms->catalog));
-    VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), bytes, (vsi_l_offset)strlen(_parms->catalog), FALSE);
+    VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(),
+                                        const_cast<GByte*>(reinterpret_cast<const GByte*>(parms->catalog.value.c_str())), // source bytes
+                                        static_cast<vsi_l_offset>(parms->catalog.value.size()), // length in bytes
+                                        FALSE);
     CHECKPTR(fp);
     VSIFCloseL(fp);
 }

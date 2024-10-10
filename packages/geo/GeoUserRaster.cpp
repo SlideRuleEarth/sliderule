@@ -44,6 +44,7 @@ const char* GeoUserRaster::RASTERDATA_KEY    = "data";
 const char* GeoUserRaster::RASTERLENGTH_KEY  = "length";
 const char* GeoUserRaster::GPSTIME_KEY       = "date";
 const char* GeoUserRaster::ELEVATION_KEY     = "elevation";
+const char* GeoUserRaster::SAMPLES_KEY       = "samples";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -98,9 +99,10 @@ GeoUserRaster* GeoUserRaster::create (lua_State* L, int index)
     const bool iselevation = getLuaBoolean(L, -1);
     lua_pop(L, 1);
 
-    lua_getfield(L, index, GeoParms::SELF);
-    GeoParms* _parms = new GeoParms(L, lua_gettop(L), true);
-    LuaObject::referenceLuaObject(_parms); // GeoUserRaster expects a LuaObject created from a Lua script
+    lua_getfield(L, index, SAMPLES_KEY);
+    RequestFields* rqst_parms = new RequestFields(L, 0, {});
+    rqst_parms->fromLua(L, lua_gettop(L));
+    LuaObject::referenceLuaObject(rqst_parms); // GeoUserRaster expects a LuaObject created from a Lua script
     lua_pop(L, 1);
 
     /* Convert raster from Base64 to Binary */
@@ -113,7 +115,7 @@ GeoUserRaster* GeoUserRaster::create (lua_State* L, int index)
 
 
     /* Create GeoUserRaster */
-    return new GeoUserRaster(L, _parms, tiff.c_str(), tiff.size(), gps, iselevation);
+    return new GeoUserRaster(L, rqst_parms, GeoFields::DEFAULT_KEY, tiff.c_str(), tiff.size(), gps, iselevation);
 }
 
 
@@ -133,8 +135,8 @@ GeoUserRaster::~GeoUserRaster(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoUserRaster::GeoUserRaster(lua_State *L, GeoParms* _parms, const char *file, long filelength, double gps, bool iselevation):
-    GeoRaster(L, _parms, std::string("/vsimem/userraster/" + GdalRaster::getUUID() + ".tif"), gps, iselevation ),
+GeoUserRaster::GeoUserRaster(lua_State *L, RequestFields* rqst_parms, const char* key, const char *file, long filelength, double gps, bool iselevation):
+    GeoRaster(L, rqst_parms, key, std::string("/vsimem/userraster/" + GdalRaster::getUUID() + ".tif"), gps, iselevation ),
     data(NULL)
 {
     if(file == NULL)

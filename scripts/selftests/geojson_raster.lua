@@ -21,9 +21,7 @@ else
 end
 
 local cellsize = 0.01
-local params = {data = vectorfile, cellsize = cellsize}
-
-local robj = geo.geojson(params)
+local robj = geo.geojson(vectorfile, cellsize)
 runner.check(robj ~= nil)
 
 

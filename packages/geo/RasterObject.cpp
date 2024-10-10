@@ -34,9 +34,11 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "RequestFields.h"
 #include "RasterObject.h"
 #include "GdalRaster.h"
 #include "GeoIndexedRaster.h"
+#include "GeoFields.h"
 #include "Ordering.h"
 #include "List.h"
 
@@ -80,35 +82,38 @@ void RasterObject::deinit( void )
  *----------------------------------------------------------------------------*/
 int RasterObject::luaCreate( lua_State* L )
 {
-    GeoParms* _parms = NULL;
+    RequestFields* rqst_parms = NULL;
     try
     {
         /* Get Parameters */
-        _parms = dynamic_cast<GeoParms*>(getLuaObject(L, 1, GeoParms::OBJECT_TYPE));
-        if(_parms == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create GeoParms object");
+        rqst_parms = dynamic_cast<RequestFields*>(getLuaObject(L, 1, RequestFields::OBJECT_TYPE));
+        if(rqst_parms == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get request parameters");
+
+        const char* key = getLuaString(L, 2, true, GeoFields::DEFAULT_KEY);
+        const GeoFields* geo_fields = &rqst_parms->samplers[key];
 
         /* Get Factory */
         factory_t factory;
         bool found = false;
         factoryMut.lock();
         {
-            found = factories.find(_parms->asset_name, &factory);
+            found = factories.find(geo_fields->asset.getName(), &factory);
         }
         factoryMut.unlock();
 
         /* Check Factory */
-        if(!found) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find registered raster for %s", _parms->asset_name);
+        if(!found) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find registered raster for %s", geo_fields->asset.getName());
 
         /* Create Raster */
-        RasterObject* _raster = factory.create(L, _parms);
-        if(_raster == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create raster of type: %s", _parms->asset_name);
+        RasterObject* _raster = factory.create(L, rqst_parms, key);
+        if(_raster == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create raster of type: %s", geo_fields->asset.getName());
 
         /* Return Object */
         return createLuaObject(L, _raster);
     }
     catch(const RunTimeException& e)
     {
-        if(_parms) _parms->releaseLuaObject();
+        if(rqst_parms) rqst_parms->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
@@ -117,10 +122,11 @@ int RasterObject::luaCreate( lua_State* L )
 /*----------------------------------------------------------------------------
  * cppCreate
  *----------------------------------------------------------------------------*/
-RasterObject* RasterObject::cppCreate(GeoParms* _parms)
+RasterObject* RasterObject::cppCreate(RequestFields* rqst_parms, const char* key)
 {
     /* Check Parameters */
-    if(!_parms) return NULL;
+    if(!rqst_parms) return NULL;
+    const GeoFields* geo_fields = &rqst_parms->samplers[key];
 
     /* Get Factory */
     factory_t factory;
@@ -128,27 +134,27 @@ RasterObject* RasterObject::cppCreate(GeoParms* _parms)
 
     factoryMut.lock();
     {
-        found = factories.find(_parms->asset_name, &factory);
+        found = factories.find(geo_fields->asset.getName(), &factory);
     }
     factoryMut.unlock();
 
     /* Check Factory */
     if(!found)
     {
-        mlog(CRITICAL, "Failed to find registered raster for %s", _parms->asset_name);
+        mlog(CRITICAL, "Failed to find registered raster for %s", geo_fields->asset.getName());
         return NULL;
     }
 
     /* Create Raster */
-    RasterObject* _raster = factory.create(NULL, _parms);
+    RasterObject* _raster = factory.create(NULL, rqst_parms, key);
     if(!_raster)
     {
-        mlog(CRITICAL, "Failed to create raster for %s", _parms->asset_name);
+        mlog(CRITICAL, "Failed to create raster for %s", geo_fields->asset.getName());
         return NULL;
     }
 
     /* Bump Lua Reference (for releasing in destructor) */
-    referenceLuaObject(_parms);
+    referenceLuaObject(rqst_parms);
 
     /* Return Raster */
     return _raster;
@@ -159,11 +165,11 @@ RasterObject* RasterObject::cppCreate(GeoParms* _parms)
  *----------------------------------------------------------------------------*/
 RasterObject* RasterObject::cppCreate(const RasterObject* obj)
 {
-    return cppCreate(obj->parms);
+    return cppCreate(obj->rqstParms, obj->samplerKey);
 }
 
 /*----------------------------------------------------------------------------
- * registerDriver
+ * registerRaster
  *----------------------------------------------------------------------------*/
 bool RasterObject::registerRaster (const char* _name, factory_f create)
 {
@@ -325,8 +331,11 @@ uint32_t RasterObject::getMaxBatchThreads(void)
  *----------------------------------------------------------------------------*/
 RasterObject::~RasterObject(void)
 {
-    /* Release GeoParms LuaObject */
-    parms->releaseLuaObject();
+    /* Release RequestFields LuaObject */
+    rqstParms->releaseLuaObject();
+
+    /* Delete Key */
+    delete [] samplerKey;
 }
 
 void RasterObject::stopSampling(void)
@@ -349,7 +358,7 @@ uint64_t RasterObject::fileDictAdd(const string& fileName)
 
     if(!fileDict.find(fileName.c_str(), &id))
     {
-        id = (parms->key_space << 32) | fileDict.length();
+        id = (rqstParms->keySpace.value << 32) | fileDict.length();
         fileDict.add(fileName.c_str(), id);
     }
 
@@ -417,9 +426,11 @@ void RasterObject::getThreadsRanges(std::vector<range_t>& ranges, uint32_t num,
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RasterObject::RasterObject(lua_State *L, GeoParms* _parms):
+RasterObject::RasterObject(lua_State *L, RequestFields* rqst_parms, const char* key):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    parms(_parms),
+    rqstParms(rqst_parms),
+    parms(&rqstParms->samplers[key]),
+    samplerKey(StringLib::duplicate(key)),
     sampling(true)
 {
     /* Add Lua Functions */

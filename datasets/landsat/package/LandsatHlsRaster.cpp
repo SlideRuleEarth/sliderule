@@ -36,10 +36,6 @@
 #include "LandsatHlsRaster.h"
 
 /******************************************************************************
- * PRIVATE IMPLEMENTATION
- ******************************************************************************/
-
-/******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
@@ -68,11 +64,6 @@ const char* LandsatHlsRaster::ALGO_bands[] = {"B03", "B04", "B05", "B06", "B8A",
 
 const char* LandsatHlsRaster::URL_str = "https://data.lpdaac.earthdatacloud.nasa.gov/lp-prod-protected";
 
-
-/******************************************************************************
- * PUBLIC METHODS
- ******************************************************************************/
-
 /******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
@@ -80,29 +71,31 @@ const char* LandsatHlsRaster::URL_str = "https://data.lpdaac.earthdatacloud.nasa
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
- GeoIndexedRaster(L, _parms),
- filePath(_parms->asset->getPath()),
+LandsatHlsRaster::LandsatHlsRaster(lua_State *L, RequestFields* rqst_parms, const char* key):
+ GeoIndexedRaster(L, rqst_parms, key),
+ filePath(parms->asset.asset->getPath()),
  indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson")
 {
     ndsi = ndvi = ndwi = false;
 
-    if(_parms->catalog == NULL)
+    if(parms->catalog.value.empty())
         throw RunTimeException(ERROR, RTE_ERROR, "Empty CATALOG/geojson index file received");
 
-    if(_parms->bands->length == 0)
+    if(parms->bands.length() == 0)
         throw RunTimeException(ERROR, RTE_ERROR, "Empty BANDS array received");
 
     /* Create in memory index file (geojson) */
-    GByte* bytes = const_cast<GByte*>(reinterpret_cast<const GByte*>(_parms->catalog));
-    VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(), bytes, (vsi_l_offset)strlen(_parms->catalog), FALSE);
+    VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(),
+                                        const_cast<GByte*>(reinterpret_cast<const GByte*>(parms->catalog.value.c_str())), // source bytes
+                                        static_cast<vsi_l_offset>(parms->catalog.value.size()), // length in bytes
+                                        FALSE);
     CHECKPTR(fp);
     VSIFCloseL(fp);
 
     /* Create dictionary of bands and algo names to process */
-    for(int i = 0; i < _parms->bands->length; i++)
+    for(int i = 0; i < parms->bands.length(); i++)
     {
-        const char* name = (*_parms->bands)[i].c_str();
+        const char* name = parms->bands[i].c_str();
         if( isValidL8Band(name) || isValidS2Band(name) || isValidAlgoName(name))
         {
             /* Add band to dictionary of bands but don't override if already there */
@@ -110,9 +103,9 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
             if(it == bandsDict.end())
                 bandsDict[name] = true;
 
-            if(strcasecmp((*_parms->bands)[i].c_str(), "NDSI") == 0) ndsi = true;
-            if(strcasecmp((*_parms->bands)[i].c_str(), "NDVI") == 0) ndvi = true;
-            if(strcasecmp((*_parms->bands)[i].c_str(), "NDWI") == 0) ndwi = true;
+            if(strcasecmp(parms->bands[i].c_str(), "NDSI") == 0) ndsi = true;
+            if(strcasecmp(parms->bands[i].c_str(), "NDVI") == 0) ndvi = true;
+            if(strcasecmp(parms->bands[i].c_str(), "NDWI") == 0) ndwi = true;
         }
     }
 
@@ -130,7 +123,7 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, GeoParms* _parms):
     }
 
     /* If user specified flags, add group's Fmask to dictionary of bands */
-    if(_parms->flags_file)
+    if(parms->flags_file)
     {
         /* Add band to dictionary of bands but don't override if already there */
         const char* band = "Fmask";

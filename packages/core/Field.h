@@ -90,8 +90,9 @@ class Field
             ENUMERATION   = 2,
             LIST          = 3,
             COLUMN        = 4,
-            DICTIONARY    = 5,
-            DATAFRAME     = 6
+            MAP           = 5,
+            DICTIONARY    = 6,
+            DATAFRAME     = 7
         } type_t;
 
         /*--------------------------------------------------------------------

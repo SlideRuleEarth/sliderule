@@ -360,7 +360,7 @@ class Icesat2Fields: public RequestFields
          * Methods
          *--------------------------------------------------------------------*/
 
-                Icesat2Fields   (lua_State* L, const char* default_asset_name, const char* default_resource, const std::initializer_list<FieldDictionary::entry_t>& init_list);
+                Icesat2Fields   (lua_State* L, uint64_t key_space, const char* default_asset_name, const char* default_resource, const std::initializer_list<FieldDictionary::entry_t>& init_list);
         virtual ~Icesat2Fields  (void) override = default;
 
         void parseResource (void);

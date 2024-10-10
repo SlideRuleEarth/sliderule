@@ -309,13 +309,21 @@ void FieldList<T>::fromLua (lua_State* L, int index)
     // clear the list of values
     values.clear();
 
-    // convert all elements from lua
-    const int num_elements = lua_rawlen(L, index);
-    for(int i = 0; i < num_elements; i++)
+    if(lua_istable(L, index))
     {
-        lua_rawgeti(L, index, i + 1);
-        convertFromLua(L, -1, value);
-        lua_pop(L, 1);
+        // convert all elements from lua
+        const int num_elements = lua_rawlen(L, index);
+        for(int i = 0; i < num_elements; i++)
+        {
+            lua_rawgeti(L, index, i + 1);
+            convertFromLua(L, -1, value);
+            lua_pop(L, 1);
+            values.push_back(value);
+        }
+    }
+    else // single element
+    {
+        convertFromLua(L, index, value);
         values.push_back(value);
     }
 }

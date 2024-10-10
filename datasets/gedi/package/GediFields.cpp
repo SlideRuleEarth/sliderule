@@ -43,7 +43,7 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<parameter table>, [<default asset>], [<default resource>])
+ * luaCreate - create(<parameter table>, <key_space>, [<default asset>], [<default resource>])
  *----------------------------------------------------------------------------*/
 int GediFields::luaCreate (lua_State* L)
 {
@@ -51,10 +51,11 @@ int GediFields::luaCreate (lua_State* L)
 
     try
     {
-        const char* default_asset_name = LuaObject::getLuaString(L, 2, true, NULL);
-        const char* default_resource = LuaObject::getLuaString(L, 3, true, NULL);
+        const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, 0);
+        const char* default_asset_name = LuaObject::getLuaString(L, 3, true, NULL);
+        const char* default_resource = LuaObject::getLuaString(L, 4, true, NULL);
 
-        gedi_fields = new GediFields(L, default_asset_name, default_resource);
+        gedi_fields = new GediFields(L, key_space, default_asset_name, default_resource);
         gedi_fields->fromLua(L, 1);
 
         return createLuaObject(L, gedi_fields);
@@ -70,14 +71,15 @@ int GediFields::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GediFields::GediFields(lua_State* L , const char* default_asset_name, const char* default_resource):
-    RequestFields (L, { {"asset",               &asset},
-                        {"resource",            &resource},
-                        {"beams",               &beams},
-                        {"degrade_filter",      &degrade_filter},
-                        {"l2_quality_filter",   &l2_quality_filter},
-                        {"l4_quality_filter",   &l4_quality_filter},
-                        {"surface_filter",      &surface_filter} }),
+GediFields::GediFields(lua_State* L , uint64_t key_space, const char* default_asset_name, const char* default_resource):
+    RequestFields (L, key_space,
+        { {"asset",               &asset},
+          {"resource",            &resource},
+          {"beams",               &beams},
+          {"degrade_filter",      &degrade_filter},
+          {"l2_quality_filter",   &l2_quality_filter},
+          {"l4_quality_filter",   &l4_quality_filter},
+          {"surface_filter",      &surface_filter} }),
     asset(default_asset_name)
 {
     if(default_resource)

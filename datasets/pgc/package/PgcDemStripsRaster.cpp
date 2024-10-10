@@ -46,10 +46,10 @@ static const std::vector<const char*> dates = {"start_datetime", "end_datetime"}
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, GeoParms* _parms, const char* dem_name, const char* geo_suffix, GdalRaster::overrideCRS_t cb):
-    GeoIndexedRaster(L, _parms, cb),
+PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, RequestFields* rqst_parms, const char* key, const char* dem_name, const char* geo_suffix, GdalRaster::overrideCRS_t cb):
+    GeoIndexedRaster(L, rqst_parms, key, cb),
     demName(dem_name),
-    path2geocells(_parms->asset->getPath() + std::string(geo_suffix))
+    path2geocells(parms->asset.asset->getPath() + std::string(geo_suffix))
 {
     const std::size_t pos = path2geocells.find(demName);
     if (pos == std::string::npos)
@@ -70,7 +70,6 @@ PgcDemStripsRaster::~PgcDemStripsRaster(void)
     }
 }
 
-
 /*----------------------------------------------------------------------------
  * getFeatureDate
  *----------------------------------------------------------------------------*/
@@ -88,7 +87,6 @@ bool PgcDemStripsRaster::getFeatureDate(const OGRFeature* feature, TimeLib::gmt_
 
     return true;
 }
-
 
 /*----------------------------------------------------------------------------
  * getIndexFile

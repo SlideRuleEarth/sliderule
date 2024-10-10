@@ -29,13 +29,47 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef __field_map__
+#define __field_map__
+
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
 #include "LuaEngine.h"
-#include "FieldDictionary.h"
+#include "Field.h"
+
+/******************************************************************************
+ * CLASS
+ ******************************************************************************/
+
+template <class T>
+class FieldMap: public Field
+{
+    public:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+                        FieldMap    (void);
+        virtual         ~FieldMap   (void) override = default;
+
+        long            add         (const string& key, const T& v);
+        long            length      (void) const override;
+        const T&               operator[]  (const char* key);
+
+        string          toJson      (void) const override;
+        int             toLua       (lua_State* L) const override;
+        void            fromLua     (lua_State* L, int index) override;
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        map<string, T> values;
+};
 
 /******************************************************************************
  * METHODS
@@ -44,83 +78,58 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-FieldDictionary::FieldDictionary(std::initializer_list<entry_t> init_list, int hash_table_size):
-    Field(DICTIONARY, 0),
-    fields(hash_table_size)
-{
-    for(const entry_t elem: init_list)
-    {
-        fields.add(elem.name, elem);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-FieldDictionary::FieldDictionary(int hash_table_size):
-    Field(DICTIONARY, 0),
-    fields(hash_table_size)
-{
-}
-
-/*----------------------------------------------------------------------------
- * Copy Constructor
- *----------------------------------------------------------------------------*/
-FieldDictionary::FieldDictionary(const FieldDictionary& dictionary):
-    Field(DICTIONARY, 0),
-    fields(dictionary.fields)
+template <class T>
+FieldMap<T>::FieldMap():
+    Field(LIST, getImpliedEncoding<T>())
 {
 }
 
 /*----------------------------------------------------------------------------
  * add
  *----------------------------------------------------------------------------*/
-bool FieldDictionary::add(const entry_t& entry)
+template<class T>
+long FieldMap<T>::add(const string& key, const T& v)
 {
-    return fields.add(entry.name, entry);
+    values[key] = v;
+    return static_cast<long>(values.size());
 }
 
 /*----------------------------------------------------------------------------
- * operator=
+ * length
  *----------------------------------------------------------------------------*/
-FieldDictionary& FieldDictionary::operator= (const FieldDictionary& dictionary)
+template<class T>
+long FieldMap<T>::length(void) const
 {
-    if(this == &dictionary) return *this;
-    fields = dictionary.fields;
-    return *this;
+    return static_cast<long>(values.size());
 }
+
 
 /*----------------------------------------------------------------------------
  * operator[] - rvalue
  *----------------------------------------------------------------------------*/
-Field* FieldDictionary::operator[](const char* key) const
+template <class T>
+const T& FieldMap<T>::operator[](const char* key)
 {
-    return fields[key].field;
-}
-
-/*----------------------------------------------------------------------------
- * operator[] - lvalue
- *----------------------------------------------------------------------------*/
-Field& FieldDictionary::operator[](const char* key)
-{
-    return *(fields[key].field);
+    return values[key];
 }
 
 /*----------------------------------------------------------------------------
  * toJson
  *----------------------------------------------------------------------------*/
-string FieldDictionary::toJson (void) const
+template <class T>
+string FieldMap<T>::toJson (void) const
 {
-    Dictionary<entry_t>::Iterator iter(fields);
+    long cnt = 0;
+    long size = length();
     string str("{");
-    for(int i = 0; i < iter.length; i++)
+    for(const auto& pair: values)
     {
-        const Dictionary<entry_t>::kv_t kv = iter[i];
         str += "\"";
-        str += kv.value.name;
+        str += pair.first;
         str += "\":";
-        str += kv.value.field->toJson();
-        if(i < iter.length - 1) str += ",";
+        str += convertToJson(pair.second);
+        if(cnt < size - 1) str += ",";
+        cnt++;
     }
     str += "}";
     return str;
@@ -129,63 +138,44 @@ string FieldDictionary::toJson (void) const
 /*----------------------------------------------------------------------------
  * toLua
  *----------------------------------------------------------------------------*/
-int FieldDictionary::toLua (lua_State* L) const
+template <class T>
+int FieldMap<T>::toLua (lua_State* L) const
 {
-    Dictionary<entry_t>::Iterator iter(fields);
     lua_newtable(L);
-    for(int i = 0; i < iter.length; i++)
+    for(auto& pair: values)
     {
-        const Dictionary<entry_t>::kv_t kv = iter[i];
-        lua_pushstring(L, kv.value.name);
-        kv.value.field->toLua(L);
+        lua_pushstring(L, pair.first.c_str());
+        convertToLua(L, pair.second);
         lua_settable(L, -3);
     }
     return 1;
 }
 
 /*----------------------------------------------------------------------------
- * toLua
- *----------------------------------------------------------------------------*/
-int FieldDictionary::toLua (lua_State* L, const string& key) const
-{
-    try
-    {
-        const entry_t& entry = fields[key.c_str()];
-        entry.field->toLua(L);
-    }
-    catch(const RunTimeException& e)
-    {
-        (void)e;
-        lua_pushnil(L);
-    }
-    return 1;
-}
-
-
-/*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
-void FieldDictionary::fromLua (lua_State* L, int index)
+template <class T>
+void FieldMap<T>::fromLua (lua_State* L, int index)
 {
     if(lua_istable(L, index))
     {
-        Dictionary<entry_t>::Iterator iter(fields);
-        for(int i = 0; i < iter.length; i++)
+        lua_pushnil(L);
+        while(lua_next(L, index) != 0)
         {
-            Dictionary<entry_t>::kv_t kv = iter[i];
-            lua_getfield(L, index, kv.value.name);
             try
             {
-                kv.value.field->fromLua(L, -1);
+                const char* key = LuaObject::getLuaString(L, -2);
+                T value;
+                convertFromLua(L, -1, value);
+                values[key] = value;
             }
-            catch (const RunTimeException& e)
+            catch(const RunTimeException& e)
             {
-                if(!lua_isnil(L, -1))
-                {
-                    mlog(ERROR, "Field <%s> using default value: %s", kv.value.name, e.what());
-                }
+                mlog(ERROR, "Failed to read field: %s", e.what());
             }
             lua_pop(L, 1);
         }
     }
 }
+
+#endif  /* __field_map__ */

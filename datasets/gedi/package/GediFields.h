@@ -136,7 +136,7 @@ class GediFields: public RequestFields
          * Methods
          *--------------------------------------------------------------------*/
 
-        GediFields  (lua_State* L, const char* default_asset_name, const char* default_resource);
+        GediFields  (lua_State* L, uint64_t key_space, const char* default_asset_name, const char* default_resource);
         ~GediFields (void) override = default;
 };
 

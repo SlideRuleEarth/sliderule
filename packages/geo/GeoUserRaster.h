@@ -55,6 +55,7 @@ class GeoUserRaster: public GeoRaster
         static const char* RASTERLENGTH_KEY;
         static const char* GPSTIME_KEY;
         static const char* ELEVATION_KEY;
+        static const char* SAMPLES_KEY;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -71,7 +72,7 @@ class GeoUserRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        GeoUserRaster(lua_State* L, GeoParms* _parms, const char* file, long filelength, double gps, bool iselevation);
+        GeoUserRaster(lua_State* L, RequestFields* rqst_parms, const char* key, const char* file, long filelength, double gps, bool iselevation);
 
     private:
 

@@ -41,11 +41,16 @@
 #include "FieldDictionary.h"
 #include "FieldElement.h"
 #include "FieldColumn.h"
+#include "FieldMap.h"
 #include "RegionMask.h"
 #include "MathLib.h"
 
 #ifdef __arrow__
 #include "ArrowFields.h"
+#endif
+
+#ifdef __geo__
+#include "GeoFields.h"
 #endif
 
 /******************************************************************************
@@ -85,11 +90,19 @@ class RequestFields: public LuaObject, public FieldDictionary
         static int luaGetField (lua_State* L);
         static int luaSetField (lua_State* L);
         static int luaWithArrowOutput (lua_State* L);
+        static int luaGetSamplers (lua_State* L);
 
         bool polyIncludes (double lon, double lat) const;
         bool maskIncludes (double lon, double lat) const;
 
+        #ifdef __geo__
+        const GeoFields* geoFields(const char* key);
+        #endif
+
         virtual void fromLua (lua_State* L, int index) override;
+
+        RequestFields (lua_State* L, uint64_t key_space, const std::initializer_list<entry_t>& init_list);
+        virtual ~RequestFields  (void) override;
 
         /*--------------------------------------------------------------------
          * Data
@@ -103,6 +116,7 @@ class RequestFields: public LuaObject, public FieldDictionary
         FieldElement<int>               nodeTimeout         {INVALID_TIMEOUT};
         FieldElement<int>               readTimeout         {INVALID_TIMEOUT};
         FieldElement<int>               clusterSizeHint     {0};
+        FieldElement<uint64_t>          keySpace            {0};
         RegionMask                      regionMask;
         FieldElement<string>            slideruleVersion;
         FieldElement<string>            buildInformation;
@@ -112,16 +126,11 @@ class RequestFields: public LuaObject, public FieldDictionary
         ArrowFields                     output;
         #endif
 
+        #ifdef __geo__
+        FieldMap<GeoFields>             samplers;
+        #endif
+
         MathLib::point_t*               projectedPolygon    {NULL};
-
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                RequestFields   (lua_State* L, const std::initializer_list<entry_t>& init_list);
-        virtual ~RequestFields  (void) override;
 };
 
 /******************************************************************************

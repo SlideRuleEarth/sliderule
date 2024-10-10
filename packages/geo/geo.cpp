@@ -45,6 +45,9 @@
 #include "GeoJsonRaster.h"
 #include "GeoUserRaster.h"
 #include "RegionMask.h"
+#include "GeoFields.h"
+#include "GeoLib.h"
+#include "RasterSampler.h"
 
 #include <gdal.h>
 #include <cpl_conv.h>
@@ -252,7 +255,7 @@ int geo_open (lua_State* L)
         {"userraster",  GeoUserRaster::luaCreate},
         {"raster",      RasterObject::luaCreate},
         {"sampler",     RasterSampler::luaCreate},
-        {"parms",       GeoParms::luaCreate},
+        {"parms",       GeoFields::luaCreate},
         {"calcutm",     GeoLib::luaCalcUTM},
         {"tiff",        GeoLib::TIFFImage::luaCreate},
 #ifdef __unittesting__
@@ -266,7 +269,6 @@ int geo_open (lua_State* L)
     luaL_newlib(L, geo_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrStr   (L, "PARMS",                            GeoParms::SELF);
     LuaEngine::setAttrStr   (L, GeoParms::NEARESTNEIGHBOUR_ALGO,    GeoParms::NEARESTNEIGHBOUR_ALGO);
     LuaEngine::setAttrStr   (L, GeoParms::BILINEAR_ALGO,            GeoParms::BILINEAR_ALGO);
     LuaEngine::setAttrStr   (L, GeoParms::CUBIC_ALGO,               GeoParms::CUBIC_ALGO);

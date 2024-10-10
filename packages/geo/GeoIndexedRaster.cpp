@@ -383,15 +383,15 @@ GeoIndexedRaster::BatchReader::~BatchReader (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::overrideCRS_t cb):
-    RasterObject    (L, _parms),
+GeoIndexedRaster::GeoIndexedRaster(lua_State *L, RequestFields* rqst_parms, const char* key, GdalRaster::overrideCRS_t cb):
+    RasterObject    (L, rqst_parms, key),
     cache           (MAX_READER_THREADS),
     ssErrors        (SS_NO_ERRORS),
     crscb           (cb),
     bbox            {0, 0, 0, 0},
     rows            (0),
     cols            (0),
-    geoRtree        (_parms->sort_by_index)
+    geoRtree        (parms->sort_by_index)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -399,7 +399,7 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
     LuaEngine::setAttrFunc(L, "cell", luaCellSize);
 
     /* Establish Credentials */
-    GdalRaster::initAwsAccess(_parms);
+    GdalRaster::initAwsAccess(parms);
 }
 
 
@@ -932,14 +932,15 @@ void* GeoIndexedRaster::readerThread(void *param)
                      * new GeoIndexRaster with the same file path as parent raster.
                      */
                     entry->subset->robj = new GeoRaster(NULL,
-                                                        reader->obj->parms,
+                                                        reader->obj->rqstParms,
+                                                        reader->obj->samplerKey,
                                                         entry->subset->rasterName,
                                                         entry->raster->getGpsTime(),
                                                         entry->raster->isElevation(),
                                                         entry->raster->getOverrideCRS());
 
-                    /* GeoParms are shared with subsseted raster and other readers */
-                    GeoIndexedRaster::referenceLuaObject(reader->obj->parms);
+                    /* RequestFields are shared with subsseted raster and other readers */
+                    GeoIndexedRaster::referenceLuaObject(reader->obj->rqstParms);
                 }
             }
             entry->enabled = false; /* raster samples/subsetted */
@@ -1252,15 +1253,14 @@ bool GeoIndexedRaster::updateCache(uint32_t& rasters2sample, const GroupOrdering
             const bool inCache = cache.find(key, &item);
             if(!inCache)
             {
-                /* Limit area of interest to the extent of vector index file */
-                parms->aoi_bbox = bbox;
-
-                /* Create new cache item with raster */
+                /* Create new cache item with raster
+                    note use of bbox in construcutor - it limits area
+                    of interest to the extent of vector index file */
                 item = new cacheitem_t;
                 item->raster = new GdalRaster(parms, rinfo.fileName,
                                               static_cast<double>(rgroup->gpsTime / 1000),
                                               fileDictAdd(rinfo.fileName),
-                                              rinfo.dataIsElevation, crscb);
+                                              rinfo.dataIsElevation, crscb, &bbox);
                 item->sample = NULL;
                 item->subset = NULL;
                 const bool status = cache.add(key, item);
@@ -1314,7 +1314,7 @@ bool GeoIndexedRaster::updateCache(uint32_t& rasters2sample, const GroupOrdering
 bool GeoIndexedRaster::filterRasters(int64_t gps, GroupOrdering* groupList)
 {
     /* NOTE: temporal filter is applied in openGeoIndex() */
-    if(parms->url_substring || parms->filter_doy_range)
+    if(!parms->url_substring.value.empty() || parms->filter_doy_range)
     {
         const GroupOrdering::Iterator group_iter(*groupList);
         for(int i = 0; i < group_iter.length; i++)
@@ -1325,9 +1325,9 @@ bool GeoIndexedRaster::filterRasters(int64_t gps, GroupOrdering* groupList)
             for(const auto& rinfo : rgroup->infovect)
             {
                 /* URL filter */
-                if(parms->url_substring)
+                if(!parms->url_substring.value.empty())
                 {
-                    if(rinfo.fileName.find(parms->url_substring) == std::string::npos)
+                    if(rinfo.fileName.find(parms->url_substring.value) == std::string::npos)
                     {
                         removeGroup = true;
                         break;

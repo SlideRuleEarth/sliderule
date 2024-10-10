@@ -35,19 +35,6 @@
 
 #include "GebcoBathyRaster.h"
 
-
-/******************************************************************************
- * PRIVATE IMPLEMENTATION
- ******************************************************************************/
-
-/******************************************************************************
- * STATIC DATA
- ******************************************************************************/
-
-/******************************************************************************
- * PUBLIC METHODS
- ******************************************************************************/
-
 /******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
@@ -55,10 +42,10 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GebcoBathyRaster::GebcoBathyRaster(lua_State* L, GeoParms* _parms):
- GeoIndexedRaster(L, _parms),
- filePath("/vsis3/" + std::string(_parms->asset->getPath())),
- indexFile(_parms->asset->getIndex())
+GebcoBathyRaster::GebcoBathyRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
+ GeoIndexedRaster(L, rqst_parms, key),
+ filePath("/vsis3/" + std::string(parms->asset.asset->getPath())),
+ indexFile(parms->asset.asset->getIndex())
 {
 }
 
@@ -144,8 +131,3 @@ bool GebcoBathyRaster::findRasters(finder_t* finder)
 
     return (!finder->rasterGroups.empty());
 }
-
-
-/******************************************************************************
- * PRIVATE METHODS
- ******************************************************************************/

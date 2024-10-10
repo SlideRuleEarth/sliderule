@@ -37,18 +37,6 @@
 #include "CreFields.h"
 
 /******************************************************************************
- * STATIC DATA
- ******************************************************************************/
-
-const char* CreFields::OBJECT_TYPE = "CreFields";
-const char* CreFields::LUA_META_NAME = "CreFields";
-const struct luaL_Reg CreFields::LUA_META_TABLE[] = {
-    {"image",       luaImage},
-    {"export",      luaExport},
-    {NULL,          NULL}
-};
-
-/******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
 
@@ -73,27 +61,6 @@ int CreFields::luaCreate (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaExport - export() --> lua table
- *----------------------------------------------------------------------------*/
-int CreFields::luaExport (lua_State* L)
-{
-    int num_rets = 1;
-
-    try
-    {
-        CreFields* lua_obj = dynamic_cast<CreFields*>(getLuaSelf(L, 1));
-        num_rets = lua_obj->toLua(L);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error exporting %s: %s", OBJECT_TYPE, e.what());
-        lua_pushnil(L);
-    }
-
-    return num_rets;
-}
-
-/*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
 void CreFields::fromLua (lua_State* L, int index)
@@ -101,7 +68,7 @@ void CreFields::fromLua (lua_State* L, int index)
     FieldDictionary::fromLua(L, index);
 
     // check image for ONLY legal characters
-    for (auto c_iter = image.value.begin(); c_iter < image.value.end(); ++c_iter)
+    for (auto c_iter = container_image.value.begin(); c_iter < container_image.value.end(); ++c_iter)
     {
         const int c = *c_iter;
         if(!isalnum(c) && (c != '/') && (c != '.') && (c != ':') && (c != '-'))
@@ -115,30 +82,10 @@ void CreFields::fromLua (lua_State* L, int index)
  * Constructor
  *----------------------------------------------------------------------------*/
 CreFields::CreFields (lua_State* L):
-    LuaObject           (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    FieldDictionary ({
-        {"image",   &image},
-        {"name",    &name},
-        {"command", &command},
-        {"timeout", &timeout},
+    RequestFields(L, 0, {
+        {"container_image",   &container_image},
+        {"container_name",    &container_name},
+        {"container_command", &container_command}
     })
 {
-}
-
-/*----------------------------------------------------------------------------
- * luaImage
- *----------------------------------------------------------------------------*/
-int CreFields::luaImage (lua_State* L)
-{
-    try
-    {
-        const CreFields* lua_obj = dynamic_cast<CreFields*>(getLuaSelf(L, 1));
-        if(!lua_obj->image.value.empty()) lua_pushstring(L, lua_obj->image.value.c_str());
-        else lua_pushnil(L);
-        return 1;
-    }
-    catch(const RunTimeException& e)
-    {
-        return luaL_error(L, "method invoked from invalid object: %s", __FUNCTION__);
-    }
 }

@@ -50,10 +50,11 @@ int BathyFields::luaCreate (lua_State* L)
 
     try
     {
-        const char* default_asset_name = LuaObject::getLuaString(L, 2, true, "icesat2");
-        const char* default_resource = LuaObject::getLuaString(L, 3, true, NULL);
+        long key_space = LuaObject::getLuaInteger(L, 2, true, 0);
+        const char* default_asset_name = LuaObject::getLuaString(L, 3, true, "icesat2");
+        const char* default_resource = LuaObject::getLuaString(L, 4, true, NULL);
 
-        bathy_fields = new BathyFields(L, default_asset_name, default_resource);
+        bathy_fields = new BathyFields(L, key_space, default_asset_name, default_resource);
         bathy_fields->fromLua(L, 1);
 
         return createLuaObject(L, bathy_fields);
@@ -97,8 +98,8 @@ void BathyFields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-BathyFields::BathyFields(lua_State* L, const char* default_asset_name, const char* default_resource):
-    Icesat2Fields (L, default_asset_name, default_resource,
+BathyFields::BathyFields(lua_State* L, uint64_t key_space, const char* default_asset_name, const char* default_resource):
+    Icesat2Fields (L, key_space, default_asset_name, default_resource,
         { {"asset09",             &atl09AssetName},
           {"max_dem_delta",       &maxDemDelta},
           {"min_dem_delta",       &minDemDelta},

@@ -49,7 +49,9 @@ int SwotFields::luaCreate (lua_State* L)
 
     try
     {
-        swot_fields = new SwotFields(L);
+        uint64_t key_space = LuaObject::getLuaInteger(L, 1, true, 0);
+
+        swot_fields = new SwotFields(L, key_space);
         swot_fields->fromLua(L, 1);
 
         return createLuaObject(L, swot_fields);
@@ -65,8 +67,9 @@ int SwotFields::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-SwotFields::SwotFields(lua_State* L):
-    RequestFields(L, {
+SwotFields::SwotFields(lua_State* L, uint64_t key_space):
+    RequestFields(L, key_space,
+    {
         {"asset",       &asset},
         {"resource",    &resource},
         {"variables",   &variables}

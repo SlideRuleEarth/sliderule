@@ -85,7 +85,7 @@ class SwotFields: public RequestFields
          * Methods
          *--------------------------------------------------------------------*/
 
-        SwotFields  (lua_State* L);
+        SwotFields  (lua_State* L, uint64_t key_space);
         ~SwotFields (void) override = default;
 };
 

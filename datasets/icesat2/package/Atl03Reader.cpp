@@ -1027,7 +1027,7 @@ void Atl03Reader::YapcScore::yapcV2 (const info_t* info, const Region& region, c
 void Atl03Reader::YapcScore::yapcV3 (const info_t* info, const Region& region, const Atl03Data& atl03)
 {
     /* YAPC Parameters */
-    const YapcFields settings = info->reader->parms->yapc;
+    const YapcFields& settings = info->reader->parms->yapc;
     const double hWX = settings.win_x / 2; // meters
     const double hWZ = settings.win_h / 2; // meters
 

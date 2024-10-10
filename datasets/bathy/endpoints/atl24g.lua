@@ -6,7 +6,7 @@ local json          = require("json")
 local earthdata     = require("earth_data_query")
 local runner        = require("container_runtime")
 local rqst          = json.decode(arg[1])
-local parms         = bathy.parms(rqst["parms"], "icesat2", rqst["resource"])
+local parms         = bathy.parms(rqst["parms"], 0, "icesat2", rqst["resource"])
 local resource      = parms["resource"]
 local timeout       = parms["node_timeout"]
 local userlog       = msg.publish(rspq) -- create user log publisher (alerts)
@@ -298,13 +298,12 @@ outputs["latch"] = latch
 -- run oceaneyes
 -------------------------------------------------------
 local container_parms = {
-    image = "oceaneyes",
-    name = "oceaneyes",
-    command = string.format("/bin/bash /runner.sh %s/settings.json", crenv.container_sandbox_mount),
-    timeout = ctimeout(),
-    parms = { ["settings.json"] = outputs }
+    container_image = "oceaneyes",
+    container_name = "oceaneyes",
+    container_command = string.format("/bin/bash /runner.sh %s/settings.json", crenv.container_sandbox_mount),
+    timeout = ctimeout()
 }
-local container = runner.execute(crenv, container_parms, rspq)
+local container = runner.execute(crenv, container_parms, { ["settings.json"] = outputs }, rspq)
 runner.wait(container, timeout)
 
 -------------------------------------------------------

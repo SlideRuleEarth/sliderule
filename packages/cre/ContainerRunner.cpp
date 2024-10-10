@@ -285,7 +285,7 @@ void* ContainerRunner::controlThread (void* parm)
     /* Build Container Command Parameter */
     string token;
     vector<string> tokens;
-    std::istringstream cmd_str_iss(cr->parms->command.value);
+    std::istringstream cmd_str_iss(cr->parms->container_command.value);
     while(std::getline(cmd_str_iss, token, ' '))
     {
         if(!token.empty())
@@ -303,7 +303,7 @@ void* ContainerRunner::controlThread (void* parm)
     const FString cmd("\"Cmd\": [%s]}", cmd_str.c_str());
 
     /* Build Container Parameters */
-    const FString image("\"Image\": \"%s/%s\"", REGISTRY, cr->parms->image.value.c_str());
+    const FString image("\"Image\": \"%s/%s\"", REGISTRY, cr->parms->container_image.value.c_str());
     const FString host_config("\"HostConfig\": {\"Binds\": [\"%s:%s\", \"/data:/data\"]}", cr->hostSandboxDirectory, SANDBOX_MOUNT);
     const FString data("{%s, %s, %s}", image.c_str(), host_config.c_str(), cmd.c_str());
 
@@ -311,8 +311,8 @@ void* ContainerRunner::controlThread (void* parm)
     const FString create_url("http://localhost/%s/containers/create", api_version);
     const char* create_response = NULL;
     const long create_http_code = CurlLib::request(EndpointObject::POST, create_url.c_str(), data.c_str(), &create_response, NULL, false, false, cr->parms->timeout.value, &headers, unix_socket);
-    if(create_http_code != EndpointObject::Created) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to create container <%s>: %ld - %s", cr->parms->image.value.c_str(), create_http_code, create_response);
-    else alert(INFO, RTE_INFO, cr->outQ, NULL, "Created container <%s/%s> with parameters: %s", cr->parms->image.value.c_str(), cr->parms->name.value.c_str(), data.c_str());
+    if(create_http_code != EndpointObject::Created) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to create container <%s>: %ld - %s", cr->parms->container_image.value.c_str(), create_http_code, create_response);
+    else alert(INFO, RTE_INFO, cr->outQ, NULL, "Created container <%s/%s> with parameters: %s", cr->parms->container_image.value.c_str(), cr->parms->container_name.value.c_str(), data.c_str());
 
     /* Run Container */
     if(create_http_code == EndpointObject::Created)
@@ -325,7 +325,7 @@ void* ContainerRunner::controlThread (void* parm)
         /* Build Container Name String */
         char subid[8];
         StringLib::copy(subid, container_id, 8);
-        const FString container_name_str("%s:%s/%s", cr->parms->image.value.c_str(), subid, cr->parms->name.value.c_str());
+        const FString container_name_str("%s:%s/%s", cr->parms->container_image.value.c_str(), subid, cr->parms->container_name.value.c_str());
 
         /* Latch Start Time */
         int64_t logs_since = TimeLib::gps2systime(TimeLib::gpstime()) / 1000000;
@@ -430,7 +430,7 @@ void* ContainerRunner::controlThread (void* parm)
             const FString stop_url("http://localhost/%s/containers/%s/stop", api_version, container_id);
             const char* stop_response = NULL;
             const long stop_http_code = CurlLib::request(EndpointObject::POST, stop_url.c_str(), NULL, &stop_response, NULL, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
-            if(stop_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to force stop container <%s>: %ld - %s", cr->parms->image.value.c_str(), stop_http_code, stop_response);
+            if(stop_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to force stop container <%s>: %ld - %s", cr->parms->container_image.value.c_str(), stop_http_code, stop_response);
             else alert(INFO, RTE_INFO, cr->outQ, NULL, "Force stopped container <%s>", container_name_str.c_str());
             delete [] stop_response;
         }
@@ -439,7 +439,7 @@ void* ContainerRunner::controlThread (void* parm)
         const FString remove_url("http://localhost/%s/containers/%s", api_version, container_id);
         const char* remove_response = NULL;
         const long remove_http_code = CurlLib::request(EndpointObject::DELETE, remove_url.c_str(), NULL, &remove_response, NULL, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
-        if(remove_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to delete container <%s>: %ld - %s", cr->parms->image.value.c_str(), remove_http_code, remove_response);
+        if(remove_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to delete container <%s>: %ld - %s", cr->parms->container_image.value.c_str(), remove_http_code, remove_response);
         else alert(INFO, RTE_INFO, cr->outQ, NULL, "Removed container <%s>", container_name_str.c_str());
         delete [] remove_response;
     }

@@ -27,11 +27,11 @@ local function initialize(parms, algo, args)
 
     -- Raster Sampler --
     local sampler_disp = nil
-    if parms[geo.PARMS] and not parms[arrow.PARMS] then
+    if parms:hassamplers() and not parms:hasoutput() then
         local rsps_bridge = streaming.bridge(args.result_q, rspq)
         sampler_disp = streaming.dispatcher(args.result_q, 1) -- 1 thread required due to performance issues for GeoIndexRasters
-        for key,settings in pairs(parms[geo.PARMS]) do
-            local robj = geo.raster(geo.parms(settings):keyspace(args.shard))
+        for key,settings in pairs(parms:samplers()) do
+            local robj = geo.raster(parms, key)
             if robj then
                 local sampler = geo.sampler(robj, key, rspq, args.result_rec, settings["use_poi_time"])
                 if sampler then
@@ -77,7 +77,7 @@ end
 local function waiton(parms, algo, reader, algo_disp, sampler_disp, userlog, with_stats)
 
     -- Initialize Timeouts --
-    local timeout = parms["node_timeout"] or parms["timeout"] or core.NODE_TIMEOUT
+    local timeout = parms["node_timeout"]
     local duration = 0
     local interval = 10 < timeout and 10 or timeout -- seconds
 

@@ -39,7 +39,8 @@
 #include "LuaObject.h"
 #include "MathLib.h"
 #include "List.h"
-#include "GeoParms.h"
+#include "RequestFields.h"
+#include "GeoFields.h"
 #include "RasterSample.h"
 #include "RasterSubset.h"
 
@@ -62,7 +63,7 @@ class RasterObject: public LuaObject
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef RasterObject* (*factory_f) (lua_State* L, GeoParms* _parms);
+        typedef RasterObject* (*factory_f) (lua_State* L, RequestFields* rqst_parms, const char* key);
 
         typedef struct
         {
@@ -101,7 +102,7 @@ class RasterObject: public LuaObject
         static void          init            (void);
         static void          deinit          (void);
         static int           luaCreate       (lua_State* L);
-        static RasterObject* cppCreate       (GeoParms* _parms);
+        static RasterObject* cppCreate       (RequestFields* rqst_parms, const char* key);
         static RasterObject* cppCreate       (const RasterObject* obj);
         static bool          registerRaster  (const char* _name, factory_f create);
         virtual uint32_t     getSamples      (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) = 0;
@@ -154,7 +155,7 @@ class RasterObject: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                    RasterObject    (lua_State* L, GeoParms* _parms);
+                    RasterObject    (lua_State* L, RequestFields* rqst_parms, const char* key);
         static int  luaSamples      (lua_State* L);
         static int  luaSubsets      (lua_State* L);
         static int  luaPixels       (lua_State *L);
@@ -163,7 +164,9 @@ class RasterObject: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        GeoParms* parms;
+        RequestFields* rqstParms;
+        const GeoFields* parms;
+        const char* samplerKey;
 
     private:
 

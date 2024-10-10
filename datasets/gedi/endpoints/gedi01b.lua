@@ -5,11 +5,10 @@
 local json          = require("json")
 local georesource   = require("georesource")
 local rqst          = json.decode(arg[1])
-local parms         = gedi.parms(rqst["parms"], "gedil1b", rqst["resource"])
+local parms         = gedi.parms(rqst["parms"], rqst["shard"], "gedil1b", rqst["resource"])
 
 local args = {
-    shard           = rqst["shard"] or 0, -- key space
-    result_q        = (parms[geo.PARMS] and not parms[arrow.PARMS]) and "result." .. parms["resource"] .. "." .. rspq or rspq,
+    result_q        = (parms[geo.PARMS] and not parms:hasoutput()) and "result." .. parms["resource"] .. "." .. rspq or rspq,
     result_rec      = "gedi01brec",
 }
 

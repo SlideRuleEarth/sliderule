@@ -108,10 +108,11 @@ int Icesat2Fields::luaCreate (lua_State* L)
 
     try
     {
-        const char* default_asset_name = LuaObject::getLuaString(L, 2, true, "icesat2");
-        const char* default_resource = LuaObject::getLuaString(L, 3, true, NULL);
+        uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, 0);
+        const char* default_asset_name = LuaObject::getLuaString(L, 3, true, "icesat2");
+        const char* default_resource = LuaObject::getLuaString(L, 4, true, NULL);
 
-        icesat2_fields = new Icesat2Fields(L, default_asset_name, default_resource, {});
+        icesat2_fields = new Icesat2Fields(L, key_space, default_asset_name, default_resource, {});
         icesat2_fields->fromLua(L, 1);
 
         return createLuaObject(L, icesat2_fields);
@@ -192,38 +193,39 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Icesat2Fields::Icesat2Fields(lua_State* L, const char* default_asset_name, const char* default_resource, const std::initializer_list<FieldDictionary::entry_t>& init_list):
-    RequestFields (L, { {"asset",               &asset},
-                        {"resource",            &resource},
-                        {"srt",                 &surfaceType},
-                        {"pass_invalid",        &passInvalid},
-                        {"dist_in_seg",         &distInSeg},
-                        {"cnf",                 &atl03Cnf},
-                        {"quality_ph",          &qualityPh},
-                        {"atl08_class",         &atl08Class},
-                        {"beams",               &beams},
-                        {"yapc",                &yapc},
-                        {"track",               &track},
-                        {"maxi",                &maxIterations},
-                        {"cnt",                 &minPhotonCount},
-                        {"ats",                 &alongTrackSpread},
-                        {"H_min_win",           &minWindow},
-                        {"sigma_r_max",         &maxRobustDispersion},
-                        {"len",                 &extentLength},
-                        {"res",                 &extentStep},
-                        {"phoreal",             &phoreal},
-                        {"atl03_geo_fields",    &atl03GeoFields},
-                        {"atl03_ph_fields",     &atl03PhFields},
-                        {"atl06_fields",        &atl06Fields},
-                        {"atl08_fields",        &atl08Fields},
-                        {"atl13_fields",        &atl13Fields},
-                        {"year",                &year},
-                        {"month",               &month},
-                        {"day",                 &day},
-                        {"rgt",                 &rgt},
-                        {"cycle",               &cycle},
-                        {"region",              &region},
-                        {"version",             &version} }),
+Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* default_asset_name, const char* default_resource, const std::initializer_list<FieldDictionary::entry_t>& init_list):
+    RequestFields (L, key_space, {
+        {"asset",               &asset},
+        {"resource",            &resource},
+        {"srt",                 &surfaceType},
+        {"pass_invalid",        &passInvalid},
+        {"dist_in_seg",         &distInSeg},
+        {"cnf",                 &atl03Cnf},
+        {"quality_ph",          &qualityPh},
+        {"atl08_class",         &atl08Class},
+        {"beams",               &beams},
+        {"yapc",                &yapc},
+        {"track",               &track},
+        {"maxi",                &maxIterations},
+        {"cnt",                 &minPhotonCount},
+        {"ats",                 &alongTrackSpread},
+        {"H_min_win",           &minWindow},
+        {"sigma_r_max",         &maxRobustDispersion},
+        {"len",                 &extentLength},
+        {"res",                 &extentStep},
+        {"phoreal",             &phoreal},
+        {"atl03_geo_fields",    &atl03GeoFields},
+        {"atl03_ph_fields",     &atl03PhFields},
+        {"atl06_fields",        &atl06Fields},
+        {"atl08_fields",        &atl08Fields},
+        {"atl13_fields",        &atl13Fields},
+        {"year",                &year},
+        {"month",               &month},
+        {"day",                 &day},
+        {"rgt",                 &rgt},
+        {"cycle",               &cycle},
+        {"region",              &region},
+        {"version",             &version} }),
     asset(default_asset_name)
 {
     // initialize resource (if provided)

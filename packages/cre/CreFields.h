@@ -46,35 +46,23 @@
  * CLASS
  ******************************************************************************/
 
-class CreFields: public LuaObject, public FieldDictionary
+class CreFields: public RequestFields
 {
     public:
-
-        /*--------------------------------------------------------------------
-        * Constants
-        *--------------------------------------------------------------------*/
-
-        static const char* OBJECT_TYPE;
-        static const char* LUA_META_NAME;
-        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
         * Data
         *--------------------------------------------------------------------*/
 
-        FieldElement<string>    image; // container image
-        FieldElement<string>    name; // container name
-        FieldElement<string>    command; // container command
-        FieldElement<int>       timeout {RequestFields::DEFAULT_TIMEOUT}; // on requests to docker daemon
+        FieldElement<string>    container_image;
+        FieldElement<string>    container_name;
+        FieldElement<string>    container_command;
 
         /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
 
         static int  luaCreate   (lua_State* L);
-        static int  luaExport   (lua_State* L);
-        static int  luaImage    (lua_State* L);
-
         virtual void fromLua    (lua_State* L, int index) override;
 
     protected:

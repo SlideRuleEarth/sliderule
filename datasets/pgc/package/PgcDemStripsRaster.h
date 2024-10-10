@@ -50,7 +50,7 @@ class PgcDemStripsRaster: public GeoIndexedRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                 PgcDemStripsRaster (lua_State* L, GeoParms* _parms, const char* dem_name, const char* geo_suffix, GdalRaster::overrideCRS_t cb);
+                 PgcDemStripsRaster (lua_State* L, RequestFields* rqst_parms, const char* key, const char* dem_name, const char* geo_suffix, GdalRaster::overrideCRS_t cb);
                 ~PgcDemStripsRaster (void) override;
         bool     getFeatureDate     (const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate) final;
         void     getIndexFile       (const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points) final;

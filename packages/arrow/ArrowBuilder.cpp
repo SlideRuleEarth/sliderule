@@ -75,12 +75,11 @@ int ArrowBuilder::luaCreate (lua_State* L)
         const char* inq_name        = getLuaString(L, 3);
         const char* rec_type        = getLuaString(L, 4);
         const char* id              = getLuaString(L, 5);
-        const char* parms_str       = getLuaString(L, 6);
-        const char* endpoint        = getLuaString(L, 7);
-        const bool  keep_local      = getLuaBoolean(L, 8, true, false);
+        const char* endpoint        = getLuaString(L, 6);
+        const bool  keep_local      = getLuaBoolean(L, 7, true, false);
 
         /* Create Dispatch */
-        return createLuaObject(L, new ArrowBuilder(L, rqst_parms, outq_name, inq_name, rec_type, id, parms_str, endpoint, keep_local));
+        return createLuaObject(L, new ArrowBuilder(L, rqst_parms, outq_name, inq_name, rec_type, id, endpoint, keep_local));
     }
     catch(const RunTimeException& e)
     {
@@ -228,7 +227,7 @@ bool ArrowBuilder::hasAncElements (void) const
 /*----------------------------------------------------------------------------
  * getParmsString
  *----------------------------------------------------------------------------*/
-const char* ArrowBuilder::getParmsAsString (void)
+const string& ArrowBuilder::getParmsAsString (void)
 {
     return parmsAsString;
 }
@@ -251,13 +250,13 @@ const char* ArrowBuilder::getEndpoint (void)
 ArrowBuilder::ArrowBuilder (lua_State* L, RequestFields* rqst_parms,
                             const char* outq_name, const char* inq_name,
                             const char* rec_type, const char* id,
-                            const char* parms_str, const char* _endpoint,
-                            const bool keep_local):
+                            const char* _endpoint, const bool keep_local):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     rqstParms(rqst_parms),
     parms(rqst_parms->output),
     hasAncillaryFields(false),
     hasAncillaryElements(false),
+    parmsAsString(rqstParms->toJson()),
     keepLocal(keep_local)
 {
     assert(rqst_parms);
@@ -265,7 +264,6 @@ ArrowBuilder::ArrowBuilder (lua_State* L, RequestFields* rqst_parms,
     assert(inq_name);
     assert(rec_type);
     assert(id);
-    assert(parms_str);
     assert(_endpoint);
 
     /* Get Record Meta Data */
@@ -308,8 +306,7 @@ ArrowBuilder::ArrowBuilder (lua_State* L, RequestFields* rqst_parms,
     outputMetadataPath = ArrowCommon::createMetadataFileName(parms.path.value.c_str());
 
     /* Save Parameters */
-    parmsAsString = StringLib::duplicate(parms_str);
-    endpoint      = StringLib::duplicate(_endpoint);
+    endpoint = StringLib::duplicate(_endpoint);
 
     /* Create Unique Temporary Filenames */
     dataFile = ArrowCommon::getUniqueFileName(id);
@@ -354,7 +351,6 @@ ArrowBuilder::~ArrowBuilder(void)
     delete[] dataFile;
     delete[] metadataFile;
     delete[] outputMetadataPath;
-    delete[] parmsAsString;
     delete[] endpoint;
     delete[] recType;
     delete[] timeKey;

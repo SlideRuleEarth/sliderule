@@ -59,7 +59,11 @@ int GeoJsonRaster::luaCreate (lua_State* L)
 {
     try
     {
-        return createLuaObject(L, create(L, 1));
+        const char* geojstr = getLuaString(L, 1);
+        const double cellsize = getLuaFloat(L, 2);
+        RequestFields* rqst_parms = new RequestFields(L, 0, {});
+        LuaObject::referenceLuaObject(rqst_parms); // GeoJsonRaster expects a LuaObject created from a Lua script
+        return createLuaObject(L, new GeoJsonRaster(L, rqst_parms, GeoFields::DEFAULT_KEY, geojstr, cellsize));
     }
     catch(const RunTimeException& e)
     {
@@ -68,41 +72,15 @@ int GeoJsonRaster::luaCreate (lua_State* L)
     }
 }
 
-
-/*----------------------------------------------------------------------------
- * create
- *----------------------------------------------------------------------------*/
-GeoJsonRaster* GeoJsonRaster::create (lua_State* L, int index)
-{
-    /* Get geojson file */
-    lua_getfield(L, index, FILEDATA_KEY);
-    const char* geojstr = getLuaString(L, -1);
-    lua_pop(L, 1);
-
-    /* Get cellsize */
-    lua_getfield(L, index, CELLSIZE_KEY);
-    const double cellsize = getLuaFloat(L, -1);
-    lua_pop(L, 1);
-
-    /* Get Geo Parameters */
-    lua_getfield(L, index, GeoParms::SELF);
-    GeoParms* _parms = new GeoParms(L, lua_gettop(L), true);
-    LuaObject::referenceLuaObject(_parms); // GeoJsonRaster expects a LuaObject created from a Lua script
-    lua_pop(L, 1);
-
-    /* Create GeoJsonRaster */
-    return new GeoJsonRaster(L, _parms, geojstr, cellsize);
-}
-
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
 GeoJsonRaster* GeoJsonRaster::create (const string& geojson, double cellsize)
 {
     /* Get Geo Parameters */
-    GeoParms* _parms = new GeoParms(NULL, 0, true);
-    LuaObject::referenceLuaObject(_parms); // GeoJsonRaster expects a LuaObject created from a Lua script
-    return new GeoJsonRaster(NULL, _parms, geojson.c_str(), cellsize);
+    RequestFields* rqst_parms = new RequestFields(NULL, 0, {});
+    LuaObject::referenceLuaObject(rqst_parms); // GeoJsonRaster expects a LuaObject created from a Lua script
+    return new GeoJsonRaster(NULL, rqst_parms, GeoFields::DEFAULT_KEY, geojson.c_str(), cellsize);
 }
 
 /*----------------------------------------------------------------------------
@@ -153,8 +131,8 @@ GeoJsonRaster::~GeoJsonRaster(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoJsonRaster::GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* _geojstr, double _cellsize):
- GeoRaster(L, _parms, std::string("/vsimem/" + GdalRaster::getUUID() + ".tif"), TimeLib::gpstime(), false /* not elevation*/),
+GeoJsonRaster::GeoJsonRaster(lua_State* L, RequestFields* rqst_parms, const char* key, const char* _geojstr, double _cellsize):
+ GeoRaster(L, rqst_parms, key, std::string("/vsimem/" + GdalRaster::getUUID() + ".tif"), TimeLib::gpstime(), false /* not elevation*/),
  data(NULL),
  cellsize(_cellsize),
  cols(0),

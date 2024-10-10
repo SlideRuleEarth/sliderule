@@ -49,6 +49,7 @@ const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {"__index",     luaGetField},
     {"__newindex",  luaSetField},
     {"hasoutput",   luaWithArrowOutput},
+    {"samplers",    luaGetSamplers},
     {NULL,          NULL}
 };
 
@@ -64,7 +65,7 @@ int RequestFields::luaCreate (lua_State* L)
     RequestFields* request_fields = NULL;
     try
     {
-        request_fields = new RequestFields(L, {});
+        request_fields = new RequestFields(L, 0, {});
         request_fields->fromLua(L, 1);
         return createLuaObject(L, request_fields);
     }
@@ -163,7 +164,7 @@ int RequestFields::luaGetField (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(WARNING, "unable to retrieve field: %s", e.what());
+        mlog(DEBUG, "unable to retrieve field: %s", e.what());
         lua_pushnil(L);
     }
 
@@ -190,7 +191,7 @@ int RequestFields::luaSetField (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaWith ArrowOutput
+ * luaWithArrowOutput
  *----------------------------------------------------------------------------*/
 int RequestFields::luaWithArrowOutput (lua_State* L)
 {
@@ -206,6 +207,37 @@ int RequestFields::luaWithArrowOutput (lua_State* L)
     }
 
     return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaGetSamplers
+ *----------------------------------------------------------------------------*/
+int RequestFields::luaGetSamplers (lua_State* L)
+{
+    try
+    {
+        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+
+        // create table of GeoParms
+        lua_newtable(L);
+
+        // loop through each GeoFields
+        for(auto& pair: lua_obj->samplers.values)
+        {
+            // create entry of GeoFields
+            lua_pushstring(L, pair.first.c_str());
+            pair.second.toLua(L);
+            lua_settable(L, -3);
+        }
+
+        // return table
+        return 1;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "error retrieving samplers: %s", e.what());
+        return returnLuaStatus(L, false);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -234,6 +266,16 @@ bool RequestFields::maskIncludes (double lon, double lat) const
 {
     return regionMask.includes(lon, lat);
 }
+
+/*----------------------------------------------------------------------------
+ * geoFields
+ *----------------------------------------------------------------------------*/
+#ifdef __geo__
+const GeoFields* RequestFields::geoFields(const char* key)
+{
+    return &samplers[key];
+}
+#endif
 
 /*----------------------------------------------------------------------------
  * fromLua
@@ -277,7 +319,7 @@ void RequestFields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RequestFields::RequestFields(lua_State* L, const std::initializer_list<entry_t>& init_list):
+RequestFields::RequestFields(lua_State* L, uint64_t key_space, const std::initializer_list<entry_t>& init_list):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     FieldDictionary ({
         {"poly",                &polygon},
@@ -288,6 +330,7 @@ RequestFields::RequestFields(lua_State* L, const std::initializer_list<entry_t>&
         {"node_timeout",        &nodeTimeout},
         {"read_timeout",        &readTimeout},
         {"cluster_size_hint",   &clusterSizeHint},
+        {"key_space",           &keySpace},
         {"region_mask",         &regionMask},
         {"sliderule_version",   &slideruleVersion},
         {"build_information",   &buildInformation},
@@ -295,8 +338,14 @@ RequestFields::RequestFields(lua_State* L, const std::initializer_list<entry_t>&
         #ifdef __arrow__
         {"output",              &output},
         #endif
+        #ifdef __geo__
+        {"samples",             &samplers},
+        #endif
     })
 {
+    // set key space
+    keySpace = key_space;
+
     // add additional fields to dictionary
     for(const entry_t elem: init_list)
     {

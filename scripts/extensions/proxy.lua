@@ -17,14 +17,18 @@
 local json = require("json")
 local earthdata = require("earth_data_query")
 
-local function proxy(resources, parms, endpoint, rec)
+local function proxy(resources, parms_tbl, endpoint, rec)
+
+    -- Create Request Parameters --
+    local parms = core.parms(parms_tbl)
+
     -- Create User Status --
     local userlog = msg.publish(rspq)
 
     -- Request Parameters --
-    local timeout = parms["rqst_timeout"] or parms["timeout"] or core.RQST_TIMEOUT
-    local node_timeout = parms["node_timeout"] or parms["timeout"] or core.NODE_TIMEOUT
-    local cluster_size_hint = parms["cluster_size_hint"] or core.CLUSTER_SIZE_HINT
+    local timeout = parms["rqst_timeout"]
+    local node_timeout = parms["node_timeout"]
+    local cluster_size_hint = parms["cluster_size_hint"]
 
     -- Initialize Queue Management --
     local rsps_from_nodes = rspq
@@ -32,15 +36,13 @@ local function proxy(resources, parms, endpoint, rec)
 
     -- Handle Output Options --
     local arrow_builder = nil
-    local arrow_parms = nil
     local arrow_file = nil
     local arrow_metafile = nil
     if parms:hasoutput() then
         -- Determine if Keeping Local File (needed for later ArrowSampler) --
         local keep_local = parms[geo.PARMS] ~= nil
         -- Arrow Builder --
-        local parms_str = json.encode(parms)
-        arrow_builder = arrow.builder(parms, rspq, rspq .. "-builder", rec, rqstid, parms_str, endpoint, keep_local)
+        arrow_builder = arrow.builder(parms, rspq, rspq .. "-builder", rec, rqstid, endpoint, keep_local)
         if arrow_builder then
             rsps_from_nodes = rspq .. "-builder"
             terminate_proxy_stream = true
@@ -84,7 +86,7 @@ local function proxy(resources, parms, endpoint, rec)
     end
 
     -- Proxy Request --
-    local endpoint_proxy = core.proxy(endpoint, resources, json.encode(parms), node_timeout, locks_per_node, rsps_from_nodes, terminate_proxy_stream, cluster_size_hint)
+    local endpoint_proxy = core.proxy(endpoint, resources, json.encode(parms_tbl), node_timeout, locks_per_node, rsps_from_nodes, terminate_proxy_stream, cluster_size_hint)
 
     -- Wait Until Proxy Completes --
     local duration = 0

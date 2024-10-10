@@ -487,7 +487,7 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
     delete [] pkg_list;
 
     /* Build rqst String */
-    const FString rqststr("{\"endpoint\": \"%s\", \"parms\": %s}", arrowBuilder->getEndpoint(), arrowBuilder->getParmsAsString());
+    const FString rqststr("{\"endpoint\": \"%s\", \"parms\": %s}", arrowBuilder->getEndpoint(), arrowBuilder->getParmsAsString().c_str());
 
     /* Initialize Meta Data String */
     string metastr(FString(R"json({

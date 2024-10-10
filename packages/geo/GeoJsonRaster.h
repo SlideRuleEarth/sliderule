@@ -63,14 +63,13 @@ class GeoJsonRaster: public GeoRaster
          *--------------------------------------------------------------------*/
 
         /* import bbox_t into this namespace from GeoParms.h */
-        using bbox_t=GeoParms::bbox_t;
+        using bbox_t=GeoFields::bbox_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static int            luaCreate      (lua_State* L);
-        static GeoJsonRaster* create         (lua_State* L, int index);
         static GeoJsonRaster* create         (const string& geojson, double cellsize);
 
         bool                  includes       (double lon, double lat, double height=0);
@@ -98,7 +97,7 @@ class GeoJsonRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        GeoJsonRaster(lua_State* L, GeoParms* _parms, const char* _geojstr, double cellsize);
+        GeoJsonRaster(lua_State* L, RequestFields* rqst_parms, const char* key, const char* _geojstr, double cellsize);
 
     private:
 

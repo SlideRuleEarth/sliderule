@@ -36,6 +36,7 @@ if (GDAL_FOUND AND PROJ_FOUND AND TIFF_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/RasterObject.cpp
             ${CMAKE_CURRENT_LIST_DIR}/RasterSampler.cpp
             ${CMAKE_CURRENT_LIST_DIR}/RasterSubset.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/GeoFields.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoParms.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoRtree.cpp
@@ -61,6 +62,7 @@ if (GDAL_FOUND AND PROJ_FOUND AND TIFF_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/RasterSampler.h
             ${CMAKE_CURRENT_LIST_DIR}/RasterSample.h
             ${CMAKE_CURRENT_LIST_DIR}/RasterSubset.h
+            ${CMAKE_CURRENT_LIST_DIR}/GeoFields.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoParms.h
             ${CMAKE_CURRENT_LIST_DIR}/GeoLib.h
             ${CMAKE_CURRENT_LIST_DIR}/GeoRtree.h
