@@ -269,14 +269,14 @@ int geo_open (lua_State* L)
     luaL_newlib(L, geo_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrStr   (L, GeoParms::NEARESTNEIGHBOUR_ALGO,    GeoParms::NEARESTNEIGHBOUR_ALGO);
-    LuaEngine::setAttrStr   (L, GeoParms::BILINEAR_ALGO,            GeoParms::BILINEAR_ALGO);
-    LuaEngine::setAttrStr   (L, GeoParms::CUBIC_ALGO,               GeoParms::CUBIC_ALGO);
-    LuaEngine::setAttrStr   (L, GeoParms::CUBICSPLINE_ALGO,         GeoParms::CUBICSPLINE_ALGO);
-    LuaEngine::setAttrStr   (L, GeoParms::LANCZOS_ALGO,             GeoParms::LANCZOS_ALGO);
-    LuaEngine::setAttrStr   (L, GeoParms::AVERAGE_ALGO,             GeoParms::AVERAGE_ALGO);
-    LuaEngine::setAttrStr   (L, GeoParms::MODE_ALGO,                GeoParms::MODE_ALGO);
-    LuaEngine::setAttrStr   (L, GeoParms::GAUSS_ALGO,               GeoParms::GAUSS_ALGO);
+    LuaEngine::setAttrStr   (L, GeoFields::NEARESTNEIGHBOUR_ALGO_STR,    GeoFields::NEARESTNEIGHBOUR_ALGO_STR);
+    LuaEngine::setAttrStr   (L, GeoFields::BILINEAR_ALGO_STR,            GeoFields::BILINEAR_ALGO_STR);
+    LuaEngine::setAttrStr   (L, GeoFields::CUBIC_ALGO_STR,               GeoFields::CUBIC_ALGO_STR);
+    LuaEngine::setAttrStr   (L, GeoFields::CUBICSPLINE_ALGO_STR,         GeoFields::CUBICSPLINE_ALGO_STR);
+    LuaEngine::setAttrStr   (L, GeoFields::LANCZOS_ALGO_STR,             GeoFields::LANCZOS_ALGO_STR);
+    LuaEngine::setAttrStr   (L, GeoFields::AVERAGE_ALGO_STR,             GeoFields::AVERAGE_ALGO_STR);
+    LuaEngine::setAttrStr   (L, GeoFields::MODE_ALGO_STR,                GeoFields::MODE_ALGO_STR);
+    LuaEngine::setAttrStr   (L, GeoFields::GAUSS_ALGO_STR,               GeoFields::GAUSS_ALGO_STR);
 
     return 1;
 }

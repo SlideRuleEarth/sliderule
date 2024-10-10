@@ -45,6 +45,15 @@
 
 const char* GeoFields::DEFAULT_KEY = "default";
 
+const char* GeoFields::NEARESTNEIGHBOUR_ALGO_STR = "NearestNeighbour";
+const char* GeoFields::BILINEAR_ALGO_STR         = "Bilinear";
+const char* GeoFields::CUBIC_ALGO_STR            = "Cubic";
+const char* GeoFields::CUBICSPLINE_ALGO_STR      = "CubicSpline";
+const char* GeoFields::LANCZOS_ALGO_STR          = "Lanczos";
+const char* GeoFields::AVERAGE_ALGO_STR          = "Average";
+const char* GeoFields::MODE_ALGO_STR             = "Mode";
+const char* GeoFields::GAUSS_ALGO_STR            = "Gauss";
+
 /******************************************************************************
  * CLASS METHODS
  ******************************************************************************/

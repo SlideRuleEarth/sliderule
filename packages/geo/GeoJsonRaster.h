@@ -37,7 +37,7 @@
  ******************************************************************************/
 
 #include "GeoRaster.h"
-#include "GeoParms.h"
+#include "GeoFields.h"
 
 /******************************************************************************
  * GEOJSON RASTER CLASS
@@ -62,7 +62,7 @@ class GeoJsonRaster: public GeoRaster
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        /* import bbox_t into this namespace from GeoParms.h */
+        /* import bbox_t into this namespace from GeoFields.h */
         using bbox_t=GeoFields::bbox_t;
 
         /*--------------------------------------------------------------------

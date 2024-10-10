@@ -73,7 +73,17 @@ class GeoFields: public FieldDictionary
         * Constants
         *--------------------------------------------------------------------*/
 
-       static const char* DEFAULT_KEY;
+        static const char* DEFAULT_KEY;
+
+        static const char* NEARESTNEIGHBOUR_ALGO_STR;
+        static const char* BILINEAR_ALGO_STR;
+        static const char* CUBIC_ALGO_STR;
+        static const char* CUBICSPLINE_ALGO_STR;
+        static const char* LANCZOS_ALGO_STR;
+        static const char* AVERAGE_ALGO_STR;
+        static const char* MODE_ALGO_STR;
+        static const char* GAUSS_ALGO_STR;
+        static const char* ZONALSTATS_ALGO_STR;
 
         /*--------------------------------------------------------------------
         * Typedefs

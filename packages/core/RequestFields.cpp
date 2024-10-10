@@ -218,7 +218,7 @@ int RequestFields::luaGetSamplers (lua_State* L)
     {
         RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
 
-        // create table of GeoParms
+        // create table of GeoFields
         lua_newtable(L);
 
         // loop through each GeoFields
