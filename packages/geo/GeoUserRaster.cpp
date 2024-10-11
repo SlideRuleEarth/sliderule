@@ -59,65 +59,62 @@ const char* GeoUserRaster::SAMPLES_KEY       = "samples";
  *----------------------------------------------------------------------------*/
 int GeoUserRaster::luaCreate (lua_State* L)
 {
-    GeoUserRaster* gur = NULL;
+    const int index = 1;
+    RequestFields* rqst_parms = NULL;
     try
     {
-        gur = create( L, 1);
-        return createLuaObject(L, gur);
+        /* Get raster */
+        lua_getfield(L, index, RASTERDATA_KEY);
+        const char* raster = getLuaString(L, -1);
+        lua_pop(L, 1);
+
+        /* Get raster length */
+        lua_getfield(L, index, RASTERLENGTH_KEY);
+        size_t rasterlength = (size_t)getLuaInteger(L, -1);
+        lua_pop(L, 1);
+
+        /* Get raster gps time */
+        lua_getfield(L, index, GPSTIME_KEY);
+        const double gps = getLuaFloat(L, -1);
+        lua_pop(L, 1);
+
+        /* Get raster elevation flag */
+        lua_getfield(L, index, ELEVATION_KEY);
+        const bool iselevation = getLuaBoolean(L, -1);
+        lua_pop(L, 1);
+
+        /* Get geo fields */
+        lua_getfield(L, index, SAMPLES_KEY);
+        rqst_parms = new RequestFields(L, 0, {});
+        GeoFields* geo_fields = new GeoFields();
+        if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields))
+        {
+            delete geo_fields;
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to add default geo fields");
+        }
+        geo_fields->fromLua(L, lua_gettop(L));
+        LuaObject::referenceLuaObject(rqst_parms); // GeoUserRaster expects a LuaObject created from a Lua script
+        lua_pop(L, 1);
+
+        /* Convert raster from Base64 to Binary */
+        const std::string tiff = MathLib::b64decode(raster, rasterlength);
+        rasterlength = tiff.length();
+
+        /* Check maximum size */
+        const uint32_t maxSize = 64*1024*1024;
+        if(rasterlength > maxSize)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "User raster too big, size is: %lu, max allowed: %u", rasterlength, maxSize);
+
+        /* Create GeoUserRaster */
+        return createLuaObject(L, new GeoUserRaster(L, rqst_parms, GeoFields::DEFAULT_KEY, tiff.c_str(), tiff.size(), gps, iselevation));
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating GeoUserRaster: %s", e.what());
-        delete gur;
+        delete rqst_parms;
         return returnLuaStatus(L, false);
     }
 }
-
-
-/*----------------------------------------------------------------------------
- * create
- *----------------------------------------------------------------------------*/
-GeoUserRaster* GeoUserRaster::create (lua_State* L, int index)
-{
-    /* Get raster */
-    lua_getfield(L, index, RASTERDATA_KEY);
-    const char* raster = getLuaString(L, -1);
-    lua_pop(L, 1);
-
-    /* Get raster length */
-    lua_getfield(L, index, RASTERLENGTH_KEY);
-    size_t rasterlength = (size_t)getLuaInteger(L, -1);
-    lua_pop(L, 1);
-
-    /* Get raster gps time */
-    lua_getfield(L, index, GPSTIME_KEY);
-    const double gps = getLuaFloat(L, -1);
-    lua_pop(L, 1);
-
-    /* Get raster elevation flag */
-    lua_getfield(L, index, ELEVATION_KEY);
-    const bool iselevation = getLuaBoolean(L, -1);
-    lua_pop(L, 1);
-
-    lua_getfield(L, index, SAMPLES_KEY);
-    RequestFields* rqst_parms = new RequestFields(L, 0, {});
-    rqst_parms->fromLua(L, lua_gettop(L));
-    LuaObject::referenceLuaObject(rqst_parms); // GeoUserRaster expects a LuaObject created from a Lua script
-    lua_pop(L, 1);
-
-    /* Convert raster from Base64 to Binary */
-    const std::string tiff = MathLib::b64decode(raster, rasterlength);
-    rasterlength = tiff.length();
-
-    const uint32_t maxSize = 64*1024*1024;
-    if(rasterlength > maxSize)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "User raster too big, size is: %lu, max allowed: %u", rasterlength, maxSize);
-
-
-    /* Create GeoUserRaster */
-    return new GeoUserRaster(L, rqst_parms, GeoFields::DEFAULT_KEY, tiff.c_str(), tiff.size(), gps, iselevation);
-}
-
 
 /*----------------------------------------------------------------------------
  * Destructor

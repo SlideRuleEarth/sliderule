@@ -57,17 +57,25 @@ const char* GeoJsonRaster::CELLSIZE_KEY   = "cellsize";
  *----------------------------------------------------------------------------*/
 int GeoJsonRaster::luaCreate (lua_State* L)
 {
+    RequestFields* rqst_parms = NULL;
     try
     {
         const char* geojstr = getLuaString(L, 1);
         const double cellsize = getLuaFloat(L, 2);
-        RequestFields* rqst_parms = new RequestFields(L, 0, {});
+        rqst_parms = new RequestFields(L, 0, {});
+        GeoFields* geo_fields = new GeoFields();
+        if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields))
+        {
+            delete geo_fields;
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to add default geo fields");
+        }
         LuaObject::referenceLuaObject(rqst_parms); // GeoJsonRaster expects a LuaObject created from a Lua script
         return createLuaObject(L, new GeoJsonRaster(L, rqst_parms, GeoFields::DEFAULT_KEY, geojstr, cellsize));
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating GeoJsonRaster: %s", e.what());
+        delete rqst_parms;
         return returnLuaStatus(L, false);
     }
 }
@@ -77,10 +85,25 @@ int GeoJsonRaster::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 GeoJsonRaster* GeoJsonRaster::create (const string& geojson, double cellsize)
 {
-    /* Get Geo Parameters */
-    RequestFields* rqst_parms = new RequestFields(NULL, 0, {});
-    LuaObject::referenceLuaObject(rqst_parms); // GeoJsonRaster expects a LuaObject created from a Lua script
-    return new GeoJsonRaster(NULL, rqst_parms, GeoFields::DEFAULT_KEY, geojson.c_str(), cellsize);
+    RequestFields* rqst_parms = NULL;
+    try
+    {
+        rqst_parms = new RequestFields(NULL, 0, {});
+        GeoFields* geo_fields = new GeoFields();
+        if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields))
+        {
+            delete geo_fields;
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to add default geo fields");
+        }
+        LuaObject::referenceLuaObject(rqst_parms); // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+        return new GeoJsonRaster(NULL, rqst_parms, GeoFields::DEFAULT_KEY, geojson.c_str(), cellsize);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating GeoJsonRaster: %s", e.what());
+        delete rqst_parms;
+        return NULL;
+    }
 }
 
 /*----------------------------------------------------------------------------

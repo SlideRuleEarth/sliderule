@@ -587,6 +587,7 @@ bool GeoLib::burnGeoJson(RegionMask& image)
     {
         // create geojson raster
         raster = GeoJsonRaster::create(image.geojson.value, image.cellSize.value);
+        if(!raster) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to create raster");
 
         // populate image attributes
         const GeoJsonRaster::bbox_t bbox = raster->getRasterBbox();

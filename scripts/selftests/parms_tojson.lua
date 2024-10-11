@@ -49,25 +49,22 @@ if __cre__ then
     runner.check(string.len(json.encode(js)) > 0)
 
     print(string.format("\n--------------------------------\nUserSet cre.parms.export\n--------------------------------"))
-    js = cre.parms({image="/tmp/fakeimage.jpg", command="fakecommand"}):export()
-    runner.check(js.image == "/tmp/fakeimage.jpg", js.image)
-    runner.check(js.command == "fakecommand", js.command)
+    js = cre.parms({container_image="/tmp/fakeimage.jpg", container_command="fakecommand"}):export()
+    runner.check(js.container_image == "/tmp/fakeimage.jpg", js.container_image)
+    runner.check(js.container_command == "fakecommand", js.container_command)
 end
 
---[[
 if __geo__ then
     print(string.format("\n--------------------------------\nDefault geo.parms.export\n--------------------------------"))
-    jsonstr = geo.parms({}):tojson()
-    runner.check(string.len(jsonstr) > 0)
+    js = geo.parms({}):export(geo.DEFAULT_SAMPLER)
+    runner.check(string.len(json.encode(js)) > 0)
 
     print(string.format("\n--------------------------------\nUserSet geo.parms.export\n--------------------------------"))
-    jsonstr = geo.parms({ asset = "arcticdem-mosaic", algorithm = "Bilinear", radius = 0, bands = {"NDVI", "B03"}}):tojson()
-    js = json.decode(jsonstr)
+    js = geo.parms({ asset = "arcticdem-mosaic", algorithm = "Bilinear", radius = 0, bands = {"NDVI", "B03"}}):export(geo.DEFAULT_SAMPLER)
     runner.check(js.sampling_algo == "Bilinear", js.sampling_algo)
-    runner.check(js.bands_list[1] == "NDVI", js.bands_list[1])
-    runner.check(js.bands_list[2] == "B03", js.bands_list[2])
+    runner.check(js.bands[1] == "NDVI", js.bands[1])
+    runner.check(js.bands[2] == "B03", js.bands[2])
 end
---]]
 
 print(string.format("\n--------------------------------\nDefault core.parms.export\n--------------------------------"))
 js = core.parms({}):export()

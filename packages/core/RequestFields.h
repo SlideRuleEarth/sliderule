@@ -96,7 +96,7 @@ class RequestFields: public LuaObject, public FieldDictionary
         bool maskIncludes (double lon, double lat) const;
 
         #ifdef __geo__
-        const GeoFields* geoFields(const char* key);
+        const GeoFields* geoFields(const char* key) const;
         #endif
 
         virtual void fromLua (lua_State* L, int index) override;

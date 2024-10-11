@@ -87,7 +87,16 @@ int RequestFields::luaExport (lua_State* L)
     try
     {
         const RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
-        num_rets = lua_obj->toLua(L);
+        const char* sampler = getLuaString(L, 2, true, NULL);
+
+        if(!sampler)
+        {
+            num_rets = lua_obj->toLua(L);
+        }
+        else
+        {
+            lua_obj->samplers["sampler"].toLua(L);
+        }
     }
     catch(const RunTimeException& e)
     {
@@ -276,7 +285,7 @@ bool RequestFields::maskIncludes (double lon, double lat) const
  * geoFields
  *----------------------------------------------------------------------------*/
 #ifdef __geo__
-const GeoFields* RequestFields::geoFields(const char* key)
+const GeoFields* RequestFields::geoFields(const char* key) const
 {
     return &samplers[key];
 }

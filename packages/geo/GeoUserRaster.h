@@ -62,7 +62,6 @@ class GeoUserRaster: public GeoRaster
          *--------------------------------------------------------------------*/
 
         static int            luaCreate      (lua_State* L);
-        static GeoUserRaster* create         (lua_State* L, int index);
 
                              ~GeoUserRaster  (void) override;
 

@@ -62,7 +62,7 @@ class FieldMap: public Field
         long            length      (void) const override;
 
         FieldMap<T>&    operator=   (const FieldMap<T>& other);
-        const T&        operator[]  (const char* key);
+        const T&        operator[]  (const char* key) const;
 
         string          toJson      (void) const override;
         int             toLua       (lua_State* L) const override;
@@ -132,7 +132,7 @@ FieldMap<T>& FieldMap<T>::operator= (const FieldMap<T>& other)
  * operator[] - rvalue
  *----------------------------------------------------------------------------*/
 template <class T>
-const T& FieldMap<T>::operator[](const char* key)
+const T& FieldMap<T>::operator[](const char* key) const
 {
     return *values[key];
 }
