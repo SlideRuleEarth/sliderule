@@ -128,7 +128,7 @@ void GdalRaster::open(void)
     // mlog(DEBUG, "Extent: (%.2lf, %.2lf), (%.2lf, %.2lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
 
     cellSize       = geoTransform[1];
-    radiusInPixels = radius2pixels(parms->sampling_radius);
+    radiusInPixels = radius2pixels(parms->sampling_radius.value);
 
     /* Limit maximum sampling radius */
     if(radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
