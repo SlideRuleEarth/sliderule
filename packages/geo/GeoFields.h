@@ -146,10 +146,7 @@ class GeoFields: public FieldDictionary
         void fromLua (lua_State* L, int index) override;
 
         GeoFields   (void);
-        GeoFields   (const GeoFields& other);
         ~GeoFields  (void) override = default;
-
-//        GeoFields& operator= (const GeoFields& geo_fields);
 
         static std::string  sserror2str (uint32_t error);
 };

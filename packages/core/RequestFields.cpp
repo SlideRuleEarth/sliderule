@@ -222,12 +222,17 @@ int RequestFields::luaGetSamplers (lua_State* L)
         lua_newtable(L);
 
         // loop through each GeoFields
-        for(auto& pair: lua_obj->samplers.values)
+        GeoFields* geo_field;
+        const char* key = lua_obj->samplers.values.first(&geo_field);
+        while(key != NULL)
         {
             // create entry of GeoFields
-            lua_pushstring(L, pair.first.c_str());
-            pair.second.toLua(L);
+            lua_pushstring(L, key);
+            geo_field->toLua(L);
             lua_settable(L, -3);
+
+            // goto next geo field
+            key = lua_obj->samplers.values.next(&geo_field);
         }
 
         // return table

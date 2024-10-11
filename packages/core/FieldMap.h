@@ -38,6 +38,7 @@
 
 #include "OsApi.h"
 #include "LuaEngine.h"
+#include "Dictionary.h"
 #include "Field.h"
 
 /******************************************************************************
@@ -54,13 +55,13 @@ class FieldMap: public Field
          *--------------------------------------------------------------------*/
 
                         FieldMap    (void);
-                        FieldMap    (const FieldMap<T>& field_map);
+                        FieldMap    (const FieldMap<T>& other);
         virtual         ~FieldMap   (void) override = default;
 
-        long            add         (const string& key, const T& v);
+        long            add         (const char* key, T* v);
         long            length      (void) const override;
 
-        FieldMap<T>&    operator=   (const FieldMap<T>& field_map);
+        FieldMap<T>&    operator=   (const FieldMap<T>& other);
         const T&        operator[]  (const char* key);
 
         string          toJson      (void) const override;
@@ -71,7 +72,7 @@ class FieldMap: public Field
          * Data
          *--------------------------------------------------------------------*/
 
-        map<string, T> values;
+        Dictionary<T*> values;
 };
 
 /******************************************************************************
@@ -91,9 +92,9 @@ FieldMap<T>::FieldMap():
  * Constructor - Copy
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldMap<T>::FieldMap(const FieldMap<T>& field_map):
+FieldMap<T>::FieldMap(const FieldMap<T>& other):
     Field(LIST, getImpliedEncoding<T>()),
-    values(field_map.values)
+    values(other.values)
 {
 }
 
@@ -101,10 +102,10 @@ FieldMap<T>::FieldMap(const FieldMap<T>& field_map):
  * add
  *----------------------------------------------------------------------------*/
 template<class T>
-long FieldMap<T>::add(const string& key, const T& v)
+long FieldMap<T>::add(const char* key, T* v)
 {
-    values[key] = v;
-    return static_cast<long>(values.size());
+    values.add(key, v);
+    return values.length();
 }
 
 /*----------------------------------------------------------------------------
@@ -113,17 +114,17 @@ long FieldMap<T>::add(const string& key, const T& v)
 template<class T>
 long FieldMap<T>::length(void) const
 {
-    return static_cast<long>(values.size());
+    return values.length();
 }
 
 /*----------------------------------------------------------------------------
  * operator=
  *----------------------------------------------------------------------------*/
 template<class T>
-FieldMap<T>& FieldMap<T>::operator= (const FieldMap<T>& field_map)
+FieldMap<T>& FieldMap<T>::operator= (const FieldMap<T>& other)
 {
-    if(&field_map == this) return *this;
-    values = field_map.values;
+    if(&other == this) return *this;
+    values = other.values;
     return *this;
 }
 
@@ -133,7 +134,7 @@ FieldMap<T>& FieldMap<T>::operator= (const FieldMap<T>& field_map)
 template <class T>
 const T& FieldMap<T>::operator[](const char* key)
 {
-    return values[key];
+    return *values[key];
 }
 
 /*----------------------------------------------------------------------------
@@ -142,17 +143,15 @@ const T& FieldMap<T>::operator[](const char* key)
 template <class T>
 string FieldMap<T>::toJson (void) const
 {
-    long cnt = 0;
-    long size = length();
+    typename Dictionary<T*>::Iterator iter(values);
     string str("{");
-    for(const auto& pair: values)
+    for(int i = 0; i < iter.length; i++)
     {
         str += "\"";
-        str += pair.first;
+        str += iter[i].key;
         str += "\":";
-        str += convertToJson(pair.second);
-        if(cnt < size - 1) str += ",";
-        cnt++;
+        str += convertToJson(*iter[i].value);
+        if(i < iter.length - 1) str += ",";
     }
     str += "}";
     return str;
@@ -164,11 +163,12 @@ string FieldMap<T>::toJson (void) const
 template <class T>
 int FieldMap<T>::toLua (lua_State* L) const
 {
+    typename Dictionary<T*>::Iterator iter(values);
     lua_newtable(L);
-    for(auto& pair: values)
+    for(int i = 0; i < iter.length; i++)
     {
-        lua_pushstring(L, pair.first.c_str());
-        convertToLua(L, pair.second);
+        lua_pushstring(L, iter[i].key);
+        convertToLua(L, *iter[i].value);
         lua_settable(L, -3);
     }
     return 1;
@@ -188,8 +188,9 @@ void FieldMap<T>::fromLua (lua_State* L, int index)
             try
             {
                 const char* key = LuaObject::getLuaString(L, -2);
-                values.emplace(key, T());
-                convertFromLua(L, -1, values[key]);
+                T* value = new T;
+                values.add(key, value);
+                convertFromLua(L, -1, *value);
             }
             catch(const RunTimeException& e)
             {

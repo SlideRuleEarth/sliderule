@@ -69,12 +69,10 @@ class FieldDictionary: public Field
 
                         FieldDictionary (std::initializer_list<entry_t> init_list, int hash_table_size=DEFAULT_INITIAL_HASH_TABLE_SIZE);
         explicit        FieldDictionary (int hash_table_size=DEFAULT_INITIAL_HASH_TABLE_SIZE);
-//                        FieldDictionary (const FieldDictionary& dictionary);
         virtual         ~FieldDictionary(void) override = default;
 
         bool            add             (const entry_t& entry);
 
-//        FieldDictionary& operator=      (const FieldDictionary& dictionary);
         Field*          operator[]      (const char* key) const;
         Field&          operator[]      (const char* key);
 

@@ -67,8 +67,9 @@ int GeoFields::luaCreate (lua_State* L)
     try
     {
         request_fields = new RequestFields(L, 0, {});
-        request_fields->samplers.values.emplace(GeoFields::DEFAULT_KEY, GeoFields());
-        request_fields->samplers.values[GeoFields::DEFAULT_KEY].fromLua(L, 1);
+        GeoFields* geo_fields = new GeoFields();
+        request_fields->samplers.add(GeoFields::DEFAULT_KEY, geo_fields);
+        geo_fields->fromLua(L, 1);
         return LuaObject::createLuaObject(L, request_fields);
     }
     catch(const RunTimeException& e)
@@ -203,70 +204,6 @@ GeoFields::GeoFields (void):
 {
 }
 
-/*----------------------------------------------------------------------------
- * Constructor - Copy
- *----------------------------------------------------------------------------*/
-GeoFields::GeoFields (const GeoFields& other):
-    FieldDictionary ({
-        {"algorithm",       &sampling_algo},
-        {"radius",          &sampling_radius},
-        {"t0",              &t0},
-        {"t1",              &t1},
-        {"closest_time",    &tc},
-        {"zonal_stats",     &zonal_stats},
-        {"with_flags",      &flags_file},
-        {"substr",          &url_substring},
-        {"use_poi_time",    &use_poi_time},
-        {"doy_range",       &doy_range},
-        {"sort_by_index",   &sort_by_index},
-        {"proj_pipeline",   &proj_pipeline},
-        {"aoi_bbox",        &aoi_bbox},
-        {"catalog",         &catalog},
-        {"bands",           &bands},
-        {"asset",           &asset}
-    }),
-    filter_time(other.filter_time),
-    filter_doy_range(other.filter_doy_range),
-    doy_keep_inrange(other.doy_keep_inrange),
-    doy_start(other.doy_start),
-    doy_end(other.doy_end),
-    filter_closest_time(other.filter_closest_time),
-    closest_time(other.closest_time),
-    start_time(other.start_time),
-    stop_time(other.stop_time)
-{
-    sampling_algo = other.sampling_algo;
-    sampling_radius = other.sampling_radius;
-    t0 = other.t0;
-    t1 = other.t1;
-    tc = other.tc;
-    zonal_stats = other.zonal_stats;
-    flags_file = other.flags_file;
-    url_substring = other.url_substring;
-    use_poi_time = other.use_poi_time;
-    doy_range = other.doy_range;
-    sort_by_index = other.sort_by_index;
-    proj_pipeline = other.proj_pipeline;
-    aoi_bbox = other.aoi_bbox;
-    catalog = other.catalog;
-    bands = other.bands;
-    asset = other.asset;
-
-printf("\n\n\nHERE WE ARE\n\n\n");
-}
-
-/*----------------------------------------------------------------------------
- * operator=
- *----------------------------------------------------------------------------*/
-/*
-GeoFields& GeoFields::operator= (const GeoFields& geo_fields)
-{
-    if(&geo_fields == this) return *this;
-printf("\n\n\nPH BOY\n\n\n");
-    fields = geo_fields.fields;
-    return *this;
-}
-*/
 /*----------------------------------------------------------------------------
  * sserror2str
  *----------------------------------------------------------------------------*/

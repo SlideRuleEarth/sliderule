@@ -64,33 +64,12 @@ FieldDictionary::FieldDictionary(int hash_table_size):
 }
 
 /*----------------------------------------------------------------------------
- * Copy Constructor
- *----------------------------------------------------------------------------*/
-//FieldDictionary::FieldDictionary(const FieldDictionary& dictionary):
-//    Field(DICTIONARY, 0),
-//    fields(dictionary.fields)
-//{
-//printf("\n\n\nTHIS IS PROBABLY A BUG\n\n\n");
-//}
-
-/*----------------------------------------------------------------------------
  * add
  *----------------------------------------------------------------------------*/
 bool FieldDictionary::add(const entry_t& entry)
 {
     return fields.add(entry.name, entry);
 }
-
-/*----------------------------------------------------------------------------
- * operator=
- *----------------------------------------------------------------------------*/
-//FieldDictionary& FieldDictionary::operator= (const FieldDictionary& dictionary)
-//{
-//    if(this == &dictionary) return *this;
-//printf("\n\n\nI MEAN IT, IT IS PROBABLY A BUG\n\n\n");
-//    fields = dictionary.fields;
-//    return *this;
-//}
 
 /*----------------------------------------------------------------------------
  * operator[] - rvalue
