@@ -119,7 +119,6 @@ class GeoFields: public FieldDictionary
         FieldElement<bool>              zonal_stats {false};
         FieldElement<bool>              flags_file {false};
         FieldElement<string>            url_substring;
-        FieldElement<bool>              filter_closest_time {false};
         FieldElement<bool>              use_poi_time {false};
         FieldElement<string>            doy_range;
         FieldElement<bool>              sort_by_index {false};
@@ -134,6 +133,7 @@ class GeoFields: public FieldDictionary
         bool                            doy_keep_inrange;
         int                             doy_start;
         int                             doy_end;
+        bool                            filter_closest_time;
         TimeLib::gmt_time_t             closest_time;
         TimeLib::gmt_time_t             start_time;
         TimeLib::gmt_time_t             stop_time;
@@ -146,7 +146,10 @@ class GeoFields: public FieldDictionary
         void fromLua (lua_State* L, int index) override;
 
         GeoFields   (void);
+        GeoFields   (const GeoFields& other);
         ~GeoFields  (void) override = default;
+
+//        GeoFields& operator= (const GeoFields& geo_fields);
 
         static std::string  sserror2str (uint32_t error);
 };

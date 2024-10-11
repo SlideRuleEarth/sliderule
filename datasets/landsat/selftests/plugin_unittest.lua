@@ -41,15 +41,14 @@ local demType = "landsat-hls"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog=contents, sort_by_index=true }))
 runner.check(dem ~= nil)
 
-ut = geo.ut_sample(dem)
+local ut = geo.ut_sample(dem)
 runner.check(ut ~= nil)
-status = ut:test(lon, lat, lon_incr, lat_incr, pointCount)
+local status = ut:test(lon, lat, lon_incr, lat_incr, pointCount)
 runner.check(status, "Failed sampling test")
-ut = nil
-
-
 
 -- Clean Up --
+
+ut:destroy()
 
 -- Report Results --
 

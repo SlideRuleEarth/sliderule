@@ -54,11 +54,14 @@ class FieldMap: public Field
          *--------------------------------------------------------------------*/
 
                         FieldMap    (void);
+                        FieldMap    (const FieldMap<T>& field_map);
         virtual         ~FieldMap   (void) override = default;
 
         long            add         (const string& key, const T& v);
         long            length      (void) const override;
-        const T&               operator[]  (const char* key);
+
+        FieldMap<T>&    operator=   (const FieldMap<T>& field_map);
+        const T&        operator[]  (const char* key);
 
         string          toJson      (void) const override;
         int             toLua       (lua_State* L) const override;
@@ -85,6 +88,16 @@ FieldMap<T>::FieldMap():
 }
 
 /*----------------------------------------------------------------------------
+ * Constructor - Copy
+ *----------------------------------------------------------------------------*/
+template <class T>
+FieldMap<T>::FieldMap(const FieldMap<T>& field_map):
+    Field(LIST, getImpliedEncoding<T>()),
+    values(field_map.values)
+{
+}
+
+/*----------------------------------------------------------------------------
  * add
  *----------------------------------------------------------------------------*/
 template<class T>
@@ -103,6 +116,16 @@ long FieldMap<T>::length(void) const
     return static_cast<long>(values.size());
 }
 
+/*----------------------------------------------------------------------------
+ * operator=
+ *----------------------------------------------------------------------------*/
+template<class T>
+FieldMap<T>& FieldMap<T>::operator= (const FieldMap<T>& field_map)
+{
+    if(&field_map == this) return *this;
+    values = field_map.values;
+    return *this;
+}
 
 /*----------------------------------------------------------------------------
  * operator[] - rvalue
@@ -165,9 +188,8 @@ void FieldMap<T>::fromLua (lua_State* L, int index)
             try
             {
                 const char* key = LuaObject::getLuaString(L, -2);
-                T value;
-                convertFromLua(L, -1, value);
-                values[key] = value;
+                values.emplace(key, T());
+                convertFromLua(L, -1, values[key]);
             }
             catch(const RunTimeException& e)
             {

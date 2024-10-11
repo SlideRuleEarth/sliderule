@@ -62,7 +62,7 @@ class ArcticDemMosaicRaster: public GeoRaster
 
         ArcticDemMosaicRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
          GeoRaster(L, rqst_parms, key,
-                  std::string(rqst_parms->geoFields(key)->asset.asset->getPath()).append("/").append(parms->asset.asset->getIndex()),
+                  std::string(rqst_parms->geoFields(key)->asset.asset->getPath()).append("/").append(rqst_parms->geoFields(key)->asset.asset->getIndex()),
                   TimeLib::datetime2gps(2023, 01, 18, 20, 23, 42),
                   true, /* Data is elevation */
                   &overrideTargetCRS) {}
