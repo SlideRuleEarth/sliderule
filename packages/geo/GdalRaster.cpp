@@ -454,9 +454,18 @@ void GdalRaster::initAwsAccess(GeoParms* _parms)
     if(_parms->asset)
     {
 #ifdef __aws__
+
+         /* Set AWS_REGION for primary buckets in us-west-2 */
+        VSISetPathSpecificOption("/vsis3/sliderule/", "AWS_REGION", "us-west-2");
+
         const char* path = _parms->asset->getPath();
         const char* identity = _parms->asset->getIdentity();
+        const char* region = _parms->asset->getRegion();
         const CredentialStore::Credential credentials = CredentialStore::get(identity);
+
+        VSISetPathSpecificOption(path, "AWS_REGION", region);
+        mlog(DEBUG, "Setting AWS region for path %s %s", path, region);
+
         if(!credentials.expiration.value.empty())
         {
             VSISetPathSpecificOption(path, "AWS_ACCESS_KEY_ID", credentials.accessKeyId.value.c_str());

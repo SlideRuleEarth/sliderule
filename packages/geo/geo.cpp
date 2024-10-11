@@ -140,11 +140,6 @@ static void configGDAL(void)
     CPLSetConfigOption("CPL_CURL_VERBOSE", "NO");
 
     /*
-     * AWS region, defaults to us-east-1
-     */
-    CPLSetConfigOption("AWS_DEFAULT_REGION", "us-west-2");
-
-    /*
      * When reading datasets with necessary external sidecar files, it's imperative to set FALSE.
      * For example, the landsat-pds bucket on AWS S3 contains GeoTIFF images where overviews are in external .ovr files.
      * If set to EMPTY_DIR, GDAL won't find the .ovr files.
@@ -295,7 +290,8 @@ void GdalErrHandler(CPLErr eErrClass, int err_no, const char *msg)
         case CE_Fatal:      lvl = CRITICAL; break;
         default:            lvl = CRITICAL; break;
     }
-    mlog(lvl, "GDAL ERROR %d: %s", err_no, msg);
+    // mlog(lvl, "GDAL ERROR %d: %s", err_no, msg);
+    print2term("%s\n", msg);
 }
 
 /******************************************************************************
@@ -319,12 +315,12 @@ void initgeo (void)
     GeoLib::init();
 
     /* Register GDAL custom error handler */
-#ifdef GDAL_ERROR_REPORTING
+// #ifdef GDAL_ERROR_REPORTING
     void (*fptrGdalErrorHandler)(CPLErr, int, const char*) = GdalErrHandler;
     CPLSetErrorHandler(fptrGdalErrorHandler);
-#else
-    CPLSetErrorHandler(NULL);
-#endif
+// #else
+//     CPLSetErrorHandler(NULL);
+// #endif
 
     /* Register Region Mask Rasterizer */
     RegionMask::registerRasterizer(GeoLib::burnGeoJson);
