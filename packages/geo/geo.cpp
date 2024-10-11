@@ -35,11 +35,6 @@
 
 #include "geo.h"
 
-#ifdef __unittesting__
-#include "UT_RasterSubset.h"
-#include "UT_RasterSample.h"
-#endif
-
 #include "GeoRaster.h"
 #include "GeoIndexedRaster.h"
 #include "GeoJsonRaster.h"
@@ -48,6 +43,10 @@
 #include "GeoFields.h"
 #include "GeoLib.h"
 #include "RasterSampler.h"
+#ifdef __unittesting__
+#include "UT_RasterSubset.h"
+#include "UT_RasterSample.h"
+#endif
 
 #include <gdal.h>
 #include <cpl_conv.h>

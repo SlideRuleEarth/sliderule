@@ -89,7 +89,7 @@ class GeoFields: public FieldDictionary
         * Typedefs
         *--------------------------------------------------------------------*/
 
-        typedef struct {
+        typedef struct GeoBBox {
             double lon_min {0.0};
             double lat_min {0.0};
             double lon_max {0.0};

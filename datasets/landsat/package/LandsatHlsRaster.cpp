@@ -95,8 +95,8 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, RequestFields* rqst_parms, cons
     /* Create dictionary of bands and algo names to process */
     for(int i = 0; i < parms->bands.length(); i++)
     {
-        const char* name = parms->bands[i].c_str();
-        if( isValidL8Band(name) || isValidS2Band(name) || isValidAlgoName(name))
+        const string& name = parms->bands[i];
+        if( isValidL8Band(name.c_str()) || isValidS2Band(name.c_str()) || isValidAlgoName(name.c_str()))
         {
             /* Add band to dictionary of bands but don't override if already there */
             auto it = bandsDict.find(name);

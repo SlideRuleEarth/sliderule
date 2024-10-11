@@ -675,19 +675,19 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, RasterSample* sample)
         {
             int kernel = 0;
 
-            if (parms->sampling_algo == GRIORA_Bilinear)
+            if (parms->sampling_algo == GeoFields::BILINEAR_ALGO)
                 kernel = 2; /* 2x2 kernel */
-            else if (parms->sampling_algo == GRIORA_Cubic)
+            else if (parms->sampling_algo == GeoFields::CUBIC_ALGO)
                 kernel = 4; /* 4x4 kernel */
-            else if (parms->sampling_algo == GRIORA_CubicSpline)
+            else if (parms->sampling_algo == GeoFields::CUBICSPLINE_ALGO)
                 kernel = 4; /* 4x4 kernel */
-            else if (parms->sampling_algo == GRIORA_Lanczos)
+            else if (parms->sampling_algo == GeoFields::LANCZOS_ALGO)
                 kernel = 6; /* 6x6 kernel */
-            else if (parms->sampling_algo == GRIORA_Average)
+            else if (parms->sampling_algo == GeoFields::AVERAGE_ALGO)
                 kernel = 6; /* No default kernel, pick something */
-            else if (parms->sampling_algo == GRIORA_Mode)
+            else if (parms->sampling_algo == GeoFields::MODE_ALGO)
                 kernel = 6; /* No default kernel, pick something */
-            else if (parms->sampling_algo == GRIORA_Gauss)
+            else if (parms->sampling_algo == GeoFields::GAUSS_ALGO)
                 kernel = 6; /* No default kernel, pick something */
 
             windowSize = kernel + 1;    // Odd window size around pixel

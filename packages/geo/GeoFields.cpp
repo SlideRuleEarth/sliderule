@@ -319,7 +319,7 @@ void convertFromLua(lua_State* L, int index, GeoFields::sampling_algo_t& v)
     }
     else
     {
-        long n = LuaObject::getLuaInteger(L, index);
+        const long n = LuaObject::getLuaInteger(L, index);
         switch(static_cast<GeoFields::sampling_algo_t>(n))
         {
             case GeoFields::NEARESTNEIGHBOUR_ALGO: break; // valid value

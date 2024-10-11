@@ -108,7 +108,7 @@ int Icesat2Fields::luaCreate (lua_State* L)
 
     try
     {
-        uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, 0);
+        const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, 0);
         const char* default_asset_name = LuaObject::getLuaString(L, 3, true, "icesat2");
         const char* default_resource = LuaObject::getLuaString(L, 4, true, NULL);
 

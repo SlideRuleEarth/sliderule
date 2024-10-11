@@ -50,7 +50,7 @@ int BathyFields::luaCreate (lua_State* L)
 
     try
     {
-        long key_space = LuaObject::getLuaInteger(L, 2, true, 0);
+        const long key_space = LuaObject::getLuaInteger(L, 2, true, 0);
         const char* default_asset_name = LuaObject::getLuaString(L, 3, true, "icesat2");
         const char* default_resource = LuaObject::getLuaString(L, 4, true, NULL);
 
