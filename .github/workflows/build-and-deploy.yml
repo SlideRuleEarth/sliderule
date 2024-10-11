@@ -15,9 +15,6 @@ jobs:
       contents: read
 
     steps:
-    - name: Checkout SlideRule Repository
-      uses: actions/checkout@v3
-
     - name: Checkout CoastNet
       uses: actions/checkout@v3
       with:
@@ -32,6 +29,9 @@ jobs:
       uses: actions/checkout@v3
       with:
         repository: SlideRuleEarth/ut-ATL24-oopp
+
+    - name: Checkout SlideRule Repository
+      uses: actions/checkout@v3
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v2
