@@ -8,7 +8,7 @@ local rqst          = json.decode(arg[1])
 local parms         = gedi.parms(rqst["parms"], rqst["shard"], "gedil1b", rqst["resource"])
 
 local args = {
-    result_q        = (parms[geo.PARMS] and not parms:hasoutput()) and "result." .. parms["resource"] .. "." .. rspq or rspq,
+    result_q        = (parms:withsamplers() and not parms:hasoutput()) and "result." .. parms["resource"] .. "." .. rspq or rspq,
     result_rec      = "gedi01brec",
 }
 

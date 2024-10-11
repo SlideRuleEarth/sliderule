@@ -43,6 +43,7 @@
  * STATIC DATA
  ******************************************************************************/
 
+const char* GeoFields::PARMS = "samples";
 const char* GeoFields::DEFAULT_KEY = "default";
 
 const char* GeoFields::NEARESTNEIGHBOUR_ALGO_STR = "NearestNeighbour";
@@ -115,7 +116,6 @@ void GeoFields::fromLua (lua_State* L, int index)
         const TimeLib::date_t stop_date = TimeLib::gmt2date(stop_time);
         mlog(DEBUG, "Setting t1 to %04d-%02d-%02dT%02d:%02d:%02dZ", stop_date.year, stop_date.month, stop_date.day, stop_time.hour, stop_time.minute, stop_time.second);
     }
-    lua_pop(L, 1);
 
     /* Start and Stop Time Special Cases */
     if(!t0.value.empty() && t1.value.empty()) // only start time supplied
@@ -143,7 +143,6 @@ void GeoFields::fromLua (lua_State* L, int index)
         const TimeLib::date_t closest_date = TimeLib::gmt2date(closest_time);
         mlog(DEBUG, "Setting closest time to %04d-%02d-%02dT%02d:%02d:%02dZ", closest_date.year, closest_date.month, closest_date.day, closest_time.hour, closest_time.minute, closest_time.second);
     }
-    lua_pop(L, 1);
 
     /* Day Of Year Range Filter */
     if(!doy_range.value.empty())
@@ -167,7 +166,6 @@ void GeoFields::fromLua (lua_State* L, int index)
         filter_doy_range = true;
         mlog(DEBUG, "Setting day of year to %02d:%02d, doy_keep_inrange: %s", doy_start, doy_end, doy_keep_inrange ? "true" : "false");
     }
-    lua_pop(L, 1);
 }
 
 /*----------------------------------------------------------------------------

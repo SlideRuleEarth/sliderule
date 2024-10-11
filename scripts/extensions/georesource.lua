@@ -27,7 +27,7 @@ local function initialize(parms, algo, args)
 
     -- Raster Sampler --
     local sampler_disp = nil
-    if parms:hassamplers() and not parms:hasoutput() then
+    if parms:withsamplers() and not parms:hasoutput() then
         local rsps_bridge = streaming.bridge(args.result_q, rspq)
         sampler_disp = streaming.dispatcher(args.result_q, 1) -- 1 thread required due to performance issues for GeoIndexRasters
         for key,settings in pairs(parms:samplers()) do

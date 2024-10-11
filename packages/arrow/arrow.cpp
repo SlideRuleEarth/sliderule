@@ -68,6 +68,7 @@ int arrow_open (lua_State* L)
     luaL_newlib(L, arrow_functions);
 
     /* Set Attributes */
+    LuaEngine::setAttrStr(L, "PARMS",       ArrowFields::PARMS);
     LuaEngine::setAttrInt(L, "PARQUET",     ArrowFields::PARQUET);
     LuaEngine::setAttrInt(L, "GEOPARQUET",  ArrowFields::GEOPARQUET);
     LuaEngine::setAttrInt(L, "FEATHER",     ArrowFields::FEATHER);

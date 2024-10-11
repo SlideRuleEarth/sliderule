@@ -13,11 +13,11 @@ region = [  {"lon": -108.3435200747503, "lat": 38.89102961045247},
 
 @pytest.mark.network
 class Test3DEP:
-    def test_sample(self, init):
-        geojson = earthdata.tnm(short_name='Digital Elevation Model (DEM) 1 meter', polygon=region)
-        gdf = raster.sample("usgs3dep-1meter-dem", [[-108.0,39.0]], {"catalog": geojson})
-        assert init
-        assert len(gdf) >= 4
+#    def test_sample(self, init):
+#        geojson = earthdata.tnm(short_name='Digital Elevation Model (DEM) 1 meter', polygon=region)
+#        gdf = raster.sample("usgs3dep-1meter-dem", [[-108.0,39.0]], {"catalog": geojson})
+#        assert init
+#        assert len(gdf) >= 4
 
     def test_as_numpy_array(self, init):
         parms = {

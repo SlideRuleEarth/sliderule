@@ -73,6 +73,7 @@ class GeoFields: public FieldDictionary
         * Constants
         *--------------------------------------------------------------------*/
 
+        static const char* PARMS;
         static const char* DEFAULT_KEY;
 
         static const char* NEARESTNEIGHBOUR_ALGO_STR;

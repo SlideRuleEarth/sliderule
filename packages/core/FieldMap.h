@@ -182,8 +182,9 @@ void FieldMap<T>::fromLua (lua_State* L, int index)
 {
     if(lua_istable(L, index))
     {
+        int table_index = index < 0 ? lua_gettop(L) + index + 1 : index;
         lua_pushnil(L);
-        while(lua_next(L, index) != 0)
+        while(lua_next(L, table_index) != 0)
         {
             try
             {

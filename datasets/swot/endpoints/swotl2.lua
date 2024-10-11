@@ -8,7 +8,7 @@ local rqst          = json.decode(arg[1])
 local parms         = swot.parms(rqst["parms"], rqst["shard"], "swot-sim-ecco-llc4320", rqst["resource"])
 
 local args = {
-    result_q        = (parms[geo.PARMS] and not parms:hasoutput()) and "result." .. parms["resource"] .. "." .. rspq or rspq,
+    result_q        = (parms:withsamplers() and not parms:hasoutput()) and "result." .. parms["resource"] .. "." .. rspq or rspq,
     result_rec      = "swotl2geo",
 }
 

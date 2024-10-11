@@ -19,11 +19,29 @@ local earthdata = require("earth_data_query")
 
 local function proxy(resources, parms_tbl, endpoint, rec)
 
-    -- Create Request Parameters --
-    local parms = core.parms(parms_tbl)
-
     -- Create User Status --
     local userlog = msg.publish(rspq)
+
+    -- Populate Catalogs via STAC and TNM Requests --
+    local geo_parms = parms_tbl[geo.PARMS]
+    if geo_parms then
+        for dataset,raster_parms in pairs(geo_parms) do
+            if not raster_parms["catalog"] then
+                userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> querying resources for %s", rspq, dataset))
+                local rc, rsps = earthdata.search(raster_parms, parms_tbl["poly"])
+                if rc == earthdata.SUCCESS then
+                    parms_tbl[geo.PARMS][dataset]["catalog"] = json.encode(rsps)
+                    local num_features = parms_tbl[geo.PARMS][dataset]["catalog"]["features"] and #parms_tbl[geo.PARMS][dataset]["catalog"]["features"] or 0
+                    userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> returned %d resources for %s", rspq, num_features, dataset))
+                elseif rc ~= earthdata.UNSUPPORTED then
+                    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to get catalog for %s <%d>: %s", rspq, dataset, rc, rsps))
+                end
+            end
+        end
+    end
+
+    -- Create Request Parameters --
+    local parms = core.parms(parms_tbl)
 
     -- Request Parameters --
     local timeout = parms["rqst_timeout"]
@@ -40,7 +58,7 @@ local function proxy(resources, parms_tbl, endpoint, rec)
     local arrow_metafile = nil
     if parms:hasoutput() then
         -- Determine if Keeping Local File (needed for later ArrowSampler) --
-        local keep_local = parms[geo.PARMS] ~= nil
+        local keep_local = parms:withsamplers()
         -- Arrow Builder --
         arrow_builder = arrow.builder(parms, rspq, rspq .. "-builder", rec, rqstid, endpoint, keep_local)
         if arrow_builder then
@@ -64,24 +82,6 @@ local function proxy(resources, parms_tbl, endpoint, rec)
         else
             userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("request <%s> failed to make CMR request <%d>: %s", rspq, rc, rsps))
             return
-        end
-    end
-
-    -- Populate Catalogs via STAC and TNM Requests --
-    local geo_parms = parms[geo.PARMS]
-    if geo_parms then
-        for dataset,raster_parms in pairs(geo_parms) do
-            if not raster_parms["catalog"] then
-                userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> querying resources for %s", rspq, dataset))
-                local rc, rsps = earthdata.search(raster_parms, parms["poly"])
-                if rc == earthdata.SUCCESS then
-                    parms[geo.PARMS][dataset]["catalog"] = json.encode(rsps)
-                    local num_features = parms[geo.PARMS][dataset]["catalog"]["features"] and #parms[geo.PARMS][dataset]["catalog"]["features"] or 0
-                    userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> returned %d resources for %s", rspq, num_features, dataset))
-                elseif rc ~= earthdata.UNSUPPORTED then
-                    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to get catalog for %s <%d>: %s", rspq, dataset, rc, rsps))
-                end
-            end
         end
     end
 

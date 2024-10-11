@@ -91,6 +91,8 @@ class RequestFields: public LuaObject, public FieldDictionary
         static int luaSetField (lua_State* L);
         static int luaWithArrowOutput (lua_State* L);
         static int luaGetSamplers (lua_State* L);
+        static int luaWithSamplers (lua_State* L);
+        static int luaSetCatalog (lua_State* L);
 
         bool polyIncludes (double lon, double lat) const;
         bool maskIncludes (double lon, double lat) const;

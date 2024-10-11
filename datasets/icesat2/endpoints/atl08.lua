@@ -8,7 +8,7 @@ local rqst          = json.decode(arg[1])
 local parms         = icesat2.parms(rqst["parms"], rqst["shard"], "icesat2", rqst["resource"])
 
 local args = {
-    result_q        = (parms[geo.PARMS] and not parms:hasoutput()) and "result." .. parms["resource"] .. "." .. rspq or rspq,
+    result_q        = (parms:withsamplers() and not parms:hasoutput()) and "result." .. parms["resource"] .. "." .. rspq or rspq,
     source_rec      = "atl03rec",
     result_rec      = "atl08rec",
 }

@@ -50,6 +50,8 @@ const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {"__newindex",  luaSetField},
     {"hasoutput",   luaWithArrowOutput},
     {"samplers",    luaGetSamplers},
+    {"withsamplers",luaWithSamplers},
+    {"setcatalog",  luaSetCatalog},
     {NULL,          NULL}
 };
 
@@ -255,6 +257,46 @@ int RequestFields::luaGetSamplers (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * luaWithSamplers
+ *----------------------------------------------------------------------------*/
+int RequestFields::luaWithSamplers (lua_State* L)
+{
+    bool status = false;
+    try
+    {
+        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        status = lua_obj->samplers.length() > 0;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "error checking samplers: %s", e.what());
+    }
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaSetCatalog
+ *----------------------------------------------------------------------------*/
+int RequestFields::luaSetCatalog (lua_State* L)
+{
+    bool status = false;
+    try
+    {
+        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        const char* key = getLuaString(L, 2);
+        const char* catalog = getLuaString(L, 3);
+
+        // the long form of accessing this variable is because other methods are const
+        lua_obj->samplers.values[key]->catalog.value = catalog;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "error checking samplers: %s", e.what());
+    }
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
  * polyIncludes
  *----------------------------------------------------------------------------*/
 bool RequestFields::polyIncludes (double lon, double lat) const
@@ -350,10 +392,10 @@ RequestFields::RequestFields(lua_State* L, uint64_t key_space, const std::initia
         {"build_information",   &buildInformation},
         {"environment_version", &environmentVersion},
         #ifdef __arrow__
-        {"output",              &output},
+        {ArrowFields::PARMS,    &output},
         #endif
         #ifdef __geo__
-        {"samples",             &samplers},
+        {GeoFields::PARMS,      &samplers},
         #endif
     })
 {

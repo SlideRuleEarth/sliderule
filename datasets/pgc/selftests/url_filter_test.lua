@@ -63,7 +63,7 @@ url = "SETSM_s2s041_WV01_20181210_102001007A560E00_10200100802C2300"
 expResults = {{452.48437500, 0x4, '/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n51w178/SETSM_s2s041_WV01_20181210_102001007A560E00_10200100802C2300_2m_lsf_seg3_dem.tif'}}
 
 print(string.format("\n--------------------------------\nTest: %s URL Filter: %s\n--------------------------------", demType, url))
-dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true, substr=url, sort_by_index=true, sort_by_index=true}))
+dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true, substr=url, sort_by_index=true}))
 tbl, err = dem:sample(lon, lat, height)
 runner.check(err == 0)
 runner.check(tbl ~= nil)

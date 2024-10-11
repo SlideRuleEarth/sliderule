@@ -268,6 +268,7 @@ int geo_open (lua_State* L)
     luaL_newlib(L, geo_functions);
 
     /* Set Globals */
+    LuaEngine::setAttrStr   (L, "PARMS",                                GeoFields::PARMS);
     LuaEngine::setAttrStr   (L, "DEFAULT_SAMPLER",                      GeoFields::DEFAULT_KEY);
     LuaEngine::setAttrStr   (L, GeoFields::NEARESTNEIGHBOUR_ALGO_STR,   GeoFields::NEARESTNEIGHBOUR_ALGO_STR);
     LuaEngine::setAttrStr   (L, GeoFields::BILINEAR_ALGO_STR,           GeoFields::BILINEAR_ALGO_STR);
