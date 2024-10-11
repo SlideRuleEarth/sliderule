@@ -95,7 +95,7 @@ int RequestFields::luaExport (lua_State* L)
         }
         else
         {
-            lua_obj->samplers["sampler"].toLua(L);
+            lua_obj->samplers[sampler].toLua(L);
         }
     }
     catch(const RunTimeException& e)

@@ -61,7 +61,7 @@ if __geo__ then
 
     print(string.format("\n--------------------------------\nUserSet geo.parms.export\n--------------------------------"))
     js = geo.parms({ asset = "arcticdem-mosaic", algorithm = "Bilinear", radius = 0, bands = {"NDVI", "B03"}}):export(geo.DEFAULT_SAMPLER)
-    runner.check(js.sampling_algo == "Bilinear", js.sampling_algo)
+    runner.check(js.algorithm == "Bilinear", js.algorithm)
     runner.check(js.bands[1] == "NDVI", js.bands[1])
     runner.check(js.bands[2] == "B03", js.bands[2])
 end
