@@ -162,6 +162,12 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
         stages[STAGE_YAPC] = true;
     }
 
+    // handle atl08 class options
+    if(atl08Class.anyEnabled())
+    {
+        stages[STAGE_ATL08] = true;
+    }
+
     // handle PhoREAL options
     if(phoreal.provided)
     {

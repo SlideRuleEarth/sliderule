@@ -59,6 +59,7 @@ class FieldEnumeration: public Field
         virtual                 ~FieldEnumeration   (void) override = default;
 
         bool                    enabled             (int i) const;
+        bool                    anyEnabled          (void) const;
 
         FieldEnumeration<T,N>&  operator=           (const FieldEnumeration<T,N>& array);
         bool                    operator[]          (T i) const;
@@ -152,6 +153,20 @@ bool FieldEnumeration<T,N>::enabled(int i) const
         return false;
     }
     return values[i];
+}
+
+/*----------------------------------------------------------------------------
+ * anyEnabled
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+bool FieldEnumeration<T,N>::anyEnabled(void) const
+{
+    bool status = false;
+    for(int i = 0; i < N; i++)
+    {
+        status = status || values[i];
+    }
+    return status;
 }
 
 /*----------------------------------------------------------------------------
