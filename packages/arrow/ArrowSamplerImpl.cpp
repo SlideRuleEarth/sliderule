@@ -116,7 +116,7 @@ bool ArrowSamplerImpl::processSamples(ArrowSampler::batch_sampler_t* sampler)
     /* Convert samples into new columns */
     try
     {
-        if(parms->format == ArrowFields::PARQUET || parms->format == ArrowFields::FEATHER)
+        if(parms->format == ArrowFields::GEOPARQUET || parms->format == ArrowFields::PARQUET || parms->format == ArrowFields::FEATHER)
         {
             status = makeColumnsWithLists(sampler);
         }
@@ -182,6 +182,10 @@ void ArrowSamplerImpl::createOutpuFiles(void)
 
         switch(parms->format.value)
         {
+        case ArrowFields::GEOPARQUET:
+            tableToParquet(updated_table, dataFile);
+            break;
+
         case ArrowFields::PARQUET:
             tableToParquet(updated_table, dataFile);
             break;

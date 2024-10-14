@@ -20,7 +20,7 @@ class TestL1B:
         }
         gdf = gedi.gedi01bp(parms, resources=[resource])
         assert init
-        assert gdf.describe()["beams"]["mean"] == 0.0
+        assert gdf.describe()["beam"]["mean"] == 0.0
         assert gdf.describe()["flags"]["mean"] == 0.0
         assert gdf.describe()["tx_size"]["mean"] == 128.0
         assert gdf.describe()["rx_size"]["min"] == 737.000000
@@ -47,7 +47,7 @@ class TestL2A:
         }
         gdf = gedi.gedi02ap(parms, resources=[resource])
         assert init
-        assert gdf.describe()["beams"]["mean"] == 0.0
+        assert gdf.describe()["beam"]["mean"] == 0.0
         assert gdf.describe()["flags"]["max"] == 130.0
         assert abs(gdf.describe()["elevation_lm"]["min"] - 667.862000) < 0.001
         assert abs(gdf.describe()["elevation_hr"]["min"] - 667.862000) < 0.001
@@ -96,7 +96,7 @@ class TestL4A:
         }
         gdf = gedi.gedi04ap(parms, resources=[resource])
         assert init
-        assert gdf.describe()["beams"]["mean"] == 0.0
+        assert gdf.describe()["beam"]["mean"] == 0.0
         assert gdf.describe()["flags"]["max"] == 134.0
         assert abs(gdf.describe()["elevation"]["min"] - 1499.137329) < 0.001
         assert abs(gdf.describe()["agbd"]["min"] - 0.919862) < 0.001

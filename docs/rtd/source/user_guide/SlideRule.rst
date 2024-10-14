@@ -86,10 +86,10 @@ Stream
 #########
 
 When accessing SlideRule as a service, there are times when you need to specify which source datasets it should use when processing the data.
-A source dataset is called an **asset** and is specified by its name as a string.  SlideRule's asset directory is a list of datasets that SlideRule 
+A source dataset is called an **asset** and is specified by its name as a string.  SlideRule's asset directory is a list of datasets that SlideRule
 has access to.  Each entry in the asset directory describes a dataset and provides the necessary information to find, authenticate, and read that dataset.
 
-The following datasets are currently provided in SlideRule's Asset Directory (with more being added as time goes on); 
+The following datasets are currently provided in SlideRule's Asset Directory (with more being added as time goes on);
 the ones marked as rasters can be sampled; the ones that are not marked as rasters can be subsetted through different subsetting APIs.
 
 .. csv-table::
@@ -131,7 +131,7 @@ Parameters are passed to the SlideRule endpoints as JSON data structures (or as 
 All polygons provided to SlideRule must be provided as a list of dictionaries containing longitudes and latitudes in counter-clockwise order with the first and last point matching.
 
 * ``"poly"``: polygon of region of interest
-* ``"proj"``: projection used when subsetting data ("north_polar", "south_polar", "plate_carree"). In most cases, do not specify and code will do the right thing.
+* ``"projection"``: projection used when subsetting data ("north_polar", "south_polar", "plate_carree"). In most cases, do not specify and code will do the right thing.
 * ``"ignore_poly_for_cmr"``: boolean for whether to use the polygon as a part of the request to CMR for obtaining the list of resources to process. By default the polygon is used and this is only here for unusual cases where SlideRule is able to handle a polygon for subsetting that CMR cannot, and the list of resources to process is obtained some other way.
 
 For example:
@@ -154,9 +154,9 @@ There is no limit to the number of points in the polygon, but note that as the n
 5.2 GeoJSON
 -------------
 
-One of the outputs of the ``sliderule.toregion`` function is a GeoJSON object that describes the region of interest.  It is available under the ``"raster"`` element of the returned dictionary.
+One of the outputs of the ``sliderule.toregion`` function is a GeoJSON object that describes the region of interest.  It is available under the ``"region_mask"`` element of the returned dictionary.
 
-* ``"raster"``: geojson describing region of interest, enables use of rasterized region for subsetting
+* ``"region_mask"``: geojson describing region of interest, enables use of rasterized region for subsetting
 
 When supplied in the parameters sent in the request, the server side software forgoes using the polygon for subsetting operations, and instead builds a raster of the GeoJSON object using the specified cellsize, and then uses that raster image as a mask to determine which points in the source datasets are included in the region of interest.
 
@@ -169,7 +169,7 @@ The example code below shows how this option can be enabled and used (note, the 
     region = sliderule.toregion('examples/grandmesa.geojson', cellsize=0.02)
     parms = {
         "poly": region['poly'],
-        "raster": region['raster']
+        "region_mask": region['region_mask']
     }
 
 5.3 Time
@@ -303,13 +303,13 @@ The default set of parameters used by SlideRule are set to match anticipated use
    * - ``"poly"``
      - String, JSON
      -
-   * - ``"proj"``
+   * - ``"projection"``
      - String
      -
    * - ``"ignore_poly_for_cmr"``
      - Boolean
      - False
-   * - ``"raster"``
+   * - ``"region_mask"``
      - String, JSON
      -
    * - ``"read_timeout"``

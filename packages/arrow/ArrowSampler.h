@@ -59,7 +59,7 @@
 class ArrowSamplerImpl; // arrow implementation
 
 /******************************************************************************
- * PARQUET SAMPLER CLASS
+ * CLASS
  ******************************************************************************/
 
 class ArrowSampler: public LuaObject

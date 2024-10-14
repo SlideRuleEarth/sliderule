@@ -102,9 +102,13 @@ void ArrowFields::fromLua (lua_State* L, int index)
             // set output path
             const char* path_prefix = StringLib::match(asset->getDriver(), "s3") ? "s3://" : "";
             const char* path_suffix = "bin";
-            if(format.value == PARQUET)
+            if(format.value == GEOPARQUET)
             {
-                path_suffix = asGeo.value ? ".geoparquet" : ".parquet";
+                path_suffix = ".geoparquet";
+            }
+            else if(format.value == PARQUET)
+            {
+                path_suffix = ".parquet";
             }
             else if(format == CSV)
             {

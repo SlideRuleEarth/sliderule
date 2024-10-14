@@ -94,7 +94,6 @@ class ArrowBuilderImpl
         unique_ptr<parquet::arrow::FileWriter>      parquetWriter;
         shared_ptr<arrow::io::FileOutputStream>     featherWriter;
         shared_ptr<arrow::io::FileOutputStream>     csvWriter;
-        ArrowFields::format_t                       writerFormat;
         vector<shared_ptr<arrow::Field>>            fieldVector;
         field_list_t                                fieldList;
         bool                                        firstTime;

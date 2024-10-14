@@ -159,7 +159,7 @@ def atl06_sample_landsat():
     time_start = "2021-01-01T00:00:00Z"
     time_end = "2021-02-01T23:59:59Z"
     catalog = earthdata.stac(short_name="HLS", polygon=region['poly'], time_start=time_start, time_end=time_end, as_str=True)
-    parms = { 
+    parms = {
         "poly": region['poly'],
         "srt": icesat2.SRT_LAND,
         "cnf": icesat2.CNF_SURFACE_LOW,
@@ -174,7 +174,7 @@ def atl06_sample_landsat():
 # Benchmark ATL06 Sample (Zonal) ArcticDEM
 # ------------------------------------
 def atl06_sample_zonal_arcticdem():
-    parms = { 
+    parms = {
         "poly": sliderule.toregion("tests/data/dicksonfjord.geojson")['poly'],
         "cnf": "atl03_high",
         "ats": 5.0,
@@ -189,7 +189,7 @@ def atl06_sample_zonal_arcticdem():
 # Benchmark ATL06 Sample (Nearest Neighbor) ArcticDEM
 # ------------------------------------
 def atl06_sample_nn_arcticdem():
-    parms = { 
+    parms = {
         "poly": sliderule.toregion("tests/data/dicksonfjord.geojson")['poly'],
         "cnf": "atl03_high",
         "ats": 5.0,
@@ -204,7 +204,7 @@ def atl06_sample_nn_arcticdem():
 # Benchmark ATL06 Multi-Sample (Nearest Neighbor) ArcticDEM
 # ------------------------------------
 def atl06_msample_nn_arcticdem():
-    parms = { 
+    parms = {
         "poly": sliderule.toregion("tests/data/dicksonfjord.geojson")['poly'],
         "cnf": "atl03_high",
         "ats": 5.0,
@@ -219,7 +219,7 @@ def atl06_msample_nn_arcticdem():
 # Benchmark ATL06 No Sampling ArcticDEM
 # ------------------------------------
 def atl06_no_sample_arcticdem():
-    parms = { 
+    parms = {
         "poly": sliderule.toregion("tests/data/dicksonfjord.geojson")['poly'],
         "cnf": "atl03_high",
         "ats": 5.0,
@@ -233,9 +233,9 @@ def atl06_no_sample_arcticdem():
 # Benchmark ATL03 Rasterized Subset
 # ------------------------------------
 def atl03_rasterized_subset():
-    parms = { 
+    parms = {
         "poly": region['poly'],
-        "raster": region['raster'],
+        "region_mask": region['region_mask'],
         "srt": icesat2.SRT_LAND,
         "cnf": icesat2.CNF_SURFACE_LOW,
         "ats": 20.0,
@@ -248,7 +248,7 @@ def atl03_rasterized_subset():
 # Benchmark ATL03 Polygon Subset
 # ------------------------------------
 def atl03_polygon_subset():
-    parms = { 
+    parms = {
         "poly": region['poly'],
         "srt": icesat2.SRT_LAND,
         "cnf": icesat2.CNF_SURFACE_LOW,
@@ -279,12 +279,12 @@ if __name__ == '__main__':
         "atl03_rasterized_subset":      atl03_rasterized_subset,
         "atl03_polygon_subset":         atl03_polygon_subset,
     }
-    
+
     # build list of benchmarks to run
     benchmarks_to_run = args.benchmarks
     if len(benchmarks_to_run) == 0:
         benchmarks_to_run = benchmarks.keys()
-    
+
     # run benchmarks
     for benchmark in benchmarks_to_run:
         tstart = time.perf_counter()

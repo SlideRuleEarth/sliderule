@@ -584,12 +584,12 @@ def procoutputfile(parm, rsps):
     # Handle Local Files
     if "open_on_complete" in output and output["open_on_complete"]:
         if output["format"] == "parquet":
-            if "as_geo" in output and not output["as_geo"]:
-                # Return Parquet File as DataFrame
-                return geopandas.pd.read_parquet(path)
-            else:
+            if "as_geo" in output and output["as_geo"]:
                 # Return GeoParquet File as GeoDataFrame
                 return geopandas.read_parquet(path)
+            else:
+                # Return Parquet File as DataFrame
+                return geopandas.pd.read_parquet(path)
         elif output["format"] == "geoparquet":
             # Return Parquet File as DataFrame
             return geopandas.pd.read_parquet(path)
@@ -681,7 +681,7 @@ def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude
 def simplifypolygon(parm):
     if "parms" not in parm:
         return
-    
+
     if "cmr" in parm["parms"]:
         polygon = parm["parms"]["cmr"]["polygon"]
     elif "poly" in parm["parms"]:
@@ -702,9 +702,9 @@ def simplifypolygon(parm):
         simplified_polygon.insert(0, point)
 
     if "cmr" not in parm["parms"]:
-        parm["parms"]["cmr"] = {}                    
+        parm["parms"]["cmr"] = {}
     parm["parms"]["cmr"]["polygon"] = simplified_polygon
-    
+
     logger.warning('Using simplified polygon (for CMR request only!), {} points using tolerance of {}'.format(len(simplified_coords), tolerance))
 
 #
@@ -722,13 +722,13 @@ def rethrow():
 #  Initialize
 #
 def init (
-    url=PUBLIC_URL, 
-    verbose=False, 
-    loglevel=logging.INFO, 
-    organization=0, 
-    desired_nodes=None, 
-    time_to_live=60, 
-    bypass_dns=False, 
+    url=PUBLIC_URL,
+    verbose=False,
+    loglevel=logging.INFO,
+    organization=0,
+    desired_nodes=None,
+    time_to_live=60,
+    bypass_dns=False,
     plugins=[],
     trust_env=DEFAULT_TRUST_ENV,
     log_handler=None,
@@ -1414,7 +1414,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
 
             "poly": [{"lat": <lat1>, "lon": <lon1> }, ...],
 
-            "raster": {"data": <geojson file as string>,
+            "region_mask": {"data": <geojson file as string>,
 
             "clusters": [[{"lat": <lat1>, "lon": <lon1>}, ...], [{"lat": <lat1>, "lon": <lon1>}, ...]] }
 
@@ -1564,8 +1564,8 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         "gdf": gdf,
         "poly": polygon, # convex hull of polygons
         "clusters": clusters, # list of polygon clusters for cmr request
-        "raster": {
-            "data": datafile, # geojson file
+        "region_mask": {
+            "geojson": datafile, # geojson file
             "length": len(datafile), # geojson file length
             "cellsize": cellsize  # units are in crs/projection
         }

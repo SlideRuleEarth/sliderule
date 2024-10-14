@@ -62,7 +62,7 @@
 * encode - T: field column type, B: arrow builder type
 *----------------------------------------------------------------------------*/
 template<class T, class B>
-void encode(const FieldColumn<T>* field_column, vector<shared_ptr<arrow::Array>>& columns) 
+void encode(const FieldColumn<T>* field_column, vector<shared_ptr<arrow::Array>>& columns)
 {
     B builder;
 
@@ -81,7 +81,7 @@ void encode(const FieldColumn<T>* field_column, vector<shared_ptr<arrow::Array>>
 /*----------------------------------------------------------------------------
 * encode - time8_t
 *----------------------------------------------------------------------------*/
-void encode(const FieldColumn<time8_t>* field_column, vector<shared_ptr<arrow::Array>>& columns) 
+void encode(const FieldColumn<time8_t>* field_column, vector<shared_ptr<arrow::Array>>& columns)
 {
     arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
 
@@ -101,7 +101,7 @@ void encode(const FieldColumn<time8_t>* field_column, vector<shared_ptr<arrow::A
 * encodeColumn - T: field column type, B: arrow builder type
 *----------------------------------------------------------------------------*/
 template<class T, class B>
-void encodeColumn(const FieldColumn<FieldColumn<T>>* field_column, vector<shared_ptr<arrow::Array>>& columns) 
+void encodeColumn(const FieldColumn<FieldColumn<T>>* field_column, vector<shared_ptr<arrow::Array>>& columns)
 {
     auto builder = make_shared<B>();
 
@@ -126,7 +126,7 @@ void encodeColumn(const FieldColumn<FieldColumn<T>>* field_column, vector<shared
 /*----------------------------------------------------------------------------
 * encodeColumn - time8_t
 *----------------------------------------------------------------------------*/
-void encodeColumn(const FieldColumn<FieldColumn<time8_t>>* field_column, vector<shared_ptr<arrow::Array>>& columns) 
+void encodeColumn(const FieldColumn<FieldColumn<time8_t>>* field_column, vector<shared_ptr<arrow::Array>>& columns)
 {
     auto builder = make_shared<arrow::TimestampBuilder>(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
 
@@ -152,7 +152,7 @@ void encodeColumn(const FieldColumn<FieldColumn<time8_t>>* field_column, vector<
 * encodeList - T: field list type, B: arrow builder type
 *----------------------------------------------------------------------------*/
 template<class T, class B>
-void encodeList(const FieldColumn<FieldList<T>>* field_column, vector<shared_ptr<arrow::Array>>& columns) 
+void encodeList(const FieldColumn<FieldList<T>>* field_column, vector<shared_ptr<arrow::Array>>& columns)
 {
     auto builder = make_shared<B>();
 
@@ -177,7 +177,7 @@ void encodeList(const FieldColumn<FieldList<T>>* field_column, vector<shared_ptr
 /*----------------------------------------------------------------------------
 * encodeList - time8_t
 *----------------------------------------------------------------------------*/
-void encodeList(const FieldColumn<FieldList<time8_t>>* field_column, vector<shared_ptr<arrow::Array>>& columns) 
+void encodeList(const FieldColumn<FieldList<time8_t>>* field_column, vector<shared_ptr<arrow::Array>>& columns)
 {
     auto builder = make_shared<arrow::TimestampBuilder>(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
 
@@ -203,7 +203,7 @@ void encodeList(const FieldColumn<FieldList<time8_t>>* field_column, vector<shar
 * encodeArray - T: field array type, B: arrow builder type
 *----------------------------------------------------------------------------*/
 template<class T, class B>
-void encodeArray(const Field* field, vector<shared_ptr<arrow::Array>>& columns) 
+void encodeArray(const Field* field, vector<shared_ptr<arrow::Array>>& columns)
 {
     auto builder = make_shared<B>();
 
@@ -228,7 +228,7 @@ void encodeArray(const Field* field, vector<shared_ptr<arrow::Array>>& columns)
 /*----------------------------------------------------------------------------
 * encodeArray - time8_t
 *----------------------------------------------------------------------------*/
-void encodeArrayTime8(const Field* field, vector<shared_ptr<arrow::Array>>& columns) 
+void encodeArrayTime8(const Field* field, vector<shared_ptr<arrow::Array>>& columns)
 {
     auto builder = make_shared<arrow::TimestampBuilder>(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
 
@@ -253,7 +253,7 @@ void encodeArrayTime8(const Field* field, vector<shared_ptr<arrow::Array>>& colu
 /*----------------------------------------------------------------------------
 * encodeGeometry
 *----------------------------------------------------------------------------*/
-void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Array>>& columns) 
+void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Array>>& columns)
 {
     const long num_rows = dataframe.length();
     const FieldColumn<double>* x = dataframe.getXColumn();
@@ -297,7 +297,7 @@ void buildFieldList (vector<shared_ptr<arrow::Field>>& fields, const ArrowFields
         Field* field = dataframe.getColumnData(name.c_str());
 
         // check for geometry columns
-        if(parms.asGeo)
+        if(parms.format == ArrowFields::GEOPARQUET)
         {
             // skip over source columns for geometry as they will be added
             // separately as a part of the dedicated geometry column
@@ -520,7 +520,7 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const ArrowFie
         const Field* field = iter[f].value.field;
 
         // check for geoparquet format
-        if( parms.asGeo && 
+        if( (parms.format == ArrowFields::GEOPARQUET) &&
             (field->encoding & Field::X_COLUMN ||
              field->encoding & Field::Y_COLUMN) )
         {
@@ -530,7 +530,7 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const ArrowFie
 
         // encode field to arrow
         const uint32_t field_trace_id = start_trace(INFO, trace_id, "encodeFields", "{\"field\": %s}", name);
-        if(field->type == Field::COLUMN) 
+        if(field->type == Field::COLUMN)
         {
             switch(field->getValueEncoding())
             {
@@ -597,7 +597,7 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const ArrowFie
     }
 
     // build geo columns
-    if(parms.asGeo)
+    if(parms.format == ArrowFields::GEOPARQUET)
     {
         const uint32_t geo_trace_id = start_trace(INFO, trace_id, "encodeGeometry", "%s", "{}");
         encodeGeometry(dataframe, columns);
@@ -662,7 +662,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
         const RequestFields& parms = *lua_obj->parms;
         const GeoDataFrame& dataframe = *lua_obj->dataframe;
         const ArrowFields& arrow_parms = parms.output;
-          
+
         // start trace
         const uint32_t parent_trace_id = EventLib::grabId();
         const uint32_t trace_id = start_trace(INFO, parent_trace_id, "ArrowDataFrame", "{\"num_rows\": %ld}", dataframe.length());
@@ -678,7 +678,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
 
         // write out table
         const uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
-        if(format == ArrowFields::PARQUET)
+        if(format == ArrowFields::GEOPARQUET || format == ArrowFields::PARQUET)
         {
             // set arrow output stream
             shared_ptr<arrow::io::FileOutputStream> file_output_stream;
@@ -698,7 +698,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
 
                 // set metadata
                 auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-                if(arrow_parms.asGeo) appendGeoMetaData(metadata);
+                if(parms.output.format == ArrowFields::GEOPARQUET) appendGeoMetaData(metadata);
                 appendPandasMetaData(dataframe.getTimeColumnName().c_str(), metadata, schema);
                 metadata->Append("sliderule", parms.toJson());
                 metadata->Append("meta", dataframe.metaFields.toJson());
@@ -719,7 +719,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
                             mlog(CRITICAL, "Parquet table validation failed: %s\n", validation_status.ToString().c_str());
                         }
                     }
-                    
+
                     // write table
                     const arrow::Status s = parquet_writer->WriteTable(*table);
                     (void)parquet_writer->Close();
@@ -727,7 +727,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
                     {
                         status = true;
                     }
-                    else 
+                    else
                     {
                         mlog(CRITICAL, "Failed to write parquet table: %s", s.CodeAsString().c_str());
                     }
@@ -753,7 +753,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
                 const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
                 const arrow::Status s = arrow::ipc::feather::WriteTable(*table, feather_writer.get());
                 (void)feather_writer->Close();
-                if(s.ok()) 
+                if(s.ok())
                 {
                     status = true;
                 }
@@ -809,13 +809,13 @@ int ArrowDataFrame::luaExport (lua_State* L)
     // clean up
     delete [] unique_filename;
 
-    // return status     
+    // return status
     lua_pushboolean(L, status);
     return 1;
 }
 
 /*----------------------------------------------------------------------------
- * luaImport - import() 
+ * luaImport - import()
  *----------------------------------------------------------------------------*/
 int ArrowDataFrame::luaImport (lua_State* L)
 {

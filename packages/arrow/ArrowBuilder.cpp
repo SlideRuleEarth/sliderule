@@ -177,14 +177,6 @@ const char* ArrowBuilder::getYKey (void)
 }
 
 /*----------------------------------------------------------------------------
- * getAsGeo
- *----------------------------------------------------------------------------*/
-bool ArrowBuilder::getAsGeo (void) const
-{
-    return geoData.as_geo;
-}
-
-/*----------------------------------------------------------------------------
  * getXField
  *----------------------------------------------------------------------------*/
 RecordObject::field_t& ArrowBuilder::getXField (void)
@@ -274,8 +266,7 @@ ArrowBuilder::ArrowBuilder (lua_State* L, RequestFields* rqst_parms,
     }
 
     /* Build Geometry Fields */
-    geoData.as_geo = parms.asGeo.value;
-    if(geoData.as_geo)
+    if(parms.format == ArrowFields::GEOPARQUET)
     {
         /* Check if Record has Geospatial Fields */
         if((rec_meta->x_field == NULL) || (rec_meta->y_field == NULL))

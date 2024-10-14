@@ -73,13 +73,12 @@
 ArrowBuilderImpl::ArrowBuilderImpl (ArrowBuilder* _builder):
     arrowBuilder(_builder),
     schema(NULL),
-    writerFormat(ArrowFields::PARQUET),
     fieldList(LIST_BLOCK_SIZE),
     firstTime(true)
 {
     /* Build Field List and Iterator */
     buildFieldList(arrowBuilder->getRecType(), 0, 0);
-    if(arrowBuilder->getAsGeo()) fieldVector.push_back(arrow::field("geometry", arrow::binary()));
+    if(arrowBuilder->getParms()->format == ArrowFields::GEOPARQUET) fieldVector.push_back(arrow::field("geometry", arrow::binary()));
 }
 
 /*----------------------------------------------------------------------------
@@ -93,6 +92,7 @@ ArrowBuilderImpl::~ArrowBuilderImpl (void) = default;
 bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_rows, int batch_row_size_bits, bool file_finished)
 {
     bool status = false;
+    ArrowFields::format_t format = arrowBuilder->getParms()->format.value;
 
     /* Start Trace */
     const uint32_t parent_trace_id = EventLib::grabId();
@@ -118,7 +118,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     }
 
     /* Add Geometry Column (if GeoParquet) */
-    if(arrowBuilder->getAsGeo())
+    if(format == ArrowFields::GEOPARQUET)
     {
         const uint32_t geo_trace_id = start_trace(INFO, trace_id, "geo_column", "%s", "{}");
         shared_ptr<arrow::Array> column;
@@ -143,7 +143,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
         }
     }
 
-    if(writerFormat == ArrowFields::PARQUET)
+    if(format == ArrowFields::GEOPARQUET || format == ArrowFields::PARQUET)
     {
         /* Build and Write Table */
         const uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
@@ -159,7 +159,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
             (void)parquetWriter->Close();
         }
     }
-    else if(writerFormat == ArrowFields::FEATHER)
+    else if(format == ArrowFields::FEATHER)
     {
         /* Write the Table to a FEATHER file */
         const uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
@@ -175,7 +175,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
             (void)featherWriter->Close();
         }
     }
-    else if(writerFormat == ArrowFields::CSV)
+    else if(format == ArrowFields::CSV)
     {
         /* Write the Table to a CSV file */
         const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
@@ -207,11 +207,12 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
 bool ArrowBuilderImpl::createSchema (void)
 {
     bool status = true;
+    ArrowFields::format_t format = arrowBuilder->getParms()->format.value;
 
     /* Create Schema */
     schema = make_shared<arrow::Schema>(fieldVector);
 
-    if(arrowBuilder->getParms()->format == ArrowFields::PARQUET)
+    if(format == ArrowFields::GEOPARQUET || format == ArrowFields::PARQUET)
     {
         /* Set Arrow Output Stream */
         shared_ptr<arrow::io::FileOutputStream> file_output_stream;
@@ -231,7 +232,7 @@ bool ArrowBuilderImpl::createSchema (void)
 
             /* Set MetaData */
             auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-            if(arrowBuilder->getAsGeo()) appendGeoMetaData(metadata);
+            if(arrowBuilder->getParms()->format == ArrowFields::GEOPARQUET) appendGeoMetaData(metadata);
             appendServerMetaData(metadata);
             appendPandasMetaData(metadata);
             schema = schema->WithMetadata(metadata);
@@ -241,7 +242,6 @@ bool ArrowBuilderImpl::createSchema (void)
             if(result.ok())
             {
                 parquetWriter = std::move(result).ValueOrDie();
-                writerFormat = ArrowFields::PARQUET;
             }
             else
             {
@@ -255,7 +255,7 @@ bool ArrowBuilderImpl::createSchema (void)
             status = false;
         }
     }
-    else if(arrowBuilder->getParms()->format == ArrowFields::FEATHER)
+    else if(format == ArrowFields::FEATHER)
     {
         createMetadataFile();
 
@@ -264,7 +264,6 @@ bool ArrowBuilderImpl::createSchema (void)
         if(result.ok())
         {
             featherWriter = result.ValueOrDie();
-            writerFormat = ArrowFields::FEATHER;
         }
         else
         {
@@ -272,7 +271,7 @@ bool ArrowBuilderImpl::createSchema (void)
             status = false;
         }
     }
-    else if(arrowBuilder->getParms()->format == ArrowFields::CSV)
+    else if(format == ArrowFields::CSV)
     {
         createMetadataFile();
 
@@ -281,7 +280,6 @@ bool ArrowBuilderImpl::createSchema (void)
         if(result.ok())
         {
             csvWriter = result.ValueOrDie();
-            writerFormat = ArrowFields::CSV;
         }
         else
         {
@@ -314,7 +312,7 @@ bool ArrowBuilderImpl::buildFieldList (const char* rec_type, int offset, int fla
         bool add_field_to_list = true;
 
         /* Check for Geometry Columns */
-        if(arrowBuilder->getAsGeo())
+        if(arrowBuilder->getParms()->format == ArrowFields::GEOPARQUET)
         {
             /* skip over source columns for geometry as they will be added
              * separately as a part of the dedicated geometry column */
@@ -517,7 +515,7 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
         BUILDINFO,
         timestr.c_str(),
         arrowBuilder->getTimeKey(),
-        arrowBuilder->getAsGeo() ? "true" : "false",
+        arrowBuilder->getParms()->format == ArrowFields::GEOPARQUET ? "true" : "false",
         arrowBuilder->getXKey(),
         arrowBuilder->getYKey()).c_str());
 

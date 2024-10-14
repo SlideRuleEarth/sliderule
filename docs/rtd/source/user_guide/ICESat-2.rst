@@ -21,7 +21,7 @@ The ICESat-2 module provides additional parameters specific to making ICESat-2 p
 The photon-input parameters allow the user to select an area, a time range, or a specific ATL03 granule to use for input to the photon-selection algorithm.  If multiple parameters are specified, the result will be those photons that match all of the parameters.
 
 * ``"poly"``: polygon defining region of interest (see `polygons </web/rtd/user_guide/SlideRule.html#polygons>`_)
-* ``"raster"``: geojson describing region of interest which enables rasterized subsetting on servers (see `geojson </web/rtd/user_guide/SlideRule.html#geojson>`_)
+* ``"region_mask"``: geojson describing region of interest which enables rasterized subsetting on servers (see `geojson </web/rtd/user_guide/SlideRule.html#geojson>`_)
 * ``"track"``: reference pair track number (1, 2, 3, or 0 to include for all three; defaults to 0)
 * ``"beam"``: list of beam identifiers (gt1l, gt1r, gt2l, gt2r, gt3l, gt3r; defaults to all)
 * ``"rgt"``: reference ground track (defaults to all if not specified)
@@ -114,7 +114,7 @@ The ATL06-SR algorithm fits a line segment to the photons in each extent, using 
 ------------------------------
 
 The ancillary field parameters allow the user to request additional fields from the source datasets being subsetted.
-The ``"atl03_geo_fields"``, ``"atl03_ph_fields"``, and ``"atl08_fields"`` are used to specify additional fields in the ATL03 and ATL08 granules to be returned with the photon extent and ATL06-SR elevation responses.  
+The ``"atl03_geo_fields"``, ``"atl03_ph_fields"``, and ``"atl08_fields"`` are used to specify additional fields in the ATL03 and ATL08 granules to be returned with the photon extent and ATL06-SR elevation responses.
 The ``"atl06_fields"`` is used to specify additional fields in the ATL06 granule for ATL06 subsetting requests.
 Each field provided by the user will result in a corresponding column added to the returned GeoDataFrame.  Note: if a field is requested that is already present in the default GeoDataFrame, then the name of both fields will be changed to include a _x suffix for the default incusion of the field, and a _y for the ancillary inclusion of the field.  In general, they should have the same value, but in some cases the ancillary field goes through different processing steps and may possibly contain a different value.
 

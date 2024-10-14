@@ -1739,7 +1739,9 @@ void Atl03Reader::generateAncillaryRecords (uint64_t extent_id, const FieldList<
         for(int i = 0; i < field_list.length(); i++)
         {
             /* Get Data Array */
-            const H5DArray* array = (*field_dict)[field_list[i].c_str()];
+            string anc_field = field_list[i];
+            if(anc_field.back() == '%') anc_field.pop_back();
+            const H5DArray* array = (*field_dict)[anc_field.c_str()];
 
             /* Create Ancillary Record */
             const int record_size = offsetof(AncillaryFields::element_array_t, data) +

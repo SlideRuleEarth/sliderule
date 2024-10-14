@@ -132,6 +132,15 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
 {
     RequestFields::fromLua(L, index);
 
+    // check resource
+    if(resource.value.empty())
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "must supply resource name to process");
+    }
+
+    // parse resource name
+    parseResource();
+
     // handle signal confidence options
     if(atl03Cnf.providedAsSingle)
     {
@@ -185,9 +194,6 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
             atl08Class[ATL08_UNCLASSIFIED] = false;
         }
     }
-
-    // parse resource name
-    parseResource();
 }
 
 /*----------------------------------------------------------------------------

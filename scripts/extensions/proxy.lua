@@ -103,9 +103,9 @@ local function proxy(resources, parms_tbl, endpoint, rec)
     if arrow_builder then
         -- Create Raster Objects for Arrow Sampler --
         local georasters = nil
-        if parms[geo.PARMS] then
+        if parms:withsamplers() then
             georasters = {}
-            for key,settings in pairs(parms[geo.PARMS]) do
+            for key,settings in pairs(parms:samplers()) do
                 local robj = geo.raster(geo.parms(settings))
                 if robj then
                     georasters[key] = robj

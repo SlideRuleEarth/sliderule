@@ -26,7 +26,7 @@ class TestParquet:
                   "len": 40.0,
                   "res": 20.0,
                   "maxi": 1,
-                  "output": { "path": "testfile1.parquet", "format": "parquet", "open_on_complete": True } }
+                  "output": { "path": "testfile1.parquet", "format": "geoparquet", "open_on_complete": True } }
         gdf = icesat2.atl06p(parms, resources=[resource])
         metadata = pq.read_metadata("testfile1.parquet")
         sliderule_metadata = ctypes.create_string_buffer(metadata.metadata[b'sliderule']).value.decode('ascii')
@@ -34,7 +34,7 @@ class TestParquet:
         os.remove("testfile1.parquet")
         assert init
         assert len(gdf) == 957
-        assert len(gdf.keys()) == 17
+        assert len(gdf.keys()) == 17, f'{list(gdf.keys())}'
         assert gdf["rgt"].iloc[0] == 1160
         assert gdf["cycle"].iloc[0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
@@ -53,12 +53,12 @@ class TestParquet:
                   "len": 40.0,
                   "res": 20.0,
                   "maxi": 1,
-                  "output": { "path": "testfile2.parquet", "format": "parquet", "open_on_complete": True, "as_geo": False } }
+                  "output": { "path": "testfile2.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = icesat2.atl06p(parms, resources=[resource])
         os.remove("testfile2.parquet")
         assert init
         assert len(gdf) == 957
-        assert len(gdf.keys()) == 18
+        assert len(gdf.keys()) == 18, f'{list(gdf.keys())}'
         assert gdf["rgt"].iloc[0] == 1160
         assert gdf["cycle"].iloc[0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
@@ -74,7 +74,7 @@ class TestParquet:
                   "len": 40.0,
                   "res": 20.0,
                   "maxi": 1,
-                  "output": { "path": "testfile3.parquet", "format": "parquet", "open_on_complete": True } }
+                  "output": { "path": "testfile3.parquet", "format": "geoparquet", "open_on_complete": True } }
         gdf = icesat2.atl06sp(parms, resources=[resource])
         metadata = pq.read_metadata("testfile3.parquet")
         sliderule_metadata = ctypes.create_string_buffer(metadata.metadata[b'sliderule']).value.decode('ascii')
@@ -99,7 +99,7 @@ class TestParquet:
                   "len": 40.0,
                   "res": 20.0,
                   "maxi": 1,
-                  "output": { "path": "testfile4.parquet", "format": "parquet", "open_on_complete": True } }
+                  "output": { "path": "testfile4.parquet", "format": "geoparquet", "open_on_complete": True } }
         gdf = icesat2.atl03sp(parms, resources=[resource])
         os.remove("testfile4.parquet")
         assert init
@@ -120,7 +120,7 @@ class TestParquet:
                 "len": 40.0,
                 "res": 20.0,
                 "maxi": 1,
-                "output": { "path": "testfile5.parquet", "format": "parquet", "open_on_complete": True } }
+                "output": { "path": "testfile5.parquet", "format": "geoparquet", "open_on_complete": True } }
         gdf = icesat2.atl03vp(parms, resources=[resource])
         os.remove("testfile5.parquet")
         assert len(gdf) == 1662
@@ -138,7 +138,7 @@ class TestParquet:
             "cnt": 10,
             "len": 40.0,
             "res": 20.0,
-            "output": { "path": "testfile6.parquet", "format": "parquet", "open_on_complete": True } }
+            "output": { "path": "testfile6.parquet", "format": "geoparquet", "open_on_complete": True } }
         gdf = icesat2.atl06p(parms, resources=[resource])
         os.remove("testfile6.parquet")
         assert init
@@ -201,7 +201,7 @@ class TestParquet:
             "cnt": 10,
             "len": 40.0,
             "res": 20.0,
-            "output": { "path": "testfile7.parquet", "format": "parquet", "open_on_complete": True } }
+            "output": { "path": "testfile7.parquet", "format": "geoparquet", "open_on_complete": True } }
         gdf = icesat2.atl03sp(parms, resources=[resource])
         os.remove("testfile7.parquet")
         assert init
@@ -231,8 +231,7 @@ class TestParquet:
             "phoreal": {"binsize": 1.0, "geoloc": "center", "above_classifier": True, "use_abs_h": False, "send_waveform": False},
             "output": {
                 "path": "testfile8.parquet",
-                "format": "parquet",
-                "as_geo": True,
+                "format": "geoparquet",
                 "ancillary": ancillary_outputs,
                 "open_on_complete": True
             }
@@ -274,7 +273,7 @@ class TestParquet:
                   "len": 40.0,
                   "res": 20.0,
                   "maxi": 1,
-                  "output": { "path": "", "format": "", "open_on_complete": True, "as_geo": False } }
+                  "output": { "path": "", "format": "", "open_on_complete": True } }
 
         # create parquet file
         parms["output"]["path"] = "testfile9.parquet"
@@ -317,7 +316,7 @@ class TestParquet:
                   "len": 40.0,
                   "res": 20.0,
                   "maxi": 1,
-                  "output": { "path": "", "format": "", "open_on_complete": True, "as_geo": False } }
+                  "output": { "path": "", "format": "", "open_on_complete": True, } }
 
         # create parquet file
         parms["output"]["path"] = "testfile10.parquet"
@@ -356,7 +355,7 @@ class TestParquet:
         parms = {
             "poly": region["poly"],
             "beams": 0,
-            "output": { "path": "testfile11.parquet", "format": "parquet", "open_on_complete": True } }
+            "output": { "path": "testfile11.parquet", "format": "geoparquet", "open_on_complete": True } }
         gdf = gedi.gedi01bp(parms, resources=[resource])
         os.remove("testfile11.parquet")
         assert init
@@ -372,7 +371,7 @@ class TestParquet:
             "poly": region["poly"],
             "degrade_filter": True,
             "l2_quality_filter": True,
-            "output": { "path": "testfile12.parquet", "format": "parquet", "open_on_complete": True } }
+            "output": { "path": "testfile12.parquet", "format": "geoparquet", "open_on_complete": True } }
         gdf = gedi.gedi02ap(parms, resources=[resource])
         os.remove("testfile12.parquet")
         assert init
@@ -387,7 +386,7 @@ class TestParquet:
             "poly": region["poly"],
             "degrade_filter": True,
             "l2_quality_filter": True,
-            "output": { "path": "testfile13.parquet", "format": "parquet", "open_on_complete": True } }
+            "output": { "path": "testfile13.parquet", "format": "geoparquet", "open_on_complete": True } }
         gdf = gedi.gedi04ap(parms, resources=[resource])
         os.remove("testfile13.parquet")
         assert init

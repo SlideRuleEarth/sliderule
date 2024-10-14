@@ -58,7 +58,7 @@
 class ArrowBuilderImpl; // arrow implementation
 
 /******************************************************************************
- * PARQUET BUILDER CLASS
+ * CLASS
  ******************************************************************************/
 
 class ArrowBuilder: public LuaObject
@@ -108,7 +108,6 @@ class ArrowBuilder: public LuaObject
         typedef List<batch_t*>  batch_list_t;
 
         typedef struct {
-            bool                    as_geo;
             RecordObject::field_t   x_field;
             RecordObject::field_t   y_field;
         } geo_data_t;
@@ -129,7 +128,6 @@ class ArrowBuilder: public LuaObject
         const char*             getTimeKey      (void);
         const char*             getXKey         (void);
         const char*             getYKey         (void);
-        bool                    getAsGeo        (void) const;
         RecordObject::field_t&  getXField       (void);
         RecordObject::field_t&  getYField       (void);
         const ArrowFields*      getParms        (void);

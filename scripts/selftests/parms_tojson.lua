@@ -39,7 +39,7 @@ if __arrow__ then
     runner.check(string.len(json.encode(js)) > 0)
 
     print(string.format("\n--------------------------------\nUserSet arrow parms.export\n--------------------------------"))
-    js = core.parms({path="/tmp/samples.geoparquet", format="parquet", as_geo=true}):export()["output"]
+    js = core.parms({path="/tmp/samples.geoparquet", format="geoparquet"}):export()["output"]
     runner.check(string.len(json.encode(js)) > 0)
 end
 

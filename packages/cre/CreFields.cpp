@@ -65,7 +65,7 @@ int CreFields::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void CreFields::fromLua (lua_State* L, int index)
 {
-    FieldDictionary::fromLua(L, index);
+    RequestFields::fromLua(L, index);
 
     // check image for ONLY legal characters
     for (auto c_iter = container_image.value.begin(); c_iter < container_image.value.end(); ++c_iter)
