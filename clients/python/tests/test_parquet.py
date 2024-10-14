@@ -355,7 +355,7 @@ class TestParquet:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
-            "beam": 0,
+            "beams": 0,
             "output": { "path": "testfile11.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = gedi.gedi01bp(parms, resources=[resource])
         os.remove("testfile11.parquet")
@@ -370,8 +370,8 @@ class TestParquet:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
-            "degrade_flag": 0,
-            "l2_quality_flag": 1,
+            "degrade_filter": True,
+            "l2_quality_filter": True,
             "output": { "path": "testfile12.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = gedi.gedi02ap(parms, resources=[resource])
         os.remove("testfile12.parquet")
@@ -385,8 +385,8 @@ class TestParquet:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
-            "degrade_flag": 0,
-            "l2_quality_flag": 1,
+            "degrade_filter": True,
+            "l2_quality_filter": True,
             "output": { "path": "testfile13.parquet", "format": "parquet", "open_on_complete": True } }
         gdf = gedi.gedi04ap(parms, resources=[resource])
         os.remove("testfile13.parquet")

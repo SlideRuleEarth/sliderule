@@ -20,10 +20,10 @@ The GEDI API currently provides subsetting and raster sampling capabilities to S
 The GEDI module provides additional parameters specific to making GEDI processing requests.
 
 * ``"beam"``: specifies which beam to process (0, 1, 2, 3, 5, 6, 8, 11; -1 for all)
-* ``"degrade_flag"``: filters footprints based on degrade flag, leaving blank means it is unfiltered
-* ``"l2_quality_flag"``: filters footprints based on L2 quality flag, leaving blank means it is unfiltered
-* ``"l4_quality_flag"``: filters footprints based on L4 quality flag, leaving blank means it is unfiltered
-* ``"surface_flag"``: filters footprints based on surface flag, leaving blank means it is unfiltered
+* ``"degrade_filter"``: if set to true, will filter out footprints that DO have the degrade flag set (default = false)
+* ``"l2_quality_filter"``: if set to true, will filter out footprints that do NOT have the L2 quality flag set (default = false)
+* ``"l4_quality_filter"``: if set to true, will filter footprints that do NOT have the L4 quality flag set (default = false)
+* ``"surface_filter"``: if set to true, will filter out footprints that do NOT have the surface flag set (default = false)
 
 2.1 Parameter reference table
 ------------------------------
@@ -37,21 +37,21 @@ The default set of parameters used by SlideRule are set to recommended settings.
    * - Parameter
      - Units
      - Default
-   * - ``"beam"``
-     - Integer
-     - ALL_BEAMS (-1)
-   * - ``"degrade_flag"``
+   * - ``"beams"``
+     - Enumeration
+     - All beams selected
+   * - ``"degrade_filter"``
      - Boolean
-     -
-   * - ``"l2_quality_flag"``
+     - False
+   * - ``"l2_quality_filter"``
      - Boolean
-     -
-   * - ``"l4_quality_flag"``
+     - False
+   * - ``"l4_quality_filter"``
      - Boolean
-     -
-   * - ``"surface_flag"``
+     - False
+   * - ``"surface_filter"``
      - Boolean
-     -
+     - False
 
 
 3. Returned data
