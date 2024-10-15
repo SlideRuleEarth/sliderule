@@ -4,6 +4,8 @@
 
 Version description of the v4.7.2 release of SlideRule Earth.
 
+Bathy Version #5.
+
 ## ATL24 Changes
 
 * Fixed issue with ortho_h where it was being set to zero when the surface_h was less than or equal to zero.
@@ -26,6 +28,10 @@ Version description of the v4.7.2 release of SlideRule Earth.
     - `l4_quality_flag` changed to `l4_quality_filter` and instead of having to know what the flag values were; the user now just needs to set to True to filter out anything that does not meet the L4 quality criteria.
     - `surface_flag` changed to `surface_filter` and instead of having to know what the flag values were; the user now just needs to set to True to filter out anything that isn't a surface footprint.
     - `beam` changed to `beams` to reflect that it is primarily a list of beams to process and not just a single beam (even though if the user only provides a single beam, the server side code will automatically promote it to a list of beams with only one element).
+
+* Subsetting requests that use a rasterized geojson to perform the subsetting have been changed so that the geojson string is passed via a parameter named `region_mask` instead of `raster`.  The original name was confusing with our increasing support for raster sampling.  THe new name makes it clearer that the parameter is used as a mask for the region of interest.
+
+* The `proj` field has changed to `projection` for clarity.
 
 ## Development Updates
 

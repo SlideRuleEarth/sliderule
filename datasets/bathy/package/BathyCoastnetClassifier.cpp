@@ -109,6 +109,7 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
         const FieldColumn<double>& x_atc = *dynamic_cast<FieldColumn<double>*>(dataframe->getColumnData("x_atc"));
         const FieldColumn<float>& geoid_corr_h = *dynamic_cast<FieldColumn<float>*>(dataframe->getColumnData("geoid_corr_h"));
         FieldColumn<int8_t>& class_ph = *dynamic_cast<FieldColumn<int8_t>*>(dataframe->getColumnData("class_ph"));
+        FieldColumn<float>& surface_h = *dynamic_cast<FieldColumn<float>*>(dataframe->getColumnData("surface_h"));
         FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>>& predictions = *dynamic_cast<FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>>*>(dataframe->getColumnData("predictions"));
         FieldColumn<uint32_t>& processing_flags = *dynamic_cast<FieldColumn<uint32_t>*>(dataframe->getColumnData("processing_flags"));
 
@@ -152,6 +153,7 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
         // Update extents
         for(size_t i = 0; i < number_of_samples; i++)
         {
+            if(cparms.setSurface) surface_h[i] = results[i].surface_elevation;
             if(cparms.setClass) class_ph[i] = results[i].prediction;
             predictions[i][BathyFields::COASTNET] = results[i].prediction;
             if(results[i].prediction == BathyFields::BATHYMETRY)

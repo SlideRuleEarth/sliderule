@@ -121,12 +121,14 @@ struct CoastnetFields: public FieldDictionary
 {
     FieldElement<string>  model             {COASTNET_MODEL};
     FieldElement<bool>    setClass          {true};
+    FieldElement<bool>    setSurface        {true};
     FieldElement<bool>    usePredictions    {false};
     FieldElement<bool>    verbose           {true};
 
     CoastnetFields(void):
         FieldDictionary({ {"model",             &model},
                           {"set_class",         &setClass},
+                          {"set_surface",       &setSurface},
                           {"use_predictions",   &usePredictions},
                           {"verbose",           &verbose} }) {
     };
@@ -199,7 +201,7 @@ struct QtreesFields: public FieldDictionary
 {
     FieldElement<string>  model         {QTREES_MODEL};
     FieldElement<bool>    setClass      {false};
-    FieldElement<bool>    setSurface    {true};
+    FieldElement<bool>    setSurface    {false};
     FieldElement<bool>    verbose       {true};
 
     QtreesFields(void):
@@ -232,6 +234,10 @@ class BathyFields: public Icesat2Fields
         inline static const char* POINTNET_NAME         = "pointnet";
         inline static const char* OPENOCEANS_NAME       = "openoceans";
         inline static const char* ENSEMBLE_NAME         = "ensemble";
+
+        static const double NIGHT_SOLAR_ELEVATION_THRESHOLD;
+        static const double MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY;
+        static const double MINIMUM_VERTICAL_SUBAQUEOUS_UNCERTAINTY;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -267,6 +273,7 @@ class BathyFields: public Icesat2Fields
             SENSOR_DEPTH_EXCEEDED   = 0x02,
             SEA_SURFACE_UNDETECTED  = 0x04,
             INVALID_KD              = 0x08,
+            NIGHT_FLAG              = 0x10,
             BATHY_QTREES            = 0x01000000,
             BATHY_COASTNET          = 0x02000000,
             BATHY_OPENOCEANSPP      = 0x04000000,

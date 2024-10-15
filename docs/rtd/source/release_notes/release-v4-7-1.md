@@ -4,6 +4,8 @@
 
 Version description of the v4.7.1 release of SlideRule Earth.
 
+Bathy Version #4.
+
 ## ATL24 Changes
 
 * Fixed default for parameter `thresh` in C-Shelph.
