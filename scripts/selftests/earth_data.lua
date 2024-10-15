@@ -25,7 +25,7 @@ local parms = {
     }
 }
 local rc, rsps = earthdata.cmr(parms)
-runner.check(rc == earthdata.SUCCESS, string.format("failed stac request: %d", rc))
+runner.check(rc == earthdata.SUCCESS, string.format("failed cmr request: %d", rc))
 if rc == earthdata.SUCCESS then
     runner.check(#rsps >= 5)
     runner.check(type(rsps) == "table")
