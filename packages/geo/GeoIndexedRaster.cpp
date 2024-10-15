@@ -100,14 +100,13 @@ GeoIndexedRaster::Finder::Finder (const OGRGeometry* _geo, const std::vector<OGR
 }
 
 /*----------------------------------------------------------------------------
- * UnionMaker Constructor
+ * SampleCollector Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::UnionMaker::UnionMaker(GeoIndexedRaster* _obj, const std::vector<point_info_t>* _points):
+GeoIndexedRaster::SampleCollector::SampleCollector(GeoIndexedRaster* _obj, const std::vector<point_groups_t>& _pointsGroups):
     obj(_obj),
-    pointsRange({0, 0}),
-    points(_points),
-    unionPolygon(NULL),
-    stats({0.0, 0.0})
+    pGroupsRange({0, 0}),
+    pointsGroups(_pointsGroups),
+    ssErrors(SS_NO_ERRORS)
 {
 }
 
@@ -244,42 +243,10 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
             throw RunTimeException(CRITICAL, RTE_ERROR, "Error sampling unique rasters");
         }
 
-        /*
-         * Populate sllist with samples
-         */
-        if(isSampling())
+        /* Populate sllist with samples */
+        if(!collectSamples(pointsGroups, sllist))
         {
-            const double start = TimeLib::latchtime();
-            mlog(DEBUG, "Populating sllist with samples");
-            for(uint32_t pointIndx = 0; pointIndx < pointsGroups.size(); pointIndx++)
-            {
-                const point_groups_t& pg = pointsGroups[pointIndx];
-
-                /* Allocate a new sample list for groupList */
-                sample_list_t* slist = new sample_list_t();
-
-                const GroupOrdering::Iterator iter(*pg.groupList);
-                for(int i = 0; i < iter.length; i++)
-                {
-                    const rasters_group_t* rgroup = iter[i].value;
-                    uint32_t flags = 0;
-
-                    /* Get flags value for this group of rasters */
-                    if(parms->flags_file)
-                        flags = getBatchGroupFlags(rgroup, pointIndx);
-
-                    ssErrors |= getBatchGroupSamples(rgroup, slist, flags, pointIndx);
-                }
-
-                sllist.add(slist);
-            }
-            perfStats.collectSamplesTime = TimeLib::latchtime() - start;
-            mlog(INFO, "Populated sllist with samples, time: %lf", perfStats.collectSamplesTime);
-        }
-        else
-        {
-            /* Sampling has been stopped, return empty sllist */
-            sllist.clear();
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Error collecting samples");
         }
     }
     catch (const RunTimeException &e)
@@ -313,6 +280,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
 
     return ssErrors;
 }
+
 
 /*----------------------------------------------------------------------------
  * getSubset
@@ -1004,84 +972,6 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
 }
 
 /*----------------------------------------------------------------------------
- * unionThread
- *----------------------------------------------------------------------------*/
-void* GeoIndexedRaster::unionThread(void* param)
-{
-    union_maker_t* um = static_cast<union_maker_t*>(param);
-
-    /* Create an empty geometry collection to hold all points */
-    OGRGeometryCollection geometryCollection;
-
-    /*
-    * Create geometry collection from the bounding boxes around each point.
-    * NOTE: Using buffered points is significantly more computationally
-    *       expensive than bounding boxes (10x slower).
-    */
-
-    const double startTime = TimeLib::latchtime();
-
-    const uint32_t start = um->pointsRange.start;
-    const uint32_t end   = um->pointsRange.end;
-
-    for(uint32_t i = start; i < end; i++)
-    {
-        const point_info_t& point_info = um->points->at(i);
-        const double lon = point_info.point.x;
-        const double lat = point_info.point.y;
-
-        /* Create a linear ring representing the bounding box */
-        OGRLinearRing ring;
-        ring.addPoint(lon - DISTANCE, lat - DISTANCE);  /* Lower-left corner  */
-        ring.addPoint(lon + DISTANCE, lat - DISTANCE);  /* Lower-right corner */
-        ring.addPoint(lon + DISTANCE, lat + DISTANCE);  /* Upper-right corner */
-        ring.addPoint(lon - DISTANCE, lat + DISTANCE);  /* Upper-left corner  */
-        ring.closeRings();
-
-        /* Create a polygon from the ring */
-        OGRPolygon* bboxPoly = new OGRPolygon();
-        bboxPoly->addRing(&ring);
-
-        /* Add the bboxPoly to the geometry collection, collection takes ownership of bboxPoly */
-        geometryCollection.addGeometryDirectly(bboxPoly);
-    }
-    um->stats.points2polyTime = TimeLib::latchtime() - startTime;
-
-    CPLErrorReset();
-    OGRGeometry* unionPolygon = geometryCollection.UnaryUnion();
-    if(unionPolygon == NULL)
-    {
-        const char *msg = CPLGetLastErrorMsg();
-        const CPLErr errType = CPLGetLastErrorType();
-        if(errType == CE_Failure || errType == CE_Fatal)
-        {
-            mlog(ERROR, "UnaryUnion error: %s", msg);
-        }
-        um->stats.unioningTime = TimeLib::latchtime() - startTime;
-        return NULL;
-    }
-
-    /* Simplify the final union polygon to reduce complexity */
-    OGRGeometry* simplifiedPolygon = unionPolygon->Simplify(TOLERANCE);
-    OGRGeometryFactory::destroyGeometry(unionPolygon);
-    unionPolygon = simplifiedPolygon;
-    if(simplifiedPolygon == NULL)
-    {
-        mlog(ERROR, "Failed to simplify polygon");
-    }
-
-    um->stats.unioningTime = TimeLib::latchtime() - startTime;
-    // mlog(DEBUG, "Unioning geometries took %.3lf seconds", um->stats.unioningTime);
-
-    /* Set the unioned polygon in the union maker object */
-    um->unionPolygon = unionPolygon;
-
-    /* Exit Thread */
-    return NULL;
-}
-
-
-/*----------------------------------------------------------------------------
  * groupsFinderThread
  *----------------------------------------------------------------------------*/
 void* GeoIndexedRaster::groupsFinderThread(void *param)
@@ -1098,7 +988,7 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
 
     for(uint32_t i = start; i < end; i++)
     {
-        if(!gf->obj->isSampling())
+        if(!gf->obj->sampling())
         {
             mlog(WARNING, "Sampling has been stopped, exiting groups finder thread");
             break;
@@ -1106,7 +996,6 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
 
         const point_info_t& pinfo = gf->points->at(i);
         const OGRPoint ogrPoint(pinfo.point.x, pinfo.point.y, pinfo.point.z);
-
 
         /* Query the R-tree with the OGRPoint and get the result features */
         std::vector<OGRFeature*> foundFeatures;
@@ -1134,17 +1023,19 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
             OGRFeature::DestroyFeature(feature);
         }
 
-        /* Copy from finder to pointGroups */
+        /* Copy rasterGroups from finder to local groupList */
         GroupOrdering* groupList = new GroupOrdering();
         for(rasters_group_t* rgroup : finder.rasterGroups)
         {
             groupList->add(groupList->length(), rgroup);
         }
-        gf->pointsGroups.emplace_back(point_groups_t{ogrPoint, i, groupList});
 
         /* Filter rasters based on POI time */
         const int64_t gps = gf->obj->usePOItime() ? pinfo.gps : 0.0;
         gf->obj->filterRasters(gps, groupList);
+
+        /* Add found rasters which passed the filter to pointsGroups */
+        gf->pointsGroups.emplace_back(point_groups_t{ogrPoint, i, groupList});
 
         /* Add raster file names from this groupList to raster to points map */
         const GroupOrdering::Iterator iter(*groupList);
@@ -1158,13 +1049,62 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         }
     }
 
-    mlog(DEBUG, "Found   groups for points range: %u - %u", start, end);
+    mlog(DEBUG, "Found %zu point groups for points range: %u - %u", gf->pointsGroups.size(), start, end);
 
     /* Thread must initialize GEOS context */
     GeoRtree::deinit(threadGeosContext);
 
     return NULL;
 }
+
+/*----------------------------------------------------------------------------
+ * samplesCollectThread
+ *----------------------------------------------------------------------------*/
+void* GeoIndexedRaster::samplesCollectThread(void* param)
+{
+    sample_collector_t* sc = static_cast<sample_collector_t*>(param);
+
+    const uint32_t start = sc->pGroupsRange.start;
+    const uint32_t end   = sc->pGroupsRange.end;
+
+    mlog(DEBUG, "Finding samples for range: %u - %u", start, end);
+
+    u_int32_t numSamples = 0;
+    for(uint32_t pointIndx = start; pointIndx < end; pointIndx++)
+    {
+        if(!sc->obj->sampling())
+        {
+            mlog(WARNING, "Sampling has been stopped, exiting samples collect thread");
+            break;
+        }
+
+        const point_groups_t& pg = sc->pointsGroups[pointIndx];
+
+        /* Allocate a new sample list for groupList */
+        sample_list_t* slist = new sample_list_t();
+
+        const GroupOrdering::Iterator iter(*pg.groupList);
+        for(int i = 0; i < iter.length; i++)
+        {
+            const rasters_group_t* rgroup = iter[i].value;
+            uint32_t flags = 0;
+
+            /* Get flags value for this group of rasters */
+            if(sc->obj->parms->flags_file)
+                flags = getBatchGroupFlags(rgroup, pointIndx);
+
+            sc->ssErrors |= sc->obj->getBatchGroupSamples(rgroup, slist, flags, pointIndx);
+            numSamples += slist->length();
+        }
+
+        sc->slvector.push_back(slist);
+    }
+
+    mlog(DEBUG, "Found %u samples for points range: %u - %u", numSamples, start, end);
+
+    return NULL;
+}
+
 
 /*----------------------------------------------------------------------------
  * createReaderThreads
@@ -1452,102 +1392,6 @@ OGRGeometry* GeoIndexedRaster::getConvexHull(const std::vector<point_info_t>* po
 }
 
 /*----------------------------------------------------------------------------
- * getBufferedPoints
- *----------------------------------------------------------------------------*/
-OGRGeometry* GeoIndexedRaster::getBufferedPoints(const std::vector<point_info_t>* points)
-{
-    if(points->empty())
-        return NULL;
-
-    /* Start geometry union threads */
-    std::vector<Thread*> pids;
-    std::vector<union_maker_t*> unionMakers;
-
-    const uint32_t numMaxThreads = std::thread::hardware_concurrency();
-    const uint32_t minPointsPerThread = 100;
-
-    std::vector<range_t> pointsRanges;
-    getThreadsRanges(pointsRanges, points->size(), minPointsPerThread, numMaxThreads);
-    mlog(DEBUG, "Using %ld unionMaker threads to union %ld point's envelopes", pointsRanges.size(), points->size());
-
-    const uint32_t numThreads = pointsRanges.size();
-    const double startTime = TimeLib::latchtime();
-
-    for(uint32_t i = 0; i < numThreads; i++)
-    {
-        union_maker_t* um = new union_maker_t(this, points);
-        um->pointsRange = pointsRanges[i];
-        unionMakers.push_back(um);
-        Thread* pid = new Thread(unionThread, um);
-        pids.push_back(pid);
-    }
-
-    /* Wait for all union maker threads to finish */
-    for(Thread* pid : pids)
-    {
-        delete pid;
-    }
-
-    /* Combine results from all union maker threads */
-    OGRGeometryCollection geometryCollection;
-
-    for(union_maker_t* um : unionMakers)
-    {
-        if(um->unionPolygon == NULL)
-        {
-            mlog(WARNING, "Union polygon is NULL");
-            continue;
-        }
-
-        /* Add the union polygon from each thread directly to the geometry collection */
-        geometryCollection.addGeometryDirectly(um->unionPolygon);
-    }
-
-    /* Perform UnaryUnion on the entire collection */
-    CPLErrorReset();
-    OGRGeometry* unionPolygon = geometryCollection.UnaryUnion();
-    if(unionPolygon == NULL)
-    {
-        const char *msg = CPLGetLastErrorMsg();
-        const CPLErr errType = CPLGetLastErrorType();
-        if(errType == CE_Failure || errType == CE_Fatal)
-        {
-            mlog(ERROR, "UnaryUnion error: %s", msg);
-        }
-        return NULL;
-    }
-
-    /* Simplify the final union polygon */
-    OGRGeometry* simplifiedPolygon = unionPolygon->Simplify(TOLERANCE);
-    if(simplifiedPolygon == NULL)
-    {
-        mlog(ERROR, "Failed to simplify polygon");
-        OGRGeometryFactory::destroyGeometry(unionPolygon);
-        return NULL;
-    }
-
-    /* Clean up the unsimplified union polygon, use the simplified version */
-    OGRGeometryFactory::destroyGeometry(unionPolygon);
-    unionPolygon = simplifiedPolygon;
-
-    const double elapsedTime = TimeLib::latchtime() - startTime;
-    mlog(DEBUG, "Unioning point geometries took %.3lf", elapsedTime);
-
-    /* Log stats and cleanup */
-    for(uint32_t i = 0; i < unionMakers.size(); i++)
-    {
-        union_maker_t* um = unionMakers[i];
-
-        mlog(DEBUG, "Thread[%d]: %10d - %-10d p2poly: %.3lf, unioning: %.3lf",
-             i, um->pointsRange.start, um->pointsRange.end, um->stats.points2polyTime, um->stats.unioningTime);
-
-        delete um;
-    }
-
-    return unionPolygon;
-}
-
-/*----------------------------------------------------------------------------
  * applySpatialFilter
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::applySpatialFilter(OGRLayer* layer, const std::vector<point_info_t>* points)
@@ -1582,6 +1426,9 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
                                      std::vector<point_groups_t>& pointsGroups,
                                      raster_points_map_t& rasterToPointsMap)
 {
+    /* Do not find groups if sampling stopped */
+    if(!sampling()) return true;
+
     bool status = false;
     const double startTime = TimeLib::latchtime();
 
@@ -1662,6 +1509,9 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                                          const std::vector<point_groups_t>& pointsGroups,
                                          raster_points_map_t& rasterToPointsMap)
 {
+    /* Do not find unique rasters if sampling stopped */
+    if(!sampling()) return true;
+
     bool status = false;
     const double startTime = TimeLib::latchtime();
 
@@ -1747,6 +1597,9 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
  *----------------------------------------------------------------------------*/
 bool GeoIndexedRaster::sampleUniqueRasters(const std::vector<unique_raster_t*>& uniqueRasters)
 {
+    /* Do not sample rasters if sampling stopped */
+    if(!sampling()) return true;
+
     bool status = false;
     const double startTime = TimeLib::latchtime();
 
@@ -1792,7 +1645,7 @@ bool GeoIndexedRaster::sampleUniqueRasters(const std::vector<unique_raster_t*>& 
                     }
                     breader->sync.unlock();
 
-                    if(!isSampling())
+                    if(!sampling())
                     {
                         /* Sampling has been stopped, stop assigning new rasters */
                         activeReaders = 0;
@@ -1840,6 +1693,69 @@ bool GeoIndexedRaster::sampleUniqueRasters(const std::vector<unique_raster_t*>& 
     perfStats.samplesTime = TimeLib::latchtime() - startTime;
     return status;
 }
+
+
+/*----------------------------------------------------------------------------
+ * collectSamples
+ *----------------------------------------------------------------------------*/
+bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsGroups, List<sample_list_t*>& sllist)
+{
+    /* Do not collect samples if sampling stopped */
+    if(!sampling()) return true;
+
+    const double start = TimeLib::latchtime();
+    mlog(DEBUG, "Populating sllist with samples");
+
+    /* Sanity check for pointsGroups, internal pointIndex should be the same as the index in pointsGroups vector */
+    assert(std::all_of(pointsGroups.cbegin(), pointsGroups.cend(),
+                       [&pointsGroups](const point_groups_t& pg) { return pg.pointIndex == &pg - pointsGroups.data(); }));
+
+    /* Start sample collection threads */
+    std::vector<Thread*> pids;
+    std::vector<SampleCollector*> sampleCollectors;
+
+    const uint32_t numMaxThreads = std::thread::hardware_concurrency();
+    const uint32_t minPointGroupsPerThread = 1000;
+
+    std::vector<range_t> pGroupRanges;
+    getThreadsRanges(pGroupRanges, pointsGroups.size(), minPointGroupsPerThread, numMaxThreads);
+    const uint32_t numThreads = pGroupRanges.size();
+
+    for(uint32_t i = 0; i < numThreads; i++)
+    {
+        SampleCollector* sc = new SampleCollector(this, pointsGroups);
+        sc->pGroupsRange = pGroupRanges[i];
+        sampleCollectors.push_back(sc);
+        Thread* pid = new Thread(samplesCollectThread, sc);
+        pids.push_back(pid);
+    }
+
+    /* Wait for all sample collection threads to finish */
+    for(Thread* pid : pids)
+    {
+        delete pid;
+    }
+
+    /* Merge sample lists from all sample collection threads */
+    for(SampleCollector* sc : sampleCollectors)
+    {
+        const std::vector<sample_list_t*>& slvector = sc->slvector;
+        for(sample_list_t* sl : slvector)
+        {
+            sllist.add(sl);
+        }
+        ssErrors |= sc->ssErrors;
+        delete sc;
+    }
+
+    perfStats.collectSamplesTime = TimeLib::latchtime() - start;
+    mlog(DEBUG, "Populated sllist with %d lists of samples, time: %lf", sllist.length(), perfStats.collectSamplesTime);
+
+    return true;
+}
+
+
+
 
 
 

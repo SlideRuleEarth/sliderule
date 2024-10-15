@@ -98,7 +98,6 @@ class GeoIndexedRaster: public RasterObject
             std::vector<point_sample_t> pointSamples;
         } unique_raster_t;
 
-
         typedef struct RaserGroup {
             std::string                id;
             std::vector<raster_info_t> infovect;
@@ -148,27 +147,20 @@ class GeoIndexedRaster: public RasterObject
             explicit Finder(const OGRGeometry* geo, const std::vector<OGRFeature*>* _featuresList);
         } finder_t;
 
-
-        typedef struct {
-            double        points2polyTime;
-            double        unioningTime;
-        } union_maker_stats_t;
-
-        typedef struct UnionMaker {
-            GeoIndexedRaster*                obj;
-            range_t                          pointsRange;
-            const std::vector<point_info_t>* points;
-            OGRGeometry*                     unionPolygon;
-            union_maker_stats_t              stats;
-
-            explicit UnionMaker (GeoIndexedRaster* _obj, const std::vector<point_info_t>* _points);
-        } union_maker_t;
-
         typedef struct {
             OGRPoint           point;
             int64_t            pointIndex;
             GroupOrdering*     groupList;
         } point_groups_t;
+
+        typedef struct SampleCollector {
+            GeoIndexedRaster*                  obj;
+            range_t                            pGroupsRange;
+            const std::vector<point_groups_t>& pointsGroups;
+            std::vector<sample_list_t*>        slvector;
+            uint32_t                           ssErrors;
+            explicit SampleCollector(GeoIndexedRaster* _obj, const std::vector<point_groups_t>& _pointsGroups);
+        } sample_collector_t;
 
         /* Typedef for the global map (raster file name -> set of unique point IDs) */
         typedef std::unordered_map<std::string, std::set<uint32_t>> raster_points_map_t;
@@ -288,9 +280,9 @@ class GeoIndexedRaster: public RasterObject
 
         static void*    readerThread        (void *param);
         static void*    batchReaderThread   (void *param);
-        static void*    unionThread         (void* param);
 
         static void*    groupsFinderThread  (void *param);
+        static void*    samplesCollectThread(void *param);
 
         bool            createReaderThreads (uint32_t  rasters2sample);
         bool            createBatchReaderThreads(uint32_t rasters2sample);
@@ -298,7 +290,6 @@ class GeoIndexedRaster: public RasterObject
         bool            updateCache         (uint32_t& rasters2sample, const GroupOrdering* groupList);
         bool            filterRasters       (int64_t gps, GroupOrdering* groupList);
         static OGRGeometry* getConvexHull   (const std::vector<point_info_t>* points);
-        OGRGeometry*    getBufferedPoints   (const std::vector<point_info_t>* points);
         void            applySpatialFilter  (OGRLayer* layer, const std::vector<point_info_t>* points);
 
         bool            findAllGroups       (const std::vector<point_info_t>* points,
@@ -310,6 +301,10 @@ class GeoIndexedRaster: public RasterObject
                                              raster_points_map_t& rasterToPointsMap);
 
         bool            sampleUniqueRasters (const std::vector<unique_raster_t*>& uniqueRasters);
+
+        bool            collectSamples      (const std::vector<point_groups_t>& pointsGroups,
+                                             List<sample_list_t*>& sllist);
+
 };
 
 #endif  /* __geo_indexed_raster__ */

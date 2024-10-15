@@ -142,7 +142,7 @@ class RasterObject: public LuaObject
         }
 
         void        stopSampling    (void);
-        bool        isSampling      (void) {return sampling;};
+        bool        sampling        (void) {return samplingEnabled;};
         uint64_t    fileDictAdd     (const std::string& fileName);
         const char* fileDictGetFile (uint64_t fileId);
         static void getThreadsRanges(std::vector<range_t>& ranges, uint32_t num,
@@ -188,7 +188,7 @@ class RasterObject: public LuaObject
 
         Mutex                           readersMut;
         Mutex                           samplingMut;
-        std::atomic<bool>               sampling;  /* Used by batch getSample code */
+        std::atomic<bool>               samplingEnabled;  /* Used by batch getSample code */
         std::vector<reader_t*>          readers;
 };
 

@@ -331,7 +331,7 @@ RasterObject::~RasterObject(void)
 
 void RasterObject::stopSampling(void)
 {
-    sampling = false;
+    samplingEnabled = false;
     readersMut.lock();
     {
         for(const reader_t* reader : readers)
@@ -420,7 +420,7 @@ void RasterObject::getThreadsRanges(std::vector<range_t>& ranges, uint32_t num,
 RasterObject::RasterObject(lua_State *L, GeoParms* _parms):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
-    sampling(true)
+    samplingEnabled(true)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "sample", luaSamples);
@@ -680,7 +680,7 @@ uint32_t RasterObject::readSamples(RasterObject* robj, const range_t& range,
 
     for(uint32_t i = range.start; i < range.end; i++)
     {
-        if(!robj->sampling)
+        if(!robj->sampling())
         {
             mlog(DEBUG, "Sampling stopped");
             samples.clear();
