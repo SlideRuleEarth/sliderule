@@ -46,7 +46,7 @@ local function initialize(parms, algo, args)
         sampler_disp:run()
      end
 
-    -- Dispatcher --
+     -- Dispatcher --
     local source_q = nil
     local algo_disp = nil
     if algo then
@@ -75,6 +75,9 @@ end
 -- Wait On Processing of Resource
 --
 local function waiton(parms, algo, reader, algo_disp, sampler_disp, userlog, with_stats)
+
+    -- Check Parameters --
+    if not reader then return false end
 
     -- Initialize Timeouts --
     local timeout = parms["node_timeout"]

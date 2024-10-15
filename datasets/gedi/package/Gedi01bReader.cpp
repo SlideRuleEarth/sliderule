@@ -87,6 +87,10 @@ int Gedi01bReader::luaCreate (lua_State* L)
         parms = dynamic_cast<GediFields*>(getLuaObject(L, 2, GediFields::OBJECT_TYPE));
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
+        /* Check for Null Resource and Asset */
+        if(parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a resource to process");
+        else if(parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a valid asset");
+
         /* Return Reader Object */
         return createLuaObject(L, new Gedi01bReader(L, outq_name, parms, send_terminator));
     }

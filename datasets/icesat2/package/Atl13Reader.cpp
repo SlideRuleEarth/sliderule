@@ -86,29 +86,29 @@ const struct luaL_Reg Atl13Reader::LUA_META_TABLE[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>, <send terminator>)
+ * luaCreate - create(<outq_name>, <parms>, <send terminator>)
  *----------------------------------------------------------------------------*/
 int Atl13Reader::luaCreate (lua_State* L)
 {
-    Asset* asset = NULL;
-    Icesat2Fields* parms = NULL;
+    Icesat2Fields* _parms = NULL;
 
     try
     {
         /* Get Parameters */
-        asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
-        const char* resource = getLuaString(L, 2);
-        const char* outq_name = getLuaString(L, 3);
-        parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 4, Icesat2Fields::OBJECT_TYPE));
-        const bool send_terminator = getLuaBoolean(L, 5, true, true);
+        const char* outq_name = getLuaString(L, 1);
+        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
+        const bool send_terminator = getLuaBoolean(L, 3, true, true);
+
+        /* Check for Null Resource and Asset */
+        if(_parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a resource to process");
+        else if(_parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a valid asset");
 
         /* Return Reader Object */
-        return createLuaObject(L, new Atl13Reader(L, asset, resource, outq_name, parms, send_terminator));
+        return createLuaObject(L, new Atl13Reader(L, outq_name, _parms, send_terminator));
     }
     catch(const RunTimeException& e)
     {
-        if(asset) asset->releaseLuaObject();
-        if(parms) parms->releaseLuaObject();
+        if(_parms) _parms->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", Atl13Reader::LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
@@ -126,23 +126,17 @@ void Atl13Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl13Reader::Atl13Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator):
+Atl13Reader::Atl13Reader (lua_State* L, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     read_timeout_ms(_parms->readTimeout.value * 1000),
+    parms(_parms),
     context(NULL)
 {
-    assert(_asset);
-    assert(_resource);
     assert(outq_name);
     assert(_parms);
 
     /* Initialize Thread Count */
     threadCount = 0;
-
-    /* Save Info */
-    asset = _asset;
-    resource = StringLib::duplicate(_resource);
-    parms = _parms;
 
     /* Create Publisher */
     outQ = new Publisher(outq_name);
@@ -167,10 +161,7 @@ Atl13Reader::Atl13Reader (lua_State* L, Asset* _asset, const char* _resource, co
     try
     {
         /* Create H5Coro Context */
-        context = new H5Coro::Context(asset, resource);
-
-        /* Parse Globals (throws) */
-        parseResource(resource, start_rgt, start_cycle, start_region);
+        context = new H5Coro::Context(parms->asset.asset, parms->resource.value.c_str());
 
         /* Create Readers */
         for(int track = 1; track <= Icesat2Fields::NUM_TRACKS; track++)
@@ -199,8 +190,8 @@ Atl13Reader::Atl13Reader (lua_State* L, Asset* _asset, const char* _resource, co
     catch(const RunTimeException& e)
     {
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "Failure on resource %s: %s", resource, e.what());
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "Failure on resource %s: %s", resource, e.what());
+        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "Failure on resource %s: %s", parms->resource.value.c_str(), e.what());
+        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "Failure on resource %s: %s", parms->resource.value.c_str(), e.what());
 
         /* Indicate End of Data */
         if(sendTerminator) outQ->postCopy("", 0, SYS_TIMEOUT);
@@ -225,10 +216,6 @@ Atl13Reader::~Atl13Reader (void)
     delete context;
 
     parms->releaseLuaObject();
-
-    delete [] resource;
-
-    asset->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -467,7 +454,7 @@ void* Atl13Reader::subsettingThread (void* parm)
     vector<RecordObject*> rec_vec;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl13_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl13_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), parms->resource.value.c_str(), info->track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -512,11 +499,11 @@ void* Atl13Reader::subsettingThread (void* parm)
 
             /* Populate Elevation */
             water_t* entry = &atl13_data->water[batch_index++];
-            entry->extent_id                = Icesat2Fields::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, extent_counter) | Icesat2Fields::EXTENT_ID_ELEVATION;
+            entry->extent_id                = Icesat2Fields::generateExtentId(reader->parms->rgt.value, reader->parms->cycle.value, reader->parms->region.value, info->track, info->pair, extent_counter) | Icesat2Fields::EXTENT_ID_ELEVATION;
             entry->time_ns                  = Icesat2Fields::deltatime2timestamp(atl13.delta_time[segment]);
             entry->segment_id               = atl13.segment_id_beg[segment];
-            entry->rgt                      = reader->start_rgt;
-            entry->cycle                    = reader->start_cycle;
+            entry->rgt                      = reader->parms->rgt.value;
+            entry->cycle                    = reader->parms->cycle.value;
             entry->spot                     = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl13.sc_orient[0], (Icesat2Fields::track_t)info->track, info->pair);
             entry->gt                       = Icesat2Fields::getGroundTrack((Icesat2Fields::sc_orient_t)atl13.sc_orient[0], (Icesat2Fields::track_t)info->track, info->pair);
             entry->latitude                 = region.latitude[segment];
@@ -611,7 +598,7 @@ void* Atl13Reader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d: %s", info->reader->resource, info->track, e.what());
+        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d: %s", parms->resource.value.c_str(), info->track, e.what());
     }
 
     /* Handle Global Reader Updates */
@@ -628,7 +615,7 @@ void* Atl13Reader::subsettingThread (void* parm)
         reader->numComplete++;
         if(reader->numComplete == reader->threadCount)
         {
-            mlog(INFO, "Completed processing resource %s", info->reader->resource);
+            mlog(INFO, "Completed processing resource %s", parms->resource.value.c_str());
 
             /* Indicate End of Data */
             if(reader->sendTerminator)
@@ -639,12 +626,12 @@ void* Atl13Reader::subsettingThread (void* parm)
                     status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
                     if(status < 0)
                     {
-                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, info->reader->resource);
+                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, parms->resource.value.c_str());
                         break;
                     }
                     else if(status == MsgQ::STATE_TIMEOUT)
                     {
-                        mlog(INFO, "Timeout posting terminator for %s ... trying again", info->reader->resource);
+                        mlog(INFO, "Timeout posting terminator for %s ... trying again", parms->resource.value.c_str());
                     }
                 }
             }
@@ -661,75 +648,6 @@ void* Atl13Reader::subsettingThread (void* parm)
 
     /* Return */
     return NULL;
-}
-
-/*----------------------------------------------------------------------------
- * parseResource
- *
- *  ATL0x_YYYYMMDDHHMMSS_ttttccrr_vvv_ee
- *      YYYY    - year
- *      MM      - month
- *      DD      - day
- *      HH      - hour
- *      MM      - minute
- *      SS      - second
- *      tttt    - reference ground track
- *      cc      - cycle
- *      rr      - region
- *      vvv     - version
- *      ee      - revision
- *----------------------------------------------------------------------------*/
-void Atl13Reader::parseResource (const char* _resource, int32_t& rgt, int32_t& cycle, int32_t& region)
-{
-    if(StringLib::size(_resource) < 29)
-    {
-        rgt = 0;
-        cycle = 0;
-        region = 0;
-        return; // early exit on error
-    }
-
-    long val;
-    char rgt_str[5];
-    rgt_str[0] = _resource[21];
-    rgt_str[1] = _resource[22];
-    rgt_str[2] = _resource[23];
-    rgt_str[3] = _resource[24];
-    rgt_str[4] = '\0';
-    if(StringLib::str2long(rgt_str, &val, 10))
-    {
-        rgt = val;
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse RGT from resource %s: %s", _resource, rgt_str);
-    }
-
-    char cycle_str[3];
-    cycle_str[0] = _resource[25];
-    cycle_str[1] = _resource[26];
-    cycle_str[2] = '\0';
-    if(StringLib::str2long(cycle_str, &val, 10))
-    {
-        cycle = val;
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Cycle from resource %s: %s", _resource, cycle_str);
-    }
-
-    char region_str[3];
-    region_str[0] = _resource[27];
-    region_str[1] = _resource[28];
-    region_str[2] = '\0';
-    if(StringLib::str2long(region_str, &val, 10))
-    {
-        region = val;
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Region from resource %s: %s", _resource, region_str);
-    }
 }
 
 /*----------------------------------------------------------------------------

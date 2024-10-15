@@ -62,9 +62,6 @@ Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State* L, RequestFields* rq
  filePath(parms->asset.asset->getPath()),
  indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson")
 {
-    if(parms->catalog.value.empty())
-        throw RunTimeException(ERROR, RTE_ERROR, "Empty CATALOG/geojson index file received");
-
     /* Create in memory index file */
     VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(),
                                         const_cast<GByte*>(reinterpret_cast<const GByte*>(parms->catalog.value.c_str())), // source bytes

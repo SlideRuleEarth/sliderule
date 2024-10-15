@@ -71,8 +71,8 @@ class CreFields: public RequestFields
         * Methods
         *--------------------------------------------------------------------*/
 
-        CreFields    (lua_State* L);
-        ~CreFields   (void) override = default;
+        CreFields (lua_State* L);
+        virtual ~CreFields (void) override = default;
 };
 
 #endif  /* __cre_fields__ */

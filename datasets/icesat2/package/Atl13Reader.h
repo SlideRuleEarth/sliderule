@@ -190,8 +190,6 @@ class Atl13Reader: public LuaObject
         Mutex               threadMut;
         int                 threadCount;
         int                 numComplete;
-        Asset*              asset;
-        const char*         resource;
         bool                sendTerminator;
         const int           read_timeout_ms;
         Publisher*          outQ;
@@ -200,21 +198,16 @@ class Atl13Reader: public LuaObject
 
         H5Coro::Context*    context; // for ATL13 file
 
-        int32_t             start_rgt;
-        int32_t             start_cycle;
-        int32_t             start_region;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl13Reader                 (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator=true);
+                            Atl13Reader                 (lua_State* L, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator=true);
                             ~Atl13Reader                (void) override;
 
         static void*        subsettingThread            (void* parm);
 
         void                postRecord                  (RecordObject& record, stats_t& local_stats);
-        static void         parseResource               (const char* resource, int32_t& rgt, int32_t& cycle, int32_t& region);
 
         static int          luaStats                    (lua_State* L);
 };

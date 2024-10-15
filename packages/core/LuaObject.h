@@ -114,6 +114,8 @@ class LuaObject
         bool                releaseLuaObject    (void); // pairs with getLuaObject(..) and getLuaObjectByName(..), returns whether object was deleted
         bool                waitComplete        (int timeout);
 
+        inline long getRefCnt(void) { long v = referenceCount; return v; }; // debug only
+
     protected:
 
         /*--------------------------------------------------------------------

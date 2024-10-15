@@ -78,12 +78,6 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, RequestFields* rqst_parms, cons
 {
     ndsi = ndvi = ndwi = false;
 
-    if(parms->catalog.value.empty())
-        throw RunTimeException(ERROR, RTE_ERROR, "Empty CATALOG/geojson index file received");
-
-    if(parms->bands.length() == 0)
-        throw RunTimeException(ERROR, RTE_ERROR, "Empty BANDS array received");
-
     /* Create in memory index file (geojson) */
     VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(),
                                         const_cast<GByte*>(reinterpret_cast<const GByte*>(parms->catalog.value.c_str())), // source bytes

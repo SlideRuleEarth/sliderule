@@ -94,6 +94,10 @@ int Atl03Viewer::luaCreate (lua_State* L)
         _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
+        /* Check for Null Resource and Asset */
+        if(_parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a resource to process");
+        else if(_parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a valid asset");
+
         /* Return Viewer Object */
         return createLuaObject(L, new Atl03Viewer(L, outq_name, _parms, send_terminator));
     }

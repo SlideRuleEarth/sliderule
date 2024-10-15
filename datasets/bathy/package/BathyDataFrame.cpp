@@ -83,6 +83,10 @@ int BathyDataFrame::luaCreate (lua_State* L)
         _hdf09 = dynamic_cast<H5Object*>(getLuaObject(L, 5, H5Object::OBJECT_TYPE));
         const char* rqstq_name = getLuaString(L, 6, true, NULL);
 
+        /* Check for Null Resource and Asset */
+        if(_parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a resource to process");
+        else if(_parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a valid asset");
+
         /* Return Reader Object */
         return createLuaObject(L, new BathyDataFrame(L, beam_str, _parms, _hdf03, _hdf09, rqstq_name, _mask));
     }
