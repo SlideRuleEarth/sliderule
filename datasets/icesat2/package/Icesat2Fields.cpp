@@ -132,14 +132,11 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
 {
     RequestFields::fromLua(L, index);
 
-    // check resource
-    if(resource.value.empty())
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "must supply resource name to process");
-    }
-
     // parse resource name
-    parseResource();
+    if(!resource.value.empty())
+    {
+        parseResource();
+    }
 
     // handle signal confidence options
     if(atl03Cnf.providedAsSingle)
