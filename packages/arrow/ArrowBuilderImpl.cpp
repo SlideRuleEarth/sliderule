@@ -92,7 +92,7 @@ ArrowBuilderImpl::~ArrowBuilderImpl (void) = default;
 bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_rows, int batch_row_size_bits, bool file_finished)
 {
     bool status = false;
-    ArrowFields::format_t format = arrowBuilder->getParms()->format.value;
+    const ArrowFields::format_t format = arrowBuilder->getParms()->format.value;
 
     /* Start Trace */
     const uint32_t parent_trace_id = EventLib::grabId();
@@ -207,7 +207,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
 bool ArrowBuilderImpl::createSchema (void)
 {
     bool status = true;
-    ArrowFields::format_t format = arrowBuilder->getParms()->format.value;
+    const ArrowFields::format_t format = arrowBuilder->getParms()->format.value;
 
     /* Create Schema */
     schema = make_shared<arrow::Schema>(fieldVector);

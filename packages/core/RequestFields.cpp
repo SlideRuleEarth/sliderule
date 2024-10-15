@@ -279,7 +279,7 @@ int RequestFields::luaWithSamplers (lua_State* L)
  *----------------------------------------------------------------------------*/
 int RequestFields::luaSetCatalog (lua_State* L)
 {
-    bool status = false;
+    const bool status = false;
     try
     {
         RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));

@@ -454,7 +454,7 @@ void* Atl13Reader::subsettingThread (void* parm)
     vector<RecordObject*> rec_vec;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl13_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), parms->resource.value.c_str(), info->track);
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl13_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms->asset.asset->getName(), parms->resource.value.c_str(), info->track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
