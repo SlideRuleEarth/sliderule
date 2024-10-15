@@ -106,12 +106,19 @@ class BathyDataFrame: public GeoDataFrame
         FieldColumn<int8_t>         class_ph;           // photon classification
         FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>> predictions; // photon classification from each of the classifiers
         FieldColumn<float>          geoid_corr_h;       // orthometric height without refraction correction (passed to classifiers)
-        FieldColumn<float>          wind_v;             // wind speed (in meters/second)            
+        FieldColumn<float>          wind_v;             // wind speed (in meters/second)
         FieldColumn<float>          ref_el;             // reference elevation
         FieldColumn<float>          ref_az;             // reference aziumth
         FieldColumn<float>          sigma_across;       // across track aerial uncertainty
         FieldColumn<float>          sigma_along;        // along track aerial uncertainty
         FieldColumn<float>          sigma_h;            // vertical aerial uncertainty
+
+        // temporary column so that python code can apply calculations on subaqueous photons
+        FieldColumn<double>         refracted_dZ;
+        FieldColumn<double>         refracted_lat;
+        FieldColumn<double>         refracted_lon;
+        FieldColumn<float>          subaqueous_sigma_thu;
+        FieldColumn<float>          subaqueous_sigma_tvu;
 
     private:
 

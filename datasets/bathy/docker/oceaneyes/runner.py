@@ -225,7 +225,7 @@ def openoceans(spot, df):
 def ensemble(spot, df):
     ensemble_model_filename = settings['ensemble']['ensemble_model_filename']
     print(f'loading ensemble model: {ensemble_model_filename}')
-    df = df[['ortho_h', 'surface_h', 'qtrees', 'cshelph', 'medianfilter', 'bathypathfinder', 'openoceanspp', 'coastnet', 'pointnet']]
+    df = df[['geoid_corr_h', 'surface_h', 'qtrees', 'cshelph', 'medianfilter', 'bathypathfinder', 'openoceanspp', 'coastnet']]
     clf = xgb.XGBClassifier(device='cpu')
     clf.load_model(ensemble_model_filename)
     x = df.to_numpy()
@@ -276,6 +276,20 @@ print("Concatenated data frames into a single data frame")
 
 # set processing flags
 df["processing_flags"] = df["processing_flags"] + ((df["cshelph"] == 40) * 2**28) + ((df["medianfilter"] == 40) * 2**27) + ((df["bathypathfinder"] == 40) * 2**29) + ((df["pointnet"] == 40) * 2**30)
+
+# apply subaqueous corrections
+corrections_start_time = time.time()
+df.reset_index(drop=False, inplace=True)
+subaqueous_df = df[df["ortho_h"] < df["surface_h"]] # only photons below sea surface
+subaqueous_df = subaqueous_df[subaqueous_df["ensemble"].isin([0, 40])] # exclude photons labeled as sea surface
+df.loc[subaqueous_df.index, 'ortho_h'] += df.loc[subaqueous_df.index, 'refracted_dZ']
+df.loc[subaqueous_df.index, 'ellipse_h'] += df.loc[subaqueous_df.index, 'refracted_dZ']
+df.loc[subaqueous_df.index, 'lat_ph'] = df.loc[subaqueous_df.index,"refracted_lat"]
+df.loc[subaqueous_df.index, 'lon_ph'] = df.loc[subaqueous_df.index, "refracted_lon"]
+df.loc[subaqueous_df.index, 'sigma_thu'] = df.loc[subaqueous_df.index, "subaqueous_sigma_thu"]
+df.loc[subaqueous_df.index, 'sigma_tvu'] = df.loc[subaqueous_df.index, "subaqueous_sigma_tvu"]
+df.set_index("time_ns", inplace=True)
+profile["corrections_duration"] = time.time() - corrections_start_time
 
 # get dataframe of only bathy points to calculate bathymetry statistics
 bathy_df = df[df["ensemble"] == 40]
@@ -580,7 +594,7 @@ elif format == "hdf5" or format == "h5":
         # spots
         for beam in beam_table:
             df = beam_table[beam]
-            df["delta_time"] = (df["time"] / 1000000000.0) - ATLAS_GPS_EPOCH
+            df["delta_time"] = (df["time_ns"] / 1000000000.0) - ATLAS_GPS_EPOCH
 
             beam_group = hf.create_group(beam) # e.g. gt1r, gt2l, etc.
             add_variable(beam_group, "index_ph",   df['index_ph'],     'int32',

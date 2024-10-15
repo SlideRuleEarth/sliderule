@@ -318,11 +318,23 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
         }
 
         /* set total uncertainties */
+#if 0
+// to be restored when python code ported to c++
         df.sigma_thu[i] = sqrtf( (df.sigma_across[i] * df.sigma_across[i]) +
                                  (df.sigma_along[i] * df.sigma_along[i]) +
                                  (subaqueous_horizontal_uncertainty * subaqueous_horizontal_uncertainty) );
-        df.sigma_tvu[i] = sqrtf ( (df.sigma_h[i] * df.sigma_h[i]) +
-                                  (subaqueous_vertical_uncertainty * subaqueous_vertical_uncertainty) );
+        df.sigma_tvu[i] = sqrtf( (df.sigma_h[i] * df.sigma_h[i]) +
+                                 (subaqueous_vertical_uncertainty * subaqueous_vertical_uncertainty) );
+#else
+        df.sigma_thu[i] = sqrtf( (df.sigma_across[i] * df.sigma_across[i]) +
+                                 (df.sigma_along[i] * df.sigma_along[i]) );
+        df.sigma_tvu[i] = df.sigma_h[i];
+        df.subaqueous_sigma_thu[i] = sqrtf( (df.sigma_across[i] * df.sigma_across[i]) +
+                                            (df.sigma_along[i] * df.sigma_along[i]) +
+                                            (subaqueous_horizontal_uncertainty * subaqueous_horizontal_uncertainty) );
+        df.subaqueous_sigma_tvu[i] = sqrtf( (df.sigma_h[i] * df.sigma_h[i]) +
+                                            (subaqueous_vertical_uncertainty * subaqueous_vertical_uncertainty) );
+#endif
     }
 
     /* mark completion */

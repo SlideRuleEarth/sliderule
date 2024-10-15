@@ -128,6 +128,12 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"class_ph",            &class_ph},
         {"predictions",         &predictions},
         {"geoid_corr_h",        &geoid_corr_h},
+        // temporary columns for python code
+        {"refracted_dZ",        &refracted_dZ},
+        {"refracted_lat",       &refracted_lat},
+        {"refracted_lon",       &refracted_lon},
+        {"subaqueous_sigma_thu", &subaqueous_sigma_thu},
+        {"subaqueous_sigma_tvu", &subaqueous_sigma_tvu}
     },
     {
         {"spot",                &spot},
@@ -708,6 +714,14 @@ void* BathyDataFrame::subsettingThread (void* parm)
         dataframe.sigma_thu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
         dataframe.sigma_tvu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
         dataframe.predictions.initialize(dataframe.length(), {0, 0, 0, 0, 0, 0, 0, 0, 0});
+
+        /* Initialize Temporary Columns to Support Python Code */
+        dataframe.refracted_dZ.initialize(dataframe.length(), 0.0);
+        dataframe.refracted_lat.initialize(dataframe.length(), 0.0);
+        dataframe.refracted_lon.initialize(dataframe.length(), 0.0);
+        dataframe.subaqueous_sigma_thu.initialize(dataframe.length(), 0.0);
+        dataframe.subaqueous_sigma_tvu.initialize(dataframe.length(), 0.0);
+
     }
     catch(const RunTimeException& e)
     {

@@ -19,7 +19,7 @@ local start_time    = time.gps() -- used for timeout handling
 -- function: cleanup
 -------------------------------------------------------
 local function cleanup(_crenv, _transaction_id)
-    runner.cleanup(_crenv) -- container runtime environment
+--    runner.cleanup(_crenv) -- container runtime environment
     core.orchunlock({_transaction_id}) -- unlock transaction
 end
 

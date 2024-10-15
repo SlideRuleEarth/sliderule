@@ -223,15 +223,26 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
             const double dN = dY * cos(static_cast<double>(df.ref_az[i]));
 
             /* Apply Refraction Correction */
+#if 0
+// to be restored when python code ported to c++
             df.ortho_h[i] = df.ortho_h[i] + dZ;
             df.ellipse_h[i] = df.ellipse_h[i] + dZ;
+#else
+            df.refracted_dZ[i] = dZ;
+#endif
 
             /* Correct Latitude and Longitude */
             const double corr_x_ph = df.x_ph[i] + dE;
             const double corr_y_ph = df.y_ph[i] + dN;
             const GeoLib::point_t point = transform.calculateCoordinates(corr_x_ph, corr_y_ph);
+#if 0
+// to be restored when python code ported to c++
             df.lat_ph[i] = point.x;
             df.lon_ph[i] = point.y;
+#else
+            df.refracted_lat[i] = point.x;
+            df.refracted_lon[i] = point.y;
+#endif
         }
     }
 
