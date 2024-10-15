@@ -80,7 +80,7 @@ int BathyDataFrame::luaCreate (lua_State* L)
         _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 2, BathyFields::OBJECT_TYPE));
         _mask = dynamic_cast<BathyMask*>(getLuaObject(L, 3, GeoLib::TIFFImage::OBJECT_TYPE, true, NULL));
         _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE));
-        _hdf09 = dynamic_cast<H5Object*>(getLuaObject(L, 5, H5Object::OBJECT_TYPE));
+        _hdf09 = dynamic_cast<H5Object*>(getLuaObject(L, 5, H5Object::OBJECT_TYPE, true, NULL));
         const char* rqstq_name = getLuaString(L, 6, true, NULL);
 
         /* Check for Null Resource and Asset */
@@ -198,7 +198,7 @@ BathyDataFrame::~BathyDataFrame (void)
     delete rqstQ;
 
     hdf03->releaseLuaObject();
-    hdf09->releaseLuaObject();
+    if(hdf09) hdf09->releaseLuaObject();
 
     parmsPtr->releaseLuaObject();
     bathyMask->releaseLuaObject();
@@ -483,6 +483,7 @@ BathyDataFrame::Atl09Class::Atl09Class (const BathyDataFrame& dataframe):
 {
     try
     {
+        if(!dataframe.hdf09) throw RunTimeException(CRITICAL, RTE_ERROR, "invalid HDF5 ATL09 object");
         met_u10m.join(dataframe.readTimeoutMs, true);
         met_v10m.join(dataframe.readTimeoutMs, true);
         delta_time.join(dataframe.readTimeoutMs, true);
@@ -490,7 +491,7 @@ BathyDataFrame::Atl09Class::Atl09Class (const BathyDataFrame& dataframe):
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "ATL09 data unavailable for <%s>", dataframe.parms.resource.value.c_str());
+        mlog(CRITICAL, "ATL09 data unavailable for <%s>: %s", dataframe.parms.resource.value.c_str(), e.what());
     }
 }
 
@@ -662,6 +663,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 uint32_t processing_flags = BathyFields::FLAGS_CLEAR;
                 if(on_boundary) processing_flags |= BathyFields::ON_BOUNDARY;
                 if(atl03.solar_elevation[current_segment] < BathyFields::NIGHT_SOLAR_ELEVATION_THRESHOLD) processing_flags |= BathyFields::NIGHT_FLAG;
+                if(!atl09.valid) processing_flags |= BathyFields::INVALID_WIND_SPEED;
 
                 /* Add Photon to DataFrame */
                 dataframe.addRow(); // start new row in dataframe

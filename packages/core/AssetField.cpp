@@ -89,7 +89,7 @@ const char* AssetField::getName (void) const
  *----------------------------------------------------------------------------*/
 string AssetField::toJson (void) const
 {
-    return getName();
+    return FString("\"%s\"", getName()).c_str();
 }
 
 /*----------------------------------------------------------------------------

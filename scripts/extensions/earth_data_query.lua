@@ -245,7 +245,7 @@ local function cmr (parms, poly, with_meta)
                                 end
                                 -- add url to table of links with metadata
                                 if not link_table[url] then
-                                    link_table[url] = metadata 
+                                    link_table[url] = metadata
                                     num_links = num_links + 1
                                     total_links = total_links + 1
                                 end

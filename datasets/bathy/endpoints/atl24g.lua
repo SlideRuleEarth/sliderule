@@ -131,14 +131,14 @@ while true do
             break -- success
         else
             userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> returned an invalid number of resources for ATL09 CMR request for %s: %d", rspq, resource, #rsps2))
-            return -- failure
+            break -- failure
         end
     else
         userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed attempt %d to make ATL09 CMR request <%d>: %s", rspq, atl09_attempt, rc2, rsps2))
         atl09_attempt = atl09_attempt + 1
         if atl09_attempt > atl09_max_retries then
             userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to make ATL09 CMR request for %s... aborting!", rspq, resource))
-            return -- failure
+            break -- failure
         end
     end
 end
@@ -270,7 +270,7 @@ end
 -- clean up objects to cut down on memory usage
 -------------------------------------------------------
 atl03h5:destroy()
-atl09h5:destroy()
+if atl09h5 then atl09h5:destroy() end
 kd490:destroy()
 
 -------------------------------------------------------
