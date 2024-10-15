@@ -142,11 +142,6 @@ static void configGDAL(void)
     CPLSetConfigOption("CPL_CURL_VERBOSE", "NO");
 
     /*
-     * AWS region, defaults to us-east-1
-     */
-    CPLSetConfigOption("AWS_DEFAULT_REGION", "us-west-2");
-
-    /*
      * When reading datasets with necessary external sidecar files, it's imperative to set FALSE.
      * For example, the landsat-pds bucket on AWS S3 contains GeoTIFF images where overviews are in external .ovr files.
      * If set to EMPTY_DIR, GDAL won't find the .ovr files.

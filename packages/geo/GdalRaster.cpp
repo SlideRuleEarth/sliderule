@@ -459,9 +459,18 @@ void GdalRaster::initAwsAccess(const GeoFields* _parms)
     if(_parms->asset.asset)
     {
 #ifdef __aws__
+
+        /* Set AWS_REGION for sliderule buckets in us-west-2 */
+        VSISetPathSpecificOption("/vsis3/sliderule/", "AWS_REGION", "us-west-2");
+
         const char* path = _parms->asset.asset->getPath();
         const char* identity = _parms->asset.asset->getIdentity();
+        const char* region = _parms->asset.asset->getRegion();
         const CredentialStore::Credential credentials = CredentialStore::get(identity);
+
+        /* Set AWS_REGION for a specific path */
+        VSISetPathSpecificOption(path, "AWS_REGION", region);
+
         if(!credentials.expiration.value.empty())
         {
             VSISetPathSpecificOption(path, "AWS_ACCESS_KEY_ID", credentials.accessKeyId.value.c_str());
@@ -496,11 +505,6 @@ OGRPolygon GdalRaster::makeRectangle(double minx, double miny, double maxx, doub
     return poly;
 }
 
-
-
-/******************************************************************************
- * PROTECTED METHODS
- ******************************************************************************/
 
 /******************************************************************************
  * PRIVATE METHODS

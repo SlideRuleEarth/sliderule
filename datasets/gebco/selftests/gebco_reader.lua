@@ -18,6 +18,11 @@ height = 0
 local expDepth = { -64,  -4933, -4072}
 local expFlags = {  70,     40,    44}
 
+-- Tolerance for depth values is needed because of the different versions of PROJLIB
+-- The values are different in the different versions of the library.
+-- We add 1 meter of depth tolerance for the test to pass
+local depth_tolerance = 1;
+
 print(string.format("\n--------------------------------\nTest: GEBCO Correct Values\n--------------------------------"))
 local dem = geo.raster(geo.parms({ asset = "gebco-bathy", algorithm = "NearestNeighbour", with_flags=true, sort_by_index = true }))
 runner.check(dem ~= nil)
@@ -38,7 +43,7 @@ for j, lon in ipairs(lons) do
             flags = v["flags"]
             print(string.format("(%02d)   (%6.1f, %5.1f) %8.1fm  %02d  %s", k, lon, lat, value, flags, fname))
 
-            assert(value == expDepth[j], string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))
+            assert( math.abs(value - expDepth[j]) < depth_tolerance, string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))
             assert(flags == expFlags[j], string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))
         end
     end
