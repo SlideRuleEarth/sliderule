@@ -150,6 +150,7 @@ string convertToJson(const ArrowFields::format_t& v)
         case ArrowFields::PARQUET:      return "\"parquet\"";
         case ArrowFields::GEOPARQUET:   return "\"geoparquet\"";
         case ArrowFields::CSV:          return "\"csv\"";
+        case ArrowFields::H5:           return "\"h5\"";
         default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid format: %d", static_cast<int>(v));
     }
 }
@@ -165,6 +166,7 @@ int convertToLua(lua_State* L, const ArrowFields::format_t& v)
         case ArrowFields::PARQUET:      lua_pushstring(L, "parquet");       break;
         case ArrowFields::GEOPARQUET:   lua_pushstring(L, "geoparquet");    break;
         case ArrowFields::CSV:          lua_pushstring(L, "csv");           break;
+        case ArrowFields::H5:           lua_pushstring(L, "h5");            break;
         default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid format: %d", static_cast<int>(v));
     }
 
@@ -187,7 +189,8 @@ void convertFromLua(lua_State* L, int index, ArrowFields::format_t& v)
         else if(StringLib::match(str, "parquet"))       v = ArrowFields::PARQUET;
         else if(StringLib::match(str, "geoparquet"))    v = ArrowFields::GEOPARQUET;
         else if(StringLib::match(str, "csv"))           v = ArrowFields::CSV;
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "format is an invalid value: %d", static_cast<int>(v));
+        else if(StringLib::match(str, "h5"))            v = ArrowFields::H5;
+        else throw RunTimeException(CRITICAL, RTE_ERROR, "format is an invalid value: %s", str);
     }
     else if(!lua_isnil(L, index))
     {

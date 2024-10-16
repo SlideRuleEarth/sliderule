@@ -211,44 +211,52 @@ end
 -------------------------------------------------------
 -- wait for dataframes to complete and write to file
 -------------------------------------------------------
+local failed_processing_run = false
 for beam,dataframe in pairs(dataframes) do
+    local failed_dataframe = false
     if dataframe:finished(ctimeout(), rspq) then
         if dataframes[beam]:length() <= 0 then
             userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s created an empty bathy dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
         elseif not dataframes[beam]:isvalid() then
             userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create valid bathy dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
-            cleanup(crenv, transaction_id)
-            return
+            failed_dataframe = true
         else
             local spot = dataframe:meta("spot")
             local output_filename = string.format("%s/bathy_spot_%d.parquet", crenv.host_sandbox_directory, spot)
             local arrow_dataframe = arrow.dataframe(parms, dataframe)
             if not arrow_dataframe then
                 userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create arrow dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
-                cleanup(crenv, transaction_id)
-                return
+                failed_dataframe = true
             elseif not arrow_dataframe:export(output_filename, arrow.PARQUET) then
                 userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to write dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
-                cleanup(crenv, transaction_id)
-                return
+                failed_dataframe = true
             end
-            userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> dataframe for %s created", rspq, beam))
-            outputs[beam] = string.format("%s/bathy_spot_%d.parquet", crenv.container_sandbox_mount, spot)
-            dataframe:destroy()
+            if not failed_dataframe then
+                userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> dataframe for %s created", rspq, beam))
+                outputs[beam] = string.format("%s/bathy_spot_%d.parquet", crenv.container_sandbox_mount, spot)
+            end
         end
+        -- cleanup to save memory
+        dataframe:destroy()
     else
         userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> on %s timed out waiting for dataframe to complete on spot %d", rspq, resource, dataframe:meta("spot")))
-        cleanup(crenv, transaction_id)
-        return
+        failed_dataframe = true
     end
+    failed_processing_run = failed_processing_run or failed_dataframe
+end
+-- delay clean up and exit because race condition exists for
+-- dataframes that otherwise might not have finished yet
+if failed_processing_run then
+    cleanup(crenv, transaction_id)
+    return
 end
 
 -------------------------------------------------------
 -- wait for granule to complete and write to file
 -------------------------------------------------------
 if granule then
-    outputs["granule"] = string.format("%s/bathy_granule.json", crenv.container_sandbox_mount, "w")
-    local f = io.open(outputs["granule"])
+    outputs["granule"] = string.format("%s/bathy_granule.json", crenv.container_sandbox_mount)
+    local f = io.open(outputs["granule"], "w")
     if f then
         if granule:waiton(ctimeout(), rspq) then
             f:write(json.encode(granule:export()))

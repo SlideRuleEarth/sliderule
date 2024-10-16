@@ -69,7 +69,8 @@ class ArrowFields: public FieldDictionary
             FEATHER = 1,
             PARQUET = 2,
             GEOPARQUET = 3,
-            CSV = 4
+            CSV = 4,
+            H5 = 5
         } format_t;
 
         /*--------------------------------------------------------------------
