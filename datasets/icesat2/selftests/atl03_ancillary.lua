@@ -27,7 +27,7 @@ local cnt = 0
 local recq = msg.subscribe("atl03-ancillary-recq")
 local f = icesat2.atl03s("atl03-ancillary-recq", icesat2.parms({resource="ATL03_20181017222812_02950102_005_01.h5", cnf=4, track=icesat2.RPT_1, atl03_geo_fields={"solar_elevation"}}))
 while true do
-    local rec = recq:recvrecord(15000)
+    local rec = recq:recvrecord(25000)
     if rec == nil then
         break
     end
