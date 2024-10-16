@@ -140,6 +140,8 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         "--suppress=constVariableReference:*/GeoIndexedRaster.cpp"      # List [] const issue
 
         "--suppress=*:*/coastnet.h"                                     # suppress all checks for coastnet
+        "--suppress=*:*/blunder_detection.h"                            # suppress all checks for blunder_detection
+        "--suppress=*:*/oopp/utils.h"                                   # suppress all checks for openoceans
     )
 
 endif()
