@@ -405,7 +405,12 @@ def __cmr_max_version(provider, short_name):
 #
 def __build_geojson(rsps):
     geojson = rsps.json()
-    del geojson["links"]
+    next = None
+    if "links" in geojson:
+        for link in geojson["links"]:
+            if link["rel"] == "next":
+                next = link["href"]
+        del geojson["links"]
     if 'numberMatched' in geojson:
         del geojson['numberMatched']
     if 'numberReturned' in geojson:
@@ -426,7 +431,7 @@ def __build_geojson(rsps):
             if "href" in assetsDict[val]:
                 propertiesDict[val] = assetsDict[val]["href"]
         del geojson["features"][i]["assets"]
-    return geojson
+    return geojson, next
 
 #
 # Perform a STAC Query
@@ -466,22 +471,16 @@ def __stac_search(provider, short_name, collections, polygons, time_start, time_
     # make initial stac request
     data = context.post(url, data=json.dumps(rqst), headers=headers)
     data.raise_for_status()
-    geojson = __build_geojson(data)
+    geojson, next_link = __build_geojson(data)
 
-    # iterate through additional pages if not all returned
-    num_returned = geojson["context"]["returned"]
-    num_matched = geojson["context"]["matched"]
-    if num_matched > max_requested_resources:
-        logger.warn("Number of matched resources truncated from {} to {}".format(num_matched, max_requested_resources))
-        num_matched = max_requested_resources
-    num_pages = int((num_matched  + (num_returned - 1)) / num_returned)
-    for page in range(2, num_pages+1):
-        rqst["page"] = page
-        data = context.post(url, data=json.dumps(rqst), headers=headers)
+    # Continue fetching pages if 'next' link is available
+    while next_link:
+        data = context.get(next_link, headers=headers)
         data.raise_for_status()
-        _geojson = __build_geojson(data)
+        _geojson, next_link = __build_geojson(data)
         geojson["features"] += _geojson["features"]
-    geojson["context"]["returned"] = num_matched
+
+    geojson["context"]["returned"] = len(geojson["features"])
     geojson["context"]["limit"] = max_requested_resources
 
     # return geojson dictionary
