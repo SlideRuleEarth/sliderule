@@ -279,7 +279,7 @@ bool send2Client (const char* fileName, const char* outPath, const ArrowFields* 
         fseek(fp, 0L, SEEK_SET);
 
         /* Log Status */
-        mlog(INFO, "Writing file %s of size %ld", fileName, file_size);
+        mlog(INFO, "Sending file %s of size %ld to %s", fileName, file_size, outPath);
 
         do
         {

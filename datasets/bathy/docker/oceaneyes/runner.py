@@ -40,11 +40,11 @@ import sys
 import time
 import json
 
-#from cshelph import c_shelph as CSHELPH
-#from medianfilter import medianmodel as MEDIANFILTER
-#from bathypathfinder.BathyPathFinder import BathyPathSearch
-#from pointnet.pointnet2 import PointNet2
-#from openoceans.openoceans import OpenOceans
+from cshelph import c_shelph as CSHELPH
+from medianfilter import medianmodel as MEDIANFILTER
+from bathypathfinder.BathyPathFinder import BathyPathSearch
+from pointnet.pointnet2 import PointNet2
+from openoceans.openoceans import OpenOceans
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -264,11 +264,11 @@ def runClassifier(classifier, classifier_func, num_processes=6):
     return duration
 
 # call runners
-#profile["cshelph"] = runClassifier("cshelph", cshelph)
-#profile["medianfilter"] = runClassifier("medianfilter", medianfilter)
-#profile["bathypathfinder"] = runClassifier("bathypathfinder", bathypathfinder)
-#profile["pointnet"] = runClassifier("pointnet", pointnet, num_processes=1)
-#profile["ensemble"] = runClassifier("ensemble", ensemble)
+profile["cshelph"] = runClassifier("cshelph", cshelph)
+profile["medianfilter"] = runClassifier("medianfilter", medianfilter)
+profile["bathypathfinder"] = runClassifier("bathypathfinder", bathypathfinder)
+profile["pointnet"] = runClassifier("pointnet", pointnet, num_processes=1)
+profile["ensemble"] = runClassifier("ensemble", ensemble)
 
 # #####################
 # DataFrame & MetaData
@@ -311,17 +311,17 @@ stats = {
     "bathy_min_depth": bathy_df.depth.min(),
     "bathy_max_depth": bathy_df.depth.max(),
     "bathy_std_depth": bathy_df.depth.std(),
-    "subaqueous_mean_uncertainty": bathy_df.subaqueous_sigma_tvu.mean(),
-    "subaqueous_min_uncertainty": bathy_df.subaqueous_sigma_tvu.min(),
-    "subaqueous_max_uncertainty": bathy_df.subaqueous_sigma_tvu.max(),
-    "subaqueous_std_uncertainty": bathy_df.subaqueous_sigma_tvu.std()
+    "subaqueous_mean_uncertainty": bathy_df.subaqueous_sigma_tvu.mean().item(),
+    "subaqueous_min_uncertainty": bathy_df.subaqueous_sigma_tvu.min().item(),
+    "subaqueous_max_uncertainty": bathy_df.subaqueous_sigma_tvu.max().item(),
+    "subaqueous_std_uncertainty": bathy_df.subaqueous_sigma_tvu.std().item()
 }
 
 # read versions
-#with open("cshelph/cshelph_version.txt") as file:
-#    cshelph_version = file.read()
-#with open("medianfilter/medianfilter_version.txt") as file:
-#    medianfilter_version = file.read()
+with open("cshelph/cshelph_version.txt") as file:
+    cshelph_version = file.read()
+with open("medianfilter/medianfilter_version.txt") as file:
+    medianfilter_version = file.read()
 
 # update profile
 profile["total_duration"] = time.time() - settings["latch"]
@@ -332,8 +332,8 @@ metadata = {
     "sliderule": json.dumps(rqst_parms),
     "profile": json.dumps(profile),
     "stats": json.dumps(stats),
-#    "cshelph": cshelph_version,
-#    "medianfilter": medianfilter_version
+    "cshelph": cshelph_version,
+    "medianfilter": medianfilter_version
 }
 
 # #####################
@@ -367,21 +367,18 @@ elif format == "h5":
         "begin_time": extent_begin_time,
         "end_time": extent_end_time
     })
-    print(metadata["extent"])
 
     # write ISO XML file
-    atl24_filename = "ATL24_TEST.h5" #settings["atl03_filename"].replace("ATL03", "ATL24")
     now = datetime.datetime.now()
-    generation_time = f'{now.year}-{now.month:02}-{now.day:02}T{now.hour:02}:{now.minute:02}:{now.second}.000000Z'
     with open("atl24_iso_xml_template.txt", 'r') as template_file:
         template = template_file.read()
-        template = template.replace("$FILENAME", atl24_filename)
-        template = template.replace("$GENERATION_TIME", generation_time)
+        template = template.replace("$FILENAME", settings["atl24_filename"])
+        template = template.replace("$GENERATION_TIME", f'{now.year}-{now.month:02}-{now.day:02}T{now.hour:02}:{now.minute:02}:{now.second}.000000Z')
         template = template.replace("$EXTENT_POLYGON", extent_polygon)
         template = template.replace("$EXTENT_BEGIN_TIME", extent_begin_time)
         template = template.replace("$EXTENT_END_TIME", extent_end_time)
         template = template.replace("$SLIDERULE_VERSION", rqst_parms["sliderule_version"])
-    with open(atl24_filename + ".iso.xml", "w") as iso_xml_file:
+    with open(settings["iso_xml_filename"], "w") as iso_xml_file:
         iso_xml_file.write(template)
 
     # helper function that adds a variable
