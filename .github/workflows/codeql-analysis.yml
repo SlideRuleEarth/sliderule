@@ -39,19 +39,24 @@ jobs:
       uses: actions/checkout@v3
       with:
         repository: SlideRuleEarth/ut-ATL24-coastnet
+        path: ut-ATL24-coastnet
 
     - name: Checkout Qtrees
       uses: actions/checkout@v3
       with:
         repository: SlideRuleEarth/ut-ATL24-qtrees
+        path: ut-ATL24-qtrees
 
     - name: Checkout OpenOceans++
       uses: actions/checkout@v3
       with:
         repository: SlideRuleEarth/ut-ATL24-oopp
+        path: ut-ATL24-oopp
 
     - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        path: sliderule
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
@@ -61,7 +66,7 @@ jobs:
 
     # Build SlideRule
     - run: |
-       cd targets/slideruleearth-aws
+       cd sliderule/targets/slideruleearth-aws
        make config-release
        make
 

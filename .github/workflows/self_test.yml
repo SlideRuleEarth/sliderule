@@ -33,27 +33,32 @@ jobs:
       uses: actions/checkout@v3
       with:
         repository: SlideRuleEarth/ut-ATL24-coastnet
+        path: ut-ATL24-coastnet
 
     - name: Checkout Qtrees
       uses: actions/checkout@v3
       with:
         repository: SlideRuleEarth/ut-ATL24-qtrees
+        path: ut-ATL24-qtrees
 
     - name: Checkout OpenOceans++
       uses: actions/checkout@v3
       with:
         repository: SlideRuleEarth/ut-ATL24-oopp
+        path: ut-ATL24-oopp
 
-    - name: Checkout sliderule repository
+    - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        path: sliderule
 
     - name: Build sliderule
       run: |
-       cd targets/slideruleearth-aws
+       cd sliderule/targets/slideruleearth-aws
        make config-debug
        make
 
     - name: Run test
       run: |
-       cd targets/slideruleearth-aws
+       cd sliderule/targets/slideruleearth-aws
        make selftest TEST=../../scripts/selftests/test_runner.lua
