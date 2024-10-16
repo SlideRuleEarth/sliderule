@@ -395,7 +395,6 @@ uint32_t GeoIndexedRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
                 if(ps.sample == NULL) break;
 
                 RasterSample* s;
-
                 if(!ps.sampleReturned)
                 {
                     ps.sampleReturned = true;
@@ -1613,7 +1612,7 @@ bool GeoIndexedRaster::sampleUniqueRasters(const std::vector<unique_raster_t*>& 
         createBatchReaderThreads(std::min(maxThreads, numRasters));
 
         const uint32_t numThreads = batchReaders.length();
-        mlog(DEBUG, "Sampling %u rasters with %u threads", numRasters, numThreads);
+        mlog(INFO, "Sampling %u rasters with %u threads", numRasters, numThreads);
 
         /* Sample unique rasters utilizing numThreads */
         uint32_t currentRaster = 0;
