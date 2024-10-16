@@ -1,8 +1,8 @@
-# Release v4.7.2
+# Release v4.8.0
 
-2024-xx-xx
+2024-10-15
 
-Version description of the v4.7.2 release of SlideRule Earth.
+Version description of the v4.8.0 release of SlideRule Earth.
 
 Bathy Version #5.
 
@@ -18,7 +18,17 @@ Bathy Version #5.
 
 * Fixed issue with the use of the wind speed in the uncertainty calculation where wind speeds are now averaged between five different levels
 
+* Coastnet is used to set the surface_h
+
+* Minimum subaqueous vertical uncertainty set to 10cm
+
+* Refraction correction and uncertainty applied to photons below surface_h AND are not labeled as sea surface
+
+* Classifiers updated: coastnet, qtrees, openoceanspp, ensemble
+
 ## Known Issues and Remaining Tasks
+
+* CMR queries of ATL09 stopped working
 
 ## General Changes
 
@@ -33,12 +43,6 @@ Bathy Version #5.
 
 * The `proj` field has changed to `projection` for clarity.
 
-## Development Updates
-
 ## Getting This Release
 
-[https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.7.2](https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.7.2)
-
-## ATL24 Request Parameters
-
-## Benchmarks
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.8.0](https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.8.0)
