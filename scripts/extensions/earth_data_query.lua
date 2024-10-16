@@ -5,6 +5,9 @@
 
 local json = require("json")
 
+
+local pp = require("prettyprint")
+
 --
 -- Constants
 --
@@ -177,7 +180,7 @@ local function cmr (parms, poly, with_meta)
     local cmr_query_url = table.concat({
         "https://cmr.earthdata.nasa.gov/search/granules.json",
         string.format("?provider=%s", provider),
-        "&sort_key[]=start_date&sort_key[]=producer_granule_id&scroll=true",
+        "&sort_key[]=start_date&sort_key[]=producer_granule_id",
         string.format("&page_size=%s", CMR_PAGE_SIZE),
         string.format("&short_name=%s", short_name),
         version and string.format("&version=%s", version) or "",
@@ -197,10 +200,11 @@ local function cmr (parms, poly, with_meta)
             return RC_RQST_FAILED, string.format("http request to CMR failed <%s>", rsps)
         end
 
-        -- add scroll id for future page requests
-        if not headers["cmr-scroll-id"] then
-            headers["cmr-scroll-id"] = hdrs["cmr-scroll-id"]
-        end
+        -- add search after link for future page requests
+        headers["cmr-search-after"] = hdrs["cmr-search-after"]
+
+        -- get number of cmr hits
+        local cmr_hits = tonumber(hdrs["cmr-hits"])
 
         -- decode response text (json) into lua table
         local rc, results = pcall(json.decode, rsps)
@@ -257,10 +261,12 @@ local function cmr (parms, poly, with_meta)
             end
         end
 
-        -- check if any links added with last request (else all done)
-        if num_links == 0 then
-            break
-        elseif total_links >= max_resources then
+        -- check completion
+        if cmr_hits ~= nil and total_links >= cmr_hits then -- number of hits reached
+            break -- all done
+        elseif num_links == 0 then -- no links added with last request
+            break -- all done
+        elseif total_links > max_resources then -- maximum number of links allowed exceeded
             return RC_RSPS_TRUNCATED, string.format("number of matched resources at %d exceeded maximum allowed for %s", total_links, short_name)
         end
     end

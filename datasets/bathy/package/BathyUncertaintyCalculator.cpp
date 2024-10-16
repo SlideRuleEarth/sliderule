@@ -297,8 +297,8 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
         df.processing_flags[i] = df.processing_flags[i] | processing_flags;
 
         /* calculate subaqueous uncertainty */
-        double subaqueous_horizontal_uncertainty = BathyFields::MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY;
-        double subaqueous_vertical_uncertainty = BathyFields::MINIMUM_VERTICAL_SUBAQUEOUS_UNCERTAINTY;
+        double subaqueous_horizontal_uncertainty = 0.0;
+        double subaqueous_vertical_uncertainty = 0.0;
         const double depth = df.surface_h[i] - df.ortho_h[i];
         if(depth > 0.0)
         {
@@ -309,6 +309,10 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
             /* subaqueous uncertainties */
             subaqueous_horizontal_uncertainty += (horizontal_coeff.b * depth) + horizontal_coeff.c;
             subaqueous_vertical_uncertainty += (vertical_coeff.b * depth) + vertical_coeff.c;
+
+            /* check against minimum uncertainties */
+            subaqueous_horizontal_uncertainty = MAX(subaqueous_horizontal_uncertainty, BathyFields::MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY);
+            subaqueous_vertical_uncertainty = MAX(subaqueous_vertical_uncertainty, BathyFields::MINIMUM_VERTICAL_SUBAQUEOUS_UNCERTAINTY);
 
             /* set maximum sensor depth processing flag */
             if(depth > max_sensor_depth)
