@@ -19,7 +19,7 @@ local start_time    = time.gps() -- used for timeout handling
 -- function: cleanup
 -------------------------------------------------------
 local function cleanup(_crenv, _transaction_id)
-    runner.cleanup(_crenv) -- container runtime environment
+--    runner.cleanup(_crenv) -- container runtime environment
     core.orchunlock({_transaction_id}) -- unlock transaction
 end
 
@@ -300,6 +300,7 @@ outputs["profile"] = profile
 outputs["format"] = parms["output"]["format"]
 outputs["filename"] = crenv.container_sandbox_mount.."/"..tmp_filename
 outputs["ensemble"] = parms["ensemble"] or {ensemble_model_filename=string.format("%s/%s", cre.HOST_DIRECTORY, bathy.ENSEMBLE_MODEL)}
+outputs["atl03_filename"] = parms["resource"]
 outputs["latch"] = latch
 
 -------------------------------------------------------

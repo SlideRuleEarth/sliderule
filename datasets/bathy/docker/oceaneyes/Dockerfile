@@ -18,7 +18,7 @@ RUN dnf update -y \
 # # install mamba for python based algorithms
 # RUN wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-aarch64.sh \
 #     && bash Miniforge3-Linux-aarch64.sh -b
-# 
+#
 # # install python dependencies for python based algorithms
 # COPY conda-linux-aarch64.lock .
 # RUN /root/miniforge3/bin/mamba create --copy -p /env --file conda-linux-aarch64.lock \
@@ -31,6 +31,7 @@ COPY magic_pytorch_env /magic
 # install python applications
 COPY runner.sh /runner.sh
 COPY runner.py /runner.py
+COPY atl24_iso_xml_template.txt /atl24_iso_xml_template.txt
 COPY bathypathfinder /bathypathfinder
 COPY cshelph /cshelph
 COPY medianfilter /medianfilter

@@ -114,6 +114,10 @@ void ArrowFields::fromLua (lua_State* L, int index)
             {
                 path_suffix = ".csv";
             }
+            else if(format == H5)
+            {
+                path_suffix = ".h5";
+            }
             if(!path.value.empty() && (path.value[0] != '\0'))
             {
                 path = FString("%s%s/%s", path_prefix, asset->getPath(), path.value.c_str()).c_str();

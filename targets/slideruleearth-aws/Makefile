@@ -181,6 +181,7 @@ oceaneyes-docker:
 	cp $(OCEANEYES_SRC_DIR)/Dockerfile $(OCEANEYES_STAGE_DIR)
 	cp $(OCEANEYES_SRC_DIR)/conda-* $(OCEANEYES_STAGE_DIR)
 	cp $(OCEANEYES_SRC_DIR)/runner.* $(OCEANEYES_STAGE_DIR)
+	cp $(OCEANEYES_SRC_DIR)/atl24_iso_xml_template.txt $(OCEANEYES_STAGE_DIR)
 	mkdir $(OCEANEYES_STAGE_DIR)/cshelph
 	cp $(CSHELPH_SOURCE_FILE) $(OCEANEYES_STAGE_DIR)/cshelph
 	@echo $(CSHELPH_VERSION) > $(OCEANEYES_STAGE_DIR)/cshelph/cshelph_version.txt
