@@ -38,8 +38,7 @@ import requests
 import numpy
 import geopandas
 from datetime import datetime
-from shapely.geometry.multipolygon import MultiPolygon
-from shapely.geometry import Polygon
+import shapely.geometry
 from sliderule import logger
 import sliderule
 
@@ -188,9 +187,9 @@ def __cmr_granule_metadata(search_results):
             # for each polygon
             for poly in e['polygons'][0]:
                 coords = [float(i) for i in poly.split()]
-                polygons.append(Polygon(zip(coords[1::2], coords[::2])))
+                polygons.append(shapely.Geometry.Polygon(zip(coords[1::2], coords[::2])))
             # generate multipolygon from list of polygons
-            geometry = MultiPolygon(polygons)
+            geometry = shapely.geometry.MultiPolygon(polygons)
         else:
             geometry, = geopandas.points_from_xy([None], [None])
         # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
@@ -337,9 +336,13 @@ def __cmr_search(provider, short_name, version, polygons, time_start, time_end, 
             # simplify polygon
             if polygon and tolerance:
                 raw_multi_polygon = [[(tuple([(c['lon'], c['lat']) for c in polygon]), [])]]
-                shape = MultiPolygon(*raw_multi_polygon)
+                shape = shapely.geometry.MultiPolygon(*raw_multi_polygon)
                 buffered_shape = shape.buffer(tolerance)
                 simplified_shape = buffered_shape.simplify(tolerance)
+                # verify that polygon is counter-clockwise
+                if not shapely.is_ccw(simplified_shape.exterior):
+                    simplified_shape = shapely.reverse(simplified_shape)
+                # extract coordinates for new CMR search
                 simplified_coords = list(simplified_shape.exterior.coords)
                 logger.warning('Using simplified polygon (for CMR request only!), {} points using tolerance of {}'.format(len(simplified_coords), tolerance))
                 region = []
