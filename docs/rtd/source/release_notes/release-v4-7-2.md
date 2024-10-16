@@ -26,9 +26,11 @@ Bathy Version #5.
 
 * Classifiers updated: coastnet, qtrees, openoceanspp, ensemble
 
+* Statistics on Subaqueous photons no longer include photons labeled as sea surface
+
 ## Known Issues and Remaining Tasks
 
-* CMR queries of ATL09 stopped working
+* CMR queries of ATL09 stopped working - CMR updated their API and removed support for page numbers when scrolling
 
 ## General Changes
 

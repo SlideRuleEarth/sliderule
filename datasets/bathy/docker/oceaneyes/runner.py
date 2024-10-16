@@ -280,7 +280,7 @@ df["processing_flags"] = df["processing_flags"] + ((df["cshelph"] == 40) * 2**28
 # apply subaqueous corrections
 corrections_start_time = time.time()
 df.reset_index(drop=False, inplace=True)
-subaqueous_df = df[df["ortho_h"] < df["surface_h"]] # only photons below sea surface
+subaqueous_df = df[df["geoid_corr_h"] < df["surface_h"]] # only photons below sea surface
 subaqueous_df = subaqueous_df[subaqueous_df["ensemble"].isin([0, 40])] # exclude photons labeled as sea surface
 df.loc[subaqueous_df.index, 'ortho_h'] += df.loc[subaqueous_df.index, 'refracted_dZ']
 df.loc[subaqueous_df.index, 'ellipse_h'] += df.loc[subaqueous_df.index, 'refracted_dZ']
@@ -299,14 +299,18 @@ bathy_df["depth"] = bathy_df["surface_h"] - bathy_df["ortho_h"]
 stats = {
     "total_photons": len(df),
     "sea_surface_photons": len(df[df.ensemble == 41]),
-    "subaqueous_photons": len(df[df.ortho_h < df.surface_h]),
+    "subaqueous_photons": len(subaqueous_df),
     "bathy_photons": len(bathy_df),
     "bathy_strong_photons": len(bathy_df[bathy_df.spot.isin([1,3,5])]),
     "bathy_linear_coverage":  bathy_df.index_seg.nunique() * 20.0, # number of unique segments with bathymetry X size of each segment in meters
-    "bathy_mean_depth": bathy_df.depth.mean(),
-    "bathy_min_depth": bathy_df.depth.min(),
-    "bathy_max_depth": bathy_df.depth.max(),
-    "bathy_std_depth": bathy_df.depth.std()
+    "bathy_mean_depth": bathy_df.depth.mean().item(),
+    "bathy_min_depth": bathy_df.depth.min().item(),
+    "bathy_max_depth": bathy_df.depth.max().item(),
+    "bathy_std_depth": bathy_df.depth.std().item(),
+    "subaqueous_mean_uncertainty": bathy_df.subaqueous_sigma_tvu.mean().item(),
+    "subaqueous_min_uncertainty": bathy_df.subaqueous_sigma_tvu.min().item(),
+    "subaqueous_max_uncertainty": bathy_df.subaqueous_sigma_tvu.max().item(),
+    "subaqueous_std_uncertainty": bathy_df.subaqueous_sigma_tvu.std().item()
 }
 
 # read versions

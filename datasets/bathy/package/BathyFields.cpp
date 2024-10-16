@@ -42,8 +42,8 @@
  ******************************************************************************/
 
 const double BathyFields::NIGHT_SOLAR_ELEVATION_THRESHOLD = 5.0; // degrees
-const double BathyFields::MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY = 0.0;
-const double BathyFields::MINIMUM_VERTICAL_SUBAQUEOUS_UNCERTAINTY = 10.0;
+const double BathyFields::MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY = 0.0; // meters
+const double BathyFields::MINIMUM_VERTICAL_SUBAQUEOUS_UNCERTAINTY = 0.10; // meters
 
 /******************************************************************************
  * METHODS
