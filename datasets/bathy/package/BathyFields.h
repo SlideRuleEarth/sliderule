@@ -145,51 +145,12 @@ struct OpenOceansPPFields: public FieldDictionary
     FieldElement<bool>      setSurface              {false};
     FieldElement<bool>      usePredictions          {false};
     FieldElement<bool>      verbose                 {true};
-    FieldElement<double>    xResolution             {10.0};
-    FieldElement<double>    zResolution             {0.2};
-    FieldElement<double>    zMin                    {-50};
-    FieldElement<double>    zMax                    {30};
-    FieldElement<double>    surfaceZMin             {-20};
-    FieldElement<double>    surfaceZMax             {20};
-    FieldElement<double>    bathyMinDepth           {0.5};
-    FieldElement<double>    verticalSmoothingSigma  {0.5};
-    FieldElement<double>    surfaceSmoothingSigma   {200.0};
-    FieldElement<double>    bathySmoothingSigma     {100.0};
-    FieldElement<double>    minPeakProminence       {0.01};
-    FieldElement<size_t>    minPeakDistance         {2};
-
-    size_t                  minSurfacePhotonsPerWindow;
-    size_t                  minBathyPhotonsPerWindow;
-
-    void updatePhotonsPerWindow(void) {
-        minSurfacePhotonsPerWindow = 0.25 * (xResolution.value / 0.7);
-        minBathyPhotonsPerWindow = 0.25 * (xResolution.value / 0.7);
-    }
-
-    void fromLua (lua_State* L, int index) override {
-        FieldDictionary::fromLua(L, index);
-        updatePhotonsPerWindow();
-    }
 
     OpenOceansPPFields(void):
         FieldDictionary({ {"set_class",                 &setClass},
                           {"set_surface",               &setSurface},
                           {"use_predictions",           &usePredictions},
-                          {"verbose",                   &verbose},
-                          {"x_resolution",              &xResolution},
-                          {"z_resolution",              &zResolution},
-                          {"z_min",                     &zMin},
-                          {"z_max",                     &zMax},
-                          {"surface_z_min",             &surfaceZMin},
-                          {"surface_z_max",             &surfaceZMax},
-                          {"bathy_min_depth",           &bathyMinDepth},
-                          {"vertical_smoothing_sigma",  &verticalSmoothingSigma},
-                          {"surface_smoothing_sigma",   &surfaceSmoothingSigma},
-                          {"bathy_smoothing_sigma",     &bathySmoothingSigma},
-                          {"min_peak_prominence",       &minPeakProminence},
-                          {"min_peak_distance",         &minPeakDistance} }) {
-        updatePhotonsPerWindow();
-    };
+                          {"verbose",                   &verbose} }) {};
 
     virtual ~OpenOceansPPFields(void) override = default;
 };

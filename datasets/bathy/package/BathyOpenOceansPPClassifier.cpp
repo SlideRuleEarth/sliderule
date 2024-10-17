@@ -29,7 +29,6 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// NOLINTBEGIN
 
 /******************************************************************************
  * INCLUDES
@@ -120,7 +119,7 @@ bool BathyOpenOceansPPClassifier::run (GeoDataFrame* dataframe)
         for(size_t i = 0; i < number_of_samples; i++)
         {
             // Populate photon
-            oopp::photon photon = {
+            const oopp::photon photon = {
                 .h5_index = 0,
                 .x = x_atc[i],
                 .z = geoid_corr_h[i],
@@ -138,27 +137,8 @@ bool BathyOpenOceansPPClassifier::run (GeoDataFrame* dataframe)
             }
         }
 
-        // Initialize Parameters
-        oopp::params params = {
-            .x_resolution = args.xResolution.value,
-            .z_resolution = args.zResolution.value,
-            .z_min = args.zMin.value,
-            .z_max = args.zMax.value,
-            .surface_z_min = args.surfaceZMin.value,
-            .surface_z_max = args.surfaceZMax.value,
-            .bathy_min_depth = args.bathyMinDepth.value,
-            .vertical_smoothing_sigma = args.verticalSmoothingSigma.value,
-            .surface_smoothing_sigma = args.surfaceSmoothingSigma.value,
-            .bathy_smoothing_sigma = args.bathySmoothingSigma.value,
-            .min_peak_prominence = args.minPeakProminence.value,
-            .min_peak_distance = args.minPeakDistance.value,
-            .min_surface_photons_per_window = args.minSurfacePhotonsPerWindow,
-            .min_bathy_photons_per_window = args.minBathyPhotonsPerWindow,
-            .surface_n_stddev = 3.0,
-            .bathy_n_stddev = 3.0
-        };
-
         // Run classification
+        const oopp::params params;
         samples = classify (samples, params, args.usePredictions);
 
         // Update extents
@@ -183,4 +163,3 @@ bool BathyOpenOceansPPClassifier::run (GeoDataFrame* dataframe)
     return true;
 }
 
-// NOLINTEND

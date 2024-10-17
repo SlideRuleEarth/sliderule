@@ -29,8 +29,6 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// NOLINTBEGIN
-
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
@@ -124,7 +122,7 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
         for(size_t i = 0; i < number_of_samples; i++)
         {
             // Populate sample
-            utils::sample s = {
+            const utils::sample s = {
                 .dataset_id = 0,
                 .h5_index = 0,
                 .x = x_atc[i],
@@ -168,5 +166,3 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
     updateRunTime(TimeLib::latchtime() - start);
     return true;
 }
-
-// NOLINTEND
