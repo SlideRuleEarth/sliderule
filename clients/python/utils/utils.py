@@ -61,7 +61,7 @@ def initialize_client(args):
         "asset":                    'atlas-local',
         "region":                   None,
         "resource":                 'ATL03_20181017222812_02950102_005_01.h5',
-        "raster":                   True,
+        "region_mask":              True,
         "atl08_class":              [],
         "yapc.score":               0,
         "yapc.knn":                 0,
@@ -110,8 +110,8 @@ def initialize_client(args):
     if cfg["region"]:
         region = sliderule.toregion(cfg["region"])
         parms["poly"] = region['poly']
-        if cfg["raster"]:
-            parms["raster"] = region['raster']
+        if cfg["region_mask"]:
+            parms["region_mask"] = region['region_mask']
 
     # Add Ancillary Fields
     if len(cfg['atl03_geo_fields']) > 0:

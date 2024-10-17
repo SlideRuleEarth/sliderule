@@ -40,6 +40,7 @@
 #include "LuaObject.h"
 #include "FieldDictionary.h"
 #include "FieldElement.h"
+#include "FieldList.h"
 #include "Asset.h"
 
 #ifdef __aws__
@@ -55,13 +56,21 @@ class ArrowFields: public FieldDictionary
     public:
 
         /*--------------------------------------------------------------------
+        * Constants
+        *--------------------------------------------------------------------*/
+
+        static const char* PARMS;
+
+        /*--------------------------------------------------------------------
         * Typedefs
         *--------------------------------------------------------------------*/
+
         typedef enum {
             FEATHER = 1,
             PARQUET = 2,
             GEOPARQUET = 3,
-            CSV = 4
+            CSV = 4,
+            H5 = 5
         } format_t;
 
         /*--------------------------------------------------------------------
@@ -69,13 +78,14 @@ class ArrowFields: public FieldDictionary
         *--------------------------------------------------------------------*/
 
         FieldElement<string>    path;                       // file system path to the file (includes filename)
-        FieldElement<format_t>  format {PARQUET};           // format of the file
+        FieldElement<format_t>  format {GEOPARQUET};        // format of the file
         FieldElement<bool>      openOnComplete {false};     // flag to client to open file on completion
         FieldElement<bool>      asGeo {false};              // whether to create a standard geo-based formatted file
         FieldElement<bool>      withChecksum {false};       // whether to perform checksum on file and send EOF record
         FieldElement<bool>      withValidation {false};     // whether to validate the arrow structure before outputing
         FieldElement<string>    assetName;
         FieldElement<string>    region;
+        FieldList<string>       ancillaryFields;
 
         #ifdef __aws__
         CredentialStore::Credential credentials;

@@ -17,14 +17,36 @@
 local json = require("json")
 local earthdata = require("earth_data_query")
 
-local function proxy(resources, parms, endpoint, rec)
+local function proxy(resources, parms_tbl, endpoint, rec)
+
     -- Create User Status --
     local userlog = msg.publish(rspq)
 
+    -- Populate Catalogs via STAC and TNM Requests --
+    local geo_parms = parms_tbl[geo.PARMS]
+    if geo_parms then
+        for dataset,raster_parms in pairs(geo_parms) do
+            if not raster_parms["catalog"] then
+                userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> querying resources for %s", rspq, dataset))
+                local rc, rsps = earthdata.search(raster_parms, parms_tbl["poly"])
+                if rc == earthdata.SUCCESS then
+                    parms_tbl[geo.PARMS][dataset]["catalog"] = json.encode(rsps)
+                    local num_features = parms_tbl[geo.PARMS][dataset]["catalog"]["features"] and #parms_tbl[geo.PARMS][dataset]["catalog"]["features"] or 0
+                    userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> returned %d resources for %s", rspq, num_features, dataset))
+                elseif rc ~= earthdata.UNSUPPORTED then
+                    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to get catalog for %s <%d>: %s", rspq, dataset, rc, rsps))
+                end
+            end
+        end
+    end
+
+    -- Create Request Parameters --
+    local parms = core.parms(parms_tbl)
+
     -- Request Parameters --
-    local timeout = parms["rqst_timeout"] or parms["timeout"] or core.RQST_TIMEOUT
-    local node_timeout = parms["node_timeout"] or parms["timeout"] or core.NODE_TIMEOUT
-    local cluster_size_hint = parms["cluster_size_hint"] or core.CLUSTER_SIZE_HINT
+    local timeout = parms["rqst_timeout"]
+    local node_timeout = parms["node_timeout"]
+    local cluster_size_hint = parms["cluster_size_hint"]
 
     -- Initialize Queue Management --
     local rsps_from_nodes = rspq
@@ -32,23 +54,18 @@ local function proxy(resources, parms, endpoint, rec)
 
     -- Handle Output Options --
     local arrow_builder = nil
-    local arrow_parms = nil
     local arrow_file = nil
     local arrow_metafile = nil
-    if parms[arrow.PARMS] then
-        arrow_parms = arrow.parms(parms[arrow.PARMS])
+    if parms:hasoutput() then
         -- Determine if Keeping Local File (needed for later ArrowSampler) --
-        local keep_local = parms[geo.PARMS] ~= nil
+        local keep_local = parms:withsamplers()
         -- Arrow Builder --
-        if arrow_parms:isarrow() then
-            local parms_str = json.encode(parms)
-            arrow_builder = arrow.builder(arrow_parms, rspq, rspq .. "-builder", rec, rqstid, parms_str, endpoint, keep_local)
-            if arrow_builder then
-                rsps_from_nodes = rspq .. "-builder"
-                terminate_proxy_stream = true
-                if keep_local then
-                    arrow_file, arrow_metafile = arrow_builder:filenames()
-                end
+        arrow_builder = arrow.builder(parms, rspq, rspq .. "-builder", rec, rqstid, endpoint, keep_local)
+        if arrow_builder then
+            rsps_from_nodes = rspq .. "-builder"
+            terminate_proxy_stream = true
+            if keep_local then
+                arrow_file, arrow_metafile = arrow_builder:filenames()
             end
         end
     end
@@ -68,26 +85,8 @@ local function proxy(resources, parms, endpoint, rec)
         end
     end
 
-    -- Populate Catalogs via STAC and TNM Requests --
-    local geo_parms = parms[geo.PARMS]
-    if geo_parms then
-        for dataset,raster_parms in pairs(geo_parms) do
-            if not raster_parms["catalog"] then
-                userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> querying resources for %s", rspq, dataset))
-                local rc, rsps = earthdata.search(raster_parms, parms["poly"])
-                if rc == earthdata.SUCCESS then
-                    parms[geo.PARMS][dataset]["catalog"] = json.encode(rsps)
-                    local num_features = parms[geo.PARMS][dataset]["catalog"]["features"] and #parms[geo.PARMS][dataset]["catalog"]["features"] or 0
-                    userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> returned %d resources for %s", rspq, num_features, dataset))
-                elseif rc ~= earthdata.UNSUPPORTED then
-                    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to get catalog for %s <%d>: %s", rspq, dataset, rc, rsps))
-                end
-            end
-        end
-    end
-
     -- Proxy Request --
-    local endpoint_proxy = core.proxy(endpoint, resources, json.encode(parms), node_timeout, locks_per_node, rsps_from_nodes, terminate_proxy_stream, cluster_size_hint)
+    local endpoint_proxy = core.proxy(endpoint, resources, json.encode(parms_tbl), node_timeout, locks_per_node, rsps_from_nodes, terminate_proxy_stream, cluster_size_hint)
 
     -- Wait Until Proxy Completes --
     local duration = 0
@@ -104,9 +103,9 @@ local function proxy(resources, parms, endpoint, rec)
     if arrow_builder then
         -- Create Raster Objects for Arrow Sampler --
         local georasters = nil
-        if parms[geo.PARMS] then
+        if parms:withsamplers() then
             georasters = {}
-            for key,settings in pairs(parms[geo.PARMS]) do
+            for key,settings in pairs(parms:samplers()) do
                 local robj = geo.raster(geo.parms(settings))
                 if robj then
                     georasters[key] = robj
@@ -128,7 +127,7 @@ local function proxy(resources, parms, endpoint, rec)
         -- Handle Arrow Sampler --
         if georasters then
             -- Create Arrow Sampler and Sample Rasters --
-            local arrow_sampler = arrow.sampler(arrow_parms, arrow_file, rspq, georasters)
+            local arrow_sampler = arrow.sampler(parms, arrow_file, rspq, georasters)
 
             -- Wait Until Arrow Sampler Completion --
             while (userlog:numsubs() > 0) and not arrow_sampler:waiton(interval * 1000) do

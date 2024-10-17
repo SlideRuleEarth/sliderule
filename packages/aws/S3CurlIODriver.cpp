@@ -147,7 +147,7 @@ static size_t curlReadFile(void* buffer, size_t size, size_t nmemb, void *userp)
 /*----------------------------------------------------------------------------
  * buildReadHeadersV2
  *----------------------------------------------------------------------------*/
-static headers_t buildReadHeadersV2 (const char* bucket, const char* key, CredentialStore::Credential* credentials)
+static headers_t buildReadHeadersV2 (const char* bucket, const char* key, const CredentialStore::Credential* credentials)
 {
     /* Initial HTTP Header List */
     struct curl_slist* headers = NULL;
@@ -184,7 +184,7 @@ static headers_t buildReadHeadersV2 (const char* bucket, const char* key, Creden
 /*----------------------------------------------------------------------------
  * buildWriteHeadersV2
  *----------------------------------------------------------------------------*/
-static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials, long content_length)
+static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const char* region, const CredentialStore::Credential* credentials, long content_length)
 {
     (void)region;
 
@@ -405,7 +405,7 @@ int64_t S3CurlIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
 /*----------------------------------------------------------------------------
  * get - fixed
  *----------------------------------------------------------------------------*/
-int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
+int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const char* bucket, const char* key, const char* region, const CredentialStore::Credential* credentials)
 {
     bool status = false;
 
@@ -515,7 +515,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
 /*----------------------------------------------------------------------------
  * get - streaming
  *----------------------------------------------------------------------------*/
-int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
+int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key, const char* region, const CredentialStore::Credential* credentials)
 {
     /* Initialize Function Parameters */
     bool status = false;
@@ -627,7 +627,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
 /*----------------------------------------------------------------------------
  * get - file
  *----------------------------------------------------------------------------*/
-int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
+int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const char* key, const char* region, const CredentialStore::Credential* credentials)
 {
     bool status = false;
 
@@ -721,7 +721,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
 /*----------------------------------------------------------------------------
  * put - file
  *----------------------------------------------------------------------------*/
-int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const char* key, const char* region, CredentialStore::Credential* credentials)
+int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const char* key, const char* region, const CredentialStore::Credential* credentials)
 {
     bool status = false;
 
@@ -834,7 +834,7 @@ int S3CurlIODriver::luaGet(lua_State* L)
         const char* identity    = LuaObject::getLuaString(L, 4, true, S3CurlIODriver::DEFAULT_IDENTITY);
 
         /* Get Credentials */
-        CredentialStore::Credential credentials = CredentialStore::get(identity);
+        const CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Make Request */
         uint8_t* rsps_data = NULL;
@@ -880,7 +880,7 @@ int S3CurlIODriver::luaDownload(lua_State* L)
         const char* filename    = LuaObject::getLuaString(L, 5, true, key);
 
         /* Get Credentials */
-        CredentialStore::Credential credentials = CredentialStore::get(identity);
+        const CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Make Request */
         const int64_t rsps_size = get(filename, bucket, key, region, &credentials);
@@ -922,7 +922,7 @@ int S3CurlIODriver::luaRead(lua_State* L)
         if(pos < 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid position: %ld", pos);
 
         /* Get Credentials */
-        CredentialStore::Credential credentials = CredentialStore::get(identity);
+        const CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Make Request */
         uint8_t* rsps_data = new uint8_t [size];
@@ -968,7 +968,7 @@ int S3CurlIODriver::luaUpload(lua_State* L)
         const char* identity    = LuaObject::getLuaString(L, 5, true, S3CurlIODriver::DEFAULT_IDENTITY);
 
         /* Get Credentials */
-        CredentialStore::Credential credentials = CredentialStore::get(identity);
+        const CredentialStore::Credential credentials = CredentialStore::get(identity);
 
         /* Make Request */
         const int64_t upload_size = put(filename, bucket, key, region, &credentials);

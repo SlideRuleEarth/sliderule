@@ -56,9 +56,9 @@ void GeoRaster::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool dataIsElevation, GdalRaster::overrideCRS_t cb):
-    RasterObject(L, _parms),
-    raster(_parms, _fileName, _gpsTime, fileDictAdd(_fileName), dataIsElevation, cb)
+GeoRaster::GeoRaster(lua_State *L, RequestFields* rqst_parms, const char* key, const std::string& _fileName, double _gpsTime, bool dataIsElevation, GdalRaster::overrideCRS_t cb):
+    RasterObject(L, rqst_parms, key),
+    raster(parms, _fileName, _gpsTime, fileDictAdd(_fileName), dataIsElevation, cb)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -66,7 +66,7 @@ GeoRaster::GeoRaster(lua_State *L, GeoParms* _parms, const std::string& _fileNam
     LuaEngine::setAttrFunc(L, "cell", luaCellSize);
 
     /* Establish Credentials */
-    GdalRaster::initAwsAccess(_parms);
+    GdalRaster::initAwsAccess(parms);
 }
 
 /*----------------------------------------------------------------------------
@@ -127,14 +127,15 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
              * it would create subsetted raster with the same file path as parent raster.
              */
             subset->robj = new GeoRaster(NULL,
-                                         parms,
+                                         rqstParms,
+                                         samplerKey,
                                          subset->rasterName,
                                          raster.getGpsTime(),
                                          raster.isElevation(),
                                          raster.getOverrideCRS());
 
-            /* GeoParms are shared with subsseted raster */
-            referenceLuaObject(parms);
+            /* RequestFields are shared with subsseted raster */
+            referenceLuaObject(rqstParms);
             slist.add(subset);
         }
     }

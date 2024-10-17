@@ -329,6 +329,30 @@ long LuaObject::getNumObjects (void)
 }
 
 /*----------------------------------------------------------------------------
+ * createLuaObject
+ *
+ *  Note: if object is an alias, all calls into it from Lua must be thread safe
+ *----------------------------------------------------------------------------*/
+int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
+{
+    /* Create Lua User Data Object */
+    lua_obj->userData = static_cast<luaUserData_t*>(lua_newuserdata(L, sizeof(luaUserData_t)));
+    if(!lua_obj->userData)
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to allocate new user data");
+    }
+
+    /* Bump Reference Count */
+    lua_obj->referenceCount++;
+
+    /* Return User Data to Lua */
+    lua_obj->userData->luaObj = lua_obj;
+    luaL_getmetatable(L, lua_obj->LuaMetaName);
+    lua_setmetatable(L, -2);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * getLuaObjectByName
  *----------------------------------------------------------------------------*/
 LuaObject* LuaObject::getLuaObjectByName (const char* name, const char* object_type)
@@ -352,6 +376,18 @@ LuaObject* LuaObject::getLuaObjectByName (const char* name, const char* object_t
     globalMut.unlock();
 
     return lua_obj;
+}
+
+/*----------------------------------------------------------------------------
+ * referenceLuaObject
+ *----------------------------------------------------------------------------*/
+void LuaObject::referenceLuaObject (LuaObject* lua_obj)
+{
+    globalMut.lock();
+    {
+        lua_obj->referenceCount++;
+    }
+    globalMut.unlock();
 }
 
 /*----------------------------------------------------------------------------
@@ -468,32 +504,7 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
         LuaEngine::setAttrFunc(L, "waiton", luaWaitOn);
         LuaEngine::setAttrFunc(L, "destroy", luaDestroy);
         LuaEngine::setAttrFunc(L, "__gc", luaDelete);
-        LuaEngine::setAttrFunc(L, "tojson", lua2json);
     }
-}
-
-/*----------------------------------------------------------------------------
- * createLuaObject
- *
- *  Note: if object is an alias, all calls into it from Lua must be thread safe
- *----------------------------------------------------------------------------*/
-int LuaObject::createLuaObject (lua_State* L, LuaObject* lua_obj)
-{
-    /* Create Lua User Data Object */
-    lua_obj->userData = static_cast<luaUserData_t*>(lua_newuserdata(L, sizeof(luaUserData_t)));
-    if(!lua_obj->userData)
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to allocate new user data");
-    }
-
-    /* Bump Reference Count */
-    lua_obj->referenceCount++;
-
-    /* Return User Data to Lua */
-    lua_obj->userData->luaObj = lua_obj;
-    luaL_getmetatable(L, lua_obj->LuaMetaName);
-    lua_setmetatable(L, -2);
-    return 1;
 }
 
 /*----------------------------------------------------------------------------
@@ -518,26 +529,6 @@ LuaObject* LuaObject::getLuaSelf (lua_State* L, int parm)
     }
 
     throw RunTimeException(CRITICAL, RTE_ERROR, "calling object method from something not an object");
-}
-
-/*----------------------------------------------------------------------------
- * referenceLuaObject
- *----------------------------------------------------------------------------*/
-void LuaObject::referenceLuaObject (LuaObject* lua_obj)
-{
-    globalMut.lock();
-    {
-        lua_obj->referenceCount++;
-    }
-    globalMut.unlock();
-}
-
-/*----------------------------------------------------------------------------
- * tojson
- *----------------------------------------------------------------------------*/
-const char* LuaObject::tojson(void) const
-{
-    return StringLib::duplicate("{}");
 }
 
 /*----------------------------------------------------------------------------
@@ -760,29 +751,5 @@ int LuaObject::luaWaitOn(lua_State* L)
 
     /* Return Completion Status */
     return returnLuaStatus(L, status);
-}
-
-/*----------------------------------------------------------------------------
- * lua2json - :tojson()
- *----------------------------------------------------------------------------*/
-int LuaObject::lua2json(lua_State* L)
-{
-    const char* json_str = NULL;
-    try
-    {
-        /* Get Self */
-        const LuaObject* lua_obj = getLuaSelf(L, 1);
-
-        /* Convert object's default parameters to JSON */
-        json_str = lua_obj->tojson();
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error converting object's default parameters to json: %s", e.what());
-    }
-
-    lua_pushstring(L, json_str);
-    delete [] json_str;
-    return 1;
 }
 

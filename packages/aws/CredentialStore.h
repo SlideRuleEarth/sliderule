@@ -129,14 +129,14 @@ class CredentialStore
                 sessionToken = c.sessionToken;
                 expiration = c.expiration;
             };
-            
+
             Credential& operator=(const Credential& c) {
                 if(this != &c) {
                     accessKeyId = c.accessKeyId;
                     secretAccessKey = c.secretAccessKey;
                     sessionToken = c.sessionToken;
                     expiration = c.expiration;
-                } 
+                }
 
                 return *this;
             };

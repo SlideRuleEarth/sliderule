@@ -39,9 +39,8 @@
 #include "OsApi.h"
 #include "ContainerRecord.h"
 #include "Atl13Reader.h"
-#include "Icesat2Parms.h"
+#include "Icesat2Fields.h"
 #include "AncillaryFields.h"
-#include "h5.h"
 
 using std::numeric_limits;
 
@@ -87,29 +86,29 @@ const struct luaL_Reg Atl13Reader::LUA_META_TABLE[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>, <send terminator>)
+ * luaCreate - create(<outq_name>, <parms>, <send terminator>)
  *----------------------------------------------------------------------------*/
 int Atl13Reader::luaCreate (lua_State* L)
 {
-    Asset* asset = NULL;
-    Icesat2Parms* parms = NULL;
+    Icesat2Fields* _parms = NULL;
 
     try
     {
         /* Get Parameters */
-        asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
-        const char* resource = getLuaString(L, 2);
-        const char* outq_name = getLuaString(L, 3);
-        parms = dynamic_cast<Icesat2Parms*>(getLuaObject(L, 4, Icesat2Parms::OBJECT_TYPE));
-        const bool send_terminator = getLuaBoolean(L, 5, true, true);
+        const char* outq_name = getLuaString(L, 1);
+        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
+        const bool send_terminator = getLuaBoolean(L, 3, true, true);
+
+        /* Check for Null Resource and Asset */
+        if(_parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a resource to process");
+        else if(_parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a valid asset");
 
         /* Return Reader Object */
-        return createLuaObject(L, new Atl13Reader(L, asset, resource, outq_name, parms, send_terminator));
+        return createLuaObject(L, new Atl13Reader(L, outq_name, _parms, send_terminator));
     }
     catch(const RunTimeException& e)
     {
-        if(asset) asset->releaseLuaObject();
-        if(parms) parms->releaseLuaObject();
+        if(_parms) _parms->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", Atl13Reader::LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
@@ -127,23 +126,17 @@ void Atl13Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl13Reader::Atl13Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, Icesat2Parms* _parms, bool _send_terminator):
+Atl13Reader::Atl13Reader (lua_State* L, const char* outq_name, Icesat2Fields* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    read_timeout_ms(_parms->read_timeout * 1000),
+    read_timeout_ms(_parms->readTimeout.value * 1000),
+    parms(_parms),
     context(NULL)
 {
-    assert(_asset);
-    assert(_resource);
     assert(outq_name);
     assert(_parms);
 
     /* Initialize Thread Count */
     threadCount = 0;
-
-    /* Save Info */
-    asset = _asset;
-    resource = StringLib::duplicate(_resource);
-    parms = _parms;
 
     /* Create Publisher */
     outQ = new Publisher(outq_name);
@@ -168,18 +161,15 @@ Atl13Reader::Atl13Reader (lua_State* L, Asset* _asset, const char* _resource, co
     try
     {
         /* Create H5Coro Context */
-        context = new H5Coro::Context(asset, resource);
-
-        /* Parse Globals (throws) */
-        parseResource(resource, start_rgt, start_cycle, start_region);
+        context = new H5Coro::Context(parms->asset.asset, parms->resource.value.c_str());
 
         /* Create Readers */
-        for(int track = 1; track <= Icesat2Parms::NUM_TRACKS; track++)
+        for(int track = 1; track <= Icesat2Fields::NUM_TRACKS; track++)
         {
-            for(int pair = 0; pair < Icesat2Parms::NUM_PAIR_TRACKS; pair++)
+            for(int pair = 0; pair < Icesat2Fields::NUM_PAIR_TRACKS; pair++)
             {
                 const int gt_index = (2 * (track - 1)) + pair;
-                if(parms->beams[gt_index] && (parms->track == Icesat2Parms::ALL_TRACKS || track == parms->track))
+                if(parms->beams.values[gt_index] && (parms->track == Icesat2Fields::ALL_TRACKS || track == parms->track))
                 {
                     info_t* info = new info_t;
                     info->reader = this;
@@ -194,14 +184,14 @@ Atl13Reader::Atl13Reader (lua_State* L, Asset* _asset, const char* _resource, co
         /* Check if Readers Created */
         if(threadCount == 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "No reader threads were created, invalid track specified: %d\n", parms->track);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "No reader threads were created, invalid track specified: %d\n", parms->track.value);
         }
     }
     catch(const RunTimeException& e)
     {
         /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "Failure on resource %s: %s", resource, e.what());
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "Failure on resource %s: %s", resource, e.what());
+        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "Failure on resource %s: %s", parms->resource.value.c_str(), e.what());
+        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "Failure on resource %s: %s", parms->resource.value.c_str(), e.what());
 
         /* Indicate End of Data */
         if(sendTerminator) outQ->postCopy("", 0, SYS_TIMEOUT);
@@ -226,10 +216,6 @@ Atl13Reader::~Atl13Reader (void)
     delete context;
 
     parms->releaseLuaObject();
-
-    delete [] resource;
-
-    asset->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -252,11 +238,11 @@ Atl13Reader::Region::Region (const info_t* info):
         num_segments = H5Coro::ALL_ROWS;
 
         /* Determine Spatial Extent */
-        if(info->reader->parms->raster.valid())
+        if(info->reader->parms->regionMask.valid())
         {
             rasterregion(info);
         }
-        else if(info->reader->parms->points_in_poly > 0)
+        else if(info->reader->parms->pointsInPolygon.value > 0)
         {
             polyregion(info);
         }
@@ -310,17 +296,8 @@ void Atl13Reader::Region::polyregion (const info_t* info)
     int segment = 0;
     while(segment < latitude.size)
     {
-        bool inclusion = false;
-
-        /* Project Segment Coordinate */
-        const MathLib::coord_t segment_coord = {longitude[segment], latitude[segment]};
-        const MathLib::point_t segment_point = MathLib::coord2point(segment_coord, info->reader->parms->projection);
-
         /* Test Inclusion */
-        if(MathLib::inpoly(info->reader->parms->projected_poly, info->reader->parms->points_in_poly, segment_point))
-        {
-            inclusion = true;
-        }
+        const bool inclusion = info->reader->parms->polyIncludes(longitude[segment], latitude[segment]);
 
         /* Check First Segment */
         if(!first_segment_found && inclusion)
@@ -370,7 +347,7 @@ void Atl13Reader::Region::rasterregion (const info_t* info)
     while(segment < latitude.size)
     {
         /* Check Inclusion */
-        const bool inclusion = info->reader->parms->raster.includes(longitude[segment], latitude[segment]);
+        const bool inclusion = info->reader->parms->maskIncludes(longitude[segment], latitude[segment]);
         inclusion_mask[segment] = inclusion;
 
         /* Check For First Segment */
@@ -417,17 +394,17 @@ Atl13Reader::Atl13Data::Atl13Data (const info_t* info, const Region& region):
     segment_slope_trk_bdy   (info->reader->context, FString("%s/%s", info->prefix, "segment_slope_trk_bdy").c_str(), 0, region.first_segment, region.num_segments),
     water_depth             (info->reader->context, FString("%s/%s", info->prefix, "water_depth").c_str(),           0, region.first_segment, region.num_segments)
 {
-    AncillaryFields::list_t* anc_fields = info->reader->parms->atl13_fields;
+    const FieldList<string>& anc_fields = info->reader->parms->atl13Fields;
 
     /* Read Ancillary Fields */
-    if(anc_fields)
+    if(anc_fields.length() > 0)
     {
-        for(int i = 0; i < anc_fields->length(); i++)
+        for(int i = 0; i < anc_fields.length(); i++)
         {
-            const char* field_name = (*anc_fields)[i].field.c_str();
-            const FString dataset_name("%s/%s", info->prefix, field_name);
+            const string& field_name = anc_fields[i];
+            const FString dataset_name("%s/%s", info->prefix, field_name.c_str());
             H5DArray* array = new H5DArray(info->reader->context, dataset_name.c_str(), 0, region.first_segment, region.num_segments);
-            const bool status = anc_data.add(field_name, array);
+            const bool status = anc_data.add(field_name.c_str(), array);
             if(!status) delete array;
             assert(status); // the dictionary add should never fail
         }
@@ -447,7 +424,7 @@ Atl13Reader::Atl13Data::Atl13Data (const info_t* info, const Region& region):
     water_depth.join(info->reader->read_timeout_ms, true);
 
     /* Join Ancillary  Reads */
-    if(anc_fields)
+    if(anc_fields.length() > 0)
     {
         H5DArray* array = NULL;
         const char* dataset_name = anc_data.first(&array);
@@ -472,12 +449,12 @@ void* Atl13Reader::subsettingThread (void* parm)
     /* Get Thread Info */
     const info_t* info = static_cast<info_t*>(parm);
     Atl13Reader* reader = info->reader;
-    const Icesat2Parms* parms = reader->parms;
+    const Icesat2Fields* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
     vector<RecordObject*> rec_vec;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl13_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", info->reader->asset->getName(), info->reader->resource, info->track);
+    const uint32_t trace_id = start_trace(INFO, reader->traceId, "atl13_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms->asset.asset->getName(), parms->resource.value.c_str(), info->track);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -522,13 +499,13 @@ void* Atl13Reader::subsettingThread (void* parm)
 
             /* Populate Elevation */
             water_t* entry = &atl13_data->water[batch_index++];
-            entry->extent_id                = Icesat2Parms::generateExtentId(reader->start_rgt, reader->start_cycle, reader->start_region, info->track, info->pair, extent_counter) | Icesat2Parms::EXTENT_ID_ELEVATION;
-            entry->time_ns                  = Icesat2Parms::deltatime2timestamp(atl13.delta_time[segment]);
+            entry->extent_id                = Icesat2Fields::generateExtentId(reader->parms->rgt.value, reader->parms->cycle.value, reader->parms->region.value, info->track, info->pair, extent_counter) | Icesat2Fields::EXTENT_ID_ELEVATION;
+            entry->time_ns                  = Icesat2Fields::deltatime2timestamp(atl13.delta_time[segment]);
             entry->segment_id               = atl13.segment_id_beg[segment];
-            entry->rgt                      = reader->start_rgt;
-            entry->cycle                    = reader->start_cycle;
-            entry->spot                     = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)atl13.sc_orient[0], (Icesat2Parms::track_t)info->track, info->pair);
-            entry->gt                       = Icesat2Parms::getGroundTrack((Icesat2Parms::sc_orient_t)atl13.sc_orient[0], (Icesat2Parms::track_t)info->track, info->pair);
+            entry->rgt                      = reader->parms->rgt.value;
+            entry->cycle                    = reader->parms->cycle.value;
+            entry->spot                     = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl13.sc_orient[0], (Icesat2Fields::track_t)info->track, info->pair);
+            entry->gt                       = Icesat2Fields::getGroundTrack((Icesat2Fields::sc_orient_t)atl13.sc_orient[0], (Icesat2Fields::track_t)info->track, info->pair);
             entry->latitude                 = region.latitude[segment];
             entry->longitude                = region.longitude[segment];
             entry->snow_ice_atl09           = atl13.snow_ice_atl09[segment];
@@ -541,19 +518,19 @@ void* Atl13Reader::subsettingThread (void* parm)
             entry->water_depth              = atl13.water_depth[segment]            != numeric_limits<float>::max()   ? atl13.water_depth[segment]              : numeric_limits<float>::quiet_NaN();
 
             /* Populate Ancillary Data */
-            if(parms->atl13_fields)
+            if(parms->atl13Fields.length() > 0)
             {
                 /* Populate Each Field in Array */
                 vector<AncillaryFields::field_t> field_vec;
-                for(int i = 0; i < parms->atl13_fields->length(); i++)
+                for(int i = 0; i < parms->atl13Fields.length(); i++)
                 {
-                    const char* field_name = parms->atl13_fields->get(i).field.c_str();
+                    const string& field_name = parms->atl13Fields[i];
 
                     AncillaryFields::field_t field;
-                    field.anc_type = Icesat2Parms::ATL06_ANC_TYPE;
+                    field.anc_type = Icesat2Fields::ATL06_ANC_TYPE;
                     field.field_index = i;
-                    field.data_type = atl13.anc_data[field_name]->elementType();
-                    atl13.anc_data[field_name]->serialize(&field.value[0], segment, 1);
+                    field.data_type = atl13.anc_data[field_name.c_str()]->elementType();
+                    atl13.anc_data[field_name.c_str()]->serialize(&field.value[0], segment, 1);
 
                     field_vec.push_back(field);
                 }
@@ -621,7 +598,7 @@ void* Atl13Reader::subsettingThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d: %s", info->reader->resource, info->track, e.what());
+        alert(e.level(), e.code(), reader->outQ, &reader->active, "Failure on resource %s track %d: %s", parms->resource.value.c_str(), info->track, e.what());
     }
 
     /* Handle Global Reader Updates */
@@ -638,7 +615,7 @@ void* Atl13Reader::subsettingThread (void* parm)
         reader->numComplete++;
         if(reader->numComplete == reader->threadCount)
         {
-            mlog(INFO, "Completed processing resource %s", info->reader->resource);
+            mlog(INFO, "Completed processing resource %s", parms->resource.value.c_str());
 
             /* Indicate End of Data */
             if(reader->sendTerminator)
@@ -649,12 +626,12 @@ void* Atl13Reader::subsettingThread (void* parm)
                     status = reader->outQ->postCopy("", 0, SYS_TIMEOUT);
                     if(status < 0)
                     {
-                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, info->reader->resource);
+                        mlog(CRITICAL, "Failed (%d) to post terminator for %s", status, parms->resource.value.c_str());
                         break;
                     }
                     else if(status == MsgQ::STATE_TIMEOUT)
                     {
-                        mlog(INFO, "Timeout posting terminator for %s ... trying again", info->reader->resource);
+                        mlog(INFO, "Timeout posting terminator for %s ... trying again", parms->resource.value.c_str());
                     }
                 }
             }
@@ -671,75 +648,6 @@ void* Atl13Reader::subsettingThread (void* parm)
 
     /* Return */
     return NULL;
-}
-
-/*----------------------------------------------------------------------------
- * parseResource
- *
- *  ATL0x_YYYYMMDDHHMMSS_ttttccrr_vvv_ee
- *      YYYY    - year
- *      MM      - month
- *      DD      - day
- *      HH      - hour
- *      MM      - minute
- *      SS      - second
- *      tttt    - reference ground track
- *      cc      - cycle
- *      rr      - region
- *      vvv     - version
- *      ee      - revision
- *----------------------------------------------------------------------------*/
-void Atl13Reader::parseResource (const char* _resource, int32_t& rgt, int32_t& cycle, int32_t& region)
-{
-    if(StringLib::size(_resource) < 29)
-    {
-        rgt = 0;
-        cycle = 0;
-        region = 0;
-        return; // early exit on error
-    }
-
-    long val;
-    char rgt_str[5];
-    rgt_str[0] = _resource[21];
-    rgt_str[1] = _resource[22];
-    rgt_str[2] = _resource[23];
-    rgt_str[3] = _resource[24];
-    rgt_str[4] = '\0';
-    if(StringLib::str2long(rgt_str, &val, 10))
-    {
-        rgt = val;
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse RGT from resource %s: %s", _resource, rgt_str);
-    }
-
-    char cycle_str[3];
-    cycle_str[0] = _resource[25];
-    cycle_str[1] = _resource[26];
-    cycle_str[2] = '\0';
-    if(StringLib::str2long(cycle_str, &val, 10))
-    {
-        cycle = val;
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Cycle from resource %s: %s", _resource, cycle_str);
-    }
-
-    char region_str[3];
-    region_str[0] = _resource[27];
-    region_str[1] = _resource[28];
-    region_str[2] = '\0';
-    if(StringLib::str2long(region_str, &val, 10))
-    {
-        region = val;
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse Region from resource %s: %s", _resource, region_str);
-    }
 }
 
 /*----------------------------------------------------------------------------

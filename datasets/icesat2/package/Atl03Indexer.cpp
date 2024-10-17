@@ -34,9 +34,10 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "icesat2.h"
+#include "LuaObject.h"
 #include "H5Coro.h"
 #include "H5Array.h"
+#include "Atl03Indexer.h"
 
 /******************************************************************************
  * STATIC DATA

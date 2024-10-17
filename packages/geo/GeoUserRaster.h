@@ -37,7 +37,7 @@
  ******************************************************************************/
 
 #include "GeoRaster.h"
-#include "GeoParms.h"
+#include "GeoFields.h"
 
 /******************************************************************************
  * GEOUSER RASTER CLASS
@@ -55,13 +55,13 @@ class GeoUserRaster: public GeoRaster
         static const char* RASTERLENGTH_KEY;
         static const char* GPSTIME_KEY;
         static const char* ELEVATION_KEY;
+        static const char* SAMPLES_KEY;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static int            luaCreate      (lua_State* L);
-        static GeoUserRaster* create         (lua_State* L, int index);
 
                              ~GeoUserRaster  (void) override;
 
@@ -71,7 +71,7 @@ class GeoUserRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        GeoUserRaster(lua_State* L, GeoParms* _parms, const char* file, long filelength, double gps, bool iselevation);
+        GeoUserRaster(lua_State* L, RequestFields* rqst_parms, const char* key, const char* file, long filelength, double gps, bool iselevation);
 
     private:
 

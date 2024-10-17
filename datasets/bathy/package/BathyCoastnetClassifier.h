@@ -70,7 +70,7 @@ class BathyCoastnetClassifier: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathyCoastnetClassifier (lua_State* L, BathyFields* _fields);
+        BathyCoastnetClassifier (lua_State* L, BathyFields* _parms);
         ~BathyCoastnetClassifier (void) override;
 
         /*--------------------------------------------------------------------

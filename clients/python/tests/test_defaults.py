@@ -1,7 +1,7 @@
 """Tests for sliderule APIs."""
 
 import pytest
-import sliderule
+from sliderule import sliderule, icesat2
 
 #
 # Default parms
@@ -11,9 +11,9 @@ class TestDefaultParms:
     def test_parms(self, init):
         d = sliderule.source("defaults")
         assert init
-        assert d["output"]["as_geo"]
-        assert d["cre"]["timeout"] == 600
-        assert d["samples"]["sampling_algo"] == "NearestNeighbour"
-        assert d["rqst"]["cluster_size_hint"] == 0
-        assert d["icesat2"]["surface_type"] == "SRT_LAND_ICE"
-        assert d["gedi"]["projection"] == "AUTOMATIC"
+        assert d["icesat2"]["output"]["as_geo"] == False, f'icesat2 output has invalid as_geo field: {d["icesat2"]["output"]}'
+        assert d["cre"]["timeout"] == 600, f'container runtime environment has invalid timeout: {d["cre"]}'
+        assert len(d["core"]["samples"]) == 0, f'core has invalid samples parameters: {d["core"]["samples"]}'
+        assert d["core"]["cluster_size_hint"] == 0, f'core has invalid cluster size hint: {d["core"]["cluster_size_hint"]}'
+        assert d["icesat2"]["srt"] == "land_ice", f'icesat2 has invalid surface reference type: {d["icesat2"]["srt"]}'
+        assert d["gedi"]["projection"] == "auto", f'gedi has invalid projection: {d["gedi"]["projection"]}'

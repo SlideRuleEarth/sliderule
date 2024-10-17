@@ -5,8 +5,7 @@
 --
 -- INPUT:       rqst
 --              {
---                  "resource":     "<url of hdf5 file or object>"
---                  "parms":        {<table of parameters>}
+--                  "parms": {<table of parameters>}
 --              }
 --
 --              rspq - output queue to stream results
@@ -21,45 +20,37 @@
 --
 -- Initialize Processing of Resource
 --
-local function initialize(resource, parms, algo, args)
+local function initialize(parms, algo, args)
 
     -- User Status --
     local userlog = args.userlog or msg.publish(rspq)
 
-    -- Get Asset --
-    local asset_name = parms["asset"] or args.default_asset
-    local asset = core.getbyname(asset_name)
-    if not asset then
-        userlog:alert(core.INFO, core.RTE_ERROR, string.format("invalid asset specified: %s", asset_name))
-        do return nil end
-    end
-
     -- Raster Sampler --
     local sampler_disp = nil
-    if parms[geo.PARMS] and not parms[arrow.PARMS] then
+    if parms:withsamplers() and not parms:hasoutput() then
         local rsps_bridge = streaming.bridge(args.result_q, rspq)
         sampler_disp = streaming.dispatcher(args.result_q, 1) -- 1 thread required due to performance issues for GeoIndexRasters
-        for key,settings in pairs(parms[geo.PARMS]) do
-            local robj = geo.raster(geo.parms(settings):keyspace(args.shard))
+        for key,settings in pairs(parms:samplers()) do
+            local robj = geo.raster(parms, key)
             if robj then
                 local sampler = geo.sampler(robj, key, rspq, args.result_rec, settings["use_poi_time"])
                 if sampler then
                     sampler_disp:attach(sampler, args.result_rec)
                 else
-                    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create sampler %s for %s", rspq, key, resource))
+                    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create sampler %s for %s", rspq, key, parms["resource"]))
                 end
             else
-                userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create raster %s for %s", rspq, key, resource))
+                userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create raster %s for %s", rspq, key, parms["resource"]))
             end
         end
         sampler_disp:run()
      end
 
-    -- Dispatcher --
+     -- Dispatcher --
     local source_q = nil
     local algo_disp = nil
     if algo then
-        source_q = resource .. "." .. rspq
+        source_q = parms["resource"] .. "." .. rspq
         algo_disp = streaming.dispatcher(source_q)
 
         -- Attach Exception and Ancillary Record Forwarding --
@@ -74,19 +65,22 @@ local function initialize(resource, parms, algo, args)
     end
 
     -- Post Initial Status Progress --
-    userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> processing initialized on %s ...", rspq, resource))
+    userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> processing initialized on %s ...", rspq, parms["resource"]))
 
     -- Return Needed Objects to Continue Processing Request --
-    return {asset=asset, source_q=source_q, algo_disp=algo_disp, sampler_disp=sampler_disp, userlog=userlog}
+    return {source_q=source_q, algo_disp=algo_disp, sampler_disp=sampler_disp, userlog=userlog}
 end
 
 --
 -- Wait On Processing of Resource
 --
-local function waiton(resource, parms, algo, reader, algo_disp, sampler_disp, userlog, with_stats)
+local function waiton(parms, algo, reader, algo_disp, sampler_disp, userlog, with_stats)
+
+    -- Check Parameters --
+    if not reader then return false end
 
     -- Initialize Timeouts --
-    local timeout = parms["node_timeout"] or parms["timeout"] or core.NODE_TIMEOUT
+    local timeout = parms["node_timeout"]
     local duration = 0
     local interval = 10 < timeout and 10 or timeout -- seconds
 
@@ -95,16 +89,16 @@ local function waiton(resource, parms, algo, reader, algo_disp, sampler_disp, us
         duration = duration + interval
         -- Check for Timeout --
         if timeout >= 0 and duration >= timeout then
-            userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> for %s timed-out after %d seconds", rspq, resource, duration))
+            userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> for %s timed-out after %d seconds", rspq, parms["resource"], duration))
             do return false end
         end
-        userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ... continuing to read %s (after %d seconds)", rspq, resource, duration))
+        userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ... continuing to read %s (after %d seconds)", rspq, parms["resource"], duration))
     end
 
     -- Resource Processing Complete --
     if with_stats and reader then
         local reader_stats = reader:stats(false)
-        userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> processing of %s complete (%d/%d/%d)", rspq, resource, reader_stats.read, reader_stats.filtered, reader_stats.dropped))
+        userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> processing of %s complete (%d/%d/%d)", rspq, parms["resource"], reader_stats.read, reader_stats.filtered, reader_stats.dropped))
     end
 
     -- Wait Until Algorithm Dispatch Completion --

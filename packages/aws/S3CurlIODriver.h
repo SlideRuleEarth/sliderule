@@ -74,22 +74,22 @@ class S3CurlIODriver: public Asset::IODriver
         // fixed GET - memory preallocated
         static int64_t      get             (uint8_t* data, int64_t size, uint64_t pos,
                                              const char* bucket, const char* key, const char* region,
-                                             CredentialStore::Credential* credentials);
+                                             const CredentialStore::Credential* credentials);
 
         // streaming GET - memory allocated and returned
         static int64_t      get             (uint8_t** data,
                                              const char* bucket, const char* key, const char* region,
-                                             CredentialStore::Credential* credentials);
+                                             const CredentialStore::Credential* credentials);
 
         // file GET - data written directly to file
         static int64_t      get             (const char* filename,
                                              const char* bucket, const char* key, const char* region,
-                                             CredentialStore::Credential* credentials);
+                                             const CredentialStore::Credential* credentials);
 
         // file PUT - data read directly from file
         static int64_t      put             (const char* filename,
                                              const char* bucket, const char* key, const char* region,
-                                             CredentialStore::Credential* credentials);
+                                             const CredentialStore::Credential* credentials);
 
         static int          luaGet          (lua_State* L);
         static int          luaDownload     (lua_State* L);

@@ -59,6 +59,7 @@ class FieldEnumeration: public Field
         virtual                 ~FieldEnumeration   (void) override = default;
 
         bool                    enabled             (int i) const;
+        bool                    anyEnabled          (void) const;
 
         FieldEnumeration<T,N>&  operator=           (const FieldEnumeration<T,N>& array);
         bool                    operator[]          (T i) const;
@@ -149,9 +150,23 @@ bool FieldEnumeration<T,N>::enabled(int i) const
 {
     if(i < 0 || i >= N)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "index out of bounds: %d", index);
+        return false;
     }
     return values[i];
+}
+
+/*----------------------------------------------------------------------------
+ * anyEnabled
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+bool FieldEnumeration<T,N>::anyEnabled(void) const
+{
+    bool status = false;
+    for(int i = 0; i < N; i++)
+    {
+        status = status || values[i];
+    }
+    return status;
 }
 
 /*----------------------------------------------------------------------------
@@ -222,6 +237,7 @@ string FieldEnumeration<T,N>::toJson (void) const
 template <class T, int N>
 int FieldEnumeration<T,N>::toLua (lua_State* L) const
 {
+    int table_index = 1;
     lua_newtable(L);
     for(int i = 0; i < N; i++)
     {
@@ -230,7 +246,7 @@ int FieldEnumeration<T,N>::toLua (lua_State* L) const
             T selection;
             convertFromIndex(i, selection);
             convertToLua(L, selection);
-            lua_rawseti(L, -2, i + 1);
+            lua_rawseti(L, -2, table_index++);
         }
     }
     return 1;
@@ -266,7 +282,7 @@ int FieldEnumeration<T,N>::toLua (lua_State* L, long key) const
  * fromLua
  *----------------------------------------------------------------------------*/
 template <class T, int N>
-void FieldEnumeration<T,N>::fromLua (lua_State* L, int index) 
+void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
 {
     T selection;
 

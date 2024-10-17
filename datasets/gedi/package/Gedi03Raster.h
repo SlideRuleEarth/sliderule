@@ -52,8 +52,8 @@ class Gedi03Raster: public GeoRaster
 
         static void init (void) {}
 
-        static RasterObject* create (lua_State* L, GeoParms* _parms)
-        { return new Gedi03Raster(L, _parms); }
+        static RasterObject* create (lua_State* L, RequestFields* rqst_parms, const char* key)
+        { return new Gedi03Raster(L, rqst_parms, key); }
 
     protected:
 
@@ -62,9 +62,9 @@ class Gedi03Raster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        Gedi03Raster(lua_State* L, GeoParms* _parms) :
-         GeoRaster(L, _parms,
-                 std::string(_parms->asset->getPath()).append("/").append(_parms->asset->getIndex()),
+        Gedi03Raster(lua_State* L, RequestFields* rqst_parms, const char* key) :
+         GeoRaster(L, rqst_parms, key,
+                 std::string(rqst_parms->geoFields(key)->asset.asset->getPath()).append("/").append(rqst_parms->geoFields(key)->asset.asset->getIndex()),
                  TimeLib::datetime2gps(2022, 1, 19),
                  true /* Data is elevation */) {}
 };

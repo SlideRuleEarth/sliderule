@@ -14,9 +14,9 @@ class TestL1B:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
-            "degrade_flag": 0,
-            "quality_flag": 1,
-            "beam": 0
+            "degrade_filter": True,
+            "quality_filter": True,
+            "beams": 0
         }
         gdf = gedi.gedi01bp(parms, resources=[resource])
         assert init
@@ -41,9 +41,9 @@ class TestL2A:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
-            "degrade_flag": 0,
-            "quality_flag": 1,
-            "beam": 0
+            "degrade_filter": True,
+            "quality_filter": True,
+            "beams": 0
         }
         gdf = gedi.gedi02ap(parms, resources=[resource])
         assert init
@@ -90,9 +90,9 @@ class TestL4A:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
-            "degrade_flag": 0,
-            "l2_quality_flag": 1,
-            "beam": 0
+            "degrade_filter": True,
+            "l2_quality_filter": True,
+            "beams": 0
         }
         gdf = gedi.gedi04ap(parms, resources=[resource])
         assert init

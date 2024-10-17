@@ -62,8 +62,8 @@ int BathyKd::luaCreate (lua_State* L)
     {
         parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
         const char* resource_kd = getLuaString(L, 2);
-        if(!parms->uncertainty.assetKd) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no asset provided");
-        _context = new H5Coro::Context(parms->uncertainty.assetKd, resource_kd);
+        if(!parms->uncertainty.assetKd.asset) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no asset provided");
+        _context = new H5Coro::Context(parms->uncertainty.assetKd.asset, resource_kd);
         parms->releaseLuaObject();
         return createLuaObject(L, new BathyKd(L, _context));
     }

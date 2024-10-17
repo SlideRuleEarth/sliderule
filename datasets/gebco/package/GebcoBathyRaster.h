@@ -58,8 +58,8 @@ class GebcoBathyRaster: public GeoIndexedRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, GeoParms* _parms)
-                          { return new GebcoBathyRaster(L, _parms); }
+        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
+                          { return new GebcoBathyRaster(L, rqst_parms, key); }
 
 
     protected:
@@ -68,7 +68,7 @@ class GebcoBathyRaster: public GeoIndexedRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                GebcoBathyRaster (lua_State* L, GeoParms* _parms);
+                GebcoBathyRaster (lua_State* L, RequestFields* rqst_parms, const char* key);
                ~GebcoBathyRaster (void) override;
 
         void    getIndexFile     (const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points) final;

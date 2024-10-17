@@ -38,7 +38,7 @@
 
 #include "OsApi.h"
 #include "RecordObject.h"
-#include "GeoParms.h"
+#include "GeoFields.h"
 
 /******************************************************************************
  * RASTER SUBSET CLASS

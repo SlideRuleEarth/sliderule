@@ -80,8 +80,12 @@ int BathyDataFrame::luaCreate (lua_State* L)
         _parms = dynamic_cast<BathyFields*>(getLuaObject(L, 2, BathyFields::OBJECT_TYPE));
         _mask = dynamic_cast<BathyMask*>(getLuaObject(L, 3, GeoLib::TIFFImage::OBJECT_TYPE, true, NULL));
         _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE));
-        _hdf09 = dynamic_cast<H5Object*>(getLuaObject(L, 5, H5Object::OBJECT_TYPE));
+        _hdf09 = dynamic_cast<H5Object*>(getLuaObject(L, 5, H5Object::OBJECT_TYPE, true, NULL));
         const char* rqstq_name = getLuaString(L, 6, true, NULL);
+
+        /* Check for Null Resource and Asset */
+        if(_parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a resource to process");
+        else if(_parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a valid asset");
 
         /* Return Reader Object */
         return createLuaObject(L, new BathyDataFrame(L, beam_str, _parms, _hdf03, _hdf09, rqstq_name, _mask));
@@ -102,7 +106,7 @@ int BathyDataFrame::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields* _parms, H5Object* _hdf03, H5Object* _hdf09, const char* rqstq_name, BathyMask* _mask):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
-    {   
+    {
         {"time_ns",             &time_ns},
         {"index_ph",            &index_ph},
         {"index_seg",           &index_seg},
@@ -124,7 +128,13 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"class_ph",            &class_ph},
         {"predictions",         &predictions},
         {"geoid_corr_h",        &geoid_corr_h},
-    }, 
+        // temporary columns for python code
+        {"refracted_dZ",        &refracted_dZ},
+        {"refracted_lat",       &refracted_lat},
+        {"refracted_lon",       &refracted_lon},
+        {"subaqueous_sigma_thu", &subaqueous_sigma_thu},
+        {"subaqueous_sigma_tvu", &subaqueous_sigma_tvu}
+    },
     {
         {"spot",                &spot},
         {"beam",                &beam},
@@ -190,11 +200,11 @@ BathyDataFrame::~BathyDataFrame (void)
 {
     active = false;
     delete pid;
-    
+
     delete rqstQ;
 
     hdf03->releaseLuaObject();
-    hdf09->releaseLuaObject();
+    if(hdf09) hdf09->releaseLuaObject();
 
     parmsPtr->releaseLuaObject();
     bathyMask->releaseLuaObject();
@@ -224,7 +234,7 @@ BathyDataFrame::Region::Region (const BathyDataFrame& dataframe):
         num_photons = H5Coro::ALL_ROWS;
 
         /* Determine Spatial Extent */
-        if(dataframe.parms.regionMask.cellSize.value > 0.0)
+        if(dataframe.parms.regionMask.valid())
         {
             rasterregion(dataframe);
         }
@@ -440,8 +450,8 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     lat_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/lat_ph").c_str(),              0, region.first_photon,  region.num_photons),
     lon_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/lon_ph").c_str(),              0, region.first_photon,  region.num_photons),
     delta_time          (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/delta_time").c_str(),          0, region.first_photon,  region.num_photons),
-    bckgrd_delta_time   (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/delta_time").c_str()),
-    bckgrd_rate         (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/bckgrd_rate").c_str())
+    bckgrd_delta_time   (dataframe.parms.findSeaSurface ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/delta_time").c_str()),
+    bckgrd_rate         (dataframe.parms.findSeaSurface ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/bckgrd_rate").c_str())
 {
     sc_orient.join(dataframe.readTimeoutMs, true);
     velocity_sc.join(dataframe.readTimeoutMs, true);
@@ -464,8 +474,8 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     lat_ph.join(dataframe.readTimeoutMs, true);
     lon_ph.join(dataframe.readTimeoutMs, true);
     delta_time.join(dataframe.readTimeoutMs, true);
-    bckgrd_delta_time.join(dataframe.readTimeoutMs, true);
-    bckgrd_rate.join(dataframe.readTimeoutMs, true);
+    if(dataframe.parms.findSeaSurface) bckgrd_delta_time.join(dataframe.readTimeoutMs, true);
+    if(dataframe.parms.findSeaSurface) bckgrd_rate.join(dataframe.readTimeoutMs, true);
 }
 
 /*----------------------------------------------------------------------------
@@ -479,6 +489,7 @@ BathyDataFrame::Atl09Class::Atl09Class (const BathyDataFrame& dataframe):
 {
     try
     {
+        if(!dataframe.hdf09) throw RunTimeException(CRITICAL, RTE_ERROR, "invalid HDF5 ATL09 object");
         met_u10m.join(dataframe.readTimeoutMs, true);
         met_v10m.join(dataframe.readTimeoutMs, true);
         delta_time.join(dataframe.readTimeoutMs, true);
@@ -486,7 +497,7 @@ BathyDataFrame::Atl09Class::Atl09Class (const BathyDataFrame& dataframe):
     }
     catch(const RunTimeException& e)
     {
-        mlog(CRITICAL, "ATL09 data unavailable for <%s>", dataframe.parms.resource.value.c_str());
+        mlog(CRITICAL, "ATL09 data unavailable for <%s>: %s", dataframe.parms.resource.value.c_str(), e.what());
     }
 }
 
@@ -501,7 +512,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
     const BathyFields& parms = dataframe.parms;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms.asset->getName(), parms.resource.value.c_str(), dataframe.track.value);
+    const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "bathy_subsetter", "{\"asset\":\"%s\", \"resource\":\"%s\", \"track\":%d}", parms.asset.getName(), parms.getResource(), dataframe.track.value);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
@@ -530,7 +541,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
         GeoLib::UTMTransform utm_transform(region.segment_lat[0], region.segment_lon[0]);
         dataframe.utm_zone = utm_transform.zone;
         dataframe.utm_is_north = region.segment_lat[0] >= 0.0;
-        
+
         /* Traverse All Photons In Dataset */
         while(dataframe.active && (current_photon < atl03.dist_ph_along.size))
         {
@@ -654,6 +665,12 @@ void* BathyDataFrame::subsettingThread (void* parm)
                     }
                 }
 
+                /* Set Initial Processing Flags */
+                uint32_t processing_flags = BathyFields::FLAGS_CLEAR;
+                if(on_boundary) processing_flags |= BathyFields::ON_BOUNDARY;
+                if(atl03.solar_elevation[current_segment] < BathyFields::NIGHT_SOLAR_ELEVATION_THRESHOLD) processing_flags |= BathyFields::NIGHT_FLAG;
+                if(!atl09.valid) processing_flags |= BathyFields::INVALID_WIND_SPEED;
+
                 /* Add Photon to DataFrame */
                 dataframe.addRow(); // start new row in dataframe
                 dataframe.time_ns.append(Icesat2Fields::deltatime2timestamp(current_delta_time));
@@ -665,14 +682,15 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 dataframe.y_ph.append(coord.y);
                 dataframe.x_atc.append(atl03.segment_dist_x[current_segment] + atl03.dist_ph_along[current_photon]);
                 dataframe.y_atc.append(atl03.dist_ph_across[current_photon]);
-                dataframe.background_rate.append(calculateBackground(current_segment, bckgrd_index, atl03));
-                dataframe.ellipse_h.append(atl03.h_ph[current_photon]); // corrected by refraction correction
+                dataframe.ellipse_h.append(atl03.h_ph[current_photon]); // later corrected by refraction correction
+                dataframe.ortho_h.append(atl03.h_ph[current_photon] - atl03.geoid[current_segment]); // later corrected by refraction correction
                 dataframe.yapc_score.append(yapc_score);
                 dataframe.max_signal_conf.append(atl03_cnf);
                 dataframe.quality_ph.append(quality_ph);
-                dataframe.processing_flags.append(on_boundary ? BathyFields::ON_BOUNDARY : 0x00);
+                dataframe.processing_flags.append(processing_flags);
 
                 /* Add Additional Photon Data to DataFrame */
+                dataframe.background_rate.append(parms.findSeaSurface ? calculateBackground(current_segment, bckgrd_index, atl03) : 0.0);
                 dataframe.geoid_corr_h.append(atl03.h_ph[current_photon] - atl03.geoid[current_segment]);
                 dataframe.wind_v.append(wind_v);
                 dataframe.ref_el.append(atl03.ref_elev[current_segment]);
@@ -691,12 +709,19 @@ void* BathyDataFrame::subsettingThread (void* parm)
         }
 
         /* Initialize Additional DataFrame Columns (populated later) */
-        dataframe.ortho_h.initialize(dataframe.length(), 0.0); // populated by refraction correction
         dataframe.class_ph.initialize(dataframe.length(), static_cast<uint8_t>(BathyFields::UNCLASSIFIED));
         dataframe.surface_h.initialize(dataframe.length(), 0.0); // populated by sea surface finder
         dataframe.sigma_thu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
         dataframe.sigma_tvu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
         dataframe.predictions.initialize(dataframe.length(), {0, 0, 0, 0, 0, 0, 0, 0, 0});
+
+        /* Initialize Temporary Columns to Support Python Code */
+        dataframe.refracted_dZ.initialize(dataframe.length(), 0.0);
+        dataframe.refracted_lat.initialize(dataframe.length(), 0.0);
+        dataframe.refracted_lon.initialize(dataframe.length(), 0.0);
+        dataframe.subaqueous_sigma_thu.initialize(dataframe.length(), 0.0);
+        dataframe.subaqueous_sigma_tvu.initialize(dataframe.length(), 0.0);
+
     }
     catch(const RunTimeException& e)
     {
@@ -762,7 +787,7 @@ int BathyDataFrame::luaIsValid (lua_State* L)
     bool status = false;
     try
     {
-        BathyDataFrame* lua_obj = dynamic_cast<BathyDataFrame*>(getLuaSelf(L, 1));
+        const BathyDataFrame* lua_obj = dynamic_cast<BathyDataFrame*>(getLuaSelf(L, 1));
         status = lua_obj->valid;
     }
     catch(const RunTimeException& e)
@@ -780,7 +805,7 @@ int BathyDataFrame::luaLength (lua_State* L)
 {
     try
     {
-        BathyDataFrame* lua_obj = dynamic_cast<BathyDataFrame*>(getLuaSelf(L, 1));
+        const BathyDataFrame* lua_obj = dynamic_cast<BathyDataFrame*>(getLuaSelf(L, 1));
         lua_pushinteger(L, lua_obj->length());
     }
     catch(const RunTimeException& e)

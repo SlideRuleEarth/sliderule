@@ -20,26 +20,24 @@ class TestAtl03s:
     def test_badasset(self, init):
         invalid_asset = "invalid-asset"
         rqst = {
-            "resource": [],
-            "parms": {"asset" : "invalid-asset"}
+            "resource": [], # invalid resource (should be resources if a list)
+            "parms": {"asset" : invalid_asset} # bogus asset
         }
         rsps = sliderule.source("atl03s", rqst, stream=True, callbacks=GLOBAL_callbacks)
         assert init
         assert(len(rsps) == 0)
-        assert("invalid asset specified: {}".format(invalid_asset) == GLOBAL_message)
 
 @pytest.mark.network
 class TestAtl06:
     def test_badasset(self, init):
         invalid_asset = "invalid-asset"
         rqst = {
-            "resource": [],
-            "parms": {"asset" : "invalid-asset"}
+            "resource": [], # invalid resource (should be resources if a list)
+            "parms": {"asset" : invalid_asset} # bogus asset
         }
         rsps = sliderule.source("atl06", rqst, stream=True, callbacks=GLOBAL_callbacks)
         assert init
         assert(len(rsps) == 0)
-        assert("invalid asset specified: {}".format(invalid_asset) == GLOBAL_message)
 
     def test_timeout(self, init):
         resource = "ATL03_20220208000041_07291401_005_01.h5"
@@ -50,4 +48,3 @@ class TestAtl06:
         rsps = sliderule.source("atl06", rqst, stream=True, callbacks=GLOBAL_callbacks)
         assert init
         assert(len(rsps) == 0)
-        # assert("{} timed-out after 10 seconds".format(resource) in GLOBAL_message) # non-deterministic

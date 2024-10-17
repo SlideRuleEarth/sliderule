@@ -38,8 +38,9 @@
 #include <stdarg.h>
 
 #include "OsApi.h"
-#include "h5.h"
-#include "swot.h"
+#include "H5Coro.h"
+#include "SwotFields.h"
+#include "SwotL2Reader.h"
 
 /******************************************************************************
  * MACROS
@@ -88,28 +89,24 @@ const RecordObject::fieldDef_t SwotL2Reader::geoRecDef[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create(<asset>, <resource>, <outq_name>, <parms>, <send terminator>)
+ * luaCreate - create(<outq_name>, <parms>, <send terminator>)
  *----------------------------------------------------------------------------*/
 int SwotL2Reader::luaCreate (lua_State* L)
 {
-    Asset* asset = NULL;
-    SwotParms* parms = NULL;
+    SwotFields* parms = NULL;
 
     try
     {
         /* Get Parameters */
-        asset = dynamic_cast<Asset*>(getLuaObject(L, 1, Asset::OBJECT_TYPE));
-        const char* resource = getLuaString(L, 2);
-        const char* outq_name = getLuaString(L, 3);
-        parms = dynamic_cast<SwotParms*>(getLuaObject(L, 4, SwotParms::OBJECT_TYPE));
-        const bool send_terminator = getLuaBoolean(L, 5, true, true);
+        const char* outq_name = getLuaString(L, 1);
+        parms = dynamic_cast<SwotFields*>(getLuaObject(L, 2, SwotFields::OBJECT_TYPE));
+        const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Return Reader Object */
-        return createLuaObject(L, new SwotL2Reader(L, asset, resource, outq_name, parms, send_terminator));
+        return createLuaObject(L, new SwotL2Reader(L, outq_name, parms, send_terminator));
     }
     catch(const RunTimeException& e)
     {
-        if(asset) asset->releaseLuaObject();
         if(parms) parms->releaseLuaObject();
         mlog(e.level(), "Error creating SwotL2Reader: %s", e.what());
         return returnLuaStatus(L, false);
@@ -129,7 +126,7 @@ void SwotL2Reader::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, SwotParms* _parms, bool _send_terminator):
+SwotL2Reader::SwotL2Reader (lua_State* L, const char* outq_name, SwotFields* _parms, bool _send_terminator):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     context(NULL),
     region(NULL),
@@ -138,8 +135,6 @@ SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, 
     outQ(NULL)
 {
     /* Initialize Reader */
-    asset       = _asset;
-    resource    = StringLib::duplicate(_resource);
     parms       = _parms;
     active      = true;
     numComplete = 0;
@@ -148,7 +143,7 @@ SwotL2Reader::SwotL2Reader (lua_State* L, Asset* _asset, const char* _resource, 
     try
     {
         /* Create H5Coro Context */
-        context = new H5Coro::Context(asset, resource);
+        context = new H5Coro::Context(parms->asset.asset, parms->getResource());
 
         /* Initialize Region */
         region = new Region(context, _parms);
@@ -225,35 +220,31 @@ SwotL2Reader::~SwotL2Reader (void)
     delete context;
 
     parms->releaseLuaObject();
-
-    delete [] resource;
-
-    asset->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-SwotL2Reader::Region::Region (H5Coro::Context* context, const SwotParms* _parms):
+SwotL2Reader::Region::Region (H5Coro::Context* context, const SwotFields* _parms):
     lat             (context, "latitude_nadir"),
     lon             (context, "longitude_nadir"),
     inclusion_mask  (NULL),
     inclusion_ptr   (NULL)
 {
     /* Join Reads */
-    lat.join(_parms->read_timeout * 1000, true);
-    lon.join(_parms->read_timeout * 1000, true);
+    lat.join(_parms->readTimeout.value * 1000, true);
+    lon.join(_parms->readTimeout.value * 1000, true);
 
     /* Initialize Region */
     first_line = 0;
     num_lines = H5Coro::ALL_ROWS;
 
     /* Determine Spatial Extent */
-    if(_parms->raster.valid())
+    if(_parms->regionMask.valid())
     {
         rasterregion(_parms);
     }
-    else if(!_parms->polygon.empty())
+    else if(_parms->pointsInPolygon.value > 0)
     {
         polyregion(_parms);
     }
@@ -286,7 +277,7 @@ void SwotL2Reader::Region::cleanup (void) const
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void SwotL2Reader::Region::polyregion (const SwotParms* _parms)
+void SwotL2Reader::Region::polyregion (const SwotFields* _parms)
 {
     /* Find First and Last Lines in Polygon */
     bool first_line_found = false;
@@ -294,17 +285,8 @@ void SwotL2Reader::Region::polyregion (const SwotParms* _parms)
     int line = 0;
     while(line < lat.size && !last_line_found)
     {
-        bool inclusion = false;
-
-        /* Project Line Coordinate */
-        const MathLib::coord_t line_coord = {CONVERT_LON(lon[line]), CONVERT_LAT(lat[line])};
-        const MathLib::point_t line_point = MathLib::coord2point(line_coord, _parms->projection);
-
         /* Test Inclusion */
-        if(MathLib::inpoly(_parms->projected_poly, _parms->points_in_poly, line_point))
-        {
-            inclusion = true;
-        }
+        const bool inclusion = _parms->polyIncludes(CONVERT_LON(lon[line]), CONVERT_LAT(lat[line]));
 
         /* Find First Line */
         if(!first_line_found && inclusion)
@@ -333,7 +315,7 @@ void SwotL2Reader::Region::polyregion (const SwotParms* _parms)
 /*----------------------------------------------------------------------------
  * Region::rasterregion
  *----------------------------------------------------------------------------*/
-void SwotL2Reader::Region::rasterregion (const SwotParms* _parms)
+void SwotL2Reader::Region::rasterregion (const SwotFields* _parms)
 {
     /* Allocate Inclusion Mask */
     if(lat.size <= 0) return;
@@ -347,7 +329,7 @@ void SwotL2Reader::Region::rasterregion (const SwotParms* _parms)
     while(line < lat.size)
     {
         /* Check Inclusion */
-        const bool inclusion = _parms->raster.includes(CONVERT_LON(lon[line]), CONVERT_LAT(lat[line]));
+        const bool inclusion = _parms->maskIncludes(CONVERT_LON(lon[line]), CONVERT_LAT(lat[line]));
         inclusion_mask[line] = inclusion;
 
         /* If Coordinate Is In Raster */

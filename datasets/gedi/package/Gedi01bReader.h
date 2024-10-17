@@ -45,8 +45,8 @@
 #include "OsApi.h"
 #include "StringLib.h"
 #include "H5Array.h"
-
-#include "GediParms.h"
+#include "FootprintReader.h"
+#include "GediFields.h"
 
 /******************************************************************************
  * GEDI01B FOOTPRINT
@@ -125,7 +125,7 @@ class Gedi01bReader: public FootprintReader<g01b_footprint_t>
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Gedi01bReader           (lua_State* L, Asset* _asset, const char* _resource, const char* outq_name, GediParms* _parms, bool _send_terminator=true);
+                        Gedi01bReader           (lua_State* L, const char* outq_name, GediFields* _parms, bool _send_terminator=true);
                         ~Gedi01bReader          (void) override;
         static void*    subsettingThread        (void* parm);
 };

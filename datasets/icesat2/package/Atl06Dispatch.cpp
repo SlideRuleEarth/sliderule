@@ -72,7 +72,10 @@
 
 #include "OsApi.h"
 #include "ContainerRecord.h"
-#include "icesat2.h"
+#include "Atl06Dispatch.h"
+#include "AncillaryFields.h"
+#include "LuaObject.h"
+#include "RecordObject.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -128,19 +131,19 @@ const struct luaL_Reg Atl06Dispatch::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int Atl06Dispatch::luaCreate (lua_State* L)
 {
-    Icesat2Parms* parms = NULL;
+    Icesat2Fields* _parms = NULL;
     try
     {
         /* Get Parameters */
         const char* outq_name = getLuaString(L, 1);
-        parms = dynamic_cast<Icesat2Parms*>(getLuaObject(L, 2, Icesat2Parms::OBJECT_TYPE));
+        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
 
         /* Create ATL06 Dispatch */
-        return createLuaObject(L, new Atl06Dispatch(L, outq_name, parms));
+        return createLuaObject(L, new Atl06Dispatch(L, outq_name, _parms));
     }
     catch(const RunTimeException& e)
     {
-        if(parms) parms->releaseLuaObject();
+        if(_parms) _parms->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
@@ -167,7 +170,7 @@ void Atl06Dispatch::init (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, Icesat2Parms* _parms):
+Atl06Dispatch::Atl06Dispatch (lua_State* L, const char* outq_name, Icesat2Fields* _parms):
     DispatchObject(L, LUA_META_NAME, LUA_META_TABLE),
     elevationRecord(atRecType, sizeof(atl06_t))
 {
@@ -246,7 +249,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     }
 
     /* Elevation Attributes */
-    result.elevation.extent_id = extent->extent_id | Icesat2Parms::EXTENT_ID_ELEVATION;
+    result.elevation.extent_id = extent->extent_id | Icesat2Fields::EXTENT_ID_ELEVATION;
     result.elevation.segment_id = extent->segment_id;
     result.elevation.rgt = extent->reference_ground_track;
     result.elevation.cycle = extent->cycle;
@@ -266,11 +269,11 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     }
 
     /* Calcualte Beam Numbers */
-    result.elevation.spot = Icesat2Parms::getSpotNumber((Icesat2Parms::sc_orient_t)extent->spacecraft_orientation, (Icesat2Parms::track_t)extent->track, extent->pair);
-    result.elevation.gt = Icesat2Parms::getGroundTrack((Icesat2Parms::sc_orient_t)extent->spacecraft_orientation, (Icesat2Parms::track_t)extent->track, extent->pair);
+    result.elevation.spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)extent->spacecraft_orientation, (Icesat2Fields::track_t)extent->track, extent->pair);
+    result.elevation.gt = Icesat2Fields::getGroundTrack((Icesat2Fields::sc_orient_t)extent->spacecraft_orientation, (Icesat2Fields::track_t)extent->track, extent->pair);
 
     /* Execute Algorithm Stages */
-    if(parms->stages[Icesat2Parms::STAGE_LSF]) iterativeFitStage(extent, result);
+    if(parms->stages[Icesat2Fields::STAGE_LSF]) iterativeFitStage(extent, result);
 
     /* Post Results */
     postResult(&result);
@@ -434,8 +437,8 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t& 
         const double sigma_expected = sqrt(se1 + se2); // sigma_expected, section 5.5, procedure 4d
 
         /* Calculate Window Height */
-        if(sigma_r > parms->maximum_robust_dispersion) sigma_r = parms->maximum_robust_dispersion;
-        const double new_window_height = MAX(MAX(parms->minimum_window, 6.0 * sigma_expected), 6.0 * sigma_r); // H_win, section 5.5, procedure 4e
+        if(sigma_r > parms->maxRobustDispersion.value) sigma_r = parms->maxRobustDispersion.value;
+        const double new_window_height = MAX(MAX(parms->minWindow.value, 6.0 * sigma_expected), 6.0 * sigma_r); // H_win, section 5.5, procedure 4e
         result.elevation.window_height = MAX(new_window_height, 0.75 * result.elevation.window_height); // section 5.7, procedure 2e
         const double window_spread = result.elevation.window_height / 2.0;
 
@@ -455,14 +458,14 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t& 
         }
 
         /* Check Photon Count */
-        if(next_num_photons < parms->minimum_photon_count)
+        if(next_num_photons < parms->minPhotonCount.value)
         {
             result.elevation.pflags |= PFLAG_TOO_FEW_PHOTONS;
             invalid = true;
             done = true;
         }
         /* Check Spread */
-        else if((x_max - x_min) < parms->along_track_spread)
+        else if((x_max - x_min) < parms->alongTrackSpread.value)
         {
             result.elevation.pflags |= PFLAG_SPREAD_TOO_SHORT;
             invalid = true;
@@ -474,7 +477,7 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t& 
             done = true;
         }
         /* Check Iterations */
-        else if(++iteration >= parms->max_iterations)
+        else if(++iteration >= parms->maxIterations.value)
         {
             result.elevation.pflags |= PFLAG_MAX_ITERATIONS_REACHED;
             done = true;

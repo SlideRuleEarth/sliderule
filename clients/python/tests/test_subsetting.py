@@ -13,9 +13,9 @@ class TestSubsetting:
     def test_rasterize(self, init):
         resource = "ATL03_20181017222812_02950102_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
-        parms = { 
+        parms = {
             "poly": region['poly'],
-            "raster": region['raster'],
+            "region_mask": region['region_mask'],
             "srt": icesat2.SRT_LAND,
             "cnf": icesat2.CNF_SURFACE_LOW,
             "ats": 20.0,
@@ -35,7 +35,7 @@ class TestSubsetting:
                  { "lat": -74.0, "lon": 180.00 },
                  { "lat": -73.0, "lon": 180.00 },
                  { "lat": -73.0, "lon": 155.00 } ]
-        parms = { 
+        parms = {
             "poly": poly,
             "srt": icesat2.SRT_LAND,
             "cnf": icesat2.CNF_SURFACE_LOW,
@@ -56,9 +56,9 @@ class TestSubsetting:
                  { "lat": -74.0, "lon": 180.00 },
                  { "lat": -73.0, "lon": 180.00 },
                  { "lat": -73.0, "lon": -180.00 } ]
-        parms = { 
+        parms = {
             "poly": poly,
-            "proj": "plate_carree",
+            "projection": "plate_carree",
             "srt": icesat2.SRT_LAND,
             "cnf": icesat2.CNF_SURFACE_LOW,
             "ats": 20.0,
@@ -78,7 +78,7 @@ class TestSubsetting:
                  { "lat": -74.0, "lon": 170.00 },
                  { "lat": -73.0, "lon": 170.00 },
                  { "lat": -73.0, "lon": 160.00 } ]
-        parms = { 
+        parms = {
             "poly": poly,
             "srt": icesat2.SRT_LAND,
             "cnf": icesat2.CNF_SURFACE_LOW,

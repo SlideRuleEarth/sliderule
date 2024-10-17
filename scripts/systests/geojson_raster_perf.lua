@@ -41,11 +41,8 @@ end
 ]]
 
 
-local len = string.len(vectorfile)
 local cellsize = 0.01
-local params = {data = vectorfile, length = len, cellsize = cellsize}
-
-local robj = geo.geojson(params)
+local robj = geo.geojson(vectorfile, cellsize)
 runner.check(robj ~= nil)
 
 
