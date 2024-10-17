@@ -114,7 +114,7 @@ class BathyDataFrame: public GeoDataFrame
         FieldColumn<float>          sigma_h;            // vertical aerial uncertainty
 
         // temporary column so that python code can apply calculations on subaqueous photons
-        FieldColumn<double>         refracted_dZ;
+        FieldColumn<float>          refracted_dZ;
         FieldColumn<double>         refracted_lat;
         FieldColumn<double>         refracted_lon;
         FieldColumn<float>          subaqueous_sigma_thu;

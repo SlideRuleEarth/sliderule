@@ -256,7 +256,7 @@ end
 -------------------------------------------------------
 if granule then
     outputs["granule"] = string.format("%s/bathy_granule.json", crenv.container_sandbox_mount)
-    local f = io.open(outputs["granule"], "w")
+    local f, err = io.open(string.format("%s/bathy_granule.json", crenv.host_sandbox_directory), "w")
     if f then
         if granule:waiton(ctimeout(), rspq) then
             f:write(json.encode(granule:export()))
@@ -268,7 +268,7 @@ if granule then
             return
         end
     else
-        userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to write granule json for %s", rspq, resource))
+        userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to write granule json for %s: %s", rspq, resource, err))
         cleanup(crenv, transaction_id)
         return
     end
