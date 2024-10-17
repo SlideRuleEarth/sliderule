@@ -184,6 +184,7 @@ class RasterObject: public LuaObject
 
         static Mutex                    factoryMut;
         static Dictionary<factory_t>    factories;
+        static Mutex                    fileDictMut;
         Dictionary<uint64_t>            fileDict;
 
         Mutex                           readersMut;

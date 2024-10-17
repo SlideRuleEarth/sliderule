@@ -395,9 +395,8 @@ uint32_t GeoIndexedRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
                 if(ps.sample == NULL) break;
 
                 RasterSample* s;
-                if(!ps.sampleReturned)
+                if(!ps.sampleReturned.exchange(true))
                 {
-                    ps.sampleReturned = true;
                     s = ps.sample;
                 }
                 else
@@ -1048,7 +1047,7 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         }
     }
 
-    mlog(DEBUG, "Found %zu point groups for points range: %u - %u", gf->pointsGroups.size(), start, end);
+    mlog(DEBUG, "Found %zu point groups for range: %u - %u", gf->pointsGroups.size(), start, end);
 
     /* Thread must initialize GEOS context */
     GeoRtree::deinit(threadGeosContext);
@@ -1066,7 +1065,7 @@ void* GeoIndexedRaster::samplesCollectThread(void* param)
     const uint32_t start = sc->pGroupsRange.start;
     const uint32_t end   = sc->pGroupsRange.end;
 
-    mlog(DEBUG, "Finding samples for range: %u - %u", start, end);
+    mlog(DEBUG, "Collecting samples for range: %u - %u", start, end);
 
     u_int32_t numSamples = 0;
     for(uint32_t pointIndx = start; pointIndx < end; pointIndx++)
@@ -1099,7 +1098,7 @@ void* GeoIndexedRaster::samplesCollectThread(void* param)
         sc->slvector.push_back(slist);
     }
 
-    mlog(DEBUG, "Found %u samples for points range: %u - %u", numSamples, start, end);
+    mlog(DEBUG, "Collected %u samples for range: %u - %u", numSamples, start, end);
 
     return NULL;
 }
@@ -1395,7 +1394,7 @@ OGRGeometry* GeoIndexedRaster::getConvexHull(const std::vector<point_info_t>* po
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::applySpatialFilter(OGRLayer* layer, const std::vector<point_info_t>* points)
 {
-    mlog(INFO, "Features before spatial filter: %lld", layer->GetFeatureCount());
+    mlog(DEBUG, "Features before spatial filter: %lld", layer->GetFeatureCount());
 
     const double startTime = TimeLib::latchtime();
 
@@ -1414,8 +1413,8 @@ void GeoIndexedRaster::applySpatialFilter(OGRLayer* layer, const std::vector<poi
     }
     perfStats.spatialFilterTime = TimeLib::latchtime() - startTime;
 
-    mlog(INFO, "Features after spatial filter: %lld", layer->GetFeatureCount());
-    mlog(INFO, "Spatial filter time: %.3lf", perfStats.spatialFilterTime);
+    mlog(DEBUG, "Features after spatial filter: %lld", layer->GetFeatureCount());
+    mlog(DEBUG, "Spatial filter time: %.3lf", perfStats.spatialFilterTime);
 }
 
 /*----------------------------------------------------------------------------
@@ -1568,7 +1567,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                 for(const uint32_t pointIndx : it->second)
                 {
                     const point_groups_t& pg = pointsGroups[pointIndx];
-                    ur->pointSamples.push_back({ pg.point, pg.pointIndex, NULL, false, SS_NO_ERRORS });
+                    ur->pointSamples.emplace_back(pg.point, pg.pointIndex);
                 }
                 ur->pointSamples.shrink_to_fit();
             }
@@ -1682,6 +1681,7 @@ bool GeoIndexedRaster::sampleUniqueRasters(const std::vector<unique_raster_t*>& 
             breader->sync.unlock();
         }
 
+        mlog(DEBUG, "Done Sampling %u rasters", numRasters);
         status = true;
     }
     catch(const RunTimeException& e)
@@ -1703,7 +1703,6 @@ bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsG
     if(!sampling()) return true;
 
     const double start = TimeLib::latchtime();
-    mlog(DEBUG, "Populating sllist with samples");
 
     /* Sanity check for pointsGroups, internal pointIndex should be the same as the index in pointsGroups vector */
     assert(std::all_of(pointsGroups.cbegin(), pointsGroups.cend(),
@@ -1719,6 +1718,8 @@ bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsG
     std::vector<range_t> pGroupRanges;
     getThreadsRanges(pGroupRanges, pointsGroups.size(), minPointGroupsPerThread, numMaxThreads);
     const uint32_t numThreads = pGroupRanges.size();
+
+    mlog(INFO, "Collecting samples for %zu points with %u threads", pointsGroups.size(), numThreads);
 
     for(uint32_t i = 0; i < numThreads; i++)
     {
@@ -1736,6 +1737,8 @@ bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsG
     }
 
     /* Merge sample lists from all sample collection threads */
+    const double mergeStart = TimeLib::latchtime();
+    mlog(DEBUG, "Merging sample lists");
     for(SampleCollector* sc : sampleCollectors)
     {
         const std::vector<sample_list_t*>& slvector = sc->slvector;
@@ -1746,6 +1749,7 @@ bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsG
         ssErrors |= sc->ssErrors;
         delete sc;
     }
+    mlog(DEBUG, "Merged %d sample lists, time: %lf", sllist.length(), TimeLib::latchtime() - mergeStart);
 
     perfStats.collectSamplesTime = TimeLib::latchtime() - start;
     mlog(DEBUG, "Populated sllist with %d lists of samples, time: %lf", sllist.length(), perfStats.collectSamplesTime);

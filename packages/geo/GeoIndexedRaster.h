@@ -73,12 +73,19 @@ class GeoIndexedRaster: public RasterObject
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef struct {
+        typedef struct PointSample {
             OGRPoint                    point;
-                     int64_t            pointIndex;
+            int64_t                     pointIndex;
             RasterSample*               sample;
-            bool                        sampleReturned;
+            std::atomic<bool>           sampleReturned;
             uint32_t                    ssErrors;
+
+            PointSample(const OGRPoint& _point, int64_t _pointIndex):
+               point(_point), pointIndex(_pointIndex), sample(NULL), sampleReturned(false), ssErrors(SS_NO_ERRORS) {}
+
+            PointSample(const PointSample& ps):
+               point(ps.point), pointIndex(ps.pointIndex), sample(ps.sample), sampleReturned(ps.sampleReturned.load()), ssErrors(ps.ssErrors) {}
+
         } point_sample_t;
 
         struct unique_raster_t;

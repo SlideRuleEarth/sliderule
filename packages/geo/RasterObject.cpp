@@ -56,6 +56,7 @@ const struct luaL_Reg RasterObject::LUA_META_TABLE[] = {
 
 Mutex RasterObject::factoryMut;
 Dictionary<RasterObject::factory_t> RasterObject::factories;
+Mutex RasterObject::fileDictMut;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -347,12 +348,15 @@ uint64_t RasterObject::fileDictAdd(const string& fileName)
 {
     uint64_t id;
 
-    if(!fileDict.find(fileName.c_str(), &id))
+    fileDictMut.lock();
     {
-        id = (parms->key_space << 32) | fileDict.length();
-        fileDict.add(fileName.c_str(), id);
+        if(!fileDict.find(fileName.c_str(), &id))
+        {
+            id = (parms->key_space << 32) | fileDict.length();
+            fileDict.add(fileName.c_str(), id);
+        }
     }
-
+    fileDictMut.unlock();
     return id;
 }
 
@@ -361,12 +365,16 @@ uint64_t RasterObject::fileDictAdd(const string& fileName)
  *----------------------------------------------------------------------------*/
 const char* RasterObject::fileDictGetFile (uint64_t fileId)
 {
-    Dictionary<uint64_t>::Iterator iterator(fileDict);
-    for(int i = 0; i < iterator.length; i++)
+    fileDictMut.lock();
     {
-        if(fileId == iterator[i].value)
-            return iterator[i].key;
+        Dictionary<uint64_t>::Iterator iterator(fileDict);
+        for(int i = 0; i < iterator.length; i++)
+        {
+            if(fileId == iterator[i].value)
+                return iterator[i].key;
+        }
     }
+    fileDictMut.unlock();
     return NULL;
 }
 

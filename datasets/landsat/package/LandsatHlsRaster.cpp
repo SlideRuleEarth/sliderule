@@ -374,9 +374,8 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
                         if(returnBandSample)
                         {
                             RasterSample* s;
-                            if(!ps.sampleReturned)
+                            if(!ps.sampleReturned.exchange(true))
                             {
-                                ps.sampleReturned = true;
                                 s = ps.sample;
                             }
                             else
