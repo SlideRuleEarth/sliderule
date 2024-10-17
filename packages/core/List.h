@@ -464,7 +464,7 @@ template <class T>
 void List<T>::sort(void)
 {
     /* Allocate Array */
-    T* array = new T[len];
+    T* _array = new T[len];
 
     /* Build Array */
     list_node_t* curr = &head;
@@ -475,14 +475,14 @@ void List<T>::sort(void)
         const int items_to_copy = MIN(items_remaining, listBlockSize);
         for(int i = 0; i < items_to_copy; i++)
         {
-            array[index++] = curr->data[i];
+            _array[index++] = curr->data[i];
         }
         items_remaining -= items_to_copy;
         curr = curr->next;
     }
 
     /* Sort Array */
-    quicksort(array, 0, len - 1);
+    quicksort(_array, 0, len - 1);
 
     /* Write Array */
     curr = &head;
@@ -493,14 +493,14 @@ void List<T>::sort(void)
         const int items_to_copy = MIN(items_remaining, listBlockSize);
         for(int i = 0; i < items_to_copy; i++)
         {
-            curr->data[i] = array[index++];
+            curr->data[i] = _array[index++];
         }
         items_remaining -= items_to_copy;
         curr = curr->next;
     }
 
     /* Deallocate Array */
-    delete [] array;
+    delete [] _array;
 }
 
 /*----------------------------------------------------------------------------
@@ -543,10 +543,10 @@ T List<T>::operator[](int index) const
         const int node_offset = index % listBlockSize;
 
         const list_node_t* curr = &head;
-        for(int i = 0; i < node_block; i++) 
-        { 
-            assert(curr); 
-            curr = curr->next; 
+        for(int i = 0; i < node_block; i++)
+        {
+            assert(curr);
+            curr = curr->next;
         }
 
         assert(curr);

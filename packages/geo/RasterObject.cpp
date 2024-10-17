@@ -56,6 +56,7 @@ const struct luaL_Reg RasterObject::LUA_META_TABLE[] = {
 
 Mutex RasterObject::factoryMut;
 Dictionary<RasterObject::factory_t> RasterObject::factories;
+Mutex RasterObject::fileDictMut;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -200,7 +201,7 @@ uint32_t RasterObject::getSamples(const std::vector<point_info_t>& points, List<
         for(uint32_t i = 0; i < ranges.size(); i++)
         {
             const range_t& range = ranges[i];
-            mlog(DEBUG, "ragne-%u: %u to %u\n", i, range.start, range.end);
+            mlog(DEBUG, "ragne-%u: %u to %u", i, range.start, range.end);
         }
 
         const uint32_t numThreads = ranges.size();
@@ -331,7 +332,7 @@ RasterObject::~RasterObject(void)
 
 void RasterObject::stopSampling(void)
 {
-    sampling = false;
+    samplingEnabled = false;
     readersMut.lock();
     {
         for(const reader_t* reader : readers)
@@ -347,12 +348,15 @@ uint64_t RasterObject::fileDictAdd(const string& fileName)
 {
     uint64_t id;
 
-    if(!fileDict.find(fileName.c_str(), &id))
+    fileDictMut.lock();
     {
-        id = (parms->key_space << 32) | fileDict.length();
-        fileDict.add(fileName.c_str(), id);
+        if(!fileDict.find(fileName.c_str(), &id))
+        {
+            id = (parms->key_space << 32) | fileDict.length();
+            fileDict.add(fileName.c_str(), id);
+        }
     }
-
+    fileDictMut.unlock();
     return id;
 }
 
@@ -361,12 +365,16 @@ uint64_t RasterObject::fileDictAdd(const string& fileName)
  *----------------------------------------------------------------------------*/
 const char* RasterObject::fileDictGetFile (uint64_t fileId)
 {
-    Dictionary<uint64_t>::Iterator iterator(fileDict);
-    for(int i = 0; i < iterator.length; i++)
+    fileDictMut.lock();
     {
-        if(fileId == iterator[i].value)
-            return iterator[i].key;
+        Dictionary<uint64_t>::Iterator iterator(fileDict);
+        for(int i = 0; i < iterator.length; i++)
+        {
+            if(fileId == iterator[i].value)
+                return iterator[i].key;
+        }
     }
+    fileDictMut.unlock();
     return NULL;
 }
 
@@ -420,7 +428,7 @@ void RasterObject::getThreadsRanges(std::vector<range_t>& ranges, uint32_t num,
 RasterObject::RasterObject(lua_State *L, GeoParms* _parms):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms),
-    sampling(true)
+    samplingEnabled(true)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "sample", luaSamples);
@@ -680,7 +688,7 @@ uint32_t RasterObject::readSamples(RasterObject* robj, const range_t& range,
 
     for(uint32_t i = range.start; i < range.end; i++)
     {
-        if(!robj->sampling)
+        if(!robj->sampling())
         {
             mlog(DEBUG, "Sampling stopped");
             samples.clear();

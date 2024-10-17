@@ -219,12 +219,10 @@ bool LandsatHlsRaster::findRasters(finder_t* finder)
                     }
                 }
             }
-            rgroup->infovect.shrink_to_fit();
 
             // mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
             finder->rasterGroups.push_back(rgroup);
         }
-        finder->rasterGroups.shrink_to_fit();
         // mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
     }
     catch (const RunTimeException &e)
@@ -359,9 +357,9 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
             assert(ur);
 
             /* Get the sample for this point from unique raster */
-            for(const point_sample_t& ps : ur->pointSamples)
+            for(point_sample_t& ps : ur->pointSamples)
             {
-                if(ps.pointInfo.index == pointIndx)
+                if(ps.pointIndex == pointIndx)
                 {
                     /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
                     if(ps.sample == NULL) break;
@@ -375,12 +373,21 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
                         const bool returnBandSample = it->second;
                         if(returnBandSample)
                         {
-                            /* Create a copy of the sample and add it to the list */
-                            RasterSample* sample = new RasterSample(*ps.sample);
+                            RasterSample* s;
+                            if(!ps.sampleReturned.exchange(true))
+                            {
+                                s = ps.sample;
+                            }
+                            else
+                            {
+                                /* Sample has already been returned, must create a copy */
+                                s = new RasterSample(*ps.sample);
+                            }
 
-                            /* Set flags for this sample */
-                            sample->flags = flags;
-                            slist->add(sample);
+                            /* Set flags for this sample, add it to the list */
+                            s->flags = flags;
+                            slist->add(s);
+                            errors |= ps.ssErrors;
                         }
                     }
                     errors |= ps.ssErrors;
