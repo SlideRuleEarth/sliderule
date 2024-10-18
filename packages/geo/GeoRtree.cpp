@@ -71,8 +71,7 @@ GeoRtree::GeoRtree(bool _sort, uint32_t _nodeCapacity):
     nodeCapacity(_nodeCapacity),
     sort(_sort)
 {
-    rtree = GEOSSTRtree_create_r(geosContext, nodeCapacity);
-    mlog(DEBUG, "Created R-tree with node capacity: %u, index sorting: %d", nodeCapacity, static_cast<int>(sort));
+    /* R-tree is created when insert method inserts the first feature */
 }
 
 /*----------------------------------------------------------------------------
@@ -99,6 +98,12 @@ void GeoRtree::query(const OGRGeometry* geo, std::vector<OGRFeature*>& resultFea
 void GeoRtree::query(const OGRGeometry* geo, GEOSContextHandle_t context,
                      std::vector<OGRFeature*>& resultFeatures)
 {
+    if(rtree == NULL)
+    {
+        mlog(DEBUG, "R-tree is empty");
+        return;
+    }
+
     /* Convert OGRGeometry to GEOSGeometry */
     GEOSGeometry* geos = geo->exportToGEOS(context);
     if (geos == NULL)
@@ -120,7 +125,6 @@ void GeoRtree::query(const OGRGeometry* geo, GEOSContextHandle_t context,
     /* Query the R-tree using the envelope of the point */
     std::vector<FeatureIndexPair*> resultPairs;
     GEOSSTRtree_query_r(context, rtree, geosEnvelope, queryCallback, &resultPairs);
-
     // mlog(DEBUG, "Found %zu features for query", resultPairs.size());
 
     if(sort)

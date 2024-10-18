@@ -324,7 +324,7 @@ uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t g
 /*----------------------------------------------------------------------------
  * BatchReader Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::BatchReader::BatchReader (GeoIndexedRaster* _obj):
+GeoIndexedRaster::BatchReader::BatchReader(GeoIndexedRaster* _obj) :
     obj(_obj),
     uraster(NULL),
     sync(NUM_SYNC_SIGNALS),
@@ -336,7 +336,7 @@ GeoIndexedRaster::BatchReader::BatchReader (GeoIndexedRaster* _obj):
 /*----------------------------------------------------------------------------
  * BatchReader Destructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::BatchReader::~BatchReader (void)
+GeoIndexedRaster::BatchReader::~BatchReader(void)
 {
     sync.lock();
     {
@@ -404,6 +404,9 @@ uint32_t GeoIndexedRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
                     /* Sample has already been returned, must create a copy */
                     s = new RasterSample(*ps.sample);
                 }
+
+                /* Set time for this sample */
+                s->time = rgroup->gpsTime / 1000;
 
                 /* Set flags for this sample, add it to the list */
                 s->flags = flags;
@@ -666,7 +669,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
             bbox.lat_max = env.MaxY;
         }
 
-        mlog(DEBUG, "Loaded %lld features from: %s", layer->GetFeatureCount(), newFile.c_str());
+        // mlog(DEBUG, "Loaded %lld features from: %s", layer->GetFeatureCount(), newFile.c_str());
         GDALClose((GDALDatasetH)dset);
     }
     catch (const RunTimeException &e)
@@ -944,7 +947,7 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
             unique_raster_t* ur = breader->uraster;
             GdalRaster* raster = new GdalRaster(breader->obj->parms,
                                                 ur->rinfo->fileName,
-                                                static_cast<double>(ur->gpsTime / 1000),
+                                                0,                     /* Sample collecting code will set it to group's gpsTime */
                                                 ur->fileId,
                                                 ur->rinfo->dataIsElevation,
                                                 breader->obj->crscb);
@@ -1542,7 +1545,6 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                     {
                         unique_raster_t* ur = new unique_raster_t();
                         ur->rinfo = &rinfo;
-                        ur->gpsTime = rgroup->gpsTime;
                         ur->fileId = fileDictAdd(rinfo.fileName);
                         uniqueRasters.push_back(ur);
 
@@ -1713,7 +1715,7 @@ bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsG
     std::vector<SampleCollector*> sampleCollectors;
 
     const uint32_t numMaxThreads = std::thread::hardware_concurrency();
-    const uint32_t minPointGroupsPerThread = 1000;
+    const uint32_t minPointGroupsPerThread = 100;
 
     std::vector<range_t> pGroupRanges;
     getThreadsRanges(pGroupRanges, pointsGroups.size(), minPointGroupsPerThread, numMaxThreads);

@@ -323,6 +323,12 @@ runner.check(sampleCnt == 180)
 print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, sampleCnt))
 
 
+--[[
+
+EL - we are currently not using subseting and this test is very slow (180 rasters to subset)
+   - I am disabling it for now. There are other tests (shorter) which subset rasters.
+   - I am leaving this here in case we want to re-enable it later.
+
 print(string.format("\n-------------------------------------------------\nLandsat AOI Subset test\n-------------------------------------------------"))
 
 -- AOI extent (extent of hls_trimmed.geojson)
@@ -367,6 +373,7 @@ if tbl ~= nil then
         runner.check(size > 0)
     end
 end
+--]]
 
 
 
@@ -440,7 +447,7 @@ for i=1, maxSamples do
     sampleCnt = sampleCnt + 1
 end
 local stoptime = time.latch();
-print(string.format("POI sample %d points time: %.2f   (%d threads)", sampleCnt, stoptime - starttime, threadCnt))
+print(string.format("POI sample %d points time: %.2f", sampleCnt, stoptime - starttime))
 runner.check(sampleCnt == maxSamples)
 dem = nil
 

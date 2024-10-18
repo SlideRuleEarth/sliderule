@@ -77,6 +77,7 @@ class UT_RasterSample: public LuaObject
         explicit         UT_RasterSample (lua_State* L, RasterObject* _raster);
                         ~UT_RasterSample (void) override;
 
+        static bool      ReadPointsFile(std::vector<RasterObject::point_info_t>& points, const char* filePath);
         static int       luaSampleTest (lua_State* L);
 
         /*--------------------------------------------------------------------

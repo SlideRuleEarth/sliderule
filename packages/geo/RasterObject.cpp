@@ -365,17 +365,21 @@ uint64_t RasterObject::fileDictAdd(const string& fileName)
  *----------------------------------------------------------------------------*/
 const char* RasterObject::fileDictGetFile (uint64_t fileId)
 {
+    const char* fileName = NULL;
     fileDictMut.lock();
     {
         Dictionary<uint64_t>::Iterator iterator(fileDict);
         for(int i = 0; i < iterator.length; i++)
         {
             if(fileId == iterator[i].value)
-                return iterator[i].key;
+            {
+                fileName = iterator[i].key;
+                break;
+            }
         }
     }
     fileDictMut.unlock();
-    return NULL;
+    return fileName;
 }
 
 /*----------------------------------------------------------------------------

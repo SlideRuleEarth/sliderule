@@ -96,6 +96,33 @@ UT_RasterSample::~UT_RasterSample(void)
     raster->releaseLuaObject();
 }
 
+/*----------------------------------------------------------------------------
+ * ReadPointsFile
+ *----------------------------------------------------------------------------*/
+bool UT_RasterSample::ReadPointsFile(std::vector<RasterObject::point_info_t>& points, const char* filePath)
+{
+    FILE* file = fopen(filePath, "r");
+    if (!file) {
+        print2term("Error: Unable to open file: %s\n", filePath);
+        return false;
+    }
+
+    double lon, lat;
+
+    while (fscanf(file, "%lf %lf", &lon, &lat) == 2)
+    {
+        RasterObject::point_info_t pointInfo;
+        pointInfo.point.x = lon;
+        pointInfo.point.y = lat;
+        pointInfo.point.z = 0.0;
+        pointInfo.gps = 0.0;
+
+        points.push_back(pointInfo);
+    }
+
+    fclose(file);
+    return true;
+}
 
 /*----------------------------------------------------------------------------
  * luaSampleTest
@@ -122,27 +149,56 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
         /* Get Count */
         const long pointsCnt = getLuaInteger(L, 6);
 
-        /* Create  of points to sample */
+        /* Get Points File if provided */
+        const char* pointsFile = getLuaString(L, 7, true, NULL);
+
         std::vector<RasterObject::point_info_t> points2sample;
-        for(long i = 0; i < pointsCnt; i++)
+
+        if(pointsFile)
         {
-            RasterObject::point_info_t point;
-            point.point.x = lon;
-            point.point.y = lat;
-            point.point.z = 0.0;
-            point.gps = 0.0;
+            std::vector<RasterObject::point_info_t> pointsInFile;
+            print2term("Using points file: %s\n", pointsFile);
+            if(!lua_obj->ReadPointsFile(pointsInFile, pointsFile))
+            {
+                return returnLuaStatus(L, false);
+            }
 
-            points2sample.push_back(point);
+            /* Calculate step to sample pointsCnt so they are not consecutive */
+            uint32_t step = pointsInFile.size() / pointsCnt;
+            if(step < 1) step = 1;
+            print2term("Using step of %u\n", step);
 
-            lon += lonIncr;
-            lat += latIncr;
+            /* Create points to sample */
+            for(uint32_t i = 0; i < pointsInFile.size(); i += step)
+                points2sample.push_back(pointsInFile[i]);
+
+            /* Trim points if needed */
+            points2sample.resize(pointsCnt);
+        }
+        else
+        {
+            /* Create points to sample */
+            for(long i = 0; i < pointsCnt; i++)
+            {
+                RasterObject::point_info_t point;
+                point.point.x = lon;
+                point.point.y = lat;
+                point.point.z = 0.0;
+                point.gps = 0.0;
+
+                points2sample.push_back(point);
+
+                lon += lonIncr;
+                lat += latIncr;
+            }
         }
 
-        print2term("Points to sample: %ld\n", pointsCnt);
-        print2term("Starting at (%.4lf, %.4lf), incrementing by (%+.4lf, %+.4lf)\n", lon, lat, lonIncr, latIncr);
+        print2term("Points to sample: %zu\n", points2sample.size());
+        print2term("Starting at (%.4lf, %.4lf), incrementing by (%+.4lf, %+.4lf)\n", points2sample[0].point.x, points2sample[0].point.y, lonIncr, latIncr);
+        print2term("Last point: (%.4lf, %.4lf)\n", points2sample[points2sample.size() - 1].point.x, points2sample[points2sample.size() - 1].point.y);
 
         /* Get samples using serial method */
-        print2term("Getting samples using serial method\n");
+        print2term("Getting samples for %zu points using serial method\n", points2sample.size());
         List<RasterObject::sample_list_t*> serial_sllist;
         const double serialStartTime = TimeLib::latchtime();
         for(uint32_t i = 0; i < points2sample.size(); i++)
@@ -156,7 +212,7 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
         const double serialStopTime = TimeLib::latchtime();
 
         /* Get samples using batch method */
-        print2term("Getting samples using batch method\n");
+        print2term("Getting samples for %zu points using batch method\n", points2sample.size());
         List<RasterObject::sample_list_t*> batch_sllist;
         const double batchStartTime = TimeLib::latchtime();
         lua_obj->raster->getSamples(points2sample, batch_sllist, NULL);
@@ -176,16 +232,39 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
         }
 
         /* Compare results */
-        uint32_t validStreamSamples = 0;
+        uint32_t allSerialSamples = 0;
+        uint32_t allBatchSamples = 0;
+        uint32_t validSerialSamples = 0;
         uint32_t validBatchSamples = 0;
-        uint32_t nanStreamSamples = 0;
+        uint32_t nanSerialSamples = 0;
         uint32_t nanBatchSamples = 0;
 
-        print2term("Comparing samples\n");
+        /* Count all samples in each list */
+        for(int i = 0; i < serial_sllist.length(); i++)
+        {
+            RasterObject::sample_list_t* slist = serial_sllist[i];
+            for(int j = 0; j < slist->length(); j++)
+                allSerialSamples++;
+        }
+        for(int i = 0; i < batch_sllist.length(); i++)
+        {
+            RasterObject::sample_list_t* slist = batch_sllist[i];
+            for(int j = 0; j < slist->length(); j++)
+                    allBatchSamples++;
+        }
+
+        print2term("Comparing lists\n");
         if(serial_sllist.length() != batch_sllist.length())
         {
             print2term("Number of samples differ, serial: %d, batch: %d\n", serial_sllist.length(), batch_sllist.length());
-            errors++;
+            return returnLuaStatus(L, false);
+        }
+
+        print2term("Comparing %u samples\n", allSerialSamples);
+        if(allSerialSamples != allBatchSamples)
+        {
+            print2term("Number of samples differ, serial: %d, batch: %d\n", allSerialSamples, allBatchSamples);
+            return returnLuaStatus(L, false);
         }
 
         for(int i = 0; i < serial_sllist.length(); i++)
@@ -230,8 +309,8 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
                     errors++;
                 }
 
-                if(std::isnan(serial->value)) nanStreamSamples++;
-                else validStreamSamples++;
+                if(std::isnan(serial->value)) nanSerialSamples++;
+                else validSerialSamples++;
 
                 if(std::isnan(batch->value)) nanBatchSamples++;
                 else validBatchSamples++;
@@ -256,7 +335,7 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
             }
         }
 
-        print2term("Stream samples, valid: %u, nan: %u\n", validStreamSamples, nanStreamSamples);
+        print2term("Serial samples, valid: %u, nan: %u\n", validSerialSamples, nanSerialSamples);
         print2term("Batch  samples, valid: %u, nan: %u\n", validBatchSamples, nanBatchSamples);
     }
     catch(const RunTimeException& e)

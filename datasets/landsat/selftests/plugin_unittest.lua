@@ -22,28 +22,28 @@ while not aws.csget("lpdaac-cloud") do
 end
 
 
-local geojsonfile = td.."../data/hls_trimmed.geojson"
+local geojsonfile = td.."../data/grand_mesa.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
 
 -- Unit Test --
 
-local  lon = -179.0
-local  lat = 51.0
-
-local lon_incr = 0.01
-local lat_incr = 0.00
-local pointCount = 100
-
 print(string.format("\n-------------------------------------------------\nLandsat Plugin test (NDVI)\n-------------------------------------------------"))
 local demType = "landsat-hls"
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog=contents, sort_by_index=true }))
+local t0str = "2022:01:05:00:00:00"
+local t1str = "2022:01:15:00:00:00"
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, t0=t0str, t1=t1str, bands = {"NDVI"}, catalog = contents, sort_by_index = true }))
 runner.check(dem ~= nil)
 
 ut = geo.ut_sample(dem)
 runner.check(ut ~= nil)
-status = ut:test(lon, lat, lon_incr, lat_incr, pointCount)
+-- This test ignores lon, lat, lon_incr, lat_incr, pointCount as they are not used.
+-- It opens a test file with points.
+local pointsFile = td.."../data/grand_mesa_poi.txt"
+local pointsInFile = 26183  -- number of points in file
+local maxPointCount = 1000  -- number of points to sample, 1000 will trigger all threaded code
+status = ut:test(0, 0, 0, 0, maxPointCount, pointsFile);
 runner.check(status, "Failed sampling test")
 ut = nil
 

@@ -156,7 +156,7 @@ void LandsatHlsRaster::getIndexFile(const OGRGeometry* geo, std::string& file, c
     static_cast<void>(geo);
     static_cast<void>(points);
     file = indexFile;
-    mlog(DEBUG, "Using %s", file.c_str());
+    // mlog(DEBUG, "Using %s", file.c_str());
 }
 
 
@@ -383,6 +383,9 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
                                 /* Sample has already been returned, must create a copy */
                                 s = new RasterSample(*ps.sample);
                             }
+
+                            /* Set time for this sample */
+                            s->time = rgroup->gpsTime / 1000;
 
                             /* Set flags for this sample, add it to the list */
                             s->flags = flags;
