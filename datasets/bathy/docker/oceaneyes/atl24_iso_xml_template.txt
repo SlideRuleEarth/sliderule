@@ -1,0 +1,341 @@
+<?xml version="1.0"?>
+<gmd:DS_Series xsi:schemaLocation="http://www.isotc211.org/2005/gmi http://cdn.earthdata.nasa.gov/iso/schema/1.0/ISO19115-2_EOS.xsd" xmlns:eos="http://earthdata.nasa.gov/schema/eos" xmlns:gco="http://www.isotc211.org/2005/gco" xmlns:gmd="http://www.isotc211.org/2005/gmd" xmlns:gmi="http://www.isotc211.org/2005/gmi" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:gmx="http://www.isotc211.org/2005/gmx" xmlns:gsr="http://www.isotc211.org/2005/gsr" xmlns:gss="http://www.isotc211.org/2005/gss" xmlns:gts="http://www.isotc211.org/2005/gts" xmlns:srv="http://www.isotc211.org/2005/srv" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <gmd:composedOf>
+    <gmd:DS_DataSet>
+      <gmd:has>
+        <gmi:MI_Metadata>
+          <gmd:fileIdentifier>
+            <gmx:FileName>$FILENAME</gmx:FileName>
+          </gmd:fileIdentifier>
+          <gmd:contact>
+            <gmd:CI_ResponsibleParty>
+              <gmd:organisationName>
+                <gco:CharacterString>NSIDC DAAC &gt; National Snow and Ice Data Center DAAC</gco:CharacterString>
+              </gmd:organisationName>
+              <gmd:contactInfo>
+                <gmd:CI_Contact>
+                  <gmd:address>
+                    <gmd:CI_Address>
+                      <gmd:electronicMailAddress>
+                        <gco:CharacterString>nsidc@nsidc.org</gco:CharacterString>
+                      </gmd:electronicMailAddress>
+                    </gmd:CI_Address>
+                  </gmd:address>
+                  <gmd:onlineResource>
+                    <gmd:CI_OnlineResource>
+                      <gmd:linkage>
+                        <gmd:URL>http://nsidc.org/daac/</gmd:URL>
+                      </gmd:linkage>
+                    </gmd:CI_OnlineResource>
+                  </gmd:onlineResource>
+                </gmd:CI_Contact>
+              </gmd:contactInfo>
+              <gmd:role>
+                <gmd:CI_RoleCode codeList="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_RoleCode" codeListValue="pointOfContact">pointOfContact</gmd:CI_RoleCode>
+              </gmd:role>
+            </gmd:CI_ResponsibleParty>
+          </gmd:contact>
+          <gmd:dateStamp>
+            <gco:DateTime>$GENERATION_TIME</gco:DateTime>
+          </gmd:dateStamp>
+          <gmd:metadataStandardName>
+            <gco:CharacterString>ISO 19115-2 Geographic information - Metadata - Part 2: Extensions for imagery and gridded data</gco:CharacterString>
+          </gmd:metadataStandardName>
+          <gmd:metadataStandardVersion>
+            <gco:CharacterString>ISO 19115-2:2009-02-15</gco:CharacterString>
+          </gmd:metadataStandardVersion>
+          <gmd:identificationInfo>
+            <gmd:MD_DataIdentification>
+              <gmd:citation>
+                <gmd:CI_Citation>
+                  <gmd:title>
+                    <gmx:FileName>$FILENAME</gmx:FileName>
+                  </gmd:title>
+                  <gmd:date>
+                    <gmd:CI_Date>
+                      <gmd:date>
+                        <gco:DateTime>$GENERATION_TIME</gco:DateTime>
+                      </gmd:date>
+                      <gmd:dateType>
+                        <gmd:CI_DateTypeCode codeList="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#CI_DateTypeCode" codeListValue="creation">creation</gmd:CI_DateTypeCode>
+                      </gmd:dateType>
+                    </gmd:CI_Date>
+                  </gmd:date>
+                  <gmd:identifier>
+                    <gmd:MD_Identifier>
+                      <gmd:code>
+                        <gco:CharacterString>ATL24</gco:CharacterString>
+                      </gmd:code>
+                      <gmd:description>
+                        <gco:CharacterString>The ECS Short Name</gco:CharacterString>
+                      </gmd:description>
+                    </gmd:MD_Identifier>
+                  </gmd:identifier>
+                  <gmd:identifier>
+                    <gmd:MD_Identifier>
+                      <gmd:code>
+                        <gco:CharacterString>006</gco:CharacterString>
+                      </gmd:code>
+                      <gmd:description>
+                        <gco:CharacterString>The ECS Version ID</gco:CharacterString>
+                      </gmd:description>
+                    </gmd:MD_Identifier>
+                  </gmd:identifier>
+                  <gmd:identifier>
+                    <gmd:MD_Identifier>
+                      <gmd:code>
+                        <gco:CharacterString>$FILENAME</gco:CharacterString>
+                      </gmd:code>
+                      <gmd:description>
+                        <gco:CharacterString>ProducerGranuleId</gco:CharacterString>
+                      </gmd:description>
+                    </gmd:MD_Identifier>
+                  </gmd:identifier>
+                </gmd:CI_Citation>
+              </gmd:citation>
+              <gmd:abstract>
+                <gco:CharacterString>The ICESat-2 ATL24 standard data product contains latitude, longitude, orthometric height of received photons in coastal regions.  Each photon is classified as bathymetry, sea surface, or unclassified.  Subaqueous photons are refraction corrected and are accompanied by a modeled uncertainty.</gco:CharacterString>
+              </gmd:abstract>
+              <gmd:status>
+                <gmd:MD_ProgressCode codeList="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_ProgressCode" codeListValue="onGoing">onGoing</gmd:MD_ProgressCode>
+              </gmd:status>
+              <gmd:aggregationInfo>
+                <gmd:MD_AggregateInformation>
+                  <gmd:aggregateDataSetName>
+                    <gmd:CI_Citation>
+                      <gmd:title>
+                        <gco:CharacterString>ATL24</gco:CharacterString>
+                      </gmd:title>
+                      <gmd:date gco:nilReason="unknown"/>
+                      <gmd:edition>
+                        <gco:CharacterString>006</gco:CharacterString>
+                      </gmd:edition>
+                    </gmd:CI_Citation>
+                  </gmd:aggregateDataSetName>
+                  <gmd:associationType>
+                    <gmd:DS_AssociationTypeCode codeList="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#DS_AssociationTypeCode" codeListValue="largerWorkCitation">largerWorkCitation</gmd:DS_AssociationTypeCode>
+                  </gmd:associationType>
+                </gmd:MD_AggregateInformation>
+              </gmd:aggregationInfo>
+              <gmd:language>
+                <gco:CharacterString>eng</gco:CharacterString>
+              </gmd:language>
+              <gmd:topicCategory>
+                <gmd:MD_TopicCategoryCode>geoscientificInformation</gmd:MD_TopicCategoryCode>
+              </gmd:topicCategory>
+             <gmd:extent>
+                <gmd:EX_Extent id="boundingExtent">
+                  <gmd:description>
+                    <gco:CharacterString>SpatialCoverageType=HORIZONTAL, SpatialGranuleSpatialRepresentation=GEODETIC, TemporalRangeType=Continuous Range, TimeType=UTC, CoordinateSystem=CARTESIAN</gco:CharacterString>
+                  </gmd:description>
+                  <gmd:geographicElement>
+                    <gmd:EX_BoundingPolygon id="boundingPolygon0">
+                     <gmd:extentTypeCode>
+                       <gco:Boolean>true</gco:Boolean>
+                      </gmd:extentTypeCode>
+                      <gmd:polygon>
+                        <gml:Polygon gml:id="Poly0">
+                          <gml:exterior>
+                            <gml:LinearRing>
+                              <gml:posList srsDimension="2" srsName="http://www.opengis.net/def/crs/EPSG/4326">$EXTENT_POLYGON</gml:posList>
+                              </gml:LinearRing>
+                            </gml:exterior>
+                        </gml:Polygon>
+                      </gmd:polygon>
+                    </gmd:EX_BoundingPolygon>
+                  </gmd:geographicElement>
+                  <gmd:temporalElement>
+                    <gmd:EX_TemporalExtent>
+                      <gmd:extent>
+                        <gml:TimePeriod gml:id="TIME_PERIOD_ID">
+                          <gml:beginPosition>$EXTENT_BEGIN_TIME</gml:beginPosition>
+                          <gml:endPosition>$EXTENT_END_TIME</gml:endPosition>
+                        </gml:TimePeriod>
+                      </gmd:extent>
+                    </gmd:EX_TemporalExtent>
+                  </gmd:temporalElement>
+                </gmd:EX_Extent>
+              </gmd:extent>
+            </gmd:MD_DataIdentification>
+          </gmd:identificationInfo>
+         <gmd:contentInfo>
+            <gmd:MD_CoverageDescription>
+              <gmd:attributeDescription>
+                <gco:RecordType>AdditionalAttributes</gco:RecordType>
+              </gmd:attributeDescription>
+              <gmd:contentType>
+                <gmd:MD_CoverageContentTypeCode codeList="https://cdn.earthdata.nasa.gov/iso/resources/Codelist/gmxCodelists.xml#MD_CoverageContentTypeCode" codeListValue="physicalMeasurement">physicalMeasurement</gmd:MD_CoverageContentTypeCode>
+              </gmd:contentType>
+              <gmd:dimension>
+                <gmd:MD_Band>
+                  <gmd:otherProperty>
+                    <gco:Record>
+                      <eos:EOS_AdditionalAttributes>
+                        <eos:additionalAttribute>
+                          <eos:EOS_AdditionalAttribute>
+                            <eos:reference>
+                              <eos:EOS_AdditionalAttributeDescription>
+                                <eos:type>
+                                  <eos:EOS_AdditionalAttributeTypeCode codeList="http://earthdata.nasa.gov/metadata/resources/Codelists.xml#EOS_AdditionalAttributeTypeCode" codeListValue="contentInformation">contentInformation</eos:EOS_AdditionalAttributeTypeCode>
+                                </eos:type>
+                                <eos:name>
+                                  <gco:CharacterString>Percent_Land</gco:CharacterString>
+                                </eos:name>
+                                <eos:description>
+                                  <gco:CharacterString>Percentage of acquired data considered as possible Land</gco:CharacterString>
+                                </eos:description>
+                                <eos:dataType>
+                                  <eos:EOS_AdditionalAttributeDataTypeCode codeList="http://earthdata.nasa.gov/metadata/resources/Codelists.xml#EOS_AdditionalAttributeDataTypeCode" codeListValue="float">float</eos:EOS_AdditionalAttributeDataTypeCode>
+                                </eos:dataType>
+                                <eos:parameterUnitsOfMeasure>
+                                  <gco:CharacterString>Percent</gco:CharacterString>
+                                </eos:parameterUnitsOfMeasure>
+                              </eos:EOS_AdditionalAttributeDescription>
+                            </eos:reference>
+                            <eos:value>
+                              <gco:CharacterString>0.0000</gco:CharacterString>
+                            </eos:value>
+                          </eos:EOS_AdditionalAttribute>
+                        </eos:additionalAttribute>
+                        <eos:additionalAttribute>
+                          <eos:EOS_AdditionalAttribute>
+                            <eos:reference>
+                              <eos:EOS_AdditionalAttributeDescription>
+                                <eos:type>
+                                  <eos:EOS_AdditionalAttributeTypeCode codeList="http://earthdata.nasa.gov/metadata/resources/Codelists.xml#EOS_AdditionalAttributeTypeCode" codeListValue="contentInformation">contentInformation</eos:EOS_AdditionalAttributeTypeCode>
+                                </eos:type>
+                                <eos:name>
+                                  <gco:CharacterString>Percent_Ocean</gco:CharacterString>
+                                </eos:name>
+                                <eos:description>
+                                  <gco:CharacterString>Percentage of acquired data considered as possible Ocean</gco:CharacterString>
+                                </eos:description>
+                                <eos:dataType>
+                                  <eos:EOS_AdditionalAttributeDataTypeCode codeList="http://earthdata.nasa.gov/metadata/resources/Codelists.xml#EOS_AdditionalAttributeDataTypeCode" codeListValue="float">float</eos:EOS_AdditionalAttributeDataTypeCode>
+                                </eos:dataType>
+                                <eos:parameterUnitsOfMeasure>
+                                  <gco:CharacterString>Percent</gco:CharacterString>
+                                </eos:parameterUnitsOfMeasure>
+                              </eos:EOS_AdditionalAttributeDescription>
+                            </eos:reference>
+                            <eos:value>
+                              <gco:CharacterString>1.0000</gco:CharacterString>
+                            </eos:value>
+                          </eos:EOS_AdditionalAttribute>
+                        </eos:additionalAttribute>
+                        <eos:additionalAttribute>
+                          <eos:EOS_AdditionalAttribute>
+                            <eos:reference>
+                              <eos:EOS_AdditionalAttributeDescription>
+                                <eos:type>
+                                  <eos:EOS_AdditionalAttributeTypeCode codeList="http://earthdata.nasa.gov/metadata/resources/Codelists.xml#EOS_AdditionalAttributeTypeCode" codeListValue="contentInformation">contentInformation</eos:EOS_AdditionalAttributeTypeCode>
+                                </eos:type>
+                                <eos:name>
+                                  <gco:CharacterString>Percent_SeaIce</gco:CharacterString>
+                                </eos:name>
+                                <eos:description>
+                                  <gco:CharacterString>Percentage of acquired data considered as possible Sea Ice</gco:CharacterString>
+                                </eos:description>
+                                <eos:dataType>
+                                  <eos:EOS_AdditionalAttributeDataTypeCode codeList="http://earthdata.nasa.gov/metadata/resources/Codelists.xml#EOS_AdditionalAttributeDataTypeCode" codeListValue="float">float</eos:EOS_AdditionalAttributeDataTypeCode>
+                                </eos:dataType>
+                                <eos:parameterUnitsOfMeasure>
+                                  <gco:CharacterString>Percent</gco:CharacterString>
+                                </eos:parameterUnitsOfMeasure>
+                              </eos:EOS_AdditionalAttributeDescription>
+                            </eos:reference>
+                            <eos:value>
+                              <gco:CharacterString>0.0000</gco:CharacterString>
+                            </eos:value>
+                          </eos:EOS_AdditionalAttribute>
+                        </eos:additionalAttribute>
+                        <eos:additionalAttribute>
+                          <eos:EOS_AdditionalAttribute>
+                            <eos:reference>
+                              <eos:EOS_AdditionalAttributeDescription>
+                                <eos:type>
+                                  <eos:EOS_AdditionalAttributeTypeCode codeList="http://earthdata.nasa.gov/metadata/resources/Codelists.xml#EOS_AdditionalAttributeTypeCode" codeListValue="contentInformation">contentInformation</eos:EOS_AdditionalAttributeTypeCode>
+                                </eos:type>
+                                <eos:name>
+                                  <gco:CharacterString>Percent_LandIce</gco:CharacterString>
+                                </eos:name>
+                                <eos:description>
+                                  <gco:CharacterString>Percentage of acquired data considered as possible Land Ice</gco:CharacterString>
+                                </eos:description>
+                                <eos:dataType>
+                                  <eos:EOS_AdditionalAttributeDataTypeCode codeList="http://earthdata.nasa.gov/metadata/resources/Codelists.xml#EOS_AdditionalAttributeDataTypeCode" codeListValue="float">float</eos:EOS_AdditionalAttributeDataTypeCode>
+                                </eos:dataType>
+                                <eos:parameterUnitsOfMeasure>
+                                  <gco:CharacterString>Percent</gco:CharacterString>
+                                </eos:parameterUnitsOfMeasure>
+                              </eos:EOS_AdditionalAttributeDescription>
+                            </eos:reference>
+                            <eos:value>
+                              <gco:CharacterString>0.0000</gco:CharacterString>
+                            </eos:value>
+                          </eos:EOS_AdditionalAttribute>
+                        </eos:additionalAttribute>
+                        <eos:additionalAttribute>
+                          <eos:EOS_AdditionalAttribute>
+                            <eos:reference>
+                              <eos:EOS_AdditionalAttributeDescription>
+                                <eos:type>
+                                  <eos:EOS_AdditionalAttributeTypeCode codeList="http://earthdata.nasa.gov/metadata/resources/Codelists.xml#EOS_AdditionalAttributeTypeCode" codeListValue="contentInformation">contentInformation</eos:EOS_AdditionalAttributeTypeCode>
+                                </eos:type>
+                                <eos:name>
+                                  <gco:CharacterString>Percent_InlandWater</gco:CharacterString>
+                                </eos:name>
+                                <eos:description>
+                                  <gco:CharacterString>Percentage of acquired data considered as possible Inland Water</gco:CharacterString>
+                                </eos:description>
+                                <eos:dataType>
+                                  <eos:EOS_AdditionalAttributeDataTypeCode codeList="http://earthdata.nasa.gov/metadata/resources/Codelists.xml#EOS_AdditionalAttributeDataTypeCode" codeListValue="float">float</eos:EOS_AdditionalAttributeDataTypeCode>
+                                </eos:dataType>
+                                <eos:parameterUnitsOfMeasure>
+                                  <gco:CharacterString>Percent</gco:CharacterString>
+                                </eos:parameterUnitsOfMeasure>
+                              </eos:EOS_AdditionalAttributeDescription>
+                            </eos:reference>
+                            <eos:value>
+                              <gco:CharacterString>0.0000</gco:CharacterString>
+                            </eos:value>
+                          </eos:EOS_AdditionalAttribute>
+                        </eos:additionalAttribute>
+                      </eos:EOS_AdditionalAttributes>
+                    </gco:Record>
+                  </gmd:otherProperty>
+                </gmd:MD_Band>
+              </gmd:dimension>
+            </gmd:MD_CoverageDescription>
+          </gmd:contentInfo>
+          <gmd:dataQualityInfo>
+            <gmd:DQ_DataQuality>
+              <gmd:scope>
+                <gmd:DQ_Scope>
+                  <gmd:level>
+                    <gmd:MD_ScopeCode codeList="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml#MD_ScopeCode" codeListValue="dataset">dataset</gmd:MD_ScopeCode>
+                  </gmd:level>
+                </gmd:DQ_Scope>
+              </gmd:scope>
+              <gmd:lineage>
+                <gmd:LI_Lineage>
+                  <gmd:processStep>
+                    <gmi:LE_ProcessStep>
+                      <gmd:description>
+                        <gco:CharacterString>Created by SlideRule $SLIDERULE_VERSION</gco:CharacterString>
+                      </gmd:description>
+                      <gmd:dateTime>
+                        <gco:DateTime>$GENERATION_TIME</gco:DateTime>
+                      </gmd:dateTime>
+                    </gmi:LE_ProcessStep>
+                  </gmd:processStep>
+                </gmd:LI_Lineage>
+              </gmd:lineage>
+            </gmd:DQ_DataQuality>
+          </gmd:dataQualityInfo>
+        </gmi:MI_Metadata>
+      </gmd:has>
+    </gmd:DS_DataSet>
+  </gmd:composedOf>
+  <gmd:seriesMetadata gco:nilReason="missing"/>
+</gmd:DS_Series>

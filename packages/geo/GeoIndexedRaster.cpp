@@ -93,19 +93,10 @@ GeoIndexedRaster::Reader::~Reader (void)
 /*----------------------------------------------------------------------------
  * Finder Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::Finder::Finder (OGRGeometry* _geo, std::vector<OGRFeature*>* _featuresList):
+GeoIndexedRaster::Finder::Finder (const OGRGeometry* _geo, const std::vector<OGRFeature*>* _featuresList):
     geo(_geo),
     featuresList(_featuresList)
 {
-}
-
-/*----------------------------------------------------------------------------
- * Finder Destructor
- *----------------------------------------------------------------------------*/
-GeoIndexedRaster::Finder::~Finder (void)
-{
-    /* geometry geo is cloned not 'newed' on GDAL heap. Use this call to free it */
-    OGRGeometryFactory::destroyGeometry(geo);
 }
 
 /*----------------------------------------------------------------------------
@@ -156,12 +147,12 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
     try
     {
         GroupOrdering groupList;
-        OGRPoint      ogr_point(point.x, point.y, point.z);
+        OGRPoint      ogrPoint(point.x, point.y, point.z);
 
         ssErrors = SS_NO_ERRORS;
 
         /* Sample Rasters */
-        if(sample(&ogr_point, gps, &groupList))
+        if(sample(&ogrPoint, gps, &groupList))
         {
             /* Populate Return Vector of Samples (slist) */
             const GroupOrdering::Iterator iter(groupList);
@@ -258,15 +249,16 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
          */
         if(isSampling())
         {
+            const double start = TimeLib::latchtime();
             mlog(DEBUG, "Populating sllist with samples");
             for(uint32_t pointIndx = 0; pointIndx < pointsGroups.size(); pointIndx++)
             {
                 const point_groups_t& pg = pointsGroups[pointIndx];
-                const GroupOrdering::Iterator iter(*pg.groupList);
 
                 /* Allocate a new sample list for groupList */
                 sample_list_t* slist = new sample_list_t();
 
+                const GroupOrdering::Iterator iter(*pg.groupList);
                 for(int i = 0; i < iter.length; i++)
                 {
                     const rasters_group_t* rgroup = iter[i].value;
@@ -281,6 +273,8 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
 
                 sllist.add(slist);
             }
+            perfStats.collectSamplesTime = TimeLib::latchtime() - start;
+            mlog(INFO, "Populated sllist with samples, time: %lf", perfStats.collectSamplesTime);
         }
         else
         {
@@ -315,11 +309,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
     unlockSampling();
 
     /* Print performance stats */
-    mlog(INFO, "Performance Stats:");
-    mlog(INFO, "spatialFilter: %12.3lf", perfStats.spatialFilterTime);
-    mlog(INFO, "findingRasters:%12.3lf", perfStats.findRastersTime);
-    mlog(INFO, "findingUnique: %12.3lf", perfStats.findUniqueRastersTime);
-    mlog(INFO, "sampling:      %12.3lf", perfStats.samplesTime);
+    perfStats.log(INFO);
 
     return ssErrors;
 }
@@ -359,14 +349,6 @@ uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t g
     return ssErrors;
 }
 
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-GeoIndexedRaster::~GeoIndexedRaster(void)
-{
-    emptyFeaturesList();
-}
-
 /******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
@@ -401,14 +383,15 @@ GeoIndexedRaster::BatchReader::~BatchReader (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::overrideCRS_t cb):
-    RasterObject    (L, _parms),
+GeoIndexedRaster::GeoIndexedRaster(lua_State *L, RequestFields* rqst_parms, const char* key, GdalRaster::overrideCRS_t cb):
+    RasterObject    (L, rqst_parms, key),
     cache           (MAX_READER_THREADS),
     ssErrors        (SS_NO_ERRORS),
     crscb           (cb),
     bbox            {0, 0, 0, 0},
     rows            (0),
-    cols            (0)
+    cols            (0),
+    geoRtree        (parms->sort_by_index)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -416,10 +399,7 @@ GeoIndexedRaster::GeoIndexedRaster(lua_State *L, GeoParms* _parms, GdalRaster::o
     LuaEngine::setAttrFunc(L, "cell", luaCellSize);
 
     /* Establish Credentials */
-    GdalRaster::initAwsAccess(_parms);
-
-    /* Mark index file bbox/extent poly as empty */
-    geoIndexPoly.empty();
+    GdalRaster::initAwsAccess(parms);
 }
 
 
@@ -441,7 +421,7 @@ uint32_t GeoIndexedRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
         /* Get the sample for this point from unique raster */
         for(point_sample_t& ps : ur->pointSamples)
         {
-            if(ps.pointInfo.index == pointIndx)
+            if(ps.pointIndex == pointIndx)
             {
                 /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
                 if(ps.sample == NULL) break;
@@ -492,7 +472,7 @@ uint32_t GeoIndexedRaster::getBatchGroupFlags(const rasters_group_t* rgroup, uin
         /* Get the sample for this point from unique raster */
         for(const point_sample_t& ps : ur->pointSamples)
         {
-            if(ps.pointInfo.index == pointIndx)
+            if(ps.pointIndex == pointIndx)
             {
                 /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
                 if(ps.sample)
@@ -655,14 +635,13 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
     getIndexFile(geo, newFile, points);
 
     /* Trying to open the same file? */
-    if(!featuresList.empty() && newFile == indexFile)
+    if(!geoRtree.empty() && newFile == indexFile)
         return true;
 
     GDALDataset* dset = NULL;
     try
     {
-        emptyFeaturesList();
-        geoIndexPoly.empty();
+        geoRtree.clear();
 
         /* Open new vector data set*/
         dset = static_cast<GDALDataset *>(GDALOpenEx(newFile.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL));
@@ -683,7 +662,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
         }
 
         /*
-         * Clone features and store them for performance/speed of feature lookup
+         * Insert features into R-tree after applying temporal filter
          */
         layer->ResetReading();
         while(OGRFeature* feature = layer->GetNextFeature())
@@ -700,14 +679,12 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
                 }
             }
 
-            /* Clone feature and store it */
-            OGRFeature* fp = feature->Clone();
-            featuresList.push_back(fp);
+            /* Insert feature into tree */
+            geoRtree.insert(feature);
+
+            /* Destroy feature, R-tree has its own copy */
             OGRFeature::DestroyFeature(feature);
         }
-
-        /* Reduce memory footprint */
-        featuresList.shrink_to_fit();
 
         cols = dset->GetRasterXSize();
         rows = dset->GetRasterYSize();
@@ -721,19 +698,15 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
             bbox.lat_min = env.MinY;
             bbox.lon_max = env.MaxX;
             bbox.lat_max = env.MaxY;
-
-            /* Create poly geometry for index file bbox/envelope */
-            geoIndexPoly = GdalRaster::makeRectangle(bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
-            mlog(DEBUG, "index file extent/bbox: (%.6lf, %.6lf), (%.6lf, %.6lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
         }
 
+        mlog(DEBUG, "Loaded %lld features from: %s", layer->GetFeatureCount(), newFile.c_str());
         GDALClose((GDALDatasetH)dset);
-        mlog(DEBUG, "Loaded %ld features from: %s", featuresList.size(), newFile.c_str());
     }
     catch (const RunTimeException &e)
     {
         if(dset) GDALClose((GDALDatasetH)dset);
-        emptyFeaturesList();
+        geoRtree.clear();
         ssErrors |= SS_INDEX_FILE_ERROR;
         return false;
     }
@@ -790,15 +763,17 @@ void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
  *----------------------------------------------------------------------------*/
 bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps, GroupOrdering* groupList)
 {
-    const bool openNewFile = geoIndexPoly.IsEmpty() || !geoIndexPoly.Contains(geo);
-    if(openNewFile)
-    {
-        if(!openGeoIndex(geo, NULL))
-            return false;
-    }
+    /* Open the index file, if not already open */
+    if(!openGeoIndex(geo, NULL))
+        return false;
 
     /* Find rasters that intersect with the geometry */
-    finder_t finder(geo->clone(), &featuresList);
+    std::vector<OGRFeature*> foundFeatures;
+
+    /* Query the R-tree with the OGRPoint and get the result features */
+    geoRtree.query(geo, foundFeatures);
+
+    finder_t finder(geo, &foundFeatures);
     if(!findRasters(&finder))
         return false;
 
@@ -825,21 +800,6 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps, GroupOrdering* grou
     return true;
 }
 
-
-/*----------------------------------------------------------------------------
- * emptyFeaturesList
- *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::emptyFeaturesList(void)
-{
-    if(featuresList.empty()) return;
-
-    for(unsigned i = 0; i < featuresList.size(); i++)
-    {
-        OGRFeature* feature = featuresList[i];
-        OGRFeature::DestroyFeature(feature);
-    }
-    featuresList.clear();
-}
 
 /******************************************************************************
  * PRIVATE METHODS
@@ -972,14 +932,15 @@ void* GeoIndexedRaster::readerThread(void *param)
                      * new GeoIndexRaster with the same file path as parent raster.
                      */
                     entry->subset->robj = new GeoRaster(NULL,
-                                                        reader->obj->parms,
+                                                        reader->obj->rqstParms,
+                                                        reader->obj->samplerKey,
                                                         entry->subset->rasterName,
                                                         entry->raster->getGpsTime(),
                                                         entry->raster->isElevation(),
                                                         entry->raster->getOverrideCRS());
 
-                    /* GeoParms are shared with subsseted raster and other readers */
-                    GeoIndexedRaster::referenceLuaObject(reader->obj->parms);
+                    /* RequestFields are shared with subsseted raster and other readers */
+                    GeoIndexedRaster::referenceLuaObject(reader->obj->rqstParms);
                 }
             }
             entry->enabled = false; /* raster samples/subsetted */
@@ -1017,16 +978,16 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
         {
             unique_raster_t* ur = breader->uraster;
             GdalRaster* raster = new GdalRaster(breader->obj->parms,
-                                                ur->rinfo.fileName,
+                                                ur->rinfo->fileName,
                                                 static_cast<double>(ur->gpsTime / 1000),
                                                 ur->fileId,
-                                                ur->rinfo.dataIsElevation,
+                                                ur->rinfo->dataIsElevation,
                                                 breader->obj->crscb);
 
             /* Sample all points for this raster */
             for(point_sample_t& ps : ur->pointSamples)
             {
-                ps.sample = raster->samplePOI(&ps.pointInfo.point);
+                ps.sample = raster->samplePOI(&ps.point);
                 ps.ssErrors |= raster->getSSerror();
             }
 
@@ -1058,8 +1019,6 @@ void* GeoIndexedRaster::unionThread(void* param)
     * NOTE: Using buffered points is significantly more computationally
     *       expensive than bounding boxes (10x slower).
     */
-    mlog(DEBUG, "Creating collection of bboxes from %d points, range: %d - %d",
-         um->pointsRange.end - um->pointsRange.start, um->pointsRange.start, um->pointsRange.end);
 
     const double startTime = TimeLib::latchtime();
 
@@ -1088,7 +1047,6 @@ void* GeoIndexedRaster::unionThread(void* param)
         geometryCollection.addGeometryDirectly(bboxPoly);
     }
     um->stats.points2polyTime = TimeLib::latchtime() - startTime;
-    mlog(DEBUG, "Creating collection took %.3lf seconds", um->stats.points2polyTime);
 
     CPLErrorReset();
     OGRGeometry* unionPolygon = geometryCollection.UnaryUnion();
@@ -1114,7 +1072,7 @@ void* GeoIndexedRaster::unionThread(void* param)
     }
 
     um->stats.unioningTime = TimeLib::latchtime() - startTime;
-    mlog(DEBUG, "Unioning all geometries took %.3lf seconds", um->stats.unioningTime);
+    // mlog(DEBUG, "Unioning geometries took %.3lf seconds", um->stats.unioningTime);
 
     /* Set the unioned polygon in the union maker object */
     um->unionPolygon = unionPolygon;
@@ -1123,6 +1081,7 @@ void* GeoIndexedRaster::unionThread(void* param)
     return NULL;
 }
 
+
 /*----------------------------------------------------------------------------
  * groupsFinderThread
  *----------------------------------------------------------------------------*/
@@ -1130,21 +1089,13 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
 {
     groups_finder_t* gf = static_cast<groups_finder_t*>(param);
 
-    /* Find groups of rasters for each point in range.
-     * NOTE: cannot filter rasters here, must be done in one thread
-     */
+    /* Thread must initialize GEOS context */
+    GEOSContextHandle_t threadGeosContext = GeoRtree::init();
+
     const uint32_t start = gf->pointsRange.start;
-    const uint32_t end   = gf->pointsRange.end;
+    const uint32_t end = gf->pointsRange.end;
 
-    /* Clone features list for this thread (OGRFeature objects are not thread save, must copy/clone) */
-    const uint32_t size = gf->obj->featuresList.size();
-    std::vector<OGRFeature*> localFeaturesList;
-    for(uint32_t j = 0; j < size; j++)
-    {
-        localFeaturesList.push_back(gf->obj->featuresList[j]->Clone());
-    }
-
-    mlog(DEBUG, "Finding groups for %zu points, range: %u - %u, features cloned: %u", gf->points->size(), start, end, size);
+    mlog(DEBUG, "Finding groups for points range: %u - %u", start, end);
 
     for(uint32_t i = start; i < end; i++)
     {
@@ -1155,25 +1106,46 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         }
 
         const point_info_t& pinfo = gf->points->at(i);
-        OGRPoint* ogr_point = new OGRPoint(pinfo.point.x, pinfo.point.y, pinfo.point.z);
+        const OGRPoint ogrPoint(pinfo.point.x, pinfo.point.y, pinfo.point.z);
 
-        /* Set finder for the whole range of features */
-        Finder finder(ogr_point, &localFeaturesList);
 
-        /* Find rasters intersecting with ogr_point */
+        /* Query the R-tree with the OGRPoint and get the result features */
+        std::vector<OGRFeature*> foundFeatures;
+        gf->obj->geoRtree.query(&ogrPoint, threadGeosContext, foundFeatures);
+        // mlog(DEBUG, "Found %zu features for point %u", foundFeatures.size(), i);
+
+        /* Clone found features since OGRFeature is not thread safe */
+        std::vector<OGRFeature*> localFeatures;
+        localFeatures.reserve(foundFeatures.size());
+
+        for(OGRFeature* feature : foundFeatures)
+        {
+            localFeatures.push_back(feature->Clone());
+        }
+
+        /* Set finder for the found features */
+        Finder finder(&ogrPoint, &localFeatures);
+
+        /* Find rasters intersecting with ogrPoint */
         gf->obj->findRasters(&finder);
 
-        /* Filter rasters based on gps time */
-        GroupOrdering* groupList = new GroupOrdering();
-        const int64_t gps = gf->obj->usePOItime() ? pinfo.gps : 0.0;
-        gf->obj->filterRasters(gps, groupList);
+        /* Destroy cloned features */
+        for(OGRFeature* feature : localFeatures)
+        {
+            OGRFeature::DestroyFeature(feature);
+        }
 
         /* Copy from finder to pointGroups */
+        GroupOrdering* groupList = new GroupOrdering();
         for(rasters_group_t* rgroup : finder.rasterGroups)
         {
             groupList->add(groupList->length(), rgroup);
         }
-        gf->pointsGroups.emplace_back(point_groups_t{ {*ogr_point, i}, groupList });
+        gf->pointsGroups.emplace_back(point_groups_t{ogrPoint, i, groupList});
+
+        /* Filter rasters based on POI time */
+        const int64_t gps = gf->obj->usePOItime() ? pinfo.gps : 0.0;
+        gf->obj->filterRasters(gps, groupList);
 
         /* Add raster file names from this groupList to raster to points map */
         const GroupOrdering::Iterator iter(*groupList);
@@ -1187,11 +1159,10 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         }
     }
 
-    /* Cleanup cloned features */
-    for(OGRFeature* feature : localFeaturesList)
-    {
-        OGRFeature::DestroyFeature(feature);
-    }
+    mlog(DEBUG, "Found   groups for points range: %u - %u", start, end);
+
+    /* Thread must initialize GEOS context */
+    GeoRtree::deinit(threadGeosContext);
 
     return NULL;
 }
@@ -1282,15 +1253,14 @@ bool GeoIndexedRaster::updateCache(uint32_t& rasters2sample, const GroupOrdering
             const bool inCache = cache.find(key, &item);
             if(!inCache)
             {
-                /* Limit area of interest to the extent of vector index file */
-                parms->aoi_bbox = bbox;
-
-                /* Create new cache item with raster */
+                /* Create new cache item with raster
+                    note use of bbox in construcutor - it limits area
+                    of interest to the extent of vector index file */
                 item = new cacheitem_t;
                 item->raster = new GdalRaster(parms, rinfo.fileName,
                                               static_cast<double>(rgroup->gpsTime / 1000),
                                               fileDictAdd(rinfo.fileName),
-                                              rinfo.dataIsElevation, crscb);
+                                              rinfo.dataIsElevation, crscb, &bbox);
                 item->sample = NULL;
                 item->subset = NULL;
                 const bool status = cache.add(key, item);
@@ -1344,7 +1314,7 @@ bool GeoIndexedRaster::updateCache(uint32_t& rasters2sample, const GroupOrdering
 bool GeoIndexedRaster::filterRasters(int64_t gps, GroupOrdering* groupList)
 {
     /* NOTE: temporal filter is applied in openGeoIndex() */
-    if(parms->url_substring || parms->filter_doy_range)
+    if(!parms->url_substring.value.empty() || parms->filter_doy_range)
     {
         const GroupOrdering::Iterator group_iter(*groupList);
         for(int i = 0; i < group_iter.length; i++)
@@ -1355,9 +1325,9 @@ bool GeoIndexedRaster::filterRasters(int64_t gps, GroupOrdering* groupList)
             for(const auto& rinfo : rgroup->infovect)
             {
                 /* URL filter */
-                if(parms->url_substring)
+                if(!parms->url_substring.value.empty())
                 {
-                    if(rinfo.fileName.find(parms->url_substring) == std::string::npos)
+                    if(rinfo.fileName.find(parms->url_substring.value) == std::string::npos)
                     {
                         removeGroup = true;
                         break;
@@ -1586,8 +1556,10 @@ void GeoIndexedRaster::applySpatialFilter(OGRLayer* layer, const std::vector<poi
 
     const double startTime = TimeLib::latchtime();
 
-    OGRGeometry* filter = getBufferedPoints(points);
-    // OGRGeometry* filter = getConvexHull(points);
+    /* Buffered points generates more detailed filter polygon but is much slower than
+     * convex hull, especially for large number of points.
+     */
+    OGRGeometry* filter = getConvexHull(points);
     if(filter != NULL)
     {
         layer->SetSpatialFilter(filter);
@@ -1595,7 +1567,7 @@ void GeoIndexedRaster::applySpatialFilter(OGRLayer* layer, const std::vector<poi
     }
     else
     {
-        mlog(ERROR, "Failed to create union polygon for spatial filter");
+        mlog(ERROR, "Failed to create polygon for spatial filter");
     }
     perfStats.spatialFilterTime = TimeLib::latchtime() - startTime;
 
@@ -1643,7 +1615,10 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
             delete pid;
         }
 
+        mlog(DEBUG, "All groups finders time: %lf", TimeLib::latchtime() - startTime);
+
         /* Merge the pointGroups for each thread */
+        mlog(DEBUG, "Merging point groups from all threads");
         for(GroupsFinder* gf : rgroupFinders)
         {
             pointsGroups.insert(pointsGroups.end(), gf->pointsGroups.begin(), gf->pointsGroups.end());
@@ -1706,7 +1681,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                     bool addNewRaster = true;
                     for(unique_raster_t* ur : uniqueRasters)
                     {
-                        if(ur->rinfo.fileName == rinfo.fileName)
+                        if(ur->rinfo->fileName == rinfo.fileName)
                         {
                             /* already in unique rasters list, set pointer in rinfo to this raster */
                             rinfo.uraster = ur;
@@ -1718,7 +1693,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                     if(addNewRaster)
                     {
                         unique_raster_t* ur = new unique_raster_t();
-                        ur->rinfo = rinfo;
+                        ur->rinfo = &rinfo;
                         ur->gpsTime = rgroup->gpsTime;
                         ur->fileId = fileDictAdd(rinfo.fileName);
                         uniqueRasters.push_back(ur);
@@ -1736,7 +1711,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
         mlog(DEBUG, "Finding points for unique rasters");
         for(unique_raster_t* ur : uniqueRasters)
         {
-            const std::string& rasterName = ur->rinfo.fileName;
+            const std::string& rasterName = ur->rinfo->fileName;
 
             auto it = rasterToPointsMap.find(rasterName);
             if(it != rasterToPointsMap.end())
@@ -1744,7 +1719,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                 for(const uint32_t pointIndx : it->second)
                 {
                     const point_groups_t& pg = pointsGroups[pointIndx];
-                    ur->pointSamples.push_back({ pg.pointInfo, NULL, false, SS_NO_ERRORS });
+                    ur->pointSamples.push_back({ pg.point, pg.pointIndex, NULL, false, SS_NO_ERRORS });
                 }
                 ur->pointSamples.shrink_to_fit();
             }
@@ -1761,6 +1736,8 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
     }
 
     perfStats.findUniqueRastersTime = TimeLib::latchtime() - startTime;
+    mlog(DEBUG, "Unique rasters time: %lf", perfStats.findUniqueRastersTime);
+
     return status;
 }
 

@@ -6,7 +6,7 @@ local json          = require("json")
 local earthdata     = require("earth_data_query")
 local runner        = require("container_runtime")
 local rqst          = json.decode(arg[1])
-local parms         = bathy.parms(rqst["parms"])
+local parms         = bathy.parms(rqst["parms"], 0, "icesat2", rqst["resource"])
 local resource      = parms["resource"]
 local timeout       = parms["node_timeout"]
 local userlog       = msg.publish(rspq) -- create user log publisher (alerts)
@@ -16,7 +16,7 @@ local profile       = {} -- timing profiling table
 local start_time    = time.gps() -- used for timeout handling
 
 -------------------------------------------------------
--- function: cleanup 
+-- function: cleanup
 -------------------------------------------------------
 local function cleanup(_crenv, _transaction_id)
     runner.cleanup(_crenv) -- container runtime environment
@@ -131,14 +131,14 @@ while true do
             break -- success
         else
             userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> returned an invalid number of resources for ATL09 CMR request for %s: %d", rspq, resource, #rsps2))
-            return -- failure
+            break -- failure
         end
     else
         userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed attempt %d to make ATL09 CMR request <%d>: %s", rspq, atl09_attempt, rc2, rsps2))
         atl09_attempt = atl09_attempt + 1
         if atl09_attempt > atl09_max_retries then
             userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to make ATL09 CMR request for %s... aborting!", rspq, resource))
-            return -- failure
+            break -- failure
         end
     end
 end
@@ -211,44 +211,52 @@ end
 -------------------------------------------------------
 -- wait for dataframes to complete and write to file
 -------------------------------------------------------
+local failed_processing_run = false
 for beam,dataframe in pairs(dataframes) do
+    local failed_dataframe = false
     if dataframe:finished(ctimeout(), rspq) then
         if dataframes[beam]:length() <= 0 then
             userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s created an empty bathy dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
         elseif not dataframes[beam]:isvalid() then
             userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create valid bathy dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
-            cleanup(crenv, transaction_id)
-            return
+            failed_dataframe = true
         else
             local spot = dataframe:meta("spot")
             local output_filename = string.format("%s/bathy_spot_%d.parquet", crenv.host_sandbox_directory, spot)
             local arrow_dataframe = arrow.dataframe(parms, dataframe)
             if not arrow_dataframe then
                 userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create arrow dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
-                cleanup(crenv, transaction_id)
-                return
+                failed_dataframe = true
             elseif not arrow_dataframe:export(output_filename, arrow.PARQUET) then
                 userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to write dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
-                cleanup(crenv, transaction_id)
-                return
+                failed_dataframe = true
             end
-            userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> dataframe for %s created", rspq, beam))
-            outputs[beam] = string.format("%s/bathy_spot_%d.parquet", crenv.container_sandbox_mount, spot)
-            dataframe:destroy()
+            if not failed_dataframe then
+                userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> dataframe for %s created", rspq, beam))
+                outputs[beam] = string.format("%s/bathy_spot_%d.parquet", crenv.container_sandbox_mount, spot)
+            end
         end
+        -- cleanup to save memory
+        dataframe:destroy()
     else
         userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> on %s timed out waiting for dataframe to complete on spot %d", rspq, resource, dataframe:meta("spot")))
-        cleanup(crenv, transaction_id)
-        return
+        failed_dataframe = true
     end
+    failed_processing_run = failed_processing_run or failed_dataframe
+end
+-- delay clean up and exit because race condition exists for
+-- dataframes that otherwise might not have finished yet
+if failed_processing_run then
+    cleanup(crenv, transaction_id)
+    return
 end
 
 -------------------------------------------------------
 -- wait for granule to complete and write to file
 -------------------------------------------------------
 if granule then
-    outputs["granule"] = string.format("%s/bathy_granule.json", crenv.container_sandbox_mount, "w")
-    local f = io.open(outputs["granule"])
+    outputs["granule"] = string.format("%s/bathy_granule.json", crenv.container_sandbox_mount)
+    local f, err = io.open(string.format("%s/bathy_granule.json", crenv.host_sandbox_directory), "w")
     if f then
         if granule:waiton(ctimeout(), rspq) then
             f:write(json.encode(granule:export()))
@@ -260,7 +268,7 @@ if granule then
             return
         end
     else
-        userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to write granule json for %s", rspq, resource))
+        userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to write granule json for %s: %s", rspq, resource, err))
         cleanup(crenv, transaction_id)
         return
     end
@@ -270,7 +278,7 @@ end
 -- clean up objects to cut down on memory usage
 -------------------------------------------------------
 atl03h5:destroy()
-atl09h5:destroy()
+if atl09h5 then atl09h5:destroy() end
 kd490:destroy()
 
 -------------------------------------------------------
@@ -292,28 +300,41 @@ outputs["profile"] = profile
 outputs["format"] = parms["output"]["format"]
 outputs["filename"] = crenv.container_sandbox_mount.."/"..tmp_filename
 outputs["ensemble"] = parms["ensemble"] or {ensemble_model_filename=string.format("%s/%s", cre.HOST_DIRECTORY, bathy.ENSEMBLE_MODEL)}
+outputs["iso_xml_filename"] = crenv.container_sandbox_mount.."/"..tmp_filename..".iso.xml"
+outputs["atl24_filename"] = string.gsub(parms["resource"], "ATL03", "ATL24")
 outputs["latch"] = latch
 
 -------------------------------------------------------
 -- run oceaneyes
 -------------------------------------------------------
 local container_parms = {
-    image = "oceaneyes",
-    name = "oceaneyes",
-    command = string.format("/bin/bash /runner.sh %s/settings.json", crenv.container_sandbox_mount),
-    timeout = ctimeout(),
-    parms = { ["settings.json"] = outputs }
+    container_image = "oceaneyes",
+    container_name = "oceaneyes",
+    container_command = string.format("/bin/bash /runner.sh %s/settings.json", crenv.container_sandbox_mount),
+    timeout = ctimeout()
 }
-local container = runner.execute(crenv, container_parms, rspq)
+local container = runner.execute(crenv, container_parms, { ["settings.json"] = outputs }, rspq)
 runner.wait(container, timeout)
 
 -------------------------------------------------------
--- send final output to user
+-- send final granule output to user
 -------------------------------------------------------
-arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_filename, arrow.parms(parms["output"]), rspq)
+arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_filename, parms, rspq)
 
 -------------------------------------------------------
--- exit 
+-- send ISO XML file to user
+-------------------------------------------------------
+if parms["output"]["format"] == "h5" then
+    local xml_parms = core.parms({
+        output = {
+            asset=rqst["parms"]["output"]["asset"], -- use original request asset
+            path=rqst["parms"]["output"]["path"]..".iso.xml" -- modify the original requested path
+        }
+    })
+    arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_filename..".iso.xml", xml_parms, rspq)
+end
+-------------------------------------------------------
+-- exit
 -------------------------------------------------------
 cleanup(crenv, transaction_id)
 

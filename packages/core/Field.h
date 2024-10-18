@@ -90,19 +90,20 @@ class Field
             ENUMERATION   = 2,
             LIST          = 3,
             COLUMN        = 4,
-            DICTIONARY    = 5,
-            DATAFRAME     = 6
+            MAP           = 5,
+            DICTIONARY    = 6,
+            DATAFRAME     = 7
         } type_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        Field (type_t _type, uint32_t _encoding): 
+        Field (type_t _type, uint32_t _encoding):
             type(_type), encoding(_encoding) {};
 
         virtual ~Field (void) = default;
-        
+
         virtual const Field* get (long i) const {
             (void)i;
             return NULL;
@@ -130,8 +131,8 @@ class Field
             return 1;
         };
 
-        uint32_t getValueEncoding(void) const { 
-            return encoding & 0xFFFF; 
+        uint32_t getValueEncoding(void) const {
+            return encoding & 0xFFFF;
         };
 
         /*--------------------------------------------------------------------
@@ -158,8 +159,8 @@ inline static string convertToJson(const uint32_t& v) { return std::to_string(v)
 inline static string convertToJson(const uint64_t& v) { return std::to_string(v);       }
 inline static string convertToJson(const float& v)    { return std::to_string(v);       }
 inline static string convertToJson(const double& v)   { return std::to_string(v);       }
-inline static string convertToJson(const time8_t& v)  { 
-    const int64_t gps = TimeLib::sysex2gpstime(v); 
+inline static string convertToJson(const time8_t& v)  {
+    const int64_t gps = TimeLib::sysex2gpstime(v);
     const TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(gps);
     const TimeLib::date_t date = TimeLib::gmt2date(gmt);
     const double seconds = (double)gmt.second + ((double)gmt.millisecond / 1000.0);

@@ -35,7 +35,8 @@
  * INCLUDES
  ******************************************************************************/
 
-#include COASTNET_INCLUDE
+#include <ATL24_coastnet/utils.h>
+#include <ATL24_coastnet/coastnet.h>
 
 #include "ContainerRunner.h"
 #include "FieldColumn.h"
@@ -105,10 +106,11 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
 
     try
     {
-        const CoastnetFields& cparms = parms->coastnet;
+        const CoastnetFields& args = parms->coastnet;
         const FieldColumn<double>& x_atc = *dynamic_cast<FieldColumn<double>*>(dataframe->getColumnData("x_atc"));
         const FieldColumn<float>& geoid_corr_h = *dynamic_cast<FieldColumn<float>*>(dataframe->getColumnData("geoid_corr_h"));
         FieldColumn<int8_t>& class_ph = *dynamic_cast<FieldColumn<int8_t>*>(dataframe->getColumnData("class_ph"));
+        FieldColumn<float>& surface_h = *dynamic_cast<FieldColumn<float>*>(dataframe->getColumnData("surface_h"));
         FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>>& predictions = *dynamic_cast<FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>>*>(dataframe->getColumnData("predictions"));
         FieldColumn<uint32_t>& processing_flags = *dynamic_cast<FieldColumn<uint32_t>*>(dataframe->getColumnData("processing_flags"));
 
@@ -134,25 +136,21 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
             samples.push_back(p);
 
             // Clear classification (if necessary)
-            if(cparms.setClass)
+            if(args.setClass)
             {
                 class_ph[i] = BathyFields::UNCLASSIFIED;
             }
         }
 
-        // Build arguments
-        struct cmd::args args;
-        args.verbose = cparms.verbose.value;
-        args.use_predictions = cparms.usePredictions.value;
-        args.model_filename = FString("%s/%s", ContainerRunner::HOST_DIRECTORY, cparms.model.value.c_str()).c_str();
-
         // Run classification
-        const auto results = classify (samples, args);
+        const string model_filename = FString("%s/%s", ContainerRunner::HOST_DIRECTORY, args.model.value.c_str()).c_str();
+        const auto results = classify (args.verbose, samples, model_filename, args.usePredictions);
 
         // Update extents
         for(size_t i = 0; i < number_of_samples; i++)
         {
-            if(cparms.setClass) class_ph[i] = results[i].prediction;
+            if(args.setSurface) surface_h[i] = results[i].surface_elevation;
+            if(args.setClass) class_ph[i] = results[i].prediction;
             predictions[i][BathyFields::COASTNET] = results[i].prediction;
             if(results[i].prediction == BathyFields::BATHYMETRY)
             {

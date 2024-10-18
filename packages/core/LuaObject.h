@@ -108,9 +108,13 @@ class LuaObject
         static void         getGlobalObjects    (vector<object_info_t>& globals);
         static long         getNumObjects       (void);
 
+        static int          createLuaObject     (lua_State* L, LuaObject* lua_obj);
         static LuaObject*   getLuaObjectByName  (const char* name, const char* object_type);
+        static void         referenceLuaObject  (LuaObject* lua_obj);
         bool                releaseLuaObject    (void); // pairs with getLuaObject(..) and getLuaObjectByName(..), returns whether object was deleted
         bool                waitComplete        (int timeout);
+
+        inline long getRefCnt(void) { long v = referenceCount; return v; }; // debug only
 
     protected:
 
@@ -132,10 +136,7 @@ class LuaObject
 
         void                signalComplete      (void);
         static void         associateMetaTable  (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
-        static int          createLuaObject     (lua_State* L, LuaObject* lua_obj);
         static LuaObject*   getLuaSelf          (lua_State* L, int parm);
-        static void         referenceLuaObject  (LuaObject* lua_obj);
-        virtual const char* tojson              (void) const;
 
         /*--------------------------------------------------------------------
          * Data
@@ -154,7 +155,6 @@ class LuaObject
         static int          luaDestroy          (lua_State* L);
         static int          luaName             (lua_State* L);
         static int          luaWaitOn           (lua_State* L);
-        static int          lua2json            (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Types

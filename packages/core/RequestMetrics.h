@@ -38,7 +38,7 @@
 
 #include "OsApi.h"
 #include "MathLib.h"
-#include "RequestParms.h"
+#include "RequestFields.h"
 
 /******************************************************************************
  * CLASS
@@ -89,8 +89,8 @@ class RequestMetrics
          *--------------------------------------------------------------------*/
 
         static bool         init            (void);
-        static regions_t    getRegion       (RequestParms* parms);
-    
+        static regions_t    getRegion       (RequestFields* parms);
+
     private:
 
         /*--------------------------------------------------------------------

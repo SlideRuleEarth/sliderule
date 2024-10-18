@@ -34,7 +34,14 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "gedi.h"
+#include "FootprintReader.h"
+#include "Gedi01bReader.h"
+#include "Gedi02aReader.h"
+#include "Gedi03Raster.h"
+#include "Gedi04aReader.h"
+#include "Gedi04bRaster.h"
+#include "GediFields.h"
+#include "GediIODriver.h"
 
 /******************************************************************************
  * DEFINES
@@ -58,7 +65,7 @@
 int gedi_open (lua_State *L)
 {
     static const struct luaL_Reg gedi_functions[] = {
-        {"parms",               GediParms::luaCreate},
+        {"parms",               GediFields::luaCreate},
         {"gedi01b",             Gedi01bReader::luaCreate},
         {"gedi02a",             Gedi02aReader::luaCreate},
         {"gedi04a",             Gedi04aReader::luaCreate},
@@ -67,11 +74,6 @@ int gedi_open (lua_State *L)
 
     /* Set Library */
     luaL_newlib(L, gedi_functions);
-
-    /* Set Globals */
-    LuaEngine::setAttrStr(L, "PARMS",           GediParms::_SELF);
-    LuaEngine::setAttrInt(L, "NUM_BEAMS",       GediParms::NUM_BEAMS);
-    LuaEngine::setAttrInt(L, "ALL_BEAMS",       GediParms::ALL_BEAMS);
 
     return 1;
 }

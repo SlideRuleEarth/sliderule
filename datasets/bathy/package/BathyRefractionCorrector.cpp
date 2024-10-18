@@ -104,6 +104,23 @@ int BathyRefractionCorrector::getSubAqPh (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * sampleWaterMask
+ *----------------------------------------------------------------------------*/
+double BathyRefractionCorrector::sampleWaterMask (GeoLib::TIFFImage* mask, double lon, double lat)
+{
+    const double degrees_of_longitude =  lon - GLOBAL_WATER_RI_MASK_MIN_LON;
+    const double longitude_pixels = degrees_of_longitude / GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
+    const uint32_t x = static_cast<uint32_t>(std::round(longitude_pixels));
+
+    const double degrees_of_latitude = lat - GLOBAL_WATER_RI_MASK_MIN_LAT;
+    const double latitude_pixels = degrees_of_latitude / GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
+    const uint32_t y = mask->getHeight() - static_cast<uint32_t>(std::round(latitude_pixels)); // flipped image
+
+    const GeoLib::TIFFImage::val_t pixel = mask->getPixel(x, y);
+    return pixel.f64;
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 BathyRefractionCorrector::BathyRefractionCorrector (lua_State* L, BathyFields* _parms):
@@ -186,20 +203,12 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
         double ri_water = refraction_parms.RIWater.value;
         if(waterRiMask)
         {
-            const double degrees_of_latitude = df.lat_ph[i] - GLOBAL_WATER_RI_MASK_MIN_LAT;
-            const double latitude_pixels = degrees_of_latitude / GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
-            const uint32_t y = waterRiMask->getHeight() - static_cast<uint32_t>(latitude_pixels); // flipped image
-
-            const double degrees_of_longitude =  df.lon_ph[i] - GLOBAL_WATER_RI_MASK_MIN_LON;
-            const double longitude_pixels = degrees_of_longitude / GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
-            const uint32_t x = static_cast<uint32_t>(longitude_pixels);
-
-            const GeoLib::TIFFImage::val_t pixel = waterRiMask->getPixel(x, y);
-            ri_water = pixel.f64;
+            const double pixel = sampleWaterMask(waterRiMask, df.lon_ph[i], df.lat_ph[i]);
+            if(pixel > 0.0) ri_water = pixel; // only set if valid pixel
         }
 
         /* Correct All Subaqueous Photons */
-        const double depth = df.surface_h[i] - df.ortho_h[i]; // compute un-refraction-corrected depths
+        const double depth = df.surface_h[i] - df.geoid_corr_h[i]; // compute un-refraction-corrected depths
         if(depth > 0)
         {
             /* Count Subaqueous Photons */
@@ -208,7 +217,7 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
             /* Calculate Refraction Corrections */
             const double n1 = refraction_parms.RIAir.value;
             const double n2 = ri_water;
-            const double theta_1 = (M_PI / 2.0) - df.ref_el[i];              // angle of incidence (without Earth curvature)
+            const double theta_1 = (M_PI / 2.0) - df.ref_el[i];                     // angle of incidence (without Earth curvature)
             const double theta_2 = asin(n1 * sin(theta_1) / n2);                    // angle of refraction
             const double phi = theta_1 - theta_2;
             const double s = depth / cos(theta_1);                                  // uncorrected slant range to the uncorrected seabed photon location
@@ -219,19 +228,30 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
             const double beta = gamma - alpha;
             const double dZ = p * sin(beta);                                        // vertical offset
             const double dY = p * cos(beta);                                        // cross-track offset
-            const double dE = dY * sin(static_cast<double>(df.ref_az[i]));   // UTM offsets
+            const double dE = dY * sin(static_cast<double>(df.ref_az[i]));          // UTM offsets
             const double dN = dY * cos(static_cast<double>(df.ref_az[i]));
 
             /* Apply Refraction Correction */
-            df.ortho_h[i] = df.geoid_corr_h[i] + dZ;
+#if 0
+// to be restored when python code ported to c++
+            df.ortho_h[i] = df.ortho_h[i] + dZ;
             df.ellipse_h[i] = df.ellipse_h[i] + dZ;
+#else
+            df.refracted_dZ[i] = dZ;
+#endif
 
             /* Correct Latitude and Longitude */
             const double corr_x_ph = df.x_ph[i] + dE;
             const double corr_y_ph = df.y_ph[i] + dN;
             const GeoLib::point_t point = transform.calculateCoordinates(corr_x_ph, corr_y_ph);
+#if 0
+// to be restored when python code ported to c++
             df.lat_ph[i] = point.x;
             df.lon_ph[i] = point.y;
+#else
+            df.refracted_lat[i] = point.x;
+            df.refracted_lon[i] = point.y;
+#endif
         }
     }
 

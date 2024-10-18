@@ -8,8 +8,8 @@ target_sources(slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi01bReader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi02aReader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi04aReader.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/GediFields.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GediIODriver.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/GediParms.cpp
 )
 
 target_include_directories (slideruleLib
@@ -27,8 +27,8 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi03Raster.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi04aReader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi04bRaster.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/GediFields.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GediIODriver.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/GediParms.h
     DESTINATION
         ${INCDIR}/gedi
 )

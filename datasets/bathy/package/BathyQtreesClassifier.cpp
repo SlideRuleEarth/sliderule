@@ -29,13 +29,11 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// NOLINTBEGIN
-
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include QTREES_INCLUDE
+#include <ATL24_qtrees/qtrees.h>
 
 #include "BathyQtreesClassifier.h"
 #include "ContainerRunner.h"
@@ -106,7 +104,7 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
 
     try
     {
-        const QtreesFields& qparms = parms->qtrees;
+        const QtreesFields& args = parms->qtrees;
         const FieldColumn<double>& x_atc = *dynamic_cast<FieldColumn<double>*>(dataframe->getColumnData("x_atc"));
         const FieldColumn<float>& geoid_corr_h = *dynamic_cast<FieldColumn<float>*>(dataframe->getColumnData("geoid_corr_h"));
         FieldColumn<int8_t>& class_ph = *dynamic_cast<FieldColumn<int8_t>*>(dataframe->getColumnData("class_ph"));
@@ -124,7 +122,7 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
         for(size_t i = 0; i < number_of_samples; i++)
         {
             // Populate sample
-            utils::sample s = {
+            const utils::sample s = {
                 .dataset_id = 0,
                 .h5_index = 0,
                 .x = x_atc[i],
@@ -137,27 +135,23 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
             samples.push_back(s);
 
             // Clear classification (if necessary)
-            if(qparms.setClass)
+            if(args.setClass)
             {
                 class_ph[i] = BathyFields::UNCLASSIFIED;
             }
         }
 
-        // Build arguments
-        struct cmd::args args;
-        args.verbose = qparms.verbose.value;
-        args.model_filename = FString("%s/%s", ContainerRunner::HOST_DIRECTORY, qparms.model.value.c_str()).c_str();
-
         // Run classification
-        classify(args, samples);
+        const string model_filename = FString("%s/%s", ContainerRunner::HOST_DIRECTORY, args.model.value.c_str()).c_str();
+        const auto results = classify(args.verbose, samples, model_filename);
 
         // Update extents
         for(size_t i = 0; i < number_of_samples; i++)
         {
-            if(qparms.setSurface) surface_h[i] = samples[i].surface_elevation;
-            if(qparms.setClass) class_ph[i] = samples[i].prediction;
-            predictions[i][BathyFields::QTREES] = samples[i].prediction;
-            if(samples[i].prediction == BathyFields::BATHYMETRY)
+            if(args.setSurface) surface_h[i] = results[i].surface_elevation;
+            if(args.setClass) class_ph[i] = results[i].prediction;
+            predictions[i][BathyFields::QTREES] = results[i].prediction;
+            if(results[i].prediction == BathyFields::BATHYMETRY)
             {
                 processing_flags[i] = processing_flags[i] | BathyFields::BATHY_QTREES;
             }
@@ -172,5 +166,3 @@ bool BathyQtreesClassifier::run (GeoDataFrame* dataframe)
     updateRunTime(TimeLib::latchtime() - start);
     return true;
 }
-
-// NOLINTEND

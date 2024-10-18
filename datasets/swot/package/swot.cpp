@@ -34,7 +34,8 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "swot.h"
+#include "SwotFields.h"
+#include "SwotL2Reader.h"
 
 /******************************************************************************
  * DEFINES
@@ -52,15 +53,13 @@
 int swot_open (lua_State *L)
 {
     static const struct luaL_Reg swot_functions[] = {
-        {"parms",               SwotParms::luaCreate},
+        {"parms",               SwotFields::luaCreate},
         {"swotl2",              SwotL2Reader::luaCreate},
         {NULL,                  NULL}
     };
 
     /* Set Library */
     luaL_newlib(L, swot_functions);
-
-    LuaEngine::setAttrStr(L, "PARMS", SwotParms::_SELF);
 
     return 1;
 }

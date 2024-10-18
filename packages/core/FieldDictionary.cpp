@@ -48,7 +48,7 @@ FieldDictionary::FieldDictionary(std::initializer_list<entry_t> init_list, int h
     Field(DICTIONARY, 0),
     fields(hash_table_size)
 {
-    for(const entry_t elem: init_list) 
+    for(const entry_t elem: init_list)
     {
         fields.add(elem.name, elem);
     }
@@ -64,30 +64,11 @@ FieldDictionary::FieldDictionary(int hash_table_size):
 }
 
 /*----------------------------------------------------------------------------
- * Copy Constructor
- *----------------------------------------------------------------------------*/
-FieldDictionary::FieldDictionary(const FieldDictionary& dictionary):
-    Field(DICTIONARY, 0),
-    fields(dictionary.fields)
-{
-}
-
-/*----------------------------------------------------------------------------
  * add
  *----------------------------------------------------------------------------*/
 bool FieldDictionary::add(const entry_t& entry)
 {
     return fields.add(entry.name, entry);
-}
-
-/*----------------------------------------------------------------------------
- * operator=
- *----------------------------------------------------------------------------*/
-FieldDictionary& FieldDictionary::operator= (const FieldDictionary& dictionary)
-{
-    if(this == &dictionary) return *this;
-    fields = dictionary.fields;
-    return *this;
 }
 
 /*----------------------------------------------------------------------------
@@ -165,7 +146,7 @@ int FieldDictionary::toLua (lua_State* L, const string& key) const
 /*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
-void FieldDictionary::fromLua (lua_State* L, int index) 
+void FieldDictionary::fromLua (lua_State* L, int index)
 {
     if(lua_istable(L, index))
     {
@@ -174,9 +155,9 @@ void FieldDictionary::fromLua (lua_State* L, int index)
         {
             Dictionary<entry_t>::kv_t kv = iter[i];
             lua_getfield(L, index, kv.value.name);
-            try 
+            try
             {
-                kv.value.field->fromLua(L, -1);                
+                kv.value.field->fromLua(L, -1);
             }
             catch (const RunTimeException& e)
             {

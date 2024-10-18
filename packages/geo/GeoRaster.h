@@ -51,8 +51,8 @@ class GeoRaster: public RasterObject
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        /* import bbox_t into this namespace from GeoParms.h */
-        using bbox_t=GeoParms::bbox_t;
+        /* import bbox_t into this namespace from GeoFields.h */
+        using bbox_t=GeoFields::bbox_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -61,7 +61,7 @@ class GeoRaster: public RasterObject
         static void   init       (void);
         static void   deinit     (void);
 
-                      GeoRaster  (lua_State* L, GeoParms* _parms, const std::string& _fileName, double _gpsTime, bool dataIsElevation, GdalRaster::overrideCRS_t cb=NULL);
+                      GeoRaster  (lua_State* L, RequestFields* rqst_parms, const char* key, const std::string& _fileName, double _gpsTime, bool dataIsElevation, GdalRaster::overrideCRS_t cb=NULL);
                      ~GeoRaster  (void) override;
         uint32_t      getSamples (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) final;
         uint32_t      getSubsets (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) final;

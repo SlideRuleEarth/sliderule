@@ -58,7 +58,7 @@ pointCount = 2
 lon_incr = 2.0
 print('\n------------------\nTest04 RasterSampler::arcticdem-strips\n------------------')
 demType = "arcticdem-strips"
-dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true}))
+dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true, sort_by_index=true}))
 runner.check(dem ~= nil)
 
 ut = geo.ut_sample(dem)

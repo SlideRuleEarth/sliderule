@@ -18,7 +18,7 @@ variable "aws_region" {
 variable  "availability_zone" {
   description = "The AWS availability zone to deploy into"
   type        = string
-  default     = "us-west-2a"
+  default     = "us-west-2c"
 }
 
 # -------------------------------------------------------------

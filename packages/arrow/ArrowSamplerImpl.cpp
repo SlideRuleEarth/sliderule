@@ -110,17 +110,17 @@ void ArrowSamplerImpl::processInputFile(const char* file_path, std::vector<point
 *----------------------------------------------------------------------------*/
 bool ArrowSamplerImpl::processSamples(ArrowSampler::batch_sampler_t* sampler)
 {
-    const ArrowParms* parms = arrowSampler->getParms();
+    const ArrowFields* parms = arrowSampler->getParms();
     bool  status = false;
 
     /* Convert samples into new columns */
     try
     {
-        if(parms->format == ArrowParms::PARQUET || parms->format == ArrowParms::FEATHER)
+        if(parms->format == ArrowFields::GEOPARQUET || parms->format == ArrowFields::PARQUET || parms->format == ArrowFields::FEATHER)
         {
             status = makeColumnsWithLists(sampler);
         }
-        else if(parms->format == ArrowParms::CSV)
+        else if(parms->format == ArrowFields::CSV)
         {
             /* Arrow csv writer cannot handle columns with lists of samples */
             status = makeColumnsWithOneSample(sampler);
@@ -171,7 +171,7 @@ bool ArrowSamplerImpl::processSamples(ArrowSampler::batch_sampler_t* sampler)
 *----------------------------------------------------------------------------*/
 void ArrowSamplerImpl::createOutpuFiles(void)
 {
-    const ArrowParms* parms = arrowSampler->getParms();
+    const ArrowFields* parms = arrowSampler->getParms();
     const char* dataFile = arrowSampler->getDataFile();
 
     try
@@ -180,19 +180,23 @@ void ArrowSamplerImpl::createOutpuFiles(void)
         auto updated_table = addNewColumns(table);
         table = nullptr;
 
-        switch(parms->format)
+        switch(parms->format.value)
         {
-        case ArrowParms::PARQUET:
+        case ArrowFields::GEOPARQUET:
             tableToParquet(updated_table, dataFile);
             break;
 
-        case ArrowParms::CSV:
+        case ArrowFields::PARQUET:
+            tableToParquet(updated_table, dataFile);
+            break;
+
+        case ArrowFields::CSV:
             /* Remove geometry column before writing to csv */
             table = removeGeometryColumn(updated_table);
             tableToCsv(table, dataFile);
             break;
 
-        case ArrowParms::FEATHER:
+        case ArrowFields::FEATHER:
             tableToFeather(updated_table, dataFile);
             break;
 
@@ -201,7 +205,7 @@ void ArrowSamplerImpl::createOutpuFiles(void)
         }
 
         /* Generate metadata file since csv/feather writers ignore it */
-        if(parms->format == ArrowParms::CSV || parms->format == ArrowParms::FEATHER)
+        if(parms->format == ArrowFields::CSV || parms->format == ArrowFields::FEATHER)
         {
             metadataToJson(updated_table, arrowSampler->getMetadataFile());
         }
@@ -289,7 +293,7 @@ void ArrowSamplerImpl::getPoints(std::vector<point_info_t>& points)
     const int time_column_index = table->schema()->GetFieldIndex(timeKey);
     if(time_column_index > -1)
     {
-        auto time_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(time_column_index)->chunk(0));
+        auto time_column = std::static_pointer_cast<arrow::TimestampArray>(table->column(time_column_index)->chunk(0));
         mlog(DEBUG, "Time column elements: %ld", time_column->length());
 
         /* Update gps time for each point */

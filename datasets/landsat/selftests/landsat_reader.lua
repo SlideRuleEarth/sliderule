@@ -47,7 +47,7 @@ local expResults = {{-0.259439707674, 1293577339.0, 'HLS.S30.T01UCS.2021001T2259
                     {-0.022610551591, 1295565136.0, 'HLS.S30.T01UCS.2021024T230841.v2.0 {"algo": "NDVI"}'},
                     {-1.105263157895, 1295737338.0, 'HLS.S30.T01UCS.2021026T225819.v2.0 {"algo": "NDVI"}'}}
 
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog = contents }))
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDVI"}, catalog = contents, sort_by_index = true}))
 local sampleCnt = 0
 local ndvi = 0
 local gpsTime = 0
@@ -58,7 +58,7 @@ else
     local value, fname, _time
     for i, v in ipairs(tbl) do
         value = v["value"]
-        _time  = v["time"]
+        _time = v["time"]
         fname = v["file"]
         print(string.format("(%02d) value %16.12f, time %.2f, fname: %s", i, value, _time, fname))
         sampleCnt = sampleCnt + 1
@@ -70,7 +70,6 @@ else
 end
 runner.check(sampleCnt == #expResults)
 dem=nil
-
 
 expResults = {{ 0.065173116090, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDSI"}'},
               {-0.259439707674, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDVI"}'},
@@ -101,7 +100,7 @@ expResults = {{ 0.065173116090, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.
               {-0.965811965812, 1295737338.0, 'HLS.S30.T01UCS.2021026T225819.v2.0 {"algo": "NDWI"}'}}
 
 print(string.format("\n-------------------------------------------------\nLandsat Plugin test (NDVI, NDSI, NDWI)\n-------------------------------------------------"))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents }))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents, sort_by_index = true }))
 sampleCnt = 0
 local ndviCnt= 0
 local ndsiCnt= 0
@@ -135,7 +134,7 @@ expResults = {{ 0.065173116090, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.
 
 local url = "HLS.S30.T01UCS.2021001T22594"
 print(string.format("\n--------------------------------\nTest: %s URL/GROUP Filter: %s\n--------------------------------", demType, url))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, substr = url, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents }))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, substr = url, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents, sort_by_index = true }))
 sampleCnt = 0
 local invalidSamples = 0
 
@@ -165,7 +164,7 @@ local tstr = "2021:2:4:23:3:0"
 local expectedGroup = "T01UCS.2021026T225819.v2.0"
 
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter: closest_time=%s\n--------------------------------", demType, tstr))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true,  closest_time=tstr, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents }))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true,  closest_time=tstr, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents, sort_by_index = true }))
 runner.check(dem ~= nil)
 tbl, err = dem:sample(lon, lat, height)
 runner.check(err == 0)
@@ -189,7 +188,7 @@ local tstrOverride  = "2000:2:4:23:3:0"
 local expectedGroup = "T01UCS.2021001T225941.v2.0"
 
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter Override:  closest_time=%s\n--------------------------------", demType, tstrOverride, tstr))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, closest_time=tstr, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents }))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, closest_time=tstr, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents, sort_by_index = true }))
 runner.check(dem ~= nil)
 tbl, err = dem:sample(lon, lat, height, tstrOverride)
 runner.check(err == 0)
@@ -221,7 +220,7 @@ expResults = {{  523.0, 1293577339.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020
 
 
 print(string.format("\n-------------------------------------------------\nLandsat Plugin test (BO3 and qualit flags)\n-------------------------------------------------"))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, bands = {"B03"}, catalog = contents }))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, bands = {"B03"}, catalog = contents, sort_by_index = true }))
 local fmaskCnt  = 0
 local sampleCnt = 0
 local b03 = 0
@@ -271,7 +270,7 @@ expResults = {{  523.0, 1293577339.0, 0xc2, '/vsis3/lp-prod-protected/HLSS30.020
 
 
 print(string.format("\n-------------------------------------------------\nLandsat Sample test (BO3 and Fmask raster)\n-------------------------------------------------"))
-dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, bands = {"Fmask","B03"}, catalog = contents }))
+dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, bands = {"Fmask","B03"}, catalog = contents, sort_by_index = true }))
 fmaskCnt  = 0
 sampleCnt = 0
 b03 = 0
@@ -303,7 +302,7 @@ dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", ra
                             bands = {"VAA", "VZA", "Fmask","SAA", "SZA", "NDSI", "NDVI", "NDWI",
                                      "B01", "B02", "B03", "B04", "B05", "B06",
                                      "B07", "B08", "B09", "B10", "B11", "B12", "B8A"},
-                            catalog = contents }))
+                            catalog = contents, sort_by_index = true }))
 
 sampleCnt = 0
 local starttime = time.latch();
@@ -337,7 +336,7 @@ dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", ra
                             bands = {"VAA", "VZA", "Fmask","SAA", "SZA", "NDSI", "NDVI", "NDWI",
                                      "B01", "B02", "B03", "B04", "B05", "B06",
                                      "B07", "B08", "B09", "B10", "B11", "B12", "B8A"},
-                            catalog = contents }))
+                            catalog = contents, sort_by_index = true }))
 
 local starttime = time.latch();
 local tbl, err = dem:subset(llx, lly, urx, ury)
@@ -417,7 +416,7 @@ local expectedFile = "HLS.S30.T12SYJ.2022004T180729.v2.0 {\"algo\": \"NDVI\"}"
 
 print(string.format("\n-------------------------------------------------\nLandsat Grand Mesa test\n-------------------------------------------------"))
 
-local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, closest_time = "2022-01-05T00:00:00Z", bands = {"NDVI"}, catalog = contents }))
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, closest_time = "2022-01-05T00:00:00Z", bands = {"NDVI"}, catalog = contents, sort_by_index = true }))
 sampleCnt = 0
 
 local starttime = time.latch();
@@ -444,8 +443,6 @@ local stoptime = time.latch();
 print(string.format("POI sample %d points time: %.2f   (%d threads)", sampleCnt, stoptime - starttime, threadCnt))
 runner.check(sampleCnt == maxSamples)
 dem = nil
-
-
 
 
 -- Report Results --

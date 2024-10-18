@@ -35,16 +35,18 @@
 
 #include "geo.h"
 
-#ifdef __unittesting__
-#include "UT_RasterSubset.h"
-#include "UT_RasterSample.h"
-#endif
-
 #include "GeoRaster.h"
 #include "GeoIndexedRaster.h"
 #include "GeoJsonRaster.h"
 #include "GeoUserRaster.h"
 #include "RegionMask.h"
+#include "GeoFields.h"
+#include "GeoLib.h"
+#include "RasterSampler.h"
+#ifdef __unittesting__
+#include "UT_RasterSubset.h"
+#include "UT_RasterSample.h"
+#endif
 
 #include <gdal.h>
 #include <cpl_conv.h>
@@ -138,11 +140,6 @@ static void configGDAL(void)
      * Very, very verbose CURL tracing
      */
     CPLSetConfigOption("CPL_CURL_VERBOSE", "NO");
-
-    /*
-     * AWS region, defaults to us-east-1
-     */
-    CPLSetConfigOption("AWS_DEFAULT_REGION", "us-west-2");
 
     /*
      * When reading datasets with necessary external sidecar files, it's imperative to set FALSE.
@@ -252,7 +249,7 @@ int geo_open (lua_State* L)
         {"userraster",  GeoUserRaster::luaCreate},
         {"raster",      RasterObject::luaCreate},
         {"sampler",     RasterSampler::luaCreate},
-        {"parms",       GeoParms::luaCreate},
+        {"parms",       GeoFields::luaCreate},
         {"calcutm",     GeoLib::luaCalcUTM},
         {"tiff",        GeoLib::TIFFImage::luaCreate},
 #ifdef __unittesting__
@@ -266,15 +263,16 @@ int geo_open (lua_State* L)
     luaL_newlib(L, geo_functions);
 
     /* Set Globals */
-    LuaEngine::setAttrStr   (L, "PARMS",                            GeoParms::SELF);
-    LuaEngine::setAttrStr   (L, GeoParms::NEARESTNEIGHBOUR_ALGO,    GeoParms::NEARESTNEIGHBOUR_ALGO);
-    LuaEngine::setAttrStr   (L, GeoParms::BILINEAR_ALGO,            GeoParms::BILINEAR_ALGO);
-    LuaEngine::setAttrStr   (L, GeoParms::CUBIC_ALGO,               GeoParms::CUBIC_ALGO);
-    LuaEngine::setAttrStr   (L, GeoParms::CUBICSPLINE_ALGO,         GeoParms::CUBICSPLINE_ALGO);
-    LuaEngine::setAttrStr   (L, GeoParms::LANCZOS_ALGO,             GeoParms::LANCZOS_ALGO);
-    LuaEngine::setAttrStr   (L, GeoParms::AVERAGE_ALGO,             GeoParms::AVERAGE_ALGO);
-    LuaEngine::setAttrStr   (L, GeoParms::MODE_ALGO,                GeoParms::MODE_ALGO);
-    LuaEngine::setAttrStr   (L, GeoParms::GAUSS_ALGO,               GeoParms::GAUSS_ALGO);
+    LuaEngine::setAttrStr   (L, "PARMS",                                GeoFields::PARMS);
+    LuaEngine::setAttrStr   (L, "DEFAULT_SAMPLER",                      GeoFields::DEFAULT_KEY);
+    LuaEngine::setAttrStr   (L, GeoFields::NEARESTNEIGHBOUR_ALGO_STR,   GeoFields::NEARESTNEIGHBOUR_ALGO_STR);
+    LuaEngine::setAttrStr   (L, GeoFields::BILINEAR_ALGO_STR,           GeoFields::BILINEAR_ALGO_STR);
+    LuaEngine::setAttrStr   (L, GeoFields::CUBIC_ALGO_STR,              GeoFields::CUBIC_ALGO_STR);
+    LuaEngine::setAttrStr   (L, GeoFields::CUBICSPLINE_ALGO_STR,        GeoFields::CUBICSPLINE_ALGO_STR);
+    LuaEngine::setAttrStr   (L, GeoFields::LANCZOS_ALGO_STR,            GeoFields::LANCZOS_ALGO_STR);
+    LuaEngine::setAttrStr   (L, GeoFields::AVERAGE_ALGO_STR,            GeoFields::AVERAGE_ALGO_STR);
+    LuaEngine::setAttrStr   (L, GeoFields::MODE_ALGO_STR,               GeoFields::MODE_ALGO_STR);
+    LuaEngine::setAttrStr   (L, GeoFields::GAUSS_ALGO_STR,              GeoFields::GAUSS_ALGO_STR);
 
     return 1;
 }

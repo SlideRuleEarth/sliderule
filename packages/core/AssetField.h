@@ -29,65 +29,45 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __swot_parms__
-#define __swot_parms__
+#ifndef __asset_field__
+#define __asset_field__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "LuaObject.h"
-#include "List.h"
-#include "RequestParms.h"
+#include "Asset.h"
+#include "Field.h"
 
 /******************************************************************************
- * SWOT PARAMETERS
+ * CLASS
  ******************************************************************************/
 
-class SwotParms: public RequestParms
+class AssetField: public Field
 {
     public:
-
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const char* _SELF;
-        static const char* VARIABLES;
-        static const int64_t SWOT_SDP_EPOCH_GPS = 630720013; // seconds to add to SWOT times to get GPS times
-        static const int EXPECTED_NUM_FIELDS = 16;
-
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef List<string> string_list_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int      luaCreate           (lua_State* L);
-        static time8_t  deltatime2timestamp (double delta_time);
-        const char*     tojson              (void) const override;
+                    AssetField          (void);
+                    AssetField          (const char* asset_name);
+                    ~AssetField         (void) override;
+
+        const char* getName             (void) const;
+
+        string      toJson              (void) const override;
+        int         toLua               (lua_State* L) const override;
+        void        fromLua             (lua_State* L, int index) override;
+
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        string_list_t       variables;
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                            SwotParms           (lua_State* L, int index);
-                            ~SwotParms          (void) override;
-        void                cleanup             (void);
-        static void         get_lua_string_list (lua_State* L, int index, string_list_t& string_list, bool* provided);
+        Asset* asset;
 };
 
-#endif  /* __swot_parms__ */
+#endif  /* __asset_field__ */

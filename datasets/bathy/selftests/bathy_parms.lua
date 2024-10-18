@@ -43,7 +43,6 @@ local rqst_parms = {
         ["path"] = "myfile.bin",
         ["format"] = "parquet",
         ["open_on_complete"] = false,
-        ["as_geo"] = false,
         ["with_checksum"] = false
     }
 }

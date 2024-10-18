@@ -55,7 +55,7 @@ class FieldList: public Field
 
                         FieldList   (void);
                         FieldList   (std::initializer_list<T> init_list);
-                        FieldList   (size_t size, T default_value);
+                        FieldList   (size_t size, const T& default_value);
                         FieldList   (const FieldList<T>& list);
         virtual         ~FieldList  (void) override = default;
 
@@ -153,7 +153,7 @@ FieldList<T>::FieldList(std::initializer_list<T> init_list):
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldList<T>::FieldList(size_t size, T default_value):
+FieldList<T>::FieldList(size_t size, const T& default_value):
     Field(LIST, getImpliedEncoding<T>()),
     values(size, default_value)
 {
@@ -302,20 +302,28 @@ int FieldList<T>::toLua (lua_State* L, long key) const
  * fromLua
  *----------------------------------------------------------------------------*/
 template <class T>
-void FieldList<T>::fromLua (lua_State* L, int index) 
+void FieldList<T>::fromLua (lua_State* L, int index)
 {
     T value;
 
     // clear the list of values
     values.clear();
 
-    // convert all elements from lua
-    const int num_elements = lua_rawlen(L, index);
-    for(int i = 0; i < num_elements; i++)
+    if(lua_istable(L, index))
     {
-        lua_rawgeti(L, index, i + 1);
-        convertFromLua(L, -1, value);
-        lua_pop(L, 1);
+        // convert all elements from lua
+        const int num_elements = lua_rawlen(L, index);
+        for(int i = 0; i < num_elements; i++)
+        {
+            lua_rawgeti(L, index, i + 1);
+            convertFromLua(L, -1, value);
+            lua_pop(L, 1);
+            values.push_back(value);
+        }
+    }
+    else // single element
+    {
+        convertFromLua(L, index, value);
         values.push_back(value);
     }
 }

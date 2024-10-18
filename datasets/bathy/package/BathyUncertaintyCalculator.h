@@ -62,7 +62,7 @@ class BathyUncertaintyCalculator: public GeoDataFrame::FrameRunner
         static int      luaCreate   (lua_State* L);
         static int      luaInit     (lua_State* L);
 
-        
+
         bool            run         (GeoDataFrame* dataframe) override;
 
     private:
@@ -86,7 +86,7 @@ class BathyUncertaintyCalculator: public GeoDataFrame::FrameRunner
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
-        
+
         BathyUncertaintyCalculator  (lua_State* L, BathyFields* _parms, BathyKd* _kd);
         ~BathyUncertaintyCalculator (void) override;
 
@@ -95,7 +95,7 @@ class BathyUncertaintyCalculator: public GeoDataFrame::FrameRunner
          *--------------------------------------------------------------------*/
 
         static const int            NUM_POINTING_ANGLES = 6;
-        static const int            NUM_WIND_SPEEDS = 10;
+        static const int            NUM_WIND_SPEED_RANGES = 5;
         static const int            NUM_KD_RANGES = 5;
         static const int            NUM_UNCERTAINTY_DIMENSIONS = 2;
         static const int            THU = 0;
@@ -104,10 +104,10 @@ class BathyUncertaintyCalculator: public GeoDataFrame::FrameRunner
 
         static const char*          TU_FILENAMES[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES];
         static const int            POINTING_ANGLES[NUM_POINTING_ANGLES];
-        static const int            WIND_SPEEDS[NUM_WIND_SPEEDS];
+        static const int            WIND_SPEED_RANGES[NUM_WIND_SPEED_RANGES][2];
         static const double         KD_RANGES[NUM_KD_RANGES][2];
 
-        static uncertainty_coeff_t  UNCERTAINTY_COEFF_MAP[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES][NUM_WIND_SPEEDS][NUM_KD_RANGES];
+        static uncertainty_coeff_t  UNCERTAINTY_COEFF_MAP[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES][NUM_WIND_SPEED_RANGES][NUM_KD_RANGES];
 
         BathyFields*                parms;
         BathyKd*                    kd490;

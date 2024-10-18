@@ -34,7 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "ArrowParms.h"
+#include "ArrowFields.h"
 #include "ArrowBuilder.h"
 #include "ArrowBuilderImpl.h"
 #include "AncillaryFields.h"
@@ -65,26 +65,25 @@ const struct luaL_Reg ArrowBuilder::LUA_META_TABLE[] = {
  *----------------------------------------------------------------------------*/
 int ArrowBuilder::luaCreate (lua_State* L)
 {
-    ArrowParms* _parms = NULL;
+    RequestFields* rqst_parms = NULL;
 
     try
     {
         /* Get Parameters */
-        _parms                      = dynamic_cast<ArrowParms*>(getLuaObject(L, 1, ArrowParms::OBJECT_TYPE));
+        rqst_parms                  = dynamic_cast<RequestFields*>(getLuaObject(L, 1, RequestFields::OBJECT_TYPE));
         const char* outq_name       = getLuaString(L, 2);
         const char* inq_name        = getLuaString(L, 3);
         const char* rec_type        = getLuaString(L, 4);
         const char* id              = getLuaString(L, 5);
-        const char* parms_str       = getLuaString(L, 6);
-        const char* endpoint        = getLuaString(L, 7);
-        const bool  keep_local      = getLuaBoolean(L, 8, true, false);
+        const char* endpoint        = getLuaString(L, 6);
+        const bool  keep_local      = getLuaBoolean(L, 7, true, false);
 
         /* Create Dispatch */
-        return createLuaObject(L, new ArrowBuilder(L, _parms, outq_name, inq_name, rec_type, id, parms_str, endpoint, keep_local));
+        return createLuaObject(L, new ArrowBuilder(L, rqst_parms, outq_name, inq_name, rec_type, id, endpoint, keep_local));
     }
     catch(const RunTimeException& e)
     {
-        if(_parms) _parms->releaseLuaObject();
+        if(rqst_parms) rqst_parms->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
@@ -178,14 +177,6 @@ const char* ArrowBuilder::getYKey (void)
 }
 
 /*----------------------------------------------------------------------------
- * getAsGeo
- *----------------------------------------------------------------------------*/
-bool ArrowBuilder::getAsGeo (void) const
-{
-    return geoData.as_geo;
-}
-
-/*----------------------------------------------------------------------------
  * getXField
  *----------------------------------------------------------------------------*/
 RecordObject::field_t& ArrowBuilder::getXField (void)
@@ -204,9 +195,9 @@ RecordObject::field_t& ArrowBuilder::getYField (void)
 /*----------------------------------------------------------------------------
  * getParms
  *----------------------------------------------------------------------------*/
-ArrowParms* ArrowBuilder::getParms (void)
+const ArrowFields* ArrowBuilder::getParms (void)
 {
-    return parms;
+    return &rqstParms->output;
 }
 
 /*----------------------------------------------------------------------------
@@ -228,7 +219,7 @@ bool ArrowBuilder::hasAncElements (void) const
 /*----------------------------------------------------------------------------
  * getParmsString
  *----------------------------------------------------------------------------*/
-const char* ArrowBuilder::getParmsAsString (void)
+const string& ArrowBuilder::getParmsAsString (void)
 {
     return parmsAsString;
 }
@@ -248,23 +239,23 @@ const char* ArrowBuilder::getEndpoint (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArrowBuilder::ArrowBuilder (lua_State* L, ArrowParms* _parms,
+ArrowBuilder::ArrowBuilder (lua_State* L, RequestFields* rqst_parms,
                             const char* outq_name, const char* inq_name,
                             const char* rec_type, const char* id,
-                            const char* parms_str, const char* _endpoint,
-                            const bool keep_local):
+                            const char* _endpoint, const bool keep_local):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    parms(_parms),
+    rqstParms(rqst_parms),
+    parms(rqst_parms->output),
     hasAncillaryFields(false),
     hasAncillaryElements(false),
+    parmsAsString(rqstParms->toJson()),
     keepLocal(keep_local)
 {
-    assert(_parms);
+    assert(rqst_parms);
     assert(outq_name);
     assert(inq_name);
     assert(rec_type);
     assert(id);
-    assert(parms_str);
     assert(_endpoint);
 
     /* Get Record Meta Data */
@@ -275,8 +266,7 @@ ArrowBuilder::ArrowBuilder (lua_State* L, ArrowParms* _parms,
     }
 
     /* Build Geometry Fields */
-    geoData.as_geo = parms->as_geo;
-    if(geoData.as_geo)
+    if(parms.format == ArrowFields::GEOPARQUET)
     {
         /* Check if Record has Geospatial Fields */
         if((rec_meta->x_field == NULL) || (rec_meta->y_field == NULL))
@@ -299,19 +289,15 @@ ArrowBuilder::ArrowBuilder (lua_State* L, ArrowParms* _parms,
         }
     }
 
-    /* Get Paths */
-    outputPath = ArrowCommon::getOutputPath(parms);  // throws
-
     /*
      * NO THROWING BEYOND THIS POINT
      */
 
     /* Get Paths */
-    outputMetadataPath = ArrowCommon::createMetadataFileName(outputPath);
+    outputMetadataPath = ArrowCommon::createMetadataFileName(parms.path.value.c_str());
 
     /* Save Parameters */
-    parmsAsString = StringLib::duplicate(parms_str);
-    endpoint      = StringLib::duplicate(_endpoint);
+    endpoint = StringLib::duplicate(_endpoint);
 
     /* Create Unique Temporary Filenames */
     dataFile = ArrowCommon::getUniqueFileName(id);
@@ -352,12 +338,10 @@ ArrowBuilder::~ArrowBuilder(void)
 {
     active = false;
     delete builderPid;
-    parms->releaseLuaObject();
+    rqstParms->releaseLuaObject();
     delete[] dataFile;
     delete[] metadataFile;
-    delete[] outputPath;
     delete[] outputMetadataPath;
-    delete[] parmsAsString;
     delete[] endpoint;
     delete[] recType;
     delete[] timeKey;
@@ -504,7 +488,7 @@ void* ArrowBuilder::builderThread(void* parm)
                     const bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8);
                     if(!status)
                     {
-                        alert(INFO, RTE_ERROR, builder->outQ, NULL, "Failed to process record batch for %s", builder->outputPath);
+                        alert(INFO, RTE_ERROR, builder->outQ, NULL, "Failed to process record batch for %s", builder->parms.path.value.c_str());
                         builder->active = false; // breaks out of loop
                     }
                     builder->recordBatch.clear();
@@ -529,7 +513,7 @@ void* ArrowBuilder::builderThread(void* parm)
 
     /* Process Remaining Records */
     const bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8, true);
-    if(!status) alert(INFO, RTE_ERROR, builder->outQ, NULL, "Failed to process last record batch for %s", builder->outputPath);
+    if(!status) alert(INFO, RTE_ERROR, builder->outQ, NULL, "Failed to process last record batch for %s", builder->parms.path.value.c_str());
     builder->recordBatch.clear();
 
     /* Check if Keeping Local
@@ -539,12 +523,12 @@ void* ArrowBuilder::builderThread(void* parm)
     if(!builder->keepLocal)
     {
         /* Send File to User */
-        ArrowCommon::send2User(builder->dataFile, builder->outputPath, trace_id, builder->parms, builder->outQ);
+        ArrowCommon::send2User(builder->dataFile, builder->parms.path.value.c_str(), trace_id, &builder->parms, builder->outQ);
 
         /* Send Metadata File to User */
         if(ArrowCommon::fileExists(builder->metadataFile))
         {
-            ArrowCommon::send2User(builder->metadataFile, builder->outputMetadataPath, trace_id, builder->parms, builder->outQ);
+            ArrowCommon::send2User(builder->metadataFile, builder->outputMetadataPath, trace_id, &builder->parms, builder->outQ);
         }
     }
 

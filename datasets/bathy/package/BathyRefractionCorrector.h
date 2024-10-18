@@ -63,10 +63,10 @@ class BathyRefractionCorrector: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int      luaCreate   (lua_State* L);
-        static int      getSubAqPh  (lua_State* L);
-
-        bool            run         (GeoDataFrame* dataframe) override;
+        static int      luaCreate       (lua_State* L);
+        static int      getSubAqPh      (lua_State* L);
+        static double   sampleWaterMask (GeoLib::TIFFImage* mask, double lon, double lat);
+        bool            run             (GeoDataFrame* dataframe) override;
 
     private:
 

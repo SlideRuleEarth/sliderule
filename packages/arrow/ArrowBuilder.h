@@ -47,7 +47,7 @@
 #include "LuaObject.h"
 #include "Ordering.h"
 #include "RecordObject.h"
-#include "ArrowParms.h"
+#include "RequestFields.h"
 #include "OsApi.h"
 #include "MsgQ.h"
 
@@ -58,7 +58,7 @@
 class ArrowBuilderImpl; // arrow implementation
 
 /******************************************************************************
- * PARQUET BUILDER CLASS
+ * CLASS
  ******************************************************************************/
 
 class ArrowBuilder: public LuaObject
@@ -108,7 +108,6 @@ class ArrowBuilder: public LuaObject
         typedef List<batch_t*>  batch_list_t;
 
         typedef struct {
-            bool                    as_geo;
             RecordObject::field_t   x_field;
             RecordObject::field_t   y_field;
         } geo_data_t;
@@ -129,13 +128,12 @@ class ArrowBuilder: public LuaObject
         const char*             getTimeKey      (void);
         const char*             getXKey         (void);
         const char*             getYKey         (void);
-        bool                    getAsGeo        (void) const;
         RecordObject::field_t&  getXField       (void);
         RecordObject::field_t&  getYField       (void);
-        ArrowParms*             getParms        (void);
+        const ArrowFields*      getParms        (void);
         bool                    hasAncFields    (void) const;
         bool                    hasAncElements  (void) const;
-        const char*             getParmsAsString(void);
+        const string&           getParmsAsString(void);
         const char*             getEndpoint     (void);
 
     private:
@@ -151,7 +149,8 @@ class ArrowBuilder: public LuaObject
          *--------------------------------------------------------------------*/
 
         Thread*             builderPid;
-        ArrowParms*         parms;
+        RequestFields*      rqstParms;
+        const ArrowFields&  parms;
         bool                active;
         Subscriber*         inQ;
         const char*         recType;
@@ -168,9 +167,8 @@ class ArrowBuilder: public LuaObject
         geo_data_t          geoData;
         const char*         dataFile;           // used locally to build data file
         const char*         metadataFile;       // used locally to build json metadata file
-        const char*         outputPath;         // final destination of the data file
         const char*         outputMetadataPath; // final destination of the metadata file
-        const char*         parmsAsString;
+        const string        parmsAsString;
         const char*         endpoint;
         const bool          keepLocal;
 
@@ -180,11 +178,10 @@ class ArrowBuilder: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                        ArrowBuilder            (lua_State* L, ArrowParms* parms,
+                        ArrowBuilder            (lua_State* L, RequestFields* parms,
                                                  const char* outq_name, const char* inq_name,
                                                  const char* rec_type, const char* id,
-                                                 const char* parms_str, const char* _endpoint,
-                                                 const bool keep_local);
+                                                 const char* _endpoint, const bool keep_local);
                         ~ArrowBuilder           (void) override;
         static void*    builderThread           (void* parm);
         static int      luaGetFileNames         (lua_State* L);

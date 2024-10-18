@@ -49,18 +49,15 @@ class Usgs3dep1meterDemRaster: public GeoIndexedRaster
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-        static const char* URL_str;
 
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
+        static const char* URL_str;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, GeoParms* _parms)
-                          { return new Usgs3dep1meterDemRaster(L, _parms); }
+        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
+                          { return new Usgs3dep1meterDemRaster(L, rqst_parms, key); }
 
 
     protected:
@@ -69,7 +66,7 @@ class Usgs3dep1meterDemRaster: public GeoIndexedRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                Usgs3dep1meterDemRaster (lua_State* L, GeoParms* _parms);
+                Usgs3dep1meterDemRaster (lua_State* L, RequestFields* rqst_parms, const char* key);
                ~Usgs3dep1meterDemRaster (void) override;
 
         void    getIndexFile     (const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points) final;

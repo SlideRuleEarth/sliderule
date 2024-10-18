@@ -11,22 +11,22 @@ target_link_libraries(slideruleLib PUBLIC OpenMP::OpenMP_CXX)
 
 # CoastNet
 set (COASTNETDIR ${PROJECT_SOURCE_DIR}/../ut-ATL24-coastnet CACHE STRING "Coastnet application source directory")
-target_link_libraries(slideruleLib PUBLIC xgboost::xgboost)
-target_compile_definitions (slideruleLib PUBLIC COASTNET_INCLUDE="${COASTNETDIR}/apps/classify_inc.h")
+target_include_directories (slideruleLib PUBLIC ${COASTNETDIR})
 execute_process (COMMAND git --work-tree ${COASTNETDIR} --git-dir ${COASTNETDIR}/.git describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE COASTNETINFO)
 string(REGEX REPLACE "\n$" "" COASTNETINFO "${COASTNETINFO}")
 target_compile_definitions (slideruleLib PUBLIC COASTNETINFO="${COASTNETINFO}")
 
 # Qtrees
 set (QTREESDIR ${PROJECT_SOURCE_DIR}/../ut-ATL24-qtrees CACHE STRING "Qtrees application source directory")
-target_compile_definitions (slideruleLib PUBLIC QTREES_INCLUDE="${QTREESDIR}/apps/classify_inc.h")
+target_include_directories (slideruleLib PUBLIC ${QTREESDIR})
+target_include_directories (slideruleLib PUBLIC ${QTREESDIR}/apps)
 execute_process (COMMAND git --work-tree ${QTREESDIR} --git-dir ${QTREESDIR}/.git describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE QTREESINFO)
 string(REGEX REPLACE "\n$" "" QTREESINFO "${QTREESINFO}")
 target_compile_definitions (slideruleLib PUBLIC QTREESINFO="${QTREESINFO}")
 
 # OpenOceansPP
 set (OPENOCEANSPPDIR ${PROJECT_SOURCE_DIR}/../ut-ATL24-oopp CACHE STRING "OpenOceans++ application source directory")
-target_compile_definitions (slideruleLib PUBLIC OPENOCEANSPP_INCLUDE="${OPENOCEANSPPDIR}/apps/classify_inc.h")
+target_include_directories (slideruleLib PUBLIC ${OPENOCEANSPPDIR})
 execute_process (COMMAND git --work-tree ${OPENOCEANSPPDIR} --git-dir ${OPENOCEANSPPDIR}/.git describe --abbrev --dirty --always --tags --long OUTPUT_VARIABLE OPENOCEANSPPINFO)
 string(REGEX REPLACE "\n$" "" OPENOCEANSPPINFO "${OPENOCEANSPPINFO}")
 target_compile_definitions (slideruleLib PUBLIC OPENOCEANSPPINFO="${OPENOCEANSPPINFO}")
@@ -41,12 +41,12 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyKd.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyMask.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyOpenOceansPPClassifier.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyParms.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyQtreesClassifier.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyRefractionCorrector.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathySeaSurfaceFinder.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyUncertaintyCalculator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.cpp
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_RiWater.cpp>
 )
 
 target_include_directories (slideruleLib
@@ -65,12 +65,12 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyKd.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyMask.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyOpenOceansPPClassifier.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/BathyParms.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyQtreesClassifier.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyRefractionCorrector.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathySeaSurfaceFinder.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyUncertaintyCalculator.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.h
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_RiWater.h>
     DESTINATION
         ${INCDIR}/bathy
 )

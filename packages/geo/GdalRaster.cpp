@@ -55,7 +55,7 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _gpsTime, uint64_t _fileId, bool _dataIsElevation, overrideCRS_t cb) :
+GdalRaster::GdalRaster(const GeoFields* _parms, const std::string& _fileName, double _gpsTime, uint64_t _fileId, bool _dataIsElevation, overrideCRS_t cb, bbox_t* aoi_bbox_override):
    parms      (_parms),
    gpsTime    (_gpsTime),
    fileId     (_fileId),
@@ -69,11 +69,16 @@ GdalRaster::GdalRaster(GeoParms* _parms, const std::string& _fileName, double _g
    ysize      (0),
    cellSize   (0),
    bbox       (),
+   aoi_bbox   (), // override of parameters
    radiusInPixels(0),
    geoTransform(),
    invGeoTransform(),
    ssError    (SS_NO_ERRORS)
 {
+    if(aoi_bbox_override)
+    {
+        aoi_bbox = *aoi_bbox_override;
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -123,14 +128,14 @@ void GdalRaster::open(void)
     // mlog(DEBUG, "Extent: (%.2lf, %.2lf), (%.2lf, %.2lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
 
     cellSize       = geoTransform[1];
-    radiusInPixels = radius2pixels(parms->sampling_radius);
+    radiusInPixels = radius2pixels(parms->sampling_radius.value);
 
     /* Limit maximum sampling radius */
     if(radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR,
                                "Sampling radius is too big: %d: max allowed %d meters",
-                               parms->sampling_radius, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(cellSize));
+                               parms->sampling_radius.value, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(cellSize));
     }
 
     band = dset->GetRasterBand(1);
@@ -156,10 +161,10 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi)
             open();
 
         const double z = poi->getZ();
-        mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+        // mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
         if(poi->transform(transf) != OGRERR_NONE)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi->getX(), poi->getY(), poi->getZ());
-        mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+        // mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
 
         /*
          * Attempt to read raster only if it contains the point of interest.
@@ -396,7 +401,7 @@ uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint
             if(parms->sampling_algo != GRIORA_NearestNeighbour)
             {
                 INIT_RASTERIO_EXTRA_ARG(args);
-                args.eResampleAlg = static_cast<GDALRIOResampleAlg>(parms->sampling_algo);
+                args.eResampleAlg = static_cast<GDALRIOResampleAlg>(parms->sampling_algo.value);
                 argsPtr = &args;
             }
             err = band->RasterIO(GF_Read, ulx, uly, _xsize, _ysize, data, _xsize, _ysize, dtype, 0, 0, argsPtr);
@@ -449,14 +454,23 @@ std::string GdalRaster::getUUID(void)
 /*----------------------------------------------------------------------------
  * initAwsAccess
  *----------------------------------------------------------------------------*/
-void GdalRaster::initAwsAccess(GeoParms* _parms)
+void GdalRaster::initAwsAccess(const GeoFields* _parms)
 {
-    if(_parms->asset)
+    if(_parms->asset.asset)
     {
 #ifdef __aws__
-        const char* path = _parms->asset->getPath();
-        const char* identity = _parms->asset->getIdentity();
+
+        /* Set AWS_REGION for sliderule buckets in us-west-2 */
+        VSISetPathSpecificOption("/vsis3/sliderule/", "AWS_REGION", "us-west-2");
+
+        const char* path = _parms->asset.asset->getPath();
+        const char* identity = _parms->asset.asset->getIdentity();
+        const char* region = _parms->asset.asset->getRegion();
         const CredentialStore::Credential credentials = CredentialStore::get(identity);
+
+        /* Set AWS_REGION for a specific path */
+        VSISetPathSpecificOption(path, "AWS_REGION", region);
+
         if(!credentials.expiration.value.empty())
         {
             VSISetPathSpecificOption(path, "AWS_ACCESS_KEY_ID", credentials.accessKeyId.value.c_str());
@@ -491,11 +505,6 @@ OGRPolygon GdalRaster::makeRectangle(double minx, double miny, double maxx, doub
     return poly;
 }
 
-
-
-/******************************************************************************
- * PROTECTED METHODS
- ******************************************************************************/
 
 /******************************************************************************
  * PRIVATE METHODS
@@ -670,19 +679,19 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, RasterSample* sample)
         {
             int kernel = 0;
 
-            if (parms->sampling_algo == GRIORA_Bilinear)
+            if (parms->sampling_algo == GeoFields::BILINEAR_ALGO)
                 kernel = 2; /* 2x2 kernel */
-            else if (parms->sampling_algo == GRIORA_Cubic)
+            else if (parms->sampling_algo == GeoFields::CUBIC_ALGO)
                 kernel = 4; /* 4x4 kernel */
-            else if (parms->sampling_algo == GRIORA_CubicSpline)
+            else if (parms->sampling_algo == GeoFields::CUBICSPLINE_ALGO)
                 kernel = 4; /* 4x4 kernel */
-            else if (parms->sampling_algo == GRIORA_Lanczos)
+            else if (parms->sampling_algo == GeoFields::LANCZOS_ALGO)
                 kernel = 6; /* 6x6 kernel */
-            else if (parms->sampling_algo == GRIORA_Average)
+            else if (parms->sampling_algo == GeoFields::AVERAGE_ALGO)
                 kernel = 6; /* No default kernel, pick something */
-            else if (parms->sampling_algo == GRIORA_Mode)
+            else if (parms->sampling_algo == GeoFields::MODE_ALGO)
                 kernel = 6; /* No default kernel, pick something */
-            else if (parms->sampling_algo == GRIORA_Gauss)
+            else if (parms->sampling_algo == GeoFields::GAUSS_ALGO)
                 kernel = 6; /* No default kernel, pick something */
 
             windowSize = kernel + 1;    // Odd window size around pixel
@@ -699,7 +708,7 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, RasterSample* sample)
 
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);
-        args.eResampleAlg = static_cast<GDALRIOResampleAlg>(parms->sampling_algo);
+        args.eResampleAlg = static_cast<GDALRIOResampleAlg>(parms->sampling_algo.value);
 
         const bool validWindow = containsWindow(_x, _y, xsize, ysize, windowSize);
         if(validWindow)
@@ -742,7 +751,7 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, RasterSample* sample)
 
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);
-        args.eResampleAlg = static_cast<GDALRIOResampleAlg>(parms->sampling_algo);
+        args.eResampleAlg = static_cast<GDALRIOResampleAlg>(parms->sampling_algo.value);
         samplesArray = new double[windowSize*windowSize];
 
         const bool validWindow = containsWindow(newx, newy, xsize, ysize, windowSize);
@@ -890,17 +899,22 @@ void GdalRaster::createTransform(void)
     }
 
     OGRCoordinateTransformationOptions options;
-    if(parms->proj_pipeline)
+    if(!parms->proj_pipeline.value.empty())
     {
         /* User specified proj pipeline */
-        if(!options.SetCoordinateOperation(parms->proj_pipeline, false))
+        if(!options.SetCoordinateOperation(parms->proj_pipeline.value.c_str(), false))
             throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to set user projlib pipeline");
-        mlog(DEBUG, "Set projlib  pipeline: %s", parms->proj_pipeline);
+        mlog(DEBUG, "Set projlib  pipeline: %s", parms->proj_pipeline.value.c_str());
     }
 
     /* Limit to area of interest if AOI was set */
-    bbox_t* aoi = &parms->aoi_bbox;
-    const bool useaoi = !((aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max));
+    const bbox_t* aoi = &aoi_bbox; // check override first
+    bool useaoi = !((aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max));
+    if(!useaoi)
+    {
+        aoi = &parms->aoi_bbox.value; // check parameters
+        useaoi = !((aoi->lon_min == aoi->lon_max) || (aoi->lat_min == aoi->lat_max));
+    }
     if(useaoi)
     {
         if(!options.SetAreaOfInterest(aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max))

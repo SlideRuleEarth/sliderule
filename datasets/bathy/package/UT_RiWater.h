@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __cre_parms__
-#define __cre_parms__
+#ifndef __ut_riwaterindex__
+#define __ut_riwaterindex__
 
 /******************************************************************************
  * INCLUDES
@@ -40,56 +40,37 @@
 #include "LuaObject.h"
 
 /******************************************************************************
- * CRE PARAMETERS CLASS
+ * CLASS
  ******************************************************************************/
 
-class CreParms: public LuaObject
+class UT_RiWater: public LuaObject
 {
     public:
 
         /*--------------------------------------------------------------------
-        * Constants
-        *--------------------------------------------------------------------*/
-
-        static const char* SELF;
-        static const char* PARMS;
-        static const char* IMAGE;
-        static const char* NAME;
-        static const char* COMMAND;
-        static const char* TIMEOUT;
+         * Constants
+         *--------------------------------------------------------------------*/
 
         static const char* OBJECT_TYPE;
+
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
-        static const int DEFAULT_TIMEOUT = 600;
-
         /*--------------------------------------------------------------------
-        * Data
-        *--------------------------------------------------------------------*/
+         * Methods
+         *--------------------------------------------------------------------*/
 
-        const char* image; // container image
-        const char* name; // container name
-        const char* command; // container command
-        int timeout; // on requests to docker daemon
-
-        /*--------------------------------------------------------------------
-        * Methods
-        *--------------------------------------------------------------------*/
-
-        static int  luaCreate           (lua_State* L);
-                    CreParms            (lua_State* L, int index);
-                    ~CreParms           (void) override;
-        const char* tojson              (void) const override;
+        static int  luaCreate   (lua_State* L);
 
     private:
 
         /*--------------------------------------------------------------------
-        * Methods
-        *--------------------------------------------------------------------*/
+         * Methods
+         *--------------------------------------------------------------------*/
 
-        void            cleanup             (void);
-        static int      luaImage            (lua_State* L);
+        explicit UT_RiWater (lua_State* L);
+        ~UT_RiWater         (void) override;
+        static int  luaTest (lua_State* L);
 };
 
-#endif  /* __cre_parms__ */
+#endif  /* __ut_riwaterindex__ */

@@ -181,6 +181,7 @@ oceaneyes-docker:
 	cp $(OCEANEYES_SRC_DIR)/Dockerfile $(OCEANEYES_STAGE_DIR)
 	cp $(OCEANEYES_SRC_DIR)/conda-* $(OCEANEYES_STAGE_DIR)
 	cp $(OCEANEYES_SRC_DIR)/runner.* $(OCEANEYES_STAGE_DIR)
+	cp $(OCEANEYES_SRC_DIR)/atl24_iso_xml_template.txt $(OCEANEYES_STAGE_DIR)
 	mkdir $(OCEANEYES_STAGE_DIR)/cshelph
 	cp $(CSHELPH_SOURCE_FILE) $(OCEANEYES_STAGE_DIR)/cshelph
 	@echo $(CSHELPH_VERSION) > $(OCEANEYES_STAGE_DIR)/cshelph/cshelph_version.txt
@@ -334,6 +335,9 @@ SUBSET_PERFORMANCE_TEST ?=  $(ROOT)/scripts/systests/subset_perf_test.lua
 
 selftest: ## run the self test on the server code
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
+
+shorttest: ## run the short form self test on the server code
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(ROOT)/scripts/selftests/test_runner.lua short
 
 perfmtest: ## run mosaics performance test on the server code
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
