@@ -51,7 +51,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # constants
 ATLAS_GPS_EPOCH = 1198800018
-ATLAS_LEAP_SECONDS_SINCE_GPS = 18
+ATLAS_LEAP_SECONDS = 18
 GPS_EPOCH_START = 315964800
 RELEASE = "1"
 CLASSIFIERS = ['qtrees', 'coastnet', 'openoceanspp', 'medianfilter', 'cshelph', 'bathypathfinder', 'pointnet', 'openoceans', 'ensemble']
@@ -643,7 +643,7 @@ elif format == "h5":
         for beam in beam_list:
             spot = spot_table[beam]
             beam_df = df[df["spot"] == spot]
-            beam_df["delta_time"] = (beam_df.index.view('int64') / 1000000000.0) - (ATLAS_GPS_EPOCH + GPS_EPOCH_START + ATLAS_LEAP_SECONDS_SINCE_GPS)
+            beam_df["delta_time"] = (beam_df.index.view('int64') / 1000000000.0) - (ATLAS_GPS_EPOCH + GPS_EPOCH_START - ATLAS_LEAP_SECONDS)
 
             beam_group = hf.create_group(beam) # e.g. gt1r, gt2l, etc.
             add_variable(beam_group, "index_ph", beam_df['index_ph'], 'int32', True,
