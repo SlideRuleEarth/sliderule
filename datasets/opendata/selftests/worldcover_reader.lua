@@ -13,9 +13,9 @@ local assets = asset.loaddir()
 -- Unit Test --
 
 local  sigma = 1.0e-9
-local  lon =    -108.1
-local  lat =      39.1
-local  height =    0.0
+local  lon =   -108.1
+local  lat =     39.1
+local  height =   0.0
 
 
 print(string.format("\n-------------------------------------------------\nesa worldcover 10meter sample POI\n-------------------------------------------------"))

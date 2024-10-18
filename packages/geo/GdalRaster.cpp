@@ -156,10 +156,10 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi)
             open();
 
         const double z = poi->getZ();
-        mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+        // mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
         if(poi->transform(transf) != OGRERR_NONE)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi->getX(), poi->getY(), poi->getZ());
-        mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+        // mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
 
         /*
          * Attempt to read raster only if it contains the point of interest.
@@ -454,9 +454,18 @@ void GdalRaster::initAwsAccess(GeoParms* _parms)
     if(_parms->asset)
     {
 #ifdef __aws__
+
+        /* Set AWS_REGION for sliderule buckets in us-west-2 */
+        VSISetPathSpecificOption("/vsis3/sliderule/", "AWS_REGION", "us-west-2");
+
         const char* path = _parms->asset->getPath();
         const char* identity = _parms->asset->getIdentity();
+        const char* region = _parms->asset->getRegion();
         const CredentialStore::Credential credentials = CredentialStore::get(identity);
+
+        /* Set AWS_REGION for a specific path */
+        VSISetPathSpecificOption(path, "AWS_REGION", region);
+
         if(!credentials.expiration.value.empty())
         {
             VSISetPathSpecificOption(path, "AWS_ACCESS_KEY_ID", credentials.accessKeyId.value.c_str());

@@ -106,7 +106,7 @@ class RequestFields: public LuaObject, public FieldDictionary
         FieldElement<string>            slideruleVersion;
         FieldElement<string>            buildInformation;
         FieldElement<string>            environmentVersion;
-        
+
         #ifdef __arrow__
         ArrowFields                     output;
         #endif

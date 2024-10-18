@@ -598,7 +598,8 @@ bool GeoLib::burnGeoJson(RegionMask& image)
         image.latMax = bbox.lat_max;
 
         // populate image data
-        const long data_size = image.cols.value * image.rows.value;
+        const long data_size = static_cast<long>(image.cols.value) * static_cast<long>(image.rows.value);
+
         if(data_size > 0)
         {
             image.data = new uint8_t [data_size];

@@ -23,6 +23,18 @@ class TestHLS:
         assert init
         assert len(rsps) > 0
 
+    def test_cmr_stac(self, init):
+        time_start = "2000-01-01T00:00:00Z"
+        time_end = "2022-02-01T23:59:59Z"
+        polygon = [ {"lon": -177.0000000001, "lat": 51.0000000001},
+                    {"lon": -179.0000000001, "lat": 51.0000000001},
+                    {"lon": -179.0000000001, "lat": 49.0000000001},
+                    {"lon": -177.0000000001, "lat": 49.0000000001},
+                    {"lon": -177.0000000001, "lat": 51.0000000001} ]
+        catalog = earthdata.stac(short_name="HLS", polygon=polygon, time_start=time_start, time_end=time_end, as_str=True)
+        assert len(catalog) >= 6359
+
+
     def test_subset1(self, init):
         time_start = "2021-01-01T00:00:00Z"
         time_end = "2021-02-01T23:59:59Z"

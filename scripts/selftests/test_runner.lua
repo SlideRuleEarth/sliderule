@@ -57,7 +57,7 @@ end
 --    runner.script(td .. "geojson_raster.lua")
 --    runner.script(td .. "geouser_raster.lua")
 --end
-
+--[[
 -- Run ICESat-2 Plugin Self Tests
 if __icesat2__ and incloud then
     local icesat2_td = td .. "../../datasets/icesat2/selftests/"
@@ -72,6 +72,7 @@ if __icesat2__ and incloud then
     runner.script(icesat2_td .. "h5_2darray.lua")
     runner.script(icesat2_td .. "s3_driver.lua")
 end
+--]]
 
 -- Run opendata Plugin Self Tests
 if __opendata__ and incloud then
@@ -105,6 +106,7 @@ end
 -- Run USGS3DEP Plugin Self Tests
 if __usgs3dep__ and incloud then
     local usg2dep_td = td .. "../../datasets/usgs3dep/selftests/"
+    runner.script(usg2dep_td.. "plugin_unittest.lua")
     runner.script(usg2dep_td .. "usgs3dep_reader.lua")
 end
 

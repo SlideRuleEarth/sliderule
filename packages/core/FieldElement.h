@@ -53,7 +53,7 @@ class FieldElement: public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit        FieldElement    (T default_value);
+        explicit        FieldElement    (const T& default_value);
                         FieldElement    (void);
                         FieldElement    (const FieldElement<T>& element);
         virtual         ~FieldElement   (void) override = default;
@@ -73,7 +73,7 @@ class FieldElement: public Field
          *--------------------------------------------------------------------*/
 
         operator bool() const {
-            return value != 0;  // Object is "true" if value is non-zero
+            return value != 0; // Object is "true" if value is non-zero
         }
 
         /*--------------------------------------------------------------------
@@ -91,7 +91,7 @@ class FieldElement: public Field
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldElement<T>::FieldElement(T default_value):
+FieldElement<T>::FieldElement(const T& default_value):
     Field(ELEMENT, getImpliedEncoding<T>()),
     value(default_value)
 {
@@ -111,9 +111,9 @@ FieldElement<T>::FieldElement():
  *----------------------------------------------------------------------------*/
 template <class T>
 FieldElement<T>::FieldElement(const FieldElement<T>& element):
-    Field(ELEMENT, getImpliedEncoding<T>())
+    Field(ELEMENT, getImpliedEncoding<T>()),
+    value(element.value)
 {
-    value = element.value;
 }
 
 /*----------------------------------------------------------------------------
@@ -131,7 +131,7 @@ FieldElement<T>& FieldElement<T>::operator=(const FieldElement<T>& element)
  * operator=
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldElement<T>& FieldElement<T>::operator=(const T& v) 
+FieldElement<T>& FieldElement<T>::operator=(const T& v)
 {
     value = v;
     return *this;
@@ -177,7 +177,7 @@ int FieldElement<T>::toLua (lua_State* L) const
  * fromLua
  *----------------------------------------------------------------------------*/
 template <class T>
-void FieldElement<T>::fromLua (lua_State* L, int index) 
+void FieldElement<T>::fromLua (lua_State* L, int index)
 {
     convertFromLua(L, index, value);
 }

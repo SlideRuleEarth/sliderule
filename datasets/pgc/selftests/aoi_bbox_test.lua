@@ -29,7 +29,7 @@ local expSamplesCnt = {8}
 for i = 1, #demTypes do
     local demType = demTypes[i];
     print(string.format("\n--------------------------------\nTest: %s Reading Correct Values with AOI box\n--------------------------------", demType))
-    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", aoi_bbox=extentbox}))
+    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", aoi_bbox=extentbox, sort_by_index=true}))
 
     for j, lon in ipairs(lons) do
         local sampleCnt = 0
