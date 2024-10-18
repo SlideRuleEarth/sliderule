@@ -46,6 +46,9 @@
 #include "BathySeaSurfaceFinder.h"
 #include "BathyRefractionCorrector.h"
 #include "BathyUncertaintyCalculator.h"
+#ifdef __unittesting__
+#include "UT_RiWater.h"
+#endif
 
 /******************************************************************************
  * DEFINES
@@ -76,6 +79,9 @@ int bathy_open (lua_State *L)
         {"refraction",          BathyRefractionCorrector::luaCreate},
         {"uncertainty",         BathyUncertaintyCalculator::luaCreate},
         {"inituncertainty",     BathyUncertaintyCalculator::luaInit},
+#ifdef __unittesting__
+        {"ut_riwater",          UT_RiWater::luaCreate},
+#endif
         {NULL,                  NULL}
     };
 

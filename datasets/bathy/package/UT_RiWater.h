@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, University of Texas
+ * Copyright (c) 2021, University of Washington
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,14 +12,14 @@
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
  *
- * 3. Neither the name of the University of Texas nor the names of its
+ * 3. Neither the name of the University of Washington nor the names of its
  *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF TEXAS AND CONTRIBUTORS
+ * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
  * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF TEXAS OR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
@@ -29,19 +29,21 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __bathy_refraction_corrector__
-#define __bathy_refraction_corrector__
+#ifndef __ut_riwaterindex__
+#define __ut_riwaterindex__
+
+/******************************************************************************
+ * INCLUDES
+ ******************************************************************************/
 
 #include "OsApi.h"
-#include "GeoDataFrame.h"
-#include "BathyDataFrame.h"
-#include "BathyFields.h"
+#include "LuaObject.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class BathyRefractionCorrector: public GeoDataFrame::FrameRunner
+class UT_RiWater: public LuaObject
 {
     public:
 
@@ -49,12 +51,7 @@ class BathyRefractionCorrector: public GeoDataFrame::FrameRunner
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* GLOBAL_WATER_RI_MASK;
-        static const double GLOBAL_WATER_RI_MASK_MAX_LAT;
-        static const double GLOBAL_WATER_RI_MASK_MIN_LAT;
-        static const double GLOBAL_WATER_RI_MASK_MAX_LON;
-        static const double GLOBAL_WATER_RI_MASK_MIN_LON;
-        static const double GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
+        static const char* OBJECT_TYPE;
 
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
@@ -63,10 +60,7 @@ class BathyRefractionCorrector: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int      luaCreate       (lua_State* L);
-        static int      getSubAqPh      (lua_State* L);
-        static double   sampleWaterMask (GeoLib::TIFFImage* mask, double lon, double lat);
-        bool            run             (GeoDataFrame* dataframe) override;
+        static int  luaCreate   (lua_State* L);
 
     private:
 
@@ -74,16 +68,9 @@ class BathyRefractionCorrector: public GeoDataFrame::FrameRunner
          * Methods
          *--------------------------------------------------------------------*/
 
-        BathyRefractionCorrector    (lua_State* L, BathyFields* _parms);
-        ~BathyRefractionCorrector   (void) override;
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        BathyFields*        parms;
-        GeoLib::TIFFImage*  waterRiMask;
-        uint64_t            subaqueousPhotons;
+        explicit UT_RiWater (lua_State* L);
+        ~UT_RiWater         (void) override;
+        static int  luaTest (lua_State* L);
 };
 
-#endif
+#endif  /* __ut_riwaterindex__ */

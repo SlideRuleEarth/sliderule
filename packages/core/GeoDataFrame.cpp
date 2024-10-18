@@ -171,7 +171,7 @@ Field* GeoDataFrame::getMetaData (const char* name, Field::type_t _type)
 {
     const FieldDictionary::entry_t entry = metaFields.fields[name];
     if(!entry.field) throw RunTimeException(CRITICAL, RTE_ERROR, "%s field is null", name);
-    if(_type != Field::FIELD && _type != entry.field->type) throw RunTimeException(CRITICAL, RTE_ERROR, "%s is incorrect type: %d", name, static_cast<int>(entry.field->type));
+    if(_type != entry.field->type) throw RunTimeException(CRITICAL, RTE_ERROR, "%s is incorrect type: %d", name, static_cast<int>(entry.field->type));
     return entry.field;
 }
 

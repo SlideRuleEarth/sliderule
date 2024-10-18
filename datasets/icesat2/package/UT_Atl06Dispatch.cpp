@@ -44,7 +44,6 @@
  ******************************************************************************/
 
 const char* UT_Atl06Dispatch::OBJECT_TYPE = "UT_Atl06Dispatch";
-
 const char* UT_Atl06Dispatch::LUA_META_NAME = "UT_Atl06Dispatch";
 const struct luaL_Reg UT_Atl06Dispatch::LUA_META_TABLE[] = {
     {"lsftest",         luaLsfTest},
@@ -53,7 +52,7 @@ const struct luaL_Reg UT_Atl06Dispatch::LUA_META_TABLE[] = {
 };
 
 /******************************************************************************
- * PUBLIC METHODS
+ * CLASS METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
@@ -63,7 +62,6 @@ int UT_Atl06Dispatch::luaCreate (lua_State* L)
 {
     try
     {
-        /* Create Math Library Unit Test */
         return createLuaObject(L, new UT_Atl06Dispatch(L));
     }
     catch(const RunTimeException& e)
@@ -72,10 +70,6 @@ int UT_Atl06Dispatch::luaCreate (lua_State* L)
         return returnLuaStatus(L, false);
     }
 }
-
-/******************************************************************************
- * PRIVATE METHODS
- *******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * Constructor

@@ -104,6 +104,23 @@ int BathyRefractionCorrector::getSubAqPh (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * sampleWaterMask
+ *----------------------------------------------------------------------------*/
+double BathyRefractionCorrector::sampleWaterMask (GeoLib::TIFFImage* mask, double lon, double lat)
+{
+    const double degrees_of_longitude =  lon - GLOBAL_WATER_RI_MASK_MIN_LON;
+    const double longitude_pixels = degrees_of_longitude / GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
+    const uint32_t x = static_cast<uint32_t>(std::round(longitude_pixels));
+
+    const double degrees_of_latitude = lat - GLOBAL_WATER_RI_MASK_MIN_LAT;
+    const double latitude_pixels = degrees_of_latitude / GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
+    const uint32_t y = mask->getHeight() - static_cast<uint32_t>(std::round(latitude_pixels)); // flipped image
+
+    const GeoLib::TIFFImage::val_t pixel = mask->getPixel(x, y);
+    return pixel.f64;
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 BathyRefractionCorrector::BathyRefractionCorrector (lua_State* L, BathyFields* _parms):
@@ -186,16 +203,8 @@ bool BathyRefractionCorrector::run(GeoDataFrame* dataframe)
         double ri_water = refraction_parms.RIWater.value;
         if(waterRiMask)
         {
-            const double degrees_of_latitude = df.lat_ph[i] - GLOBAL_WATER_RI_MASK_MIN_LAT;
-            const double latitude_pixels = degrees_of_latitude / GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
-            const uint32_t y = waterRiMask->getHeight() - static_cast<uint32_t>(latitude_pixels); // flipped image
-
-            const double degrees_of_longitude =  df.lon_ph[i] - GLOBAL_WATER_RI_MASK_MIN_LON;
-            const double longitude_pixels = degrees_of_longitude / GLOBAL_WATER_RI_MASK_PIXEL_SIZE;
-            const uint32_t x = static_cast<uint32_t>(longitude_pixels);
-
-            const GeoLib::TIFFImage::val_t pixel = waterRiMask->getPixel(x, y);
-            ri_water = pixel.f64;
+            const double pixel = sampleWaterMask(waterRiMask, df.lon_ph[i], df.lat_ph[i]);
+            if(pixel > 0.0) ri_water = pixel; // only set if valid pixel
         }
 
         /* Correct All Subaqueous Photons */
