@@ -230,6 +230,28 @@ class BathyDataFrame: public GeoDataFrame
 
         static int          luaIsValid                  (lua_State* L);
         static int          luaLength                   (lua_State* L);
+
+        #ifdef __unittesting__
+            BathyDataFrame(BathyFields* _parms):
+                GeoDataFrame(NULL, LUA_META_NAME, LUA_META_TABLE, {}, {}),
+                active(false),
+                pid(NULL),
+                parmsPtr(_parms),
+                parms(*_parms),
+                bathyMask(NULL),
+                hdf03(NULL),
+                hdf09(NULL),
+                rqstQ(NULL),
+                signalConfColIndex(0),
+                readTimeoutMs(0),
+                valid(false) {};
+        #endif
+
+        /*--------------------------------------------------------------------
+         * Friends
+         *--------------------------------------------------------------------*/
+
+        friend class UT_BathyRefractionCorrector; // necessary for the private constructor/destructor
 };
 
 #endif  /* __bathy_data_frame__ */

@@ -46,7 +46,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/BathySeaSurfaceFinder.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyUncertaintyCalculator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.cpp
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_RiWater.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_BathyRefractionCorrector.cpp>
 )
 
 target_include_directories (slideruleLib
@@ -70,7 +70,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/BathySeaSurfaceFinder.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyUncertaintyCalculator.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.h
-        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_RiWater.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_BathyRefractionCorrector.h>
     DESTINATION
         ${INCDIR}/bathy
 )

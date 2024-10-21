@@ -47,7 +47,7 @@
 #include "BathyRefractionCorrector.h"
 #include "BathyUncertaintyCalculator.h"
 #ifdef __unittesting__
-#include "UT_RiWater.h"
+#include "UT_BathyRefractionCorrector.h"
 #endif
 
 /******************************************************************************
@@ -80,7 +80,7 @@ int bathy_open (lua_State *L)
         {"uncertainty",         BathyUncertaintyCalculator::luaCreate},
         {"inituncertainty",     BathyUncertaintyCalculator::luaInit},
 #ifdef __unittesting__
-        {"ut_riwater",          UT_RiWater::luaCreate},
+        {"ut_refraction",          UT_BathyRefractionCorrector::luaCreate},
 #endif
         {NULL,                  NULL}
     };

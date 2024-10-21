@@ -203,11 +203,11 @@ BathyDataFrame::~BathyDataFrame (void)
 
     delete rqstQ;
 
-    hdf03->releaseLuaObject();
+    if(hdf03) hdf03->releaseLuaObject();
     if(hdf09) hdf09->releaseLuaObject();
 
-    parmsPtr->releaseLuaObject();
-    bathyMask->releaseLuaObject();
+    if(parmsPtr) parmsPtr->releaseLuaObject();
+    if(bathyMask) bathyMask->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------

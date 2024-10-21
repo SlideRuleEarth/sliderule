@@ -84,6 +84,12 @@ class BathyRefractionCorrector: public GeoDataFrame::FrameRunner
         BathyFields*        parms;
         GeoLib::TIFFImage*  waterRiMask;
         uint64_t            subaqueousPhotons;
+
+        /*--------------------------------------------------------------------
+         * Friends
+         *--------------------------------------------------------------------*/
+
+        friend class UT_BathyRefractionCorrector;
 };
 
 #endif

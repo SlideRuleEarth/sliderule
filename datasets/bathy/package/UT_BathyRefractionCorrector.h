@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __ut_riwaterindex__
-#define __ut_riwaterindex__
+#ifndef ut_bathy_refraction_corrector__
+#define ut_bathy_refraction_corrector__
 
 /******************************************************************************
  * INCLUDES
@@ -43,7 +43,7 @@
  * CLASS
  ******************************************************************************/
 
-class UT_RiWater: public LuaObject
+class UT_BathyRefractionCorrector: public LuaObject
 {
     public:
 
@@ -68,9 +68,11 @@ class UT_RiWater: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit UT_RiWater (lua_State* L);
-        ~UT_RiWater         (void) override;
-        static int  luaTest (lua_State* L);
+        explicit UT_BathyRefractionCorrector    (lua_State* L);
+                ~UT_BathyRefractionCorrector    (void) override;
+
+        static int  luaRiWaterTest              (lua_State* L);
+        static int  luaRefractionTest           (lua_State* L);
 };
 
-#endif  /* __ut_riwaterindex__ */
+#endif  /* ut_bathy_refraction_corrector__ */
