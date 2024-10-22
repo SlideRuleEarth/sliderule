@@ -244,18 +244,6 @@ int UT_RasterSubset::luaSubsetTest(lua_State* L)
  *----------------------------------------------------------------------------*/
 const char* UT_RasterSubset::getRasterName(RasterObject* robj, uint64_t fileId)
 {
-    const char* fileName = NULL;
-
-    /* Find fileName from fileId */
-    Dictionary<uint64_t>::Iterator iterator(robj->fileDictGet());
-    for(int i = 0; i < iterator.length; i++)
-    {
-        if(iterator[i].value == fileId)
-        {
-            fileName = iterator[i].key;
-            break;
-        }
-    }
-
+    const char* fileName = robj->fileDictGetFile(fileId);
     return StringLib::duplicate(fileName);
 }

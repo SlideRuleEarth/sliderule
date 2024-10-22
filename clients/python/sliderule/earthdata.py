@@ -234,7 +234,7 @@ def __cmr_collection_query(provider, short_name):
         return search_results['feed']['entry']
 
 def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
-    """Perform a scrolling CMR query for files matching input criteria."""
+    """Perform a search-after CMR query for files matching input criteria."""
     kwargs.setdefault('polygon',None)
     kwargs.setdefault('name_filter',None)
     kwargs.setdefault('return_metadata',False)
@@ -242,21 +242,22 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
     params = '&short_name={0}'.format(short_name)
     if version != None:
         params += '&version={0}'.format(version)
-    if time_start != None and time_end != None:
+    if time_start is not None and time_end is not None:
         params += '&temporal[]={0},{1}'.format(time_start, time_end)
     if kwargs['polygon']:
         params += '&polygon={0}'.format(kwargs['polygon'])
     if kwargs['name_filter']:
         params += '&options[producer_granule_id][pattern]=true'
         params += '&producer_granule_id[]=' + kwargs['name_filter']
+
     CMR_URL = 'https://cmr.earthdata.nasa.gov'
     cmr_query_url = ('{0}/search/granules.json?provider={1}'
                      '&sort_key[]=start_date&sort_key[]=producer_granule_id'
-                     '&scroll=true&page_size={2}'.format(CMR_URL, provider, CMR_PAGE_SIZE))
+                     '&page_size={2}'.format(CMR_URL, provider, CMR_PAGE_SIZE))
     cmr_query_url += params
-    logger.debug('cmr request={0}\n'.format(cmr_query_url))
+    logger.debug(f'Initial CMR request: {cmr_query_url}')
 
-    cmr_scroll_id = None
+    cmr_search_after = None
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
@@ -266,15 +267,18 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
     metadata = sliderule.emptyframe()
     while True:
         req = urllib.request.Request(cmr_query_url)
-        if cmr_scroll_id:
-            req.add_header('cmr-scroll-id', cmr_scroll_id)
+        if cmr_search_after:
+            req.add_header('CMR-Search-After', cmr_search_after)
+            logger.debug(f'Requesting next page with CMR-Search-After: {cmr_search_after}')
+
         response = urllib.request.urlopen(req, context=ctx)
-        if not cmr_scroll_id:
-            # Python 2 and 3 have different case for the http headers
-            headers = {k.lower(): v for k, v in dict(response.info()).items()}
-            cmr_scroll_id = headers['cmr-scroll-id']
+
+        headers = {k.lower(): v for k, v in dict(response.info()).items()}
+        cmr_search_after = headers.get('cmr-search-after')
+
         search_page = response.read()
         search_page = json.loads(search_page.decode('utf-8'))
+
         url_scroll_results = __cmr_filter_urls(search_page, DATASETS[short_name]["formats"])
         if not url_scroll_results:
             break
@@ -284,10 +288,22 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
             metadata_results = __cmr_granule_metadata(search_page)
         else:
             metadata_results = geopandas.pd.DataFrame([None for _ in url_scroll_results])
+
         # append granule metadata
         metadata = geopandas.pd.concat([metadata, metadata_results])
 
-    return (urls,metadata)
+        # Two ways to determine that there is no more data available:
+        # 1. The number of granules in the current response is less than the requested 'page_size':
+        # 2. The absence of the 'CMR-Search-After' header
+        result_count = len(search_page['feed']['entry'])
+        if result_count < CMR_PAGE_SIZE:
+            logger.debug(f'Received {result_count} results, fewer than page size. Ending pagination after processing.')
+            break
+        if not cmr_search_after:
+            logger.debug('No CMR-Search-After header found, no more pages.')
+            break
+
+    return urls, metadata
 
 ###############################################################################
 # CMR UTILITIES
@@ -389,7 +405,12 @@ def __cmr_max_version(provider, short_name):
 #
 def __build_geojson(rsps):
     geojson = rsps.json()
-    del geojson["links"]
+    next = None
+    if "links" in geojson:
+        for link in geojson["links"]:
+            if link["rel"] == "next":
+                next = link["href"]
+        del geojson["links"]
     if 'numberMatched' in geojson:
         del geojson['numberMatched']
     if 'numberReturned' in geojson:
@@ -410,7 +431,7 @@ def __build_geojson(rsps):
             if "href" in assetsDict[val]:
                 propertiesDict[val] = assetsDict[val]["href"]
         del geojson["features"][i]["assets"]
-    return geojson
+    return geojson, next
 
 #
 # Perform a STAC Query
@@ -450,22 +471,16 @@ def __stac_search(provider, short_name, collections, polygons, time_start, time_
     # make initial stac request
     data = context.post(url, data=json.dumps(rqst), headers=headers)
     data.raise_for_status()
-    geojson = __build_geojson(data)
+    geojson, next_link = __build_geojson(data)
 
-    # iterate through additional pages if not all returned
-    num_returned = geojson["context"]["returned"]
-    num_matched = geojson["context"]["matched"]
-    if num_matched > max_requested_resources:
-        logger.warn("Number of matched resources truncated from {} to {}".format(num_matched, max_requested_resources))
-        num_matched = max_requested_resources
-    num_pages = int((num_matched  + (num_returned - 1)) / num_returned)
-    for page in range(2, num_pages+1):
-        rqst["page"] = page
-        data = context.post(url, data=json.dumps(rqst), headers=headers)
+    # Continue fetching pages if 'next' link is available
+    while next_link:
+        data = context.get(next_link, headers=headers)
         data.raise_for_status()
-        _geojson = __build_geojson(data)
+        _geojson, next_link = __build_geojson(data)
         geojson["features"] += _geojson["features"]
-    geojson["context"]["returned"] = num_matched
+
+    geojson["context"]["returned"] = len(geojson["features"])
     geojson["context"]["limit"] = max_requested_resources
 
     # return geojson dictionary

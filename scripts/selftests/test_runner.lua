@@ -104,6 +104,7 @@ end
 -- Run USGS3DEP Plugin Self Tests
 if __usgs3dep__ and incloud then
     local usg2dep_td = td .. "../../datasets/usgs3dep/selftests/"
+    runner.script(usg2dep_td.. "plugin_unittest.lua")
     runner.script(usg2dep_td .. "usgs3dep_reader.lua")
 end
 

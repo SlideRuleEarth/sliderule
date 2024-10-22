@@ -1,12 +1,22 @@
 local runner = require("test_executive")
-console = require("console")
-asset = require("asset")
-local assets = asset.loaddir()
-local td = runner.rootdir(arg[0])
+local console = require("console")
+local asset = require("asset")
+local csv = require("csv")
+local json = require("json")
+local _,td = runner.srcscript()
 
 -- Setup --
--- console.monitor:config(core.LOG, core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
+local assets = asset.loaddir()
+
+console.monitor:config(core.LOG, core.DEBUG)
+sys.setlvl(core.LOG, core.DEBUG)
+
+local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"}
+local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms))
+while not aws.csget("lpdaac-cloud") do
+    print("Waiting to authenticate to LPDAAC...")
+    sys.wait(1)
+end
 
 local outq_name = "outq-luatest"
 
@@ -28,9 +38,6 @@ local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
 
-
--- console.monitor:config(core.LOG, core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
 
 function getFileSize(filePath)
     local file = io.open(filePath, "rb")  -- 'rb' mode opens the file in binary mode

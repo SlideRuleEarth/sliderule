@@ -143,7 +143,7 @@ void LandsatHlsRaster::getIndexFile(const OGRGeometry* geo, std::string& file, c
     static_cast<void>(geo);
     static_cast<void>(points);
     file = indexFile;
-    mlog(DEBUG, "Using %s", file.c_str());
+    // mlog(DEBUG, "Using %s", file.c_str());
 }
 
 
@@ -344,7 +344,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
             assert(ur);
 
             /* Get the sample for this point from unique raster */
-            for(const point_sample_t& ps : ur->pointSamples)
+            for(point_sample_t& ps : ur->pointSamples)
             {
                 if(ps.pointIndex == pointIndx)
                 {
@@ -360,12 +360,24 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
                         const bool returnBandSample = it->second;
                         if(returnBandSample)
                         {
-                            /* Create a copy of the sample and add it to the list */
-                            RasterSample* sample = new RasterSample(*ps.sample);
+                            RasterSample* s;
+                            if(!ps.sampleReturned.exchange(true))
+                            {
+                                s = ps.sample;
+                            }
+                            else
+                            {
+                                /* Sample has already been returned, must create a copy */
+                                s = new RasterSample(*ps.sample);
+                            }
 
-                            /* Set flags for this sample */
-                            sample->flags = flags;
-                            slist->add(sample);
+                            /* Set time for this sample */
+                            s->time = rgroup->gpsTime / 1000;
+
+                            /* Set flags for this sample, add it to the list */
+                            s->flags = flags;
+                            slist->add(s);
+                            errors |= ps.ssErrors;
                         }
                     }
                     errors |= ps.ssErrors;

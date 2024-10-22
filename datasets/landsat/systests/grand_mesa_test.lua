@@ -72,6 +72,7 @@ for i=1,#arr do
     local  lon = arr[i][1]
     local  lat = arr[i][2]
     local  height = 0
+    -- print(string.format("%0.16f, %0.16f", lon, lat))
     local  tbl, err = dem:sample(lon, lat, height)
     if err ~= 0 then
         print(string.format("======> FAILED to read", lon, lat, height))
@@ -115,4 +116,3 @@ local dtime = stoptime - starttime
 print(string.format("\nSamples: %d, wrong NDVI: %d, wrong groupID: %d", samplesCnt, badNDVICnt, badFileCnt))
 print(string.format("ExecTime: %f", dtime))
 
-os.exit()

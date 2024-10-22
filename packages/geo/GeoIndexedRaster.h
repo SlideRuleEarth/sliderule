@@ -59,7 +59,6 @@ class GeoIndexedRaster: public RasterObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const double DISTANCE;
         static const double TOLERANCE;
 
         static const int   MAX_CACHE_SIZE     =  20;
@@ -73,31 +72,39 @@ class GeoIndexedRaster: public RasterObject
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef struct {
+        typedef struct PointSample {
             OGRPoint                    point;
-                     int64_t            pointIndex;
+            int64_t                     pointIndex;
             RasterSample*               sample;
-            bool                        sampleReturned;
+            std::atomic<bool>           sampleReturned;
             uint32_t                    ssErrors;
+
+            PointSample(const OGRPoint& _point, int64_t _pointIndex):
+               point(_point), pointIndex(_pointIndex), sample(NULL), sampleReturned(false), ssErrors(SS_NO_ERRORS) {}
+
+            PointSample(const PointSample& ps):
+               point(ps.point), pointIndex(ps.pointIndex), sample(ps.sample), sampleReturned(ps.sampleReturned.load()), ssErrors(ps.ssErrors) {}
+
         } point_sample_t;
 
-        struct unique_raster_t;
+        struct UniqueRaster;
         typedef struct RasterInfo {
-            bool                       dataIsElevation;
-            std::string                tag;
-            std::string                fileName;
-            unique_raster_t*           uraster;  // only used for batch reading
+            bool                    dataIsElevation;
+            std::string             tag;
+            std::string             fileName;
+            UniqueRaster*           uraster;  // only used for batch reading
 
             RasterInfo(void): dataIsElevation(false), uraster(NULL) {}
         } raster_info_t;
 
-        typedef struct unique_raster_t {
-            raster_info_t*              rinfo;
-            double                      gpsTime;
+        typedef struct UniqueRaster {
+            bool                        dataIsElevation;
+            const std::string&          fileName;
             uint64_t                    fileId;
             std::vector<point_sample_t> pointSamples;
+            explicit UniqueRaster(bool _dataIsElevation, const std::string& _fileName):
+                                 dataIsElevation(_dataIsElevation), fileName(_fileName), fileId(0) {}
         } unique_raster_t;
-
 
         typedef struct RaserGroup {
             std::string                id;
@@ -148,29 +155,22 @@ class GeoIndexedRaster: public RasterObject
             explicit Finder(const OGRGeometry* geo, const std::vector<OGRFeature*>* _featuresList);
         } finder_t;
 
-
-        typedef struct {
-            double        points2polyTime;
-            double        unioningTime;
-        } union_maker_stats_t;
-
-        typedef struct UnionMaker {
-            GeoIndexedRaster*                obj;
-            range_t                          pointsRange;
-            const std::vector<point_info_t>* points;
-            OGRGeometry*                     unionPolygon;
-            union_maker_stats_t              stats;
-
-            explicit UnionMaker (GeoIndexedRaster* _obj, const std::vector<point_info_t>* _points);
-        } union_maker_t;
-
         typedef struct {
             OGRPoint           point;
             int64_t            pointIndex;
             GroupOrdering*     groupList;
         } point_groups_t;
 
-        /* Typedef for the global map (raster file name -> set of unique point IDs) */
+        typedef struct SampleCollector {
+            GeoIndexedRaster*                  obj;
+            range_t                            pGroupsRange;
+            const std::vector<point_groups_t>& pointsGroups;
+            std::vector<sample_list_t*>        slvector;
+            uint32_t                           ssErrors;
+            explicit SampleCollector(GeoIndexedRaster* _obj, const std::vector<point_groups_t>& _pointsGroups);
+        } sample_collector_t;
+
+        /* Typedef for the map of raster file name -> set of unique ordered points */
         typedef std::unordered_map<std::string, std::set<uint32_t>> raster_points_map_t;
 
         typedef struct GroupsFinder {
@@ -288,9 +288,9 @@ class GeoIndexedRaster: public RasterObject
 
         static void*    readerThread        (void *param);
         static void*    batchReaderThread   (void *param);
-        static void*    unionThread         (void* param);
 
         static void*    groupsFinderThread  (void *param);
+        static void*    samplesCollectThread(void *param);
 
         bool            createReaderThreads (uint32_t  rasters2sample);
         bool            createBatchReaderThreads(uint32_t rasters2sample);
@@ -298,7 +298,6 @@ class GeoIndexedRaster: public RasterObject
         bool            updateCache         (uint32_t& rasters2sample, const GroupOrdering* groupList);
         bool            filterRasters       (int64_t gps, GroupOrdering* groupList);
         static OGRGeometry* getConvexHull   (const std::vector<point_info_t>* points);
-        OGRGeometry*    getBufferedPoints   (const std::vector<point_info_t>* points);
         void            applySpatialFilter  (OGRLayer* layer, const std::vector<point_info_t>* points);
 
         bool            findAllGroups       (const std::vector<point_info_t>* points,
@@ -310,6 +309,10 @@ class GeoIndexedRaster: public RasterObject
                                              raster_points_map_t& rasterToPointsMap);
 
         bool            sampleUniqueRasters (const std::vector<unique_raster_t*>& uniqueRasters);
+
+        bool            collectSamples      (const std::vector<point_groups_t>& pointsGroups,
+                                             List<sample_list_t*>& sllist);
+
 };
 
 #endif  /* __geo_indexed_raster__ */
