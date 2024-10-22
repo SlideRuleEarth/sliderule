@@ -82,7 +82,15 @@ RC_UNSUPPORTED = -6
 --
 local function build_geojson(rsps)
     local status, geotable = pcall(json.decode, rsps)
+    local next_page = nil
     if status then
+        if geotable["links"] then
+            for _,link in ipairs(geotable["links"]) do
+                if link["link"] == "next" then
+                    next_page = link["href"]
+                end
+            end
+        end
         if geotable["links"]                    then geotable["links"] = nil end
         if geotable["numberMatched"]            then geotable["numberMatched"] = nil end
         if geotable["numberReturned"]           then geotable["numberReturned"] = nil end
@@ -105,7 +113,7 @@ local function build_geojson(rsps)
             end
         end
     end
-    return status, geotable
+    return status, geotable, next_page
 end
 
 --
@@ -329,36 +337,42 @@ local function stac (parms, poly)
     end
 
     -- parse response into a table
-    status, geotable = build_geojson(rsps)
+    local next_page = nil
+    status, geotable, next_page = build_geojson(rsps)
     if not status then
         return RC_RSPS_UNPARSEABLE, "could not parse json in response from stac"
     end
 
     -- iterate through additional pages if not all returned
-    local num_returned = geotable["context"]["returned"]
     local num_matched = geotable["context"]["matched"]
     if num_matched > max_resources then
         return RC_RSPS_TRUNCATED, string.format("number of matched resources truncated from %d to %d", num_matched, max_resources)
     end
-    local num_pages = math.floor((num_matched  + (num_returned - 1)) / num_returned)
-    for page = 2, num_pages do
-        rqst["page"] = page
 
+    while next_page do
         -- post paged request
-        local rsps, status = core.post(url, json.encode(rqst), headers)
+        rsps, status = core.post(next_page, nil, headers)
         if not status then
             return RC_RQST_FAILED, "http request to stac server failed"
         end
 
         -- parse paged response into table
-        local status, paged_geotable = build_geojson(rsps)
+        local paged_geotable = nil
+        status, paged_geotable, next_page = build_geojson(rsps)
         if not status then
             return RC_RSPS_UNPARSEABLE, "could not parse json in response from stac server"
         end
         table.move(paged_geotable["features"], 1, #paged_geotable["features"], #geotable["features"] + 1, geotable["features"])
     end
+
+    -- set number of returned (and limit)
     geotable["context"]["returned"] = num_matched
     geotable["context"]["limit"] = max_resources
+
+    -- check full results returned
+    if #geotable["features"] ~= num_matched then
+        return RC_RSPS_TRUNCATED, string.format("number of results did not match number of features: %d != %d", #geotable["features"], num_matched)
+    end
 
     -- return response
     return RC_SUCCESS, geotable

@@ -536,7 +536,7 @@ int CurlLib::luaPost (lua_State* L)
     {
         /* Get Parameters */
         const char* url         = LuaObject::getLuaString(L, 1);
-        const char* data        = LuaObject::getLuaString(L, 2, true, "{}");
+        const char* data        = LuaObject::getLuaString(L, 2, true, NULL);
         const int   num_hdrs    = CurlLib::getHeaders(L, 3, header_list); (void)num_hdrs;
 
         /* Perform Request */
