@@ -496,85 +496,95 @@ Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
     const FieldList<string>& geo_fields = info->reader->parms->atl03GeoFields;
     const FieldList<string>& photon_fields = info->reader->parms->atl03PhFields;
 
-    /* Read Ancillary Geolocation Fields */
-    if(geo_fields.length() > 0)
+    try
     {
-        anc_geo_data = new H5DArrayDictionary(Icesat2Fields::EXPECTED_NUM_FIELDS);
-        for(int i = 0; i < geo_fields.length(); i++)
+        /* Read Ancillary Geolocation Fields */
+        if(geo_fields.length() > 0)
         {
-            const string& field_name = geo_fields[i];
-            const char* group_name = "geolocation";
-            if( (field_name[0] == 't' && field_name[1] == 'i' && field_name[2] == 'd') ||
-                (field_name[0] == 'g' && field_name[1] == 'e' && field_name[2] == 'o') ||
-                (field_name[0] == 'd' && field_name[1] == 'e' && field_name[2] == 'm') ||
-                (field_name[0] == 'd' && field_name[1] == 'a' && field_name[2] == 'c') )
+            anc_geo_data = new H5DArrayDictionary(Icesat2Fields::EXPECTED_NUM_FIELDS);
+            for(int i = 0; i < geo_fields.length(); i++)
             {
-                group_name = "geophys_corr";
+                const string& field_name = geo_fields[i];
+                const char* group_name = "geolocation";
+                if( (field_name[0] == 't' && field_name[1] == 'i' && field_name[2] == 'd') ||
+                    (field_name[0] == 'g' && field_name[1] == 'e' && field_name[2] == 'o') ||
+                    (field_name[0] == 'd' && field_name[1] == 'e' && field_name[2] == 'm') ||
+                    (field_name[0] == 'd' && field_name[1] == 'a' && field_name[2] == 'c') )
+                {
+                    group_name = "geophys_corr";
+                }
+                const FString dataset_name("%s/%s", group_name, field_name.c_str());
+                H5DArray* array = new H5DArray(info->reader->context, FString("%s/%s", info->prefix, dataset_name.c_str()).c_str(), 0, region.first_segment, region.num_segments);
+                const bool status = anc_geo_data->add(field_name.c_str(), array);
+                if(!status) delete array;
+                assert(status); // the dictionary add should never fail
             }
-            const FString dataset_name("%s/%s", group_name, field_name.c_str());
-            H5DArray* array = new H5DArray(info->reader->context, FString("%s/%s", info->prefix, dataset_name.c_str()).c_str(), 0, region.first_segment, region.num_segments);
-            const bool status = anc_geo_data->add(field_name.c_str(), array);
-            if(!status) delete array;
-            assert(status); // the dictionary add should never fail
+        }
+
+        /* Read Ancillary Photon Fields */
+        if(photon_fields.length() > 0)
+        {
+            anc_ph_data = new H5DArrayDictionary(Icesat2Fields::EXPECTED_NUM_FIELDS);
+            for(int i = 0; i < photon_fields.length(); i++)
+            {
+                const string& field_name = photon_fields[i];
+                const FString dataset_name("heights/%s", field_name.c_str());
+                H5DArray* array = new H5DArray(info->reader->context, FString("%s/%s", info->prefix, dataset_name.c_str()).c_str(), 0, region.first_photon,  region.num_photons);
+                const bool status = anc_ph_data->add(field_name.c_str(), array);
+                if(!status) delete array;
+                assert(status); // the dictionary add should never fail
+            }
+        }
+
+        /* Join Hardcoded Reads */
+        sc_orient.join(info->reader->read_timeout_ms, true);
+        velocity_sc.join(info->reader->read_timeout_ms, true);
+        segment_delta_time.join(info->reader->read_timeout_ms, true);
+        segment_id.join(info->reader->read_timeout_ms, true);
+        segment_dist_x.join(info->reader->read_timeout_ms, true);
+        solar_elevation.join(info->reader->read_timeout_ms, true);
+        dist_ph_along.join(info->reader->read_timeout_ms, true);
+        dist_ph_across.join(info->reader->read_timeout_ms, true);
+        h_ph.join(info->reader->read_timeout_ms, true);
+        signal_conf_ph.join(info->reader->read_timeout_ms, true);
+        quality_ph.join(info->reader->read_timeout_ms, true);
+        if(read_yapc) weight_ph.join(info->reader->read_timeout_ms, true);
+        lat_ph.join(info->reader->read_timeout_ms, true);
+        lon_ph.join(info->reader->read_timeout_ms, true);
+        delta_time.join(info->reader->read_timeout_ms, true);
+        bckgrd_delta_time.join(info->reader->read_timeout_ms, true);
+        bckgrd_rate.join(info->reader->read_timeout_ms, true);
+
+        /* Join Ancillary Geolocation Reads */
+        if(anc_geo_data)
+        {
+            H5DArray* array = NULL;
+            const char* dataset_name = anc_geo_data->first(&array);
+            while(dataset_name != NULL)
+            {
+                array->join(info->reader->read_timeout_ms, true);
+                dataset_name = anc_geo_data->next(&array);
+            }
+        }
+
+        /* Join Ancillary Photon Reads */
+        if(anc_ph_data)
+        {
+            H5DArray* array = NULL;
+            const char* dataset_name = anc_ph_data->first(&array);
+            while(dataset_name != NULL)
+            {
+                array->join(info->reader->read_timeout_ms, true);
+                dataset_name = anc_ph_data->next(&array);
+            }
         }
     }
-
-    /* Read Ancillary Photon Fields */
-    if(photon_fields.length() > 0)
+    catch(const RunTimeException& e)
     {
-        anc_ph_data = new H5DArrayDictionary(Icesat2Fields::EXPECTED_NUM_FIELDS);
-        for(int i = 0; i < photon_fields.length(); i++)
-        {
-            const string& field_name = photon_fields[i];
-            const FString dataset_name("heights/%s", field_name.c_str());
-            H5DArray* array = new H5DArray(info->reader->context, FString("%s/%s", info->prefix, dataset_name.c_str()).c_str(), 0, region.first_photon,  region.num_photons);
-            const bool status = anc_ph_data->add(field_name.c_str(), array);
-            if(!status) delete array;
-            assert(status); // the dictionary add should never fail
-        }
-    }
-
-    /* Join Hardcoded Reads */
-    sc_orient.join(info->reader->read_timeout_ms, true);
-    velocity_sc.join(info->reader->read_timeout_ms, true);
-    segment_delta_time.join(info->reader->read_timeout_ms, true);
-    segment_id.join(info->reader->read_timeout_ms, true);
-    segment_dist_x.join(info->reader->read_timeout_ms, true);
-    solar_elevation.join(info->reader->read_timeout_ms, true);
-    dist_ph_along.join(info->reader->read_timeout_ms, true);
-    dist_ph_across.join(info->reader->read_timeout_ms, true);
-    h_ph.join(info->reader->read_timeout_ms, true);
-    signal_conf_ph.join(info->reader->read_timeout_ms, true);
-    quality_ph.join(info->reader->read_timeout_ms, true);
-    if(read_yapc) weight_ph.join(info->reader->read_timeout_ms, true);
-    lat_ph.join(info->reader->read_timeout_ms, true);
-    lon_ph.join(info->reader->read_timeout_ms, true);
-    delta_time.join(info->reader->read_timeout_ms, true);
-    bckgrd_delta_time.join(info->reader->read_timeout_ms, true);
-    bckgrd_rate.join(info->reader->read_timeout_ms, true);
-
-    /* Join Ancillary Geolocation Reads */
-    if(anc_geo_data)
-    {
-        H5DArray* array = NULL;
-        const char* dataset_name = anc_geo_data->first(&array);
-        while(dataset_name != NULL)
-        {
-            array->join(info->reader->read_timeout_ms, true);
-            dataset_name = anc_geo_data->next(&array);
-        }
-    }
-
-    /* Join Ancillary Photon Reads */
-    if(anc_ph_data)
-    {
-        H5DArray* array = NULL;
-        const char* dataset_name = anc_ph_data->first(&array);
-        while(dataset_name != NULL)
-        {
-            array->join(info->reader->read_timeout_ms, true);
-            dataset_name = anc_ph_data->next(&array);
-        }
+        mlog(CRITICAL, "Failed to read ATL03 data: %s", e.what());
+        delete anc_geo_data;
+        delete anc_ph_data;
+        throw;
     }
 }
 
