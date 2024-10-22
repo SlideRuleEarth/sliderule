@@ -130,14 +130,21 @@ class GediFields: public RequestFields
         FieldElement<bool>                      l4_quality_filter {false};
         FieldElement<bool>                      surface_filter {false};
 
+        // backwards compatibility
+        FieldElement<int>                       degrade_flag {0};
+        FieldElement<int>                       l2_quality_flag {0};
+        FieldElement<int>                       l4_quality_flag {0};
+        FieldElement<int>                       surface_flag {0};
+
     private:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        GediFields  (lua_State* L, uint64_t key_space, const char* default_asset_name, const char* default_resource);
+        GediFields (lua_State* L, uint64_t key_space, const char* default_asset_name, const char* default_resource);
         virtual ~GediFields (void) override = default;
+        void fromLua (lua_State* L, int index) override;
 };
 
 /******************************************************************************

@@ -131,7 +131,7 @@ Parameters are passed to the SlideRule endpoints as JSON data structures (or as 
 All polygons provided to SlideRule must be provided as a list of dictionaries containing longitudes and latitudes in counter-clockwise order with the first and last point matching.
 
 * ``"poly"``: polygon of region of interest
-* ``"projection"``: projection used when subsetting data ("north_polar", "south_polar", "plate_carree"). In most cases, do not specify and code will do the right thing.
+* ``"proj"``: projection used when subsetting data ("north_polar", "south_polar", "plate_carree"). In most cases, do not specify and code will do the right thing.
 * ``"ignore_poly_for_cmr"``: boolean for whether to use the polygon as a part of the request to CMR for obtaining the list of resources to process. By default the polygon is used and this is only here for unusual cases where SlideRule is able to handle a polygon for subsetting that CMR cannot, and the list of resources to process is obtained some other way.
 
 For example:
@@ -303,7 +303,7 @@ The default set of parameters used by SlideRule are set to match anticipated use
    * - ``"poly"``
      - String, JSON
      -
-   * - ``"projection"``
+   * - ``"proj"``
      - String
      -
    * - ``"ignore_poly_for_cmr"``

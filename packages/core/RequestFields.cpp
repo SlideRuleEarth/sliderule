@@ -379,7 +379,7 @@ RequestFields::RequestFields(lua_State* L, uint64_t key_space, const std::initia
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     FieldDictionary ({
         {"poly",                &polygon},
-        {"projection",          &projection},
+        {"proj",                &projection},
         {"points_in_polygon",   &pointsInPolygon},
         {"timeout",             &timeout},
         {"rqst_timeout",        &rqstTimeout},

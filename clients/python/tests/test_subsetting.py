@@ -58,7 +58,7 @@ class TestSubsetting:
                  { "lat": -73.0, "lon": -180.00 } ]
         parms = {
             "poly": poly,
-            "projection": "plate_carree",
+            "proj": "plate_carree",
             "srt": icesat2.SRT_LAND,
             "cnf": icesat2.CNF_SURFACE_LOW,
             "ats": 20.0,

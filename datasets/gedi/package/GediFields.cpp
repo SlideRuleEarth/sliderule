@@ -73,19 +73,38 @@ int GediFields::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 GediFields::GediFields(lua_State* L , uint64_t key_space, const char* default_asset_name, const char* default_resource):
     RequestFields (L, key_space,
-        { {"asset",               &asset},
-          {"resource",            &resource},
-          {"beams",               &beams},
-          {"degrade_filter",      &degrade_filter},
-          {"l2_quality_filter",   &l2_quality_filter},
-          {"l4_quality_filter",   &l4_quality_filter},
-          {"surface_filter",      &surface_filter} }),
+        { {"asset",             &asset},
+          {"resource",          &resource},
+          {"beams",             &beams},
+          {"degrade_filter",    &degrade_filter},
+          {"l2_quality_filter", &l2_quality_filter},
+          {"l4_quality_filter", &l4_quality_filter},
+          {"surface_filter",    &surface_filter},
+          // backwards compatibility
+          {"beam",              &beams},
+          {"degrade_flag",      &degrade_flag},
+          {"l2_quality_flag",   &l2_quality_flag},
+          {"l4_quality_flag",   &l4_quality_flag},
+          {"surface_flag",      &surface_flag} }),
     asset(default_asset_name)
 {
     if(default_resource)
     {
         resource = default_resource;
     }
+}
+
+/*----------------------------------------------------------------------------
+ * fromLua
+ *----------------------------------------------------------------------------*/
+void GediFields::fromLua (lua_State* L, int index)
+{
+    RequestFields::fromLua(L, index);
+
+    if(degrade_flag == 1) degrade_filter = true;
+    if(l2_quality_flag == 1) l2_quality_filter = true;
+    if(l4_quality_flag == 1) l4_quality_filter = true;
+    if(surface_flag == 1) surface_filter = true;
 }
 
 /******************************************************************************
