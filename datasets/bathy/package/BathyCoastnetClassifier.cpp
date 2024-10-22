@@ -128,7 +128,7 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
                 .h5_index = 0,
                 .x = x_atc[i],
                 .z = geoid_corr_h[i],
-                .cls = static_cast<size_t>(class_ph[i]),
+                .cls = 0,
                 .prediction = BathyFields::UNCLASSIFIED,
                 .surface_elevation = 0.0,
                 .bathy_elevation = 0.0
@@ -144,7 +144,7 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
 
         // Run classification
         const string model_filename = FString("%s/%s", ContainerRunner::HOST_DIRECTORY, args.model.value.c_str()).c_str();
-        const auto results = classify (args.verbose, samples, model_filename, args.usePredictions);
+        const auto results = classify (args.verbose, samples, model_filename, false);
 
         // Update extents
         for(size_t i = 0; i < number_of_samples; i++)

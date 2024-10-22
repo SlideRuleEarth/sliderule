@@ -124,7 +124,7 @@ bool BathyOpenOceansPPClassifier::run (GeoDataFrame* dataframe)
                 .x = x_atc[i],
                 .z = geoid_corr_h[i],
                 .cls = 0,
-                .prediction = static_cast<unsigned>(class_ph[i]),
+                .prediction = BathyFields::UNCLASSIFIED,
                 .surface_elevation = 0.0,
                 .bathy_elevation = 0.0
             };
@@ -139,7 +139,7 @@ bool BathyOpenOceansPPClassifier::run (GeoDataFrame* dataframe)
 
         // Run classification
         const oopp::params params;
-        samples = classify (samples, params, args.usePredictions);
+        samples = classify (samples, params, false);
 
         // Update extents
         for(size_t i = 0; i < number_of_samples; i++)

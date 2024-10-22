@@ -122,14 +122,12 @@ struct CoastnetFields: public FieldDictionary
     FieldElement<string>  model             {COASTNET_MODEL};
     FieldElement<bool>    setClass          {true};
     FieldElement<bool>    setSurface        {true};
-    FieldElement<bool>    usePredictions    {false};
     FieldElement<bool>    verbose           {true};
 
     CoastnetFields(void):
         FieldDictionary({ {"model",             &model},
                           {"set_class",         &setClass},
                           {"set_surface",       &setSurface},
-                          {"use_predictions",   &usePredictions},
                           {"verbose",           &verbose} }) {
     };
 
@@ -143,13 +141,11 @@ struct OpenOceansPPFields: public FieldDictionary
 {
     FieldElement<bool>      setClass                {false};
     FieldElement<bool>      setSurface              {false};
-    FieldElement<bool>      usePredictions          {false};
     FieldElement<bool>      verbose                 {true};
 
     OpenOceansPPFields(void):
         FieldDictionary({ {"set_class",                 &setClass},
                           {"set_surface",               &setSurface},
-                          {"use_predictions",           &usePredictions},
                           {"verbose",                   &verbose} }) {};
 
     virtual ~OpenOceansPPFields(void) override = default;
