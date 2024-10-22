@@ -48,8 +48,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const double GeoIndexedRaster::DISTANCE  = 0.01;         /* Aproximately 1000 meters at equator */
-const double GeoIndexedRaster::TOLERANCE = DISTANCE/10;  /* Tolerance for simplification */
+const double GeoIndexedRaster::TOLERANCE = 0.01;  /* Tolerance for simplification */
 
 const char* GeoIndexedRaster::FLAGS_TAG = "Fmask";
 const char* GeoIndexedRaster::VALUE_TAG = "Value";
@@ -206,6 +205,10 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
 
     perfStats.clear();
 
+    /* Clear raster cache and file dictionary used by serialized getSamples */
+    cache.clear();
+    fileDictClear();
+
     /* Vector of points and their associated raster groups */
     std::vector<point_groups_t> pointsGroups;
 
@@ -222,19 +225,23 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
             throw RunTimeException(CRITICAL, RTE_ERROR, "Error opening index file");
         }
 
-        /* Rasters to points map */
-        raster_points_map_t rasterToPointsMap;
-
-        /* For all points from the caller, create a vector of raster group lists */
-        if(!findAllGroups(&points, pointsGroups, rasterToPointsMap))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Error creating groups");
-        }
+            /* Rasters to points map */
+            raster_points_map_t rasterToPointsMap;
 
-        /* For all points from the caller, create a vector of unique rasters */
-        if(!findUniqueRasters(uniqueRasters, pointsGroups, rasterToPointsMap))
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Error finding unique rasters");
+            /* For all points from the caller, create a vector of raster group lists */
+            if(!findAllGroups(&points, pointsGroups, rasterToPointsMap))
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Error creating groups");
+            }
+
+            /* For all points from the caller, create a vector of unique rasters */
+            if(!findUniqueRasters(uniqueRasters, pointsGroups, rasterToPointsMap))
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Error finding unique rasters");
+            }
+
+            /* rastersToPointsMap is no longer needed */
         }
 
         /* For all unique rasters, sample them */
@@ -946,10 +953,10 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
         {
             unique_raster_t* ur = breader->uraster;
             GdalRaster* raster = new GdalRaster(breader->obj->parms,
-                                                ur->rinfo->fileName,
+                                                ur->fileName,
                                                 0,                     /* Sample collecting code will set it to group's gpsTime */
                                                 ur->fileId,
-                                                ur->rinfo->dataIsElevation,
+                                                ur->dataIsElevation,
                                                 breader->obj->crscb);
 
             /* Sample all points for this raster */
@@ -1383,7 +1390,7 @@ OGRGeometry* GeoIndexedRaster::getConvexHull(const std::vector<point_info_t>* po
     }
 
     /* Add a buffer around the convex hull to avoid missing edge points */
-    OGRGeometry* bufferedConvexHull = convexHull->Buffer(DISTANCE);
+    OGRGeometry* bufferedConvexHull = convexHull->Buffer(TOLERANCE);
     if(bufferedConvexHull)
     {
         OGRGeometryFactory::destroyGeometry(convexHull);
@@ -1397,7 +1404,7 @@ OGRGeometry* GeoIndexedRaster::getConvexHull(const std::vector<point_info_t>* po
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::applySpatialFilter(OGRLayer* layer, const std::vector<point_info_t>* points)
 {
-    mlog(DEBUG, "Features before spatial filter: %lld", layer->GetFeatureCount());
+    mlog(INFO, "Features before spatial filter: %lld", layer->GetFeatureCount());
 
     const double startTime = TimeLib::latchtime();
 
@@ -1409,10 +1416,6 @@ void GeoIndexedRaster::applySpatialFilter(OGRLayer* layer, const std::vector<poi
     {
         layer->SetSpatialFilter(filter);
         OGRGeometryFactory::destroyGeometry(filter);
-    }
-    else
-    {
-        mlog(ERROR, "Failed to create polygon for spatial filter");
     }
     perfStats.spatialFilterTime = TimeLib::latchtime() - startTime;
 
@@ -1435,14 +1438,14 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
 
     try
     {
-        mlog(DEBUG, "Finding rasters groups for all points");
-
         /* Start rasters groups finder threads */
         std::vector<Thread*> pids;
         std::vector<GroupsFinder*> rgroupFinders;
 
         const uint32_t numMaxThreads = std::thread::hardware_concurrency();
         const uint32_t minPointsPerThread = 100;
+
+        mlog(INFO, "Finding rasters groups for all points with %u threads", numMaxThreads);
 
         std::vector<range_t> pointsRanges;
         getThreadsRanges(pointsRanges, points->size(), minPointsPerThread, numMaxThreads);
@@ -1463,10 +1466,10 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
             delete pid;
         }
 
-        mlog(DEBUG, "All groups finders time: %lf", TimeLib::latchtime() - startTime);
+        mlog(INFO, "All groups finders time: %lf", TimeLib::latchtime() - startTime);
 
         /* Merge the pointGroups for each thread */
-        mlog(DEBUG, "Merging point groups from all threads");
+        mlog(INFO, "Merging point groups from all threads");
         for(GroupsFinder* gf : rgroupFinders)
         {
             pointsGroups.insert(pointsGroups.end(), gf->pointsGroups.begin(), gf->pointsGroups.end());
@@ -1518,6 +1521,9 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
 
     try
     {
+        /* Map to track the index of each unique raster in the uniqueRasters vector */
+        std::unordered_map<std::string, size_t> fileIndexMap;
+
         /* Create vector of unique rasters. */
         mlog(DEBUG, "Finding unique rasters");
         for(const point_groups_t& pg : pointsGroups)
@@ -1529,41 +1535,34 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                 for(raster_info_t& rinfo : rgroup->infovect)
                 {
                     /* Is this raster already in the list of unique rasters? */
-                    bool addNewRaster = true;
-                    for(unique_raster_t* ur : uniqueRasters)
+                    auto it = fileIndexMap.find(rinfo.fileName);
+                    if(it != fileIndexMap.end())
                     {
-                        if(ur->rinfo->fileName == rinfo.fileName)
-                        {
-                            /* already in unique rasters list, set pointer in rinfo to this raster */
-                            rinfo.uraster = ur;
-                            addNewRaster = false;
-                            break;
-                        }
+                        /* Raster is already in the vector of unique rasters, get index from map and update uraster pointer */
+                        rinfo.uraster = uniqueRasters[it->second];
                     }
-
-                    if(addNewRaster)
+                    else
                     {
-                        unique_raster_t* ur = new unique_raster_t();
-                        ur->rinfo = &rinfo;
+                        /* Raster is not in the vector of unique rasters */
+                        unique_raster_t* ur = new unique_raster_t(rinfo.dataIsElevation, rinfo.fileName);
                         ur->fileId = fileDictAdd(rinfo.fileName);
                         uniqueRasters.push_back(ur);
 
-                        /* Set pointer in rinfo to this new unique raster */
+                        /* Set pointer in rinfo to new unique raster */
                         rinfo.uraster = ur;
+
+                        /* Update index map */
+                        fileIndexMap[rinfo.fileName] = uniqueRasters.size() - 1;
                     }
                 }
             }
         }
 
-        /*
-         * For each unique raster, find the points that belong to it
-         */
+        /* For each unique raster, find the points that belong to it */
         mlog(DEBUG, "Finding points for unique rasters");
         for(unique_raster_t* ur : uniqueRasters)
         {
-            const std::string& rasterName = ur->rinfo->fileName;
-
-            auto it = rasterToPointsMap.find(rasterName);
+            auto it = rasterToPointsMap.find(ur->fileName);
             if(it != rasterToPointsMap.end())
             {
                 for(const uint32_t pointIndx : it->second)
@@ -1577,7 +1576,6 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
 
         /* Reduce memory usage */
         uniqueRasters.shrink_to_fit();
-
         status = true;
     }
     catch(const RunTimeException& e)
@@ -1586,7 +1584,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
     }
 
     perfStats.findUniqueRastersTime = TimeLib::latchtime() - startTime;
-    mlog(DEBUG, "Unique rasters time: %lf", perfStats.findUniqueRastersTime);
+    mlog(INFO, "Unique rasters time: %lf", perfStats.findUniqueRastersTime);
 
     return status;
 }
@@ -1683,7 +1681,6 @@ bool GeoIndexedRaster::sampleUniqueRasters(const std::vector<unique_raster_t*>& 
             breader->sync.unlock();
         }
 
-        mlog(DEBUG, "Done Sampling %u rasters", numRasters);
         status = true;
     }
     catch(const RunTimeException& e)
@@ -1692,6 +1689,7 @@ bool GeoIndexedRaster::sampleUniqueRasters(const std::vector<unique_raster_t*>& 
     }
 
     perfStats.samplesTime = TimeLib::latchtime() - startTime;
+    mlog(INFO, "Done Sampling, time: %lf", perfStats.samplesTime);
     return status;
 }
 
@@ -1754,15 +1752,10 @@ bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsG
     mlog(DEBUG, "Merged %d sample lists, time: %lf", sllist.length(), TimeLib::latchtime() - mergeStart);
 
     perfStats.collectSamplesTime = TimeLib::latchtime() - start;
-    mlog(DEBUG, "Populated sllist with %d lists of samples, time: %lf", sllist.length(), perfStats.collectSamplesTime);
+    mlog(INFO, "Populated sllist with %d lists of samples, time: %lf", sllist.length(), perfStats.collectSamplesTime);
 
     return true;
 }
-
-
-
-
-
 
 
 

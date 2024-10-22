@@ -383,6 +383,18 @@ const char* RasterObject::fileDictGetFile (uint64_t fileId)
 }
 
 /*----------------------------------------------------------------------------
+ * fileDictClear
+ *----------------------------------------------------------------------------*/
+void RasterObject::fileDictClear (void)
+{
+    fileDictMut.lock();
+    {
+        fileDict.clear();
+    }
+    fileDictMut.unlock();
+}
+
+/*----------------------------------------------------------------------------
  * getThreadsRanges
  *----------------------------------------------------------------------------*/
 void RasterObject::getThreadsRanges(std::vector<range_t>& ranges, uint32_t num,

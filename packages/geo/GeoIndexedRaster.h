@@ -59,7 +59,6 @@ class GeoIndexedRaster: public RasterObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const double DISTANCE;
         static const double TOLERANCE;
 
         static const int   MAX_CACHE_SIZE     =  20;
@@ -88,20 +87,23 @@ class GeoIndexedRaster: public RasterObject
 
         } point_sample_t;
 
-        struct unique_raster_t;
+        struct UniqueRaster;
         typedef struct RasterInfo {
-            bool                       dataIsElevation;
-            std::string                tag;
-            std::string                fileName;
-            unique_raster_t*           uraster;  // only used for batch reading
+            bool                    dataIsElevation;
+            std::string             tag;
+            std::string             fileName;
+            UniqueRaster*           uraster;  // only used for batch reading
 
             RasterInfo(void): dataIsElevation(false), uraster(NULL) {}
         } raster_info_t;
 
-        typedef struct unique_raster_t {
-            raster_info_t*              rinfo;
+        typedef struct UniqueRaster {
+            bool                        dataIsElevation;
+            const std::string&          fileName;
             uint64_t                    fileId;
             std::vector<point_sample_t> pointSamples;
+            explicit UniqueRaster(bool _dataIsElevation, const std::string& _fileName):
+                                 dataIsElevation(_dataIsElevation), fileName(_fileName), fileId(0) {}
         } unique_raster_t;
 
         typedef struct RaserGroup {
@@ -168,7 +170,7 @@ class GeoIndexedRaster: public RasterObject
             explicit SampleCollector(GeoIndexedRaster* _obj, const std::vector<point_groups_t>& _pointsGroups);
         } sample_collector_t;
 
-        /* Typedef for the global map (raster file name -> set of unique point IDs) */
+        /* Typedef for the map of raster file name -> set of unique ordered points */
         typedef std::unordered_map<std::string, std::set<uint32_t>> raster_points_map_t;
 
         typedef struct GroupsFinder {
