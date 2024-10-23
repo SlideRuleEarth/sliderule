@@ -139,7 +139,7 @@ bool BathyOpenOceansPPClassifier::run (GeoDataFrame* dataframe)
 
         // Run classification
         const oopp::params params;
-        samples = classify (samples, params, false);
+        samples = classify (samples, params);
 
         // Update extents
         for(size_t i = 0; i < number_of_samples; i++)

@@ -35,6 +35,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <ATL24_coastnet/precompiled.h>
 #include <ATL24_coastnet/utils.h>
 #include <ATL24_coastnet/coastnet.h>
 
@@ -144,7 +145,7 @@ bool BathyCoastnetClassifier::run (GeoDataFrame* dataframe)
 
         // Run classification
         const string model_filename = FString("%s/%s", ContainerRunner::HOST_DIRECTORY, args.model.value.c_str()).c_str();
-        const auto results = classify (args.verbose, samples, model_filename, false);
+        const auto results = classify (args.verbose, samples, model_filename);
 
         // Update extents
         for(size_t i = 0; i < number_of_samples; i++)
