@@ -1414,7 +1414,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
 
             "poly": [{"lat": <lat1>, "lon": <lon1> }, ...],
 
-            "region_mask": {"data": <geojson file as string>,
+            "raster": {"data": <geojson file as string>,
 
             "clusters": [[{"lat": <lat1>, "lon": <lon1>}, ...], [{"lat": <lat1>, "lon": <lon1>}, ...]] }
 
@@ -1564,7 +1564,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         "gdf": gdf,
         "poly": polygon, # convex hull of polygons
         "clusters": clusters, # list of polygon clusters for cmr request
-        "region_mask": {
+        "raster": {
             "geojson": datafile, # geojson file
             "length": len(datafile), # geojson file length
             "cellsize": cellsize  # units are in crs/projection

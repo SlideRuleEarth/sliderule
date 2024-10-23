@@ -35,8 +35,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <ATL24_coastnet/precompiled.h>
-#include <ATL24_coastnet/utils.h>
 #include <ATL24_coastnet/coastnet.h>
 
 #include "ContainerRunner.h"

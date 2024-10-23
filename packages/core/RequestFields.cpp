@@ -397,6 +397,8 @@ RequestFields::RequestFields(lua_State* L, uint64_t key_space, const std::initia
         #ifdef __geo__
         {GeoFields::PARMS,      &samplers},
         #endif
+        // deprecated
+        {"raster",              &regionMask},
     })
 {
     // set key space
