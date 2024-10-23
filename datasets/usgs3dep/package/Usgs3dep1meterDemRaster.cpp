@@ -94,7 +94,7 @@ void Usgs3dep1meterDemRaster::getIndexFile(const OGRGeometry* geo, std::string& 
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool Usgs3dep1meterDemRaster::findRasters(finder_t* finder)
+bool Usgs3dep1meterDemRaster::findRasters(raster_finder_t* finder)
 {
     const std::vector<OGRFeature*>* flist = finder->featuresList;
     const OGRGeometry* geo = finder->geo;
@@ -112,7 +112,7 @@ bool Usgs3dep1meterDemRaster::findRasters(finder_t* finder)
             if (!rastergeo->Intersects(geo)) continue;
 
             rasters_group_t* rgroup = new rasters_group_t;
-            rgroup->id = feature->GetFieldAsString("id");
+            rgroup->featureId = feature->GetFieldAsString("id");
             rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
 
             const char* fname = feature->GetFieldAsString("url");
@@ -128,7 +128,7 @@ bool Usgs3dep1meterDemRaster::findRasters(finder_t* finder)
                 rgroup->infovect.push_back(rinfo);
             }
 
-            // mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
+            // mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->featureId.c_str(), rgroup->infovect.size());
             finder->rasterGroups.push_back(rgroup);
         }
         // mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());

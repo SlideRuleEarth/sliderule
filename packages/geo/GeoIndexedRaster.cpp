@@ -90,9 +90,9 @@ GeoIndexedRaster::Reader::~Reader (void)
 }
 
 /*----------------------------------------------------------------------------
- * Finder Constructor
+ * RasterFinder Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::Finder::Finder (const OGRGeometry* _geo, const std::vector<OGRFeature*>* _featuresList):
+GeoIndexedRaster::RasterFinder::RasterFinder (const OGRGeometry* _geo, const std::vector<OGRFeature*>* _featuresList):
     geo(_geo),
     featuresList(_featuresList)
 {
@@ -749,7 +749,7 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps, GroupOrdering* grou
     /* Query the R-tree with the OGRPoint and get the result features */
     geoRtree.query(geo, foundFeatures);
 
-    finder_t finder(geo, &foundFeatures);
+    raster_finder_t finder(geo, &foundFeatures);
     if(!findRasters(&finder))
         return false;
 
@@ -1021,7 +1021,7 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         }
 
         /* Set finder for the found features */
-        Finder finder(&ogrPoint, &localFeatures);
+        RasterFinder finder(&ogrPoint, &localFeatures);
 
         /* Find rasters intersecting with ogrPoint */
         gf->obj->findRasters(&finder);
@@ -1419,7 +1419,7 @@ void GeoIndexedRaster::applySpatialFilter(OGRLayer* layer, const std::vector<poi
     }
     perfStats.spatialFilterTime = TimeLib::latchtime() - startTime;
 
-    mlog(DEBUG, "Features after spatial filter: %lld", layer->GetFeatureCount());
+    mlog(INFO, "Features after spatial filter: %lld", layer->GetFeatureCount());
     mlog(DEBUG, "Spatial filter time: %.3lf", perfStats.spatialFilterTime);
 }
 

@@ -183,7 +183,7 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file,
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool PgcDemStripsRaster::findRasters(finder_t* finder)
+bool PgcDemStripsRaster::findRasters(raster_finder_t* finder)
 {
     const std::vector<OGRFeature*>* flist = finder->featuresList;
     const OGRGeometry* geo = finder->geo;
