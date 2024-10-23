@@ -156,7 +156,7 @@ There is no limit to the number of points in the polygon, but note that as the n
 
 One of the outputs of the ``sliderule.toregion`` function is a GeoJSON object that describes the region of interest.  It is available under the ``"region_mask"`` element of the returned dictionary.
 
-* ``"region_mask"``: geojson describing region of interest, enables use of rasterized region for subsetting
+* ``"raster"``: geojson describing region of interest, enables use of rasterized region for subsetting
 
 When supplied in the parameters sent in the request, the server side software forgoes using the polygon for subsetting operations, and instead builds a raster of the GeoJSON object using the specified cellsize, and then uses that raster image as a mask to determine which points in the source datasets are included in the region of interest.
 
@@ -169,7 +169,7 @@ The example code below shows how this option can be enabled and used (note, the 
     region = sliderule.toregion('examples/grandmesa.geojson', cellsize=0.02)
     parms = {
         "poly": region['poly'],
-        "region_mask": region['region_mask']
+        "region_mask": region['raster']
     }
 
 5.3 Time

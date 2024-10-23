@@ -111,7 +111,7 @@ def initialize_client(args):
         region = sliderule.toregion(cfg["region"])
         parms["poly"] = region['poly']
         if cfg["region_mask"]:
-            parms["region_mask"] = region['region_mask']
+            parms["region_mask"] = region['raster']
 
     # Add Ancillary Fields
     if len(cfg['atl03_geo_fields']) > 0:

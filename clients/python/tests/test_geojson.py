@@ -15,7 +15,7 @@ class TestGeoJson:
             region = sliderule.toregion(os.path.join(TESTDIR, testfile))
             parms = {
                 "poly": region["poly"],
-                "region_mask": region["region_mask"],
+                "region_mask": region["raster"],
                 "srt": icesat2.SRT_LAND,
                 "cnf": icesat2.CNF_SURFACE_HIGH,
                 "ats": 10.0,
