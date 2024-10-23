@@ -40,6 +40,18 @@ local function proxy(resources, parms_tbl, endpoint, rec)
         end
     end
 
+    -- Populate Resources via CMR Request --
+    if not resources then
+        local rc, rsps = earthdata.cmr(parms_tbl)
+        if rc == earthdata.SUCCESS then
+            resources = rsps
+            userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> retrieved %d resources from CMR", rspq, #resources))
+        else
+            userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("request <%s> failed to make CMR request <%d>: %s", rspq, rc, rsps))
+            return
+        end
+    end
+
     -- Create Request Parameters --
     local parms = core.parms(parms_tbl)
 
@@ -72,18 +84,6 @@ local function proxy(resources, parms_tbl, endpoint, rec)
 
     -- Determine Locks per Node --
     local locks_per_node = (parms["poly"] and not parms["ignore_poly_for_cmr"]) and 1 or core.MAX_LOCKS_PER_NODE
-
-    -- Populate Resources via CMR Request --
-    if not resources then
-        local rc, rsps = earthdata.cmr(parms)
-        if rc == earthdata.SUCCESS then
-            resources = rsps
-            userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> retrieved %d resources from CMR", rspq, #resources))
-        else
-            userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("request <%s> failed to make CMR request <%d>: %s", rspq, rc, rsps))
-            return
-        end
-    end
 
     -- Proxy Request --
     local endpoint_proxy = core.proxy(endpoint, resources, json.encode(parms_tbl), node_timeout, locks_per_node, rsps_from_nodes, terminate_proxy_stream, cluster_size_hint)
