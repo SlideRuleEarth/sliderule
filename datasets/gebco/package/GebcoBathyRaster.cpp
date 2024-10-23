@@ -69,7 +69,7 @@ void GebcoBathyRaster::getIndexFile(const OGRGeometry* geo, std::string& file, c
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool GebcoBathyRaster::findRasters(finder_t* finder)
+bool GebcoBathyRaster::findRasters(raster_finder_t* finder)
 {
     const std::vector<OGRFeature*>* flist = finder->featuresList;
     const OGRGeometry* geo = finder->geo;
@@ -86,7 +86,7 @@ bool GebcoBathyRaster::findRasters(finder_t* finder)
             if (!rastergeo->Intersects(geo)) continue;
 
             rasters_group_t* rgroup = new rasters_group_t;
-            rgroup->id = feature->GetFieldAsString("id");
+            rgroup->featureId = feature->GetFieldAsString("id");
             rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
 
             const char* dataFile  = feature->GetFieldAsString("data_raster");
@@ -113,7 +113,7 @@ bool GebcoBathyRaster::findRasters(finder_t* finder)
             }
             rgroup->infovect.shrink_to_fit();
 
-            mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
+            mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->featureId.c_str(), rgroup->infovect.size());
             for(unsigned j = 0; j < rgroup->infovect.size(); j++)
                 mlog(DEBUG, "  %s", rgroup->infovect[j].fileName.c_str());
 

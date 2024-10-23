@@ -150,7 +150,7 @@ void LandsatHlsRaster::getIndexFile(const OGRGeometry* geo, std::string& file, c
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/
-bool LandsatHlsRaster::findRasters(finder_t* finder)
+bool LandsatHlsRaster::findRasters(raster_finder_t* finder)
 {
     const std::vector<OGRFeature*>* flist = finder->featuresList;
     const OGRGeometry* geo = finder->geo;
@@ -166,9 +166,9 @@ bool LandsatHlsRaster::findRasters(finder_t* finder)
 
             if (!rastergeo->Intersects(geo)) continue;
 
-            /* Set raster group time and group id */
+            /* Set raster group time and group featureId */
             rasters_group_t* rgroup = new rasters_group_t;
-            rgroup->id = feature->GetFieldAsString("id");
+            rgroup->featureId = feature->GetFieldAsString("id");
             rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
 
             /* Find each requested band in the index file */
@@ -207,7 +207,7 @@ bool LandsatHlsRaster::findRasters(finder_t* finder)
                 }
             }
 
-            // mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->id.c_str(), rgroup->infovect.size());
+            // mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->featureId.c_str(), rgroup->infovect.size());
             finder->rasterGroups.push_back(rgroup);
         }
         // mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
@@ -274,10 +274,10 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
     bool isS2 = false;
     std::size_t pos;
 
-    pos = rgroup->id.find("HLS.L30");
+    pos = rgroup->featureId.find("HLS.L30");
     if(pos != std::string::npos) isL8 = true;
 
-    pos = rgroup->id.find("HLS.S30");
+    pos = rgroup->featureId.find("HLS.S30");
     if(pos != std::string::npos) isS2 = true;
 
     if(!isL8 && !isS2)
@@ -407,7 +407,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
     }
 
     const double groupTime = rgroup->gpsTime / 1000;
-    const std::string groupName = rgroup->id + " {\"algo\": \"";
+    const std::string groupName = rgroup->featureId + " {\"algo\": \"";
 
     /* Calculate algos - make sure that all the necessary bands were read */
     if(ndsi)

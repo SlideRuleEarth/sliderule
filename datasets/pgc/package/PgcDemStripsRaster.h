@@ -54,7 +54,7 @@ class PgcDemStripsRaster: public GeoIndexedRaster
                 ~PgcDemStripsRaster (void) override;
         bool     getFeatureDate     (const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate) final;
         void     getIndexFile       (const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points) final;
-        bool     findRasters        (finder_t* finder) final;
+        bool     findRasters        (raster_finder_t* finder) final;
 
     private:
         void    _getIndexFile       (double lon, double lat, std::string& file);
