@@ -338,7 +338,7 @@ GeoDataFrame::~GeoDataFrame(void)
     {
         GeoDataFrame::FrameRunner* runner;
         recv_status = subRunQ.receiveCopy(&runner, sizeof(runner), SYS_TIMEOUT);
-        if(recv_status > 0) runner->releaseLuaObject();
+        if(recv_status > 0 && runner) runner->releaseLuaObject();
     }
 }
 
