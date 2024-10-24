@@ -531,7 +531,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
         int32_t photon_in_segment = 0; // the photon number in the current segment
         int32_t bckgrd_index = 0; // background 50Hz group
         int32_t low_rate_index = 0; // ATL09 low rate group
-        float wind_v = 0.0; // segment level wind speed
+        float wind_v = BathyFields::DEFAULT_WIND_SPEED; // segment level wind speed
         bool on_boundary = true; // true when a spatial subsetting boundary is encountered
 
         /* Set Spot*/

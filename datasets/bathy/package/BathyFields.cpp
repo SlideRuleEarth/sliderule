@@ -44,6 +44,7 @@
 const double BathyFields::NIGHT_SOLAR_ELEVATION_THRESHOLD = 5.0; // degrees
 const double BathyFields::MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY = 0.0; // meters
 const double BathyFields::MINIMUM_VERTICAL_SUBAQUEOUS_UNCERTAINTY = 0.10; // meters
+const double BathyFields::DEFAULT_WIND_SPEED = 3.3; // meters
 
 /******************************************************************************
  * METHODS

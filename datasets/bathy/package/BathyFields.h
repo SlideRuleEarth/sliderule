@@ -45,8 +45,8 @@
  * INCLUDES
  ******************************************************************************/
 
-#define COASTNET_MODEL  "coastnet_model-20241023.json"
-#define QTREES_MODEL    "qtrees_model-20241023.json"
+#define COASTNET_MODEL  "coastnet_model-20241024.json"
+#define QTREES_MODEL    "qtrees_model-20241024.json"
 #define ENSEMBLE_MODEL  "ensemble_model-20241009.json"
 #define POINTNET_MODEL  "pointnet2_model.pth"
 
@@ -195,6 +195,7 @@ class BathyFields: public Icesat2Fields
         static const double NIGHT_SOLAR_ELEVATION_THRESHOLD;
         static const double MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY;
         static const double MINIMUM_VERTICAL_SUBAQUEOUS_UNCERTAINTY;
+        static const double DEFAULT_WIND_SPEED;
 
         /*--------------------------------------------------------------------
          * Typedefs
