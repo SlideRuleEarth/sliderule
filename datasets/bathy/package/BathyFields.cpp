@@ -120,6 +120,9 @@ BathyFields::BathyFields(lua_State* L, uint64_t key_space, const char* default_a
           {"surface",             &surface},
           {"refraction",          &refraction},
           {"uncertainty",         &uncertainty},
+          {"coastnet",            &coastnet},
+          {"qtrees",              &qtrees},
+          {"openoceanspp",        &openoceanspp},
           {"coastnet_version",    &coastnetVersion},
           {"qtrees_version",      &qtreesVersion},
           {"openoceanspp_version",&openoceansppVersion} })
