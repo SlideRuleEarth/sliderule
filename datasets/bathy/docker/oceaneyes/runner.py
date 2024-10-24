@@ -80,6 +80,7 @@ format  = settings.get('format', 'parquet')
 # #####################
 
 beam_list = [] # list of beams there is data for
+beam_failures = [] # list of beams that encountered an error
 beam_table = {} # [beam] => DataFrame
 spot_table = {} # [beam] => spot
 rqst_parms = {} # request parameters
@@ -109,118 +110,140 @@ for beam in BEAMS:
 # #####################
 
 def cshelph(spot, df):
-    parms = settings.get('cshelph', {})
-    results = CSHELPH.c_shelph_classification(
-        df[["lat_ph", "lon_ph", "geoid_corr_h", "index_ph", "class_ph"]],
-        surface_buffer      = parms.get('surface_buffer', -0.5),
-        h_res               = parms.get('h_res', 0.5),
-        lat_res             = parms.get('lat_res', 0.001),
-        thresh              = parms.get('thresh', 25),
-        min_buffer          = parms.get('min_buffer', -80),
-        max_buffer          = parms.get('max_buffer', 5),
-        min_photons_per_bin = parms.get('min_photons_per_bin', 5),
-        sea_surface_label   = 41,
-        bathymetry_label    = 40 )
-    print(f'cshelph completed spot {spot}')
-    return results['classification'].astype(np.int8)
+    try:
+        parms = settings.get('cshelph', {})
+        results = CSHELPH.c_shelph_classification(
+            df[["lat_ph", "lon_ph", "geoid_corr_h", "index_ph", "class_ph"]],
+            surface_buffer      = parms.get('surface_buffer', -0.5),
+            h_res               = parms.get('h_res', 0.5),
+            lat_res             = parms.get('lat_res', 0.001),
+            thresh              = parms.get('thresh', 25),
+            min_buffer          = parms.get('min_buffer', -80),
+            max_buffer          = parms.get('max_buffer', 5),
+            min_photons_per_bin = parms.get('min_photons_per_bin', 5),
+            sea_surface_label   = 41,
+            bathymetry_label    = 40 )
+        print(f'cshelph completed spot {spot}')
+        return results['classification'].astype(np.int8)
+    except Exception as e:
+        print(f'cshelph failed on spot {spot} with error: {e}')
+        return None
 
 # #####################
 # MedianFilter
 # #####################
 
 def medianfilter(spot, df):
-    parms = settings.get('medianfilter', {})
-    results = MEDIANFILTER.rolling_median_bathy_classification(
-        point_cloud         = df[["lat_ph", "lon_ph", "geoid_corr_h", "index_ph", "class_ph"]],
-        window_sizes        = parms.get('window_sizes', [51, 30, 7]) ,
-        kdiff               = parms.get('kdiff', 0.75),
-        kstd                = parms.get('kstd', 1.75),
-        high_low_buffer     = parms.get('high_low_buffer', 4),
-        min_photons         = parms.get('min_photons', 14),
-        segment_length      = parms.get('segment_length', 0.001),
-        compress_heights    = parms.get('compress_heights', None),
-        compress_lats       = parms.get('compress_lats', None))
-    print(f'medianfilter completed spot {spot}')
-    return results['classification'].astype(np.int8)
+    try:
+        parms = settings.get('medianfilter', {})
+        results = MEDIANFILTER.rolling_median_bathy_classification(
+            point_cloud         = df[["lat_ph", "lon_ph", "geoid_corr_h", "index_ph", "class_ph"]],
+            window_sizes        = parms.get('window_sizes', [51, 30, 7]) ,
+            kdiff               = parms.get('kdiff', 0.75),
+            kstd                = parms.get('kstd', 1.75),
+            high_low_buffer     = parms.get('high_low_buffer', 4),
+            min_photons         = parms.get('min_photons', 14),
+            segment_length      = parms.get('segment_length', 0.001),
+            compress_heights    = parms.get('compress_heights', None),
+            compress_lats       = parms.get('compress_lats', None))
+        print(f'medianfilter completed spot {spot}')
+        return results['classification'].astype(np.int8)
+    except Exception as e:
+        print(f'medianfilter failed on spot {spot} with error: {e}')
+        return None
 
 # #####################
 # BathyPathFinder
 # #####################
 
 def bathypathfinder(spot, df):
-    # get parameters
-    parms           = settings.get('bathypathfinder', {})
-    tau             = parms.get('tau', 0.5)
-    k               = parms.get('k', 15)
-    n               = parms.get('n', 99)
-    find_surface    = parms.get('find_surface', False)
+    try:
+        # get parameters
+        parms           = settings.get('bathypathfinder', {})
+        tau             = parms.get('tau', 0.5)
+        k               = parms.get('k', 15)
+        n               = parms.get('n', 99)
+        find_surface    = parms.get('find_surface', False)
 
-    # build dataframe to process
-    bathy_df = pd.DataFrame()
-    bathy_df['x_atc'] = df['x_atc'].values
-    bathy_df['geoid_corr_h'] = df['geoid_corr_h'].values
-    bathy_df['class_ph'] = df['class_ph'].values
+        # build dataframe to process
+        bathy_df = pd.DataFrame()
+        bathy_df['x_atc'] = df['x_atc'].values
+        bathy_df['geoid_corr_h'] = df['geoid_corr_h'].values
+        bathy_df['class_ph'] = df['class_ph'].values
 
-    # keep only photons below sea surface
-    if not find_surface:
-        sea_surface_df = bathy_df[bathy_df['class_ph'] == 41]
-        sea_surface_bottom = sea_surface_df['geoid_corr_h'].min()
-        data_df = bathy_df.loc[bathy_df['geoid_corr_h'] < sea_surface_bottom] # remove sea photons and above
-    else:
-        data_df = bathy_df
+        # keep only photons below sea surface
+        if not find_surface:
+            sea_surface_df = bathy_df[bathy_df['class_ph'] == 41]
+            sea_surface_bottom = sea_surface_df['geoid_corr_h'].min()
+            data_df = bathy_df.loc[bathy_df['geoid_corr_h'] < sea_surface_bottom] # remove sea photons and above
+        else:
+            data_df = bathy_df
 
-    # run bathy pathfinder
-    bps = BathyPathSearch(tau, k, n)
-    bps.fit(data_df['x_atc'], data_df['geoid_corr_h'], find_surface)
+        # run bathy pathfinder
+        bps = BathyPathSearch(tau, k, n)
+        bps.fit(data_df['x_atc'], data_df['geoid_corr_h'], find_surface)
 
-    # write bathy classifications to spot df
-    bathy_df['bathypathfinder'] = 0
-    bathy_df.loc[bps.bathy_photons.index, 'bathypathfinder'] = 40
-    if not find_surface:
-        bathy_df.loc[sea_surface_df.index, 'bathypathfinder'] = 41
-    else:
-        bathy_df.loc[bps.sea_surface_photons.index, 'bathypathfinder'] = 41
+        # write bathy classifications to spot df
+        bathy_df['bathypathfinder'] = 0
+        bathy_df.loc[bps.bathy_photons.index, 'bathypathfinder'] = 40
+        if not find_surface:
+            bathy_df.loc[sea_surface_df.index, 'bathypathfinder'] = 41
+        else:
+            bathy_df.loc[bps.sea_surface_photons.index, 'bathypathfinder'] = 41
 
-    print(f'bathypathfinder completed spot {spot}')
-    return bathy_df['bathypathfinder'].to_numpy()
+        print(f'bathypathfinder completed spot {spot}')
+        return bathy_df['bathypathfinder'].to_numpy()
+
+    except Exception as e:
+        print(f'bathypathfinder failed on spot {spot} with error: {e}')
+        return None
 
 # #####################
 # PointNet2
 # #####################
 
 def pointnet(spot, df):
-    parms = settings.get('pointnet', {})
-    results = PointNet2(df[['index_ph', 'x_ph', 'y_ph', 'geoid_corr_h', 'max_signal_conf', 'class_ph', 'surface_h']],
-        model_filename          = parms.get('model_filename', '/data/pointnet2_model.pth'),
-        maxElev                 = parms.get('maxElev', 10),
-        minElev                 = parms.get('minElev', -50),
-        minSignalConf           = parms.get('minSignalConf', 3),
-        gpu                     = parms.get('gpu', "0"),
-        num_point               = parms.get('num_point', 8192),
-        batch_size              = parms.get('batch_size', 8),
-        num_votes               = parms.get('num_votes', 10),
-        threshold               = parms.get('threshold', 0.5),
-        model_seed              = parms.get('model_seed', 24),
-        seaSurfaceDecimation    = parms.get('seaSurfaceDecimation', 0.8)) # removes 80% of sea surface
-    print(f'pointnet completed spot {spot}')
-    return results
+    try:
+        parms = settings.get('pointnet', {})
+        results = PointNet2(df[['index_ph', 'x_ph', 'y_ph', 'geoid_corr_h', 'max_signal_conf', 'class_ph', 'surface_h']],
+            model_filename          = parms.get('model_filename', '/data/pointnet2_model.pth'),
+            maxElev                 = parms.get('maxElev', 10),
+            minElev                 = parms.get('minElev', -50),
+            minSignalConf           = parms.get('minSignalConf', 3),
+            gpu                     = parms.get('gpu', "0"),
+            num_point               = parms.get('num_point', 8192),
+            batch_size              = parms.get('batch_size', 8),
+            num_votes               = parms.get('num_votes', 10),
+            threshold               = parms.get('threshold', 0.5),
+            model_seed              = parms.get('model_seed', 24),
+            seaSurfaceDecimation    = parms.get('seaSurfaceDecimation', 0.8)) # removes 80% of sea surface
+        print(f'pointnet completed spot {spot}')
+        return results
+    except Exception as e:
+        print(f'pointnet failed on spot {spot} with error: {e}')
+        return None
 
 # #####################
 # OpenOceans
 # #####################
 
 def openoceans(spot, df):
-    parms = settings.get('openoceans', {})
-    results = OpenOceans(df[['index_ph', 'x_ph', 'y_ph', 'geoid_corr_h', 'max_signal_conf', 'class_ph', 'surface_h']],
-        spot            = spot,
-        res_along_track = parms.get('res_along_track', 10),
-        res_z           = parms.get('res_z', 0.2),
-        window_size     = parms.get('window_size', 11), # 3x overlap is not enough to filter bad daytime noise
-        range_z         = parms.get('range_z', [-50, 30]), # include at least a few meters more than 5m above the surface for noise estimation, key for daytime case noise filtering
-        verbose         = parms.get('verbose', False), # not really fully integrated, it's still going to print some recent debugging statements
-        chunk_size      = parms.get('chunk_size', 65536)) # number of photons to process at one time
-    print(f'openoceans completed spot {spot}')
-    return results
+    try:
+        parms = settings.get('openoceans', {})
+        results = OpenOceans(df[['index_ph', 'x_ph', 'y_ph', 'geoid_corr_h', 'max_signal_conf', 'class_ph', 'surface_h']],
+            spot            = spot,
+            res_along_track = parms.get('res_along_track', 10),
+            res_z           = parms.get('res_z', 0.2),
+            window_size     = parms.get('window_size', 11), # 3x overlap is not enough to filter bad daytime noise
+            range_z         = parms.get('range_z', [-50, 30]), # include at least a few meters more than 5m above the surface for noise estimation, key for daytime case noise filtering
+            verbose         = parms.get('verbose', False), # not really fully integrated, it's still going to print some recent debugging statements
+            chunk_size      = parms.get('chunk_size', 65536)) # number of photons to process at one time
+        print(f'openoceans completed spot {spot}')
+        return results
+    except Exception as e:
+        print(f'openoceans failed on spot {spot} with error: {e}')
+        return None
+
 
 # #####################
 # Ensemble
@@ -255,10 +278,17 @@ def runClassifier(classifier, classifier_func, num_processes=6):
             pool.close()
             pool.join()
             for i in range(len(beam_list)):
-                beam_table[beam_list[i]][classifier] = results[i]
+                if results[i] != None:
+                    beam_table[beam_list[i]][classifier] = results[i]
+                else:
+                    beam_failures.append(beam_list[i])
         else:
             for beam in beam_list:
-                beam_table[beam][classifier] = classifier_func(spot_table[beam], beam_table[beam])
+                result = classifier_func(spot_table[beam], beam_table[beam])
+                if result != None:
+                    beam_table[beam][classifier] = result
+                else:
+                    beam_failures.append(beam)
     duration = time.time() - start
     print(f'{classifier} finished in {duration:.03f} seconds')
     return duration
@@ -273,6 +303,11 @@ profile["ensemble"] = runClassifier("ensemble", ensemble)
 # #####################
 # DataFrame & MetaData
 # #####################
+
+# remove beams that had failures
+for beam in beam_failures:
+    if beam in beam_list:
+        beam_list.remove(beam)
 
 # create one large dataframe of all spots
 df = pd.concat([beam_table[beam] for beam in beam_list])
