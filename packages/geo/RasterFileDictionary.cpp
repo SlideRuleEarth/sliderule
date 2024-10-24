@@ -47,13 +47,16 @@ Mutex RasterFileDictionary::mutex;
  * PUBLIC METHODS
  ******************************************************************************/
 
+/*
+ *  NOTE: only add() method is thread safe
+ */
+
 /*----------------------------------------------------------------------------
  * addFile
  *----------------------------------------------------------------------------*/
 uint64_t RasterFileDictionary::add(const string& fileName)
 {
     uint64_t id;
-
     mutex.lock();
     {
         if(!fileDict.find(fileName.c_str(), &id))
@@ -73,20 +76,17 @@ uint64_t RasterFileDictionary::add(const string& fileName)
 const char* RasterFileDictionary::get(uint64_t fileId)
 {
     const char* fileName = NULL;
-    mutex.lock();
+
+    /* Mask upper 32 bits to get index into vector */
+    const uint32_t index = static_cast<uint32_t>(fileId & 0xFFFFFFFF);
+    if(index < fileVector.size())
     {
-        /* Mask upper 32 bits to get index into vector */
-        const uint32_t index = static_cast<uint32_t>(fileId & 0xFFFFFFFF);
-        if (index < fileVector.size())
-        {
-            fileName = fileVector[index].c_str();
-        }
-        else
-        {
-            mlog(ERROR, "Invalid fileId: %lu", fileId);
-        }
+        fileName = fileVector[index].c_str();
     }
-    mutex.unlock();
+    else
+    {
+        mlog(ERROR, "Invalid fileId: %lu", fileId);
+    }
     return fileName;
 }
 
@@ -95,12 +95,8 @@ const char* RasterFileDictionary::get(uint64_t fileId)
  *----------------------------------------------------------------------------*/
 void RasterFileDictionary::clear (void)
 {
-    mutex.lock();
-    {
-        fileDict.clear();
-        fileVector.clear();
-    }
-    mutex.unlock();
+    fileDict.clear();
+    fileVector.clear();
 }
 
 /*----------------------------------------------------------------------------
@@ -108,9 +104,5 @@ void RasterFileDictionary::clear (void)
  *----------------------------------------------------------------------------*/
 Dictionary<uint64_t>::Iterator RasterFileDictionary::getIter(void)
 {
-    /*
-     * Not thread safe, user must not modify dictionary.
-     * Should be called when dictionary is not being modified.
-     */
     return Dictionary<uint64_t>::Iterator(fileDict);
 }

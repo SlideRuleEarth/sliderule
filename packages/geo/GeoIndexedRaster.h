@@ -94,8 +94,8 @@ class GeoIndexedRaster: public RasterObject
         /** Raster information needed for sampling */
         typedef struct RasterInfo {
             bool                    dataIsElevation;
-            std::string             tag;          // "Value", "Flags", "Date"
-            std::string             fileName;     // Raster file name
+            std::string             tag;          // "Dem", "Flags", "Date"
+            uint64_t                fileId;       // file dictionary id
             UniqueRaster*           uraster;      // Pointer to the unique raster which contains the sample for this raster
 
             RasterInfo(void): dataIsElevation(false), uraster(NULL) {}
@@ -114,11 +114,10 @@ class GeoIndexedRaster: public RasterObject
         /* Raster and associated points to sample, used by batch sampling */
         typedef struct UniqueRaster {
             bool                        dataIsElevation;
-            const std::string&          fileName;
-            uint64_t                    fileId;         // fileDictionary id
+            uint64_t                    fileId;         // file dictionary id
             std::vector<point_sample_t> pointSamples;   // vector of samples for each point in this raster
-            explicit UniqueRaster(bool _dataIsElevation, const std::string& _fileName):
-                                 dataIsElevation(_dataIsElevation), fileName(_fileName), fileId(0) {}
+            explicit UniqueRaster(bool _dataIsElevation, uint64_t _fileId):
+                                 dataIsElevation(_dataIsElevation), fileId(_fileId) {}
         } unique_raster_t;
 
         typedef Ordering<rasters_group_t*, unsigned long> GroupOrdering;
@@ -184,6 +183,7 @@ class GeoIndexedRaster: public RasterObject
             const std::vector<point_info_t>* points;
             std::vector<point_groups_t>      pointsGroups;
             raster_points_map_t              rasterToPointsMap;
+            RasterFileDictionary             threadFileDict;
 
             explicit GroupsFinder (GeoIndexedRaster* _obj, const std::vector<point_info_t>* _points);
         } groups_finder_t;
@@ -193,7 +193,8 @@ class GeoIndexedRaster: public RasterObject
             const OGRGeometry*              geo;
             const std::vector<OGRFeature*>* featuresList;  // features to test for intersection with geo
             std::vector<rasters_group_t*>   rasterGroups;  // result raster groups which intersect with geo
-            explicit RasterFinder(const OGRGeometry* geo, const std::vector<OGRFeature*>* _featuresList);
+            RasterFileDictionary&           fileDict;
+            explicit RasterFinder(const OGRGeometry* geo, const std::vector<OGRFeature*>* _featuresList, RasterFileDictionary& _fileDict);
         } raster_finder_t;
 
         /*--------------------------------------------------------------------
@@ -309,7 +310,7 @@ class GeoIndexedRaster: public RasterObject
         bool            createBatchReaderThreads(uint32_t rasters2sample);
 
         bool            updateCache         (uint32_t& rasters2sample, const GroupOrdering* groupList);
-        bool            filterRasters       (int64_t gps, GroupOrdering* groupList);
+        bool            filterRasters       (int64_t gps, GroupOrdering* groupList, RasterFileDictionary& dict);
         static OGRGeometry* getConvexHull   (const std::vector<point_info_t>* points);
         void            applySpatialFilter  (OGRLayer* layer, const std::vector<point_info_t>* points);
 

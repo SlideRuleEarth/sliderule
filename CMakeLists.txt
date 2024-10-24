@@ -20,7 +20,8 @@ if(NOT CMAKE_BUILD_PLATFORM)
 endif()
 
 # Configure static analysis
-if(CMAKE_BUILD_TYPE MATCHES "Debug")
+#if(CMAKE_BUILD_TYPE MATCHES "Debug")
+if(CMAKE_BUILD_TYPE MATCHES "ERIC")
     message(STATUS "Enabling static analysis")
 
 ### https://clang.llvm.org/extra/clang-tidy/

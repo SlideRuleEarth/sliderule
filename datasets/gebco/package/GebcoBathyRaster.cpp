@@ -95,7 +95,7 @@ bool GebcoBathyRaster::findRasters(raster_finder_t* finder)
                 raster_info_t rinfo;
                 rinfo.dataIsElevation = true;
                 rinfo.tag             = VALUE_TAG;
-                rinfo.fileName        = filePath + "/" + dataFile;
+                rinfo.fileId          = finder->fileDict.add(filePath + "/" + dataFile);
                 rgroup->infovect.push_back(rinfo);
             }
 
@@ -106,8 +106,8 @@ bool GebcoBathyRaster::findRasters(raster_finder_t* finder)
                 {
                     raster_info_t rinfo;
                     rinfo.dataIsElevation = false;
-                    rinfo.tag = FLAGS_TAG;
-                    rinfo.fileName = filePath + "/" + flagsFile;
+                    rinfo.tag             = FLAGS_TAG;
+                    rinfo.fileId          = finder->fileDict.add(filePath + "/" + flagsFile);
                     rgroup->infovect.push_back(rinfo);
                 }
             }
@@ -115,7 +115,7 @@ bool GebcoBathyRaster::findRasters(raster_finder_t* finder)
 
             mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->featureId.c_str(), rgroup->infovect.size());
             for(unsigned j = 0; j < rgroup->infovect.size(); j++)
-                mlog(DEBUG, "  %s", rgroup->infovect[j].fileName.c_str());
+                mlog(DEBUG, "  %s", finder->fileDict.get(rgroup->infovect[j].fileId));
 
             // Add the group
             finder->rasterGroups.push_back(rgroup);

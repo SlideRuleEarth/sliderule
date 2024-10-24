@@ -22,9 +22,9 @@ local outq_name = "outq-luatest"
 
 
 -- Use the same input parquet files as 3dep
-local in_parquet = '/data/3dep/wrzesien_snow_64k.parquet'
+-- local in_parquet = '/data/3dep/wrzesien_snow_64k.parquet'
 -- local in_parquet = '/data/3dep/wrzesien_snow_525k.parquet'
--- local in_parquet = '/data/3dep/wrzesien_snow_2618k.parquet'
+local in_parquet = '/data/3dep/wrzesien_snow_2618k.parquet'
 
 
 -- Indicates local file system (no s3 or client)

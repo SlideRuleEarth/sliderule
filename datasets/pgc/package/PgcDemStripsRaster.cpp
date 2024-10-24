@@ -228,7 +228,7 @@ bool PgcDemStripsRaster::findRasters(raster_finder_t* finder)
                 raster_info_t demRinfo;
                 demRinfo.dataIsElevation = true;
                 demRinfo.tag = VALUE_TAG;
-                demRinfo.fileName = fileName;
+                demRinfo.fileId = finder->fileDict.add(fileName);
 
                 /* bitmask raster, ie flags_file */
                 if(parms->flags_file)
@@ -242,13 +242,12 @@ bool PgcDemStripsRaster::findRasters(raster_finder_t* finder)
                     }
                     else fileName.clear();
 
-                    raster_info_t flagsRinfo;
-                    flagsRinfo.dataIsElevation = false;
-                    flagsRinfo.tag = FLAGS_TAG;
-                    flagsRinfo.fileName = fileName;
-
-                    if(!flagsRinfo.fileName.empty())
+                    if(!fileName.empty())
                     {
+                        raster_info_t flagsRinfo;
+                        flagsRinfo.dataIsElevation = false;
+                        flagsRinfo.tag = FLAGS_TAG;
+                        flagsRinfo.fileId = finder->fileDict.add(fileName);
                         rgroup->infovect.push_back(flagsRinfo);
                     }
                 }

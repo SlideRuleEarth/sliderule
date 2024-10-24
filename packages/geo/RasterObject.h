@@ -166,6 +166,8 @@ class RasterObject: public LuaObject
         const GeoFields* parms;
         const char* samplerKey;
 
+        RasterFileDictionary fileDict;
+
     private:
 
         /*--------------------------------------------------------------------
@@ -185,7 +187,6 @@ class RasterObject: public LuaObject
 
         static Mutex                    factoryMut;
         static Dictionary<factory_t>    factories;
-        RasterFileDictionary            fileDict;
 
         Mutex                           readersMut;
         Mutex                           samplingMut;

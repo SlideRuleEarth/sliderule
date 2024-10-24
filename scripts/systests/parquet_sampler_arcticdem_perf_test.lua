@@ -11,9 +11,9 @@ local td = runner.rootdir(arg[0])
 local outq_name = "outq-luatest"
 
 
-local in_parquet = '/data/arcticdem/alaska62k.parquet'
+-- local in_parquet = '/data/arcticdem/alaska62k.parquet'
 -- local in_parquet = '/data/arcticdem/alaska962k.parquet'
--- local in_parquet = '/data/arcticdem/alaska_2milionpoints.parquet'
+local in_parquet = '/data/arcticdem/alaska_2milionpoints.parquet'
 
 -- Indicates local file system (no s3 or client)
 local prefix = "file://"

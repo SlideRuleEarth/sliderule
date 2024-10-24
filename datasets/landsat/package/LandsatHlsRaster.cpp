@@ -188,7 +188,7 @@ bool LandsatHlsRaster::findRasters(raster_finder_t* finder)
 
                     raster_info_t rinfo;
                     rinfo.dataIsElevation = false; /* All bands are not elevation */
-                    rinfo.fileName = filePath + fileName.substr(pos);
+                    rinfo.fileId = finder->fileDict.add(filePath + fileName.substr(pos));
 
                     if(strcmp(bandName, "Fmask") == 0)
                     {
@@ -295,7 +295,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
     {
         for(const auto& rinfo : rgroup->infovect)
         {
-            const char* key = rinfo.fileName.c_str();
+            const char* key = fileDictGet(rinfo.fileId);
             cacheitem_t* item;
             if(cache.find(key, &item))
             {

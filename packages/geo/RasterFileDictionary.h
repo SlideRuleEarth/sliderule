@@ -75,10 +75,10 @@ class RasterFileDictionary
          * Data
          *--------------------------------------------------------------------*/
 
-        Dictionary<uint64_t>     fileDict;       // Dictionary to store file names and their ids
+        Dictionary<uint64_t>     fileDict;       // Dictionary to store raster file names
+        std::vector<std::string> fileVector;     // Vector to store raster file names by id (index derived from lower 32 bits)
         uint64_t                 keySpace;       // Key space
-        std::vector<std::string> fileVector;     // Vector to store file names by id (index derived from lower 32 bits)
-        static Mutex             mutex;          // Mutex for thread safety
+        static Mutex             mutex;          // Mutex for thread safety, only add() method is thread safe
 
 };
 

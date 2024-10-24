@@ -124,7 +124,7 @@ bool Usgs3dep1meterDemRaster::findRasters(raster_finder_t* finder)
                 raster_info_t rinfo;
                 rinfo.dataIsElevation = true;
                 rinfo.tag             = VALUE_TAG;
-                rinfo.fileName        = filePath + fileName.substr(pos);
+                rinfo.fileId          = finder->fileDict.add(filePath + fileName.substr(pos));
                 rgroup->infovect.push_back(rinfo);
             }
 
