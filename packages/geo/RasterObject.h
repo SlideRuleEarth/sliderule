@@ -43,6 +43,7 @@
 #include "GeoFields.h"
 #include "RasterSample.h"
 #include "RasterSubset.h"
+#include "RasterFileDictionary.h"
 
 /******************************************************************************
  * RASTER OBJECT CLASS
@@ -127,11 +128,6 @@ class RasterObject: public LuaObject
             return parms->use_poi_time;
         }
 
-        const Dictionary<uint64_t>& fileDictGet(void)
-        {
-            return fileDict;
-        }
-
         void lockSampling(void)
         {
             samplingMut.lock();
@@ -144,9 +140,10 @@ class RasterObject: public LuaObject
 
         void        stopSampling    (void);
         bool        sampling        (void) {return samplingEnabled;};
-        uint64_t    fileDictAdd     (const std::string& fileName);
-        const char* fileDictGetFile (uint64_t fileId);
-        void        fileDictClear   (void);
+        uint64_t    fileDictAdd     (const std::string& fileName) { return fileDict.add(fileName); }
+        const char* fileDictGet     (uint64_t fileId) { return fileDict.get(fileId); }
+        void        fileDictClear   (void) { fileDict.clear(); }
+        Dictionary<uint64_t>::Iterator fileDictGetIter(void) { return fileDict.getIter(); }
         static void getThreadsRanges(std::vector<range_t>& ranges, uint32_t num,
                                      uint32_t minPerThread, uint32_t maxNumThreads);
 
@@ -188,8 +185,7 @@ class RasterObject: public LuaObject
 
         static Mutex                    factoryMut;
         static Dictionary<factory_t>    factories;
-        static Mutex                    fileDictMut;
-        Dictionary<uint64_t>            fileDict;
+        RasterFileDictionary            fileDict;
 
         Mutex                           readersMut;
         Mutex                           samplingMut;

@@ -58,7 +58,6 @@ const struct luaL_Reg RasterObject::LUA_META_TABLE[] = {
 
 Mutex RasterObject::factoryMut;
 Dictionary<RasterObject::factory_t> RasterObject::factories;
-Mutex RasterObject::fileDictMut;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -268,7 +267,7 @@ uint32_t RasterObject::getSamples(const std::vector<point_info_t>& points, List<
                         RasterSample* sample = slist->get(i);
 
                         /* Find the file name for the sample id in reader's dictionary */
-                        const char* name = reader->robj->fileDictGetFile(sample->fileId);
+                        const char* name = reader->robj->fileDictGet(sample->fileId);
 
                         /* Use user's RasterObject dictionary to store the file names. */
                         const uint64_t id = fileDictAdd(name);
@@ -351,59 +350,6 @@ void RasterObject::stopSampling(void)
 }
 
 /*----------------------------------------------------------------------------
- * fileDictAdd
- *----------------------------------------------------------------------------*/
-uint64_t RasterObject::fileDictAdd(const string& fileName)
-{
-    uint64_t id;
-
-    fileDictMut.lock();
-    {
-        if(!fileDict.find(fileName.c_str(), &id))
-        {
-            id = (rqstParms->keySpace.value << 32) | fileDict.length();
-            fileDict.add(fileName.c_str(), id);
-        }
-    }
-    fileDictMut.unlock();
-    return id;
-}
-
-/*----------------------------------------------------------------------------
- * fileDictGetFile
- *----------------------------------------------------------------------------*/
-const char* RasterObject::fileDictGetFile (uint64_t fileId)
-{
-    const char* fileName = NULL;
-    fileDictMut.lock();
-    {
-        Dictionary<uint64_t>::Iterator iterator(fileDict);
-        for(int i = 0; i < iterator.length; i++)
-        {
-            if(fileId == iterator[i].value)
-            {
-                fileName = iterator[i].key;
-                break;
-            }
-        }
-    }
-    fileDictMut.unlock();
-    return fileName;
-}
-
-/*----------------------------------------------------------------------------
- * fileDictClear
- *----------------------------------------------------------------------------*/
-void RasterObject::fileDictClear (void)
-{
-    fileDictMut.lock();
-    {
-        fileDict.clear();
-    }
-    fileDictMut.unlock();
-}
-
-/*----------------------------------------------------------------------------
  * getThreadsRanges
  *----------------------------------------------------------------------------*/
 void RasterObject::getThreadsRanges(std::vector<range_t>& ranges, uint32_t num,
@@ -455,6 +401,7 @@ RasterObject::RasterObject(lua_State *L, RequestFields* rqst_parms, const char* 
     rqstParms(rqst_parms),
     parms(&rqstParms->samplers[key]),
     samplerKey(StringLib::duplicate(key)),
+    fileDict(rqstParms->keySpace.value),
     samplingEnabled(true)
 {
     /* Add Lua Functions */
@@ -518,18 +465,7 @@ int RasterObject::luaSamples(lua_State *L)
             for(int i = 0; i < slist.length(); i++)
             {
                 const RasterSample* sample = slist[i];
-                const char* fileName = "";
-
-                /* Find fileName from fileId */
-                Dictionary<uint64_t>::Iterator iterator(lua_obj->fileDictGet());
-                for(int j = 0; j < iterator.length; j++)
-                {
-                    if(iterator[j].value == sample->fileId)
-                    {
-                        fileName = iterator[j].key;
-                        break;
-                    }
-                }
+                const char* fileName = lua_obj->fileDictGet(sample->fileId);
 
                 lua_createtable(L, 0, 4);
                 LuaEngine::setAttrStr(L, "file", fileName);

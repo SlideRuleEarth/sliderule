@@ -283,8 +283,8 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
                 RasterSample* serial = (*serial_slist)[j];
                 RasterSample* batch  = (*batch_slist)[j];
 
-                const char* serialName = lua_obj->raster->fileDictGetFile(serial->fileId);
-                const char* batchName  = lua_obj->raster->fileDictGetFile(batch->fileId);
+                const char* serialName = lua_obj->raster->fileDictGet(serial->fileId);
+                const char* batchName  = lua_obj->raster->fileDictGet(batch->fileId);
 
                 if (strcmp(serialName, batchName) != 0)
                 {

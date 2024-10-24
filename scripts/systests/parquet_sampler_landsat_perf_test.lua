@@ -8,8 +8,8 @@ local _,td = runner.srcscript()
 -- Setup --
 local assets = asset.loaddir()
 
-console.monitor:config(core.LOG, core.DEBUG)
-sys.setlvl(core.LOG, core.DEBUG)
+-- console.monitor:config(core.LOG, core.DEBUG)
+-- sys.setlvl(core.LOG, core.DEBUG)
 
 local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"}
 local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms))

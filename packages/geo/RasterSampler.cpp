@@ -355,7 +355,7 @@ bool RasterSampler::processTimeout (void)
  *----------------------------------------------------------------------------*/
 bool RasterSampler::processTermination (void)
 {
-    Dictionary<uint64_t>::Iterator iterator(raster->fileDictGet());
+    Dictionary<uint64_t>::Iterator iterator = raster->fileDictGetIter();
     for(int i = 0; i < iterator.length; i++)
     {
         /* Send File Directory Entry Record for each File in Raster Dictionary */

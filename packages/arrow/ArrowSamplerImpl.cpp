@@ -135,7 +135,7 @@ bool ArrowSamplerImpl::processSamples(ArrowSampler::batch_sampler_t* sampler)
     if(status)
     {
         /* Create raster file map <id, filename> */
-        Dictionary<uint64_t>::Iterator iterator(sampler->robj->fileDictGet());
+        Dictionary<uint64_t>::Iterator iterator = sampler->robj->fileDictGetIter();
         for(int i = 0; i < iterator.length; i++)
         {
             const char* name = iterator[i].key;

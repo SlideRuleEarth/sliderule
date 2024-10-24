@@ -229,13 +229,13 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
             /* Rasters to points map */
             raster_points_map_t rasterToPointsMap;
 
-            /* For all points from the caller, create a vector of raster group lists */
+            /* For all points create a vector of raster group lists */
             if(!findAllGroups(&points, pointsGroups, rasterToPointsMap))
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Error creating groups");
             }
 
-            /* For all points from the caller, create a vector of unique rasters */
+            /* For all points create a vector of unique rasters */
             if(!findUniqueRasters(uniqueRasters, pointsGroups, rasterToPointsMap))
             {
                 throw RunTimeException(CRITICAL, RTE_ERROR, "Error finding unique rasters");
@@ -244,7 +244,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
             /* rastersToPointsMap is no longer needed */
         }
 
-        /* For all unique rasters, sample them */
+        /* Sample all unique rasters */
         if(!sampleUniqueRasters(uniqueRasters))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "Error sampling unique rasters");
