@@ -243,8 +243,7 @@ for beam,dataframe in pairs(dataframes) do
     end
     failed_processing_run = failed_processing_run or failed_dataframe
 end
--- delay clean up and exit because race condition exists for
--- dataframes that otherwise might not have finished yet
+-- exit here after all dataframes have finished
 if failed_processing_run then
     cleanup(crenv, transaction_id)
     return

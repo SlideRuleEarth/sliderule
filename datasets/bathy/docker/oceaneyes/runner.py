@@ -278,14 +278,14 @@ def runClassifier(classifier, classifier_func, num_processes=6):
             pool.close()
             pool.join()
             for i in range(len(beam_list)):
-                if results[i] != None:
+                if results[i] is not None:
                     beam_table[beam_list[i]][classifier] = results[i]
                 else:
                     beam_failures.append(beam_list[i])
         else:
             for beam in beam_list:
                 result = classifier_func(spot_table[beam], beam_table[beam])
-                if result != None:
+                if result is not None:
                     beam_table[beam][classifier] = result
                 else:
                     beam_failures.append(beam)
