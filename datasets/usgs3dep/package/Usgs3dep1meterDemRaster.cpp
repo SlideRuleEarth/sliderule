@@ -112,7 +112,6 @@ bool Usgs3dep1meterDemRaster::findRasters(raster_finder_t* finder)
             if (!rastergeo->Intersects(geo)) continue;
 
             rasters_group_t* rgroup = new rasters_group_t;
-            rgroup->featureId = feature->GetFieldAsString("id");
             rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
 
             const char* fname = feature->GetFieldAsString("url");
@@ -124,11 +123,11 @@ bool Usgs3dep1meterDemRaster::findRasters(raster_finder_t* finder)
                 raster_info_t rinfo;
                 rinfo.dataIsElevation = true;
                 rinfo.tag             = VALUE_TAG;
-                rinfo.fileName        = filePath + fileName.substr(pos);
+                rinfo.fileId          = finder->fileDict.add(filePath + fileName.substr(pos));
                 rgroup->infovect.push_back(rinfo);
             }
 
-            // mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->featureId.c_str(), rgroup->infovect.size());
+            // mlog(DEBUG, "Added group with %ld rasters", rgroup->infovect.size());
             finder->rasterGroups.push_back(rgroup);
         }
         // mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());

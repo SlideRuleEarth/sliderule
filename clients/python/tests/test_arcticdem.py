@@ -113,8 +113,9 @@ class TestStrips:
                   "samples": {"strips": {"asset": "arcticdem-strips", "with_flags": True}} }
         gdf = icesat2.atl06p(parms, resources=['ATL03_20191108234307_06580503_005_01.h5'])
         assert init
-        assert len(gdf.attrs['file_directory']) == 32        
-        for file_id in range(16):
+        assert len(gdf.attrs['file_directory']) == 16
+        for file_id in range(0, 16, 2):
             assert file_id in gdf.attrs['file_directory'].keys()
             assert '/pgc-opendata-dems/arcticdem/strips/' in gdf.attrs['file_directory'][file_id]
+            assert '_dem.tif' in gdf.attrs['file_directory'][file_id]  # only dems, no flags
 

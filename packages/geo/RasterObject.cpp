@@ -58,7 +58,6 @@ const struct luaL_Reg RasterObject::LUA_META_TABLE[] = {
 
 Mutex RasterObject::factoryMut;
 Dictionary<RasterObject::factory_t> RasterObject::factories;
-Mutex RasterObject::fileDictMut;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -121,55 +120,6 @@ int RasterObject::luaCreate( lua_State* L )
 }
 
 /*----------------------------------------------------------------------------
- * cppCreate
- *----------------------------------------------------------------------------*/
-RasterObject* RasterObject::cppCreate(RequestFields* rqst_parms, const char* key)
-{
-    /* Check Parameters */
-    if(!rqst_parms) return NULL;
-    const GeoFields* geo_fields = &rqst_parms->samplers[key];
-
-    /* Get Factory */
-    factory_t factory;
-    bool found = false;
-
-    factoryMut.lock();
-    {
-        found = factories.find(geo_fields->asset.getName(), &factory);
-    }
-    factoryMut.unlock();
-
-    /* Check Factory */
-    if(!found)
-    {
-        mlog(CRITICAL, "Failed to find registered raster for %s", geo_fields->asset.getName());
-        return NULL;
-    }
-
-    /* Create Raster */
-    RasterObject* _raster = factory.create(NULL, rqst_parms, key);
-    if(!_raster)
-    {
-        mlog(CRITICAL, "Failed to create raster for %s", geo_fields->asset.getName());
-        return NULL;
-    }
-
-    /* Bump Lua Reference (for releasing in destructor) */
-    referenceLuaObject(rqst_parms);
-
-    /* Return Raster */
-    return _raster;
-}
-
-/*----------------------------------------------------------------------------
- * cppCreate
- *----------------------------------------------------------------------------*/
-RasterObject* RasterObject::cppCreate(const RasterObject* obj)
-{
-    return cppCreate(obj->rqstParms, obj->samplerKey);
-}
-
-/*----------------------------------------------------------------------------
  * registerRaster
  *----------------------------------------------------------------------------*/
 bool RasterObject::registerRaster (const char* _name, factory_f create)
@@ -198,7 +148,7 @@ uint32_t RasterObject::getSamples(const std::vector<point_info_t>& points, List<
     try
     {
         /* Get maximum number of batch processing threads allowed */
-        const uint32_t maxNumThreads = getMaxBatchThreads();
+        const uint32_t maxNumThreads = std::min(std::thread::hardware_concurrency(), static_cast<uint32_t>(16));
 
         /* Get readers ranges */
         std::vector<range_t> ranges;
@@ -268,13 +218,10 @@ uint32_t RasterObject::getSamples(const std::vector<point_info_t>& points, List<
                         RasterSample* sample = slist->get(i);
 
                         /* Find the file name for the sample id in reader's dictionary */
-                        const char* name = reader->robj->fileDictGetFile(sample->fileId);
+                        const char* name = reader->robj->fileDict.get(sample->fileId);
 
                         /* Use user's RasterObject dictionary to store the file names. */
-                        const uint64_t id = fileDictAdd(name);
-
-                        /* Update the sample file id */
-                        sample->fileId = id;
+                        sample->fileId = fileDict.add(name, true);
                     }
 
                     sllist.add(slist);
@@ -316,18 +263,6 @@ uint8_t* RasterObject::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uin
 }
 
 /*----------------------------------------------------------------------------
- * getMaxBatchThreads
- *----------------------------------------------------------------------------*/
-uint32_t RasterObject::getMaxBatchThreads(void)
-{
-    /* Maximum number of batch threads.
-     * Each batch thread may create multiple raster reading threads.
-     */
-    const uint32_t maxThreads = 16;
-    return std::min(std::thread::hardware_concurrency(), maxThreads);
-}
-
-/*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
 RasterObject::~RasterObject(void)
@@ -339,6 +274,9 @@ RasterObject::~RasterObject(void)
     delete [] samplerKey;
 }
 
+/*----------------------------------------------------------------------------
+ * stopSampling
+ *----------------------------------------------------------------------------*/
 void RasterObject::stopSampling(void)
 {
     samplingEnabled = false;
@@ -348,99 +286,6 @@ void RasterObject::stopSampling(void)
             reader->robj->stopSampling();
     }
     readersMut.unlock();
-}
-
-/*----------------------------------------------------------------------------
- * fileDictAdd
- *----------------------------------------------------------------------------*/
-uint64_t RasterObject::fileDictAdd(const string& fileName)
-{
-    uint64_t id;
-
-    fileDictMut.lock();
-    {
-        if(!fileDict.find(fileName.c_str(), &id))
-        {
-            id = (rqstParms->keySpace.value << 32) | fileDict.length();
-            fileDict.add(fileName.c_str(), id);
-        }
-    }
-    fileDictMut.unlock();
-    return id;
-}
-
-/*----------------------------------------------------------------------------
- * fileDictGetFile
- *----------------------------------------------------------------------------*/
-const char* RasterObject::fileDictGetFile (uint64_t fileId)
-{
-    const char* fileName = NULL;
-    fileDictMut.lock();
-    {
-        Dictionary<uint64_t>::Iterator iterator(fileDict);
-        for(int i = 0; i < iterator.length; i++)
-        {
-            if(fileId == iterator[i].value)
-            {
-                fileName = iterator[i].key;
-                break;
-            }
-        }
-    }
-    fileDictMut.unlock();
-    return fileName;
-}
-
-/*----------------------------------------------------------------------------
- * fileDictClear
- *----------------------------------------------------------------------------*/
-void RasterObject::fileDictClear (void)
-{
-    fileDictMut.lock();
-    {
-        fileDict.clear();
-    }
-    fileDictMut.unlock();
-}
-
-/*----------------------------------------------------------------------------
- * getThreadsRanges
- *----------------------------------------------------------------------------*/
-void RasterObject::getThreadsRanges(std::vector<range_t>& ranges, uint32_t num,
-                                    uint32_t minPerThread, uint32_t maxNumThreads)
-{
-    ranges.clear();
-
-    /* Determine how many threads to use */
-    if(num <= minPerThread)
-    {
-        ranges.emplace_back(range_t{0, num});
-        return;
-    }
-
-    uint32_t numThreads = std::min(maxNumThreads, num / minPerThread);
-
-    /* Ensure at least two threads if num > minPerThread */
-    if(numThreads == 1 && maxNumThreads > 1)
-    {
-        numThreads = 2;
-    }
-
-    const uint32_t pointsPerThread = num / numThreads;
-    uint32_t remainingPoints = num % numThreads;
-
-    uint32_t start = 0;
-    for(uint32_t i = 0; i < numThreads; i++)
-    {
-        const uint32_t end = start + pointsPerThread + (remainingPoints > 0 ? 1 : 0);
-        ranges.emplace_back(range_t{start, end});
-
-        start = end;
-        if(remainingPoints > 0)
-        {
-            remainingPoints--;
-        }
-    }
 }
 
 /******************************************************************************
@@ -455,6 +300,7 @@ RasterObject::RasterObject(lua_State *L, RequestFields* rqst_parms, const char* 
     rqstParms(rqst_parms),
     parms(&rqstParms->samplers[key]),
     samplerKey(StringLib::duplicate(key)),
+    fileDict(rqstParms->keySpace.value),
     samplingEnabled(true)
 {
     /* Add Lua Functions */
@@ -518,18 +364,7 @@ int RasterObject::luaSamples(lua_State *L)
             for(int i = 0; i < slist.length(); i++)
             {
                 const RasterSample* sample = slist[i];
-                const char* fileName = "";
-
-                /* Find fileName from fileId */
-                Dictionary<uint64_t>::Iterator iterator(lua_obj->fileDictGet());
-                for(int j = 0; j < iterator.length; j++)
-                {
-                    if(iterator[j].value == sample->fileId)
-                    {
-                        fileName = iterator[j].key;
-                        break;
-                    }
-                }
+                const char* fileName = lua_obj->fileDict.get(sample->fileId);
 
                 lua_createtable(L, 0, 4);
                 LuaEngine::setAttrStr(L, "file", fileName);
@@ -613,7 +448,107 @@ int RasterObject::luaSubsets(lua_State *L)
     return num_ret;
 }
 
+/*----------------------------------------------------------------------------
+ * cppCreate
+ *----------------------------------------------------------------------------*/
+RasterObject* RasterObject::cppCreate(RequestFields* rqst_parms, const char* key)
+{
+    /* Check Parameters */
+    if(!rqst_parms) return NULL;
+    const GeoFields* geo_fields = &rqst_parms->samplers[key];
 
+    /* Get Factory */
+    factory_t factory;
+    bool found = false;
+
+    factoryMut.lock();
+    {
+        found = factories.find(geo_fields->asset.getName(), &factory);
+    }
+    factoryMut.unlock();
+
+    /* Check Factory */
+    if(!found)
+    {
+        mlog(CRITICAL, "Failed to find registered raster for %s", geo_fields->asset.getName());
+        return NULL;
+    }
+
+    /* Create Raster */
+    RasterObject* _raster = factory.create(NULL, rqst_parms, key);
+    if(!_raster)
+    {
+        mlog(CRITICAL, "Failed to create raster for %s", geo_fields->asset.getName());
+        return NULL;
+    }
+
+    /* Bump Lua Reference (for releasing in destructor) */
+    referenceLuaObject(rqst_parms);
+
+    /* Return Raster */
+    return _raster;
+}
+
+/*----------------------------------------------------------------------------
+ * cppCreate
+ *----------------------------------------------------------------------------*/
+RasterObject* RasterObject::cppCreate(const RasterObject* obj)
+{
+    return cppCreate(obj->rqstParms, obj->samplerKey);
+}
+
+/*----------------------------------------------------------------------------
+ * getThreadsRanges
+ *----------------------------------------------------------------------------*/
+void RasterObject::getThreadsRanges(std::vector<range_t>& ranges, uint32_t num,
+                                    uint32_t minPerThread, uint32_t maxNumThreads)
+{
+    ranges.clear();
+
+    /* Determine how many threads to use */
+    if(num <= minPerThread)
+    {
+        ranges.emplace_back(range_t{0, num});
+        return;
+    }
+
+    uint32_t numThreads = std::min(maxNumThreads, num / minPerThread);
+
+    /* Ensure at least two threads if num > minPerThread */
+    if(numThreads == 1 && maxNumThreads > 1)
+    {
+        numThreads = 2;
+    }
+
+    const uint32_t pointsPerThread = num / numThreads;
+    uint32_t remainingPoints = num % numThreads;
+
+    uint32_t start = 0;
+    for(uint32_t i = 0; i < numThreads; i++)
+    {
+        const uint32_t end = start + pointsPerThread + (remainingPoints > 0 ? 1 : 0);
+        ranges.emplace_back(range_t{start, end});
+
+        start = end;
+        if(remainingPoints > 0)
+        {
+            remainingPoints--;
+        }
+    }
+}
+
+
+/*----------------------------------------------------------------------------
+ * fileDictSetSamples
+ *----------------------------------------------------------------------------*/
+void RasterObject::fileDictSetSamples(List<RasterSample*>* slist)
+{
+    for(int i = 0; i < slist->length(); i++)
+    {
+        const RasterSample *sample = slist->get(i);
+        fileDict.setSample(sample->fileId);
+    }
+}
 
 /******************************************************************************
  * PRIVATE METHODS

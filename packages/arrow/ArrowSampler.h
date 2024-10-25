@@ -91,7 +91,6 @@ class ArrowSampler: public LuaObject
             RasterObject*                robj;
             ArrowSampler*                obj;
             List<sample_list_t*>         samples;
-            std::set<uint64_t>           file_ids;
             std::vector<std::pair<uint64_t, const char*>> filemap;
 
             explicit BatchSampler (const char* _rkey, RasterObject* _robj, ArrowSampler* _obj);

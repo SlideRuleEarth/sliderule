@@ -182,7 +182,6 @@ void* ArrowSampler::mainThread(void* parm)
 
         /* Release since not needed anymore */
         sampler->samples.clear();
-        sampler->file_ids.clear();
     }
 
     try
