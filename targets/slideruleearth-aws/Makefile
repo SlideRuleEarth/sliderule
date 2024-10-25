@@ -298,8 +298,8 @@ tag: ## create version tag in this repository and release it on GitHub
 
 release: ## release a version of sliderule; needs VERSION
 	make tag
-	make sliderule-buildenv-docker
-	make sliderule-buildenv-docker-push
+#	make sliderule-buildenv-docker
+#	make sliderule-buildenv-docker-push
 	make cluster-docker
 	make cluster-docker-push
 	make cluster-build-packer
