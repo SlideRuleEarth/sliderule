@@ -98,7 +98,7 @@ void RasterFileDictionary::setSample(uint64_t sampleFileId)
 {
     /* Make sure sampleFileId is valid */
     const char* fileName = get(sampleFileId);
-    if(fileName != NULL)
+    if(fileName && *fileName != '\0')
     {
         sampleIdSet.insert(sampleFileId);
     }
