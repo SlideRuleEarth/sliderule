@@ -61,9 +61,9 @@ DATASETS = {
     "ATL06":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": []},
     "ATL08":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": []},
     "ATL09":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": []},
+    "ATL13":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": {".h5"},    "collections": {}},
     "GEDI01_B":                                            {"provider": "LPCLOUD",     "version": "002",  "api": "cmr",   "formats": [".h5"],    "collections": []},
     "GEDI02_A":                                            {"provider": "LPCLOUD",     "version": "002",  "api": "cmr",   "formats": [".h5"],    "collections": []},
-    "GEDI02_B":                                            {"provider": "LPCLOUD",     "version": "002",  "api": "cmr",   "formats": [".tiff"],  "collections": []},
     "GEDI_L3_LandSurface_Metrics_V2_1952":                 {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".h5"],    "collections": []},
     "GEDI_L4A_AGB_Density_V2_1_2056":                      {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".h5"],    "collections": []},
     "GEDI_L4B_Gridded_Biomass_2017":                       {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".tiff"],  "collections": []},
@@ -83,7 +83,7 @@ ASSETS_TO_DATASETS = {
     "gedil3-canopy-stddev": "GEDI_L3_LandSurface_Metrics_V2_1952",
     "gedil3-counts": "GEDI_L3_LandSurface_Metrics_V2_1952",
     "gedil2a": "GEDI02_A",
-    "gedil1b": "GEDI02_B",
+    "gedil1b": "GEDI01_B",
     "swot-sim-ecco-llc4320": "SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1",
     "swot-sim-glorys": "SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1",
     "usgs3dep-1meter-dem": "Digital Elevation Model (DEM) 1 meter",
@@ -92,6 +92,7 @@ ASSETS_TO_DATASETS = {
     "icesat2-atl06": "ATL06",
     "icesat2-atl08": "ATL08",
     "icesat2-atl09": "ATL09",
+    "icesat2-atl13": "ATL13",
     "atlas-local": "ATL03",
     "nsidc-s3": "ATL03"
 }

@@ -5,9 +5,6 @@
 
 local json = require("json")
 
-
-local pp = require("prettyprint")
-
 --
 -- Constants
 --
@@ -24,7 +21,6 @@ DATASETS = {
     ATL13 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
     GEDI01_B =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {}},
     GEDI02_A =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {}},
-    GEDI02_B =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".tiff"},  collections = {}},
     GEDI_L3_LandSurface_Metrics_V2_1952 =                 {provider = "ORNL_CLOUD",  version = nil,    api = "cmr",   formats = {".h5"},    collections = {}},
     GEDI_L4A_AGB_Density_V2_1_2056 =                      {provider = "ORNL_CLOUD",  version = nil,    api = "cmr",   formats = {".h5"},    collections = {}},
     GEDI_L4B_Gridded_Biomass_2017 =                       {provider = "ORNL_CLOUD",  version = nil,    api = "cmr",   formats = {".tiff"},  collections = {}},
@@ -44,7 +40,7 @@ ASSETS_TO_DATASETS = {
     ["gedil3-canopy-stddev"] = "GEDI_L3_LandSurface_Metrics_V2_1952",
     ["gedil3-counts"] = "GEDI_L3_LandSurface_Metrics_V2_1952",
     ["gedil2a"] = "GEDI02_A",
-    ["gedil1b"] = "GEDI02_B",
+    ["gedil1b"] = "GEDI01_B",
     ["swot-sim-ecco-llc4320"] = "SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1",
     ["swot-sim-glorys"] = "SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1",
     ["usgs3dep-1meter-dem"] = "Digital Elevation Model (DEM) 1 meter",
@@ -247,21 +243,26 @@ local function cmr (parms, poly, with_meta)
                 for _,l in ipairs(links) do
                     local link = l["href"]
                     if link and (total_links < max_resources) then
-                        -- grab only links with the desired format (checks extension match)
-                        for _,format in ipairs(dataset["formats"]) do
-                            if link:sub(-#format) == format then
-                                -- split link over '/' and grab last element
-                                local url = link
-                                for token in link:gmatch("[^" .. "/"  .. "]+") do
-                                    url = token
+                        -- exclude opendap links - this is a hack, but is the only way
+                        -- to currently remove these duplicate responses (and is the way
+                        -- CMR code currently does it as well)
+                        if not string.find(link, "opendap") then
+                            -- grab only links with the desired format (checks extension match)
+                            for _,format in ipairs(dataset["formats"]) do
+                                if link:sub(-#format) == format then
+                                    -- split link over '/' and grab last element
+                                    local url = link
+                                    for token in link:gmatch("[^" .. "/"  .. "]+") do
+                                        url = token
+                                    end
+                                    -- add url to table of links with metadata
+                                    if not link_table[url] then
+                                        link_table[url] = metadata
+                                        num_links = num_links + 1
+                                        total_links = total_links + 1
+                                    end
+                                    break
                                 end
-                                -- add url to table of links with metadata
-                                if not link_table[url] then
-                                    link_table[url] = metadata
-                                    num_links = num_links + 1
-                                    total_links = total_links + 1
-                                end
-                                break
                             end
                         end
                     end

@@ -2,10 +2,11 @@
 
 import pytest
 import sliderule
-from sliderule import icesat2, earthdata
+from sliderule import earthdata
 from sliderule.earthdata import __cmr_collection_query as cmr_collection_query
 from sliderule.earthdata import __cmr_max_version as cmr_max_version
 from pathlib import Path
+from datetime import datetime
 import os
 import json
 
@@ -86,3 +87,125 @@ class TestTNM:
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         geojson = earthdata.tnm(short_name='DOES_NOT_EXIST', polygon=region["poly"], as_str=False)
         assert len(geojson['features']) == 0
+
+#
+# SlideRule Endpoint
+#
+@pytest.mark.network
+class TestSlideRule:
+    def test_atl03(self, init):
+        parms = {"asset": "icesat2", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
+        resources = earthdata.search(parms)
+        rsps = sliderule.source("earthdata", parms)
+        assert init
+        assert len(rsps) == 26
+        assert len(rsps) == len(set(rsps))
+        assert len(rsps) == len(resources)
+        for resource in resources:
+            assert resource in rsps
+            assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
+            assert datetime.strptime(resource[6:14], '%Y%m%d') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
+
+    def test_atl06(self, init):
+        parms = {"asset": "icesat2-atl06", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
+        resources = earthdata.search(parms)
+        rsps = sliderule.source("earthdata", parms)
+        assert init
+        assert len(rsps) == 26
+        assert len(rsps) == len(set(rsps))
+        assert len(rsps) == len(resources)
+        for resource in resources:
+            assert resource in rsps
+            assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
+            assert datetime.strptime(resource[6:14], '%Y%m%d') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
+
+    def test_atl09(self, init):
+        parms = {"asset": "icesat2-atl09", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
+        resources = earthdata.search(parms)
+        rsps = sliderule.source("earthdata", parms)
+        assert init
+        assert len(rsps) == 36
+        assert len(rsps) == len(set(rsps))
+        assert len(rsps) == len(resources)
+        for resource in resources:
+            assert resource in rsps
+            assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
+            assert datetime.strptime(resource[6:14], '%Y%m%d') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
+
+    def test_atl13(self, init):
+        saltlake = [
+            {
+            "lon": -111.78656302303546,
+            "lat": 40.474445992545355
+            },
+            {
+            "lon": -111.78656302303546,
+            "lat": 41.745511885629725
+            },
+            {
+            "lon": -113.25842634761666,
+            "lat": 41.745511885629725
+            },
+            {
+            "lon": -113.25842634761666,
+            "lat": 40.474445992545355
+            },
+            {
+            "lon": -111.78656302303546,
+            "lat": 40.474445992545355
+            }
+        ]
+        parms = {"asset": "icesat2-atl13", "poly": saltlake, "t0": '2018-10-01', "t1": '2019-12-01'}
+        resources = earthdata.search(parms)
+        rsps = sliderule.source("earthdata", parms)
+        assert init
+        print(resources)
+        assert len(rsps) == 67
+        assert len(rsps) == len(set(rsps))
+        assert len(rsps) == len(resources)
+        for resource in resources:
+            assert resource in rsps
+            assert datetime.strptime(resource[6:14], '%Y%m%d') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
+            assert datetime.strptime(resource[6:14], '%Y%m%d') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
+
+    def test_gedil1b(self, init):
+        parms = {"asset": "gedil1b", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
+        resources = earthdata.search(parms)
+        rsps = sliderule.source("earthdata", parms)
+        print(resources)
+        assert init
+        assert len(rsps) == 26
+        assert len(rsps) == len(set(rsps))
+        assert len(rsps) == len(resources)
+        for resource in resources:
+            assert resource in rsps
+            assert datetime.strptime(resource[9:16], '%Y%j') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
+            assert datetime.strptime(resource[9:16], '%Y%j') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
+
+    def test_gedil2a(self, init):
+        parms = {"asset": "gedil2a", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
+        resources = earthdata.search(parms)
+        rsps = sliderule.source("earthdata", parms)
+        print(resources)
+        assert init
+        assert len(rsps) == 26
+        assert len(rsps) == len(set(rsps))
+        assert len(rsps) == len(resources)
+        for resource in resources:
+            assert resource in rsps
+            assert datetime.strptime(resource[9:16], '%Y%j') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
+            assert datetime.strptime(resource[9:16], '%Y%j') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
+
+    def test_gedil4a(self, init):
+        parms = {"asset": "gedil4a", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}
+        resources = earthdata.search(parms)
+        rsps = sliderule.source("earthdata", parms)
+        print(resources)
+        assert init
+        assert len(rsps) == 26
+        assert len(rsps) == len(set(rsps))
+        assert len(rsps) == len(resources)
+        for resource in resources:
+            assert resource in rsps
+            assert datetime.strptime(resource[9:16], '%Y%j') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
+            assert datetime.strptime(resource[9:16], '%Y%j') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
