@@ -81,13 +81,14 @@ uint64_t RasterFileDictionary::add(const string& fileName, bool sample)
 const char* RasterFileDictionary::get(uint64_t fileId)
 {
     const char* fileName = "";
+    uint32_t index;
 
-    /* Mask upper 32 bits to get index into vector */
-    const uint32_t index = static_cast<uint32_t>(fileId & 0xFFFFFFFF);
-    if(index < fileVector.size())
+    if(getIndex(fileId, index))
     {
+        /* Mask upper 32 bits to get index into vector */
         fileName = fileVector[index].c_str();
     }
+
     return fileName;
 }
 
@@ -96,9 +97,9 @@ const char* RasterFileDictionary::get(uint64_t fileId)
  *----------------------------------------------------------------------------*/
 void RasterFileDictionary::setSample(uint64_t sampleFileId)
 {
-    /* Make sure sampleFileId is valid */
-    const char* fileName = get(sampleFileId);
-    if(fileName && *fileName != '\0')
+    uint32_t index;
+
+    if(getIndex(sampleFileId, index))
     {
         sampleIdSet.insert(sampleFileId);
     }

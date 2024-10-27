@@ -51,6 +51,8 @@ class RasterFileDictionary
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
+        const uint64_t UPPER32_MASK = 0xFFFFFFFF00000000;
+        const uint32_t INDEX_MASK   = 0xFFFFFFFF;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -64,6 +66,7 @@ class RasterFileDictionary
         const char* get      (uint64_t fileId);
         void        setSample(uint64_t sampleFileId);
         void        clear    (void);
+        size_t      size     (void) const { return fileVector.size(); }
 
         const std::set<uint64_t>& getSampleIds(void) const;
         RasterFileDictionary copy(void);
@@ -74,6 +77,16 @@ class RasterFileDictionary
          * Methods
          *--------------------------------------------------------------------*/
 
+        /* Force inline by implementing here */
+        bool getIndex(uint64_t fileId, uint32_t& index)
+        {
+            if((fileId & UPPER32_MASK) == keySpace)
+            {
+                index = static_cast<uint32_t>(fileId & INDEX_MASK);
+                return index < fileVector.size();
+            }
+            return false;
+        }
 
         /*--------------------------------------------------------------------
          * Data
