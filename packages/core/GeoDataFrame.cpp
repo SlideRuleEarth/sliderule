@@ -364,12 +364,15 @@ void* GeoDataFrame::runThread (void* parm)
             {
                 if(runner)
                 {
-                    // execute frame runner
-                    if(!runner->run(dataframe))
+                    if(dataframe->length() > 0)
                     {
-                        // exit loop on error
-                        mlog(CRITICAL, "error encountered in frame runner: %s", runner->getName());
-                        dataframe->active = false;
+                        // execute frame runner
+                        if(!runner->run(dataframe))
+                        {
+                            // exit loop on error
+                            mlog(CRITICAL, "error encountered in frame runner: %s", runner->getName());
+                            dataframe->active = false;
+                        }
                     }
 
                     // release frame runner

@@ -211,6 +211,7 @@ end
 -------------------------------------------------------
 -- wait for dataframes to complete and write to file
 -------------------------------------------------------
+local valid_output_present = false
 local failed_processing_run = false
 for beam,dataframe in pairs(dataframes) do
     local failed_dataframe = false
@@ -229,10 +230,10 @@ for beam,dataframe in pairs(dataframes) do
             elseif not arrow_dataframe:export(output_filename, arrow.PARQUET) then
                 userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to write dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
                 failed_dataframe = true
-            end
-            if not failed_dataframe then
+            else -- success
                 userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> dataframe for %s created", rspq, beam))
                 outputs[beam] = string.format("%s/bathy_spot_%d.parquet", crenv.container_sandbox_mount, spot)
+                valid_output_present = true
             end
         end
         -- cleanup to save memory
@@ -243,8 +244,30 @@ for beam,dataframe in pairs(dataframes) do
     end
     failed_processing_run = failed_processing_run or failed_dataframe
 end
--- exit here after all dataframes have finished
-if failed_processing_run then
+
+-------------------------------------------------------
+-- early exit on failures or empty dataframe
+-------------------------------------------------------
+if failed_processing_run or not valid_output_present then
+    -- generate filename
+    local record_of_run = string.format("%s/record_of_run.json", crenv.host_sandbox_directory)
+    -- write record of run
+    local f, err = io.open(record_of_run, "w")
+    if f then
+        f:write(json.encode({failed_processing_run=failed_processing_run, valid_output_present=valid_output_present}))
+        f:close()
+    else
+        userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to write record of run json for %s: %s", rspq, resource, err))
+    end
+    -- send record of run to user
+    local ror_parms = core.parms({
+        output = {
+            asset=rqst["parms"]["output"]["asset"], -- use original request asset
+            path=rqst["parms"]["output"]["path"]..".empty" -- modify the original requested path
+        }
+    })
+    arrow.send2user(record_of_run, ror_parms, rspq)
+    -- clean up and exit
     cleanup(crenv, transaction_id)
     return
 end

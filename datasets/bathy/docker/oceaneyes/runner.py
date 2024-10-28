@@ -80,7 +80,7 @@ format  = settings.get('format', 'parquet')
 # #####################
 
 beam_list = [] # list of beams there is data for
-beam_failures = [] # list of beams that encountered an error
+beam_failures = {} # [beam] => records classifier exceptions
 beam_table = {} # [beam] => DataFrame
 spot_table = {} # [beam] => spot
 rqst_parms = {} # request parameters
@@ -102,6 +102,7 @@ for beam in BEAMS:
         beam_list.append(beam)
         beam_table[beam] = beam_df
         spot_table[beam] = beam_meta["spot"]
+        beam_failures[beam] = [] # initialize list
         if len(rqst_parms) == 0:
             rqst_parms = json.loads(parquet_file.metadata.metadata[b'sliderule'])
 
@@ -268,7 +269,7 @@ def ensemble(spot, df):
 
 # runner function
 def runClassifier(classifier, classifier_func, num_processes=6):
-    global beam_list, beam_table, spot_table, rqst_parms
+    global beam_list, beam_table, spot_table, rqst_parms, beam_failures
     print(f'running classifier {classifier}...')
     start = time.time()
     if classifier in rqst_parms["classifiers"]:
@@ -281,14 +282,14 @@ def runClassifier(classifier, classifier_func, num_processes=6):
                 if results[i] is not None:
                     beam_table[beam_list[i]][classifier] = results[i]
                 else:
-                    beam_failures.append(beam_list[i])
+                    beam_failures[beam_list[i]].append(classifier)
         else:
             for beam in beam_list:
                 result = classifier_func(spot_table[beam], beam_table[beam])
                 if result is not None:
                     beam_table[beam][classifier] = result
                 else:
-                    beam_failures.append(beam)
+                    beam_failures[beam].append(classifier)
     duration = time.time() - start
     print(f'{classifier} finished in {duration:.03f} seconds')
     return duration
@@ -306,7 +307,7 @@ profile["ensemble"] = runClassifier("ensemble", ensemble)
 
 # remove beams that had failures
 for beam in beam_failures:
-    if beam in beam_list:
+    if len(beam_failures[beam]) > 0: # at least one classifier encountered an error
         beam_list.remove(beam)
 
 # create one large dataframe of all spots
@@ -368,7 +369,8 @@ metadata = {
     "profile": json.dumps(profile),
     "stats": json.dumps(stats),
     "cshelph": cshelph_version,
-    "medianfilter": medianfilter_version
+    "medianfilter": medianfilter_version,
+    "errors": json.dumps(beam_failures)
 }
 
 # #####################
