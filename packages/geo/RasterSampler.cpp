@@ -355,17 +355,19 @@ bool RasterSampler::processTimeout (void)
  *----------------------------------------------------------------------------*/
 bool RasterSampler::processTermination (void)
 {
-    Dictionary<uint64_t>::Iterator iterator(raster->fileDictGet());
-    for(int i = 0; i < iterator.length; i++)
+    const std::set<uint64_t>& sampleIds = raster->fileDictGetSampleIds();
+    for(std::set<uint64_t>::const_iterator it = sampleIds.begin(); it != sampleIds.end(); it++)
     {
         /* Send File Directory Entry Record for each File in Raster Dictionary */
-        const int file_name_len = StringLib::size(iterator[i].key) + 1;
+        const uint64_t fileId = *it;
+        const int file_name_len = StringLib::size(raster->fileDictGet(fileId)) + 1;
         const int size = offsetof(file_directory_entry_t, file_name) + file_name_len;
         RecordObject record(fileIdRecType, size);
         file_directory_entry_t* entry = reinterpret_cast<file_directory_entry_t*>(record.getRecordData());
-        entry->file_id = iterator[i].value;
-        StringLib::copy(entry->file_name, iterator[i].key, file_name_len);
+        entry->file_id = fileId;
+        StringLib::copy(entry->file_name, raster->fileDictGet(fileId), file_name_len);
         record.post(outQ);
     }
+
     return true;
 }

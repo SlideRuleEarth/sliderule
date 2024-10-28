@@ -168,7 +168,7 @@ bool LandsatHlsRaster::findRasters(raster_finder_t* finder)
 
             /* Set raster group time and group featureId */
             rasters_group_t* rgroup = new rasters_group_t;
-            rgroup->featureId = feature->GetFieldAsString("id");
+            rgroup->featureId = StringLib::duplicate(feature->GetFieldAsString("id"));
             rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
 
             /* Find each requested band in the index file */
@@ -188,7 +188,7 @@ bool LandsatHlsRaster::findRasters(raster_finder_t* finder)
 
                     raster_info_t rinfo;
                     rinfo.dataIsElevation = false; /* All bands are not elevation */
-                    rinfo.fileName = filePath + fileName.substr(pos);
+                    rinfo.fileId = finder->fileDict.add(filePath + fileName.substr(pos));
 
                     if(strcmp(bandName, "Fmask") == 0)
                     {
@@ -207,7 +207,7 @@ bool LandsatHlsRaster::findRasters(raster_finder_t* finder)
                 }
             }
 
-            // mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->featureId.c_str(), rgroup->infovect.size());
+            // mlog(DEBUG, "Added group: %s with %ld rasters", rgroup->featureId, rgroup->infovect.size());
             finder->rasterGroups.push_back(rgroup);
         }
         // mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
@@ -274,10 +274,11 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
     bool isS2 = false;
     std::size_t pos;
 
-    pos = rgroup->featureId.find("HLS.L30");
+    const std::string featureId = rgroup->featureId;
+    pos = featureId.find("HLS.L30");
     if(pos != std::string::npos) isL8 = true;
 
-    pos = rgroup->featureId.find("HLS.S30");
+    pos = featureId.find("HLS.S30");
     if(pos != std::string::npos) isS2 = true;
 
     if(!isL8 && !isS2)
@@ -295,7 +296,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
     {
         for(const auto& rinfo : rgroup->infovect)
         {
-            const char* key = rinfo.fileName.c_str();
+            const char* key = fileDictGet(rinfo.fileId);
             cacheitem_t* item;
             if(cache.find(key, &item))
             {
@@ -407,12 +408,12 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
     }
 
     const double groupTime = rgroup->gpsTime / 1000;
-    const std::string groupName = rgroup->featureId + " {\"algo\": \"";
+    const std::string groupName = featureId + " {\"algo\": \"";
 
     /* Calculate algos - make sure that all the necessary bands were read */
     if(ndsi)
     {
-        RasterSample* sample = new RasterSample(groupTime, fileDictAdd(groupName + "NDSI\"}"));
+        RasterSample* sample = new RasterSample(groupTime, fileDict.add(groupName + "NDSI\"}"));
         if((green != invalid) && (swir16 != invalid))
             sample->value = (green - swir16) / (green + swir16);
         else sample->value = invalid;
@@ -421,7 +422,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
 
     if(ndvi)
     {
-        RasterSample* sample = new RasterSample(groupTime, fileDictAdd(groupName + "NDVI\"}"));
+        RasterSample* sample = new RasterSample(groupTime, fileDict.add(groupName + "NDVI\"}"));
         if((red != invalid) && (nir08 != invalid))
             sample->value = (nir08 - red) / (nir08 + red);
         else sample->value = invalid;
@@ -430,7 +431,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
 
     if(ndwi)
     {
-        RasterSample* sample = new RasterSample(groupTime, fileDictAdd(groupName + "NDWI\"}"));
+        RasterSample* sample = new RasterSample(groupTime, fileDict.add(groupName + "NDWI\"}"));
         if((nir08 != invalid) && (swir16 != invalid))
             sample->value = (nir08 - swir16) / (nir08 + swir16);
         else sample->value = invalid;

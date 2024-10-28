@@ -125,6 +125,70 @@ bool UT_RasterSample::ReadPointsFile(std::vector<RasterObject::point_info_t>& po
 }
 
 /*----------------------------------------------------------------------------
+ * TestFileDictionary
+ *----------------------------------------------------------------------------*/
+bool UT_RasterSample::TestFileDictionary(RasterObject* raster)
+{
+    /* Make a copy so we don't change the original dictionary */
+    RasterFileDictionary dict = raster->fileDictCopy();
+
+    /* Clear the dictionary but keep keySpace */
+    dict.clear();
+
+    const char* raster1 = "RasterOneNotSample";
+    const char* raster2 = "RasterTwoSample";
+    const uint64_t fileIdRaster1 = dict.add(raster1);
+    const uint64_t fileIdRaster2 = dict.add(raster2, true);
+
+    const std::set<uint64_t>& sampleIds = dict.getSampleIds();
+    uint32_t cnt = 0;
+    const char* raserName = NULL;
+    uint64_t fileId;
+    for (std::set<uint64_t>::const_iterator it = sampleIds.begin(); it != sampleIds.end(); it++)
+    {
+        fileId = *it;
+        raserName = dict.get(fileId);
+        cnt++;
+    }
+
+    if(cnt != 1)
+    {
+        mlog(CRITICAL, "Expected 1 sample but got %d", cnt);
+        return false;
+    }
+
+    if(strcmp(raserName, raster2) != 0)
+    {
+        mlog(CRITICAL, "Expected %s but got %s", raster2, raserName);
+        return false;
+    }
+
+    const uint64_t keySpace1 = fileIdRaster1 >> 32;
+    const uint64_t keySpace2 = fileIdRaster2 >> 32;
+
+    if(keySpace1 != keySpace2)
+    {
+        mlog(CRITICAL, "Expected key space %lu but got %lu", keySpace1, keySpace2);
+        return false;
+    }
+
+    dict.setSample(fileIdRaster1);  // Set raster1 as sample
+    cnt = 0;
+    for (std::set<uint64_t>::const_iterator it = sampleIds.begin(); it != sampleIds.end(); it++)
+    {
+        cnt++;
+    }
+
+    if(cnt != 2)
+    {
+        mlog(CRITICAL, "Expected 2 sample but got %d", cnt);
+        return false;
+    }
+
+    return true;
+}
+
+/*----------------------------------------------------------------------------
  * luaSampleTest
  *----------------------------------------------------------------------------*/
 int UT_RasterSample::luaSampleTest(lua_State* L)
@@ -151,6 +215,12 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
 
         /* Get Points File if provided */
         const char* pointsFile = getLuaString(L, 7, true, NULL);
+
+        /* Test fileDictionary */
+        if(!lua_obj->TestFileDictionary(lua_obj->raster))
+        {
+            return returnLuaStatus(L, false);
+        }
 
         std::vector<RasterObject::point_info_t> points2sample;
 
@@ -210,6 +280,9 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
             serial_sllist.add(slist);
         }
         const double serialStopTime = TimeLib::latchtime();
+
+        /* Store fileDictionary from serial sampling, batch sampling will overwrite it */
+        RasterFileDictionary serialDict = lua_obj->raster->fileDictCopy();
 
         /* Get samples using batch method */
         print2term("Getting samples for %zu points using batch method\n", points2sample.size());
@@ -283,8 +356,8 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
                 RasterSample* serial = (*serial_slist)[j];
                 RasterSample* batch  = (*batch_slist)[j];
 
-                const char* serialName = lua_obj->raster->fileDictGetFile(serial->fileId);
-                const char* batchName  = lua_obj->raster->fileDictGetFile(batch->fileId);
+                const char* serialName = serialDict.get(serial->fileId);
+                const char* batchName  = lua_obj->raster->fileDictGet(batch->fileId);
 
                 if (strcmp(serialName, batchName) != 0)
                 {

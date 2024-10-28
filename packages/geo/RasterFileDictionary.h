@@ -29,59 +29,74 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __ut_raster_sample__
-#define __ut_raster_sample__
+#ifndef __raster_file_dictionary__
+#define __raster_file_dictionary__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "LuaObject.h"
-#include "RasterObject.h"
+#include "Dictionary.h"
+#include <set>
 
 /******************************************************************************
- * ATL03 READER UNIT TEST CLASS
+ * RASTER FIlE DICTIONARY CLASS
  ******************************************************************************/
 
-class UT_RasterSample: public LuaObject
+class RasterFileDictionary
 {
     public:
 
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
-
-        static const char* OBJECT_TYPE;
-
-        static const char* LUA_META_NAME;
-        static const struct luaL_Reg LUA_META_TABLE[];
+        const uint64_t UPPER32_MASK = 0xFFFFFFFF00000000;
+        const uint32_t INDEX_MASK   = 0xFFFFFFFF;
 
         /*--------------------------------------------------------------------
-         * Methods
+         * Typedefs
          *--------------------------------------------------------------------*/
 
-        static int  luaCreate   (lua_State* L);
+
+        explicit RasterFileDictionary(uint64_t _keySpace=0): keySpace(_keySpace<<32) {}
+                ~RasterFileDictionary(void) = default;
+
+        uint64_t    add      (const std::string& fileName, bool sample=false);
+        const char* get      (uint64_t fileId);
+        void        setSample(uint64_t sampleFileId);
+        void        clear    (void);
+        size_t      size     (void) const { return fileVector.size(); }
+
+        const std::set<uint64_t>& getSampleIds(void) const;
+        RasterFileDictionary copy(void);
 
     private:
 
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit         UT_RasterSample (lua_State* L, RasterObject* _raster);
-                        ~UT_RasterSample (void) override;
-
-        static bool      ReadPointsFile(std::vector<RasterObject::point_info_t>& points, const char* filePath);
-        static bool      TestFileDictionary(RasterObject* raster);
-        static int       luaSampleTest (lua_State* L);
+        /* Force inline by implementing here */
+        bool getIndex(uint64_t fileId, uint32_t& index)
+        {
+            if((fileId & UPPER32_MASK) == keySpace)
+            {
+                index = static_cast<uint32_t>(fileId & INDEX_MASK);
+                return index < fileVector.size();
+            }
+            return false;
+        }
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        RasterObject*   raster;
+        Dictionary<uint64_t>     fileDict;       // Dictionary to store raster file names
+        std::vector<std::string> fileVector;     // Vector to store raster file names by id (index derived from lower 32 bits of fileDict value)
+        std::set<uint64_t>       sampleIdSet;    // Set to store raster fileIds used only in returned RasterSamples
+        uint64_t                 keySpace;       // Key space
+        static Mutex             mutex;          // Mutex for thread safety, only add() method is thread safe
 };
 
-#endif  /* __ut_raster_subset__*/
+#endif  /* __raster_file_dictionary__ */
