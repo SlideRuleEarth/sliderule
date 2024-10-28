@@ -310,6 +310,12 @@ for beam in beam_failures:
     if len(beam_failures[beam]) > 0: # at least one classifier encountered an error
         beam_list.remove(beam)
 
+# write empty record of run if no beams left
+if len(beam_list) == 0:
+    with open(settings["filename"] + ".empty", "w") as ror_file:
+            ror_file.write(json.dumps({"beam_failures": beam_failures}))
+    sys.exit(0)
+
 # create one large dataframe of all spots
 df = pd.concat([beam_table[beam] for beam in beam_list])
 print("Concatenated data frames into a single data frame")
