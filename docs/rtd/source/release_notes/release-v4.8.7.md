@@ -16,6 +16,8 @@ Bathy Version #10.
 
 * When a classifier in the docker container encounters an error, the exception is recorded and the occurrence of the error is provided in the metadata output.
 
+* Coastnet was updated to handle the non-deterministic behavior of casting a signed double to an unsigned long (arm behaves differently than x86).
+
 ## Known Issues and Remaining Tasks
 
 * There are classifier mismatches for the ATL24 classifications; but increasingly they appear to be related to the arm64 vs x86 architecture differences.
