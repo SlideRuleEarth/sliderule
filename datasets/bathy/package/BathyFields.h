@@ -47,7 +47,7 @@
 
 #define COASTNET_MODEL  "coastnet_model-20241024.json"
 #define QTREES_MODEL    "qtrees_model-20241024.json"
-#define ENSEMBLE_MODEL  "ensemble_model-20241025.json"
+#define ENSEMBLE_MODEL  "ensemble_model-20241030.json"
 #define POINTNET_MODEL  "pointnet2_model.pth"
 
 /******************************************************************************
