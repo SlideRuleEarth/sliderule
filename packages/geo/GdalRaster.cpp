@@ -86,8 +86,8 @@ GdalRaster::GdalRaster(const GeoFields* _parms, const std::string& _fileName, do
  *----------------------------------------------------------------------------*/
 GdalRaster::~GdalRaster(void)
 {
-    if(dset) GDALClose((GDALDatasetH)dset);
-    if(transf) OGRCoordinateTransformation::DestroyCT(transf);
+    GDALClose((GDALDatasetH)dset);
+    OGRCoordinateTransformation::DestroyCT(transf);
 }
 
 /*----------------------------------------------------------------------------
@@ -101,48 +101,65 @@ void GdalRaster::open(void)
         return;
     }
 
-    dset = static_cast<GDALDataset*>(GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL));
-    if(dset == NULL)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open raster: %s:", fileName.c_str());
-
-    mlog(DEBUG, "Opened %s", fileName.c_str());
-
-    /* Store information about raster */
-    xsize = dset->GetRasterXSize();
-    ysize = dset->GetRasterYSize();
-
-    const CPLErr err = dset->GetGeoTransform(geoTransform);
-    CHECK_GDALERR(err);
-    if(!GDALInvGeoTransform(geoTransform, invGeoTransform))
+    try
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get inverted geo transform: %s:", fileName.c_str());
+        dset = static_cast<GDALDataset*>(GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL));
+        if(dset == NULL)
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open raster: %s:", fileName.c_str());
+
+        mlog(DEBUG, "Opened %s", fileName.c_str());
+
+        /* Store information about raster */
+        xsize = dset->GetRasterXSize();
+        ysize = dset->GetRasterYSize();
+
+        const CPLErr err = dset->GetGeoTransform(geoTransform);
+        CHECK_GDALERR(err);
+        if(!GDALInvGeoTransform(geoTransform, invGeoTransform))
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get inverted geo transform: %s:", fileName.c_str());
+        }
+
+        /* Get raster boundry box */
+        CHECK_GDALERR(err);
+        bbox.lon_min = geoTransform[0];
+        bbox.lon_max = geoTransform[0] + xsize * geoTransform[1];
+        bbox.lat_max = geoTransform[3];
+        bbox.lat_min = geoTransform[3] + ysize * geoTransform[5];
+
+        // mlog(DEBUG, "Extent: (%.2lf, %.2lf), (%.2lf, %.2lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
+
+        cellSize = geoTransform[1];
+        radiusInPixels = radius2pixels(parms->sampling_radius.value);
+
+        /* Limit maximum sampling radius */
+        if(radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR,
+                "Sampling radius is too big: %d: max allowed %d meters",
+                parms->sampling_radius.value, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(cellSize));
+        }
+
+        band = dset->GetRasterBand(1);
+        CHECKPTR(band);
+
+        /* Create coordinates transform for raster */
+        createTransform();
+
     }
-
-    /* Get raster boundry box */
-    CHECK_GDALERR(err);
-    bbox.lon_min = geoTransform[0];
-    bbox.lon_max = geoTransform[0] + xsize * geoTransform[1];
-    bbox.lat_max = geoTransform[3];
-    bbox.lat_min = geoTransform[3] + ysize * geoTransform[5];
-
-    // mlog(DEBUG, "Extent: (%.2lf, %.2lf), (%.2lf, %.2lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
-
-    cellSize       = geoTransform[1];
-    radiusInPixels = radius2pixels(parms->sampling_radius.value);
-
-    /* Limit maximum sampling radius */
-    if(radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
+    catch (const RunTimeException &e)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR,
-                               "Sampling radius is too big: %d: max allowed %d meters",
-                               parms->sampling_radius.value, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(cellSize));
+        /* If there is an error opening the raster, retrieving its info, or getting its transform,
+         * close the raster and rethrow an exception.
+         */
+        mlog(e.level(), "Error opening raster: %s", e.what());
+        GDALClose((GDALDatasetH)dset);
+        dset = NULL;
+        OGRCoordinateTransformation::DestroyCT(transf);
+        transf = NULL;
+        band = NULL;
+        throw;
     }
-
-    band = dset->GetRasterBand(1);
-    CHECKPTR(band);
-
-    /* Create coordinates transform for raster */
-    createTransform();
 }
 
 /*----------------------------------------------------------------------------
@@ -189,11 +206,8 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi)
     }
     catch (const RunTimeException &e)
     {
-        if(sample)
-        {
-            delete sample;
-            sample = NULL;
-        }
+        delete sample;
+        sample = NULL;
         mlog(e.level(), "Error sampling: %s", e.what());
     }
 
