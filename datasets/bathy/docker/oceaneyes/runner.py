@@ -416,7 +416,7 @@ elif format == "h5":
     with open("atl24_iso_xml_template.txt", 'r') as template_file:
         template = template_file.read()
         template = template.replace("$FILENAME", settings["atl24_filename"])
-        template = template.replace("$GENERATION_TIME", f'{now.year}-{now.month:02}-{now.day:02}T{now.hour:02}:{now.minute:02}:{now.second}.000000Z')
+        template = template.replace("$GENERATION_TIME", f'{now.year}-{now.month:02}-{now.day:02}T{now.hour:02}:{now.minute:02}:{now.second:02}.000000Z')
         template = template.replace("$EXTENT_POLYGON", extent_polygon)
         template = template.replace("$EXTENT_BEGIN_TIME", extent_begin_time)
         template = template.replace("$EXTENT_END_TIME", extent_end_time)

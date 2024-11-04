@@ -1,5 +1,5 @@
 # install build dependencies
-FROM haproxytech/haproxy-ubuntu:2.6
+FROM haproxytech/haproxy-ubuntu:2.9
 
 # configure haproxy
 COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg

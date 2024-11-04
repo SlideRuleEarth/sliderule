@@ -299,7 +299,7 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
         /* calculate subaqueous uncertainty */
         double subaqueous_horizontal_uncertainty = 0.0;
         double subaqueous_vertical_uncertainty = 0.0;
-        const double depth = df.surface_h[i] - df.ortho_h[i];
+        const double depth = df.surface_h[i] - df.geoid_corr_h[i];
         if(depth > 0.0)
         {
             /* uncertainty coefficients */
@@ -338,6 +338,22 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
                                             (subaqueous_horizontal_uncertainty * subaqueous_horizontal_uncertainty) );
         df.subaqueous_sigma_tvu[i] = sqrtf( (df.sigma_h[i] * df.sigma_h[i]) +
                                             (subaqueous_vertical_uncertainty * subaqueous_vertical_uncertainty) );
+#endif
+
+        /* output diagnostic csv file */
+#if 0
+        static fileptr_t fp[BathyFields::NUM_SPOTS] = {NULL, NULL, NULL, NULL, NULL, NULL};
+        int s = df.spot.value - 1; // spot index
+        if(fp[s] == NULL)
+        {
+            fp[s] = fopen(FString("uncertainty_%d.csv",df.spot.value).c_str(), "w");
+            fprintf(fp[s], "ref_el,wind_v,lon_ph,lat_ph,surface_h,geoid_corr_h,subaqueous_horizontal_uncertainty,subaqueous_vertical_uncertainty\n");
+        }
+        fprintf(fp[s],"%f,%f,%lf,%lf,%f,%f,%lf,%lf\n", df.ref_el[i], df.wind_v[i], df.lon_ph[i], df.lat_ph[i], df.surface_h[i], df.geoid_corr_h[i], subaqueous_horizontal_uncertainty, subaqueous_vertical_uncertainty);
+        if((i + 1) == df.length())
+        {
+            fclose(fp[s]);
+        }
 #endif
     }
 
