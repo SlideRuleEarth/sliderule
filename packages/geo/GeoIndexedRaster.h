@@ -228,7 +228,7 @@ class GeoIndexedRaster: public RasterObject
         virtual void     getGroupSubsets       (const rasters_group_t* rgroup, List<RasterSubset*>& slist);
         uint32_t         getGroupFlags         (const rasters_group_t* rgroup);
 
-        static double    getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
+        virtual double   getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         bool             openGeoIndex          (const OGRGeometry* geo, const std::vector<point_info_t>* points);
         virtual bool     getFeatureDate        (const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate);
         virtual void     getIndexFile          (const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points=NULL) = 0;

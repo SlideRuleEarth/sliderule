@@ -75,6 +75,10 @@
 #include "bathy.h"
 #endif
 
+#ifdef __bluetopo__
+#include "bluetopo.h"
+#endif
+
 #ifdef __gebco__
 #include "gebco.h"
 #endif
@@ -368,6 +372,10 @@ int main (int argc, char* argv[])
         initbathy();
     #endif
 
+    #ifdef __bluetopo__
+        initbluetopo();
+    #endif
+
     #ifdef __gebco__
         initgebco();
     #endif
@@ -439,6 +447,10 @@ int main (int argc, char* argv[])
 
     #ifdef __bathy__
         deinitbathy();
+    #endif
+
+    #ifdef __bluetopo__
+        deinitbluetopo();
     #endif
 
     #ifdef __gebco__
