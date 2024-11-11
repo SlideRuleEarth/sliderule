@@ -114,11 +114,9 @@ class GeoIndexedRaster: public RasterObject
 
         /* Raster and associated points to sample, used by batch sampling */
         typedef struct UniqueRaster {
-            bool                        dataIsElevation;
-            uint64_t                    fileId;         // file dictionary id
+            const raster_info_t*        rinfo;
             std::vector<point_sample_t> pointSamples;   // vector of samples for each point in this raster
-            explicit UniqueRaster(bool _dataIsElevation, uint64_t _fileId):
-                                 dataIsElevation(_dataIsElevation), fileId(_fileId) {}
+            explicit UniqueRaster(const raster_info_t* _rinfo): rinfo(_rinfo) {}
         } unique_raster_t;
 
         typedef Ordering<rasters_group_t*, unsigned long> GroupOrdering;

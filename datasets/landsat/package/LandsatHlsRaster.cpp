@@ -313,6 +313,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
                         const bool returnBandSample = it->second;
                         if(returnBandSample)
                         {
+                            sample->bandName = bandName;  // TODO: Remove when sample contains band name
                             slist->add(sample);
                             item->sample = NULL;
                         }
@@ -372,6 +373,9 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
                                 s = new RasterSample(*ps.sample);
                             }
 
+                            /* Set band name for this sample */
+                            s->bandName = bandName; //TODO: remove when sample contains band name
+
                             /* Set time for this sample */
                             s->time = rgroup->gpsTime / 1000;
 
@@ -417,6 +421,9 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
         if((green != invalid) && (swir16 != invalid))
             sample->value = (green - swir16) / (green + swir16);
         else sample->value = invalid;
+
+        /* Set band name for this sample */
+        sample->bandName = "NDSI";
         slist->add(sample);
     }
 
@@ -426,6 +433,9 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
         if((red != invalid) && (nir08 != invalid))
             sample->value = (nir08 - red) / (nir08 + red);
         else sample->value = invalid;
+
+        /* Set band name for this sample */
+        sample->bandName = "NDVI";
         slist->add(sample);
     }
 
@@ -435,6 +445,9 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
         if((nir08 != invalid) && (swir16 != invalid))
             sample->value = (nir08 - swir16) / (nir08 + swir16);
         else sample->value = invalid;
+
+        /* Set band name for this sample */
+        sample->bandName = "NDWI";
         slist->add(sample);
     }
 

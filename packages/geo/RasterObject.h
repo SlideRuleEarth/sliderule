@@ -110,6 +110,11 @@ class RasterObject: public LuaObject
         virtual uint8_t*     getPixels       (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, void* param=NULL);
                             ~RasterObject    (void) override;
 
+        bool hasBands (void) const
+        {
+            return parms->bands.length() > 0;
+        }
+
         bool hasZonalStats (void) const
         {
             return parms->zonal_stats;

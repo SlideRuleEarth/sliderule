@@ -47,7 +47,7 @@ BlueTopoBathyRaster::BlueTopoBathyRaster(lua_State* L, RequestFields* rqst_parms
  filePath(parms->asset.asset->getPath()),
  indexBucket(parms->asset.asset->getIndex())
 {
-    std::string bucketPath = filePath + indexBucket;
+    const std::string bucketPath = filePath + indexBucket;
     if(!findIndexFileInS3Bucket(bucketPath))
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create BlueTopoBathyRaster");
@@ -104,12 +104,13 @@ bool BlueTopoBathyRaster::findRasters(raster_finder_t* finder)
                 {
                     pos += token.length();
 
-                    std::string rasterName = fullPath.substr(pos);
+                    const std::string rasterName = fullPath.substr(pos);
                     fullPath = filePath + rasterName;
                 }
                 else
                 {
                     mlog(WARNING, "Could not find token %s in %s", token.c_str(), dataFile);
+                    delete rgroup;
                     continue;
                 }
 
@@ -202,16 +203,17 @@ bool BlueTopoBathyRaster::findIndexFileInS3Bucket(const std::string& bucketPath)
     if(fileList)
     {
         /* Look for .gpkg file, assume there is only one in the bucket */
-        std::string token = ".gpkg";
+        const std::string token = ".gpkg";
 
         for(int i = 0; fileList[i] != nullptr; i++)
         {
-            std::string fileName = fileList[i];
+            const std::string fileName = fileList[i];
 
             if(fileName.size() >= token.size() &&
                fileName.compare(fileName.size() - token.size(), token.size(), token) == 0)
             {
-                indexFile = bucketPath + "/" + fileName;
+                indexFile = bucketPath;
+                indexFile.append("/").append(fileName);
                 found = true;
                 mlog(DEBUG, "Found index file: %s", indexFile.c_str());
                 break;

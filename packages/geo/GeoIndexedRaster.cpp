@@ -958,10 +958,10 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
         {
             unique_raster_t* ur = breader->uraster;
             GdalRaster* raster = new GdalRaster(breader->obj->parms,
-                                                breader->obj->fileDict.get(ur->fileId),
+                                                breader->obj->fileDict.get(ur->rinfo->fileId),
                                                 0,                     /* Sample collecting code will set it to group's gpsTime */
-                                                ur->fileId,
-                                                ur->dataIsElevation,
+                                                ur->rinfo->fileId,
+                                                ur->rinfo->dataIsElevation,
                                                 breader->obj->crscb);
 
             /* Sample all points for this raster */
@@ -1569,7 +1569,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                     else
                     {
                         /* Raster is not in the vector of unique rasters */
-                        unique_raster_t* ur = new unique_raster_t(rinfo.dataIsElevation, rinfo.fileId);
+                        unique_raster_t* ur = new unique_raster_t(&rinfo);
                         uniqueRasters.push_back(ur);
 
                         /* Set pointer in rinfo to new unique raster */
@@ -1586,7 +1586,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
         mlog(DEBUG, "Finding points for unique rasters");
         for(unique_raster_t* ur : uniqueRasters)
         {
-            auto it = rasterToPointsMap.find(fileDict.get(ur->fileId));
+            auto it = rasterToPointsMap.find(fileDict.get(ur->rinfo->fileId));
             if(it != rasterToPointsMap.end())
             {
                 for(const uint32_t pointIndx : it->second)
