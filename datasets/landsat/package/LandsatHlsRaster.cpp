@@ -300,7 +300,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
             cacheitem_t* item;
             if(cache.find(key, &item))
             {
-                RasterSample* sample = item->sample;
+                RasterSample* sample = item->bandSample[0];
                 if(sample)
                 {
                     sample->flags = flags;
@@ -315,7 +315,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
                         {
                             sample->bandName = bandName;  // TODO: Remove when sample contains band name
                             slist->add(sample);
-                            item->sample = NULL;
+                            item->bandSample[0] = NULL;
                         }
                     }
 

@@ -87,7 +87,7 @@ uint32_t GeoRaster::getSamples(const MathLib::point_3d_t& point, int64_t gps, Li
     try
     {
         OGRPoint ogr_point(point.x, point.y, point.z);
-        RasterSample* sample = raster.samplePOI(&ogr_point);
+        RasterSample* sample = raster.samplePOI(&ogr_point, 1); //TODO: fix this
         if(sample) slist.add(sample);
     }
     catch (const RunTimeException &e)
@@ -117,7 +117,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
         OGRPolygon poly = GdalRaster::makeRectangle(extent.ll.x, extent.ll.y, extent.ur.x, extent.ur.y);
 
         /* Get subset rasters, if none found, return */
-        RasterSubset* subset = raster.subsetAOI(&poly);
+        RasterSubset* subset = raster.subsetAOI(&poly, 1); //TODO: fix this
         if(subset)
         {
             /*
@@ -133,10 +133,10 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
                                          raster.getGpsTime(),
                                          raster.isElevation(),
                                          raster.getOverrideCRS());
+            slist.add(subset);
 
             /* RequestFields are shared with subsseted raster */
             referenceLuaObject(rqstParms);
-            slist.add(subset);
         }
     }
     catch (const RunTimeException &e)
@@ -155,7 +155,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
 /*----------------------------------------------------------------------------
  * getPixels
  *----------------------------------------------------------------------------*/
-uint8_t* GeoRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, void* param)
+uint8_t* GeoRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, int bandNum, void* param)
 {
     static_cast<void>(param);
     uint8_t* data = NULL;
@@ -165,7 +165,7 @@ uint8_t* GeoRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32
     /* Enable multi-threaded decompression in Gtiff driver */
     CPLSetThreadLocalConfigOption("GDAL_NUM_THREADS", "ALL_CPUS");
 
-    data = raster.getPixels(ulx, uly, xsize, ysize);
+    data = raster.getPixels(ulx, uly, xsize, ysize, bandNum);
 
     /* Disable multi-threaded decompression in Gtiff driver */
     CPLSetThreadLocalConfigOption("GDAL_NUM_THREADS", "1");

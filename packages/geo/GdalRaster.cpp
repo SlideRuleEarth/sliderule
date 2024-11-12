@@ -63,7 +63,6 @@ GdalRaster::GdalRaster(const GeoFields* _parms, const std::string& _fileName, do
    overrideCRS(cb),
    fileName   (_fileName),
    dset       (NULL),
-   band       (NULL),
    dataIsElevation(_dataIsElevation),
    xsize      (0),
    ysize      (0),
@@ -109,6 +108,28 @@ void GdalRaster::open(void)
 
         mlog(DEBUG, "Opened %s", fileName.c_str());
 
+        const int bandCount = dset->GetRasterCount();
+        if (bandCount == 0)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "No bands found in raster: %s:", fileName.c_str());
+        }
+
+        /* Populate the mapping of band names to indices */
+        for (int i = 1; i <= bandCount; ++i)
+        {
+            GDALRasterBand* band = dset->GetRasterBand(i);
+            CHECKPTR(band);
+
+            const char* bandName = band->GetDescription();
+
+            /* Only store bands that have valid names */
+            if (bandName && strlen(bandName) > 0)
+            {
+                bandMap[std::string(bandName)] = i;
+                mlog(DEBUG, "Band %d: %s", i, bandName);
+            }
+        }
+
         /* Store information about raster */
         xsize = dset->GetRasterXSize();
         ysize = dset->GetRasterYSize();
@@ -140,9 +161,6 @@ void GdalRaster::open(void)
                 parms->sampling_radius.value, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(cellSize));
         }
 
-        band = dset->GetRasterBand(1);
-        CHECKPTR(band);
-
         /* Create coordinates transform for raster */
         createTransform();
 
@@ -157,7 +175,7 @@ void GdalRaster::open(void)
         dset = NULL;
         OGRCoordinateTransformation::DestroyCT(transf);
         transf = NULL;
-        band = NULL;
+        bandMap.clear();
         throw;
     }
 }
@@ -165,7 +183,7 @@ void GdalRaster::open(void)
 /*----------------------------------------------------------------------------
  * samplePOI
  *----------------------------------------------------------------------------*/
-RasterSample* GdalRaster::samplePOI(OGRPoint* poi)
+RasterSample* GdalRaster::samplePOI(OGRPoint* poi, int bandNum)
 {
     RasterSample* sample = NULL;
 
@@ -176,6 +194,9 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi)
     {
         if(dset == NULL)
             open();
+
+        GDALRasterBand* band = dset->GetRasterBand(bandNum);
+        CHECKPTR(band);
 
         const double z = poi->getZ();
         // mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
@@ -192,12 +213,12 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi)
             const double vertical_shift = z - poi->getZ();
             sample = new RasterSample(gpsTime, fileId, vertical_shift);
             if(parms->sampling_algo == GRIORA_NearestNeighbour)
-                readPixel(poi, sample);
+                readPixel(poi, band, sample);
             else
-                resamplePixel(poi, sample);
+                resamplePixel(poi, band, sample);
 
             if(parms->zonal_stats)
-                computeZonalStats(poi, sample);
+                computeZonalStats(poi, band, sample);
         }
         else
         {
@@ -218,7 +239,7 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi)
 /*----------------------------------------------------------------------------
  * subsetAOI
  *----------------------------------------------------------------------------*/
-RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
+RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly, int bandNum)
 {
     /*
      * Notes on extent format:
@@ -341,7 +362,7 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
             throw RunTimeException(CRITICAL, RTE_ERROR, "AOI upleft pixel (%d, %d) < raster upleft pixel (%d, %d)", ulx, uly, raster_ulx, raster_uly);
         }
 
-        subset = getSubset(ulx, uly, _xsize, _ysize);
+        subset = getSubset(ulx, uly, _xsize, _ysize, bandNum);
     }
     catch (const RunTimeException &e)
     {
@@ -359,7 +380,7 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly)
 /*----------------------------------------------------------------------------
  * getPixels
  *----------------------------------------------------------------------------*/
-uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize)
+uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize, int bandNum)
 {
     /* Clear error status */
     ssError = SS_NO_ERRORS;
@@ -395,6 +416,8 @@ uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint
         if(uly + _ysize > ysize)
             throw RunTimeException(CRITICAL, RTE_ERROR, "rows out of bounds");
 
+        GDALRasterBand* band = dset->GetRasterBand(bandNum);
+        CHECKPTR(band);
         const GDALDataType dtype = band->GetRasterDataType();
 
         /* Make all uint64_t, with uint32_t got an overflow */
@@ -438,6 +461,20 @@ uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint
     }
 
     return data;
+}
+
+
+/*----------------------------------------------------------------------------
+ * getBandNumber
+ *----------------------------------------------------------------------------*/
+int GdalRaster::getBandNumber(const std::string& bandName)
+{
+    auto it = bandMap.find(bandName);
+    if(it == bandMap.end())
+    {
+        mlog(WARNING, "Band name not found: %s", bandName.c_str());
+    }
+    return it->second;
 }
 
 
@@ -527,7 +564,7 @@ OGRPolygon GdalRaster::makeRectangle(double minx, double miny, double maxx, doub
 /*----------------------------------------------------------------------------
  * readPixel
  *----------------------------------------------------------------------------*/
-void GdalRaster::readPixel(const OGRPoint* poi, RasterSample* sample)
+void GdalRaster::readPixel(const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample)
 {
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
@@ -540,6 +577,7 @@ void GdalRaster::readPixel(const OGRPoint* poi, RasterSample* sample)
 
         int xBlockSize = 0;
         int yBlockSize = 0;
+
         band->GetBlockSize(&xBlockSize, &yBlockSize);
 
         /* Raster offsets to block of interest */
@@ -659,7 +697,7 @@ void GdalRaster::readPixel(const OGRPoint* poi, RasterSample* sample)
 
         /* Done reading, release block lock */
         block->DropLock();
-        if(nodataCheck(sample) && dataIsElevation)
+        if(nodataCheck(sample, band) && dataIsElevation)
         {
             sample->value += sample->verticalShift;
         }
@@ -678,7 +716,7 @@ void GdalRaster::readPixel(const OGRPoint* poi, RasterSample* sample)
 /*----------------------------------------------------------------------------
  * resamplePixel
  *----------------------------------------------------------------------------*/
-void GdalRaster::resamplePixel(const OGRPoint* poi, RasterSample* sample)
+void GdalRaster::resamplePixel(const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample)
 {
     try
     {
@@ -727,8 +765,8 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, RasterSample* sample)
         const bool validWindow = containsWindow(_x, _y, xsize, ysize, windowSize);
         if(validWindow)
         {
-            readWithRetry(_x, _y, windowSize, windowSize, &sample->value, 1, 1, &args);
-            if(nodataCheck(sample) && dataIsElevation)
+            readWithRetry(band, _x, _y, windowSize, windowSize, &sample->value, 1, 1, &args);
+            if(nodataCheck(sample, band) && dataIsElevation)
             {
                 sample->value += sample->verticalShift;
             }
@@ -736,7 +774,7 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, RasterSample* sample)
         else
         {
             /* At least return pixel value if unable to resample raster */
-            readPixel(poi, sample);
+            readPixel(poi, band, sample);
         }
     }
     catch (const RunTimeException &e)
@@ -749,7 +787,7 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, RasterSample* sample)
 /*----------------------------------------------------------------------------
  * computeZonalStats
  *----------------------------------------------------------------------------*/
-void GdalRaster::computeZonalStats(const OGRPoint* poi, RasterSample* sample)
+void GdalRaster::computeZonalStats(const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample)
 {
     double *samplesArray = NULL;
 
@@ -771,12 +809,13 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, RasterSample* sample)
         const bool validWindow = containsWindow(newx, newy, xsize, ysize, windowSize);
         if(validWindow)
         {
-            readWithRetry(newx, newy, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
+            readWithRetry(band, newx, newy, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
 
             /* One of the windows (raster or index data set) was valid. Compute zonal stats */
             double min = std::numeric_limits<double>::max();
             double max = std::numeric_limits<double>::min();
             double sum = 0;
+
             const double nodata = band->GetNoDataValue();
             std::vector<double> validSamples;
             /*
@@ -872,7 +911,7 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, RasterSample* sample)
 /*----------------------------------------------------------------------------
  * nodataCheck
  *----------------------------------------------------------------------------*/
-bool GdalRaster::nodataCheck(RasterSample* sample)
+bool GdalRaster::nodataCheck(RasterSample* sample, GDALRasterBand* band)
 {
     /*
      * Replace nodata with NAN
@@ -981,7 +1020,7 @@ bool GdalRaster::containsWindow(int x, int y, int maxx, int maxy, int windowSize
 /*----------------------------------------------------------------------------
  * readWithRetry
  *----------------------------------------------------------------------------*/
-void GdalRaster::readWithRetry(int x, int y, int _xsize, int _ysize, void *data, int dataXsize, int dataYsize, GDALRasterIOExtraArg *args)
+void GdalRaster::readWithRetry(GDALRasterBand* band, int x, int y, int _xsize, int _ysize, void *data, int dataXsize, int dataYsize, GDALRasterIOExtraArg *args)
 {
     /*
      * On AWS reading from S3 buckets may result in failed reads due to network issues/timeouts.
@@ -1009,7 +1048,7 @@ void GdalRaster::readWithRetry(int x, int y, int _xsize, int _ysize, void *data,
 /*----------------------------------------------------------------------------
  * getSubset
  *----------------------------------------------------------------------------*/
-RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize)
+RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize, int bandNum)
 {
     RasterSubset* subset = NULL;
     char** options = NULL;
@@ -1027,6 +1066,8 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
 
         }
 
+        GDALRasterBand* band = dset->GetRasterBand(bandNum);
+        CHECKPTR(band);
         const GDALDataType dtype = band->GetRasterDataType();
 
         /* Calculate size of subset */

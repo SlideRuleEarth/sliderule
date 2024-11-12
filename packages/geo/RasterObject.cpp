@@ -252,14 +252,27 @@ uint32_t RasterObject::getSamples(const std::vector<point_info_t>& points, List<
 /*----------------------------------------------------------------------------
  * getPixels
  *----------------------------------------------------------------------------*/
-uint8_t* RasterObject::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, void* param)
+uint8_t* RasterObject::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, int bandNum, void* param)
 {
     static_cast<void>(ulx);
     static_cast<void>(uly);
     static_cast<void>(xsize);
     static_cast<void>(ysize);
+    static_cast<void>(bandNum);
     static_cast<void>(param);
     return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * getBands
+ *----------------------------------------------------------------------------*/
+void RasterObject::getBands(std::vector<std::string>& bands)
+{
+    for(long i = 0; i < parms->bands.length(); i++)
+    {
+        const std::string& bandName = parms->bands[i];
+        bands.push_back(bandName);
+    }
 }
 
 /*----------------------------------------------------------------------------

@@ -70,7 +70,6 @@ void BlueTopoBathyRaster::getIndexFile(const OGRGeometry* geo, std::string& file
     mlog(DEBUG, "Using %s", file.c_str());
 }
 
-
 /*----------------------------------------------------------------------------
  * findRasters
  *----------------------------------------------------------------------------*/

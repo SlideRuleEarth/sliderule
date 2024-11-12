@@ -41,6 +41,7 @@
 #include "RasterSubset.h"
 #include <ogrsf_frmts.h>
 #include <thread>
+#include <unordered_map>
 
 /******************************************************************************
  * Typedef and macros used by GDAL class
@@ -104,9 +105,9 @@ class GdalRaster
                            GdalRaster     (const GeoFields* _parms, const std::string& _fileName, double _gpsTime, uint64_t _fileId, bool _dataIsElevation, overrideCRS_t cb, bbox_t* aoi_bbox_override=NULL);
         virtual           ~GdalRaster     (void);
         void               open           (void);
-        RasterSample*      samplePOI      (OGRPoint* poi);
-        RasterSubset*      subsetAOI      (OGRPolygon* poly);
-        uint8_t*           getPixels      (uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize);
+        RasterSample*      samplePOI      (OGRPoint* poi, int bandNum);
+        RasterSubset*      subsetAOI      (OGRPolygon* poly, int bandNum);
+        uint8_t*           getPixels      (uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize, int bandNum);
         const std::string& getFileName    (void) const { return fileName;}
         int                getRows        (void) const { return ysize; }
         int                getCols        (void) const { return xsize; }
@@ -116,6 +117,7 @@ class GdalRaster
         bool               isElevation    (void) const { return dataIsElevation; }
         overrideCRS_t      getOverrideCRS (void) const { return overrideCRS; }
         double             getGpsTime     (void) const { return gpsTime; }
+        int                getBandNumber  (const std::string& bandName);
 
         /*--------------------------------------------------------------------
          * Static Methods
@@ -145,7 +147,6 @@ class GdalRaster
 
         std::string     fileName;
         GDALDataset    *dset;
-        GDALRasterBand* band;
         bool            dataIsElevation;
         uint32_t        xsize;
         uint32_t        ysize;
@@ -157,19 +158,21 @@ class GdalRaster
         double          invGeoTransform[6];
         uint32_t        ssError;
 
+        std::unordered_map<std::string, int> bandMap; /* Maps raster band names to band numbers */
+
         /*--------------------------------------------------------------------
         * Methods
         *--------------------------------------------------------------------*/
 
-        void        readPixel            (const OGRPoint* poi, RasterSample* sample);
-        void        resamplePixel        (const OGRPoint* poi, RasterSample* sample);
-        void        computeZonalStats    (const OGRPoint* poi, RasterSample* sample);
-        inline bool nodataCheck          (RasterSample* sample);
+        void        readPixel            (const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample);
+        void        resamplePixel        (const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample);
+        void        computeZonalStats    (const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample);
+        inline bool nodataCheck          (RasterSample* sample, GDALRasterBand* band);
         void        createTransform      (void);
         int         radius2pixels        (int _radius) const;
         static inline bool containsWindow(int x, int y, int maxx, int maxy, int windowSize);
-        inline void readWithRetry        (int x, int y, int xsize, int ysize, void* data, int dataXsize, int dataYsize, GDALRasterIOExtraArg* args);
-        RasterSubset* getSubset          (uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize);
+        inline void readWithRetry        (GDALRasterBand* band, int x, int y, int xsize, int ysize, void* data, int dataXsize, int dataYsize, GDALRasterIOExtraArg* args);
+        RasterSubset* getSubset          (uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize, int bandNum);
 
         void        map2pixel            (double mapx, double mapy, int& x, int& y);
         void        map2pixel            (const OGRPoint* poi, int& x, int& y) { map2pixel(poi->getX(), poi->getY(), x, y); }

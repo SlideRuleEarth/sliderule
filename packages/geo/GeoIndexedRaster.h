@@ -134,10 +134,10 @@ class GeoIndexedRaster: public RasterObject
 
         /* Cache used by serial sampling code */
         typedef struct CacheItem {
-            bool            enabled;
-            RasterSample*   sample;
-            RasterSubset*   subset;
-            GdalRaster*     raster;
+            bool                        enabled;
+            std::vector<RasterSample*>  bandSample;
+            std::vector<RasterSubset*>  bandSubset;
+            GdalRaster*                 raster;
             ~CacheItem(void) {delete raster;}
         } cacheitem_t;
 
@@ -325,6 +325,8 @@ class GeoIndexedRaster: public RasterObject
 
         bool            collectSamples      (const std::vector<point_groups_t>& pointsGroups,
                                              List<sample_list_t*>& sllist);
+
+        void            getRasterBands      (RasterObject* robj, GdalRaster* raster, std::vector<int>& bands);
 
 };
 
