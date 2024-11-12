@@ -258,6 +258,8 @@ class BathyFields: public Icesat2Fields
         FieldElement<string>                            atl09AssetName {"icesat2"}; // name of the asset in the asset directory for the ATL09 granules
         FieldElement<double>                            maxDemDelta {50.0};         // initial filter of heights against DEM (For removing things like clouds)
         FieldElement<double>                            minDemDelta {-100.0};       // initial filter of heights against DEM (For removing things like clouds)
+        FieldElement<double>                            maxGeoidDelta {50.0};       // initial filter of heights against geoid (For removing things like clouds)
+        FieldElement<double>                            minGeoidDelta {-100.0};     // initial filter of heights against geoid (For removing things like clouds)
         FieldElement<int>                               phInExtent {8192};          // number of photons in each extent
         FieldElement<bool>                              generateNdwi {false};       // use HLS data to generate NDWI for each segment lat,lon
         FieldElement<bool>                              useBathyMask {true};        // global bathymetry mask downloaded in atl24 init lua routine

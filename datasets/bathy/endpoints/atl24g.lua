@@ -363,10 +363,12 @@ arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_filename, parms, rspq)
 -- send ISO XML file to user
 -------------------------------------------------------
 if parms["output"]["format"] == "h5" then
+    local xml_filename = rqst["parms"]["output"]["path"]
+    xml_filename = xml_filename:sub(0, xml_filename:find(".h5")).."iso.xml"
     local xml_parms = core.parms({
         output = {
             asset=rqst["parms"]["output"]["asset"], -- use original request asset
-            path=rqst["parms"]["output"]["path"]..".iso.xml" -- modify the original requested path
+            path=xml_filename -- modify the original requested path
         }
     })
     arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_filename..".iso.xml", xml_parms, rspq)

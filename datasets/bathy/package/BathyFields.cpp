@@ -112,6 +112,8 @@ BathyFields::BathyFields(lua_State* L, uint64_t key_space, const char* default_a
         { {"asset09",             &atl09AssetName},
           {"max_dem_delta",       &maxDemDelta},
           {"min_dem_delta",       &minDemDelta},
+          {"max_geoid_delta",     &maxGeoidDelta},
+          {"min_geoid_delta",     &minGeoidDelta},
           {"ph_in_extent",        &phInExtent},
           {"generate_ndwi",       &generateNdwi},
           {"use_bathy_mask",      &useBathyMask},

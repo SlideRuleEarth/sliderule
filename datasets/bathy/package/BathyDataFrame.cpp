@@ -636,6 +636,13 @@ void* BathyDataFrame::subsettingThread (void* parm)
                     break;
                 }
 
+                /* Calculate Geoid Corrected Height and Check Delta */
+                const float geoid_corr_h = atl03.h_ph[current_photon] - atl03.geoid[current_segment];
+                if(geoid_corr_h > parms.maxGeoidDelta.value || geoid_corr_h < parms.minGeoidDelta.value)
+                {
+                    break;
+                }
+
                 /* Calculate UTM Coordinates */
                 const double latitude = atl03.lat_ph[current_photon];
                 const double longitude = atl03.lon_ph[current_photon];
