@@ -61,6 +61,19 @@ class GeoDataFrame: public LuaObject, public Field
         static const char* META;
         static const char* TERMINATE;
 
+        static const char* elRecType;
+        static const RecordObject::fieldDef_t elRecDef[];
+        static const char* atRecType;
+        static const RecordObject::fieldDef_t atRecDef[];
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+
+        };
+
         /*--------------------------------------------------------------------
          * Subclasses
          *--------------------------------------------------------------------*/
@@ -168,6 +181,7 @@ class GeoDataFrame: public LuaObject, public Field
         virtual ~GeoDataFrame   (void) override;
 
         static void*    runThread           (void* parm);
+        static void*    receiveThread       (void* parm);
         void            populateGeoColumns  (void);
 
         string          toJson              (void) const override;
@@ -180,6 +194,8 @@ class GeoDataFrame: public LuaObject, public Field
         static int      luaGetMetaData      (lua_State* L);
         static int      luaRun              (lua_State* L);
         static int      luaRunComplete      (lua_State* L);
+        static int      luaSend             (lua_State* L);
+        static int      luaReceive          (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data

@@ -55,6 +55,34 @@ const struct luaL_Reg GeoDataFrame::FrameColumn::LUA_META_TABLE[] = {
 
 const char* GeoDataFrame::FrameRunner::OBJECT_TYPE = "FrameRunner";
 
+const char* GeoDataFrame::elRecType = "atl06rec.elevation"; // extended elevation measurement record
+const GeoDataFrame::fieldDef_t Atl06Dispatch::elRecDef[] = {
+    {"extent_id",               RecordObject::UINT64,   offsetof(elevation_t, extent_id),           1,  NULL, NATIVE_FLAGS | RecordObject::INDEX},
+    {"segment_id",              RecordObject::UINT32,   offsetof(elevation_t, segment_id),          1,  NULL, NATIVE_FLAGS},
+    {"n_fit_photons",           RecordObject::INT32,    offsetof(elevation_t, photon_count),        1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"pflags",                  RecordObject::UINT16,   offsetof(elevation_t, pflags),              1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"rgt",                     RecordObject::UINT16,   offsetof(elevation_t, rgt),                 1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"cycle",                   RecordObject::UINT8,    offsetof(elevation_t, cycle),               1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"region",                  RecordObject::UINT8,    offsetof(elevation_t, region),              1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"spot",                    RecordObject::UINT8,    offsetof(elevation_t, spot),                1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"gt",                      RecordObject::UINT8,    offsetof(elevation_t, gt),                  1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"time",                    RecordObject::TIME8,    offsetof(elevation_t, time_ns),             1,  NULL, NATIVE_FLAGS | RecordObject::TIME},
+    {"latitude",                RecordObject::DOUBLE,   offsetof(elevation_t, latitude),            1,  NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
+    {"longitude",               RecordObject::DOUBLE,   offsetof(elevation_t, longitude),           1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
+    {"h_mean",                  RecordObject::DOUBLE,   offsetof(elevation_t, h_mean),              1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
+    {"dh_fit_dx",               RecordObject::FLOAT,    offsetof(elevation_t, dh_fit_dx),           1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"x_atc",                   RecordObject::FLOAT,    offsetof(elevation_t, x_atc),               1,  NULL, NATIVE_FLAGS},
+    {"y_atc",                   RecordObject::FLOAT,    offsetof(elevation_t, y_atc),               1,  NULL, NATIVE_FLAGS},
+    {"w_surface_window_final",  RecordObject::FLOAT,    offsetof(elevation_t, window_height),       1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"rms_misfit",              RecordObject::FLOAT,    offsetof(elevation_t, rms_misfit),          1,  NULL, NATIVE_FLAGS | RecordObject::AUX},
+    {"h_sigma",                 RecordObject::FLOAT,    offsetof(elevation_t, h_sigma),             1,  NULL, NATIVE_FLAGS | RecordObject::AUX}
+};
+
+const char* GeoDataFrame::atRecType = "atl06rec";
+const RecordObject::fieldDef_t GeoDataFrame::atRecDef[] = {
+    {"elevation",               RecordObject::USER,     offsetof(atl06_t, elevation),               0,  elRecType, NATIVE_FLAGS | RecordObject::BATCH}
+};
+
 /******************************************************************************
  * CLASS METHODS
  ******************************************************************************/

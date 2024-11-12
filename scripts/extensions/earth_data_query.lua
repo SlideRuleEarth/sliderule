@@ -65,6 +65,7 @@ STAC_PAGE_SIZE = 100
 TNM_PAGE_SIZE = 100
 
 -- response codes for all of the package functions
+RC_SINGLETON = 1
 RC_SUCCESS = 0
 RC_FAILURE = -1
 RC_RQST_FAILED = -2
@@ -522,6 +523,59 @@ local function search (parms, poly)
 end
 
 --
+-- query
+--
+local function query(parms, q, userlog)
+
+    -- populate catalogs
+    if parms:withsamplers() then
+        for dataset,raster_parms in pairs(parms[geo.PARMS]) do
+            if not raster_parms["catalog"] then
+                userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> querying resources for %s", q, dataset))
+                local rc, rsps = search(raster_parms, parms["poly"])
+                if rc == RC_SUCCESS then
+                    parms:setcatalog(dataset,json.encode(rsps))
+                    userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> returned %d resources for %s", q, rsps and #rsps["features"] or 0, dataset))
+                elseif rc ~= RC_UNSUPPORTED then
+                    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to get catalog for %s <%d>: %s", q, dataset, rc, rsps))
+                    parms:setcatalog(dataset,"{}") --prevents trying again on a proxied request
+                end
+            end
+        end
+    end
+
+    -- if singular resource populated, then just return
+    if parms["resource"] then
+        return RC_SINGLETON
+    end
+
+    -- if multiple resources populated, then just return
+    if parms["resources"] then
+        return RC_SUCCESS
+    end
+
+    -- else populate resources via earthdata search (with multiple attempts)
+    local max_retries = 3
+    local attempt = 1
+    while true do
+        local rc, rsps = search(parms)
+        if rc == RC_SUCCESS then
+            userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> retrieved %d resources", q, #rsps))
+            parms["resources"] = rsps
+            return RC_SUCCESS
+        else
+            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed attempt %d <%d>: %s", q, attempt, rc, rsps))
+            attempt = attempt + 1
+            if attempt > max_retries then
+                userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed query... aborting!", q))
+                return RC_FAILURE
+            end
+        end
+    end
+
+end
+
+--
 -- Return Package --
 --
 return {
@@ -529,6 +583,8 @@ return {
     stac = stac,
     tnm = tnm,
     search = search,
+    query = query,
+    SINGLETON = RC_SINGLETON,
     SUCCESS = RC_SUCCESS,
     FAILURE = RC_FAILURE,
     RQST_FAILED = RC_RQST_FAILED,
