@@ -114,9 +114,9 @@ bool BlueTopoBathyRaster::findRasters(raster_finder_t* finder)
                 }
 
                 raster_info_t rinfo;
-                rinfo.dataIsElevation = true;
-                rinfo.tag             = VALUE_TAG;
-                rinfo.fileId          = finder->fileDict.add(fullPath);
+                rinfo.elevationBandNum = 1;
+                rinfo.tag              = VALUE_TAG;
+                rinfo.fileId           = finder->fileDict.add(fullPath);
                 rgroup->infovect.push_back(rinfo);
             }
             rgroup->infovect.shrink_to_fit();

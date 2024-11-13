@@ -66,7 +66,8 @@ class Gedi03Raster: public GeoRaster
          GeoRaster(L, rqst_parms, key,
                  std::string(rqst_parms->geoFields(key)->asset.asset->getPath()).append("/").append(rqst_parms->geoFields(key)->asset.asset->getIndex()),
                  TimeLib::datetime2gps(2022, 1, 19),
-                 true /* Data is elevation */) {}
+                 1,                  /* elevationBandNum */
+                 GdalRaster::NO_BAND /* flagsBandNum     */) {}
 };
 
 #endif  /* __gedi03_raster__ */

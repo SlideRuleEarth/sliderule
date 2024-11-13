@@ -955,17 +955,25 @@ void* GeoIndexedRaster::readerThread(void *param)
         cacheitem_t* entry = reader->entry;
         if(entry != NULL)
         {
-            std::vector<int> bands;
-            reader->obj->getInnerBands(entry->raster, bands);
-
             GdalRaster* raster = entry->raster;
+
+            /* Open raster so we can get inner bands from it */
+            raster->open();
+
+            std::vector<int> bands;
+            reader->obj->getInnerBands(raster, bands);
+
             if(GdalRaster::ispoint(reader->geo))
             {
                 /* Sample raster bands */
                 for(const int bandNum : bands)
                 {
-                    RasterSample* sample = raster->samplePOI(dynamic_cast<OGRPoint*>(reader->geo), bandNum);
+                    /* Use local copy of point, it will be projected in samplePOI. We do not want project it again */
+                    OGRPoint point(*(dynamic_cast<OGRPoint*>(reader->geo)));
+
+                    RasterSample* sample = raster->samplePOI(&point, bandNum);
                     entry->bandSample.push_back(sample);
+                    mlog(DEBUG, "Band: %d, %s", bandNum, sample->toString().c_str());
                 }
             }
             else if(GdalRaster::ispoly(reader->geo))
@@ -973,6 +981,7 @@ void* GeoIndexedRaster::readerThread(void *param)
                 /* Subset raster bands */
                 for(const int bandNum : bands)
                 {
+                    /* No need to use local copy of polygon, subsetAOI will use it's envelope and not project it */
                     RasterSubset* subset = raster->subsetAOI(dynamic_cast<OGRPolygon*>(reader->geo), bandNum);
                     if(subset)
                     {
@@ -987,7 +996,8 @@ void* GeoIndexedRaster::readerThread(void *param)
                                                      reader->obj->samplerKey,
                                                      subset->rasterName,
                                                      raster->getGpsTime(),
-                                                     raster->isElevation(),
+                                                     raster->getElevationBandNum(),
+                                                     raster->getFLagsBandNum(),
                                                      raster->getOverrideCRS());
 
                         entry->bandSubset.push_back(subset);
@@ -1035,7 +1045,8 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
                                                 breader->obj->fileDict.get(ur->rinfo->fileId),
                                                 0,                     /* Sample collecting code will set it to group's gpsTime */
                                                 ur->rinfo->fileId,
-                                                ur->rinfo->dataIsElevation,
+                                                ur->rinfo->elevationBandNum,
+                                                ur->rinfo->flagsBandNum,
                                                 breader->obj->crscb);
 
             std::vector<int> bands;
@@ -1293,10 +1304,14 @@ bool GeoIndexedRaster::updateCache(uint32_t& rasters2sample, const GroupOrdering
                     note use of bbox in construcutor - it limits area
                     of interest to the extent of vector index file */
                 item = new cacheitem_t;
-                item->raster = new GdalRaster(parms, key,
+                item->raster = new GdalRaster(parms,
+                                              key,
                                               static_cast<double>(rgroup->gpsTime / 1000),
                                               rinfo.fileId,
-                                              rinfo.dataIsElevation, crscb, &bbox);
+                                              rinfo.elevationBandNum,
+                                              rinfo.flagsBandNum,
+                                              crscb,
+                                              &bbox);
                 const bool status = cache.add(key, item);
                 assert(status); (void)status; // cannot fail; prevents linter warnings
             }

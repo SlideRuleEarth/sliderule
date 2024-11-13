@@ -55,7 +55,10 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GdalRaster::GdalRaster(const GeoFields* _parms, const std::string& _fileName, double _gpsTime, uint64_t _fileId, bool _dataIsElevation, overrideCRS_t cb, bbox_t* aoi_bbox_override):
+GdalRaster::GdalRaster(const GeoFields* _parms, const std::string& _fileName,
+                       double _gpsTime, uint64_t _fileId,
+                       int _elevationBandNum, int _flagsBandNum,
+                       overrideCRS_t cb, bbox_t* aoi_bbox_override):
    parms      (_parms),
    gpsTime    (_gpsTime),
    fileId     (_fileId),
@@ -63,7 +66,10 @@ GdalRaster::GdalRaster(const GeoFields* _parms, const std::string& _fileName, do
    overrideCRS(cb),
    fileName   (_fileName),
    dset       (NULL),
-   dataIsElevation(_dataIsElevation),
+   elevationBandNum(_elevationBandNum),
+   elevationBand(NULL),
+   flagsBandNum(_flagsBandNum),
+   flagsBand  (NULL),
    xsize      (0),
    ysize      (0),
    cellSize   (0),
@@ -114,7 +120,7 @@ void GdalRaster::open(void)
             throw RunTimeException(CRITICAL, RTE_ERROR, "No bands found in raster: %s:", fileName.c_str());
         }
 
-        /* Populate the mapping of band names to indices */
+        /* Populate the mapping of band names to band numbers*/
         for (int i = 1; i <= bandCount; ++i)
         {
             GDALRasterBand* band = dset->GetRasterBand(i);
@@ -128,6 +134,20 @@ void GdalRaster::open(void)
                 bandMap[std::string(bandName)] = i;
                 mlog(DEBUG, "Band %d: %s", i, bandName);
             }
+        }
+
+        /* Get elevation band */
+        if(elevationBandNum > 0 && elevationBandNum <= bandCount)
+        {
+            elevationBand = dset->GetRasterBand(elevationBandNum);
+            CHECKPTR(elevationBand);
+        }
+
+        /* Get flags band */
+        if(flagsBandNum > 0 && flagsBandNum <= bandCount)
+        {
+            flagsBand = dset->GetRasterBand(flagsBandNum);
+            CHECKPTR(flagsBand);
         }
 
         /* Store information about raster */
@@ -176,6 +196,8 @@ void GdalRaster::open(void)
         OGRCoordinateTransformation::DestroyCT(transf);
         transf = NULL;
         bandMap.clear();
+        elevationBand = NULL;
+        flagsBand = NULL;
         throw;
     }
 }
@@ -199,10 +221,10 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi, int bandNum)
         CHECKPTR(band);
 
         const double z = poi->getZ();
-        // mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+        mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
         if(poi->transform(transf) != OGRERR_NONE)
             throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi->getX(), poi->getY(), poi->getZ());
-        // mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
+        mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
 
         /*
          * Attempt to read raster only if it contains the point of interest.
@@ -472,7 +494,8 @@ int GdalRaster::getBandNumber(const std::string& bandName)
     auto it = bandMap.find(bandName);
     if(it == bandMap.end())
     {
-        mlog(WARNING, "Band name not found: %s", bandName.c_str());
+        mlog(ERROR, "Band %s not found", bandName.c_str());
+        return NO_BAND;
     }
     return it->second;
 }
@@ -617,90 +640,92 @@ void GdalRaster::readPixel(const OGRPoint* poi, GDALRasterBand* band, RasterSamp
         /* Be carefull using offset based on the pixel data type */
         switch(band->GetRasterDataType())
         {
-            case GDT_Byte:
-            {
-                const uint8_t* p   = static_cast<uint8_t*>(data);
-                sample->value = p[offset];
-            }
-            break;
+        case GDT_Byte:
+        {
+            const uint8_t* p = static_cast<uint8_t*>(data);
+            sample->value = p[offset];
+        }
+        break;
 
-            case GDT_Int8:
-            {
-                const int8_t* p   = static_cast<int8_t*>(data);
-                sample->value = p[offset];
-            }
-            break;
+        case GDT_Int8:
+        {
+            const int8_t* p = static_cast<int8_t*>(data);
+            sample->value = p[offset];
+        }
+        break;
 
-            case GDT_UInt16:
-            {
-                const uint16_t* p  = static_cast<uint16_t*>(data);
-                sample->value = p[offset];
-            }
-            break;
+        case GDT_UInt16:
+        {
+            const uint16_t* p = static_cast<uint16_t*>(data);
+            sample->value = p[offset];
+        }
+        break;
 
-            case GDT_Int16:
-            {
-                const int16_t* p   = static_cast<int16_t*>(data);
-                sample->value = p[offset];
-            }
-            break;
+        case GDT_Int16:
+        {
+            const int16_t* p = static_cast<int16_t*>(data);
+            sample->value = p[offset];
+        }
+        break;
 
-            case GDT_UInt32:
-            {
-                const uint32_t* p  = static_cast<uint32_t*>(data);
-                sample->value = p[offset];
-            }
-            break;
+        case GDT_UInt32:
+        {
+            const uint32_t* p = static_cast<uint32_t*>(data);
+            sample->value = p[offset];
+        }
+        break;
 
-            case GDT_Int32:
-            {
-                const int32_t* p   = static_cast<int32_t*>(data);
-                sample->value = p[offset];
-            }
-            break;
+        case GDT_Int32:
+        {
+            const int32_t* p = static_cast<int32_t*>(data);
+            sample->value = p[offset];
+        }
+        break;
 
-            case GDT_Int64:
-            {
-                const int64_t* p   = static_cast<int64_t*>(data);
-                sample->value = p[offset];
-            }
-            break;
+        case GDT_Int64:
+        {
+            const int64_t* p = static_cast<int64_t*>(data);
+            sample->value = p[offset];
+        }
+        break;
 
-            case GDT_UInt64:
-            {
-                const uint64_t* p  = static_cast<uint64_t*>(data);
-                sample->value = p[offset];
-            }
-            break;
+        case GDT_UInt64:
+        {
+            const uint64_t* p = static_cast<uint64_t*>(data);
+            sample->value = p[offset];
+        }
+        break;
 
-            case GDT_Float32:
-            {
-                const float* p     = static_cast<float*>(data);
-                sample->value = p[offset];
-            }
-            break;
+        case GDT_Float32:
+        {
+            const float* p = static_cast<float*>(data);
+            sample->value = p[offset];
+        }
+        break;
 
-            case GDT_Float64:
-            {
-                const double* p    = static_cast<double*>(data);
-                sample->value = p[offset];
-            }
-            break;
+        case GDT_Float64:
+        {
+            const double* p = static_cast<double*>(data);
+            sample->value = p[offset];
+        }
+        break;
 
-            default:
-                /*
-                 * Complex numbers are supported but not needed at this point.
-                 */
-                block->DropLock();
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Unsuported data type %d, in raster: %s:", band->GetRasterDataType(), fileName.c_str());
+        default:
+            /*
+             * Complex numbers are supported but not needed at this point.
+             */
+            block->DropLock();
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Unsuported data type %d, in raster: %s:", band->GetRasterDataType(), fileName.c_str());
         }
 
         /* Done reading, release block lock */
         block->DropLock();
-        if(nodataCheck(sample, band) && dataIsElevation)
+        if(nodataCheck(sample, band) && band == elevationBand)
         {
             sample->value += sample->verticalShift;
         }
+
+        sample->bandName = band->GetDescription();
 
         // mlog(DEBUG, "Value: %.2lf, x: %u, y: %u, xblk: %u, yblk: %u, bcol: %u, brow: %u, offset: %u",
         //      sample->value, x, y, xblk, yblk, _x, _y, offset);
@@ -766,10 +791,11 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, GDALRasterBand* band, Raster
         if(validWindow)
         {
             readWithRetry(band, _x, _y, windowSize, windowSize, &sample->value, 1, 1, &args);
-            if(nodataCheck(sample, band) && dataIsElevation)
+            if(nodataCheck(sample, band) && band == elevationBand)
             {
                 sample->value += sample->verticalShift;
             }
+            sample->bandName = band->GetDescription();
         }
         else
         {
@@ -832,7 +858,7 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, GDALRasterBand* band, Ra
                     double value = samplesArray[_y*windowSize + _x];
                     if(value == nodata) continue;
 
-                    if(dataIsElevation)
+                    if(band == elevationBand)
                         value += sample->verticalShift;
 
                     const double x2 = _x + newx;  /* Current pixel in buffer */

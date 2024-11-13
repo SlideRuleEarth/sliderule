@@ -437,6 +437,7 @@ int RasterObject::luaSamples(lua_State *L)
                 LuaEngine::setAttrInt(L, "fileid", sample->fileId);
                 LuaEngine::setAttrNum(L, "time", sample->time);
                 LuaEngine::setAttrNum(L, "value", sample->value);
+                LuaEngine::setAttrStr(L, "band", sample->bandName.c_str());
                 lua_rawseti(L, -2, i+1);
             }
         } else mlog(DEBUG, "No samples read for (%.2lf, %.2lf)", lon, lat);

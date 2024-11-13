@@ -90,12 +90,13 @@ class GeoIndexedRaster: public RasterObject
 
         /** Raster information needed for sampling */
         typedef struct RasterInfo {
-            bool                    dataIsElevation;
-            std::string             tag;          // value, fmask, etc
-            uint64_t                fileId;       // file dictionary id
-            UniqueRaster*           uraster;      // Pointer to the unique raster which contains the sample for this raster
+            int                     elevationBandNum;  // band number for elevation
+            int                     flagsBandNum;      // band number for fmask
+            std::string             tag;               // value, fmask, etc
+            uint64_t                fileId;            // file dictionary id
+            UniqueRaster*           uraster;           // Pointer to the unique raster which contains the sample for this raster
 
-            RasterInfo(void): dataIsElevation(false), uraster(NULL) {}
+            RasterInfo(void): elevationBandNum(GdalRaster::NO_BAND), flagsBandNum(GdalRaster::NO_BAND), uraster(NULL) {}
         } raster_info_t;
 
         /* Group of rasters belonging to the same geojson stac catalog feature */

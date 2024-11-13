@@ -92,9 +92,9 @@ bool GebcoBathyRaster::findRasters(raster_finder_t* finder)
             if(dataFile && (strlen(dataFile) > 0))
             {
                 raster_info_t rinfo;
-                rinfo.dataIsElevation = true;
-                rinfo.tag             = VALUE_TAG;
-                rinfo.fileId          = finder->fileDict.add(filePath + "/" + dataFile);
+                rinfo.elevationBandNum = 1;
+                rinfo.tag              = VALUE_TAG;
+                rinfo.fileId           = finder->fileDict.add(filePath + "/" + dataFile);
                 rgroup->infovect.push_back(rinfo);
             }
 
@@ -104,7 +104,7 @@ bool GebcoBathyRaster::findRasters(raster_finder_t* finder)
                 if(flagsFile && (strlen(flagsFile) > 0))
                 {
                     raster_info_t rinfo;
-                    rinfo.dataIsElevation = false;
+                    rinfo.flagsBandNum    = 1;
                     rinfo.tag             = FLAGS_TAG;
                     rinfo.fileId          = finder->fileDict.add(filePath + "/" + flagsFile);
                     rgroup->infovect.push_back(rinfo);

@@ -71,7 +71,9 @@ class GeoUserRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        GeoUserRaster(lua_State* L, RequestFields* rqst_parms, const char* key, const char* file, long filelength, double gps, bool iselevation);
+        GeoUserRaster(lua_State* L, RequestFields* rqst_parms, const char* key,
+                      const char* file, long filelength, double gps,
+                      int elevationBandNum, int flagsBandNum);
 
     private:
 

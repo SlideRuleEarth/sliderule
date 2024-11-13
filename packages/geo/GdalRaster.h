@@ -83,6 +83,7 @@ class GdalRaster
 
         static const int MAX_SAMPLING_RADIUS_IN_PIXELS = 50;
         static const int SLIDERULE_EPSG                = 7912;
+        static const int NO_BAND                       = 0;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -102,7 +103,11 @@ class GdalRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                           GdalRaster     (const GeoFields* _parms, const std::string& _fileName, double _gpsTime, uint64_t _fileId, bool _dataIsElevation, overrideCRS_t cb, bbox_t* aoi_bbox_override=NULL);
+                           GdalRaster     (const GeoFields* _parms, const std::string& _fileName,
+                                           double _gpsTime, uint64_t _fileId,
+                                           int _elevationBandNum, int _flagsBandNum,
+                                           overrideCRS_t cb, bbox_t* aoi_bbox_override=NULL);
+
         virtual           ~GdalRaster     (void);
         void               open           (void);
         RasterSample*      samplePOI      (OGRPoint* poi, int bandNum);
@@ -114,7 +119,8 @@ class GdalRaster
         const bbox_t&      getBbox        (void) const { return bbox; }
         double             getCellSize    (void) const { return cellSize; }
         uint32_t           getSSerror     (void) const { return ssError; }
-        bool               isElevation    (void) const { return dataIsElevation; }
+        int                getElevationBandNum (void) const { return elevationBandNum; }
+        int                getFLagsBandNum (void) const { return flagsBandNum; }
         overrideCRS_t      getOverrideCRS (void) const { return overrideCRS; }
         double             getGpsTime     (void) const { return gpsTime; }
         int                getBandNumber  (const std::string& bandName);
@@ -147,7 +153,10 @@ class GdalRaster
 
         std::string     fileName;
         GDALDataset    *dset;
-        bool            dataIsElevation;
+        int             elevationBandNum;
+        GDALRasterBand* elevationBand;
+        int             flagsBandNum;
+        GDALRasterBand* flagsBand;
         uint32_t        xsize;
         uint32_t        ysize;
         double          cellSize;

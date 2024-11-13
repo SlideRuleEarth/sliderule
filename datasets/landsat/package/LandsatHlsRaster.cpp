@@ -187,12 +187,12 @@ bool LandsatHlsRaster::findRasters(raster_finder_t* finder)
                     const size_t pos = strlen(URL_str);
 
                     raster_info_t rinfo;
-                    rinfo.dataIsElevation = false; /* All bands are not elevation */
                     rinfo.fileId = finder->fileDict.add(filePath + fileName.substr(pos));
 
                     if(strcmp(bandName, "Fmask") == 0)
                     {
                         /* Use base class generic flags tag */
+                        rinfo.flagsBandNum = 1;
                         rinfo.tag = FLAGS_TAG;
                         if(parms->flags_file)
                         {

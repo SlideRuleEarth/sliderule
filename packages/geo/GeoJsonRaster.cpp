@@ -155,7 +155,7 @@ GeoJsonRaster::~GeoJsonRaster(void)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::GeoJsonRaster(lua_State* L, RequestFields* rqst_parms, const char* key, const char* _geojstr, double _cellsize):
- GeoRaster(L, rqst_parms, key, std::string("/vsimem/" + GdalRaster::getUUID() + ".tif"), TimeLib::gpstime(), false /* not elevation*/),
+ GeoRaster(L, rqst_parms, key, std::string("/vsimem/" + GdalRaster::getUUID() + ".tif"), TimeLib::gpstime()),
  data(NULL),
  cellsize(_cellsize),
  cols(0),
