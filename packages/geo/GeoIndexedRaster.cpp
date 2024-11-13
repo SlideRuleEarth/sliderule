@@ -973,7 +973,7 @@ void* GeoIndexedRaster::readerThread(void *param)
 
                     RasterSample* sample = raster->samplePOI(&point, bandNum);
                     entry->bandSample.push_back(sample);
-                    mlog(DEBUG, "Band: %d, %s", bandNum, sample->toString().c_str());
+                    mlog(DEBUG, "Band: %d, %s", bandNum, sample ? sample->toString().c_str() : "NULL");
                 }
             }
             else if(GdalRaster::ispoly(reader->geo))
