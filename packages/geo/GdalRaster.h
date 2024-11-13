@@ -167,7 +167,7 @@ class GdalRaster
         void        readPixel            (const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample);
         void        resamplePixel        (const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample);
         void        computeZonalStats    (const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample);
-        inline bool nodataCheck          (RasterSample* sample, GDALRasterBand* band);
+        static inline bool nodataCheck   (RasterSample* sample, GDALRasterBand* band);
         void        createTransform      (void);
         int         radius2pixels        (int _radius) const;
         static inline bool containsWindow(int x, int y, int maxx, int maxy, int windowSize);

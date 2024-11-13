@@ -276,6 +276,42 @@ void RasterObject::getBands(std::vector<std::string>& bands)
 }
 
 /*----------------------------------------------------------------------------
+ * getInnerBands
+ *----------------------------------------------------------------------------*/
+void RasterObject::getInnerBands(std::vector<std::string>& bands)
+{
+    return getBands(bands);
+}
+
+/*----------------------------------------------------------------------------
+ * getInnerBands
+ *----------------------------------------------------------------------------*/
+void RasterObject::getInnerBands(void* rptr, std::vector<int>& bands)
+{
+    GdalRaster* raster = static_cast<GdalRaster*>(rptr);
+
+    std::vector<std::string> bandsNames;
+    getInnerBands(bandsNames);
+
+    if(bandsNames.empty())
+    {
+        /* Default to first band */
+        bands.push_back(1);
+    }
+    else
+    {
+        for(const std::string& bname : bandsNames)
+        {
+            const int bandNum = raster->getBandNumber(bname);
+            if(bandNum > 0)
+            {
+                bands.push_back(bandNum);
+            }
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
 RasterObject::~RasterObject(void)

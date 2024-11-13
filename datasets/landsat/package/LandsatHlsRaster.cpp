@@ -291,6 +291,9 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
     double swir16;
     green = red = nir08 = swir16 = invalid;
 
+    /* Landsat rasters use only the first inner band */
+    const int INNER_BAND_INDX = 0;
+
     /* Collect samples for all rasters */
     if(mode == SERIAL)
     {
@@ -300,39 +303,40 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
             cacheitem_t* item;
             if(cache.find(key, &item))
             {
-                RasterSample* sample = item->bandSample[0];
-                if(sample)
+                RasterSample* sample = item->bandSample[INNER_BAND_INDX];
+
+                /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
+                if(sample == NULL) continue;;
+
+                sample->flags = flags;
+
+                /* Is this band's sample to be returned to the user? */
+                const char* bandName = rinfo.tag.c_str();
+                auto it = bandsDict.find(bandName);
+                if(it != bandsDict.end())
                 {
-                    sample->flags = flags;
-
-                    /* Is this band's sample to be returned to the user? */
-                    const char* bandName = rinfo.tag.c_str();
-                    auto it = bandsDict.find(bandName);
-                    if(it != bandsDict.end())
+                    const bool returnBandSample = it->second;
+                    if(returnBandSample)
                     {
-                        const bool returnBandSample = it->second;
-                        if(returnBandSample)
-                        {
-                            sample->bandName = bandName;  // TODO: Remove when sample contains band name
-                            slist->add(sample);
-                            item->bandSample[0] = NULL;
-                        }
+                        sample->bandName = bandName;
+                        slist->add(sample);
+                        item->bandSample[INNER_BAND_INDX] = NULL;
                     }
+                }
 
-                    /* green and red bands are the same for L8 and S2 */
-                    if(rinfo.tag == "B03") green = sample->value;
-                    if(rinfo.tag == "B04") red = sample->value;
+                /* green and red bands are the same for L8 and S2 */
+                if(rinfo.tag == "B03") green = sample->value;
+                if(rinfo.tag == "B04") red = sample->value;
 
-                    if(isL8)
-                    {
-                        if(rinfo.tag == "B05") nir08 = sample->value;
-                        if(rinfo.tag == "B06") swir16 = sample->value;
-                    }
-                    else /* Must be Sentinel2 */
-                    {
-                        if(rinfo.tag == "B8A") nir08 = sample->value;
-                        if(rinfo.tag == "B11") swir16 = sample->value;
-                    }
+                if(isL8)
+                {
+                    if(rinfo.tag == "B05") nir08 = sample->value;
+                    if(rinfo.tag == "B06") swir16 = sample->value;
+                }
+                else /* Must be Sentinel2 */
+                {
+                    if(rinfo.tag == "B8A") nir08 = sample->value;
+                    if(rinfo.tag == "B11") swir16 = sample->value;
                 }
             }
         }
@@ -350,8 +354,10 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
             {
                 if(ps.pointIndex == pointIndx)
                 {
+                    RasterSample* sample = ps.bandSample[INNER_BAND_INDX];
+
                     /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
-                    if(ps.sample == NULL) break;
+                    if(sample == NULL) break;
 
                     /* Is this band's sample to be returned to the user? */
                     const char* bandName = rinfo.tag.c_str();
@@ -363,18 +369,18 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
                         if(returnBandSample)
                         {
                             RasterSample* s;
-                            if(!ps.sampleReturned.exchange(true))
+                            if(!ps.bandSampleReturned[INNER_BAND_INDX]->exchange(true))
                             {
-                                s = ps.sample;
+                                s = ps.bandSample[INNER_BAND_INDX];
                             }
                             else
                             {
                                 /* Sample has already been returned, must create a copy */
-                                s = new RasterSample(*ps.sample);
+                                s = new RasterSample(*ps.bandSample[INNER_BAND_INDX]);
                             }
 
                             /* Set band name for this sample */
-                            s->bandName = bandName; //TODO: remove when sample contains band name
+                            s->bandName = bandName;
 
                             /* Set time for this sample */
                             s->time = rgroup->gpsTime / 1000;
@@ -388,18 +394,18 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
                     errors |= ps.ssErrors;
 
                     /* green and red bands are the same for L8 and S2 */
-                    if(rinfo.tag == "B03") green = ps.sample->value;
-                    if(rinfo.tag == "B04") red = ps.sample->value;
+                    if(rinfo.tag == "B03") green = sample->value;
+                    if(rinfo.tag == "B04") red   = sample->value;
 
                     if(isL8)
                     {
-                        if(rinfo.tag == "B05") nir08 = ps.sample->value;
-                        if(rinfo.tag == "B06") swir16 = ps.sample->value;
+                        if(rinfo.tag == "B05") nir08  = sample->value;
+                        if(rinfo.tag == "B06") swir16 = sample->value;
                     }
                     else /* Must be Sentinel2 */
                     {
-                        if(rinfo.tag == "B8A") nir08 = ps.sample->value;
-                        if(rinfo.tag == "B11") swir16 = ps.sample->value;
+                        if(rinfo.tag == "B8A") nir08  = sample->value;
+                        if(rinfo.tag == "B11") swir16 = sample->value;
                     }
                     break;
                 }

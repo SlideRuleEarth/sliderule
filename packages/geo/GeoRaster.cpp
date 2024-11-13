@@ -87,8 +87,14 @@ uint32_t GeoRaster::getSamples(const MathLib::point_3d_t& point, int64_t gps, Li
     try
     {
         OGRPoint ogr_point(point.x, point.y, point.z);
-        RasterSample* sample = raster.samplePOI(&ogr_point, 1); //TODO: fix this
-        if(sample) slist.add(sample);
+
+        std::vector<int> bands;
+        getInnerBands(&raster, bands);
+        for(const int bandNum : bands)
+        {
+            RasterSample* sample = raster.samplePOI(&ogr_point, bandNum);
+            if(sample) slist.add(sample);
+        }
     }
     catch (const RunTimeException &e)
     {
@@ -116,27 +122,32 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
     {
         OGRPolygon poly = GdalRaster::makeRectangle(extent.ll.x, extent.ll.y, extent.ur.x, extent.ur.y);
 
-        /* Get subset rasters, if none found, return */
-        RasterSubset* subset = raster.subsetAOI(&poly, 1); //TODO: fix this
-        if(subset)
+        std::vector<int> bands;
+        getInnerBands(&raster, bands);
+        for(const int bandNum : bands)
         {
-            /*
-             * Create new GeoRaster object for subsetted raster
-             * Use NULL for LuaState, using parent's causes memory corruption
-             * NOTE: cannot use RasterObject::cppCreate(parms) here,
-             * it would create subsetted raster with the same file path as parent raster.
-             */
-            subset->robj = new GeoRaster(NULL,
-                                         rqstParms,
-                                         samplerKey,
-                                         subset->rasterName,
-                                         raster.getGpsTime(),
-                                         raster.isElevation(),
-                                         raster.getOverrideCRS());
-            slist.add(subset);
+            /* Get subset rasters, if none found, return */
+            RasterSubset* subset = raster.subsetAOI(&poly, bandNum);
+            if(subset)
+            {
+                /*
+                 * Create new GeoRaster object for subsetted raster
+                 * Use NULL for LuaState, using parent's causes memory corruption
+                 * NOTE: cannot use RasterObject::cppCreate(parms) here,
+                 * it would create subsetted raster with the same file path as parent raster.
+                 */
+                subset->robj = new GeoRaster(NULL,
+                                             rqstParms,
+                                             samplerKey,
+                                             subset->rasterName,
+                                             raster.getGpsTime(),
+                                             raster.isElevation(),
+                                             raster.getOverrideCRS());
+                slist.add(subset);
 
-            /* RequestFields are shared with subsseted raster */
-            referenceLuaObject(rqstParms);
+                /* RequestFields are shared with subsseted raster */
+                referenceLuaObject(rqstParms);
+            }
         }
     }
     catch (const RunTimeException &e)

@@ -59,6 +59,35 @@ const char* GeoIndexedRaster::DATE_TAG  = "datetime";
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * PointSample Constructor
+ *----------------------------------------------------------------------------*/
+GeoIndexedRaster::PointSample::PointSample(const OGRPoint& _point, int64_t _pointIndex):
+    point(_point), pointIndex(_pointIndex), ssErrors(SS_NO_ERRORS) {}
+
+
+/*----------------------------------------------------------------------------
+ * PointSample Copy Constructor
+ *----------------------------------------------------------------------------*/
+GeoIndexedRaster::PointSample::PointSample(const PointSample& ps):
+    point(ps.point), pointIndex(ps.pointIndex), bandSample(ps.bandSample), ssErrors(ps.ssErrors)
+{
+    bandSampleReturned.resize(ps.bandSampleReturned.size());
+
+    for (size_t i = 0; i < ps.bandSampleReturned.size(); ++i)
+    {
+        if(ps.bandSampleReturned[i])
+        {
+            /* Create a new atomic<bool> with the value loaded from the original */
+            bandSampleReturned[i] = std::make_unique<std::atomic<bool>>(ps.bandSampleReturned[i]->load());
+        }
+        else
+        {
+            bandSampleReturned[i] = NULL;
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
  * Reader Constructor
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::Reader::Reader (GeoIndexedRaster* _obj):
@@ -282,9 +311,12 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         for(const point_sample_t& ps : ur->pointSamples)
         {
             /* Delete samples which have not been returned (quality masks, etc) */
-            if(!ps.sampleReturned)
+            for(size_t i = 0; i < ps.bandSample.size(); i++)
             {
-                delete ps.sample;
+                if(!ps.bandSampleReturned[i]->load())
+                {
+                    delete ps.bandSample[i];
+                }
             }
         }
 
@@ -409,31 +441,34 @@ uint32_t GeoIndexedRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
         {
             if(ps.pointIndex == pointIndx)
             {
-                /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
-                if(ps.sample == NULL) break;
-
-                RasterSample* s;
-                if(!ps.sampleReturned.exchange(true))
+                for(size_t i = 0; i < ps.bandSample.size(); i++)
                 {
-                    s = ps.sample;
-                }
-                else
-                {
-                    /* Sample has already been returned, must create a copy */
-                    s = new RasterSample(*ps.sample);
-                }
+                    /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
+                    if(ps.bandSample[i] == NULL) continue;;
 
-                /* Set time for this sample */
-                s->time = rgroup->gpsTime / 1000;
+                    RasterSample* s;
+                    if(!ps.bandSampleReturned[i]->exchange(true))
+                    {
+                        s = ps.bandSample[i];
+                    }
+                    else
+                    {
+                        /* Sample has already been returned, must create a copy */
+                        s = new RasterSample(*ps.bandSample[i]);
+                    }
 
-                /* Set flags for this sample, add it to the list */
-                s->flags = flags;
-                slist->add(s);
-                errors |= ps.ssErrors;
+                    /* Set time for this sample */
+                    s->time = rgroup->gpsTime / 1000;
+
+                    /* Set flags for this sample, add it to the list */
+                    s->flags = flags;
+                    slist->add(s);
+                    errors |= ps.ssErrors;
+                }
 
                 /*
-                 * There is only one raster with VALUE_TAG and one with FLAGS_TAG in a group.
-                 * If group has other type rasters the dataset must override the getGroupFlags method.
+                 * This function assumes that there is only one raster with VALUE_TAG in a group.
+                 * If group has other value rasters the dataset must override this function.
                  */
                 return errors;
             }
@@ -461,11 +496,17 @@ uint32_t GeoIndexedRaster::getBatchGroupFlags(const rasters_group_t* rgroup, uin
         {
             if(ps.pointIndex == pointIndx)
             {
+                /*
+                 * This function assumes that there is only one raster with FLAGS_TAG in a group.
+                 * The flags value must be in the first band.
+                 * If these assumptions are not met the dataset must override this function.
+                 */
+                RasterSample* s = ps.bandSample[0];
+
                 /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
-                if(ps.sample)
-                {
-                    return ps.sample->value;
-                }
+                if(s == NULL) break;;
+
+                return s->value;
             }
         }
     }
@@ -501,10 +542,10 @@ void GeoIndexedRaster::getGroupSamples(const rasters_group_t* rgroup, List<Raste
             /* Get sampling/subset error status */
             ssErrors |= item->raster->getSSerror();
 
-            /*
-             * There is only one raster with VALUE_TAG and one with FLAGS_TAG in a group.
-             * If group has other type rasters the dataset must override the getGroupFlags method.
-             */
+           /*
+            * This function assumes that there is only one raster with VALUE_TAG in a group.
+            * If group has other value rasters the dataset must override this function.
+            */
             break;
         }
     }
@@ -552,8 +593,10 @@ uint32_t GeoIndexedRaster::getGroupFlags(const rasters_group_t* rgroup)
         const char* key = fileDict.get(rinfo.fileId);
         if(cache.find(key, &item))
         {
-            /* TODO: rinfo needs to specify which band has the flags,
-             *       for now just use the first
+            /*
+             * This function assumes that there is only one raster with FLAGS_TAG in a group.
+             * The flags value must be in the first band.
+             * If these assumptions are not met the dataset must override this function.
              */
             const RasterSample* _sample = item->bandSample[0];
             if(_sample)
@@ -913,24 +956,24 @@ void* GeoIndexedRaster::readerThread(void *param)
         if(entry != NULL)
         {
             std::vector<int> bands;
-            reader->obj->getRasterBands(reader->obj, entry->raster, bands);
+            reader->obj->getInnerBands(entry->raster, bands);
 
             GdalRaster* raster = entry->raster;
             if(GdalRaster::ispoint(reader->geo))
             {
                 /* Sample raster bands */
-                for(size_t i = 0; i < bands.size(); i++)
+                for(const int bandNum : bands)
                 {
-                    RasterSample* sample = raster->samplePOI(dynamic_cast<OGRPoint*>(reader->geo), bands[i]);
+                    RasterSample* sample = raster->samplePOI(dynamic_cast<OGRPoint*>(reader->geo), bandNum);
                     entry->bandSample.push_back(sample);
                 }
             }
             else if(GdalRaster::ispoly(reader->geo))
             {
                 /* Subset raster bands */
-                for(size_t i = 0; i < bands.size(); i++)
+                for(const int bandNum : bands)
                 {
-                    RasterSubset* subset = raster->subsetAOI(dynamic_cast<OGRPolygon*>(reader->geo), bands[i]);
+                    RasterSubset* subset = raster->subsetAOI(dynamic_cast<OGRPolygon*>(reader->geo), bandNum);
                     if(subset)
                     {
                         /*
@@ -996,15 +1039,17 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
                                                 breader->obj->crscb);
 
             std::vector<int> bands;
-            breader->obj->getRasterBands(breader->obj, raster, bands);
+            breader->obj->getInnerBands(raster, bands);
 
             /* Sample all points for this raster */
-            for(point_sample_t& ps : ur->pointSamples)  //TODO: fxi this, must be vector of samples
+            for(point_sample_t& ps : ur->pointSamples)
             {
                 /* Sample all bands for this point */
-                for(size_t i = 0; i < bands.size(); i++)
+                for(const int bandNum : bands)
                 {
-                    ps.sample = raster->samplePOI(&ps.point, bands[i]);
+                    RasterSample* sample = raster->samplePOI(&ps.point, bandNum);
+                    ps.bandSample.push_back(sample);
+                    ps.bandSampleReturned.emplace_back(std::make_unique<std::atomic<bool>>(false));
                     ps.ssErrors |= raster->getSSerror();
                 }
             }
@@ -1823,34 +1868,3 @@ bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsG
 
     return true;
 }
-
-
-
-/*----------------------------------------------------------------------------
- * getRasterBands
- *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getRasterBands(RasterObject* robj, GdalRaster* raster, std::vector<int>& bands)
-{
-    std::vector<std::string> bandsNames;
-    robj->getBands(bandsNames);
-
-    if(bandsNames.empty())
-    {
-        /* Default to first band */
-        bands.push_back(1);
-    }
-    else
-    {
-        for(const std::string& bname : bandsNames)
-        {
-            const int bandNum = raster->getBandNumber(bname);
-            if(bandNum > 0)
-            {
-                bands.push_back(bandNum);
-            }
-        }
-    }
-}
-
-
-

@@ -74,18 +74,15 @@ class GeoIndexedRaster: public RasterObject
 
         /* Raster Sample used by batch sampling */
         typedef struct PointSample {
-            OGRPoint                    point;
-            int64_t                     pointIndex;    // index to the user provided list of points to sample
-            RasterSample*               sample;        // sample created by the batch reader thread
-            std::atomic<bool>           sampleReturned;// multiple rasters may share the same sample,
-                                                       // this flag is used to avoid returning the same sample, if set a copy of the sample is returned
-            uint32_t                    ssErrors;      // sampling errors
+            OGRPoint                       point;
+            int64_t                        pointIndex;    // index to the user provided list of points to sample
+            std::vector<RasterSample*>     bandSample;    // vector of samples for each band
+            std::vector<std::unique_ptr<std::atomic<bool>>> bandSampleReturned; // multiple rasters may share the same sample,
+                                                                                // these flags are used to avoid returning the same sample, if set a copy of the sample is returned
+            uint32_t                       ssErrors;      // sampling errors
 
-            PointSample(const OGRPoint& _point, int64_t _pointIndex):
-               point(_point), pointIndex(_pointIndex), sample(NULL), sampleReturned(false), ssErrors(SS_NO_ERRORS) {}
-
-            PointSample(const PointSample& ps):
-               point(ps.point), pointIndex(ps.pointIndex), sample(ps.sample), sampleReturned(ps.sampleReturned.load()), ssErrors(ps.ssErrors) {}
+            PointSample(const OGRPoint& _point, int64_t _pointIndex);
+            PointSample(const PointSample& ps);
 
         } point_sample_t;
 
@@ -94,7 +91,7 @@ class GeoIndexedRaster: public RasterObject
         /** Raster information needed for sampling */
         typedef struct RasterInfo {
             bool                    dataIsElevation;
-            std::string             tag;          // "Dem", "Flags", "Date"
+            std::string             tag;          // value, fmask, etc
             uint64_t                fileId;       // file dictionary id
             UniqueRaster*           uraster;      // Pointer to the unique raster which contains the sample for this raster
 
@@ -325,9 +322,6 @@ class GeoIndexedRaster: public RasterObject
 
         bool            collectSamples      (const std::vector<point_groups_t>& pointsGroups,
                                              List<sample_list_t*>& sllist);
-
-        void            getRasterBands      (RasterObject* robj, GdalRaster* raster, std::vector<int>& bands);
-
 };
 
 #endif  /* __geo_indexed_raster__ */

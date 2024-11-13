@@ -100,8 +100,8 @@ class LandsatHlsRaster: public GeoIndexedRaster
         uint32_t getBatchGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx) final
                                      { return _getGroupSamples(BATCH, rgroup, slist, flags, pointIndx);}
 
-        void     getBands            (std::vector<std::string>& bands) final
-                                     { bands.clear(); } /* Landsat has bands in dedicated rasters */
+        void     getInnerBands       (std::vector<std::string>& bands) final
+                                     { bands.clear(); } /* Landsat bands are in seperate rasters */
 
     private:
 

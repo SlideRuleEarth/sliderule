@@ -108,7 +108,9 @@ class RasterObject: public LuaObject
         virtual uint32_t     getSamples      (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL);
         virtual uint32_t     getSubsets      (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) = 0;
         virtual uint8_t*     getPixels       (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, int bandNum=1, void* param=NULL);
-        virtual void         getBands        (std::vector<std::string>& bands);
+        void                 getBands        (std::vector<std::string>& bands);
+        virtual void         getInnerBands   (std::vector<std::string>& bands);
+        void                 getInnerBands   (void* rptr, std::vector<int>& bands);
                             ~RasterObject    (void) override;
 
         bool hasBands (void) const
