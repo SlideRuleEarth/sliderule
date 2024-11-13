@@ -238,25 +238,26 @@ local failed_processing_run = false
 for beam,dataframe in pairs(dataframes) do
     local failed_dataframe = false
     if dataframe:finished(ctimeout(), rspq) then
-        if dataframes[beam]:length() <= 0 then
-            userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s created an empty bathy dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
-        elseif not dataframes[beam]:isvalid() then
+        if not dataframes[beam]:isvalid() then
             userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create valid bathy dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
-        else
+            failed_dataframe = true
+        elseif dataframes[beam]:length() > 0 then
             local spot = dataframe:meta("spot")
             local output_filename = string.format("%s/bathy_spot_%d.parquet", crenv.host_sandbox_directory, spot)
             local arrow_dataframe = arrow.dataframe(parms, dataframe)
             if not arrow_dataframe then
-                userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create arrow dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
+                userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create arrow dataframe for spot %d", rspq, resource, spot))
                 failed_dataframe = true
             elseif not arrow_dataframe:export(output_filename, arrow.PARQUET) then
-                userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to write dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
+                userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to write dataframe for spot %d", rspq, resource, spot))
                 failed_dataframe = true
             else -- success
-                userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> dataframe for %s created", rspq, beam))
+                userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> on %s created dataframe for spot %s", rspq, resource, spot))
                 outputs[beam] = string.format("%s/bathy_spot_%d.parquet", crenv.container_sandbox_mount, spot)
                 valid_output_present = true
             end
+        else
+            userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> on %s created an empty bathy dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
         end
         -- cleanup to save memory
         dataframe:destroy()
