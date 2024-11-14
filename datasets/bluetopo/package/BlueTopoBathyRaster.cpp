@@ -205,10 +205,15 @@ double BlueTopoBathyRaster::getGmtDate(const OGRFeature* feature, const char* fi
  *----------------------------------------------------------------------------*/
 bool BlueTopoBathyRaster::validateBandNames(void)
 {
+    if(parms->bands.length() == 0)
+    {
+        mlog(ERROR, "No bands specified");
+        return false;
+    }
+
     for (int i = 0; i < parms->bands.length(); i++)
     {
         bool valid = false;
-
         for(size_t j = 0; j < validBandsCnt; j++)
         {
             /* Raster band names are case insensitive */

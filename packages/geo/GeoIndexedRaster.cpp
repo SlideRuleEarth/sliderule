@@ -957,68 +957,78 @@ void* GeoIndexedRaster::readerThread(void *param)
         {
             GdalRaster* raster = entry->raster;
 
-            /* Open raster so we can get inner bands from it */
-            raster->open();
-
-            std::vector<int> bands;
-            reader->obj->getInnerBands(raster, bands);
-
-            if(GdalRaster::ispoint(reader->geo))
+            try
             {
-                /* Sample raster bands */
-                const bool oneBand = bands.size() == 1;
-                if(oneBand)
+                CHECKPTR(raster);
+
+                /* Open raster so we can get inner bands from it */
+                raster->open();
+
+                std::vector<int> bands;
+                reader->obj->getInnerBands(raster, bands);
+
+                if(GdalRaster::ispoint(reader->geo))
                 {
-                    OGRPoint* p = (dynamic_cast<OGRPoint*>(reader->geo));
-                    RasterSample* sample = raster->samplePOI(p, bands[0]);
-                    entry->bandSample.push_back(sample);
+                    /* Sample raster bands */
+                    const bool oneBand = bands.size() == 1;
+                    if(oneBand)
+                    {
+                        OGRPoint* p = (dynamic_cast<OGRPoint*>(reader->geo));
+                        RasterSample* sample = raster->samplePOI(p, bands[0]);
+                        entry->bandSample.push_back(sample);
+                    }
+                    else
+                    {
+                        /* Multiple bands */
+                        for(const int bandNum : bands)
+                        {
+                            /* Use local copy of point, it will be projected in samplePOI. We do not want to project it again */
+                            OGRPoint* p = (dynamic_cast<OGRPoint*>(reader->geo));
+                            OGRPoint point(*p);
+
+                            RasterSample* sample = raster->samplePOI(&point, bandNum);
+                            entry->bandSample.push_back(sample);
+                            mlog(DEBUG, "Band: %d, %s", bandNum, sample ? sample->toString().c_str() : "NULL");
+                        }
+                    }
                 }
-                else
+                else if(GdalRaster::ispoly(reader->geo))
                 {
-                    /* Multiple bands */
+                    /* Subset raster bands */
                     for(const int bandNum : bands)
                     {
-                        /* Use local copy of point, it will be projected in samplePOI. We do not want to project it again */
-                        OGRPoint* p = (dynamic_cast<OGRPoint*>(reader->geo));
-                        OGRPoint point(*p);
+                        /* No need to use local copy of polygon, subsetAOI will use it's envelope and not project it */
+                        RasterSubset* subset = raster->subsetAOI(dynamic_cast<OGRPolygon*>(reader->geo), bandNum);
+                        if(subset)
+                        {
+                            /*
+                             * Create new GeoRaster object for subsetted raster
+                             * Use NULL for LuaState, using parent's causes memory corruption
+                             * NOTE: cannot use RasterObject::cppCreate(parms) here, it would create
+                             * new GeoIndexRaster with the same file path as parent raster.
+                             */
+                            subset->robj = new GeoRaster(NULL,
+                                                        reader->obj->rqstParms,
+                                                        reader->obj->samplerKey,
+                                                        subset->rasterName,
+                                                        raster->getGpsTime(),
+                                                        raster->getElevationBandNum(),
+                                                        raster->getFLagsBandNum(),
+                                                        raster->getOverrideCRS());
 
-                        RasterSample* sample = raster->samplePOI(&point, bandNum);
-                        entry->bandSample.push_back(sample);
-                        mlog(DEBUG, "Band: %d, %s", bandNum, sample ? sample->toString().c_str() : "NULL");
+                            entry->bandSubset.push_back(subset);
+
+                            /* RequestFields are shared with subsseted raster and other readers */
+                            GeoIndexedRaster::referenceLuaObject(reader->obj->rqstParms);
+                        }
                     }
                 }
             }
-            else if(GdalRaster::ispoly(reader->geo))
+            catch(const RunTimeException& e)
             {
-                /* Subset raster bands */
-                for(const int bandNum : bands)
-                {
-                    /* No need to use local copy of polygon, subsetAOI will use it's envelope and not project it */
-                    RasterSubset* subset = raster->subsetAOI(dynamic_cast<OGRPolygon*>(reader->geo), bandNum);
-                    if(subset)
-                    {
-                        /*
-                         * Create new GeoRaster object for subsetted raster
-                         * Use NULL for LuaState, using parent's causes memory corruption
-                         * NOTE: cannot use RasterObject::cppCreate(parms) here, it would create
-                         * new GeoIndexRaster with the same file path as parent raster.
-                         */
-                        subset->robj = new GeoRaster(NULL,
-                                                     reader->obj->rqstParms,
-                                                     reader->obj->samplerKey,
-                                                     subset->rasterName,
-                                                     raster->getGpsTime(),
-                                                     raster->getElevationBandNum(),
-                                                     raster->getFLagsBandNum(),
-                                                     raster->getOverrideCRS());
-
-                        entry->bandSubset.push_back(subset);
-
-                        /* RequestFields are shared with subsseted raster and other readers */
-                        GeoIndexedRaster::referenceLuaObject(reader->obj->rqstParms);
-                    }
-                }
+                mlog(e.level(), "%s", e.what());
             }
+
             entry->enabled = false; /* raster samples/subsetted */
 
             reader->sync.lock();
@@ -1053,45 +1063,56 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
         if(breader->uraster != NULL)
         {
             unique_raster_t* ur = breader->uraster;
-            GdalRaster* raster = new GdalRaster(breader->obj->parms,
-                                                breader->obj->fileDict.get(ur->rinfo->fileId),
-                                                0,                     /* Sample collecting code will set it to group's gpsTime */
-                                                ur->rinfo->fileId,
-                                                ur->rinfo->elevationBandNum,
-                                                ur->rinfo->flagsBandNum,
-                                                breader->obj->crscb);
+            GdalRaster* raster = NULL;
 
-            /* Open raster so we can get inner bands from it */
-            raster->open();
-
-            std::vector<int> bands;
-            breader->obj->getInnerBands(raster, bands);
-
-            /* Sample all points for this raster */
-            for(point_sample_t& ps : ur->pointSamples)
+            try
             {
-                /* Sample raster bands */
-                const bool oneBand = bands.size() == 1;
-                if(oneBand)
-                {
-                    RasterSample* sample = raster->samplePOI(&ps.point, bands[0]);
-                    ps.bandSample.push_back(sample);
-                    ps.bandSampleReturned.emplace_back(std::make_unique<std::atomic<bool>>(false));
-                }
-                else
-                {
-                    /* Multiple bands */
-                    for(const int bandNum : bands)
-                    {
-                        /* Use local copy of point, it will be projected in samplePOI. We do not want to project it again */
-                        OGRPoint point(ps.point);
+                raster = new GdalRaster(breader->obj->parms,
+                                        breader->obj->fileDict.get(ur->rinfo->fileId),
+                                        0,                     /* Sample collecting code will set it to group's gpsTime */
+                                        ur->rinfo->fileId,
+                                        ur->rinfo->elevationBandNum,
+                                        ur->rinfo->flagsBandNum,
+                                        breader->obj->crscb);
 
-                        RasterSample* sample = raster->samplePOI(&point, bandNum);
+                CHECKPTR(raster);
+
+                /* Open raster so we can get inner bands from it */
+                raster->open();
+
+                std::vector<int> bands;
+                breader->obj->getInnerBands(raster, bands);
+
+                /* Sample all points for this raster */
+                for(point_sample_t& ps : ur->pointSamples)
+                {
+                    /* Sample raster bands */
+                    const bool oneBand = bands.size() == 1;
+                    if(oneBand)
+                    {
+                        RasterSample* sample = raster->samplePOI(&ps.point, bands[0]);
                         ps.bandSample.push_back(sample);
                         ps.bandSampleReturned.emplace_back(std::make_unique<std::atomic<bool>>(false));
-                        ps.ssErrors |= raster->getSSerror();
+                    }
+                    else
+                    {
+                        /* Multiple bands */
+                        for(const int bandNum : bands)
+                        {
+                            /* Use local copy of point, it will be projected in samplePOI. We do not want to project it again */
+                            OGRPoint point(ps.point);
+
+                            RasterSample* sample = raster->samplePOI(&point, bandNum);
+                            ps.bandSample.push_back(sample);
+                            ps.bandSampleReturned.emplace_back(std::make_unique<std::atomic<bool>>(false));
+                            ps.ssErrors |= raster->getSSerror();
+                        }
                     }
                 }
+            }
+            catch(const RunTimeException& e)
+            {
+                mlog(e.level(), "%s", e.what());
             }
 
             delete raster;

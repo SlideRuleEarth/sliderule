@@ -235,18 +235,23 @@ bool LandsatHlsRaster::findRasters(raster_finder_t* finder)
  *----------------------------------------------------------------------------*/
 bool LandsatHlsRaster::validateBandNames(void)
 {
-    bool valid = false;
+    if(parms->bands.length() == 0)
+    {
+        mlog(ERROR, "No bands specified");
+        return false;
+    }
 
     for (int i = 0; i < parms->bands.length(); i++)
     {
         const std::string& bandName = parms->bands[i];
-        valid = validL8Band(bandName.c_str()) || validS2Band(bandName.c_str()) || validAlgoName(bandName.c_str());
-
-        /* User specified invalid band name */
-        if(!valid) mlog(ERROR, "Invalid band name: %s", bandName.c_str());
+        if(!validL8Band(bandName.c_str()) && !validS2Band(bandName.c_str()) && !validAlgoName(bandName.c_str()))
+        {
+            mlog(ERROR, "Invalid band name: %s", bandName.c_str());
+            return false;
+        }
     }
 
-    return valid;
+    return true;
 }
 
 /*----------------------------------------------------------------------------
