@@ -75,6 +75,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"lsobj",       LuaLibrarySys::lsys_lsobj},
     {"cwd",         LuaLibrarySys::lsys_cwd},
     {"fileexists",  LuaLibrarySys::lsys_fileexists},
+    {"deletefile",  LuaLibrarySys::lsys_deletefile},
     {"memu",        LuaLibrarySys::lsys_memu},
     {"setmemlimit", LuaLibrarySys::lsys_setmemlimit},
     {"lsdev",       DeviceObject::luaList},
@@ -615,6 +616,33 @@ int LuaLibrarySys::lsys_fileexists (lua_State* L)
     {
         lua_pushboolean(L, false);
     }
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_deletefile - deletes file it it exists
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_deletefile (lua_State* L)
+{
+    bool status = false;
+    if(lua_isstring(L, 1))
+    {
+        const char* filename = lua_tostring(L, 1);
+        if(std::filesystem::exists(filename))
+        {
+            const int rc = std::remove(filename);
+            if(rc == 0)
+            {
+                status = true;
+            }
+            else
+            {
+                char err_buf[256];
+                mlog(CRITICAL, "Failed (%d) to delete file %s: %s", rc, filename, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
+            }
+        }
+    }
+    lua_pushboolean(L, status);
     return 1;
 }
 

@@ -94,6 +94,7 @@ class LuaLibrarySys
         static int      lsys_lsobj          (lua_State* L);
         static int      lsys_cwd            (lua_State* L);
         static int      lsys_fileexists     (lua_State* L);
+        static int      lsys_deletefile     (lua_State* L);
         static int      lsys_memu           (lua_State* L);
         static int      lsys_setmemlimit    (lua_State* L);
 

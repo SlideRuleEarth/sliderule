@@ -1,8 +1,8 @@
-# Release v4.8.12
+# Release v4.8.13
 
-2024-11-13
+2024-11-14
 
-Version description of the v4.8.12 release of SlideRule Earth.
+Version description of the v4.8.13 release of SlideRule Earth.
 
 Bathy Version #12.
 
@@ -16,4 +16,4 @@ Bathy Version #12.
 
 ## Getting This Release
 
-[https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.8.12](https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.8.12)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.8.13](https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.8.13)
