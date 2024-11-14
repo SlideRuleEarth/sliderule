@@ -91,7 +91,9 @@ uint32_t GeoRaster::getSamples(const MathLib::point_3d_t& point, int64_t gps, Li
         getInnerBands(&raster, bands);
         for(const int bandNum : bands)
         {
+            /* Must create OGRPoint for each bandNum, samplePOI projects it to raster CRS */
             OGRPoint ogr_point(point.x, point.y, point.z);
+
             RasterSample* sample = raster.samplePOI(&ogr_point, bandNum);
             if(sample) slist.add(sample);
         }
