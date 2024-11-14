@@ -19,10 +19,8 @@ local expElevation   = { -2.02, -14.03, -4.28, -17.18}
 local expUncertainty = {  1.00,   4.37,  0.34,  1.32}
 local expContributor = {  31156, 0, 24955, 45641}
 
--- Tolerance for depth values is needed because of the different versions of PROJLIB
--- The values are different in the different versions of the library.
--- We add 1 meter of depth tolerance for the test to pass
-local elevation_tolerance = 0.1;
+
+local elevation_tolerance = 0.01;
 
 print(string.format("\n--------------------------------\nTest: BlueTopo Correct Values\n--------------------------------"))
 local dem = geo.raster(geo.parms({ asset = "bluetopo-bathy", algorithm = "NearestNeighbour", bands = {"Elevation", "Uncertainty", "Contributor"}, sort_by_index = true }))
@@ -42,7 +40,7 @@ for j, lon in ipairs(lons) do
             band = v["band"]
             value = v["value"]
             fname = v["file"]
-            print(string.format("(%02d) (%6.2f, %6.2f) %12s %10.2f  %s", k, lon, lat, band, value, fname))
+            print(string.format("(%6.2f, %6.2f)  Band: %11s %8.2f  %s", lon, lat, band, value, fname))
 
             if band == "Elevation" then
                 runner.check(math.abs(value - expElevation[j]) < elevation_tolerance, string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))

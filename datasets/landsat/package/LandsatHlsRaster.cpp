@@ -78,6 +78,13 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, RequestFields* rqst_parms, cons
 {
     ndsi = ndvi = ndwi = false;
 
+    if(!validateBandNames())
+    {
+        VSIUnlink(indexFile.c_str());
+        throw RunTimeException(DEBUG, RTE_ERROR, "Invalid band names specified");
+    }
+
+
     /* Create in memory index file (geojson) */
     VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(),
                                         const_cast<GByte*>(reinterpret_cast<const GByte*>(parms->catalog.value.c_str())), // source bytes
@@ -90,20 +97,18 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, RequestFields* rqst_parms, cons
     for(int i = 0; i < parms->bands.length(); i++)
     {
         const string& name = parms->bands[i];
-        if( isValidL8Band(name.c_str()) || isValidS2Band(name.c_str()) || isValidAlgoName(name.c_str()))
-        {
-            /* Add band to dictionary of bands but don't override if already there */
-            auto it = bandsDict.find(name);
-            if(it == bandsDict.end())
-                bandsDict[name] = true;
 
-            if(strcasecmp(parms->bands[i].c_str(), "NDSI") == 0) ndsi = true;
-            if(strcasecmp(parms->bands[i].c_str(), "NDVI") == 0) ndvi = true;
-            if(strcasecmp(parms->bands[i].c_str(), "NDWI") == 0) ndwi = true;
-        }
+        /* Add band to dictionary of bands but don't override if already there */
+        auto it = bandsDict.find(name);
+        if(it == bandsDict.end())
+            bandsDict[name] = true;
+
+        if(strcasecmp(name.c_str(), "NDSI") == 0) ndsi = true;
+        if(strcasecmp(name.c_str(), "NDVI") == 0) ndvi = true;
+        if(strcasecmp(name.c_str(), "NDWI") == 0) ndwi = true;
     }
 
-    /* If user specified only algortithm(s), add needed bands to dictionary of bands */
+    /* If user specified algortithm(s), add needed bands to dictionary of bands */
     if(ndsi || ndvi || ndwi)
     {
         for (unsigned i=0; i<ALGO_bandCnt; i++)
@@ -177,7 +182,7 @@ bool LandsatHlsRaster::findRasters(raster_finder_t* finder)
                 const char* bandName = it->first.c_str();
 
                 /* skip algo names (NDIS, etc) */
-                if(isValidAlgoName(bandName))
+                if(validAlgoName(bandName))
                     continue;
 
                 const char* fname = feature->GetFieldAsString(bandName);
@@ -225,6 +230,28 @@ bool LandsatHlsRaster::findRasters(raster_finder_t* finder)
  * PRIVATE METHODS
  ******************************************************************************/
 
+/*----------------------------------------------------------------------------
+ * validateBandNames
+ *----------------------------------------------------------------------------*/
+bool LandsatHlsRaster::validateBandNames(void)
+{
+    bool valid = false;
+
+    for (int i = 0; i < parms->bands.length(); i++)
+    {
+        const std::string& bandName = parms->bands[i];
+        valid = validL8Band(bandName.c_str()) || validS2Band(bandName.c_str()) || validAlgoName(bandName.c_str());
+
+        /* User specified invalid band name */
+        if(!valid) mlog(ERROR, "Invalid band name: %s", bandName.c_str());
+    }
+
+    return valid;
+}
+
+/*----------------------------------------------------------------------------
+ * validateBand
+ *----------------------------------------------------------------------------*/
 bool LandsatHlsRaster::validateBand(band_type_t type, const char* bandName)
 {
     const char** tags;
@@ -294,6 +321,9 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
     /* Landsat rasters use only the first inner band */
     const int INNER_BAND_INDX = 0;
 
+    /* Samples to be returned to the user */
+    std::vector<RasterSample*> sampleVect;
+
     /* Collect samples for all rasters */
     if(mode == SERIAL)
     {
@@ -319,7 +349,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
                     if(returnBandSample)
                     {
                         sample->bandName = bandName;
-                        slist->add(sample);
+                        sampleVect.push_back(sample);
                         item->bandSample[INNER_BAND_INDX] = NULL;
                     }
                 }
@@ -387,7 +417,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
 
                             /* Set flags for this sample, add it to the list */
                             s->flags = flags;
-                            slist->add(s);
+                            sampleVect.push_back(sample);
                             errors |= ps.ssErrors;
                         }
                     }
@@ -430,7 +460,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
 
         /* Set band name for this sample */
         sample->bandName = "NDSI";
-        slist->add(sample);
+        sampleVect.push_back(sample);
     }
 
     if(ndvi)
@@ -442,7 +472,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
 
         /* Set band name for this sample */
         sample->bandName = "NDVI";
-        slist->add(sample);
+        sampleVect.push_back(sample);
     }
 
     if(ndwi)
@@ -454,7 +484,20 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
 
         /* Set band name for this sample */
         sample->bandName = "NDWI";
-        slist->add(sample);
+        sampleVect.push_back(sample);
+    }
+
+    /* Add samples to the slist in the order of bands specified by the user in parms */
+    for(int i = 0; i < parms->bands.length(); i++)
+    {
+        for(RasterSample* sample : sampleVect)
+        {
+            if(strcasecmp(parms->bands[i].c_str(), sample->bandName.c_str()) == 0)
+            {
+                slist->add(sample);
+                break;
+            }
+        }
     }
 
     return errors;

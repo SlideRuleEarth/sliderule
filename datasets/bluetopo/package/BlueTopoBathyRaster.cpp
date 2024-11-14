@@ -35,6 +35,10 @@
 
 #include "BlueTopoBathyRaster.h"
 
+/* Valid Bands for BlueTopo Bathy Raster */
+const char* BlueTopoBathyRaster::validBands[] = {"Elevation", "Uncertainty", "Contributor"};
+#define validBandsCnt (sizeof (validBands) / sizeof (const char *))
+
 /******************************************************************************
  * PROTECTED METHODS
  ******************************************************************************/
@@ -47,6 +51,11 @@ BlueTopoBathyRaster::BlueTopoBathyRaster(lua_State* L, RequestFields* rqst_parms
  filePath(parms->asset.asset->getPath()),
  indexBucket(parms->asset.asset->getIndex())
 {
+    if(!validateBandNames())
+    {
+        throw RunTimeException(DEBUG, RTE_ERROR, "Invalid band name specified");
+    }
+
     const std::string bucketPath = filePath + indexBucket;
     if(!findIndexFileInS3Bucket(bucketPath))
     {
@@ -190,6 +199,36 @@ double BlueTopoBathyRaster::getGmtDate(const OGRFeature* feature, const char* fi
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * validateBandNames
+ *----------------------------------------------------------------------------*/
+bool BlueTopoBathyRaster::validateBandNames(void)
+{
+    for (int i = 0; i < parms->bands.length(); i++)
+    {
+        bool valid = false;
+
+        for(size_t j = 0; j < validBandsCnt; j++)
+        {
+            /* Raster band names are case insensitive */
+            if(strcmp(parms->bands[i].c_str(), validBands[j]) == 0)
+            {
+                valid = true;
+                break;
+            }
+        }
+
+        if(!valid)
+        {
+            mlog(ERROR, "Invalid band name: %s", parms->bands[i].c_str());
+            return false;
+        }
+    }
+
+    return true;
+}
+
 
 /*----------------------------------------------------------------------------
  * findIndexFileInS3Bucket

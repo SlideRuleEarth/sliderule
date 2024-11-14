@@ -117,6 +117,7 @@ end
 -- Run BLUETOPO Plugin Self Tests
 if __bluetopo__ and incloud then
     local bluetopo_td = td .. "../../datasets/bluetopo/selftests/"
+    runner.script(bluetopo_td.. "plugin_unittest.lua")
     runner.script(bluetopo_td.. "bluetopo_reader.lua")
 end
 

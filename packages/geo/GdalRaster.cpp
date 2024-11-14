@@ -494,7 +494,7 @@ int GdalRaster::getBandNumber(const std::string& bandName)
     auto it = bandMap.find(bandName);
     if(it == bandMap.end())
     {
-        mlog(ERROR, "Band %s not found", bandName.c_str());
+        mlog(ERROR, "Band \"%s\" not found", bandName.c_str());
         return NO_BAND;
     }
     return it->second;

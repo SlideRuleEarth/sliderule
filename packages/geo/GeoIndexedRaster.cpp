@@ -966,14 +966,26 @@ void* GeoIndexedRaster::readerThread(void *param)
             if(GdalRaster::ispoint(reader->geo))
             {
                 /* Sample raster bands */
-                for(const int bandNum : bands)
+                const bool oneBand = bands.size() == 1;
+                if(oneBand)
                 {
-                    /* Use local copy of point, it will be projected in samplePOI. We do not want project it again */
-                    OGRPoint point(*(dynamic_cast<OGRPoint*>(reader->geo)));
-
-                    RasterSample* sample = raster->samplePOI(&point, bandNum);
+                    OGRPoint* p = (dynamic_cast<OGRPoint*>(reader->geo));
+                    RasterSample* sample = raster->samplePOI(p, bands[0]);
                     entry->bandSample.push_back(sample);
-                    mlog(DEBUG, "Band: %d, %s", bandNum, sample ? sample->toString().c_str() : "NULL");
+                }
+                else
+                {
+                    /* Multiple bands */
+                    for(const int bandNum : bands)
+                    {
+                        /* Use local copy of point, it will be projected in samplePOI. We do not want to project it again */
+                        OGRPoint* p = (dynamic_cast<OGRPoint*>(reader->geo));
+                        OGRPoint point(*p);
+
+                        RasterSample* sample = raster->samplePOI(&point, bandNum);
+                        entry->bandSample.push_back(sample);
+                        mlog(DEBUG, "Band: %d, %s", bandNum, sample ? sample->toString().c_str() : "NULL");
+                    }
                 }
             }
             else if(GdalRaster::ispoly(reader->geo))
@@ -1049,19 +1061,36 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
                                                 ur->rinfo->flagsBandNum,
                                                 breader->obj->crscb);
 
+            /* Open raster so we can get inner bands from it */
+            raster->open();
+
             std::vector<int> bands;
             breader->obj->getInnerBands(raster, bands);
 
             /* Sample all points for this raster */
             for(point_sample_t& ps : ur->pointSamples)
             {
-                /* Sample all bands for this point */
-                for(const int bandNum : bands)
+                /* Sample raster bands */
+                const bool oneBand = bands.size() == 1;
+                if(oneBand)
                 {
-                    RasterSample* sample = raster->samplePOI(&ps.point, bandNum);
+                    RasterSample* sample = raster->samplePOI(&ps.point, bands[0]);
                     ps.bandSample.push_back(sample);
                     ps.bandSampleReturned.emplace_back(std::make_unique<std::atomic<bool>>(false));
-                    ps.ssErrors |= raster->getSSerror();
+                }
+                else
+                {
+                    /* Multiple bands */
+                    for(const int bandNum : bands)
+                    {
+                        /* Use local copy of point, it will be projected in samplePOI. We do not want to project it again */
+                        OGRPoint point(ps.point);
+
+                        RasterSample* sample = raster->samplePOI(&point, bandNum);
+                        ps.bandSample.push_back(sample);
+                        ps.bandSampleReturned.emplace_back(std::make_unique<std::atomic<bool>>(false));
+                        ps.ssErrors |= raster->getSSerror();
+                    }
                 }
             }
 

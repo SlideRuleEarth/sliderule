@@ -367,6 +367,17 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
                     errors++;
                 }
 
+                const std::string& serialBand = serial->bandName;
+                const std::string& batchBand  = batch->bandName;
+
+                if (serialBand != batchBand)
+                {
+                    print2term("Bands differ:\n");
+                    print2term("Serial: %s\n", serialBand.c_str());
+                    print2term("Batch:  %s\n", batchBand.c_str());
+                    errors++;
+                }
+
                 /* Compare as whole seconds */
                 if(static_cast<int64_t>(serial->time) != static_cast<int64_t>(batch->time))
                 {

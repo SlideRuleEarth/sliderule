@@ -49,6 +49,7 @@ class BlueTopoBathyRaster: public GeoIndexedRaster
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
+        static const char* validBands[];
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -85,7 +86,8 @@ class BlueTopoBathyRaster: public GeoIndexedRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        bool findIndexFileInS3Bucket(const std::string& bucketPath);
+        bool validateBandNames (void);
+        bool findIndexFileInS3Bucket (const std::string& bucketPath);
 
         /*--------------------------------------------------------------------
          * Data
