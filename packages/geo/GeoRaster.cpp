@@ -87,12 +87,11 @@ uint32_t GeoRaster::getSamples(const MathLib::point_3d_t& point, int64_t gps, Li
     lockSampling();
     try
     {
-        OGRPoint ogr_point(point.x, point.y, point.z);
-
         std::vector<int> bands;
         getInnerBands(&raster, bands);
         for(const int bandNum : bands)
         {
+            OGRPoint ogr_point(point.x, point.y, point.z);
             RasterSample* sample = raster.samplePOI(&ogr_point, bandNum);
             if(sample) slist.add(sample);
         }
