@@ -234,13 +234,22 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi, int bandNum)
         {
             const double vertical_shift = z - poi->getZ();
             sample = new RasterSample(gpsTime, fileId, vertical_shift);
-            if(parms->sampling_algo == GRIORA_NearestNeighbour)
-                readPixel(poi, band, sample);
-            else
-                resamplePixel(poi, band, sample);
 
-            if(parms->zonal_stats)
-                computeZonalStats(poi, band, sample);
+            if(band == flagsBand)
+            {
+                /* Skip resampling and zonal stats for quality mask band (value is bitmask) */
+                readPixel(poi, band, sample);
+            }
+            else
+            {
+                if(parms->sampling_algo == GRIORA_NearestNeighbour)
+                    readPixel(poi, band, sample);
+                else
+                    resamplePixel(poi, band, sample);
+
+                if(parms->zonal_stats)
+                    computeZonalStats(poi, band, sample);
+            }
         }
         else
         {
