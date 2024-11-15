@@ -88,7 +88,8 @@ class RecordObject
             STRING          = 12,
             USER            = 13,
             INVALID_FIELD   = 14,
-            NUM_FIELD_TYPES = 15
+            BOOL            = 15,
+            NUM_FIELD_TYPES = 16
         } fieldType_t;
 
         typedef enum {
@@ -247,7 +248,7 @@ class RecordObject
         /* Overloaded Methods */
         virtual bool            deserialize         (unsigned char* buffer, int size);
         virtual int             serialize           (unsigned char** buffer, serialMode_t mode=ALLOCATE, int size=0);
-        bool                    post                (Publisher* outq, int size=0, const bool* active=NULL, bool verbose=true);
+        bool                    post                (Publisher* outq, int size=0, const bool* active=NULL, bool verbose=true, int timeout=SYS_TIMEOUT);
 
         /* Attribute Methods */
         bool                    isRecordType        (const char* rec_type) const;

@@ -240,6 +240,7 @@ void initcore (void)
     TTYLib::init();
     TimeLib::init();
     LuaEngine::init();
+    GeoDataFrame::init();
     RequestMetrics::init();
     CurlLib::init();
     OrchestratorLib::init();
