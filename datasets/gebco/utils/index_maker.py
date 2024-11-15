@@ -1,19 +1,22 @@
 import os
+import sys
 from osgeo import gdal, ogr
 
+# Enable GDAL exceptions to avoid future warnings
+gdal.UseExceptions()
 
-def create_geojson(directory_path, geojson_name):
-    if not os.path.exists(directory_path):
-        raise ValueError(f"The directory '{directory_path}' does not exist.")
+def create_geojson(dir_path, index_file):
+    if not os.path.exists(dir_path):
+        raise ValueError(f"The directory '{dir_path}' does not exist.")
 
     # Find all .tif files in the directory
-    tif_files = [os.path.join(directory_path, f) for f in os.listdir(directory_path) if f.endswith(".tif")]
+    tif_files = [os.path.join(dir_path, f) for f in os.listdir(dir_path) if f.endswith(".tif")]
 
     if not tif_files:
-        raise ValueError("No .vrt files found in the specified directory.")
+        raise ValueError(f"No .tif files found in directory: {dir_path}")
 
     # Set the output path for the geojson file in the same directory
-    geojson_output_path = os.path.join(directory_path, geojson_name)
+    geojson_output_path = os.path.join(dir_path, index_file)
 
     # Remove if it already exists
     if os.path.exists(geojson_output_path):
@@ -48,7 +51,7 @@ def create_geojson(directory_path, geojson_name):
         if '_tid_' in tif_file:
             continue
 
-        print(f"TIF File: {tif_file}")
+        # print(f"Processed: {tif_file}")
 
          # Get the geotransform and size of the raster
         geotransform = raster_ds.GetGeoTransform()
@@ -80,9 +83,9 @@ def create_geojson(directory_path, geojson_name):
         feature.SetField("id", id)
         id += 1
 
-        # Set the "datetime" attribute to the middle of 2023
-        middle_of_2023 = "2023-07-02T00:00:00Z"
-        feature.SetField("datetime", middle_of_2023)
+        # Set the "datetime" attribute to the middle of the specified year
+        middle_of_year = f"{year}-07-02T00:00:00Z"
+        feature.SetField("datetime", middle_of_year)
 
         # Remove the directory path from the tif file name
         tif_file = os.path.basename(tif_file)
@@ -101,11 +104,27 @@ def create_geojson(directory_path, geojson_name):
 
 
     geojson_ds.Destroy()  # Close and save the GeoJSON file
-    print(f"GeoJSON created at: {geojson_output_path}")
+    print(f"GeoJSON index file created at: {geojson_output_path}")
 
 
-# Make index geojson for tif files
-cogs_directory = "/data/GEBCO/2023/COGS"
-geojson_name   = "index.geojson"
-create_geojson(cogs_directory, geojson_name)
+if __name__ == "__main__":
+    # List of supported years
+    supported_years = ["2023", "2024"]
 
+    if len(sys.argv) != 2:
+        print("Usage: python index_maker.py <year>")
+        sys.exit(1)
+
+    # Get the year from the command line argument
+    year = sys.argv[1]
+
+    # Ensure the provided year is valid
+    if year not in supported_years:
+        print(f"Error: Invalid year. Supported years are: {', '.join(supported_years)}")
+        sys.exit(1)
+
+    # Compose directory paths based on the year
+    cogs_dir = f"/data/GEBCO/{year}/COGS"
+    index_file = "index.geojson"
+
+    create_geojson(cogs_dir, index_file)
