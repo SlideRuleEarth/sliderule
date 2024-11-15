@@ -348,15 +348,15 @@ stats = {
     "subaqueous_photons": len(subaqueous_df),
     "bathy_photons": len(bathy_df),
     "bathy_strong_photons": len(bathy_df[bathy_df.spot.isin([1,3,5])]),
-    "bathy_linear_coverage":  bathy_df.index_seg.nunique() * 20.0, # number of unique segments with bathymetry X size of each segment in meters
-    "bathy_mean_depth": bathy_df.depth.mean(),
-    "bathy_min_depth": bathy_df.depth.min(),
-    "bathy_max_depth": bathy_df.depth.max(),
-    "bathy_std_depth": bathy_df.depth.std(),
-    "subaqueous_mean_uncertainty": bathy_df.subaqueous_sigma_tvu.mean().item(),
-    "subaqueous_min_uncertainty": bathy_df.subaqueous_sigma_tvu.min().item(),
-    "subaqueous_max_uncertainty": bathy_df.subaqueous_sigma_tvu.max().item(),
-    "subaqueous_std_uncertainty": bathy_df.subaqueous_sigma_tvu.std().item()
+    "bathy_linear_coverage":  float(bathy_df.index_seg.nunique() * 20.0), # number of unique segments with bathymetry X size of each segment in meters
+    "bathy_mean_depth": float(bathy_df.depth.mean()),
+    "bathy_min_depth": float(bathy_df.depth.min()),
+    "bathy_max_depth": float(bathy_df.depth.max()),
+    "bathy_std_depth": float(bathy_df.depth.std()),
+    "subaqueous_mean_uncertainty": float(bathy_df.subaqueous_sigma_tvu.mean()),
+    "subaqueous_min_uncertainty": float(bathy_df.subaqueous_sigma_tvu.min()),
+    "subaqueous_max_uncertainty": float(bathy_df.subaqueous_sigma_tvu.max()),
+    "subaqueous_std_uncertainty": float(bathy_df.subaqueous_sigma_tvu.std())
 }
 
 # read versions
