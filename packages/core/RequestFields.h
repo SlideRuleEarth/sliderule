@@ -69,7 +69,7 @@ class RequestFields: public LuaObject, public FieldDictionary
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
-        static const uint64_t DEFAULT_KEY_SPACE = 0;
+        static const uint64_t DEFAULT_KEY_SPACE = INVALID_KEY;
 
         /*--------------------------------------------------------------------
          * Types

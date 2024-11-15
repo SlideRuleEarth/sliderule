@@ -65,7 +65,6 @@ STAC_PAGE_SIZE = 100
 TNM_PAGE_SIZE = 100
 
 -- response codes for all of the package functions
-RC_SINGLETON = 1
 RC_SUCCESS = 0
 RC_FAILURE = -1
 RC_RQST_FAILED = -2
@@ -544,13 +543,8 @@ local function query(parms, q, userlog)
         end
     end
 
-    -- if singular resource populated, then just return
-    if parms["resource"] then
-        return RC_SINGLETON
-    end
-
-    -- if multiple resources populated, then just return
-    if parms["resources"] then
+    -- if resources populated, then just return
+    if parms["resources"] or parms["resource"] then
         return RC_SUCCESS
     end
 
@@ -584,7 +578,6 @@ return {
     tnm = tnm,
     search = search,
     query = query,
-    SINGLETON = RC_SINGLETON,
     SUCCESS = RC_SUCCESS,
     FAILURE = RC_FAILURE,
     RQST_FAILED = RC_RQST_FAILED,

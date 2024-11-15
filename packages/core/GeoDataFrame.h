@@ -156,6 +156,7 @@ class GeoDataFrame: public LuaObject, public Field
          *--------------------------------------------------------------------*/
 
         static void                 init                (void);
+        static int                  luaReceive          (lua_State* L);
 
         long                        length              (void) const override;
         long                        addRow              (void);
@@ -216,7 +217,6 @@ class GeoDataFrame: public LuaObject, public Field
         static int      luaRun              (lua_State* L);
         static int      luaRunComplete      (lua_State* L);
         static int      luaSend             (lua_State* L);
-        static int      luaReceive          (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
