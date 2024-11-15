@@ -52,14 +52,6 @@ local function ctimeout()
 end
 
 -------------------------------------------------------
--- public check
--------------------------------------------------------
-if sys.ispublic() then -- verify on a private cluster
-    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> forbidden on public cluster... exiting", rspq))
-    return
-end
-
--------------------------------------------------------
 -- get Kd resource filename
 -------------------------------------------------------
 local rdate         = string.format("%04d-%02d-%02dT00:00:00Z", parms["year"], parms["month"], parms["day"])

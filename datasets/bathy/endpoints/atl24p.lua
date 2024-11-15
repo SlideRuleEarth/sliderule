@@ -12,9 +12,9 @@ if earthdata.query(parms, rspq, userlog) == earthdata.SUCCESS then
 
     local df = nil
 
-    if parms["resource"] then
-    else
+    if not parms["resource"] then
         df = dataframe.proxy("atl24p", parms, rspq, userlog)
+    else
     end
 
     if df then
