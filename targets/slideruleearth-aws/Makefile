@@ -62,6 +62,9 @@ CSHELPH_VERSION = $(shell git --work-tree ${CSHELPH_SOURCE_DIR} --git-dir ${CSHE
 MEDIANFILTER_SOURCE_DIR ?= $(ROOT)/../ut-ATL24-medianfilter
 MEDIANFILTER_SOURCE_FILE = $(MEDIANFILTER_SOURCE_DIR)/medianmodel.py
 MEDIANFILTER_VERSION = $(shell git --work-tree ${MEDIANFILTER_SOURCE_DIR} --git-dir ${MEDIANFILTER_SOURCE_DIR}/.git describe --abbrev --dirty --always --tags --long)
+ENSEMBLE_SOURCE_DIR ?= $(ROOT)/../ut-ATL24-track_stacker
+ENSEMBLE_SOURCE_FILE = $(ENSEMBLE_SOURCE_DIR)/apps/classify.py
+ENSEMBLE_VERSION = $(shell git --work-tree ${ENSEMBLE_SOURCE_DIR} --git-dir ${ENSEMBLE_SOURCE_DIR}/.git describe --abbrev --dirty --always --tags --long)
 COASTNET_DIR = $(ROOT)/../ut-ATL24-coastnet
 QTREES_DIR = $(ROOT)/../ut-ATL24-qtrees
 OPENOCEANSPP_DIR = $(ROOT)/../ut-ATL24-oopp
@@ -188,6 +191,9 @@ oceaneyes-docker:
 	mkdir $(OCEANEYES_STAGE_DIR)/medianfilter
 	cp $(MEDIANFILTER_SOURCE_FILE) $(OCEANEYES_STAGE_DIR)/medianfilter
 	@echo $(MEDIANFILTER_VERSION) > $(OCEANEYES_STAGE_DIR)/medianfilter/medianfilter_version.txt
+	mkdir $(OCEANEYES_STAGE_DIR)/ensemble
+	cp $(ENSEMBLE_SOURCE_FILE) $(OCEANEYES_STAGE_DIR)/ensemble
+	@echo $(ENSEMBLE_VERSION) > $(OCEANEYES_STAGE_DIR)/ensemble/ensemble_version.txt
 	cp -R $(OCEANEYES_SRC_DIR)/bathypathfinder $(OCEANEYES_STAGE_DIR)
 	cp -R $(OCEANEYES_SRC_DIR)/pointnet $(OCEANEYES_STAGE_DIR)
 	cp -R $(OCEANEYES_SRC_DIR)/openoceans $(OCEANEYES_STAGE_DIR)

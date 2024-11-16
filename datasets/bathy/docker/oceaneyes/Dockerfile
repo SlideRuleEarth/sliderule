@@ -37,6 +37,7 @@ COPY cshelph /cshelph
 COPY medianfilter /medianfilter
 COPY openoceans /openoceans
 COPY pointnet /pointnet
+COPY ensemble /ensemble
 
 # container defaults
 SHELL ["/bin/bash", "-c"]

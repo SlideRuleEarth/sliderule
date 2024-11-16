@@ -42,6 +42,7 @@ import json
 
 from cshelph import c_shelph as CSHELPH
 from medianfilter import medianmodel as MEDIANFILTER
+from ensemble import classify as ENSEMBLE
 from bathypathfinder.BathyPathFinder import BathyPathSearch
 from pointnet.pointnet2 import PointNet2
 from openoceans.openoceans import OpenOceans
@@ -56,6 +57,7 @@ GPS_EPOCH_START = 315964800
 RELEASE = "1"
 CLASSIFIERS = ['qtrees', 'coastnet', 'openoceanspp', 'medianfilter', 'cshelph', 'bathypathfinder', 'pointnet', 'openoceans', 'ensemble']
 BEAMS = ["gt1l", "gt1r", "gt2l", "gt2r", "gt3l", "gt3r"]
+CONFIDENCE_COLUMN = "ensemble_bathy_prob"
 
 # #####################
 # Command Line Inputs
@@ -74,6 +76,9 @@ with open(settings_json, 'r') as json_file:
 # get setttings
 profile = settings.get('profile', {})
 format  = settings.get('format', 'parquet')
+
+# get ensemble model filename (required)
+ensemble_model_filename = settings['ensemble']['ensemble_model_filename']
 
 # #####################
 # Read In Data
@@ -251,17 +256,13 @@ def openoceans(spot, df):
 # #####################
 
 def ensemble(spot, df):
-    ensemble_model_filename = settings['ensemble']['ensemble_model_filename']
-    print(f'loading ensemble model: {ensemble_model_filename}')
-    df = df[['geoid_corr_h', 'surface_h', 'qtrees', 'cshelph', 'medianfilter', 'bathypathfinder', 'openoceanspp', 'coastnet']]
-    clf = xgb.XGBClassifier(device='cpu')
-    clf.load_model(ensemble_model_filename)
-    x = df.to_numpy()
-    p = clf.predict(x)
-    p[p == 1] = 40
-    p[p == 2] = 41
-    print(f'ensemble completed spot {spot}')
-    return p
+    try:
+        df = ENSEMBLE.classify(df.reset_index(drop=True, inplace=False), False, ensemble_model_filename)
+        print(f'ensemble completed spot {spot}')
+        return df
+    except Exception as e:
+        print(f'ensemble failed on spot {spot} with error: {e}')
+        return None
 
 # #####################
 # Run Classifiers
@@ -279,7 +280,11 @@ def runClassifier(classifier, classifier_func, num_processes=6):
             pool.close()
             pool.join()
             for i in range(len(beam_list)):
-                if results[i] is not None:
+                if type(results[i]) == pd.core.frame.DataFrame: # special case ensemble
+                    beam_table[beam_list[i]][classifier] = results[i][classifier].to_numpy()
+                    if CONFIDENCE_COLUMN in results[i]:
+                        beam_table[beam_list[i]]["confidence"] = results[i][CONFIDENCE_COLUMN].to_numpy()
+                elif results[i] is not None:
                     beam_table[beam_list[i]][classifier] = results[i]
                 else:
                     beam_failures[beam_list[i]].append(classifier)
@@ -321,7 +326,12 @@ df = pd.concat([beam_table[beam] for beam in beam_list])
 print("Concatenated data frames into a single data frame")
 
 # set processing flags
-df["processing_flags"] = df["processing_flags"] + ((df["cshelph"] == 40) * 2**28) + ((df["medianfilter"] == 40) * 2**27) + ((df["bathypathfinder"] == 40) * 2**29) + ((df["pointnet"] == 40) * 2**30)
+df["processing_flags"] = df["processing_flags"] + \
+                        ((df["confidence"] * 256).astype(np.uint8) * 256) + \
+                        ((df["cshelph"] == 40) * 2**28) + \
+                        ((df["medianfilter"] == 40) * 2**27) + \
+                        ((df["bathypathfinder"] == 40) * 2**29) + \
+                        ((df["pointnet"] == 40) * 2**30)
 
 # apply subaqueous corrections
 corrections_start_time = time.time()
@@ -361,9 +371,11 @@ stats = {
 
 # read versions
 with open("cshelph/cshelph_version.txt") as file:
-    cshelph_version = file.read()
+    cshelph_version = file.read().strip()
 with open("medianfilter/medianfilter_version.txt") as file:
-    medianfilter_version = file.read()
+    medianfilter_version = file.read().strip()
+with open("ensemble/ensemble_version.txt") as file:
+    ensemble_version = file.read().strip()
 
 # update profile
 profile["total_duration"] = time.time() - settings["latch"]
@@ -371,11 +383,12 @@ print(f'ATL24 total duration is {profile["total_duration"]:.03f} seconds')
 
 # build metadata table
 metadata = {
-    "sliderule": json.dumps(rqst_parms),
+    "sliderule": json.dumps(rqst_parms |
+                            {"cshelph": {"version": cshelph_version}} |
+                            {"medianfilter": {"version": medianfilter_version}} |
+                            {"ensemble": {"version": ensemble_version, "model": settings['ensemble']['ensemble_model_filename']}}),
     "profile": json.dumps(profile),
     "stats": json.dumps(stats),
-    "cshelph": cshelph_version,
-    "medianfilter": medianfilter_version,
     "errors": json.dumps(beam_failures)
 }
 

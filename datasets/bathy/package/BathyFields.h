@@ -47,7 +47,7 @@
 
 #define COASTNET_MODEL  "coastnet_model-20241111.json"
 #define QTREES_MODEL    "qtrees_model-20241105.json"
-#define ENSEMBLE_MODEL  "ensemble_model-20241030.json"
+#define ENSEMBLE_MODEL  "ensemble_model-20241115.json"
 #define POINTNET_MODEL  "pointnet2_model.pth"
 
 /******************************************************************************
@@ -226,13 +226,14 @@ class BathyFields: public Icesat2Fields
 
         /* Processing Flags */
         typedef enum {
-            FLAGS_CLEAR             = 0x00,
-            ON_BOUNDARY             = 0x01, // set if photon is first after a spatial boundary
-            SENSOR_DEPTH_EXCEEDED   = 0x02,
-            SEA_SURFACE_UNDETECTED  = 0x04,
-            INVALID_KD              = 0x08,
-            INVALID_WIND_SPEED      = 0x10,
-            NIGHT_FLAG              = 0x20,
+            FLAGS_CLEAR             = 0x00000000,
+            ON_BOUNDARY             = 0x00000001, // set if photon is first after a spatial boundary
+            SENSOR_DEPTH_EXCEEDED   = 0x00000002,
+            SEA_SURFACE_UNDETECTED  = 0x00000004,
+            INVALID_KD              = 0x00000008,
+            INVALID_WIND_SPEED      = 0x00000010,
+            NIGHT_FLAG              = 0x00000020,
+            BATHY_CONFIDENCE        = 0x0000FF00,
             BATHY_QTREES            = 0x01000000,
             BATHY_COASTNET          = 0x02000000,
             BATHY_OPENOCEANSPP      = 0x04000000,
