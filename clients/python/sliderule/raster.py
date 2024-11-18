@@ -134,6 +134,9 @@ def sample(asset, coordinates, parms={}):
             **columns
         }
 
+    # GPS Offset between unix epoch and gps epoch in milliseconds
+    gps_offset_msecs = 315964800.0 * 1000
+
     # Populate Columns
     i = 0
     per_coord_index = 0
@@ -142,7 +145,7 @@ def sample(asset, coordinates, parms={}):
         latitude = coordinates[per_coord_index][1]
         per_coord_index += 1
         for raster_sample in input_coord_response:
-            columns['time'][i] = numpy.int64((raster_sample['time'] + 315964800.0) * 1000000000)
+            columns['time'][i] = numpy.int64((raster_sample['time'] + gps_offset_msecs) * 1e6) # int64 with gps nanoseconds will overflow in year 2272
             columns['longitude'][i] = numpy.double(longitude)
             columns['latitude'][i] = numpy.double(latitude)
             columns['file'] += raster_sample['file'],
