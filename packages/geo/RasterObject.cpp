@@ -383,7 +383,7 @@ int RasterObject::luaSamples(lua_State *L)
         int64_t gps = 0;
         if(closest_time_str != NULL)
         {
-            gps = TimeLib::str2gpstime(closest_time_str);
+            gps = TimeLib::str2gpstime(closest_time_str) / 1000;
         }
 
         /* Get samples */

@@ -63,7 +63,7 @@ class EsaWorldCover10meterRaster: public GeoRaster
         EsaWorldCover10meterRaster (lua_State* L, RequestFields* rqst_parms, const char* key):
          GeoRaster(L, rqst_parms, key,
                   rqst_parms->geoFields(key)->asset.asset->getIndex(),
-                  TimeLib::datetime2gps(2021, 06, 30, 0, 0, 0) /* Mid point for year data was collected */) {}
+                  TimeLib::datetime2gps(2021, 06, 30, 0, 0, 0) / 1000 /* Mid point for year data was collected */) {}
 
     private:
 

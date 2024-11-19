@@ -11,7 +11,7 @@ sigma = 1.0e-9
 lon = -80.87
 lat =  32.06
 
-file  = '/vsis3/noaa-ocs-nationalbathymetry-pds/BlueTopo/BH4SX59B/BlueTopo_BH4SX59B_20241021.tiff'
+file  = '/vsis3/noaa-ocs-nationalbathymetry-pds/BlueTopo/BH4SX59B/BlueTopo_BH4SX59B_20241115.tiff'
 
 expElevation   = -2.02
 expUncertainty =  1.00

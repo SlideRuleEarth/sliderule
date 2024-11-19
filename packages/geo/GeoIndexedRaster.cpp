@@ -446,23 +446,23 @@ uint32_t GeoIndexedRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
                     /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
                     if(ps.bandSample[i] == NULL) continue;;
 
-                    RasterSample* s;
+                    RasterSample* sample;
                     if(!ps.bandSampleReturned[i]->exchange(true))
                     {
-                        s = ps.bandSample[i];
+                        sample = ps.bandSample[i];
                     }
                     else
                     {
                         /* Sample has already been returned, must create a copy */
-                        s = new RasterSample(*ps.bandSample[i]);
+                        sample = new RasterSample(*ps.bandSample[i]);
                     }
 
                     /* Set time for this sample */
-                    s->time = rgroup->gpsTime / 1000;
+                    sample->time = rgroup->gpsTime;
 
                     /* Set flags for this sample, add it to the list */
-                    s->flags = flags;
-                    slist->add(s);
+                    sample->flags = flags;
+                    slist->add(sample);
                     errors |= ps.ssErrors;
                 }
 
@@ -501,12 +501,19 @@ uint32_t GeoIndexedRaster::getBatchGroupFlags(const rasters_group_t* rgroup, uin
                  * The flags value must be in the first band.
                  * If these assumptions are not met the dataset must override this function.
                  */
-                RasterSample* s = ps.bandSample[0];
+                RasterSample* sample = NULL;
+
+                /* bandSample can be empty if raster failed to open */
+                if(!ps.bandSample.empty())
+                {
+                    sample = ps.bandSample[0];
+                }
+
 
                 /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
-                if(s == NULL) break;;
+                if(sample == NULL) break;;
 
-                return s->value;
+                return sample->value;
             }
         }
     }
@@ -591,7 +598,7 @@ uint32_t GeoIndexedRaster::getGroupFlags(const rasters_group_t* rgroup)
 
         cacheitem_t* item;
         const char* key = fileDict.get(rinfo.fileId);
-        if(cache.find(key, &item))
+        if(cache.find(key, &item) && !item->bandSample.empty())
         {
             /*
              * This function assumes that there is only one raster with FLAGS_TAG in a group.
@@ -800,7 +807,7 @@ void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps, GroupOrdering* groupList)
+bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps_secs, GroupOrdering* groupList)
 {
     /* Open the index file, if not already open */
     if(!openGeoIndex(geo, NULL))
@@ -823,7 +830,7 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps, GroupOrdering* grou
         groupList->add(groupList->length(), rgroup);
     }
 
-    if(!filterRasters(gps, groupList, fileDict))
+    if(!filterRasters(gps_secs, groupList, fileDict))
         return false;
 
     uint32_t rasters2sample = 0;
@@ -1356,7 +1363,7 @@ bool GeoIndexedRaster::updateCache(uint32_t& rasters2sample, const GroupOrdering
                 item = new cacheitem_t;
                 item->raster = new GdalRaster(parms,
                                               key,
-                                              static_cast<double>(rgroup->gpsTime / 1000),
+                                              static_cast<double>(rgroup->gpsTime),
                                               rinfo.fileId,
                                               rinfo.elevationBandNum,
                                               rinfo.flagsBandNum,
@@ -1414,7 +1421,7 @@ bool GeoIndexedRaster::updateCache(uint32_t& rasters2sample, const GroupOrdering
 /*----------------------------------------------------------------------------
  * filterRasters
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::filterRasters(int64_t gps, GroupOrdering* groupList, RasterFileDictionary& dict)
+bool GeoIndexedRaster::filterRasters(int64_t gps_secs, GroupOrdering* groupList, RasterFileDictionary& dict)
 {
     /* NOTE: temporal filter is applied in openGeoIndex() */
     if(!parms->url_substring.value.empty() || parms->filter_doy_range)
@@ -1470,15 +1477,15 @@ bool GeoIndexedRaster::filterRasters(int64_t gps, GroupOrdering* groupList, Rast
 
     /* Closest time filter - using raster group time, not individual reaster time */
     int64_t closestGps = 0;
-    if(gps > 0)
+    if(gps_secs > 0)
     {
         /* Caller provided gps time, use it insead of time from params */
-        closestGps = gps;
+        closestGps = gps_secs;
     }
     else if (parms->filter_closest_time)
     {
         /* Params provided closest time */
-        closestGps = TimeLib::gmt2gpstime(parms->closest_time);
+        closestGps = TimeLib::gmt2gpstime(parms->closest_time) / 1000;
     }
 
     if(closestGps > 0)

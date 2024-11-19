@@ -112,7 +112,7 @@ bool GebcoBathyRaster::findRasters(raster_finder_t* finder)
             if (!rastergeo->Intersects(geo)) continue;
 
             rasters_group_t* rgroup = new rasters_group_t;
-            rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
+            rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate) / 1000.0;
 
             const char* dataFile  = feature->GetFieldAsString("data_raster");
             if(dataFile && (strlen(dataFile) > 0))

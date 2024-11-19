@@ -21,7 +21,7 @@ local  height =   0.0
 
 print(string.format("\n-------------------------------------------------\nMeta (\u{221E}) global canopy height sample POI\n-------------------------------------------------"))
 
-local expResults = {{20.0, 1396483218000, '/vsis3/sliderule/data/GLOBALCANOPY/META_GlobalCanopyHeight_1m_2024_v1.vrt'}}
+local expResults = {{20.0, 1396483218, '/vsis3/sliderule/data/GLOBALCANOPY/META_GlobalCanopyHeight_1m_2024_v1.vrt'}}
 
 local demType = "meta-globalcanopy-1meter"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))

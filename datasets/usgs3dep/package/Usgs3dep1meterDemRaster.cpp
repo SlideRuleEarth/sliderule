@@ -112,7 +112,7 @@ bool Usgs3dep1meterDemRaster::findRasters(raster_finder_t* finder)
             if (!rastergeo->Intersects(geo)) continue;
 
             rasters_group_t* rgroup = new rasters_group_t;
-            rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
+            rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate) / 1000.0;
 
             const char* fname = feature->GetFieldAsString("url");
             if(fname && strlen(fname) > 0)

@@ -101,7 +101,7 @@ bool BlueTopoBathyRaster::findRasters(raster_finder_t* finder)
             if (!rastergeo->Intersects(geo)) continue;
 
             rasters_group_t* rgroup = new rasters_group_t;
-            rgroup->gpsTime = getGmtDate(feature, "Delivered_Date", rgroup->gmtDate);
+            rgroup->gpsTime = getGmtDate(feature, "Delivered_Date", rgroup->gmtDate) / 1000.0;
 
             const char* dataFile  = feature->GetFieldAsString("GeoTIFF_link");
             if(dataFile && (strlen(dataFile) > 0))

@@ -104,7 +104,7 @@ class GeoIndexedRaster: public RasterObject
             char*                      featureId;  // stac catalog feature id
             std::vector<raster_info_t> infovect;   // vector of rasters belonging to the same stac catalog feature
             TimeLib::gmt_time_t        gmtDate;    // feature date (can be computed from start/end dates)
-            int64_t                    gpsTime;    // feature gps time
+            int64_t                    gpsTime;    // feature gps time in seconds
 
             RaserGroup(void): featureId(NULL), gmtDate{0,0,0,0,0,0}, gpsTime(0) {}
            ~RaserGroup(void) { delete[] featureId; }
@@ -200,7 +200,7 @@ class GeoIndexedRaster: public RasterObject
 
         static void     init              (void);
         static void     deinit            (void);
-        uint32_t        getSamples        (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) final;
+        uint32_t        getSamples        (const MathLib::point_3d_t& point, int64_t gps_secs, List<RasterSample*>& slist, void* param=NULL) final;
         uint32_t        getSamples        (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) final;
         uint32_t        getSubsets        (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) final;
 
@@ -307,7 +307,7 @@ class GeoIndexedRaster: public RasterObject
         bool            createBatchReaderThreads(uint32_t rasters2sample);
 
         bool            updateCache         (uint32_t& rasters2sample, const GroupOrdering* groupList);
-        bool            filterRasters       (int64_t gps, GroupOrdering* groupList, RasterFileDictionary& dict);
+        bool            filterRasters       (int64_t gps_secs, GroupOrdering* groupList, RasterFileDictionary& dict);
         static OGRGeometry* getConvexHull   (const std::vector<point_info_t>* points);
         void            applySpatialFilter  (OGRLayer* layer, const std::vector<point_info_t>* points);
 

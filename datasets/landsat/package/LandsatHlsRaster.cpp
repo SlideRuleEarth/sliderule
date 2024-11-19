@@ -174,7 +174,7 @@ bool LandsatHlsRaster::findRasters(raster_finder_t* finder)
             /* Set raster group time and group featureId */
             rasters_group_t* rgroup = new rasters_group_t;
             rgroup->featureId = StringLib::duplicate(feature->GetFieldAsString("id"));
-            rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
+            rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate) / 1000.0;
 
             /* Find each requested band in the index file */
             for(auto it = bandsDict.begin(); it != bandsDict.end(); it++)
@@ -336,7 +336,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
         {
             const char* key = fileDictGet(rinfo.fileId);
             cacheitem_t* item;
-            if(cache.find(key, &item))
+            if(cache.find(key, &item) && !item->bandSample.empty())
             {
                 RasterSample* sample = item->bandSample[INNER_BAND_INDX];
 
@@ -389,7 +389,13 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
             {
                 if(ps.pointIndex == pointIndx)
                 {
-                    RasterSample* sample = ps.bandSample[INNER_BAND_INDX];
+                    RasterSample* sample = NULL;
+
+                    /* bandSample can be empty if raster failed to open */
+                    if(!ps.bandSample.empty())
+                    {
+                        sample = ps.bandSample[INNER_BAND_INDX];
+                    }
 
                     /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
                     if(sample == NULL) break;
@@ -406,23 +412,23 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
                             RasterSample* s;
                             if(!ps.bandSampleReturned[INNER_BAND_INDX]->exchange(true))
                             {
-                                s = ps.bandSample[INNER_BAND_INDX];
+                                s = sample;
                             }
                             else
                             {
                                 /* Sample has already been returned, must create a copy */
-                                s = new RasterSample(*ps.bandSample[INNER_BAND_INDX]);
+                                s = new RasterSample(*sample);
                             }
 
                             /* Set band name for this sample */
                             s->bandName = bandName;
 
                             /* Set time for this sample */
-                            s->time = rgroup->gpsTime / 1000;
+                            s->time = rgroup->gpsTime;
 
                             /* Set flags for this sample, add it to the list */
                             s->flags = flags;
-                            sampleVect.push_back(sample);
+                            sampleVect.push_back(s);
                             errors |= ps.ssErrors;
                         }
                     }
@@ -452,7 +458,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
         throw RunTimeException(DEBUG, RTE_ERROR, "Invalid sample mode");
     }
 
-    const double groupTime = rgroup->gpsTime / 1000;
+    const double groupTime = rgroup->gpsTime;
     const std::string groupName = featureId + " {\"algo\": \"";
 
     /* Calculate algos - make sure that all the necessary bands were read */

@@ -63,7 +63,7 @@ class MetaGlobalCanopy1meterRaster: public GeoRaster
         MetaGlobalCanopy1meterRaster (lua_State* L, RequestFields* rqst_parms, const char* key):
          GeoRaster(L, rqst_parms, key,
                   rqst_parms->geoFields(key)->asset.asset->getIndex(),
-                  TimeLib::datetime2gps(2024, 4, 7, 0, 0, 0)) {}
+                  TimeLib::datetime2gps(2024, 4, 7, 0, 0, 0) / 1000) {}
 
 };
 
