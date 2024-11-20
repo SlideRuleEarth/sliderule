@@ -293,7 +293,7 @@ void ArrowSamplerImpl::getPoints(std::vector<point_info_t>& points)
         /* Convert unix nanoseconds to gps seconds */
         for(int64_t i = 0; i < time_column->length(); i++)
         {
-            double unix_nsecs = time_column->Value(i);
+            const double unix_nsecs = time_column->Value(i);
             points[i].gps = TimeLib::sys2gpstime(unix_nsecs / 1000.0) * 1000.0;
         }
     }
