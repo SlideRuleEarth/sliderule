@@ -142,7 +142,7 @@ def sample(asset, coordinates, parms={}):
         latitude = coordinates[per_coord_index][1]
         per_coord_index += 1
         for raster_sample in input_coord_response:
-            columns['time'][i] = numpy.int64((raster_sample['time'] + 315564800.0) * 1e9)
+            columns['time'][i] = numpy.int64((raster_sample['time'] + 315964800.0) * 1e9)
             columns['longitude'][i] = numpy.double(longitude)
             columns['latitude'][i] = numpy.double(latitude)
             columns['file'] += raster_sample['file'],

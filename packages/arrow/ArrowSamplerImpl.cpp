@@ -281,13 +281,23 @@ void ArrowSamplerImpl::getPoints(std::vector<point_info_t>& points)
     if(time_column_index > -1)
     {
         auto time_column = std::static_pointer_cast<arrow::TimestampArray>(table->column(time_column_index)->chunk(0));
-        mlog(DEBUG, "Time column elements: %ld", time_column->length());
+        auto timestamp_type = std::static_pointer_cast<arrow::TimestampType>(table->column(time_column_index)->type());
 
-        /* Update gps time for each point */
+        if(timestamp_type->unit() != arrow::TimeUnit::NANO)
+        {
+            mlog(ERROR, "Time column must be in nanoseconds.");
+            points.clear();
+            return;
+        }
+
+        /* Convert unix nanoseconds to gps seconds */
         for(int64_t i = 0; i < time_column->length(); i++)
-            points[i].gps = time_column->Value(i);
+        {
+            double unix_nsecs = time_column->Value(i);
+            points[i].gps = TimeLib::sys2gpstime(unix_nsecs / 1000.0) * 1000.0;
+        }
     }
-    else mlog(DEBUG, "Time column not found.");
+    else mlog(ERROR, "Time column not found.");
 }
 
 /*----------------------------------------------------------------------------

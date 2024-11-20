@@ -15,7 +15,8 @@ vrtLat =   39.1
 
 expValue     = 10
 vrtFile      = '/vsis3/sliderule/data/WORLDCOVER/ESA_WorldCover_10m_2021_v200_Map.vrt'
-vrtFileTime  = 1309046418  # gpsTime in seconds 2021-06-30
+timeAsDateStr  = '2021-06-30 00:00:18'
+timeAsUnixSecs = 1309046418  # includes 18 leap seconds
 
 @pytest.mark.network
 class TestMosaic:
@@ -25,7 +26,7 @@ class TestMosaic:
         assert init
         assert abs(rsps["samples"][0][0]["value"] - expValue) < sigma
         assert rsps["samples"][0][0]["file"] ==  vrtFile
-        assert rsps["samples"][0][0]["time"] ==  vrtFileTime  # datetime in seconds
+        assert rsps["samples"][0][0]["time"] ==  timeAsUnixSecs  # datetime in seconds
 
     def test_time_overflow(self, init):
         region = [  {"lon": -108.34, "lat": 38.89},
@@ -41,16 +42,12 @@ class TestMosaic:
         # Reset the index to make 'time' a regular column
         gdf_reset = gdf.reset_index()
 
-        # Access raw time column values as NumPy array
-        raw_time_values = gdf_reset['time'].astype('int64')
+        # Access the 'time' column
+        time_values = gdf_reset['time'].tolist()
+        print(time_values)
 
-        # Expected gps epoch time in nanoseconds
-        expected_time = (vrtFileTime + 315564800) * 1e9
-
-        print("Raw time column values (NumPy array):", raw_time_values)
-        print("expected_time:", expected_time)
-
-        assert (raw_time_values == expected_time).all()
+        assert [str(t) for t in time_values] == [timeAsDateStr, timeAsDateStr], \
+            f"Time values do not match. Expected: {[timeAsDateStr, timeAsDateStr]}, Found: {[str(t) for t in time_values]}"
 
         values = gdf_reset['value']
         assert (values == expValue).all()
