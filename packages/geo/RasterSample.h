@@ -50,6 +50,7 @@ public:
     double verticalShift;
     uint64_t fileId;
     uint32_t flags;
+    std::string bandName;
 
     struct zonal_t
     {
@@ -82,6 +83,7 @@ public:
     {
         value = sample.value;
         flags = sample.flags;
+        bandName = sample.bandName;
         stats = sample.stats;
     }
 

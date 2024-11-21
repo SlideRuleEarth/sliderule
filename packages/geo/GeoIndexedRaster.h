@@ -74,18 +74,15 @@ class GeoIndexedRaster: public RasterObject
 
         /* Raster Sample used by batch sampling */
         typedef struct PointSample {
-            OGRPoint                    point;
-            int64_t                     pointIndex;    // index to the user provided list of points to sample
-            RasterSample*               sample;        // sample created by the batch reader thread
-            std::atomic<bool>           sampleReturned;// multiple rasters may share the same sample,
-                                                       // this flag is used to avoid returning the same sample, if set a copy of the sample is returned
-            uint32_t                    ssErrors;      // sampling errors
+            OGRPoint                       point;
+            int64_t                        pointIndex;    // index to the user provided list of points to sample
+            std::vector<RasterSample*>     bandSample;    // vector of samples for each band
+            std::vector<std::unique_ptr<std::atomic<bool>>> bandSampleReturned; // multiple rasters may share the same sample,
+                                                                                // these flags are used to avoid returning the same sample, if set a copy of the sample is returned
+            uint32_t                       ssErrors;      // sampling errors
 
-            PointSample(const OGRPoint& _point, int64_t _pointIndex):
-               point(_point), pointIndex(_pointIndex), sample(NULL), sampleReturned(false), ssErrors(SS_NO_ERRORS) {}
-
-            PointSample(const PointSample& ps):
-               point(ps.point), pointIndex(ps.pointIndex), sample(ps.sample), sampleReturned(ps.sampleReturned.load()), ssErrors(ps.ssErrors) {}
+            PointSample(const OGRPoint& _point, int64_t _pointIndex);
+            PointSample(const PointSample& ps);
 
         } point_sample_t;
 
@@ -93,12 +90,13 @@ class GeoIndexedRaster: public RasterObject
 
         /** Raster information needed for sampling */
         typedef struct RasterInfo {
-            bool                    dataIsElevation;
-            std::string             tag;          // "Dem", "Flags", "Date"
-            uint64_t                fileId;       // file dictionary id
-            UniqueRaster*           uraster;      // Pointer to the unique raster which contains the sample for this raster
+            int                     elevationBandNum;  // band number for elevation
+            int                     flagsBandNum;      // band number for fmask
+            std::string             tag;               // value, fmask, etc
+            uint64_t                fileId;            // file dictionary id
+            UniqueRaster*           uraster;           // Pointer to the unique raster which contains the sample for this raster
 
-            RasterInfo(void): dataIsElevation(false), uraster(NULL) {}
+            RasterInfo(void): elevationBandNum(GdalRaster::NO_BAND), flagsBandNum(GdalRaster::NO_BAND), uraster(NULL) {}
         } raster_info_t;
 
         /* Group of rasters belonging to the same geojson stac catalog feature */
@@ -106,7 +104,7 @@ class GeoIndexedRaster: public RasterObject
             char*                      featureId;  // stac catalog feature id
             std::vector<raster_info_t> infovect;   // vector of rasters belonging to the same stac catalog feature
             TimeLib::gmt_time_t        gmtDate;    // feature date (can be computed from start/end dates)
-            int64_t                    gpsTime;    // feature gps time
+            int64_t                    gpsTime;    // feature gps time in seconds
 
             RaserGroup(void): featureId(NULL), gmtDate{0,0,0,0,0,0}, gpsTime(0) {}
            ~RaserGroup(void) { delete[] featureId; }
@@ -114,11 +112,9 @@ class GeoIndexedRaster: public RasterObject
 
         /* Raster and associated points to sample, used by batch sampling */
         typedef struct UniqueRaster {
-            bool                        dataIsElevation;
-            uint64_t                    fileId;         // file dictionary id
+            const raster_info_t*        rinfo;
             std::vector<point_sample_t> pointSamples;   // vector of samples for each point in this raster
-            explicit UniqueRaster(bool _dataIsElevation, uint64_t _fileId):
-                                 dataIsElevation(_dataIsElevation), fileId(_fileId) {}
+            explicit UniqueRaster(const raster_info_t* _rinfo): rinfo(_rinfo) {}
         } unique_raster_t;
 
         typedef Ordering<rasters_group_t*, unsigned long> GroupOrdering;
@@ -136,10 +132,10 @@ class GeoIndexedRaster: public RasterObject
 
         /* Cache used by serial sampling code */
         typedef struct CacheItem {
-            bool            enabled;
-            RasterSample*   sample;
-            RasterSubset*   subset;
-            GdalRaster*     raster;
+            bool                        enabled;
+            std::vector<RasterSample*>  bandSample;
+            std::vector<RasterSubset*>  bandSubset;
+            GdalRaster*                 raster;
             ~CacheItem(void) {delete raster;}
         } cacheitem_t;
 
@@ -204,7 +200,7 @@ class GeoIndexedRaster: public RasterObject
 
         static void     init              (void);
         static void     deinit            (void);
-        uint32_t        getSamples        (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) final;
+        uint32_t        getSamples        (const MathLib::point_3d_t& point, int64_t gps_secs, List<RasterSample*>& slist, void* param=NULL) final;
         uint32_t        getSamples        (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) final;
         uint32_t        getSubsets        (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) final;
 
@@ -228,7 +224,7 @@ class GeoIndexedRaster: public RasterObject
         virtual void     getGroupSubsets       (const rasters_group_t* rgroup, List<RasterSubset*>& slist);
         uint32_t         getGroupFlags         (const rasters_group_t* rgroup);
 
-        static double    getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
+        virtual double   getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
         bool             openGeoIndex          (const OGRGeometry* geo, const std::vector<point_info_t>* points);
         virtual bool     getFeatureDate        (const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate);
         virtual void     getIndexFile          (const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points=NULL) = 0;
@@ -311,7 +307,7 @@ class GeoIndexedRaster: public RasterObject
         bool            createBatchReaderThreads(uint32_t rasters2sample);
 
         bool            updateCache         (uint32_t& rasters2sample, const GroupOrdering* groupList);
-        bool            filterRasters       (int64_t gps, GroupOrdering* groupList, RasterFileDictionary& dict);
+        bool            filterRasters       (int64_t gps_secs, GroupOrdering* groupList, RasterFileDictionary& dict);
         static OGRGeometry* getConvexHull   (const std::vector<point_info_t>* points);
         void            applySpatialFilter  (OGRLayer* layer, const std::vector<point_info_t>* points);
 
@@ -327,7 +323,6 @@ class GeoIndexedRaster: public RasterObject
 
         bool            collectSamples      (const std::vector<point_groups_t>& pointsGroups,
                                              List<sample_list_t*>& sllist);
-
 };
 
 #endif  /* __geo_indexed_raster__ */

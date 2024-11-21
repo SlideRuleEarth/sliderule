@@ -105,8 +105,12 @@ int GeoUserRaster::luaCreate (lua_State* L)
         if(rasterlength > maxSize)
             throw RunTimeException(CRITICAL, RTE_ERROR, "User raster too big, size is: %lu, max allowed: %u", rasterlength, maxSize);
 
+        /* If raster has elevation assume it is in the first band */
+        const int elevationBandNum = iselevation ? 1 : GdalRaster::NO_BAND;
+        const int flagsBandNum = GdalRaster::NO_BAND;
+
         /* Create GeoUserRaster */
-        return createLuaObject(L, new GeoUserRaster(L, rqst_parms, GeoFields::DEFAULT_KEY, tiff.c_str(), tiff.size(), gps, iselevation));
+        return createLuaObject(L, new GeoUserRaster(L, rqst_parms, GeoFields::DEFAULT_KEY, tiff.c_str(), tiff.size(), gps, elevationBandNum, flagsBandNum));
     }
     catch(const RunTimeException& e)
     {
@@ -132,8 +136,10 @@ GeoUserRaster::~GeoUserRaster(void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoUserRaster::GeoUserRaster(lua_State *L, RequestFields* rqst_parms, const char* key, const char *file, long filelength, double gps, bool iselevation):
-    GeoRaster(L, rqst_parms, key, std::string("/vsimem/userraster/" + GdalRaster::getUUID() + ".tif"), gps, iselevation ),
+GeoUserRaster::GeoUserRaster(lua_State *L, RequestFields* rqst_parms, const char* key,
+                             const char *file, long filelength, double gps,
+                             int elevationBandNum, int flagsBandNum) :
+    GeoRaster(L, rqst_parms, key, std::string("/vsimem/userraster/" + GdalRaster::getUUID() + ".tif"), gps, elevationBandNum, flagsBandNum),
     data(NULL)
 {
     if(file == NULL)

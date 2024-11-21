@@ -100,6 +100,8 @@ class LandsatHlsRaster: public GeoIndexedRaster
         uint32_t getBatchGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx) final
                                      { return _getGroupSamples(BATCH, rgroup, slist, flags, pointIndx);}
 
+        void     getInnerBands       (std::vector<std::string>& bands) final
+                                     { bands.clear(); } /* Landsat bands are in seperate rasters */
 
     private:
 
@@ -107,12 +109,13 @@ class LandsatHlsRaster: public GeoIndexedRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static bool validateBand   (band_type_t type, const char* bandName);
+        bool        validateBandNames (void);
+        static bool validateBand (band_type_t type, const char* bandName);
 
-        static bool isValidL8Band   (const char* bandName) {return validateBand(LANDSAT8, bandName);}
-        static bool isValidS2Band   (const char* bandName) {return validateBand(SENTINEL2,bandName);}
-        static bool isValidAlgoBand (const char* bandName) {return validateBand(ALGOBAND, bandName);}
-        static bool isValidAlgoName (const char* bandName) {return validateBand(ALGONAME, bandName);}
+        static bool validL8Band   (const char* bandName)  {return validateBand(LANDSAT8, bandName);}
+        static bool validS2Band   (const char* bandName)  {return validateBand(SENTINEL2,bandName);}
+        static bool validAlgoBand (const char* bandName)  {return validateBand(ALGOBAND, bandName);}
+        static bool validAlgoName (const char* bandName)  {return validateBand(ALGONAME, bandName);}
 
         uint32_t _getGroupSamples(sample_mode_t mode, const rasters_group_t* rgroup,
                                   List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx=0);
@@ -123,7 +126,7 @@ class LandsatHlsRaster: public GeoIndexedRaster
 
         std::string filePath;
         std::string indexFile;
-        std::unordered_map<std::string, bool> bandsDict;
+        std::unordered_map<std::string, bool> bandsDict; /* Bands (rasters) to sample */
 
         bool ndsi;
         bool ndvi;

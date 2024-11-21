@@ -59,6 +59,35 @@ const char* GeoIndexedRaster::DATE_TAG  = "datetime";
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * PointSample Constructor
+ *----------------------------------------------------------------------------*/
+GeoIndexedRaster::PointSample::PointSample(const OGRPoint& _point, int64_t _pointIndex):
+    point(_point), pointIndex(_pointIndex), ssErrors(SS_NO_ERRORS) {}
+
+
+/*----------------------------------------------------------------------------
+ * PointSample Copy Constructor
+ *----------------------------------------------------------------------------*/
+GeoIndexedRaster::PointSample::PointSample(const PointSample& ps):
+    point(ps.point), pointIndex(ps.pointIndex), bandSample(ps.bandSample), ssErrors(ps.ssErrors)
+{
+    bandSampleReturned.resize(ps.bandSampleReturned.size());
+
+    for (size_t i = 0; i < ps.bandSampleReturned.size(); ++i)
+    {
+        if(ps.bandSampleReturned[i])
+        {
+            /* Create a new atomic<bool> with the value loaded from the original */
+            bandSampleReturned[i] = std::make_unique<std::atomic<bool>>(ps.bandSampleReturned[i]->load());
+        }
+        else
+        {
+            bandSampleReturned[i] = NULL;
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
  * Reader Constructor
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::Reader::Reader (GeoIndexedRaster* _obj):
@@ -183,15 +212,22 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
     const char* key = cache.first(&item);
     while(key != NULL)
     {
-        if(item->sample)
+        for(uint32_t i = 0; i < item->bandSample.size(); i++)
         {
-            delete item->sample;
-            item->sample = NULL;
+            if(item->bandSample[i])
+            {
+                delete item->bandSample[i];
+                item->bandSample[i] = NULL;
+            }
         }
-        if(item->subset)
+
+        for(uint32_t i = 0; i < item->bandSubset.size(); i++)
         {
-            delete item->subset;
-            item->subset = NULL;
+            if(item->bandSubset[i])
+            {
+                delete item->bandSubset[i];
+                item->bandSubset[i] = NULL;
+            }
         }
         key = cache.next(&item);
     }
@@ -275,9 +311,12 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         for(const point_sample_t& ps : ur->pointSamples)
         {
             /* Delete samples which have not been returned (quality masks, etc) */
-            if(!ps.sampleReturned)
+            for(size_t i = 0; i < ps.bandSample.size(); i++)
             {
-                delete ps.sample;
+                if(!ps.bandSampleReturned[i]->load())
+                {
+                    delete ps.bandSample[i];
+                }
             }
         }
 
@@ -402,31 +441,34 @@ uint32_t GeoIndexedRaster::getBatchGroupSamples(const rasters_group_t* rgroup, L
         {
             if(ps.pointIndex == pointIndx)
             {
-                /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
-                if(ps.sample == NULL) break;
-
-                RasterSample* s;
-                if(!ps.sampleReturned.exchange(true))
+                for(size_t i = 0; i < ps.bandSample.size(); i++)
                 {
-                    s = ps.sample;
-                }
-                else
-                {
-                    /* Sample has already been returned, must create a copy */
-                    s = new RasterSample(*ps.sample);
-                }
+                    /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
+                    if(ps.bandSample[i] == NULL) continue;;
 
-                /* Set time for this sample */
-                s->time = rgroup->gpsTime / 1000;
+                    RasterSample* sample;
+                    if(!ps.bandSampleReturned[i]->exchange(true))
+                    {
+                        sample = ps.bandSample[i];
+                    }
+                    else
+                    {
+                        /* Sample has already been returned, must create a copy */
+                        sample = new RasterSample(*ps.bandSample[i]);
+                    }
 
-                /* Set flags for this sample, add it to the list */
-                s->flags = flags;
-                slist->add(s);
-                errors |= ps.ssErrors;
+                    /* Set time for this sample */
+                    sample->time = rgroup->gpsTime;
+
+                    /* Set flags for this sample, add it to the list */
+                    sample->flags = flags;
+                    slist->add(sample);
+                    errors |= ps.ssErrors;
+                }
 
                 /*
-                 * There is only one raster with VALUE_TAG and one with FLAGS_TAG in a group.
-                 * If group has other type rasters the dataset must override the getGroupFlags method.
+                 * This function assumes that there is only one raster with VALUE_TAG in a group.
+                 * If group has other value rasters the dataset must override this function.
                  */
                 return errors;
             }
@@ -454,11 +496,24 @@ uint32_t GeoIndexedRaster::getBatchGroupFlags(const rasters_group_t* rgroup, uin
         {
             if(ps.pointIndex == pointIndx)
             {
-                /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
-                if(ps.sample)
+                /*
+                 * This function assumes that there is only one raster with FLAGS_TAG in a group.
+                 * The flags value must be in the first band.
+                 * If these assumptions are not met the dataset must override this function.
+                 */
+                RasterSample* sample = NULL;
+
+                /* bandSample can be empty if raster failed to open */
+                if(!ps.bandSample.empty())
                 {
-                    return ps.sample->value;
+                    sample = ps.bandSample[0];
                 }
+
+
+                /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
+                if(sample == NULL) break;;
+
+                return sample->value;
             }
         }
     }
@@ -480,21 +535,24 @@ void GeoIndexedRaster::getGroupSamples(const rasters_group_t* rgroup, List<Raste
         cacheitem_t* item;
         if(cache.find(key, &item))
         {
-            RasterSample* _sample = item->sample;
-            if(_sample)
+            for(uint32_t i = 0; i < item->bandSample.size(); i++)
             {
-                _sample->flags = flags;
-                slist.add(_sample);
-                item->sample = NULL;
+                RasterSample* _sample = item->bandSample[i];
+                if(_sample)
+                {
+                    _sample->flags = flags;
+                    slist.add(_sample);
+                    item->bandSample[i] = NULL;
+                }
             }
 
             /* Get sampling/subset error status */
             ssErrors |= item->raster->getSSerror();
 
-            /*
-             * There is only one raster with VALUE_TAG and one with FLAGS_TAG in a group.
-             * If group has other type rasters the dataset must override the getGroupFlags method.
-             */
+           /*
+            * This function assumes that there is only one raster with VALUE_TAG in a group.
+            * If group has other value rasters the dataset must override this function.
+            */
             break;
         }
     }
@@ -512,11 +570,14 @@ void GeoIndexedRaster::getGroupSubsets(const rasters_group_t* rgroup, List<Raste
         cacheitem_t* item;
         if(cache.find(key, &item))
         {
-            RasterSubset* subset = item->subset;
-            if(subset)
+            for(uint32_t i = 0; i < item->bandSubset.size(); i++)
             {
-                slist.add(subset);
-                item->subset = NULL;
+                RasterSubset* subset = item->bandSubset[i];
+                if(subset)
+                {
+                    slist.add(subset);
+                    item->bandSubset[i] = NULL;
+                }
             }
 
             /* Get sampling/subset error status */
@@ -537,9 +598,14 @@ uint32_t GeoIndexedRaster::getGroupFlags(const rasters_group_t* rgroup)
 
         cacheitem_t* item;
         const char* key = fileDict.get(rinfo.fileId);
-        if(cache.find(key, &item))
+        if(cache.find(key, &item) && !item->bandSample.empty())
         {
-            const RasterSample* _sample = item->sample;
+            /*
+             * This function assumes that there is only one raster with FLAGS_TAG in a group.
+             * The flags value must be in the first band.
+             * If these assumptions are not met the dataset must override this function.
+             */
+            const RasterSample* _sample = item->bandSample[0];
             if(_sample)
             {
                 return _sample->value;
@@ -685,7 +751,7 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
     }
     catch (const RunTimeException &e)
     {
-        if(dset) GDALClose((GDALDatasetH)dset);
+        GDALClose((GDALDatasetH)dset);
         geoRtree.clear();
         ssErrors |= SS_INDEX_FILE_ERROR;
         return false;
@@ -741,7 +807,7 @@ void GeoIndexedRaster::sampleRasters(OGRGeometry* geo)
 /*----------------------------------------------------------------------------
  * sample
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps, GroupOrdering* groupList)
+bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps_secs, GroupOrdering* groupList)
 {
     /* Open the index file, if not already open */
     if(!openGeoIndex(geo, NULL))
@@ -764,7 +830,7 @@ bool GeoIndexedRaster::sample(OGRGeometry* geo, int64_t gps, GroupOrdering* grou
         groupList->add(groupList->length(), rgroup);
     }
 
-    if(!filterRasters(gps, groupList, fileDict))
+    if(!filterRasters(gps_secs, groupList, fileDict))
         return false;
 
     uint32_t rasters2sample = 0;
@@ -896,33 +962,80 @@ void* GeoIndexedRaster::readerThread(void *param)
         cacheitem_t* entry = reader->entry;
         if(entry != NULL)
         {
-            if(GdalRaster::ispoint(reader->geo))
+            GdalRaster* raster = entry->raster;
+
+            try
             {
-                entry->sample = entry->raster->samplePOI(dynamic_cast<OGRPoint*>(reader->geo));
-            }
-            else if(GdalRaster::ispoly(reader->geo))
-            {
-                entry->subset = entry->raster->subsetAOI(dynamic_cast<OGRPolygon*>(reader->geo));
-                if(entry->subset)
+                CHECKPTR(raster);
+
+                /* Open raster so we can get inner bands from it */
+                raster->open();
+
+                std::vector<int> bands;
+                reader->obj->getInnerBands(raster, bands);
+
+                if(GdalRaster::ispoint(reader->geo))
                 {
-                    /*
-                     * Create new GeoRaster object for subsetted raster
-                     * Use NULL for LuaState, using parent's causes memory corruption
-                     * NOTE: cannot use RasterObject::cppCreate(parms) here, it would create
-                     * new GeoIndexRaster with the same file path as parent raster.
-                     */
-                    entry->subset->robj = new GeoRaster(NULL,
+                    /* Sample raster bands */
+                    const bool oneBand = bands.size() == 1;
+                    if(oneBand)
+                    {
+                        OGRPoint* p = (dynamic_cast<OGRPoint*>(reader->geo));
+                        RasterSample* sample = raster->samplePOI(p, bands[0]);
+                        entry->bandSample.push_back(sample);
+                    }
+                    else
+                    {
+                        /* Multiple bands */
+                        for(const int bandNum : bands)
+                        {
+                            /* Use local copy of point, it will be projected in samplePOI. We do not want to project it again */
+                            OGRPoint* p = (dynamic_cast<OGRPoint*>(reader->geo));
+                            OGRPoint point(*p);
+
+                            RasterSample* sample = raster->samplePOI(&point, bandNum);
+                            entry->bandSample.push_back(sample);
+                            mlog(DEBUG, "Band: %d, %s", bandNum, sample ? sample->toString().c_str() : "NULL");
+                        }
+                    }
+                }
+                else if(GdalRaster::ispoly(reader->geo))
+                {
+                    /* Subset raster bands */
+                    for(const int bandNum : bands)
+                    {
+                        /* No need to use local copy of polygon, subsetAOI will use it's envelope and not project it */
+                        RasterSubset* subset = raster->subsetAOI(dynamic_cast<OGRPolygon*>(reader->geo), bandNum);
+                        if(subset)
+                        {
+                            /*
+                             * Create new GeoRaster object for subsetted raster
+                             * Use NULL for LuaState, using parent's causes memory corruption
+                             * NOTE: cannot use RasterObject::cppCreate(parms) here, it would create
+                             * new GeoIndexRaster with the same file path as parent raster.
+                             */
+                            subset->robj = new GeoRaster(NULL,
                                                         reader->obj->rqstParms,
                                                         reader->obj->samplerKey,
-                                                        entry->subset->rasterName,
-                                                        entry->raster->getGpsTime(),
-                                                        entry->raster->isElevation(),
-                                                        entry->raster->getOverrideCRS());
+                                                        subset->rasterName,
+                                                        raster->getGpsTime(),
+                                                        raster->getElevationBandNum(),
+                                                        raster->getFLagsBandNum(),
+                                                        raster->getOverrideCRS());
 
-                    /* RequestFields are shared with subsseted raster and other readers */
-                    GeoIndexedRaster::referenceLuaObject(reader->obj->rqstParms);
+                            entry->bandSubset.push_back(subset);
+
+                            /* RequestFields are shared with subsseted raster and other readers */
+                            GeoIndexedRaster::referenceLuaObject(reader->obj->rqstParms);
+                        }
+                    }
                 }
             }
+            catch(const RunTimeException& e)
+            {
+                mlog(e.level(), "%s", e.what());
+            }
+
             entry->enabled = false; /* raster samples/subsetted */
 
             reader->sync.lock();
@@ -957,18 +1070,56 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
         if(breader->uraster != NULL)
         {
             unique_raster_t* ur = breader->uraster;
-            GdalRaster* raster = new GdalRaster(breader->obj->parms,
-                                                breader->obj->fileDict.get(ur->fileId),
-                                                0,                     /* Sample collecting code will set it to group's gpsTime */
-                                                ur->fileId,
-                                                ur->dataIsElevation,
-                                                breader->obj->crscb);
+            GdalRaster* raster = NULL;
 
-            /* Sample all points for this raster */
-            for(point_sample_t& ps : ur->pointSamples)
+            try
             {
-                ps.sample = raster->samplePOI(&ps.point);
-                ps.ssErrors |= raster->getSSerror();
+                raster = new GdalRaster(breader->obj->parms,
+                                        breader->obj->fileDict.get(ur->rinfo->fileId),
+                                        0,                     /* Sample collecting code will set it to group's gpsTime */
+                                        ur->rinfo->fileId,
+                                        ur->rinfo->elevationBandNum,
+                                        ur->rinfo->flagsBandNum,
+                                        breader->obj->crscb);
+
+                CHECKPTR(raster);
+
+                /* Open raster so we can get inner bands from it */
+                raster->open();
+
+                std::vector<int> bands;
+                breader->obj->getInnerBands(raster, bands);
+
+                /* Sample all points for this raster */
+                for(point_sample_t& ps : ur->pointSamples)
+                {
+                    /* Sample raster bands */
+                    const bool oneBand = bands.size() == 1;
+                    if(oneBand)
+                    {
+                        RasterSample* sample = raster->samplePOI(&ps.point, bands[0]);
+                        ps.bandSample.push_back(sample);
+                        ps.bandSampleReturned.emplace_back(std::make_unique<std::atomic<bool>>(false));
+                    }
+                    else
+                    {
+                        /* Multiple bands */
+                        for(const int bandNum : bands)
+                        {
+                            /* Use local copy of point, it will be projected in samplePOI. We do not want to project it again */
+                            OGRPoint point(ps.point);
+
+                            RasterSample* sample = raster->samplePOI(&point, bandNum);
+                            ps.bandSample.push_back(sample);
+                            ps.bandSampleReturned.emplace_back(std::make_unique<std::atomic<bool>>(false));
+                            ps.ssErrors |= raster->getSSerror();
+                        }
+                    }
+                }
+            }
+            catch(const RunTimeException& e)
+            {
+                mlog(e.level(), "%s", e.what());
             }
 
             delete raster;
@@ -1210,15 +1361,21 @@ bool GeoIndexedRaster::updateCache(uint32_t& rasters2sample, const GroupOrdering
                     note use of bbox in construcutor - it limits area
                     of interest to the extent of vector index file */
                 item = new cacheitem_t;
-                item->raster = new GdalRaster(parms, key,
-                                              static_cast<double>(rgroup->gpsTime / 1000),
+                item->raster = new GdalRaster(parms,
+                                              key,
+                                              static_cast<double>(rgroup->gpsTime),
                                               rinfo.fileId,
-                                              rinfo.dataIsElevation, crscb, &bbox);
-                item->sample = NULL;
-                item->subset = NULL;
+                                              rinfo.elevationBandNum,
+                                              rinfo.flagsBandNum,
+                                              crscb,
+                                              &bbox);
                 const bool status = cache.add(key, item);
                 assert(status); (void)status; // cannot fail; prevents linter warnings
             }
+
+            /* Clear from previous run */
+            item->bandSample.clear();
+            item->bandSample.clear();
 
             /* Mark as Enabled */
             item->enabled = true;
@@ -1264,7 +1421,7 @@ bool GeoIndexedRaster::updateCache(uint32_t& rasters2sample, const GroupOrdering
 /*----------------------------------------------------------------------------
  * filterRasters
  *----------------------------------------------------------------------------*/
-bool GeoIndexedRaster::filterRasters(int64_t gps, GroupOrdering* groupList, RasterFileDictionary& dict)
+bool GeoIndexedRaster::filterRasters(int64_t gps_secs, GroupOrdering* groupList, RasterFileDictionary& dict)
 {
     /* NOTE: temporal filter is applied in openGeoIndex() */
     if(!parms->url_substring.value.empty() || parms->filter_doy_range)
@@ -1320,15 +1477,15 @@ bool GeoIndexedRaster::filterRasters(int64_t gps, GroupOrdering* groupList, Rast
 
     /* Closest time filter - using raster group time, not individual reaster time */
     int64_t closestGps = 0;
-    if(gps > 0)
+    if(gps_secs > 0)
     {
         /* Caller provided gps time, use it insead of time from params */
-        closestGps = gps;
+        closestGps = gps_secs;
     }
     else if (parms->filter_closest_time)
     {
         /* Params provided closest time */
-        closestGps = TimeLib::gmt2gpstime(parms->closest_time);
+        closestGps = TimeLib::gmt2gpstime(parms->closest_time) / 1000;
     }
 
     if(closestGps > 0)
@@ -1569,7 +1726,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                     else
                     {
                         /* Raster is not in the vector of unique rasters */
-                        unique_raster_t* ur = new unique_raster_t(rinfo.dataIsElevation, rinfo.fileId);
+                        unique_raster_t* ur = new unique_raster_t(&rinfo);
                         uniqueRasters.push_back(ur);
 
                         /* Set pointer in rinfo to new unique raster */
@@ -1586,7 +1743,7 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
         mlog(DEBUG, "Finding points for unique rasters");
         for(unique_raster_t* ur : uniqueRasters)
         {
-            auto it = rasterToPointsMap.find(fileDict.get(ur->fileId));
+            auto it = rasterToPointsMap.find(fileDict.get(ur->rinfo->fileId));
             if(it != rasterToPointsMap.end())
             {
                 for(const uint32_t pointIndx : it->second)
@@ -1783,6 +1940,3 @@ bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsG
 
     return true;
 }
-
-
-

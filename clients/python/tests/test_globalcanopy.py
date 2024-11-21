@@ -13,7 +13,7 @@ vrtLat =  -3.0
 
 vrtValue     = 20
 vrtFile      = '/vsis3/sliderule/data/GLOBALCANOPY/META_GlobalCanopyHeight_1m_2024_v1.vrt'
-vrtFileTime  = 1396483218000
+vrtFileTime  = 1396483218
 
 @pytest.mark.network
 class TestGlobalCanopy:

@@ -29,44 +29,24 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __esa_worldcover_10meter_raster__
-#define __esa_worldcover_10meter_raster__
+#ifndef __bluetopo_plugin__
+#define __bluetopo_plugin__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "GeoRaster.h"
+#include "BlueTopoBathyRaster.h"
 
 /******************************************************************************
- * ESA WORLD COVER 10 METER RASTER CLASS
+ * PROTOTYPES
  ******************************************************************************/
 
-class EsaWorldCover10meterRaster: public GeoRaster
-{
-    public:
+extern "C" {
+void initbluetopo(void);
+void deinitbluetopo(void);
+}
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
-                          { return new EsaWorldCover10meterRaster(L, rqst_parms, key); }
+#endif  /* __bluetopo_plugin__ */
 
 
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        EsaWorldCover10meterRaster (lua_State* L, RequestFields* rqst_parms, const char* key):
-         GeoRaster(L, rqst_parms, key,
-                  rqst_parms->geoFields(key)->asset.asset->getIndex(),
-                  TimeLib::datetime2gps(2021, 06, 30, 0, 0, 0) / 1000 /* Mid point for year data was collected */) {}
-
-    private:
-
-};
-
-#endif  /* __esa_worldcover_10meter_raster__ */

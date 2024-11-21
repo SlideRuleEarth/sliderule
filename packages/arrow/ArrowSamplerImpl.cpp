@@ -281,13 +281,23 @@ void ArrowSamplerImpl::getPoints(std::vector<point_info_t>& points)
     if(time_column_index > -1)
     {
         auto time_column = std::static_pointer_cast<arrow::TimestampArray>(table->column(time_column_index)->chunk(0));
-        mlog(DEBUG, "Time column elements: %ld", time_column->length());
+        auto timestamp_type = std::static_pointer_cast<arrow::TimestampType>(table->column(time_column_index)->type());
 
-        /* Update gps time for each point */
+        if(timestamp_type->unit() != arrow::TimeUnit::NANO)
+        {
+            mlog(ERROR, "Time column must be in nanoseconds.");
+            points.clear();
+            return;
+        }
+
+        /* Convert unix nanoseconds to gps seconds */
         for(int64_t i = 0; i < time_column->length(); i++)
-            points[i].gps = time_column->Value(i);
+        {
+            const double unix_nsecs = time_column->Value(i);
+            points[i].gps = TimeLib::sys2gpstime(unix_nsecs / 1000.0) * 1000.0;
+        }
     }
-    else mlog(DEBUG, "Time column not found.");
+    else mlog(ERROR, "Time column not found.");
 }
 
 /*----------------------------------------------------------------------------
@@ -434,6 +444,9 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
     const RasterObject* robj = sampler->robj;
 
     /* Create list builders for the new columns */
+    arrow::ListBuilder band_list_builder(pool, std::make_shared<arrow::StringBuilder>());
+    auto* band_builder = dynamic_cast<arrow::StringBuilder*>(band_list_builder.value_builder());
+
     arrow::ListBuilder value_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
     auto* value_builder = dynamic_cast<arrow::DoubleBuilder*>(value_list_builder.value_builder());
 
@@ -468,7 +481,7 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
     arrow::ListBuilder mad_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
     auto* mad_builder = dynamic_cast<arrow::DoubleBuilder*>(mad_list_builder.value_builder());
 
-    std::shared_ptr<arrow::Array> value_list_array, time_list_array, fileid_list_array, flags_list_array;
+    std::shared_ptr<arrow::Array> band_list_array, value_list_array, time_list_array, fileid_list_array, flags_list_array;
     std::shared_ptr<arrow::Array> count_list_array, min_list_array, max_list_array, mean_list_array, median_list_array, stdev_list_array, mad_list_array;
 
     /* Iterate over each sample in a vector of lists of samples */
@@ -477,6 +490,10 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
         sample_list_t* slist = sampler->samples[i];
 
         /* Start new lists */
+        if(robj->hasBands())
+        {
+            PARQUET_THROW_NOT_OK(band_list_builder.Append());
+        }
         PARQUET_THROW_NOT_OK(value_list_builder.Append());
         PARQUET_THROW_NOT_OK(time_list_builder.Append());
         if(robj->hasFlags())
@@ -503,7 +520,10 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
         {
             const RasterSample* sample = slist->get(j);
 
-            /* Append the value to the value list */
+            if(robj->hasBands())
+            {
+                PARQUET_THROW_NOT_OK(band_builder->Append(sample->bandName));
+            }
             PARQUET_THROW_NOT_OK(value_builder->Append(sample->value));
             PARQUET_THROW_NOT_OK(time_builder->Append(sample->time));
             if(robj->hasFlags())
@@ -525,6 +545,10 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
     }
 
     /* Finish the list builders */
+    if(robj->hasBands())
+    {
+        PARQUET_THROW_NOT_OK(band_list_builder.Finish(&band_list_array));
+    }
     PARQUET_THROW_NOT_OK(value_list_builder.Finish(&value_list_array));
     PARQUET_THROW_NOT_OK(time_list_builder.Finish(&time_list_array));
     if(robj->hasFlags())
@@ -546,6 +570,7 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
     const std::string prefix = sampler->rkey;
 
     /* Create fields for the new columns */
+    auto band_field = std::make_shared<arrow::Field>(prefix + ".band", arrow::list(arrow::utf8()));
     auto value_field = std::make_shared<arrow::Field>(prefix + ".value", arrow::list(arrow::float64()));
     auto time_field = std::make_shared<arrow::Field>(prefix + ".time", arrow::list(arrow::float64()));
     auto flags_field = std::make_shared<arrow::Field>(prefix + ".flags", arrow::list(arrow::uint32()));
@@ -565,6 +590,10 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
     mutex.lock();
     {
         /* Add new columns fields */
+        if(robj->hasBands())
+        {
+            newFields.push_back(band_field);
+        }
         newFields.push_back(value_field);
         newFields.push_back(time_field);
         if(robj->hasFlags())
@@ -584,6 +613,10 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
         }
 
         /* Add new columns */
+        if(robj->hasBands())
+        {
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(band_list_array));
+        }
         newColumns.push_back(std::make_shared<arrow::ChunkedArray>(value_list_array));
         newColumns.push_back(std::make_shared<arrow::ChunkedArray>(time_list_array));
         if(robj->hasFlags())
@@ -616,6 +649,7 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
     const RasterObject* robj = sampler->robj;
 
     /* Create builders for the new columns */
+    arrow::StringBuilder band_builder(pool);
     arrow::DoubleBuilder value_builder(pool);
     arrow::DoubleBuilder time_builder(pool);
     arrow::UInt32Builder flags_builder(pool);
@@ -630,7 +664,7 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
     arrow::DoubleBuilder stdev_builder(pool);
     arrow::DoubleBuilder mad_builder(pool);
 
-    std::shared_ptr<arrow::Array> value_array, time_array, fileid_array, flags_array;
+    std::shared_ptr<arrow::Array> band_array, value_array, time_array, fileid_array, flags_array;
     std::shared_ptr<arrow::Array> count_array, min_array, max_array, mean_array, median_array, stdev_array, mad_array;
 
     RasterSample fakeSample(0.0, 0);
@@ -652,7 +686,10 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
              */
             sample = &fakeSample;
         }
-
+        if(robj->hasBands())
+        {
+            PARQUET_THROW_NOT_OK(band_builder.Append(sample->bandName));
+        }
         PARQUET_THROW_NOT_OK(value_builder.Append(sample->value));
         PARQUET_THROW_NOT_OK(time_builder.Append(sample->time));
         if(robj->hasFlags())
@@ -673,6 +710,10 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
     }
 
     /* Finish the builders */
+    if(robj->hasBands())
+    {
+        PARQUET_THROW_NOT_OK(band_builder.Finish(&band_array));
+    }
     PARQUET_THROW_NOT_OK(value_builder.Finish(&value_array));
     PARQUET_THROW_NOT_OK(time_builder.Finish(&time_array));
     if(robj->hasFlags())
@@ -694,6 +735,7 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
     const std::string prefix = sampler->rkey;
 
     /* Create fields for the new columns */
+    auto band_field = std::make_shared<arrow::Field>(prefix + ".band", arrow::utf8());
     auto value_field = std::make_shared<arrow::Field>(prefix + ".value", arrow::float64());
     auto time_field = std::make_shared<arrow::Field>(prefix + ".time", arrow::float64());
     auto flags_field = std::make_shared<arrow::Field>(prefix + ".flags", arrow::uint32());
@@ -713,6 +755,10 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
     mutex.lock();
     {
         /* Add new columns fields */
+        if(robj->hasBands())
+        {
+            newFields.push_back(band_field);
+        }
         newFields.push_back(value_field);
         newFields.push_back(time_field);
         if(robj->hasFlags())
@@ -732,6 +778,10 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
         }
 
         /* Add new columns */
+        if(robj->hasBands())
+        {
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(band_array));
+        }
         newColumns.push_back(std::make_shared<arrow::ChunkedArray>(value_array));
         newColumns.push_back(std::make_shared<arrow::ChunkedArray>(time_array));
         if(robj->hasFlags())

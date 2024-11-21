@@ -18,10 +18,13 @@ class TestHLS:
                     {"lon": -177.0000000001, "lat": 49.0000000001},
                     {"lon": -177.0000000001, "lat": 51.0000000001} ]
         catalog = earthdata.stac(short_name="HLS", polygon=polygon, time_start=time_start, time_end=time_end, as_str=True)
-        rqst = {"samples": {"asset": "landsat-hls", "catalog": catalog, "bands": ["B02"]}, "coordinates": [[-178.0, 50.7]]}
+        rqst = {"samples": {"asset": "landsat-hls", "catalog": catalog, "closest_time": "2020-01-05T00:00:00Z", "bands": ["NDVI"]}, "coordinates": [[-179.0, 51.0]]}
         rsps = sliderule.source("samples", rqst)
         assert init
+        print(rsps)
         assert len(rsps) > 0
+        assert rsps['samples'][0][0]['band'] == "NDVI"
+        assert rsps['samples'][0][0]['value'] == pytest.approx(-0.259439707674, rel=1e-6)
 
     def test_cmr_stac(self, init):
         time_start = "2000-01-01T00:00:00Z"

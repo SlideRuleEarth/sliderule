@@ -155,7 +155,7 @@ GeoJsonRaster::~GeoJsonRaster(void)
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoJsonRaster::GeoJsonRaster(lua_State* L, RequestFields* rqst_parms, const char* key, const char* _geojstr, double _cellsize):
- GeoRaster(L, rqst_parms, key, std::string("/vsimem/" + GdalRaster::getUUID() + ".tif"), TimeLib::gpstime(), false /* not elevation*/),
+ GeoRaster(L, rqst_parms, key, std::string("/vsimem/" + GdalRaster::getUUID() + ".tif"), TimeLib::gpstime()),
  data(NULL),
  cellsize(_cellsize),
  cols(0),
@@ -216,8 +216,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, RequestFields* rqst_parms, const char
         rasterDset->SetProjection(wkt);
         CPLFree(wkt);
 
-        const int bandInx = 1; /* Band index starts at 1, not 0 */
-        GDALRasterBand *rb = rasterDset->GetRasterBand(bandInx);
+        GDALRasterBand *rb = rasterDset->GetRasterBand(1);
         CHECKPTR(rb);
         rb->SetNoDataValue(RASTER_NODATA_VALUE);
 
@@ -228,7 +227,7 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, RequestFields* rqst_parms, const char
         const int BANDCNT = 1;
 
         int bandlist[BANDCNT];
-        bandlist[0] = bandInx;
+        bandlist[0] = 1;
 
         OGRLayer *layers[BANDCNT];
         layers[0] = srcLayer;
@@ -280,8 +279,8 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, RequestFields* rqst_parms, const char
 
    /* Cleanup */
    VSIUnlink(jsonFile.c_str());
-   if(jsonDset) GDALClose(reinterpret_cast<GDALDatasetH>(jsonDset));
-   if(rasterDset) GDALClose(reinterpret_cast<GDALDatasetH>(rasterDset));
+   GDALClose(reinterpret_cast<GDALDatasetH>(jsonDset));
+   GDALClose(reinterpret_cast<GDALDatasetH>(rasterDset));
 
    if(!rasterCreated)
        throw RunTimeException(CRITICAL, RTE_ERROR, "GeoJsonRaster failed");

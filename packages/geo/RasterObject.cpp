@@ -252,14 +252,63 @@ uint32_t RasterObject::getSamples(const std::vector<point_info_t>& points, List<
 /*----------------------------------------------------------------------------
  * getPixels
  *----------------------------------------------------------------------------*/
-uint8_t* RasterObject::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, void* param)
+uint8_t* RasterObject::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, int bandNum, void* param)
 {
     static_cast<void>(ulx);
     static_cast<void>(uly);
     static_cast<void>(xsize);
     static_cast<void>(ysize);
+    static_cast<void>(bandNum);
     static_cast<void>(param);
     return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * getBands
+ *----------------------------------------------------------------------------*/
+void RasterObject::getBands(std::vector<std::string>& bands)
+{
+    for(long i = 0; i < parms->bands.length(); i++)
+    {
+        const std::string& bandName = parms->bands[i];
+        bands.push_back(bandName);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * getInnerBands
+ *----------------------------------------------------------------------------*/
+void RasterObject::getInnerBands(std::vector<std::string>& bands)
+{
+    return getBands(bands);
+}
+
+/*----------------------------------------------------------------------------
+ * getInnerBands
+ *----------------------------------------------------------------------------*/
+void RasterObject::getInnerBands(void* rptr, std::vector<int>& bands)
+{
+    GdalRaster* raster = static_cast<GdalRaster*>(rptr);
+
+    std::vector<std::string> bandsNames;
+    getInnerBands(bandsNames);
+
+    if(bandsNames.empty())
+    {
+        /* Default to first band */
+        bands.push_back(1);
+    }
+    else
+    {
+        for(const std::string& bname : bandsNames)
+        {
+            const int bandNum = raster->getBandNumber(bname);
+            if(bandNum > 0)
+            {
+                bands.push_back(bandNum);
+            }
+        }
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -334,7 +383,7 @@ int RasterObject::luaSamples(lua_State *L)
         int64_t gps = 0;
         if(closest_time_str != NULL)
         {
-            gps = TimeLib::str2gpstime(closest_time_str);
+            gps = TimeLib::str2gpstime(closest_time_str) / 1000;
         }
 
         /* Get samples */
@@ -388,6 +437,7 @@ int RasterObject::luaSamples(lua_State *L)
                 LuaEngine::setAttrInt(L, "fileid", sample->fileId);
                 LuaEngine::setAttrNum(L, "time", sample->time);
                 LuaEngine::setAttrNum(L, "value", sample->value);
+                LuaEngine::setAttrStr(L, "band", sample->bandName.c_str());
                 lua_rawseti(L, -2, i+1);
             }
         } else mlog(DEBUG, "No samples read for (%.2lf, %.2lf)", lon, lat);

@@ -47,6 +47,32 @@ GebcoBathyRaster::GebcoBathyRaster(lua_State* L, RequestFields* rqst_parms, cons
  filePath("/vsis3/" + std::string(parms->asset.asset->getPath())),
  indexFile(parms->asset.asset->getIndex())
 {
+    /*
+     * To support datasets from different years, we use the 'bands' parameter to identify which year's data to sample.
+     * This band parameter must be cleared in 'parms' since it does not correspond to an actual band.
+     */
+    std::string year("2024");
+    if(parms->bands.length() == 0)
+    {
+        mlog(INFO, "Using latest GEBCO data from %s", year.c_str());
+    }
+    else if(parms->bands.length() == 1)
+    {
+        if(parms->bands[0] == "2023" || parms->bands[0] == "2024")
+        {
+            year = parms->bands[0];
+            mlog(INFO, "Using GEBCO data from %s", year.c_str());
+
+            /* Clear params->bands */
+            const_cast<FieldList<std::string>&>(parms->bands).clear();
+        }
+        else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid band name specified");
+    }
+    else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid number of bands specified");
+
+    /* Build data path on s3 */
+    filePath += "/" + year;
+    mlog(DEBUG, "Using data path: %s", filePath.c_str());
 }
 
 /*----------------------------------------------------------------------------
@@ -62,7 +88,7 @@ void GebcoBathyRaster::getIndexFile(const OGRGeometry* geo, std::string& file, c
     static_cast<void>(geo);
     static_cast<void>(points);
     file = filePath + "/" + indexFile;
-    mlog(DEBUG, "Using %s", file.c_str());
+    mlog(DEBUG, "Using index file: %s", file.c_str());
 }
 
 
@@ -86,15 +112,15 @@ bool GebcoBathyRaster::findRasters(raster_finder_t* finder)
             if (!rastergeo->Intersects(geo)) continue;
 
             rasters_group_t* rgroup = new rasters_group_t;
-            rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate);
+            rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate) / 1000.0;
 
             const char* dataFile  = feature->GetFieldAsString("data_raster");
             if(dataFile && (strlen(dataFile) > 0))
             {
                 raster_info_t rinfo;
-                rinfo.dataIsElevation = true;
-                rinfo.tag             = VALUE_TAG;
-                rinfo.fileId          = finder->fileDict.add(filePath + "/" + dataFile);
+                rinfo.elevationBandNum = 1;
+                rinfo.tag              = VALUE_TAG;
+                rinfo.fileId           = finder->fileDict.add(filePath + "/" + dataFile);
                 rgroup->infovect.push_back(rinfo);
             }
 
@@ -104,7 +130,7 @@ bool GebcoBathyRaster::findRasters(raster_finder_t* finder)
                 if(flagsFile && (strlen(flagsFile) > 0))
                 {
                     raster_info_t rinfo;
-                    rinfo.dataIsElevation = false;
+                    rinfo.flagsBandNum    = 1;
                     rinfo.tag             = FLAGS_TAG;
                     rinfo.fileId          = finder->fileDict.add(filePath + "/" + flagsFile);
                     rgroup->infovect.push_back(rinfo);

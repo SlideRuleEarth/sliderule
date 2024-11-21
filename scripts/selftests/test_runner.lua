@@ -72,7 +72,7 @@ if __icesat2__ and incloud then
     runner.script(icesat2_td .. "s3_driver.lua")
 end
 
--- Run opendata Plugin Self Tests
+-- Run OPENDATA Plugin Self Tests
 if __opendata__ and incloud then
     local opendata_td = td .. "../../datasets/opendata/selftests/"
     runner.script(opendata_td .. "worldcover_reader.lua")
@@ -94,7 +94,7 @@ if __pgc__ and incloud then
     runner.script(pgc_td .. "subset_test.lua")
 end
 
--- Run Landsat Plugin Self Tests
+-- Run LANDSAT Plugin Self Tests
 if __landsat__ and incloud then
     local landsat_td = td .. "../../datasets/landsat/selftests/"
     runner.script(landsat_td .. "plugin_unittest.lua")
@@ -112,6 +112,13 @@ end
 if __gebco__ and incloud then
     local gebco_td = td .. "../../datasets/gebco/selftests/"
     runner.script(gebco_td .. "gebco_reader.lua")
+end
+
+-- Run BLUETOPO Plugin Self Tests
+if __bluetopo__ and incloud then
+    local bluetopo_td = td .. "../../datasets/bluetopo/selftests/"
+    runner.script(bluetopo_td.. "plugin_unittest.lua")
+    runner.script(bluetopo_td.. "bluetopo_reader.lua")
 end
 
 -- Run Default Parameters Self Tests for all modules

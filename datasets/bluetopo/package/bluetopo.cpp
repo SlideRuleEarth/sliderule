@@ -29,44 +29,65 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __esa_worldcover_10meter_raster__
-#define __esa_worldcover_10meter_raster__
-
 /******************************************************************************
- * INCLUDES
+ *INCLUDES
  ******************************************************************************/
 
-#include "GeoRaster.h"
+#include "OsApi.h"
+#include "bluetopo.h"
 
 /******************************************************************************
- * ESA WORLD COVER 10 METER RASTER CLASS
+ * DEFINES
  ******************************************************************************/
 
-class EsaWorldCover10meterRaster: public GeoRaster
+#define LUA_BLUETOPO_LIBNAME     "bluetopo"
+#define LUA_BLUETOPO_RASTER_NAME "bluetopo-bathy"
+
+/******************************************************************************
+ * LOCAL FUNCTIONS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * bluetopo_open
+ *----------------------------------------------------------------------------*/
+int bluetopo_open (lua_State *L)
 {
-    public:
+    static const struct luaL_Reg bluetopo_functions[] = {
+        {NULL,              NULL}
+    };
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+    /* Set Library */
+    luaL_newlib(L, bluetopo_functions);
 
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
-                          { return new EsaWorldCover10meterRaster(L, rqst_parms, key); }
+    return 1;
+}
 
+/******************************************************************************
+ * EXPORTED FUNCTIONS
+ ******************************************************************************/
 
-    protected:
+extern "C" {
+void initbluetopo(void)
+{
+    /* Initialize Modules */
+    BlueTopoBathyRaster::init();
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+    /* Register Rasters */
+    RasterObject::registerRaster(LUA_BLUETOPO_RASTER_NAME, BlueTopoBathyRaster::create);
 
-        EsaWorldCover10meterRaster (lua_State* L, RequestFields* rqst_parms, const char* key):
-         GeoRaster(L, rqst_parms, key,
-                  rqst_parms->geoFields(key)->asset.asset->getIndex(),
-                  TimeLib::datetime2gps(2021, 06, 30, 0, 0, 0) / 1000 /* Mid point for year data was collected */) {}
+    /* Extend Lua */
+    LuaEngine::extend(LUA_BLUETOPO_LIBNAME, bluetopo_open);
 
-    private:
+    /* Indicate Presence of Package */
+    LuaEngine::indicate(LUA_BLUETOPO_LIBNAME, LIBID);
 
-};
+    /* Display Status */
+    print2term("%s package initialized (%s)\n", LUA_BLUETOPO_LIBNAME, LIBID);
+}
 
-#endif  /* __esa_worldcover_10meter_raster__ */
+void deinitbluetopo(void)
+{
+    /* Uninitialize Modules */
+    BlueTopoBathyRaster::deinit();
+}
+}

@@ -226,7 +226,7 @@ bool PgcDemStripsRaster::findRasters(raster_finder_t* finder)
 
                 rasters_group_t* rgroup = new rasters_group_t;
                 raster_info_t demRinfo;
-                demRinfo.dataIsElevation = true;
+                demRinfo.elevationBandNum = 1;
                 demRinfo.tag = VALUE_TAG;
                 demRinfo.fileId = finder->fileDict.add(fileName);
 
@@ -245,24 +245,24 @@ bool PgcDemStripsRaster::findRasters(raster_finder_t* finder)
                     if(!fileName.empty())
                     {
                         raster_info_t flagsRinfo;
-                        flagsRinfo.dataIsElevation = false;
+                        flagsRinfo.flagsBandNum = 1;
                         flagsRinfo.tag = FLAGS_TAG;
                         flagsRinfo.fileId = finder->fileDict.add(fileName);
                         rgroup->infovect.push_back(flagsRinfo);
                     }
                 }
 
-                double gps = 0;
+                double gps_msecs = 0;
                 for(const auto& s: dates)
                 {
                     TimeLib::gmt_time_t gmt;
-                    gps += getGmtDate(feature, s, gmt);
+                    gps_msecs += getGmtDate(feature, s, gmt);
                 }
-                gps = gps/dates.size();
+                gps_msecs = gps_msecs/dates.size();
 
                 /* Set raster group time and group id */
-                rgroup->gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps));
-                rgroup->gpsTime = static_cast<int64_t>(gps);
+                rgroup->gmtDate = TimeLib::gps2gmttime(static_cast<int64_t>(gps_msecs));
+                rgroup->gpsTime = static_cast<int64_t>(gps_msecs / 1000.0);
                 rgroup->infovect.push_back(demRinfo);
                 rgroup->infovect.shrink_to_fit();
                 finder->rasterGroups.push_back(rgroup);

@@ -65,7 +65,8 @@ class RemaDemMosaicRaster: public GeoRaster
          GeoRaster(L, rqst_parms, key,
                   std::string(rqst_parms->geoFields(key)->asset.asset->getPath()).append("/").append(rqst_parms->geoFields(key)->asset.asset->getIndex()),
                   TimeLib::datetime2gps(2023, 02, 24, 18, 51, 44),
-                  true, /* Data is elevation */
+                  1,                   /* elevationBandNum */
+                  GdalRaster::NO_BAND, /* flagsBandNum     */
                   &overrideTargetCRS) {}
 
         static OGRErr overrideTargetCRS(OGRSpatialReference& target)

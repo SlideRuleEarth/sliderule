@@ -29,29 +29,38 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __esa_worldcover_10meter_raster__
-#define __esa_worldcover_10meter_raster__
+#ifndef __bluetopo_bathy_raster__
+#define __bluetopo_bathy_raster__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "GeoRaster.h"
+#include "GeoIndexedRaster.h"
 
 /******************************************************************************
- * ESA WORLD COVER 10 METER RASTER CLASS
+ * GEBCO BATHY RASTER CLASS
  ******************************************************************************/
 
-class EsaWorldCover10meterRaster: public GeoRaster
+class BlueTopoBathyRaster: public GeoIndexedRaster
 {
     public:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+        static const char* validBands[];
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
-                          { return new EsaWorldCover10meterRaster(L, rqst_parms, key); }
+                          { return new BlueTopoBathyRaster(L, rqst_parms, key); }
 
 
     protected:
@@ -59,14 +68,33 @@ class EsaWorldCover10meterRaster: public GeoRaster
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
+        double  getGmtDate (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate) final;
 
-        EsaWorldCover10meterRaster (lua_State* L, RequestFields* rqst_parms, const char* key):
-         GeoRaster(L, rqst_parms, key,
-                  rqst_parms->geoFields(key)->asset.asset->getIndex(),
-                  TimeLib::datetime2gps(2021, 06, 30, 0, 0, 0) / 1000 /* Mid point for year data was collected */) {}
+                BlueTopoBathyRaster (lua_State* L, RequestFields* rqst_parms, const char* key);
+               ~BlueTopoBathyRaster (void) override;
+
+        void    getIndexFile (const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points) final;
+        bool    findRasters  (raster_finder_t* finder) final;
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
 
     private:
 
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        bool validateBandNames (void);
+        bool findIndexFileInS3Bucket (const std::string& bucketPath);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+        std::string filePath;
+        std::string indexBucket;
+        std::string indexFile;
 };
 
-#endif  /* __esa_worldcover_10meter_raster__ */
+#endif  /* __gebco_bathy_raster__ */
