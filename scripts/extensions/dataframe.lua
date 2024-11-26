@@ -6,7 +6,6 @@
 -- Imports
 --
 local json = require("json")
-local earthdata = require("earth_data_query")
 
 --
 -- Constants
