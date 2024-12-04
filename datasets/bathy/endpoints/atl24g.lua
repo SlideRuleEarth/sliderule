@@ -329,7 +329,7 @@ userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ATL24 runtim
 local atl24_filename = parms["output"]["path"]
 local pos_last_delim = string.reverse(atl24_filename):find("/") or -(#atl24_filename + 2)
 outputs["atl24_filename"] = string.sub(atl24_filename, #atl24_filename - pos_last_delim + 2)
-print("FILENAME", outputs["atl24_filename"])
+userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> generating file %s", rspq, outputs["atl24_filename"]))
 
 -------------------------------------------------------
 -- set additional outputs
