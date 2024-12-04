@@ -128,6 +128,7 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"class_ph",            &class_ph},
         {"predictions",         &predictions},
         {"geoid_corr_h",        &geoid_corr_h},
+        {"signal_score",        &signal_score},
         // temporary columns for python code
         {"refracted_dZ",        &refracted_dZ},
         {"refracted_lat",       &refracted_lat},
@@ -450,8 +451,8 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     lat_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/lat_ph").c_str(),              0, region.first_photon,  region.num_photons),
     lon_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/lon_ph").c_str(),              0, region.first_photon,  region.num_photons),
     delta_time          (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/delta_time").c_str(),          0, region.first_photon,  region.num_photons),
-    bckgrd_delta_time   (dataframe.parms.findSeaSurface ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/delta_time").c_str()),
-    bckgrd_rate         (dataframe.parms.findSeaSurface ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/bckgrd_rate").c_str())
+    bckgrd_delta_time   (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/delta_time").c_str()),
+    bckgrd_rate         (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/bckgrd_rate").c_str())
 {
     sc_orient.join(dataframe.readTimeoutMs, true);
     velocity_sc.join(dataframe.readTimeoutMs, true);
@@ -474,8 +475,8 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     lat_ph.join(dataframe.readTimeoutMs, true);
     lon_ph.join(dataframe.readTimeoutMs, true);
     delta_time.join(dataframe.readTimeoutMs, true);
-    if(dataframe.parms.findSeaSurface) bckgrd_delta_time.join(dataframe.readTimeoutMs, true);
-    if(dataframe.parms.findSeaSurface) bckgrd_rate.join(dataframe.readTimeoutMs, true);
+    bckgrd_delta_time.join(dataframe.readTimeoutMs, true);
+    bckgrd_rate.join(dataframe.readTimeoutMs, true);
 }
 
 /*----------------------------------------------------------------------------
@@ -697,7 +698,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 dataframe.processing_flags.append(processing_flags);
 
                 /* Add Additional Photon Data to DataFrame */
-                dataframe.background_rate.append(parms.findSeaSurface ? calculateBackground(current_segment, bckgrd_index, atl03) : 0.0);
+                dataframe.background_rate.append(calculateBackground(current_segment, bckgrd_index, atl03));
                 dataframe.geoid_corr_h.append(atl03.h_ph[current_photon] - atl03.geoid[current_segment]);
                 dataframe.wind_v.append(wind_v);
                 dataframe.ref_el.append(atl03.ref_elev[current_segment]);
@@ -721,6 +722,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
         dataframe.sigma_thu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
         dataframe.sigma_tvu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
         dataframe.predictions.initialize(dataframe.length(), {0, 0, 0, 0, 0, 0, 0, 0, 0});
+        dataframe.signal_score.initialize(dataframe.length(), 0.0); // populated by signal strength
 
         /* Initialize Temporary Columns to Support Python Code */
         dataframe.refracted_dZ.initialize(dataframe.length(), 0.0);
@@ -750,9 +752,9 @@ void* BathyDataFrame::subsettingThread (void* parm)
 /*----------------------------------------------------------------------------
  * calculateBackground
  *----------------------------------------------------------------------------*/
-double BathyDataFrame::calculateBackground (int32_t current_segment, int32_t& bckgrd_index, const Atl03Data& atl03)
+float BathyDataFrame::calculateBackground (int32_t current_segment, int32_t& bckgrd_index, const Atl03Data& atl03)
 {
-    double background_rate = atl03.bckgrd_rate[atl03.bckgrd_rate.size - 1];
+    float background_rate = atl03.bckgrd_rate[atl03.bckgrd_rate.size - 1];
     while(bckgrd_index < atl03.bckgrd_rate.size)
     {
         const double curr_bckgrd_time = atl03.bckgrd_delta_time[bckgrd_index];

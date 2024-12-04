@@ -206,6 +206,7 @@ local kd490 = bathy.kd(parms, viirs_filename)
 local refraction = bathy.refraction(parms)
 local uncertainty = bathy.uncertainty(parms, kd490)
 local seasurface = parms["find_sea_surface"] and bathy.seasurface(parms) or nil
+local signal = bathy.signal(parms)
 local qtrees = parms:classifier(bathy.QTREES) and bathy.qtrees(parms) or nil
 local coastnet = parms:classifier(bathy.COASTNET) and bathy.coastnet(parms) or nil
 local openoceanspp = parms:classifier(bathy.OPENOCEANSPP) and bathy.openoceanspp(parms) or nil
@@ -221,6 +222,7 @@ for _, beam in ipairs(parms["beams"]) do
         userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> on %s failed to create bathy dataframe for beam %s", rspq, resource, beam))
     else
         dataframes[beam]:run(seasurface)
+        dataframes[beam]:run(signal)
         dataframes[beam]:run(qtrees)
         dataframes[beam]:run(coastnet)
         dataframes[beam]:run(openoceanspp)
@@ -322,6 +324,14 @@ profile["duration"] = (time.gps() - start_time) / 1000.0
 userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ATL24 runtime at %0.3f", rspq, profile["duration"]))
 
 -------------------------------------------------------
+-- set atl24 output filename
+-------------------------------------------------------
+local atl24_filename = parms["output"]["path"]
+local pos_last_delim = string.reverse(atl24_filename):find("/") or -(#atl24_filename + 2)
+outputs["atl24_filename"] = string.sub(atl24_filename, #atl24_filename - pos_last_delim + 2)
+print("FILENAME", outputs["atl24_filename"])
+
+-------------------------------------------------------
 -- set additional outputs
 -------------------------------------------------------
 outputs["profile"] = profile
@@ -329,7 +339,6 @@ outputs["format"] = parms["output"]["format"]
 outputs["filename"] = crenv.container_sandbox_mount.."/"..tmp_filename
 outputs["ensemble"] = parms["ensemble"] or {ensemble_model_filename=string.format("%s/%s", cre.HOST_DIRECTORY, bathy.ENSEMBLE_MODEL)}
 outputs["iso_xml_filename"] = crenv.container_sandbox_mount.."/"..tmp_filename..".iso.xml"
-outputs["atl24_filename"] = string.gsub(parms["resource"], "ATL03", "ATL24")
 outputs["latch"] = latch
 
 -------------------------------------------------------

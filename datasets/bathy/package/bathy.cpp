@@ -44,6 +44,7 @@
 #include "BathyQtreesClassifier.h"
 #include "BathyOpenOceansPPClassifier.h"
 #include "BathySeaSurfaceFinder.h"
+#include "BathySignalStrength.h"
 #include "BathyRefractionCorrector.h"
 #include "BathyUncertaintyCalculator.h"
 #ifdef __unittesting__
@@ -76,6 +77,7 @@ int bathy_open (lua_State *L)
         {"qtrees",              BathyQtreesClassifier::luaCreate},
         {"openoceanspp",        BathyOpenOceansPPClassifier::luaCreate},
         {"seasurface",          BathySeaSurfaceFinder::luaCreate},
+        {"signal",              BathySignalStrength::luaCreate},
         {"refraction",          BathyRefractionCorrector::luaCreate},
         {"uncertainty",         BathyUncertaintyCalculator::luaCreate},
         {"inituncertainty",     BathyUncertaintyCalculator::luaInit},
