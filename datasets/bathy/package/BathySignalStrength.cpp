@@ -225,14 +225,15 @@ bool BathySignalStrength::run(GeoDataFrame* dataframe)
                 const long bin = static_cast<long>(std::floor((df.geoid_corr_h[k] - histo_start) / histo_binstep));
                 if(bin >= 0 && bin <= histo_numbins)
                 {
-                    if(df.signal_score[k] == 0)
-                    {
-                        df.signal_score[k] = histogram[bin];
-                    }
-                    else
-                    {
-                        df.signal_score[k] = MAX(histogram[bin], df.signal_score[k]);
-                    }
+                    /* get current signal score from processing flags */
+                    uint32_t signal_score = (df.processing_flags[k] & BathyFields::BATHY_SIGNAL) >> 16;
+
+                    /* set signal score */
+                    if(signal_score == 0) signal_score = histogram[bin];
+                    else signal_score = MAX(histogram[bin], signal_score);
+
+                    /* populate processing flags with latest signal score */
+                    df.processing_flags[k] = df.processing_flags[k] | ((signal_score << 16) & BathyFields::BATHY_SIGNAL);
                 }
                 else
                 {

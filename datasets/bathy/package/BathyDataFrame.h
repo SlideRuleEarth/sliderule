@@ -105,7 +105,6 @@ class BathyDataFrame: public GeoDataFrame
         FieldColumn<int8_t>         class_ph;           // photon classification
         FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>> predictions; // photon classification from each of the classifiers
         FieldColumn<float>          background_rate;    // PE per second
-        FieldColumn<float>          signal_score;       // number of standard deviations above background
         FieldColumn<float>          geoid_corr_h;       // orthometric height without refraction correction (passed to classifiers)
         FieldColumn<float>          wind_v;             // wind speed (in meters/second)
         FieldColumn<float>          ref_el;             // reference elevation
