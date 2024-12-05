@@ -20,6 +20,7 @@ local  height = 0
 local _lon = lon
 local _lat = lat
 
+for i = 1, 10 do
 print(string.format("\n------------------------------------\nMosaics reading one point\n------------------------------------"))
 local dem = geo.raster(geo.parms({asset="arcticdem-mosaic", algorithm="NearestNeighbour", radius=0}))
 local starttime = time.latch();
@@ -127,5 +128,7 @@ stoptime = time.latch();
 dtime = stoptime-starttime
 print('\n')
 print(string.format("%d points read, time: %f, failed reads: %d", maxPoints, dtime, failedSamples))
+
+end
 
 sys.quit()

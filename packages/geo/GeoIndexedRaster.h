@@ -323,6 +323,8 @@ class GeoIndexedRaster: public RasterObject
 
         bool            collectSamples      (const std::vector<point_groups_t>& pointsGroups,
                                              List<sample_list_t*>& sllist);
+
+        uint32_t        _getSamples         (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist);
 };
 
 #endif  /* __geo_indexed_raster__ */

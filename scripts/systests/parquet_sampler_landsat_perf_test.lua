@@ -8,8 +8,8 @@ local _,td = runner.srcscript()
 -- Setup --
 local assets = asset.loaddir()
 
--- console.monitor:config(core.LOG, core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
+console.monitor:config(core.LOG, core.DEBUG)
+sys.setlvl(core.LOG, core.DEBUG)
 
 local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"}
 local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms))
@@ -22,9 +22,9 @@ local outq_name = "outq-luatest"
 
 
 -- Use the same input parquet files as 3dep
--- local in_parquet = '/data/3dep/wrzesien_snow_64k.parquet'
+local in_parquet = '/data/3dep/wrzesien_snow_64k.parquet'
 -- local in_parquet = '/data/3dep/wrzesien_snow_525k.parquet'
-local in_parquet = '/data/3dep/wrzesien_snow_2618k.parquet'
+-- local in_parquet = '/data/3dep/wrzesien_snow_2618k.parquet'
 
 
 -- Indicates local file system (no s3 or client)
@@ -50,7 +50,8 @@ function getFileSize(filePath)
     return fileSize
 end
 
-local robj_hls = geo.raster(geo.parms({ asset = "landsat-hls", algorithm = "NearestNeighbour", radius = 0, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents, use_poi_time=false}))
+-- local robj_hls = geo.raster(geo.parms({ asset = "landsat-hls", algorithm = "NearestNeighbour", radius = 0, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents, use_poi_time=false}))
+local robj_hls = geo.raster(geo.parms({ asset = "landsat-hls", algorithm = "NearestNeighbour", radius = 0, bands = {"NDWI", "B01", "B02"}, catalog = contents, use_poi_time=false}))
 runner.check(robj_hls ~= nil)
 
 print('\n--------------------------------------\nTest01: input/output parquet (x, y)\n--------------------------------------')
