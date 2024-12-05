@@ -235,6 +235,7 @@ class BathyFields: public Icesat2Fields
             NIGHT_FLAG              = 0x00000020,
             BATHY_CONFIDENCE        = 0x0000FF00,
             BATHY_SIGNAL            = 0x00FF0000,
+            YAPC_SCORE              = 0xFF000000,
             BATHY_QTREES            = 0x01000000,
             BATHY_COASTNET          = 0x02000000,
             BATHY_OPENOCEANSPP      = 0x04000000,

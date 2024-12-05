@@ -122,7 +122,7 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"sigma_thu",           &sigma_thu},
         {"sigma_tvu",           &sigma_tvu},
         {"processing_flags",    &processing_flags},
-        {"yapc_score",          &yapc_score},
+        {"turbidity",           &turbidity},
         {"max_signal_conf",     &max_signal_conf},
         {"quality_ph",          &quality_ph},
         {"class_ph",            &class_ph},
@@ -674,6 +674,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
 
                 /* Set Initial Processing Flags */
                 uint32_t processing_flags = BathyFields::FLAGS_CLEAR;
+                processing_flags |= static_cast<uint32_t>(yapc_score) << 24;
                 if(on_boundary) processing_flags |= BathyFields::ON_BOUNDARY;
                 if(atl03.solar_elevation[current_segment] < BathyFields::NIGHT_SOLAR_ELEVATION_THRESHOLD) processing_flags |= BathyFields::NIGHT_FLAG;
                 if(!atl09.valid) processing_flags |= BathyFields::INVALID_WIND_SPEED;
@@ -691,7 +692,6 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 dataframe.y_atc.append(atl03.dist_ph_across[current_photon]);
                 dataframe.ellipse_h.append(atl03.h_ph[current_photon]); // later corrected by refraction correction
                 dataframe.ortho_h.append(atl03.h_ph[current_photon] - atl03.geoid[current_segment]); // later corrected by refraction correction
-                dataframe.yapc_score.append(yapc_score);
                 dataframe.max_signal_conf.append(atl03_cnf);
                 dataframe.quality_ph.append(quality_ph);
                 dataframe.processing_flags.append(processing_flags);
@@ -721,6 +721,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
         dataframe.sigma_thu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
         dataframe.sigma_tvu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
         dataframe.predictions.initialize(dataframe.length(), {0, 0, 0, 0, 0, 0, 0, 0, 0});
+        dataframe.turbidity.initialize(dataframe.length(), 0);
 
         /* Initialize Temporary Columns to Support Python Code */
         dataframe.refracted_dZ.initialize(dataframe.length(), 0.0);

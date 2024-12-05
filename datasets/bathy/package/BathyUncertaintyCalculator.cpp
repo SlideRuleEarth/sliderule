@@ -81,6 +81,8 @@ const double BathyUncertaintyCalculator::KD_RANGES[NUM_KD_RANGES][2] = {
     {0.06, 0.10}, {0.11, 0.17}, {0.18, 0.25}, {0.26, 0.32}, {0.33, 0.36}
 };
 
+const double BathyUncertaintyCalculator::MAX_TURBIDITY = 0.40;
+
 BathyUncertaintyCalculator::uncertainty_coeff_t BathyUncertaintyCalculator::UNCERTAINTY_COEFF_MAP[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES][NUM_WIND_SPEED_RANGES][NUM_KD_RANGES];
 
 /******************************************************************************
@@ -244,6 +246,7 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
     int pointing_angle_index = 0;
     int wind_speed_index = 0;
     int kd_range_index = 0;
+    uint32_t turbidity_score = 0;
     uint32_t processing_flags = BathyFields::INVALID_KD;
     double max_sensor_depth = fabs(parms->minDemDelta.value);
 
@@ -270,7 +273,7 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
             }
 
             /* get kd index */
-            const double kd = kd490->getKd(df.lon_ph[i], df.lat_ph[i]);
+            double kd = kd490->getKd(df.lon_ph[i], df.lat_ph[i]);
             if(kd > 0) // check if valid
             {
                 /* start with no flags set */
@@ -288,13 +291,21 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
             }
             else
             {
-                /* start with invalid kd flag set */
+                /* set invalid kd flag and max kd and turbidity */
                 processing_flags = BathyFields::INVALID_KD;
+                kd_range_index = NUM_KD_RANGES - 1;
             }
+
+            /* populate turbidity into processing flags */
+            if(kd < 0 || kd > MAX_TURBIDITY) kd = MAX_TURBIDITY;
+            turbidity_score = (kd / MAX_TURBIDITY) * 0xFF;
         }
 
         /* set processing flags */
         df.processing_flags[i] = df.processing_flags[i] | processing_flags;
+
+        /* set turbidity */
+        df.turbidity[i] = turbidity_score;
 
         /* calculate subaqueous uncertainty */
         double subaqueous_horizontal_uncertainty = 0.0;
