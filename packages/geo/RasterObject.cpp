@@ -354,7 +354,6 @@ RasterObject::RasterObject(lua_State *L, RequestFields* rqst_parms, const char* 
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "sample", luaSamples);
-    LuaEngine::setAttrFunc(L, "subset", luaSubsets);
 }
 
 /*----------------------------------------------------------------------------
@@ -449,52 +448,6 @@ int RasterObject::luaSamples(lua_State *L)
 
     /* Return Errors and Table of Samples */
     lua_pushinteger(L, err);
-    return num_ret;
-}
-
-/*----------------------------------------------------------------------------
- * luaSubsets - :subset(lon_min, lat_min, lon_max, lat_max) --> in|out
- *----------------------------------------------------------------------------*/
-int RasterObject::luaSubsets(lua_State *L)
-{
-    uint32_t err = SS_NO_ERRORS;
-    int num_ret = 1;
-
-    RasterObject *lua_obj = NULL;
-    List<RasterSubset*> slist;
-
-    try
-    {
-        /* Get Self */
-        lua_obj = dynamic_cast<RasterObject*>(getLuaSelf(L, 1));
-
-        /* Get extent */
-        double lon_min = getLuaFloat(L, 2);
-        double lat_min = getLuaFloat(L, 3);
-        double lon_max = getLuaFloat(L, 4);
-        double lat_max = getLuaFloat(L, 5);
-        const char* closest_time_str = getLuaString(L, 6, true, NULL);
-
-        /* Get gps closest time (overrides params provided closest time) */
-        int64_t gps = 0;
-        if(closest_time_str != NULL)
-        {
-            gps = TimeLib::str2gpstime(closest_time_str);
-        }
-
-        /* Get subset */
-        const MathLib::extent_t extent = {{lon_min, lat_min}, {lon_max, lat_max}};
-        err = lua_obj->getSubsets(extent, gps, slist, NULL);
-        num_ret += slist2table(slist, err, L);
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Failed to subset raster: %s", e.what());
-    }
-
-    /* Return Errors and Table of Samples */
-    lua_pushinteger(L, err);
-
     return num_ret;
 }
 
@@ -624,58 +577,6 @@ RasterObject::Reader::~Reader(void)
 }
 
 
-
-/*----------------------------------------------------------------------------
- * slist2table
- *----------------------------------------------------------------------------*/
-int RasterObject::slist2table(const List<RasterSubset*>& slist, uint32_t errors, lua_State *L)
-{
-    int num_ret = 0;
-
-    bool listvalid = true;
-    if(errors & SS_THREADS_LIMIT_ERROR)
-    {
-        listvalid = false;
-        mlog(CRITICAL, "Too many rasters to subset, max allowed: %d, limit your AOI/temporal range or use filters", GeoIndexedRaster::MAX_READER_THREADS);
-    }
-
-    if(errors & SS_MEMPOOL_ERROR)
-    {
-        listvalid = false;
-        mlog(CRITICAL, "Some rasters could not be subset, requested memory size > max allowed: %ld MB", RasterSubset::MAX_SIZE / (1024 * 1024));
-    }
-
-    if(errors & SS_RESOURCE_LIMIT_ERROR)
-    {
-        listvalid = false;
-        mlog(CRITICAL, "System resource limit reached, could not subset rasters");
-    }
-
-    /* Create return table */
-    lua_createtable(L, slist.length(), 0);
-    num_ret++;
-
-    /* Populate subsets */
-    if(listvalid && !slist.empty())
-    {
-        const List<RasterSubset*>::Iterator lit(slist);
-        for(int i = 0; i < lit.length; i++)
-        {
-            const RasterSubset* subset = lit[i];
-
-            /* Populate Return Results */
-            lua_createtable(L, 0, 2);
-            LuaEngine::setAttrStr(L, "robj", "", 0);  /* For now, figure out how to return RasterObject* */
-            LuaEngine::setAttrStr(L, "file",     subset->rasterName.c_str());
-            LuaEngine::setAttrInt(L, "size",     subset->getSize());
-            LuaEngine::setAttrInt(L, "poolsize", RasterSubset::getPoolSize());
-            lua_rawseti(L, -2, i + 1);
-        }
-    }
-    else mlog(DEBUG, "No subsets read");
-
-    return num_ret;
-}
 
 /*----------------------------------------------------------------------------
  * readerThread

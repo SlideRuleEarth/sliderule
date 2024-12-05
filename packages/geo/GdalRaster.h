@@ -38,7 +38,6 @@
 
 #include "GeoFields.h"
 #include "RasterSample.h"
-#include "RasterSubset.h"
 #include <ogrsf_frmts.h>
 #include <thread>
 #include <unordered_map>
@@ -111,7 +110,6 @@ class GdalRaster
         virtual           ~GdalRaster     (void);
         void               open           (void);
         RasterSample*      samplePOI      (OGRPoint* poi, int bandNum);
-        RasterSubset*      subsetAOI      (OGRPolygon* poly, int bandNum);
         uint8_t*           getPixels      (uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize, int bandNum);
         const std::string& getFileName    (void) const { return fileName;}
         int                getRows        (void) const { return ysize; }
@@ -181,7 +179,6 @@ class GdalRaster
         int         radius2pixels        (int _radius) const;
         static inline bool containsWindow(int x, int y, int maxx, int maxy, int windowSize);
         inline void readWithRetry        (GDALRasterBand* band, int x, int y, int xsize, int ysize, void* data, int dataXsize, int dataYsize, GDALRasterIOExtraArg* args);
-        RasterSubset* getSubset          (uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize, int bandNum);
 
         void        map2pixel            (double mapx, double mapy, int& x, int& y);
         void        map2pixel            (const OGRPoint* poi, int& x, int& y) { map2pixel(poi->getX(), poi->getY(), x, y); }

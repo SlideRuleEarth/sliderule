@@ -44,7 +44,6 @@
 #include "GeoLib.h"
 #include "RasterSampler.h"
 #ifdef __unittesting__
-#include "UT_RasterSubset.h"
 #include "UT_RasterSample.h"
 #endif
 
@@ -224,7 +223,6 @@ static void configGDAL(void)
      * The default value depends on the context in which it is used.
      *
      * NOTE: Disable GDAL multi-thread support used by Gtiff driver for decompression
-     *       GeoRaster::getSubsets() temporarily enables/disables multi-thread support
      */
     CPLSetConfigOption("GDAL_NUM_THREADS", "1");
 
@@ -253,7 +251,6 @@ int geo_open (lua_State* L)
         {"calcutm",     GeoLib::luaCalcUTM},
         {"tiff",        GeoLib::TIFFImage::luaCreate},
 #ifdef __unittesting__
-        {"ut_subset",  UT_RasterSubset::luaCreate},
         {"ut_sample",  UT_RasterSample::luaCreate},
 #endif
         {NULL,          NULL}

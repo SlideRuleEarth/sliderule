@@ -47,27 +47,6 @@ for i, v in ipairs(tbl) do
 end
 runner.check(sampleCnt == #expResults, string.format("Received unexpected number of samples: %d instead of %d", sampleCnt, #expResults))
 
-
-print(string.format("\n-------------------------------------------------\nesa worldcover 10meter subset AOI\n-------------------------------------------------"))
-
-starttime = time.latch();
-tbl, err = dem:subset(-108.3412, 38.8236, -107.7292, 39.1956)
-stoptime = time.latch();
-print(string.format("subset time: %f", stoptime - starttime))
-runner.check(err == 0)
-
-local subsetCnt = 0
-for i, v in ipairs(tbl) do
-    local size = v["size"]
-
-    local mbytes = size / (1024*1024)
-    print(string.format("(%02d) size: %d (%.2fMB)", i, size, mbytes))
-    subsetCnt = subsetCnt + 1
-
-    runner.check(size > 0)
-end
-runner.check(subsetCnt == 1, string.format("Received unexpected number of subsets: %d", subsetCnt))
-
 -- Report Results --
 
 runner.report()

@@ -220,15 +220,6 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
                 item->bandSample[i] = NULL;
             }
         }
-
-        for(uint32_t i = 0; i < item->bandSubset.size(); i++)
-        {
-            if(item->bandSubset[i])
-            {
-                delete item->bandSubset[i];
-                item->bandSubset[i] = NULL;
-            }
-        }
         key = cache.next(&item);
     }
     unlockSampling();
@@ -331,41 +322,6 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
     return ssErrors;
 }
 
-
-/*----------------------------------------------------------------------------
- * getSubset
- *----------------------------------------------------------------------------*/
-uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, List<RasterSubset*>& slist, void* param)
-{
-    static_cast<void>(param);
-
-    lockSampling();
-    try
-    {
-        GroupOrdering groupList;
-        OGRPolygon    poly = GdalRaster::makeRectangle(extent.ll.x, extent.ll.y, extent.ur.x, extent.ur.y);
-        ssErrors = SS_NO_ERRORS;
-
-        /* Sample Subsets */
-        if(sample(&poly, gps, &groupList))
-        {
-            /* Populate Return Vector of Subsets (slist) */
-            const GroupOrdering::Iterator iter(groupList);
-            for(int i = 0; i < iter.length; i++)
-            {
-                const rasters_group_t* rgroup = iter[i].value;
-                getGroupSubsets(rgroup, slist);
-            }
-        }
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error subsetting raster: %s", e.what());
-    }
-    unlockSampling();
-
-    return ssErrors;
-}
 
 /******************************************************************************
  * PROTECTED METHODS
@@ -554,34 +510,6 @@ void GeoIndexedRaster::getGroupSamples(const rasters_group_t* rgroup, List<Raste
             * If group has other value rasters the dataset must override this function.
             */
             break;
-        }
-    }
-}
-
-
-/*----------------------------------------------------------------------------
- * getGroupSubsets
- *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getGroupSubsets(const rasters_group_t* rgroup, List<RasterSubset*>& slist)
-{
-    for(const auto& rinfo: rgroup->infovect)
-    {
-        const char* key = fileDict.get(rinfo.fileId);
-        cacheitem_t* item;
-        if(cache.find(key, &item))
-        {
-            for(uint32_t i = 0; i < item->bandSubset.size(); i++)
-            {
-                RasterSubset* subset = item->bandSubset[i];
-                if(subset)
-                {
-                    slist.add(subset);
-                    item->bandSubset[i] = NULL;
-                }
-            }
-
-            /* Get sampling/subset error status */
-            ssErrors |= item->raster->getSSerror();
         }
     }
 }
@@ -996,37 +924,6 @@ void* GeoIndexedRaster::readerThread(void *param)
                             RasterSample* sample = raster->samplePOI(&point, bandNum);
                             entry->bandSample.push_back(sample);
                             mlog(DEBUG, "Band: %d, %s", bandNum, sample ? sample->toString().c_str() : "NULL");
-                        }
-                    }
-                }
-                else if(GdalRaster::ispoly(reader->geo))
-                {
-                    /* Subset raster bands */
-                    for(const int bandNum : bands)
-                    {
-                        /* No need to use local copy of polygon, subsetAOI will use it's envelope and not project it */
-                        RasterSubset* subset = raster->subsetAOI(dynamic_cast<OGRPolygon*>(reader->geo), bandNum);
-                        if(subset)
-                        {
-                            /*
-                             * Create new GeoRaster object for subsetted raster
-                             * Use NULL for LuaState, using parent's causes memory corruption
-                             * NOTE: cannot use RasterObject::cppCreate(parms) here, it would create
-                             * new GeoIndexRaster with the same file path as parent raster.
-                             */
-                            subset->robj = new GeoRaster(NULL,
-                                                        reader->obj->rqstParms,
-                                                        reader->obj->samplerKey,
-                                                        subset->rasterName,
-                                                        raster->getGpsTime(),
-                                                        raster->getElevationBandNum(),
-                                                        raster->getFLagsBandNum(),
-                                                        raster->getOverrideCRS());
-
-                            entry->bandSubset.push_back(subset);
-
-                            /* RequestFields are shared with subsseted raster and other readers */
-                            GeoIndexedRaster::referenceLuaObject(reader->obj->rqstParms);
                         }
                     }
                 }

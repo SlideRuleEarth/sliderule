@@ -134,7 +134,6 @@ class GeoIndexedRaster: public RasterObject
         typedef struct CacheItem {
             bool                        enabled;
             std::vector<RasterSample*>  bandSample;
-            std::vector<RasterSubset*>  bandSubset;
             GdalRaster*                 raster;
             ~CacheItem(void) {delete raster;}
         } cacheitem_t;
@@ -202,7 +201,6 @@ class GeoIndexedRaster: public RasterObject
         static void     deinit            (void);
         uint32_t        getSamples        (const MathLib::point_3d_t& point, int64_t gps_secs, List<RasterSample*>& slist, void* param=NULL) final;
         uint32_t        getSamples        (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL) final;
-        uint32_t        getSubsets        (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) final;
 
     protected:
 
@@ -221,7 +219,6 @@ class GeoIndexedRaster: public RasterObject
         static  uint32_t getBatchGroupFlags    (const rasters_group_t* rgroup, uint32_t pointIndx);
 
         virtual void     getGroupSamples       (const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags);
-        virtual void     getGroupSubsets       (const rasters_group_t* rgroup, List<RasterSubset*>& slist);
         uint32_t         getGroupFlags         (const rasters_group_t* rgroup);
 
         virtual double   getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);

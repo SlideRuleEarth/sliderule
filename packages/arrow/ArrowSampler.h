@@ -48,6 +48,7 @@
 #include "ArrowFields.h"
 #include "RequestFields.h"
 #include "RasterObject.h"
+#include "MsgQ.h"
 #include "OsApi.h"
 
 #include <set>

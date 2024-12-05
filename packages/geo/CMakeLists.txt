@@ -35,12 +35,10 @@ if (GDAL_FOUND AND PROJ_FOUND AND TIFF_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/GeoUserRaster.cpp
             ${CMAKE_CURRENT_LIST_DIR}/RasterObject.cpp
             ${CMAKE_CURRENT_LIST_DIR}/RasterSampler.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/RasterSubset.cpp
             ${CMAKE_CURRENT_LIST_DIR}/RasterFileDictionary.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoFields.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoLib.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoRtree.cpp
-            $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_RasterSubset.cpp>
             $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_RasterSample.cpp>
         )
 
@@ -61,12 +59,10 @@ if (GDAL_FOUND AND PROJ_FOUND AND TIFF_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/RasterObject.h
             ${CMAKE_CURRENT_LIST_DIR}/RasterSampler.h
             ${CMAKE_CURRENT_LIST_DIR}/RasterSample.h
-            ${CMAKE_CURRENT_LIST_DIR}/RasterSubset.h
             ${CMAKE_CURRENT_LIST_DIR}/RasterFileDictionary.h
             ${CMAKE_CURRENT_LIST_DIR}/GeoFields.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoLib.h
             ${CMAKE_CURRENT_LIST_DIR}/GeoRtree.h
-            $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_RasterSubset.h>
             $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_RasterSample.h>
         DESTINATION
             ${INCDIR}

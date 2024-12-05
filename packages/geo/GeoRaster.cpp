@@ -108,65 +108,6 @@ uint32_t GeoRaster::getSamples(const MathLib::point_3d_t& point, int64_t gps, Li
 }
 
 /*----------------------------------------------------------------------------
- * getSubsets
- *----------------------------------------------------------------------------*/
-uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, List<RasterSubset*>& slist, void* param)
-{
-    static_cast<void>(gps);
-    static_cast<void>(param);
-
-    lockSampling();
-
-    /* Enable multi-threaded decompression in Gtiff driver */
-    CPLSetThreadLocalConfigOption("GDAL_NUM_THREADS", "ALL_CPUS");
-
-    try
-    {
-        OGRPolygon poly = GdalRaster::makeRectangle(extent.ll.x, extent.ll.y, extent.ur.x, extent.ur.y);
-
-        std::vector<int> bands;
-        getInnerBands(&raster, bands);
-        for(const int bandNum : bands)
-        {
-            /* Get subset rasters, if none found, return */
-            RasterSubset* subset = raster.subsetAOI(&poly, bandNum);
-            if(subset)
-            {
-                /*
-                 * Create new GeoRaster object for subsetted raster
-                 * Use NULL for LuaState, using parent's causes memory corruption
-                 * NOTE: cannot use RasterObject::cppCreate(parms) here,
-                 * it would create subsetted raster with the same file path as parent raster.
-                 */
-                subset->robj = new GeoRaster(NULL,
-                                             rqstParms,
-                                             samplerKey,
-                                             subset->rasterName,
-                                             raster.getGpsTime(),
-                                             raster.getElevationBandNum(),
-                                             raster.getFLagsBandNum(),
-                                             raster.getOverrideCRS());
-                slist.add(subset);
-
-                /* RequestFields are shared with subsseted raster */
-                referenceLuaObject(rqstParms);
-            }
-        }
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error subsetting raster: %s", e.what());
-    }
-
-    /* Disable multi-threaded decompression in Gtiff driver */
-    CPLSetThreadLocalConfigOption("GDAL_NUM_THREADS", "1");
-
-    unlockSampling();
-
-    return raster.getSSerror();
-}
-
-/*----------------------------------------------------------------------------
  * getPixels
  *----------------------------------------------------------------------------*/
 uint8_t* GeoRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t xsize, uint32_t ysize, int bandNum, void* param)

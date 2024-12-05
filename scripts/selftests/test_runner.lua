@@ -91,7 +91,6 @@ if __pgc__ and incloud then
     runner.script(pgc_td .. "aoi_bbox_test.lua")
     runner.script(pgc_td .. "proj_pipeline_test.lua")
     runner.script(pgc_td .. "remadem_reader.lua")
-    runner.script(pgc_td .. "subset_test.lua")
 end
 
 -- Run LANDSAT Plugin Self Tests

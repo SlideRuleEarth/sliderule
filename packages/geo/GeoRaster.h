@@ -65,7 +65,6 @@ class GeoRaster: public RasterObject
                                   int elevationBandNum=GdalRaster::NO_BAND, int flagsBandNum=GdalRaster::NO_BAND, GdalRaster::overrideCRS_t cb=NULL);
                      ~GeoRaster  (void) override;
         uint32_t      getSamples (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) final;
-        uint32_t      getSubsets (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) final;
         uint8_t*      getPixels  (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, int bandNum=1, void* param=NULL) override;
 
         uint32_t      getRows    (void) const { return raster.getRows(); }

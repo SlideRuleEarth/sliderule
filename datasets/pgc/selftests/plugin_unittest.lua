@@ -13,28 +13,6 @@ if not core.UNITTEST then return end
 
 -- Unit Test --
 
-print('\n------------------\nTest01 RasterSubset::rema-mosaic \n------------------')
-
-local demType = "rema-mosaic"
-local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=50, zonal_stats=true}))
-runner.check(dem ~= nil)
-local ut = geo.ut_subset(dem)
-runner.check(ut ~= nil)
-local status = ut:test()
-runner.check(status, "Failed subset test")
-ut = nil
-
-
-print('\n------------------\nTest02 RasterSubset::rema-strips \n------------------')
-demType = "rema-strips"
-dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=50, zonal_stats=true}))
-runner.check(dem ~= nil)
-ut = geo.ut_subset(dem)
-runner.check(ut ~= nil)
-status = ut:test()
-runner.check(status, "Failed subset test")
-ut = nil
-
 
 lon = -178.0
 lat =   51.7
