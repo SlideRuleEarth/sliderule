@@ -1,7 +1,7 @@
-Steps to generates VRT files for opnedata plugins
-Open Data on AWS host data but does not provide stac end point, vrt, etc.
-We build our own VRT files and host them in SlideRule s3 bucket.
+OpenData on AWS hosts datasets but does not provide STAC endpoints, VRT files, or similar metadata structures.
+To work with these datasets, we create our own VRT files and host them in the SlideRule S3 bucket.
 
+Steps to generates VRT files for opnedata plugins
 
 **********************************************
 *** ESA WorldCover 2021 product.
