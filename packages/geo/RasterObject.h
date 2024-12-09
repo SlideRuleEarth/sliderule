@@ -172,8 +172,6 @@ class RasterObject: public LuaObject
 
                     RasterObject    (lua_State* L, RequestFields* rqst_parms, const char* key);
         static int  luaSamples      (lua_State* L);
-        static int  luaSubsets      (lua_State* L);
-        static int  luaPixels       (lua_State *L);
 
         static RasterObject* cppCreate(RequestFields* rqst_parms, const char* key);
         static RasterObject* cppCreate(const RasterObject* obj);
