@@ -10,6 +10,8 @@ local assets = asset.loaddir()
 
 -- Setup --
 
+for i = 1, 10 do
+
 local failedSamples = 0
 local verbose = false
 
@@ -160,6 +162,9 @@ end
 stoptime = time.latch();
 dtime = stoptime-starttime
 print(string.format("%d points read, time: %f, failed reads: %d", maxPoints, dtime, failedSamples))
+
+end
+
 
 sys.quit()
 

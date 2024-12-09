@@ -174,6 +174,28 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
     static_cast<void>(param);
 
     lockSampling();
+
+    point_info_t point_info = {point, static_cast<double>(gps)};
+#if 1
+    std::vector<point_info_t> points;
+    points.emplace_back(point_info);
+
+    List<sample_list_t*> sllist;
+    ssErrors = _getSamples(points, sllist);
+
+    /* Populate Return List of Samples (slist) */
+    if(sllist.length() > 0)
+    {
+        List<RasterSample*>* sl = sllist[0];
+        for(int i = 0; i < sl->length(); i++)
+        {
+            RasterSample* s = sl->get(i);
+            RasterSample* sample = new RasterSample(*s);
+            slist.add(sample);
+            // sl->set(i, NULL);
+        }
+    }
+#else
     try
     {
         GroupOrdering groupList;
@@ -222,6 +244,8 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
         }
         key = cache.next(&item);
     }
+#endif
+
     unlockSampling();
 
     return ssErrors;
@@ -237,82 +261,10 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
     lockSampling();
 
     perfStats.clear();
-    cache.clear();       /* Clear cache used by serial sampling */
+    cache.clear();        /* Clear cache used by serial sampling */
     fileDict.clear();     /* Start with empty file dictionary    */
 
-    /* Vector of points and their associated raster groups */
-    std::vector<point_groups_t> pointsGroups;
-
-    /* Vector of rasters and all points they contain */
-    std::vector<unique_raster_t*> uniqueRasters;
-
-    try
-    {
-        ssErrors = SS_NO_ERRORS;
-
-        /* Open the index file for all points */
-        if(!openGeoIndex(NULL, &points))
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Error opening index file");
-        }
-
-        {
-            /* Rasters to points map */
-            raster_points_map_t rasterToPointsMap;
-
-            /* For all points create a vector of raster group lists */
-            if(!findAllGroups(&points, pointsGroups, rasterToPointsMap))
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Error creating groups");
-            }
-
-            /* For all points create a vector of unique rasters */
-            if(!findUniqueRasters(uniqueRasters, pointsGroups, rasterToPointsMap))
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Error finding unique rasters");
-            }
-
-            /* rastersToPointsMap is no longer needed */
-        }
-
-        /* Sample all unique rasters */
-        if(!sampleUniqueRasters(uniqueRasters))
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Error sampling unique rasters");
-        }
-
-        /* Populate sllist with samples */
-        if(!collectSamples(pointsGroups, sllist))
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Error collecting samples");
-        }
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error getting samples: %s", e.what());
-    }
-
-    /* Clean up pointsGroups */
-    for(const point_groups_t& pg : pointsGroups)
-        delete pg.groupList;
-
-    /* Clean up unique rasters */
-    for(unique_raster_t* ur : uniqueRasters)
-    {
-        for(const point_sample_t& ps : ur->pointSamples)
-        {
-            /* Delete samples which have not been returned (quality masks, etc) */
-            for(size_t i = 0; i < ps.bandSample.size(); i++)
-            {
-                if(!ps.bandSampleReturned[i]->load())
-                {
-                    delete ps.bandSample[i];
-                }
-            }
-        }
-
-        delete ur;
-    }
+    ssErrors = _getSamples(points, sllist);
 
     unlockSampling();
 
@@ -1836,4 +1788,86 @@ bool GeoIndexedRaster::collectSamples(const std::vector<point_groups_t>& pointsG
     mlog(INFO, "Populated sllist with %d lists of samples, time: %lf", sllist.length(), perfStats.collectSamplesTime);
 
     return true;
+}
+
+/*----------------------------------------------------------------------------
+ * _getSamples - batch sampling
+ *----------------------------------------------------------------------------*/
+uint32_t GeoIndexedRaster::_getSamples(const std::vector<point_info_t>& points, List<sample_list_t*>& sllist)
+{
+    /* Vector of points and their associated raster groups */
+    std::vector<point_groups_t> pointsGroups;
+
+    /* Vector of rasters and all points they contain */
+    std::vector<unique_raster_t*> uniqueRasters;
+
+    try
+    {
+        ssErrors = SS_NO_ERRORS;
+
+        /* Open the index file for all points */
+        if(!openGeoIndex(NULL, &points))
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Error opening index file");
+        }
+
+        {
+            /* Rasters to points map */
+            raster_points_map_t rasterToPointsMap;
+
+            /* For all points create a vector of raster group lists */
+            if(!findAllGroups(&points, pointsGroups, rasterToPointsMap))
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Error creating groups");
+            }
+
+            /* For all points create a vector of unique rasters */
+            if(!findUniqueRasters(uniqueRasters, pointsGroups, rasterToPointsMap))
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "Error finding unique rasters");
+            }
+
+            /* rastersToPointsMap is no longer needed */
+        }
+
+        /* Sample all unique rasters */
+        if(!sampleUniqueRasters(uniqueRasters))
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Error sampling unique rasters");
+        }
+
+        /* Populate sllist with samples */
+        if(!collectSamples(pointsGroups, sllist))
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Error collecting samples");
+        }
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Error getting samples: %s", e.what());
+    }
+
+    /* Clean up pointsGroups */
+    for(const point_groups_t& pg : pointsGroups)
+        delete pg.groupList;
+
+    /* Clean up unique rasters */
+    for(unique_raster_t* ur : uniqueRasters)
+    {
+        for(const point_sample_t& ps : ur->pointSamples)
+        {
+            /* Delete samples which have not been returned (quality masks, etc) */
+            for(size_t i = 0; i < ps.bandSample.size(); i++)
+            {
+                if(!ps.bandSampleReturned[i]->load())
+                {
+                    delete ps.bandSample[i];
+                }
+            }
+        }
+
+        delete ur;
+    }
+
+    return ssErrors;
 }
