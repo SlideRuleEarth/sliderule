@@ -15,10 +15,9 @@ local lons = {-80.87, -81.02, -89.66, -94.72}
 local lats = { 32.06,  31.86,  29.99,  29.35}
 height = 0
 
-local expElevation   = { -2.02, -14.10, -4.28, -17.18}
-local expUncertainty = {  1.00,   2.58,  0.34,  1.32}
-local expContributor = {  31156, 63846, 24955, 45641}
-
+local expElevation   = { -4.14, -14.10, -4.28, -17.18}
+local expUncertainty = {  1.03,   2.58,  0.34,  1.32}
+local expContributor = { 63824,  63846, 24955, 45641}
 
 local elevation_tolerance = 0.01;
 
