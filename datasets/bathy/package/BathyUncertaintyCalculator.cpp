@@ -288,8 +288,9 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
             }
             else
             {
-                /* start with invalid kd flag set */
+                /* set invalid kd flag and max kd and turbidity */
                 processing_flags = BathyFields::INVALID_KD;
+                kd_range_index = NUM_KD_RANGES - 1;
             }
         }
 

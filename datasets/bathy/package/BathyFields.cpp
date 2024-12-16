@@ -117,7 +117,6 @@ BathyFields::BathyFields(lua_State* L, uint64_t key_space, const char* default_a
           {"ph_in_extent",        &phInExtent},
           {"generate_ndwi",       &generateNdwi},
           {"use_bathy_mask",      &useBathyMask},
-          {"find_sea_surface",    &findSeaSurface},
           {"classifiers",         &classifiers},
           {"spots",               &spots},
           {"surface",             &surface},

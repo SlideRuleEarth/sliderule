@@ -93,18 +93,17 @@ class BathyDataFrame: public GeoDataFrame
         FieldColumn<double>         y_ph;               // the northing coordinate in meters of the photon for the given UTM zone
         FieldColumn<double>         x_atc;              // along track distance calculated from segment_dist_x and dist_ph_along
         FieldColumn<double>         y_atc;              // dist_ph_across
-        FieldColumn<double>         background_rate;    // PE per second
-        FieldColumn<float>          surface_h;          // orthometric height of sea surface at each photon location
         FieldColumn<double>         ortho_h {Field::Z_COLUMN}; // refraction corrected, geoid corrected height of photon
+        FieldColumn<float>          surface_h;          // orthometric height of sea surface at each photon location
         FieldColumn<float>          ellipse_h;          // height of photon with respect to reference ellipsoid
         FieldColumn<float>          sigma_thu;          // total horizontal uncertainty
         FieldColumn<float>          sigma_tvu;          // total vertical uncertainty
         FieldColumn<uint32_t>       processing_flags;   // bit mask of flags for capturing errors and warnings (top 8 bits reserved for classifiers)
-        FieldColumn<uint8_t>        yapc_score;         // atl03 density estimate (Yet Another Photon Classifier)
         FieldColumn<int8_t>         max_signal_conf;    // maximum value in the atl03 confidence table
         FieldColumn<int8_t>         quality_ph;         // atl03 quality flags
         FieldColumn<int8_t>         class_ph;           // photon classification
         FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>> predictions; // photon classification from each of the classifiers
+        FieldColumn<float>          background_rate;    // PE per second
         FieldColumn<float>          geoid_corr_h;       // orthometric height without refraction correction (passed to classifiers)
         FieldColumn<float>          wind_v;             // wind speed (in meters/second)
         FieldColumn<float>          ref_el;             // reference elevation
@@ -226,7 +225,7 @@ class BathyDataFrame: public GeoDataFrame
                             ~BathyDataFrame             (void) override;
 
         static void*        subsettingThread            (void* parm);
-        static double       calculateBackground         (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03);
+        static float        calculateBackground         (int32_t current_segment, int32_t& bckgrd_in, const Atl03Data& atl03);
 
         static int          luaIsValid                  (lua_State* L);
         static int          luaLength                   (lua_State* L);

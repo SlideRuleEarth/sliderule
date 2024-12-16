@@ -122,7 +122,6 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"sigma_thu",           &sigma_thu},
         {"sigma_tvu",           &sigma_tvu},
         {"processing_flags",    &processing_flags},
-        {"yapc_score",          &yapc_score},
         {"max_signal_conf",     &max_signal_conf},
         {"quality_ph",          &quality_ph},
         {"class_ph",            &class_ph},
@@ -450,8 +449,8 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     lat_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/lat_ph").c_str(),              0, region.first_photon,  region.num_photons),
     lon_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/lon_ph").c_str(),              0, region.first_photon,  region.num_photons),
     delta_time          (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/delta_time").c_str(),          0, region.first_photon,  region.num_photons),
-    bckgrd_delta_time   (dataframe.parms.findSeaSurface ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/delta_time").c_str()),
-    bckgrd_rate         (dataframe.parms.findSeaSurface ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/bckgrd_rate").c_str())
+    bckgrd_delta_time   (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/delta_time").c_str()),
+    bckgrd_rate         (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/bckgrd_rate").c_str())
 {
     sc_orient.join(dataframe.readTimeoutMs, true);
     velocity_sc.join(dataframe.readTimeoutMs, true);
@@ -474,8 +473,8 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     lat_ph.join(dataframe.readTimeoutMs, true);
     lon_ph.join(dataframe.readTimeoutMs, true);
     delta_time.join(dataframe.readTimeoutMs, true);
-    if(dataframe.parms.findSeaSurface) bckgrd_delta_time.join(dataframe.readTimeoutMs, true);
-    if(dataframe.parms.findSeaSurface) bckgrd_rate.join(dataframe.readTimeoutMs, true);
+    bckgrd_delta_time.join(dataframe.readTimeoutMs, true);
+    bckgrd_rate.join(dataframe.readTimeoutMs, true);
 }
 
 /*----------------------------------------------------------------------------
@@ -674,6 +673,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
 
                 /* Set Initial Processing Flags */
                 uint32_t processing_flags = BathyFields::FLAGS_CLEAR;
+                processing_flags |= static_cast<uint32_t>(yapc_score) << 24;
                 if(on_boundary) processing_flags |= BathyFields::ON_BOUNDARY;
                 if(atl03.solar_elevation[current_segment] < BathyFields::NIGHT_SOLAR_ELEVATION_THRESHOLD) processing_flags |= BathyFields::NIGHT_FLAG;
                 if(!atl09.valid) processing_flags |= BathyFields::INVALID_WIND_SPEED;
@@ -691,13 +691,12 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 dataframe.y_atc.append(atl03.dist_ph_across[current_photon]);
                 dataframe.ellipse_h.append(atl03.h_ph[current_photon]); // later corrected by refraction correction
                 dataframe.ortho_h.append(atl03.h_ph[current_photon] - atl03.geoid[current_segment]); // later corrected by refraction correction
-                dataframe.yapc_score.append(yapc_score);
                 dataframe.max_signal_conf.append(atl03_cnf);
                 dataframe.quality_ph.append(quality_ph);
                 dataframe.processing_flags.append(processing_flags);
 
                 /* Add Additional Photon Data to DataFrame */
-                dataframe.background_rate.append(parms.findSeaSurface ? calculateBackground(current_segment, bckgrd_index, atl03) : 0.0);
+                dataframe.background_rate.append(calculateBackground(current_segment, bckgrd_index, atl03));
                 dataframe.geoid_corr_h.append(atl03.h_ph[current_photon] - atl03.geoid[current_segment]);
                 dataframe.wind_v.append(wind_v);
                 dataframe.ref_el.append(atl03.ref_elev[current_segment]);
@@ -750,9 +749,9 @@ void* BathyDataFrame::subsettingThread (void* parm)
 /*----------------------------------------------------------------------------
  * calculateBackground
  *----------------------------------------------------------------------------*/
-double BathyDataFrame::calculateBackground (int32_t current_segment, int32_t& bckgrd_index, const Atl03Data& atl03)
+float BathyDataFrame::calculateBackground (int32_t current_segment, int32_t& bckgrd_index, const Atl03Data& atl03)
 {
-    double background_rate = atl03.bckgrd_rate[atl03.bckgrd_rate.size - 1];
+    float background_rate = atl03.bckgrd_rate[atl03.bckgrd_rate.size - 1];
     while(bckgrd_index < atl03.bckgrd_rate.size)
     {
         const double curr_bckgrd_time = atl03.bckgrd_delta_time[bckgrd_index];

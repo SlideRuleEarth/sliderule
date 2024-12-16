@@ -325,13 +325,18 @@ if len(beam_list) == 0:
 df = pd.concat([beam_table[beam] for beam in beam_list])
 print("Concatenated data frames into a single data frame")
 
-# set processing flags
+# set confidence in processing flags
+df["processing_flags"] = df["processing_flags"] + ((df["confidence"] * 256).astype(np.uint8) * 256)
+
+## set individual classifier bits in processing flags
 df["processing_flags"] = df["processing_flags"] + \
-                        ((df["confidence"] * 256).astype(np.uint8) * 256) + \
-                        ((df["cshelph"] == 40) * 2**28) + \
-                        ((df["medianfilter"] == 40) * 2**27) + \
-                        ((df["bathypathfinder"] == 40) * 2**29) + \
-                        ((df["pointnet"] == 40) * 2**30)
+                       ((df["qtrees"]          == 40) * 2**24) + \
+                       ((df["coastnet"]        == 40) * 2**25) + \
+                       ((df["openoceanspp"]    == 40) * 2**26) + \
+                       ((df["medianfilter"]    == 40) * 2**27) + \
+                       ((df["cshelph"]         == 40) * 2**28) + \
+                       ((df["bathypathfinder"] == 40) * 2**29) + \
+                       ((df["pointnet"]        == 40) * 2**30)
 
 # apply subaqueous corrections
 corrections_start_time = time.time()

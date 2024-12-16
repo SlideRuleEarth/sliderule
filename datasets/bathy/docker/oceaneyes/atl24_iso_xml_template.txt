@@ -74,7 +74,7 @@
                   <gmd:identifier>
                     <gmd:MD_Identifier>
                       <gmd:code>
-                        <gco:CharacterString>006</gco:CharacterString>
+                        <gco:CharacterString>001</gco:CharacterString>
                       </gmd:code>
                       <gmd:description>
                         <gco:CharacterString>The ECS Version ID</gco:CharacterString>
@@ -108,7 +108,7 @@
                       </gmd:title>
                       <gmd:date gco:nilReason="unknown"/>
                       <gmd:edition>
-                        <gco:CharacterString>006</gco:CharacterString>
+                        <gco:CharacterString>001</gco:CharacterString>
                       </gmd:edition>
                     </gmd:CI_Citation>
                   </gmd:aggregateDataSetName>

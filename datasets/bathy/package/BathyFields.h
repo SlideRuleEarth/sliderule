@@ -234,6 +234,8 @@ class BathyFields: public Icesat2Fields
             INVALID_WIND_SPEED      = 0x00000010,
             NIGHT_FLAG              = 0x00000020,
             BATHY_CONFIDENCE        = 0x0000FF00,
+            BATHY_SIGNAL            = 0x00FF0000,
+            YAPC_SCORE              = 0xFF000000,
             BATHY_QTREES            = 0x01000000,
             BATHY_COASTNET          = 0x02000000,
             BATHY_OPENOCEANSPP      = 0x04000000,
@@ -264,7 +266,6 @@ class BathyFields: public Icesat2Fields
         FieldElement<int>                               phInExtent {8192};          // number of photons in each extent
         FieldElement<bool>                              generateNdwi {false};       // use HLS data to generate NDWI for each segment lat,lon
         FieldElement<bool>                              useBathyMask {true};        // global bathymetry mask downloaded in atl24 init lua routine
-        FieldElement<bool>                              findSeaSurface {false};     // locally implemented sea surface finder
         FieldEnumeration<classifier_t, NUM_CLASSIFIERS> classifiers {true, true, true, true, true, true, true, true, true}; // which bathymetry classifiers to run
         FieldEnumeration<spot_t, NUM_SPOTS>             spots = {true, true, true, true, true, true}; // only used by downstream algorithms
         SurfaceFields                                   surface;                    // surface finding fields

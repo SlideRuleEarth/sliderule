@@ -220,6 +220,7 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     result_t result;
     result.provided = false;
     result.photons = NULL;
+    result.elevation.window_height = 0;
 
     /* Get Input */
     Atl03Reader::extent_t* extent = reinterpret_cast<Atl03Reader::extent_t*>(record->getRecordData());
