@@ -106,7 +106,6 @@ class BathyUncertaintyCalculator: public GeoDataFrame::FrameRunner
         static const int            POINTING_ANGLES[NUM_POINTING_ANGLES];
         static const int            WIND_SPEED_RANGES[NUM_WIND_SPEED_RANGES][2];
         static const double         KD_RANGES[NUM_KD_RANGES][2];
-        static const double         MAX_TURBIDITY;
 
         static uncertainty_coeff_t  UNCERTAINTY_COEFF_MAP[NUM_UNCERTAINTY_DIMENSIONS][NUM_POINTING_ANGLES][NUM_WIND_SPEED_RANGES][NUM_KD_RANGES];
 

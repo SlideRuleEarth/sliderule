@@ -122,7 +122,6 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"sigma_thu",           &sigma_thu},
         {"sigma_tvu",           &sigma_tvu},
         {"processing_flags",    &processing_flags},
-        {"turbidity",           &turbidity},
         {"max_signal_conf",     &max_signal_conf},
         {"quality_ph",          &quality_ph},
         {"class_ph",            &class_ph},
@@ -721,7 +720,6 @@ void* BathyDataFrame::subsettingThread (void* parm)
         dataframe.sigma_thu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
         dataframe.sigma_tvu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
         dataframe.predictions.initialize(dataframe.length(), {0, 0, 0, 0, 0, 0, 0, 0, 0});
-        dataframe.turbidity.initialize(dataframe.length(), 0);
 
         /* Initialize Temporary Columns to Support Python Code */
         dataframe.refracted_dZ.initialize(dataframe.length(), 0.0);

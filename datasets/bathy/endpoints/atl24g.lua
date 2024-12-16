@@ -205,8 +205,6 @@ local granule = (parms["output"]["format"] == "h5") and bathy.granule(parms, atl
 local kd490 = bathy.kd(parms, viirs_filename)
 local refraction = bathy.refraction(parms)
 local uncertainty = bathy.uncertainty(parms, kd490)
-local seasurface = parms["find_sea_surface"] and bathy.seasurface(parms) or nil
-local signal = bathy.signal(parms)
 local qtrees = parms:classifier(bathy.QTREES) and bathy.qtrees(parms) or nil
 local coastnet = parms:classifier(bathy.COASTNET) and bathy.coastnet(parms) or nil
 local openoceanspp = parms:classifier(bathy.OPENOCEANSPP) and bathy.openoceanspp(parms) or nil
@@ -221,8 +219,6 @@ for _, beam in ipairs(parms["beams"]) do
     if not dataframes[beam] then
         userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> on %s failed to create bathy dataframe for beam %s", rspq, resource, beam))
     else
-        dataframes[beam]:run(seasurface)
-        dataframes[beam]:run(signal)
         dataframes[beam]:run(qtrees)
         dataframes[beam]:run(coastnet)
         dataframes[beam]:run(openoceanspp)
@@ -314,7 +310,6 @@ kd490:destroy()
 -------------------------------------------------------
 -- get profiles
 -------------------------------------------------------
-profile["seasurface"] = seasurface and seasurface:runtime() or 0.0
 profile["refraction"] = refraction and refraction:runtime() or 0.0
 profile["uncertainty"] = uncertainty and uncertainty:runtime() or 0.0
 profile["qtrees"] = qtrees and qtrees:runtime() or 0.0

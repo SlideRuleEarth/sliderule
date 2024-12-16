@@ -329,14 +329,14 @@ print("Concatenated data frames into a single data frame")
 df["processing_flags"] = df["processing_flags"] + ((df["confidence"] * 256).astype(np.uint8) * 256)
 
 ## set individual classifier bits in processing flags
-#df["processing_flags"] = df["processing_flags"] + \
-#                        ((df["qtrees"]          == 40) * 2**24) + \
-#                        ((df["coastnet"]        == 40) * 2**25) + \
-#                        ((df["openoceanspp"]    == 40) * 2**26) + \
-#                        ((df["medianfilter"]    == 40) * 2**27) + \
-#                        ((df["cshelph"]         == 40) * 2**28) + \
-#                        ((df["bathypathfinder"] == 40) * 2**29) + \
-#                        ((df["pointnet"]        == 40) * 2**30)
+df["processing_flags"] = df["processing_flags"] + \
+                       ((df["qtrees"]          == 40) * 2**24) + \
+                       ((df["coastnet"]        == 40) * 2**25) + \
+                       ((df["openoceanspp"]    == 40) * 2**26) + \
+                       ((df["medianfilter"]    == 40) * 2**27) + \
+                       ((df["cshelph"]         == 40) * 2**28) + \
+                       ((df["bathypathfinder"] == 40) * 2**29) + \
+                       ((df["pointnet"]        == 40) * 2**30)
 
 # apply subaqueous corrections
 corrections_start_time = time.time()
@@ -797,13 +797,6 @@ elif format == "h5":
                          'long_name':'Total vertical uncertainty',
                          'source':'ATL03',
                          'units':'meters'})
-            add_variable(beam_group, "turbidity", beam_df["turbidity"], 'uint8', True,
-                        {'contentType':'modelResult',
-                         'coordinates': 'delta_time lat_ph lon_ph',
-                         'description':'A scaled Kd from 0.0 to 0.40',
-                         'long_name':'Turbidity score',
-                         'source':'ATL03',
-                         'units':'scalar'})
             add_variable(beam_group, "flags", beam_df["processing_flags"], 'uint32', True,
                         {'contentType':'modelResult',
                          'coordinates': 'delta_time lat_ph lon_ph',

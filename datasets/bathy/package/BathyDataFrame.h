@@ -99,7 +99,6 @@ class BathyDataFrame: public GeoDataFrame
         FieldColumn<float>          sigma_thu;          // total horizontal uncertainty
         FieldColumn<float>          sigma_tvu;          // total vertical uncertainty
         FieldColumn<uint32_t>       processing_flags;   // bit mask of flags for capturing errors and warnings (top 8 bits reserved for classifiers)
-        FieldColumn<uint8_t>        turbidity;          // kd value from JIIRS
         FieldColumn<int8_t>         max_signal_conf;    // maximum value in the atl03 confidence table
         FieldColumn<int8_t>         quality_ph;         // atl03 quality flags
         FieldColumn<int8_t>         class_ph;           // photon classification
