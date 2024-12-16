@@ -270,7 +270,7 @@ bool BathyUncertaintyCalculator::run (GeoDataFrame* dataframe)
             }
 
             /* get kd index */
-            double kd = kd490->getKd(df.lon_ph[i], df.lat_ph[i]);
+            const double kd = kd490->getKd(df.lon_ph[i], df.lat_ph[i]);
             if(kd > 0) // check if valid
             {
                 /* start with no flags set */
