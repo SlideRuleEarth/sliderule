@@ -131,6 +131,11 @@ class RasterObject: public LuaObject
             return parms->use_poi_time;
         }
 
+        void usePOItimeSet(bool use_poi_time)
+        {
+            const_cast<FieldElement<bool>&>(parms->use_poi_time) = use_poi_time;
+        }
+
         void stopSampling(void);
 
         const char* fileDictGet(uint64_t fileId)

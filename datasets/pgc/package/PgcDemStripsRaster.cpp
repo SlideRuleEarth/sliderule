@@ -160,6 +160,22 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file,
     std::sort(files.begin(), files.end());
     files.erase(std::unique(files.begin(), files.end()), files.end());
 
+    /* Check if we have any files */
+    if (files.empty())
+    {
+        mlog(ERROR, "No geojson index files found");
+        ssErrors |= SS_INDEX_FILE_ERROR;
+        return;
+    }
+
+    /* Check if we have only one file and if so use it as the index file */
+    if(files.size() == 1)
+    {
+        file = files[0];
+        mlog(INFO, "Index file: %s", file.c_str());
+        return;
+    }
+
     /* Combine all geojson files into a single file stored in vsimem */
     if(!combinedGeoJSON.empty())
     {
@@ -332,48 +348,6 @@ void PgcDemStripsRaster::_getIndexFile(double lon, double lat, std::string& file
  *----------------------------------------------------------------------------*/
 bool PgcDemStripsRaster::combineGeoJSONFiles(const std::vector<std::string>& inputFiles)
 {
-    if (inputFiles.empty())
-    {
-        mlog(ERROR, "No input files provided.");
-        return false;
-    }
-
-    /* Special case: only one input file - no need to combine. Copy to vsimem instead */
-    if (inputFiles.size() == 1)
-    {
-        const std::string& infile = inputFiles[0];
-
-        GDALDataset* inputDataset = static_cast<GDALDataset*>(GDALOpenEx(infile.c_str(), GDAL_OF_VECTOR, NULL, NULL, NULL));
-        if (inputDataset == NULL)
-        {
-            mlog(ERROR, "Failed to open input file: %s", infile.c_str());
-            return false;
-        }
-
-        /* Use GeoJSON driver to copy the file into vsimem */
-        GDALDriver* jsonDriver = GetGDALDriverManager()->GetDriverByName("GeoJSON");
-        if (jsonDriver == NULL)
-        {
-            mlog(ERROR, "GeoJSON driver not available.");
-            GDALClose(inputDataset);
-            return false;
-        }
-
-        GDALDataset* vsiDataset = jsonDriver->CreateCopy(combinedGeoJSON.c_str(), inputDataset, FALSE, NULL, NULL, NULL);
-        if (vsiDataset == NULL)
-        {
-            mlog(ERROR, "Failed to copy GeoJSON file to vsimem.");
-            GDALClose(inputDataset);
-            return false;
-        }
-
-        mlog(DEBUG, "GeoJSON successfully copied to vsimem: %s", combinedGeoJSON.c_str());
-
-        GDALClose(vsiDataset);
-        GDALClose(inputDataset);
-        return true;
-    }
-
     /* Create an in-memory data source for the output */
     GDALDriver* memDriver   = GetGDALDriverManager()->GetDriverByName("Memory");
     GDALDataset* memDataset = memDriver->Create("memory", 0, 0, 0, GDT_Unknown, NULL);

@@ -175,8 +175,14 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
 
     lockSampling();
 
-    point_info_t point_info = {point, static_cast<double>(gps)};
 #if 1
+    bool use_poi_time = usePOItime();
+    if(gps != 0 && !use_poi_time)
+    {
+        usePOItimeSet(true);
+    }
+
+    point_info_t point_info = {point, static_cast<double>(gps)};
     std::vector<point_info_t> points;
     points.emplace_back(point_info);
 
@@ -195,6 +201,10 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
             // sl->set(i, NULL);
         }
     }
+
+    /* Restore use POI time flag */
+    usePOItimeSet(use_poi_time);
+
 #else
     try
     {
@@ -581,6 +591,20 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
         OGRLayer* layer = dset->GetLayer(0);
         CHECKPTR(layer);
 
+        cols = dset->GetRasterXSize();
+        rows = dset->GetRasterYSize();
+
+        /* OGREnvelope is not treated as first classs geometry in OGR, must create a polygon geometry from it */
+        OGREnvelope env;
+        const OGRErr err = layer->GetExtent(&env);
+        if(err == OGRERR_NONE )
+        {
+            bbox.lon_min = env.MinX;
+            bbox.lat_min = env.MinY;
+            bbox.lon_max = env.MaxX;
+            bbox.lat_max = env.MaxY;
+        }
+
         /* If caller provided points, use spatial filter to reduce number of features */
         if(points)
         {
@@ -610,20 +634,6 @@ bool GeoIndexedRaster::openGeoIndex(const OGRGeometry* geo, const std::vector<po
 
             /* Destroy feature, R-tree has its own copy */
             OGRFeature::DestroyFeature(feature);
-        }
-
-        cols = dset->GetRasterXSize();
-        rows = dset->GetRasterYSize();
-
-        /* OGREnvelope is not treated as first classs geometry in OGR, must create a polygon geometry from it */
-        OGREnvelope env;
-        const OGRErr err = layer->GetExtent(&env);
-        if(err == OGRERR_NONE )
-        {
-            bbox.lon_min = env.MinX;
-            bbox.lat_min = env.MinY;
-            bbox.lon_max = env.MaxX;
-            bbox.lat_max = env.MaxY;
         }
 
         // mlog(DEBUG, "Loaded %lld features from: %s", layer->GetFeatureCount(), newFile.c_str());
