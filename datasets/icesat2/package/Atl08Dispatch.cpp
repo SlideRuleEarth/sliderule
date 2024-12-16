@@ -70,7 +70,7 @@ const RecordObject::fieldDef_t Atl08Dispatch::vegRecDef[] = {
     {"time",                    RecordObject::TIME8,    offsetof(vegetation_t, time_ns),                1, NULL, NATIVE_FLAGS | RecordObject::TIME},
     {"latitude",                RecordObject::DOUBLE,   offsetof(vegetation_t, latitude),               1, NULL, NATIVE_FLAGS | RecordObject::Y_COORD},
     {"longitude",               RecordObject::DOUBLE,   offsetof(vegetation_t, longitude),              1, NULL, NATIVE_FLAGS | RecordObject::X_COORD},
-    {"x_atc",                   RecordObject::DOUBLE,   offsetof(vegetation_t, x_atc),                  1, NULL, NATIVE_FLAGS},
+    {"x_atc",                   RecordObject::FLOAT,    offsetof(vegetation_t, x_atc),                  1, NULL, NATIVE_FLAGS},
     {"solar_elevation",         RecordObject::FLOAT,    offsetof(vegetation_t, solar_elevation),        1, NULL, NATIVE_FLAGS},
     {"h_te_median",             RecordObject::FLOAT,    offsetof(vegetation_t, h_te_median),            1, NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"h_max_canopy",            RecordObject::FLOAT,    offsetof(vegetation_t, h_max_canopy),           1, NULL, NATIVE_FLAGS},
@@ -239,7 +239,7 @@ bool Atl08Dispatch::processTermination (void)
 }
 
 /*----------------------------------------------------------------------------
- * geolocateResult
+ * buildAncillaryRecord
  *----------------------------------------------------------------------------*/
 RecordObject* Atl08Dispatch::buildAncillaryRecord (const Atl03Reader::extent_t* extent, recVec_t* records)
 {
