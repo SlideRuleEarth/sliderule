@@ -91,10 +91,11 @@ class LandsatHlsRaster: public GeoIndexedRaster
                  LandsatHlsRaster    (lua_State* L, RequestFields* rqst_parms, const char* key);
                 ~LandsatHlsRaster    (void) override;
 
-        void     getIndexFile        (const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points) final;
+        void     getIndexFile        (const OGRGeometry* geo, std::string& file) final;
+        void     getIndexFile        (const std::vector<point_info_t>* points, std::string& file) final;
         bool     findRasters         (raster_finder_t* finder) final;
 
-        void     getGroupSamples     (const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags) final
+        void     getSerialGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags) final
                                      { _getGroupSamples(SERIAL, rgroup, &slist, flags);}
 
         uint32_t getBatchGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx) final

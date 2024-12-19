@@ -91,19 +91,17 @@ bool PgcDemStripsRaster::getFeatureDate(const OGRFeature* feature, TimeLib::gmt_
 /*----------------------------------------------------------------------------
  * getIndexFile
  *----------------------------------------------------------------------------*/
-void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points)
+void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
 {
-    const OGRPolygon* poly = NULL;
-
-    if(geo == NULL && points == NULL)
+    if(geo == NULL)
     {
-        mlog(ERROR, "Both geo and points are NULL");
+        mlog(ERROR, "geo param is NULL");
         ssErrors |= SS_INDEX_FILE_ERROR;
         return;
     }
 
     /* Determine if we have a point */
-    if(geo && GdalRaster::ispoint(geo))
+    if(GdalRaster::ispoint(geo))
     {
         /* Only one index file for a point from one of the geocells */
         const OGRPoint* poi = geo->toPoint();
@@ -111,14 +109,14 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file,
         return;
     }
 
-    /* Vector holding all geojson files from all geocells */
+    /* Vector holding all geojson index files from all geocells */
     std::vector<std::string> files;
 
     /* Determine if we have a polygon */
-    if(geo && GdalRaster::ispoly(geo))
+    if(GdalRaster::ispoly(geo))
     {
         OGREnvelope env;
-        poly = geo->toPolygon();
+        const OGRPolygon* poly = geo->toPolygon();
         poly->getEnvelope(&env);
 
         const double minx = floor(env.MinX);
@@ -141,24 +139,68 @@ void PgcDemStripsRaster::getIndexFile(const OGRGeometry* geo, std::string& file,
         mlog(INFO, "Found %ld geojson files in polygon", files.size());
     }
 
-    /* If we don't have a polygon but we have points get all files for the points */
-    if(poly == NULL && points != NULL)
+    /* If we have only one file, use it as the index file */
+    if(files.size() == 1)
     {
-        for(const auto& p : *points)
-        {
-            std::string newFile;
-            _getIndexFile(p.point.x, p.point.y, newFile);
-            if(!newFile.empty())
-            {
-                files.push_back(newFile);
-            }
-        }
-        mlog(INFO, "Found %zu geojson files with %zu points", files.size(), points->size());
+        file = files[0];
+        return;
     }
+
+    /* Combine all geojson files into a single file stored in vsimem */
+    if(!combinedGeoJSON.empty())
+    {
+        /* Remove previous combined geojson file */
+        VSIUnlink(combinedGeoJSON.c_str());
+    }
+
+    combinedGeoJSON = "/vsimem/" + GdalRaster::getUUID() + "_combined.geojson";
+    if(combineGeoJSONFiles(files))
+    {
+        /* Set the combined geojson file as the index file */
+        file = combinedGeoJSON;
+    }
+    else
+    {
+        mlog(ERROR, "Failed to combine geojson files");
+        ssErrors |= SS_INDEX_FILE_ERROR;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * getIndexFile
+ *----------------------------------------------------------------------------*/
+void PgcDemStripsRaster::getIndexFile(const std::vector<point_info_t>* points, std::string& file)
+{
+    if(points == NULL)
+    {
+        mlog(ERROR, "points param is NULL");
+        ssErrors |= SS_INDEX_FILE_ERROR;
+        return;
+    }
+
+    /* Get all geojson files for all points */
+    std::vector<std::string> files;
+    for(const auto& p : *points)
+    {
+        std::string newFile;
+        _getIndexFile(p.point.x, p.point.y, newFile);
+        if(!newFile.empty())
+        {
+            files.push_back(newFile);
+        }
+    }
+    mlog(INFO, "Found %zu geojson files with %zu points", files.size(), points->size());
 
     /* Remove any duplicate files */
     std::sort(files.begin(), files.end());
     files.erase(std::unique(files.begin(), files.end()), files.end());
+
+    /* If we have only one file, use it as the index file */
+    if(files.size() == 1)
+    {
+        file = files[0];
+        return;
+    }
 
     /* Combine all geojson files into a single file stored in vsimem */
     if(!combinedGeoJSON.empty())

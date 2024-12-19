@@ -143,9 +143,18 @@ LandsatHlsRaster::~LandsatHlsRaster(void)
 /*----------------------------------------------------------------------------
  * getIndexFile
  *----------------------------------------------------------------------------*/
-void LandsatHlsRaster::getIndexFile(const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points)
+void LandsatHlsRaster::getIndexFile(const OGRGeometry* geo, std::string& file)
 {
     static_cast<void>(geo);
+    file = indexFile;
+    // mlog(DEBUG, "Using %s", file.c_str());
+}
+
+/*----------------------------------------------------------------------------
+ * getIndexFile
+ *----------------------------------------------------------------------------*/
+void LandsatHlsRaster::getIndexFile(const std::vector<point_info_t>* points, std::string& file)
+{
     static_cast<void>(points);
     file = indexFile;
     // mlog(DEBUG, "Using %s", file.c_str());

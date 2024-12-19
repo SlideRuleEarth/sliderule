@@ -220,17 +220,18 @@ class GeoIndexedRaster: public RasterObject
         virtual uint32_t getBatchGroupSamples  (const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx);
         static  uint32_t getBatchGroupFlags    (const rasters_group_t* rgroup, uint32_t pointIndx);
 
-        virtual void     getGroupSamples       (const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags);
-        virtual void     getGroupSubsets       (const rasters_group_t* rgroup, List<RasterSubset*>& slist);
-        uint32_t         getGroupFlags         (const rasters_group_t* rgroup);
+        virtual void     getSerialGroupSamples (const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags);
+        virtual void     getSerialGroupSubsets (const rasters_group_t* rgroup, List<RasterSubset*>& slist);
+        uint32_t         getSerialGroupFlags   (const rasters_group_t* rgroup);
 
         virtual double   getGmtDate            (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate);
-        bool             openGeoIndex          (const OGRGeometry* geo, const std::vector<point_info_t>* points);
+        bool             openGeoIndex          (const std::string& newFile, OGRGeometry* filter=NULL);
         virtual bool     getFeatureDate        (const OGRFeature* feature, TimeLib::gmt_time_t& gmtDate);
-        virtual void     getIndexFile          (const OGRGeometry* geo, std::string& file, const std::vector<point_info_t>* points=NULL) = 0;
+        virtual void     getIndexFile          (const OGRGeometry* geo, std::string& file) = 0;
+        virtual void     getIndexFile          (const std::vector<point_info_t>* points, std::string& file) = 0;
         virtual bool     findRasters           (raster_finder_t* finder) = 0;
         void             sampleRasters         (OGRGeometry* geo);
-        bool             sample                (OGRGeometry* geo, int64_t gps, GroupOrdering* groupList);
+        bool             serialSample          (OGRGeometry* geo, int64_t gps, GroupOrdering* groupList);
 
         /*--------------------------------------------------------------------
          * Data
@@ -277,7 +278,7 @@ class GeoIndexedRaster: public RasterObject
          * Data
          *--------------------------------------------------------------------*/
 
-        List<reader_t*>           readers;
+        List<reader_t*>           serialReaders;
         List<batch_reader_t*>     batchReaders;
         perf_stats_t              perfStats;
         GdalRaster::overrideCRS_t crscb;
@@ -297,19 +298,19 @@ class GeoIndexedRaster: public RasterObject
         static int      luaBoundingBox      (lua_State* L);
         static int      luaCellSize         (lua_State* L);
 
-        static void*    readerThread        (void *param);
+        static void*    serialReaderThread  (void *param);
         static void*    batchReaderThread   (void *param);
 
         static void*    groupsFinderThread  (void *param);
         static void*    samplesCollectThread(void *param);
 
-        bool            createReaderThreads (uint32_t  rasters2sample);
-        bool            createBatchReaderThreads(uint32_t rasters2sample);
+        bool            createSerialReaderThreads (uint32_t rasters2sample);
+        bool            createBatchReaderThreads  (uint32_t rasters2sample);
 
-        bool            updateCache         (uint32_t& rasters2sample, const GroupOrdering* groupList);
+        bool            updateSerialCache   (uint32_t& rasters2sample, const GroupOrdering* groupList);
         bool            filterRasters       (int64_t gps_secs, GroupOrdering* groupList, RasterFileDictionary& dict);
         static OGRGeometry* getConvexHull   (const std::vector<point_info_t>* points);
-        void            applySpatialFilter  (OGRLayer* layer, const std::vector<point_info_t>* points);
+        void            applySpatialFilter  (OGRLayer* layer, OGRGeometry* filter);
 
         bool            findAllGroups       (const std::vector<point_info_t>* points,
                                              std::vector<point_groups_t>& pointsGroups,

@@ -31,6 +31,8 @@ if (GDAL_FOUND AND PROJ_FOUND AND TIFF_FOUND)
             ${CMAKE_CURRENT_LIST_DIR}/GdalRaster.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoRaster.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoIndexedRaster.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/GeoIndexedRasterSerial.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/GeoIndexedRasterBatch.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoJsonRaster.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoUserRaster.cpp
             ${CMAKE_CURRENT_LIST_DIR}/RasterObject.cpp
