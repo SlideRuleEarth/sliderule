@@ -48,6 +48,7 @@ const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {"mask",        luaRegionMaskIncludes},
     {"__index",     luaGetField},
     {"__newindex",  luaSetField},
+    {"length",      luaGetLength},
     {"hasoutput",   luaWithArrowOutput},
     {"samplers",    luaGetSamplers},
     {"withsamplers",luaWithSamplers},
@@ -199,6 +200,27 @@ int RequestFields::luaSetField (lua_State* L)
     }
 
     return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * luaGetLength
+ *----------------------------------------------------------------------------*/
+int RequestFields::luaGetLength (lua_State* L)
+{
+    try
+    {
+        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        const char* field_name = getLuaString(L, 2);
+        long len = (*lua_obj)[field_name].length();
+        lua_pushinteger(L, len);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "error retrieving length: %s", e.what());
+        lua_pushinteger(L, 0);
+    }
+
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
