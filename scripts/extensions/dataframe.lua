@@ -42,14 +42,14 @@ local function proxy(endpoint, parms, rspq, userlog)
     local endpoint_proxy = core.proxy(endpoint, resources, rqst_json, node_timeout, locks_per_node, proxyq_name, true, cluster_size_hint)
 
     -- Receive DataFrame (blocks until dataframe complete or timeout) --
-    local dataframe = core.rxdataframe(proxyq, rspq, parms["rqst_timeout"])
-    if not dataframe then
+    local df = core.rxdataframe(proxyq, rspq, parms["rqst_timeout"])
+    if not df then
         userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to receive dataframe"));
         return nil, RC_PROXY_FAILURE
     end
 
     -- Success --
-    return dataframe, RC_SUCCESS
+    return df, RC_SUCCESS
 
 end
 
@@ -58,10 +58,10 @@ end
 --
 --  transmit dataframe back to requesting client
 --
-local function send(dataframe, parms, rspq, userlog)
+local function send(df, parms, rspq, userlog)
 
     -- Create Arrow DataFrame --
-    local arrow_dataframe = arrow.dataframe(parms, dataframe)
+    local arrow_dataframe = arrow.dataframe(parms, df)
     if not arrow_dataframe then
         userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to create arrow dataframe", rspq))
         return RC_ARROW_FAILURE

@@ -8,7 +8,6 @@ local runner        = require("container_runtime")
 local rqst          = json.decode(arg[1])
 local parms         = bathy.parms(rqst["parms"], rqst["shard"], "icesat2", rqst["resource"])
 local userlog       = msg.publish(rspq) -- create user log publisher (alerts)
-local profile       = {} -- timing profiling table
 local outputs       = {} -- table of all outputs that go into oceaneyes
 local starttime    = time.gps() -- used for timeout handling
 local rdelta        = 5 * 24 * 60 * 60 * 1000 -- 5 days * (24 hours/day * 60 minutes/hour * 60 seconds/minute * 1000 milliseconds/second)
@@ -16,6 +15,7 @@ local rdate         = string.format("%04d-%02d-%02dT00:00:00Z", parms["year"], p
 local rgps          = time.gmt2gps(rdate)
 local t0            = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps - rdelta)) -- start time for NDWI and ATL09
 local t1            = string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(rgps + rdelta)) -- stop time for NDWI and ATL09
+local tempfile      = "atl24.bin"
 
 -------------------------------------------------------
 -- Function - acquire lock (only used when not proxied)
@@ -130,7 +130,7 @@ local function getAtl09(resource)
 end
 
 -------------------------------------------------------
---Ffunction - cleanup
+--Function - cleanup
 -------------------------------------------------------
 local function cleanup(_crenv, _transaction_id, failure, reason)
     if failure then
@@ -163,7 +163,7 @@ if earthdata_status ~= earthdata.SUCCESS then
 end
 
 -- proxy request
-if not parms["resoure"] then
+if not parms["resource"] then
     local df = dataframe.proxy("atl24p", parms, rspq, userlog)
     dataframe.send(df, parms, rspq, userlog)
     return
@@ -171,13 +171,13 @@ end
 
 -- get initial resources
 local transaction_id = nil
-local resource = parms["resoure"]
+local resource = parms["resource"]
 local viirs_filename = getKd(parms)
 local resource09 = getAtl09(resource)
 
 -- acquire lock when not proxied
 if parms["shard"] == core.INVALID_KEY then
-    transaction_id = acquireLock(parms["timeout"], starttime)
+    transaction_id = acquireLock(parms["node_timeout"], starttime)
 end
 
 -- create container runtime environment
@@ -215,7 +215,7 @@ end
 
 -- wait for dataframes to complete and write to file
 for beam,beam_df in pairs(dataframes) do
-    local df_finished = beam_df:finished(ctimeout(), rspq)
+    local df_finished = beam_df:finished(ctimeout(parms["node_timeout"], starttime), rspq)
     if not df_finished then
         userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> on %s timed out waiting for dataframe to complete on spot %d", rspq, resource, beam_df:meta("spot")))
     elseif not dataframes[beam]:isvalid() then
@@ -234,11 +234,63 @@ for beam,beam_df in pairs(dataframes) do
     beam_df:destroy()
 end
 
+-------------------------------------------------------
 -- clean up objects to cut down on memory usage
+-------------------------------------------------------
 atl03h5:destroy()
 if atl09h5 then atl09h5:destroy() end
 kd490:destroy()
 
+-------------------------------------------------------
+-- set atl24 output filename
+-------------------------------------------------------
+local atl24_filename = parms["output"]["path"]
+local pos_last_delim = string.reverse(atl24_filename):find("/") or -(#atl24_filename + 2)
+outputs["atl24_filename"] = string.sub(atl24_filename, #atl24_filename - pos_last_delim + 2)
+userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> generating file %s", rspq, outputs["atl24_filename"]))
+
+-------------------------------------------------------
+-- set additional outputs
+-------------------------------------------------------
+outputs["profile"] = {}
+outputs["format"] = parms["output"]["format"]
+outputs["filename"] = crenv.container_sandbox_mount.."/"..tempfile
+outputs["ensemble"] = parms["ensemble"] or {ensemble_model_filename=string.format("%s/%s", cre.HOST_DIRECTORY, bathy.ENSEMBLE_MODEL)}
+
+-------------------------------------------------------
+-- run oceaneyes
+-------------------------------------------------------
+local container_parms = {
+    container_image = "oceaneyes",
+    container_name = "oceaneyes",
+    container_command = string.format("/bin/bash /runner.sh %s/settings.json", crenv.container_sandbox_mount),
+    timeout = ctimeout(parms["node_timeout"], starttime)
+}
+local container = runner.execute(crenv, container_parms, { ["settings.json"] = outputs }, rspq)
+runner.wait(container, ctimeout(parms["node_timeout"], starttime))
+
+-------------------------------------------------------
+-- check for container failure
+-------------------------------------------------------
+local f, _ = io.open(crenv.host_sandbox_directory.."/"..tempfile..".empty", "r")
+if f then
+    f:close()
+    cleanup(crenv, transaction_id, true, string.format("container indicated empty output: %s", resource))
+    return
+end
+
+-------------------------------------------------------
 -- send dataframe back to user
+-------------------------------------------------------
+local df = arrow.dataframe(crenv.host_sandbox_directory.."/"..tempfile, arrow.PARQUET)
 dataframe.send(df, parms, rspq, userlog)
 
+-------------------------------------------------------
+-- exit
+-------------------------------------------------------
+cleanup(crenv, transaction_id)
+
+
+-- write arrow dataframe function that reads parquet (or csv, or geoparquet, etc) file and creates a dataframe from it
+-- write core rxdataframe function that receives dataframes being sent
+-- support all the nodes sending back parquet files that don't get assembled by the proxy node (need to call it something)

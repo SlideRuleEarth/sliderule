@@ -211,7 +211,7 @@ int RequestFields::luaGetLength (lua_State* L)
     {
         RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
         const char* field_name = getLuaString(L, 2);
-        long len = (*lua_obj)[field_name].length();
+        const long len = (*lua_obj)[field_name].length();
         lua_pushinteger(L, len);
     }
     catch(const RunTimeException& e)

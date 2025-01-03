@@ -175,7 +175,7 @@ int GeoDataFrame::luaReceive(lua_State* L)
 
         // parameter #3 - get request timeout
         const long timeout = getLuaInteger(L, 3, true, RequestFields::DEFAULT_TIMEOUT);
-        double timelimit = TimeLib::latchtime() + static_cast<double>(timeout);
+        const double timelimit = TimeLib::latchtime() + static_cast<double>(timeout);
 
         // while receiving messages
         while(!terminator_received)
@@ -952,7 +952,7 @@ int GeoDataFrame::luaSend(lua_State* L)
             const Dictionary<FieldDictionary::entry_t>::kv_t kv = iter[i];
 
             // determine size of column
-            uint32_t encoding = kv.value.field->getValueEncoding();
+            const uint32_t encoding = kv.value.field->getValueEncoding();
             assert(encoding >= 0 && encoding < RecordObject::NUM_FIELD_TYPES);
             const long column_size = kv.value.field->length() * RecordObject::FIELD_TYPE_BYTES[encoding];
             const long rec_size = offsetof(column_rec_t, data) + column_size;
@@ -966,7 +966,7 @@ int GeoDataFrame::luaSend(lua_State* L)
             StringLib::copy(column_rec_data->name, kv.value.name, MAX_COLUMN_NAME_SIZE);
 
             // serialize column data into record
-            long bytes_serialized = kv.value.field->serialize(column_rec_data->data, column_size);
+            const long bytes_serialized = kv.value.field->serialize(column_rec_data->data, column_size);
             if(bytes_serialized != column_size) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to serialize column %s", column_rec_data->name);
 
             // send column record

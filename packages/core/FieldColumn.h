@@ -323,7 +323,7 @@ long FieldColumn<T>::serialize (uint8_t* buffer, size_t size) const
         // copy data elements out of chunk
         for(size_t j = 0; j < elements_in_chunk; j++)
         {
-            memcpy(&buffer[buff_index], &chunk_ptr[j], sizeof(T));
+            memcpy(&buffer[buff_index], reinterpret_cast<void*>(&chunk_ptr[j]), sizeof(T));
             buff_index += sizeof(T);
         }
     }
