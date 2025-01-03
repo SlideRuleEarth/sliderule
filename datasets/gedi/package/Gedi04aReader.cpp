@@ -166,7 +166,6 @@ void* Gedi04aReader::subsettingThread (void* parm)
     Gedi04aReader* reader = reinterpret_cast<Gedi04aReader*>(info->reader);
     const GediFields* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
-    vector<RecordObject*> rec_vec;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, reader->traceId, "gedi04a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", parms->asset.getName(), parms->getResource(), static_cast<int>(info->beam));
