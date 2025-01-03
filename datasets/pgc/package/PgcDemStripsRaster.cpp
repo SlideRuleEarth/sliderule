@@ -180,10 +180,10 @@ void PgcDemStripsRaster::getIndexFile(const std::vector<point_info_t>* points, s
 
     /* Get all geojson files for all points */
     std::vector<std::string> files;
-    for(const auto& p : *points)
+    for(const auto& pinfo : *points)
     {
         std::string newFile;
-        _getIndexFile(p.point.x, p.point.y, newFile);
+        _getIndexFile(pinfo.point3d.x, pinfo.point3d.y, newFile);
         if(!newFile.empty())
         {
             files.push_back(newFile);

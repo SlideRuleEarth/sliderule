@@ -73,8 +73,8 @@ class RasterObject: public LuaObject
 
         typedef struct
         {
-            MathLib::point_3d_t point;
-            double              gps;
+            MathLib::point_3d_t point3d;
+            int64_t             gps;
         } point_info_t;
 
         typedef struct
@@ -104,7 +104,7 @@ class RasterObject: public LuaObject
         static void          deinit          (void);
         static int           luaCreate       (lua_State* L);
         static bool          registerRaster  (const char* _name, factory_f create);
-        virtual uint32_t     getSamples      (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) = 0;
+        virtual uint32_t     getSamples      (const point_info_t& pinfo, sample_list_t& slist, void* param=NULL) = 0;
         virtual uint32_t     getSamples      (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL);
         virtual uint32_t     getSubsets      (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) = 0;
         virtual uint8_t*     getPixels       (uint32_t ulx, uint32_t uly, uint32_t xsize=0, uint32_t ysize=0, int bandNum=1, void* param=NULL);
@@ -173,6 +173,7 @@ class RasterObject: public LuaObject
 
 
                     RasterObject    (lua_State* L, RequestFields* rqst_parms, const char* key);
+        static int  luaBatchSamples (lua_State* L);
         static int  luaSamples      (lua_State* L);
         static int  luaSubsets      (lua_State* L);
         static int  luaPixels       (lua_State *L);
@@ -184,6 +185,8 @@ class RasterObject: public LuaObject
                                      uint32_t minPerThread, uint32_t maxNumThreads);
 
         void        fileDictSetSamples(List<RasterSample*>* slist);
+
+        static void setLuaSamples(lua_State* L, const List<RasterSample*>& slist, RasterObject* lua_obj);
 
 
         /*--------------------------------------------------------------------

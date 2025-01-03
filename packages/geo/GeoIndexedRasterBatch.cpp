@@ -446,7 +446,7 @@ void* GeoIndexedRaster::groupsFinderThread(void *param)
         }
 
         const point_info_t& pinfo = gf->points->at(i);
-        const OGRPoint ogrPoint(pinfo.point.x, pinfo.point.y, pinfo.point.z);
+        const OGRPoint ogrPoint(pinfo.point3d.x, pinfo.point3d.y, pinfo.point3d.z);
 
         /* Query the R-tree with the OGRPoint and get the result features */
         std::vector<OGRFeature*> foundFeatures;
@@ -955,10 +955,10 @@ OGRGeometry* GeoIndexedRaster::getConvexHull(const std::vector<point_info_t>* po
     mlog(INFO, "Creating convex hull from %zu points", points->size());
 
     /* Collect all points into a geometry collection */
-    for(const point_info_t& point_info : *points)
+    for(const point_info_t& pinfo : *points)
     {
-        const double lon = point_info.point.x;
-        const double lat = point_info.point.y;
+        const double lon = pinfo.point3d.x;
+        const double lat = pinfo.point3d.y;
 
         OGRPoint* point = new OGRPoint(lon, lat);
         geometryCollection.addGeometryDirectly(point);

@@ -111,13 +111,8 @@ bool UT_RasterSample::ReadPointsFile(std::vector<RasterObject::point_info_t>& po
 
     while (fscanf(file, "%lf %lf", &lon, &lat) == 2)
     {
-        RasterObject::point_info_t pointInfo;
-        pointInfo.point.x = lon;
-        pointInfo.point.y = lat;
-        pointInfo.point.z = 0.0;
-        pointInfo.gps = 0.0;
-
-        points.push_back(pointInfo);
+        const RasterObject::point_info_t pinfo = {{lon, lat, 0.0}, 0};
+        points.push_back(pinfo);
     }
 
     fclose(file);
@@ -250,13 +245,8 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
             /* Create points to sample */
             for(long i = 0; i < pointsCnt; i++)
             {
-                RasterObject::point_info_t point;
-                point.point.x = lon;
-                point.point.y = lat;
-                point.point.z = 0.0;
-                point.gps = 0.0;
-
-                points2sample.push_back(point);
+                const RasterObject::point_info_t pinfo = { {lon, lat, 0.0}, 0 };
+                points2sample.push_back(pinfo);
 
                 lon += lonIncr;
                 lat += latIncr;
@@ -264,8 +254,8 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
         }
 
         print2term("Points to sample: %zu\n", points2sample.size());
-        print2term("Starting at (%.4lf, %.4lf), incrementing by (%+.4lf, %+.4lf)\n", points2sample[0].point.x, points2sample[0].point.y, lonIncr, latIncr);
-        print2term("Last point: (%.4lf, %.4lf)\n", points2sample[points2sample.size() - 1].point.x, points2sample[points2sample.size() - 1].point.y);
+        print2term("Starting at (%.4lf, %.4lf), incrementing by (%+.4lf, %+.4lf)\n", points2sample[0].point3d.x, points2sample[0].point3d.y, lonIncr, latIncr);
+        print2term("Last point: (%.4lf, %.4lf)\n", points2sample[points2sample.size() - 1].point3d.x, points2sample[points2sample.size() - 1].point3d.y);
 
         /* Get samples using serial method */
         print2term("Getting samples for %zu points using serial method\n", points2sample.size());
@@ -274,7 +264,7 @@ int UT_RasterSample::luaSampleTest(lua_State* L)
         for(uint32_t i = 0; i < points2sample.size(); i++)
         {
             RasterObject::sample_list_t* slist = new RasterObject::sample_list_t();
-            lua_obj->raster->getSamples(points2sample[i].point, 0, *slist, NULL);
+            lua_obj->raster->getSamples(points2sample[i], *slist, NULL);
 
             /* Add to list */
             serial_sllist.add(slist);

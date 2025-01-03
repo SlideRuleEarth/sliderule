@@ -77,7 +77,7 @@ class MeritRaster: public RasterObject
          *--------------------------------------------------------------------*/
 
                  MeritRaster (lua_State *L, RequestFields* rqst_parms, const char* key);
-        uint32_t getSamples (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param=NULL) final;
+        uint32_t getSamples (const point_info_t& pinfo, sample_list_t& slist, void* param=NULL) final;
         uint32_t getSubsets (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) final;
     private:
 

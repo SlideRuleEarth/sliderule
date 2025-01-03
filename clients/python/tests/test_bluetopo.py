@@ -8,14 +8,13 @@ TESTDIR = Path(__file__).parent
 
 sigma = 1.0e-9
 
-lon = -80.87
-lat =  32.06
+lon =  -81.02
+lat =   31.86
 
-file  = '/vsis3/noaa-ocs-nationalbathymetry-pds/BlueTopo/BH4SX59B/BlueTopo_BH4SX59B_20241203.tiff'
-
-expElevation   = -4.14
-expUncertainty =  1.03
-expContributor = 63824
+file  = '/vsis3/noaa-ocs-nationalbathymetry-pds/BlueTopo/BH4SV597/BlueTopo_BH4SV597_20241219.tiff'
+expElevation   = -14.10
+expUncertainty =   2.58
+expContributor =  63846
 
 @pytest.mark.network
 class TestBlueTopo:

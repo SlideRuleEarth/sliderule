@@ -261,7 +261,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
         lat_field.offset += (batchRecordSizeBytes * 8);
 
         /* Get Time */
-        long gps = 0;
+        int64_t gps = 0;
         if(time_field.type != RecordObject::INVALID_FIELD)
         {
             const long time_val = record->getValueInteger(time_field);
@@ -279,8 +279,8 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
 
         /* Sample Raster */
         List<RasterSample*> slist;
-        const MathLib::point_3d_t point = {lon_val, lat_val, height_val};
-        const uint32_t err = raster->getSamples(point, gps, slist);
+        const RasterObject::point_info_t pinfo = {{lon_val, lat_val, height_val}, gps};
+        const uint32_t err = raster->getSamples(pinfo, slist);
         const int num_samples = slist.length();
 
         /* Generate Error Messages */
