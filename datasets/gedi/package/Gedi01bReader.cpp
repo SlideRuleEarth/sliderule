@@ -181,6 +181,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
 
         /* Read GEDI Datasets */
         const Gedi01b gedi01b(info, region);
+        reader->readAncillaryData(info, region.first_footprint, region.num_footprints);
 
         /* Read Waveforms */
         const long tx0 = gedi01b.tx_start_index[0] - 1;
@@ -251,6 +252,9 @@ void* Gedi01bReader::subsettingThread (void* parm)
                 {
                     fp->rx_waveform[j] = rxwaveform[i];
                 }
+
+                /* Populate Ancillary Fields */
+                reader->populateAncillaryFields(info, footprint, fp->shot_number);
 
                 /* Send Record */
                 reader->batchIndex++;

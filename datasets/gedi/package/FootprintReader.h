@@ -45,6 +45,9 @@
 #include "OsApi.h"
 #include "StringLib.h"
 #include "H5Array.h"
+#include "H5DArray.h"
+#include "AncillaryFields.h"
+#include "ContainerRecord.h"
 
 #include "GediFields.h"
 
@@ -122,22 +125,24 @@ class FootprintReader: public LuaObject
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                active;
-        Thread*             readerPid[GediFields::NUM_BEAMS];
-        Mutex               threadMut;
-        int                 threadCount;
-        int                 numComplete;
-        bool                sendTerminator;
-        const int           read_timeout_ms;
-        Publisher*          outQ;
-        GediFields*         parms;
-        stats_t             stats;
-        H5Coro::Context*    context;
-        RecordObject        batchRecord;
-        int                 batchIndex;
-        batch_t*            batchData;
-        const char*         latName;
-        const char*         lonName;
+        bool                    active;
+        Thread*                 readerPid[GediFields::NUM_BEAMS];
+        Mutex                   threadMut;
+        int                     threadCount;
+        int                     numComplete;
+        bool                    sendTerminator;
+        const int               read_timeout_ms;
+        Publisher*              outQ;
+        GediFields*             parms;
+        stats_t                 stats;
+        H5Coro::Context*        context;
+        RecordObject            batchRecord;
+        vector<RecordObject*>   ancRecords;
+        int                     batchIndex;
+        batch_t*                batchData;
+        const char*             latName;
+        const char*             lonName;
+        Dictionary<H5DArray*>   ancData;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -147,6 +152,8 @@ class FootprintReader: public LuaObject
                                                      const char* batch_rec_type, const char* lat_name, const char* lon_name,
                                                      subset_func_t subsetter);
                             ~FootprintReader        (void) override;
+        void                readAncillaryData       (const info_t* info, long first_footprint, long num_footprints);
+        void                populateAncillaryFields (const info_t* info, long footprint, uint64_t shot_number);
         void                postRecordBatch         (stats_t* local_stats);
         static int          luaStats                (lua_State* L);
 };
@@ -423,24 +430,125 @@ void FootprintReader<footprint_t>::Region::rasterregion (const info_t* info)
 }
 
 /*----------------------------------------------------------------------------
+ * readAncillaryData
+ *----------------------------------------------------------------------------*/
+template <class footprint_t>
+void FootprintReader<footprint_t>::readAncillaryData (const info_t* info, long first_footprint, long num_footprints)
+{
+    vector<H5DArray*> arrays_to_join;
+
+    /* Read Ancillary Fields */
+    for(int i = 0; i < parms->anc_fields.length(); i++)
+    {
+        const string& field_name = parms->anc_fields[i];
+        const FString dataset_name("%s/%s", info->group, field_name.c_str());
+        H5DArray* array = new H5DArray(context, dataset_name.c_str(), 0, first_footprint, num_footprints);
+        threadMut.lock();
+        {
+            const bool status = ancData.add(field_name.c_str(), array);
+            if(!status) delete array;
+            else arrays_to_join.push_back(array);
+            assert(status); // the dictionary add should never fail
+        }
+        threadMut.unlock();
+    }
+
+    /* Join Ancillary Reads */
+    for(H5DArray* array: arrays_to_join)
+    {
+        array->join(read_timeout_ms, true);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * populateAncillaryFields
+ *----------------------------------------------------------------------------*/
+template <class footprint_t>
+void FootprintReader<footprint_t>::populateAncillaryFields (const info_t* info, long footprint, uint64_t shot_number)
+{
+    (void)info;
+
+    /* Create Vector of Fields */
+    vector<AncillaryFields::field_t> field_vec;
+    for(int i = 0; i < parms->anc_fields.length(); i++)
+    {
+        const string& field_name = parms->anc_fields[i];
+
+        AncillaryFields::field_t field;
+        field.anc_type = 0;
+        field.field_index = i;
+        field.data_type = ancData[field_name.c_str()]->elementType();
+        ancData[field_name.c_str()]->serialize(&field.value[0], footprint, 1);
+
+        field_vec.push_back(field);
+    }
+
+    /* Create Field Array Record */
+    RecordObject* field_array_rec = AncillaryFields::createFieldArrayRecord(shot_number, field_vec); // memory allocation
+    ancRecords.push_back(field_array_rec);
+}
+
+/*----------------------------------------------------------------------------
  * postRecordBatch
  *----------------------------------------------------------------------------*/
 template <class footprint_t>
 void FootprintReader<footprint_t>::postRecordBatch (stats_t* local_stats)
 {
-    uint8_t* rec_buf = NULL;
-    const int size = batchIndex * sizeof(footprint_t);
-    const int rec_bytes = batchRecord.serialize(&rec_buf, RecordObject::REFERENCE, size);
-    int post_status = MsgQ::STATE_TIMEOUT;
-    while( active && ((post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT) );
-    if(post_status > 0)
+    if(ancRecords.empty())
     {
-        local_stats->footprints_sent += batchIndex;
+        uint8_t* rec_buf = NULL;
+        const int size = batchIndex * sizeof(footprint_t);
+        const int rec_bytes = batchRecord.serialize(&rec_buf, RecordObject::REFERENCE, size);
+        int post_status = MsgQ::STATE_TIMEOUT;
+        while( active && ((post_status = outQ->postCopy(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT) );
+        if(post_status > 0)
+        {
+            local_stats->footprints_sent += batchIndex;
+        }
+        else
+        {
+            mlog(ERROR, "Failed to post %s to stream %s: %d", batchRecord.getRecordType(), outQ->getName(), post_status);
+            local_stats->footprints_dropped += batchIndex;
+        }
     }
     else
     {
-        mlog(ERROR, "Failed to post %s to stream %s: %d", batchRecord.getRecordType(), outQ->getName(), post_status);
-        local_stats->footprints_dropped += batchIndex;
+        /* Insert Batch Record */
+        const int size = batchIndex * sizeof(footprint_t);
+        batchRecord.setUsedData(size);
+        ancRecords.insert(ancRecords.begin(), &batchRecord);
+
+        /* Create and Serialize Container Record */
+        uint8_t* rec_buf = NULL;
+        ContainerRecord container(ancRecords);
+        const int rec_bytes = container.serialize(&rec_buf, RecordObject::TAKE_OWNERSHIP);
+
+        /* Post Record */
+        int post_status = MsgQ::STATE_TIMEOUT;
+        while(active && (post_status = outQ->postRef(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT)
+        {
+            local_stats->footprints_retried++;
+        }
+
+        /* Handle Success/Failure of Post */
+        if(post_status > 0)
+        {
+            local_stats->footprints_sent++;
+        }
+        else
+        {
+            delete [] rec_buf; // delete buffer we now own and never was posted
+            local_stats->footprints_dropped++;
+        }
+
+        /* Free Ancillary Records */
+        for(size_t i = 1; i < ancRecords.size(); i++)
+        {
+            delete ancRecords[i];
+        }
+
+        /* Reset Vector of Ancillary Records */
+        ancRecords.clear();
     }
 }
 

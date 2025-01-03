@@ -177,6 +177,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
 
         /* Read GEDI Datasets */
         const Gedi02a gedi02a(info, region);
+        reader->readAncillaryData(info, region.first_footprint, region.num_footprints);
 
         /* Increment Read Statistics */
         local_stats.footprints_read = region.num_footprints;
@@ -240,6 +241,9 @@ void* Gedi02aReader::subsettingThread (void* parm)
                 if(gedi02a.degrade_flag[footprint]) fp->flags |= GediFields::DEGRADE_FLAG_MASK;
                 if(gedi02a.quality_flag[footprint]) fp->flags |= GediFields::L2_QUALITY_FLAG_MASK;
                 if(gedi02a.surface_flag[footprint]) fp->flags |= GediFields::SURFACE_FLAG_MASK;
+
+                /* Populate Ancillary Fields */
+                reader->populateAncillaryFields(info, footprint, fp->shot_number);
 
                 /* Send Record */
                 reader->batchIndex++;

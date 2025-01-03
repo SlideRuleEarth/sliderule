@@ -80,6 +80,7 @@ GediFields::GediFields(lua_State* L , uint64_t key_space, const char* default_as
           {"l2_quality_filter", &l2_quality_filter},
           {"l4_quality_filter", &l4_quality_filter},
           {"surface_filter",    &surface_filter},
+          {"anc_fields",        &anc_fields},
           // backwards compatibility
           {"beam",              &beams},
           {"degrade_flag",      &degrade_flag},

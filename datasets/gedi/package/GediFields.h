@@ -129,6 +129,7 @@ class GediFields: public RequestFields
         FieldElement<bool>                      l2_quality_filter {false};
         FieldElement<bool>                      l4_quality_filter {false};
         FieldElement<bool>                      surface_filter {false};
+        FieldList<string>                       anc_fields; // list of fields to associate with an GEDI subsetting request
 
         // backwards compatibility
         FieldElement<int>                       degrade_flag {0};

@@ -138,7 +138,6 @@ Gedi04aReader::Gedi04a::Gedi04a (const info_t* info, const Region& region):
     l4_quality_flag (info->reader->context, FString("%s/l4_quality_flag", info->group).c_str(), 0, region.first_footprint, region.num_footprints),
     surface_flag    (info->reader->context, FString("%s/surface_flag",    info->group).c_str(), 0, region.first_footprint, region.num_footprints)
 {
-
     /* Join Hardcoded Reads */
     shot_number.join(info->reader->read_timeout_ms, true);
     delta_time.join(info->reader->read_timeout_ms, true);
@@ -167,6 +166,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
     Gedi04aReader* reader = reinterpret_cast<Gedi04aReader*>(info->reader);
     const GediFields* parms = reader->parms;
     stats_t local_stats = {0, 0, 0, 0, 0};
+    vector<RecordObject*> rec_vec;
 
     /* Start Trace */
     const uint32_t trace_id = start_trace(INFO, reader->traceId, "gedi04a_reader", "{\"asset\":\"%s\", \"resource\":\"%s\", \"beam\":%d}", parms->asset.getName(), parms->getResource(), static_cast<int>(info->beam));
@@ -179,6 +179,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
 
         /* Read GEDI Datasets */
         const Gedi04a gedi04a(info, region);
+        reader->readAncillaryData(info, region.first_footprint, region.num_footprints);
 
         /* Increment Read Statistics */
         local_stats.footprints_read = region.num_footprints;
@@ -253,6 +254,9 @@ void* Gedi04aReader::subsettingThread (void* parm)
                 if(gedi04a.l2_quality_flag[footprint])  fp->flags |= GediFields::L2_QUALITY_FLAG_MASK;
                 if(gedi04a.l4_quality_flag[footprint])  fp->flags |= GediFields::L4_QUALITY_FLAG_MASK;
                 if(gedi04a.surface_flag[footprint])     fp->flags |= GediFields::SURFACE_FLAG_MASK;
+
+                /* Populate Ancillary Fields */
+                reader->populateAncillaryFields(info, footprint, fp->shot_number);
 
                 /* Send Record */
                 reader->batchIndex++;
