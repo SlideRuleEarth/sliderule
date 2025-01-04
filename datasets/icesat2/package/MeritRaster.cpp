@@ -112,26 +112,25 @@ MeritRaster::MeritRaster(lua_State *L, RequestFields* rqst_parms, const char* ke
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-uint32_t MeritRaster::getSamples (const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param)
+uint32_t MeritRaster::getSamples (const point_info_t& pinfo, sample_list_t& slist, void* param)
 {
     (void)param;
-    (void)gps;
 
     lockSampling();
 
     /* Determine Upper Left Coordinates */
-    int left_lon = ((int)floor(point.x / 5.0)) * 5;
-    int upper_lat = ((int)ceil(point.y / 5.0)) * 5;
+    int left_lon = ((int)floor(pinfo.point3d.x / 5.0)) * 5;
+    int upper_lat = ((int)ceil(pinfo.point3d.y / 5.0)) * 5;
 
     /* Calculate Pixel Location */
-    const int x_offset = (int)(((double)point.x - left_lon) / X_SCALE);
-    const int y_offset = (int)(((double)point.y - upper_lat) / Y_SCALE);
+    const int x_offset = (int)(((double)pinfo.point3d.x - left_lon)  / X_SCALE);
+    const int y_offset = (int)(((double)pinfo.point3d.y - upper_lat) / Y_SCALE);
 
     /* Check Pixel Location */
     if( x_offset < 0 || x_offset >= X_MAX ||
         y_offset < 0 || y_offset >= Y_MAX )
     {
-        mlog(ERROR, "Invalid pixel location for MERIT DEM at %lf, %lf: %d, %d\n", point.x, point.y, x_offset, y_offset);
+        mlog(ERROR, "Invalid pixel location for MERIT DEM at %lf, %lf: %d, %d\n", pinfo.point3d.x, pinfo.point3d.y, x_offset, y_offset);
         return SS_OUT_OF_BOUNDS_ERROR;
     }
 

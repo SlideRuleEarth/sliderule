@@ -323,7 +323,7 @@ void ArrowSamplerImpl::getXYPoints(std::vector<point_info_t>& points)
         const double x = x_column->Value(i);
         const double y = y_column->Value(i);
 
-        points.emplace_back(point_info_t({{x, y, 0.0}, 0.0}));
+        points.emplace_back(point_info_t({{x, y, 0.0}, 0}));
     }
     mlog(DEBUG, "Read %zu points from file", points.size());
 }
@@ -352,7 +352,7 @@ void ArrowSamplerImpl::getGeoPoints(std::vector<point_info_t>& points)
         const std::string wkb_data = binary_array->GetString(i);     /* Get WKB data as string (binary data) */
         const ArrowCommon::wkbpoint_t point = convertWKBToPoint(wkb_data);
 
-        points.emplace_back(point_info_t({{point.x, point.y, 0.0}, 0.0}));
+        points.emplace_back(point_info_t({{point.x, point.y, 0.0}, 0}));
     }
     mlog(INFO, "Read %zu geo points from file", points.size());
 }

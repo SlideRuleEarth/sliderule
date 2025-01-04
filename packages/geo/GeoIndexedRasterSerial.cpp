@@ -78,7 +78,7 @@ GeoIndexedRaster::Reader::~Reader (void)
 /*----------------------------------------------------------------------------
  * getSamples - serial sampling
  *----------------------------------------------------------------------------*/
-uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param)
+uint32_t GeoIndexedRaster::getSamples(const point_info_t& pinfo, sample_list_t& slist, void* param)
 {
     static_cast<void>(param);
 
@@ -86,12 +86,12 @@ uint32_t GeoIndexedRaster::getSamples(const MathLib::point_3d_t& point, int64_t 
     try
     {
         GroupOrdering groupList;
-        OGRPoint      ogrPoint(point.x, point.y, point.z);
+        OGRPoint      ogrPoint(pinfo.point3d.x, pinfo.point3d.y, pinfo.point3d.z);
 
         ssErrors = SS_NO_ERRORS;
 
         /* Sample Rasters */
-        if(serialSample(&ogrPoint, gps, &groupList))
+        if(serialSample(&ogrPoint, pinfo.gps, &groupList))
         {
             /* Populate Return List of Samples (slist) */
             const GroupOrdering::Iterator iter(groupList);

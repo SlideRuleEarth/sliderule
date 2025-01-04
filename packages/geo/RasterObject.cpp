@@ -353,8 +353,122 @@ RasterObject::RasterObject(lua_State *L, RequestFields* rqst_parms, const char* 
     samplingEnabled(true)
 {
     /* Add Lua Functions */
+    LuaEngine::setAttrFunc(L, "batchsample", luaBatchSamples);
     LuaEngine::setAttrFunc(L, "sample", luaSamples);
     LuaEngine::setAttrFunc(L, "subset", luaSubsets);
+}
+
+/*----------------------------------------------------------------------------
+ * luaBatchSamples - :batchsample(lons, lats, heights, [gps]) --> in|out
+ *----------------------------------------------------------------------------*/
+int RasterObject::luaBatchSamples(lua_State *L)
+{
+    uint32_t err = SS_NO_ERRORS;
+    int num_ret = 1;
+
+    RasterObject *lua_obj = NULL;
+    List<sample_list_t*> sllist;
+
+    try
+    {
+        /* Validate Input Arguments */
+        if (!lua_istable(L, 2) || !lua_istable(L, 3) || !lua_istable(L, 4))
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Expected three arrays (tables) as arguments for lon, lat, and height");
+        }
+
+        /* Get Self */
+        lua_obj = dynamic_cast<RasterObject*>(getLuaSelf(L, 1));
+
+        std::vector<double> lonVec;
+        std::vector<double> latVec;
+        std::vector<double> heightVec;
+
+        /* Helper Lambda to Read Lua Table into Vector */
+        auto luaTableToVector = [&](int tableIndex, std::vector<double> &vec)
+        {
+            lua_pushnil(L); // Start at the beginning of the table
+            while (lua_next(L, tableIndex) != 0)
+            {
+                if (lua_isnumber(L, -1))
+                {
+                    vec.push_back(lua_tonumber(L, -1));
+                }
+                else
+                {
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "Non-numeric value found in table");
+                }
+                lua_pop(L, 1); // Remove value, keep key for next iteration
+            }
+        };
+
+        /* Read Tables */
+        luaTableToVector(2, lonVec);     // lon table
+        luaTableToVector(3, latVec);     // lat table
+        luaTableToVector(4, heightVec);  // height table
+
+        /* Validate Sizes */
+        if (lonVec.size() != latVec.size() || lonVec.size() != heightVec.size())
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Input arrays (lon, lat, height) must have the same size");
+        }
+
+        const char* closest_time_str = getLuaString(L, 5, true, NULL);
+
+        /* Get gps closest time (overrides params provided closest time) */
+        int64_t gps = 0;
+        if(closest_time_str != NULL)
+        {
+            gps = TimeLib::str2gpstime(closest_time_str) / 1000;
+        }
+
+        /* Create point_info_t vector from tables */
+        std::vector<point_info_t> points;
+        for (size_t i = 0; i < lonVec.size(); i++)
+        {
+            points.push_back({{lonVec[i], latVec[i], heightVec[i]}, gps});
+        }
+
+        mlog(DEBUG, "Batch sample received %lu points", points.size());
+
+        /* Get samples */
+        err = lua_obj->getSamples(points, sllist, NULL);
+        if(err == SS_NO_ERRORS)
+        {
+            mlog(DEBUG, "Batch sample received %d samples lists", sllist.length());
+
+            /* Create parent table with space for `points.size()` entries */
+            lua_createtable(L, points.size(), 0);
+            num_ret++;
+
+            /* Process samples list for each point */
+            for(size_t i = 0; i < points.size(); i++)
+            {
+                const sample_list_t* slist = sllist[i];
+
+                /* Create sample table for this point */
+                lua_createtable(L, slist->length(), 0);
+
+                /* Populate table with samples */
+                setLuaSamples(L, *slist, lua_obj);
+
+                /* Insert table into parent table */
+                lua_rawseti(L, -2, i + 1);
+            }
+        }
+        else
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get samples");
+        }
+    }
+    catch (const RunTimeException &e)
+    {
+        mlog(e.level(), "Failed to read samples: %s", e.what());
+    }
+
+    /* Return Errors and Table of Samples */
+    lua_pushinteger(L, err);
+    return num_ret;
 }
 
 /*----------------------------------------------------------------------------
@@ -388,8 +502,8 @@ int RasterObject::luaSamples(lua_State *L)
 
         /* Get samples */
         bool listvalid = true;
-        const MathLib::point_3d_t point = {lon, lat, height};
-        err = lua_obj->getSamples(point, gps, slist, NULL);
+        const point_info_t pinfo = {{lon, lat, height}, gps};
+        err = lua_obj->getSamples(pinfo, slist, NULL);
 
         if(err & SS_THREADS_LIMIT_ERROR)
         {
@@ -410,36 +524,7 @@ int RasterObject::luaSamples(lua_State *L)
         /* Populate samples */
         if(listvalid && !slist.empty())
         {
-            for(int i = 0; i < slist.length(); i++)
-            {
-                const RasterSample* sample = slist[i];
-                const char* fileName = lua_obj->fileDict.get(sample->fileId);
-
-                lua_createtable(L, 0, 4);
-                LuaEngine::setAttrStr(L, "file", fileName);
-
-                if(lua_obj->parms->zonal_stats) /* Include all zonal stats */
-                {
-                    LuaEngine::setAttrNum(L, "mad", sample->stats.mad);
-                    LuaEngine::setAttrNum(L, "stdev", sample->stats.stdev);
-                    LuaEngine::setAttrNum(L, "median", sample->stats.median);
-                    LuaEngine::setAttrNum(L, "mean", sample->stats.mean);
-                    LuaEngine::setAttrNum(L, "max", sample->stats.max);
-                    LuaEngine::setAttrNum(L, "min", sample->stats.min);
-                    LuaEngine::setAttrNum(L, "count", sample->stats.count);
-                }
-
-                if(lua_obj->parms->flags_file) /* Include flags */
-                {
-                    LuaEngine::setAttrNum(L, "flags", sample->flags);
-                }
-
-                LuaEngine::setAttrInt(L, "fileid", sample->fileId);
-                LuaEngine::setAttrNum(L, "time", sample->time);
-                LuaEngine::setAttrNum(L, "value", sample->value);
-                LuaEngine::setAttrStr(L, "band", sample->bandName.c_str());
-                lua_rawseti(L, -2, i+1);
-            }
+            setLuaSamples(L, slist, lua_obj);
         } else mlog(DEBUG, "No samples read for (%.2lf, %.2lf)", lon, lat);
     }
     catch (const RunTimeException &e)
@@ -600,6 +685,57 @@ void RasterObject::fileDictSetSamples(List<RasterSample*>* slist)
     }
 }
 
+
+/*----------------------------------------------------------------------------
+ * setLuaSamples
+ *----------------------------------------------------------------------------*/
+void RasterObject::setLuaSamples(lua_State *L, const List<RasterSample*> &slist, RasterObject *lua_obj)
+{
+    if (!lua_obj || slist.empty())
+    {
+        mlog(DEBUG, "No samples to populate");
+        return;
+    }
+
+    /* Populate samples */
+    for (int i = 0; i < slist.length(); i++)
+    {
+        const RasterSample* sample = slist[i];
+        const char* fileName = lua_obj->fileDict.get(sample->fileId);
+
+        lua_createtable(L, 0, 4); // Create a new table for the sample
+
+        /* Add basic attributes */
+        LuaEngine::setAttrStr(L, "file", fileName);
+        LuaEngine::setAttrNum(L, "value", sample->value);
+        LuaEngine::setAttrNum(L, "time", sample->time);
+        LuaEngine::setAttrInt(L, "fileid", sample->fileId);
+        LuaEngine::setAttrStr(L, "band", sample->bandName.c_str());
+
+        /* Add zonal statistics if enabled */
+        if (lua_obj->parms->zonal_stats)
+        {
+            LuaEngine::setAttrNum(L, "mad", sample->stats.mad);
+            LuaEngine::setAttrNum(L, "stdev", sample->stats.stdev);
+            LuaEngine::setAttrNum(L, "median", sample->stats.median);
+            LuaEngine::setAttrNum(L, "mean", sample->stats.mean);
+            LuaEngine::setAttrNum(L, "max", sample->stats.max);
+            LuaEngine::setAttrNum(L, "min", sample->stats.min);
+            LuaEngine::setAttrNum(L, "count", sample->stats.count);
+        }
+
+        /* Add flags if enabled */
+        if (lua_obj->parms->flags_file)
+        {
+            LuaEngine::setAttrNum(L, "flags", sample->flags);
+        }
+
+        /* Add sample table to parent Lua table, insert at index i+1 */
+        lua_rawseti(L, -2, i + 1);
+    }
+}
+
+
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
@@ -707,13 +843,10 @@ uint32_t RasterObject::readSamples(RasterObject* robj, const range_t& range,
             break;
         }
 
-        const RasterObject::point_info_t& pinfo = points[i];
-        const MathLib::point_3d_t& point = pinfo.point;
-        const int64_t gps = robj->usePOItime() ? pinfo.gps : 0.0;
-
         sample_list_t* slist = new sample_list_t;
+        const RasterObject::point_info_t& pinfo = points[i];
+        const uint32_t err = robj->getSamples(pinfo, *slist, NULL);
         bool listvalid = true;
-        const uint32_t err = robj->getSamples(point, gps, *slist, NULL);
 
         /* Acumulate errors from all getSamples calls */
         ssErrors |= err;

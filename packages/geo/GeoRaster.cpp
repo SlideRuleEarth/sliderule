@@ -79,9 +79,8 @@ GeoRaster::~GeoRaster(void) = default;
 /*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
-uint32_t GeoRaster::getSamples(const MathLib::point_3d_t& point, int64_t gps, List<RasterSample*>& slist, void* param)
+uint32_t GeoRaster::getSamples(const point_info_t& pinfo, sample_list_t& slist, void* param)
 {
-    static_cast<void>(gps);
     static_cast<void>(param);
 
     lockSampling();
@@ -92,7 +91,7 @@ uint32_t GeoRaster::getSamples(const MathLib::point_3d_t& point, int64_t gps, Li
         for(const int bandNum : bands)
         {
             /* Must create OGRPoint for each bandNum, samplePOI projects it to raster CRS */
-            OGRPoint ogr_point(point.x, point.y, point.z);
+            OGRPoint ogr_point(pinfo.point3d.x, pinfo.point3d.y, pinfo.point3d.z);
 
             RasterSample* sample = raster.samplePOI(&ogr_point, bandNum);
             if(sample) slist.add(sample);
