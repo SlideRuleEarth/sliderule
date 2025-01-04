@@ -468,24 +468,27 @@ void FootprintReader<footprint_t>::populateAncillaryFields (const info_t* info, 
 {
     (void)info;
 
-    /* Create Vector of Fields */
-    vector<AncillaryFields::field_t> field_vec;
-    for(int i = 0; i < parms->anc_fields.length(); i++)
+    if(parms->anc_fields.length() > 0)
     {
-        const string& field_name = parms->anc_fields[i];
+        /* Create Vector of Fields */
+        vector<AncillaryFields::field_t> field_vec;
+        for(int i = 0; i < parms->anc_fields.length(); i++)
+        {
+            const string& field_name = parms->anc_fields[i];
 
-        AncillaryFields::field_t field;
-        field.anc_type = 0;
-        field.field_index = i;
-        field.data_type = ancData[field_name.c_str()]->elementType();
-        ancData[field_name.c_str()]->serialize(&field.value[0], footprint, 1);
+            AncillaryFields::field_t field;
+            field.anc_type = 0;
+            field.field_index = i;
+            field.data_type = ancData[field_name.c_str()]->elementType();
+            ancData[field_name.c_str()]->serialize(&field.value[0], footprint, 1);
 
-        field_vec.push_back(field);
+            field_vec.push_back(field);
+        }
+
+        /* Create Field Array Record */
+        RecordObject* field_array_rec = AncillaryFields::createFieldArrayRecord(shot_number, field_vec); // memory allocation
+        ancRecords.push_back(field_array_rec);
     }
-
-    /* Create Field Array Record */
-    RecordObject* field_array_rec = AncillaryFields::createFieldArrayRecord(shot_number, field_vec); // memory allocation
-    ancRecords.push_back(field_array_rec);
 }
 
 /*----------------------------------------------------------------------------
@@ -513,14 +516,18 @@ void FootprintReader<footprint_t>::postRecordBatch (stats_t* local_stats)
     }
     else
     {
-        /* Insert Batch Record */
+        /* Trim Batch Record */
         const int size = batchIndex * sizeof(footprint_t);
         batchRecord.setUsedData(size);
-        ancRecords.insert(ancRecords.begin(), &batchRecord);
+
+        /* Build Vector of Records for Container Record */
+        vector<RecordObject*> recvec;
+        recvec.push_back(&batchRecord);
+        for(auto rec: ancRecords) recvec.push_back(rec);
 
         /* Create and Serialize Container Record */
         uint8_t* rec_buf = NULL;
-        ContainerRecord container(ancRecords);
+        ContainerRecord container(recvec);
         const int rec_bytes = container.serialize(&rec_buf, RecordObject::TAKE_OWNERSHIP);
 
         /* Post Record */
@@ -542,7 +549,7 @@ void FootprintReader<footprint_t>::postRecordBatch (stats_t* local_stats)
         }
 
         /* Free Ancillary Records */
-        for(size_t i = 1; i < ancRecords.size(); i++)
+        for(size_t i = 0; i < ancRecords.size(); i++)
         {
             delete ancRecords[i];
         }
