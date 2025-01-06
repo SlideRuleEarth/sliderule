@@ -2,14 +2,14 @@
 
 import pytest
 import sliderule
-from sliderule import icesat2
+from sliderule import icesat2, gedi, earthdata
 from pathlib import Path
 import os.path
 
 TESTDIR = Path(__file__).parent
 
 @pytest.mark.network
-class TestAncillary:
+class TestIcesat2:
     def test_geo(self, init):
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
@@ -75,3 +75,92 @@ class TestAncillary:
         assert abs(gdf["rgt_y"].quantile(q=.50) - 295.0) < 0.000001
         assert abs(gdf["sigma_atlas_land%"].quantile(q=.50) - 0.24470525979995728) < 0.000001
         assert abs(gdf["cloud_flag_atm%"].quantile(q=.50) - 1.0) < 0.000001
+
+@pytest.mark.network
+class TestGedi:
+    def test_l1b(self, init):
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        parms = {
+            "asset": "gedil1b",
+            "poly": region["poly"],
+            "beam": 0,
+            "anc_fields": ["master_frac", "rx_open"]
+        }
+        granules = earthdata.search(parms)
+        gdf = gedi.gedi01bp(parms, resources=granules[0:1])
+        assert init
+        assert len(gdf) == 22
+        assert gdf["beam"].unique()[0] == 0
+        assert gdf.master_frac.describe()["max"] < 0.3
+        assert gdf.rx_open.describe()["max"] == 2851996.0
+
+    def test_l2a(self, init):
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        parms = {
+            "asset": "gedil2a",
+            "poly": region["poly"],
+            "beam": 0,
+            "anc_fields": ["energy_total", "geolocation/elev_highestreturn_a1"]
+        }
+        granules = earthdata.search(parms)
+        gdf = gedi.gedi02ap(parms, resources=granules[0:1])
+        assert init
+        assert len(gdf) == 22
+        assert gdf["beam"].unique()[0] == 0
+        assert abs(gdf.energy_total.describe()["max"] - 7498) < 1.0
+        assert abs(gdf["geolocation/elev_highestreturn_a1"].describe()["max"] - 2892) < 1.0
+
+    def test_l4a(self, init):
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        parms = {
+            "asset": "gedil4a",
+            "poly": region["poly"],
+            "beam": 0,
+            "anc_fields": ["selected_algorithm", "geolocation/elev_lowestmode_a1"]
+        }
+        granules = earthdata.search(parms)
+        gdf = gedi.gedi04ap(parms, resources=granules[0:1])
+        assert init
+        assert len(gdf) == 22
+        assert gdf["beam"].unique()[0] == 0
+        assert gdf.selected_algorithm.value_counts()[2] == 14
+        assert abs(gdf["geolocation/elev_lowestmode_a1"].describe()["max"] - 2886) < 1.0
+
+    def test_l1b_failure(self, init):
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        parms = {
+            "asset": "gedil1b",
+            "poly": region["poly"],
+            "beam": 0,
+            "anc_fields": ["non_existent_field", "rx_open"]
+        }
+        granules = earthdata.search(parms)
+        gdf = gedi.gedi01bp(parms, resources=granules[0:1])
+        assert init
+        assert len(gdf) == 0
+
+    def test_l2a_failure(self, init):
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        parms = {
+            "asset": "gedil2a",
+            "poly": region["poly"],
+            "beam": 0,
+            "anc_fields": ["non_existent_field", "geolocation/elev_highestreturn_a1"]
+        }
+        granules = earthdata.search(parms)
+        gdf = gedi.gedi02ap(parms, resources=granules[0:1])
+        assert init
+        assert len(gdf) == 0
+
+    def test_l4a_failure(self, init):
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        parms = {
+            "asset": "gedil4a",
+            "poly": region["poly"],
+            "beam": 0,
+            "anc_fields": ["non_existent_field", "geolocation/elev_lowestmode_a1"]
+        }
+        granules = earthdata.search(parms)
+        gdf = gedi.gedi04ap(parms, resources=granules[0:1])
+        assert init
+        assert len(gdf) == 0

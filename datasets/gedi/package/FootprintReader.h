@@ -152,7 +152,7 @@ class FootprintReader: public LuaObject
                                                      const char* batch_rec_type, const char* lat_name, const char* lon_name,
                                                      subset_func_t subsetter);
                             ~FootprintReader        (void) override;
-        void                readAncillaryData       (const info_t* info, long first_footprint, long num_footprints);
+        bool                readAncillaryData       (const info_t* info, long first_footprint, long num_footprints);
         void                populateAncillaryFields (const info_t* info, long footprint, uint64_t shot_number);
         void                postRecordBatch         (stats_t* local_stats);
         static int          luaStats                (lua_State* L);
@@ -433,7 +433,7 @@ void FootprintReader<footprint_t>::Region::rasterregion (const info_t* info)
  * readAncillaryData
  *----------------------------------------------------------------------------*/
 template <class footprint_t>
-void FootprintReader<footprint_t>::readAncillaryData (const info_t* info, long first_footprint, long num_footprints)
+bool FootprintReader<footprint_t>::readAncillaryData (const info_t* info, long first_footprint, long num_footprints)
 {
     vector<H5DArray*> arrays_to_join;
 
@@ -454,10 +454,17 @@ void FootprintReader<footprint_t>::readAncillaryData (const info_t* info, long f
     }
 
     /* Join Ancillary Reads */
+    bool status = true;
     for(H5DArray* array: arrays_to_join)
     {
-        array->join(read_timeout_ms, true);
+        if(!array->join(read_timeout_ms, false))
+        {
+            status = false;
+        }
     }
+
+    /* Return Status */
+    return status;
 }
 
 /*----------------------------------------------------------------------------

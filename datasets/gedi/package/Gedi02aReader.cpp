@@ -177,7 +177,10 @@ void* Gedi02aReader::subsettingThread (void* parm)
 
         /* Read GEDI Datasets */
         const Gedi02a gedi02a(info, region);
-        reader->readAncillaryData(info, region.first_footprint, region.num_footprints);
+        if(!reader->readAncillaryData(info, region.first_footprint, region.num_footprints))
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read ancillary data");
+        }
 
         /* Increment Read Statistics */
         local_stats.footprints_read = region.num_footprints;

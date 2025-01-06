@@ -181,7 +181,10 @@ void* Gedi01bReader::subsettingThread (void* parm)
 
         /* Read GEDI Datasets */
         const Gedi01b gedi01b(info, region);
-        reader->readAncillaryData(info, region.first_footprint, region.num_footprints);
+        if(!reader->readAncillaryData(info, region.first_footprint, region.num_footprints))
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read ancillary data");
+        }
 
         /* Read Waveforms */
         const long tx0 = gedi01b.tx_start_index[0] - 1;
