@@ -442,7 +442,7 @@ bool FootprintReader<footprint_t>::readAncillaryData (const info_t* info, long f
     {
         const string& field_name = parms->anc_fields[i];
         const FString dataset_name("%s/%s", info->group, field_name.c_str());
-        H5DArray* array = new H5DArray(context, dataset_name.c_str(), 0, first_footprint, num_footprints);
+        H5DArray* array = new H5DArray(context, dataset_name.c_str(), H5Coro::ALL_COLS, first_footprint, num_footprints);
         threadMut.lock();
         {
             const bool status = ancData.add(field_name.c_str(), array);
@@ -475,24 +475,42 @@ void FootprintReader<footprint_t>::populateAncillaryFields (const info_t* info, 
 {
     (void)info;
 
-    if(parms->anc_fields.length() > 0)
+    vector<AncillaryFields::field_t> field_vec;
+    for(int i = 0; i < parms->anc_fields.length(); i++)
     {
-        /* Create Vector of Fields */
-        vector<AncillaryFields::field_t> field_vec;
-        for(int i = 0; i < parms->anc_fields.length(); i++)
-        {
-            const string& field_name = parms->anc_fields[i];
+        const string& field_name = parms->anc_fields[i];
+        H5DArray* array = ancData[field_name.c_str()];
 
+        if(array->numDimensions() > 1)
+        {
+            /* Create Element Array Records */
+            const int record_size = offsetof(AncillaryFields::element_array_t, data) + (array->rowSize() * array->elementSize());
+            RecordObject* element_array_rec = new RecordObject(AncillaryFields::ancElementRecType, record_size);
+            AncillaryFields::element_array_t* data = reinterpret_cast<AncillaryFields::element_array_t*>(element_array_rec->getRecordData());
+
+            data->extent_id = shot_number;
+            data->anc_type = 0;
+            data->field_index = i;
+            data->data_type = array->elementType();
+            data->num_elements = array->rowSize();
+            array->serializeRow(&data->data[0], footprint);
+
+            ancRecords.push_back(element_array_rec);
+        }
+        else
+        {
+            /* Create Field Array Record */
             AncillaryFields::field_t field;
             field.anc_type = 0;
             field.field_index = i;
-            field.data_type = ancData[field_name.c_str()]->elementType();
-            ancData[field_name.c_str()]->serialize(&field.value[0], footprint, 1);
-
+            field.data_type = array->elementType();
+            array->serializeRow(&field.value[0], footprint);
             field_vec.push_back(field);
         }
+    }
 
-        /* Create Field Array Record */
+    if(!field_vec.empty())
+    {
         RecordObject* field_array_rec = AncillaryFields::createFieldArrayRecord(shot_number, field_vec); // memory allocation
         ancRecords.push_back(field_array_rec);
     }

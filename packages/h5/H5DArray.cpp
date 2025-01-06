@@ -110,6 +110,16 @@ bool H5DArray::join(int timeout, bool throw_exception) const
 }
 
 /*----------------------------------------------------------------------------
+ * numDimensions
+ *----------------------------------------------------------------------------*/
+int H5DArray::numDimensions (void) const
+{
+    int ndims = 0;
+    while(h5f->info.shape[ndims] != 0) ndims++;
+    return ndims;
+}
+
+/*----------------------------------------------------------------------------
  * numElements
  *----------------------------------------------------------------------------*/
 int H5DArray::numElements (void) const
@@ -134,16 +144,33 @@ H5DArray::type_t H5DArray::elementType (void) const
 }
 
 /*----------------------------------------------------------------------------
+ * rowSize
+ *----------------------------------------------------------------------------*/
+int64_t H5DArray::rowSize (void) const
+{
+    int64_t row_size = 1;
+    for(int i = 1; i < H5Coro::MAX_NDIMS; i++)
+    {
+        if(h5f->info.shape[i] == 0)
+        {
+            break;
+        }
+        row_size *= h5f->info.shape[i];
+    }
+    return row_size;
+}
+
+/*----------------------------------------------------------------------------
  * serialize
  *----------------------------------------------------------------------------*/
-uint64_t H5DArray::serialize (uint8_t* buffer, int32_t start_element, uint32_t num_elements) const
+uint64_t H5DArray::serialize (uint8_t* buffer, int64_t start_element, int64_t num_elements) const
 {
     /* Serialize Elements of Array */
     if(h5f->info.typesize == 8)
     {
         const uint64_t* src = reinterpret_cast<const uint64_t*>(h5f->info.data);
         uint64_t* dst = reinterpret_cast<uint64_t*>(buffer);
-        for(uint32_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
+        for(int64_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
         {
             *dst++ = src[i];
         }
@@ -152,7 +179,7 @@ uint64_t H5DArray::serialize (uint8_t* buffer, int32_t start_element, uint32_t n
     {
         const uint32_t* src = reinterpret_cast<const uint32_t*>(h5f->info.data);
         uint32_t* dst = reinterpret_cast<uint32_t*>(buffer);
-        for(uint32_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
+        for(int64_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
         {
             *dst++ = src[i];
         }
@@ -161,7 +188,7 @@ uint64_t H5DArray::serialize (uint8_t* buffer, int32_t start_element, uint32_t n
     {
         const uint16_t* src = reinterpret_cast<const uint16_t*>(h5f->info.data);
         uint16_t* dst = reinterpret_cast<uint16_t*>(buffer);
-        for(uint32_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
+        for(int64_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
         {
             *dst++ = src[i];
         }
@@ -170,7 +197,7 @@ uint64_t H5DArray::serialize (uint8_t* buffer, int32_t start_element, uint32_t n
     {
         const uint8_t* src = reinterpret_cast<const uint8_t*>(h5f->info.data);
         uint8_t* dst = buffer;
-        for(uint32_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
+        for(int64_t i = start_element; (i < h5f->info.elements) && (i < (start_element + num_elements)); i++)
         {
             *dst++ = src[i];
         }
@@ -184,4 +211,18 @@ uint64_t H5DArray::serialize (uint8_t* buffer, int32_t start_element, uint32_t n
     const int64_t elements_available = h5f->info.elements - start_element;
     const int64_t elements_copied = MAX(MIN(elements_available, num_elements), 0);
     return elements_copied * h5f->info.typesize;
+}
+
+/*----------------------------------------------------------------------------
+ * serializeRow
+ *----------------------------------------------------------------------------*/
+uint64_t H5DArray::serializeRow (uint8_t* buffer, int64_t row) const
+{
+    /* Get Elements to Read */
+    const int64_t row_size = rowSize();
+    const int64_t start_element = row_size * row;
+    const int64_t num_elements = row_size;
+
+    /* Read Elements */
+    return serialize(buffer, start_element, num_elements);
 }

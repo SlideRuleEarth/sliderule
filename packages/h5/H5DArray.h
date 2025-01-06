@@ -67,10 +67,13 @@ class H5DArray
 
         bool        join            (int timeout, bool throw_exception) const;
 
+        int         numDimensions   (void) const;
         int         numElements     (void) const;
         int         elementSize     (void) const;
         type_t      elementType     (void) const;
-        uint64_t    serialize       (uint8_t* buffer, int32_t start_element, uint32_t num_elements) const;
+        int64_t     rowSize         (void) const;
+        uint64_t    serialize       (uint8_t* buffer, int64_t start_element, int64_t num_elements) const;
+        uint64_t    serializeRow    (uint8_t* buffer, int64_t row) const;
 
         /*--------------------------------------------------------------------
          * Data

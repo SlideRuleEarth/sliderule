@@ -79,6 +79,13 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
                         field_dictionary[field_name] = {'shot_number': [], field_name: []}
                     field_dictionary[field_name]['shot_number'] += shot_number,
                     field_dictionary[field_name][field_name] += sliderule.getvalues(field_rec['value'], field_rec['datatype'], len(field_rec['value']), num_elements=1)[0],
+            elif 'ancerec' == rsp['__rectype']:
+                shot_number = numpy.uint64(rsp['extent_id'])
+                field_name = parm['anc_fields'][rsp['field_index']]
+                if field_name not in field_dictionary:
+                    field_dictionary[field_name] = {'shot_number': [], field_name: []}
+                field_dictionary[field_name]['shot_number'] += shot_number,
+                field_dictionary[field_name][field_name] += sliderule.getvalues(rsp['data'], rsp['datatype'], len(rsp['data']), num_elements=rsp['num_elements']),
             elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype']:
                 if rsp["num_samples"] <= 0:
                     continue

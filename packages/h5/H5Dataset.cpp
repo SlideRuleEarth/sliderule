@@ -421,6 +421,12 @@ void H5Dataset::readDataset (info_t* info)
                 }
                 else
                 {
+                    range_t write_slice[MAX_NDIMS];
+                    for(int d = 0; d < metaData.ndims; d++)
+                    {
+                        write_slice[d].r0 = 0;
+                        write_slice[d].r1 = labs(hyperslice[d].r1 - hyperslice[d].r0);
+                    }
                     uint64_t compact_buffer_size = metaData.typesize;
                     for(int d = 0; d < metaData.ndims; d++)
                     {
@@ -428,8 +434,8 @@ void H5Dataset::readDataset (info_t* info)
                     }
                     uint8_t* compact_buffer = new uint8_t [compact_buffer_size];
                     uint64_t data_addr = metaData.address;
-                    ioContext->ioRequest(&data_addr, buffer_size, buffer, 0, false);
-                    readSlice(buffer, info->shape, hyperslice, compact_buffer, metaData.dimensions, hyperslice);
+                    ioContext->ioRequest(&data_addr, compact_buffer_size, compact_buffer, 0, false);
+                    readSlice(buffer, shape, write_slice, compact_buffer, metaData.dimensions, hyperslice);
                     delete [] compact_buffer;
                 }
                 break;

@@ -164,3 +164,16 @@ class TestGedi:
         gdf = gedi.gedi04ap(parms, resources=granules[0:1])
         assert init
         assert len(gdf) == 0
+
+    def test_l2a_rh_2D(self, init):
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        parms = {
+            "asset": "gedil2a",
+            "poly": region["poly"],
+            "beam": 0,
+            "anc_fields": ["rh", "geolocation/elev_highestreturn_a1"]
+        }
+        granules = earthdata.search(parms)
+        gdf = gedi.gedi02ap(parms, resources=granules[2:3])
+        assert init
+        assert gdf.iloc[4].rh[3] == -2.5
