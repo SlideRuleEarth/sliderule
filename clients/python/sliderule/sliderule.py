@@ -592,7 +592,7 @@ def procoutputfile(parm, rsps):
                 return geopandas.pd.read_parquet(path)
         elif output["format"] == "geoparquet":
             # Return Parquet File as DataFrame
-            return geopandas.pd.read_parquet(path)
+            return geopandas.read_parquet(path)
         elif output["format"] == "feather":
             # Return Feather File as DataFrame
             return geopandas.pd.read_feather(path)

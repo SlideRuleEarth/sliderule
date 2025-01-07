@@ -49,7 +49,7 @@ int SwotFields::luaCreate (lua_State* L)
 
     try
     {
-        const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, 0);
+        const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, RequestFields::DEFAULT_KEY_SPACE);
 
         swot_fields = new SwotFields(L, key_space);
         swot_fields->fromLua(L, 1);

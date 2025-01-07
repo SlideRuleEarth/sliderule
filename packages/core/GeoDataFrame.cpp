@@ -35,6 +35,8 @@
 
 #include "OsApi.h"
 #include "GeoDataFrame.h"
+#include "RequestFields.h"
+#include "LuaLibraryMsg.h"
 #include "MsgQ.h"
 
 /******************************************************************************
@@ -46,6 +48,11 @@ const char* GeoDataFrame::GDF = "gdf";
 const char* GeoDataFrame::META = "meta";
 const char* GeoDataFrame::TERMINATE = "terminate";
 
+const char* GeoDataFrame::LUA_META_NAME = "GeoDataFrame";
+const struct luaL_Reg GeoDataFrame::LUA_META_TABLE[] = {
+    {NULL,      NULL}
+};
+
 const char* GeoDataFrame::FrameColumn::OBJECT_TYPE = "FrameColumn";
 const char* GeoDataFrame::FrameColumn::LUA_META_NAME = "FrameColumn";
 const struct luaL_Reg GeoDataFrame::FrameColumn::LUA_META_TABLE[] = {
@@ -54,6 +61,25 @@ const struct luaL_Reg GeoDataFrame::FrameColumn::LUA_META_TABLE[] = {
 };
 
 const char* GeoDataFrame::FrameRunner::OBJECT_TYPE = "FrameRunner";
+
+const char* GeoDataFrame::metaRecType = "geodataframe.meta"; // extended elevation measurement record
+const RecordObject::fieldDef_t GeoDataFrame::metaRecDef[] = {
+    {"num_rows",            RecordObject::UINT64,   offsetof(meta_rec_t, num_rows),             1,                      NULL, NATIVE_FLAGS},
+    {"num_columns",         RecordObject::UINT32,   offsetof(meta_rec_t, num_columns),          1,                      NULL, NATIVE_FLAGS},
+    {"time_column_index",   RecordObject::UINT32,   offsetof(meta_rec_t, time_column_index),    1,                      NULL, NATIVE_FLAGS},
+    {"x_column_index",      RecordObject::UINT32,   offsetof(meta_rec_t, x_column_index),       1,                      NULL, NATIVE_FLAGS},
+    {"y_column_index",      RecordObject::UINT32,   offsetof(meta_rec_t, y_column_index),       1,                      NULL, NATIVE_FLAGS},
+    {"z_column_index",      RecordObject::UINT32,   offsetof(meta_rec_t, z_column_index),       1,                      NULL, NATIVE_FLAGS},
+};
+
+const char* GeoDataFrame::columnRecType = "geodataframe.column";
+const RecordObject::fieldDef_t GeoDataFrame::columnRecDef[] = {
+    {"index",               RecordObject::UINT32,   offsetof(column_rec_t, index),              1,                      NULL, NATIVE_FLAGS},
+    {"size",                RecordObject::UINT32,   offsetof(column_rec_t, size),               1,                      NULL, NATIVE_FLAGS},
+    {"encoding",            RecordObject::UINT32,   offsetof(column_rec_t, encoding),           1,                      NULL, NATIVE_FLAGS},
+    {"name",                RecordObject::STRING,   offsetof(column_rec_t, name),               MAX_COLUMN_NAME_SIZE,   NULL, NATIVE_FLAGS},
+    {"data",                RecordObject::UINT8,    offsetof(column_rec_t, data),               0,                      NULL, NATIVE_FLAGS},
+};
 
 /******************************************************************************
  * CLASS METHODS
@@ -98,11 +124,180 @@ int GeoDataFrame::FrameColumn::luaGetData (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::init(void)
+{
+    RECDEF(metaRecType,     metaRecDef,     sizeof(meta_rec_t),     NULL);
+    RECDEF(columnRecType,   columnRecDef,   sizeof(column_rec_t),   NULL);
+}
+
+/*----------------------------------------------------------------------------
+ * luaReceive - core.rxdataframe(<msgq>, <rspq>)
+ *----------------------------------------------------------------------------*/
+template<class T>
+void add_column(GeoDataFrame* dataframe, GeoDataFrame::column_rec_t* column_rec_data, uint32_t encoding_mask)
+{
+    FieldColumn<T>* column = new FieldColumn<T>(column_rec_data->data, column_rec_data->size, encoding_mask);
+    if(!dataframe->addColumnData(column_rec_data->name, column))
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to add column %s of size %u", column_rec_data->name, column_rec_data->size);
+    }
+}
+
+int GeoDataFrame::luaReceive(lua_State* L)
+{
+    bool status = true;
+    Publisher* pubq = NULL;
+    bool complete = false;
+    bool terminator_received = false;
+
+    long num_columns = 0;
+    uint32_t time_index = INVALID_INDEX;
+    uint32_t x_index = INVALID_INDEX;
+    uint32_t y_index = INVALID_INDEX;
+    uint32_t z_index = INVALID_INDEX;
+
+    // create initial dataframe
+    GeoDataFrame* dataframe = new GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {});
+    dataframe->freeOnDelete = true;
+
+    try
+    {
+        // parameter #1 - get subscriber (userdata)
+        LuaLibraryMsg::msgSubscriberData_t* msg_data = static_cast<LuaLibraryMsg::msgSubscriberData_t*>(luaL_checkudata(L, 1, LuaLibraryMsg::LUA_SUBMETANAME));
+        if(!msg_data) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply subscriber for parameter #1");
+        Subscriber* subq = msg_data->sub;
+
+        // parameter #2 - get output message queue (string)
+        const char* outq_name = getLuaString(L, 2, true, NULL);
+        if(outq_name) pubq = new Publisher(outq_name);
+
+        // parameter #3 - get request timeout
+        const long timeout = getLuaInteger(L, 3, true, RequestFields::DEFAULT_TIMEOUT);
+        const double timelimit = TimeLib::latchtime() + static_cast<double>(timeout);
+
+        // while receiving messages
+        while(!terminator_received)
+        {
+            // check timeout
+            if(TimeLib::latchtime() > timelimit)
+            {
+                alert(CRITICAL, RTE_ERROR, pubq, NULL, "timeout occurred receiving dataframe");
+            }
+
+            // receive message
+            Subscriber::msgRef_t ref;
+            const int recv_status = subq->receiveRef(ref, SYS_TIMEOUT);
+            if(recv_status > 0)
+            {
+                // process terminator
+                if(ref.size == 0)
+                {
+                    terminator_received = true;
+                    if(!complete)
+                    {
+                        alert(CRITICAL, RTE_ERROR, pubq, NULL, "received terminator on <%s> before dataframe was complete", subq->getName());
+                    }
+                }
+                // process record
+                else if(ref.size > 0)
+                {
+                    RecordInterface* record = new RecordInterface(reinterpret_cast<unsigned char*>(ref.data), ref.size);
+
+                    if(StringLib::match(record->getRecordType(), metaRecType))
+                    {
+                        // meta record
+                        meta_rec_t* meta_rec_data = reinterpret_cast<meta_rec_t*>(record->getRecordData());
+                        dataframe->numRows = meta_rec_data->num_rows;
+                        time_index = meta_rec_data->time_column_index;
+                        x_index = meta_rec_data->x_column_index;
+                        y_index = meta_rec_data->y_column_index;
+                        z_index = meta_rec_data->z_column_index;
+                        num_columns = meta_rec_data->num_columns;
+                    }
+                    else if(StringLib::match(record->getRecordType(), columnRecType))
+                    {
+                        // column record
+                        column_rec_t* column_rec_data = reinterpret_cast<column_rec_t*>(record->getRecordData());
+
+                        // create encoding mask
+                        uint32_t encoding_mask = 0;
+                        if(column_rec_data->index == time_index) encoding_mask |= TIME_COLUMN;
+                        if(column_rec_data->index == x_index) encoding_mask |= X_COLUMN;
+                        if(column_rec_data->index == y_index) encoding_mask |= Y_COLUMN;
+                        if(column_rec_data->index == z_index) encoding_mask |= Z_COLUMN;
+
+                        // create field column
+                        switch(column_rec_data->encoding)
+                        {
+                            case BOOL:      add_column<bool>    (dataframe, column_rec_data, encoding_mask); break;
+                            case INT8:      add_column<int8_t>  (dataframe, column_rec_data, encoding_mask); break;
+                            case INT16:     add_column<int16_t> (dataframe, column_rec_data, encoding_mask); break;
+                            case INT32:     add_column<int32_t> (dataframe, column_rec_data, encoding_mask); break;
+                            case INT64:     add_column<int64_t> (dataframe, column_rec_data, encoding_mask); break;
+                            case UINT8:     add_column<uint8_t> (dataframe, column_rec_data, encoding_mask); break;
+                            case UINT16:    add_column<uint16_t>(dataframe, column_rec_data, encoding_mask); break;
+                            case UINT32:    add_column<uint32_t>(dataframe, column_rec_data, encoding_mask); break;
+                            case UINT64:    add_column<uint64_t>(dataframe, column_rec_data, encoding_mask); break;
+                            case FLOAT:     add_column<float>   (dataframe, column_rec_data, encoding_mask); break;
+                            case DOUBLE:    add_column<double>  (dataframe, column_rec_data, encoding_mask); break;
+                            case TIME8:     add_column<time8_t> (dataframe, column_rec_data, encoding_mask); break;
+                            // case STRING:    add_column<string>  (dataframe, column_rec_data, encoding_mask); break; -- not yet supported
+                            default:        alert(CRITICAL, RTE_ERROR, pubq, NULL, "unable to add column %s with encoding: %u", column_rec_data->name, column_rec_data->encoding);
+                        }
+
+                        // last column
+                        if(column_rec_data->index == (num_columns - 1))
+                        {
+                            dataframe->populateGeoColumns();
+                            complete = true;
+                        }
+                    }
+                    else if(pubq)
+                    {
+                        // record of non-targeted type - pass through
+                        pubq->postCopy(ref.data, ref.size);
+                    }
+
+                    // free record
+                    delete record;
+                }
+                else
+                {
+                    alert(CRITICAL, RTE_ERROR, pubq, NULL, "received record of invalid size from queue <%s>: %d", subq->getName(), ref.size);
+                }
+            }
+            else if(recv_status != MsgQ::STATE_TIMEOUT)
+            {
+                alert(CRITICAL, RTE_ERROR, pubq, NULL, "failed to receive records from queue <%s>: %d", subq->getName(), recv_status);
+            }
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error receiving dataframe: %s", e.what());
+        status = false;
+    }
+
+    /* Cleanup */
+    delete pubq;
+
+    /* Return Dataframe LuaObject */
+    if(!status)
+    {
+        delete dataframe;
+        return returnLuaStatus(L, false);
+    }
+    return createLuaObject(L, dataframe);
+}
+
+/*----------------------------------------------------------------------------
  * length
  *----------------------------------------------------------------------------*/
 long GeoDataFrame::length(void) const
 {
-    return static_cast<long>(indexColumn.size());
+    return numRows;
 }
 
 /*----------------------------------------------------------------------------
@@ -110,21 +305,8 @@ long GeoDataFrame::length(void) const
  *----------------------------------------------------------------------------*/
 long GeoDataFrame::addRow(void)
 {
-    // update index
-    const long len = static_cast<long>(indexColumn.size());
-    indexColumn.push_back(len);
-
-    // return size of dataframe
-    return len + 1;
-}
-
-/*----------------------------------------------------------------------------
- * addColumnData
- *----------------------------------------------------------------------------*/
-void GeoDataFrame::addColumnData (const char* name, Field* column)
-{
-    const FieldDictionary::entry_t entry = {name, column};
-    columnFields.add(entry);
+    numRows++;
+    return numRows;
 }
 
 /*----------------------------------------------------------------------------
@@ -142,6 +324,20 @@ vector<string> GeoDataFrame::getColumnNames(void) const
     }
     delete [] keys;
     return names;
+}
+
+/*----------------------------------------------------------------------------
+ * addColumnData
+ *----------------------------------------------------------------------------*/
+bool GeoDataFrame::addColumnData (const char* name, Field* column)
+{
+    if(column->length() == numRows)
+    {
+        const FieldDictionary::entry_t entry = {name, column};
+        columnFields.add(entry);
+        return true;
+    }
+    return false;
 }
 
 /*----------------------------------------------------------------------------
@@ -299,8 +495,9 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
                             const std::initializer_list<FieldDictionary::entry_t>& meta_list):
     LuaObject (L, OBJECT_TYPE, meta_name, meta_table),
     Field(DATAFRAME, 0),
-    columnFields (column_list),
-    metaFields (meta_list),
+    numRows(0),
+    columnFields(column_list),
+    metaFields(meta_list),
     timeColumn(NULL),
     xColumn(NULL),
     yColumn(NULL),
@@ -309,9 +506,9 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     pid(NULL),
     pubRunQ(NULL),
     subRunQ(pubRunQ),
-    runComplete(false)
+    runComplete(false),
+    freeOnDelete(false)
 {
-
     // set lua functions
     LuaEngine::setAttrFunc(L, "export",     luaExport);
     LuaEngine::setAttrFunc(L, "import",     luaImport);
@@ -339,6 +536,34 @@ GeoDataFrame::~GeoDataFrame(void)
         GeoDataFrame::FrameRunner* runner;
         recv_status = subRunQ.receiveCopy(&runner, sizeof(runner), SYS_TIMEOUT);
         if(recv_status > 0 && runner) runner->releaseLuaObject();
+    }
+
+    // free entries in FieldDictionaries
+    if(freeOnDelete)
+    {
+        // column dictionary
+        {
+            FieldDictionary::entry_t entry;
+            const char* key = columnFields.fields.first(&entry);
+            while(key != NULL)
+            {
+                delete [] entry.name;
+                delete entry.field;
+                key = columnFields.fields.next(&entry);
+            }
+        }
+
+        // meta dictionary
+        {
+            FieldDictionary::entry_t entry;
+            const char* key = metaFields.fields.first(&entry);
+            while(key != NULL)
+            {
+                delete [] entry.name;
+                delete entry.field;
+                key = metaFields.fields.next(&entry);
+            }
+        }
     }
 }
 
@@ -588,6 +813,7 @@ int GeoDataFrame::luaRun  (lua_State* L)
         catch(const RunTimeException& e)
         {
             (void)e;
+
             // try to get the termination string
             const char* termination_string = getLuaString(L, 2, true, NULL);
             if(termination_string && StringLib::match(termination_string, TERMINATE))
@@ -624,15 +850,15 @@ int GeoDataFrame::luaRunComplete(lua_State* L)
 
     try
     {
-        /* Get Self */
+        // get self
         GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
 
-        /* Get Parameters */
+        // get parameters
         const int timeout = getLuaInteger(L, 2, true, IO_PEND);
         const char* rspq = getLuaString(L, 3, true, NULL);
         int interval = getLuaInteger(L, 4, true, DEFAULT_WAIT_INTERVAL);
 
-        /* Wait On Signal */
+        // wait on signal
         if(rspq && timeout > 0)
         {
             Publisher pub(rspq);
@@ -671,6 +897,88 @@ int GeoDataFrame::luaRunComplete(lua_State* L)
         mlog(e.level(), "Error waiting for run completion: %s", e.what());
     }
 
-    /* Return Completion Status */
+    // return completion status
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaSend - :send(<rspq>, [<timeout>])
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaSend(lua_State* L)
+{
+    bool status = true;
+
+    try
+    {
+        // get parameters
+        GeoDataFrame*   dataframe   = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        const char*     rspq        = getLuaString(L, 2);
+        const int       timeout     = getLuaInteger(L, 3, true, SYS_TIMEOUT);
+
+        // create publisher
+        Publisher pub(rspq);
+
+        // create column field iterator
+        Dictionary<FieldDictionary::entry_t>::Iterator iter(dataframe->columnFields.fields);
+
+        // get geo-column indices
+        uint32_t time_column_index = INVALID_INDEX;
+        uint32_t x_column_index = INVALID_INDEX;
+        uint32_t y_column_index = INVALID_INDEX;
+        uint32_t z_column_index = INVALID_INDEX;
+        for(int i = 0; i < iter.length; i++)
+        {
+            const Dictionary<FieldDictionary::entry_t>::kv_t kv = iter[i];
+            if(kv.value.field->encoding & TIME_COLUMN) time_column_index = i;
+            if(kv.value.field->encoding & X_COLUMN) x_column_index = i;
+            if(kv.value.field->encoding & Y_COLUMN) y_column_index = i;
+            if(kv.value.field->encoding & Z_COLUMN) z_column_index = i;
+        }
+
+        // create and send meta record
+        RecordObject meta_rec(metaRecType);
+        meta_rec_t* meta_rec_data = reinterpret_cast<meta_rec_t*>(meta_rec.getRecordData());
+        meta_rec_data->num_rows = dataframe->length();
+        meta_rec_data->num_columns = dataframe->columnFields.length();
+        meta_rec_data->time_column_index = time_column_index;
+        meta_rec_data->x_column_index = x_column_index;
+        meta_rec_data->y_column_index = y_column_index;
+        meta_rec_data->z_column_index = z_column_index;
+        meta_rec.post(&pub, 0, NULL, true, timeout);
+
+        // create and send column records
+        for(int i = 0; i < iter.length; i++)
+        {
+            const Dictionary<FieldDictionary::entry_t>::kv_t kv = iter[i];
+
+            // determine size of column
+            const uint32_t encoding = kv.value.field->getValueEncoding();
+            assert(encoding >= 0 && encoding < RecordObject::NUM_FIELD_TYPES);
+            const long column_size = kv.value.field->length() * RecordObject::FIELD_TYPE_BYTES[encoding];
+            const long rec_size = offsetof(column_rec_t, data) + column_size;
+
+            // create column record
+            RecordObject column_rec(columnRecType, rec_size);
+            column_rec_t* column_rec_data = reinterpret_cast<column_rec_t*>(column_rec.getRecordData());
+            column_rec_data->index = i;
+            column_rec_data->size = column_size;
+            column_rec_data->encoding = encoding;
+            StringLib::copy(column_rec_data->name, kv.value.name, MAX_COLUMN_NAME_SIZE);
+
+            // serialize column data into record
+            const long bytes_serialized = kv.value.field->serialize(column_rec_data->data, column_size);
+            if(bytes_serialized != column_size) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to serialize column %s", column_rec_data->name);
+
+            // send column record
+            column_rec.post(&pub, 0, NULL, true, timeout);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error sending dataframe: %s", e.what());
+        status = false;
+    }
+
+    // return completion status
     return returnLuaStatus(L, status);
 }

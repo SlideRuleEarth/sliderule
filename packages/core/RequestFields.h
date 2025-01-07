@@ -69,6 +69,8 @@ class RequestFields: public LuaObject, public FieldDictionary
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
+        static const uint64_t DEFAULT_KEY_SPACE = INVALID_KEY;
+
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
@@ -89,6 +91,7 @@ class RequestFields: public LuaObject, public FieldDictionary
         static int luaRegionMaskIncludes (lua_State* L);
         static int luaGetField (lua_State* L);
         static int luaSetField (lua_State* L);
+        static int luaGetLength (lua_State* L);
         static int luaWithArrowOutput (lua_State* L);
         static int luaGetSamplers (lua_State* L);
         static int luaWithSamplers (lua_State* L);
