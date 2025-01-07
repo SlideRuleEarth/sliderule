@@ -283,7 +283,7 @@ end
 -- send dataframe back to user
 -------------------------------------------------------
 local df = arrow.dataframe(crenv.host_sandbox_directory.."/"..tempfile, arrow.PARQUET)
-dataframe.send(df, parms, rspq, userlog)
+df:send(df, parms, rspq, userlog)
 
 -------------------------------------------------------
 -- exit

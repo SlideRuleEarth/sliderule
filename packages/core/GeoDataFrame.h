@@ -156,6 +156,7 @@ class GeoDataFrame: public LuaObject, public Field
          *--------------------------------------------------------------------*/
 
         static void                 init                (void);
+        static int                  luaImport           (lua_State* L);
         static int                  luaReceive          (lua_State* L);
 
         long                        length              (void) const override;
@@ -200,7 +201,8 @@ class GeoDataFrame: public LuaObject, public Field
                                  const char* meta_name,
                                  const struct luaL_Reg meta_table[],
                                  const std::initializer_list<FieldDictionary::entry_t>& column_list,
-                                 const std::initializer_list<FieldDictionary::entry_t>& meta_list);
+                                 const std::initializer_list<FieldDictionary::entry_t>& meta_list,
+                                 bool free_on_delete = false);
         virtual ~GeoDataFrame   (void) override;
 
         static void*    runThread           (void* parm);
@@ -211,12 +213,11 @@ class GeoDataFrame: public LuaObject, public Field
         void            fromLua             (lua_State* L, int index) override;
 
         static int      luaExport           (lua_State* L);
-        static int      luaImport           (lua_State* L);
+        static int      luaSend             (lua_State* L);
         static int      luaGetColumnData    (lua_State* L);
         static int      luaGetMetaData      (lua_State* L);
         static int      luaRun              (lua_State* L);
         static int      luaRunComplete      (lua_State* L);
-        static int      luaSend             (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data

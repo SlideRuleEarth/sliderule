@@ -62,7 +62,7 @@ const struct luaL_Reg GeoDataFrame::FrameColumn::LUA_META_TABLE[] = {
 
 const char* GeoDataFrame::FrameRunner::OBJECT_TYPE = "FrameRunner";
 
-const char* GeoDataFrame::metaRecType = "geodataframe.meta"; // extended elevation measurement record
+const char* GeoDataFrame::metaRecType = "geodataframe.meta";
 const RecordObject::fieldDef_t GeoDataFrame::metaRecDef[] = {
     {"num_rows",            RecordObject::UINT64,   offsetof(meta_rec_t, num_rows),             1,                      NULL, NATIVE_FLAGS},
     {"num_columns",         RecordObject::UINT32,   offsetof(meta_rec_t, num_columns),          1,                      NULL, NATIVE_FLAGS},
@@ -133,6 +133,52 @@ void GeoDataFrame::init(void)
 }
 
 /*----------------------------------------------------------------------------
+ * luaImport - import(<lua table>)
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaImport (lua_State* L)
+{
+    bool status = true;
+    GeoDataFrame* dataframe = NULL;
+
+    try
+    {
+        // create initial dataframe
+        dataframe = new GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {}, true);
+
+        // build columns of dataframe
+        lua_pushnil(L); // prime the stack for the next key
+        while(lua_next(L, 1) != 0)
+        {
+            if(lua_isstring(L, -2))
+            {
+                const char* name = StringLib::duplicate(lua_tostring(L, -2));
+                FieldColumn<double>* column = new FieldColumn<double>();
+                const FieldDictionary::entry_t entry = {name, column};
+                dataframe->columnFields.add(entry);
+                mlog(INFO, "Adding column %s", name);
+            }
+            lua_pop(L, 1); // remove the key
+        }
+
+        // import dataframe columns from lua
+        dataframe->columnFields.fromLua(L, 1);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error importing %s: %s", OBJECT_TYPE, e.what());
+        status = false;
+    }
+
+    // return dataframe LuaObject
+    if(!status)
+    {
+        delete dataframe;
+        return returnLuaStatus(L, false);
+    }
+    return createLuaObject(L, dataframe);
+}
+
+/*----------------------------------------------------------------------------
  * luaReceive - core.rxdataframe(<msgq>, <rspq>)
  *----------------------------------------------------------------------------*/
 template<class T>
@@ -159,8 +205,7 @@ int GeoDataFrame::luaReceive(lua_State* L)
     uint32_t z_index = INVALID_INDEX;
 
     // create initial dataframe
-    GeoDataFrame* dataframe = new GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {});
-    dataframe->freeOnDelete = true;
+    GeoDataFrame* dataframe = new GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {}, true);
 
     try
     {
@@ -492,7 +537,8 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
                             const char* meta_name,
                             const struct luaL_Reg meta_table[],
                             const std::initializer_list<FieldDictionary::entry_t>& column_list,
-                            const std::initializer_list<FieldDictionary::entry_t>& meta_list):
+                            const std::initializer_list<FieldDictionary::entry_t>& meta_list,
+                            bool free_on_delete):
     LuaObject (L, OBJECT_TYPE, meta_name, meta_table),
     Field(DATAFRAME, 0),
     numRows(0),
@@ -507,11 +553,11 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     pubRunQ(NULL),
     subRunQ(pubRunQ),
     runComplete(false),
-    freeOnDelete(false)
+    freeOnDelete(free_on_delete)
 {
     // set lua functions
     LuaEngine::setAttrFunc(L, "export",     luaExport);
-    LuaEngine::setAttrFunc(L, "import",     luaImport);
+    LuaEngine::setAttrFunc(L, "send",       luaSend);
     LuaEngine::setAttrFunc(L, "__index",    luaGetColumnData);
     LuaEngine::setAttrFunc(L, "meta",       luaGetMetaData);
     LuaEngine::setAttrFunc(L, "run",        luaRun);
@@ -724,22 +770,84 @@ int GeoDataFrame::luaExport (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaImport - import(<lua table>)
+ * luaSend - :send(<rspq>, [<timeout>])
  *----------------------------------------------------------------------------*/
-int GeoDataFrame::luaImport (lua_State* L)
+int GeoDataFrame::luaSend(lua_State* L)
 {
     bool status = true;
+
     try
     {
-        GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
-        lua_obj->fromLua(L, 2);
+        // get parameters
+        GeoDataFrame*   dataframe   = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        const char*     rspq        = getLuaString(L, 2);
+        const int       timeout     = getLuaInteger(L, 3, true, SYS_TIMEOUT);
+
+        // create publisher
+        Publisher pub(rspq);
+
+        // create column field iterator
+        Dictionary<FieldDictionary::entry_t>::Iterator iter(dataframe->columnFields.fields);
+
+        // get geo-column indices
+        uint32_t time_column_index = INVALID_INDEX;
+        uint32_t x_column_index = INVALID_INDEX;
+        uint32_t y_column_index = INVALID_INDEX;
+        uint32_t z_column_index = INVALID_INDEX;
+        for(int i = 0; i < iter.length; i++)
+        {
+            const Dictionary<FieldDictionary::entry_t>::kv_t kv = iter[i];
+            if(kv.value.field->encoding & TIME_COLUMN) time_column_index = i;
+            if(kv.value.field->encoding & X_COLUMN) x_column_index = i;
+            if(kv.value.field->encoding & Y_COLUMN) y_column_index = i;
+            if(kv.value.field->encoding & Z_COLUMN) z_column_index = i;
+        }
+
+        // create and send meta record
+        RecordObject meta_rec(metaRecType);
+        meta_rec_t* meta_rec_data = reinterpret_cast<meta_rec_t*>(meta_rec.getRecordData());
+        meta_rec_data->num_rows = dataframe->length();
+        meta_rec_data->num_columns = dataframe->columnFields.length();
+        meta_rec_data->time_column_index = time_column_index;
+        meta_rec_data->x_column_index = x_column_index;
+        meta_rec_data->y_column_index = y_column_index;
+        meta_rec_data->z_column_index = z_column_index;
+        meta_rec.post(&pub, 0, NULL, true, timeout);
+
+        // create and send column records
+        for(int i = 0; i < iter.length; i++)
+        {
+            const Dictionary<FieldDictionary::entry_t>::kv_t kv = iter[i];
+
+            // determine size of column
+            const uint32_t encoding = kv.value.field->getValueEncoding();
+            assert(encoding >= 0 && encoding < RecordObject::NUM_FIELD_TYPES);
+            const long column_size = kv.value.field->length() * RecordObject::FIELD_TYPE_BYTES[encoding];
+            const long rec_size = offsetof(column_rec_t, data) + column_size;
+
+            // create column record
+            RecordObject column_rec(columnRecType, rec_size);
+            column_rec_t* column_rec_data = reinterpret_cast<column_rec_t*>(column_rec.getRecordData());
+            column_rec_data->index = i;
+            column_rec_data->size = column_size;
+            column_rec_data->encoding = encoding;
+            StringLib::copy(column_rec_data->name, kv.value.name, MAX_COLUMN_NAME_SIZE);
+
+            // serialize column data into record
+            const long bytes_serialized = kv.value.field->serialize(column_rec_data->data, column_size);
+            if(bytes_serialized != column_size) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to serialize column %s", column_rec_data->name);
+
+            // send column record
+            column_rec.post(&pub, 0, NULL, true, timeout);
+        }
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error importing %s: %s", OBJECT_TYPE, e.what());
+        mlog(e.level(), "Error sending dataframe: %s", e.what());
         status = false;
     }
 
+    // return completion status
     return returnLuaStatus(L, status);
 }
 
@@ -895,88 +1003,6 @@ int GeoDataFrame::luaRunComplete(lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error waiting for run completion: %s", e.what());
-    }
-
-    // return completion status
-    return returnLuaStatus(L, status);
-}
-
-/*----------------------------------------------------------------------------
- * luaSend - :send(<rspq>, [<timeout>])
- *----------------------------------------------------------------------------*/
-int GeoDataFrame::luaSend(lua_State* L)
-{
-    bool status = true;
-
-    try
-    {
-        // get parameters
-        GeoDataFrame*   dataframe   = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
-        const char*     rspq        = getLuaString(L, 2);
-        const int       timeout     = getLuaInteger(L, 3, true, SYS_TIMEOUT);
-
-        // create publisher
-        Publisher pub(rspq);
-
-        // create column field iterator
-        Dictionary<FieldDictionary::entry_t>::Iterator iter(dataframe->columnFields.fields);
-
-        // get geo-column indices
-        uint32_t time_column_index = INVALID_INDEX;
-        uint32_t x_column_index = INVALID_INDEX;
-        uint32_t y_column_index = INVALID_INDEX;
-        uint32_t z_column_index = INVALID_INDEX;
-        for(int i = 0; i < iter.length; i++)
-        {
-            const Dictionary<FieldDictionary::entry_t>::kv_t kv = iter[i];
-            if(kv.value.field->encoding & TIME_COLUMN) time_column_index = i;
-            if(kv.value.field->encoding & X_COLUMN) x_column_index = i;
-            if(kv.value.field->encoding & Y_COLUMN) y_column_index = i;
-            if(kv.value.field->encoding & Z_COLUMN) z_column_index = i;
-        }
-
-        // create and send meta record
-        RecordObject meta_rec(metaRecType);
-        meta_rec_t* meta_rec_data = reinterpret_cast<meta_rec_t*>(meta_rec.getRecordData());
-        meta_rec_data->num_rows = dataframe->length();
-        meta_rec_data->num_columns = dataframe->columnFields.length();
-        meta_rec_data->time_column_index = time_column_index;
-        meta_rec_data->x_column_index = x_column_index;
-        meta_rec_data->y_column_index = y_column_index;
-        meta_rec_data->z_column_index = z_column_index;
-        meta_rec.post(&pub, 0, NULL, true, timeout);
-
-        // create and send column records
-        for(int i = 0; i < iter.length; i++)
-        {
-            const Dictionary<FieldDictionary::entry_t>::kv_t kv = iter[i];
-
-            // determine size of column
-            const uint32_t encoding = kv.value.field->getValueEncoding();
-            assert(encoding >= 0 && encoding < RecordObject::NUM_FIELD_TYPES);
-            const long column_size = kv.value.field->length() * RecordObject::FIELD_TYPE_BYTES[encoding];
-            const long rec_size = offsetof(column_rec_t, data) + column_size;
-
-            // create column record
-            RecordObject column_rec(columnRecType, rec_size);
-            column_rec_t* column_rec_data = reinterpret_cast<column_rec_t*>(column_rec.getRecordData());
-            column_rec_data->index = i;
-            column_rec_data->size = column_size;
-            column_rec_data->encoding = encoding;
-            StringLib::copy(column_rec_data->name, kv.value.name, MAX_COLUMN_NAME_SIZE);
-
-            // serialize column data into record
-            const long bytes_serialized = kv.value.field->serialize(column_rec_data->data, column_size);
-            if(bytes_serialized != column_size) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to serialize column %s", column_rec_data->name);
-
-            // send column record
-            column_rec.post(&pub, 0, NULL, true, timeout);
-        }
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error sending dataframe: %s", e.what());
-        status = false;
     }
 
     // return completion status

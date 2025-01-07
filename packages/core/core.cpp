@@ -126,6 +126,7 @@ static int core_open (lua_State *L)
         {"get",             CurlLib::luaGet},
         {"put",             CurlLib::luaPut},
         {"post",            CurlLib::luaPost},
+        {"dataframe",       GeoDataFrame::luaImport},
         {"rxdataframe",     GeoDataFrame::luaReceive},
         {"proxy",           EndpointProxy::luaCreate},
         {"orchurl",         OrchestratorLib::luaUrl},
