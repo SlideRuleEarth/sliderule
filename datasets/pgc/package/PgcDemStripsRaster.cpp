@@ -189,11 +189,12 @@ void PgcDemStripsRaster::getIndexFile(const std::vector<point_info_t>* points, s
             files.push_back(newFile);
         }
     }
-    mlog(INFO, "Found %zu geojson files with %zu points", files.size(), points->size());
 
     /* Remove any duplicate files */
     std::sort(files.begin(), files.end());
     files.erase(std::unique(files.begin(), files.end()), files.end());
+
+    mlog(INFO, "Found %zu geojson files with %zu points", files.size(), points->size());
 
     /* If we have only one file, use it as the index file */
     if(files.size() == 1)

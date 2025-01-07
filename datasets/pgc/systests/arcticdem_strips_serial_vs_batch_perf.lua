@@ -41,11 +41,11 @@ local maxPoints = 10^5 -- Total number of points
 
 local lons, lats, heights = generatePointArrays(startLon, stopLon, lat, height, maxPoints)
 
-print(string.format("\n------------------------------------\nMosaics serial reading %d points along arctic circle, longitude range (%.2f to %.2f)\n------------------------------------", maxPoints, startLon, stopLon))
+print(string.format("\n------------------------------------\nStrips serial reading %d points along arctic circle, longitude range (%.2f to %.2f)\n------------------------------------", maxPoints, startLon, stopLon))
 
 -- Capture results from serial sampling
 local serialResults = {}
-local dem = geo.raster(geo.parms({ asset = "arcticdem-mosaic", algorithm = "NearestNeighbour", radius = 0 }))
+local dem = geo.raster(geo.parms({ asset = "arcticdem-strips", algorithm = "NearestNeighbour", radius = 0, sort_by_index = true }))
 
 local starttimeSerial = time.latch()
 local intervaltime = starttimeSerial
@@ -67,7 +67,7 @@ for i = 1, maxPoints do
             local dtime = midtime - intervaltime
             local firstSample = tbl[1]
             local el = firstSample["value"]
-            print(string.format("Point: %7d sampled at (%.2f, %.2f), elevation: %7.2fm, %d points interval time: %5.2f", i, lons[i], lats[i], el, modulovalue, dtime))
+            print(string.format("Point: %7d sampled at (%.2f, %.2f), strips: %3d, first strip elevation: %7.2fm, %d points interval time: %5.2f", i, lons[i], lats[i], #tbl, el, modulovalue, dtime))
             intervaltime = time.latch()
         end
     end
@@ -81,7 +81,7 @@ print(string.format("Serial sampling: %d points read, time: %f, failed reads: %d
 local batchResults = {}
 local starttimeBatch = time.latch()
 
-print(string.format("\n------------------------------------\nMosaics batch reading %d points along arctic circle, longitude range (%.2f to %.2f)\n------------------------------------", maxPoints, startLon, stopLon))
+print(string.format("\n------------------------------------\nStrips batch reading %d points along arctic circle, longitude range (%.2f to %.2f)\n------------------------------------", maxPoints, startLon, stopLon))
 local tbl, err = dem:batchsample(lons, lats, heights)
 if err ~= 0 then
     print("Batch sampling failed")
@@ -92,6 +92,19 @@ end
 local stoptimeBatch = time.latch()
 local dtimeBatch = stoptimeBatch - starttimeBatch
 print(string.format("Batch sampling: %d points read, time: %f, failed reads: %d", maxPoints, dtimeBatch, failedSamplesBatch))
+
+
+-- Helper function to check if two numbers are equal, considering NaN
+local function areEqual(num1, num2)
+    if num1 ~= num1 and num2 ~= num2 then
+        -- Both are NaN
+        return true
+    else
+        -- Regular comparison
+        return math.abs(num1 - num2) <= 1e-6
+    end
+end
+
 
 -- Compare serial and batch results
 print("\n------------------------------------\nComparing Serial and Batch Results\n------------------------------------")
@@ -119,12 +132,27 @@ for i = 1, maxPoints do
         totalMismatches = totalMismatches + 1
         print(string.format("Point %d: Batch failed, Serial succeeded", i))
     else
-        -- Compare values
-        for j, serialValue in ipairs(serialSample) do
-            local batchValue = batchSample[j]
-            if not batchValue or math.abs(serialValue["value"] - batchValue["value"]) > 1e-6 then
-                totalMismatches = totalMismatches + 1
-                print(string.format("Point %d, Sample %d: Serial %.6f != Batch %.6f", i, j, serialValue["value"], batchValue["value"]))
+        -- Compare number of samples
+        if #serialSample > #batchSample then
+            totalMismatches = totalMismatches + 1
+            print(string.format("Point %d: (%.2f, %.2f), Error: Serial samples (%d) > Batch samples (%d)", i, lons[i], lats[i], #serialSample, #batchSample))
+        else
+            -- Check if each serial sample matches any batch sample
+            local mismatchFound = false
+            for j = 1, #serialSample do
+                local foundMatch = false
+                for k = 1, #batchSample do
+                    if areEqual(serialSample[j]["value"], batchSample[k]["value"]) then
+                        foundMatch = true
+                        break
+                    end
+                end
+
+                if not foundMatch then
+                    mismatchFound = true
+                    totalMismatches = totalMismatches + 1
+                    print(string.format("Point %d, Serial Sample %d: %.6f has no match in Batch samples", i, j, serialSample[j]["value"]))
+                end
             end
         end
     end

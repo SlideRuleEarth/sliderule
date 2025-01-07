@@ -340,6 +340,7 @@ STRIPS_PERFORMANCE_TEST ?=  $(ROOT)/datasets/pgc/systests/arcticdem_strips_perf.
 SUBSET_PERFORMANCE_TEST ?=  $(ROOT)/scripts/systests/subset_perf_test.lua
 
 MOSAICS_SERIAL_VS_BATCH_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arcticdem_mosaic_serial_vs_batch_perf.lua
+STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST  ?= $(ROOT)/datasets/pgc/systests/arcticdem_strips_serial_vs_batch_perf.lua
 
 selftest: ## run the self test on the server code
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
@@ -356,8 +357,11 @@ perfstest: ## run strips performance test on the server code
 perfsubsetest: ## run subset performance test
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
 
-perfmsbtest: ## run mosaics serial and batch performance test for 1 million points comparing results
+perfmsbtest: ## run mosaics serial and batch performance test comparing results
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(MOSAICS_SERIAL_VS_BATCH_PERFORMANCE_TEST)
+
+perfssbtest: ## run strips serial and batch performance test comparing results
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST)
 
 OCEANEYES_SHARE=/data/AppServer.1
 oceaneyes-test: ## run oceaneyes

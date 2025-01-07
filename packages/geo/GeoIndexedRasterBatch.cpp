@@ -367,7 +367,8 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
                                         ur->rinfo->fileId,
                                         ur->rinfo->elevationBandNum,
                                         ur->rinfo->flagsBandNum,
-                                        breader->obj->crscb);
+                                        breader->obj->crscb,
+                                        &breader->obj->bbox);
 
                 CHECKPTR(raster);
 
@@ -754,6 +755,19 @@ bool GeoIndexedRaster::findUniqueRasters(std::vector<unique_raster_t*>& uniqueRa
                 ur->pointSamples.shrink_to_fit();
             }
         }
+
+#if 0
+        /* For each unique raster, print its name and points in it */
+        mlog(DEBUG, "Unique rasters:");
+        for(unique_raster_t* ur : uniqueRasters)
+        {
+            mlog(DEBUG, "Unique raster: %s", fileDict.get(ur->rinfo->fileId));
+            for(point_sample_t& ps : ur->pointSamples)
+            {
+                mlog(DEBUG, "Point index: %ld, (%.2lf, %.2lf)", ps.pointIndex, ps.point.getX(), ps.point.getY());
+            }
+        }
+#endif
 
         /* Reduce memory usage */
         uniqueRasters.shrink_to_fit();
