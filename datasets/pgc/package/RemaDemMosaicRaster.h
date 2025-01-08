@@ -64,7 +64,7 @@ class RemaDemMosaicRaster: public GeoRaster
         RemaDemMosaicRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
          GeoRaster(L, rqst_parms, key,
                   std::string(rqst_parms->geoFields(key)->asset.asset->getPath()).append("/").append(rqst_parms->geoFields(key)->asset.asset->getIndex()),
-                  TimeLib::datetime2gps(2023, 02, 24, 18, 51, 44),
+                  TimeLib::datetime2gps(2023, 02, 24, 18, 51, 44) / 1000,
                   1,                   /* elevationBandNum */
                   GdalRaster::NO_BAND, /* flagsBandNum     */
                   &overrideTargetCRS) {}

@@ -3,6 +3,8 @@
 import pytest
 from pathlib import Path
 import sliderule
+from sliderule import raster
+import geopandas as gpd
 
 TESTDIR = Path(__file__).parent
 
@@ -30,3 +32,11 @@ class TestBlueTopo:
         assert rsps['samples'][0][1]['value'] == pytest.approx(expUncertainty, rel=1e-3)
         assert rsps["samples"][0][2]["band"] == "Contributor"
         assert rsps['samples'][0][2]['value'] == expContributor
+
+    def test_sample_api(self, init):
+        gfp = gpd.GeoDataFrame(geometry=gpd.points_from_xy([lon, lon+0.001], [lat, lat+0.001]), crs='EPSG:4326')
+        points = [[x,y] for x,y in zip(gfp.geometry.x , gfp.geometry.y)]
+        gdf = raster.sample("bluetopo-bathy", points, {"bands": ["Elevation", "Uncertainty", "Contributor"]})
+        assert init
+        assert len(gdf) == 6
+

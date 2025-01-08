@@ -3,6 +3,7 @@
 import pytest
 from pathlib import Path
 import sliderule
+from sliderule import raster
 
 TESTDIR = Path(__file__).parent
 
@@ -24,3 +25,18 @@ class TestGlobalCanopy:
         assert abs(rsps["samples"][0][0]["value"] - vrtValue) < sigma
         assert rsps["samples"][0][0]["file"] ==  vrtFile
         assert rsps["samples"][0][0]["time"] ==  vrtFileTime
+
+    def test_sample_api_serial(self, init):
+        gdf = raster.sample("meta-globalcanopy-1meter", [[vrtLon,vrtLat]])
+        assert init
+        assert len(gdf) == 1
+        assert abs(gdf["value"].iat[0] - vrtValue) < sigma
+        assert gdf["file"].iat[0] ==  vrtFile
+
+    def test_sample_api_batch(self, init):
+        gdf = raster.sample("meta-globalcanopy-1meter", [[vrtLon,vrtLat],[vrtLon+0.01,vrtLat+0.01]])
+        assert init
+        assert len(gdf) == 2
+        assert abs(gdf["value"].iat[0] - vrtValue) < sigma
+        assert gdf["file"].iat[0] ==  vrtFile
+

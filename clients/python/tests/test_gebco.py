@@ -3,6 +3,7 @@
 import pytest
 from pathlib import Path
 import sliderule
+from sliderule import raster
 
 TESTDIR = Path(__file__).parent
 
@@ -31,7 +32,6 @@ class TestGebco:
         assert rsps["samples"][0][0]["flags"] == expected_tid
 
     def test_samples_2024(self, init):
-        value = -64  # meters
         rqst = {"samples": {"asset": "gebco-bathy", "with_flags": True, "bands": ["2024"]}, "coordinates": [[lon,lat]]}
         rsps = sliderule.source("samples", rqst)
         assert init
@@ -42,7 +42,6 @@ class TestGebco:
 
     # Test default data set (no bands parameter)
     def test_samples_default(self, init):
-        value = -64  # meters
         rqst = {"samples": {"asset": "gebco-bathy", "with_flags": True}, "coordinates": [[lon,lat]]}
         rsps = sliderule.source("samples", rqst)
         assert init
@@ -50,3 +49,10 @@ class TestGebco:
         assert rsps["samples"][0][0]["value"] == expected_depth_2024
         assert rsps["samples"][0][0]["file"]  == expected_file_2024
         assert rsps["samples"][0][0]["flags"] == expected_tid
+
+    def test_sample_api(self, init):
+        gdf = raster.sample("gebco-bathy", [[lon,lat],[lon+0.01,lat+0.01]])
+        assert init
+        assert len(gdf) == 2
+        assert gdf["value"].iloc[0] == expected_depth_2024
+        assert gdf["file"].iloc[0]  == expected_file_2024

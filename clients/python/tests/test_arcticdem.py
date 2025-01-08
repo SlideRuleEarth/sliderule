@@ -5,6 +5,7 @@ from pathlib import Path
 import os.path
 import sliderule
 from sliderule import icesat2
+from sliderule import raster
 
 TESTDIR = Path(__file__).parent
 
@@ -12,9 +13,9 @@ sigma = 1.0e-9
 
 vrtLon = -150.0
 vrtLat =  70.0
-vrtElevation = 116.250000000
+vrtElevation = 116.25
 vrtFile      = '/vsis3/pgc-opendata-dems/arcticdem/mosaics/v4.1/2m_dem_tiles.vrt'
-vrtFileTime  = 1358108640000.0
+vrtFileTime  = 1358108640.0
 
 @pytest.mark.network
 class TestMosaic:
@@ -26,6 +27,19 @@ class TestMosaic:
         assert rsps["samples"][0][0]["file"] ==  vrtFile
         assert rsps["samples"][0][0]["time"] ==  vrtFileTime
 
+    def test_sample_api_serial(self, init):
+        gdf = raster.sample("arcticdem-mosaic", [[vrtLon,vrtLat]])
+        assert init
+        assert len(gdf) == 1
+        assert abs(gdf["value"].iat[0] - vrtElevation) < sigma
+        assert gdf["file"].iat[0] ==  vrtFile
+
+    def test_sample_api_batch(self, init):
+        gdf = raster.sample("arcticdem-mosaic", [[vrtLon,vrtLat],[vrtLon+0.01,vrtLat+0.01]])
+        assert init
+        assert len(gdf) == 2
+        assert abs(gdf["value"].iat[0] - vrtElevation) < sigma
+        assert gdf["file"].iat[0] ==  vrtFile
 
     def test_vrt_with_aoi(self, init):
         bbox = [-179, 50, -177, 52]
@@ -118,4 +132,14 @@ class TestStrips:
             assert file_id in gdf.attrs['file_directory'].keys()
             assert '/pgc-opendata-dems/arcticdem/strips/' in gdf.attrs['file_directory'][file_id]
             assert '_dem.tif' in gdf.attrs['file_directory'][file_id]  # only dems, no flags
+
+    def test_sample_api_serial(self, init):
+        gdf = raster.sample("arcticdem-strips", [[vrtLon,vrtLat]])
+        assert init
+        assert len(gdf) == 8
+
+    def test_sample_api_batch(self, init):
+        gdf = raster.sample("arcticdem-strips", [[vrtLon,vrtLat],[vrtLon+0.01,vrtLat+0.01]])
+        assert init
+        assert len(gdf) == 16
 

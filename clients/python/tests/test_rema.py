@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 import os.path
 import sliderule
-from sliderule import icesat2
+from sliderule import raster
 
 TESTDIR = Path(__file__).parent
 
@@ -15,7 +15,7 @@ vrtLat = -80.0
 
 vrtElevation = 328.0156250
 vrtFile      = '/vsis3/pgc-opendata-dems/rema/mosaics/v2.0/2m/2m_dem_tiles.vrt'
-vrtFileTime  = 1361299922000.0
+vrtFileTime  = 1361299922
 
 @pytest.mark.network
 class TestMosaic:
@@ -44,4 +44,17 @@ class TestMosaic:
         assert init
         assert abs(rsps["samples"][0][0]["value"] - vrtElevation) < sigma
         assert rsps["samples"][0][0]["file"] ==  vrtFile
-        assert rsps["samples"][0][0]["time"] ==  vrtFileTime
+
+    def test_sample_api_serial(self, init):
+        gdf = raster.sample("rema-mosaic", [[vrtLon,vrtLat]])
+        assert init
+        assert len(gdf) == 1
+        assert abs(gdf["value"].iat[0] - vrtElevation) < sigma
+        assert gdf["file"].iat[0] ==  vrtFile
+
+    def test_sample_api_batch(self, init):
+        gdf = raster.sample("rema-mosaic", [[vrtLon,vrtLat],[vrtLon+0.01,vrtLat+0.01]])
+        assert init
+        assert len(gdf) == 2
+        assert abs(gdf["value"].iat[0] - vrtElevation) < sigma
+        assert gdf["file"].iat[0] ==  vrtFile

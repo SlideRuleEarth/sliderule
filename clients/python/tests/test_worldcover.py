@@ -29,12 +29,6 @@ class TestMosaic:
         assert rsps["samples"][0][0]["time"] ==  timeAsUnixSecs  # datetime in seconds
 
     def test_time_overflow(self, init):
-        region = [  {"lon": -108.34, "lat": 38.89},
-                    {"lon": -107.76, "lat": 38.90},
-                    {"lon": -107.78, "lat": 39.26},
-                    {"lon": -108.36, "lat": 39.25},
-                    {"lon": -108.34, "lat": 38.89}  ]
-
         gfp = gpd.GeoDataFrame(geometry=gpd.points_from_xy([-108.1, -108.3], [39.1, 39.2]), crs='EPSG:4326')
         points = [[x,y] for x,y in zip(gfp.geometry.x , gfp.geometry.y)]
         gdf = raster.sample("esa-worldcover-10meter", points)
