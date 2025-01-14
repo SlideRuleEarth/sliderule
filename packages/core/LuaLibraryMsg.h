@@ -144,6 +144,7 @@ class LuaLibraryMsg
         static int      lmsg_recvstring     (lua_State* L);
         static int      lmsg_recvrecord     (lua_State* L);
         static int      lmsg_drain          (lua_State* L);
+        static int      lmsg_count          (lua_State* L);
         static int      lmsg_deletesub      (lua_State* L);
 
         /* record meta functions */

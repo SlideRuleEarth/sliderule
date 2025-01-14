@@ -163,6 +163,21 @@ int GeoDataFrame::luaImport (lua_State* L)
         // import dataframe columns from lua
         dataframe->columnFields.fromLua(L, 1);
 
+        // check dataframe columns and set number of rows
+        const vector<string>& column_names = dataframe->getColumnNames();
+        for(const string& name: column_names)
+        {
+            const Field* field = dataframe->getColumnData(name.c_str());
+            if(dataframe->numRows == 0)
+            {
+                dataframe->numRows = field->length();
+            }
+            else if(dataframe->numRows != field->length())
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "number of rows must match for all columns, %ld != %ld", dataframe->numRows, field->length());
+            }
+        }
+
         // optionally build metadata
         if(lua_gettop(L) >= 2)
         {
@@ -209,7 +224,8 @@ void add_column(GeoDataFrame* dataframe, GeoDataFrame::column_rec_t* column_rec_
     FieldColumn<T>* column = new FieldColumn<T>(column_rec_data->data, column_rec_data->size, encoding_mask);
     if(!dataframe->addColumnData(column_rec_data->name, column))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to add column %s of size %u", column_rec_data->name, column_rec_data->size);
+        delete column;
+        throw RunTimeException(CRITICAL, RTE_ERROR, "size mismatch, %ld != %u", dataframe->length(), column_rec_data->size);
     }
 }
 
@@ -228,6 +244,7 @@ int GeoDataFrame::luaReceive(lua_State* L)
 
     // create initial dataframe
     GeoDataFrame* dataframe = new GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {}, true);
+    lua_pop(L, 2); // creation of GeoDataFrame LuaObject leaves two objects on the stack
 
     try
     {
@@ -245,12 +262,13 @@ int GeoDataFrame::luaReceive(lua_State* L)
         const double timelimit = TimeLib::latchtime() + static_cast<double>(timeout);
 
         // while receiving messages
-        while(!terminator_received)
+        while(!terminator_received && status)
         {
             // check timeout
             if(TimeLib::latchtime() > timelimit)
             {
                 alert(CRITICAL, RTE_ERROR, pubq, NULL, "timeout occurred receiving dataframe");
+                status = false;
             }
 
             // receive message
@@ -265,6 +283,7 @@ int GeoDataFrame::luaReceive(lua_State* L)
                     if(!complete)
                     {
                         alert(CRITICAL, RTE_ERROR, pubq, NULL, "received terminator on <%s> before dataframe was complete", subq->getName());
+                        status = false;
                     }
                 }
                 // process record
@@ -296,22 +315,30 @@ int GeoDataFrame::luaReceive(lua_State* L)
                         if(column_rec_data->index == z_index) encoding_mask |= Z_COLUMN;
 
                         // create field column
-                        switch(column_rec_data->encoding)
+                        try
                         {
-                            case BOOL:      add_column<bool>    (dataframe, column_rec_data, encoding_mask); break;
-                            case INT8:      add_column<int8_t>  (dataframe, column_rec_data, encoding_mask); break;
-                            case INT16:     add_column<int16_t> (dataframe, column_rec_data, encoding_mask); break;
-                            case INT32:     add_column<int32_t> (dataframe, column_rec_data, encoding_mask); break;
-                            case INT64:     add_column<int64_t> (dataframe, column_rec_data, encoding_mask); break;
-                            case UINT8:     add_column<uint8_t> (dataframe, column_rec_data, encoding_mask); break;
-                            case UINT16:    add_column<uint16_t>(dataframe, column_rec_data, encoding_mask); break;
-                            case UINT32:    add_column<uint32_t>(dataframe, column_rec_data, encoding_mask); break;
-                            case UINT64:    add_column<uint64_t>(dataframe, column_rec_data, encoding_mask); break;
-                            case FLOAT:     add_column<float>   (dataframe, column_rec_data, encoding_mask); break;
-                            case DOUBLE:    add_column<double>  (dataframe, column_rec_data, encoding_mask); break;
-                            case TIME8:     add_column<time8_t> (dataframe, column_rec_data, encoding_mask); break;
-                            // case STRING:    add_column<string>  (dataframe, column_rec_data, encoding_mask); break; -- not yet supported
-                            default:        alert(CRITICAL, RTE_ERROR, pubq, NULL, "unable to add column %s with encoding: %u", column_rec_data->name, column_rec_data->encoding);
+                            switch(column_rec_data->encoding)
+                            {
+                                case BOOL:      add_column<bool>    (dataframe, column_rec_data, encoding_mask); break;
+                                case INT8:      add_column<int8_t>  (dataframe, column_rec_data, encoding_mask); break;
+                                case INT16:     add_column<int16_t> (dataframe, column_rec_data, encoding_mask); break;
+                                case INT32:     add_column<int32_t> (dataframe, column_rec_data, encoding_mask); break;
+                                case INT64:     add_column<int64_t> (dataframe, column_rec_data, encoding_mask); break;
+                                case UINT8:     add_column<uint8_t> (dataframe, column_rec_data, encoding_mask); break;
+                                case UINT16:    add_column<uint16_t>(dataframe, column_rec_data, encoding_mask); break;
+                                case UINT32:    add_column<uint32_t>(dataframe, column_rec_data, encoding_mask); break;
+                                case UINT64:    add_column<uint64_t>(dataframe, column_rec_data, encoding_mask); break;
+                                case FLOAT:     add_column<float>   (dataframe, column_rec_data, encoding_mask); break;
+                                case DOUBLE:    add_column<double>  (dataframe, column_rec_data, encoding_mask); break;
+                                case TIME8:     add_column<time8_t> (dataframe, column_rec_data, encoding_mask); break;
+                                // case STRING:    add_column<string>  (dataframe, column_rec_data, encoding_mask); break; -- not yet supported
+                                default:        throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported encoding %u", column_rec_data->encoding);
+                            }
+                        }
+                        catch(const RunTimeException& e)
+                        {
+                            alert(e.level(), RTE_ERROR, pubq, NULL, "unable to add column %s: %s", column_rec_data->name, e.what());
+                            status = false;
                         }
 
                         // last column
@@ -333,11 +360,16 @@ int GeoDataFrame::luaReceive(lua_State* L)
                 else
                 {
                     alert(CRITICAL, RTE_ERROR, pubq, NULL, "received record of invalid size from queue <%s>: %d", subq->getName(), ref.size);
+                    status = false;
                 }
+
+                // dereference
+                subq->dereference(ref);
             }
             else if(recv_status != MsgQ::STATE_TIMEOUT)
             {
                 alert(CRITICAL, RTE_ERROR, pubq, NULL, "failed to receive records from queue <%s>: %d", subq->getName(), recv_status);
+                status = false;
             }
         }
     }

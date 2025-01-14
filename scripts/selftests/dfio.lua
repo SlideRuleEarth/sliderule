@@ -1,7 +1,15 @@
 local runner = require("test_executive")
 local prettyprint = require("prettyprint")
 
--- Unit Test: DataFrame Import and Export --
+-- Configure Console
+
+local console = require("console")
+console.monitor:config(core.LOG, core.INFO)
+sys.setlvl(core.LOG, core.INFO)
+
+-----------------------------------------------
+print("Unit Test: DataFrame Import and Export")
+-----------------------------------------------
 
 do
     local table_in = {a = {1,2,3,4}, b = {11,12,13,14}, c = {21,22,23,24}}
@@ -20,6 +28,32 @@ do
 
     for k,_ in pairs(meta_in) do
         runner.check(meta_in[k] == meta_out[k], string.format("metadata mismatch on key %s: %f != %f", k, meta_in[k], meta_out[k]))
+    end
+end
+
+-----------------------------------------------
+print("Unit Test: DataFrame Send and Receive")
+-----------------------------------------------
+
+do
+    local table_in = {a = {100,200,300,400}, b = {110,120,130,140}, c = {210,220,230,240}}
+    local meta_in = {bob = 10, bill = 20, cynthia = 30}
+    local df_in = core.dataframe(table_in, meta_in)
+
+    local dfq = msg.subscribe("dfq")
+    df_in:send("dfq")
+    local df = core.rxdataframe(dfq)
+
+    prettyprint.display(df:export())
+
+    for k,_ in pairs(table_in) do
+        for i = 1,4 do
+            runner.check(table_in[k][i] == df[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, table_in[k][i], df[k][i]))
+        end
+    end
+
+    for k,_ in pairs(meta_in) do
+        runner.check(meta_in[k] == df[k], string.format("metadata mismatch on key %s: %f != %f", k, meta_in[k], df[k]))
     end
 end
 
