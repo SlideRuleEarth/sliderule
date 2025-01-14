@@ -102,7 +102,7 @@ int GeoDataFrame::FrameColumn::luaGetData (lua_State* L)
     try
     {
         GeoDataFrame::FrameColumn* lua_obj = dynamic_cast<GeoDataFrame::FrameColumn*>(getLuaSelf(L, 1));
-        const long index = getLuaInteger(L, 2);
+        const long index = getLuaInteger(L, 2) - 1; // lua indexing starts at 1, convert to c indexing that starts at 0
 
         // check the metatable for the key (to support functions)
         luaL_getmetatable(L, lua_obj->LuaMetaName);
@@ -162,6 +162,28 @@ int GeoDataFrame::luaImport (lua_State* L)
 
         // import dataframe columns from lua
         dataframe->columnFields.fromLua(L, 1);
+
+        // optionally build metadata
+        if(lua_gettop(L) >= 2)
+        {
+            // build keys of metadata
+            lua_pushnil(L); // prime the stack for the next key
+            while(lua_next(L, 2) != 0)
+            {
+                if(lua_isstring(L, -2))
+                {
+                    const char* name = StringLib::duplicate(lua_tostring(L, -2));
+                    FieldElement<double>* element = new FieldElement<double>();
+                    const FieldDictionary::entry_t entry = {name, element};
+                    dataframe->metaFields.add(entry);
+                    mlog(INFO, "Adding metadata %s", name);
+                }
+                lua_pop(L, 1); // remove the key
+            }
+
+            // import metadata elements from lua
+            dataframe->metaFields.fromLua(L, 2);
+        }
     }
     catch(const RunTimeException& e)
     {
