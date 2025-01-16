@@ -62,37 +62,43 @@ class GeoDataFrame: public LuaObject, public Field
         static const char* META;
         static const char* TERMINATE;
 
-        static const int MAX_COLUMN_NAME_SIZE = 128;
+        static const int MAX_NAME_SIZE = 128;
         static const uint32_t INVALID_INDEX = 0xFFFFFFFF;
 
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
-        static const char* metaRecType;
-        static const RecordObject::fieldDef_t metaRecDef[];
         static const char* columnRecType;
         static const RecordObject::fieldDef_t columnRecDef[];
+        static const char* metaRecType;
+        static const RecordObject::fieldDef_t metaRecDef[];
+        static const char* eofRecType;
+        static const RecordObject::fieldDef_t eofRecDef[];
 
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            uint32_t    num_rows;
-            uint32_t    num_columns;
-            uint32_t    time_column_index;
-            uint32_t    x_column_index;
-            uint32_t    y_column_index;
-            uint32_t    z_column_index;
+            uint32_t    size;
+            uint32_t    encoding;
+            char        name[MAX_NAME_SIZE];
+            uint8_t     data[];
         } meta_rec_t;
 
         typedef struct {
             uint32_t    index;
             uint32_t    size;
             uint32_t    encoding;
-            char        name[MAX_COLUMN_NAME_SIZE];
+            uint32_t    num_rows;
+            char        name[MAX_NAME_SIZE];
             uint8_t     data[];
         } column_rec_t;
+
+        typedef struct {
+            uint32_t    num_rows;
+            uint32_t    num_columns;
+        } eof_rec_t;
 
         /*--------------------------------------------------------------------
          * Subclasses

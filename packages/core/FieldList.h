@@ -64,6 +64,7 @@ class FieldList: public Field
 
         long            length      (void) const override;
         const Field*    get         (long i) const override;
+        long            serialize   (uint8_t* buffer, size_t size) const override;
 
         FieldList<T>&   operator=   (const FieldList<T>& list);
         FieldList<T>&   operator=   (std::initializer_list<T> init_list);
@@ -204,6 +205,17 @@ template<class T>
 const Field* FieldList<T>::get(long i) const
 {
     return reinterpret_cast<const Field*>(&values[i]);
+}
+
+/*----------------------------------------------------------------------------
+ * get
+ *----------------------------------------------------------------------------*/
+template<class T>
+long FieldList<T>::serialize(uint8_t* buffer, size_t size) const
+{
+    size_t bytes_to_copy = MIN(size, values.size() * sizeof(T));
+    memcpy(buffer, values.data(), bytes_to_copy);
+    return bytes_to_copy;
 }
 
 /*----------------------------------------------------------------------------

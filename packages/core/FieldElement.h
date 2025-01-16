@@ -72,6 +72,22 @@ class FieldElement: public Field
          * Inlines
          *--------------------------------------------------------------------*/
 
+        long length (void) const override {
+            return 1;
+        }
+
+        const Field* get (long i) const override {
+            (void)i;
+            return this;
+        }
+
+        long serialize (uint8_t* buffer, size_t size) const override {
+            const uint8_t* ptr = reinterpret_cast<const uint8_t*>(&value);
+            const size_t bytes_to_copy = MIN(size, sizeof(T));
+            memcpy(buffer, ptr, bytes_to_copy);
+            return bytes_to_copy;
+        }
+
         operator bool() const {
             return value != 0;
         }

@@ -3,7 +3,6 @@
 local results = {}
 local context = "global"
 local argsave = {}
-local exit_on_error = false
 
 --[[
 Function:   set_context
@@ -18,15 +17,6 @@ local function set_context (testname)
         results[testname]["messages"] = {}
     end
     context = testname
-end
-
---[[
-Function:   set_exit_on_error
- Purpose:   if set will exit lua interpreter on first error
-   Notes:   none
-]]
-local function set_exit_on_error (enable)
-    exit_on_error = enable
 end
 
 --[[
@@ -71,9 +61,6 @@ local function command (cmd_str)
         results[context]["messages"][results[context]["errors"]] = debug.traceback(cmd_str)
         results[context]["errors"] = results[context]["errors"] + 1
     end
-    if status == false then
-        if exit_on_error then os.exit() end
-    end
     return status
 end
 
@@ -82,7 +69,7 @@ Function:   check
  Purpose:   run statement and check if it returns true in the context of the executive
    Notes:   status is boolean
 ]]
-local function check (expression, errmsg)
+local function check (expression, errmsg, raise_on_error)
     results[context]["asserts"] = results[context]["asserts"] + 1
     local status = true
     if type(expression) == "string" then
@@ -94,7 +81,7 @@ local function check (expression, errmsg)
     if status == false or status == nil then
         results[context]["messages"][results[context]["errors"]] = debug.traceback(errmsg)
         results[context]["errors"] = results[context]["errors"] + 1
-        if exit_on_error then os.exit() end
+        if raise_on_error then error(errmsg) end
     end
     return status
 end
@@ -130,6 +117,17 @@ local function script (script_str, parms)
 end
 
 --[[
+Function:   unittest
+ Purpose:   handle the execution of a unittest function
+   Notes:   none
+]]
+local function unittest (testname, testfunc)
+    local status, result = pcall(testfunc)
+    check(status, testname)
+    return result
+end
+
+--[[
 Function:   compare
  Purpose:   do a binary comparison of two arbitrary strings
    Notes:   necessary to work around strings created from userdata
@@ -155,7 +153,6 @@ local function compare(str1, str2, errmsg)
     if status == false then
         results[context]["messages"][results[context]["errors"]] = debug.traceback(errmsg)
         results[context]["errors"] = results[context]["errors"] + 1
-        if exit_on_error then os.exit() end
     end
     return status
 end
@@ -214,12 +211,12 @@ for k,v in pairs(arg) do
 end
 
 local package = {
-    set_exit_on_error = set_exit_on_error,
     rootdir = rootdir,
     srcscript = srcscript,
     command = command,
     check = check,
     script = script,
+    unittest = unittest,
     compare = compare,
     cmpfloat = cmpfloat,
     report = report,
