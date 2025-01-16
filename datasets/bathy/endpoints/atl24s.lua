@@ -5,7 +5,7 @@ local json          = require("json")
 local dataframe     = require("dataframe")
 local earthdata     = require("earthdata")
 local rqst          = json.decode(arg[1])
-local parms         = bathy.parms(rqst["parms"], rqst["shard"], "icesat2", rqst["resource"])
+local parms         = bathy.parms(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
 local userlog       = msg.publish(rspq) -- create user log publisher (alerts)
 
 if earthdata.query(parms, rspq, userlog) == earthdata.SUCCESS then

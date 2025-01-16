@@ -80,6 +80,7 @@ class GeoDataFrame: public LuaObject, public Field
          *--------------------------------------------------------------------*/
 
         typedef struct {
+            uint64_t    key;
             uint32_t    size;
             uint32_t    encoding;
             char        name[MAX_NAME_SIZE];
@@ -87,6 +88,7 @@ class GeoDataFrame: public LuaObject, public Field
         } meta_rec_t;
 
         typedef struct {
+            uint64_t    key;
             uint32_t    index;
             uint32_t    size;
             uint32_t    encoding;
@@ -96,6 +98,7 @@ class GeoDataFrame: public LuaObject, public Field
         } column_rec_t;
 
         typedef struct {
+            uint64_t    key;
             uint32_t    num_rows;
             uint32_t    num_columns;
         } eof_rec_t;
@@ -162,8 +165,7 @@ class GeoDataFrame: public LuaObject, public Field
          *--------------------------------------------------------------------*/
 
         static void                 init                (void);
-        static int                  luaImport           (lua_State* L);
-        static int                  luaReceive          (lua_State* L);
+        static int                  luaCreate           (lua_State* L);
 
         long                        length              (void) const override;
         long                        addRow              (void);
@@ -220,6 +222,7 @@ class GeoDataFrame: public LuaObject, public Field
 
         static int      luaExport           (lua_State* L);
         static int      luaSend             (lua_State* L);
+        static int      luaReceive          (lua_State* L);
         static int      luaGetColumnData    (lua_State* L);
         static int      luaGetMetaData      (lua_State* L);
         static int      luaRun              (lua_State* L);

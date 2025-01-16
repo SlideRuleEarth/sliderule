@@ -38,23 +38,23 @@ runner.unittest("DataFrame Send and Receive", function()
     local table_in = {a = {100,200,300,400}, b = {110,120,130,140}, c = {210,220,230,240}}
     local meta_in = {bob = 10, bill = 20, cynthia = 30}
     local df_in = core.dataframe(table_in, meta_in)
+    local df_out = core.dataframe()
 
-    local dfq = msg.subscribe("dfq")
-    local send_status = df_in:send("dfq")
-    runner.check(send_status, "failed to send dataframe", true)
-    local df = core.rxdataframe(dfq)
+    df_out:receive("dfq", 1, "rspq") -- non-blocking
+    runner.check(df_in:send("dfq"), "failed to send dataframe", true)
 
-    prettyprint.display(df:export())
+    -- check df_out:complete() which is blocking call that waits for timeout and responds with true|false status
 
     for k,_ in pairs(table_in) do
         for i = 1,4 do
-            runner.check(table_in[k][i] == df[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, table_in[k][i], df[k][i]))
+            runner.check(table_in[k][i] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, table_in[k][i], df_out[k][i]))
         end
     end
 
     for k,_ in pairs(meta_in) do
-        runner.check(meta_in[k] == df:meta(k), string.format("metadata mismatch on key %s: %f != %f", k, meta_in[k], df:meta(k)))
+        runner.check(meta_in[k] == df_out:meta(k), string.format("metadata mismatch on key %s: %f != %f", k, meta_in[k], df_out:meta(k)))
     end
+
 end)
 
 -- Report Results --

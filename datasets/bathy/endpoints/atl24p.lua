@@ -6,7 +6,7 @@ local dataframe     = require("dataframe")
 local earthdata     = require("earthdata")
 local runner        = require("container_runtime")
 local rqst          = json.decode(arg[1])
-local parms         = bathy.parms(rqst["parms"], rqst["shard"], "icesat2", rqst["resource"])
+local parms         = bathy.parms(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
 local userlog       = msg.publish(rspq) -- create user log publisher (alerts)
 local outputs       = {} -- table of all outputs that go into oceaneyes
 local starttime    = time.gps() -- used for timeout handling
@@ -176,7 +176,7 @@ local viirs_filename = getKd(parms)
 local resource09 = getAtl09(resource)
 
 -- acquire lock when not proxied
-if parms["shard"] == core.INVALID_KEY then
+if parms["key_space"] == core.INVALID_KEY then
     transaction_id = acquireLock(parms["node_timeout"], starttime)
 end
 

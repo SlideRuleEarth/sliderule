@@ -139,57 +139,66 @@ void GeoDataFrame::init(void)
 }
 
 /*----------------------------------------------------------------------------
- * luaImport - import(<lua table>)
+ * luaCreate - dataframe([<column table>], [<meta table>])
  *----------------------------------------------------------------------------*/
-int GeoDataFrame::luaImport (lua_State* L)
+int GeoDataFrame::luaCreate (lua_State* L)
 {
     bool status = true;
     GeoDataFrame* dataframe = NULL;
 
     try
     {
+        // parameter indices
+        const int column_table_index = 1;
+        const int meta_table_index = 2;
+
         // create initial dataframe
         dataframe = new GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {}, true);
+        lua_pop(L, 2);
 
-        // build columns of dataframe
-        lua_pushnil(L); // prime the stack for the next key
-        while(lua_next(L, 1) != 0)
+        // column table
+        if(lua_gettop(L) >= column_table_index)
         {
-            if(lua_isstring(L, -2))
+            // build columns of dataframe
+            lua_pushnil(L); // prime the stack for the next key
+            while(lua_next(L, column_table_index) != 0)
             {
-                const char* name = StringLib::duplicate(lua_tostring(L, -2));
-                FieldColumn<double>* column = new FieldColumn<double>();
-                const FieldDictionary::entry_t entry = {name, column};
-                dataframe->columnFields.add(entry);
-                mlog(INFO, "Adding column %ld: %s", dataframe->columnFields.length(), name);
+                if(lua_isstring(L, -2))
+                {
+                    const char* name = StringLib::duplicate(lua_tostring(L, -2));
+                    FieldColumn<double>* column = new FieldColumn<double>();
+                    const FieldDictionary::entry_t entry = {name, column};
+                    dataframe->columnFields.add(entry);
+                    mlog(INFO, "Adding column %ld: %s", dataframe->columnFields.length(), name);
+                }
+                lua_pop(L, 1); // remove the key
             }
-            lua_pop(L, 1); // remove the key
+
+            // import dataframe columns from lua
+            dataframe->columnFields.fromLua(L, column_table_index);
+
+            // check dataframe columns and set number of rows
+            const vector<string>& column_names = dataframe->getColumnNames();
+            for(const string& name: column_names)
+            {
+                const Field* field = dataframe->getColumnData(name.c_str());
+                if(dataframe->numRows == 0)
+                {
+                    dataframe->numRows = field->length();
+                }
+                else if(dataframe->numRows != field->length())
+                {
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "number of rows must match for all columns, %ld != %ld", dataframe->numRows, field->length());
+                }
+            }
         }
 
-        // import dataframe columns from lua
-        dataframe->columnFields.fromLua(L, 1);
-
-        // check dataframe columns and set number of rows
-        const vector<string>& column_names = dataframe->getColumnNames();
-        for(const string& name: column_names)
-        {
-            const Field* field = dataframe->getColumnData(name.c_str());
-            if(dataframe->numRows == 0)
-            {
-                dataframe->numRows = field->length();
-            }
-            else if(dataframe->numRows != field->length())
-            {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "number of rows must match for all columns, %ld != %ld", dataframe->numRows, field->length());
-            }
-        }
-
-        // optionally build metadata
-        if(lua_gettop(L) >= 2)
+        //  meta table
+        if(lua_gettop(L) >= meta_table_index)
         {
             // build keys of metadata
             lua_pushnil(L); // prime the stack for the next key
-            while(lua_next(L, 2) != 0)
+            while(lua_next(L, meta_table_index) != 0)
             {
                 if(lua_isstring(L, -2))
                 {
@@ -203,7 +212,7 @@ int GeoDataFrame::luaImport (lua_State* L)
             }
 
             // import metadata elements from lua
-            dataframe->metaFields.fromLua(L, 2);
+            dataframe->metaFields.fromLua(L, meta_table_index);
         }
     }
     catch(const RunTimeException& e)
@@ -213,228 +222,6 @@ int GeoDataFrame::luaImport (lua_State* L)
     }
 
     // return dataframe LuaObject
-    if(!status)
-    {
-        delete dataframe;
-        return returnLuaStatus(L, false);
-    }
-    return createLuaObject(L, dataframe);
-}
-
-/*----------------------------------------------------------------------------
- * luaReceive - core.rxdataframe(<msgq>, <rspq>)
- *----------------------------------------------------------------------------*/
-template<class T>
-void add_meta(GeoDataFrame* dataframe, GeoDataFrame::meta_rec_t* meta_rec_data)
-{
-    if(sizeof(T) == meta_rec_data->size)
-    {
-        T* value_ptr = reinterpret_cast<T*>(meta_rec_data->data);
-        FieldElement<T>* data = new FieldElement<T>(*value_ptr);
-        const char* _name = StringLib::duplicate(meta_rec_data->name);
-        dataframe->addMetaData(_name, data);
-    }
-}
-
-template<class T>
-void add_column(GeoDataFrame* dataframe, GeoDataFrame::column_rec_t* column_rec_data)
-{
-    FieldColumn<T>* column = new FieldColumn<T>(column_rec_data->data, column_rec_data->size, column_rec_data->encoding);
-    const char* _name = StringLib::duplicate(column_rec_data->name);
-    if(!dataframe->addColumnData(_name, column))
-    {
-        delete column;
-        delete [] _name;
-        throw RunTimeException(CRITICAL, RTE_ERROR, "size mismatch, %ld != %u", dataframe->length(), column_rec_data->size);
-    }
-}
-
-int GeoDataFrame::luaReceive(lua_State* L)
-{
-    bool status = true;
-    Publisher* pubq = NULL;
-    bool complete = false;
-    long num_columns = 0;
-
-    // create initial dataframe
-    GeoDataFrame* dataframe = new GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {}, true);
-    lua_pop(L, 2); // creation of GeoDataFrame LuaObject leaves two objects on the stack
-
-    try
-    {
-        // parameter #1 - get subscriber (userdata)
-        LuaLibraryMsg::msgSubscriberData_t* msg_data = static_cast<LuaLibraryMsg::msgSubscriberData_t*>(luaL_checkudata(L, 1, LuaLibraryMsg::LUA_SUBMETANAME));
-        if(!msg_data) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply subscriber for parameter #1");
-        Subscriber* subq = msg_data->sub;
-
-        // parameter #2 - get output message queue (string)
-        const char* outq_name = getLuaString(L, 2, true, NULL);
-        if(outq_name) pubq = new Publisher(outq_name);
-
-        // parameter #3 - get request timeout
-        const long timeout = getLuaInteger(L, 3, true, RequestFields::DEFAULT_TIMEOUT);
-        const double timelimit = TimeLib::latchtime() + static_cast<double>(timeout);
-
-        // while receiving messages
-        while(!complete && status)
-        {
-            // check timeout
-            if(TimeLib::latchtime() > timelimit)
-            {
-                alert(CRITICAL, RTE_ERROR, pubq, NULL, "timeout occurred receiving dataframe");
-                status = false;
-            }
-
-            // receive message
-            Subscriber::msgRef_t ref;
-            const int recv_status = subq->receiveRef(ref, SYS_TIMEOUT);
-            if(recv_status > 0)
-            {
-                // process terminator
-                if(ref.size == 0)
-                {
-                    alert(CRITICAL, RTE_ERROR, pubq, NULL, "received unexpected terminator on <%s> before dataframe was complete", subq->getName());
-                    complete = true;
-                    status = false;
-                }
-                // process record
-                else if(ref.size > 0)
-                {
-                    RecordInterface* record = new RecordInterface(reinterpret_cast<unsigned char*>(ref.data), ref.size);
-
-                    if(StringLib::match(record->getRecordType(), metaRecType))
-                    {
-                        // meta record
-                        meta_rec_t* meta_rec_data = reinterpret_cast<meta_rec_t*>(record->getRecordData());
-                        const uint32_t encoding_mask = meta_rec_data->encoding & Field::VALUE_MASK;
-
-                        // create meta field
-                        switch(encoding_mask)
-                        {
-                            case BOOL:      add_meta<bool>    (dataframe, meta_rec_data); break;
-                            case INT8:      add_meta<int8_t>  (dataframe, meta_rec_data); break;
-                            case INT16:     add_meta<int16_t> (dataframe, meta_rec_data); break;
-                            case INT32:     add_meta<int32_t> (dataframe, meta_rec_data); break;
-                            case INT64:     add_meta<int64_t> (dataframe, meta_rec_data); break;
-                            case UINT8:     add_meta<uint8_t> (dataframe, meta_rec_data); break;
-                            case UINT16:    add_meta<uint16_t>(dataframe, meta_rec_data); break;
-                            case UINT32:    add_meta<uint32_t>(dataframe, meta_rec_data); break;
-                            case UINT64:    add_meta<uint64_t>(dataframe, meta_rec_data); break;
-                            case FLOAT:     add_meta<float>   (dataframe, meta_rec_data); break;
-                            case DOUBLE:    add_meta<double>  (dataframe, meta_rec_data); break;
-                            case TIME8:     add_meta<time8_t> (dataframe, meta_rec_data); break;
-                            // case STRING:    add_meta<string>  (dataframe, meta_rec_data); break; -- not yet supported
-                            default:        throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported meta encoding %u", meta_rec_data->encoding);
-                        }
-
-                        // count column
-                        num_columns++;
-                    }
-                    else if(StringLib::match(record->getRecordType(), columnRecType))
-                    {
-                        // column record
-                        column_rec_t* column_rec_data = reinterpret_cast<column_rec_t*>(record->getRecordData());
-                        const uint32_t encoding_mask = column_rec_data->encoding & Field::VALUE_MASK;
-
-                        // set number of rows on first column
-                        if(dataframe->numRows == 0)
-                        {
-                            dataframe->numRows = column_rec_data->num_rows;
-                        }
-
-                        // create column field
-                        try
-                        {
-                            switch(encoding_mask)
-                            {
-                                case BOOL:      add_column<bool>    (dataframe, column_rec_data); break;
-                                case INT8:      add_column<int8_t>  (dataframe, column_rec_data); break;
-                                case INT16:     add_column<int16_t> (dataframe, column_rec_data); break;
-                                case INT32:     add_column<int32_t> (dataframe, column_rec_data); break;
-                                case INT64:     add_column<int64_t> (dataframe, column_rec_data); break;
-                                case UINT8:     add_column<uint8_t> (dataframe, column_rec_data); break;
-                                case UINT16:    add_column<uint16_t>(dataframe, column_rec_data); break;
-                                case UINT32:    add_column<uint32_t>(dataframe, column_rec_data); break;
-                                case UINT64:    add_column<uint64_t>(dataframe, column_rec_data); break;
-                                case FLOAT:     add_column<float>   (dataframe, column_rec_data); break;
-                                case DOUBLE:    add_column<double>  (dataframe, column_rec_data); break;
-                                case TIME8:     add_column<time8_t> (dataframe, column_rec_data); break;
-                                // case STRING:    add_column<string>  (dataframe, column_rec_data); break; -- not yet supported
-                                default:        throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported column encoding %u", column_rec_data->encoding);
-                            }
-                        }
-                        catch(const RunTimeException& e)
-                        {
-                            alert(e.level(), RTE_ERROR, pubq, NULL, "unable to add column %s: %s", column_rec_data->name, e.what());
-                            status = false;
-                        }
-
-                        // last column
-                        if(column_rec_data->index == (num_columns - 1))
-                        {
-                            dataframe->populateGeoColumns();
-                            complete = true;
-                        }
-                    }
-                    else if(StringLib::match(record->getRecordType(), eofRecType))
-                    {
-                        // eof record
-                        eof_rec_t* eof_rec_data = reinterpret_cast<eof_rec_t*>(record->getRecordData());
-                        if(num_columns == eof_rec_data->num_columns)
-                        {
-                            if(dataframe->numRows == eof_rec_data->num_rows)
-                            {
-                                // complete dataframe
-                                dataframe->populateGeoColumns();
-                                complete = true;
-                            }
-                            else
-                            {
-                                alert(CRITICAL, RTE_ERROR, pubq, NULL, "invalid number of rows identified: %ld != %u", dataframe->numRows, eof_rec_data->num_rows);
-                                status = false;
-                            }
-                        }
-                        else
-                        {
-                            alert(CRITICAL, RTE_ERROR, pubq, NULL, "incomplete number of columns received: %ld != %u", num_columns, eof_rec_data->num_columns);
-                            status = false;
-                        }
-                    }
-                    else if(pubq)
-                    {
-                        // record of non-targeted type - pass through
-                        pubq->postCopy(ref.data, ref.size);
-                    }
-
-                    // free record
-                    delete record;
-                }
-                else
-                {
-                    alert(CRITICAL, RTE_ERROR, pubq, NULL, "received record of invalid size from queue <%s>: %d", subq->getName(), ref.size);
-                    status = false;
-                }
-
-                // dereference
-                subq->dereference(ref);
-            }
-            else if(recv_status != MsgQ::STATE_TIMEOUT)
-            {
-                alert(CRITICAL, RTE_ERROR, pubq, NULL, "failed to receive records from queue <%s>: %d", subq->getName(), recv_status);
-                status = false;
-            }
-        }
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error receiving dataframe: %s", e.what());
-        status = false;
-    }
-
-    /* Cleanup */
-    delete pubq;
-
-    /* Return Dataframe LuaObject */
     if(!status)
     {
         delete dataframe;
@@ -664,6 +451,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     // set lua functions
     LuaEngine::setAttrFunc(L, "export",     luaExport);
     LuaEngine::setAttrFunc(L, "send",       luaSend);
+    LuaEngine::setAttrFunc(L, "receive",    luaReceive);
     LuaEngine::setAttrFunc(L, "__index",    luaGetColumnData);
     LuaEngine::setAttrFunc(L, "meta",       luaGetMetaData);
     LuaEngine::setAttrFunc(L, "run",        luaRun);
@@ -876,7 +664,7 @@ int GeoDataFrame::luaExport (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaSend - :send(<rspq>, [<timeout>])
+ * luaSend - :send(<rspq>, [<key_space>], [<timeout>])
  *----------------------------------------------------------------------------*/
 int GeoDataFrame::luaSend(lua_State* L)
 {
@@ -887,7 +675,8 @@ int GeoDataFrame::luaSend(lua_State* L)
         // get parameters
         GeoDataFrame*   dataframe   = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
         const char*     rspq        = getLuaString(L, 2);
-        const int       timeout     = getLuaInteger(L, 3, true, SYS_TIMEOUT);
+        const uint64_t  key_space   = getLuaInteger(L, 3, true, RequestFields::DEFAULT_KEY_SPACE);
+        const int       timeout     = getLuaInteger(L, 4, true, SYS_TIMEOUT);
 
         // create publisher
         Publisher pub(rspq);
@@ -907,6 +696,7 @@ int GeoDataFrame::luaSend(lua_State* L)
             // create meta record
             RecordObject meta_rec(metaRecType, rec_size);
             meta_rec_t* meta_rec_data = reinterpret_cast<meta_rec_t*>(meta_rec.getRecordData());
+            meta_rec_data->key = key_space;
             meta_rec_data->size = element_size;
             meta_rec_data->encoding = kv.value.field->encoding;
             StringLib::copy(meta_rec_data->name, kv.value.name, MAX_NAME_SIZE);
@@ -934,6 +724,7 @@ int GeoDataFrame::luaSend(lua_State* L)
             // create column record
             RecordObject column_rec(columnRecType, rec_size);
             column_rec_t* column_rec_data = reinterpret_cast<column_rec_t*>(column_rec.getRecordData());
+            column_rec_data->key = key_space;
             column_rec_data->index = i;
             column_rec_data->size = column_size;
             column_rec_data->encoding = kv.value.field->encoding;
@@ -951,6 +742,7 @@ int GeoDataFrame::luaSend(lua_State* L)
         // create and send eof record
         RecordObject eof_rec(metaRecType);
         eof_rec_t* eof_rec_data = reinterpret_cast<eof_rec_t*>(eof_rec.getRecordData());
+        eof_rec_data->key = key_space;
         eof_rec_data->num_rows = dataframe->length();
         eof_rec_data->num_columns = dataframe->columnFields.length();
         eof_rec.post(&pub, 0, NULL, true, timeout);
@@ -962,6 +754,233 @@ int GeoDataFrame::luaSend(lua_State* L)
     }
 
     // return completion status
+    return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaReceive - :receive(<input q>, [<number of resources>], [<outq>], [<timeout>])
+ *----------------------------------------------------------------------------*/
+
+/*
+ * Local Helper Function: add_meta
+ */
+template<class T>
+bool add_meta(GeoDataFrame* dataframe, GeoDataFrame::meta_rec_t* meta_rec_data)
+{
+    if(sizeof(T) == meta_rec_data->size)
+    {
+        T* value_ptr = reinterpret_cast<T*>(meta_rec_data->data);
+        FieldElement<T>* data = new FieldElement<T>(*value_ptr);
+        const char* _name = StringLib::duplicate(meta_rec_data->name);
+        dataframe->addMetaData(_name, data);
+        return true;
+    }
+    return false;
+}
+
+/*
+ * Local Helper Function: add_column
+ */
+template<class T>
+bool add_column(GeoDataFrame* dataframe, GeoDataFrame::column_rec_t* column_rec_data)
+{
+    FieldColumn<T>* column = new FieldColumn<T>(column_rec_data->data, column_rec_data->size, column_rec_data->encoding);
+    const char* _name = StringLib::duplicate(column_rec_data->name);
+    if(!dataframe->addColumnData(_name, column))
+    {
+        delete column;
+        delete [] _name;
+        return false;
+    }
+    return true;
+}
+
+/*
+ * Local Helper Function: rx_thread
+ */
+//static void* rx_thread (void* parm)
+//{
+//
+//}
+
+/*
+ * Class Method: luaReceive
+ */
+int GeoDataFrame::luaReceive(lua_State* L)
+{
+    bool status = true;
+    bool complete = false;
+    Publisher* outq = NULL;
+    Subscriber* inq = NULL;
+    Subscriber::msgRef_t ref;
+
+    try
+    {
+        // parameters
+        GeoDataFrame* dataframe = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        const char* inq_name = getLuaString(L, 2);
+//        const int total_resources = getLuaInteger(L, 3);
+        const char* outq_name = getLuaString(L, 4);
+        const long timeout = getLuaInteger(L, 5, true, RequestFields::DEFAULT_TIMEOUT);
+
+        // initialize processing variables
+        inq = new Subscriber(inq_name);
+        outq = new Publisher(outq_name);
+        const double timelimit = TimeLib::latchtime() + static_cast<double>(timeout);
+        long num_columns = 0;
+
+        // while receiving messages
+        while(dataframe->active && !complete)
+        {
+            // check timeout
+            if(TimeLib::latchtime() > timelimit)
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "timeout occurred receiving dataframe");
+            }
+
+            // receive message
+            const int recv_status = inq->receiveRef(ref, SYS_TIMEOUT);
+
+            // check for timeout
+            if(recv_status == MsgQ::STATE_TIMEOUT)
+            {
+                continue;
+            }
+
+            // check for error in receiving
+            if(recv_status < 0)
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to receive records from queue <%s>: %d", inq->getName(), recv_status);
+            }
+
+            // check for terminator
+            if(ref.size == 0)
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "received unexpected terminator on <%s> before dataframe was complete", inq->getName());
+            }
+
+            // check for invalid size
+            if(ref.size < 0)
+            {
+                throw RunTimeException(CRITICAL, RTE_ERROR, "received record of invalid size from queue <%s>: %d", inq->getName(), ref.size);
+            }
+
+            // process record
+            const RecordInterface record(reinterpret_cast<unsigned char*>(ref.data), ref.size);
+            if(StringLib::match(record.getRecordType(), metaRecType))
+            {
+                // meta record
+                meta_rec_t* meta_rec_data = reinterpret_cast<meta_rec_t*>(record.getRecordData());
+                const uint32_t encoding_mask = meta_rec_data->encoding & Field::VALUE_MASK;
+
+                // create meta field
+                bool add_status = false;
+                switch(encoding_mask)
+                {
+                    case BOOL:      add_status = add_meta<bool>    (dataframe, meta_rec_data); break;
+                    case INT8:      add_status = add_meta<int8_t>  (dataframe, meta_rec_data); break;
+                    case INT16:     add_status = add_meta<int16_t> (dataframe, meta_rec_data); break;
+                    case INT32:     add_status = add_meta<int32_t> (dataframe, meta_rec_data); break;
+                    case INT64:     add_status = add_meta<int64_t> (dataframe, meta_rec_data); break;
+                    case UINT8:     add_status = add_meta<uint8_t> (dataframe, meta_rec_data); break;
+                    case UINT16:    add_status = add_meta<uint16_t>(dataframe, meta_rec_data); break;
+                    case UINT32:    add_status = add_meta<uint32_t>(dataframe, meta_rec_data); break;
+                    case UINT64:    add_status = add_meta<uint64_t>(dataframe, meta_rec_data); break;
+                    case FLOAT:     add_status = add_meta<float>   (dataframe, meta_rec_data); break;
+                    case DOUBLE:    add_status = add_meta<double>  (dataframe, meta_rec_data); break;
+                    case TIME8:     add_status = add_meta<time8_t> (dataframe, meta_rec_data); break;
+                    default:        break;
+                }
+
+                // check add status
+                if(!add_status)
+                {
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "failed to add metadata of size %u with encoding %u", meta_rec_data->size, meta_rec_data->encoding);
+                }
+            }
+            else if(StringLib::match(record.getRecordType(), columnRecType))
+            {
+                // column record
+                column_rec_t* column_rec_data = reinterpret_cast<column_rec_t*>(record.getRecordData());
+                const uint32_t encoding_mask = column_rec_data->encoding & Field::VALUE_MASK;
+
+                // set number of rows on first column
+                if(dataframe->numRows == 0)
+                {
+                    dataframe->numRows = column_rec_data->num_rows;
+                }
+
+                // create column field
+                bool add_status = false;
+                switch(encoding_mask)
+                {
+                    case BOOL:      add_status = add_column<bool>    (dataframe, column_rec_data); break;
+                    case INT8:      add_status = add_column<int8_t>  (dataframe, column_rec_data); break;
+                    case INT16:     add_status = add_column<int16_t> (dataframe, column_rec_data); break;
+                    case INT32:     add_status = add_column<int32_t> (dataframe, column_rec_data); break;
+                    case INT64:     add_status = add_column<int64_t> (dataframe, column_rec_data); break;
+                    case UINT8:     add_status = add_column<uint8_t> (dataframe, column_rec_data); break;
+                    case UINT16:    add_status = add_column<uint16_t>(dataframe, column_rec_data); break;
+                    case UINT32:    add_status = add_column<uint32_t>(dataframe, column_rec_data); break;
+                    case UINT64:    add_status = add_column<uint64_t>(dataframe, column_rec_data); break;
+                    case FLOAT:     add_status = add_column<float>   (dataframe, column_rec_data); break;
+                    case DOUBLE:    add_status = add_column<double>  (dataframe, column_rec_data); break;
+                    case TIME8:     add_status = add_column<time8_t> (dataframe, column_rec_data); break;
+                    default:        break;
+                }
+
+                // check add status
+                if(!add_status)
+                {
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "failed to add column with %u rows and with encoding %u", column_rec_data->num_rows, column_rec_data->encoding);
+                }
+
+                // count column
+                num_columns++;
+            }
+            else if(StringLib::match(record.getRecordType(), eofRecType))
+            {
+                // eof record
+                eof_rec_t* eof_rec_data = reinterpret_cast<eof_rec_t*>(record.getRecordData());
+
+                // check number of columns
+                if(num_columns != eof_rec_data->num_columns)
+                {
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "incomplete number of columns received: %ld != %u", num_columns, eof_rec_data->num_columns);
+                }
+
+                // check number of rows
+                if(dataframe->numRows != eof_rec_data->num_rows)
+                {
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "invalid number of rows identified: %ld != %u", dataframe->numRows, eof_rec_data->num_rows);
+                }
+
+                // complete dataframe
+                dataframe->populateGeoColumns();
+                complete = true;
+            }
+            else
+            {
+                // record of non-targeted type - pass through
+                outq->postCopy(ref.data, ref.size);
+            }
+
+            // dereference
+            inq->dereference(ref);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        if(inq) inq->dereference(ref);
+        alert(e.level(), RTE_ERROR, outq, NULL, "Error receiving dataframe: %s", e.what());
+        status = false;
+    }
+
+    // free message queues
+    delete inq;
+    delete outq;
+
+    // return status
     return returnLuaStatus(L, status);
 }
 

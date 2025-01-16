@@ -613,10 +613,13 @@ Subscriber::~Subscriber()
  *----------------------------------------------------------------------------*/
 bool Subscriber::dereference(msgRef_t& ref, bool with_delete)
 {
-    assert(ref._handle); // casted to a pointer below and dereferenced
+    /* Null Handles are Vacuous */
+    if(ref._handle == NULL) return false;
 
+    /* Cast Handle to Queue Node Pointer */
     queue_node_t* node = static_cast<queue_node_t*>(ref._handle);
 
+    /* Deference Node and Reclaim Freed Space */
     msgQ->locknblock->lock();
     {
         node->refs--;
@@ -629,6 +632,10 @@ bool Subscriber::dereference(msgRef_t& ref, bool with_delete)
     }
     msgQ->locknblock->unlock();
 
+    /* Set Handle to Null for Future */
+    ref._handle = NULL;
+
+    /* Success */
     return true;
 }
 
@@ -689,6 +696,7 @@ void* Subscriber::getData(void* _handle, int* size)
  *----------------------------------------------------------------------------*/
 int Subscriber::receiveRef(msgRef_t& ref, int timeout)
 {
+    ref._handle = NULL;
     return receive(ref, CFG_SIZE_INFINITY, timeout, false);
 }
 

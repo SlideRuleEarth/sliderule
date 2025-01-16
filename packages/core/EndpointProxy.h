@@ -105,6 +105,8 @@ class EndpointProxy: public LuaObject
                                                      bool _send_terminator, int _cluster_size_hint);
                             ~EndpointProxy          (void) override;
 
+        static int          luaTotalResources       (lua_State* L);
+        static int          luaCompleteResources    (lua_State* L);
         static void*        collatorThread          (void* parm);
         static void*        proxyThread             (void* parm);
 };
