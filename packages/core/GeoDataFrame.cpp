@@ -636,7 +636,7 @@ void* GeoDataFrame::receiveThread (void* parm)
                 // check add status
                 if(!add_status)
                 {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "failed to add metadata of size %u with encoding %u", meta_rec_data->size, meta_rec_data->encoding);
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "failed to add metadata %s of size %u with encoding %u", meta_rec_data->name, meta_rec_data->size, meta_rec_data->encoding);
                 }
             }
             else if(StringLib::match(record.getRecordType(), columnRecType))
@@ -904,7 +904,7 @@ int GeoDataFrame::luaSend(lua_State* L)
 
             // determine size of element
             const uint32_t value_encoding = kv.value.field->getValueEncoding();
-            assert(value_encoding >= 0 && value_encoding < RecordObject::NUM_FIELD_TYPES);
+            if(value_encoding < 0 || value_encoding >= RecordObject::NUM_FIELD_TYPES) continue;
             const long element_size = kv.value.field->length() * RecordObject::FIELD_TYPE_BYTES[value_encoding];
             const long rec_size = offsetof(column_rec_t, data) + element_size;
 
@@ -955,7 +955,7 @@ int GeoDataFrame::luaSend(lua_State* L)
         }
 
         // create and send eof record
-        RecordObject eof_rec(metaRecType);
+        RecordObject eof_rec(eofRecType);
         eof_rec_t* eof_rec_data = reinterpret_cast<eof_rec_t*>(eof_rec.getRecordData());
         eof_rec_data->key = key_space;
         eof_rec_data->num_rows = dataframe->length();
