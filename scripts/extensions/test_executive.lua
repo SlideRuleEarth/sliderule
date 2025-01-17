@@ -122,6 +122,7 @@ Function:   unittest
    Notes:   none
 ]]
 local function unittest (testname, testfunc)
+    print("Starting test: " .. testname)
     local status, result = pcall(testfunc)
     check(status, testname)
     return result

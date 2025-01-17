@@ -202,6 +202,31 @@ class GeoDataFrame: public LuaObject, public Field
     protected:
 
         /*--------------------------------------------------------------------
+         * Structs
+         *--------------------------------------------------------------------*/
+
+        struct receive_info_t {
+            GeoDataFrame* dataframe = NULL;
+            const char* inq_name = NULL;
+            const char* outq_name = NULL;
+            int total_resources = 0;
+            int timeout = IO_PEND;
+            Cond ready_signal;
+            bool ready = false;
+            receive_info_t(GeoDataFrame* _dataframe, const char* _inq_name, const char* _outq_name, int _total_resources, int _timeout) {
+                dataframe = _dataframe;
+                inq_name = StringLib::duplicate(_inq_name);
+                outq_name = StringLib::duplicate(_outq_name);
+                total_resources = _total_resources;
+                timeout = _timeout;
+            }
+            ~receive_info_t() {
+                delete [] inq_name;
+                delete [] outq_name;
+            }
+        };
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -213,6 +238,7 @@ class GeoDataFrame: public LuaObject, public Field
                                  bool free_on_delete = false);
         virtual ~GeoDataFrame   (void) override;
 
+        static void*    receiveThread       (void* parm);
         static void*    runThread           (void* parm);
         void            populateGeoColumns  (void);
 
@@ -243,7 +269,8 @@ class GeoDataFrame: public LuaObject, public Field
         string                      zColumnName;
 
         bool                        active;
-        Thread*                     pid;
+        Thread*                     receivePid;
+        Thread*                     runPid;
         Publisher                   pubRunQ;
         Subscriber                  subRunQ;
         Cond                        runSignal;

@@ -42,8 +42,7 @@ runner.unittest("DataFrame Send and Receive", function()
 
     df_out:receive("dfq", 1, "rspq") -- non-blocking
     runner.check(df_in:send("dfq"), "failed to send dataframe", true)
-
-    -- check df_out:complete() which is blocking call that waits for timeout and responds with true|false status
+    runner.check(df_out:waiton(10000), "failed to receive dataframe", true)
 
     for k,_ in pairs(table_in) do
         for i = 1,4 do
