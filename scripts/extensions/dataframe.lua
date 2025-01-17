@@ -29,20 +29,25 @@ local function proxy(endpoint, parms, rspq, userlog)
         return nil, RC_PASS_THROUGH
     end
 
-    -- Proxy Request --
+    -- Initialize Variables
     local resources = parms["resources"]
+    local proxyq_name = "proxy."..rspq
     local parms_tbl = parms:export()
     parms_tbl["resources"] = nil -- remove list of resources in proxied request
     local rqst_json = json.encode(parms_tbl)
-    local proxyq_name = "proxy."..rspq
     local node_timeout = parms["node_timeout"]
     local cluster_size_hint = parms["cluster_size_hint"]
     local locks_per_node = (parms["poly"] and not parms["ignore_poly_for_cmr"]) and 1 or core.MAX_LOCKS_PER_NODE
+
+    -- Create Receiving DataFrame
+    local df = core.dataframe()
+    df:receive(proxyq_name, rspq, #resources, parms["rqst_timeout"])
+
+    -- Proxy Request --
     local endpoint_proxy = core.proxy(endpoint, resources, rqst_json, node_timeout, locks_per_node, proxyq_name, true, cluster_size_hint)
 
     -- Receive DataFrame (blocks until dataframe complete or timeout) --
-    local df = core.rxdataframe(proxyq_name, endpoint_proxy:totalresources(), rspq, parms["rqst_timeout"])
-    if not df then
+    if not df:waiton(parms["rqst_timeout"] * 1000) then
         userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to receive dataframe"));
         return nil, RC_PROXY_FAILURE
     end

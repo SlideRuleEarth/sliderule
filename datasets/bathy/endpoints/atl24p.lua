@@ -218,7 +218,7 @@ for beam,beam_df in pairs(dataframes) do
     local df_finished = beam_df:finished(ctimeout(parms["node_timeout"], starttime), rspq)
     if not df_finished then
         userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> on %s timed out waiting for dataframe to complete on spot %d", rspq, resource, beam_df:meta("spot")))
-    elseif not dataframes[beam]:isvalid() then
+    elseif dataframes[beam]:inerror() then
         userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create valid bathy dataframe for spot %d", rspq, resource, beam_df:meta("spot")))
     elseif dataframes[beam]:length() == 0 then
         userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> on %s created an empty bathy dataframe for spot %d", rspq, resource, beam_df:meta("spot")))

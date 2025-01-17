@@ -64,44 +64,33 @@ class GeoDataFrame: public LuaObject, public Field
 
         static const int MAX_NAME_SIZE = 128;
         static const uint32_t INVALID_INDEX = 0xFFFFFFFF;
+        static const int DEFAULT_RECEIVED_COLUMN_CHUNK_SIZE = 2048;
 
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
-        static const char* columnRecType;
-        static const RecordObject::fieldDef_t columnRecDef[];
-        static const char* metaRecType;
-        static const RecordObject::fieldDef_t metaRecDef[];
-        static const char* eofRecType;
-        static const RecordObject::fieldDef_t eofRecDef[];
+        static const char* gdfRecType;
+        static const RecordObject::fieldDef_t gdfRecDef[];
 
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef struct {
-            uint64_t    key;
-            uint32_t    size;
-            uint32_t    encoding;
-            char        name[MAX_NAME_SIZE];
-            uint8_t     data[];
-        } meta_rec_t;
+        typedef enum {
+            COLUMN_REC = 0,
+            META_REC = 1,
+            EOF_REC = 2
+        } rec_type_t;
 
         typedef struct {
             uint64_t    key;
-            uint32_t    index;
-            uint32_t    size;
+            uint32_t    type;
+            uint32_t    size; // bytes
             uint32_t    encoding;
             uint32_t    num_rows;
             char        name[MAX_NAME_SIZE];
-            uint8_t     data[];
-        } column_rec_t;
-
-        typedef struct {
-            uint64_t    key;
-            uint32_t    num_rows;
-            uint32_t    num_columns;
-        } eof_rec_t;
+            uint8_t     data[]; // num_columns when EOF
+        } gdf_rec_t;
 
         /*--------------------------------------------------------------------
          * Subclasses
@@ -170,10 +159,10 @@ class GeoDataFrame: public LuaObject, public Field
         long                        length              (void) const override;
         long                        addRow              (void);
         vector<string>              getColumnNames      (void) const;
-        bool                        addColumnData       (const char* name, Field* column);
-        Field*                      getColumnData       (const char* name, Field::type_t _type=Field::COLUMN) const;
+        bool                        addColumn           (const char* name, Field* column);
+        Field*                      getColumn           (const char* name, Field::type_t _type=Field::COLUMN, bool no_throw=false) const;
         void                        addMetaData         (const char* name, Field* column);
-        Field*                      getMetaData         (const char* name, Field::type_t _type=Field::FIELD);
+        Field*                      getMetaData         (const char* name, Field::type_t _type=Field::FIELD, bool no_throw=false) const;
 
         const FieldColumn<time8_t>* getTimeColumn       (void) const;
         const FieldColumn<double>*  getXColumn          (void) const;
@@ -195,6 +184,7 @@ class GeoDataFrame: public LuaObject, public Field
          * Data
          *--------------------------------------------------------------------*/
 
+        bool                        inError;
         long                        numRows;
         FieldDictionary             columnFields;
         FieldDictionary             metaFields;
@@ -230,22 +220,24 @@ class GeoDataFrame: public LuaObject, public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-                GeoDataFrame    (lua_State* L,
-                                 const char* meta_name,
-                                 const struct luaL_Reg meta_table[],
-                                 const std::initializer_list<FieldDictionary::entry_t>& column_list,
-                                 const std::initializer_list<FieldDictionary::entry_t>& meta_list,
-                                 bool free_on_delete = false);
-        virtual ~GeoDataFrame   (void) override;
+                        GeoDataFrame        (lua_State* L,
+                                            const char* meta_name,
+                                            const struct luaL_Reg meta_table[],
+                                            const std::initializer_list<FieldDictionary::entry_t>& column_list,
+                                            const std::initializer_list<FieldDictionary::entry_t>& meta_list,
+                                            bool free_on_delete = false);
+        virtual         ~GeoDataFrame       (void) override;
 
         static void*    receiveThread       (void* parm);
         static void*    runThread           (void* parm);
         void            populateGeoColumns  (void);
+        void            appendDataframe     (GeoDataFrame::gdf_rec_t* gdf_rec_data);
 
         string          toJson              (void) const override;
         int             toLua               (lua_State* L) const override;
         void            fromLua             (lua_State* L, int index) override;
 
+        static int      luaInError          (lua_State* L);
         static int      luaExport           (lua_State* L);
         static int      luaSend             (lua_State* L);
         static int      luaReceive          (lua_State* L);

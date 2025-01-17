@@ -65,6 +65,8 @@ class FieldColumn: public Field
         virtual         ~FieldColumn    (void) override;
 
         long            append          (const T& v);
+        long            appendBuffer    (long size, const uint8_t* buffer);
+        long            appendValue     (long size, const T& v);
         void            initialize      (long size, const T& v);
         void            clear           (void);
 
@@ -236,6 +238,75 @@ long FieldColumn<T>::append(const T& v)
     }
 
     return ++numElements;
+}
+
+/*----------------------------------------------------------------------------
+ * appendBuffer
+ *----------------------------------------------------------------------------*/
+template<class T>
+long FieldColumn<T>::appendBuffer(long size, const uint8_t* buffer)
+{
+    assert(size > 0);
+    assert(size % sizeof(T) == 0);
+
+    const T* buf_ptr = reinterpret_cast<const T*>(buffer);
+
+    long elements_remaining = size / sizeof(T);
+    numElements += elements_remaining;
+
+    while(elements_remaining > 0)
+    {
+        long space_in_current_chunk = chunkSize - currChunkOffset;
+        long elements_to_copy = MIN(space_in_current_chunk, elements_remaining);
+
+        for(long i = 0; i < elements_to_copy; i++)
+        {
+            chunks[currChunk][currChunkOffset++] = buf_ptr[i];
+        }
+
+        elements_remaining -= elements_to_copy;
+        if(currChunkOffset == chunkSize)
+        {
+            T* chunk = new T[chunkSize];
+            chunks.push_back(chunk);
+            currChunkOffset = 0;
+            currChunk++;
+        }
+    }
+
+    return numElements;
+}
+
+/*----------------------------------------------------------------------------
+ * appendValue
+ *----------------------------------------------------------------------------*/
+template<class T>
+long FieldColumn<T>::appendValue(long size, const T& v)
+{
+    long elements_remaining = size;
+    numElements += elements_remaining;
+
+    while(elements_remaining > 0)
+    {
+        long space_in_current_chunk = chunkSize - currChunkOffset;
+        long elements_to_copy = MIN(space_in_current_chunk, elements_remaining);
+
+        for(long i = 0; i < elements_to_copy; i++)
+        {
+            chunks[currChunk][currChunkOffset++] = v;
+        }
+
+        elements_remaining -= elements_to_copy;
+        if(currChunkOffset == chunkSize)
+        {
+            T* chunk = new T[chunkSize];
+            chunks.push_back(chunk);
+            currChunkOffset = 0;
+            currChunk++;
+        }
+    }
+
+    return numElements;
 }
 
 /*----------------------------------------------------------------------------

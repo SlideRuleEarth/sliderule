@@ -53,6 +53,7 @@ const char* EndpointProxy::LUA_META_NAME = "EndpointProxy";
 const struct luaL_Reg EndpointProxy::LUA_META_TABLE[] = {
     {"totalresources",      luaTotalResources},
     {"completeresources",   luaCompleteResources},
+    {"proxythreads",        luaNumProxyThreads},
     {NULL,                  NULL}
 };
 
@@ -71,7 +72,7 @@ int EndpointProxy::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        const char* _endpoint   = getLuaString(L, 1); // get endpoint
+        const char* _endpoint = getLuaString(L, 1); // get endpoint
 
         /* Check Resource Table Parameter */
         const int resources_parm_index = 2;
@@ -247,7 +248,7 @@ int EndpointProxy::luaTotalResources (lua_State* L)
     try
     {
         EndpointProxy* lua_obj = dynamic_cast<EndpointProxy*>(getLuaSelf(L, 1));
-        return lua_obj->numResources;
+        lua_pushinteger(L, lua_obj->numResources);
     }
     catch(const RunTimeException& e)
     {
@@ -266,11 +267,30 @@ int EndpointProxy::luaCompleteResources (lua_State* L)
     try
     {
         EndpointProxy* lua_obj = dynamic_cast<EndpointProxy*>(getLuaSelf(L, 1));
-        return lua_obj->numResourcesComplete;
+        lua_pushinteger(L, lua_obj->numResourcesComplete);
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error getting completed resources: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaNumProxyThreads - proxythreads()
+ *----------------------------------------------------------------------------*/
+int EndpointProxy::luaNumProxyThreads (lua_State* L)
+{
+    try
+    {
+        EndpointProxy* lua_obj = dynamic_cast<EndpointProxy*>(getLuaSelf(L, 1));
+        lua_pushinteger(L, lua_obj->numProxyThreads);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting number of proxy threads: %s", e.what());
         lua_pushnil(L);
     }
 

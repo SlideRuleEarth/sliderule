@@ -40,9 +40,10 @@ runner.unittest("DataFrame Send and Receive", function()
     local df_in = core.dataframe(table_in, meta_in)
     local df_out = core.dataframe()
 
-    df_out:receive("dfq", 1, "rspq") -- non-blocking
+    df_out:receive("dfq", "rspq") -- non-blocking
     runner.check(df_in:send("dfq"), "failed to send dataframe", true)
     runner.check(df_out:waiton(10000), "failed to receive dataframe", true)
+    runner.check(df_out:inerror() == false, "dataframe encountered error")
 
     for k,_ in pairs(table_in) do
         for i = 1,4 do
@@ -51,9 +52,53 @@ runner.unittest("DataFrame Send and Receive", function()
     end
 
     for k,_ in pairs(meta_in) do
-        runner.check(meta_in[k] == df_out:meta(k), string.format("metadata mismatch on key %s: %f != %f", k, meta_in[k], df_out:meta(k)))
+        for i = 1,4 do
+            runner.check(meta_in[k] == df_out[k][i], string.format("metadata mismatch on key %s: %f != %f", k, meta_in[k], df_out[k][i]))
+        end
     end
 
+end)
+
+-- Unit Test --
+
+runner.unittest("DataFrame Multiple Senders and Merged Receive", function()
+
+    local table1_in = {a = {101,102,103,104}, b = {111,112,113,114}, c = {121,122,123,124}}
+    local meta1_in = {bob = 11, bill = 12, cynthia = 13}
+    local df1_in = core.dataframe(table1_in, meta1_in)
+
+    local table2_in = {a = {201,202,203,204}, b = {211,212,213,214}, c = {221,222,223,224}}
+    local meta2_in = {bob = 21, bill = 22, cynthia = 23}
+    local df2_in = core.dataframe(table2_in, meta2_in)
+
+    local df_out = core.dataframe()
+    df_out:receive("dfq", "rspq", 2) -- non-blocking
+
+    runner.check(df1_in:send("dfq"), "failed to send dataframe 1", true)
+    runner.check(df2_in:send("dfq"), "failed to send dataframe 2", true)
+
+    runner.check(df_out:waiton(10000), "failed to receive dataframe", true)
+    runner.check(df_out:inerror() == false, "dataframe encountered error")
+
+    prettyprint.display(df_out:export())
+
+    for k,_ in pairs(table1_in) do
+        for i = 1,4 do
+            runner.check(table1_in[k][i] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, table1_in[k][i], df_out[k][i]))
+        end
+        for i = 5,8 do
+            runner.check(table2_in[k][i] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, table2_in[k][i], df_out[k][i]))
+        end
+    end
+
+    for k,_ in pairs(meta1_in) do
+        for i = 1,4 do
+            runner.check(meta1_in[k] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, meta1_in[k], df_out[k][i]))
+        end
+        for i = 5,8 do
+            runner.check(meta2_in[k] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, meta1_in[k], df_out[k][i]))
+        end
+    end
 end)
 
 -- Report Results --

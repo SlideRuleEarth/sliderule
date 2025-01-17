@@ -54,7 +54,6 @@
 
 const char* BathyDataFrame::LUA_META_NAME = "BathyDataFrame";
 const struct luaL_Reg BathyDataFrame::LUA_META_TABLE[] = {
-    {"isvalid",     luaIsValid},
     {"length",      luaLength},
     {NULL,          NULL}
 };
@@ -149,11 +148,14 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
     hdf03(_hdf03),
     hdf09(_hdf09),
     rqstQ(NULL),
-    readTimeoutMs(parms.readTimeout.value * 1000),
-    valid(true)
+    readTimeoutMs(parms.readTimeout.value * 1000)
 {
     /* Create Request Queue Publisher (if supplied) */
     if(rqstq_name) rqstQ = new Publisher(rqstq_name);
+
+    /* Set MetaData Sent as Columns */
+    spot.setEncodingFlags(META_COLUMN);
+    utm_zone.setEncodingFlags(META_COLUMN);
 
     /* Call Parent Class Initialization of GeoColumns */
     populateGeoColumns();
@@ -732,7 +734,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
     catch(const RunTimeException& e)
     {
         alert(e.level(), e.code(), dataframe.rqstQ, &dataframe.active, "Failure on resource %s track %d.%d: %s", parms.resource.value.c_str(), dataframe.track.value, dataframe.pair.value, e.what());
-        dataframe.valid = false;
+        dataframe.inError = true;
     }
 
     /* Mark Completion */
@@ -783,25 +785,6 @@ float BathyDataFrame::calculateBackground (int32_t current_segment, int32_t& bck
         bckgrd_index++;
     }
     return background_rate;
-}
-
-/*----------------------------------------------------------------------------
- * luaIsValid
- *----------------------------------------------------------------------------*/
-int BathyDataFrame::luaIsValid (lua_State* L)
-{
-    bool status = false;
-    try
-    {
-        const BathyDataFrame* lua_obj = dynamic_cast<BathyDataFrame*>(getLuaSelf(L, 1));
-        status = lua_obj->valid;
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error getting status of %s: %s", OBJECT_TYPE, e.what());
-    }
-
-    return returnLuaStatus(L, status);
 }
 
 /*----------------------------------------------------------------------------

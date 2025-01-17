@@ -54,8 +54,11 @@ class Field
          * Constants
          *--------------------------------------------------------------------*/
 
+        // encodings - masks
+        static const uint32_t VALUE_MASK    = 0xFFFF;
+        static const uint32_t TYPE_MASK     = 0x00FF;
+
         // encodings - values
-        static const uint32_t VALUE_MASK    = 0x00FF;
         static const uint32_t BOOL          = RecordObject::BOOL;
         static const uint32_t INT8          = RecordObject::INT8;
         static const uint32_t INT16         = RecordObject::INT16;
@@ -79,6 +82,7 @@ class Field
         static const uint32_t X_COLUMN      = 0x40000000;
         static const uint32_t Y_COLUMN      = 0x20000000;
         static const uint32_t Z_COLUMN      = 0x10000000;
+        static const uint32_t META_COLUMN   = 0x08000000; // used for metadata elements that are exported as dataframe columns
 
         /*--------------------------------------------------------------------
          * Types
@@ -138,9 +142,18 @@ class Field
             return 1;
         };
 
+        uint32_t getEncodedType(void) const {
+            return encoding & TYPE_MASK;
+        };
+
         uint32_t getValueEncoding(void) const {
             return encoding & 0xFFFF;
         };
+
+        uint32_t setEncodingFlags(uint32_t flags) {
+            encoding |= flags;
+            return encoding;
+        }
 
         /*--------------------------------------------------------------------
          * Data

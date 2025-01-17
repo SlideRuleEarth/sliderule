@@ -227,7 +227,7 @@ local failed_processing_run = false
 for beam,dataframe in pairs(dataframes) do
     local failed_dataframe = false
     if dataframe:finished(ctimeout(), rspq) then
-        if not dataframes[beam]:isvalid() then
+        if dataframes[beam]:inerror() then
             userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create valid bathy dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
             failed_dataframe = true
         elseif dataframes[beam]:length() > 0 then
