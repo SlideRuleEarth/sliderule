@@ -255,13 +255,9 @@ vector<string> GeoDataFrame::getColumnNames(void) const
  *----------------------------------------------------------------------------*/
 bool GeoDataFrame::addColumn (const char* name, Field* column)
 {
-    if(column->length() == numRows)
-    {
-        const FieldDictionary::entry_t entry = {name, column};
-        columnFields.add(entry);
-        return true;
-    }
-    return false;
+    const FieldDictionary::entry_t entry = {name, column};
+    columnFields.add(entry);
+    return true;
 }
 
 /*----------------------------------------------------------------------------
@@ -534,7 +530,7 @@ template<class T>
 bool add_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data)
 {
     // get column from dataframe
-    FieldColumn<T>* column = dynamic_cast<FieldColumn<T>*>(dataframe->getColumn(gdf_rec_data->name));
+    FieldColumn<T>* column = dynamic_cast<FieldColumn<T>*>(dataframe->getColumn(gdf_rec_data->name, Field::COLUMN, true));
 
     // create new column if not found
     if(!column)
@@ -556,14 +552,14 @@ bool add_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data)
     // append data to column
     if(gdf_rec_data->type == GeoDataFrame::COLUMN_REC)
     {
-        column->appendBuffer(gdf_rec_data->size, gdf_rec_data->data);
+        dataframe->numRows = column->appendBuffer(gdf_rec_data->size, gdf_rec_data->data);
     }
     else if(gdf_rec_data->type == GeoDataFrame::META_REC)
     {
         if(gdf_rec_data->encoding & GeoDataFrame::META_COLUMN)
         {
             T* value_ptr = reinterpret_cast<T*>(gdf_rec_data->data);
-            column->appendValue(gdf_rec_data->num_rows, *value_ptr);
+            dataframe->numRows = column->appendValue(gdf_rec_data->num_rows, *value_ptr);
         }
     }
     else
@@ -614,9 +610,9 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data)
     {
         // check number of columns
         const uint32_t* num_colums_ptr = reinterpret_cast<const uint32_t*>(gdf_rec_data->data);
-        if(columnFields.length() != *num_colums_ptr)
+        if(columnFields.length() < *num_colums_ptr)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "incomplete number of columns received: %ld != %u", columnFields.length(), *num_colums_ptr);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "incomplete number of columns received: %ld < %u", columnFields.length(), *num_colums_ptr);
         }
 
         // check number of rows
@@ -668,11 +664,13 @@ void* GeoDataFrame::receiveThread (void* parm)
             else if(recv_status < 0)
             {
                 // error in receiving
+                inq.dereference(ref);
                 throw RunTimeException(CRITICAL, RTE_ERROR, "failed to receive records from queue <%s>: %d", inq.getName(), recv_status);
             }
             else if(ref.size < 0)
             {
                 // error in data
+                inq.dereference(ref);
                 throw RunTimeException(CRITICAL, RTE_ERROR, "received record of invalid size from queue <%s>: %d", inq.getName(), ref.size);
             }
             else if(ref.size > 0)
@@ -699,6 +697,9 @@ void* GeoDataFrame::receiveThread (void* parm)
                             inq.dereference(gdf_ref);
                         }
                     }
+
+                    // remove key'ed dataframe list from table
+                    df_table.remove(key);
                 }
                 else
                 {
@@ -722,9 +723,6 @@ void* GeoDataFrame::receiveThread (void* parm)
     {
         alert(e.level(), RTE_ERROR, &outq, NULL, "Error receiving dataframe: %s", e.what());
         info->dataframe->inError = true;
-
-        // dereference current message (if never pushed to a dataframe cector)
-        inq.dereference(ref);
 
         // deference any outstanding messages in any of the lists
         uint64_t key = df_table.first(NULL);
@@ -931,8 +929,11 @@ int GeoDataFrame::luaSend(lua_State* L)
         // get parameters
         GeoDataFrame*   dataframe   = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
         const char*     rspq        = getLuaString(L, 2);
-        const uint64_t  key_space   = getLuaInteger(L, 3, true, RequestFields::DEFAULT_KEY_SPACE);
+        uint64_t        key_space   = getLuaInteger(L, 3, true, RequestFields::DEFAULT_KEY_SPACE);
         const int       timeout     = getLuaInteger(L, 4, true, SYS_TIMEOUT);
+
+        // massage key_space
+        if(key_space == INVALID_KEY) key_space = 0;
 
         // create publisher
         Publisher pub(rspq);

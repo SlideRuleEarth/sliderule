@@ -121,7 +121,8 @@ Function:   unittest
  Purpose:   handle the execution of a unittest function
    Notes:   none
 ]]
-local function unittest (testname, testfunc)
+local function unittest (testname, testfunc, skip)
+    if skip then return nil end
     print("Starting test: " .. testname)
     local status, result = pcall(testfunc)
     check(status, testname)

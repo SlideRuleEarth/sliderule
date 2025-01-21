@@ -74,9 +74,8 @@ runner.unittest("DataFrame Multiple Senders and Merged Receive", function()
     local df_out = core.dataframe()
     df_out:receive("dfq", "rspq", 2) -- non-blocking
 
-    runner.check(df1_in:send("dfq"), "failed to send dataframe 1", true)
-    runner.check(df2_in:send("dfq"), "failed to send dataframe 2", true)
-
+    runner.check(df1_in:send("dfq", 0), "failed to send dataframe 1", true)
+    runner.check(df2_in:send("dfq", 1), "failed to send dataframe 2", true)
     runner.check(df_out:waiton(10000), "failed to receive dataframe", true)
     runner.check(df_out:inerror() == false, "dataframe encountered error")
 
@@ -87,7 +86,7 @@ runner.unittest("DataFrame Multiple Senders and Merged Receive", function()
             runner.check(table1_in[k][i] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, table1_in[k][i], df_out[k][i]))
         end
         for i = 5,8 do
-            runner.check(table2_in[k][i] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, table2_in[k][i], df_out[k][i]))
+            runner.check(table2_in[k][i-4] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, table2_in[k][i-4], df_out[k][i]))
         end
     end
 
