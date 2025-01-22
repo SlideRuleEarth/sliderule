@@ -708,9 +708,9 @@ void* GeoDataFrame::receiveThread (void* parm)
                     inq.dereference(ref);
                 }
             }
-            else // if(ref.size == 0)
+            else if(ref.size == 0)
             {
-                // terminator received
+                // terminator indicates dataframe is complete
                 inq.dereference(ref);
 
                 // complete dataframe
@@ -1049,6 +1049,9 @@ int GeoDataFrame::luaReceive(lua_State* L)
         dataframe->receivePid = new Thread(receiveThread, info);
 
         // wait for ready signal
+        // this guarantees the receive thread is ready to receive data
+        // specifically, the subscriber to the message queue needs to be created so
+        // that subsequent posts to the message queue are not dropped
         info->ready_signal.lock();
         {
             if(!info->ready)

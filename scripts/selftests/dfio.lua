@@ -39,9 +39,11 @@ runner.unittest("DataFrame Send and Receive", function()
     local meta_in = {bob = 10, bill = 20, cynthia = 30}
     local df_in = core.dataframe(table_in, meta_in)
     local df_out = core.dataframe()
+    local dfq = msg.publish("dfq")
 
     df_out:receive("dfq", "rspq") -- non-blocking
     runner.check(df_in:send("dfq"), "failed to send dataframe", true)
+    dfq:sendstring("") -- terminator
     runner.check(df_out:waiton(10000), "failed to receive dataframe", true)
     runner.check(df_out:inerror() == false, "dataframe encountered error")
 
@@ -66,16 +68,16 @@ runner.unittest("DataFrame Multiple Senders and Merged Receive", function()
     local table1_in = {a = {101,102,103,104}, b = {111,112,113,114}, c = {121,122,123,124}}
     local meta1_in = {bob = 11, bill = 12, cynthia = 13}
     local df1_in = core.dataframe(table1_in, meta1_in)
-
     local table2_in = {a = {201,202,203,204}, b = {211,212,213,214}, c = {221,222,223,224}}
     local meta2_in = {bob = 21, bill = 22, cynthia = 23}
     local df2_in = core.dataframe(table2_in, meta2_in)
-
     local df_out = core.dataframe()
-    df_out:receive("dfq", "rspq", 2) -- non-blocking
+    local dfq = msg.publish("dfq")
 
+    df_out:receive("dfq", "rspq", 2) -- non-blocking
     runner.check(df1_in:send("dfq", 0), "failed to send dataframe 1", true)
     runner.check(df2_in:send("dfq", 1), "failed to send dataframe 2", true)
+    dfq:sendstring("") -- terminator
     runner.check(df_out:waiton(10000), "failed to receive dataframe", true)
     runner.check(df_out:inerror() == false, "dataframe encountered error")
 
@@ -98,6 +100,7 @@ runner.unittest("DataFrame Multiple Senders and Merged Receive", function()
             runner.check(meta2_in[k] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, meta1_in[k], df_out[k][i]))
         end
     end
+
 end)
 
 -- Report Results --
