@@ -339,7 +339,8 @@ class Icesat2Fields: public RequestFields
         FieldElement<double>                                extentLength {40.0};                                    // length of ATL06 extent (meters or segments if dist_in_seg is true)
         FieldElement<double>                                extentStep {20.0};                                      // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
         PhorealFields                                       phoreal;                                                // phoreal algorithm settings
-        FieldList<string>                                   atl03GeoFields;                                         // list of geolocation and geophys_corr fields to associate with an extent
+        FieldList<string>                                   atl03GeoFields;                                         // list of geolocation fields to associate with an extent
+        FieldList<string>                                   atl03CorrFields;                                        // list of geophys_corr fields to associate with an extent
         FieldList<string>                                   atl03PhFields;                                          // list of per-photon fields to associate with an extent
         FieldList<string>                                   atl06Fields;                                            // list of ATL06 fields to associate with an ATL06 subsetting request
         FieldList<string>                                   atl08Fields;                                            // list of ATL08 fields to associate with an extent

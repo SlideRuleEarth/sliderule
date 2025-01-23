@@ -224,6 +224,7 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* defau
         {"res",                 &extentStep},
         {"phoreal",             &phoreal},
         {"atl03_geo_fields",    &atl03GeoFields},
+        {"atl03_corr_fields",   &atl03CorrFields},
         {"atl03_ph_fields",     &atl03PhFields},
         {"atl06_fields",        &atl06Fields},
         {"atl08_fields",        &atl08Fields},

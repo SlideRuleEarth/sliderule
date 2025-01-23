@@ -86,6 +86,7 @@ class RequestFields: public LuaObject, public FieldDictionary
 
         static int luaCreate (lua_State* L);
         static int luaExport (lua_State* L);
+        static int luaEncode (lua_State* L);
 
         static int luaProjectedPolygonIncludes (lua_State* L) ;
         static int luaRegionMaskIncludes (lua_State* L);

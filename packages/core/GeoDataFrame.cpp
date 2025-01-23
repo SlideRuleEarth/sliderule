@@ -78,7 +78,7 @@ const RecordObject::fieldDef_t GeoDataFrame::gdfRecDef[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Constructor - FrameColumn
+ * FrameColumn: Constructor
  *----------------------------------------------------------------------------*/
 GeoDataFrame::FrameColumn::FrameColumn(lua_State* L, const Field& _column):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
@@ -87,7 +87,7 @@ GeoDataFrame::FrameColumn::FrameColumn(lua_State* L, const Field& _column):
 }
 
 /*----------------------------------------------------------------------------
- * luaGetData - [<index>]
+ * FrameColumn: luaGetData - [<index>]
  *----------------------------------------------------------------------------*/
 int GeoDataFrame::FrameColumn::luaGetData (lua_State* L)
 {
@@ -113,6 +113,45 @@ int GeoDataFrame::FrameColumn::luaGetData (lua_State* L)
     }
 
     return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * FrameColumn: Constructor -
+ *----------------------------------------------------------------------------*/
+GeoDataFrame::FrameRunner::FrameRunner(lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]):
+    LuaObject(L, OBJECT_TYPE, meta_name, meta_table),
+    runtime(0.0)
+{
+    LuaEngine::setAttrFunc(L, "runtime", luaGetRunTime);
+}
+
+/*----------------------------------------------------------------------------
+ * FrameColumn: luaGetRunTime -
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::FrameRunner::luaGetRunTime (lua_State* L)
+{
+    try
+    {
+        FrameRunner* lua_obj = dynamic_cast<FrameRunner*>(getLuaSelf(L, 1));
+        lua_pushnumber(L, lua_obj->runtime);
+    }
+    catch(const RunTimeException& e)
+    {
+        lua_pushnumber(L, 0.0);
+    }
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaGetRunTime -
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::FrameRunner::updateRunTime(double duration)
+{
+    m.lock();
+    {
+        runtime += duration;
+    }
+    m.unlock();
 }
 
 /*----------------------------------------------------------------------------
@@ -234,6 +273,87 @@ long GeoDataFrame::addRow(void)
 }
 
 /*----------------------------------------------------------------------------
+ * appendFromBuffer
+ *----------------------------------------------------------------------------*/
+long GeoDataFrame::appendFromBuffer(const char* name, uint8_t* buffer, int size) const
+{
+    Field* field = getColumn(name);
+    switch(field->getValueEncoding())
+    {
+        case Field::BOOL:
+        {
+            FieldColumn<bool>* column = dynamic_cast<FieldColumn<bool>*>(field);
+            return column->appendBuffer(buffer, size);
+        }
+        case Field::INT8:
+        {
+            FieldColumn<int8_t>* column = dynamic_cast<FieldColumn<int8_t>*>(field);
+            return column->appendBuffer(buffer, size);
+        }
+        case Field::INT16:
+        {
+            FieldColumn<int16_t>* column = dynamic_cast<FieldColumn<int16_t>*>(field);
+            return column->appendBuffer(buffer, size);
+        }
+        case Field::INT32:
+        {
+            FieldColumn<int32_t>* column = dynamic_cast<FieldColumn<int32_t>*>(field);
+            return column->appendBuffer(buffer, size);
+        }
+        case Field::INT64:
+        {
+            FieldColumn<int64_t>* column = dynamic_cast<FieldColumn<int64_t>*>(field);
+            return column->appendBuffer(buffer, size);
+        }
+        case Field::UINT8:
+        {
+            FieldColumn<uint8_t>* column = dynamic_cast<FieldColumn<uint8_t>*>(field);
+            return column->appendBuffer(buffer, size);
+        }
+        case Field::UINT16:
+        {
+            FieldColumn<uint16_t>* column = dynamic_cast<FieldColumn<uint16_t>*>(field);
+            return column->appendBuffer(buffer, size);
+        }
+        case Field::UINT32:
+        {
+            FieldColumn<uint32_t>* column = dynamic_cast<FieldColumn<uint32_t>*>(field);
+            return column->appendBuffer(buffer, size);
+        }
+        case Field::UINT64:
+        {
+            FieldColumn<uint64_t>* column = dynamic_cast<FieldColumn<uint64_t>*>(field);
+            return column->appendBuffer(buffer, size);
+        }
+        case Field::FLOAT:
+        {
+            FieldColumn<float>* column = dynamic_cast<FieldColumn<float>*>(field);
+            return column->appendBuffer(buffer, size);
+        }
+        case Field::DOUBLE:
+        {
+            FieldColumn<double>* column = dynamic_cast<FieldColumn<double>*>(field);
+            return column->appendBuffer(buffer, size);
+        }
+        case Field::STRING:
+        {
+            FieldColumn<string>* column = dynamic_cast<FieldColumn<string>*>(field);
+            return column->appendBuffer(buffer, size);
+        }
+        case Field::TIME8:
+        {
+            FieldColumn<time8_t>* column = dynamic_cast<FieldColumn<time8_t>*>(field);
+            return column->appendBuffer(buffer, size);
+        }
+        default:
+        {
+            mlog(ERROR, "Cannot add column <%s> of type %d", name, field->getValueEncoding());
+            return 0;
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
  * getColumnNames
  *----------------------------------------------------------------------------*/
 vector<string> GeoDataFrame::getColumnNames(void) const
@@ -257,6 +377,47 @@ bool GeoDataFrame::addColumn (const char* name, Field* column)
 {
     const FieldDictionary::entry_t entry = {name, column};
     columnFields.add(entry);
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * addColumn
+ *----------------------------------------------------------------------------*/
+bool GeoDataFrame::addColumn (const char* name, uint32_t _type)
+{
+    Field* column = NULL;
+
+    const char* _name = StringLib::duplicate(name);
+    switch(_type)
+    {
+        case Field::BOOL:   column = new FieldColumn<bool>();       break;
+        case Field::INT8:   column = new FieldColumn<int8_t>();     break;
+        case Field::INT16:  column = new FieldColumn<int16_t>();    break;
+        case Field::INT32:  column = new FieldColumn<int32_t>();    break;
+        case Field::INT64:  column = new FieldColumn<int64_t>();    break;
+        case Field::UINT8:  column = new FieldColumn<uint8_t>();    break;
+        case Field::UINT16: column = new FieldColumn<uint16_t>();   break;
+        case Field::UINT32: column = new FieldColumn<uint32_t>();   break;
+        case Field::UINT64: column = new FieldColumn<uint64_t>();   break;
+        case Field::FLOAT:  column = new FieldColumn<float>();      break;
+        case Field::DOUBLE: column = new FieldColumn<double>();     break;
+        case Field::STRING: column = new FieldColumn<string>();     break;
+        case Field::TIME8:  column = new FieldColumn<time8_t>();    break;
+        default:
+        {
+            mlog(ERROR, "Cannot add column <%s> of type %d", _name, _type);
+            return false;
+        }
+    }
+
+    if(!addColumn(_name, column))
+    {
+        delete [] _name;
+        delete column;
+        mlog(ERROR, "Failed to add column <%s>", _name);
+        return false;
+    }
+
     return true;
 }
 
@@ -552,14 +713,14 @@ bool add_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data)
     // append data to column
     if(gdf_rec_data->type == GeoDataFrame::COLUMN_REC)
     {
-        dataframe->numRows = column->appendBuffer(gdf_rec_data->size, gdf_rec_data->data);
+        dataframe->numRows = column->appendBuffer(gdf_rec_data->data, gdf_rec_data->size);
     }
     else if(gdf_rec_data->type == GeoDataFrame::META_REC)
     {
         if(gdf_rec_data->encoding & GeoDataFrame::META_COLUMN)
         {
             T* value_ptr = reinterpret_cast<T*>(gdf_rec_data->data);
-            dataframe->numRows = column->appendValue(gdf_rec_data->num_rows, *value_ptr);
+            dataframe->numRows = column->appendValue(*value_ptr, gdf_rec_data->num_rows);
         }
     }
     else

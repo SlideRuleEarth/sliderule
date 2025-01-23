@@ -102,10 +102,9 @@ class GeoDataFrame: public LuaObject, public Field
             static const char* LUA_META_NAME;
             static const struct luaL_Reg LUA_META_TABLE[];
 
-            static int luaGetData (lua_State* L);
-
             FrameColumn(lua_State* L, const Field& _column);
             ~FrameColumn(void) override = default;
+            static int luaGetData (lua_State* L);
 
             const Field& column;
         };
@@ -114,36 +113,11 @@ class GeoDataFrame: public LuaObject, public Field
         {
             static const char* OBJECT_TYPE;
 
-            static int luaGetRunTime (lua_State* L) {
-                try
-                {
-                    FrameRunner* lua_obj = dynamic_cast<FrameRunner*>(getLuaSelf(L, 1));
-                    lua_pushnumber(L, lua_obj->runtime);
-                }
-                catch(const RunTimeException& e)
-                {
-                    lua_pushnumber(L, 0.0);
-                }
-                return 1;
-            };
-
-            virtual bool run(GeoDataFrame* dataframe) = 0;
-
-            void updateRunTime(double duration) {
-                m.lock();
-                {
-                    runtime += duration;
-                }
-                m.unlock();
-            };
-
-            FrameRunner(lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]):
-                LuaObject(L, OBJECT_TYPE, meta_name, meta_table),
-                runtime(0.0) {
-                LuaEngine::setAttrFunc(L, "runtime", luaGetRunTime);
-            };
-
+            FrameRunner(lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
             ~FrameRunner(void) override = default;
+            static int luaGetRunTime (lua_State* L);
+            virtual bool run(GeoDataFrame* dataframe) = 0;
+            void updateRunTime(double duration);
 
             Mutex m;
             double runtime;
@@ -158,8 +132,10 @@ class GeoDataFrame: public LuaObject, public Field
 
         long                        length              (void) const override;
         long                        addRow              (void);
+        long                        appendFromBuffer    (const char* name, uint8_t* buffer, int size) const;
         vector<string>              getColumnNames      (void) const;
         bool                        addColumn           (const char* name, Field* column);
+        bool                        addColumn           (const char* name, uint32_t _type);
         Field*                      getColumn           (const char* name, Field::type_t _type=Field::COLUMN, bool no_throw=false) const;
         void                        addMetaData         (const char* name, Field* column);
         Field*                      getMetaData         (const char* name, Field::type_t _type=Field::FIELD, bool no_throw=false) const;

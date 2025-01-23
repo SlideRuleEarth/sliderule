@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __h5_dynamic_array__
-#define __h5_dynamic_array__
+#ifndef __h5_variable_set__
+#define __h5_variable_set__
 
 /******************************************************************************
  * INCLUDES
@@ -39,50 +39,33 @@
 #include "Asset.h"
 #include "RecordObject.h"
 #include "Dictionary.h"
+#include "FieldList.h"
+#include "GeoDataFrame.h"
+#include "H5DArray.h"
 #include "H5Coro.h"
 
-using H5Coro::ALL_ROWS;
-
 /******************************************************************************
- * H5 DYNAMIC ARRAY CLASS
+ * H5 VARIABLE SET
  ******************************************************************************/
 
-class H5DArray
+class H5VarSet
 {
     public:
 
         /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef RecordObject::fieldType_t type_t;
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
-
-        static void init                (void);
-
-                    H5DArray            (H5Coro::Context* context, const char* dataset, long col=0, long startrow=0, long numrows=H5Coro::ALL_ROWS);
-        virtual     ~H5DArray           (void);
-
-        bool        join                (int timeout, bool throw_exception) const;
-
-        int         numDimensions       (void) const;
-        int         numElements         (void) const;
-        int         elementSize         (void) const;
-        type_t      elementType         (void) const;
-        int64_t     rowSize             (void) const;
-        uint64_t    serialize           (uint8_t* buffer, int64_t start_element, int64_t num_elements) const;
-        uint64_t    serializeRow        (uint8_t* buffer, int64_t row) const;
-        uint8_t*    referenceElement    (int64_t element) const;
+                    H5VarSet            (const FieldList<string>& variable_list, H5Coro::Context* context, const char* group=NULL, long col=0, long startrow=0, long numrows=H5Coro::ALL_ROWS);
+        virtual     ~H5VarSet           (void) = default;
+        void        joinToGDF           (GeoDataFrame* gdf, int timeout_ms, bool throw_exception=true);
+        void        addToGDF            (GeoDataFrame* gdf, long element) const;
+        static int  getDictSize         (int list_size) { return list_size * 2 + 1; };
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        const char*         name;
-        H5Coro::Future*     h5f;
+        Dictionary<H5DArray*> variables;
 };
 
-#endif  /* __h5_dynamic_array__ */
+#endif  /* __h5_variable_set__ */

@@ -65,8 +65,8 @@ class FieldColumn: public Field
         virtual         ~FieldColumn    (void) override;
 
         long            append          (const T& v);
-        long            appendBuffer    (long size, const uint8_t* buffer);
-        long            appendValue     (long size, const T& v);
+        long            appendBuffer    (const uint8_t* buffer, long size);
+        long            appendValue     (const T& v, long size);
         void            initialize      (long size, const T& v);
         void            clear           (void);
 
@@ -244,7 +244,7 @@ long FieldColumn<T>::append(const T& v)
  * appendBuffer
  *----------------------------------------------------------------------------*/
 template<class T>
-long FieldColumn<T>::appendBuffer(long size, const uint8_t* buffer)
+long FieldColumn<T>::appendBuffer(const uint8_t* buffer, long size)
 {
     assert(size > 0);
     assert(size % sizeof(T) == 0);
@@ -281,7 +281,7 @@ long FieldColumn<T>::appendBuffer(long size, const uint8_t* buffer)
  * appendValue
  *----------------------------------------------------------------------------*/
 template<class T>
-long FieldColumn<T>::appendValue(long size, const T& v)
+long FieldColumn<T>::appendValue(const T& v, long size)
 {
     long elements_remaining = size;
     numElements += elements_remaining;

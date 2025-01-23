@@ -32,9 +32,7 @@ local function proxy(endpoint, parms, rspq, userlog)
     -- Initialize Variables
     local resources = parms["resources"]
     local proxyq_name = "proxy."..rspq
-    local parms_tbl = parms:export()
-    parms_tbl["resources"] = nil -- remove list of resources in proxied request
-    local rqst_json = json.encode(parms_tbl)
+    local rqst_json = parms:encode()
     local node_timeout = parms["node_timeout"]
     local cluster_size_hint = parms["cluster_size_hint"]
     local locks_per_node = (parms["poly"] and not parms["ignore_poly_for_cmr"]) and 1 or core.MAX_LOCKS_PER_NODE
