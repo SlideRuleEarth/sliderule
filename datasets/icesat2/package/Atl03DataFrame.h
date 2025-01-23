@@ -62,7 +62,6 @@ class Atl03DataFrame: public GeoDataFrame
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int32_t INVALID_INDICE = -1;
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
@@ -88,10 +87,10 @@ class Atl03DataFrame: public GeoDataFrame
         FieldColumn<int8_t>         atl03_cnf;              // ATL03 confidence level
         FieldColumn<int8_t>         quality_ph;             // ATL03 photon quality
         FieldColumn<uint8_t>        yapc_score;             // YAPC weight of photon
-        FieldColumn<uint8_t>        spot;                   // 1, 2, 3, 4, 5, 6
         FieldColumn<uint32_t>       segment_id;             // ATL03 segment
 
         /* DataFrame MetaData */
+        FieldElement<uint8_t>       spot;                   // 1, 2, 3, 4, 5, 6
         FieldElement<uint8_t>       cycle;
         FieldElement<uint8_t>       spacecraft_orientation; // 0 (backwards), 1 (forward)
         FieldElement<uint16_t>      reference_ground_track;
@@ -108,24 +107,17 @@ class Atl03DataFrame: public GeoDataFrame
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef struct {
-            Atl03DataFrame* dataframe;
-            char            prefix[7];
-            int             track;
-            int             pair;
-        } info_t;
-
         /* Region Subclass */
         class Region
         {
             public:
 
-                explicit Region     (const info_t* info);
+                explicit Region     (const Atl03DataFrame* df);
                 ~Region             (void);
 
                 void cleanup        (void);
-                void polyregion     (const info_t* info);
-                void rasterregion   (const info_t* info);
+                void polyregion     (const Atl03DataFrame* df);
+                void rasterregion   (const Atl03DataFrame* df);
 
                 H5Array<double>     segment_lat;
                 H5Array<double>     segment_lon;
@@ -145,7 +137,7 @@ class Atl03DataFrame: public GeoDataFrame
         {
             public:
 
-                Atl03Data           (const info_t* info, const Region& region);
+                Atl03Data           (Atl03DataFrame* df, const Region& region);
                 ~Atl03Data          (void) = default;
 
                 bool                read_yapc;
@@ -183,9 +175,9 @@ class Atl03DataFrame: public GeoDataFrame
                 static const uint8_t INVALID_FLAG = 0xFF;
 
                 /* Methods */
-                explicit Atl08Class (const info_t* info);
+                explicit Atl08Class (Atl03DataFrame* df);
                 ~Atl08Class         (void);
-                void classify       (const info_t* info, const Region& region, const Atl03Data& atl03);
+                void classify       (const Atl03DataFrame* df, const Region& region, const Atl03Data& atl03);
                 uint8_t operator[]  (int index) const;
 
                 /* Class Data */
@@ -220,11 +212,11 @@ class Atl03DataFrame: public GeoDataFrame
         {
             public:
 
-                YapcScore           (const info_t* info, const Region& region, const Atl03Data& atl03);
+                YapcScore           (const Atl03DataFrame* df, const Region& region, const Atl03Data& atl03);
                 ~YapcScore          (void);
 
-                void yapcV2         (const info_t* info, const Region& region, const Atl03Data& atl03);
-                void yapcV3         (const info_t* info, const Region& region, const Atl03Data& atl03);
+                void yapcV2         (const Atl03DataFrame* df, const Region& region, const Atl03Data& atl03);
+                void yapcV3         (const Atl03DataFrame* df, const Region& region, const Atl03Data& atl03);
 
                 uint8_t operator[]  (int index) const;
 
@@ -246,26 +238,22 @@ class Atl03DataFrame: public GeoDataFrame
          *--------------------------------------------------------------------*/
 
         bool                active;
-        Thread*             readerPid[Icesat2Fields::NUM_SPOTS];
-        Mutex               threadMut;
-        int                 threadCount;
-        int                 numComplete;
-        bool                sendTerminator;
-        const int           read_timeout_ms;
+        Thread*             readerPid;
+        const int           readTimeoutMs;
+        int                 signalConfColIndex;
+        const char*         beam;
         Publisher*          outQ;
         Icesat2Fields*      parms;
-        int                 signalConfColIndex;
-
-        H5Coro::Context*    context; // for ATL03 file
-        H5Coro::Context*    context08; // for ATL08 file
+        H5Object*           hdf03;  // atl03 granule
+        H5Object*           hdf08;  // atl08 granule
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                            Atl03DataFrame              (lua_State* L, Icesat2Fields* _parms);
-                            ~Atl03DataFrame             (void) override;
-        static void*        subsettingThread            (void* parm);
+                        Atl03DataFrame      (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf03, H5Object* _hdf08, const char* outq_name);
+                        ~Atl03DataFrame     (void) override;
+        static void*    subsettingThread    (void* parm);
 };
 
 #endif  /* __atl03_reader__ */

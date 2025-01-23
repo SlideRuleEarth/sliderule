@@ -38,9 +38,9 @@
 #include <stdarg.h>
 
 #include "OsApi.h"
-#include "ContainerRecord.h"
 #include "LuaObject.h"
-#include "AncillaryFields.h"
+#include "H5Object.h"
+#include "Icesat2Fields.h"
 #include "Atl03DataFrame.h"
 
 /******************************************************************************
@@ -50,7 +50,6 @@
 const char* Atl03DataFrame::OBJECT_TYPE = "Atl03DataFrame";
 const char* Atl03DataFrame::LUA_META_NAME = "Atl03DataFrame";
 const struct luaL_Reg Atl03DataFrame::LUA_META_TABLE[] = {
-    {"stats",       luaStats},
     {NULL,          NULL}
 };
 
@@ -64,23 +63,27 @@ const struct luaL_Reg Atl03DataFrame::LUA_META_TABLE[] = {
 int Atl03DataFrame::luaCreate (lua_State* L)
 {
     Icesat2Fields* _parms = NULL;
+    H5Object* _hdf03 = NULL;
+    H5Object* _hdf08 = NULL;
 
     try
     {
         /* Get Parameters */
-        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 1, Icesat2Fields::OBJECT_TYPE));
-
-        /* Check for Null Resource and Asset */
-        if(_parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a resource to process");
-        else if(_parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a valid asset");
+        const char* beam_str = getLuaString(L, 1);
+        _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
+        _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE));
+        _hdf08 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE, true, NULL));
+        const char* outq_name = getLuaString(L, 5, true, NULL);
 
         /* Return Reader Object */
-        return createLuaObject(L, new Atl03DataFrame(L, _parms));
+        return createLuaObject(L, new Atl03DataFrame(L, beam_str, _parms, _hdf03, _hdf08, outq_name));
     }
     catch(const RunTimeException& e)
     {
         if(_parms) _parms->releaseLuaObject();
-        mlog(e.level(), "Error creating Atl03DataFrame: %s", e.what());
+        if(_hdf03) _hdf03->releaseLuaObject();
+        if(_hdf08) _hdf08->releaseLuaObject();
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
 }
@@ -88,7 +91,7 @@ int Atl03DataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03DataFrame::Atl03DataFrame (lua_State* L, Icesat2Fields* _parms):
+Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf03, H5Object* _hdf08, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"time_ns",             &time_ns},
@@ -98,6 +101,9 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, Icesat2Fields* _parms):
         {"y_atc",               &y_atc},
         {"height",              &height},
         {"relief",              &relief},
+        {"solar_elevation",     &solar_elevation},
+        {"background_rate",     &background_rate},
+        {"spacecraft_velocity", &spacecraft_velocity},
         {"landcover",           &landcover},
         {"snowcover",           &snowcover},
         {"atl08_class",         &atl08_class},
@@ -105,105 +111,45 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, Icesat2Fields* _parms):
         {"quality_ph",          &quality_ph},
         {"yapc_score",          &yapc_score},
         {"segment_id",          &segment_id},
-        {"solar_elevation",     &solar_elevation},
-        {"spacecraft_velocity", &spacecraft_velocity},
-        {"background_rate",     &background_rate}
     },
     {
         {"spot",                    &spot},
-        {"track",                   &track},
-        {"pair",                    &pair},
         {"cycle",                   &cycle},
         {"spacecraft_orientation",  &spacecraft_orientation},
         {"reference_ground_track",  &reference_ground_track}
     }),
-    read_timeout_ms(_parms->readTimeout.value * 1000),
+    spot(0, META_COLUMN),
+    cycle(0, META_COLUMN),
+    spacecraft_orientation(Icesat2Fields::SC_TRANSITION, META_COLUMN),
+    reference_ground_track(0, META_COLUMN),
+    active(false),
+    readerPid(NULL),
+    readTimeoutMs(_parms->readTimeout.value * 1000),
+    signalConfColIndex(H5Coro::ALL_COLS),
+    beam(FString("%s", beam_str).c_str(true)),
+    outQ(NULL),
     parms(_parms),
-    context(NULL),
-    context08(NULL)
+    hdf03(_hdf03),
+    hdf08(_hdf08)
 {
     assert(_parms);
-
-    /* Initialize Thread Count */
-    threadCount = 0;
+    assert(_hdf03);
 
     /* Set Signal Confidence Index */
-    if(parms->surfaceType == Icesat2Fields::SRT_DYNAMIC)
-    {
-        signalConfColIndex = H5Coro::ALL_COLS;
-    }
-    else
+    if(parms->surfaceType != Icesat2Fields::SRT_DYNAMIC)
     {
         signalConfColIndex = static_cast<int>(parms->surfaceType.value);
     }
 
-    /* Generate ATL08 Resource Name */
-    char* resource08 = StringLib::duplicate(parms->getResource());
-    resource08[4] = '8';
-
-    /* Clear Statistics */
-    stats.segments_read     = 0;
-    stats.extents_filtered  = 0;
-    stats.extents_sent      = 0;
-    stats.extents_dropped   = 0;
-    stats.extents_retried   = 0;
-
-    /* Initialize Readers */
-    active = true;
-    numComplete = 0;
-    memset(readerPid, 0, sizeof(readerPid));
+    /* Setup Output Queue (for messages) */
+    if(outq_name) outQ = new Publisher(outq_name);
 
     /* Set Thread Specific Trace ID for H5Coro */
     EventLib::stashId (traceId);
 
-    /* Read Global Resource Information */
-    try
-    {
-        /* Create H5Coro Contexts */
-        context = new H5Coro::Context(parms->asset.asset, parms->getResource());
-        context08 = new H5Coro::Context(parms->asset.asset, resource08);
-
-        /* Create Readers */
-        threadMut.lock();
-        {
-            for(int track = 1; track <= Icesat2Fields::NUM_TRACKS; track++)
-            {
-                for(int pair = 0; pair < Icesat2Fields::NUM_PAIR_TRACKS; pair++)
-                {
-                    const int gt_index = (2 * (track - 1)) + pair;
-                    if(parms->beams.values[gt_index] && (parms->track == Icesat2Fields::ALL_TRACKS || track == parms->track))
-                    {
-                        info_t* info = new info_t;
-                        info->dataframe = this;
-                        info->track = track;
-                        info->pair = pair;
-                        StringLib::format(info->prefix, 7, "/gt%d%c", info->track, info->pair == 0 ? 'l' : 'r');
-                        readerPid[threadCount++] = new Thread(subsettingThread, info);
-                    }
-                }
-            }
-        }
-        threadMut.unlock();
-
-        /* Check if Readers Created */
-        if(threadCount == 0)
-        {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "No reader threads were created, invalid track specified: %d\n", parms->track.value);
-        }
-    }
-    catch(const RunTimeException& e)
-    {
-        /* Generate Exception Record */
-        if(e.code() == RTE_TIMEOUT) alert(e.level(), RTE_TIMEOUT, outQ, &active, "Failure on resource %s: %s", parms->getResource(), e.what());
-        else alert(e.level(), RTE_RESOURCE_DOES_NOT_EXIST, outQ, &active, "Failure on resource %s: %s", parms->getResource(), e.what());
-
-        /* Indicate End of Data */
-        if(sendTerminator) outQ->postCopy("", 0, SYS_TIMEOUT);
-        signalComplete();
-    }
-
-    /* Clean Up */
-    delete [] resource08;
+    /* Kickoff Reader Thread */
+    active = true;
+    readerPid = new Thread(subsettingThread, this);
 }
 
 /*----------------------------------------------------------------------------
@@ -212,34 +158,29 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, Icesat2Fields* _parms):
 Atl03DataFrame::~Atl03DataFrame (void)
 {
     active = false;
-
-    for(int pid = 0; pid < threadCount; pid++)
-    {
-        delete readerPid[pid];
-    }
-
-    delete context;
-    delete context08;
-
+    delete readerPid;
+    delete [] beam;
     parms->releaseLuaObject();
+    hdf03->releaseLuaObject();
+    if(hdf08) hdf08->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
  * Region::Constructor
  *----------------------------------------------------------------------------*/
-Atl03DataFrame::Region::Region (const info_t* info):
-    segment_lat    (info->dataframe->context, FString("%s/%s", info->prefix, "geolocation/reference_photon_lat").c_str()),
-    segment_lon    (info->dataframe->context, FString("%s/%s", info->prefix, "geolocation/reference_photon_lon").c_str()),
-    segment_ph_cnt (info->dataframe->context, FString("%s/%s", info->prefix, "geolocation/segment_ph_cnt").c_str()),
+Atl03DataFrame::Region::Region (const Atl03DataFrame* df):
+    segment_lat    (df->hdf03, FString("/%s/%s", df->beam, "geolocation/reference_photon_lat").c_str()),
+    segment_lon    (df->hdf03, FString("/%s/%s", df->beam, "geolocation/reference_photon_lon").c_str()),
+    segment_ph_cnt (df->hdf03, FString("/%s/%s", df->beam, "geolocation/segment_ph_cnt").c_str()),
     inclusion_mask {NULL},
     inclusion_ptr  {NULL}
 {
     try
     {
         /* Join Reads */
-        segment_lat.join(info->dataframe->read_timeout_ms, true);
-        segment_lon.join(info->dataframe->read_timeout_ms, true);
-        segment_ph_cnt.join(info->dataframe->read_timeout_ms, true);
+        segment_lat.join(df->readTimeoutMs, true);
+        segment_lon.join(df->readTimeoutMs, true);
+        segment_ph_cnt.join(df->readTimeoutMs, true);
 
         /* Initialize Region */
         first_segment = 0;
@@ -248,13 +189,13 @@ Atl03DataFrame::Region::Region (const info_t* info):
         num_photons = H5Coro::ALL_ROWS;
 
         /* Determine Spatial Extent */
-        if(info->dataframe->parms->regionMask.valid())
+        if(df->parms->regionMask.valid())
         {
-            rasterregion(info);
+            rasterregion(df);
         }
-        else if(info->dataframe->parms->pointsInPolygon.value > 0)
+        else if(df->parms->pointsInPolygon.value > 0)
         {
-            polyregion(info);
+            polyregion(df);
         }
         else
         {
@@ -304,7 +245,7 @@ void Atl03DataFrame::Region::cleanup (void)
 /*----------------------------------------------------------------------------
  * Region::polyregion
  *----------------------------------------------------------------------------*/
-void Atl03DataFrame::Region::polyregion (const info_t* info)
+void Atl03DataFrame::Region::polyregion (const Atl03DataFrame* df)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -312,7 +253,7 @@ void Atl03DataFrame::Region::polyregion (const info_t* info)
     while(segment < segment_ph_cnt.size)
     {
         /* Test Inclusion */
-        const bool inclusion = info->dataframe->parms->polyIncludes(segment_lon[segment], segment_lat[segment]);
+        const bool inclusion = df->parms->polyIncludes(segment_lon[segment], segment_lat[segment]);
 
         /* Segments with zero photon count may contain invalid coordinates,
            making them unsuitable for inclusion in polygon tests. */
@@ -362,7 +303,7 @@ void Atl03DataFrame::Region::polyregion (const info_t* info)
 /*----------------------------------------------------------------------------
  * Region::rasterregion
  *----------------------------------------------------------------------------*/
-void Atl03DataFrame::Region::rasterregion (const info_t* info)
+void Atl03DataFrame::Region::rasterregion (const Atl03DataFrame* df)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -386,7 +327,7 @@ void Atl03DataFrame::Region::rasterregion (const info_t* info)
         if(segment_ph_cnt[segment] != 0)
         {
             /* Check Inclusion */
-            const bool inclusion = info->dataframe->parms->maskIncludes(segment_lon[segment], segment_lat[segment]);
+            const bool inclusion = df->parms->maskIncludes(segment_lon[segment], segment_lat[segment]);
             inclusion_mask[segment] = inclusion;
 
             /* Check For First Segment */
@@ -445,78 +386,76 @@ void Atl03DataFrame::Region::rasterregion (const info_t* info)
 /*----------------------------------------------------------------------------
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl03DataFrame::Atl03Data::Atl03Data (const info_t* info, const Region& region):
-    read_yapc           (info->dataframe->parms->stages[Icesat2Fields::STAGE_YAPC] && (info->dataframe->parms->yapc.version == 0) && (info->dataframe->parms->version.value >= 6)),
-    sc_orient           (info->dataframe->context,                                "/orbit_info/sc_orient"),
-    velocity_sc         (info->dataframe->context, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),      H5Coro::ALL_COLS, region.first_segment, region.num_segments),
-    segment_delta_time  (info->dataframe->context, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),       0, region.first_segment, region.num_segments),
-    segment_id          (info->dataframe->context, FString("%s/%s", info->prefix, "geolocation/segment_id").c_str(),       0, region.first_segment, region.num_segments),
-    segment_dist_x      (info->dataframe->context, FString("%s/%s", info->prefix, "geolocation/segment_dist_x").c_str(),   0, region.first_segment, region.num_segments),
-    solar_elevation     (info->dataframe->context, FString("%s/%s", info->prefix, "geolocation/solar_elevation").c_str(),  0, region.first_segment, region.num_segments),
-    dist_ph_along       (info->dataframe->context, FString("%s/%s", info->prefix, "heights/dist_ph_along").c_str(),        0, region.first_photon,  region.num_photons),
-    dist_ph_across      (info->dataframe->context, FString("%s/%s", info->prefix, "heights/dist_ph_across").c_str(),       0, region.first_photon,  region.num_photons),
-    h_ph                (info->dataframe->context, FString("%s/%s", info->prefix, "heights/h_ph").c_str(),                 0, region.first_photon,  region.num_photons),
-    signal_conf_ph      (info->dataframe->context, FString("%s/%s", info->prefix, "heights/signal_conf_ph").c_str(),       info->dataframe->signalConfColIndex, region.first_photon,  region.num_photons),
-    quality_ph          (info->dataframe->context, FString("%s/%s", info->prefix, "heights/quality_ph").c_str(),           0, region.first_photon,  region.num_photons),
-    weight_ph           (read_yapc ? info->dataframe->context : NULL, FString("%s/%s", info->prefix, "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
-    lat_ph              (info->dataframe->context, FString("%s/%s", info->prefix, "heights/lat_ph").c_str(),               0, region.first_photon,  region.num_photons),
-    lon_ph              (info->dataframe->context, FString("%s/%s", info->prefix, "heights/lon_ph").c_str(),               0, region.first_photon,  region.num_photons),
-    delta_time          (info->dataframe->context, FString("%s/%s", info->prefix, "heights/delta_time").c_str(),           0, region.first_photon,  region.num_photons),
-    bckgrd_delta_time   (info->dataframe->context, FString("%s/%s", info->prefix, "bckgrd_atlas/delta_time").c_str()),
-    bckgrd_rate         (info->dataframe->context, FString("%s/%s", info->prefix, "bckgrd_atlas/bckgrd_rate").c_str()),
-    anc_geo_data        (info->dataframe->parms->atl03GeoFields,  info->dataframe->context, FString("%s/%s", info->prefix, "geolocation").c_str(),  0, region.first_segment, region.num_segments),
-    anc_corr_data       (info->dataframe->parms->atl03CorrFields, info->dataframe->context, FString("%s/%s", info->prefix, "geophys_corr").c_str(), 0, region.first_segment, region.num_segments),
-    anc_ph_data         (info->dataframe->parms->atl03PhFields,   info->dataframe->context, FString("%s/%s", info->prefix, "heights").c_str(),      0, region.first_photon,  region.num_photons)
+Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const Region& region):
+    read_yapc           (df->parms->stages[Icesat2Fields::STAGE_YAPC] && (df->parms->yapc.version == 0) && (df->parms->version.value >= 6)),
+    sc_orient           (df->hdf03,                            "/orbit_info/sc_orient"),
+    velocity_sc         (df->hdf03, FString("%s/%s", df->beam, "geolocation/velocity_sc").c_str(),      H5Coro::ALL_COLS, region.first_segment, region.num_segments),
+    segment_delta_time  (df->hdf03, FString("%s/%s", df->beam, "geolocation/delta_time").c_str(),       0, region.first_segment, region.num_segments),
+    segment_id          (df->hdf03, FString("%s/%s", df->beam, "geolocation/segment_id").c_str(),       0, region.first_segment, region.num_segments),
+    segment_dist_x      (df->hdf03, FString("%s/%s", df->beam, "geolocation/segment_dist_x").c_str(),   0, region.first_segment, region.num_segments),
+    solar_elevation     (df->hdf03, FString("%s/%s", df->beam, "geolocation/solar_elevation").c_str(),  0, region.first_segment, region.num_segments),
+    dist_ph_along       (df->hdf03, FString("%s/%s", df->beam, "heights/dist_ph_along").c_str(),        0, region.first_photon,  region.num_photons),
+    dist_ph_across      (df->hdf03, FString("%s/%s", df->beam, "heights/dist_ph_across").c_str(),       0, region.first_photon,  region.num_photons),
+    h_ph                (df->hdf03, FString("%s/%s", df->beam, "heights/h_ph").c_str(),                 0, region.first_photon,  region.num_photons),
+    signal_conf_ph      (df->hdf03, FString("%s/%s", df->beam, "heights/signal_conf_ph").c_str(),       df->signalConfColIndex, region.first_photon,  region.num_photons),
+    quality_ph          (df->hdf03, FString("%s/%s", df->beam, "heights/quality_ph").c_str(),           0, region.first_photon,  region.num_photons),
+    weight_ph           (read_yapc ? df->hdf03 : NULL, FString("%s/%s", df->beam, "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
+    lat_ph              (df->hdf03, FString("%s/%s", df->beam, "heights/lat_ph").c_str(),               0, region.first_photon,  region.num_photons),
+    lon_ph              (df->hdf03, FString("%s/%s", df->beam, "heights/lon_ph").c_str(),               0, region.first_photon,  region.num_photons),
+    delta_time          (df->hdf03, FString("%s/%s", df->beam, "heights/delta_time").c_str(),           0, region.first_photon,  region.num_photons),
+    bckgrd_delta_time   (df->hdf03, FString("%s/%s", df->beam, "bckgrd_atlas/delta_time").c_str()),
+    bckgrd_rate         (df->hdf03, FString("%s/%s", df->beam, "bckgrd_atlas/bckgrd_rate").c_str()),
+    anc_geo_data        (df->parms->atl03GeoFields,  df->hdf03, FString("%s/%s", df->beam, "geolocation").c_str(),  0, region.first_segment, region.num_segments),
+    anc_corr_data       (df->parms->atl03CorrFields, df->hdf03, FString("%s/%s", df->beam, "geophys_corr").c_str(), 0, region.first_segment, region.num_segments),
+    anc_ph_data         (df->parms->atl03PhFields,   df->hdf03, FString("%s/%s", df->beam, "heights").c_str(),      0, region.first_photon,  region.num_photons)
 {
-    Atl03DataFrame* dataframe = info->dataframe;
-
     /* Join Hardcoded Reads */
-    sc_orient.join(dataframe->read_timeout_ms, true);
-    velocity_sc.join(dataframe->read_timeout_ms, true);
-    segment_delta_time.join(dataframe->read_timeout_ms, true);
-    segment_id.join(dataframe->read_timeout_ms, true);
-    segment_dist_x.join(dataframe->read_timeout_ms, true);
-    solar_elevation.join(dataframe->read_timeout_ms, true);
-    dist_ph_along.join(dataframe->read_timeout_ms, true);
-    dist_ph_across.join(dataframe->read_timeout_ms, true);
-    h_ph.join(dataframe->read_timeout_ms, true);
-    signal_conf_ph.join(dataframe->read_timeout_ms, true);
-    quality_ph.join(dataframe->read_timeout_ms, true);
-    if(read_yapc) weight_ph.join(dataframe->read_timeout_ms, true);
-    lat_ph.join(dataframe->read_timeout_ms, true);
-    lon_ph.join(dataframe->read_timeout_ms, true);
-    delta_time.join(dataframe->read_timeout_ms, true);
-    bckgrd_delta_time.join(dataframe->read_timeout_ms, true);
-    bckgrd_rate.join(dataframe->read_timeout_ms, true);
+    sc_orient.join(df->readTimeoutMs, true);
+    velocity_sc.join(df->readTimeoutMs, true);
+    segment_delta_time.join(df->readTimeoutMs, true);
+    segment_id.join(df->readTimeoutMs, true);
+    segment_dist_x.join(df->readTimeoutMs, true);
+    solar_elevation.join(df->readTimeoutMs, true);
+    dist_ph_along.join(df->readTimeoutMs, true);
+    dist_ph_across.join(df->readTimeoutMs, true);
+    h_ph.join(df->readTimeoutMs, true);
+    signal_conf_ph.join(df->readTimeoutMs, true);
+    quality_ph.join(df->readTimeoutMs, true);
+    if(read_yapc) weight_ph.join(df->readTimeoutMs, true);
+    lat_ph.join(df->readTimeoutMs, true);
+    lon_ph.join(df->readTimeoutMs, true);
+    delta_time.join(df->readTimeoutMs, true);
+    bckgrd_delta_time.join(df->readTimeoutMs, true);
+    bckgrd_rate.join(df->readTimeoutMs, true);
 
     /* Join and Add Ancillary Columns */
-    anc_geo_data.joinToGDF(dataframe, dataframe->read_timeout_ms, true);
-    anc_corr_data.joinToGDF(dataframe, dataframe->read_timeout_ms, true);
-    anc_ph_data.joinToGDF(dataframe, dataframe->read_timeout_ms, true);
+    anc_geo_data.joinToGDF(df, df->readTimeoutMs, true);
+    anc_corr_data.joinToGDF(df, df->readTimeoutMs, true);
+    anc_ph_data.joinToGDF(df, df->readTimeoutMs, true);
 }
 
 /*----------------------------------------------------------------------------
  * Atl08Class::Constructor
  *----------------------------------------------------------------------------*/
-Atl03DataFrame::Atl08Class::Atl08Class (const info_t* info):
-    enabled             (info->dataframe->parms->stages[Icesat2Fields::STAGE_ATL08]),
-    phoreal             (info->dataframe->parms->stages[Icesat2Fields::STAGE_PHOREAL]),
-    ancillary           (info->dataframe->parms->atl08Fields.length() > 0),
+Atl03DataFrame::Atl08Class::Atl08Class (Atl03DataFrame* df):
+    enabled             (df->parms->stages[Icesat2Fields::STAGE_ATL08]),
+    phoreal             (df->parms->stages[Icesat2Fields::STAGE_PHOREAL]),
+    ancillary           (df->parms->atl08Fields.length() > 0),
     classification      {NULL},
     relief              {NULL},
     landcover           {NULL},
     snowcover           {NULL},
-    atl08_segment_id    (enabled ? info->dataframe->context08 : NULL, FString("%s/%s", info->prefix, "signal_photons/ph_segment_id").c_str()),
-    atl08_pc_indx       (enabled ? info->dataframe->context08 : NULL, FString("%s/%s", info->prefix, "signal_photons/classed_pc_indx").c_str()),
-    atl08_pc_flag       (enabled ? info->dataframe->context08 : NULL, FString("%s/%s", info->prefix, "signal_photons/classed_pc_flag").c_str()),
-    atl08_ph_h          (phoreal ? info->dataframe->context08 : NULL, FString("%s/%s", info->prefix, "signal_photons/ph_h").c_str()),
-    segment_id_beg      ((phoreal || ancillary) ? info->dataframe->context08 : NULL, FString("%s/%s", info->prefix, "land_segments/segment_id_beg").c_str()),
-    segment_landcover   (phoreal ? info->dataframe->context08 : NULL, FString("%s/%s", info->prefix, "land_segments/segment_landcover").c_str()),
-    segment_snowcover   (phoreal ? info->dataframe->context08 : NULL, FString("%s/%s", info->prefix, "land_segments/segment_snowcover").c_str()),
-    anc_seg_data        (info->dataframe->parms->atl08Fields, info->dataframe->context08, FString("%s/land_segments", info->prefix).c_str()),
+    atl08_segment_id    (enabled ? df->hdf08 : NULL, FString("%s/%s", df->beam, "signal_photons/ph_segment_id").c_str()),
+    atl08_pc_indx       (enabled ? df->hdf08 : NULL, FString("%s/%s", df->beam, "signal_photons/classed_pc_indx").c_str()),
+    atl08_pc_flag       (enabled ? df->hdf08 : NULL, FString("%s/%s", df->beam, "signal_photons/classed_pc_flag").c_str()),
+    atl08_ph_h          (phoreal ? df->hdf08 : NULL, FString("%s/%s", df->beam, "signal_photons/ph_h").c_str()),
+    segment_id_beg      ((phoreal || ancillary) ? df->hdf08 : NULL, FString("%s/%s", df->beam, "land_segments/segment_id_beg").c_str()),
+    segment_landcover   (phoreal ? df->hdf08 : NULL, FString("%s/%s", df->beam, "land_segments/segment_landcover").c_str()),
+    segment_snowcover   (phoreal ? df->hdf08 : NULL, FString("%s/%s", df->beam, "land_segments/segment_snowcover").c_str()),
+    anc_seg_data        (df->parms->atl08Fields, df->hdf08, FString("%s/land_segments", df->beam).c_str()),
     anc_seg_indices     (NULL)
 {
-    anc_seg_data.joinToGDF(info->dataframe, info->dataframe->read_timeout_ms, true);
+    anc_seg_data.joinToGDF(df, df->readTimeoutMs, true);
 }
 
 /*----------------------------------------------------------------------------
@@ -534,7 +473,7 @@ Atl03DataFrame::Atl08Class::~Atl08Class (void)
 /*----------------------------------------------------------------------------
  * Atl08Class::classify
  *----------------------------------------------------------------------------*/
-void Atl03DataFrame::Atl08Class::classify (const info_t* info, const Region& region, const Atl03Data& atl03)
+void Atl03DataFrame::Atl08Class::classify (const Atl03DataFrame* df, const Region& region, const Atl03Data& atl03)
 {
     /* Do Nothing If Not Enabled */
     if(!enabled)
@@ -543,18 +482,18 @@ void Atl03DataFrame::Atl08Class::classify (const info_t* info, const Region& reg
     }
 
     /* Wait for Reads to Complete */
-    atl08_segment_id.join(info->dataframe->read_timeout_ms, true);
-    atl08_pc_indx.join(info->dataframe->read_timeout_ms, true);
-    atl08_pc_flag.join(info->dataframe->read_timeout_ms, true);
+    atl08_segment_id.join(df->readTimeoutMs, true);
+    atl08_pc_indx.join(df->readTimeoutMs, true);
+    atl08_pc_flag.join(df->readTimeoutMs, true);
     if(phoreal || ancillary)
     {
-        segment_id_beg.join(info->dataframe->read_timeout_ms, true);
+        segment_id_beg.join(df->readTimeoutMs, true);
     }
     if(phoreal)
     {
-        atl08_ph_h.join(info->dataframe->read_timeout_ms, true);
-        segment_landcover.join(info->dataframe->read_timeout_ms, true);
-        segment_snowcover.join(info->dataframe->read_timeout_ms, true);
+        atl08_ph_h.join(df->readTimeoutMs, true);
+        segment_landcover.join(df->readTimeoutMs, true);
+        segment_snowcover.join(df->readTimeoutMs, true);
     }
 
     /* Allocate ATL08 Classification Array */
@@ -626,11 +565,10 @@ void Atl03DataFrame::Atl08Class::classify (const info_t* info, const Region& reg
                     snowcover[atl03_photon] = (uint8_t)segment_snowcover[atl08_segment_index];
 
                     /* Run ABoVE Classifier (if specified) */
-                    if(info->dataframe->parms->phoreal.above_classifier && (classification[atl03_photon] != Icesat2Fields::ATL08_TOP_OF_CANOPY))
+                    if(df->parms->phoreal.above_classifier && (classification[atl03_photon] != Icesat2Fields::ATL08_TOP_OF_CANOPY))
                     {
-                        const uint8_t spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], (Icesat2Fields::track_t)info->track, info->pair);
                         if( (atl03.solar_elevation[atl03_segment_index] <= 5.0) &&
-                            ((spot == 1) || (spot == 3) || (spot == 5)) &&
+                            ((df->spot.value == 1) || (df->spot.value == 3) || (df->spot.value == 5)) &&
                             (atl03.signal_conf_ph[atl03_photon] == Icesat2Fields::CNF_SURFACE_HIGH) &&
                             ((relief[atl03_photon] >= 0.0) && (relief[atl03_photon] < 35.0)) )
                             /* TODO: check for valid ground photons in ATL08 segment */
@@ -666,7 +604,7 @@ void Atl03DataFrame::Atl08Class::classify (const info_t* info, const Region& reg
                 /* Set Ancillary Index to Invalid */
                 if(ancillary)
                 {
-                    anc_seg_indices[atl03_photon] = Atl03DataFrame::INVALID_INDICE;
+                    anc_seg_indices[atl03_photon] = static_cast<int32_t>(INVALID_KEY);
                 }
             }
 
@@ -692,8 +630,8 @@ uint8_t Atl03DataFrame::Atl08Class::operator[] (int index) const
 /*----------------------------------------------------------------------------
  * YapcScore::Constructor
  *----------------------------------------------------------------------------*/
-Atl03DataFrame::YapcScore::YapcScore (const info_t* info, const Region& region, const Atl03Data& atl03):
-    enabled {info->dataframe->parms->stages[Icesat2Fields::STAGE_YAPC]},
+Atl03DataFrame::YapcScore::YapcScore (const Atl03DataFrame* df, const Region& region, const Atl03Data& atl03):
+    enabled {df->parms->stages[Icesat2Fields::STAGE_YAPC]},
     score {NULL}
 {
     /* Do Nothing If Not Enabled */
@@ -703,17 +641,17 @@ Atl03DataFrame::YapcScore::YapcScore (const info_t* info, const Region& region, 
     }
 
     /* Run YAPC */
-    if(info->dataframe->parms->yapc.version == 3)
+    if(df->parms->yapc.version == 3)
     {
-        yapcV3(info, region, atl03);
+        yapcV3(df, region, atl03);
     }
-    else if(info->dataframe->parms->yapc.version == 2 || info->dataframe->parms->yapc.version == 1)
+    else if(df->parms->yapc.version == 2 || df->parms->yapc.version == 1)
     {
-        yapcV2(info, region, atl03);
+        yapcV2(df, region, atl03);
     }
-    else if(info->dataframe->parms->yapc.version != 0) // read from file
+    else if(df->parms->yapc.version != 0) // read from file
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid YAPC version specified: %d", info->dataframe->parms->yapc.version.value);
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid YAPC version specified: %d", df->parms->yapc.version.value);
     }
 }
 
@@ -728,7 +666,7 @@ Atl03DataFrame::YapcScore::~YapcScore (void)
 /*----------------------------------------------------------------------------
  * yapcV2
  *----------------------------------------------------------------------------*/
-void Atl03DataFrame::YapcScore::yapcV2 (const info_t* info, const Region& region, const Atl03Data& atl03)
+void Atl03DataFrame::YapcScore::yapcV2 (const Atl03DataFrame* df, const Region& region, const Atl03Data& atl03)
 {
     /* YAPC Hard-Coded Parameters */
     const double MAXIMUM_HSPREAD = 15000.0; // meters
@@ -737,7 +675,7 @@ void Atl03DataFrame::YapcScore::yapcV2 (const info_t* info, const Region& region
     double nearest_neighbors[MAX_KNN];
 
     /* Shortcut to Settings */
-    const YapcFields& settings = info->dataframe->parms->yapc;
+    const YapcFields& settings = df->parms->yapc;
 
     /* Score Photons
      *
@@ -771,7 +709,7 @@ void Atl03DataFrame::YapcScore::yapcV2 (const info_t* info, const Region& region
         knn = MIN(knn, MAX_KNN); // truncate if too large
 
         /* Check Valid Extent (note check against knn)*/
-        if((N <= knn) || (N < info->dataframe->parms->minPhotonCount.value)) continue;
+        if((N <= knn) || (N < df->parms->minPhotonCount.value)) continue;
 
         /* Calculate Distance and Height Spread */
         double min_h = atl03.h_ph[0];
@@ -899,10 +837,10 @@ void Atl03DataFrame::YapcScore::yapcV2 (const info_t* info, const Region& region
 /*----------------------------------------------------------------------------
  * yapcV3
  *----------------------------------------------------------------------------*/
-void Atl03DataFrame::YapcScore::yapcV3 (const info_t* info, const Region& region, const Atl03Data& atl03)
+void Atl03DataFrame::YapcScore::yapcV3 (const Atl03DataFrame* df, const Region& region, const Atl03Data& atl03)
 {
     /* YAPC Parameters */
-    const YapcFields& settings = info->dataframe->parms->yapc;
+    const YapcFields& settings = df->parms->yapc;
     const double hWX = settings.win_x / 2; // meters
     const double hWZ = settings.win_h / 2; // meters
 
@@ -1040,37 +978,34 @@ uint8_t Atl03DataFrame::YapcScore::operator[] (int index) const
 void* Atl03DataFrame::subsettingThread (void* parm)
 {
     /* Get Thread Info */
-    const info_t* info = static_cast<info_t*>(parm);
-    Atl03DataFrame& dataframe = *info->dataframe;
-    const Icesat2Fields& parms = *dataframe.parms;
+    Atl03DataFrame* df = static_cast<Atl03DataFrame*>(parm);
+    const Icesat2Fields& parms = *df->parms;
 
     /* Start Trace */
-    const uint32_t trace_id = start_trace(INFO, dataframe.traceId, "atl03_subsetter", "{\"context\":\"%s\", \"track\":%d}", dataframe.context->name, info->track);
+    const uint32_t trace_id = start_trace(INFO, df->traceId, "atl03_subsetter", "{\"context\":\"%s\", \"beam\":%s}", df->hdf03->name, df->beam);
     EventLib::stashId (trace_id); // set thread specific trace id for H5Coro
 
     try
     {
         /* Start Reading ATL08 Data */
-        Atl08Class atl08(info);
+        Atl08Class atl08(df);
 
         /* Subset to Region of Interest */
-        const Region region(info);
+        const Region region(df);
 
         /* Read ATL03 Datasets */
-        const Atl03Data atl03(info, region);
-
-        /* Perform YAPC Scoring (if requested) */
-        const YapcScore yapc(info, region, atl03);
-
-        /* Perform ATL08 Classification (if requested) */
-        atl08.classify(info, region, atl03);
-
-        /* Calculate Spot Number */
-        const uint8_t spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], (Icesat2Fields::track_t)info->track, info->pair);
+        const Atl03Data atl03(df, region);
 
         /* Set MetaData */
-        dataframe.spacecraft_orientation = atl03.sc_orient[0];
-        dataframe.reference_ground_track  = parms.rgt.value;
+        df->spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], df->beam);
+        df->spacecraft_orientation = atl03.sc_orient[0];
+        df->reference_ground_track  = parms.rgt.value;
+
+        /* Perform YAPC Scoring (if requested) */
+        const YapcScore yapc(df, region, atl03);
+
+        /* Perform ATL08 Classification (if requested) */
+        atl08.classify(df, region, atl03);
 
         /* Initialize Indices */
         int32_t current_photon = -1;
@@ -1079,7 +1014,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
         int32_t background_index = 0;
 
         /* Traverse All Photons In Dataset */
-        while(dataframe.active && (current_photon < atl03.dist_ph_along.size))
+        while(df->active && (current_photon < atl03.dist_ph_along.size))
         {
             /* Go to Next Photon */
             current_photon++;
@@ -1096,7 +1031,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             /* Check Current Segment */
             if(current_segment >= atl03.segment_dist_x.size)
             {
-                throw RunTimeException(ERROR, RTE_ERROR, "Photons with no segments are detected is %s/%d (%d %ld %ld)!", info->dataframe->context->name, info->track, current_segment, atl03.segment_dist_x.size, region.num_segments);
+                throw RunTimeException(ERROR, RTE_ERROR, "Photons with no segments are detected is %s/%s (%d %ld %ld)!", df->hdf03->name, df->beam, current_segment, atl03.segment_dist_x.size, region.num_segments);
             }
 
             /* Check Region Mask */
@@ -1247,53 +1182,40 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             }
 
             /* Add Photon to DataFrame */
-            dataframe.addRow();
-            dataframe.time_ns.append(Icesat2Fields::deltatime2timestamp(atl03.delta_time[current_photon]));
-            dataframe.latitude.append(atl03.lat_ph[current_photon]);
-            dataframe.longitude.append(atl03.lon_ph[current_photon]);
-            dataframe.x_atc.append(atl03.dist_ph_along[current_photon] + atl03.segment_dist_x[current_segment]);
-            dataframe.y_atc.append(atl03.dist_ph_across[current_photon]);
-            dataframe.height.append(atl03.h_ph[current_photon]);
-            dataframe.relief.append(relief);
-            dataframe.solar_elevation.append(atl03.solar_elevation[current_segment]);
-            dataframe.background_rate.append(background_rate);
-            dataframe.landcover.append(landcover_flag);
-            dataframe.snowcover.append(snowcover_flag);
-            dataframe.atl08_class.append(static_cast<uint8_t>(atl08_class));
-            dataframe.atl03_cnf.append(atl03_cnf);
-            dataframe.quality_ph.append(static_cast<int8_t>(quality_ph));
-            dataframe.yapc_score.append(yapc_score);
-            dataframe.spacecraft_velocity.append(spacecraft_velocity);
-            dataframe.spot.append(spot);
-            dataframe.segment_id.append(atl03.segment_id[current_segment]);
+            df->addRow();
+            df->time_ns.append(Icesat2Fields::deltatime2timestamp(atl03.delta_time[current_photon]));
+            df->latitude.append(atl03.lat_ph[current_photon]);
+            df->longitude.append(atl03.lon_ph[current_photon]);
+            df->x_atc.append(atl03.dist_ph_along[current_photon] + atl03.segment_dist_x[current_segment]);
+            df->y_atc.append(atl03.dist_ph_across[current_photon]);
+            df->height.append(atl03.h_ph[current_photon]);
+            df->relief.append(relief);
+            df->solar_elevation.append(atl03.solar_elevation[current_segment]);
+            df->background_rate.append(background_rate);
+            df->landcover.append(landcover_flag);
+            df->snowcover.append(snowcover_flag);
+            df->atl08_class.append(static_cast<uint8_t>(atl08_class));
+            df->atl03_cnf.append(atl03_cnf);
+            df->quality_ph.append(static_cast<int8_t>(quality_ph));
+            df->yapc_score.append(yapc_score);
+            df->spacecraft_velocity.append(spacecraft_velocity);
+            df->segment_id.append(atl03.segment_id[current_segment]);
 
             /* Add Ancillary Elements */
-            atl03.anc_geo_data.addToGDF(&dataframe, current_segment);
-            atl03.anc_corr_data.addToGDF(&dataframe, current_segment);
-            atl03.anc_ph_data.addToGDF(&dataframe, current_photon);
-            atl08.anc_seg_data.addToGDF(&dataframe, atl08.anc_seg_indices[current_photon]);
+            atl03.anc_geo_data.addToGDF(df, current_segment);
+            atl03.anc_corr_data.addToGDF(df, current_segment);
+            atl03.anc_ph_data.addToGDF(df, current_photon);
+            atl08.anc_seg_data.addToGDF(df, atl08.anc_seg_indices[current_photon]);
         }
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), e.code(), NULL, &dataframe.active, "Failure on resource %s track %d.%d: %s", dataframe.context->name, info->track, info->pair, e.what());
+        alert(e.level(), e.code(), df->outQ, &df->active, "Failure on resource %s beam %s: %s", df->hdf03->name, df->beam, e.what());
     }
 
-    /* Handle Global Reader Updates */
-    dataframe.threadMut.lock();
-    {
-        /* Count Completion */
-        dataframe.numComplete++;
-        if(dataframe.numComplete == dataframe.threadCount)
-        {
-            mlog(INFO, "Completed processing resource %s track %d.%d", dataframe.context->name, info->track, info->pair);
-            dataframe.signalComplete();
-        }
-    }
-    dataframe.threadMut.unlock();
-
-    /* Clean Up Info */
-    delete info;
+    /* Dataframe Complete */
+    mlog(INFO, "Completed processing resource %s beam %s", df->hdf03->name, df->beam);
+    df->signalComplete();
 
     /* Stop Trace */
     stop_trace(INFO, trace_id);

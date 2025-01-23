@@ -90,6 +90,14 @@ void H5VarSet::addToGDF(GeoDataFrame* gdf, long element) const
     {
         const char* dataset_name = iter[i].key;
         H5DArray* array = iter[i].value;
-        gdf->appendFromBuffer(dataset_name, array->referenceElement(element), array->elementSize());
+        if(element != static_cast<int32_t>(INVALID_KEY))
+        {
+            gdf->appendFromBuffer(dataset_name, array->referenceElement(element), array->elementSize());
+        }
+        else
+        {
+            const uint8_t nodata_buf[8] = {0,0,0,0,0,0,0,0};
+            gdf->appendFromBuffer(dataset_name, nodata_buf, 8);
+        }
     }
 }

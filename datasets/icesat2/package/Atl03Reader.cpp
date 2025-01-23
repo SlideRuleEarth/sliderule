@@ -805,7 +805,7 @@ void Atl03Reader::Atl08Class::classify (const info_t* info, const Region& region
                 /* Set Ancillary Index to Invalid */
                 if(ancillary)
                 {
-                    anc_seg_indices[atl03_photon] = Atl03Reader::INVALID_INDICE;
+                    anc_seg_indices[atl03_photon] = static_cast<int32_t>(INVALID_KEY);
                 }
             }
 

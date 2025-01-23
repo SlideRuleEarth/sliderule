@@ -53,7 +53,7 @@ class FieldElement: public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit        FieldElement    (const T& default_value);
+        explicit        FieldElement    (const T& default_value, uint32_t encoding_mask=0);
                         FieldElement    (void);
                         FieldElement    (const FieldElement<T>& element);
         virtual         ~FieldElement   (void) override = default;
@@ -111,8 +111,8 @@ class FieldElement: public Field
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>
-FieldElement<T>::FieldElement(const T& default_value):
-    Field(ELEMENT, getImpliedEncoding<T>()),
+FieldElement<T>::FieldElement(const T& default_value, uint32_t encoding_mask):
+    Field(ELEMENT, getImpliedEncoding<T>() | encoding_mask),
     value(default_value)
 {
 }

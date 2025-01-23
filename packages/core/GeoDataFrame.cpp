@@ -275,7 +275,7 @@ long GeoDataFrame::addRow(void)
 /*----------------------------------------------------------------------------
  * appendFromBuffer
  *----------------------------------------------------------------------------*/
-long GeoDataFrame::appendFromBuffer(const char* name, uint8_t* buffer, int size) const
+long GeoDataFrame::appendFromBuffer(const char* name, const uint8_t* buffer, int size) const
 {
     Field* field = getColumn(name);
     switch(field->getValueEncoding())

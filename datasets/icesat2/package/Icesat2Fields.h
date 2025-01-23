@@ -285,6 +285,23 @@ class Icesat2Fields: public RequestFields
             return static_cast<uint8_t>(lookup_table[index]);
         }
 
+        // returns spot number 1 to 6
+        static uint8_t getSpotNumber (sc_orient_t sc_orient, const char* beam)
+        {
+            track_t track;
+            if(beam[2] == '1') track = RPT_1;
+            else if(beam[2] == '2') track = RPT_2;
+            else if(beam[2] == '3') track = RPT_3;
+            else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam: %s", beam);
+
+            int pair;
+            if(beam[3] == 'l') pair = Icesat2Fields::RPT_L;
+            else if(beam[3] == 'r') pair = Icesat2Fields::RPT_R;
+            else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam: %s", beam);
+
+            return getSpotNumber(sc_orient, track, pair);
+        }
+
         // returns ground track number 10 - 60
         static uint8_t getGroundTrack (sc_orient_t sc_orient, track_t track, int pair)
         {

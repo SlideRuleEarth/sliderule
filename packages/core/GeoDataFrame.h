@@ -132,7 +132,7 @@ class GeoDataFrame: public LuaObject, public Field
 
         long                        length              (void) const override;
         long                        addRow              (void);
-        long                        appendFromBuffer    (const char* name, uint8_t* buffer, int size) const;
+        long                        appendFromBuffer    (const char* name, const uint8_t* buffer, int size) const;
         vector<string>              getColumnNames      (void) const;
         bool                        addColumn           (const char* name, Field* column);
         bool                        addColumn           (const char* name, uint32_t _type);
