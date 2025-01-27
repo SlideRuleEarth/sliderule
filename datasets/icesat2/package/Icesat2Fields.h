@@ -342,7 +342,7 @@ class Icesat2Fields: public RequestFields
         FieldElement<surface_type_t>                        surfaceType {SRT_LAND_ICE};                             // surface reference type (used to select signal confidence column)
         FieldElement<bool>                                  passInvalid {false};                                    // post extent even if each pair is invalid
         FieldElement<bool>                                  distInSeg {false};                                      // the extent length and step are expressed in segments, not meters
-        FieldEnumeration<signal_conf_t,NUM_SIGNAL_CONF>     atl03Cnf {false, false, true, true, true, true, true};  // list of desired signal confidences of photons from atl03 classification
+        FieldEnumeration<signal_conf_t,NUM_SIGNAL_CONF>     atl03Cnf {false, false, false, false, true, true, true}; // list of desired signal confidences of photons from atl03 classification
         FieldEnumeration<quality_ph_t,NUM_PHOTON_QUALITY>   qualityPh {true, false, false, false};                  // list of desired photon quality levels from atl03
         FieldEnumeration<atl08_class_t,NUM_ATL08_CLASSES>   atl08Class {false, false, false, false, false};         // list of surface classifications to use (leave empty to skip)
         FieldEnumeration<gt_t,NUM_SPOTS>                    beams {true, true, true, true, true, true};             // list of which beams (gt[l|r][1|2|3])

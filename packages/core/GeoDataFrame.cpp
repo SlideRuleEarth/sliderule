@@ -737,8 +737,8 @@ bool add_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data)
  *----------------------------------------------------------------------------*/
 void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data)
 {
-    const rec_type_t type = static_cast<const rec_type_t>(gdf_rec_data->type);
-    if((type == GeoDataFrame::COLUMN_REC) || (type == GeoDataFrame::META_REC))
+    const rec_type_t _type = static_cast<rec_type_t>(gdf_rec_data->type);
+    if((_type == GeoDataFrame::COLUMN_REC) || (_type == GeoDataFrame::META_REC))
     {
         const uint32_t value_encoding = gdf_rec_data->encoding & Field::VALUE_MASK;
         bool add_status = true;
@@ -767,7 +767,7 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data)
             throw RunTimeException(CRITICAL, RTE_ERROR, "failed to add metadata %s of size %u with encoding %u", gdf_rec_data->name, gdf_rec_data->size, gdf_rec_data->encoding);
         }
     }
-    else if(type == GeoDataFrame::EOF_REC)
+    else if(_type == GeoDataFrame::EOF_REC)
     {
         // check number of columns
         const uint32_t* num_colums_ptr = reinterpret_cast<const uint32_t*>(gdf_rec_data->data);
@@ -1137,7 +1137,7 @@ int GeoDataFrame::luaSend(lua_State* L)
 
             // determine size of element
             const uint32_t value_encoding = kv.value.field->getValueEncoding();
-            if(value_encoding < 0 || value_encoding >= RecordObject::NUM_FIELD_TYPES) continue;
+            if(value_encoding >= RecordObject::NUM_FIELD_TYPES) continue;
             const long element_size = kv.value.field->length() * RecordObject::FIELD_TYPE_BYTES[value_encoding];
             const long rec_size = offsetof(gdf_rec_t, data) + element_size;
 

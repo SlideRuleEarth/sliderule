@@ -102,9 +102,9 @@ class FieldArray: public FieldUnsafeArray<T>
             return reinterpret_cast<const Field*>(&values[i]);
         }
 
-        long serialize (uint8_t* buffer, size_t size) const override {
+        long serialize (uint8_t* buffer, size_t _size) const override {
             const uint8_t* ptr = reinterpret_cast<const uint8_t*>(&values[0]);
-            const size_t bytes_to_copy = MIN(size, sizeof(T)*N);
+            const size_t bytes_to_copy = MIN(_size, sizeof(T)*N);
             memcpy(buffer, ptr, bytes_to_copy);
             return bytes_to_copy;
         }
