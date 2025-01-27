@@ -82,6 +82,8 @@ class BathyDataFrame: public GeoDataFrame
         FieldElement<int>           spot {0};           // ATL03 spot (1, 2, 3, 4, 5, 6)
         FieldElement<int>           utm_zone;
         FieldElement<bool>          utm_is_north;
+        FieldList<double>           bounding_polygon_lat;
+        FieldList<double>           bounding_polygon_lon;
 
         /* Column Data */
         FieldColumn<time8_t>        time_ns {Field::TIME_COLUMN}; // nanoseconds since GPS epoch
@@ -160,6 +162,8 @@ class BathyDataFrame: public GeoDataFrame
 
                 /* Read Data */
                 H5Array<int8_t>     sc_orient;
+                H5Array<double>     bounding_polygon_lat;
+                H5Array<double>     bounding_polygon_lon;
                 H5Array<float>      velocity_sc;
                 H5Array<double>     segment_delta_time;
                 H5Array<double>     segment_dist_x;

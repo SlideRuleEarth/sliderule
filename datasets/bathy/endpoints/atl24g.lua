@@ -233,13 +233,14 @@ end
 -------------------------------------------------------
 local valid_output_present = false
 local failed_processing_run = false
+local bounding_polygon = {}
 for beam,dataframe in pairs(dataframes) do
     local failed_dataframe = false
     if dataframe:finished(ctimeout(), rspq) then
-        if dataframes[beam]:inerror() then
+        if dataframe:inerror() then
             userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create valid bathy dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
             failed_dataframe = true
-        elseif dataframes[beam]:length() > 0 then
+        elseif dataframe:length() > 0 then
             local spot = dataframe:meta("spot")
             local output_filename = string.format("%s/bathy_spot_%d.parquet", crenv.host_sandbox_directory, spot)
             local arrow_dataframe = arrow.dataframe(parms, dataframe)
@@ -252,6 +253,7 @@ for beam,dataframe in pairs(dataframes) do
             else -- success
                 userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> on %s created dataframe for spot %s", rspq, resource, spot))
                 outputs[beam] = string.format("%s/bathy_spot_%d.parquet", crenv.container_sandbox_mount, spot)
+                bounding_polygon = {lat = dataframe:meta("bounding_polygon_lat"), lon = dataframe:meta("bounding_polygon_lon")}
                 valid_output_present = true
             end
         else
@@ -273,6 +275,10 @@ if failed_processing_run then
     cleanup(crenv, transaction_id, true, "failed processing run")
     return
 elseif not valid_output_present then
+    cleanup(crenv, transaction_id, true, "no valid output present")
+    return
+elseif not bounding_polygon["lat"]     or not bounding_polygon["lon"] or
+          #bounding_polygon["lat"] < 4 or    #bounding_polygon["lon"] < 4 then
     cleanup(crenv, transaction_id, true, "no valid output present")
     return
 end
@@ -334,6 +340,7 @@ outputs["format"] = parms["output"]["format"]
 outputs["filename"] = crenv.container_sandbox_mount.."/"..tmp_filename
 outputs["ensemble"] = parms["ensemble"] or {ensemble_model_filename=string.format("%s/%s", cre.HOST_DIRECTORY, bathy.ENSEMBLE_MODEL)}
 outputs["iso_xml_filename"] = crenv.container_sandbox_mount.."/"..tmp_filename..".iso.xml"
+outputs["bounding_polygon"] = bounding_polygon
 outputs["latch"] = latch
 
 -------------------------------------------------------

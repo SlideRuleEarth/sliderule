@@ -140,6 +140,8 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"pair",                &pair},
         {"utm_zone",            &utm_zone},
         {"utm_is_north",        &utm_is_north},
+        {"bounding_polygon_lat",&bounding_polygon_lat},
+        {"bounding_polygon_lon",&bounding_polygon_lon}
     }),
     beam(beam_str),
     parmsPtr(_parms),
@@ -431,6 +433,8 @@ void BathyDataFrame::Region::rasterregion (const BathyDataFrame& dataframe)
  *----------------------------------------------------------------------------*/
 BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Region& region):
     sc_orient           (dataframe.hdf03,                                                "/orbit_info/sc_orient"),
+    bounding_polygon_lat(dataframe.hdf03,                                                "/orbit_info/bounding_polygon_lat1"),
+    bounding_polygon_lon(dataframe.hdf03,                                                "/orbit_info/bounding_polygon_lon1"),
     velocity_sc         (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/velocity_sc").c_str(),     H5Coro::ALL_COLS, region.first_segment, region.num_segments),
     segment_delta_time  (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/delta_time").c_str(),      0, region.first_segment, region.num_segments),
     segment_dist_x      (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "geolocation/segment_dist_x").c_str(),  0, region.first_segment, region.num_segments),
@@ -455,6 +459,8 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     bckgrd_rate         (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "bckgrd_atlas/bckgrd_rate").c_str())
 {
     sc_orient.join(dataframe.readTimeoutMs, true);
+    bounding_polygon_lat.join(dataframe.readTimeoutMs, true);
+    bounding_polygon_lon.join(dataframe.readTimeoutMs, true);
     velocity_sc.join(dataframe.readTimeoutMs, true);
     segment_delta_time.join(dataframe.readTimeoutMs, true);
     segment_dist_x.join(dataframe.readTimeoutMs, true);
@@ -542,6 +548,13 @@ void* BathyDataFrame::subsettingThread (void* parm)
         GeoLib::UTMTransform utm_transform(region.segment_lat[0], region.segment_lon[0]);
         dataframe.utm_zone = utm_transform.zone;
         dataframe.utm_is_north = region.segment_lat[0] >= 0.0;
+
+        /* Set Bounding Polygon */
+        for(int i = 0; i < atl03.bounding_polygon_lat.size; i++)
+        {
+            dataframe.bounding_polygon_lat.append(atl03.bounding_polygon_lat[i]);
+            dataframe.bounding_polygon_lon.append(atl03.bounding_polygon_lon[i]);
+        }
 
         /* Traverse All Photons In Dataset */
         while(dataframe.active && (current_photon < atl03.dist_ph_along.size))

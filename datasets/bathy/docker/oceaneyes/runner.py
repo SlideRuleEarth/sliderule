@@ -58,6 +58,10 @@ RELEASE = "1"
 CLASSIFIERS = ['qtrees', 'coastnet', 'openoceanspp', 'medianfilter', 'cshelph', 'bathypathfinder', 'pointnet', 'openoceans', 'ensemble']
 BEAMS = ["gt1l", "gt1r", "gt2l", "gt2r", "gt3l", "gt3r"]
 CONFIDENCE_COLUMN = "ensemble_bathy_prob"
+SENSOR_DEPTH_EXCEEDED = 0x00000002
+INVALID_KD = 0x00000008
+INVALID_WIND_SPEED = 0x00000010
+NIGHT_FLAG = 0x00000020
 
 # #####################
 # Command Line Inputs
@@ -73,9 +77,12 @@ settings_json = sys.argv[1]
 with open(settings_json, 'r') as json_file:
     settings = json.load(json_file)
 
-# get setttings
+# get settings
 profile = settings.get('profile', {})
 format  = settings.get('format', 'parquet')
+
+# get cmr bounding polygon
+bounding_polygon = settings['bounding_polygon']
 
 # get ensemble model filename (required)
 ensemble_model_filename = settings['ensemble']['ensemble_model_filename']
@@ -392,6 +399,7 @@ metadata = {
                             {"cshelph": {"version": cshelph_version}} |
                             {"medianfilter": {"version": medianfilter_version}} |
                             {"ensemble": {"version": ensemble_version, "model": settings['ensemble']['ensemble_model_filename']}}),
+    "cmr": json.dumps(bounding_polygon),
     "profile": json.dumps(profile),
     "stats": json.dumps(stats),
     "errors": json.dumps(beam_failures)
@@ -417,7 +425,11 @@ elif format == "h5":
     geometry = gpd.points_from_xy(df["lon_ph"], df["lat_ph"])
     gdf = gpd.GeoDataFrame(df, geometry=geometry, crs="EPSG:7912")
 
-    # get CMR query information
+    # get CMR-compatible bounding polygon
+    bounding_polygon = settings['bounding_polygon']
+    cmr_polygon = ' '.join([f'{coord[0]} {coord[1]}' for coord in zip(bounding_polygon["lat"], bounding_polygon["lon"])]) # lat1 lon1 lat2 lon2 ...
+
+    # get detailed spatial-temporal query information
     start_time = time.time()
     hull = gdf.unary_union.convex_hull
     extent_polygon = ' '.join([f'{coord[1]} {coord[0]}' for coord in list(hull.exterior.coords)]) # lat1 lon1 lat2 lon2 ...
@@ -426,7 +438,8 @@ elif format == "h5":
     metadata["extent"] = json.dumps({
         "polygon":  extent_polygon,
         "begin_time": extent_begin_time,
-        "end_time": extent_end_time
+        "end_time": extent_end_time,
+        "cmr_polygon": cmr_polygon
     })
 
     # write ISO XML file
@@ -435,7 +448,7 @@ elif format == "h5":
         template = template_file.read()
         template = template.replace("$FILENAME", settings["atl24_filename"])
         template = template.replace("$GENERATION_TIME", f'{now.year}-{now.month:02}-{now.day:02}T{now.hour:02}:{now.minute:02}:{now.second:02}.000000Z')
-        template = template.replace("$EXTENT_POLYGON", extent_polygon)
+        template = template.replace("$EXTENT_POLYGON", cmr_polygon)
         template = template.replace("$EXTENT_BEGIN_TIME", extent_begin_time)
         template = template.replace("$EXTENT_END_TIME", extent_end_time)
         template = template.replace("$SLIDERULE_VERSION", rqst_parms["sliderule_version"])
@@ -705,6 +718,7 @@ elif format == "h5":
             spot = spot_table[beam]
             beam_df = df[df["spot"] == spot]
             beam_df["delta_time"] = (beam_df.index.view('int64') / 1000000000.0) - (ATLAS_GPS_EPOCH + GPS_EPOCH_START - ATLAS_LEAP_SECONDS)
+            beam_df["low_confidence_flag"] = (beam_df["confidence"] < 0.6) & (beam_df["ensemble"] == 40)
 
             beam_group = hf.create_group(beam) # e.g. gt1r, gt2l, etc.
             add_variable(beam_group, "index_ph", beam_df['index_ph'], 'int32', True,
@@ -758,7 +772,7 @@ elif format == "h5":
             add_variable(beam_group, "y_atc", beam_df["y_atc"], 'float32', True,
                         {'contentType':'modelResult',
                          'coordinates': 'delta_time lat_ph lon_ph',
-                         'description':'Across-track distance projected to the ellipsoid of the received photon from the reference ground track.  This is based on the Along-Track Segment algorithm described in Section 3.1.',
+                         'description':'Across-track distance projected to the ellipsoid of the received photon from the reference ground track.  This is based on the Along-Track Segment algorithm described in Section 3.1 of the ATBD.',
                          'long_name':'Distance off RGT',
                          'source':'ATL03',
                          'units':'meters'})
@@ -797,13 +811,48 @@ elif format == "h5":
                          'long_name':'Total vertical uncertainty',
                          'source':'ATL03',
                          'units':'meters'})
-            add_variable(beam_group, "flags", beam_df["processing_flags"], 'uint32', True,
+            add_variable(beam_group, "sensor_depth_exceeded", (beam_df["processing_flags"] & SENSOR_DEPTH_EXCEEDED) == SENSOR_DEPTH_EXCEEDED, 'uint8', True,
                         {'contentType':'modelResult',
                          'coordinates': 'delta_time lat_ph lon_ph',
-                         'description':'bit 0 - bathy mask boundary, bit 1 - max sensor depth exceeded, bit 2 - sea surface undetected, bit 3 - invalid kd, bit 4 - invalid wind speed, bit 5 - night flag',
-                         'long_name':'Processing flags',
+                         'description':'The subaqueous photon is below the maximum depth detectable by the ATLAS sensor given the Kd of the water column',
+                         'long_name':'Sensor depth exceeded',
                          'source':'ATL03',
-                         'units':'bit mask'})
+                         'units':'boolean'})
+            add_variable(beam_group, "invalid_kd", (beam_df["processing_flags"] & INVALID_KD) == INVALID_KD, 'uint8', True,
+                        {'contentType':'modelResult',
+                         'coordinates': 'delta_time lat_ph lon_ph',
+                         'description':'No data was available in the VIIRS Kd490 8-day cycle dataset at the time and location of the photon',
+                         'long_name':'Invalid Kd',
+                         'source':'ATL03',
+                         'units':'boolean'})
+            add_variable(beam_group, "invalid_wind_speed", (beam_df["processing_flags"] & INVALID_WIND_SPEED) == INVALID_WIND_SPEED, 'uint8', True,
+                        {'contentType':'modelResult',
+                         'coordinates': 'delta_time lat_ph lon_ph',
+                         'description':'ATL09 data was not able to be read to determine wind speed',
+                         'long_name':'Invalid wind speed',
+                         'source':'ATL03',
+                         'units':'boolean'})
+            add_variable(beam_group, "night_flag", (beam_df["processing_flags"] & NIGHT_FLAG) == NIGHT_FLAG, 'uint8', True,
+                        {'contentType':'modelResult',
+                         'coordinates': 'delta_time lat_ph lon_ph',
+                         'description':'The solar elevation was less than 5 degrees at the time and location of the photon',
+                         'long_name':'Night flag',
+                         'source':'ATL03',
+                         'units':'boolean'})
+            add_variable(beam_group, "low_confidence_flag", beam_df["low_confidence_flag"], 'uint8', True,
+                        {'contentType':'modelResult',
+                         'coordinates': 'delta_time lat_ph lon_ph',
+                         'description':'There is low confidence that the photon classified as bathymetry is actually bathymetry',
+                         'long_name':'Low confidence bathymetry flag',
+                         'source':'ATL03',
+                         'units':'boolean'})
+            add_variable(beam_group, "confidence", beam_df["confidence"], 'float', True,
+                        {'contentType':'modelResult',
+                         'coordinates': 'delta_time lat_ph lon_ph',
+                         'description':'ensemble confidence score from 0.0 to 1.0 where larger numbers represent higher confidence in classification',
+                         'long_name':'Ensemble confidence',
+                         'source':'ATL03',
+                         'units':'scalar'})
             add_variable(beam_group, "class_ph", beam_df["ensemble"].astype(np.int8), 'int8', True,
                         {'contentType':'modelResult',
                          'coordinates': 'delta_time lat_ph lon_ph',
