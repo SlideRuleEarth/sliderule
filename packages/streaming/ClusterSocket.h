@@ -129,16 +129,15 @@ class ClusterSocket: public TcpSocket
             uint32_t  buffer_index;
             uint8_t   buffer[MSG_BUFFER_SIZE];
             uint8_t   meter;
-            explicit WriteConnection(bool _delete_q)
+            explicit WriteConnection(bool _delete_q):
+                delete_q(_delete_q),
+                subconnq(NULL),
+                payload_left(0),
+                bytes_processed(0),
+                buffer_index(0),
+                meter(METER_SEND_THRESH)
             {
-                delete_q = _delete_q;
-                subconnq = NULL;
-                memset(&payload_ref, 0, sizeof(payload_ref));
-                payload_left = 0;
-                bytes_processed = 0;
-                buffer_index = 0;
                 memset(buffer, 0, MSG_BUFFER_SIZE);
-                meter = METER_SEND_THRESH;
             }
             ~WriteConnection(void)
             {

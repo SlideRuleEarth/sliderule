@@ -213,9 +213,9 @@ class Subscriber: public MsgQ
     public:
 
         struct msgRef_t {
-            void*   data;
-            int     size;
-            int     state;
+            void*   data = NULL;
+            int     size = 0;
+            int     state = STATE_OKAY;
             void*   _handle = NULL;
         };
 
