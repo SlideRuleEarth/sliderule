@@ -72,8 +72,6 @@ class LuaLibraryMsg
         static bool     lmsg_addtype        (const char* recclass, char prefix, createRecFunc cfunc, associateRecFunc afunc);
         static int      luaopen_msglib      (lua_State* L);
 
-    private:
-
         /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
@@ -100,12 +98,18 @@ class LuaLibraryMsg
         } recClass_t;
 
         /*--------------------------------------------------------------------
-         * Data
+         * Constants
          *--------------------------------------------------------------------*/
 
         static const char* LUA_PUBMETANAME;
         static const char* LUA_SUBMETANAME;
         static const char* LUA_RECMETANAME;
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
 
         static const struct luaL_Reg msgLibsF [];
         static const struct luaL_Reg pubLibsM [];
@@ -140,6 +144,7 @@ class LuaLibraryMsg
         static int      lmsg_recvstring     (lua_State* L);
         static int      lmsg_recvrecord     (lua_State* L);
         static int      lmsg_drain          (lua_State* L);
+        static int      lmsg_count          (lua_State* L);
         static int      lmsg_deletesub      (lua_State* L);
 
         /* record meta functions */

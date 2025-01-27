@@ -60,15 +60,19 @@ class FieldColumn: public Field
          *--------------------------------------------------------------------*/
 
         explicit        FieldColumn     (uint32_t encoding_mask=0, long _chunk_size=DEFAULT_CHUNK_SIZE);
+                        FieldColumn     (const uint8_t* buffer, long size, uint32_t encoding_mask=0);
                         FieldColumn     (const FieldColumn<T>& column);
         virtual         ~FieldColumn    (void) override;
 
         long            append          (const T& v);
+        long            appendBuffer    (const uint8_t* buffer, long size);
+        long            appendValue     (const T& v, long size);
         void            initialize      (long size, const T& v);
         void            clear           (void);
 
         long            length          (void) const override;
         const Field*    get             (long i) const override;
+        long            serialize       (uint8_t* buffer, size_t size) const override;
 
         FieldColumn<T>& operator=       (const FieldColumn<T>& column);
         T               operator[]      (long i) const;
@@ -142,6 +146,33 @@ FieldColumn<T>::FieldColumn(uint32_t encoding_mask, long _chunk_size):
 }
 
 /*----------------------------------------------------------------------------
+ * Constructor - deserialize
+ *----------------------------------------------------------------------------*/
+template<class T>
+FieldColumn<T>::FieldColumn(const uint8_t* buffer, long size, uint32_t encoding_mask):
+    Field(COLUMN, getImpliedEncoding<T>() | encoding_mask)
+{
+    assert(size > 0);
+    assert(size % sizeof(T) == 0);
+
+    long num_elements = size / sizeof(T);
+
+    currChunk = 0;
+    currChunkOffset = num_elements;
+    numElements = num_elements;
+    chunkSize = size;
+
+    T* column_ptr = new T[num_elements];
+    const T* buf_ptr = reinterpret_cast<const T*>(buffer);
+    for(long i = 0; i < num_elements; i++)
+    {
+        column_ptr[i] = buf_ptr[i];
+    }
+
+    chunks.push_back(column_ptr);
+}
+
+/*----------------------------------------------------------------------------
  * Copy Constructor
  *----------------------------------------------------------------------------*/
 template<class T>
@@ -210,6 +241,75 @@ long FieldColumn<T>::append(const T& v)
 }
 
 /*----------------------------------------------------------------------------
+ * appendBuffer
+ *----------------------------------------------------------------------------*/
+template<class T>
+long FieldColumn<T>::appendBuffer(const uint8_t* buffer, long size)
+{
+    assert(size > 0);
+    assert(size % sizeof(T) == 0);
+
+    const T* buf_ptr = reinterpret_cast<const T*>(buffer);
+
+    long elements_remaining = size / sizeof(T);
+    numElements += elements_remaining;
+
+    while(elements_remaining > 0)
+    {
+        long space_in_current_chunk = chunkSize - currChunkOffset;
+        long elements_to_copy = MIN(space_in_current_chunk, elements_remaining);
+
+        for(long i = 0; i < elements_to_copy; i++)
+        {
+            chunks[currChunk][currChunkOffset++] = buf_ptr[i];
+        }
+
+        elements_remaining -= elements_to_copy;
+        if(currChunkOffset == chunkSize)
+        {
+            T* chunk = new T[chunkSize];
+            chunks.push_back(chunk);
+            currChunkOffset = 0;
+            currChunk++;
+        }
+    }
+
+    return numElements;
+}
+
+/*----------------------------------------------------------------------------
+ * appendValue
+ *----------------------------------------------------------------------------*/
+template<class T>
+long FieldColumn<T>::appendValue(const T& v, long size)
+{
+    long elements_remaining = size;
+    numElements += elements_remaining;
+
+    while(elements_remaining > 0)
+    {
+        long space_in_current_chunk = chunkSize - currChunkOffset;
+        long elements_to_copy = MIN(space_in_current_chunk, elements_remaining);
+
+        for(long i = 0; i < elements_to_copy; i++)
+        {
+            chunks[currChunk][currChunkOffset++] = v;
+        }
+
+        elements_remaining -= elements_to_copy;
+        if(currChunkOffset == chunkSize)
+        {
+            T* chunk = new T[chunkSize];
+            chunks.push_back(chunk);
+            currChunkOffset = 0;
+            currChunk++;
+        }
+    }
+
+    return numElements;
+}
+
+/*----------------------------------------------------------------------------
  * initialize
  *----------------------------------------------------------------------------*/
 template<class T>
@@ -265,6 +365,42 @@ const Field* FieldColumn<T>::get(long i) const
     const long chunk_index = i / chunkSize;
     const long chunk_offset = i % chunkSize;
     return reinterpret_cast<const Field*>(&chunks[chunk_index][chunk_offset]);
+}
+
+/*----------------------------------------------------------------------------
+ * serialize
+ *----------------------------------------------------------------------------*/
+template<class T>
+long FieldColumn<T>::serialize (uint8_t* buffer, size_t size) const
+{
+    // check if column will fit
+    size_t serialized_size = sizeof(T) * numElements;
+    if(serialized_size > size) return 0;
+
+    // serialize column
+    size_t buff_index = 0;
+    for(size_t i = 0; i < chunks.size(); i++) // for each chunk
+    {
+        // get elements in chunk
+        size_t elements_in_chunk = chunkSize;
+        if(i == chunks.size() - 1) // last chunk
+        {
+            elements_in_chunk = numElements % chunkSize;
+        }
+
+        // get pointer to chunk
+        T* chunk_ptr = chunks[i];
+
+        // copy data elements out of chunk
+        for(size_t j = 0; j < elements_in_chunk; j++)
+        {
+            memcpy(&buffer[buff_index], reinterpret_cast<void*>(&chunk_ptr[j]), sizeof(T));
+            buff_index += sizeof(T);
+        }
+    }
+
+    // return bytes serialized
+    return static_cast<long>(buff_index);
 }
 
 /*----------------------------------------------------------------------------

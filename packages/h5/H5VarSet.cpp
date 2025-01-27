@@ -30,49 +30,74 @@
  */
 
 /******************************************************************************
- * INCLUDE
+ * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "SwotFields.h"
+#include "H5Coro.h"
+#include "H5VarSet.h"
 
 /******************************************************************************
  * CLASS METHODS
  ******************************************************************************/
 
-/*----------------------------------------------------------------------------
- * luaCreate - create(<parameter table>)
- *----------------------------------------------------------------------------*/
-int SwotFields::luaCreate (lua_State* L)
-{
-    SwotFields* swot_fields = NULL;
-
-    try
-    {
-        const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, RequestFields::DEFAULT_KEY_SPACE);
-
-        swot_fields = new SwotFields(L, key_space);
-        swot_fields->fromLua(L, 1);
-
-        return createLuaObject(L, swot_fields);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
-        delete swot_fields;
-        return returnLuaStatus(L, false);
-    }
-}
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-SwotFields::SwotFields(lua_State* L, uint64_t key_space):
-    RequestFields(L, key_space,
-    {
-        {"asset",       &asset},
-        {"resource",    &resource},
-        {"variables",   &variables}
-    })
+H5VarSet::H5VarSet(const FieldList<string>& variable_list, H5Coro::Context* context, const char* group, long col, long startrow, long numrows):
+    variables(getDictSize(variable_list.length()))
 {
+    for(int i = 0; i < variable_list.length(); i++)
+    {
+        const string& field_name = variable_list[i];
+        const FString dataset_name("%s%s%s", group ? group : "", group ? "/" : "", field_name.c_str());
+        H5DArray* array = new H5DArray(context, dataset_name.c_str(), col, startrow, numrows);
+        const bool status = variables.add(field_name.c_str(), array);
+        if(!status)
+        {
+            delete array;
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to add dataset <%s>", dataset_name.c_str());
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * joinToGDF
+ *----------------------------------------------------------------------------*/
+void H5VarSet::joinToGDF(GeoDataFrame* gdf, int timeout_ms, bool throw_exception)
+{
+    H5DArray* array = NULL;
+    const char* dataset_name = variables.first(&array);
+    while(dataset_name != NULL)
+    {
+        array->join(timeout_ms, throw_exception);
+        if(!gdf->addColumn(dataset_name, array->elementType()))
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to join array for <%s>", dataset_name);
+        }
+        dataset_name = variables.next(&array);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * addToGDF
+ *----------------------------------------------------------------------------*/
+void H5VarSet::addToGDF(GeoDataFrame* gdf, long element) const
+{
+    Dictionary<H5DArray*>::Iterator iter(variables);
+    for(int i = 0; i < iter.length; i++)
+    {
+        const char* dataset_name = iter[i].key;
+        H5DArray* array = iter[i].value;
+        if(element != static_cast<int32_t>(INVALID_KEY))
+        {
+            gdf->appendFromBuffer(dataset_name, array->referenceElement(element), array->elementSize());
+        }
+        else
+        {
+            const uint8_t nodata_buf[8] = {0,0,0,0,0,0,0,0};
+            gdf->appendFromBuffer(dataset_name, nodata_buf, 8);
+        }
+    }
 }

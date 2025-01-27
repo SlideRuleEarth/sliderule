@@ -82,6 +82,25 @@ class FieldDictionary: public Field
         void            fromLua         (lua_State* L, int index) override;
 
         /*--------------------------------------------------------------------
+         * Inlines
+         *--------------------------------------------------------------------*/
+
+        long length (void) const override {
+            return fields.length();
+        }
+
+        const Field* get (long i) const override {
+            Dictionary<entry_t>::Iterator iter(fields);
+            return iter[i].value.field;
+        }
+
+        long serialize (uint8_t* buffer, size_t size) const override {
+            (void)buffer;
+            (void)size;
+            return 0;
+        }
+
+        /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 

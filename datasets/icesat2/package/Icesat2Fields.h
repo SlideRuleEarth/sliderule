@@ -285,6 +285,23 @@ class Icesat2Fields: public RequestFields
             return static_cast<uint8_t>(lookup_table[index]);
         }
 
+        // returns spot number 1 to 6
+        static uint8_t getSpotNumber (sc_orient_t sc_orient, const char* beam)
+        {
+            track_t track;
+            if(beam[2] == '1') track = RPT_1;
+            else if(beam[2] == '2') track = RPT_2;
+            else if(beam[2] == '3') track = RPT_3;
+            else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam: %s", beam);
+
+            int pair;
+            if(beam[3] == 'l') pair = Icesat2Fields::RPT_L;
+            else if(beam[3] == 'r') pair = Icesat2Fields::RPT_R;
+            else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam: %s", beam);
+
+            return getSpotNumber(sc_orient, track, pair);
+        }
+
         // returns ground track number 10 - 60
         static uint8_t getGroundTrack (sc_orient_t sc_orient, track_t track, int pair)
         {
@@ -325,7 +342,7 @@ class Icesat2Fields: public RequestFields
         FieldElement<surface_type_t>                        surfaceType {SRT_LAND_ICE};                             // surface reference type (used to select signal confidence column)
         FieldElement<bool>                                  passInvalid {false};                                    // post extent even if each pair is invalid
         FieldElement<bool>                                  distInSeg {false};                                      // the extent length and step are expressed in segments, not meters
-        FieldEnumeration<signal_conf_t,NUM_SIGNAL_CONF>     atl03Cnf {false, false, true, true, true, true, true};  // list of desired signal confidences of photons from atl03 classification
+        FieldEnumeration<signal_conf_t,NUM_SIGNAL_CONF>     atl03Cnf {false, false, false, false, true, true, true}; // list of desired signal confidences of photons from atl03 classification
         FieldEnumeration<quality_ph_t,NUM_PHOTON_QUALITY>   qualityPh {true, false, false, false};                  // list of desired photon quality levels from atl03
         FieldEnumeration<atl08_class_t,NUM_ATL08_CLASSES>   atl08Class {false, false, false, false, false};         // list of surface classifications to use (leave empty to skip)
         FieldEnumeration<gt_t,NUM_SPOTS>                    beams {true, true, true, true, true, true};             // list of which beams (gt[l|r][1|2|3])
@@ -339,7 +356,8 @@ class Icesat2Fields: public RequestFields
         FieldElement<double>                                extentLength {40.0};                                    // length of ATL06 extent (meters or segments if dist_in_seg is true)
         FieldElement<double>                                extentStep {20.0};                                      // resolution of the ATL06 extent (meters or segments if dist_in_seg is true)
         PhorealFields                                       phoreal;                                                // phoreal algorithm settings
-        FieldList<string>                                   atl03GeoFields;                                         // list of geolocation and geophys_corr fields to associate with an extent
+        FieldList<string>                                   atl03GeoFields;                                         // list of geolocation fields to associate with an extent
+        FieldList<string>                                   atl03CorrFields;                                        // list of geophys_corr fields to associate with an extent
         FieldList<string>                                   atl03PhFields;                                          // list of per-photon fields to associate with an extent
         FieldList<string>                                   atl06Fields;                                            // list of ATL06 fields to associate with an ATL06 subsetting request
         FieldList<string>                                   atl08Fields;                                            // list of ATL08 fields to associate with an extent

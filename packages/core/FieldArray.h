@@ -80,9 +80,6 @@ class FieldArray: public FieldUnsafeArray<T>
                             FieldArray      (const FieldArray<T,N>& array);
         virtual             ~FieldArray     (void) override = default;
 
-        long                length          (void) const override;
-        const Field*        get             (long i) const override;
-
         FieldArray<T,N>&    operator=       (const FieldArray<T,N>& array);
         FieldArray<T,N>&    operator=       (std::initializer_list<T> init_list);
         T                   operator[]      (int i) const;
@@ -92,6 +89,25 @@ class FieldArray: public FieldUnsafeArray<T>
         int                 toLua           (lua_State* L) const override;
         int                 toLua           (lua_State* L, long key) const override;
         void                fromLua         (lua_State* L, int index) override;
+
+        /*--------------------------------------------------------------------
+         * Inlines
+         *--------------------------------------------------------------------*/
+
+        long length (void) const override {
+            return N;
+        }
+
+        const Field* get (long i) const override {
+            return reinterpret_cast<const Field*>(&values[i]);
+        }
+
+        long serialize (uint8_t* buffer, size_t _size) const override {
+            const uint8_t* ptr = reinterpret_cast<const uint8_t*>(&values[0]);
+            const size_t bytes_to_copy = MIN(_size, sizeof(T)*N);
+            memcpy(buffer, ptr, bytes_to_copy);
+            return bytes_to_copy;
+        }
 
         /*--------------------------------------------------------------------
          * Data
@@ -173,25 +189,6 @@ FieldArray<T,N>::FieldArray(const FieldArray<T,N>& array):
 {
     copy(array);
 }
-
-/*----------------------------------------------------------------------------
- * length
- *----------------------------------------------------------------------------*/
-template <class T, int N>
-long FieldArray<T,N>::length (void) const
-{
-    return N;
-}
-
-/*----------------------------------------------------------------------------
- * get
- *----------------------------------------------------------------------------*/
-template <class T, int N>
-const Field* FieldArray<T,N>::get(long i) const
-{
-    return reinterpret_cast<const Field*>(&values[i]);
-}
-
 
 /*----------------------------------------------------------------------------
  * operator=

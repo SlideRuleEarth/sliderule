@@ -39,6 +39,7 @@
 #include "OsApi.h"
 #include "LuaEngine.h"
 #include "LuaObject.h"
+#include "RecordObject.h"
 #include "TimeLib.h"
 
 /******************************************************************************
@@ -53,22 +54,25 @@ class Field
          * Constants
          *--------------------------------------------------------------------*/
 
+        // encodings - masks
+        static const uint32_t VALUE_MASK    = 0xFFFF;
+        static const uint32_t TYPE_MASK     = 0x00FF;
+
         // encodings - values
-        static const uint32_t VALUE_MASK    = 0x00FF;
-        static const uint32_t BOOL          = 0x0001;
-        static const uint32_t INT8          = 0x0002;
-        static const uint32_t INT16         = 0x0003;
-        static const uint32_t INT32         = 0x0004;
-        static const uint32_t INT64         = 0x0005;
-        static const uint32_t UINT8         = 0x0006;
-        static const uint32_t UINT16        = 0x0007;
-        static const uint32_t UINT32        = 0x0008;
-        static const uint32_t UINT64        = 0x0009;
-        static const uint32_t FLOAT         = 0x000A;
-        static const uint32_t DOUBLE        = 0x000B;
-        static const uint32_t TIME8         = 0x000C;
-        static const uint32_t STRING        = 0x000D;
-        static const uint32_t USER          = 0x000E;
+        static const uint32_t BOOL          = RecordObject::BOOL;
+        static const uint32_t INT8          = RecordObject::INT8;
+        static const uint32_t INT16         = RecordObject::INT16;
+        static const uint32_t INT32         = RecordObject::INT32;
+        static const uint32_t INT64         = RecordObject::INT64;
+        static const uint32_t UINT8         = RecordObject::UINT8;
+        static const uint32_t UINT16        = RecordObject::UINT16;
+        static const uint32_t UINT32        = RecordObject::UINT32;
+        static const uint32_t UINT64        = RecordObject::UINT64;
+        static const uint32_t FLOAT         = RecordObject::FLOAT;
+        static const uint32_t DOUBLE        = RecordObject::DOUBLE;
+        static const uint32_t TIME8         = RecordObject::TIME8;
+        static const uint32_t STRING        = RecordObject::STRING;
+        static const uint32_t USER          = RecordObject::USER;
         static const uint32_t NESTED_ARRAY  = 0x2000;
         static const uint32_t NESTED_LIST   = 0x4000;
         static const uint32_t NESTED_COLUMN = 0x8000;
@@ -78,6 +82,7 @@ class Field
         static const uint32_t X_COLUMN      = 0x40000000;
         static const uint32_t Y_COLUMN      = 0x20000000;
         static const uint32_t Z_COLUMN      = 0x10000000;
+        static const uint32_t META_COLUMN   = 0x08000000; // used for metadata elements that are exported as dataframe columns
 
         /*--------------------------------------------------------------------
          * Types
@@ -104,12 +109,18 @@ class Field
 
         virtual ~Field (void) = default;
 
+        virtual long length (void) const {
+            return 0;
+        }
+
         virtual const Field* get (long i) const {
             (void)i;
             return NULL;
         }
 
-        virtual long length (void) const {
+        virtual long serialize (uint8_t* buffer, size_t size) const {
+            (void)buffer;
+            (void)size;
             return 0;
         }
 
@@ -131,9 +142,18 @@ class Field
             return 1;
         };
 
+        uint32_t getEncodedType(void) const {
+            return encoding & TYPE_MASK;
+        };
+
         uint32_t getValueEncoding(void) const {
             return encoding & 0xFFFF;
         };
+
+        uint32_t setEncodingFlags(uint32_t flags) {
+            encoding |= flags;
+            return encoding;
+        }
 
         /*--------------------------------------------------------------------
          * Data

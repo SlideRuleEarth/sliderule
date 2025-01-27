@@ -29,50 +29,43 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/******************************************************************************
- * INCLUDE
- ******************************************************************************/
-
-#include "OsApi.h"
-#include "SwotFields.h"
+#ifndef __h5_variable_set__
+#define __h5_variable_set__
 
 /******************************************************************************
- * CLASS METHODS
+ * INCLUDES
  ******************************************************************************/
 
-/*----------------------------------------------------------------------------
- * luaCreate - create(<parameter table>)
- *----------------------------------------------------------------------------*/
-int SwotFields::luaCreate (lua_State* L)
+#include "Asset.h"
+#include "RecordObject.h"
+#include "Dictionary.h"
+#include "FieldList.h"
+#include "GeoDataFrame.h"
+#include "H5DArray.h"
+#include "H5Coro.h"
+
+/******************************************************************************
+ * H5 VARIABLE SET
+ ******************************************************************************/
+
+class H5VarSet
 {
-    SwotFields* swot_fields = NULL;
+    public:
 
-    try
-    {
-        const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, RequestFields::DEFAULT_KEY_SPACE);
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+                    H5VarSet            (const FieldList<string>& variable_list, H5Coro::Context* context, const char* group=NULL, long col=0, long startrow=0, long numrows=H5Coro::ALL_ROWS);
+        virtual     ~H5VarSet           (void) = default;
+        void        joinToGDF           (GeoDataFrame* gdf, int timeout_ms, bool throw_exception=true);
+        void        addToGDF            (GeoDataFrame* gdf, long element) const;
+        static int  getDictSize         (int list_size) { return list_size * 2 + 1; };
 
-        swot_fields = new SwotFields(L, key_space);
-        swot_fields->fromLua(L, 1);
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
 
-        return createLuaObject(L, swot_fields);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
-        delete swot_fields;
-        return returnLuaStatus(L, false);
-    }
-}
+        Dictionary<H5DArray*> variables;
+};
 
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-SwotFields::SwotFields(lua_State* L, uint64_t key_space):
-    RequestFields(L, key_space,
-    {
-        {"asset",       &asset},
-        {"resource",    &resource},
-        {"variables",   &variables}
-    })
-{
-}
+#endif  /* __h5_variable_set__ */

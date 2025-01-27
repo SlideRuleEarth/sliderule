@@ -294,7 +294,7 @@ void buildFieldList (vector<shared_ptr<arrow::Field>>& fields, const ArrowFields
     const vector<string> column_names = dataframe.getColumnNames();
     for(const string& name: column_names)
     {
-        Field* field = dataframe.getColumnData(name.c_str());
+        Field* field = dataframe.getColumn(name.c_str());
 
         // check for geometry columns
         if(parms.format == ArrowFields::GEOPARQUET)
@@ -312,9 +312,10 @@ void buildFieldList (vector<shared_ptr<arrow::Field>>& fields, const ArrowFields
         if(field->type == Field::COLUMN)
         {
             const uint32_t field_encoding = field->getValueEncoding();
+            const uint32_t type_encoding = field->getEncodedType();
             if(field_encoding & (Field::NESTED_ARRAY | Field::NESTED_LIST | Field::NESTED_COLUMN))
             {
-                switch(field_encoding & Field::VALUE_MASK)
+                switch(type_encoding)
                 {
                     case Field::BOOL:   fields.push_back(arrow::field(name, arrow::list(arrow::boolean())));    break;
                     case Field::INT8:   fields.push_back(arrow::field(name, arrow::list(arrow::int8())));       break;
@@ -334,7 +335,7 @@ void buildFieldList (vector<shared_ptr<arrow::Field>>& fields, const ArrowFields
             }
             else
             {
-                switch(field_encoding & Field::VALUE_MASK)
+                switch(type_encoding)
                 {
                     case Field::BOOL:   fields.push_back(arrow::field(name, arrow::boolean()));                 break;
                     case Field::INT8:   fields.push_back(arrow::field(name, arrow::int8()));                    break;
@@ -824,6 +825,8 @@ int ArrowDataFrame::luaImport (lua_State* L)
     {
         ArrowDataFrame* lua_obj = dynamic_cast<ArrowDataFrame*>(getLuaSelf(L, 1));
         (void)lua_obj;
+
+        throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported");
     }
     catch(const RunTimeException& e)
     {

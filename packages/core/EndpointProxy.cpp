@@ -39,6 +39,7 @@
 
 #include "OsApi.h"
 #include "CurlLib.h"
+#include "RequestFields.h"
 #include "EndpointProxy.h"
 
 /******************************************************************************
@@ -50,7 +51,10 @@ const char* EndpointProxy::SERVICE = "sliderule";
 const char* EndpointProxy::OBJECT_TYPE = "EndpointProxy";
 const char* EndpointProxy::LUA_META_NAME = "EndpointProxy";
 const struct luaL_Reg EndpointProxy::LUA_META_TABLE[] = {
-    {NULL,          NULL}
+    {"totalresources",      luaTotalResources},
+    {"completeresources",   luaCompleteResources},
+    {"proxythreads",        luaNumProxyThreads},
+    {NULL,                  NULL}
 };
 
 /******************************************************************************
@@ -68,7 +72,7 @@ int EndpointProxy::luaCreate (lua_State* L)
     try
     {
         /* Get Parameters */
-        const char* _endpoint   = getLuaString(L, 1); // get endpoint
+        const char* _endpoint = getLuaString(L, 1); // get endpoint
 
         /* Check Resource Table Parameter */
         const int resources_parm_index = 2;
@@ -237,6 +241,63 @@ EndpointProxy::~EndpointProxy (void)
 }
 
 /*----------------------------------------------------------------------------
+ * luaTotalResources - totalresources()
+ *----------------------------------------------------------------------------*/
+int EndpointProxy::luaTotalResources (lua_State* L)
+{
+    try
+    {
+        EndpointProxy* lua_obj = dynamic_cast<EndpointProxy*>(getLuaSelf(L, 1));
+        lua_pushinteger(L, lua_obj->numResources);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting total resources: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaCompleteResources - completeresources()
+ *----------------------------------------------------------------------------*/
+int EndpointProxy::luaCompleteResources (lua_State* L)
+{
+    try
+    {
+        EndpointProxy* lua_obj = dynamic_cast<EndpointProxy*>(getLuaSelf(L, 1));
+        lua_pushinteger(L, lua_obj->numResourcesComplete);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting completed resources: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaNumProxyThreads - proxythreads()
+ *----------------------------------------------------------------------------*/
+int EndpointProxy::luaNumProxyThreads (lua_State* L)
+{
+    try
+    {
+        EndpointProxy* lua_obj = dynamic_cast<EndpointProxy*>(getLuaSelf(L, 1));
+        lua_pushinteger(L, lua_obj->numProxyThreads);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting number of proxy threads: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * collatorThread
  *----------------------------------------------------------------------------*/
 void* EndpointProxy::collatorThread (void* parm)
@@ -362,7 +423,7 @@ void* EndpointProxy::proxyThread (void* parm)
                     try
                     {
                         const FString url("%s/source/%s", node->member, proxy->endpoint);
-                        const FString data("{\"resource\": \"%s\", \"parms\": %s, \"timeout\": %d, \"shard\": %d}", resource, proxy->parameters, proxy->timeout, current_resource);
+                        const FString data("{\"resource\": \"%s\", \"parms\": %s, \"timeout\": %d, \"key_space\": %d}", resource, proxy->parameters, proxy->timeout, current_resource);
                         const long http_code = CurlLib::postAsRecord(url.c_str(), data.c_str(), proxy->outQ, false, proxy->timeout, &proxy->active);
                         if(http_code == EndpointObject::OK) valid = true;
                         else throw RunTimeException(CRITICAL, RTE_ERROR, "Error code returned from request to %s: %d", node->member, (int)http_code);

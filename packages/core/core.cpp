@@ -126,6 +126,7 @@ static int core_open (lua_State *L)
         {"get",             CurlLib::luaGet},
         {"put",             CurlLib::luaPut},
         {"post",            CurlLib::luaPost},
+        {"dataframe",       GeoDataFrame::luaCreate},
         {"proxy",           EndpointProxy::luaCreate},
         {"orchurl",         OrchestratorLib::luaUrl},
         {"orchreg",         OrchestratorLib::luaRegisterService},
@@ -208,6 +209,7 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "CLUSTER_SIZE_HINT",        0);
     LuaEngine::setAttrInt   (L, "MAX_LOCKS_PER_NODE",       OrchestratorLib::MAX_LOCKS_PER_NODE);
     LuaEngine::setAttrInt   (L, "INVALID_TX_ID",            OrchestratorLib::INVALID_TX_ID);
+    LuaEngine::setAttrInt   (L, "INVALID_KEY",              INVALID_KEY);
     LuaEngine::setAttrStr   (L, "TERMINATE",                GeoDataFrame::TERMINATE);
 
 #ifdef __unittesting__
@@ -240,6 +242,7 @@ void initcore (void)
     TTYLib::init();
     TimeLib::init();
     LuaEngine::init();
+    GeoDataFrame::init();
     RequestMetrics::init();
     CurlLib::init();
     OrchestratorLib::init();

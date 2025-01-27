@@ -68,6 +68,7 @@ const struct luaL_Reg LuaLibraryMsg::subLibsM [] = {
     {"recvstring",    LuaLibraryMsg::lmsg_recvstring},
     {"recvrecord",    LuaLibraryMsg::lmsg_recvrecord},
     {"drain",         LuaLibraryMsg::lmsg_drain},
+    {"count",         LuaLibraryMsg::lmsg_count},
     {"destroy",       LuaLibraryMsg::lmsg_deletesub},
     {"__gc",          LuaLibraryMsg::lmsg_deletesub},
     {NULL, NULL}
@@ -660,6 +661,26 @@ int LuaLibraryMsg::lmsg_drain (lua_State* L)
     else
     {
         lua_pushboolean(L, false);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lmsg_count
+ *----------------------------------------------------------------------------*/
+int LuaLibraryMsg::lmsg_count (lua_State* L)
+{
+    msgSubscriberData_t* msg_data = static_cast<msgSubscriberData_t*>(luaL_checkudata(L, 1, LUA_SUBMETANAME));
+
+    if(msg_data)
+    {
+        const int count = msg_data->sub->getCount();
+        lua_pushinteger(L, count);
+    }
+    else
+    {
+        lua_pushnil(L);
     }
 
     return 1;

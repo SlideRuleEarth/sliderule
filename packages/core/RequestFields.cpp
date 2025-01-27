@@ -44,10 +44,12 @@ const char* RequestFields::OBJECT_TYPE = "RequestFields";
 const char* RequestFields::LUA_META_NAME = "RequestFields";
 const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {"export",      luaExport},
+    {"encode",      luaEncode},
     {"poly",        luaProjectedPolygonIncludes},
     {"mask",        luaRegionMaskIncludes},
     {"__index",     luaGetField},
     {"__newindex",  luaSetField},
+    {"length",      luaGetLength},
     {"hasoutput",   luaWithArrowOutput},
     {"samplers",    luaGetSamplers},
     {"withsamplers",luaWithSamplers},
@@ -107,6 +109,36 @@ int RequestFields::luaExport (lua_State* L)
     }
 
     return num_rets;
+}
+
+/*----------------------------------------------------------------------------
+ * luaEncode - encode() --> json
+ *----------------------------------------------------------------------------*/
+int RequestFields::luaEncode (lua_State* L)
+{
+    try
+    {
+        const RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        const char* sampler = getLuaString(L, 2, true, NULL);
+
+        if(!sampler)
+        {
+            const string& json_str = lua_obj->toJson();
+            lua_pushstring(L, json_str.c_str());
+        }
+        else
+        {
+            const string& json_str = lua_obj->samplers[sampler].toJson();
+            lua_pushstring(L, json_str.c_str());
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error exporting %s: %s", OBJECT_TYPE, e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
 }
 
 /*----------------------------------------------------------------------------
@@ -199,6 +231,27 @@ int RequestFields::luaSetField (lua_State* L)
     }
 
     return 0;
+}
+
+/*----------------------------------------------------------------------------
+ * luaGetLength
+ *----------------------------------------------------------------------------*/
+int RequestFields::luaGetLength (lua_State* L)
+{
+    try
+    {
+        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        const char* field_name = getLuaString(L, 2);
+        const long len = (*lua_obj)[field_name].length();
+        lua_pushinteger(L, len);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "error retrieving length: %s", e.what());
+        lua_pushinteger(L, 0);
+    }
+
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

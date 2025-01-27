@@ -38,6 +38,7 @@
 
 #include "Asset.h"
 #include "RecordObject.h"
+#include "Dictionary.h"
 #include "H5Coro.h"
 
 using H5Coro::ALL_ROWS;
@@ -60,20 +61,21 @@ class H5DArray
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void init            (void);
+        static void init                (void);
 
-                    H5DArray        (H5Coro::Context* context, const char* dataset, long col=0, long startrow=0, long numrows=H5Coro::ALL_ROWS);
-        virtual     ~H5DArray       (void);
+                    H5DArray            (H5Coro::Context* context, const char* dataset, long col=0, long startrow=0, long numrows=H5Coro::ALL_ROWS);
+        virtual     ~H5DArray           (void);
 
-        bool        join            (int timeout, bool throw_exception) const;
+        bool        join                (int timeout, bool throw_exception) const;
 
-        int         numDimensions   (void) const;
-        int         numElements     (void) const;
-        int         elementSize     (void) const;
-        type_t      elementType     (void) const;
-        int64_t     rowSize         (void) const;
-        uint64_t    serialize       (uint8_t* buffer, int64_t start_element, int64_t num_elements) const;
-        uint64_t    serializeRow    (uint8_t* buffer, int64_t row) const;
+        int         numDimensions       (void) const;
+        int         numElements         (void) const;
+        int         elementSize         (void) const;
+        type_t      elementType         (void) const;
+        int64_t     rowSize             (void) const;
+        uint64_t    serialize           (uint8_t* buffer, int64_t start_element, int64_t num_elements) const;
+        uint64_t    serializeRow        (uint8_t* buffer, int64_t row) const;
+        uint8_t*    referenceElement    (int64_t element) const;
 
         /*--------------------------------------------------------------------
          * Data

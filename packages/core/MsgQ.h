@@ -212,12 +212,12 @@ class Subscriber: public MsgQ
 {
     public:
 
-        typedef struct {
-            void*   data;
-            int     size;
-            int     state;
-            void*   _handle;
-        } msgRef_t;
+        struct msgRef_t {
+            void*   data = NULL;
+            int     size = 0;
+            int     state = STATE_OKAY;
+            void*   _handle = NULL;
+        };
 
         explicit        Subscriber      (const char* name, subscriber_type_t type=SUBSCRIBER_OF_CONFIDENCE, int depth=CFG_DEPTH_STANDARD, int data_size=CFG_SIZE_INFINITY);
         explicit        Subscriber      (const MsgQ& existing_q, subscriber_type_t type=SUBSCRIBER_OF_CONFIDENCE);

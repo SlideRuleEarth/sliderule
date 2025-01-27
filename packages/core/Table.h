@@ -72,7 +72,7 @@ class Table
          * Methods
          *--------------------------------------------------------------------*/
 
-        explicit    Table       (K table_size=DEFAULT_TABLE_SIZE, hash_func_t _hash=identity);
+        explicit    Table       (K table_size=DEFAULT_TABLE_SIZE, hash_func_t _hash=identity, bool _no_throw=false);
         virtual     ~Table      (void);
 
 
@@ -91,6 +91,8 @@ class Table
 
         Table&      operator=   (const Table& other);
         T&          operator[]  (K key);
+
+        static K    identity    (K key);
 
     protected:
 
@@ -120,35 +122,35 @@ class Table
         K           newestEntry;
         K           currentEntry;
         K           openEntry;
+        bool        noThrow;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static K        identity        (K key);
-        bool            writeNode       (K index, K key, const T& data);
-        bool            overwriteNode   (K index, K key, const T& data);
+        bool            addNode         (K key, const T* data, bool unique, K* index);
+        bool            writeNode       (K index, K key, const T* data);
+        bool            overwriteNode   (K index, K key, const T* data);
         void            makeNewest      (K index);
         void            freeNode        (K index);
 };
 
 /******************************************************************************
- ORDERING METHODS
+ TABLE METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-Table<T,K>::Table(K table_size, hash_func_t _hash)
+Table<T,K>::Table(K table_size, hash_func_t _hash, bool _no_throw):
+    hash(_hash),
+    size(table_size),
+    noThrow(_no_throw)
 {
     assert(table_size > 0);
 
-    /*  Set Hash Function */
-    hash = _hash;
-
     /* Allocate Hash Structure */
-    size = table_size;
     table = new node_t [size];
 
     /* Set All Entries to Empty */
@@ -182,110 +184,7 @@ Table<T,K>::~Table(void)
 template <class T, typename K>
 bool Table<T,K>::add(K key, const T& data, bool unique)
 {
-    K curr_index = hash(key) % size;
-
-    /* Add Entry to Hash */
-    if(!table[curr_index].occupied)
-    {
-        /* Remove Index from Open List */
-        K next_index = table[curr_index].next;
-        K prev_index = table[curr_index].prev;
-        if(next_index != (K)INVALID_KEY) table[next_index].prev = prev_index;
-        if(prev_index != (K)INVALID_KEY) table[prev_index].next = next_index;
-
-        /* Update Open Entry if Collision on Head */
-        if(openEntry == curr_index) openEntry = next_index;
-
-        /* Populate Index */
-        writeNode(curr_index, key, data);
-    }
-    else /* collision */
-    {
-        /* Check Current Slot for Duplicate */
-        if(table[curr_index].key == key)
-        {
-            if(!unique) return overwriteNode(curr_index, key, data);
-            return false;
-        }
-
-        /* Transverse to End of Chain */
-        K end_index = curr_index;
-        K scan_index = table[curr_index].next;
-        while(scan_index != (K)INVALID_KEY)
-        {
-            /* Check Slot for Duplicate */
-            if(table[scan_index].key == key)
-            {
-                if(!unique) return overwriteNode(scan_index, key, data);
-                return false;
-            }
-
-            /* Go To Next Slot */
-            end_index = scan_index;
-            scan_index = table[scan_index].next;
-        }
-
-        /* Find First Open Hash Slot */
-        K open_index = openEntry;
-        if(open_index == (K)INVALID_KEY)
-        {
-            /* Hash Full */
-            return false;
-        }
-
-        /* Move Open Entry to Next Open Index */
-        openEntry = table[openEntry].next;
-        if(openEntry != (K)INVALID_KEY) table[openEntry].prev = (K)INVALID_KEY;
-
-        /* Insert Node */
-        if(table[curr_index].prev == (K)INVALID_KEY) /* End of Chain Insertion (chain == 1) */
-        {
-            /* Add Entry to Open Slot at End of Chain */
-            writeNode(open_index, key, data);
-            table[end_index].next = open_index;
-            table[open_index].prev = end_index;
-        }
-        else /* Robin Hood Insertion (chain > 1) */
-        {
-            /* Copy Current Slot to Open Slot */
-            table[open_index] = table[curr_index];
-
-            /* Update Hash Links */
-            K next_index = table[curr_index].next;
-            K prev_index = table[curr_index].prev;
-            if(next_index != (K)INVALID_KEY) table[next_index].prev = open_index;
-            if(prev_index != (K)INVALID_KEY) table[prev_index].next = open_index;
-
-            /* Update Time Order (Move) */
-            K after_index  = table[curr_index].after;
-            K before_index = table[curr_index].before;
-            if(after_index != (K)INVALID_KEY)   table[after_index].before = open_index;
-            if(before_index != (K)INVALID_KEY)  table[before_index].after = open_index;
-
-            /* Update Oldest Entry */
-            if(oldestEntry == curr_index)
-            {
-                oldestEntry = open_index;
-                table[oldestEntry].before = (K)INVALID_KEY;
-            }
-
-            /* Update Newest Entry */
-            if(newestEntry == curr_index)
-            {
-                newestEntry = open_index;
-                table[newestEntry].after = (K)INVALID_KEY;
-            }
-
-            /* Add Entry to Current Slot */
-            writeNode(curr_index, key, data);
-        }
-    }
-
-    /* New Entry Added */
-    numEntries++;
-
-    /* Return Success */
-    return true;
+    return addNode(key, &data, unique, NULL);
 }
 
 /*----------------------------------------------------------------------------
@@ -346,6 +245,17 @@ T& Table<T,K>::get(K key, match_t match, bool resort)
         }
 
         return table[best_index].data;
+    }
+    else if(noThrow)
+    {
+        K index;
+        if(addNode(key, NULL, true, &index))
+        {
+            if(index != (K)INVALID_KEY)
+            {
+                return table[index].data;
+            }
+        }
     }
 
     /* Throw Exception When Not Found */
@@ -656,18 +566,138 @@ K Table<T,K>::identity(K key)
 }
 
 /*----------------------------------------------------------------------------
+ * addNode
+ *----------------------------------------------------------------------------*/
+template <class T, typename K>
+bool Table<T,K>::addNode (K key, const T* data, bool unique, K* index)
+{
+    K curr_index = hash(key) % size;
+
+    /* Add Entry to Hash */
+    if(!table[curr_index].occupied)
+    {
+        /* Remove Index from Open List */
+        K next_index = table[curr_index].next;
+        K prev_index = table[curr_index].prev;
+        if(next_index != (K)INVALID_KEY) table[next_index].prev = prev_index;
+        if(prev_index != (K)INVALID_KEY) table[prev_index].next = next_index;
+
+        /* Update Open Entry if Collision on Head */
+        if(openEntry == curr_index) openEntry = next_index;
+
+        /* Populate Index */
+        writeNode(curr_index, key, data);
+        if(index) *index = curr_index;
+    }
+    else /* collision */
+    {
+        /* Check Current Slot for Duplicate */
+        if(table[curr_index].key == key)
+        {
+            if(index) *index = curr_index;
+            if(!unique) return overwriteNode(curr_index, key, data);
+            return false;
+        }
+
+        /* Transverse to End of Chain */
+        K end_index = curr_index;
+        K scan_index = table[curr_index].next;
+        while(scan_index != (K)INVALID_KEY)
+        {
+            /* Check Slot for Duplicate */
+            if(table[scan_index].key == key)
+            {
+                if(index) *index = scan_index;
+                if(!unique) return overwriteNode(scan_index, key, data);
+                return false;
+            }
+
+            /* Go To Next Slot */
+            end_index = scan_index;
+            scan_index = table[scan_index].next;
+        }
+
+        /* Find First Open Hash Slot */
+        K open_index = openEntry;
+        if(open_index == (K)INVALID_KEY)
+        {
+            /* Hash Full */
+            if(index) *index = (K)INVALID_KEY;
+            return false;
+        }
+
+        /* Move Open Entry to Next Open Index */
+        openEntry = table[openEntry].next;
+        if(openEntry != (K)INVALID_KEY) table[openEntry].prev = (K)INVALID_KEY;
+
+        /* Insert Node */
+        if(table[curr_index].prev == (K)INVALID_KEY) /* End of Chain Insertion (chain == 1) */
+        {
+            /* Add Entry to Open Slot at End of Chain */
+            if(index) *index = open_index;
+            writeNode(open_index, key, data);
+            table[end_index].next = open_index;
+            table[open_index].prev = end_index;
+        }
+        else /* Robin Hood Insertion (chain > 1) */
+        {
+            /* Copy Current Slot to Open Slot */
+            table[open_index] = table[curr_index];
+
+            /* Update Hash Links */
+            K next_index = table[curr_index].next;
+            K prev_index = table[curr_index].prev;
+            if(next_index != (K)INVALID_KEY) table[next_index].prev = open_index;
+            if(prev_index != (K)INVALID_KEY) table[prev_index].next = open_index;
+
+            /* Update Time Order (Move) */
+            K after_index  = table[curr_index].after;
+            K before_index = table[curr_index].before;
+            if(after_index != (K)INVALID_KEY)   table[after_index].before = open_index;
+            if(before_index != (K)INVALID_KEY)  table[before_index].after = open_index;
+
+            /* Update Oldest Entry */
+            if(oldestEntry == curr_index)
+            {
+                oldestEntry = open_index;
+                table[oldestEntry].before = (K)INVALID_KEY;
+            }
+
+            /* Update Newest Entry */
+            if(newestEntry == curr_index)
+            {
+                newestEntry = open_index;
+                table[newestEntry].after = (K)INVALID_KEY;
+            }
+
+            /* Add Entry to Current Slot */
+            if(index) *index = curr_index;
+            writeNode(curr_index, key, data);
+        }
+    }
+
+    /* New Entry Added */
+    numEntries++;
+
+    /* Return Success */
+    return true;
+}
+
+/*----------------------------------------------------------------------------
  * writeNode
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-bool Table<T,K>::writeNode(K index, K key, const T& data)
+bool Table<T,K>::writeNode(K index, K key, const T* data)
 {
     table[index].occupied   = true;
-    table[index].data       = data;
     table[index].key        = key;
     table[index].next       = (K)INVALID_KEY;
     table[index].prev       = (K)INVALID_KEY;
     table[index].after      = (K)INVALID_KEY;
     table[index].before     = newestEntry;
+
+    /* Conditionally Write Data */
+    if(data) table[index].data = *data;
 
     /* Update Time Order */
     if(oldestEntry == (K)INVALID_KEY)
@@ -691,14 +721,16 @@ bool Table<T,K>::writeNode(K index, K key, const T& data)
  * overwriteNode
  *----------------------------------------------------------------------------*/
 template <class T, typename K>
-bool Table<T,K>::overwriteNode(K index, K key, const T& data)
+bool Table<T,K>::overwriteNode(K index, K key, const T* data)
 {
     /* Delete Entry being Overritten (if requested) */
     freeNode(index);
 
-    /* Set Data */
+    /* Set Key */
     table[index].key = key;
-    table[index].data = data;
+
+    /* Conditionally Write Data */
+    if(data) table[index].data = *data;
 
     /* Make Current Node the Newest Node */
     makeNewest(index);

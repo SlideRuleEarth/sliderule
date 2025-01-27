@@ -43,6 +43,7 @@
 #include "Field.h"
 #include "FieldDictionary.h"
 #include "FieldColumn.h"
+#include "RecordObject.h"
 
 /******************************************************************************
  * CLASS
@@ -61,6 +62,36 @@ class GeoDataFrame: public LuaObject, public Field
         static const char* META;
         static const char* TERMINATE;
 
+        static const int MAX_NAME_SIZE = 128;
+        static const uint32_t INVALID_INDEX = 0xFFFFFFFF;
+        static const int DEFAULT_RECEIVED_COLUMN_CHUNK_SIZE = 2048;
+
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
+
+        static const char* gdfRecType;
+        static const RecordObject::fieldDef_t gdfRecDef[];
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef enum {
+            COLUMN_REC = 0,
+            META_REC = 1,
+            EOF_REC = 2
+        } rec_type_t;
+
+        typedef struct {
+            uint64_t    key;
+            uint32_t    type;
+            uint32_t    size; // bytes
+            uint32_t    encoding;
+            uint32_t    num_rows;
+            char        name[MAX_NAME_SIZE];
+            uint8_t     data[]; // num_columns when EOF
+        } gdf_rec_t;
+
         /*--------------------------------------------------------------------
          * Subclasses
          *--------------------------------------------------------------------*/
@@ -71,10 +102,9 @@ class GeoDataFrame: public LuaObject, public Field
             static const char* LUA_META_NAME;
             static const struct luaL_Reg LUA_META_TABLE[];
 
-            static int luaGetData (lua_State* L);
-
             FrameColumn(lua_State* L, const Field& _column);
             ~FrameColumn(void) override = default;
+            static int luaGetData (lua_State* L);
 
             const Field& column;
         };
@@ -83,36 +113,11 @@ class GeoDataFrame: public LuaObject, public Field
         {
             static const char* OBJECT_TYPE;
 
-            static int luaGetRunTime (lua_State* L) {
-                try
-                {
-                    FrameRunner* lua_obj = dynamic_cast<FrameRunner*>(getLuaSelf(L, 1));
-                    lua_pushnumber(L, lua_obj->runtime);
-                }
-                catch(const RunTimeException& e)
-                {
-                    lua_pushnumber(L, 0.0);
-                }
-                return 1;
-            };
-
-            virtual bool run(GeoDataFrame* dataframe) = 0;
-
-            void updateRunTime(double duration) {
-                m.lock();
-                {
-                    runtime += duration;
-                }
-                m.unlock();
-            };
-
-            FrameRunner(lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]):
-                LuaObject(L, OBJECT_TYPE, meta_name, meta_table),
-                runtime(0.0) {
-                LuaEngine::setAttrFunc(L, "runtime", luaGetRunTime);
-            };
-
+            FrameRunner(lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
             ~FrameRunner(void) override = default;
+            static int luaGetRunTime (lua_State* L);
+            virtual bool run(GeoDataFrame* dataframe) = 0;
+            void updateRunTime(double duration);
 
             Mutex m;
             double runtime;
@@ -122,13 +127,18 @@ class GeoDataFrame: public LuaObject, public Field
          * Methods
          *--------------------------------------------------------------------*/
 
+        static void                 init                (void);
+        static int                  luaCreate           (lua_State* L);
+
         long                        length              (void) const override;
         long                        addRow              (void);
+        long                        appendFromBuffer    (const char* name, const uint8_t* buffer, int size) const;
         vector<string>              getColumnNames      (void) const;
-        void                        addColumnData       (const char* name, Field* column);
-        Field*                      getColumnData       (const char* name, Field::type_t _type=Field::COLUMN) const;
+        bool                        addColumn           (const char* name, Field* column);
+        bool                        addColumn           (const char* name, uint32_t _type);
+        Field*                      getColumn           (const char* name, Field::type_t _type=Field::COLUMN, bool no_throw=false) const;
         void                        addMetaData         (const char* name, Field* column);
-        Field*                      getMetaData         (const char* name, Field::type_t _type=Field::FIELD);
+        Field*                      getMetaData         (const char* name, Field::type_t _type=Field::FIELD, bool no_throw=false) const;
 
         const FieldColumn<time8_t>* getTimeColumn       (void) const;
         const FieldColumn<double>*  getXColumn          (void) const;
@@ -150,32 +160,63 @@ class GeoDataFrame: public LuaObject, public Field
          * Data
          *--------------------------------------------------------------------*/
 
-        vector<long>                indexColumn;
+        bool                        inError;
+        long                        numRows;
         FieldDictionary             columnFields;
         FieldDictionary             metaFields;
 
     protected:
 
         /*--------------------------------------------------------------------
+         * Structs
+         *--------------------------------------------------------------------*/
+
+        struct receive_info_t {
+            GeoDataFrame* dataframe = NULL;
+            const char* inq_name = NULL;
+            const char* outq_name = NULL;
+            int total_resources = 0;
+            int timeout = IO_PEND;
+            Cond ready_signal;
+            bool ready = false;
+            receive_info_t(GeoDataFrame* _dataframe, const char* _inq_name, const char* _outq_name, int _total_resources, int _timeout) {
+                dataframe = _dataframe;
+                inq_name = StringLib::duplicate(_inq_name);
+                outq_name = StringLib::duplicate(_outq_name);
+                total_resources = _total_resources;
+                timeout = _timeout;
+            }
+            ~receive_info_t() {
+                delete [] inq_name;
+                delete [] outq_name;
+            }
+        };
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                GeoDataFrame    (lua_State* L,
-                                 const char* meta_name,
-                                 const struct luaL_Reg meta_table[],
-                                 const std::initializer_list<FieldDictionary::entry_t>& column_list,
-                                 const std::initializer_list<FieldDictionary::entry_t>& meta_list);
-        virtual ~GeoDataFrame   (void) override;
+                        GeoDataFrame        (lua_State* L,
+                                            const char* meta_name,
+                                            const struct luaL_Reg meta_table[],
+                                            const std::initializer_list<FieldDictionary::entry_t>& column_list,
+                                            const std::initializer_list<FieldDictionary::entry_t>& meta_list,
+                                            bool free_on_delete = false);
+        virtual         ~GeoDataFrame       (void) override;
 
+        static void*    receiveThread       (void* parm);
         static void*    runThread           (void* parm);
         void            populateGeoColumns  (void);
+        void            appendDataframe     (GeoDataFrame::gdf_rec_t* gdf_rec_data);
 
         string          toJson              (void) const override;
         int             toLua               (lua_State* L) const override;
         void            fromLua             (lua_State* L, int index) override;
 
+        static int      luaInError          (lua_State* L);
         static int      luaExport           (lua_State* L);
-        static int      luaImport           (lua_State* L);
+        static int      luaSend             (lua_State* L);
+        static int      luaReceive          (lua_State* L);
         static int      luaGetColumnData    (lua_State* L);
         static int      luaGetMetaData      (lua_State* L);
         static int      luaRun              (lua_State* L);
@@ -196,11 +237,13 @@ class GeoDataFrame: public LuaObject, public Field
         string                      zColumnName;
 
         bool                        active;
-        Thread*                     pid;
+        Thread*                     receivePid;
+        Thread*                     runPid;
         Publisher                   pubRunQ;
         Subscriber                  subRunQ;
         Cond                        runSignal;
         bool                        runComplete;
+        bool                        freeOnDelete;
 };
 
 #endif  /* __geo_data_frame__ */

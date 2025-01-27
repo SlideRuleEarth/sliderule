@@ -5,7 +5,7 @@
 local json          = require("json")
 local georesource   = require("georesource")
 local rqst          = json.decode(arg[1])
-local parms         = swot.parms(rqst["parms"], rqst["shard"], "swot-sim-ecco-llc4320", rqst["resource"])
+local parms         = swot.parms(rqst["parms"], rqst["key_space"], "swot-sim-ecco-llc4320", rqst["resource"])
 
 local args = {
     result_q        = (parms:withsamplers() and not parms:hasoutput()) and "result." .. parms["resource"] .. "." .. rspq or rspq,

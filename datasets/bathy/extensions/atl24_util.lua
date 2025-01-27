@@ -1,6 +1,3 @@
---
--- ENDPOINT:    /source/atl24g
---
 local latch         = time.sys() -- used for calculating duration of processing
 local json          = require("json")
 local earthdata     = require("earth_data_query")
@@ -52,14 +49,6 @@ local function ctimeout()
     local current_timeout = (timeout * 1000) - (time.gps() - start_time)
     if current_timeout < 0 then current_timeout = 0 end
     return math.tointeger(current_timeout)
-end
-
--------------------------------------------------------
--- public check
--------------------------------------------------------
-if sys.ispublic() then -- verify on a private cluster
-    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> forbidden on public cluster... exiting", rspq))
-    return
 end
 
 -------------------------------------------------------
@@ -205,6 +194,7 @@ local granule = (parms["output"]["format"] == "h5") and bathy.granule(parms, atl
 local kd490 = bathy.kd(parms, viirs_filename)
 local refraction = bathy.refraction(parms)
 local uncertainty = bathy.uncertainty(parms, kd490)
+local seasurface = parms["find_sea_surface"] and bathy.seasurface(parms) or nil
 local qtrees = parms:classifier(bathy.QTREES) and bathy.qtrees(parms) or nil
 local coastnet = parms:classifier(bathy.COASTNET) and bathy.coastnet(parms) or nil
 local openoceanspp = parms:classifier(bathy.OPENOCEANSPP) and bathy.openoceanspp(parms) or nil
@@ -219,6 +209,7 @@ for _, beam in ipairs(parms["beams"]) do
     if not dataframes[beam] then
         userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> on %s failed to create bathy dataframe for beam %s", rspq, resource, beam))
     else
+        dataframes[beam]:run(seasurface)
         dataframes[beam]:run(qtrees)
         dataframes[beam]:run(coastnet)
         dataframes[beam]:run(openoceanspp)
@@ -310,6 +301,7 @@ kd490:destroy()
 -------------------------------------------------------
 -- get profiles
 -------------------------------------------------------
+profile["seasurface"] = seasurface and seasurface:runtime() or 0.0
 profile["refraction"] = refraction and refraction:runtime() or 0.0
 profile["uncertainty"] = uncertainty and uncertainty:runtime() or 0.0
 profile["qtrees"] = qtrees and qtrees:runtime() or 0.0
@@ -319,14 +311,6 @@ profile["duration"] = (time.gps() - start_time) / 1000.0
 userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> ATL24 runtime at %0.3f", rspq, profile["duration"]))
 
 -------------------------------------------------------
--- set atl24 output filename
--------------------------------------------------------
-local atl24_filename = parms["output"]["path"]
-local pos_last_delim = string.reverse(atl24_filename):find("/") or -(#atl24_filename + 2)
-outputs["atl24_filename"] = string.sub(atl24_filename, #atl24_filename - pos_last_delim + 2)
-userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> generating file %s", rspq, outputs["atl24_filename"]))
-
--------------------------------------------------------
 -- set additional outputs
 -------------------------------------------------------
 outputs["profile"] = profile
@@ -334,6 +318,7 @@ outputs["format"] = parms["output"]["format"]
 outputs["filename"] = crenv.container_sandbox_mount.."/"..tmp_filename
 outputs["ensemble"] = parms["ensemble"] or {ensemble_model_filename=string.format("%s/%s", cre.HOST_DIRECTORY, bathy.ENSEMBLE_MODEL)}
 outputs["iso_xml_filename"] = crenv.container_sandbox_mount.."/"..tmp_filename..".iso.xml"
+outputs["atl24_filename"] = string.gsub(parms["resource"], "ATL03", "ATL24")
 outputs["latch"] = latch
 
 -------------------------------------------------------
@@ -363,21 +348,6 @@ end
 -- send final granule output to user
 -------------------------------------------------------
 arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_filename, parms, rspq)
-
--------------------------------------------------------
--- send ISO XML file to user
--------------------------------------------------------
-if parms["output"]["format"] == "h5" then
-    local xml_filename = rqst["parms"]["output"]["path"]
-    xml_filename = xml_filename:sub(0, xml_filename:find(".h5")).."iso.xml"
-    local xml_parms = core.parms({
-        output = {
-            asset=rqst["parms"]["output"]["asset"], -- use original request asset
-            path=xml_filename -- modify the original requested path
-        }
-    })
-    arrow.send2user(crenv.host_sandbox_directory.."/"..tmp_filename..".iso.xml", xml_parms, rspq)
-end
 
 -------------------------------------------------------
 -- exit

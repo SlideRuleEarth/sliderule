@@ -179,7 +179,15 @@ HttpServer::Connection::~Connection (void)
 void HttpServer::Connection::initialize (const char* _name)
 {
     /* Initialize Response State Variables */
-    memset(&rsps_state, 0, sizeof(rsps_state_t));
+    rsps_state.header_sent          = false;
+    rsps_state.response_complete    = false;
+    rsps_state.ref_status           = 0;
+    rsps_state.ref_index            = 0;
+    rsps_state.rspq                 = NULL;
+    rsps_state.stream_buf           = NULL;
+    rsps_state.stream_buf_index     = 0;
+    rsps_state.stream_buf_size      = 0;
+    rsps_state.stream_mem_size      = 0;
     response_type = EndpointObject::INVALID;
 
     /* Default Keep Alive to False */

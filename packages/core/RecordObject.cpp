@@ -73,7 +73,8 @@ const int RecordObject::FIELD_TYPE_BYTES[NUM_FIELD_TYPES] = {
     8, // TIME8
     1, // STRING
     0, // USER
-    0  // INVALID_FIELD
+    0, // INVALID_FIELD
+    1  // BOOL
 };
 
 /******************************************************************************
@@ -364,7 +365,7 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
 /*----------------------------------------------------------------------------
  * post
  *----------------------------------------------------------------------------*/
-bool RecordObject::post(Publisher* outq, int size, const bool* active, bool verbose)
+bool RecordObject::post(Publisher* outq, int size, const bool* active, bool verbose, int timeout)
 {
     bool status = true;
 
@@ -375,7 +376,7 @@ bool RecordObject::post(Publisher* outq, int size, const bool* active, bool verb
     /* Post Record */
     int post_status = MsgQ::STATE_TIMEOUT;
     while(  (!active || (*active)) &&
-            ((post_status = outq->postRef(rec_buf, rec_bytes, SYS_TIMEOUT)) == MsgQ::STATE_TIMEOUT) );
+            ((post_status = outq->postRef(rec_buf, rec_bytes, timeout)) == MsgQ::STATE_TIMEOUT) );
 
     /* Handle Status */
     if(post_status <= 0)
