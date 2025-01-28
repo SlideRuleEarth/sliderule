@@ -96,6 +96,9 @@ int GeoDataFrame::FrameColumn::luaGetData (lua_State* L)
         GeoDataFrame::FrameColumn* lua_obj = dynamic_cast<GeoDataFrame::FrameColumn*>(getLuaSelf(L, 1));
         const long index = getLuaInteger(L, 2) - 1; // lua indexing starts at 1, convert to c indexing that starts at 0
 
+        // check index
+        if(index < 0) throw RunTimeException(CRITICAL, RTE_ERROR, "invalid index: %ld", index + 1);
+
         // check the metatable for the key (to support functions)
         luaL_getmetatable(L, lua_obj->LuaMetaName);
         lua_pushinteger(L, index);
@@ -108,7 +111,7 @@ int GeoDataFrame::FrameColumn::luaGetData (lua_State* L)
     }
     catch(const RunTimeException& e)
     {
-        mlog(e.level(), "Error exporting %s: %s", OBJECT_TYPE, e.what());
+        mlog(e.level(), "Error indexing frame column %s: %s", OBJECT_TYPE, e.what());
         lua_pushnil(L);
     }
 
@@ -625,6 +628,8 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
 {
     // set lua functions
     LuaEngine::setAttrFunc(L, "inerror",    luaInError);
+    LuaEngine::setAttrFunc(L, "numrows",    luaNumRows);
+    LuaEngine::setAttrFunc(L, "numcols",    luaNumColumns);
     LuaEngine::setAttrFunc(L, "export",     luaExport);
     LuaEngine::setAttrFunc(L, "send",       luaSend);
     LuaEngine::setAttrFunc(L, "receive",    luaReceive);
@@ -1053,6 +1058,44 @@ int GeoDataFrame::luaInError (lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error determining state of dataframe: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaNumRows - numrows()
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaNumRows (lua_State* L)
+{
+    try
+    {
+        const GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        lua_pushinteger(L, lua_obj->numRows);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error determining number of rows in dataframe: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaNumColumns - numcols()
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaNumColumns (lua_State* L)
+{
+    try
+    {
+        const GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        lua_pushinteger(L, lua_obj->columnFields.length());
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error determining number of columns in dataframe: %s", e.what());
         lua_pushnil(L);
     }
 

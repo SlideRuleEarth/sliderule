@@ -426,7 +426,6 @@ elif format == "h5":
     gdf = gpd.GeoDataFrame(df, geometry=geometry, crs="EPSG:7912")
 
     # get CMR-compatible bounding polygon
-    bounding_polygon = settings['bounding_polygon']
     cmr_polygon = ' '.join([f'{coord[0]} {coord[1]}' for coord in zip(bounding_polygon["lat"], bounding_polygon["lon"])]) # lat1 lon1 lat2 lon2 ...
 
     # get detailed spatial-temporal query information

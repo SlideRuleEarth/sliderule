@@ -115,13 +115,15 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     {
         {"spot",                    &spot},
         {"cycle",                   &cycle},
-        {"spacecraft_orientation",  &spacecraft_orientation},
-        {"reference_ground_track",  &reference_ground_track}
+        {"region",                  &region},
+        {"reference_ground_track",  &reference_ground_track},
+        {"spacecraft_orientation",  &spacecraft_orientation}
     }),
     spot(0, META_COLUMN),
     cycle(0, META_COLUMN),
-    spacecraft_orientation(Icesat2Fields::SC_TRANSITION, META_COLUMN),
+    region(0, META_COLUMN),
     reference_ground_track(0, META_COLUMN),
+    spacecraft_orientation(Icesat2Fields::SC_TRANSITION, META_COLUMN),
     active(false),
     readerPid(NULL),
     readTimeoutMs(_parms->readTimeout.value * 1000),
@@ -140,6 +142,11 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     {
         signalConfColIndex = static_cast<int>(parms->surfaceType.value);
     }
+
+    /* Set MetaData from Parameters */
+    cycle = parms->cycle.value;
+    region = parms->region.value;
+    reference_ground_track = parms->rgt.value;
 
     /* Setup Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
@@ -999,7 +1006,6 @@ void* Atl03DataFrame::subsettingThread (void* parm)
         /* Set MetaData */
         df->spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], df->beam);
         df->spacecraft_orientation = atl03.sc_orient[0];
-        df->reference_ground_track  = parms.rgt.value;
 
         /* Perform YAPC Scoring (if requested) */
         const YapcScore yapc(df, region, atl03);
@@ -1014,11 +1020,8 @@ void* Atl03DataFrame::subsettingThread (void* parm)
         int32_t background_index = 0;
 
         /* Traverse All Photons In Dataset */
-        while(df->active && (current_photon < atl03.dist_ph_along.size))
+        while(df->active && (++current_photon < atl03.dist_ph_along.size))
         {
-            /* Go to Next Photon */
-            current_photon++;
-
             /* Go to Photon's Segment */
             current_count++;
             while((current_segment < region.segment_ph_cnt.size) &&
@@ -1031,7 +1034,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             /* Check Current Segment */
             if(current_segment >= atl03.segment_dist_x.size)
             {
-                throw RunTimeException(ERROR, RTE_ERROR, "Photons with no segments are detected is %s/%s (%d %ld %ld)!", df->hdf03->name, df->beam, current_segment, atl03.segment_dist_x.size, region.num_segments);
+                throw RunTimeException(ERROR, RTE_ERROR, "Photons with no segments are detected in %s/%s (%d %ld %ld) (%d %d)", df->hdf03->name, df->beam, current_segment, atl03.segment_dist_x.size, region.num_segments, current_photon, current_count);
             }
 
             /* Check Region Mask */
@@ -1202,10 +1205,10 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             df->segment_id.append(atl03.segment_id[current_segment]);
 
             /* Add Ancillary Elements */
-            atl03.anc_geo_data.addToGDF(df, current_segment);
-            atl03.anc_corr_data.addToGDF(df, current_segment);
-            atl03.anc_ph_data.addToGDF(df, current_photon);
-            atl08.anc_seg_data.addToGDF(df, atl08.anc_seg_indices[current_photon]);
+            if(atl03.anc_geo_data.length() > 0)     atl03.anc_geo_data.addToGDF(df, current_segment);
+            if(atl03.anc_corr_data.length() > 0)    atl03.anc_corr_data.addToGDF(df, current_segment);
+            if(atl03.anc_ph_data.length() > 0)      atl03.anc_ph_data.addToGDF(df, current_photon);
+            if(atl08.anc_seg_indices)               atl08.anc_seg_data.addToGDF(df, atl08.anc_seg_indices[current_photon]);
         }
     }
     catch(const RunTimeException& e)

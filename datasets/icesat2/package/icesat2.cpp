@@ -37,6 +37,7 @@
 #include "RasterObject.h"
 #include "Asset.h"
 #include "Icesat2Fields.h"
+#include "Atl03DataFrame.h"
 #include "Atl03Reader.h"
 #include "Atl03Viewer.h"
 #include "Atl03Indexer.h"
@@ -75,6 +76,8 @@ int icesat2_open (lua_State *L)
         {"atl06s",              Atl06Reader::luaCreate},
         {"atl08",               Atl08Dispatch::luaCreate},
         {"atl13s",              Atl13Reader::luaCreate},
+        // dataframes
+        {"atl03x",              Atl03DataFrame::luaCreate},
 #ifdef __unittesting__
         {"ut_atl06",            UT_Atl06Dispatch::luaCreate},
 #endif

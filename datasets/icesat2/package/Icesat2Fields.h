@@ -365,10 +365,10 @@ class Icesat2Fields: public RequestFields
         FieldElement<int>                                   year;                                                   // ATL03 granule observation date - year
         FieldElement<int>                                   month;                                                  // ATL03 granule observation date - month
         FieldElement<int>                                   day;                                                    // ATL03 granule observation date - day
-        FieldElement<int>                                   rgt;                                                    // ATL03 granule reference ground track
-        FieldElement<int>                                   cycle;                                                  // ATL03 granule cycle
-        FieldElement<int>                                   region;                                                 // ATL03 granule region
-        FieldElement<int>                                   version;                                                // ATL03 granule version
+        FieldElement<int>                                   rgt {-1};                                               // ATL03 granule reference ground track
+        FieldElement<int>                                   cycle {-1};                                             // ATL03 granule cycle
+        FieldElement<int>                                   region {-1};                                            // ATL03 granule region
+        FieldElement<int>                                   version {-1};                                           // ATL03 granule version
 
         bool stages[NUM_STAGES] = {true, false, false, false};
 

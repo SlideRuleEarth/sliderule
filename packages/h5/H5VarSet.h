@@ -57,6 +57,7 @@ class H5VarSet
          *--------------------------------------------------------------------*/
                     H5VarSet            (const FieldList<string>& variable_list, H5Coro::Context* context, const char* group=NULL, long col=0, long startrow=0, long numrows=H5Coro::ALL_ROWS);
         virtual     ~H5VarSet           (void) = default;
+        long        length              (void) const { return variables.length(); }
         void        joinToGDF           (GeoDataFrame* gdf, int timeout_ms, bool throw_exception=true);
         void        addToGDF            (GeoDataFrame* gdf, long element) const;
         static int  getDictSize         (int list_size) { return list_size * 2 + 1; };

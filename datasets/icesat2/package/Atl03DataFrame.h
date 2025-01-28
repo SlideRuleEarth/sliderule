@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __atl03_reader__
-#define __atl03_reader__
+#ifndef __atl03_dataframe__
+#define __atl03_dataframe__
 
 /******************************************************************************
  * INCLUDES
@@ -49,6 +49,7 @@
 #include "H5Array.h"
 #include "H5DArray.h"
 #include "H5VarSet.h"
+#include "H5Object.h"
 #include "Icesat2Fields.h"
 
 /******************************************************************************
@@ -92,8 +93,9 @@ class Atl03DataFrame: public GeoDataFrame
         /* DataFrame MetaData */
         FieldElement<uint8_t>       spot;                   // 1, 2, 3, 4, 5, 6
         FieldElement<uint8_t>       cycle;
-        FieldElement<uint8_t>       spacecraft_orientation; // 0 (backwards), 1 (forward)
+        FieldElement<uint8_t>       region;
         FieldElement<uint16_t>      reference_ground_track;
+        FieldElement<uint8_t>       spacecraft_orientation; // 0 (backwards), 1 (forward)
 
         /*--------------------------------------------------------------------
          * Methods
@@ -256,4 +258,4 @@ class Atl03DataFrame: public GeoDataFrame
         static void*    subsettingThread    (void* parm);
 };
 
-#endif  /* __atl03_reader__ */
+#endif  /* __atl03_dataframe__ */
