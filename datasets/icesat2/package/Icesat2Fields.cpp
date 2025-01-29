@@ -197,6 +197,55 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
             atl08Class[ATL08_UNCLASSIFIED] = false;
         }
     }
+
+    // handle track selection override of beams
+    if(track != ALL_TRACKS)
+    {
+        switch(track)
+        {
+            case RPT_1:
+            {
+                beams[GT1L] = true;
+                beams[GT1R] = true;
+                beams[GT2L] = false;
+                beams[GT2R] = false;
+                beams[GT3L] = false;
+                beams[GT3R] = false;
+                break;
+            }
+            case RPT_2:
+            {
+                beams[GT1L] = false;
+                beams[GT1R] = false;
+                beams[GT2L] = true;
+                beams[GT2R] = true;
+                beams[GT3L] = false;
+                beams[GT3R] = false;
+                break;
+            }
+            case RPT_3:
+            {
+                beams[GT1L] = false;
+                beams[GT1R] = false;
+                beams[GT2L] = false;
+                beams[GT2R] = false;
+                beams[GT3L] = true;
+                beams[GT3R] = true;
+                break;
+            }
+            default:
+            {
+                beams[GT1L] = false;
+                beams[GT1R] = false;
+                beams[GT2L] = false;
+                beams[GT2R] = false;
+                beams[GT3L] = false;
+                beams[GT3R] = false;
+                break;
+            }
+        }
+    }
+
 }
 
 /*----------------------------------------------------------------------------
