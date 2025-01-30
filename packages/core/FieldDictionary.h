@@ -58,10 +58,11 @@ class FieldDictionary: public Field
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef struct {
+        struct entry_t {
             const char* name;
             Field* field;
-        } entry_t;
+            bool free_on_delete = false;
+        };
 
         /*--------------------------------------------------------------------
          * Methods

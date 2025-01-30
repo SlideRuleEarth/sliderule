@@ -261,7 +261,7 @@ int GeoDataFrame::luaCreate (lua_State* L)
         const int meta_table_index = 2;
 
         // create initial dataframe
-        dataframe = new GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {}, true);
+        dataframe = new GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {});
         lua_pop(L, 2);
 
         // column table
@@ -275,7 +275,7 @@ int GeoDataFrame::luaCreate (lua_State* L)
                 {
                     const char* name = StringLib::duplicate(lua_tostring(L, -2));
                     FieldColumn<double>* column = new FieldColumn<double>();
-                    const FieldDictionary::entry_t entry = {name, column};
+                    const FieldDictionary::entry_t entry = {name, column, true};
                     dataframe->columnFields.add(entry);
                     mlog(INFO, "Adding column %ld: %s", dataframe->columnFields.length(), name);
                 }
@@ -313,7 +313,7 @@ int GeoDataFrame::luaCreate (lua_State* L)
                     const char* name = StringLib::duplicate(lua_tostring(L, -2));
                     FieldElement<double>* element = new FieldElement<double>();
                     element->setEncodingFlags(META_COLUMN);
-                    const FieldDictionary::entry_t entry = {name, element};
+                    const FieldDictionary::entry_t entry = {name, element, true};
                     dataframe->metaFields.add(entry);
                     mlog(INFO, "Adding metadata %s", name);
                 }
@@ -457,9 +457,9 @@ vector<string> GeoDataFrame::getColumnNames(void) const
 /*----------------------------------------------------------------------------
  * addColumn
  *----------------------------------------------------------------------------*/
-bool GeoDataFrame::addColumn (const char* name, Field* column)
+bool GeoDataFrame::addColumn (const char* name, Field* column, bool free_on_delete)
 {
-    const FieldDictionary::entry_t entry = {name, column};
+    const FieldDictionary::entry_t entry = {name, column, free_on_delete};
     columnFields.add(entry);
     return true;
 }
@@ -494,7 +494,7 @@ bool GeoDataFrame::addColumn (const char* name, uint32_t _type)
         }
     }
 
-    if(!addColumn(_name, column))
+    if(!addColumn(_name, column, true))
     {
         delete [] _name;
         delete column;
@@ -695,8 +695,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
                             const char* meta_name,
                             const struct luaL_Reg meta_table[],
                             const std::initializer_list<FieldDictionary::entry_t>& column_list,
-                            const std::initializer_list<FieldDictionary::entry_t>& meta_list,
-                            bool free_on_delete):
+                            const std::initializer_list<FieldDictionary::entry_t>& meta_list):
     LuaObject (L, OBJECT_TYPE, meta_name, meta_table),
     Field(DATAFRAME, 0),
     inError(false),
@@ -712,8 +711,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     runPid(NULL),
     pubRunQ(NULL),
     subRunQ(pubRunQ),
-    runComplete(false),
-    freeOnDelete(free_on_delete)
+    runComplete(false)
 {
     // set lua functions
     LuaEngine::setAttrFunc(L, "inerror",    luaInError);
@@ -749,31 +747,33 @@ GeoDataFrame::~GeoDataFrame(void)
         if(recv_status > 0 && runner) runner->releaseLuaObject();
     }
 
-    // free entries in FieldDictionaries
-    if(freeOnDelete)
+    // ree entries column dictionary
     {
-        // column dictionary
+        FieldDictionary::entry_t entry;
+        const char* key = columnFields.fields.first(&entry);
+        while(key != NULL)
         {
-            FieldDictionary::entry_t entry;
-            const char* key = columnFields.fields.first(&entry);
-            while(key != NULL)
+            if(entry.free_on_delete)
             {
                 delete [] entry.name;
                 delete entry.field;
-                key = columnFields.fields.next(&entry);
             }
+            key = columnFields.fields.next(&entry);
         }
+    }
 
-        // meta dictionary
+    // free entries in meta dictionary
+    {
+        FieldDictionary::entry_t entry;
+        const char* key = metaFields.fields.first(&entry);
+        while(key != NULL)
         {
-            FieldDictionary::entry_t entry;
-            const char* key = metaFields.fields.first(&entry);
-            while(key != NULL)
+            if(entry.free_on_delete)
             {
                 delete [] entry.name;
                 delete entry.field;
-                key = metaFields.fields.next(&entry);
             }
+            key = metaFields.fields.next(&entry);
         }
     }
 }
@@ -792,7 +792,7 @@ bool add_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data)
     {
         column = new FieldColumn<T>(gdf_rec_data->encoding, GeoDataFrame::DEFAULT_RECEIVED_COLUMN_CHUNK_SIZE);
         const char* _name = StringLib::duplicate(gdf_rec_data->name);
-        if(!dataframe->addColumn(_name, column))
+        if(!dataframe->addColumn(_name, column, true))
         {
             delete column;
             delete [] _name;

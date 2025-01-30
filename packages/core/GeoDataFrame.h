@@ -149,7 +149,7 @@ class GeoDataFrame: public LuaObject, public Field
         long                        addRow              (void);
         long                        appendFromBuffer    (const char* name, const uint8_t* buffer, int size) const;
         vector<string>              getColumnNames      (void) const;
-        bool                        addColumn           (const char* name, Field* column);
+        bool                        addColumn           (const char* name, Field* column, bool free_on_delete);
         bool                        addColumn           (const char* name, uint32_t _type);
         Field*                      getColumn           (const char* name, Field::type_t _type=Field::COLUMN, bool no_throw=false) const;
         void                        addMetaData         (const char* name, Field* column);
@@ -217,8 +217,7 @@ class GeoDataFrame: public LuaObject, public Field
                                             const char* meta_name,
                                             const struct luaL_Reg meta_table[],
                                             const std::initializer_list<FieldDictionary::entry_t>& column_list,
-                                            const std::initializer_list<FieldDictionary::entry_t>& meta_list,
-                                            bool free_on_delete = false);
+                                            const std::initializer_list<FieldDictionary::entry_t>& meta_list);
         virtual         ~GeoDataFrame       (void) override;
 
         static void*    receiveThread       (void* parm);
@@ -263,7 +262,6 @@ class GeoDataFrame: public LuaObject, public Field
         Subscriber                  subRunQ;
         Cond                        runSignal;
         bool                        runComplete;
-        bool                        freeOnDelete;
 };
 
 #endif  /* __geo_data_frame__ */
