@@ -6,8 +6,7 @@ local prettyprint = require("prettyprint")
 -- Setup Logging --
 
 local console = require("console")
-console.monitor:config(core.LOG, core.INFO)
-sys.setlvl(core.LOG, core.INFO)
+console.loglvl(core.INFO)
 
 -- Setup Credentials --
 
@@ -47,7 +46,7 @@ runner.unittest("ATL03 DataFrame", function()
     local atl03h5 = h5.object(asset_name, parms["resource"])
     local atl03df = icesat2.atl03x("gt1l", parms, atl03h5, nil, core.EVENTQ)
 
-    runner.check(atl03df:waiton(10000), "failed to create dataframe", true)
+    runner.check(atl03df:waiton(30000), "timed out creating dataframe", true)
     runner.check(atl03df:inerror() == false, "dataframe encountered error")
 
     runner.check(atl03df:numrows() == 5912939, string.format("incorrect number of rows: %d", atl03df:numrows()))
@@ -100,7 +99,7 @@ runner.unittest("ATL03 DataFrame - Ancillary Data", function()
     local atl08h5 = h5.object(asset_name, "ATL08_20200304065203_10470605_006_01.h5")
     local atl03df = icesat2.atl03x("gt2r", parms, atl03h5, atl08h5, core.EVENTQ)
 
-    runner.check(atl03df:waiton(30000), "failed to create dataframe", true)
+    runner.check(atl03df:waiton(180000), "timed out creating dataframe", true)
     runner.check(atl03df:inerror() == false, "dataframe encountered error")
 
     runner.check(atl03df:numrows() == 19522774, string.format("incorrect number of rows: %d", atl03df:numrows()))

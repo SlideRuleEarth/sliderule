@@ -167,6 +167,7 @@ Atl03DataFrame::~Atl03DataFrame (void)
     active = false;
     delete readerPid;
     delete [] beam;
+    delete outQ;
     parms->releaseLuaObject();
     hdf03->releaseLuaObject();
     if(hdf08) hdf08->releaseLuaObject();
