@@ -123,6 +123,21 @@ class GeoDataFrame: public LuaObject, public Field
             double runtime;
         };
 
+        struct FrameSender: public FrameRunner
+        {
+            static const char* LUA_META_NAME;
+            static const struct luaL_Reg LUA_META_TABLE[];
+
+            static int luaCreate (lua_State* L);
+            FrameSender(lua_State* L, const char* _rspq, uint64_t _key_space, int _timeout);
+            ~FrameSender(void) override;
+            bool run(GeoDataFrame* dataframe) override;
+
+            const char* rspq;
+            uint64_t key_space;
+            int timeout;
+        };
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -139,6 +154,8 @@ class GeoDataFrame: public LuaObject, public Field
         Field*                      getColumn           (const char* name, Field::type_t _type=Field::COLUMN, bool no_throw=false) const;
         void                        addMetaData         (const char* name, Field* column);
         Field*                      getMetaData         (const char* name, Field::type_t _type=Field::FIELD, bool no_throw=false) const;
+
+        virtual okey_t              getKey              (void) const;
 
         const FieldColumn<time8_t>* getTimeColumn       (void) const;
         const FieldColumn<double>*  getXColumn          (void) const;
@@ -206,8 +223,9 @@ class GeoDataFrame: public LuaObject, public Field
 
         static void*    receiveThread       (void* parm);
         static void*    runThread           (void* parm);
-        void            populateGeoColumns  (void);
+        void            populateDataframe   (void);
         void            appendDataframe     (GeoDataFrame::gdf_rec_t* gdf_rec_data);
+        void            sendDataframe       (const char* rspq, uint64_t key_space, int timeout) const;
 
         string          toJson              (void) const override;
         int             toLua               (lua_State* L) const override;

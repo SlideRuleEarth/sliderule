@@ -199,9 +199,9 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
     }
 
     // handle track selection override of beams
-    if(track != ALL_TRACKS)
+    if(track.value != ALL_TRACKS)
     {
-        switch(track)
+        switch(track.value)
         {
             case RPT_1:
             {

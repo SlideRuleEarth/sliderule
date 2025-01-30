@@ -8,6 +8,7 @@ if __core__ then
     runner.script(td .. "http_server.lua")
     runner.script(td .. "lua_script.lua")
     runner.script(td .. "earth_data.lua")
+    runner.script(td .. "dfio.lua")
     runner.script(td .. "message_queue.lua")
     runner.script(td .. "list.lua")
     runner.script(td .. "ordering.lua")
@@ -61,6 +62,7 @@ end
 if __icesat2__ and incloud then
     local icesat2_td = td .. "../../datasets/icesat2/selftests/"
     runner.script(icesat2_td .. "plugin_unittest.lua")
+    runner.script(icesat2_td .. "atl03_dataframe.lua")
     runner.script(icesat2_td .. "atl03_reader.lua")
     runner.script(icesat2_td .. "atl03_viewer.lua")
     runner.script(icesat2_td .. "atl03_indexer.lua")

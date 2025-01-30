@@ -5,7 +5,7 @@
 --
 -- Imports
 --
-local json = require("json")
+local earthdata = require("earth_data_query")
 
 --
 -- Constants
@@ -24,9 +24,16 @@ local RC_PARQUET_FAILURE = -4
 --
 local function proxy(endpoint, parms, rspq, userlog)
 
-    -- Check Resource --
+    -- Query EarthData for Resources to Process
+    local earthdata_status = earthdata.query(parms, rspq, userlog)
+    if earthdata_status ~= earthdata.SUCCESS then
+        userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> earthdata queury failed : %d", rspq, earthdata_status))
+        return RC_EARTHDATA_FAILURE
+    end
+
+    -- Check for Pass Through
     if parms["resource"] then
-        return nil, RC_PASS_THROUGH
+        return RC_PASS_THROUGH
     end
 
     -- Initialize Variables
@@ -46,21 +53,9 @@ local function proxy(endpoint, parms, rspq, userlog)
 
     -- Receive DataFrame (blocks until dataframe complete or timeout) --
     if not df:waiton(parms["rqst_timeout"] * 1000) then
-        userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to receive dataframe"));
-        return nil, RC_PROXY_FAILURE
+        userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to receive proxied dataframe"));
+        return RC_PROXY_FAILURE
     end
-
-    -- Success --
-    return df, RC_SUCCESS
-
-end
-
---
--- Function: send
---
---  transmit dataframe back to requesting client
---
-local function send(df, parms, rspq, userlog)
 
     -- Create Arrow DataFrame --
     local arrow_dataframe = arrow.dataframe(parms, df)
@@ -78,9 +73,23 @@ local function send(df, parms, rspq, userlog)
 
     -- Send Parquet File to User --
     arrow.send2user(arrow_filename, parms, rspq)
+
+    -- Success --
     return RC_SUCCESS
 
 end
+
+--
+-- Function: timeout
+--
+--  calculate a current timeout
+--
+local function timeout(full_timeout, start_time)
+    local current_timeout = (full_timeout * 1000) - (time.gps() - start_time)
+    if current_timeout < 0 then current_timeout = 0 end
+    return math.tointeger(current_timeout)
+end
+
 
 --
 -- package
@@ -93,7 +102,7 @@ local package = {
     ARROW_FAILURE = RC_ARROW_FAILURE,
     PARQUET_FAILURE = RC_PARQUET_FAILURE,
     proxy = proxy,
-    send = send
+    timeout = timeout
 }
 
 return package

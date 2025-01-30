@@ -73,6 +73,11 @@ const RecordObject::fieldDef_t GeoDataFrame::gdfRecDef[] = {
     {"data",        RecordObject::UINT8,    offsetof(gdf_rec_t, data),       0,              NULL, NATIVE_FLAGS},
 };
 
+const char* GeoDataFrame::FrameSender::LUA_META_NAME = "FrameSender";
+const struct luaL_Reg GeoDataFrame::FrameSender::LUA_META_TABLE[] = {
+    {NULL,          NULL}
+};
+
 /******************************************************************************
  * CLASS METHODS
  ******************************************************************************/
@@ -119,7 +124,7 @@ int GeoDataFrame::FrameColumn::luaGetData (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * FrameColumn: Constructor -
+ * FrameRunner: Constructor -
  *----------------------------------------------------------------------------*/
 GeoDataFrame::FrameRunner::FrameRunner(lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]):
     LuaObject(L, OBJECT_TYPE, meta_name, meta_table),
@@ -129,7 +134,7 @@ GeoDataFrame::FrameRunner::FrameRunner(lua_State* L, const char* meta_name, cons
 }
 
 /*----------------------------------------------------------------------------
- * FrameColumn: luaGetRunTime -
+ * FrameRunner: luaGetRunTime -
  *----------------------------------------------------------------------------*/
 int GeoDataFrame::FrameRunner::luaGetRunTime (lua_State* L)
 {
@@ -146,7 +151,7 @@ int GeoDataFrame::FrameRunner::luaGetRunTime (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaGetRunTime -
+ * FrameRunner: updateRunTime -
  *----------------------------------------------------------------------------*/
 void GeoDataFrame::FrameRunner::updateRunTime(double duration)
 {
@@ -155,6 +160,82 @@ void GeoDataFrame::FrameRunner::updateRunTime(double duration)
         runtime += duration;
     }
     m.unlock();
+}
+
+/*----------------------------------------------------------------------------
+ * FrameSender: luaCreate -
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::FrameSender::luaCreate(lua_State* L)
+{
+    try
+    {
+        const char*     rspq        = getLuaString(L, 1);
+        const uint64_t  key_space   = getLuaInteger(L, 2, true, RequestFields::DEFAULT_KEY_SPACE);
+        const int       timeout     = getLuaInteger(L, 3, true, SYS_TIMEOUT);
+
+        return createLuaObject(L, new FrameSender(L, rspq, key_space, timeout));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+    }
+
+    return returnLuaStatus(L, false);
+}
+
+/*----------------------------------------------------------------------------
+ * FrameSender: Constructor -
+ *----------------------------------------------------------------------------*/
+GeoDataFrame::FrameSender::FrameSender(lua_State* L, const char* _rspq, uint64_t _key_space, int _timeout):
+    FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
+    rspq(StringLib::duplicate(_rspq)),
+    key_space(_key_space),
+    timeout(_timeout)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * FrameSender: Destructor -
+ *----------------------------------------------------------------------------*/
+GeoDataFrame::FrameSender::~FrameSender(void)
+{
+    delete [] rspq;
+}
+
+/*----------------------------------------------------------------------------
+ * FrameSender: run -
+ *----------------------------------------------------------------------------*/
+bool GeoDataFrame::FrameSender::run(GeoDataFrame* dataframe)
+{
+    /* Latch Start Time */
+    const double start = TimeLib::latchtime();
+    const uint64_t key = (dataframe->getKey() << 32) | key_space;
+
+    /* Create Event Publisher */
+    Publisher pubq(rspq);
+
+    /* Check if DataFrame is In Error */
+    if(dataframe->inError)
+    {
+        alert(ERROR, RTE_ERROR, &pubq, &dataframe->active, "request <%s> failed to create valid dataframe", rspq);
+        return false;
+    }
+
+    /* Check if DataFrame is Empty */
+    if(dataframe->length() <= 0)
+    {
+        alert(ERROR, RTE_ERROR, &pubq, &dataframe->active, "request <%s> created an empty dataframe", rspq);
+        return false;
+    }
+
+    /* Send DataFrame */
+    dataframe->sendDataframe(rspq, key, timeout);
+
+    /* Update Run Time */
+    updateRunTime(TimeLib::latchtime() - start);
+
+    /* Success */
+    return true;
 }
 
 /*----------------------------------------------------------------------------
@@ -486,6 +567,14 @@ Field* GeoDataFrame::getMetaData (const char* name, Field::type_t _type, bool no
 }
 
 /*----------------------------------------------------------------------------
+ * getKey
+ *----------------------------------------------------------------------------*/
+okey_t GeoDataFrame::getKey (void) const
+{
+    return 0;
+}
+
+/*----------------------------------------------------------------------------
  * getTimeColumn
  *----------------------------------------------------------------------------*/
 const FieldColumn<time8_t>* GeoDataFrame::getTimeColumn (void) const
@@ -788,6 +877,92 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data)
         }
     }
 }
+
+/*----------------------------------------------------------------------------
+ * sendDataframe
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, int timeout) const
+{
+    // massage key_space
+    if(key_space == INVALID_KEY) key_space = 0;
+
+    // create publisher
+    Publisher pub(rspq);
+
+    // create and send column records
+    Dictionary<FieldDictionary::entry_t>::Iterator column_iter(columnFields.fields);
+    for(int i = 0; i < column_iter.length; i++)
+    {
+        const Dictionary<FieldDictionary::entry_t>::kv_t kv = column_iter[i];
+
+        // determine size of column
+        const uint32_t value_encoding = kv.value.field->getValueEncoding();
+        assert(value_encoding >= 0 && value_encoding < RecordObject::NUM_FIELD_TYPES);
+        const long column_size = kv.value.field->length() * RecordObject::FIELD_TYPE_BYTES[value_encoding];
+        const long rec_size = offsetof(gdf_rec_t, data) + column_size;
+
+        // create column record
+        RecordObject gdf_rec(gdfRecType, rec_size);
+        gdf_rec_t* gdf_rec_data = reinterpret_cast<gdf_rec_t*>(gdf_rec.getRecordData());
+        gdf_rec_data->key = key_space;
+        gdf_rec_data->type = COLUMN_REC;
+        gdf_rec_data->size = column_size;
+        gdf_rec_data->encoding = kv.value.field->encoding;
+        gdf_rec_data->num_rows = kv.value.field->length();
+        StringLib::copy(gdf_rec_data->name, kv.value.name, MAX_NAME_SIZE);
+
+        // serialize column data into record
+        const long bytes_serialized = kv.value.field->serialize(gdf_rec_data->data, column_size);
+        if(bytes_serialized != column_size) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to serialize column %s: %ld", gdf_rec_data->name, bytes_serialized);
+
+        // send column record
+        gdf_rec.post(&pub, 0, NULL, true, timeout);
+    }
+
+    // create and send meta records
+    Dictionary<FieldDictionary::entry_t>::Iterator meta_iter(metaFields.fields);
+    for(int i = 0; i < meta_iter.length; i++)
+    {
+        const Dictionary<FieldDictionary::entry_t>::kv_t kv = meta_iter[i];
+
+        // determine size of element
+        const uint32_t value_encoding = kv.value.field->getValueEncoding();
+        if(value_encoding >= RecordObject::NUM_FIELD_TYPES) continue;
+        const long element_size = kv.value.field->length() * RecordObject::FIELD_TYPE_BYTES[value_encoding];
+        const long rec_size = offsetof(gdf_rec_t, data) + element_size;
+
+        // create meta record
+        RecordObject gdf_rec(gdfRecType, rec_size);
+        gdf_rec_t* gdf_rec_data = reinterpret_cast<gdf_rec_t*>(gdf_rec.getRecordData());
+        gdf_rec_data->key = key_space;
+        gdf_rec_data->type = META_REC;
+        gdf_rec_data->size = element_size;
+        gdf_rec_data->encoding = kv.value.field->encoding;
+        gdf_rec_data->num_rows = length();
+        StringLib::copy(gdf_rec_data->name, kv.value.name, MAX_NAME_SIZE);
+
+        // serialize column data into record
+        const long bytes_serialized = kv.value.field->serialize(gdf_rec_data->data, element_size);
+        if(bytes_serialized != element_size) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to serialize metadata %s: %ld", gdf_rec_data->name, bytes_serialized);
+
+        // send column record
+        gdf_rec.post(&pub, 0, NULL, true, timeout);
+    }
+
+    // create and send eof record
+    {
+        const long rec_size = offsetof(gdf_rec_t, data) + sizeof(uint32_t); // for number of columns
+        RecordObject gdf_rec(gdfRecType, rec_size);
+        gdf_rec_t* gdf_rec_data = reinterpret_cast<gdf_rec_t*>(gdf_rec.getRecordData());
+        gdf_rec_data->key = key_space;
+        gdf_rec_data->type = EOF_REC;
+        gdf_rec_data->num_rows = length();
+        uint32_t num_columns = columnFields.length();
+        memcpy(gdf_rec_data->data, &num_columns, sizeof(uint32_t));
+        gdf_rec.post(&pub, 0, NULL, true, timeout);
+    }
+}
+
 /*----------------------------------------------------------------------------
  * receiveThread
  *----------------------------------------------------------------------------*/
@@ -880,7 +1055,7 @@ void* GeoDataFrame::receiveThread (void* parm)
                 inq.dereference(ref);
 
                 // complete dataframe
-                info->dataframe->populateGeoColumns();
+                info->dataframe->populateDataframe();
                 complete = true;
             }
         }
@@ -959,7 +1134,7 @@ void* GeoDataFrame::runThread (void* parm)
 /*----------------------------------------------------------------------------
  * populateGeoColumn
  *----------------------------------------------------------------------------*/
-void GeoDataFrame::populateGeoColumns (void)
+void GeoDataFrame::populateDataframe (void)
 {
     // populate geo columns
     Dictionary<FieldDictionary::entry_t>::Iterator iter(columnFields.fields);
@@ -1133,87 +1308,11 @@ int GeoDataFrame::luaSend(lua_State* L)
         // get parameters
         GeoDataFrame*   dataframe   = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
         const char*     rspq        = getLuaString(L, 2);
-        uint64_t        key_space   = getLuaInteger(L, 3, true, RequestFields::DEFAULT_KEY_SPACE);
+        const uint64_t  key_space   = getLuaInteger(L, 3, true, RequestFields::DEFAULT_KEY_SPACE);
         const int       timeout     = getLuaInteger(L, 4, true, SYS_TIMEOUT);
 
-        // massage key_space
-        if(key_space == INVALID_KEY) key_space = 0;
-
-        // create publisher
-        Publisher pub(rspq);
-
-        // create and send column records
-        Dictionary<FieldDictionary::entry_t>::Iterator column_iter(dataframe->columnFields.fields);
-        for(int i = 0; i < column_iter.length; i++)
-        {
-            const Dictionary<FieldDictionary::entry_t>::kv_t kv = column_iter[i];
-
-            // determine size of column
-            const uint32_t value_encoding = kv.value.field->getValueEncoding();
-            assert(value_encoding >= 0 && value_encoding < RecordObject::NUM_FIELD_TYPES);
-            const long column_size = kv.value.field->length() * RecordObject::FIELD_TYPE_BYTES[value_encoding];
-            const long rec_size = offsetof(gdf_rec_t, data) + column_size;
-
-            // create column record
-            RecordObject gdf_rec(gdfRecType, rec_size);
-            gdf_rec_t* gdf_rec_data = reinterpret_cast<gdf_rec_t*>(gdf_rec.getRecordData());
-            gdf_rec_data->key = key_space;
-            gdf_rec_data->type = COLUMN_REC;
-            gdf_rec_data->size = column_size;
-            gdf_rec_data->encoding = kv.value.field->encoding;
-            gdf_rec_data->num_rows = kv.value.field->length();
-            StringLib::copy(gdf_rec_data->name, kv.value.name, MAX_NAME_SIZE);
-
-            // serialize column data into record
-            const long bytes_serialized = kv.value.field->serialize(gdf_rec_data->data, column_size);
-            if(bytes_serialized != column_size) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to serialize column %s: %ld", gdf_rec_data->name, bytes_serialized);
-
-            // send column record
-            gdf_rec.post(&pub, 0, NULL, true, timeout);
-        }
-
-        // create and send meta records
-        Dictionary<FieldDictionary::entry_t>::Iterator meta_iter(dataframe->metaFields.fields);
-        for(int i = 0; i < meta_iter.length; i++)
-        {
-            const Dictionary<FieldDictionary::entry_t>::kv_t kv = meta_iter[i];
-
-            // determine size of element
-            const uint32_t value_encoding = kv.value.field->getValueEncoding();
-            if(value_encoding >= RecordObject::NUM_FIELD_TYPES) continue;
-            const long element_size = kv.value.field->length() * RecordObject::FIELD_TYPE_BYTES[value_encoding];
-            const long rec_size = offsetof(gdf_rec_t, data) + element_size;
-
-            // create meta record
-            RecordObject gdf_rec(gdfRecType, rec_size);
-            gdf_rec_t* gdf_rec_data = reinterpret_cast<gdf_rec_t*>(gdf_rec.getRecordData());
-            gdf_rec_data->key = key_space;
-            gdf_rec_data->type = META_REC;
-            gdf_rec_data->size = element_size;
-            gdf_rec_data->encoding = kv.value.field->encoding;
-            gdf_rec_data->num_rows = dataframe->length();
-            StringLib::copy(gdf_rec_data->name, kv.value.name, MAX_NAME_SIZE);
-
-            // serialize column data into record
-            const long bytes_serialized = kv.value.field->serialize(gdf_rec_data->data, element_size);
-            if(bytes_serialized != element_size) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to serialize metadata %s: %ld", gdf_rec_data->name, bytes_serialized);
-
-            // send column record
-            gdf_rec.post(&pub, 0, NULL, true, timeout);
-        }
-
-        // create and send eof record
-        {
-            const long rec_size = offsetof(gdf_rec_t, data) + sizeof(uint32_t); // for number of columns
-            RecordObject gdf_rec(gdfRecType, rec_size);
-            gdf_rec_t* gdf_rec_data = reinterpret_cast<gdf_rec_t*>(gdf_rec.getRecordData());
-            gdf_rec_data->key = key_space;
-            gdf_rec_data->type = EOF_REC;
-            gdf_rec_data->num_rows = dataframe->length();
-            uint32_t num_columns = dataframe->columnFields.length();
-            memcpy(gdf_rec_data->data, &num_columns, sizeof(uint32_t));
-            gdf_rec.post(&pub, 0, NULL, true, timeout);
-        }
+        // send dataframe
+        dataframe->sendDataframe(rspq, key_space, timeout);
     }
     catch(const RunTimeException& e)
     {

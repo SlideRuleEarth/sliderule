@@ -173,9 +173,17 @@ Atl03DataFrame::~Atl03DataFrame (void)
 }
 
 /*----------------------------------------------------------------------------
- * Region::Constructor
+ * getKey
  *----------------------------------------------------------------------------*/
-Atl03DataFrame::Region::Region (const Atl03DataFrame* df):
+okey_t Atl03DataFrame::getKey(void) const
+{
+    return spot.value;
+}
+
+/*----------------------------------------------------------------------------
+ * AreaOfInterest::Constructor
+ *----------------------------------------------------------------------------*/
+Atl03DataFrame::AreaOfInterest::AreaOfInterest (const Atl03DataFrame* df):
     segment_lat    (df->hdf03, FString("/%s/%s", df->beam, "geolocation/reference_photon_lat").c_str()),
     segment_lon    (df->hdf03, FString("/%s/%s", df->beam, "geolocation/reference_photon_lon").c_str()),
     segment_ph_cnt (df->hdf03, FString("/%s/%s", df->beam, "geolocation/segment_ph_cnt").c_str()),
@@ -189,7 +197,7 @@ Atl03DataFrame::Region::Region (const Atl03DataFrame* df):
         segment_lon.join(df->readTimeoutMs, true);
         segment_ph_cnt.join(df->readTimeoutMs, true);
 
-        /* Initialize Region */
+        /* Initialize AreaOfInterest */
         first_segment = 0;
         num_segments = H5Coro::ALL_ROWS;
         first_photon = 0;
@@ -233,26 +241,26 @@ Atl03DataFrame::Region::Region (const Atl03DataFrame* df):
 }
 
 /*----------------------------------------------------------------------------
- * Region::Destructor
+ * AreaOfInterest::Destructor
  *----------------------------------------------------------------------------*/
-Atl03DataFrame::Region::~Region (void)
+Atl03DataFrame::AreaOfInterest::~AreaOfInterest (void)
 {
     cleanup();
 }
 
 /*----------------------------------------------------------------------------
- * Region::cleanup
+ * AreaOfInterest::cleanup
  *----------------------------------------------------------------------------*/
-void Atl03DataFrame::Region::cleanup (void)
+void Atl03DataFrame::AreaOfInterest::cleanup (void)
 {
     delete [] inclusion_mask;
     inclusion_mask = NULL;
 }
 
 /*----------------------------------------------------------------------------
- * Region::polyregion
+ * AreaOfInterest::polyregion
  *----------------------------------------------------------------------------*/
-void Atl03DataFrame::Region::polyregion (const Atl03DataFrame* df)
+void Atl03DataFrame::AreaOfInterest::polyregion (const Atl03DataFrame* df)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -308,9 +316,9 @@ void Atl03DataFrame::Region::polyregion (const Atl03DataFrame* df)
 }
 
 /*----------------------------------------------------------------------------
- * Region::rasterregion
+ * AreaOfInterest::rasterregion
  *----------------------------------------------------------------------------*/
-void Atl03DataFrame::Region::rasterregion (const Atl03DataFrame* df)
+void Atl03DataFrame::AreaOfInterest::rasterregion (const Atl03DataFrame* df)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
@@ -393,28 +401,28 @@ void Atl03DataFrame::Region::rasterregion (const Atl03DataFrame* df)
 /*----------------------------------------------------------------------------
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
-Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const Region& region):
+Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest& aoi):
     read_yapc           (df->parms->stages[Icesat2Fields::STAGE_YAPC] && (df->parms->yapc.version == 0) && (df->parms->version.value >= 6)),
     sc_orient           (df->hdf03,                            "/orbit_info/sc_orient"),
-    velocity_sc         (df->hdf03, FString("%s/%s", df->beam, "geolocation/velocity_sc").c_str(),      H5Coro::ALL_COLS, region.first_segment, region.num_segments),
-    segment_delta_time  (df->hdf03, FString("%s/%s", df->beam, "geolocation/delta_time").c_str(),       0, region.first_segment, region.num_segments),
-    segment_id          (df->hdf03, FString("%s/%s", df->beam, "geolocation/segment_id").c_str(),       0, region.first_segment, region.num_segments),
-    segment_dist_x      (df->hdf03, FString("%s/%s", df->beam, "geolocation/segment_dist_x").c_str(),   0, region.first_segment, region.num_segments),
-    solar_elevation     (df->hdf03, FString("%s/%s", df->beam, "geolocation/solar_elevation").c_str(),  0, region.first_segment, region.num_segments),
-    dist_ph_along       (df->hdf03, FString("%s/%s", df->beam, "heights/dist_ph_along").c_str(),        0, region.first_photon,  region.num_photons),
-    dist_ph_across      (df->hdf03, FString("%s/%s", df->beam, "heights/dist_ph_across").c_str(),       0, region.first_photon,  region.num_photons),
-    h_ph                (df->hdf03, FString("%s/%s", df->beam, "heights/h_ph").c_str(),                 0, region.first_photon,  region.num_photons),
-    signal_conf_ph      (df->hdf03, FString("%s/%s", df->beam, "heights/signal_conf_ph").c_str(),       df->signalConfColIndex, region.first_photon,  region.num_photons),
-    quality_ph          (df->hdf03, FString("%s/%s", df->beam, "heights/quality_ph").c_str(),           0, region.first_photon,  region.num_photons),
-    weight_ph           (read_yapc ? df->hdf03 : NULL, FString("%s/%s", df->beam, "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
-    lat_ph              (df->hdf03, FString("%s/%s", df->beam, "heights/lat_ph").c_str(),               0, region.first_photon,  region.num_photons),
-    lon_ph              (df->hdf03, FString("%s/%s", df->beam, "heights/lon_ph").c_str(),               0, region.first_photon,  region.num_photons),
-    delta_time          (df->hdf03, FString("%s/%s", df->beam, "heights/delta_time").c_str(),           0, region.first_photon,  region.num_photons),
+    velocity_sc         (df->hdf03, FString("%s/%s", df->beam, "geolocation/velocity_sc").c_str(),      H5Coro::ALL_COLS, aoi.first_segment, aoi.num_segments),
+    segment_delta_time  (df->hdf03, FString("%s/%s", df->beam, "geolocation/delta_time").c_str(),       0, aoi.first_segment, aoi.num_segments),
+    segment_id          (df->hdf03, FString("%s/%s", df->beam, "geolocation/segment_id").c_str(),       0, aoi.first_segment, aoi.num_segments),
+    segment_dist_x      (df->hdf03, FString("%s/%s", df->beam, "geolocation/segment_dist_x").c_str(),   0, aoi.first_segment, aoi.num_segments),
+    solar_elevation     (df->hdf03, FString("%s/%s", df->beam, "geolocation/solar_elevation").c_str(),  0, aoi.first_segment, aoi.num_segments),
+    dist_ph_along       (df->hdf03, FString("%s/%s", df->beam, "heights/dist_ph_along").c_str(),        0, aoi.first_photon,  aoi.num_photons),
+    dist_ph_across      (df->hdf03, FString("%s/%s", df->beam, "heights/dist_ph_across").c_str(),       0, aoi.first_photon,  aoi.num_photons),
+    h_ph                (df->hdf03, FString("%s/%s", df->beam, "heights/h_ph").c_str(),                 0, aoi.first_photon,  aoi.num_photons),
+    signal_conf_ph      (df->hdf03, FString("%s/%s", df->beam, "heights/signal_conf_ph").c_str(),       df->signalConfColIndex, aoi.first_photon,  aoi.num_photons),
+    quality_ph          (df->hdf03, FString("%s/%s", df->beam, "heights/quality_ph").c_str(),           0, aoi.first_photon,  aoi.num_photons),
+    weight_ph           (read_yapc ? df->hdf03 : NULL, FString("%s/%s", df->beam, "heights/weight_ph").c_str(), 0, aoi.first_photon,  aoi.num_photons),
+    lat_ph              (df->hdf03, FString("%s/%s", df->beam, "heights/lat_ph").c_str(),               0, aoi.first_photon,  aoi.num_photons),
+    lon_ph              (df->hdf03, FString("%s/%s", df->beam, "heights/lon_ph").c_str(),               0, aoi.first_photon,  aoi.num_photons),
+    delta_time          (df->hdf03, FString("%s/%s", df->beam, "heights/delta_time").c_str(),           0, aoi.first_photon,  aoi.num_photons),
     bckgrd_delta_time   (df->hdf03, FString("%s/%s", df->beam, "bckgrd_atlas/delta_time").c_str()),
     bckgrd_rate         (df->hdf03, FString("%s/%s", df->beam, "bckgrd_atlas/bckgrd_rate").c_str()),
-    anc_geo_data        (df->parms->atl03GeoFields,  df->hdf03, FString("%s/%s", df->beam, "geolocation").c_str(),  0, region.first_segment, region.num_segments),
-    anc_corr_data       (df->parms->atl03CorrFields, df->hdf03, FString("%s/%s", df->beam, "geophys_corr").c_str(), 0, region.first_segment, region.num_segments),
-    anc_ph_data         (df->parms->atl03PhFields,   df->hdf03, FString("%s/%s", df->beam, "heights").c_str(),      0, region.first_photon,  region.num_photons)
+    anc_geo_data        (df->parms->atl03GeoFields,  df->hdf03, FString("%s/%s", df->beam, "geolocation").c_str(),  0, aoi.first_segment, aoi.num_segments),
+    anc_corr_data       (df->parms->atl03CorrFields, df->hdf03, FString("%s/%s", df->beam, "geophys_corr").c_str(), 0, aoi.first_segment, aoi.num_segments),
+    anc_ph_data         (df->parms->atl03PhFields,   df->hdf03, FString("%s/%s", df->beam, "heights").c_str(),      0, aoi.first_photon,  aoi.num_photons)
 {
     /* Join Hardcoded Reads */
     sc_orient.join(df->readTimeoutMs, true);
@@ -480,7 +488,7 @@ Atl03DataFrame::Atl08Class::~Atl08Class (void)
 /*----------------------------------------------------------------------------
  * Atl08Class::classify
  *----------------------------------------------------------------------------*/
-void Atl03DataFrame::Atl08Class::classify (const Atl03DataFrame* df, const Region& region, const Atl03Data& atl03)
+void Atl03DataFrame::Atl08Class::classify (const Atl03DataFrame* df, const AreaOfInterest& aoi, const Atl03Data& atl03)
 {
     /* Do Nothing If Not Enabled */
     if(!enabled)
@@ -539,7 +547,7 @@ void Atl03DataFrame::Atl08Class::classify (const Atl03DataFrame* df, const Regio
         }
 
         /* Get Per Photon Values */
-        const int32_t atl03_segment_count = region.segment_ph_cnt[atl03_segment_index];
+        const int32_t atl03_segment_count = aoi.segment_ph_cnt[atl03_segment_index];
         for(int atl03_count = 1; atl03_count <= atl03_segment_count; atl03_count++)
         {
             /* Go To Segment */
@@ -637,7 +645,7 @@ uint8_t Atl03DataFrame::Atl08Class::operator[] (int index) const
 /*----------------------------------------------------------------------------
  * YapcScore::Constructor
  *----------------------------------------------------------------------------*/
-Atl03DataFrame::YapcScore::YapcScore (const Atl03DataFrame* df, const Region& region, const Atl03Data& atl03):
+Atl03DataFrame::YapcScore::YapcScore (const Atl03DataFrame* df, const AreaOfInterest& aoi, const Atl03Data& atl03):
     enabled {df->parms->stages[Icesat2Fields::STAGE_YAPC]},
     score {NULL}
 {
@@ -650,11 +658,11 @@ Atl03DataFrame::YapcScore::YapcScore (const Atl03DataFrame* df, const Region& re
     /* Run YAPC */
     if(df->parms->yapc.version == 3)
     {
-        yapcV3(df, region, atl03);
+        yapcV3(df, aoi, atl03);
     }
     else if(df->parms->yapc.version == 2 || df->parms->yapc.version == 1)
     {
-        yapcV2(df, region, atl03);
+        yapcV2(df, aoi, atl03);
     }
     else if(df->parms->yapc.version != 0) // read from file
     {
@@ -673,7 +681,7 @@ Atl03DataFrame::YapcScore::~YapcScore (void)
 /*----------------------------------------------------------------------------
  * yapcV2
  *----------------------------------------------------------------------------*/
-void Atl03DataFrame::YapcScore::yapcV2 (const Atl03DataFrame* df, const Region& region, const Atl03Data& atl03)
+void Atl03DataFrame::YapcScore::yapcV2 (const Atl03DataFrame* df, const AreaOfInterest& aoi, const Atl03Data& atl03)
 {
     /* YAPC Hard-Coded Parameters */
     const double MAXIMUM_HSPREAD = 15000.0; // meters
@@ -705,13 +713,13 @@ void Atl03DataFrame::YapcScore::yapcV2 (const Atl03DataFrame* df, const Region& 
     for(int segment_index = 0; segment_index < num_segments; segment_index++)
     {
         /* Determine Indices */
-        ph_b0 += segment_index > 1 ? region.segment_ph_cnt[segment_index - 2] : 0; // Center - 2
-        ph_c0 += segment_index > 0 ? region.segment_ph_cnt[segment_index - 1] : 0; // Center - 1
-        ph_c1 += region.segment_ph_cnt[segment_index]; // Center
-        ph_b1 += segment_index < (num_segments - 1) ? region.segment_ph_cnt[segment_index + 1] : 0; // Center + 1
+        ph_b0 += segment_index > 1 ? aoi.segment_ph_cnt[segment_index - 2] : 0; // Center - 2
+        ph_c0 += segment_index > 0 ? aoi.segment_ph_cnt[segment_index - 1] : 0; // Center - 1
+        ph_c1 += aoi.segment_ph_cnt[segment_index]; // Center
+        ph_b1 += segment_index < (num_segments - 1) ? aoi.segment_ph_cnt[segment_index + 1] : 0; // Center + 1
 
         /* Calculate N and KNN */
-        const int32_t N = region.segment_ph_cnt[segment_index];
+        const int32_t N = aoi.segment_ph_cnt[segment_index];
         int knn = (settings.knn.value != 0) ? settings.knn.value : MAX(1, (sqrt((double)N) + 0.5) / 2);
         knn = MIN(knn, MAX_KNN); // truncate if too large
 
@@ -844,7 +852,7 @@ void Atl03DataFrame::YapcScore::yapcV2 (const Atl03DataFrame* df, const Region& 
 /*----------------------------------------------------------------------------
  * yapcV3
  *----------------------------------------------------------------------------*/
-void Atl03DataFrame::YapcScore::yapcV3 (const Atl03DataFrame* df, const Region& region, const Atl03Data& atl03)
+void Atl03DataFrame::YapcScore::yapcV3 (const Atl03DataFrame* df, const AreaOfInterest& aoi, const Atl03Data& atl03)
 {
     /* YAPC Parameters */
     const YapcFields& settings = df->parms->yapc;
@@ -866,7 +874,7 @@ void Atl03DataFrame::YapcScore::yapcV3 (const Atl03DataFrame* df, const Region& 
     int32_t ph_index = 0;
     for(int segment_index = 0; segment_index < num_segments; segment_index++)
     {
-        for(int32_t ph_in_seg_index = 0; ph_in_seg_index < region.segment_ph_cnt[segment_index]; ph_in_seg_index++)
+        for(int32_t ph_in_seg_index = 0; ph_in_seg_index < aoi.segment_ph_cnt[segment_index]; ph_in_seg_index++)
         {
             ph_dist[ph_index] = atl03.segment_dist_x[segment_index] + atl03.dist_ph_along[ph_index];
             ph_index++;
@@ -878,7 +886,7 @@ void Atl03DataFrame::YapcScore::yapcV3 (const Atl03DataFrame* df, const Region& 
     for(int segment_index = 0; segment_index < num_segments; segment_index++)
     {
         /* Initialize Segment Parameters */
-        const int32_t N = region.segment_ph_cnt[segment_index];
+        const int32_t N = aoi.segment_ph_cnt[segment_index];
         double* ph_weights = new double[N]; // local array freed below
         int max_knn = settings.min_knn;
         int32_t start_ph_index = ph_index;
@@ -997,21 +1005,21 @@ void* Atl03DataFrame::subsettingThread (void* parm)
         /* Start Reading ATL08 Data */
         Atl08Class atl08(df);
 
-        /* Subset to Region of Interest */
-        const Region region(df);
+        /* Subset to AreaOfInterest of Interest */
+        const AreaOfInterest aoi(df);
 
         /* Read ATL03 Datasets */
-        const Atl03Data atl03(df, region);
+        const Atl03Data atl03(df, aoi);
 
         /* Set MetaData */
         df->spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], df->beam);
         df->spacecraft_orientation = atl03.sc_orient[0];
 
         /* Perform YAPC Scoring (if requested) */
-        const YapcScore yapc(df, region, atl03);
+        const YapcScore yapc(df, aoi, atl03);
 
         /* Perform ATL08 Classification (if requested) */
-        atl08.classify(df, region, atl03);
+        atl08.classify(df, aoi, atl03);
 
         /* Initialize Indices */
         int32_t current_photon = -1;
@@ -1024,8 +1032,8 @@ void* Atl03DataFrame::subsettingThread (void* parm)
         {
             /* Go to Photon's Segment */
             current_count++;
-            while((current_segment < region.segment_ph_cnt.size) &&
-                  (current_count > region.segment_ph_cnt[current_segment]))
+            while((current_segment < aoi.segment_ph_cnt.size) &&
+                  (current_count > aoi.segment_ph_cnt[current_segment]))
             {
                 current_count = 1; // reset photons in segment
                 current_segment++; // go to next segment
@@ -1034,13 +1042,13 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             /* Check Current Segment */
             if(current_segment >= atl03.segment_dist_x.size)
             {
-                throw RunTimeException(ERROR, RTE_ERROR, "Photons with no segments are detected in %s/%s (%d %ld %ld) (%d %d)", df->hdf03->name, df->beam, current_segment, atl03.segment_dist_x.size, region.num_segments, current_photon, current_count);
+                throw RunTimeException(ERROR, RTE_ERROR, "Photons with no segments are detected in %s/%s (%d %ld %ld) (%d %d)", df->hdf03->name, df->beam, current_segment, atl03.segment_dist_x.size, aoi.num_segments, current_photon, current_count);
             }
 
-            /* Check Region Mask */
-            if(region.inclusion_ptr)
+            /* Check AreaOfInterest Mask */
+            if(aoi.inclusion_ptr)
             {
-                if(!region.inclusion_ptr[current_segment])
+                if(!aoi.inclusion_ptr[current_segment])
                 {
                     continue;
                 }
