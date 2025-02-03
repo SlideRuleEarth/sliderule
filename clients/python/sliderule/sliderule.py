@@ -34,6 +34,7 @@ import socket
 import json
 import struct
 import ctypes
+import tempfile
 import time
 import logging
 import warnings
@@ -1502,6 +1503,18 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
             datafile = file.read()
         os.remove(tempfile)
 
+    elif isinstance(source, list) and (len(source) >= 4) and isinstance(source[0], dict):
+
+        # create geodataframe
+        p = Polygon([(c["lon"], c["lat"]) for c in source])
+        gdf = geopandas.GeoDataFrame(geometry=[p], crs=EPSG_WGS84)
+
+        # Convert to geojson file
+        gdf.to_file(tempfile, driver="GeoJSON")
+        with open(tempfile, mode='rt') as file:
+            datafile = file.read()
+        os.remove(tempfile)
+
     elif isinstance(source, str) and (source.find(".shp") > 1):
         # create geodataframe
         gdf = geopandas.read_file(source)
@@ -1571,3 +1584,40 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
             "cellsize": cellsize  # units are in crs/projection
         }
     }
+
+#
+# Run: API Request to SlideRule
+#
+def run(api, parms, aoi=None, resources=None):
+
+    # add region
+    if aoi != None:
+        region = toregion(aoi)
+        parms["poly"] = region["poly"]
+
+    # add resources
+    if type(resources) == list:
+        parms["resources"] = resources
+
+    # add output
+    delete_tempfile = False
+    if "output" not in parms:
+        delete_tempfile = True
+        parms["output"] = {
+            "path": tempfile.mktemp(),
+            "format": "geoparquet",
+            "open_on_complete": True
+        }
+
+    # make request
+    rsps = source(api, parms, stream=True)
+
+    # build geodataframe
+    gdf = procoutputfile(parms, rsps)
+
+    # delete tempfile
+    if delete_tempfile and os.path.exists(parms["output"]["path"]):
+        os.remove(parms["output"]["path"])
+
+    # return geodataframe
+    return gdf
