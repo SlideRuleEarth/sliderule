@@ -122,8 +122,6 @@ class GediFields: public RequestFields
          * Data
          *--------------------------------------------------------------------*/
 
-        AssetField                              asset;      // name of Asset in asset dictionary to use for granules
-        FieldElement<string>                    resource;   // granule name (including file extension)
         FieldEnumeration<beam_t, NUM_BEAMS>     beams {true, true, true, true, true, true, true, true};
         FieldElement<bool>                      degrade_filter {false};
         FieldElement<bool>                      l2_quality_filter {false};
@@ -143,7 +141,7 @@ class GediFields: public RequestFields
          * Methods
          *--------------------------------------------------------------------*/
 
-        GediFields (lua_State* L, uint64_t key_space, const char* default_asset_name, const char* default_resource);
+        GediFields (lua_State* L, uint64_t key_space, const char* default_asset_name);
         virtual ~GediFields (void) override = default;
         void fromLua (lua_State* L, int index) override;
 };

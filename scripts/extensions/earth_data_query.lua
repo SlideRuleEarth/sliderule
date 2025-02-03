@@ -544,8 +544,8 @@ local function query(parms, q, userlog)
     end
 
     -- if resources populated, then just return
-    if parms["resources"] or parms["resource"] then
-        return RC_SUCCESS
+    if parms:length("resources") > 0 or #parms["resource"] > 0 then
+        return RC_SUCCESS, parms["resources"]
     end
 
     -- else populate resources via earthdata search (with multiple attempts)
@@ -555,8 +555,7 @@ local function query(parms, q, userlog)
         local rc, rsps = search(parms)
         if rc == RC_SUCCESS then
             userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> retrieved %d resources", q, #rsps))
-            parms["resources"] = rsps
-            return RC_SUCCESS
+            return RC_SUCCESS, rsps
         else
             userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed attempt %d <%d>: %s", q, attempt, rc, rsps))
             attempt = attempt + 1

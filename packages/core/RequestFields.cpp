@@ -69,7 +69,7 @@ int RequestFields::luaCreate (lua_State* L)
     RequestFields* request_fields = NULL;
     try
     {
-        request_fields = new RequestFields(L, 0, {});
+        request_fields = new RequestFields(L, 0, NULL, {});
         request_fields->fromLua(L, 1);
         return createLuaObject(L, request_fields);
     }
@@ -393,6 +393,8 @@ void RequestFields::fromLua (lua_State* L, int index)
 {
     FieldDictionary::fromLua(L, index);
 
+    // set new asset
+
     // set timeouts (if necessary)
     if(timeout == INVALID_TIMEOUT)      timeout = DEFAULT_TIMEOUT;
     if(rqstTimeout == INVALID_TIMEOUT)  rqstTimeout = timeout;
@@ -428,9 +430,12 @@ void RequestFields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RequestFields::RequestFields(lua_State* L, uint64_t key_space, const std::initializer_list<entry_t>& init_list):
+RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* default_asset_name, const std::initializer_list<entry_t>& init_list):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     FieldDictionary ({
+        {"asset",               &asset},
+        {"resource",            &resource},
+        {"resources",           &resources},
         {"poly",                &polygon},
         {"proj",                &projection},
         {"points_in_polygon",   &pointsInPolygon},
@@ -452,7 +457,8 @@ RequestFields::RequestFields(lua_State* L, uint64_t key_space, const std::initia
         #endif
         // deprecated
         {"raster",              &regionMask},
-    })
+    }),
+    asset(default_asset_name)
 {
     // set key space
     keySpace = key_space;

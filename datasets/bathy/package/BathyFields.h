@@ -284,7 +284,7 @@ class BathyFields: public Icesat2Fields
          * Methods
          *--------------------------------------------------------------------*/
 
-                BathyFields     (lua_State* L, uint64_t key_space, const char* default_asset_name, const char* default_resource);
+                BathyFields     (lua_State* L, uint64_t key_space, const char* default_asset_name);
         virtual ~BathyFields    (void) override = default;
 };
 

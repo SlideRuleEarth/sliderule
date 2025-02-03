@@ -110,9 +110,8 @@ int Icesat2Fields::luaCreate (lua_State* L)
     {
         const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, RequestFields::DEFAULT_KEY_SPACE);
         const char* default_asset_name = LuaObject::getLuaString(L, 3, true, "icesat2");
-        const char* default_resource = LuaObject::getLuaString(L, 4, true, NULL);
 
-        icesat2_fields = new Icesat2Fields(L, key_space, default_asset_name, default_resource, {});
+        icesat2_fields = new Icesat2Fields(L, key_space, default_asset_name, {});
         icesat2_fields->fromLua(L, 1);
 
         return createLuaObject(L, icesat2_fields);
@@ -251,10 +250,8 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* default_asset_name, const char* default_resource, const std::initializer_list<FieldDictionary::entry_t>& init_list):
-    RequestFields (L, key_space, {
-        {"asset",               &asset},
-        {"resource",            &resource},
+Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* default_asset_name, const std::initializer_list<FieldDictionary::entry_t>& init_list):
+    RequestFields (L, key_space, default_asset_name, {
         {"srt",                 &surfaceType},
         {"pass_invalid",        &passInvalid},
         {"dist_in_seg",         &distInSeg},
@@ -284,15 +281,8 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* defau
         {"rgt",                 &rgt},
         {"cycle",               &cycle},
         {"region",              &region},
-        {"version",             &version} }),
-    asset(default_asset_name)
+        {"version",             &version} })
 {
-    // initialize resource (if provided)
-    if(default_resource)
-    {
-        resource = default_resource;
-    }
-
     // add additional fields to dictionary
     for(const FieldDictionary::entry_t elem: init_list)
     {

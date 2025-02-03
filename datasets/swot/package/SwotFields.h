@@ -75,9 +75,7 @@ class SwotFields: public RequestFields
          * Data
          *--------------------------------------------------------------------*/
 
-        AssetField              asset;
-        FieldElement<string>    resource;
-        FieldList<string>       variables;
+        FieldList<string> variables;
 
     private:
 

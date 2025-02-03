@@ -6,6 +6,7 @@
 -- Imports
 --
 local earthdata = require("earth_data_query")
+local prettyprint = require("prettyprint")
 
 --
 -- Constants
@@ -24,20 +25,21 @@ local RC_PARQUET_FAILURE = -4
 --
 local function proxy(endpoint, parms, rspq, userlog)
 
-    -- Query EarthData for Resources to Process
-    local earthdata_status = earthdata.query(parms, rspq, userlog)
+    -- Use Parms -OR- Query EarthData for Resources to Process
+    local earthdata_status, resources = earthdata.query(parms, rspq, userlog)
     if earthdata_status ~= earthdata.SUCCESS then
         userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> earthdata queury failed : %d", rspq, earthdata_status))
         return RC_EARTHDATA_FAILURE
     end
 
     -- Check for Pass Through
-    if parms["resource"] then
+    if #parms["resource"] > 0 then
         return RC_PASS_THROUGH
     end
 
+print("HERE 3")
+prettyprint.display(resources)
     -- Initialize Variables
-    local resources = parms["resources"]
     local proxyq_name = "proxy."..rspq
     local rqst_json = parms:encode()
     local node_timeout = parms["node_timeout"]

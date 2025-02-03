@@ -107,13 +107,16 @@ class RequestFields: public LuaObject, public FieldDictionary
 
         virtual void fromLua (lua_State* L, int index) override;
 
-        RequestFields (lua_State* L, uint64_t key_space, const std::initializer_list<entry_t>& init_list);
+        RequestFields (lua_State* L, uint64_t key_space, const char* default_asset_name, const std::initializer_list<entry_t>& init_list);
         virtual ~RequestFields  (void) override;
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
+        AssetField                      asset;              // name of Asset in asset dictionary to use for granules
+        FieldElement<string>            resource;           // granule name (including file extension)
+        FieldList<string>               resources;          // list of granule names
         FieldColumn<MathLib::coord_t>   polygon;
         FieldElement<MathLib::proj_t>   projection          {MathLib::AUTOMATIC};
         FieldElement<int>               pointsInPolygon     {0};

@@ -62,7 +62,7 @@ int GeoJsonRaster::luaCreate (lua_State* L)
     {
         const char* geojstr = getLuaString(L, 1);
         const double cellsize = getLuaFloat(L, 2);
-        rqst_parms = new RequestFields(L, 0, {});
+        rqst_parms = new RequestFields(L, 0, NULL, {});
         GeoFields* geo_fields = new GeoFields();
         if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields))
         {
@@ -88,7 +88,7 @@ GeoJsonRaster* GeoJsonRaster::create (const string& geojson, double cellsize)
     RequestFields* rqst_parms = NULL;
     try
     {
-        rqst_parms = new RequestFields(NULL, 0, {});
+        rqst_parms = new RequestFields(NULL, 0, NULL, {});
         GeoFields* geo_fields = new GeoFields();
         if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields))
         {

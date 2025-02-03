@@ -4,7 +4,7 @@
 local json          = require("json")
 local dataframe     = require("dataframe")
 local rqst          = json.decode(arg[1])
-local parms         = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
+local parms         = icesat2.parms(rqst["parms"], rqst["key_space"])
 local userlog       = msg.publish(rspq) -- create user log publisher (alerts)
 local start_time    = time.gps() -- used for timeout handling
 

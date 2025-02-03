@@ -114,7 +114,7 @@ void AssetField::fromLua (lua_State* L, int index)
     if(asset) asset->releaseLuaObject();
     asset = NULL;
 
-   // get asset
+    // get asset
     asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
 
     // throw error on asset not found

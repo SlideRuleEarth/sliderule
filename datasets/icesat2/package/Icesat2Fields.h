@@ -337,8 +337,6 @@ class Icesat2Fields: public RequestFields
          * Data
          *--------------------------------------------------------------------*/
 
-        AssetField                                          asset;                                                  // name of Asset in asset dictionary to use for granules
-        FieldElement<string>                                resource;                                               // granule name (including file extension)
         FieldElement<surface_type_t>                        surfaceType {SRT_LAND_ICE};                             // surface reference type (used to select signal confidence column)
         FieldElement<bool>                                  passInvalid {false};                                    // post extent even if each pair is invalid
         FieldElement<bool>                                  distInSeg {false};                                      // the extent length and step are expressed in segments, not meters
@@ -378,7 +376,7 @@ class Icesat2Fields: public RequestFields
          * Methods
          *--------------------------------------------------------------------*/
 
-                Icesat2Fields   (lua_State* L, uint64_t key_space, const char* default_asset_name, const char* default_resource, const std::initializer_list<FieldDictionary::entry_t>& init_list);
+                Icesat2Fields   (lua_State* L, uint64_t key_space, const char* asset_name, const std::initializer_list<FieldDictionary::entry_t>& init_list);
         virtual ~Icesat2Fields  (void) override = default;
 
         void parseResource (void);

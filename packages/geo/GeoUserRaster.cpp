@@ -85,7 +85,7 @@ int GeoUserRaster::luaCreate (lua_State* L)
 
         /* Get geo fields */
         lua_getfield(L, index, SAMPLES_KEY);
-        rqst_parms = new RequestFields(L, 0, {});
+        rqst_parms = new RequestFields(L, 0, NULL, {});
         GeoFields* geo_fields = new GeoFields();
         if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields))
         {
