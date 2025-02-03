@@ -6,5 +6,7 @@ dependencies:
   - numpy
   - pandas
   - geopandas
+  - pyarrow
+  - libgdal-arrow-parquet
   - rasterio
   - pip

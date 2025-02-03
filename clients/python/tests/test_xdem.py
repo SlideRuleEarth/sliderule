@@ -8,7 +8,7 @@ class TestXDEM:
 
     def test_nominal(self, init):
         parms = {
-            "fn_epc": "asdf",
+            "fn_epc": "s3://sliderule/data/test/coreg_xdem_atl06.geoparquet",
             "fn_dem": "asdf"
         }
         results = sliderule.source("xdem", parms)
