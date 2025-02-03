@@ -1,0 +1,10 @@
+name: xdem
+channels:
+  - conda-forge
+dependencies:
+  - xdem
+  - numpy
+  - pandas
+  - geopandas
+  - rasterio
+  - pip

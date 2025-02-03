@@ -174,6 +174,7 @@ option (USE_GEO_PACKAGE "Include the geospatial library (GDAL) package" ON)
 option (USE_H5_PACKAGE "Include the HDF5 (H5Coro) package" ON)
 option (USE_LEGACY_PACKAGE "Include the legacy (CommandProcessor) package" OFF)
 option (USE_STREAMING_PACKAGE "Include the streaming (RecordDispatcher) package" ON)
+option (USE_XDEM_PACKAGE "Include the xdem coregistration package" ON)
 
 # Platform Options #
 
@@ -357,6 +358,10 @@ endif()
 
 if(${USE_STREAMING_PACKAGE})
     add_subdirectory (packages/streaming)
+endif()
+
+if(${USE_XDEM_PACKAGE})
+    add_subdirectory (packages/xdem)
 endif()
 
 # Datasets #

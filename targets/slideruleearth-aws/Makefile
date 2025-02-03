@@ -55,6 +55,8 @@ STATIC_WEB_STAGE_DIR = $(STAGE)/website
 STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
 OCEANEYES_SRC_DIR = $(ROOT)/datasets/bathy/docker/oceaneyes
 OCEANEYES_STAGE_DIR = $(STAGE)/oceaneyes
+XDEM_SRC_DIR = $(ROOT)/packages/xdem/docker
+XDEM_STAGE_DIR = $(STAGE)/xdem
 MAGIC_PYTORCH_DIR = $(ROOT)/../../miniconda3/envs/pointnet2
 CSHELPH_SOURCE_DIR ?= $(ROOT)/../ut-ATL24-C-shelph
 CSHELPH_SOURCE_FILE = $(CSHELPH_SOURCE_DIR)/c_shelph.py
@@ -206,6 +208,24 @@ oceaneyes-docker:
 oceaneyes-push:
 	docker push $(ECR)/oceaneyes:$(VERSION)
 	docker push $(ECR)/oceaneyes:$(MAJOR_VERSION)
+
+xdem-lock:
+	cd $(XDEM_SRC_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd $(XDEM_SRC_DIR) && conda-lock render -p linux-$(ARCH)
+
+xdem-docker:
+	-rm -Rf $(XDEM_STAGE_DIR)
+	mkdir -p $(XDEM_STAGE_DIR)
+	cp $(XDEM_SRC_DIR)/Dockerfile $(XDEM_STAGE_DIR)
+	cp $(XDEM_SRC_DIR)/conda-* $(XDEM_STAGE_DIR)
+	cp $(XDEM_SRC_DIR)/runner.* $(XDEM_STAGE_DIR)
+	cd $(XDEM_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/xdem:latest $(DOCKER_PLATFORM) .
+	docker tag $(ECR)/xdem:latest $(ECR)/xdem:$(VERSION)
+	docker tag $(ECR)/xdem:latest $(ECR)/xdem:$(MAJOR_VERSION)
+
+xdem-push:
+	docker push $(ECR)/xdem:$(VERSION)
+	docker push $(ECR)/xdem:$(MAJOR_VERSION)
 
 sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
