@@ -1,0 +1,5 @@
+{
+    "fn_epc": "s3://sliderule/data/test/coreg_xdem_s2s041_GE01.geoparquet",
+    "fn_dem": "https://pgc-opendata-dems.s3.us-west-2.amazonaws.com/arcticdem/strips/s2s041/2m/n64w149/SETSM_s2s041_GE01_20130227_105041000071DE00_105041000071D000_2m_lsf_seg1_dem.tif",
+    "fn_reg": "results.json"
+}

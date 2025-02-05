@@ -2,7 +2,7 @@ name: xdem
 channels:
   - conda-forge
 dependencies:
-  - xdem
+  - xdem>=0.1.0
   - numpy
   - pandas
   - geopandas

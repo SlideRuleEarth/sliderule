@@ -1,0 +1,1 @@
+python ../docker/runner.py settings.json
