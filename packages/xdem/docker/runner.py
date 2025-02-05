@@ -86,8 +86,13 @@ fit_args = xdem.coreg.base.InFitOrBinDict(fit_or_bin=fit_or_bin)
 # 2/ RUN COREGISTRATION
 #######################
 
+#
+# TEMPORARY work around... z_name needs to be used below (and also set in the parameters above)
+#
+epc["z"] = epc["h_mean"]
+
 # Fixed parameters to have defined in the container
-z_name = "h_li"  # Name of z variable in the geodataframe
+z_name = "h_mean"  # Name of z variable in the geodataframe
 ref = "epc"  # Which data is the reference for the user: the point cloud or DEM?
 if ref == "epc":
     reference_elev = epc
@@ -105,7 +110,7 @@ c.fit(reference_elev=reference_elev, to_be_aligned_elev=to_be_aligned_elev, **fi
 
 # In any case, extract relevant dictionary of outputs: detailed in xdem.coreg.base.OutputCoregDict
 output_random = c.meta["outputs"]["random"]
-output_fitorbin = c.meta["outputs"]["fitorbin"]
+#output_fitorbin = c.meta["outputs"]["fitorbin"]
 output_affine = c.meta["outputs"]["affine"]
 
 # If prefer to transform the elevation data in Python, run apply as well, otherwise do this in C++ later
@@ -116,5 +121,5 @@ output_affine = c.meta["outputs"]["affine"]
 print(output_affine["shift_x"], output_affine["shift_y"], output_affine["shift_z"])
 
 # Write output
-with open(fn_reg) as file:
+with open(fn_reg, "w") as file:
     file.write(json.dumps(c.meta["outputs"]))
