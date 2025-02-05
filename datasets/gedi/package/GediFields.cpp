@@ -52,9 +52,10 @@ int GediFields::luaCreate (lua_State* L)
     try
     {
         const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, RequestFields::DEFAULT_KEY_SPACE);
-        const char* default_asset_name = LuaObject::getLuaString(L, 3, true, NULL);
+        const char* asset_name = LuaObject::getLuaString(L, 3, true, NULL);
+        const char* resource = LuaObject::getLuaString(L, 4, true, NULL);
 
-        gedi_fields = new GediFields(L, key_space, default_asset_name);
+        gedi_fields = new GediFields(L, key_space, asset_name, resource);
         gedi_fields->fromLua(L, 1);
 
         return createLuaObject(L, gedi_fields);
@@ -70,8 +71,8 @@ int GediFields::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GediFields::GediFields(lua_State* L , uint64_t key_space, const char* default_asset_name):
-    RequestFields (L, key_space, default_asset_name,
+GediFields::GediFields(lua_State* L , uint64_t key_space, const char* asset_name, const char* resource):
+    RequestFields (L, key_space, asset_name, resource,
         { {"beams",             &beams},
           {"degrade_filter",    &degrade_filter},
           {"l2_quality_filter", &l2_quality_filter},

@@ -360,9 +360,9 @@ class Icesat2Fields: public RequestFields
         FieldList<string>                                   atl06Fields;                                            // list of ATL06 fields to associate with an ATL06 subsetting request
         FieldList<string>                                   atl08Fields;                                            // list of ATL08 fields to associate with an extent
         FieldList<string>                                   atl13Fields;                                            // list of ATL13 fields to associate with an extent
-        FieldElement<int>                                   year;                                                   // ATL03 granule observation date - year
-        FieldElement<int>                                   month;                                                  // ATL03 granule observation date - month
-        FieldElement<int>                                   day;                                                    // ATL03 granule observation date - day
+        FieldElement<int>                                   year {-1};                                              // ATL03 granule observation date - year
+        FieldElement<int>                                   month {-1};                                             // ATL03 granule observation date - month
+        FieldElement<int>                                   day {-1};                                               // ATL03 granule observation date - day
         FieldElement<int>                                   rgt {-1};                                               // ATL03 granule reference ground track
         FieldElement<int>                                   cycle {-1};                                             // ATL03 granule cycle
         FieldElement<int>                                   region {-1};                                            // ATL03 granule region
@@ -376,7 +376,7 @@ class Icesat2Fields: public RequestFields
          * Methods
          *--------------------------------------------------------------------*/
 
-                Icesat2Fields   (lua_State* L, uint64_t key_space, const char* asset_name, const std::initializer_list<FieldDictionary::entry_t>& init_list);
+                Icesat2Fields   (lua_State* L, uint64_t key_space, const char* asset_name, const char* resource, const std::initializer_list<FieldDictionary::entry_t>& init_list);
         virtual ~Icesat2Fields  (void) override = default;
 
         void parseResource (void);

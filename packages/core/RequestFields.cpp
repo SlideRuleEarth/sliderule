@@ -45,7 +45,7 @@ const char* RequestFields::LUA_META_NAME = "RequestFields";
 const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {"export",      luaExport},
     {"encode",      luaEncode},
-    {"poly",        luaProjectedPolygonIncludes},
+    {"polygon",     luaProjectedPolygonIncludes},
     {"mask",        luaRegionMaskIncludes},
     {"__index",     luaGetField},
     {"__newindex",  luaSetField},
@@ -69,7 +69,7 @@ int RequestFields::luaCreate (lua_State* L)
     RequestFields* request_fields = NULL;
     try
     {
-        request_fields = new RequestFields(L, 0, NULL, {});
+        request_fields = new RequestFields(L, 0, NULL, NULL, {});
         request_fields->fromLua(L, 1);
         return createLuaObject(L, request_fields);
     }
@@ -393,8 +393,6 @@ void RequestFields::fromLua (lua_State* L, int index)
 {
     FieldDictionary::fromLua(L, index);
 
-    // set new asset
-
     // set timeouts (if necessary)
     if(timeout == INVALID_TIMEOUT)      timeout = DEFAULT_TIMEOUT;
     if(rqstTimeout == INVALID_TIMEOUT)  rqstTimeout = timeout;
@@ -430,7 +428,7 @@ void RequestFields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* default_asset_name, const std::initializer_list<entry_t>& init_list):
+RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<entry_t>& init_list):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     FieldDictionary ({
         {"asset",               &asset},
@@ -458,10 +456,16 @@ RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* defau
         // deprecated
         {"raster",              &regionMask},
     }),
-    asset(default_asset_name)
+    asset(asset_name)
 {
     // set key space
     keySpace = key_space;
+
+    // set resource
+    if(_resource)
+    {
+        resource = _resource;
+    }
 
     // add additional fields to dictionary
     for(const entry_t elem: init_list)

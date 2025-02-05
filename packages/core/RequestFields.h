@@ -107,7 +107,7 @@ class RequestFields: public LuaObject, public FieldDictionary
 
         virtual void fromLua (lua_State* L, int index) override;
 
-        RequestFields (lua_State* L, uint64_t key_space, const char* default_asset_name, const std::initializer_list<entry_t>& init_list);
+        RequestFields (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<entry_t>& init_list);
         virtual ~RequestFields  (void) override;
 
         /*--------------------------------------------------------------------

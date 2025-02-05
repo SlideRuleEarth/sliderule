@@ -68,7 +68,7 @@ int SwotFields::luaCreate (lua_State* L)
  * Constructor
  *----------------------------------------------------------------------------*/
 SwotFields::SwotFields(lua_State* L, uint64_t key_space):
-    RequestFields(L, key_space, NULL,
+    RequestFields(L, key_space, NULL, NULL,
     {
         {"variables",   &variables}
     })

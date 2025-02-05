@@ -70,8 +70,8 @@ ptable = parms:export()
 runner.check(math.abs(ptable["poly"][1]["lon"] - grandmesa[1]["lon"]) < 0.001)
 runner.check(math.abs(ptable["poly"][1]["lat"] - grandmesa[1]["lat"]) < 0.001)
 
-runner.check(parms:poly(-108.0, 39.0))
-runner.check(not parms:poly(-110, 40.0))
+runner.check(parms:polygon(-108.0, 39.0))
+runner.check(not parms:polygon(-110, 40.0))
 
 -- (5) Region Mask
 

@@ -82,7 +82,7 @@ void CreFields::fromLua (lua_State* L, int index)
  * Constructor
  *----------------------------------------------------------------------------*/
 CreFields::CreFields (lua_State* L):
-    RequestFields(L, 0, NULL, {
+    RequestFields(L, 0, NULL, NULL, {
         {"container_image",   &container_image},
         {"container_name",    &container_name},
         {"container_command", &container_command}

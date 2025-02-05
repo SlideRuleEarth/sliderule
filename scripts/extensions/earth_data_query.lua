@@ -4,6 +4,7 @@
 --  NOTES:  The code below uses libcurl to issue http requests
 
 local json = require("json")
+local prettyprint = require("prettyprint")
 
 --
 -- Constants

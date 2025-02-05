@@ -3,11 +3,13 @@
 --
 local json          = require("json")
 local dataframe     = require("dataframe")
+local prettyprint   = require("prettyprint")
 local rqst          = json.decode(arg[1])
-local parms         = icesat2.parms(rqst["parms"], rqst["key_space"])
+local parms         = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
 local userlog       = msg.publish(rspq) -- create user log publisher (alerts)
 local start_time    = time.gps() -- used for timeout handling
 
+prettyprint.display(parms:export())
 -------------------------------------------------------
 -- proxy request
 -------------------------------------------------------

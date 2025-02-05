@@ -17,6 +17,7 @@ local RC_EARTHDATA_FAILURE = -1
 local RC_PROXY_FAILURE = -2
 local RC_ARROW_FAILURE = -3
 local RC_PARQUET_FAILURE = -4
+local RC_NO_RESOURCES = -5
 
 --
 -- Function: proxy
@@ -32,13 +33,13 @@ local function proxy(endpoint, parms, rspq, userlog)
         return RC_EARTHDATA_FAILURE
     end
 
-    -- Check for Pass Through
+    -- Check Parameters
     if #parms["resource"] > 0 then
         return RC_PASS_THROUGH
+    elseif #resources <= 0 then
+        return RC_NO_RESOURCES
     end
 
-print("HERE 3")
-prettyprint.display(resources)
     -- Initialize Variables
     local proxyq_name = "proxy."..rspq
     local rqst_json = parms:encode()
@@ -51,7 +52,7 @@ prettyprint.display(resources)
     df:receive(proxyq_name, rspq, #resources, parms["rqst_timeout"])
 
     -- Proxy Request --
-    local endpoint_proxy = core.proxy(endpoint, resources, rqst_json, node_timeout, locks_per_node, proxyq_name, true, cluster_size_hint)
+    local endpoint_proxy = core.proxy(endpoint, resources, rqst_json, node_timeout, locks_per_node, proxyq_name, true, cluster_size_hint, 1)
 
     -- Receive DataFrame (blocks until dataframe complete or timeout) --
     if not df:waiton(parms["rqst_timeout"] * 1000) then
