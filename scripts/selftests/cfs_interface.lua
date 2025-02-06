@@ -22,7 +22,7 @@ Test1: Invalid Telemetry
 TestTlm = "BOGUS_TELEMETRY_PACKET"
 flight_tlmsock:send(TestTlm)
 Val = ground_tlmq:recvstring(3000) -- 3 second timeout
-runner.check('Val == TestTlm')
+runner.assert('Val == TestTlm')
 print(string.format('TLM: |%s|', Val))
 
 --[[
@@ -34,7 +34,7 @@ Test2: Invalid Command
 TestCmd = "BOGUS_COMMAND_PACKET"
 ground_cmdq:sendstring(TestCmd)
 Val = flight_cmdsock:receive()
-runner.check('string.match(Val, TestCmd) == TestCmd')
+runner.assert('string.match(Val, TestCmd) == TestCmd')
 print(string.format('CMD: |%s|', Val))
 
 --[[
@@ -52,7 +52,7 @@ io.write("RAW_TLM: ")
 packet.printPacket(raw)
 flight_tlmsock:send(raw)
 Val = ground_tlmq:recvstring(3000) -- 3 second timeout
-runner.check(packet.comparePacket(raw, Val), "Failed to compare packets")
+runner.assert(packet.comparePacket(raw, Val), "Failed to compare packets")
 io.write("VAL_TLM: ")
 packet.printPacket(Val)
 
@@ -75,7 +75,7 @@ io.write("RAW_CMD: ")
 packet.printPacket(raw)
 ground_cmdq:sendrecord(TestCmd)
 Val = flight_cmdsock:receive()
-runner.check(packet.comparePacket(raw, Val), "Failed to compare packets")
+runner.assert(packet.comparePacket(raw, Val), "Failed to compare packets")
 io.write("VAL_CMD: ")
 packet.printPacket(Val)
 

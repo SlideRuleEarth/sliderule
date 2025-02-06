@@ -10,7 +10,7 @@ runner.command("ADD_FIELD test.rec counter INT32 4 1 NATIVE")
 local idmetric = streaming.metric("id", "dispatcher_metricq"):name("idmetric")
 idmetric:pbtext(true):pbname(true)
 
-local countermetric = streaming.metric("counter", "dispatcher_metricq"):name("countermetric") 
+local countermetric = streaming.metric("counter", "dispatcher_metricq"):name("countermetric")
 countermetric:pbtext(true):pbname(true)
 
 local r = streaming.dispatcher("dispatcher_inputq"):name("dispatcher")
@@ -50,8 +50,8 @@ end
 
 -- Compare Results --
 
-runner.check(expected_totals["id"] == actual_totals["test.rec.id"])
-runner.check(expected_totals["counter"] == actual_totals["test.rec.counter"])
+runner.assert(expected_totals["id"] == actual_totals["test.rec.id"])
+runner.assert(expected_totals["counter"] == actual_totals["test.rec.counter"])
 
 -- Clean Up --
 

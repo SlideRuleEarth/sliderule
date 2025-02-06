@@ -9,7 +9,7 @@ local client = streaming.http("127.0.0.1", 9081)
 -- Unit Test --
 
 local rsps, code, status = client:request("GET", "/source/health", "{}")
-runner.check(status == true, "request failed")
+runner.assert(status == true, "request failed")
 
 -- Clean Up --
 

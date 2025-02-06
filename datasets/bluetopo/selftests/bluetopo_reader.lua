@@ -23,13 +23,13 @@ local elevation_tolerance = 0.01;
 
 print(string.format("\n--------------------------------\nTest: BlueTopo Correct Values\n--------------------------------"))
 local dem = geo.raster(geo.parms({ asset = "bluetopo-bathy", algorithm = "NearestNeighbour", bands = {"Elevation", "Uncertainty", "Contributor"}, sort_by_index = true }))
-runner.check(dem ~= nil)
+runner.assert(dem ~= nil)
 
 for j, lon in ipairs(lons) do
     lat = lats[j]
     tbl, err = dem:sample(lon, lat, height)
-    runner.check(err == 0)
-    runner.check(tbl ~= nil)
+    runner.assert(err == 0)
+    runner.assert(tbl ~= nil)
 
     if err ~= 0 then
         print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read, err# %d",j, lon, lat, err))
@@ -42,11 +42,11 @@ for j, lon in ipairs(lons) do
             print(string.format("(%6.2f, %6.2f)  Band: %11s %8.2f  %s", lon, lat, band, value, fname))
 
             if band == "Elevation" then
-                runner.check(math.abs(value - expElevation[j]) < elevation_tolerance, string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))
+                runner.assert(math.abs(value - expElevation[j]) < elevation_tolerance, string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))
             elseif band == "Uncertainty" then
-                runner.check(math.abs(value - expUncertainty[j]) < elevation_tolerance, string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))
+                runner.assert(math.abs(value - expUncertainty[j]) < elevation_tolerance, string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))
             elseif band == "Contributor" then
-                runner.check(value == expContributor[j], string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))
+                runner.assert(value == expContributor[j], string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))
             end
         end
         print("\n")

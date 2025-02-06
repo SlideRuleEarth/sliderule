@@ -38,14 +38,14 @@ local f2 = icesat2.atl03s("atl03-reader-recq", icesat2.parms({resource="ATL03_20
 local extentrec = recq:recvrecord(15000)
 print("Time to execute: "..tostring(time.latch() - tstart))
 
-runner.check(extentrec, "Failed to read an extent record")
+runner.assert(extentrec, "Failed to read an extent record")
 
 if extentrec then
-    runner.check(extentrec:getvalue("track") == 1, extentrec:getvalue("track"))
-    runner.check(extentrec:getvalue("segment_id") == 555765, extentrec:getvalue("segment_id"))
+    runner.assert(extentrec:getvalue("track") == 1, extentrec:getvalue("track"))
+    runner.assert(extentrec:getvalue("segment_id") == 555765, extentrec:getvalue("segment_id"))
 
     local t2 = extentrec:tabulate()
-    runner.check(t2.segment_id == extentrec:getvalue("segment_id"))
+    runner.assert(t2.segment_id == extentrec:getvalue("segment_id"))
 end
 
 print('\n------------------\nTest03: Atl03 Reader Extent Definition\n------------------')

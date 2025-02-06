@@ -17,13 +17,13 @@ print('---------- Defaults ----------')
 local parms = core.parms()
 local ptable = parms:export()
 
-runner.check(ptable["rqst_timeout"] == core.RQST_TIMEOUT)
-runner.check(ptable["node_timeout"] == core.NODE_TIMEOUT)
-runner.check(ptable["read_timeout"] == core.READ_TIMEOUT)
-runner.check(ptable["cluster_size_hint"] == 0)
-runner.check(ptable["points_in_polygon"] == 0)
-runner.check(ptable["region_mask"]["rows"] == 0)
-runner.check(ptable["region_mask"]["cols"] == 0)
+runner.assert(ptable["rqst_timeout"] == core.RQST_TIMEOUT)
+runner.assert(ptable["node_timeout"] == core.NODE_TIMEOUT)
+runner.assert(ptable["read_timeout"] == core.READ_TIMEOUT)
+runner.assert(ptable["cluster_size_hint"] == 0)
+runner.assert(ptable["points_in_polygon"] == 0)
+runner.assert(ptable["region_mask"]["rows"] == 0)
+runner.assert(ptable["region_mask"]["cols"] == 0)
 
 prettyprint.display(ptable)
 
@@ -34,16 +34,16 @@ print('---------- Timeouts ----------')
 parms = core.parms({timeout=400})
 ptable = parms:export()
 
-runner.check(ptable["rqst_timeout"] == 400)
-runner.check(ptable["node_timeout"] == 400)
-runner.check(ptable["read_timeout"] == 400)
+runner.assert(ptable["rqst_timeout"] == 400)
+runner.assert(ptable["node_timeout"] == 400)
+runner.assert(ptable["read_timeout"] == 400)
 
 parms = core.parms({rqst_timeout=400})
 ptable = parms:export()
 
-runner.check(ptable["rqst_timeout"] == 400)
-runner.check(ptable["node_timeout"] == core.NODE_TIMEOUT)
-runner.check(ptable["read_timeout"] == core.READ_TIMEOUT)
+runner.assert(ptable["rqst_timeout"] == 400)
+runner.assert(ptable["node_timeout"] == core.NODE_TIMEOUT)
+runner.assert(ptable["read_timeout"] == core.READ_TIMEOUT)
 
 -- (3) Cluster Size Hint
 
@@ -52,7 +52,7 @@ print('---------- Cluster Size Hint ----------')
 parms = core.parms({cluster_size_hint=9})
 ptable = parms:export()
 
-runner.check(ptable["cluster_size_hint"] == 9)
+runner.assert(ptable["cluster_size_hint"] == 9)
 
 -- (4) Projected Polygon
 
@@ -67,11 +67,11 @@ local grandmesa = { {lon=-108.3435200747503, lat=38.89102961045247},
 parms = core.parms({poly=grandmesa})
 ptable = parms:export()
 
-runner.check(math.abs(ptable["poly"][1]["lon"] - grandmesa[1]["lon"]) < 0.001)
-runner.check(math.abs(ptable["poly"][1]["lat"] - grandmesa[1]["lat"]) < 0.001)
+runner.assert(math.abs(ptable["poly"][1]["lon"] - grandmesa[1]["lon"]) < 0.001)
+runner.assert(math.abs(ptable["poly"][1]["lat"] - grandmesa[1]["lat"]) < 0.001)
 
-runner.check(parms:polygon(-108.0, 39.0))
-runner.check(not parms:polygon(-110, 40.0))
+runner.assert(parms:polygon(-108.0, 39.0))
+runner.assert(not parms:polygon(-110, 40.0))
 
 -- (5) Region Mask
 
@@ -82,15 +82,15 @@ local dicksonfjord = '{"type":"FeatureCollection","features":[{"type":"Feature",
 parms = core.parms({region_mask={geojson=dicksonfjord, cellsize=0.001}})
 ptable = parms:export()
 
-runner.check(ptable["region_mask"]["rows"] == 335)
-runner.check(ptable["region_mask"]["cols"] == 1505)
-runner.check(math.abs(ptable["region_mask"]["lonmin"] - -27.678594995289) < 0.001)
-runner.check(math.abs(ptable["region_mask"]["latmin"] - 72.607067469947) < 0.001)
-runner.check(math.abs(ptable["region_mask"]["lonmax"] - -26.173594995289) < 0.001)
-runner.check(math.abs(ptable["region_mask"]["latmax"] - 72.942067469947) < 0.001)
+runner.assert(ptable["region_mask"]["rows"] == 335)
+runner.assert(ptable["region_mask"]["cols"] == 1505)
+runner.assert(math.abs(ptable["region_mask"]["lonmin"] - -27.678594995289) < 0.001)
+runner.assert(math.abs(ptable["region_mask"]["latmin"] - 72.607067469947) < 0.001)
+runner.assert(math.abs(ptable["region_mask"]["lonmax"] - -26.173594995289) < 0.001)
+runner.assert(math.abs(ptable["region_mask"]["latmax"] - 72.942067469947) < 0.001)
 
-runner.check(parms:mask(-27.0, 72.8))
-runner.check(not parms:mask(-26.0, 73.0))
+runner.assert(parms:mask(-27.0, 72.8))
+runner.assert(not parms:mask(-26.0, 73.0))
 
 prettyprint.display(ptable)
 

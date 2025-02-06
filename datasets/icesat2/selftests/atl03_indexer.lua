@@ -31,7 +31,7 @@ local filelist = { "ATL03_20181019065445_03150111_005_01.h5",
 
 -- get index filename
 local name, identity, driver, path, index_filename, region, endpoint, status = nsidc_s3:info()
-runner.check(status)
+runner.assert(status)
 
 -- setup index file writer
 local asset_index_file = streaming.file(streaming.WRITER, streaming.TEXT, index_filename)
@@ -52,7 +52,7 @@ local indexlist = {}
 print("--------------------------")
 for r=1,2 do
     local indexrec = indexrecq:recvrecord(3000)
-    runner.check(indexrec, "Failed to read an extent record")
+    runner.assert(indexrec, "Failed to read an extent record")
     if indexrec then
         local index = indexrec:tabulate()
         indexlist[r] = index
@@ -77,15 +77,15 @@ asset_index_file:close()
 local i = 1
 local raw_index = csv.open(index_filename)
 for _,line in ipairs(raw_index) do
-    runner.check(indexlist[i]["name"] == line["name"])
-    runner.check(runner.cmpfloat(indexlist[i]["t0"], line["t0"], 0.0001))
-    runner.check(runner.cmpfloat(indexlist[i]["t1"], line["t1"], 0.0001))
-    runner.check(runner.cmpfloat(indexlist[i]["lat0"], line["lat0"], 0.0001))
-    runner.check(runner.cmpfloat(indexlist[i]["lon0"], line["lon0"], 0.0001))
-    runner.check(runner.cmpfloat(indexlist[i]["lat1"], line["lat1"], 0.0001))
-    runner.check(runner.cmpfloat(indexlist[i]["lon1"], line["lon1"], 0.0001))
-    runner.check(runner.cmpfloat(indexlist[i]["cycle"], line["cycle"], 0.0001))
-    runner.check(runner.cmpfloat(indexlist[i]["rgt"], line["rgt"], 0.0001))
+    runner.assert(indexlist[i]["name"] == line["name"])
+    runner.assert(runner.cmpfloat(indexlist[i]["t0"], line["t0"], 0.0001))
+    runner.assert(runner.cmpfloat(indexlist[i]["t1"], line["t1"], 0.0001))
+    runner.assert(runner.cmpfloat(indexlist[i]["lat0"], line["lat0"], 0.0001))
+    runner.assert(runner.cmpfloat(indexlist[i]["lon0"], line["lon0"], 0.0001))
+    runner.assert(runner.cmpfloat(indexlist[i]["lat1"], line["lat1"], 0.0001))
+    runner.assert(runner.cmpfloat(indexlist[i]["lon1"], line["lon1"], 0.0001))
+    runner.assert(runner.cmpfloat(indexlist[i]["cycle"], line["cycle"], 0.0001))
+    runner.assert(runner.cmpfloat(indexlist[i]["rgt"], line["rgt"], 0.0001))
     i = i + 1
 end
 

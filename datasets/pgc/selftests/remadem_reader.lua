@@ -22,11 +22,11 @@ local demTypes = {"rema-mosaic", "rema-strips"}
 for i = 1, #demTypes do
     local demType = demTypes[i];
     local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, sort_by_index=true}))
-    runner.check(dem ~= nil)
+    runner.assert(dem ~= nil)
     print(string.format("\n--------------------------------\nTest: %s sample\n--------------------------------", demType))
     local tbl, err = dem:sample(lon, lat, height)
-    runner.check(err == 0)
-    runner.check(tbl ~= nil)
+    runner.assert(err == 0)
+    runner.assert(tbl ~= nil)
 
     local sampleCnt = 0
     for i, v in ipairs(tbl) do
@@ -49,21 +49,21 @@ for i = 1, #demTypes do
     print(string.format("cellsize: %d", cellsize))
 
     if demType == "rema-mosaic" then
-        runner.check(rows == 2921100)
-        runner.check(cols == 2725100)
-        runner.check(lon_min == -2700100.0)
-        runner.check(lat_min == -2500100.0)
-        runner.check(lon_max ==  2750100.0)
-        runner.check(lat_max ==  3342100.0)
-        runner.check(cellsize == 2.0)
+        runner.assert(rows == 2921100)
+        runner.assert(cols == 2725100)
+        runner.assert(lon_min == -2700100.0)
+        runner.assert(lat_min == -2500100.0)
+        runner.assert(lon_max ==  2750100.0)
+        runner.assert(lat_max ==  3342100.0)
+        runner.assert(cellsize == 2.0)
     else
-        runner.check(rows == 512)
-        runner.check(cols == 512)
-        runner.check(math.abs(lon_min - -80.469941394992) < sigma)
-        runner.check(math.abs(lat_min - -80.037772220485) < sigma)
-        runner.check(math.abs(lon_max - -78.624522758183) < sigma)
-        runner.check(math.abs(lat_max - -78.917647972358) < sigma)
-        runner.check(cellsize == 0.0)
+        runner.assert(rows == 512)
+        runner.assert(cols == 512)
+        runner.assert(math.abs(lon_min - -80.469941394992) < sigma)
+        runner.assert(math.abs(lat_min - -80.037772220485) < sigma)
+        runner.assert(math.abs(lon_max - -78.624522758183) < sigma)
+        runner.assert(math.abs(lat_max - -78.917647972358) < sigma)
+        runner.assert(cellsize == 0.0)
     end
 end
 
@@ -106,9 +106,9 @@ for i = 1, #demTypes do
                     -- print(string.format("(%02d) value: %16.7f  exp: %16.7f", k, el, expected_value))
                     expected_max = expected_value + 0.0000001
                     expected_min = expected_value - 0.0000001
-                    runner.check(el <= expected_max and el >= expected_min)
+                    runner.assert(el <= expected_max and el >= expected_min)
                 else
-                    runner.check(el > 300)  --All others
+                    runner.assert(el > 300)  --All others
                 end
             end
         end
@@ -120,7 +120,7 @@ for i = 1, #demTypes do
             print("\n")
         end
         -- print(string.format("(%02d) value: %d  exp: %d", i, sampleCnt, expectedSamplesCnt))
-        runner.check(sampleCnt == expectedSamplesCnt)
+        runner.assert(sampleCnt == expectedSamplesCnt)
     end
 end
 
@@ -160,9 +160,9 @@ for i = 1, #demTypes do
                     else
                         expElevation = expResultsStrips[j]
                     end
-                    runner.check(math.abs(el - expElevation) < sigma)
+                    runner.assert(math.abs(el - expElevation) < sigma)
                 else
-                    runner.check(el > 1340)  --All others must at least be 1340
+                    runner.assert(el > 1340)  --All others must at least be 1340
                 end
             end
         end
@@ -174,7 +174,7 @@ for i = 1, #demTypes do
             print("\n")
         end
         -- print(string.format("(%02d) value: %d  exp: %d", i, sampleCnt, expectedSamplesCnt))
-        runner.check(sampleCnt == expectedSamplesCnt)
+        runner.assert(sampleCnt == expectedSamplesCnt)
     end
 end
 

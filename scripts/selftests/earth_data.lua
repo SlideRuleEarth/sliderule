@@ -25,10 +25,10 @@ local parms = {
     }
 }
 local rc, rsps = earthdata.cmr(parms)
-runner.check(rc == earthdata.SUCCESS, string.format("failed cmr request: %d", rc))
+runner.assert(rc == earthdata.SUCCESS, string.format("failed cmr request: %d", rc))
 if rc == earthdata.SUCCESS then
-    runner.check(#rsps >= 5)
-    runner.check(type(rsps) == "table")
+    runner.assert(#rsps >= 5)
+    runner.assert(type(rsps) == "table")
     if type(rsps) == "table" then
         local found = false
         for _,resource in ipairs(rsps) do
@@ -36,7 +36,7 @@ if rc == earthdata.SUCCESS then
                 found = true
             end
         end
-        runner.check(found, "unable to find resource")
+        runner.assert(found, "unable to find resource")
     end
 end
 
@@ -56,11 +56,11 @@ local parms = {
     }
 }
 local rc, rsps = earthdata.stac(parms)
-runner.check(rc == earthdata.SUCCESS, string.format("failed stac request: %d", rc))
+runner.assert(rc == earthdata.SUCCESS, string.format("failed stac request: %d", rc))
 if rc == earthdata.SUCCESS then
-    runner.check(rsps["context"]["returned"] >= 10)
-    runner.check(rsps["context"]["returned"] == #rsps["features"])
-    runner.check(rsps["features"][1]["properties"]["B11"] ~= nil)
+    runner.assert(rsps["context"]["returned"] >= 10)
+    runner.assert(rsps["context"]["returned"] == #rsps["features"])
+    runner.assert(rsps["features"][1]["properties"]["B11"] ~= nil)
 end
 
 --[[
@@ -77,10 +77,10 @@ local parms = {
     }
 }
 local rc, rsps = earthdata.tnm(parms)
-runner.check(rc == earthdata.SUCCESS, string.format("failed tnm request: %d", rc))
+runner.assert(rc == earthdata.SUCCESS, string.format("failed tnm request: %d", rc))
 if rc == earthdata.SUCCESS then
-    runner.check(#rsps["features"] >= 56, string.format("failed to return enough results: %d", #rsps["features"]))
-    runner.check(#rsps["features"][1]["geometry"]["coordinates"][1] == 5, string.format("failed to return enough coordinates for each feature: %d", #rsps["features"][1]["geometry"]["coordinates"][1]))
+    runner.assert(#rsps["features"] >= 56, string.format("failed to return enough results: %d", #rsps["features"]))
+    runner.assert(#rsps["features"][1]["geometry"]["coordinates"][1] == 5, string.format("failed to return enough coordinates for each feature: %d", #rsps["features"][1]["geometry"]["coordinates"][1]))
 end
 
 -- Clean Up --

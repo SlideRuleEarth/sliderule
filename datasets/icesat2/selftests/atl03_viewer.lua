@@ -29,16 +29,16 @@ local f1 = icesat2.atl03v("atl03-reader-recq", icesat2.parms({resource="ATL03_20
 local extentrec = recq:recvrecord(15000)
 print("Time to execute: "..tostring(time.latch() - tstart))
 
-runner.check(extentrec, "Failed to read an extent record")
+runner.assert(extentrec, "Failed to read an extent record")
 
 
 if extentrec then
-    runner.check(extentrec:getvalue("track") == 1, extentrec:getvalue("track"))
-    runner.check(extentrec:getvalue("segments[0].segment_id") == 555764, extentrec:getvalue("segments[0].segment_id"))
+    runner.assert(extentrec:getvalue("track") == 1, extentrec:getvalue("track"))
+    runner.assert(extentrec:getvalue("segments[0].segment_id") == 555764, extentrec:getvalue("segments[0].segment_id"))
 
     -- NOTE: there is a bug in LuaLibraryMsg.cpp::getvalue() that does not handle array indices
     --       regardless of the index value, it always returns the first element in the array
-    -- runner.check(extentrec:getvalue("segments[256].segment_id") == 556019, extentrec:getvalue("segments[256].segment_id"))
+    -- runner.assert(extentrec:getvalue("segments[256].segment_id") == 556019, extentrec:getvalue("segments[256].segment_id"))
     print("segment   0", extentrec:getvalue("segments[0].segment_id"))
     print("segment  10", extentrec:getvalue("segments[10].segment_id"))
     print("segment 100", extentrec:getvalue("segments[100].segment_id"))

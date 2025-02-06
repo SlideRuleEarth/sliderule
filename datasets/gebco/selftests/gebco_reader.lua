@@ -26,13 +26,13 @@ local depth_tolerance = 1;
 
 print(string.format("\n--------------------------------\nTest: GEBCO Correct Values default with no band specified\n--------------------------------"))
 local dem = geo.raster(geo.parms({ asset = "gebco-bathy", algorithm = "NearestNeighbour", with_flags=true, sort_by_index = true }))
-runner.check(dem ~= nil)
+runner.assert(dem ~= nil)
 
 for j, lon in ipairs(lons) do
     lat = lats[j]
     tbl, err = dem:sample(lon, lat, height)
-    runner.check(err == 0)
-    runner.check(tbl ~= nil)
+    runner.assert(err == 0)
+    runner.assert(tbl ~= nil)
 
     if err ~= 0 then
         print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read, err# %d",j, lon, lat, err))
@@ -52,13 +52,13 @@ end
 
 print(string.format("\n--------------------------------\nTest: GEBCO Correct Values band=2024\n--------------------------------"))
 dem = geo.raster(geo.parms({ asset = "gebco-bathy", bands = {"2024"}, algorithm = "NearestNeighbour", with_flags=true, sort_by_index = true }))
-runner.check(dem ~= nil)
+runner.assert(dem ~= nil)
 
 for j, lon in ipairs(lons) do
     lat = lats[j]
     tbl, err = dem:sample(lon, lat, height)
-    runner.check(err == 0)
-    runner.check(tbl ~= nil)
+    runner.assert(err == 0)
+    runner.assert(tbl ~= nil)
 
     if err ~= 0 then
         print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read, err# %d",j, lon, lat, err))
@@ -82,13 +82,13 @@ expDepth = { -64,  -4933, -4072}
 
 print(string.format("\n--------------------------------\nTest: GEBCO Correct Values band=2023\n--------------------------------"))
 dem = geo.raster(geo.parms({ asset = "gebco-bathy", bands = {"2023"}, algorithm = "NearestNeighbour", with_flags=true, sort_by_index = true }))
-runner.check(dem ~= nil)
+runner.assert(dem ~= nil)
 
 for j, lon in ipairs(lons) do
     lat = lats[j]
     tbl, err = dem:sample(lon, lat, height)
-    runner.check(err == 0)
-    runner.check(tbl ~= nil)
+    runner.assert(err == 0)
+    runner.assert(tbl ~= nil)
 
     if err ~= 0 then
         print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read, err# %d",j, lon, lat, err))

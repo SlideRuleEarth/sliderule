@@ -20,7 +20,7 @@ end
 
 local geojsonfile = td.."../data/hls_trimmed.geojson"
 local f = io.open(geojsonfile, "r")
-runner.check(f, "failed to open geojson file")
+runner.assert(f, "failed to open geojson file")
 if not f then return end
 local contents = f:read("*all")
 f:close()
@@ -63,12 +63,12 @@ else
         print(string.format("(%02d) value %16.12f, time %.2f, fname: %s", i, value, _time, fname))
         sampleCnt = sampleCnt + 1
 
-        runner.check(math.abs(value - expResults[i][1]) < sigma)
-        runner.check(_time == expResults[i][2])
-        runner.check(fname == expResults[i][3])
+        runner.assert(math.abs(value - expResults[i][1]) < sigma)
+        runner.assert(_time == expResults[i][2])
+        runner.assert(fname == expResults[i][3])
     end
 end
-runner.check(sampleCnt == #expResults)
+runner.assert(sampleCnt == #expResults)
 dem=nil
 
 expResults = {{ 0.065173116090, 1293577339.0, 'HLS.S30.T01UCS.2021001T225941.v2.0 {"algo": "NDSI"}'},
@@ -117,13 +117,13 @@ else
 
         sampleCnt = sampleCnt + 1
         print(string.format("(%02d) value %16.12f, time %.2f, fname: %s", i, value, _time, fname))
-        runner.check(math.abs(value - expResults[i][1]) < sigma)
-        runner.check(_time == expResults[i][2])
-        runner.check(fname == expResults[i][3])
+        runner.assert(math.abs(value - expResults[i][1]) < sigma)
+        runner.assert(_time == expResults[i][2])
+        runner.assert(fname == expResults[i][3])
 
     end
 end
-runner.check(sampleCnt == #expResults)
+runner.assert(sampleCnt == #expResults)
 dem=nil
 
 
@@ -150,12 +150,12 @@ else
 
         sampleCnt = sampleCnt + 1
         print(string.format("(%02d) value %16.12f, time %.2f, fname: %s", i, value, _time, fname))
-        runner.check(math.abs(value - expResults[i][1]) < sigma)
-        runner.check(_time == expResults[i][2])
-        runner.check(fname == expResults[i][3])
+        runner.assert(math.abs(value - expResults[i][1]) < sigma)
+        runner.assert(_time == expResults[i][2])
+        runner.assert(fname == expResults[i][3])
     end
 end
-runner.check(sampleCnt == #expResults)
+runner.assert(sampleCnt == #expResults)
 dem=nil
 
 
@@ -165,10 +165,10 @@ local expectedGroup = "T01UCS.2021026T225819.v2.0"
 
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter: closest_time=%s\n--------------------------------", demType, tstr))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true,  closest_time=tstr, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents, sort_by_index = true }))
-runner.check(dem ~= nil)
+runner.assert(dem ~= nil)
 tbl, err = dem:sample(lon, lat, height)
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 
 sampleCnt = 0
 local value, fname
@@ -176,10 +176,10 @@ for i, v in ipairs(tbl) do
     fname = v["file"]
     value = v["value"]
     print(string.format("(%02d) value %16.12f, fname: %s", i, value, fname))
-    runner.check( string.find(fname, expectedGroup))
+    runner.assert( string.find(fname, expectedGroup))
     sampleCnt = sampleCnt + 1
 end
-runner.check(sampleCnt == 3)  -- 3 groups with closest time
+runner.assert(sampleCnt == 3)  -- 3 groups with closest time
 dem = nil
 
 
@@ -189,10 +189,10 @@ local expectedGroup = "T01UCS.2021001T225941.v2.0"
 
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter Override:  closest_time=%s\n--------------------------------", demType, tstrOverride, tstr))
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, with_flags=true, closest_time=tstr, bands = {"NDSI", "NDVI", "NDWI"}, catalog = contents, sort_by_index = true }))
-runner.check(dem ~= nil)
+runner.assert(dem ~= nil)
 tbl, err = dem:sample(lon, lat, height, tstrOverride)
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 
 sampleCnt = 0
 local value, fname
@@ -200,10 +200,10 @@ for i, v in ipairs(tbl) do
     fname = v["file"]
     value = v["value"]
     print(string.format("(%02d) value %16.12f, fname: %s", i, value, fname))
-    runner.check( string.find(fname, expectedGroup))
+    runner.assert( string.find(fname, expectedGroup))
     sampleCnt = sampleCnt + 1
 end
-runner.check(sampleCnt == 3)  -- 3 groups with closest time
+runner.assert(sampleCnt == 3)  -- 3 groups with closest time
 dem = nil
 
 
@@ -237,13 +237,13 @@ else
         sampleCnt = sampleCnt + 1
 
         print(string.format("(%02d) value %10.1f, time %10.1f, qmask 0x%x, %s", i, value, _time, flags, fname))
-        runner.check(math.abs(value - expResults[i][1]) < sigma)
-        runner.check(_time == expResults[i][2])
-        runner.check(flags == expResults[i][3])
-        runner.check(fname == expResults[i][4])
+        runner.assert(math.abs(value - expResults[i][1]) < sigma)
+        runner.assert(_time == expResults[i][2])
+        runner.assert(flags == expResults[i][3])
+        runner.assert(fname == expResults[i][4])
     end
 end
-runner.check(sampleCnt == #expResults)
+runner.assert(sampleCnt == #expResults)
 dem = nil
 
 
@@ -287,13 +287,13 @@ else
         sampleCnt = sampleCnt + 1
 
         print(string.format("(%02d) value %10.1f, time %10.1f, qmask 0x%x, %s", i, value, _time, flags, fname))
-        runner.check(math.abs(value - expResults[i][1]) < sigma)
-        runner.check(_time == expResults[i][2])
-        runner.check(flags == expResults[i][3])
-        runner.check(fname == expResults[i][4])
+        runner.assert(math.abs(value - expResults[i][1]) < sigma)
+        runner.assert(_time == expResults[i][2])
+        runner.assert(flags == expResults[i][3])
+        runner.assert(fname == expResults[i][4])
     end
 end
-runner.check(sampleCnt == #expResults)
+runner.assert(sampleCnt == #expResults)
 dem = nil
 
 
@@ -319,7 +319,7 @@ else
         -- print(string.format("(%02d) value %10.3f, fname: %s", j, value, fname))
     end
 end
-runner.check(sampleCnt == 180)
+runner.assert(sampleCnt == 180)
 print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, sampleCnt))
 
 
@@ -348,8 +348,8 @@ local starttime = time.latch();
 local tbl, err = dem:subset(llx, lly, urx, ury)
 local stoptime = time.latch();
 
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 
 local threadCnt = 0
 if tbl ~= nil then
@@ -359,7 +359,7 @@ if tbl ~= nil then
 end
 print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
 
-runner.check(threadCnt == 167)
+runner.assert(threadCnt == 167)
 
 if tbl ~= nil then
     for i, v in ipairs(tbl) do
@@ -370,7 +370,7 @@ if tbl ~= nil then
             print(string.format("AOI subset datasize: %.1f MB", mbytes))
         end
 
-        runner.check(size > 0)
+        runner.assert(size > 0)
     end
 end
 --]]
@@ -440,15 +440,15 @@ for i=1, maxSamples do
             fname = v["file"]
 
             local expectedNDVI = ndvi_results[i]
-            runner.check(math.abs(ndvi - expectedNDVI) < sigma)
-            runner.check(fname == expectedFile)
+            runner.assert(math.abs(ndvi - expectedNDVI) < sigma)
+            runner.assert(fname == expectedFile)
         end
     end
     sampleCnt = sampleCnt + 1
 end
 local stoptime = time.latch();
 print(string.format("POI sample %d points time: %.2f", sampleCnt, stoptime - starttime))
-runner.check(sampleCnt == maxSamples)
+runner.assert(sampleCnt == maxSamples)
 dem = nil
 
 

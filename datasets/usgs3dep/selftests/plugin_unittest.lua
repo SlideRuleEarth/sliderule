@@ -24,10 +24,10 @@ f:close()
 print(string.format("\n-------------------------------------------------\n3dep unit test\n-------------------------------------------------"))
 local demType = "usgs3dep-1meter-dem"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents, sort_by_index = true }))
-runner.check(dem ~= nil)
+runner.assert(dem ~= nil)
 
 ut = geo.ut_sample(dem)
-runner.check(ut ~= nil)
+runner.assert(ut ~= nil)
 -- This test ignores lon, lat, lon_incr, lat_incr, pointCount as they are not used.
 -- It opens a test file with points.
 local pointsFile = td.."../../landsat/data/grand_mesa_poi.txt"
@@ -35,7 +35,7 @@ print(string.format("Points file: %s", pointsFile))
 local pointsInFile = 26183   -- number of points in file
 local maxPointCount = 110
 status = ut:test(0, 0, 0, 0, maxPointCount, pointsFile);
-runner.check(status, "Failed sampling test")
+runner.assert(status, "Failed sampling test")
 ut = nil
 
 

@@ -17,7 +17,7 @@ if f ~= nil then
     vectorfile = f:read("*a")
     f:close()
 else
-    runner.check(false, "failed to open geojson file")
+    runner.assert(false, "failed to open geojson file")
 end
 
 local poifile = td.."../../plugins/landsat/data/grand_mesa_poi.txt"
@@ -43,7 +43,7 @@ end
 
 local cellsize = 0.01
 local robj = geo.geojson(vectorfile, cellsize)
-runner.check(robj ~= nil)
+runner.assert(robj ~= nil)
 
 
 print('\n------------------\nPerformance test\n------------------')
@@ -86,7 +86,7 @@ end
 local stoptime = time.latch();
 local dtime = stoptime - starttime
 
-runner.check(samplesCnt == maxLoopCnt * #arr)
+runner.assert(samplesCnt == maxLoopCnt * #arr)
 
 print(string.format("all samples %d, nans: %d, ones: %d, zeros: %d", samplesCnt, nansCnt, onesCnt, zerosCnt))
 print(string.format("duration: %.6f", dtime))

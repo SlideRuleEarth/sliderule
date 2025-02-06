@@ -48,8 +48,8 @@ local expResults = {{2638.032147717071, 1289671725.0, '/vsis3/prd-tnm/StagedProd
 local demType = "usgs3dep-1meter-dem"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents, sort_by_index = true }))
 local tbl, err = dem:sample(lon, lat, height)
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 
 local sampleCnt = 0
 for i, v in ipairs(tbl) do
@@ -60,12 +60,12 @@ for i, v in ipairs(tbl) do
     sampleCnt = sampleCnt + 1
 
     if tostring(el) ~= "nan" then
-        runner.check(math.abs(el - expResults[i][1]) < sigma)
+        runner.assert(math.abs(el - expResults[i][1]) < sigma)
     end
-    runner.check(time == expResults[i][2])
-    runner.check(fname == expResults[i][3])
+    runner.assert(time == expResults[i][2])
+    runner.assert(fname == expResults[i][3])
 end
-runner.check(sampleCnt == #expResults)
+runner.assert(sampleCnt == #expResults)
 
 
 print(string.format("\n-------------------------------------------------\nusgs3dep 1meter DEM subset\n-------------------------------------------------"))
@@ -80,15 +80,15 @@ local starttime = time.latch();
 local tbl, err = dem:subset(gm_llx, gm_lly, gm_llx+0.01, gm_lly+0.4)
 local stoptime = time.latch();
 
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 
 local threadCnt = 0
 for i, v in ipairs(tbl) do
     threadCnt = threadCnt + 1
 end
 print(string.format("subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-runner.check(threadCnt == 4)
+runner.assert(threadCnt == 4)
 
 for i, v in ipairs(tbl) do
     local size = v["size"]
@@ -99,7 +99,7 @@ for i, v in ipairs(tbl) do
         print(string.format("AOI subset datasize: %.1f MB", mbytes))
     end
 
-    runner.check(size > 0)
+    runner.assert(size > 0)
 end
 
 

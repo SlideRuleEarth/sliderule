@@ -21,7 +21,7 @@ local function check_query(act, exp)
                 found = true
             end
         end
-        runner.check(found, string.format('Failed to return resource %s', tostring(e)))
+        runner.assert(found, string.format('Failed to return resource %s', tostring(e)))
     end
 end
 
@@ -32,7 +32,7 @@ for _,v in pairs(assets) do
     local name, identity, driver, url, index_filename, region, endpoint, status = v:info()
     runner.compare(driver, expected[name]["driver"])
     runner.compare(url, expected[name]["url"])
-    runner.check(status)
+    runner.assert(status)
 end
 
 print('\n------------------\nTest02: Retrieve Existing Asset\n------------------\n')
@@ -80,9 +80,9 @@ local lon = 45.0
 while lat < 80.0 do
     local x, y = i7:project(lon, lat)
     local nlon, nlat = i7:sphere(x, y)
-    runner.check(runner.cmpfloat(math.abs(x), math.abs(y), 0.0000001))
-    runner.check(runner.cmpfloat(lat, nlat, 0.0000001))
-    runner.check(runner.cmpfloat(lon, nlon, 0.0000001))
+    runner.assert(runner.cmpfloat(math.abs(x), math.abs(y), 0.0000001))
+    runner.assert(runner.cmpfloat(lat, nlat, 0.0000001))
+    runner.assert(runner.cmpfloat(lon, nlon, 0.0000001))
     lat = lat + 10.0
 end
 
@@ -91,8 +91,8 @@ lon = -170.0
 while lon < 170.0 do
     local x, y = i7:project(lon, lat)
     local nlon, nlat = i7:sphere(x, y)
-    runner.check(runner.cmpfloat(lon, nlon, 0.0000001))
-    runner.check(runner.cmpfloat(lat, nlat, 0.0000001))
+    runner.assert(runner.cmpfloat(lon, nlon, 0.0000001))
+    runner.assert(runner.cmpfloat(lat, nlat, 0.0000001))
     lon = lon + 10.0
 end
 

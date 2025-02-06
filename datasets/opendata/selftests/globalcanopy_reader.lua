@@ -28,8 +28,8 @@ local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbou
 local starttime = time.latch();
 local tbl, err = dem:sample(lon, lat, height)
 local stoptime = time.latch();
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 print(string.format("sample time: %f", stoptime - starttime))
 
 local sampleCnt = 0
@@ -41,12 +41,12 @@ for i, v in ipairs(tbl) do
     sampleCnt = sampleCnt + 1
 
     if tostring(el) ~= "nan" then
-        runner.check(math.abs(el - expResults[i][1]) < sigma)
+        runner.assert(math.abs(el - expResults[i][1]) < sigma)
     end
-    runner.check(time == expResults[i][2])
-    runner.check(fname == expResults[i][3])
+    runner.assert(time == expResults[i][2])
+    runner.assert(fname == expResults[i][3])
 end
-runner.check(sampleCnt == #expResults, string.format("Received unexpected number of samples: %d instead of %d", sampleCnt, #expResults))
+runner.assert(sampleCnt == #expResults, string.format("Received unexpected number of samples: %d instead of %d", sampleCnt, #expResults))
 
 
 -- Report Results --

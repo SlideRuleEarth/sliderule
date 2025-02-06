@@ -34,16 +34,16 @@ local recdata = rspq:recvrecord(3000)
 local rectable = recdata:tabulate()
 pp.display(rectable)
 
-runner.check(rectable.data[1] == 4)
-runner.check(rectable.data[2] == 4)
-runner.check(rectable.data[3] == 4)
-runner.check(rectable.data[4] == 4)
-runner.check(rectable.data[5] == 4)
-runner.check(rectable.data[6] == 4)
-runner.check(rectable.data[7] == 4)
-runner.check(rectable.data[8] == 4)
-runner.check(rectable.data[9] == 4)
-runner.check(rectable.data[10] == 4)
+runner.assert(rectable.data[1] == 4)
+runner.assert(rectable.data[2] == 4)
+runner.assert(rectable.data[3] == 4)
+runner.assert(rectable.data[4] == 4)
+runner.assert(rectable.data[5] == 4)
+runner.assert(rectable.data[6] == 4)
+runner.assert(rectable.data[7] == 4)
+runner.assert(rectable.data[8] == 4)
+runner.assert(rectable.data[9] == 4)
+runner.assert(rectable.data[10] == 4)
 
 -- Unit Test 2 --
 
@@ -68,7 +68,7 @@ while all_good do
     local rectable = recdata:tabulate()
 
     for _,v in ipairs(rectable.data) do
-        runner.check(((v >= 0) and (v < 5)) or (v == 255))
+        runner.assert(((v >= 0) and (v < 5)) or (v == 255))
     end
 
     startrow = startrow + numrows

@@ -22,12 +22,12 @@ pointCount = 10
 
 print('\n------------------\nTest: RasterSampler::bluetopo-bathy\n------------------')
 local dem = geo.raster(geo.parms({ asset = "bluetopo-bathy", algorithm = "NearestNeighbour", bands = {"Elevation", "Uncertainty", "Contributor"}, sort_by_index = true }))
-runner.check(dem ~= nil)
+runner.assert(dem ~= nil)
 
 ut = geo.ut_sample(dem)
-runner.check(ut ~= nil)
+runner.assert(ut ~= nil)
 status = ut:test(lon, lat, lon_incr, lat_incr, pointCount)
-runner.check(status, "Failed sampling test")
+runner.assert(status, "Failed sampling test")
 ut = nil
 
 

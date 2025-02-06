@@ -17,7 +17,7 @@ for _,msg in ipairs(p) do
     end
 end
 
-runner.check(hello_found, "Failed to find \"Hello World\" message")
+runner.assert(hello_found, "Failed to find \"Hello World\" message")
 
 -- Clean Up --
 

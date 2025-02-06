@@ -27,9 +27,9 @@ end
 local function check_expected(exp, df, index, t)
     for key,value in pairs(exp) do
         if index then
-            runner.check(math.abs(df[key][index] - value) <= t, string.format("%s[%d] => %f", key, index, df[key][index]))
+            runner.assert(math.abs(df[key][index] - value) <= t, string.format("%s[%d] => %f", key, index, df[key][index]))
         else
-            runner.check(math.abs(df:meta(key) - value) <= t, string.format("%s => %f", key, df:meta(key)))
+            runner.assert(math.abs(df:meta(key) - value) <= t, string.format("%s => %f", key, df:meta(key)))
         end
     end
 end
@@ -46,11 +46,11 @@ runner.unittest("ATL03 DataFrame", function()
     local atl03h5 = h5.object(asset_name, parms["resource"])
     local atl03df = icesat2.atl03x("gt1l", parms, atl03h5, nil, core.EVENTQ)
 
-    runner.check(atl03df:waiton(30000), "timed out creating dataframe", true)
-    runner.check(atl03df:inerror() == false, "dataframe encountered error")
+    runner.assert(atl03df:waiton(30000), "timed out creating dataframe", true)
+    runner.assert(atl03df:inerror() == false, "dataframe encountered error")
 
-    runner.check(atl03df:numrows() == 5912939, string.format("incorrect number of rows: %d", atl03df:numrows()))
-    runner.check(atl03df:numcols() == 17, string.format("incorrect number of columns: %d", atl03df:numcols()))
+    runner.assert(atl03df:numrows() == 5912939, string.format("incorrect number of rows: %d", atl03df:numrows()))
+    runner.assert(atl03df:numcols() == 17, string.format("incorrect number of columns: %d", atl03df:numcols()))
 
     check_expected({
         time_ns = 1583304724130344448,
@@ -99,11 +99,11 @@ runner.unittest("ATL03 DataFrame - Ancillary Data", function()
     local atl08h5 = h5.object(asset_name, "ATL08_20200304065203_10470605_006_01.h5")
     local atl03df = icesat2.atl03x("gt2r", parms, atl03h5, atl08h5, core.EVENTQ)
 
-    runner.check(atl03df:waiton(180000), "timed out creating dataframe", true)
-    runner.check(atl03df:inerror() == false, "dataframe encountered error")
+    runner.assert(atl03df:waiton(180000), "timed out creating dataframe", true)
+    runner.assert(atl03df:inerror() == false, "dataframe encountered error")
 
-    runner.check(atl03df:numrows() == 19522774, string.format("incorrect number of rows: %d", atl03df:numrows()))
-    runner.check(atl03df:numcols() == 26, string.format("incorrect number of columns: %d", atl03df:numcols()))
+    runner.assert(atl03df:numrows() == 19522774, string.format("incorrect number of rows: %d", atl03df:numrows()))
+    runner.assert(atl03df:numcols() == 26, string.format("incorrect number of columns: %d", atl03df:numcols()))
 
     check_expected({
         time_ns = 1583304724455644416,

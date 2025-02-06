@@ -36,16 +36,16 @@ function getFileSize(filePath)
 end
 
 -- local dem1 = geo.raster(geo.parms({asset="arcticdem-mosaic", algorithm="NearestNeighbour", radius=30, zonal_stats=true}))
--- runner.check(dem1 ~= nil)
+-- runner.assert(dem1 ~= nil)
 
 local dem2 = geo.raster(geo.parms({asset="arcticdem-strips", algorithm="NearestNeighbour", radius=0, with_flags=true, use_poi_time=true}))
-runner.check(dem2 ~= nil)
+runner.assert(dem2 ~= nil)
 
 
 print('\n--------------------------------------\nTest01: input/output parquet (x, y)\n--------------------------------------')
 local starttime = time.latch();
 parquet_sampler = arrow.sampler(core.parms({output={path=out_parquet, format="parquet"}}), in_parquet, outq_name, {["strips"] = dem2})
-runner.check(parquet_sampler ~= nil)
+runner.assert(parquet_sampler ~= nil)
 status = parquet_sampler:waiton()
 local stoptime = time.latch();
 local dtime = stoptime - starttime
@@ -59,7 +59,7 @@ print("Input  parquet file size: "  .. in_file_size .. " bytes")
 status = parquet_sampler:waiton()
 out_file_size = getFileSize(_out_parquet);
 print("Output parquet file size: " .. out_file_size .. " bytes")
-runner.check(out_file_size > in_file_size, "Output file size is not greater than input file size: ")
+runner.assert(out_file_size > in_file_size, "Output file size is not greater than input file size: ")
 
 -- There is no easy way to read parquet file in Lua, check the size of the output files
 -- the files were tested with python scripts

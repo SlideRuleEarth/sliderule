@@ -20,13 +20,13 @@ runner.unittest("DataFrame Import and Export", function()
 
     for k,_ in pairs(table_in) do
         for i = 1,4 do
-            runner.check(table_in[k][i] == df[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, table_in[k][i], df[k][i]))
-            runner.check(table_in[k][i] == table_out[k][i], string.format("exported table mismatch on key %s, row %d: %d != %d", k, i, table_in[k][i], table_out[k][i]))
+            runner.assert(table_in[k][i] == df[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, table_in[k][i], df[k][i]))
+            runner.assert(table_in[k][i] == table_out[k][i], string.format("exported table mismatch on key %s, row %d: %d != %d", k, i, table_in[k][i], table_out[k][i]))
         end
     end
 
     for k,_ in pairs(meta_in) do
-        runner.check(meta_in[k] == meta_out[k], string.format("metadata mismatch on key %s: %f != %f", k, meta_in[k], meta_out[k]))
+        runner.assert(meta_in[k] == meta_out[k], string.format("metadata mismatch on key %s: %f != %f", k, meta_in[k], meta_out[k]))
     end
 
 end)
@@ -42,20 +42,20 @@ runner.unittest("DataFrame Send and Receive", function()
     local dfq = msg.publish("dfq")
 
     df_out:receive("dfq", "rspq") -- non-blocking
-    runner.check(df_in:send("dfq"), "failed to send dataframe", true)
+    runner.assert(df_in:send("dfq"), "failed to send dataframe", true)
     dfq:sendstring("") -- terminator
-    runner.check(df_out:waiton(10000), "failed to receive dataframe", true)
-    runner.check(df_out:inerror() == false, "dataframe encountered error")
+    runner.assert(df_out:waiton(10000), "failed to receive dataframe", true)
+    runner.assert(df_out:inerror() == false, "dataframe encountered error")
 
     for k,_ in pairs(table_in) do
         for i = 1,4 do
-            runner.check(table_in[k][i] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, table_in[k][i], df_out[k][i]))
+            runner.assert(table_in[k][i] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, table_in[k][i], df_out[k][i]))
         end
     end
 
     for k,_ in pairs(meta_in) do
         for i = 1,4 do
-            runner.check(meta_in[k] == df_out[k][i], string.format("metadata mismatch on key %s: %f != %f", k, meta_in[k], df_out[k][i]))
+            runner.assert(meta_in[k] == df_out[k][i], string.format("metadata mismatch on key %s: %f != %f", k, meta_in[k], df_out[k][i]))
         end
     end
 
@@ -75,29 +75,29 @@ runner.unittest("DataFrame Multiple Senders and Merged Receive", function()
     local dfq = msg.publish("dfq")
 
     df_out:receive("dfq", "rspq", 2) -- non-blocking
-    runner.check(df1_in:send("dfq", 0), "failed to send dataframe 1", true)
-    runner.check(df2_in:send("dfq", 1), "failed to send dataframe 2", true)
+    runner.assert(df1_in:send("dfq", 0), "failed to send dataframe 1", true)
+    runner.assert(df2_in:send("dfq", 1), "failed to send dataframe 2", true)
     dfq:sendstring("") -- terminator
-    runner.check(df_out:waiton(10000), "failed to receive dataframe", true)
-    runner.check(df_out:inerror() == false, "dataframe encountered error")
+    runner.assert(df_out:waiton(10000), "failed to receive dataframe", true)
+    runner.assert(df_out:inerror() == false, "dataframe encountered error")
 
     prettyprint.display(df_out:export())
 
     for k,_ in pairs(table1_in) do
         for i = 1,4 do
-            runner.check(table1_in[k][i] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, table1_in[k][i], df_out[k][i]))
+            runner.assert(table1_in[k][i] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, table1_in[k][i], df_out[k][i]))
         end
         for i = 5,8 do
-            runner.check(table2_in[k][i-4] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, table2_in[k][i-4], df_out[k][i]))
+            runner.assert(table2_in[k][i-4] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, table2_in[k][i-4], df_out[k][i]))
         end
     end
 
     for k,_ in pairs(meta1_in) do
         for i = 1,4 do
-            runner.check(meta1_in[k] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, meta1_in[k], df_out[k][i]))
+            runner.assert(meta1_in[k] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, meta1_in[k], df_out[k][i]))
         end
         for i = 5,8 do
-            runner.check(meta2_in[k] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, meta1_in[k], df_out[k][i]))
+            runner.assert(meta2_in[k] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, meta1_in[k], df_out[k][i]))
         end
     end
 

@@ -10,11 +10,11 @@ if not core.UNITTEST then return end
 -- Unit Test --
 
 local ut_ordering = core.ut_ordering()
-runner.check(ut_ordering:addremove())
-runner.check(ut_ordering:duplicates())
-runner.check(ut_ordering:sort())
-runner.check(ut_ordering:iterator())
-runner.check(ut_ordering:assignment())
+runner.assert(ut_ordering:addremove())
+runner.assert(ut_ordering:duplicates())
+runner.assert(ut_ordering:sort())
+runner.assert(ut_ordering:iterator())
+runner.assert(ut_ordering:assignment())
 
 -- Report Results --
 

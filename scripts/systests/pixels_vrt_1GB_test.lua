@@ -110,8 +110,8 @@ for i=1, loopcnt do
     starttime = time.latch();
     tbl, err = dem:pixels(ulx, uly, xsize, ysize)
     stoptime = time.latch();
-    runner.check(err == 0)
-    runner.check(tbl ~= nil)
+    runner.assert(err == 0)
+    runner.assert(tbl ~= nil)
 
     local threadCnt = 0
     for j, v in ipairs(tbl) do

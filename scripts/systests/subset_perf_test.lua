@@ -40,7 +40,7 @@ if tbl ~= nil then
     end
 end
 print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-runner.check(threadCnt == 0) --Error should happen, asking for too much memory or too many threads for strips
+runner.assert(threadCnt == 0) --Error should happen, asking for too much memory or too many threads for strips
 
 --Expecting 'mempool throw' for strips, let it print correctly
 sys.wait(1)
@@ -68,7 +68,7 @@ if tbl ~= nil then
     end
 end
 print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-runner.check(threadCnt == 0) --Error should happen, asking for too much memory or too many threads for strips
+runner.assert(threadCnt == 0) --Error should happen, asking for too much memory or too many threads for strips
 
 --Expecting 'mempool throw' for strips, let it print correctly
 sys.wait(1)
@@ -95,7 +95,7 @@ if tbl ~= nil then
     end
 end
 print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-runner.check(threadCnt == 0) --Error should happen, asking for too much memory
+runner.assert(threadCnt == 0) --Error should happen, asking for too much memory
 
 --Expecting 'throw' let it print correctly
 sys.wait(1)
@@ -118,8 +118,8 @@ for i = 1, #demTypes do
     stoptime = time.latch();
 
     -- For mosaics this is too much memory
-    runner.check(err == 0)
-    runner.check(tbl ~= nil)
+    runner.assert(err == 0)
+    runner.assert(tbl ~= nil)
 
     threadCnt = 0
     for i, v in ipairs(tbl) do
@@ -131,17 +131,17 @@ for i = 1, #demTypes do
     print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
 
     if demType == "rema-mosaic" then
-        runner.check(threadCnt == 1)
+        runner.assert(threadCnt == 1)
     else
-        runner.check(threadCnt == 10)
+        runner.assert(threadCnt == 10)
     end
 
     starttime = time.latch();
     tbl, err = dem:subset(llx, lly, urx, ury)
     stoptime = time.latch();
 
-    runner.check(err == 0)
-    runner.check(tbl ~= nil)
+    runner.assert(err == 0)
+    runner.assert(tbl ~= nil)
 
     threadCnt = 0
     if tbl ~= nil then
@@ -152,9 +152,9 @@ for i = 1, #demTypes do
     print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
 
     if demType == "rema-mosaic" then
-        runner.check(threadCnt == 1)
+        runner.assert(threadCnt == 1)
     else
-        runner.check(threadCnt == 20)
+        runner.assert(threadCnt == 20)
     end
 
 
@@ -165,7 +165,7 @@ for i = 1, #demTypes do
 
             -- This results in 20 threads, all the same size, cols, buffs data type. Print only first one
             print(string.format("AOI size: %6.1f MB", mbytes))
-            runner.check(size > 0)
+            runner.assert(size > 0)
         end
     end
 end
@@ -184,8 +184,8 @@ starttime = time.latch();
 local tbl, err = dem:sample(gm_llx, gm_lly, 0)
 stoptime = time.latch();
 
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 
 threadCnt = 0
 if tbl ~= nil then
@@ -194,7 +194,7 @@ if tbl ~= nil then
     end
 end
 print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-runner.check(threadCnt == 1)
+runner.assert(threadCnt == 1)
 
 
 starttime = time.latch();
@@ -202,15 +202,15 @@ starttime = time.latch();
 tbl, err = dem:subset(gm_llx, gm_lly, gm_llx+0.1, gm_lly+0.1)
 stoptime = time.latch();
 
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 
 threadCnt = 0
 for i, v in ipairs(tbl) do
     threadCnt = threadCnt + 1
 end
 print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-runner.check(threadCnt == 2)
+runner.assert(threadCnt == 2)
 
 if tbl ~= nil then
     for i, v in ipairs(tbl) do
@@ -218,7 +218,7 @@ if tbl ~= nil then
         local mbytes = size / (1024*1024)
 
         print(string.format("AOI size: %6.1f MB", mbytes))
-        runner.check(size > 0)
+        runner.assert(size > 0)
     end
 end
 
@@ -251,8 +251,8 @@ starttime = time.latch();
 tbl, err = dem:sample(-179, 51, 0)
 stoptime = time.latch();
 
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 
 threadCnt = 0
 if tbl ~= nil then
@@ -261,14 +261,14 @@ if tbl ~= nil then
     end
 end
 print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-runner.check(threadCnt == 9)
+runner.assert(threadCnt == 9)
 
 starttime = time.latch();
 tbl, err = dem:subset(llx, lly, urx, ury)
 stoptime = time.latch();
 
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 
 threadCnt = 0
 if tbl ~= nil then
@@ -277,20 +277,20 @@ if tbl ~= nil then
     end
 end
 print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-runner.check(threadCnt == 59)
+runner.assert(threadCnt == 59)
 
 if tbl ~= nil then
     for i, v in ipairs(tbl) do
         local size = v["size"]
         local mbytes = size / (1024*1024)
-        runner.check(size > 0)
+        runner.assert(size > 0)
 
         -- This results in 59 threads, all the same size, cols, buffs data type. Print only first one
         if i == 1 then
             print(string.format("AOI size: %6.1f MB", mbytes))
         end
 
-        runner.check(size > 0)
+        runner.assert(size > 0)
     end
 end
 
@@ -303,8 +303,8 @@ local height =    0.0
 local starttime = time.latch();
 local tbl, err = dem:sample(lon, lat, height)
 
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 
 local stoptime = time.latch();
 threadCnt = 0
@@ -317,28 +317,28 @@ else
     end
 end
 print(string.format("POI sample time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-runner.check(threadCnt == 1)
+runner.assert(threadCnt == 1)
 
 starttime = time.latch();
 tbl, err = dem:subset(gm_llx, gm_lly, gm_urx, gm_ury)
 stoptime = time.latch();
 
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 
 local threadCnt = 0
 for i, v in ipairs(tbl) do
     threadCnt = threadCnt + 1
 end
 print(string.format("AOI subset time: %.2f   (%d threads)", stoptime - starttime, threadCnt))
-runner.check(threadCnt == 1)
+runner.assert(threadCnt == 1)
 
 for i, v in ipairs(tbl) do
     local size = v["size"]
     local mbytes = size / (1024*1024)
 
     print(string.format("AOI size: %6.1f MB", mbytes))
-    runner.check(size > 0)
+    runner.assert(size > 0)
 end
 
 

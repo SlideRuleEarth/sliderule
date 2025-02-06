@@ -35,7 +35,7 @@ for i = 1, #demTypes do
 
     if err ~= 0 then
         print("FAILED to batchsample")
-        runner.check(false)
+        runner.assert(false)
     else
         for j, pointSamples in ipairs(tbl) do
             local lon, lat = lons[j], lats[j]
@@ -55,9 +55,9 @@ for i = 1, #demTypes do
                         else
                             expElevation = expResultsStrips[j]
                         end
-                        runner.check(math.abs(el - expElevation) < sigma)
+                        runner.assert(math.abs(el - expElevation) < sigma)
                     else
-                        runner.check(el > 10)  -- Check all other samples
+                        runner.assert(el > 10)  -- Check all other samples
                     end
                 end
             else
@@ -70,7 +70,7 @@ for i = 1, #demTypes do
             else
                 expectedSamplesCnt = expSamplesCnt[j]
             end
-            runner.check(sampleCnt == expectedSamplesCnt)
+            runner.assert(sampleCnt == expectedSamplesCnt)
         end
     end
 end

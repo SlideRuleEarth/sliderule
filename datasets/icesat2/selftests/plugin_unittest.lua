@@ -11,10 +11,10 @@ local atl06_dispatch = icesat2.ut_atl06()
 -- Unit Test --
 
 print('\n------------------\nTest01\n------------------')
-runner.check(atl06_dispatch:lsftest(), "Failed lsftest")
+runner.assert(atl06_dispatch:lsftest(), "Failed lsftest")
 
 print('\n------------------\nTest02\n------------------')
-runner.check(atl06_dispatch:sorttest(), "Failed sorttest")
+runner.assert(atl06_dispatch:sorttest(), "Failed sorttest")
 
 -- Clean Up --
 

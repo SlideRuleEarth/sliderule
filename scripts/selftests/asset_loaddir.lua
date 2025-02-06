@@ -16,9 +16,9 @@ local not_there = core.getbyname("not_there")
 local arcticdem_mosaic = core.getbyname("arcticdem-mosaic")
 nsidc_s3 = core.getbyname("icesat2")
 
-runner.check(nsidc_s3)
-runner.check(not_there == nil)
-runner.check(arcticdem_mosaic)
+runner.assert(nsidc_s3)
+runner.assert(not_there == nil)
+runner.assert(arcticdem_mosaic)
 
 local assets = asset.loaddir()
 
@@ -27,9 +27,9 @@ not_there = core.getbyname("not_there")
 arcticdem_mosaic = core.getbyname("arcticdem-mosaic")
 nsidc_s3 = core.getbyname("icesat2")
 
-runner.check(nsidc_s3)
-runner.check(not_there == nil)
-runner.check(arcticdem_mosaic)
+runner.assert(nsidc_s3)
+runner.assert(not_there == nil)
+runner.assert(arcticdem_mosaic)
 
 local assets = asset.loaddir()
 
@@ -38,9 +38,9 @@ not_there = core.getbyname("not_there")
 arcticdem_mosaic = core.getbyname("arcticdem-mosaic")
 nsidc_s3 = core.getbyname("icesat2")
 
-runner.check(nsidc_s3)
-runner.check(not_there == nil)
-runner.check(arcticdem_mosaic)
+runner.assert(nsidc_s3)
+runner.assert(not_there == nil)
+runner.assert(arcticdem_mosaic)
 
 -- Clean Up --
 

@@ -19,7 +19,7 @@ rsps = client:request("GET", "/source/version", "{}")
 local metrics = sys.metric("metrictest")
 local display = json.encode(metrics)
 
-runner.check(metrics["catchall.hits"] == 3.0, "did not catch all requests")
+runner.assert(metrics["catchall.hits"] == 3.0, "did not catch all requests")
 
 print(display)
 
@@ -33,8 +33,8 @@ rsps = client:request("GET", "/source/version", "{}")
 metrics = sys.metric("metrictest")
 display = json.encode(metrics)
 
-runner.check(metrics["catchall.hits"] == 3.0, "mischaracterized requests")
-runner.check(metrics["version.hits"] == 2.0, "did not associate requests")
+runner.assert(metrics["catchall.hits"] == 3.0, "mischaracterized requests")
+runner.assert(metrics["version.hits"] == 2.0, "did not associate requests")
 
 print(display)
 

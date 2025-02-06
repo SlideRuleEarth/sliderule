@@ -65,11 +65,11 @@ local function command (cmd_str)
 end
 
 --[[
-Function:   check
+Function:   assert
  Purpose:   run statement and check if it returns true in the context of the executive
    Notes:   status is boolean
 ]]
-local function check (expression, errmsg, raise_on_error)
+local function assert (expression, errmsg, raise_on_error)
     results[context]["asserts"] = results[context]["asserts"] + 1
     local status = true
     if type(expression) == "string" then
@@ -125,7 +125,7 @@ local function unittest (testname, testfunc, skip)
     if skip then return nil end
     print("Starting test: " .. testname)
     local status, result = pcall(testfunc)
-    check(status, testname)
+    assert(status, testname)
     return result
 end
 
@@ -216,7 +216,7 @@ local package = {
     rootdir = rootdir,
     srcscript = srcscript,
     command = command,
-    check = check,
+    assert = assert,
     script = script,
     unittest = unittest,
     compare = compare,

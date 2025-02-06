@@ -41,24 +41,24 @@ for i=1,20,1 do
         d_val         = limit:getvalue("D_VAL")
         field_name    = limit:getvalue("FIELD_NAME")
         record_name   = limit:getvalue("RECORD_NAME")
-        runner.check('filter_id == 1.0',          string.format('FILTER_ID is incorrect: %d', filter_id))
-        runner.check('limit_min == 1.0',          string.format('LIMIT_MIN is incorrect: %d', limit_min))
-        runner.check('limit_max == 1.0',          string.format('LIMIT_MAX is incorrect: %d', limit_max))
-        runner.check('id        == 50.0',         string.format('ID is incorrect: %f', id))
-        runner.check('d_min     == 11.0',         string.format('D_MIN is incorrect: %f', d_min))
-        runner.check('d_max     == 10000.0',      string.format('D_MAX is incorrect: %f', d_max))
-        runner.check('field_name == "counter"',   string.format('FIELD_NAME is incorrect: %s', field_name))
-        runner.check('record_name == "test.rec"', string.format('RECORD_NAME is incorrect: %s', record_name))
+        runner.assert('filter_id == 1.0',          string.format('FILTER_ID is incorrect: %d', filter_id))
+        runner.assert('limit_min == 1.0',          string.format('LIMIT_MIN is incorrect: %d', limit_min))
+        runner.assert('limit_max == 1.0',          string.format('LIMIT_MAX is incorrect: %d', limit_max))
+        runner.assert('id        == 50.0',         string.format('ID is incorrect: %f', id))
+        runner.assert('d_min     == 11.0',         string.format('D_MIN is incorrect: %f', d_min))
+        runner.assert('d_max     == 10000.0',      string.format('D_MAX is incorrect: %f', d_max))
+        runner.assert('field_name == "counter"',   string.format('FIELD_NAME is incorrect: %s', field_name))
+        runner.assert('record_name == "test.rec"', string.format('RECORD_NAME is incorrect: %s', record_name))
         valsum = valsum + d_val
     else
-        runner.check(false, "Timeout receiving limit")
+        runner.assert(false, "Timeout receiving limit")
         break
     end
 end
 
 -- Compare Results --
 
-runner.check(valsum == 100110, string.format('Failed to correctly report all limit violation values %d', valsum))
+runner.assert(valsum == 100110, string.format('Failed to correctly report all limit violation values %d', valsum))
 
 -- Clean Up --
 

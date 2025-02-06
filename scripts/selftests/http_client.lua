@@ -13,9 +13,9 @@ print('\n------------------\nTest01: Return\n------------------')
 
 local rsps, code, status = client:request("GET", "/source/version", "{}")
 local rsps_table = json.decode(rsps)
-runner.check(rsps_table["server"]["packages"][1] == "core")
-runner.check(code == 200)
-runner.check(status)
+runner.assert(rsps_table["server"]["packages"][1] == "core")
+runner.assert(code == 200)
+runner.assert(status)
 
 print('\n------------------\nTest02: Return\n------------------')
 
@@ -33,14 +33,14 @@ local json_object = '{ \
 rsps = client:request("GET", "/source/example_source_endpoint", json_object)
 print(rsps)
 rsps_table = json.decode(rsps)
-runner.check(rsps_table["result"] == "Hello World")
+runner.assert(rsps_table["result"] == "Hello World")
 
 print('\n------------------\nTest03: Return\n------------------')
 
 rsps = client:request("GET", "/source/health", "{}")
 print(rsps)
 rsps_table = json.decode(rsps)
-runner.check(rsps_table["healthy"] == true)
+runner.assert(rsps_table["healthy"] == true)
 
 -- Clean Up --
 

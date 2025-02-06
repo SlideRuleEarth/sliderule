@@ -34,17 +34,17 @@ local demType = "landsat-hls"
 local t0str = "2022:01:05:00:00:00"
 local t1str = "2022:01:15:00:00:00"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, t0=t0str, t1=t1str, bands = {"NDVI"}, catalog = contents, sort_by_index = true }))
-runner.check(dem ~= nil)
+runner.assert(dem ~= nil)
 
 local ut = geo.ut_sample(dem)
-runner.check(ut ~= nil)
+runner.assert(ut ~= nil)
 -- This test ignores lon, lat, lon_incr, lat_incr, pointCount as they are not used.
 -- It opens a test file with points.
 local pointsFile = td.."../data/grand_mesa_poi.txt"
 local pointsInFile = 26183  -- number of points in file
 local maxPointCount = 1000  -- number of points to sample, 1000 will trigger all threaded code
 status = ut:test(0, 0, 0, 0, maxPointCount, pointsFile);
-runner.check(status, "Failed sampling test")
+runner.assert(status, "Failed sampling test")
 
 -- Clean Up --
 

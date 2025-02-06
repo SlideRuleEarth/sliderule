@@ -20,12 +20,12 @@ end
 local inq = msg.publish("inq")
 local outq = msg.subscribe("outq")
 
-runner.check(inq ~= nil)
-runner.check(outq ~= nil)
+runner.assert(inq ~= nil)
+runner.assert(outq ~= nil)
 
-runner.check(inq:sendstring("HELLO WORLD 1"))
-runner.check(inq:sendstring("HELLO WORLD 2"))
-runner.check(inq:sendstring("HELLO WORLD 3"))
+runner.assert(inq:sendstring("HELLO WORLD 1"))
+runner.assert(inq:sendstring("HELLO WORLD 2"))
+runner.assert(inq:sendstring("HELLO WORLD 3"))
 
 message1 = outq:recvstring(5000)
 message2 = outq:recvstring(5000)

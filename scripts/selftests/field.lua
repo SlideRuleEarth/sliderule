@@ -11,12 +11,12 @@ sys.setlvl(core.LOG, core.INFO)
 -- Unit Test --
 
 local ut = core.ut_field()
-runner.check(ut:element())
-runner.check(ut:array())
-runner.check(ut:enumeration())
-runner.check(ut:list())
-runner.check(ut:column())
-runner.check(ut:dictionary())
+runner.assert(ut:element())
+runner.assert(ut:array())
+runner.assert(ut:enumeration())
+runner.assert(ut:list())
+runner.assert(ut:column())
+runner.assert(ut:dictionary())
 
 -- Report Results --
 

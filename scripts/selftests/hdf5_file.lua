@@ -13,10 +13,10 @@ local rsps1 = msg.subscribe("h5testq")
 f1:read({{dataset="DS1", col=2}}, "h5testq")
 local recdata = rsps1:recvrecord(3000)
 
-runner.check(-2 == string.unpack("i", string.char(recdata:getvalue("data[0]"), recdata:getvalue("data[1]"), recdata:getvalue("data[2]"), recdata:getvalue("data[3]"))), "failed to read hdf5 file")
-runner.check( 0 == string.unpack("i", string.char(recdata:getvalue("data[4]"), recdata:getvalue("data[5]"), recdata:getvalue("data[6]"), recdata:getvalue("data[7]"))), "failed to read hdf5 file")
-runner.check( 2 == string.unpack("i", string.char(recdata:getvalue("data[8]"), recdata:getvalue("data[9]"), recdata:getvalue("data[10]"), recdata:getvalue("data[11]"))), "failed to read hdf5 file")
-runner.check( 4 == string.unpack("i", string.char(recdata:getvalue("data[12]"), recdata:getvalue("data[13]"), recdata:getvalue("data[14]"), recdata:getvalue("data[15]"))), "failed to read hdf5 file")
+runner.assert(-2 == string.unpack("i", string.char(recdata:getvalue("data[0]"), recdata:getvalue("data[1]"), recdata:getvalue("data[2]"), recdata:getvalue("data[3]"))), "failed to read hdf5 file")
+runner.assert( 0 == string.unpack("i", string.char(recdata:getvalue("data[4]"), recdata:getvalue("data[5]"), recdata:getvalue("data[6]"), recdata:getvalue("data[7]"))), "failed to read hdf5 file")
+runner.assert( 2 == string.unpack("i", string.char(recdata:getvalue("data[8]"), recdata:getvalue("data[9]"), recdata:getvalue("data[10]"), recdata:getvalue("data[11]"))), "failed to read hdf5 file")
+runner.assert( 4 == string.unpack("i", string.char(recdata:getvalue("data[12]"), recdata:getvalue("data[13]"), recdata:getvalue("data[14]"), recdata:getvalue("data[15]"))), "failed to read hdf5 file")
 
 
 rsps1:destroy()
@@ -33,10 +33,10 @@ local r2 = streaming.reader(f2, dataq)
 local vals = rsps2:recvstring(3000)
 local e1, e2, e3, e4 = string.unpack('jjjj', vals)
 
-runner.check(-2 == e1, string.format("failed dataset read, expected: %d, actual: %d", -2, e1))
-runner.check( 0 == e2, string.format("failed dataset read, expected: %d, actual: %d", 0,  e2))
-runner.check( 2 == e3, string.format("failed dataset read, expected: %d, actual: %d", 2,  e3))
-runner.check( 4 == e4, string.format("failed dataset read, expected: %d, actual: %d", 4,  e4))
+runner.assert(-2 == e1, string.format("failed dataset read, expected: %d, actual: %d", -2, e1))
+runner.assert( 0 == e2, string.format("failed dataset read, expected: %d, actual: %d", 0,  e2))
+runner.assert( 2 == e3, string.format("failed dataset read, expected: %d, actual: %d", 2,  e3))
+runner.assert( 4 == e4, string.format("failed dataset read, expected: %d, actual: %d", 4,  e4))
 
 rsps2:destroy()
 r2:destroy()
@@ -56,7 +56,7 @@ print("ID:     "..rectable.id)
 print("OFFSET: "..rectable.offset)
 print("SIZE:   "..rectable.size)
 
-runner.check(rectable.id == 5)
+runner.assert(rectable.id == 5)
 
 rsps3:destroy()
 r3:destroy()
@@ -81,7 +81,7 @@ while status do
     local bytes = f:read(4)
     if not bytes then break end
     local val = string.unpack("<i4", bytes)
-    status = runner.check(val == exp_val, string.format("unexpected value, %d != %d", val, exp_val))
+    status = runner.assert(val == exp_val, string.format("unexpected value, %d != %d", val, exp_val))
     exp_val = exp_val + 2
 end
 

@@ -7,13 +7,13 @@ if not core.UNITTEST then return end
 -- Unit Test --
 
 local ut_table = core.ut_table()
-runner.check(ut_table:addremove())
-runner.check(ut_table:chaining())
-runner.check(ut_table:removing())
-runner.check(ut_table:duplicates())
-runner.check(ut_table:fulltable())
-runner.check(ut_table:collisions())
-runner.check(ut_table:stress())
+runner.assert(ut_table:addremove())
+runner.assert(ut_table:chaining())
+runner.assert(ut_table:removing())
+runner.assert(ut_table:duplicates())
+runner.assert(ut_table:fulltable())
+runner.assert(ut_table:collisions())
+runner.assert(ut_table:stress())
 
 -- Report Results --
 

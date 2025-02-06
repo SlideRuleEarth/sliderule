@@ -51,9 +51,9 @@ for i = 1, #demTypes do
                     else
                         expElevation = expResultsStrips[j]
                     end
-                    runner.check(math.abs(el - expElevation) < sigma)
+                    runner.assert(math.abs(el - expElevation) < sigma)
                 else
-                    runner.check(el > 116)  --All others
+                    runner.assert(el > 116)  --All others
                 end
             end
         end
@@ -65,7 +65,7 @@ for i = 1, #demTypes do
             print("\n")
         end
         -- print(string.format("(%02d) value: %d  exp: %d", i, sampleCnt, expectedSamplesCnt))
-        runner.check(sampleCnt == expectedSamplesCnt)
+        runner.assert(sampleCnt == expectedSamplesCnt)
     end
 end
 

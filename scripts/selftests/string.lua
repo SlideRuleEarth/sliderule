@@ -12,7 +12,7 @@ if not core.UNITTEST then return end
 -- Unit Test --
 
 local ut_string = core.ut_string()
-runner.check(ut_string:replace())
+runner.assert(ut_string:replace())
 
 -- Report Results --
 

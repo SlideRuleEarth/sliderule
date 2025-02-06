@@ -23,8 +23,8 @@ local samplingRadius = 30
 print(string.format("\n--------------------------------\nTest: %s Zonal Stats, sampling radius %d meters\n--------------------------------", demType, samplingRadius))
 local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=samplingRadius, zonal_stats=true}))
 tbl, err = dem:sample(lon, lat, height)
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 
 local expElevation = 19.890625000000
 local expMin       = 18.929687500000
@@ -48,14 +48,14 @@ for i, v in ipairs(tbl) do
     print(string.format("(%02d)  %.12fm   cnt: %d   min: %.12f   max: %.12f   mean: %.12f   median: %.12f   stdev: %.12f   mad: %.12f", i, el, cnt, min, max, mean, median, stdev, mad))
     sampleCnt = sampleCnt + 1
 
-    runner.check(math.abs(el - expElevation) < sigma)
-    runner.check(math.abs(min - expMin) < sigma)
-    runner.check(math.abs(max - expMax) < sigma)
-    runner.check(math.abs(mean - expMean) < sigma)
-    runner.check(math.abs(median - expMedian) < sigma)
-    runner.check(math.abs(stdev - expStdev) < sigma)
-    runner.check(math.abs(mad - expMad) < sigma)
-    runner.check(cnt == expCnt)
+    runner.assert(math.abs(el - expElevation) < sigma)
+    runner.assert(math.abs(min - expMin) < sigma)
+    runner.assert(math.abs(max - expMax) < sigma)
+    runner.assert(math.abs(mean - expMean) < sigma)
+    runner.assert(math.abs(median - expMedian) < sigma)
+    runner.assert(math.abs(stdev - expStdev) < sigma)
+    runner.assert(math.abs(mad - expMad) < sigma)
+    runner.assert(cnt == expCnt)
 end
 dem=nil
 
@@ -65,8 +65,8 @@ samplingRadius = 10
 print(string.format("\n--------------------------------\nTest: %s Zonal Stats, sampling radius %d meters\n--------------------------------", demType, samplingRadius))
 local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=samplingRadius, zonal_stats=true}))
 tbl, err = dem:sample(lon, lat, height)
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 
 expElevation = 19.890625000000
 expMin       = 19.578125000000
@@ -90,14 +90,14 @@ for i, v in ipairs(tbl) do
     print(string.format("(%02d)  %.12fm   cnt: %d   min: %.12f   max: %.12f   mean: %.12f   median: %.12f   stdev: %.12f   mad: %.12f", i, el, cnt, min, max, mean, median, stdev, mad))
     sampleCnt = sampleCnt + 1
 
-    runner.check(math.abs(el - expElevation) < sigma)
-    runner.check(math.abs(min - expMin) < sigma)
-    runner.check(math.abs(max - expMax) < sigma)
-    runner.check(math.abs(mean - expMean) < sigma)
-    runner.check(math.abs(median - expMedian) < sigma)
-    runner.check(math.abs(stdev - expStdev) < sigma)
-    runner.check(math.abs(mad - expMad) < sigma)
-    runner.check(cnt == expCnt)
+    runner.assert(math.abs(el - expElevation) < sigma)
+    runner.assert(math.abs(min - expMin) < sigma)
+    runner.assert(math.abs(max - expMax) < sigma)
+    runner.assert(math.abs(mean - expMean) < sigma)
+    runner.assert(math.abs(median - expMedian) < sigma)
+    runner.assert(math.abs(stdev - expStdev) < sigma)
+    runner.assert(math.abs(mad - expMad) < sigma)
+    runner.assert(cnt == expCnt)
 end
 dem=nil
 

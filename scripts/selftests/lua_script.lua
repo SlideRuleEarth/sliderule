@@ -14,7 +14,7 @@ end
 
 local result = json.decode(script:result())
 
-runner.check(result.healthy == true, "Failed to retrieve results of script")
+runner.assert(result.healthy == true, "Failed to retrieve results of script")
 
 -- Clean Up --
 

@@ -37,9 +37,9 @@ do
                 el = v["value"]
                 if i == 1 then
                     --NearestNeighbour has always the same value, regardless of sampling radius
-                    runner.check(math.abs(el - 653.148437500) < sigma)
+                    runner.assert(math.abs(el - 653.148437500) < sigma)
                 else
-                    runner.check(el > minElevation)
+                    runner.assert(el > minElevation)
                 end
             end
             print(string.format("%16s %16.9f", samplingAlgs[i], el))

@@ -39,8 +39,8 @@ local url = "vsis3"
 print(string.format("\n--------------------------------\nTest: %s URL Filter: %s\n--------------------------------", demType, url))
 local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true, sort_by_index=true}))
 tbl, err = dem:sample(lon, lat, height)
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 
 sampleCnt = 0
 for i, v in ipairs(tbl) do
@@ -50,11 +50,11 @@ for i, v in ipairs(tbl) do
     print(string.format("(%02d) %16.8fm  qmask: 0x%x %s", i, el, flags, fname))
     sampleCnt = sampleCnt + 1
 
-    runner.check(math.abs(el - expResults[i][1]) < sigma)
-    runner.check(flags == expResults[i][2])
-    runner.check(fname == expResults[i][3])
+    runner.assert(math.abs(el - expResults[i][1]) < sigma)
+    runner.assert(flags == expResults[i][2])
+    runner.assert(fname == expResults[i][3])
 end
-runner.check(sampleCnt == #expResults)
+runner.assert(sampleCnt == #expResults)
 dem=nil
 
 
@@ -65,8 +65,8 @@ expResults = {{452.48437500, 0x4, '/vsis3/pgc-opendata-dems/arcticdem/strips/s2s
 print(string.format("\n--------------------------------\nTest: %s URL Filter: %s\n--------------------------------", demType, url))
 dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true, substr=url, sort_by_index=true}))
 tbl, err = dem:sample(lon, lat, height)
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 
 sampleCnt = 0
 for i, v in ipairs(tbl) do
@@ -76,11 +76,11 @@ for i, v in ipairs(tbl) do
     print(string.format("(%02d) %16.8fm  qmask: 0x%x %s", i, el, flags, fname))
     sampleCnt = sampleCnt + 1
 
-    runner.check(math.abs(el - expResults[i][1]) < sigma)
-    runner.check(flags == expResults[i][2])
-    runner.check(fname == expResults[i][3])
+    runner.assert(math.abs(el - expResults[i][1]) < sigma)
+    runner.assert(flags == expResults[i][2])
+    runner.assert(fname == expResults[i][3])
 end
-runner.check(sampleCnt == #expResults)
+runner.assert(sampleCnt == #expResults)
 dem=nil
 
 
@@ -95,8 +95,8 @@ url = "WV01"
 print(string.format("\n--------------------------------\nTest: %s URL Filter: %s\n--------------------------------", demType, url))
 dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, with_flags=true, substr=url, sort_by_index=true}))
 tbl, err = dem:sample(lon, lat, height)
-runner.check(err == 0)
-runner.check(tbl ~= nil)
+runner.assert(err == 0)
+runner.assert(tbl ~= nil)
 
 sampleCnt = 0
 for i, v in ipairs(tbl) do
@@ -106,11 +106,11 @@ for i, v in ipairs(tbl) do
     print(string.format("(%02d) %16.8fm  qmask: 0x%x %s", i, el, flags, fname))
     sampleCnt = sampleCnt + 1
 
-    runner.check(math.abs(el - expResults[i][1]) < sigma)
-    runner.check(flags == expResults[i][2])
-    runner.check(fname == expResults[i][3])
+    runner.assert(math.abs(el - expResults[i][1]) < sigma)
+    runner.assert(flags == expResults[i][2])
+    runner.assert(fname == expResults[i][3])
 end
-runner.check(sampleCnt == #expResults)
+runner.assert(sampleCnt == #expResults)
 dem=nil
 
 

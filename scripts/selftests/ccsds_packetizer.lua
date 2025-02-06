@@ -18,7 +18,7 @@ cmd.exec("ADD_FIELD match.cmd msg STRING 8 11 NA")
 packet.sendCommand("/match.cmd msg=HELLOWORLD", msg.publish("cmdoutq"), "CS", true)
 local val2 = cmdoutq:recvstring(3000)
 
-runner.check(packet.comparePacket(val1, val2))
+runner.assert(packet.comparePacket(val1, val2))
 
 -- Report Results --
 

@@ -39,13 +39,13 @@ while true do
     end
     cnt = cnt + 1
     if cnt < 85 then
-        runner.check(rec:getvalue("count") == 257, string.format('Expected different number of records in container: %d', rec:getvalue("count")))
+        runner.assert(rec:getvalue("count") == 257, string.format('Expected different number of records in container: %d', rec:getvalue("count")))
     else -- last batch
-        runner.check(rec:getvalue("count") == 245, string.format('Expected different number of records in container: %d', rec:getvalue("count")))
+        runner.assert(rec:getvalue("count") == 245, string.format('Expected different number of records in container: %d', rec:getvalue("count")))
     end
 end
 
-runner.check(cnt >= 85, string.format('failed to read sufficient number of contaner records: %d', cnt))
+runner.assert(cnt >= 85, string.format('failed to read sufficient number of contaner records: %d', cnt))
 
 -- Clean Up --
 
