@@ -1610,7 +1610,7 @@ def run(api, parms, aoi=None, resources=None):
         }
 
     # make request
-    rsps = source(api, parms, stream=True)
+    rsps = source(api, {"parms": parms}, stream=True)
 
     # build geodataframe
     gdf = procoutputfile(parms, rsps)

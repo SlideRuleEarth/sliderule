@@ -132,10 +132,6 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
 {
     RequestFields::fromLua(L, index);
 
-
-printf("RESOURCES: %ld\n", resources.length());
-
-
     // parse resource name
     if(!resource.value.empty())
     {
