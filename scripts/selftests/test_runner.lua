@@ -71,6 +71,7 @@ if __icesat2__ and incloud then
     runner.script(icesat2_td .. "h5_file.lua")
     runner.script(icesat2_td .. "h5_element.lua")
     runner.script(icesat2_td .. "h5_2darray.lua")
+    runner.script(icesat2_td .. "parameters.lua")
     runner.script(icesat2_td .. "s3_driver.lua")
 end
 

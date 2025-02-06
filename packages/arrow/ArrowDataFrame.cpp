@@ -262,6 +262,12 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
     assert(x);
     assert(y);
 
+    if(!x || !y)
+    {
+        mlog(ERROR, "Attempting to build GeoDataFrame without x and y columns");
+        return;
+    }
+
     arrow::BinaryBuilder builder;
     (void)builder.Reserve(num_rows);
     (void)builder.ReserveData(num_rows * sizeof(ArrowCommon::wkbpoint_t));

@@ -72,30 +72,30 @@ class Atl03DataFrame: public GeoDataFrame
          *--------------------------------------------------------------------*/
 
         /* DataFrame Columns */
-        FieldColumn<time8_t>        time_ns;                // nanoseconds since GPS epoch
-        FieldColumn<double>         latitude;
-        FieldColumn<double>         longitude;
-        FieldColumn<double>         x_atc;                  // float[]: dist_ph_along + segment_distance
-        FieldColumn<float>          y_atc;                  // float[]: dist_ph_across
-        FieldColumn<float>          height;                 // float[]: h_ph
-        FieldColumn<float>          relief;                 // float[]: ATL08 ph_h
-        FieldColumn<float>          solar_elevation;        // degrees
-        FieldColumn<double>         background_rate;        // PE per second
-        FieldColumn<float>          spacecraft_velocity;    // meters per second
-        FieldColumn<uint8_t>        landcover;              // ATL08 land cover flags
-        FieldColumn<uint8_t>        snowcover;              // ATL08 snow cover flags
-        FieldColumn<uint8_t>        atl08_class;            // ATL08 classification
-        FieldColumn<int8_t>         atl03_cnf;              // ATL03 confidence level
-        FieldColumn<int8_t>         quality_ph;             // ATL03 photon quality
-        FieldColumn<uint8_t>        yapc_score;             // YAPC weight of photon
-        FieldColumn<uint32_t>       segment_id;             // ATL03 segment
+        FieldColumn<time8_t>        time_ns {Field::TIME_COLUMN};   // nanoseconds since GPS epoch
+        FieldColumn<double>         latitude {Field::Y_COLUMN};
+        FieldColumn<double>         longitude {Field::X_COLUMN};
+        FieldColumn<double>         x_atc;                          // double[]: dist_ph_along + segment_distance
+        FieldColumn<float>          y_atc;                          // float[]: dist_ph_across
+        FieldColumn<float>          height {Field::Z_COLUMN};       // float[]: h_ph
+        FieldColumn<float>          relief;                         // float[]: ATL08 ph_h
+        FieldColumn<float>          solar_elevation;                // degrees
+        FieldColumn<double>         background_rate;                // PE per second
+        FieldColumn<float>          spacecraft_velocity;            // meters per second
+        FieldColumn<uint8_t>        landcover;                      // ATL08 land cover flags
+        FieldColumn<uint8_t>        snowcover;                      // ATL08 snow cover flags
+        FieldColumn<uint8_t>        atl08_class;                    // ATL08 classification
+        FieldColumn<int8_t>         atl03_cnf;                      // ATL03 confidence level
+        FieldColumn<int8_t>         quality_ph;                     // ATL03 photon quality
+        FieldColumn<uint8_t>        yapc_score;                     // YAPC weight of photon
+        FieldColumn<uint32_t>       segment_id;                     // ATL03 segment
 
         /* DataFrame MetaData */
-        FieldElement<uint8_t>       spot;                   // 1, 2, 3, 4, 5, 6
+        FieldElement<uint8_t>       spot;                           // 1, 2, 3, 4, 5, 6
         FieldElement<uint8_t>       cycle;
         FieldElement<uint8_t>       region;
         FieldElement<uint16_t>      reference_ground_track;
-        FieldElement<uint8_t>       spacecraft_orientation; // 0 (backwards), 1 (forward)
+        FieldElement<uint8_t>       spacecraft_orientation;         // 0 (backwards), 1 (forward)
 
         /*--------------------------------------------------------------------
          * Methods

@@ -974,7 +974,7 @@ void* GeoDataFrame::receiveThread (void* parm)
     // initialize processing variables
     Subscriber inq(info->inq_name);
     Publisher outq(info->outq_name);
-    const double timelimit = TimeLib::latchtime() + static_cast<double>(info->timeout);
+    const double timelimit = TimeLib::latchtime() + (static_cast<double>(info->timeout) / 1000.0);
     bool complete = false;
     Subscriber::msgRef_t ref;
 
@@ -1339,7 +1339,7 @@ int GeoDataFrame::luaReceive(lua_State* L)
         const char* inq_name = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
         const int total_resources = getLuaInteger(L, 4, true, 1);
-        const int timeout = getLuaInteger(L, 5, true, RequestFields::DEFAULT_TIMEOUT);
+        const int timeout = getLuaInteger(L, 5, true, RequestFields::DEFAULT_TIMEOUT * 1000);
 
         // check if already received
         if(dataframe->receivePid)
@@ -1359,7 +1359,7 @@ int GeoDataFrame::luaReceive(lua_State* L)
         {
             if(!info->ready)
             {
-                if(info->ready_signal.wait(0, timeout * 1000))
+                if(info->ready_signal.wait(0, timeout))
                 {
                     // success
                     status = info->ready;
