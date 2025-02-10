@@ -110,9 +110,9 @@ int Icesat2Fields::luaCreate (lua_State* L)
     {
         const uint64_t key_space = LuaObject::getLuaInteger(L, 2, true, RequestFields::DEFAULT_KEY_SPACE);
         const char* asset_name = LuaObject::getLuaString(L, 3, true, "icesat2");
-        const char* resource = LuaObject::getLuaString(L, 4, true, NULL);
+        const char* _resource = LuaObject::getLuaString(L, 4, true, NULL);
 
-        icesat2_fields = new Icesat2Fields(L, key_space, asset_name, resource, {});
+        icesat2_fields = new Icesat2Fields(L, key_space, asset_name, _resource, {});
         icesat2_fields->fromLua(L, 1);
 
         return createLuaObject(L, icesat2_fields);
@@ -251,8 +251,8 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset_name, const char* resource, const std::initializer_list<FieldDictionary::entry_t>& init_list):
-    RequestFields (L, key_space, asset_name, resource, {
+Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldDictionary::entry_t>& init_list):
+    RequestFields (L, key_space, asset_name, _resource, {
         {"srt",                 &surfaceType},
         {"pass_invalid",        &passInvalid},
         {"dist_in_seg",         &distInSeg},

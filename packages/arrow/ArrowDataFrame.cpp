@@ -81,7 +81,7 @@ void encode(const FieldColumn<T>* field_column, vector<shared_ptr<arrow::Array>>
 /*----------------------------------------------------------------------------
 * encode - time8_t
 *----------------------------------------------------------------------------*/
-void encode(const FieldColumn<time8_t>* field_column, vector<shared_ptr<arrow::Array>>& columns)
+void encodeTime8(const FieldColumn<time8_t>* field_column, vector<shared_ptr<arrow::Array>>& columns)
 {
     arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
 
@@ -126,7 +126,7 @@ void encodeColumn(const FieldColumn<FieldColumn<T>>* field_column, vector<shared
 /*----------------------------------------------------------------------------
 * encodeColumn - time8_t
 *----------------------------------------------------------------------------*/
-void encodeColumn(const FieldColumn<FieldColumn<time8_t>>* field_column, vector<shared_ptr<arrow::Array>>& columns)
+void encodeColumnTime8(const FieldColumn<FieldColumn<time8_t>>* field_column, vector<shared_ptr<arrow::Array>>& columns)
 {
     auto builder = make_shared<arrow::TimestampBuilder>(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
 
@@ -177,7 +177,7 @@ void encodeList(const FieldColumn<FieldList<T>>* field_column, vector<shared_ptr
 /*----------------------------------------------------------------------------
 * encodeList - time8_t
 *----------------------------------------------------------------------------*/
-void encodeList(const FieldColumn<FieldList<time8_t>>* field_column, vector<shared_ptr<arrow::Array>>& columns)
+void encodeListTime8(const FieldColumn<FieldList<time8_t>>* field_column, vector<shared_ptr<arrow::Array>>& columns)
 {
     auto builder = make_shared<arrow::TimestampBuilder>(arrow::timestamp(arrow::TimeUnit::NANO), arrow::default_memory_pool());
 
@@ -365,6 +365,12 @@ void buildFieldList (vector<shared_ptr<arrow::Field>>& fields, const ArrowFields
             mlog(WARNING, "Skipping field %s with type %d", name.c_str(), static_cast<int>(field->type));
         }
     }
+
+    // add geometry column
+    if(parms.format == ArrowFields::GEOPARQUET)
+    {
+        fields.push_back(arrow::field("geometry", arrow::binary()));
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -551,7 +557,7 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const ArrowFie
                 case Field::UINT64:                         encode<uint64_t, arrow::UInt64Builder> (dynamic_cast<const FieldColumn<uint64_t>*>(field), columns); break;
                 case Field::FLOAT:                          encode<float,    arrow::FloatBuilder>  (dynamic_cast<const FieldColumn<float>*>(field), columns);    break;
                 case Field::DOUBLE:                         encode<double,   arrow::DoubleBuilder> (dynamic_cast<const FieldColumn<double>*>(field), columns);   break;
-                case Field::TIME8:                          encode(dynamic_cast<const FieldColumn<time8_t>*>(field), columns); break;
+                case Field::TIME8:                          encodeTime8(dynamic_cast<const FieldColumn<time8_t>*>(field), columns); break;
                 case Field::STRING:                         encode<string,   arrow::StringBuilder> (dynamic_cast<const FieldColumn<string>*>(field), columns);   break;
 
                 case Field::NESTED_ARRAY | Field::INT8:     encodeArray<int8_t,   arrow::Int8Builder>   (field, columns); break;
@@ -577,7 +583,7 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const ArrowFie
                 case Field::NESTED_LIST | Field::UINT64:    encodeList<uint64_t, arrow::UInt64Builder> (dynamic_cast<const FieldColumn<FieldList<uint64_t>>*>(field), columns); break;
                 case Field::NESTED_LIST | Field::FLOAT:     encodeList<float,    arrow::FloatBuilder>  (dynamic_cast<const FieldColumn<FieldList<float>>*>(field), columns);    break;
                 case Field::NESTED_LIST | Field::DOUBLE:    encodeList<double,   arrow::DoubleBuilder> (dynamic_cast<const FieldColumn<FieldList<double>>*>(field), columns);   break;
-                case Field::NESTED_LIST | Field::TIME8:     encodeList(dynamic_cast<const FieldColumn<FieldList<time8_t>>*>(field), columns); break;
+                case Field::NESTED_LIST | Field::TIME8:     encodeListTime8(dynamic_cast<const FieldColumn<FieldList<time8_t>>*>(field), columns); break;
                 case Field::NESTED_LIST | Field::STRING:    encodeList<string,   arrow::StringBuilder> (dynamic_cast<const FieldColumn<FieldList<string>>*>(field), columns);   break;
 
                 case Field::NESTED_COLUMN | Field::INT8:    encodeColumn<int8_t,   arrow::Int8Builder>   (dynamic_cast<const FieldColumn<FieldColumn<int8_t>>*>(field), columns);   break;
@@ -590,7 +596,7 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const ArrowFie
                 case Field::NESTED_COLUMN | Field::UINT64:  encodeColumn<uint64_t, arrow::UInt64Builder> (dynamic_cast<const FieldColumn<FieldColumn<uint64_t>>*>(field), columns); break;
                 case Field::NESTED_COLUMN | Field::FLOAT:   encodeColumn<float,    arrow::FloatBuilder>  (dynamic_cast<const FieldColumn<FieldColumn<float>>*>(field), columns);    break;
                 case Field::NESTED_COLUMN | Field::DOUBLE:  encodeColumn<double,   arrow::DoubleBuilder> (dynamic_cast<const FieldColumn<FieldColumn<double>>*>(field), columns);   break;
-                case Field::NESTED_COLUMN | Field::TIME8:   encodeColumn(dynamic_cast<const FieldColumn<FieldColumn<time8_t>>*>(field), columns); break;
+                case Field::NESTED_COLUMN | Field::TIME8:   encodeColumnTime8(dynamic_cast<const FieldColumn<FieldColumn<time8_t>>*>(field), columns); break;
                 case Field::NESTED_COLUMN | Field::STRING:  encodeColumn<string,   arrow::StringBuilder> (dynamic_cast<const FieldColumn<FieldColumn<string>>*>(field), columns);   break;
 
                 default: mlog(WARNING, "Skipping column %s with encoding %d", name, static_cast<int>(field->encoding)); break;
@@ -657,12 +663,13 @@ int ArrowDataFrame::luaExport (lua_State* L)
 {
     bool status = false;
     const char* unique_filename = ArrowCommon::getUniqueFileName(NULL);
+    const char* filename = NULL;
 
     try
     {
         // get lua parameters
         ArrowDataFrame* lua_obj = dynamic_cast<ArrowDataFrame*>(getLuaSelf(L, 1));
-        const char* filename = getLuaString(L, 2, true, unique_filename);
+        filename = getLuaString(L, 2, true, unique_filename);
         const ArrowFields::format_t format = static_cast<ArrowFields::format_t>(getLuaInteger(L, 3, true, lua_obj->parms->output.format.value));
 
         // get references
@@ -705,7 +712,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
 
                 // set metadata
                 auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-                if(parms.output.format == ArrowFields::GEOPARQUET) appendGeoMetaData(metadata);
+                if(format == ArrowFields::GEOPARQUET) appendGeoMetaData(metadata);
                 appendPandasMetaData(dataframe.getTimeColumnName().c_str(), metadata, schema);
                 metadata->Append("sliderule", parms.toJson());
                 metadata->Append("meta", dataframe.metaFields.toJson());
@@ -813,11 +820,14 @@ int ArrowDataFrame::luaExport (lua_State* L)
         mlog(e.level(), "Error exporting %s: %s", OBJECT_TYPE, e.what());
     }
 
+    // return filename or failure
+    if(status && filename) lua_pushstring(L, filename);
+    else lua_pushnil(L);
+
     // clean up
     delete [] unique_filename;
 
-    // return status
-    lua_pushboolean(L, status);
+    // return
     return 1;
 }
 

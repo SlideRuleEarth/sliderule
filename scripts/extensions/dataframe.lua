@@ -18,6 +18,7 @@ local RC_PROXY_FAILURE = -2
 local RC_ARROW_FAILURE = -3
 local RC_PARQUET_FAILURE = -4
 local RC_NO_RESOURCES = -5
+local RC_EMPTY_DATAFRAME = -6
 
 --
 -- populate_catalogs
@@ -103,30 +104,35 @@ local function proxy(endpoint, parms, rqst, rspq, userlog)
     local df = core.dataframe()
     df:receive(proxyq_name, rspq, #resources, parms["rqst_timeout"] * 1000)
 
-    -- Proxy Request --
+    -- Proxy Request
     local endpoint_proxy = core.proxy(endpoint, resources, json.encode(rqst), parms["node_timeout"], locks_per_node, proxyq_name, true, parms["cluster_size_hint"], 1)
 
-    -- Receive DataFrame (blocks until dataframe complete or timeout) --
+    -- Receive DataFrame (blocks until dataframe complete or timeout)
     if not df:waiton(parms["rqst_timeout"] * 1000) then
         userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to receive proxied dataframe"));
         return RC_PROXY_FAILURE
     end
 
-    -- Create Arrow DataFrame --
+    -- Check DataFrame Constraints
+    if df:numrows() <= 0 or df:numcols() <= 0 then
+        userlog:alert(core.WARNING, core.RTE_INFO, string.format("request <%s> produced an empty dataframe", rspq));
+        return RC_EMPTY_DATAFRAME
+    end
+    -- Create Arrow DataFrame
     local arrow_dataframe = arrow.dataframe(parms, df)
     if not arrow_dataframe then
         userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to create arrow dataframe", rspq))
         return RC_ARROW_FAILURE
     end
 
-    -- Write DataFrame to Parquet File --
-    local arrow_filename = arrow_dataframe:export(nil, arrow.PARQUET)
+    -- Write DataFrame to Parquet File
+    local arrow_filename = arrow_dataframe:export()
     if not arrow_filename then
         userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to write dataframe", rspq))
         return RC_PARQUET_FAILURE
     end
 
-    -- Send Parquet File to User --
+    -- Send Parquet File to User
     arrow.send2user(arrow_filename, parms, rspq)
 
     -- Success --
@@ -156,6 +162,7 @@ local package = {
     PROXY_FAILURE = RC_PROXY_FAILURE,
     ARROW_FAILURE = RC_ARROW_FAILURE,
     NO_RESOURCES = RC_NO_RESOURCES,
+    EMPTY_DATAFRAME = RC_NO_RESOURCES,
     proxy = proxy,
     timeout = timeout
 }

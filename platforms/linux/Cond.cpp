@@ -101,7 +101,7 @@ bool Cond::wait(int sig, int timeout_ms)
         struct timespec ts;
         clock_gettime(CLOCK_REALTIME, &ts);
         ts.tv_sec  += (time_t) (timeout_ms / 1000);
-        ts.tv_nsec +=  (timeout_ms % 1000) * 1000000L;
+        ts.tv_nsec += (timeout_ms % 1000) * 1000000L;
         if(ts.tv_nsec  >= 1000000000L)
         {
             ts.tv_nsec -= 1000000000L;

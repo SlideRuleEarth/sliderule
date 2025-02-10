@@ -7,7 +7,7 @@ from sliderule import sliderule
 class TestAtl03x:
 
     def test_nominal(self, init):
-        resources = ["ATL03_20181019065445_03150111_005_01.h5"]
+        resources = ["ATL03_20181019065445_03150111_006_02.h5"]
         aoi = [ { "lat": -80.75, "lon": -70.00 },
                 { "lat": -81.00, "lon": -70.00 },
                 { "lat": -81.00, "lon": -65.00 },

@@ -23,11 +23,11 @@ local resource = parms["resource"]
 local atl03h5 = h5.object(parms["asset"], resource)
 local atl08h5 = h5.object(parms["asset"], resource:gsub("ATL03", "ATL08"))
 local sender = core.framesender(rspq, parms["key_space"], parms["node_timeout"])
---for _, beam in ipairs(parms["beams"]) do
+
 local beam = "gt1l"
+--for _, beam in ipairs(parms["beams"]) do
     dataframes[beam] = icesat2.atl03x(beam, parms, atl03h5, atl08h5, rspq)
     if dataframes[beam] then
-        userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> on %s created dataframe for beam %s", rspq, resource, beam))
         dataframes[beam]:run(sender)
         dataframes[beam]:run(core.TERMINATE)
     else
@@ -38,9 +38,11 @@ local beam = "gt1l"
 -------------------------------------------------------
 -- wait for dataframes to complete
 -------------------------------------------------------
-for beam,df in pairs(dataframes) do
+for _,df in pairs(dataframes) do
     local status = df:finished(dataframe.timeout(parms["node_timeout"], start_time), rspq)
-    if not status then
+    if status then
+        userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> on %s sent dataframe for beam %s with %d rows and %s columns", rspq, resource, beam, dataframes[beam]:numrows(), dataframes[beam]:numcols()))
+    else
         userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> on %s timed out waiting for dataframe to complete for beam %s", rspq, resource, beam))
     end
 end

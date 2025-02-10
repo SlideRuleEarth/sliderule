@@ -997,10 +997,13 @@ void* GeoDataFrame::receiveThread (void* parm)
         {
             const int recv_status = inq.receiveRef(ref, SYS_TIMEOUT);
 
-            if((recv_status == MsgQ::STATE_TIMEOUT) && (TimeLib::latchtime() > timelimit))
+            if(recv_status == MsgQ::STATE_TIMEOUT)
             {
-                // timeout has occurred
-                throw RunTimeException(CRITICAL, RTE_ERROR, "timeout occurred receiving dataframe");
+                if(TimeLib::latchtime() > timelimit)
+                {
+                    // timeout has occurred
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "timeout occurred receiving dataframe");
+                }
             }
             else if(recv_status < 0)
             {
