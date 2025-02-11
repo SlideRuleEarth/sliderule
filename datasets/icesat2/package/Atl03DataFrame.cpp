@@ -148,6 +148,15 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     region = parms->region.value;
     reference_ground_track = parms->rgt.value;
 
+    /* Calculate Key */
+    dfKey = 0;
+    const int exp_beam_str_len = 4;
+    for(int i = 0; i < exp_beam_str_len; i++)
+    {
+        if(beam[i] == '\0') break;
+        dfKey += static_cast<int>(beam[i]);
+    }
+
     /* Setup Output Queue (for messages) */
     if(outq_name) outQ = new Publisher(outq_name);
 
@@ -178,7 +187,7 @@ Atl03DataFrame::~Atl03DataFrame (void)
  *----------------------------------------------------------------------------*/
 okey_t Atl03DataFrame::getKey(void) const
 {
-    return spot.value;
+    return dfKey;
 }
 
 /*----------------------------------------------------------------------------

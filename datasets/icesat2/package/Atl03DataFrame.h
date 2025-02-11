@@ -248,6 +248,7 @@ class Atl03DataFrame: public GeoDataFrame
         Icesat2Fields*      parms;
         H5Object*           hdf03;  // atl03 granule
         H5Object*           hdf08;  // atl08 granule
+        okey_t              dfKey;
 
         /*--------------------------------------------------------------------
          * Methods

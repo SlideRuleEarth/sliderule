@@ -71,7 +71,7 @@ end
 --
 --  fanout request to multiple nodes and assemble results
 --
-local function proxy(endpoint, parms, rqst, rspq, userlog)
+local function proxy(endpoint, parms, rqst, rspq, userlog, channels)
 
     -- Populate Catalogs on Initial User Request
     if parms["key_space"] == core.INVALID_KEY then
@@ -102,10 +102,11 @@ local function proxy(endpoint, parms, rqst, rspq, userlog)
 
     -- Create Receiving DataFrame
     local df = core.dataframe()
-    df:receive(proxyq_name, rspq, #resources, parms["rqst_timeout"] * 1000)
+    local expected_concurrent_channels = #resources * channels
+    df:receive(proxyq_name, rspq, expected_concurrent_channels, parms["rqst_timeout"] * 1000)
 
     -- Proxy Request
-    local endpoint_proxy = core.proxy(endpoint, resources, json.encode(rqst), parms["node_timeout"], locks_per_node, proxyq_name, true, parms["cluster_size_hint"], 1)
+    local endpoint_proxy = core.proxy(endpoint, resources, json.encode(rqst), parms["node_timeout"], locks_per_node, proxyq_name, true, parms["num_nodes"], 1)
 
     -- Receive DataFrame (blocks until dataframe complete or timeout)
     if not df:waiton(parms["rqst_timeout"] * 1000) then

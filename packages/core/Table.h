@@ -54,7 +54,7 @@ class Table
          * CONSTANTS
          *--------------------------------------------------------------------*/
 
-        static const int DEFAULT_TABLE_SIZE = 256;
+        static const int DEFAULT_TABLE_SIZE = 257;
 
         /*--------------------------------------------------------------------
          * Typedefs

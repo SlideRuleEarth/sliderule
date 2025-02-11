@@ -941,11 +941,11 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, int time
         gdf_rec_data->num_rows = length();
         StringLib::copy(gdf_rec_data->name, kv.value.name, MAX_NAME_SIZE);
 
-        // serialize column data into record
+        // serialize metadata element into record
         const long bytes_serialized = kv.value.field->serialize(gdf_rec_data->data, element_size);
         if(bytes_serialized != element_size) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to serialize metadata %s: %ld", gdf_rec_data->name, bytes_serialized);
 
-        // send column record
+        // send meta record
         gdf_rec.post(&pub, 0, NULL, true, timeout);
     }
 
@@ -987,8 +987,8 @@ void* GeoDataFrame::receiveThread (void* parm)
     info->ready_signal.unlock();
 
     // create table of dataframe records
-    typedef Table<vector<Subscriber::msgRef_t>> df_table_t;
-    df_table_t df_table(info->total_resources, df_table_t::identity, true);
+    typedef Table<vector<rec_ref_t>*> df_table_t;
+    df_table_t df_table(info->num_channels);
 
     try
     {
@@ -1023,27 +1023,49 @@ void* GeoDataFrame::receiveThread (void* parm)
                 const RecordInterface rec(reinterpret_cast<unsigned char*>(ref.data), ref.size);
                 if(StringLib::match(rec.getRecordType(), gdfRecType))
                 {
-                    // add reference to list specific to key'ed dataframe
+                    // get dataframe key
                     gdf_rec_t* rec_data = reinterpret_cast<gdf_rec_t*>(rec.getRecordData());
                     const uint64_t key = rec_data->key;
-                    df_table[key].push_back(ref);
+
+                    // get reference to list of key'ed dataframe
+                    vector<rec_ref_t>* df_rec_list = NULL;
+                    if(!df_table.find(key, df_table_t::MATCH_EXACTLY, &df_rec_list))
+                    {
+                        df_rec_list = new vector<rec_ref_t>;
+                        if(!df_table.add(key, df_rec_list, true))
+                        {
+                            delete df_rec_list;
+                            inq.dereference(ref);
+                            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to add record list to table");
+                        }
+                    }
 
                     // assemble on eof
                     if(rec_data->type == EOF_REC)
                     {
                         rec_data->num_rows += info->dataframe->numRows; // modify in place to hold new num rows
-                        for(Subscriber::msgRef_t& gdf_ref: df_table[key])
+                        for(rec_ref_t& entry: *df_rec_list)
                         {
                             // append columns and metadata to dataframe
-                            const RecordInterface gdf_rec(reinterpret_cast<unsigned char*>(gdf_ref.data), gdf_ref.size);
-                            gdf_rec_t* gdf_rec_data = reinterpret_cast<gdf_rec_t*>(gdf_rec.getRecordData());
-                            info->dataframe->appendDataframe(gdf_rec_data);
-                            inq.dereference(gdf_ref);
+                            info->dataframe->appendDataframe(entry.rec);
+                            inq.dereference(entry.ref);
                         }
-                    }
 
-                    // remove key'ed dataframe list from table
-                    df_table.remove(key);
+                        // dereference eof rec
+                        inq.dereference(ref);
+
+                        // remove key'ed dataframe list from table
+                        df_table.remove(key);
+                    }
+                    else
+                    {
+                        // add reference to list of key'ed dataframe
+                        const rec_ref_t rec_ref = {
+                            .ref = ref,
+                            .rec = rec_data
+                        };
+                        df_rec_list->push_back(rec_ref);
+                    }
                 }
                 else
                 {
@@ -1072,10 +1094,11 @@ void* GeoDataFrame::receiveThread (void* parm)
         uint64_t key = df_table.first(NULL);
         while(key != INVALID_KEY)
         {
-            for(Subscriber::msgRef_t& gdf_ref: df_table[key])
+            for(rec_ref_t& entry: *df_table[key])
             {
-                inq.dereference(gdf_ref);
+                inq.dereference(entry.ref);
             }
+            df_table.remove(key);
             key = df_table.next(NULL);
         }
     }
@@ -1341,7 +1364,7 @@ int GeoDataFrame::luaReceive(lua_State* L)
         GeoDataFrame* dataframe = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
         const char* inq_name = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
-        const int total_resources = getLuaInteger(L, 4, true, 1);
+        const int num_channels = getLuaInteger(L, 4, true, 1);
         const int timeout = getLuaInteger(L, 5, true, RequestFields::DEFAULT_TIMEOUT * 1000);
 
         // check if already received
@@ -1351,7 +1374,7 @@ int GeoDataFrame::luaReceive(lua_State* L)
         }
 
         // kick off receive thread
-        info = new receive_info_t(dataframe, inq_name, outq_name, total_resources, timeout);
+        info = new receive_info_t(dataframe, inq_name, outq_name, num_channels, timeout);
         dataframe->receivePid = new Thread(receiveThread, info);
 
         // wait for ready signal

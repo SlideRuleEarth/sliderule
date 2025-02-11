@@ -192,15 +192,15 @@ class GeoDataFrame: public LuaObject, public Field
             GeoDataFrame* dataframe = NULL;
             const char* inq_name = NULL;
             const char* outq_name = NULL;
-            int total_resources = 0;
+            int num_channels = 0;
             int timeout = IO_PEND;
             Cond ready_signal;
             bool ready = false;
-            receive_info_t(GeoDataFrame* _dataframe, const char* _inq_name, const char* _outq_name, int _total_resources, int _timeout) {
+            receive_info_t(GeoDataFrame* _dataframe, const char* _inq_name, const char* _outq_name, int _num_channels, int _timeout) {
                 dataframe = _dataframe;
                 inq_name = StringLib::duplicate(_inq_name);
                 outq_name = StringLib::duplicate(_outq_name);
-                total_resources = _total_resources;
+                num_channels = _num_channels;
                 timeout = _timeout;
             }
             ~receive_info_t() {
@@ -208,6 +208,15 @@ class GeoDataFrame: public LuaObject, public Field
                 delete [] outq_name;
             }
         };
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            Subscriber::msgRef_t ref;
+            gdf_rec_t* rec;
+        } rec_ref_t;
 
         /*--------------------------------------------------------------------
          * Methods
