@@ -141,7 +141,7 @@ class GediFields: public RequestFields
          * Methods
          *--------------------------------------------------------------------*/
 
-        GediFields (lua_State* L, uint64_t key_space, const char* asset_name, const char* resource);
+        GediFields (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource);
         virtual ~GediFields (void) override = default;
         void fromLua (lua_State* L, int index) override;
 };

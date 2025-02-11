@@ -19,18 +19,9 @@ class TestAtl03x:
                   "atl08_class": ["atl08_noise", "atl08_ground", "atl08_canopy", "atl08_top_of_canopy", "atl08_unclassified"] }
         gdf = sliderule.run("atl03x", parms, aoi, resources)
         assert init
-        return gdf
-
-
-# ########################################################
-# Main
-# ########################################################
-
-if __name__ == '__main__':
-
-    init_status = sliderule.init("localhost", organization=None, verbose=True)
-
-    test = TestAtl03x()
-    gdf = test.test_nominal(init_status)
-
-    print(gdf)
+        assert len(gdf) == 488670
+        assert len(gdf.keys()) == 20
+        assert gdf.spot.value_counts()[5] == 386717
+        assert gdf.spot.value_counts()[6] == 101953
+        assert gdf.cycle.describe()["mean"] == 1.0
+        assert gdf.atl03_cnf.value_counts()[1] == 55485
