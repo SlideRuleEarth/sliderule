@@ -11,7 +11,6 @@ local json = require("json")
 --
 -- Constants
 --
-local RC_PASS_THROUGH = 1
 local RC_SUCCESS = 0
 local RC_EARTHDATA_FAILURE = -1
 local RC_PROXY_FAILURE = -2
@@ -71,7 +70,11 @@ end
 --
 --  fanout request to multiple nodes and assemble results
 --
-local function proxy(endpoint, parms, rqst, rspq, userlog, channels)
+local function proxy(endpoint, parms, rqst, rspq, channels, create)
+
+    -- Initialize Variables
+    local start_time = time.gps() -- for timeout handling
+    local userlog = msg.publish(rspq) -- for alerts
 
     -- Populate Catalogs on Initial User Request
     if parms["key_space"] == core.INVALID_KEY then
@@ -80,7 +83,37 @@ local function proxy(endpoint, parms, rqst, rspq, userlog, channels)
 
     -- Check if Resource Already Set
     if #parms["resource"] > 0 then
-        return RC_PASS_THROUGH
+
+        -- Create Dataframes and Runners
+        local dataframes, runners = create(parms, rspq, userlog)
+        local node_timeout = parms["node_timeout"]
+        local sender = core.framesender(rspq, parms["key_space"], node_timeout)
+
+        -- Add Runners to Dataframes
+        for _, df in pairs(dataframes) do
+            for _, runner in pairs(runners) do
+                df:run(runner)
+            end
+            df:run(sender)
+            df:run(core.TERMINATE)
+        end
+
+        -- Wait for Dataframes to Complete
+        for key, df in pairs(dataframes) do
+            local current_timeout = (node_timeout * 1000) - (time.gps() - start_time)
+            if current_timeout < 0 then current_timeout = 0 end
+            local remaining_timeout = math.tointeger(current_timeout)
+            local status = df:finished(remaining_timeout, rspq)
+            if status then
+                userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> on %s sent dataframe [%s] with %d rows and %s columns", rspq, parms["resource"], key, df:numrows(), df:numcols()))
+            else
+                userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> on %s timed out waiting for dataframe [%s] to complete", rspq, parms["resource"], key))
+            end
+        end
+
+        -- Complete
+        return RC_SUCCESS
+
     end
 
     -- Query EarthData for Resources to Process
@@ -119,6 +152,7 @@ local function proxy(endpoint, parms, rqst, rspq, userlog, channels)
         userlog:alert(core.WARNING, core.RTE_INFO, string.format("request <%s> produced an empty dataframe", rspq));
         return RC_EMPTY_DATAFRAME
     end
+
     -- Create Arrow DataFrame
     local arrow_dataframe = arrow.dataframe(parms, df)
     if not arrow_dataframe then
@@ -142,30 +176,16 @@ local function proxy(endpoint, parms, rqst, rspq, userlog, channels)
 end
 
 --
--- Function: timeout
---
---  calculate a current timeout
---
-local function timeout(full_timeout, start_time)
-    local current_timeout = (full_timeout * 1000) - (time.gps() - start_time)
-    if current_timeout < 0 then current_timeout = 0 end
-    return math.tointeger(current_timeout)
-end
-
-
---
 -- package
 --
 local package = {
     SUCCESS = RC_SUCCESS,
-    PASS_THROUGH = RC_PASS_THROUGH,
     EARTHDATA_FAILURE = RC_EARTHDATA_FAILURE,
     PROXY_FAILURE = RC_PROXY_FAILURE,
     ARROW_FAILURE = RC_ARROW_FAILURE,
     NO_RESOURCES = RC_NO_RESOURCES,
     EMPTY_DATAFRAME = RC_NO_RESOURCES,
-    proxy = proxy,
-    timeout = timeout
+    proxy = proxy
 }
 
 return package
