@@ -210,7 +210,7 @@ class Icesat2Fields: public RequestFields
 
         /* Algorithm Stages */
         typedef enum {
-            STAGE_LSF = 0,      // least squares fit
+            STAGE_ATL06 = 0,    // surface fit
             STAGE_ATL08 = 1,    // use ATL08 photon classifications
             STAGE_YAPC = 2,     // yet another photon classifier
             STAGE_PHOREAL = 3,  // atl08 vegetation science
@@ -368,7 +368,7 @@ class Icesat2Fields: public RequestFields
         FieldElement<int>                                   region {-1};                                            // ATL03 granule region
         FieldElement<int>                                   version {-1};                                           // ATL03 granule version
 
-        bool stages[NUM_STAGES] = {true, false, false, false};
+        bool stages[NUM_STAGES] = {false, false, false, false};
 
     protected:
 
@@ -380,6 +380,8 @@ class Icesat2Fields: public RequestFields
         virtual ~Icesat2Fields  (void) override = default;
 
         void parseResource (void);
+        static int luaStage (lua_State* L);
+
 };
 
 /******************************************************************************

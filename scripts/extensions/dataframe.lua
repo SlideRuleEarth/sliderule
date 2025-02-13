@@ -85,13 +85,13 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
     if #parms["resource"] > 0 then
 
         -- Create Dataframes and Runners
-        local dataframes, runners = create(parms, rspq, userlog)
+        local dataframes, runners = create(userlog)
         local node_timeout = parms["node_timeout"]
         local sender = core.framesender(rspq, parms["key_space"], node_timeout)
 
         -- Add Runners to Dataframes
         for _, df in pairs(dataframes) do
-            for _, runner in pairs(runners) do
+            for _, runner in ipairs(runners) do
                 df:run(runner)
             end
             df:run(sender)

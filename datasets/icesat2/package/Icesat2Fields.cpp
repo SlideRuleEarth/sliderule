@@ -289,6 +289,9 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset
     {
         fields.add(elem.name, elem);
     }
+
+    // add additional functions
+    LuaEngine::setAttrFunc(L, "stage", luaStage);
 }
 
 /*----------------------------------------------------------------------------
@@ -417,6 +420,30 @@ void Icesat2Fields::parseResource (void)
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse version from resource %s: %s", resource.value.c_str(), version_str);
     }
+}
+
+/*----------------------------------------------------------------------------
+ * luaStage -
+ *----------------------------------------------------------------------------*/
+int Icesat2Fields::luaStage (lua_State* L)
+{
+    try
+    {
+        const Icesat2Fields* lua_obj = dynamic_cast<Icesat2Fields*>(getLuaSelf(L, 1));
+        const long stage = getLuaInteger(L, 2);
+        if(stage < 0 || stage >= NUM_STAGES)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid stage %ld", stage);
+        }
+        lua_pushboolean(L, lua_obj->stages[stage]);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting stage: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
 }
 
 /******************************************************************************

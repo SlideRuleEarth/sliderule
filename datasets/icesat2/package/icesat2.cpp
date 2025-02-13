@@ -115,6 +115,10 @@ int icesat2_open (lua_State *L)
     LuaEngine::setAttrInt(L, "ATL08_CANOPY",                Icesat2Fields::ATL08_CANOPY);
     LuaEngine::setAttrInt(L, "ATL08_TOP_OF_CANOPY",         Icesat2Fields::ATL08_TOP_OF_CANOPY);
     LuaEngine::setAttrInt(L, "ATL08_UNCLASSIFIED",          Icesat2Fields::ATL08_UNCLASSIFIED);
+    LuaEngine::setAttrInt(L, "ATL06",                       Icesat2Fields::STAGE_ATL06);
+    LuaEngine::setAttrInt(L, "ATL08",                       Icesat2Fields::STAGE_ATL08);
+    LuaEngine::setAttrInt(L, "YAPC",                        Icesat2Fields::STAGE_YAPC);
+    LuaEngine::setAttrInt(L, "PHOREAL",                     Icesat2Fields::STAGE_PHOREAL);
 
     return 1;
 }

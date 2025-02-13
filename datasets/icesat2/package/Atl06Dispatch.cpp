@@ -273,8 +273,8 @@ bool Atl06Dispatch::processRecord (RecordObject* record, okey_t key, recVec_t* r
     result.elevation.spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)extent->spacecraft_orientation, (Icesat2Fields::track_t)extent->track, extent->pair);
     result.elevation.gt = Icesat2Fields::getGroundTrack((Icesat2Fields::sc_orient_t)extent->spacecraft_orientation, (Icesat2Fields::track_t)extent->track, extent->pair);
 
-    /* Execute Algorithm Stages */
-    if(parms->stages[Icesat2Fields::STAGE_LSF]) iterativeFitStage(extent, result);
+    /* Execute Least Squares Fit Algorithm */
+    iterativeFitStage(extent, result);
 
     /* Post Results */
     postResult(&result);
