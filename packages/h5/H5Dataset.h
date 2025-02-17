@@ -93,7 +93,7 @@ class H5Dataset
         * Methods
         *--------------------------------------------------------------------*/
 
-                H5Dataset   (info_t* info, Context* context, 
+                H5Dataset   (info_t* info, Context* context,
                              const char* dataset, const range_t* slice, int slicendims,
                              bool _meta_only=false);
         virtual ~H5Dataset  (void);
@@ -244,7 +244,7 @@ class H5Dataset
 
         void                parseDataset          (void);
         bool                hypersliceIntersection(const range_t* node_slice, const uint8_t node_level);
-        void                readSlice             (uint8_t* output_buffer, const int64_t* output_dimensions, const range_t* output_slice, 
+        void                readSlice             (uint8_t* output_buffer, const int64_t* output_dimensions, const range_t* output_slice,
                                                    const uint8_t* input_buffer, const int64_t* input_dimensions, const range_t* input_slice) const;
 
         static const char*  type2str              (data_type_t datatype);
@@ -274,10 +274,11 @@ class H5Dataset
         bool                metaOnly;
 
         /* File Info */
-        uint8_t*            dataChunkBuffer;        // buffer for reading uncompressed chunk
-        uint8_t*            dataChunkFilterBuffer;  // buffer for reading compressed chunk
-        int64_t             dataChunkBufferSize;    // dataChunkElements * dataInfo->typesize
-        int                 highestDataLevel;       // high water mark for traversing dataset path
+        uint8_t*            dataChunkBuffer;            // buffer for reading uncompressed chunk
+        uint8_t*            dataChunkFilterBuffer;      // buffer for reading compressed chunk
+        int64_t             dataChunkBufferSize;        // dataChunkElements * dataInfo->typesize
+        int64_t             dataChunkFilterBufferSize;  // dataChunkBufferSize * FILTER_SIZE_SCALE
+        int                 highestDataLevel;           // high water mark for traversing dataset path
         int64_t             dataSizeHint;
         int64_t             dimensionsInChunks[MAX_NDIMS];
         int64_t             chunkStepSize[MAX_NDIMS];

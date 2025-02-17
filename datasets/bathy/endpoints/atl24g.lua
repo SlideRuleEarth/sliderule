@@ -238,8 +238,7 @@ for beam,dataframe in pairs(dataframes) do
     local failed_dataframe = false
     if dataframe:finished(ctimeout(), rspq) then
         if dataframe:inerror() then
-            userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create valid bathy dataframe for spot %d", rspq, resource, dataframe:meta("spot")))
-            failed_dataframe = true
+            userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> on %s failed to create valid bathy dataframe", rspq, resource))
         elseif dataframe:length() > 0 then
             local spot = dataframe:meta("spot")
             local output_filename = string.format("%s/bathy_spot_%d.parquet", crenv.host_sandbox_directory, spot)
