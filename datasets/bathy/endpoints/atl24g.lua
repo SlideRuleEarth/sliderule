@@ -279,7 +279,7 @@ elseif not valid_output_present then
     return
 elseif not bounding_polygon["lat"]     or not bounding_polygon["lon"] or
           #bounding_polygon["lat"] < 4 or    #bounding_polygon["lon"] < 4 then
-    cleanup(crenv, transaction_id, true, "no valid output present")
+    cleanup(crenv, transaction_id, true, "invalid bounding polygon")
     return
 end
 
