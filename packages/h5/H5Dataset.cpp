@@ -79,6 +79,7 @@ H5Dataset::H5Dataset (info_t* info, Context* context,
     dataChunkBuffer (NULL),
     dataChunkFilterBuffer (NULL),
     dataChunkBufferSize (0),
+    dataChunkFilterBufferSize (0),
     highestDataLevel (0),
     dataSizeHint (0)
 {
@@ -322,6 +323,14 @@ void H5Dataset::readDataset (info_t* info)
     /* Allocate Data Buffer */
     uint8_t* buffer = NULL;
     const int64_t buffer_size = num_elements * metaData.typesize;
+    if(H5CORO_ERROR_CHECKING)
+    {
+        if(metaData.size != 0 && metaData.size < buffer_size)
+        {
+            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid read: %ld < %ld", (long)metaData.size, (long)buffer_size);
+        }
+    }
+
     if(!metaOnly && buffer_size > 0)
     {
         /* Add Space for Terminator for Strings */
@@ -414,7 +423,7 @@ void H5Dataset::readDataset (info_t* info)
                     const uint64_t buffer_offset = hyperslice[0].r0 * metaData.typesize;
                     if(metaData.size != 0 && metaData.size < ((int64_t)buffer_offset + buffer_size))
                     {
-                        throw RunTimeException(CRITICAL, RTE_ERROR, "read exceeds available data: %ld != %ld", (long)metaData.size, (long)buffer_size);
+                        throw RunTimeException(CRITICAL, RTE_ERROR, "read exceeds available data: %ld != %ld + %ld", (long)metaData.size, (long)buffer_offset, (long)buffer_size);
                     }
                     uint64_t data_addr = metaData.address + buffer_offset;
                     ioContext->ioRequest(&data_addr, buffer_size, buffer, 0, false);
@@ -462,8 +471,9 @@ void H5Dataset::readDataset (info_t* info)
 
                 /* Allocate Data Chunk Buffer */
                 dataChunkBufferSize = metaData.chunkelements * metaData.typesize;
+                dataChunkFilterBufferSize = dataChunkBufferSize * FILTER_SIZE_SCALE;
                 dataChunkBuffer = new uint8_t [dataChunkBufferSize];
-                dataChunkFilterBuffer = new uint8_t [dataChunkBufferSize * FILTER_SIZE_SCALE];
+                dataChunkFilterBuffer = new uint8_t [dataChunkFilterBufferSize];
 
                 /*
                  * Prefetch and Set Data Size Hint
@@ -1225,9 +1235,12 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
                 if(metaData.filter[DEFLATE_FILTER])
                 {
                     /* Check Current Node Chunk Size */
-                    if(curr_node.chunk_size > (dataChunkBufferSize * FILTER_SIZE_SCALE))
+                    if(curr_node.chunk_size > dataChunkFilterBufferSize)
                     {
-                        throw RunTimeException(CRITICAL, RTE_ERROR, "Compressed chunk size exceeds buffer: %u > %lu", curr_node.chunk_size, (unsigned long)dataChunkBufferSize);
+                        mlog(DEBUG, "Compressed chunk size exceeds buffer: %u > %lu", curr_node.chunk_size, (unsigned long)dataChunkFilterBufferSize);
+                        delete [] dataChunkFilterBuffer;
+                        dataChunkFilterBufferSize = curr_node.chunk_size;
+                        dataChunkFilterBuffer = new uint8_t[dataChunkFilterBufferSize];
                     }
 
                     /* Read Data into Chunk Filter Buffer (holds the compressed data) */
@@ -1293,9 +1306,12 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
                 if(metaData.filter[DEFLATE_FILTER])
                 {
                     // check current node chunk size
-                    if(curr_node.chunk_size > (dataChunkBufferSize * FILTER_SIZE_SCALE))
+                    if(curr_node.chunk_size > dataChunkFilterBufferSize)
                     {
-                        throw RunTimeException(CRITICAL, RTE_ERROR, "Compressed chunk size exceeds buffer: %u > %lu", curr_node.chunk_size, (unsigned long)dataChunkBufferSize);
+                        mlog(DEBUG, "Compressed chunk size exceeds buffer: %u > %lu", curr_node.chunk_size, (unsigned long)dataChunkFilterBufferSize);
+                        delete [] dataChunkFilterBuffer;
+                        dataChunkFilterBufferSize = curr_node.chunk_size;
+                        dataChunkFilterBuffer = new uint8_t[dataChunkFilterBufferSize];
                     }
 
                     // decompress

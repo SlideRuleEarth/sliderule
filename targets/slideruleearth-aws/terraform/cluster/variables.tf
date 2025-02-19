@@ -89,7 +89,7 @@ variable "cluster_volume_size" {
 variable "spot_max_price" {
   description = "maximum price sliderule cluster will pay for spot instances"
   type        = string
-  default     = "0.17"
+  default     = "0.18"
 }
 variable "spot_allocation_strategy" {
   description = "strategy for allocating spot instances"
