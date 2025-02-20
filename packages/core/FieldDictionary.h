@@ -73,6 +73,7 @@ class FieldDictionary: public Field
         virtual         ~FieldDictionary(void) override = default;
 
         bool            add             (const entry_t& entry);
+        bool            remove          (const entry_t& entry);
 
         Field*          operator[]      (const char* key) const;
         Field&          operator[]      (const char* key);
@@ -85,6 +86,25 @@ class FieldDictionary: public Field
         /*--------------------------------------------------------------------
          * Inlines
          *--------------------------------------------------------------------*/
+
+        void clear (void) override {
+            entry_t entry;
+            const char* key = fields.first(&entry);
+            while(key != NULL)
+            {
+                if(entry.free_on_delete)
+                {
+                    delete [] entry.name;
+                    delete entry.field;
+                }
+                else
+                {
+                    entry.field->clear();
+                }
+                key = fields.next(&entry);
+            }
+            fields.clear();
+        }
 
         long length (void) const override {
             return fields.length();

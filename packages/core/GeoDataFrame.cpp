@@ -211,25 +211,16 @@ bool GeoDataFrame::FrameSender::run(GeoDataFrame* dataframe)
     const double start = TimeLib::latchtime();
     const uint64_t key = (dataframe->getKey() << 32) | key_space;
 
-    /* Create Event Publisher */
-    Publisher pubq(rspq);
-
-    /* Check if DataFrame is In Error */
-    if(dataframe->inError)
+    try
     {
-        alert(ERROR, RTE_ERROR, &pubq, &dataframe->active, "request <%s> failed to create valid dataframe", rspq);
-        return false;
+        /* Send DataFrame */
+        dataframe->sendDataframe(rspq, key, timeout);
     }
-
-    /* Check if DataFrame is Empty */
-    if(dataframe->length() <= 0)
+    catch (const RunTimeException& e)
     {
-        alert(ERROR, RTE_ERROR, &pubq, &dataframe->active, "request <%s> created an empty dataframe", rspq);
-        return false;
+        Publisher pubq(rspq);
+        alert(ERROR, RTE_ERROR, &pubq, &dataframe->active, "request <%s> failed to send dataframe: %s", rspq, e.what());
     }
-
-    /* Send DataFrame */
-    dataframe->sendDataframe(rspq, key, timeout);
 
     /* Update Run Time */
     updateRunTime(TimeLib::latchtime() - start);
@@ -337,6 +328,14 @@ int GeoDataFrame::luaCreate (lua_State* L)
         return returnLuaStatus(L, false);
     }
     return createLuaObject(L, dataframe);
+}
+
+/*----------------------------------------------------------------------------
+ * clear
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::clear(void)
+{
+    columnFields.fields.clear();
 }
 
 /*----------------------------------------------------------------------------
@@ -567,6 +566,18 @@ Field* GeoDataFrame::getMetaData (const char* name, Field::type_t _type, bool no
 }
 
 /*----------------------------------------------------------------------------
+ * deleteColumn
+ *----------------------------------------------------------------------------*/
+bool GeoDataFrame::deleteColumn (const char* name)
+{
+    if(name)
+    {
+        return columnFields.fields.remove(name);
+    }
+    return false;
+}
+
+/*----------------------------------------------------------------------------
  * getKey
  *----------------------------------------------------------------------------*/
 okey_t GeoDataFrame::getKey (void) const
@@ -747,7 +758,7 @@ GeoDataFrame::~GeoDataFrame(void)
         if(recv_status > 0 && runner) runner->releaseLuaObject();
     }
 
-    // ree entries column dictionary
+    // free entries column dictionary
     {
         FieldDictionary::entry_t entry;
         const char* key = columnFields.fields.first(&entry);
@@ -883,11 +894,17 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data)
  *----------------------------------------------------------------------------*/
 void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, int timeout) const
 {
-    // massage key_space
-    if(key_space == INVALID_KEY) key_space = 0;
+    // check if dataframe is in error
+    if(inError) throw RunTimeException(ERROR, RTE_ERROR, "invalid dataframe");
+
+    // check if dataframe is empty
+    if(length() <= 0) throw RunTimeException(ERROR, RTE_ERROR, "empty dataframe");
 
     // create publisher
     Publisher pub(rspq);
+
+    // massage key_space
+    if(key_space == INVALID_KEY) key_space = 0;
 
     // create and send column records
     Dictionary<FieldDictionary::entry_t>::Iterator column_iter(columnFields.fields);

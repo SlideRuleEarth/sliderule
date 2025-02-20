@@ -59,6 +59,8 @@ class FieldMap: public Field
         virtual         ~FieldMap   (void) override = default;
 
         long            add         (const char* key, T* v);
+
+        void            clear       (void) override;
         long            length      (void) const override;
 
         FieldMap<T>&    operator=   (const FieldMap<T>& other);
@@ -106,6 +108,15 @@ long FieldMap<T>::add(const char* key, T* v)
 {
     values.add(key, v);
     return values.length();
+}
+
+/*----------------------------------------------------------------------------
+ * clear
+ *----------------------------------------------------------------------------*/
+template<class T>
+void FieldMap<T>::clear(void)
+{
+    return values.clear;
 }
 
 /*----------------------------------------------------------------------------

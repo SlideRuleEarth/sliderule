@@ -15,8 +15,6 @@ dataframe.proxy("atl03x", parms, rqst["parms"], rspq, channels, function(userlog
     local atl08h5 = nil
     if parms:stage(icesat2.ATL08) then
         atl08h5 = h5.object(parms["asset"], resource:gsub("ATL03", "ATL08"))
-    else
-        print("OH YEAH!")
     end
     for _, beam in ipairs(parms["beams"]) do
         dataframes[beam] = icesat2.atl03x(beam, parms, atl03h5, atl08h5, rspq)

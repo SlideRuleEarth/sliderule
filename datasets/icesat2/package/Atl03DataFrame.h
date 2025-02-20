@@ -80,7 +80,7 @@ class Atl03DataFrame: public GeoDataFrame
         FieldColumn<float>          height;                         // float[]: h_ph
         FieldColumn<float>          relief;                         // float[]: ATL08 ph_h
         FieldColumn<float>          solar_elevation;                // degrees
-        FieldColumn<double>         background_rate;                // PE per second
+        FieldColumn<float>          background_rate;                // PE per second
         FieldColumn<float>          spacecraft_velocity;            // meters per second
         FieldColumn<uint8_t>        landcover;                      // ATL08 land cover flags
         FieldColumn<uint8_t>        snowcover;                      // ATL08 snow cover flags
@@ -88,14 +88,14 @@ class Atl03DataFrame: public GeoDataFrame
         FieldColumn<int8_t>         atl03_cnf;                      // ATL03 confidence level
         FieldColumn<int8_t>         quality_ph;                     // ATL03 photon quality
         FieldColumn<uint8_t>        yapc_score;                     // YAPC weight of photon
-        FieldColumn<uint32_t>       segment_id;                     // ATL03 segment
+        FieldColumn<uint32_t>       ph_index;                       // ATL03 photon index for the track
 
         /* DataFrame MetaData */
         FieldElement<uint8_t>       spot;                           // 1, 2, 3, 4, 5, 6
         FieldElement<uint8_t>       cycle;
         FieldElement<uint8_t>       region;
-        FieldElement<uint16_t>      reference_ground_track;
-        FieldElement<uint8_t>       spacecraft_orientation;         // 0 (backwards), 1 (forward)
+        FieldElement<uint16_t>      rgt;
+        FieldElement<uint8_t>       gt;                             // Icesat2Fields::gt_t
 
         /*--------------------------------------------------------------------
          * Methods

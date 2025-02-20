@@ -72,6 +72,27 @@ bool FieldDictionary::add(const entry_t& entry)
 }
 
 /*----------------------------------------------------------------------------
+ * remove
+ *----------------------------------------------------------------------------*/
+bool FieldDictionary::remove(const entry_t& entry)
+{
+    if(fields.remove(entry.name))
+    {
+        if(entry.free_on_delete)
+        {
+            delete [] entry.name;
+            delete entry.field;
+        }
+        else
+        {
+            entry.field->clear();
+        }
+        return true;
+    }
+    return false;
+}
+
+/*----------------------------------------------------------------------------
  * operator[] - rvalue
  *----------------------------------------------------------------------------*/
 Field* FieldDictionary::operator[](const char* key) const

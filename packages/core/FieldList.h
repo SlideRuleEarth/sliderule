@@ -60,8 +60,8 @@ class FieldList: public Field
         virtual         ~FieldList  (void) override = default;
 
         long            append      (const T& v);
-        void            clear       (void);
 
+        void            clear       (void) override;
         long            length      (void) const override;
         const Field*    get         (long i) const override;
         long            serialize   (uint8_t* buffer, size_t size) const override;

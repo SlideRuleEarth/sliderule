@@ -109,6 +109,10 @@ class Field
 
         virtual ~Field (void) = default;
 
+        virtual void clear (void) {
+            return;
+        }
+
         virtual long length (void) const {
             return 0;
         }

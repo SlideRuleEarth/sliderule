@@ -68,8 +68,8 @@ class FieldColumn: public Field
         long            appendBuffer    (const uint8_t* buffer, long size);
         long            appendValue     (const T& v, long size);
         void            initialize      (long size, const T& v);
-        void            clear           (void);
 
+        void            clear           (void) override;
         long            length          (void) const override;
         const Field*    get             (long i) const override;
         long            serialize       (uint8_t* buffer, size_t size) const override;

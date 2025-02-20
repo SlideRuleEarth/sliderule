@@ -110,20 +110,20 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"atl03_cnf",           &atl03_cnf},
         {"quality_ph",          &quality_ph},
         {"yapc_score",          &yapc_score},
-        {"segment_id",          &segment_id},
+        {"ph_index",            &ph_index},
     },
     {
-        {"spot",                    &spot},
-        {"cycle",                   &cycle},
-        {"region",                  &region},
-        {"reference_ground_track",  &reference_ground_track},
-        {"spacecraft_orientation",  &spacecraft_orientation}
+        {"spot",                &spot},
+        {"cycle",               &cycle},
+        {"region",              &region},
+        {"rgt",                 &rgt},
+        {"gt",                  &gt}
     }),
     spot(0, META_COLUMN),
     cycle(0, META_COLUMN),
     region(0, META_COLUMN),
-    reference_ground_track(0, META_COLUMN),
-    spacecraft_orientation(Icesat2Fields::SC_TRANSITION, META_COLUMN),
+    rgt(0, META_COLUMN),
+    gt(0, META_COLUMN),
     active(false),
     readerPid(NULL),
     readTimeoutMs(_parms->readTimeout.value * 1000),
@@ -146,7 +146,7 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     /* Set MetaData from Parameters */
     cycle = parms->cycle.value;
     region = parms->region.value;
-    reference_ground_track = parms->rgt.value;
+    rgt = parms->rgt.value;
 
     /* Calculate Key */
     dfKey = 0;
@@ -1023,7 +1023,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
 
         /* Set MetaData */
         df->spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], df->beam);
-        df->spacecraft_orientation = atl03.sc_orient[0];
+        df->gt = Icesat2Fields::getGroundTrack(df->beam);
 
         /* Perform YAPC Scoring (if requested) */
         const YapcScore yapc(df, aoi, atl03);
@@ -1220,7 +1220,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             df->quality_ph.append(static_cast<int8_t>(quality_ph));
             df->yapc_score.append(yapc_score);
             df->spacecraft_velocity.append(spacecraft_velocity);
-            df->segment_id.append(atl03.segment_id[current_segment]);
+            df->ph_index.append(current_photon);
 
             /* Add Ancillary Elements */
             if(atl03.anc_geo_data.length() > 0)     atl03.anc_geo_data.addToGDF(df, current_segment);
