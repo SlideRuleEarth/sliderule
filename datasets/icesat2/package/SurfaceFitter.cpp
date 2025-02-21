@@ -86,8 +86,7 @@ int SurfaceFitter::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 SurfaceFitter::SurfaceFitter (lua_State* L, Icesat2Fields* _parms):
     GeoDataFrame::FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
-    parms(_parms),
-    lua_state(L)
+    parms(_parms)
 {
 }
 
@@ -130,11 +129,8 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     int32_t i0 = 0; // start row
     int32_t i1 = 1; // end row
 
-    // initialize extent variables
-    int32_t e = 0; // extent row
-
     // for each photon
-    while(i1 < df.length())
+    while(i0 < df.length() && i1 < df.length())
     {
         uint32_t _pflags = 0;
 
@@ -149,7 +145,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
         if(i1 <= i0) break;
 
         // check minimum extent length
-        if((df.x_atc[i1] - df.x_atc[i0]) < parms->alongTrackSpread)
+        if((df.x_atc[i1] - df.x_atc[i0]) < parms->minAlongTrackSpread)
         {
             if(!parms->passInvalid) continue;
             _pflags |= PFLAG_SPREAD_TOO_SHORT;
@@ -163,7 +159,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
         }
 
         // run least squares fit
-        result_t result = iterativeFitStage(df, i0, i1);
+        const result_t result = iterativeFitStage(df, i0, i1);
 
         // add row
         time_ns->append(static_cast<int64_t>(result.time_ns));
@@ -179,6 +175,14 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
         photon_start->append(df.ph_index[i0]);
         photon_count->append(i1 - i0);
         pflags->append(result.pflags | _pflags);
+
+        // find start of next extent
+        const int32_t prev_i0 = i0;
+        while( (i0 < df.length()) && 
+        ((df.x_atc[i0] - prev_i0) < parms->extentStep.value) ) 
+        {
+            i0++;            
+        } 
     }
 
     // clear all columns from original dataframe
@@ -210,33 +214,36 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
  *  Note: Section 5.5 - Signal selection based on ATL03 flags
  *        Procedures 4b and after
  *----------------------------------------------------------------------------*/
-SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& df, int32_t i0, int32_t i1)
+SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons)
 {
     /* Initialize Results */
     result_t result;
     
     /* Initial Per Track Calculations */
-    const double pulses_in_extent = (parms->extentLength * PULSE_REPITITION_FREQUENCY) / df.spacecraft_velocity[i0]; // N_seg_pulses, section 5.4, procedure 1d
-    const double background_density = pulses_in_extent * df.background_rate[i0] / (SPEED_OF_LIGHT / 2.0); // BG_density, section 5.7, procedure 1c
+    const double pulses_in_extent = (parms->extentLength * PULSE_REPITITION_FREQUENCY) / df.spacecraft_velocity[start_photon]; // N_seg_pulses, section 5.4, procedure 1d
+    const double background_density = pulses_in_extent * df.background_rate[start_photon] / (SPEED_OF_LIGHT / 2.0); // BG_density, section 5.7, procedure 1c
 
-    /* Initialize Loop Variables */
-    const int32_t num_photons = i1 - i0;
+    /* Initialize Photons Variables */
     point_t* photons = new point_t[num_photons];
     int32_t photons_in_window = num_photons;
-    bool done = false;
-    bool invalid = false;
-    int iteration = 0;
+    for(int32_t i = 0; i < num_photons; i++)
+    {
+        photons[i].p = start_photon + i;
+        photons[i].r = 0;
+    }
 
     /* Generate Along Track Coordinate */
     double* x_atc_norm = new double[num_photons];
-    const int32_t i_center = i0 + ((i1 - i0) / 2);
+    const int32_t i_center = start_photon + (num_photons / 2);
     result.x_atc = df.x_atc[i_center];
-    for(int i = 0; i < num_photons; i++)
+    for(int32_t i = 0; i < num_photons; i++)
     {
-        x_atc_norm[i] = df.x_atc[i0 + i] - result.x_atc;
+        x_atc_norm[i] = df.x_atc[start_photon + i] - result.x_atc;
     }
 
     /* Iterate Processing of Photons */
+    bool done = false;
+    int iteration = 0;
     while(!done)
     {
         /* Calculate Least Squares Fit */
@@ -314,7 +321,6 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
             {
                 mlog(CRITICAL, "Out of bounds condition caught: %d, %d, %d", i0, i1, photons_in_window);
                 result.pflags |= PFLAG_OUT_OF_BOUNDS;
-                invalid = true;
             }
         }
 
@@ -324,8 +330,8 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
         const double sigma_expected = sqrt(se1 + se2); // sigma_expected, section 5.5, procedure 4d
 
         /* Calculate Window Height */
-        if(sigma_r > parms->maxRobustDispersion.value) sigma_r = parms->maxRobustDispersion.value;
-        const double new_window_height = MAX(MAX(parms->minWindow.value, 6.0 * sigma_expected), 6.0 * sigma_r); // H_win, section 5.5, procedure 4e
+        if(sigma_r > parms->fit.maxRobustDispersion.value) sigma_r = parms->fit.maxRobustDispersion.value;
+        const double new_window_height = MAX(MAX(parms->fit.minWindow.value, 6.0 * sigma_expected), 6.0 * sigma_r); // H_win, section 5.5, procedure 4e
         result.window_height = MAX(new_window_height, 0.75 * result.window_height); // section 5.7, procedure 2e
         const double window_spread = result.window_height / 2.0;
 
@@ -348,14 +354,12 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
         if(next_num_photons < parms->minPhotonCount.value)
         {
             result.pflags |= PFLAG_TOO_FEW_PHOTONS;
-            invalid = true;
             done = true;
         }
         /* Check Spread */
-        else if((x_max - x_min) < parms->alongTrackSpread.value)
+        else if((x_max - x_min) < parms->minAlongTrackSpread.value)
         {
             result.pflags |= PFLAG_SPREAD_TOO_SHORT;
-            invalid = true;
             done = true;
         }
         /* Check Change in Number of Photons */
@@ -364,7 +368,7 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
             done = true;
         }
         /* Check Iterations */
-        else if(++iteration >= parms->maxIterations.value)
+        else if(++iteration >= parms->fit.maxIterations.value)
         {
             result.pflags |= PFLAG_MAX_ITERATIONS_REACHED;
             done = true;
@@ -397,15 +401,10 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
     }
 
     /* Calculate RMS and Scale h_sigma */
-    if(!invalid && photons_in_window > 0)
+    if(photons_in_window > 0)
     {
         result.rms_misfit = sqrt(delta_sum / (double)photons_in_window);
         result.h_sigma = result.rms_misfit * result.h_sigma;
-    }
-    else
-    {
-        result.rms_misfit = 0.0;
-        result.h_sigma = 0.0;
     }
 
     /* Calculate Latitude, Longitude, and GPS Time using Least Squares Fit */
@@ -446,7 +445,7 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
  *
  *  TODO: currently no protections against divide-by-zero
  *----------------------------------------------------------------------------*/
-void SurfaceFitter::leastSquaresFit (const Atl03DataFrame& df, double* x_atc_norm, point_t* array, int32_t size, bool final, result_t& result)
+void SurfaceFitter::leastSquaresFit (const Atl03DataFrame& df, const double* x_atc_norm, point_t* array, int32_t size, bool final, result_t& result)
 {
     /* Initialize Fit */
     double fit_height = 0.0;
@@ -532,7 +531,7 @@ void SurfaceFitter::leastSquaresFit (const Atl03DataFrame& df, double* x_atc_nor
             /* Fixed Fields - Calculate G^-g and m */
             for(int p = 0; p < size; p++)
             {
-                int32_t i = array[p].p;
+                const int32_t i = array[p].p;
                 double ph_longitude = df.longitude[i];
 
                 /* Shift Longitudes */

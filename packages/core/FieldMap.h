@@ -116,7 +116,7 @@ long FieldMap<T>::add(const char* key, T* v)
 template<class T>
 void FieldMap<T>::clear(void)
 {
-    return values.clear;
+    return values.clear();
 }
 
 /*----------------------------------------------------------------------------

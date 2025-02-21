@@ -35,6 +35,7 @@
 #include "OsApi.h"
 #include "GeoDataFrame.h"
 #include "Icesat2Fields.h"
+#include "Atl03DataFrame.h"
 
 /******************************************************************************
  * CLASS
@@ -79,10 +80,10 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        struct point_t {
-            uint32_t    p = 0;              // index into photon array
-            double      r = 0;              // residual
-        };
+        typedef struct {
+            uint32_t    p;                  // index into photon array
+            double      r;                  // residual
+        } point_t;
 
         struct result_t {
             uint16_t    pflags = 0;         // processing flags
@@ -105,17 +106,16 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
         SurfaceFitter  (lua_State* L, Icesat2Fields* _parms);
         ~SurfaceFitter (void) override;
 
-        result_t iterativeFitStage (const Atl03DataFrame& df, int32_t i0, int32_t i1);
-        void leastSquaresFit (const Atl03DataFrame& df, double* x_atc_norm, point_t* array, int32_t size, bool final, result_t& result);
-        void quicksort(point_t* array, int start, int end);
-        int quicksortpartition(point_t* array, int start, int end);
+        result_t iterativeFitStage (const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons);
+        static void leastSquaresFit (const Atl03DataFrame& df, const double* x_atc_norm, point_t* array, int32_t size, bool final, result_t& result);
+        static void quicksort(point_t* array, int start, int end);
+        static int quicksortpartition(point_t* array, int start, int end);
         
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
         Icesat2Fields*  parms;
-        lua_State*      lua_state;
 };
 
 #endif

@@ -881,25 +881,25 @@ void Atl03DataFrame::YapcScore::yapcV3 (const Atl03DataFrame* df, const AreaOfIn
     double* ph_dist = new double[num_photons];  // local array freed below
 
     /* Populate Distance Array */
-    int32_t ph_index = 0;
+    int32_t photon_index = 0;
     for(int segment_index = 0; segment_index < num_segments; segment_index++)
     {
         for(int32_t ph_in_seg_index = 0; ph_in_seg_index < aoi.segment_ph_cnt[segment_index]; ph_in_seg_index++)
         {
-            ph_dist[ph_index] = atl03.segment_dist_x[segment_index] + atl03.dist_ph_along[ph_index];
-            ph_index++;
+            ph_dist[photon_index] = atl03.segment_dist_x[segment_index] + atl03.dist_ph_along[photon_index];
+            photon_index++;
         }
     }
 
     /* Traverse Each Segment */
-    ph_index = 0;
+    photon_index = 0;
     for(int segment_index = 0; segment_index < num_segments; segment_index++)
     {
         /* Initialize Segment Parameters */
         const int32_t N = aoi.segment_ph_cnt[segment_index];
         double* ph_weights = new double[N]; // local array freed below
         int max_knn = settings.min_knn;
-        int32_t start_ph_index = ph_index;
+        int32_t start_ph_index = photon_index;
 
         /* Traverse Each Photon in Segment*/
         for(int32_t ph_in_seg_index = 0; ph_in_seg_index < N; ph_in_seg_index++)
@@ -907,15 +907,15 @@ void Atl03DataFrame::YapcScore::yapcV3 (const Atl03DataFrame* df, const AreaOfIn
             List<double> proximities;
 
             /* Check Nearest Neighbors to Left */
-            int32_t neighbor_index = ph_index - 1;
+            int32_t neighbor_index = photon_index - 1;
             while(neighbor_index >= 0)
             {
                 /* Check Inside Horizontal Window */
-                const double x_dist = ph_dist[ph_index] - ph_dist[neighbor_index];
+                const double x_dist = ph_dist[photon_index] - ph_dist[neighbor_index];
                 if(x_dist <= hWX)
                 {
                     /* Check Inside Vertical Window */
-                    const double proximity = abs(atl03.h_ph[ph_index] - atl03.h_ph[neighbor_index]);
+                    const double proximity = abs(atl03.h_ph[photon_index] - atl03.h_ph[neighbor_index]);
                     if(proximity <= hWZ)
                     {
                         proximities.add(proximity);
@@ -930,15 +930,15 @@ void Atl03DataFrame::YapcScore::yapcV3 (const Atl03DataFrame* df, const AreaOfIn
             }
 
             /* Check Nearest Neighbors to Right */
-            neighbor_index = ph_index + 1;
+            neighbor_index = photon_index + 1;
             while(neighbor_index < num_photons)
             {
                 /* Check Inside Horizontal Window */
-                double x_dist = ph_dist[neighbor_index] - ph_dist[ph_index]; // NOLINT [clang-analyzer-core.UndefinedBinaryOperatorResult]
+                double x_dist = ph_dist[neighbor_index] - ph_dist[photon_index]; // NOLINT [clang-analyzer-core.UndefinedBinaryOperatorResult]
                 if(x_dist <= hWX)
                 {
                     /* Check Inside Vertical Window */
-                    const double proximity = abs(atl03.h_ph[ph_index] - atl03.h_ph[neighbor_index]);
+                    const double proximity = abs(atl03.h_ph[photon_index] - atl03.h_ph[neighbor_index]);
                     if(proximity <= hWZ) // inside of height window
                     {
                         proximities.add(proximity);
@@ -970,7 +970,7 @@ void Atl03DataFrame::YapcScore::yapcV3 (const Atl03DataFrame* df, const AreaOfIn
             ph_weights[ph_in_seg_index] = weight_sum;
 
             /* Go To Next Photon */
-            ph_index++;
+            photon_index++;
         }
 
         /* Normalize Weights */

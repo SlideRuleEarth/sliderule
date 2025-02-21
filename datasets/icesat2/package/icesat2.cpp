@@ -48,6 +48,7 @@
 #include "Atl13IODriver.h"
 #include "CumulusIODriver.h"
 #include "MeritRaster.h"
+#include "SurfaceFitter.h"
 #ifdef __unittesting__
 #include "UT_Atl06Dispatch.h"
 #endif
@@ -78,6 +79,7 @@ int icesat2_open (lua_State *L)
         {"atl13s",              Atl13Reader::luaCreate},
         // dataframes
         {"atl03x",              Atl03DataFrame::luaCreate},
+        {"fit",                 SurfaceFitter::luaCreate},
 #ifdef __unittesting__
         {"ut_atl06",            UT_Atl06Dispatch::luaCreate},
 #endif

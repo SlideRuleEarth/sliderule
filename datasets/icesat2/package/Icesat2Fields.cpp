@@ -43,6 +43,29 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * Constructor - FitFields
+ *----------------------------------------------------------------------------*/
+FitFields::FitFields():
+    FieldDictionary({ {"maxi",          &maxIterations},
+                      {"H_min_win",     &minWindow},
+                      {"sigma_r_max",   &maxRobustDispersion} }),
+    provided(false)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * fromLua - FitFields
+ *----------------------------------------------------------------------------*/
+void FitFields::fromLua (lua_State* L, int index)
+{
+    if(lua_istable(L, index))
+    {
+        FieldDictionary::fromLua(L, index);
+        provided = true;
+    }
+}
+
+/*----------------------------------------------------------------------------
  * Constructor - YapcFields
  *----------------------------------------------------------------------------*/
 YapcFields::YapcFields():
@@ -165,6 +188,12 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
         stages[STAGE_ATL08] = true;
     }
 
+    // handle Surface Fitter options
+    if(fit.provided)
+    {
+        stages[STAGE_ATL06] = true;
+    }
+
     // handle PhoREAL options
     if(phoreal.provided)
     {
@@ -260,16 +289,16 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset
         {"quality_ph",          &qualityPh},
         {"atl08_class",         &atl08Class},
         {"beams",               &beams},
-        {"yapc",                &yapc},
         {"track",               &track},
-        {"maxi",                &maxIterations},
         {"cnt",                 &minPhotonCount},
-        {"ats",                 &alongTrackSpread},
-        {"H_min_win",           &minWindow},
-        {"sigma_r_max",         &maxRobustDispersion},
+        {"ats",                 &minAlongTrackSpread},
         {"len",                 &extentLength},
         {"res",                 &extentStep},
+        {"yapc",                &yapc},
         {"phoreal",             &phoreal},
+        {"maxi",                &maxIterations},
+        {"H_min_win",           &minWindow},
+        {"sigma_r_max",         &maxRobustDispersion},
         {"atl03_geo_fields",    &atl03GeoFields},
         {"atl03_corr_fields",   &atl03CorrFields},
         {"atl03_ph_fields",     &atl03PhFields},

@@ -1521,7 +1521,7 @@ void* Atl03Reader::subsettingThread (void* parm)
             {
                 const int32_t last = state.extent_photons.length() - 1;
                 const double along_track_spread = state.extent_photons[last].x_atc - state.extent_photons[0].x_atc;
-                if(along_track_spread < parms->alongTrackSpread.value)
+                if(along_track_spread < parms->minAlongTrackSpread.value)
                 {
                     state.extent_valid = false;
                 }

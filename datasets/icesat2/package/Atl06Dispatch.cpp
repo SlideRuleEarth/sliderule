@@ -466,7 +466,7 @@ void Atl06Dispatch::iterativeFitStage (Atl03Reader::extent_t* extent, result_t& 
             done = true;
         }
         /* Check Spread */
-        else if((x_max - x_min) < parms->alongTrackSpread.value)
+        else if((x_max - x_min) < parms->minAlongTrackSpread.value)
         {
             result.elevation.pflags |= PFLAG_SPREAD_TOO_SHORT;
             invalid = true;
