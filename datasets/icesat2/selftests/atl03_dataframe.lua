@@ -61,7 +61,7 @@ runner.unittest("ATL03 DataFrame", function()
         height = 2178.863281,
         relief = 0.0,
         solar_elevation = -11.243111,
-        background_rate = 33019.825791,
+        background_rate = 33019.824219,
         spacecraft_velocity = 7096.781738,
         landcover = 255,
         snowcover = 255,
@@ -69,15 +69,15 @@ runner.unittest("ATL03 DataFrame", function()
         atl03_cnf = 4,
         quality_ph = 0,
         yapc_score = 0,
-        segment_id = 555765
+        ph_index = 112
     }, atl03df, 100, 0.00001)
 
     check_expected({
         spot = 6,
         cycle = 6,
         region = 5,
-        reference_ground_track = 1047,
-        spacecraft_orientation = 1
+        rgt = 1047,
+        gt = 10
     }, atl03df, nil, 0)
 
 end)
@@ -122,7 +122,7 @@ runner.unittest("ATL03 DataFrame - Ancillary Data", function()
         atl03_cnf = 4,
         quality_ph = 0,
         yapc_score = 0,
-        segment_id = 555764,
+        ph_index = 108,
         knn = 14,
         pitch = -0.049935,
         geoid = 33.014797,
@@ -138,8 +138,8 @@ runner.unittest("ATL03 DataFrame - Ancillary Data", function()
         spot = 3,
         cycle = 6,
         region = 5,
-        reference_ground_track = 1047,
-        spacecraft_orientation = 1
+        rgt = 1047,
+        gt = 40
     }, atl03df, nil, 0)
 
 end)
