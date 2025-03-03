@@ -72,7 +72,7 @@ void H5VarSet::joinToGDF(GeoDataFrame* gdf, int timeout_ms, bool throw_exception
     while(dataset_name != NULL)
     {
         array->join(timeout_ms, throw_exception);
-        if(!gdf->addColumn(dataset_name, array->elementType()))
+        if(!gdf->addNewColumn(dataset_name, array->elementType()))
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "failed to join array for <%s>", dataset_name);
         }

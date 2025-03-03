@@ -335,6 +335,17 @@ int GeoDataFrame::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void GeoDataFrame::clear(void)
 {
+    FieldDictionary::entry_t entry;
+    const char* key = columnFields.fields.first(&entry);
+    while(key != NULL)
+    {
+        if(entry.free_on_delete)
+        {
+            delete [] entry.name;
+            delete entry.field;
+        }
+        key = columnFields.fields.next(&entry);
+    }
     columnFields.fields.clear();
 }
 
@@ -454,7 +465,7 @@ vector<string> GeoDataFrame::getColumnNames(void) const
 }
 
 /*----------------------------------------------------------------------------
- * addColumn
+ * addColumn - assumes memory is properly allocated already
  *----------------------------------------------------------------------------*/
 bool GeoDataFrame::addColumn (const char* name, Field* column, bool free_on_delete)
 {
@@ -464,9 +475,9 @@ bool GeoDataFrame::addColumn (const char* name, Field* column, bool free_on_dele
 }
 
 /*----------------------------------------------------------------------------
- * addColumn
+ * addNewColumn - allocates name and field
  *----------------------------------------------------------------------------*/
-bool GeoDataFrame::addColumn (const char* name, uint32_t _type)
+bool GeoDataFrame::addNewColumn (const char* name, uint32_t _type)
 {
     Field* column = NULL;
 
@@ -502,6 +513,15 @@ bool GeoDataFrame::addColumn (const char* name, uint32_t _type)
     }
 
     return true;
+}
+
+/*----------------------------------------------------------------------------
+ * addExistingColumn - only allocates name
+ *----------------------------------------------------------------------------*/
+bool GeoDataFrame::addExistingColumn (const char* name, Field* column)
+{
+    const char* _name = StringLib::duplicate(name);
+    return addColumn(_name, column, true);
 }
 
 /*----------------------------------------------------------------------------

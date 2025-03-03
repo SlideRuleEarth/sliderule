@@ -35,7 +35,7 @@
 
 #include <math.h>
 #include <float.h>
- 
+
 #include "OsApi.h"
 #include "GeoLib.h"
 #include "SurfaceFitter.h"
@@ -125,83 +125,97 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     FieldColumn<int32_t>*    photon_count   = new FieldColumn<int32_t>();                   // number of photons used in final elevation calculation
     FieldColumn<uint16_t>*   pflags         = new FieldColumn<uint16_t>();                  // processing flags
 
-    // initialize extent indices (i0, i1]
-    int32_t i0 = 0; // start row
-    int32_t i1 = 1; // end row
-
     // for each photon
-    while(i0 < df.length() && i1 < df.length())
+    int32_t i0 = 0; // start row
+    while(i0 < df.length())
     {
         uint32_t _pflags = 0;
 
         // find end of extent
-        while( (i1 < df.length()) && 
-               ((df.x_atc[i1] - df.x_atc[i0]) < parms->extentLength.value) ) 
+        int32_t i1 = i0; // end row
+        while( (i1 < df.length()) &&
+               ((df.x_atc[i1] - df.x_atc[i0]) < parms->extentLength.value) )
         {
-            i1++;            
+            i1++;
         }
 
+        // check for end of dataframe
+        if(i1 == df.length()) i1--;
+
         // check for valid extent
-        if(i1 <= i0) break;
+        if (i1 < i0)
+        {
+            mlog(CRITICAL, "Invalid extent (%d, %d)\n", i0, i1);
+            break;
+        }
+
+        // calculate number of photons in extent
+        const int32_t num_photons = i1 - i0 + 1;
 
         // check minimum extent length
         if((df.x_atc[i1] - df.x_atc[i0]) < parms->minAlongTrackSpread)
         {
-            if(!parms->passInvalid) continue;
             _pflags |= PFLAG_SPREAD_TOO_SHORT;
         }
 
         // check minimum number of photons
-        if((i1 - i0) < parms->minPhotonCount)
+        if(num_photons < parms->minPhotonCount)
         {
-            if(!parms->passInvalid) continue;
             _pflags |= PFLAG_TOO_FEW_PHOTONS;
         }
 
         // run least squares fit
-        const result_t result = iterativeFitStage(df, i0, i1);
-
-        // add row
-        time_ns->append(static_cast<int64_t>(result.time_ns));
-        latitude->append(result.latitude);
-        longitude->append(result.longitude);
-        h_mean->append(result.h_mean);
-        x_atc->append(result.x_atc);
-        y_atc->append(result.y_atc);
-        dh_fit_dx->append(result.dh_fit_dx);
-        window_height->append(result.window_height);
-        rms_misfit->append(result.rms_misfit);
-        h_sigma->append(result.h_sigma);
-        photon_start->append(df.ph_index[i0]);
-        photon_count->append(i1 - i0);
-        pflags->append(result.pflags | _pflags);
+        if(_pflags == 0 || parms->passInvalid)
+        {
+            const result_t result = iterativeFitStage(df, i0, num_photons);
+            time_ns->append(static_cast<int64_t>(result.time_ns));
+            latitude->append(result.latitude);
+            longitude->append(result.longitude);
+            h_mean->append(result.h_mean);
+            x_atc->append(result.x_atc);
+            y_atc->append(result.y_atc);
+            dh_fit_dx->append(result.dh_fit_dx);
+            window_height->append(result.window_height);
+            rms_misfit->append(result.rms_misfit);
+            h_sigma->append(result.h_sigma);
+            photon_start->append(df.ph_index[i0]);
+            photon_count->append(i1 - i0);
+            pflags->append(result.pflags | _pflags);
+        }
 
         // find start of next extent
         const int32_t prev_i0 = i0;
-        while( (i0 < df.length()) && 
-        ((df.x_atc[i0] - prev_i0) < parms->extentStep.value) ) 
+        while( (i0 < df.length()) &&
+               ((df.x_atc[i0] - df.x_atc[prev_i0]) < parms->extentStep.value) )
         {
-            i0++;            
-        } 
+            i0++;
+        }
+
+        // check extent moved
+        if(i0 == prev_i0)
+        {
+            mlog(CRITICAL, "Failed to move to next extent in track");
+            break;
+        }
     }
 
     // clear all columns from original dataframe
     df.clear(); // frees memory
 
     // install new columns into dataframe
-    df.addColumn("time_ns",         time_ns,        true);
-    df.addColumn("latitude",        latitude,       true);
-    df.addColumn("longitude",       longitude,      true);
-    df.addColumn("h_mean",          h_mean,         true);
-    df.addColumn("x_atc",           x_atc,          true);
-    df.addColumn("y_atc",           y_atc,          true);
-    df.addColumn("dh_fit_dx",       dh_fit_dx,      true);
-    df.addColumn("window_height",   window_height,  true);
-    df.addColumn("rms_misfit",      rms_misfit,     true);
-    df.addColumn("h_sigma",         h_sigma,        true);
-    df.addColumn("photon_start",    photon_start,   true);
-    df.addColumn("photon_count",    photon_count,   true);
-    df.addColumn("pflags",          pflags,         true);
+    df.addExistingColumn("time_ns",         time_ns);
+    df.addExistingColumn("latitude",        latitude);
+    df.addExistingColumn("longitude",       longitude);
+    df.addExistingColumn("h_mean",          h_mean);
+    df.addExistingColumn("x_atc",           x_atc);
+    df.addExistingColumn("y_atc",           y_atc);
+    df.addExistingColumn("dh_fit_dx",       dh_fit_dx);
+    df.addExistingColumn("window_height",   window_height);
+    df.addExistingColumn("rms_misfit",      rms_misfit);
+    df.addExistingColumn("h_sigma",         h_sigma);
+    df.addExistingColumn("photon_start",    photon_start);
+    df.addExistingColumn("photon_count",    photon_count);
+    df.addExistingColumn("pflags",          pflags);
 
     // update runtime and return success
     updateRunTime(TimeLib::latchtime() - start);
@@ -216,12 +230,18 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
  *----------------------------------------------------------------------------*/
 SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons)
 {
+    assert(num_photons > 0);
+
     /* Initialize Results */
     result_t result;
-    
+
     /* Initial Per Track Calculations */
     const double pulses_in_extent = (parms->extentLength * PULSE_REPITITION_FREQUENCY) / df.spacecraft_velocity[start_photon]; // N_seg_pulses, section 5.4, procedure 1d
     const double background_density = pulses_in_extent * df.background_rate[start_photon] / (SPEED_OF_LIGHT / 2.0); // BG_density, section 5.7, procedure 1c
+
+    /* Generate Along-Track Coordinate */
+    const int32_t i_center = start_photon + (num_photons / 2);
+    result.x_atc = df.x_atc[i_center];
 
     /* Initialize Photons Variables */
     point_t* photons = new point_t[num_photons];
@@ -230,15 +250,7 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
     {
         photons[i].p = start_photon + i;
         photons[i].r = 0;
-    }
-
-    /* Generate Along Track Coordinate */
-    double* x_atc_norm = new double[num_photons];
-    const int32_t i_center = start_photon + (num_photons / 2);
-    result.x_atc = df.x_atc[i_center];
-    for(int32_t i = 0; i < num_photons; i++)
-    {
-        x_atc_norm[i] = df.x_atc[start_photon + i] - result.x_atc;
+        photons[i].x = df.x_atc[start_photon + i] - result.x_atc;
     }
 
     /* Iterate Processing of Photons */
@@ -247,7 +259,7 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
     while(!done)
     {
         /* Calculate Least Squares Fit */
-        leastSquaresFit(df, x_atc_norm, photons, photons_in_window, false, result);
+        leastSquaresFit(df, photons, photons_in_window, false, result);
 
         /* Sort Points by Residuals */
         quicksort(photons, 0, photons_in_window-1);
@@ -408,10 +420,9 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
     }
 
     /* Calculate Latitude, Longitude, and GPS Time using Least Squares Fit */
-    leastSquaresFit(df, x_atc_norm, photons, photons_in_window, true, result);
+    leastSquaresFit(df, photons, photons_in_window, true, result);
 
     /* Clean Up */
-    delete [] x_atc_norm;
     delete [] photons;
 
     /* Return Results */
@@ -445,7 +456,7 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
  *
  *  TODO: currently no protections against divide-by-zero
  *----------------------------------------------------------------------------*/
-void SurfaceFitter::leastSquaresFit (const Atl03DataFrame& df, const double* x_atc_norm, point_t* array, int32_t size, bool final, result_t& result)
+void SurfaceFitter::leastSquaresFit (const Atl03DataFrame& df, point_t* array, int32_t size, bool final, result_t& result)
 {
     /* Initialize Fit */
     double fit_height = 0.0;
@@ -458,9 +469,8 @@ void SurfaceFitter::leastSquaresFit (const Atl03DataFrame& df, const double* x_a
     double       gtg_22 = 0.0;
     for(int p = 0; p < size; p++)
     {
-        const double x = x_atc_norm[array[p].p];
-
         /* Perform Matrix Operation */
+        const double x = array[p].x;
         gtg_12_21 += x;
         gtg_22 += x * x;
     }
@@ -477,7 +487,7 @@ void SurfaceFitter::leastSquaresFit (const Atl03DataFrame& df, const double* x_a
         for(int p = 0; p < size; p++)
         {
             const int32_t i = array[p].p;
-            const double x = x_atc_norm[i];
+            const double x = array[p].x;
             const double y = df.height[i];
 
             /* Perform Matrix Operation */
@@ -504,7 +514,7 @@ void SurfaceFitter::leastSquaresFit (const Atl03DataFrame& df, const double* x_a
         for(int p = 0; p < size; p++)
         {
             const int32_t i = array[p].p;
-            const double x = x_atc_norm[i];
+            const double x = array[p].x;
             const double y = df.height[i];
             array[p].r = y - (fit_height + (x * fit_slope));
         }
@@ -538,7 +548,7 @@ void SurfaceFitter::leastSquaresFit (const Atl03DataFrame& df, const double* x_a
                 if(shift_lon) ph_longitude = fmod((ph_longitude + 360.0), 360.0);
 
                 /* Perform Matrix Operation */
-                const double gig_1 = igtg_11 + (igtg_12_21 * x_atc_norm[i]);   // G^-g row 1 element
+                const double gig_1 = igtg_11 + (igtg_12_21 * array[p].x);   // G^-g row 1 element
 
                 /* Calculate m */
                 latitude += gig_1 * df.latitude[i];

@@ -88,21 +88,6 @@ class FieldDictionary: public Field
          *--------------------------------------------------------------------*/
 
         void clear (void) override {
-            entry_t entry;
-            const char* key = fields.first(&entry);
-            while(key != NULL)
-            {
-                if(entry.free_on_delete)
-                {
-                    delete [] entry.name;
-                    delete entry.field;
-                }
-                else
-                {
-                    entry.field->clear();
-                }
-                key = fields.next(&entry);
-            }
             fields.clear();
         }
 

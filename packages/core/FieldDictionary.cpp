@@ -48,7 +48,7 @@ FieldDictionary::FieldDictionary(std::initializer_list<entry_t> init_list, int h
     Field(DICTIONARY, 0),
     fields(hash_table_size)
 {
-    for(const entry_t elem: init_list)
+    for(const entry_t& elem: init_list)
     {
         fields.add(elem.name, elem);
     }

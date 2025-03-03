@@ -80,7 +80,7 @@ runner.unittest("ATL03 DataFrame", function()
         gt = 10
     }, atl03df, nil, 0)
 
-end)
+end, true)
 
 -- Unit Test --
 
@@ -142,6 +142,63 @@ runner.unittest("ATL03 DataFrame - Ancillary Data", function()
         gt = 40
     }, atl03df, nil, 0)
 
+end, true)
+
+-- Unit Test --
+
+runner.unittest("ATL06 Surface Fitter", function()
+
+    local parms = icesat2.parms({
+        cnf = 4,
+        resource = "ATL03_20200304065203_10470605_006_01.h5",
+        fit = { maxi = 2 }
+    })
+
+    local atl03h5 = h5.object(asset_name, parms["resource"])
+    local df = icesat2.atl03x("gt1l", parms, atl03h5, nil, core.EVENTQ)
+    local fitter = icesat2.fit(parms)
+
+    df:run(fitter)
+    df:run(core.TERMINATE)
+
+    runner.assert(df:finished(30000, rspq), "failed to wait for dataframe to finish")
+    runner.assert(df:inerror() == false, "dataframe encountered error")
+
+    print("ROWS = ", df:numrows())
+    print("COLUMNS = ", df:numcols())
+
+--[[
+    runner.assert(atl03df:numrows() == 5912939, string.format("incorrect number of rows: %d", atl03df:numrows()))
+    runner.assert(atl03df:numcols() == 17, string.format("incorrect number of columns: %d", atl03df:numcols()))
+
+    check_expected({
+        time_ns = 1583304724130344448,
+        latitude = 79.993572,
+        longitude = -40.942408,
+        x_atc = 11132842.088085,
+        y_atc = 3271.814941,
+        height = 2178.863281,
+        relief = 0.0,
+        solar_elevation = -11.243111,
+        background_rate = 33019.824219,
+        spacecraft_velocity = 7096.781738,
+        landcover = 255,
+        snowcover = 255,
+        atl08_class = 4,
+        atl03_cnf = 4,
+        quality_ph = 0,
+        yapc_score = 0,
+        ph_index = 112
+    }, atl03df, 100, 0.00001)
+
+    check_expected({
+        spot = 6,
+        cycle = 6,
+        region = 5,
+        rgt = 1047,
+        gt = 10
+    }, atl03df, nil, 0)
+]]
 end)
 
 -- Report Results --

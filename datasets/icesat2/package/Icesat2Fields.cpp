@@ -294,6 +294,7 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset
         {"ats",                 &minAlongTrackSpread},
         {"len",                 &extentLength},
         {"res",                 &extentStep},
+        {"fit",                 &fit},
         {"yapc",                &yapc},
         {"phoreal",             &phoreal},
         {"maxi",                &maxIterations},
@@ -464,6 +465,7 @@ int Icesat2Fields::luaStage (lua_State* L)
         {
             throw RunTimeException(CRITICAL, RTE_ERROR, "invalid stage %ld", stage);
         }
+
         lua_pushboolean(L, lua_obj->stages[stage]);
     }
     catch(const RunTimeException& e)

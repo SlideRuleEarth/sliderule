@@ -74,7 +74,7 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
          static const double PULSE_REPITITION_FREQUENCY;
          static const double RDE_SCALE_FACTOR;
          static const double SIGMA_BEAM;
-         static const double SIGMA_XMIT; 
+         static const double SIGMA_XMIT;
 
          /*--------------------------------------------------------------------
          * Typedefs
@@ -83,6 +83,7 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
         typedef struct {
             uint32_t    p;                  // index into photon array
             double      r;                  // residual
+            double      x;                  // x-axis (x_atc relative to extent)
         } point_t;
 
         struct result_t {
@@ -98,7 +99,7 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
             double      rms_misfit = 0;
             double      window_height = 0;
         };
-        
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -107,10 +108,10 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
         ~SurfaceFitter (void) override;
 
         result_t iterativeFitStage (const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons);
-        static void leastSquaresFit (const Atl03DataFrame& df, const double* x_atc_norm, point_t* array, int32_t size, bool final, result_t& result);
+        static void leastSquaresFit (const Atl03DataFrame& df, point_t* array, int32_t size, bool final, result_t& result);
         static void quicksort(point_t* array, int start, int end);
         static int quicksortpartition(point_t* array, int start, int end);
-        
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
