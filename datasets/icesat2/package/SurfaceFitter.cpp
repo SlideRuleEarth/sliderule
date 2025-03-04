@@ -111,7 +111,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     if(df.length() <= 0) return true;
 
     // create new dataframe columns
-    FieldColumn<int64_t>*    time_ns        = new FieldColumn<int64_t>(Field::TIME_COLUMN); // nanoseconds from GPS epoch
+    FieldColumn<time8_t>*    time_ns        = new FieldColumn<time8_t>(Field::TIME_COLUMN); // nanoseconds from GPS epoch
     FieldColumn<double>*     latitude       = new FieldColumn<double>(Field::Y_COLUMN);     // EPSG:7912
     FieldColumn<double>*     longitude      = new FieldColumn<double>(Field::X_COLUMN);     // EPSG:7912
     FieldColumn<double>*     h_mean         = new FieldColumn<double>(Field::Z_COLUMN);     // meters from ellipsoid
@@ -168,7 +168,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
         if(_pflags == 0 || parms->passInvalid)
         {
             const result_t result = iterativeFitStage(df, i0, num_photons);
-            time_ns->append(static_cast<int64_t>(result.time_ns));
+            time_ns->append(static_cast<time8_t>(result.time_ns));
             latitude->append(result.latitude);
             longitude->append(result.longitude);
             h_mean->append(result.h_mean);
@@ -563,7 +563,7 @@ void SurfaceFitter::leastSquaresFit (const Atl03DataFrame& df, point_t* array, i
             /* Populate Results */
             result.latitude = latitude;
             result.longitude = longitude;
-            result.time_ns = (int64_t)time_ns;
+            result.time_ns = static_cast<int64_t>(time_ns);
             result.y_atc = (float)y_atc;
         }
     }

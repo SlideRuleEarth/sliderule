@@ -88,7 +88,7 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
 
         struct result_t {
             uint16_t    pflags = 0;         // processing flags
-            int64_t     time_ns = 0;        // nanoseconds from GPS epoch
+            time8_t     time_ns {0};        // nanoseconds from GPS epoch
             double      latitude = 0;
             double      longitude = 0;
             double      h_mean = 0;         // meters from ellipsoid

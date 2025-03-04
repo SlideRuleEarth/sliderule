@@ -31,5 +31,5 @@ dataframe.proxy("atl03x", parms, rqst["parms"], rspq, channels, function(userlog
         end
     end
     -- return back to proxy
-    return dataframes, {}
+    return dataframes, runners
 end)
