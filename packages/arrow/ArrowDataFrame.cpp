@@ -259,9 +259,6 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
     const FieldColumn<double>* x = dataframe.getXColumn();
     const FieldColumn<double>* y = dataframe.getYColumn();
 
-    assert(x);
-    assert(y);
-
     if(!x || !y)
     {
         mlog(ERROR, "Attempting to build GeoDataFrame without x and y columns");

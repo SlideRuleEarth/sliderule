@@ -14,7 +14,6 @@ dataframe.proxy("atl03x", parms, rqst["parms"], rspq, channels, function(userlog
     local resource = parms["resource"]
     -- atl06
     if parms:stage(icesat2.ATL06) then
-print("HERE CREATING A FITTER RUNNER")
         local fitter = icesat2.fit(parms)
         table.insert(runners, fitter)
     end

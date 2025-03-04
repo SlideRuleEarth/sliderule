@@ -470,27 +470,8 @@ vector<string> GeoDataFrame::getColumnNames(void) const
  *----------------------------------------------------------------------------*/
 bool GeoDataFrame::addColumn (const char* name, Field* column, bool free_on_delete)
 {
-    bool status = true;
-
-    // set number of rows if unset
-    if(numRows == 0)
-    {
-        numRows = column->length();
-    }
-
-    // check number of rows matches new column
-    if(numRows == column->length())
-    {
-        const FieldDictionary::entry_t entry = {name, column, free_on_delete};
-        status = columnFields.add(entry);
-    }
-    else
-    {
-        mlog(CRITICAL, "number of rows must match for all columns, %ld != %ld", numRows, column->length());
-        status = false;
-    }
-
-    return status;
+    const FieldDictionary::entry_t entry = {name, column, free_on_delete};
+    return columnFields.add(entry);
 }
 
 /*----------------------------------------------------------------------------
@@ -541,8 +522,17 @@ bool GeoDataFrame::addExistingColumn (const char* name, Field* column)
 {
     const char* _name = StringLib::duplicate(name);
 
-    if(!addColumn(_name, column, true))
+    if(addColumn(_name, column, true))
     {
+        // set number of rows if unset
+        if(numRows == 0)
+        {
+            numRows = column->length();
+        }
+    }
+    else
+    {
+        // log error and clean up
         mlog(ERROR, "Failed to add column <%s>", _name);
         delete [] _name;
         delete column;
@@ -918,7 +908,7 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data)
         // check add status
         if(!add_status)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to add metadata %s of size %u with encoding %u", gdf_rec_data->name, gdf_rec_data->size, gdf_rec_data->encoding);
+            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to add column <%s> of size %u with encoding %u", gdf_rec_data->name, gdf_rec_data->size, gdf_rec_data->encoding);
         }
     }
     else if(_type == GeoDataFrame::EOF_REC)
