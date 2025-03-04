@@ -249,6 +249,7 @@ class GeoDataFrame: public LuaObject, public Field
         static int      luaExport           (lua_State* L);
         static int      luaSend             (lua_State* L);
         static int      luaReceive          (lua_State* L);
+        static int      luaGetRowData       (lua_State* L);
         static int      luaGetColumnData    (lua_State* L);
         static int      luaGetMetaData      (lua_State* L);
         static int      luaRun              (lua_State* L);

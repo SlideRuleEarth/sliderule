@@ -347,6 +347,7 @@ void GeoDataFrame::clear(void)
         key = columnFields.fields.next(&entry);
     }
     columnFields.fields.clear();
+    numRows = 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -469,9 +470,27 @@ vector<string> GeoDataFrame::getColumnNames(void) const
  *----------------------------------------------------------------------------*/
 bool GeoDataFrame::addColumn (const char* name, Field* column, bool free_on_delete)
 {
-    const FieldDictionary::entry_t entry = {name, column, free_on_delete};
-    columnFields.add(entry);
-    return true;
+    bool status = true;
+
+    // set number of rows if unset
+    if(numRows == 0)
+    {
+        numRows = column->length();
+    }
+
+    // check number of rows matches new column
+    if(numRows == column->length())
+    {
+        const FieldDictionary::entry_t entry = {name, column, free_on_delete};
+        status = columnFields.add(entry);
+    }
+    else
+    {
+        mlog(CRITICAL, "number of rows must match for all columns, %ld != %ld", numRows, column->length());
+        status = false;
+    }
+
+    return status;
 }
 
 /*----------------------------------------------------------------------------
@@ -506,9 +525,9 @@ bool GeoDataFrame::addNewColumn (const char* name, uint32_t _type)
 
     if(!addColumn(_name, column, true))
     {
+        mlog(ERROR, "Failed to add column <%s>", _name);
         delete [] _name;
         delete column;
-        mlog(ERROR, "Failed to add column <%s>", _name);
         return false;
     }
 
@@ -521,7 +540,16 @@ bool GeoDataFrame::addNewColumn (const char* name, uint32_t _type)
 bool GeoDataFrame::addExistingColumn (const char* name, Field* column)
 {
     const char* _name = StringLib::duplicate(name);
-    return addColumn(_name, column, true);
+
+    if(!addColumn(_name, column, true))
+    {
+        mlog(ERROR, "Failed to add column <%s>", _name);
+        delete [] _name;
+        delete column;
+        return false;
+    }
+
+    return true;
 }
 
 /*----------------------------------------------------------------------------
@@ -751,6 +779,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     LuaEngine::setAttrFunc(L, "export",     luaExport);
     LuaEngine::setAttrFunc(L, "send",       luaSend);
     LuaEngine::setAttrFunc(L, "receive",    luaReceive);
+    LuaEngine::setAttrFunc(L, "row",        luaGetRowData);
     LuaEngine::setAttrFunc(L, "__index",    luaGetColumnData);
     LuaEngine::setAttrFunc(L, "meta",       luaGetMetaData);
     LuaEngine::setAttrFunc(L, "run",        luaRun);
@@ -1440,6 +1469,41 @@ int GeoDataFrame::luaReceive(lua_State* L)
 
     // return status
     return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaGetRowData - [<row index>]
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaGetRowData(lua_State* L)
+{
+    try
+    {
+        GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+        const long index = getLuaInteger(L, 2) - 1; // indexing in lua starts at 1
+
+        // check index
+        if(index < 0) throw RunTimeException(CRITICAL, RTE_ERROR, "invalid index: %ld", index + 1);
+
+        // create table and populate with column values
+        lua_newtable(L);
+        FieldDictionary::entry_t entry;
+        const char* key = lua_obj->columnFields.fields.first(&entry);
+        while(key != NULL)
+        {
+            lua_pushstring(L, entry.name);
+            entry.field->toLua(L, index);
+            lua_settable(L, -3);
+            key = lua_obj->columnFields.fields.next(&entry);
+        }
+
+        // return table
+        return 1;
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", FrameColumn::LUA_META_NAME, e.what());
+        return returnLuaStatus(L, false);
+    }
 }
 
 /*----------------------------------------------------------------------------
