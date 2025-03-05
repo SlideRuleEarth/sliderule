@@ -39,3 +39,16 @@ class TestAtl03x:
         assert gdf.spot.value_counts()[6] == 101953
         assert gdf.cycle.describe()["mean"] == 1.0
         assert gdf.atl03_cnf.value_counts()[1] == 55485
+
+    def test_fitter(self, init):
+        parms = {
+            "track": 1,
+            "cnf": 0,
+            "fit": {"maxi": 3}
+        }
+        gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
+        assert init
+        assert len(gdf) == 2815
+        assert len(gdf.keys()) == 16
+        assert gdf["gt"].sum() == 42240
+        assert abs(gdf["rms_misfit"].mean() - 0.2361071) < 0.0001

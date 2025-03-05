@@ -116,14 +116,14 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     FieldColumn<double>*     longitude      = new FieldColumn<double>(Field::X_COLUMN);     // EPSG:7912
     FieldColumn<double>*     h_mean         = new FieldColumn<double>(Field::Z_COLUMN);     // meters from ellipsoid
     FieldColumn<double>*     x_atc          = new FieldColumn<double>;                      // distance from the equator
-    FieldColumn<float>*      y_atc          = new FieldColumn<float>();                     // distance from reference track
-    FieldColumn<float>*      dh_fit_dx      = new FieldColumn<float>();                     // along track slope
-    FieldColumn<float>*      window_height  = new FieldColumn<float>();
-    FieldColumn<float>*      rms_misfit     = new FieldColumn<float>();
-    FieldColumn<float>*      h_sigma        = new FieldColumn<float>();
-    FieldColumn<uint32_t>*   photon_start   = new FieldColumn<uint32_t>();                  // photon index of start of extent
-    FieldColumn<int32_t>*    photon_count   = new FieldColumn<int32_t>();                   // number of photons used in final elevation calculation
-    FieldColumn<uint16_t>*   pflags         = new FieldColumn<uint16_t>();                  // processing flags
+    FieldColumn<float>*      y_atc          = new FieldColumn<float>;                       // distance from reference track
+    FieldColumn<float>*      dh_fit_dx      = new FieldColumn<float>;                       // along track slope
+    FieldColumn<float>*      window_height  = new FieldColumn<float>;
+    FieldColumn<float>*      rms_misfit     = new FieldColumn<float>;
+    FieldColumn<float>*      h_sigma        = new FieldColumn<float>;
+    FieldColumn<uint32_t>*   photon_start   = new FieldColumn<uint32_t>;                    // photon index of start of extent
+    FieldColumn<int32_t>*    photon_count   = new FieldColumn<int32_t>;                     // number of photons used in final elevation calculation
+    FieldColumn<uint16_t>*   pflags         = new FieldColumn<uint16_t>;                    // processing flags
 
     // for each photon
     int32_t i0 = 0; // start row
