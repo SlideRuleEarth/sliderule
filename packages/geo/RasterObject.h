@@ -103,6 +103,8 @@ class RasterObject: public LuaObject
         static void          init            (void);
         static void          deinit          (void);
         static int           luaCreate       (lua_State* L);
+        static RasterObject* cppCreate       (RequestFields* rqst_parms, const char* key);
+        static RasterObject* cppCreate       (const RasterObject* obj);
         static bool          registerRaster  (const char* _name, factory_f create);
         virtual uint32_t     getSamples      (const point_info_t& pinfo, sample_list_t& slist, void* param=NULL) = 0;
         virtual uint32_t     getSamples      (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL);
@@ -176,10 +178,6 @@ class RasterObject: public LuaObject
         static int  luaBatchSamples (lua_State* L);
         static int  luaSamples      (lua_State* L);
         static int  luaSubsets      (lua_State* L);
-        static int  luaPixels       (lua_State *L);
-
-        static RasterObject* cppCreate(RequestFields* rqst_parms, const char* key);
-        static RasterObject* cppCreate(const RasterObject* obj);
 
         static void getThreadsRanges(std::vector<range_t>& ranges, uint32_t num,
                                      uint32_t minPerThread, uint32_t maxNumThreads);

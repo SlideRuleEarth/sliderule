@@ -123,6 +123,7 @@ class GeoFields: public FieldDictionary
         FieldElement<bool>              use_poi_time {false};
         FieldElement<string>            doy_range;
         FieldElement<bool>              sort_by_index {false};
+        FieldElement<bool>              force_single_sample {false};
         FieldElement<string>            proj_pipeline;
         FieldElement<bbox_t>            aoi_bbox;
         FieldElement<string>            catalog;

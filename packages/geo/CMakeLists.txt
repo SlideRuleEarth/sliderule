@@ -28,6 +28,7 @@ if (GDAL_FOUND AND PROJ_FOUND AND TIFF_FOUND)
     target_sources(slideruleLib
         PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}/geo.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/DataFrameSampler.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GdalRaster.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoRaster.cpp
             ${CMAKE_CURRENT_LIST_DIR}/GeoIndexedRaster.cpp
@@ -55,6 +56,7 @@ if (GDAL_FOUND AND PROJ_FOUND AND TIFF_FOUND)
     install (
         FILES
             ${CMAKE_CURRENT_LIST_DIR}/geo.h
+            ${CMAKE_CURRENT_LIST_DIR}/DataFrameSampler.h
             ${CMAKE_CURRENT_LIST_DIR}/GdalRaster.h
             ${CMAKE_CURRENT_LIST_DIR}/GeoRaster.h
             ${CMAKE_CURRENT_LIST_DIR}/GeoIndexedRaster.h

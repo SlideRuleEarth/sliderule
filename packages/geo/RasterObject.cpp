@@ -120,6 +120,55 @@ int RasterObject::luaCreate( lua_State* L )
 }
 
 /*----------------------------------------------------------------------------
+ * cppCreate
+ *----------------------------------------------------------------------------*/
+RasterObject* RasterObject::cppCreate(RequestFields* rqst_parms, const char* key)
+{
+    /* Check Parameters */
+    if(!rqst_parms) return NULL;
+    const GeoFields* geo_fields = &rqst_parms->samplers[key];
+
+    /* Get Factory */
+    factory_t factory;
+    bool found = false;
+
+    factoryMut.lock();
+    {
+        found = factories.find(geo_fields->asset.getName(), &factory);
+    }
+    factoryMut.unlock();
+
+    /* Check Factory */
+    if(!found)
+    {
+        mlog(CRITICAL, "Failed to find registered raster for %s", geo_fields->asset.getName());
+        return NULL;
+    }
+
+    /* Create Raster */
+    RasterObject* _raster = factory.create(NULL, rqst_parms, key);
+    if(!_raster)
+    {
+        mlog(CRITICAL, "Failed to create raster for %s", geo_fields->asset.getName());
+        return NULL;
+    }
+
+    /* Bump Lua Reference (for releasing in destructor) */
+    referenceLuaObject(rqst_parms);
+
+    /* Return Raster */
+    return _raster;
+}
+
+/*----------------------------------------------------------------------------
+ * cppCreate
+ *----------------------------------------------------------------------------*/
+RasterObject* RasterObject::cppCreate(const RasterObject* obj)
+{
+    return cppCreate(obj->rqstParms, obj->samplerKey);
+}
+
+/*----------------------------------------------------------------------------
  * registerRaster
  *----------------------------------------------------------------------------*/
 bool RasterObject::registerRaster (const char* _name, factory_f create)
@@ -228,7 +277,7 @@ uint32_t RasterObject::getSamples(const std::vector<point_info_t>& points, List<
                 }
             }
 
-            /* Clear raders */
+            /* Clear readers */
             readersMut.lock();
             {
                 for(const reader_t* reader : readers)
@@ -581,55 +630,6 @@ int RasterObject::luaSubsets(lua_State *L)
     lua_pushinteger(L, err);
 
     return num_ret;
-}
-
-/*----------------------------------------------------------------------------
- * cppCreate
- *----------------------------------------------------------------------------*/
-RasterObject* RasterObject::cppCreate(RequestFields* rqst_parms, const char* key)
-{
-    /* Check Parameters */
-    if(!rqst_parms) return NULL;
-    const GeoFields* geo_fields = &rqst_parms->samplers[key];
-
-    /* Get Factory */
-    factory_t factory;
-    bool found = false;
-
-    factoryMut.lock();
-    {
-        found = factories.find(geo_fields->asset.getName(), &factory);
-    }
-    factoryMut.unlock();
-
-    /* Check Factory */
-    if(!found)
-    {
-        mlog(CRITICAL, "Failed to find registered raster for %s", geo_fields->asset.getName());
-        return NULL;
-    }
-
-    /* Create Raster */
-    RasterObject* _raster = factory.create(NULL, rqst_parms, key);
-    if(!_raster)
-    {
-        mlog(CRITICAL, "Failed to create raster for %s", geo_fields->asset.getName());
-        return NULL;
-    }
-
-    /* Bump Lua Reference (for releasing in destructor) */
-    referenceLuaObject(rqst_parms);
-
-    /* Return Raster */
-    return _raster;
-}
-
-/*----------------------------------------------------------------------------
- * cppCreate
- *----------------------------------------------------------------------------*/
-RasterObject* RasterObject::cppCreate(const RasterObject* obj)
-{
-    return cppCreate(obj->rqstParms, obj->samplerKey);
 }
 
 /*----------------------------------------------------------------------------
