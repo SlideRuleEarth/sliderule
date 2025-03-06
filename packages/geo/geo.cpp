@@ -35,6 +35,7 @@
 
 #include "geo.h"
 
+#include "DataFrameSampler.h"
 #include "GeoRaster.h"
 #include "GeoIndexedRaster.h"
 #include "GeoJsonRaster.h"
@@ -245,18 +246,19 @@ static void configGDAL(void)
 int geo_open (lua_State* L)
 {
     static const struct luaL_Reg geo_functions[] = {
-        {"geojson",     GeoJsonRaster::luaCreate},
-        {"userraster",  GeoUserRaster::luaCreate},
-        {"raster",      RasterObject::luaCreate},
-        {"sampler",     RasterSampler::luaCreate},
-        {"parms",       GeoFields::luaCreate},
-        {"calcutm",     GeoLib::luaCalcUTM},
-        {"tiff",        GeoLib::TIFFImage::luaCreate},
+        {"geojson",         GeoJsonRaster::luaCreate},
+        {"userraster",      GeoUserRaster::luaCreate},
+        {"raster",          RasterObject::luaCreate},
+        {"sampler",         RasterSampler::luaCreate},
+        {"framesampler",    DataFrameSampler::luaCreate},
+        {"parms",           GeoFields::luaCreate},
+        {"calcutm",         GeoLib::luaCalcUTM},
+        {"tiff",            GeoLib::TIFFImage::luaCreate},
 #ifdef __unittesting__
-        {"ut_subset",  UT_RasterSubset::luaCreate},
-        {"ut_sample",  UT_RasterSample::luaCreate},
+        {"ut_subset",       UT_RasterSubset::luaCreate},
+        {"ut_sample",       UT_RasterSample::luaCreate},
 #endif
-        {NULL,          NULL}
+        {NULL,              NULL}
     };
 
     /* Set Package Library */

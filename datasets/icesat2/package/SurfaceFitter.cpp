@@ -216,6 +216,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     df.addExistingColumn("photon_start",    photon_start);
     df.addExistingColumn("photon_count",    photon_count);
     df.addExistingColumn("pflags",          pflags);
+    df.populateDataframe();
 
     // update runtime and return success
     updateRunTime(TimeLib::latchtime() - start);

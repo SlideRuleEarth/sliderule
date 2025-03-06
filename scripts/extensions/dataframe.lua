@@ -91,9 +91,15 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
 
         -- Add Runners to Dataframes
         for _, df in pairs(dataframes) do
+            -- Add Provided Runners
             for _, runner in ipairs(runners) do
                 df:run(runner)
             end
+            -- Add Sampler Runner
+            if parms:withsamplers() then
+                df:run(geo.framesampler(parms))
+            end
+            -- Add Default Runners
             df:run(sender)
             df:run(core.TERMINATE)
         end

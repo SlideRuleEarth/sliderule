@@ -89,8 +89,12 @@ class GeoDataFrame: public LuaObject, public Field
             uint32_t    encoding;
             uint32_t    num_rows;
             char        name[MAX_NAME_SIZE];
-            uint8_t     data[]; // num_columns when EOF
+            uint8_t     data[]; // also used for subrecs
         } gdf_rec_t;
+
+        typedef struct {
+            uint32_t    num_columns;
+        } eof_subrec_t;
 
         /*--------------------------------------------------------------------
          * Subclasses
@@ -158,6 +162,7 @@ class GeoDataFrame: public LuaObject, public Field
         void                        addMetaData         (const char* name, Field* column);
         Field*                      getMetaData         (const char* name, Field::type_t _type=Field::FIELD, bool no_throw=false) const;
         bool                        deleteColumn        (const char* name);
+        void                        populateDataframe   (void);
 
         virtual okey_t              getKey              (void) const;
 
@@ -235,7 +240,6 @@ class GeoDataFrame: public LuaObject, public Field
 
         static void*    receiveThread       (void* parm);
         static void*    runThread           (void* parm);
-        void            populateDataframe   (void);
         void            appendDataframe     (GeoDataFrame::gdf_rec_t* gdf_rec_data);
         void            sendDataframe       (const char* rspq, uint64_t key_space, int timeout) const;
 

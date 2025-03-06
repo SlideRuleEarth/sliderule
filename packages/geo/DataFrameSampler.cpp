@@ -52,7 +52,7 @@ const struct luaL_Reg DataFrameSampler::LUA_META_TABLE[] = {
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - framesampler(parms, {["mosaic"]: dem1, ["strips"]: dem2})
+ * luaCreate - framesampler(parms)
  *----------------------------------------------------------------------------*/
 int DataFrameSampler::luaCreate(lua_State* L)
 {
@@ -85,6 +85,7 @@ DataFrameSampler::DataFrameSampler(lua_State* L, RequestFields* _parms):
         {
             sampler_info_t* sampler = new sampler_info_t(key, robj, this, parms->samplers[key]);
             samplers.push_back(sampler);
+            referenceLuaObject(robj);
         }
         else
         {

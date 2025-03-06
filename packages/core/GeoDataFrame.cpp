@@ -616,6 +616,52 @@ bool GeoDataFrame::deleteColumn (const char* name)
 }
 
 /*----------------------------------------------------------------------------
+ * populateGeoColumn
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::populateDataframe (void)
+{
+    // populate geo columns
+    Dictionary<FieldDictionary::entry_t>::Iterator iter(columnFields.fields);
+    for(int f = 0; f < iter.length; f++)
+    {
+        const char* name = iter[f].key;
+        const Field* field = iter[f].value.field;
+
+        if(field->encoding & TIME_COLUMN)
+        {
+            assert(field->type == COLUMN);
+            assert(field->getValueEncoding() == TIME8);
+            timeColumn = dynamic_cast<const FieldColumn<time8_t>*>(field);
+            timeColumnName = name;
+        }
+
+        if(field->encoding & X_COLUMN)
+        {
+            assert(field->type == COLUMN);
+            assert(field->getValueEncoding() == DOUBLE);
+            xColumn = dynamic_cast<const FieldColumn<double>*>(field);
+            xColumnName = name;
+        }
+
+        if(field->encoding & Y_COLUMN)
+        {
+            assert(field->type == COLUMN);
+            assert(field->getValueEncoding() == DOUBLE);
+            yColumn = dynamic_cast<const FieldColumn<double>*>(field);
+            yColumnName = name;
+        }
+
+        if(field->encoding & Z_COLUMN)
+        {
+            assert(field->type == COLUMN);
+            assert(field->getValueEncoding() == DOUBLE);
+            zColumn = dynamic_cast<const FieldColumn<double>*>(field);
+            zColumnName = name;
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
  * getKey
  *----------------------------------------------------------------------------*/
 okey_t GeoDataFrame::getKey (void) const
@@ -877,6 +923,55 @@ bool add_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data)
 }
 
 /*----------------------------------------------------------------------------
+ * add_list_column
+ *----------------------------------------------------------------------------*/
+template<class T>
+bool add_list_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data)
+{
+    // get column from dataframe
+    FieldColumn<FieldList<T>>* column = dynamic_cast<FieldColumn<FieldList<T>>*>(dataframe->getColumn(gdf_rec_data->name, Field::COLUMN, true));
+
+    // create new column if not found
+    if(!column)
+    {
+        column = new FieldColumn<FieldList<T>>(gdf_rec_data->encoding, GeoDataFrame::DEFAULT_RECEIVED_COLUMN_CHUNK_SIZE);
+        const char* _name = StringLib::duplicate(gdf_rec_data->name);
+        if(!dataframe->addColumn(_name, column, true))
+        {
+            delete column;
+            delete [] _name;
+            return false;
+        }
+    }
+    else if(column->encoding != gdf_rec_data->encoding)
+    {
+        return false;
+    }
+
+    // append data to column
+    if(gdf_rec_data->type == GeoDataFrame::COLUMN_REC)
+    {
+        uint32_t* sizes_ptr = reinterpret_cast<uint32_t*>(gdf_rec_data->data);
+        const long size_of_sizes = sizeof(uint32_t) * gdf_rec_data->num_rows;
+        long data_offset = size_of_sizes;
+        for(uint32_t j = 0; j < gdf_rec_data->num_rows; j++)
+        {
+            FieldList<T> field_list;
+            field_list.appendBuffer(&gdf_rec_data->data[data_offset], sizes_ptr[j]);
+            data_offset += sizes_ptr[j];
+            dataframe->numRows = column->append(field_list);
+        }
+    }
+    else
+    {
+        return false;
+    }
+
+    // success
+    return true;
+}
+
+/*----------------------------------------------------------------------------
  * appendDataframe
  *----------------------------------------------------------------------------*/
 void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data)
@@ -885,24 +980,47 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data)
     if((_type == GeoDataFrame::COLUMN_REC) || (_type == GeoDataFrame::META_REC))
     {
         const uint32_t value_encoding = gdf_rec_data->encoding & Field::VALUE_MASK;
+        const uint32_t encoded_type = gdf_rec_data->encoding & Field::TYPE_MASK;
         bool add_status = true;
 
         // add to column
-        switch(value_encoding)
+        if(value_encoding & Field::NESTED_LIST)
         {
-            case BOOL:      add_status = add_column<bool>    (this, gdf_rec_data); break;
-            case INT8:      add_status = add_column<int8_t>  (this, gdf_rec_data); break;
-            case INT16:     add_status = add_column<int16_t> (this, gdf_rec_data); break;
-            case INT32:     add_status = add_column<int32_t> (this, gdf_rec_data); break;
-            case INT64:     add_status = add_column<int64_t> (this, gdf_rec_data); break;
-            case UINT8:     add_status = add_column<uint8_t> (this, gdf_rec_data); break;
-            case UINT16:    add_status = add_column<uint16_t>(this, gdf_rec_data); break;
-            case UINT32:    add_status = add_column<uint32_t>(this, gdf_rec_data); break;
-            case UINT64:    add_status = add_column<uint64_t>(this, gdf_rec_data); break;
-            case FLOAT:     add_status = add_column<float>   (this, gdf_rec_data); break;
-            case DOUBLE:    add_status = add_column<double>  (this, gdf_rec_data); break;
-            case TIME8:     add_status = add_column<time8_t> (this, gdf_rec_data); break;
-            default:        add_status = false; break;
+            switch(encoded_type)
+            {
+//                case BOOL:      add_status = add_list_column<bool>    (this, gdf_rec_data); break;
+                case INT8:      add_status = add_list_column<int8_t>  (this, gdf_rec_data); break;
+                case INT16:     add_status = add_list_column<int16_t> (this, gdf_rec_data); break;
+                case INT32:     add_status = add_list_column<int32_t> (this, gdf_rec_data); break;
+                case INT64:     add_status = add_list_column<int64_t> (this, gdf_rec_data); break;
+                case UINT8:     add_status = add_list_column<uint8_t> (this, gdf_rec_data); break;
+                case UINT16:    add_status = add_list_column<uint16_t>(this, gdf_rec_data); break;
+                case UINT32:    add_status = add_list_column<uint32_t>(this, gdf_rec_data); break;
+                case UINT64:    add_status = add_list_column<uint64_t>(this, gdf_rec_data); break;
+                case FLOAT:     add_status = add_list_column<float>   (this, gdf_rec_data); break;
+                case DOUBLE:    add_status = add_list_column<double>  (this, gdf_rec_data); break;
+                case TIME8:     add_status = add_list_column<time8_t> (this, gdf_rec_data); break;
+                default:        add_status = false; break;
+            }
+        }
+        else
+        {
+            switch(encoded_type)
+            {
+                case BOOL:      add_status = add_column<bool>    (this, gdf_rec_data); break;
+                case INT8:      add_status = add_column<int8_t>  (this, gdf_rec_data); break;
+                case INT16:     add_status = add_column<int16_t> (this, gdf_rec_data); break;
+                case INT32:     add_status = add_column<int32_t> (this, gdf_rec_data); break;
+                case INT64:     add_status = add_column<int64_t> (this, gdf_rec_data); break;
+                case UINT8:     add_status = add_column<uint8_t> (this, gdf_rec_data); break;
+                case UINT16:    add_status = add_column<uint16_t>(this, gdf_rec_data); break;
+                case UINT32:    add_status = add_column<uint32_t>(this, gdf_rec_data); break;
+                case UINT64:    add_status = add_column<uint64_t>(this, gdf_rec_data); break;
+                case FLOAT:     add_status = add_column<float>   (this, gdf_rec_data); break;
+                case DOUBLE:    add_status = add_column<double>  (this, gdf_rec_data); break;
+                case TIME8:     add_status = add_column<time8_t> (this, gdf_rec_data); break;
+                default:        add_status = false; break;
+            }
         }
 
         // check add status
@@ -951,28 +1069,79 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, int time
     {
         const Dictionary<FieldDictionary::entry_t>::kv_t kv = column_iter[i];
 
-        // determine size of column
+        // get encodings
         const uint32_t value_encoding = kv.value.field->getValueEncoding();
-        assert(value_encoding >= 0 && value_encoding < RecordObject::NUM_FIELD_TYPES);
-        const long column_size = kv.value.field->length() * RecordObject::FIELD_TYPE_BYTES[value_encoding];
-        const long rec_size = offsetof(gdf_rec_t, data) + column_size;
+        const uint32_t encoded_type = kv.value.field->getEncodedType();
+        if(encoded_type < 0 || encoded_type >= RecordObject::NUM_FIELD_TYPES) throw RunTimeException(ERROR, RTE_ERROR, "unsupported value encoding: %X", encoded_type);
 
-        // create column record
-        RecordObject gdf_rec(gdfRecType, rec_size);
-        gdf_rec_t* gdf_rec_data = reinterpret_cast<gdf_rec_t*>(gdf_rec.getRecordData());
-        gdf_rec_data->key = key_space;
-        gdf_rec_data->type = COLUMN_REC;
-        gdf_rec_data->size = column_size;
-        gdf_rec_data->encoding = kv.value.field->encoding;
-        gdf_rec_data->num_rows = kv.value.field->length();
-        StringLib::copy(gdf_rec_data->name, kv.value.name, MAX_NAME_SIZE);
+        if(value_encoding == encoded_type)
+        {
+            // determine size of column
+            const long column_size = kv.value.field->length() * RecordObject::FIELD_TYPE_BYTES[encoded_type];
+            const long rec_size = offsetof(gdf_rec_t, data) + column_size;
 
-        // serialize column data into record
-        const long bytes_serialized = kv.value.field->serialize(gdf_rec_data->data, column_size);
-        if(bytes_serialized != column_size) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to serialize column %s: %ld", gdf_rec_data->name, bytes_serialized);
+            // create column record
+            RecordObject gdf_rec(gdfRecType, rec_size);
+            gdf_rec_t* gdf_rec_data = reinterpret_cast<gdf_rec_t*>(gdf_rec.getRecordData());
+            gdf_rec_data->key = key_space;
+            gdf_rec_data->type = COLUMN_REC;
+            gdf_rec_data->size = column_size;
+            gdf_rec_data->encoding = kv.value.field->encoding;
+            gdf_rec_data->num_rows = kv.value.field->length();
+            StringLib::copy(gdf_rec_data->name, kv.value.name, MAX_NAME_SIZE);
 
-        // send column record
-        gdf_rec.post(&pub, 0, NULL, true, timeout);
+            // serialize column data into record
+            const long bytes_serialized = kv.value.field->serialize(gdf_rec_data->data, column_size);
+            if(bytes_serialized != column_size) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to serialize column %s: %ld", gdf_rec_data->name, bytes_serialized);
+
+            // send column record
+            gdf_rec.post(&pub, 0, NULL, true, timeout);
+        }
+        else if(value_encoding & Field::NESTED_LIST)
+        {
+            // for nested list columns the data[] field
+            // is populated with the following structure:
+            //   uint32_t   size_of_row_list_in_bytes [num_rows]
+            //   T          row_list [num_rows][elements_in_list]
+
+            // determine size of sizes (bytes)
+            const long size_of_sizes = sizeof(uint32_t) * kv.value.field->length();
+
+            // determine size of column
+            long column_size = 0;
+            for(long j = 0; j < kv.value.field->length(); j++)
+            {
+                const Field* field_list = kv.value.field->get(j);
+                column_size += field_list->length();
+            }
+            column_size *= RecordObject::FIELD_TYPE_BYTES[encoded_type];
+
+            // determine record size
+            const long rec_size = offsetof(gdf_rec_t, data) + size_of_sizes + column_size;
+
+            // create column record
+            RecordObject gdf_rec(gdfRecType, rec_size);
+            gdf_rec_t* gdf_rec_data = reinterpret_cast<gdf_rec_t*>(gdf_rec.getRecordData());
+            gdf_rec_data->key = key_space;
+            gdf_rec_data->type = COLUMN_REC;
+            gdf_rec_data->size = column_size;
+            gdf_rec_data->encoding = kv.value.field->encoding;
+            gdf_rec_data->num_rows = kv.value.field->length();
+            StringLib::copy(gdf_rec_data->name, kv.value.name, MAX_NAME_SIZE);
+
+            // serialize column data into record
+            long data_offset = size_of_sizes;
+            uint32_t* sizes_ptr = reinterpret_cast<uint32_t*>(gdf_rec_data->data);
+            for(long j = 0; j < kv.value.field->length(); j++)
+            {
+                const Field* field_list = kv.value.field->get(j);
+                sizes_ptr[j] = static_cast<uint32_t>(field_list->length()) * RecordObject::FIELD_TYPE_BYTES[encoded_type];
+                data_offset += field_list->serialize(&(gdf_rec_data->data[data_offset]), column_size - data_offset);
+            }
+
+            // send column record
+            gdf_rec.post(&pub, 0, NULL, true, timeout);
+        }
     }
 
     // create and send meta records
@@ -1013,8 +1182,8 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, int time
         gdf_rec_data->key = key_space;
         gdf_rec_data->type = EOF_REC;
         gdf_rec_data->num_rows = length();
-        uint32_t num_columns = columnFields.length();
-        memcpy(gdf_rec_data->data, &num_columns, sizeof(uint32_t));
+        eof_subrec_t eof_subrec = {.num_columns = static_cast<uint32_t>(columnFields.length())};
+        memcpy(gdf_rec_data->data, &eof_subrec, sizeof(eof_subrec_t));
         gdf_rec.post(&pub, 0, NULL, true, timeout);
     }
 }
@@ -1211,52 +1380,6 @@ void* GeoDataFrame::runThread (void* parm)
     }
     dataframe->signalRunComplete();
     return NULL;
-}
-
-/*----------------------------------------------------------------------------
- * populateGeoColumn
- *----------------------------------------------------------------------------*/
-void GeoDataFrame::populateDataframe (void)
-{
-    // populate geo columns
-    Dictionary<FieldDictionary::entry_t>::Iterator iter(columnFields.fields);
-    for(int f = 0; f < iter.length; f++)
-    {
-        const char* name = iter[f].key;
-        const Field* field = iter[f].value.field;
-
-        if(field->encoding & TIME_COLUMN)
-        {
-            assert(field->type == COLUMN);
-            assert(field->getValueEncoding() == TIME8);
-            timeColumn = dynamic_cast<const FieldColumn<time8_t>*>(field);
-            timeColumnName = name;
-        }
-
-        if(field->encoding & X_COLUMN)
-        {
-            assert(field->type == COLUMN);
-            assert(field->getValueEncoding() == DOUBLE);
-            xColumn = dynamic_cast<const FieldColumn<double>*>(field);
-            xColumnName = name;
-        }
-
-        if(field->encoding & Y_COLUMN)
-        {
-            assert(field->type == COLUMN);
-            assert(field->getValueEncoding() == DOUBLE);
-            yColumn = dynamic_cast<const FieldColumn<double>*>(field);
-            yColumnName = name;
-        }
-
-        if(field->encoding & Z_COLUMN)
-        {
-            assert(field->type == COLUMN);
-            assert(field->getValueEncoding() == DOUBLE);
-            zColumn = dynamic_cast<const FieldColumn<double>*>(field);
-            zColumnName = name;
-        }
-    }
 }
 
 /*----------------------------------------------------------------------------

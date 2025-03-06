@@ -60,6 +60,7 @@ class FieldList: public Field
         virtual         ~FieldList  (void) override = default;
 
         long            append      (const T& v);
+        long            appendBuffer(const uint8_t* buffer, long size);
 
         void            clear       (void) override;
         long            length      (void) const override;
@@ -177,6 +178,24 @@ template<class T>
 long FieldList<T>::append(const T& v)
 {
     values.push_back(v);
+    return static_cast<long>(values.size());
+}
+
+/*----------------------------------------------------------------------------
+ * appendBuffer
+ *----------------------------------------------------------------------------*/
+template<class T>
+long FieldList<T>::appendBuffer(const uint8_t* buffer, long size)
+{
+    assert(size % sizeof(T) == 0);
+
+    const T* buf_ptr = reinterpret_cast<const T*>(buffer);
+    long num_elements = size / sizeof(T);
+    for(long i = 0; i < num_elements; i++)
+    {
+        values.push_back(buf_ptr[i]);
+    }
+
     return static_cast<long>(values.size());
 }
 

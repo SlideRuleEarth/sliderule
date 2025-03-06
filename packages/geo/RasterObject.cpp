@@ -126,7 +126,18 @@ RasterObject* RasterObject::cppCreate(RequestFields* rqst_parms, const char* key
 {
     /* Check Parameters */
     if(!rqst_parms) return NULL;
-    const GeoFields* geo_fields = &rqst_parms->samplers[key];
+
+    /* Get Geo Fields */
+    const GeoFields* geo_fields = NULL;
+    try
+    {
+        geo_fields = &rqst_parms->samplers[key];
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(CRITICAL, "Failed to retrieve %s from samplers: %s", key, e.what());
+        return NULL;
+    }
 
     /* Get Factory */
     factory_t factory;
@@ -141,7 +152,7 @@ RasterObject* RasterObject::cppCreate(RequestFields* rqst_parms, const char* key
     /* Check Factory */
     if(!found)
     {
-        mlog(CRITICAL, "Failed to find registered raster for %s", geo_fields->asset.getName());
+        mlog(CRITICAL, "Failed to find registered raster %s for %s", key, geo_fields->asset.getName());
         return NULL;
     }
 
@@ -149,7 +160,7 @@ RasterObject* RasterObject::cppCreate(RequestFields* rqst_parms, const char* key
     RasterObject* _raster = factory.create(NULL, rqst_parms, key);
     if(!_raster)
     {
-        mlog(CRITICAL, "Failed to create raster for %s", geo_fields->asset.getName());
+        mlog(CRITICAL, "Failed to create raster %s for %s", key, geo_fields->asset.getName());
         return NULL;
     }
 

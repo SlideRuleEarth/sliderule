@@ -77,9 +77,9 @@ class DataFrameSampler: public GeoDataFrame::FrameRunner
             List<sample_list_t*> samples;
             vector<std::pair<uint64_t, const char*>> filemap;
             sampler_info_t (const char* _rkey, RasterObject* _robj, DataFrameSampler* _obj, const GeoFields& _geoparms):
+                rkey(StringLib::duplicate(_rkey)),
                 robj(_robj),
                 obj(_obj),
-                rkey(StringLib::duplicate(_rkey)),
                 geoparms(_geoparms) {};
             ~sampler_info_t (void) {
                 delete [] rkey;
