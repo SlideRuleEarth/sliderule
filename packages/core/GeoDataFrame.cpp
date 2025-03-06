@@ -1072,7 +1072,7 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, int time
         // get encodings
         const uint32_t value_encoding = kv.value.field->getValueEncoding();
         const uint32_t encoded_type = kv.value.field->getEncodedType();
-        if(encoded_type < 0 || encoded_type >= RecordObject::NUM_FIELD_TYPES) throw RunTimeException(ERROR, RTE_ERROR, "unsupported value encoding: %X", encoded_type);
+        if(encoded_type >= RecordObject::NUM_FIELD_TYPES) throw RunTimeException(ERROR, RTE_ERROR, "unsupported value encoding: %X", encoded_type);
 
         if(value_encoding == encoded_type)
         {
