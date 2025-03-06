@@ -488,6 +488,13 @@ void* EndpointProxy::proxyThread (void* parm)
                 OrchestratorLib::unlock(failed_transactions, num_failed);
             }
 
+            /* Post Status */
+            const int code = valid ? RTE_INFO : RTE_ERROR;
+            const event_level_t level = valid ? INFO : ERROR;
+            alert(level, code, proxy->outQ, NULL, "%s processing resource [%d out of %d]: %s",
+                                                    valid ? "Successfully completed" : "Failed to complete",
+                                                    current_resource + 1, proxy->numResources, resource);
+
             /* Resource Completed */
             proxy->completion.lock();
             {
@@ -498,13 +505,6 @@ void* EndpointProxy::proxyThread (void* parm)
                 }
             }
             proxy->completion.unlock();
-
-            /* Post Status */
-            const int code = valid ? RTE_INFO : RTE_ERROR;
-            const event_level_t level = valid ? INFO : ERROR;
-            alert(level, code, proxy->outQ, NULL, "%s processing resource [%d out of %d]: %s",
-                                                    valid ? "Successfully completed" : "Failed to complete",
-                                                    current_resource + 1, proxy->numResources, resource);
         }
         else if(recv_status != MsgQ::STATE_TIMEOUT)
         {
