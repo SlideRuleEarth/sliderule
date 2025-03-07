@@ -18,7 +18,8 @@ class TestAtl03x:
 
     def test_nominal(self, init):
         parms = { "track": 1,
-                  "cnf": 0 }
+                  "cnf": 0,
+                  "srt": 3 }
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
         assert init
         assert len(gdf) == 488670
@@ -31,6 +32,7 @@ class TestAtl03x:
     def test_yapc_atl08(self, init):
         parms = { "track": 1,
                   "cnf": 0,
+                  "srt": 3,
                   "yapc": { "score": 0 },
                   "atl08_class": ["atl08_noise", "atl08_ground", "atl08_canopy", "atl08_top_of_canopy", "atl08_unclassified"] }
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
@@ -46,6 +48,7 @@ class TestAtl03x:
         parms = {
             "track": 1,
             "cnf": 0,
+            "srt": 3,
             "fit": {"maxi": 3}
         }
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
@@ -55,12 +58,31 @@ class TestAtl03x:
         assert gdf["gt"].sum() == 42240
         assert abs(gdf["rms_misfit"].mean() - 0.2361071) < 0.0001
 
+    def test_phoreal(self, init):
+        resource = "ATL03_20181017222812_02950102_005_01.h5"
+        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        parms = {
+            "track": 3,
+            "cnf": 0,
+            "phoreal": {}
+        }
+        gdf = sliderule.run("atl03x", parms, region["poly"], [resource])
+        assert init
+        assert len(gdf) == 774
+        assert len(gdf.keys()) == 23
+        assert gdf["gt"].sum() == 43210
+        assert gdf["vegetation_photon_count"].sum() == 23127
+        assert abs(gdf["canopy_openness"].mean() - 3.8784506) < 0.000001
+        assert abs(gdf["h_min_canopy"].mean() - 1.6553754) < 0.000001
+        assert abs(gdf["h_te_median"].mean() - 1487.2678) < 0.0001
+
     def test_sampler(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
         parms = {
             "track": 1,
             "cnf": 0,
+            "srt": 3,
             "fit": {"maxi": 3},
             "samples": {"mosaic": {"asset": "arcticdem-mosaic", "force_single_sample": True}}
         }

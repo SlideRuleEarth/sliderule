@@ -596,7 +596,7 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const ArrowFie
                 case Field::NESTED_COLUMN | Field::TIME8:   encodeColumnTime8(dynamic_cast<const FieldColumn<FieldColumn<time8_t>>*>(field), columns); break;
                 case Field::NESTED_COLUMN | Field::STRING:  encodeColumn<string,   arrow::StringBuilder> (dynamic_cast<const FieldColumn<FieldColumn<string>>*>(field), columns);   break;
 
-                default: mlog(WARNING, "Skipping column %s with encoding %d", name, static_cast<int>(field->encoding)); break;
+                default: mlog(WARNING, "Skipping column %s with encoding %X", name, static_cast<int>(field->encoding)); break;
             }
         }
         else

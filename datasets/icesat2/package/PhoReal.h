@@ -29,25 +29,32 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __surface_fitter__
-#define __surface_fitter__
+#ifndef __phoreal__
+#define __phoreal__
 
 #include "OsApi.h"
 #include "GeoDataFrame.h"
 #include "Icesat2Fields.h"
 #include "Atl03DataFrame.h"
+#include "FieldColumn.h"
+#include "FieldArray.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-class SurfaceFitter: public GeoDataFrame::FrameRunner
+class PhoReal: public GeoDataFrame::FrameRunner
 {
     public:
 
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
+
+        static const int NUM_PERCENTILES = 20;
+        static const int MAX_BINS = 1000;
+
+        static const double PercentileInterval[NUM_PERCENTILES];
 
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
@@ -61,51 +68,53 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
 
     private:
 
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-         static const double SPEED_OF_LIGHT;
-         static const double PULSE_REPITITION_FREQUENCY;
-         static const double RDE_SCALE_FACTOR;
-         static const double SIGMA_BEAM;
-         static const double SIGMA_XMIT;
-
          /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
 
-        typedef struct {
-            uint32_t    p;                  // index into photon array
-            double      r;                  // residual
-            double      x;                  // x-axis (x_atc relative to extent)
-        } point_t;
-
         struct result_t {
-            uint16_t    pflags = 0;         // processing flags
-            time8_t     time_ns {0};        // nanoseconds from GPS epoch
+            uint16_t    pflags = 0;
+            time8_t     time_ns {0};
             double      latitude = 0;
             double      longitude = 0;
-            double      h_mean = 0;         // meters from ellipsoid
-            double      dh_fit_dx = 0;      // along track slope
-            double      x_atc = 0;          // distance from equator
-            double      y_atc = 0;          // distance from reference track
-            double      h_sigma = 0;
-            double      rms_misfit = 0;
-            double      window_height = 0;
+            double      x_atc = 0;
+            double      y_atc = 0;
+            uint32_t    ground_photon_count = 0;
+            uint32_t    vegetation_photon_count = 0;
+            float       h_te_median = 0;
+            float       h_max_canopy = 0;
+            float       h_min_canopy = 0;
+            float       h_mean_canopy = 0;
+            float       h_canopy = 0;
+            float       canopy_openness = 0;
+            FieldArray<float,NUM_PERCENTILES> canopy_h_metrics;
         };
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        SurfaceFitter  (lua_State* L, Icesat2Fields* _parms);
-        ~SurfaceFitter (void) override;
+                        PhoReal             (lua_State* L, Icesat2Fields* _parms);
+                        ~PhoReal            (void) override;
 
-        result_t iterativeFitStage (const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons);
-        static void leastSquaresFit (const Atl03DataFrame& df, point_t* array, int32_t size, bool final, result_t& result);
-        static void quicksort(point_t* array, int start, int end);
-        static int quicksortpartition(point_t* array, int start, int end);
+        void            geolocate           (const Atl03DataFrame& df, uint32_t start_photon, uint32_t num_photons, result_t& result);
+        void            algorithm           (const Atl03DataFrame& df, uint32_t start_photon, uint32_t num_photons, result_t& result);
+        static void     quicksort           (uint32_t* index_array, const FieldColumn<float>& column, int start, int end);
+        static int      quicksortpartition  (uint32_t* index_array, const FieldColumn<float>& column, int start, int end);
+
+        /*--------------------------------------------------------------------
+         * Inline Methods
+         *--------------------------------------------------------------------*/
+
+        static bool isVegetation (uint8_t atl08_class)
+        {
+            return (atl08_class == Icesat2Fields::ATL08_CANOPY || atl08_class == Icesat2Fields::ATL08_TOP_OF_CANOPY);
+        }
+
+        static bool isGround (uint8_t atl08_class)
+        {
+            return (atl08_class == Icesat2Fields::ATL08_GROUND);
+        }
 
         /*--------------------------------------------------------------------
          * Data

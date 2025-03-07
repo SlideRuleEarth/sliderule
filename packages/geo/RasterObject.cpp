@@ -221,7 +221,7 @@ uint32_t RasterObject::getSamples(const std::vector<point_info_t>& points, List<
         }
 
         const uint32_t numThreads = ranges.size();
-        mlog(INFO, "Number of reader threads: %u", numThreads);
+        mlog(DEBUG, "Number of reader threads: %u", numThreads);
 
         if(numThreads == 1)
         {

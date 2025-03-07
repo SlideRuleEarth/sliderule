@@ -238,10 +238,10 @@ class GeoDataFrame: public LuaObject, public Field
                                             const std::initializer_list<FieldDictionary::entry_t>& meta_list);
         virtual         ~GeoDataFrame       (void) override;
 
-        static void*    receiveThread       (void* parm);
-        static void*    runThread           (void* parm);
         void            appendDataframe     (GeoDataFrame::gdf_rec_t* gdf_rec_data);
         void            sendDataframe       (const char* rspq, uint64_t key_space, int timeout) const;
+        static void*    receiveThread       (void* parm);
+        static void*    runThread           (void* parm);
 
         string          toJson              (void) const override;
         int             toLua               (lua_State* L) const override;

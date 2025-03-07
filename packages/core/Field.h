@@ -57,6 +57,7 @@ class Field
         // encodings - masks
         static const uint32_t VALUE_MASK    = 0xFFFF;
         static const uint32_t TYPE_MASK     = 0x00FF;
+        static const uint32_t NESTED_MASK   = 0xFF00;
 
         // encodings - values
         static const uint32_t BOOL          = RecordObject::BOOL;

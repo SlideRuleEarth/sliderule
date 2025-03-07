@@ -127,13 +127,22 @@ class Icesat2Fields: public RequestFields
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int NUM_SPOTS                  = 6;
-        static const int EXTENT_ID_PHOTONS          = 0x0;
-        static const int EXTENT_ID_ELEVATION        = 0x2;
-        static const int EXPECTED_NUM_FIELDS        = 8; // a typical number of ancillary fields requested
-        static const uint8_t INVALID_FLAG           = 0xFF;
-        static const int64_t ATLAS_SDP_EPOCH_GPS    = 1198800018; // seconds to add to ATLAS delta times to get GPS times
-        static const int8_t MIN_ATL03_CNF           = -128;
+        static const int NUM_SPOTS                          = 6;
+
+        static const int EXTENT_ID_PHOTONS                  = 0x0;
+        static const int EXTENT_ID_ELEVATION                = 0x2;
+        static const int EXPECTED_NUM_FIELDS                = 8; // a typical number of ancillary fields requested
+
+        static const uint8_t INVALID_FLAG                   = 0xFF;
+
+        static const int64_t ATLAS_SDP_EPOCH_GPS            = 1198800018; // seconds to add to ATLAS delta times to get GPS times
+
+        static const uint32_t PFLAG_SPREAD_TOO_SHORT        = 0x0001; // ats
+        static const uint32_t PFLAG_TOO_FEW_PHOTONS         = 0x0002; // cnt
+        static const uint32_t PFLAG_MAX_ITERATIONS_REACHED  = 0x0004; // maxi
+        static const uint32_t PFLAG_OUT_OF_BOUNDS           = 0x0008;
+        static const uint32_t PFLAG_BIN_UNDERFLOW           = 0x0010;
+        static const uint32_t PFLAG_BIN_OVERFLOW            = 0x0020;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -379,7 +388,7 @@ class Icesat2Fields: public RequestFields
          * Data
          *--------------------------------------------------------------------*/
 
-        FieldElement<surface_type_t>                        surfaceType {SRT_LAND_ICE};                             // surface reference type (used to select signal confidence column)
+        FieldElement<surface_type_t>                        surfaceType {SRT_DYNAMIC};                              // surface reference type (used to select signal confidence column)
         FieldElement<bool>                                  passInvalid {false};                                    // post extent even if each pair is invalid
         FieldElement<bool>                                  distInSeg {false};                                      // the extent length and step are expressed in segments, not meters
         FieldEnumeration<signal_conf_t,NUM_SIGNAL_CONF>     atl03Cnf {false, false, false, false, true, true, true}; // list of desired signal confidences of photons from atl03 classification

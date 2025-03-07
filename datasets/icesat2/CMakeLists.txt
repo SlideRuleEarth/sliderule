@@ -18,6 +18,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/GTDArray.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Icesat2Fields.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/MeritRaster.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/PhoReal.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/SurfaceFitter.cpp
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Atl06Dispatch.cpp>
 )
@@ -45,6 +46,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/GTDArray.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Icesat2Fields.h
         ${CMAKE_CURRENT_LIST_DIR}/package/MeritRaster.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/PhoReal.h
         ${CMAKE_CURRENT_LIST_DIR}/package/SurfaceFitter.h
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Atl06Dispatch.h>
     DESTINATION

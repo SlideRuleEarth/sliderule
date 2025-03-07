@@ -365,10 +365,7 @@ void FieldList<T>::fromLua (lua_State* L, int index)
 template <class T>
 void FieldList<T>::copy(const FieldList<T>& list)
 {
-    for(size_t i = 0; i < values.size(); i++)
-    {
-        values[i] = list.values[i];
-    }
+    values = list.values;
     encoding = list.encoding;
 }
 

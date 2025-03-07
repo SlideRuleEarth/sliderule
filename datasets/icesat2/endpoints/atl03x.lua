@@ -12,10 +12,13 @@ dataframe.proxy("atl03x", parms, rqst["parms"], rspq, channels, function(userlog
     local dataframes = {}
     local runners = {}
     local resource = parms["resource"]
-    -- atl06
-    if parms:stage(icesat2.ATL06) then
+    -- custom algorithms
+    if parms:stage(icesat2.ATL06) then -- surface fitter
         local fitter = icesat2.fit(parms)
         table.insert(runners, fitter)
+    elseif parms:stage(icesat2.PHOREAL) then -- phoreal
+        local phoreal = icesat2.phoreal(parms)
+        table.insert(runners, phoreal)
     end
     -- atl08
     local atl08h5 = nil

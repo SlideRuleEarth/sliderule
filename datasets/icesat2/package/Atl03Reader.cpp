@@ -1332,7 +1332,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                             * code below chooses the signal confidence that is the highest
                             * value of the five */
                             const int32_t conf_index = current_photon * Icesat2Fields::NUM_SURFACE_TYPES;
-                            atl03_cnf = Icesat2Fields::MIN_ATL03_CNF;
+                            atl03_cnf = -128;
                             for(int i = 0; i < Icesat2Fields::NUM_SURFACE_TYPES; i++)
                             {
                                 if(atl03.signal_conf_ph[conf_index + i] > atl03_cnf)

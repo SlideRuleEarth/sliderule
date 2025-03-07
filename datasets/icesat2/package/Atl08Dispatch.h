@@ -84,7 +84,7 @@ class Atl08Dispatch: public DispatchObject
         /* Vegetation Structure */
         typedef struct {
             uint64_t            extent_id;              // unique identifier
-            uint32_t            segment_id;             // closest atl06 segment
+            uint32_t            segment_id;             // closest atl03 segment
             uint16_t            pflags;                 // processing flags
             uint16_t            rgt;                    // reference ground track
             uint16_t            cycle;                  // cycle number

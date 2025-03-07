@@ -111,19 +111,19 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     if(df.length() <= 0) return true;
 
     // create new dataframe columns
-    FieldColumn<time8_t>*    time_ns        = new FieldColumn<time8_t>(Field::TIME_COLUMN); // nanoseconds from GPS epoch
-    FieldColumn<double>*     latitude       = new FieldColumn<double>(Field::Y_COLUMN);     // EPSG:7912
-    FieldColumn<double>*     longitude      = new FieldColumn<double>(Field::X_COLUMN);     // EPSG:7912
-    FieldColumn<double>*     h_mean         = new FieldColumn<double>(Field::Z_COLUMN);     // meters from ellipsoid
-    FieldColumn<double>*     x_atc          = new FieldColumn<double>;                      // distance from the equator
-    FieldColumn<float>*      y_atc          = new FieldColumn<float>;                       // distance from reference track
-    FieldColumn<float>*      dh_fit_dx      = new FieldColumn<float>;                       // along track slope
-    FieldColumn<float>*      window_height  = new FieldColumn<float>;
-    FieldColumn<float>*      rms_misfit     = new FieldColumn<float>;
-    FieldColumn<float>*      h_sigma        = new FieldColumn<float>;
-    FieldColumn<uint32_t>*   photon_start   = new FieldColumn<uint32_t>;                    // photon index of start of extent
-    FieldColumn<int32_t>*    photon_count   = new FieldColumn<int32_t>;                     // number of photons used in final elevation calculation
-    FieldColumn<uint16_t>*   pflags         = new FieldColumn<uint16_t>;                    // processing flags
+    FieldColumn<time8_t>*   time_ns         = new FieldColumn<time8_t>(Field::TIME_COLUMN); // nanoseconds from GPS epoch
+    FieldColumn<double>*    latitude        = new FieldColumn<double>(Field::Y_COLUMN);     // EPSG:7912
+    FieldColumn<double>*    longitude       = new FieldColumn<double>(Field::X_COLUMN);     // EPSG:7912
+    FieldColumn<double>*    x_atc           = new FieldColumn<double>;                      // distance from the equator
+    FieldColumn<float>*     y_atc           = new FieldColumn<float>;                       // distance from reference track
+    FieldColumn<uint32_t>*  photon_start    = new FieldColumn<uint32_t>;                    // photon index of start of extent
+    FieldColumn<uint32_t>*  photon_count    = new FieldColumn<uint32_t>;                    // number of photons used in final elevation calculation
+    FieldColumn<uint16_t>*  pflags          = new FieldColumn<uint16_t>;                    // processing flags
+    FieldColumn<double>*    h_mean          = new FieldColumn<double>(Field::Z_COLUMN);     // meters from ellipsoid
+    FieldColumn<float>*     dh_fit_dx       = new FieldColumn<float>;                       // along track slope
+    FieldColumn<float>*     window_height   = new FieldColumn<float>;
+    FieldColumn<float>*     rms_misfit      = new FieldColumn<float>;
+    FieldColumn<float>*     h_sigma         = new FieldColumn<float>;
 
     // for each photon
     int32_t i0 = 0; // start row
@@ -155,13 +155,13 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
         // check minimum extent length
         if((df.x_atc[i1] - df.x_atc[i0]) < parms->minAlongTrackSpread)
         {
-            _pflags |= PFLAG_SPREAD_TOO_SHORT;
+            _pflags |= Icesat2Fields::PFLAG_SPREAD_TOO_SHORT;
         }
 
         // check minimum number of photons
         if(num_photons < parms->minPhotonCount)
         {
-            _pflags |= PFLAG_TOO_FEW_PHOTONS;
+            _pflags |= Icesat2Fields::PFLAG_TOO_FEW_PHOTONS;
         }
 
         // run least squares fit
@@ -171,16 +171,16 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
             time_ns->append(static_cast<time8_t>(result.time_ns));
             latitude->append(result.latitude);
             longitude->append(result.longitude);
-            h_mean->append(result.h_mean);
             x_atc->append(result.x_atc);
             y_atc->append(result.y_atc);
+            photon_start->append(df.ph_index[i0]);
+            photon_count->append(static_cast<uint32_t>(num_photons));
+            pflags->append(result.pflags | _pflags);
+            h_mean->append(result.h_mean);
             dh_fit_dx->append(result.dh_fit_dx);
             window_height->append(result.window_height);
             rms_misfit->append(result.rms_misfit);
             h_sigma->append(result.h_sigma);
-            photon_start->append(df.ph_index[i0]);
-            photon_count->append(i1 - i0);
-            pflags->append(result.pflags | _pflags);
         }
 
         // find start of next extent
@@ -206,16 +206,16 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     df.addExistingColumn("time_ns",         time_ns);
     df.addExistingColumn("latitude",        latitude);
     df.addExistingColumn("longitude",       longitude);
-    df.addExistingColumn("h_mean",          h_mean);
     df.addExistingColumn("x_atc",           x_atc);
     df.addExistingColumn("y_atc",           y_atc);
+    df.addExistingColumn("photon_start",    photon_start);
+    df.addExistingColumn("photon_count",    photon_count);
+    df.addExistingColumn("pflags",          pflags);
+    df.addExistingColumn("h_mean",          h_mean);
     df.addExistingColumn("dh_fit_dx",       dh_fit_dx);
     df.addExistingColumn("window_height",   window_height);
     df.addExistingColumn("rms_misfit",      rms_misfit);
     df.addExistingColumn("h_sigma",         h_sigma);
-    df.addExistingColumn("photon_start",    photon_start);
-    df.addExistingColumn("photon_count",    photon_count);
-    df.addExistingColumn("pflags",          pflags);
     df.populateDataframe();
 
     // update runtime and return success
@@ -333,7 +333,7 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
             else
             {
                 mlog(CRITICAL, "Out of bounds condition caught: %d, %d, %d", i0, i1, photons_in_window);
-                result.pflags |= PFLAG_OUT_OF_BOUNDS;
+                result.pflags |= Icesat2Fields::PFLAG_OUT_OF_BOUNDS;
             }
         }
 
@@ -366,13 +366,13 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
         /* Check Photon Count */
         if(next_num_photons < parms->minPhotonCount.value)
         {
-            result.pflags |= PFLAG_TOO_FEW_PHOTONS;
+            result.pflags |= Icesat2Fields::PFLAG_TOO_FEW_PHOTONS;
             done = true;
         }
         /* Check Spread */
         else if((x_max - x_min) < parms->minAlongTrackSpread.value)
         {
-            result.pflags |= PFLAG_SPREAD_TOO_SHORT;
+            result.pflags |= Icesat2Fields::PFLAG_SPREAD_TOO_SHORT;
             done = true;
         }
         /* Check Change in Number of Photons */
@@ -383,7 +383,7 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
         /* Check Iterations */
         else if(++iteration >= parms->fit.maxIterations.value)
         {
-            result.pflags |= PFLAG_MAX_ITERATIONS_REACHED;
+            result.pflags |= Icesat2Fields::PFLAG_MAX_ITERATIONS_REACHED;
             done = true;
         }
         /* Filtered Out Photons in Results and Iterate Again (section 5.5, procedure 4f) */
