@@ -3,7 +3,7 @@
 import pytest
 import numpy
 import math
-from sliderule import sliderule, earthdata, raster, gedi
+from sliderule import earthdata, raster, gedi
 
 region = [  {"lon": -108.3435200747503, "lat": 38.89102961045247},
             {"lon": -107.7677425431139, "lat": 38.90611184543033},

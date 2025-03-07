@@ -66,6 +66,7 @@ class TestMosaic:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
+                  "srt": 3,
                   "ats": 20.0,
                   "cnt": 10,
                   "len": 40.0,
@@ -87,6 +88,7 @@ class TestMosaic:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
+                  "srt": 3,
                   "ats": 20.0,
                   "cnt": 10,
                   "len": 40.0,
@@ -116,6 +118,7 @@ class TestStrips:
                                 {'lon': -46.76533411521963, 'lat': 65.4938164756588}  ]
         parms = { "poly": region_of_interest,
                   "cnf": "atl03_high",
+                  "srt": 3,
                   "ats": 10.0,
                   "cnt": 5,
                   "len": 40.0,

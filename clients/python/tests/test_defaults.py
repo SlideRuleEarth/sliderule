@@ -15,5 +15,5 @@ class TestDefaultParms:
         assert d["cre"]["timeout"] == 600, f'container runtime environment has invalid timeout: {d["cre"]}'
         assert len(d["core"]["samples"]) == 0, f'core has invalid samples parameters: {d["core"]["samples"]}'
         assert d["core"]["cluster_size_hint"] == 0, f'core has invalid cluster size hint: {d["core"]["cluster_size_hint"]}'
-        assert d["icesat2"]["srt"] == "land_ice", f'icesat2 has invalid surface reference type: {d["icesat2"]["srt"]}'
+        assert d["icesat2"]["srt"] == "dynamic", f'icesat2 has invalid surface reference type: {d["icesat2"]["srt"]}'
         assert d["gedi"]["proj"] == "auto", f'gedi has invalid projection: {d["gedi"]["proj"]}'

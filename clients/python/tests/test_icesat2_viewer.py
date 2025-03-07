@@ -13,7 +13,8 @@ region = [ { "lat": -80.75, "lon": -70.00 },
            { "lat": -80.75, "lon": -70.00 } ]
 
 parms = { "poly": region,
-          "track": 1 }
+          "track": 1,
+          "srt": 3 }
 
 def assert_gdf(gdf):
     assert min(gdf["pair"]) == 0

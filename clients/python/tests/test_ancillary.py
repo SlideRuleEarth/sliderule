@@ -14,6 +14,7 @@ class TestIcesat2:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
             "poly":             region["poly"],
+            "cnf":              0,
             "srt":              icesat2.SRT_LAND,
             "atl03_geo_fields": ["solar_elevation"]
         }
@@ -26,6 +27,7 @@ class TestIcesat2:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
             "poly":             region["poly"],
+            "cnf":              0,
             "srt":              icesat2.SRT_LAND,
             "atl03_ph_fields":  ["ph_id_count"]
         }
@@ -38,6 +40,7 @@ class TestIcesat2:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
             "poly":             region["poly"],
+            "cnf":              0,
             "srt":              icesat2.SRT_LAND,
             "atl06_fields":     ["fit_statistics/n_seg_pulses"]
         }
@@ -65,6 +68,7 @@ class TestIcesat2:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
         parms = {
             "poly":             region["poly"],
+            "cnf":              0,
             "srt":              icesat2.SRT_LAND,
             "atl08_fields":     ["h_dif_ref", "rgt", "sigma_atlas_land%", "cloud_flag_atm%"]
         }

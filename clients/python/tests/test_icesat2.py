@@ -12,6 +12,7 @@ class TestAlgorithm:
     def test_atl06(self, init, performance):
         resource = "ATL03_20181019065445_03150111_005_01.h5"
         parms = { "cnf": "atl03_high",
+                  "srt": 3,
                   "ats": 20.0,
                   "cnt": 10,
                   "len": 40.0,
@@ -28,6 +29,7 @@ class TestAlgorithm:
     def test_atl06p(self, init, performance):
         resource = "ATL03_20181019065445_03150111_005_01.h5"
         parms = { "cnf": "atl03_high",
+                  "srt": 3,
                   "ats": 20.0,
                   "cnt": 10,
                   "len": 40.0,
@@ -51,6 +53,7 @@ class TestAlgorithm:
         parms = { "poly": region,
                   "track": 1,
                   "cnf": 0,
+                  "srt": 3,
                   "pass_invalid": True,
                   "yapc": { "score": 0 },
                   "atl08_class": ["atl08_noise", "atl08_ground", "atl08_canopy", "atl08_top_of_canopy", "atl08_unclassified"],
@@ -77,6 +80,7 @@ class TestAlgorithm:
         parms = { "poly": region,
                   "track": 1,
                   "cnf": 0,
+                  "srt": 3,
                   "pass_invalid": True,
                   "yapc": { "score": 0 },
                   "atl08_class": ["atl08_noise", "atl08_ground", "atl08_canopy", "atl08_top_of_canopy", "atl08_unclassified"],
@@ -104,6 +108,7 @@ class TestAlgorithm:
         parms = { "poly": region,
                   "track": track,
                   "cnf": 0,
+                  "srt": 3,
                   "pass_invalid": True,
                   "atl08_class": ["atl08_noise", "atl08_ground", "atl08_canopy", "atl08_top_of_canopy", "atl08_unclassified"],
                   "ats": 10.0,
@@ -135,6 +140,7 @@ class TestAlgorithm:
         # Make ATL06-SR Processing Request
         parms = { "poly": region,
                   "cnf": 4,
+                  "srt": 3,
                   "ats": 20.0,
                   "cnt": 10,
                   "len": 2.0,

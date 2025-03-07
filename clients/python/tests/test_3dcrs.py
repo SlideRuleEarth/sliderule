@@ -8,6 +8,7 @@ class Test3dCRS:
     def test_atl06p(self, init):
         resource = "ATL03_20181019065445_03150111_005_01.h5"
         parms = { "cnf": "atl03_high",
+                  "srt": 3,
                   "ats": 20.0,
                   "cnt": 10,
                   "len": 40.0,
@@ -29,6 +30,7 @@ class Test3dCRS:
         parms = { "poly": region,
                   "track": 1,
                   "cnf": 0,
+                  "srt": 3,
                   "pass_invalid": True,
                   "yapc": { "score": 0 },
                   "atl08_class": ["atl08_noise", "atl08_ground", "atl08_canopy", "atl08_top_of_canopy", "atl08_unclassified"],
@@ -55,9 +57,9 @@ class Test3dCRS:
             "srt": icesat2.SRT_LAND,
             "len": 100,
             "res": 100,
-            "pass_invalid": True, 
+            "pass_invalid": True,
             "atl08_class": ["atl08_ground", "atl08_canopy", "atl08_top_of_canopy"],
-            "phoreal": {"binsize": 1.0, "geoloc": "center", "use_abs_h": False, "send_waveform": True} 
+            "phoreal": {"binsize": 1.0, "geoloc": "center", "use_abs_h": False, "send_waveform": True}
         }
         gdf = icesat2.atl08p(parms, resources=[resource], height_key='h_te_median')
         assert init

@@ -21,6 +21,7 @@ class TestParquet:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
+                  "srt": 3,
                   "ats": 20.0,
                   "cnt": 10,
                   "len": 40.0,
@@ -48,6 +49,7 @@ class TestParquet:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
+                  "srt": 3,
                   "ats": 20.0,
                   "cnt": 10,
                   "len": 40.0,
@@ -69,6 +71,7 @@ class TestParquet:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
+                  "srt": 3,
                   "ats": 20.0,
                   "cnt": 10,
                   "len": 40.0,
@@ -94,6 +97,7 @@ class TestParquet:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
+                  "srt": 3,
                   "ats": 20.0,
                   "cnt": 10,
                   "len": 40.0,
@@ -114,13 +118,14 @@ class TestParquet:
         resource = "ATL03_20190314093716_11600203_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
-                "cnf": "atl03_high",
-                "ats": 20.0,
-                "cnt": 10,
-                "len": 40.0,
-                "res": 20.0,
-                "maxi": 1,
-                "output": { "path": "testfile5.parquet", "format": "geoparquet", "open_on_complete": True } }
+                  "cnf": "atl03_high",
+                  "srt": 3,
+                  "ats": 20.0,
+                  "cnt": 10,
+                  "len": 40.0,
+                  "res": 20.0,
+                  "maxi": 1,
+                  "output": { "path": "testfile5.parquet", "format": "geoparquet", "open_on_complete": True } }
         gdf = icesat2.atl03vp(parms, resources=[resource])
         os.remove("testfile5.parquet")
         assert len(gdf) == 1662
@@ -268,6 +273,7 @@ class TestParquet:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
+                  "srt": 3,
                   "ats": 20.0,
                   "cnt": 10,
                   "len": 40.0,
@@ -311,6 +317,7 @@ class TestParquet:
         region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
+                  "srt": 3,
                   "ats": 20.0,
                   "cnt": 10,
                   "len": 40.0,

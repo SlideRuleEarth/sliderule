@@ -13,7 +13,7 @@ sigma = 1.0e-9
 lon =  -81.02
 lat =   31.86
 
-file  = '/vsis3/noaa-ocs-nationalbathymetry-pds/BlueTopo/BH4SV597/BlueTopo_BH4SV597_20241219.tiff'
+file  = '/vsis3/noaa-ocs-nationalbathymetry-pds/BlueTopo/BH4SV597/BlueTopo_'
 expElevation   = -14.10
 expUncertainty =   2.58
 expContributor =  63846
@@ -25,7 +25,7 @@ class TestBlueTopo:
         rsps = sliderule.source("samples", rqst)
         assert init
         print(rsps)
-        assert rsps["samples"][0][0]["file"] ==  file
+        assert file in rsps["samples"][0][0]["file"] # file names change in BlueTopo regularly
         assert rsps["samples"][0][0]["band"] == "Elevation"
         assert rsps['samples'][0][0]['value'] == pytest.approx(expElevation, rel=1e-3)
         assert rsps["samples"][0][1]["band"] == "Uncertainty"
