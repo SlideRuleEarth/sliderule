@@ -39,6 +39,7 @@ end
 runner.unittest("ATL03 DataFrame", function()
 
     local parms = icesat2.parms({
+        srt = 3,
         cnf = 4,
         resource = "ATL03_20200304065203_10470605_006_01.h5"
     })
@@ -87,6 +88,7 @@ end)
 runner.unittest("ATL03 DataFrame - Ancillary Data", function()
 
     local parms = icesat2.parms({
+        srt = 3,
         cnf = 4,
         resource = "ATL03_20200304065203_10470605_006_01.h5",
         atl03_geo_fields = {"knn", "pitch"},
@@ -149,6 +151,7 @@ end)
 runner.unittest("ATL06 Surface Fitter", function()
 
     local parms = icesat2.parms({
+        srt = 3,
         cnf = 4,
         resource = "ATL03_20200304065203_10470605_006_01.h5",
         fit = { maxi = 2 }
@@ -181,7 +184,7 @@ runner.unittest("ATL06 Surface Fitter", function()
         rms_misfit = 0.12183286994696,
         h_sigma = 0.010312998667359,
         photon_start = 7076,
-        photon_count = 139,
+        photon_count = 140,
         pflags = 0,
     }, df, 100, 0.00001)
 
