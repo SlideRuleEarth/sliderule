@@ -335,18 +335,7 @@ int GeoDataFrame::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void GeoDataFrame::clear(void)
 {
-    FieldDictionary::entry_t entry;
-    const char* key = columnFields.fields.first(&entry);
-    while(key != NULL)
-    {
-        if(entry.free_on_delete)
-        {
-            delete [] entry.name;
-            delete entry.field;
-        }
-        key = columnFields.fields.next(&entry);
-    }
-    columnFields.fields.clear();
+    columnFields.clear();
     numRows = 0;
 }
 
@@ -841,36 +830,6 @@ GeoDataFrame::~GeoDataFrame(void)
         GeoDataFrame::FrameRunner* runner;
         recv_status = subRunQ.receiveCopy(&runner, sizeof(runner), SYS_TIMEOUT);
         if(recv_status > 0 && runner) runner->releaseLuaObject();
-    }
-
-    // free entries column dictionary
-    {
-        FieldDictionary::entry_t entry;
-        const char* key = columnFields.fields.first(&entry);
-        while(key != NULL)
-        {
-            if(entry.free_on_delete)
-            {
-                delete [] entry.name;
-                delete entry.field;
-            }
-            key = columnFields.fields.next(&entry);
-        }
-    }
-
-    // free entries in meta dictionary
-    {
-        FieldDictionary::entry_t entry;
-        const char* key = metaFields.fields.first(&entry);
-        while(key != NULL)
-        {
-            if(entry.free_on_delete)
-            {
-                delete [] entry.name;
-                delete entry.field;
-            }
-            key = metaFields.fields.next(&entry);
-        }
     }
 }
 

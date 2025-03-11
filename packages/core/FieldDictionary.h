@@ -81,7 +81,9 @@ class FieldDictionary: public Field
             Field(DICTIONARY, 0),
             fields(hash_table_size) {};
 
-        virtual ~FieldDictionary(void) override = default;
+        virtual ~FieldDictionary(void) override {
+            FieldDictionary::clear();
+        };
 
         bool add (const entry_t& entry) {
             return fields.add(entry.name, entry);
@@ -97,6 +99,7 @@ class FieldDictionary: public Field
                 }
                 else
                 {
+                    // frees memory earlier than destructor
                     entry.field->clear();
                 }
                 return true;
@@ -180,6 +183,17 @@ class FieldDictionary: public Field
         }
 
         void clear (void) override {
+            entry_t entry;
+            const char* key = fields.first(&entry);
+            while(key != NULL)
+            {
+                if(entry.free_on_delete)
+                {
+                    delete [] entry.name;
+                    delete entry.field;
+                }
+                key = fields.next(&entry);
+            }
             fields.clear();
         }
 

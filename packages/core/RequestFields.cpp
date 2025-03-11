@@ -286,17 +286,17 @@ int RequestFields::luaGetSamplers (lua_State* L)
         lua_newtable(L);
 
         // loop through each GeoFields
-        GeoFields* geo_field;
-        const char* key = lua_obj->samplers.values.first(&geo_field);
+        FieldMap<GeoFields>::entry_t entry;
+        const char* key = lua_obj->samplers.values.first(&entry);
         while(key != NULL)
         {
             // create entry of GeoFields
             lua_pushstring(L, key);
-            geo_field->toLua(L);
+            entry.value->toLua(L);
             lua_settable(L, -3);
 
             // goto next geo field
-            key = lua_obj->samplers.values.next(&geo_field);
+            key = lua_obj->samplers.values.next(&entry);
         }
 
         // return table
@@ -340,7 +340,7 @@ int RequestFields::luaSetCatalog (lua_State* L)
         const char* catalog = getLuaString(L, 3);
 
         // the long form of accessing this variable is because other methods are const
-        lua_obj->samplers.values[key]->catalog.value = catalog;
+        lua_obj->samplers.values[key].value->catalog.value = catalog;
     }
     catch(const RunTimeException& e)
     {

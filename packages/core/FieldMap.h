@@ -51,14 +51,23 @@ class FieldMap: public Field
     public:
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            T* value;
+            bool free_on_delete;
+        } entry_t;
+
+         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
                         FieldMap    (void);
                         FieldMap    (const FieldMap<T>& other);
-        virtual         ~FieldMap   (void) override = default;
+        virtual         ~FieldMap   (void) override;
 
-        long            add         (const char* key, T* v);
+        long            add         (const char* key, T* v, bool free_on_delete=true);
 
         void            clear       (void) override;
         long            length      (void) const override;
@@ -74,7 +83,7 @@ class FieldMap: public Field
          * Data
          *--------------------------------------------------------------------*/
 
-        Dictionary<T*> values;
+        Dictionary<entry_t> values;
 };
 
 /******************************************************************************
@@ -101,12 +110,25 @@ FieldMap<T>::FieldMap(const FieldMap<T>& other):
 }
 
 /*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+FieldMap<T>::~FieldMap(void)
+{
+    FieldMap<T>::clear();
+}
+
+/*----------------------------------------------------------------------------
  * add
  *----------------------------------------------------------------------------*/
 template<class T>
-long FieldMap<T>::add(const char* key, T* v)
+long FieldMap<T>::add(const char* key, T* v, bool free_on_delete)
 {
-    values.add(key, v);
+    entry_t entry = {
+        .value = v,
+        .free_on_delete = free_on_delete
+    };
+    values.add(key, entry);
     return values.length();
 }
 
@@ -116,6 +138,16 @@ long FieldMap<T>::add(const char* key, T* v)
 template<class T>
 void FieldMap<T>::clear(void)
 {
+    entry_t entry;
+    const char* key = values.first(&entry);
+    while(key != NULL)
+    {
+        if(entry.free_on_delete)
+        {
+            delete entry.value;
+        }
+        key = values.next(&entry);
+    }
     return values.clear();
 }
 
@@ -145,7 +177,7 @@ FieldMap<T>& FieldMap<T>::operator= (const FieldMap<T>& other)
 template <class T>
 const T& FieldMap<T>::operator[](const char* key) const
 {
-    return *values[key];
+    return *values[key].value;
 }
 
 /*----------------------------------------------------------------------------
@@ -154,14 +186,14 @@ const T& FieldMap<T>::operator[](const char* key) const
 template <class T>
 string FieldMap<T>::toJson (void) const
 {
-    typename Dictionary<T*>::Iterator iter(values);
+    typename Dictionary<entry_t>::Iterator iter(values);
     string str("{");
     for(int i = 0; i < iter.length; i++)
     {
         str += "\"";
         str += iter[i].key;
         str += "\":";
-        str += convertToJson(*iter[i].value);
+        str += convertToJson(*iter[i].value.value);
         if(i < iter.length - 1) str += ",";
     }
     str += "}";
@@ -174,12 +206,12 @@ string FieldMap<T>::toJson (void) const
 template <class T>
 int FieldMap<T>::toLua (lua_State* L) const
 {
-    typename Dictionary<T*>::Iterator iter(values);
+    typename Dictionary<entry_t>::Iterator iter(values);
     lua_newtable(L);
     for(int i = 0; i < iter.length; i++)
     {
         lua_pushstring(L, iter[i].key);
-        convertToLua(L, *iter[i].value);
+        convertToLua(L, *iter[i].value.value);
         lua_settable(L, -3);
     }
     return 1;
@@ -200,9 +232,12 @@ void FieldMap<T>::fromLua (lua_State* L, int index)
             try
             {
                 const char* key = LuaObject::getLuaString(L, -2);
-                T* value = new T;
-                values.add(key, value);
-                convertFromLua(L, -1, *value);
+                entry_t entry = {
+                    .value = new T,
+                    .free_on_delete = true
+                };
+                values.add(key, entry);
+                convertFromLua(L, -1, *entry.value);
             }
             catch(const RunTimeException& e)
             {

@@ -53,7 +53,7 @@ struct FieldUntypedColumn: public Field
         long size;
     } column_t;
 
-    FieldUntypedColumn (uint32_t _encoding):
+    explicit FieldUntypedColumn (uint32_t _encoding):
          Field(COLUMN, _encoding) {};
     ~FieldUntypedColumn (void) = default;
 
