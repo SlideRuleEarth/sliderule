@@ -68,24 +68,116 @@ class FieldDictionary: public Field
          * Methods
          *--------------------------------------------------------------------*/
 
-                        FieldDictionary (std::initializer_list<entry_t> init_list, int hash_table_size=DEFAULT_INITIAL_HASH_TABLE_SIZE);
-        explicit        FieldDictionary (int hash_table_size=DEFAULT_INITIAL_HASH_TABLE_SIZE);
-        virtual         ~FieldDictionary(void) override = default;
+        FieldDictionary (std::initializer_list<entry_t> init_list, int hash_table_size=DEFAULT_INITIAL_HASH_TABLE_SIZE):
+            Field(DICTIONARY, 0),
+            fields(hash_table_size) {
+            for(const entry_t& elem: init_list)
+            {
+                fields.add(elem.name, elem);
+            }
+        };
 
-        bool            add             (const entry_t& entry);
-        bool            remove          (const entry_t& entry);
+        explicit FieldDictionary (int hash_table_size=DEFAULT_INITIAL_HASH_TABLE_SIZE):
+            Field(DICTIONARY, 0),
+            fields(hash_table_size) {};
 
-        Field*          operator[]      (const char* key) const;
-        Field&          operator[]      (const char* key);
+        virtual ~FieldDictionary(void) override = default;
 
-        string          toJson          (void) const override;
-        int             toLua           (lua_State* L) const override;
-        int             toLua           (lua_State* L, const string& key) const override;
-        void            fromLua         (lua_State* L, int index) override;
+        bool add (const entry_t& entry) {
+            return fields.add(entry.name, entry);
+        }
 
-        /*--------------------------------------------------------------------
-         * Inlines
-         *--------------------------------------------------------------------*/
+        bool remove (const entry_t& entry) {
+            if(fields.remove(entry.name))
+            {
+                if(entry.free_on_delete)
+                {
+                    delete [] entry.name;
+                    delete entry.field;
+                }
+                else
+                {
+                    entry.field->clear();
+                }
+                return true;
+            }
+            return false;
+        }
+
+        Field* operator[] (const char* key) const {
+            return fields[key].field;
+        }
+
+        Field& operator[] (const char* key) {
+            return *(fields[key].field);
+        }
+
+        string toJson (void) const override {
+            Dictionary<entry_t>::Iterator iter(fields);
+            string str("{");
+            for(int i = 0; i < iter.length; i++)
+            {
+                const Dictionary<entry_t>::kv_t kv = iter[i];
+                str += "\"";
+                str += kv.value.name;
+                str += "\":";
+                str += kv.value.field->toJson();
+                if(i < iter.length - 1) str += ",";
+            }
+            str += "}";
+            return str;
+        }
+
+        int toLua (lua_State* L) const override {
+            Dictionary<entry_t>::Iterator iter(fields);
+            lua_newtable(L);
+            for(int i = 0; i < iter.length; i++)
+            {
+                const Dictionary<entry_t>::kv_t kv = iter[i];
+                lua_pushstring(L, kv.value.name);
+                kv.value.field->toLua(L);
+                lua_settable(L, -3);
+            }
+            return 1;
+        }
+
+        int toLua (lua_State* L, const string& key) const override {
+            try
+            {
+                const entry_t& entry = fields[key.c_str()];
+                entry.field->toLua(L);
+            }
+            catch(const RunTimeException& e)
+            {
+                (void)e;
+                lua_pushnil(L);
+            }
+            return 1;
+        }
+
+        void fromLua (lua_State* L, int index) override {
+            if(lua_istable(L, index))
+            {
+                Dictionary<entry_t>::Iterator iter(fields);
+                for(int i = 0; i < iter.length; i++)
+                {
+                    Dictionary<entry_t>::kv_t kv = iter[i];
+                    lua_getfield(L, index, kv.value.name);
+                    try
+                    {
+                        kv.value.field->fromLua(L, -1);
+                    }
+                    catch (const RunTimeException& e)
+                    {
+                        if(!lua_isnil(L, -1))
+                        {
+                            mlog(ERROR, "Field <%s> using default value: %s", kv.value.name, e.what());
+                        }
+                    }
+                    lua_pop(L, 1);
+                }
+            }
+        }
 
         void clear (void) override {
             fields.clear();

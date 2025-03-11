@@ -110,6 +110,8 @@ class Field
 
         virtual ~Field (void) = default;
 
+        // access
+
         virtual void clear (void) {
             return;
         }
@@ -129,6 +131,8 @@ class Field
             return 0;
         }
 
+        // conversion
+
         virtual string toJson (void) const = 0;
 
         virtual int toLua (lua_State* L) const = 0;
@@ -146,6 +150,8 @@ class Field
             lua_pushnil(L);
             return 1;
         };
+
+        // encoding
 
         uint32_t getEncodedType(void) const {
             return encoding & TYPE_MASK;

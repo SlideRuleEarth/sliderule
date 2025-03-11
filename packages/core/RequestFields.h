@@ -162,4 +162,11 @@ inline uint32_t toEncoding(MathLib::coord_t& v) { (void)v; return Field::USER; }
 inline uint32_t toEncoding(MathLib::point_t& v) { (void)v; return Field::USER; };
 inline uint32_t toEncoding(MathLib::proj_t& v) { (void)v; return Field::USER; };
 
+inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<MathLib::coord_t>& v, long start_index, long num_elements) {
+    (void)v;
+    (void)start_index;
+    (void)num_elements;
+    throw RunTimeException(CRITICAL, RTE_ERROR, "column format <coord_t> does not support conversion to doubles");
+}
+
 #endif  /* __request_fields__ */

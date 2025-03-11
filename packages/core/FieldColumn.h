@@ -37,15 +37,34 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "MathLib.h"
 #include "LuaEngine.h"
 #include "Field.h"
+#include "FieldList.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
+struct FieldUntypedColumn: public Field
+{
+    typedef struct {
+        double* data;
+        long size;
+    } column_t;
+
+    FieldUntypedColumn (uint32_t _encoding):
+         Field(COLUMN, _encoding) {};
+    ~FieldUntypedColumn (void) = default;
+
+    virtual double sum (long start_index, long num_elements) const = 0;
+    virtual double mean (long start_index, long num_elements) const = 0;
+    virtual double median (long start_index, long num_elements) const = 0;
+    virtual double mode (long start_index, long num_elements) const = 0;
+};
+
 template <class T>
-class FieldColumn: public Field
+class FieldColumn: public FieldUntypedColumn
 {
     public:
 
@@ -78,6 +97,11 @@ class FieldColumn: public Field
         T               operator[]      (long i) const;
         T&              operator[]      (long i);
 
+        double          sum             (long start_index, long num_elements) const override;
+        double          mean            (long start_index, long num_elements) const override;
+        double          median          (long start_index, long num_elements) const override;
+        double          mode            (long start_index, long num_elements) const override;
+
         string          toJson          (void) const override;
         int             toLua           (lua_State* L) const override;
         int             toLua           (lua_State* L, long key) const override;
@@ -99,13 +123,28 @@ class FieldColumn: public Field
  ******************************************************************************/
 
 template <class T>
+inline string convertToJson(const FieldUntypedColumn& v) {
+    return v.toJson();
+}
+
+template <class T>
 inline string convertToJson(const FieldColumn<T>& v) {
     return v.toJson();
 }
 
 template <class T>
+inline int convertToLua(lua_State* L, const FieldUntypedColumn& v) {
+    return v.toLua(L);
+}
+
+template <class T>
 inline int convertToLua(lua_State* L, const FieldColumn<T>& v) {
     return v.toLua(L);
+}
+
+template <class T>
+inline void convertFromLua(lua_State* L, int index, FieldUntypedColumn& v) {
+    v.fromLua(L, index);
 }
 
 template <class T>
@@ -128,6 +167,119 @@ inline uint32_t toEncoding(FieldColumn<double>& v)   { (void)v; return Field::NE
 inline uint32_t toEncoding(FieldColumn<time8_t>& v)  { (void)v; return Field::NESTED_COLUMN | Field::TIME8;  };
 inline uint32_t toEncoding(FieldColumn<string>& v)   { (void)v; return Field::NESTED_COLUMN | Field::STRING; };
 
+// conversion to doubles
+template<class T>
+inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<T>& v, long start_index, long num_elements) {
+    FieldUntypedColumn::column_t column = {
+        .data = new double[num_elements],
+        .size = num_elements
+    };
+    long index = 0;
+    for(long i = start_index; i < num_elements; i++) {
+        column.data[index++] = static_cast<double>(v[i]);
+    }
+    return column;
+}
+inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<time8_t>& v, long start_index, long num_elements) {
+    FieldUntypedColumn::column_t column = {
+        .data = new double[num_elements],
+        .size = num_elements
+    };
+    long index = 0;
+    for(long i = start_index; i < num_elements; i++) {
+        column.data[index++] = static_cast<double>(v[i].nanoseconds);
+    }
+    return column;
+}
+inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<string>& v, long start_index, long num_elements) {
+    (void)v;
+    (void)start_index;
+    (void)num_elements;
+    throw RunTimeException(CRITICAL, RTE_ERROR, "column format <string> does not support conversion to doubles");
+}
+template<class T>
+inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldList<T>>& v, long start_index, long num_elements) {
+    long total_elements = 0;
+    for(long i = start_index; i < num_elements; i++) {
+        total_elements += v[i].length();
+    }
+    FieldUntypedColumn::column_t column = {
+        .data = new double[total_elements],
+        .size = total_elements
+    };
+    long index = 0;
+    for(long i = start_index; i < num_elements; i++) {
+        for(long j = 0; j < v[i].length(); j++) {
+            column.data[index++] = static_cast<double>(v[i][j]);
+        }
+    }
+    return column;
+}
+inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldList<time8_t>>& v, long start_index, long num_elements) {
+    long total_elements = 0;
+    for(long i = start_index; i < num_elements; i++) {
+        total_elements += v[i].length();
+    }
+    FieldUntypedColumn::column_t column = {
+        .data = new double[total_elements],
+        .size = total_elements
+    };
+    long index = 0;
+    for(long i = start_index; i < num_elements; i++) {
+        for(long j = 0; j < v[i].length(); j++) {
+            column.data[index++] = static_cast<double>(v[i][j].nanoseconds);
+        }
+    }
+    return column;
+}
+inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldList<string>>& v, long start_index, long num_elements) {
+    (void)v;
+    (void)start_index;
+    (void)num_elements;
+    throw RunTimeException(CRITICAL, RTE_ERROR, "column format <string> does not support conversion to doubles");
+}
+template<class T>
+inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldColumn<T>>& v, long start_index, long num_elements) {
+    long total_elements = 0;
+    for(long i = start_index; i < num_elements; i++) {
+        total_elements += v[i].length();
+    }
+    FieldUntypedColumn::column_t column = {
+        .data = new double[total_elements],
+        .size = total_elements
+    };
+    long index = 0;
+    for(long i = start_index; i < num_elements; i++) {
+        for(long j = 0; j < v[i].length(); j++) {
+            column.data[index++] = static_cast<double>(v[i][j]);
+        }
+    }
+    return column;
+}
+inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldColumn<time8_t>>& v, long start_index, long num_elements) {
+    long total_elements = 0;
+    for(long i = start_index; i < num_elements; i++) {
+        total_elements += v[i].length();
+    }
+    FieldUntypedColumn::column_t column = {
+        .data = new double[total_elements],
+        .size = total_elements
+    };
+    long index = 0;
+    for(long i = start_index; i < num_elements; i++) {
+        for(long j = 0; j < v[i].length(); j++) {
+            column.data[index++] = static_cast<double>(v[i][j].nanoseconds);
+        }
+    }
+    return column;
+}
+inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldColumn<string>>& v, long start_index, long num_elements) {
+    (void)v;
+    (void)start_index;
+    (void)num_elements;
+    throw RunTimeException(CRITICAL, RTE_ERROR, "column format <string> does not support conversion to doubles");
+}
+
 /******************************************************************************
  * METHODS
  ******************************************************************************/
@@ -137,7 +289,7 @@ inline uint32_t toEncoding(FieldColumn<string>& v)   { (void)v; return Field::NE
  *----------------------------------------------------------------------------*/
 template<class T>
 FieldColumn<T>::FieldColumn(uint32_t encoding_mask, long _chunk_size):
-    Field(COLUMN, getImpliedEncoding<T>() | encoding_mask),
+    FieldUntypedColumn(getImpliedEncoding<T>() | encoding_mask),
     currChunk(-1),
     currChunkOffset(_chunk_size),
     numElements(0),
@@ -150,7 +302,7 @@ FieldColumn<T>::FieldColumn(uint32_t encoding_mask, long _chunk_size):
  *----------------------------------------------------------------------------*/
 template<class T>
 FieldColumn<T>::FieldColumn(const uint8_t* buffer, long size, uint32_t encoding_mask):
-    Field(COLUMN, getImpliedEncoding<T>() | encoding_mask)
+    FieldUntypedColumn(getImpliedEncoding<T>() | encoding_mask)
 {
     assert(size > 0);
     assert(size % sizeof(T) == 0);
@@ -177,7 +329,7 @@ FieldColumn<T>::FieldColumn(const uint8_t* buffer, long size, uint32_t encoding_
  *----------------------------------------------------------------------------*/
 template<class T>
 FieldColumn<T>::FieldColumn(const FieldColumn<T>& column):
-    Field(COLUMN, getImpliedEncoding<T>()),
+    FieldUntypedColumn(getImpliedEncoding<T>()),
     currChunk(column.currChunk),
     currChunkOffset(column.currChunkOffset),
     numElements(column.numElements),
@@ -442,6 +594,97 @@ T& FieldColumn<T>::operator[](long i)
     const long chunk_index = i / chunkSize;
     const long chunk_offset = i % chunkSize;
     return chunks[chunk_index][chunk_offset];
+}
+
+/*----------------------------------------------------------------------------
+ * FieldUntypedColumn - sum
+ *----------------------------------------------------------------------------*/
+template<class T>
+double FieldColumn<T>::sum (long start_index, long num_elements) const
+{
+    double acc = 0;
+    column_t column = toDoubles(*this, start_index, num_elements);
+    for(long i = 0; i < column.size; i++)
+    {
+        acc += column.data[i];
+    }
+    delete [] column.data;
+    return acc;
+}
+
+/*----------------------------------------------------------------------------
+ * FieldUntypedColumn - mean
+ *----------------------------------------------------------------------------*/
+template<class T>
+double FieldColumn<T>::mean (long start_index, long num_elements) const
+{
+    double avg;
+    column_t column = toDoubles(*this, start_index, num_elements);
+    double acc = 0;
+    for(long i = 0; i < column.size; i++)
+    {
+        acc += column.data[i];
+    }
+    avg = acc / static_cast<double>(num_elements);
+    delete [] column.data;
+    return avg;
+}
+
+/*----------------------------------------------------------------------------
+ * FieldUntypedColumn - median
+ *----------------------------------------------------------------------------*/
+template<class T>
+double FieldColumn<T>::median (long start_index, long num_elements) const
+{
+    double avg;
+    column_t column = toDoubles(*this, start_index, num_elements);
+    MathLib::quicksort(column.data, 0, column.size);
+    if(column.size % 2 == 0) // even
+    {
+        const long i0 = (column.size - 1) / 2;
+        const long i1 = ((column.size - 1) / 2) + 1;
+        avg = (column.data[i0] + column.data[i1]) / 2.0;
+    }
+    else // odd
+    {
+        const long i0 = (column.size - 1) / 2;
+        avg = column.data[i0];
+    }
+    delete [] column.data;
+    return avg;
+}
+
+/*----------------------------------------------------------------------------
+ * FieldUntypedColumn - mode
+ *----------------------------------------------------------------------------*/
+template<class T>
+double FieldColumn<T>::mode (long start_index, long num_elements) const
+{
+    double avg;
+    column_t column = toDoubles(*this, start_index, num_elements);
+    MathLib::quicksort(column.data, 0, column.size);
+    if(column.size > 0) avg = column.data[0];
+    else avg = 0.0;
+    long highest_consecutive = 1;
+    long current_consecutive = 1;
+    for(long i = 1; i < column.size; i++)
+    {
+        if(column.data[i] == column.data[i-1])
+        {
+            current_consecutive++;
+            if(current_consecutive > highest_consecutive)
+            {
+                highest_consecutive = current_consecutive;
+                avg = column.data[i];
+            }
+        }
+        else
+        {
+            current_consecutive = 1;
+        }
+    }
+    delete [] column.data;
+    return avg;
 }
 
 /*----------------------------------------------------------------------------

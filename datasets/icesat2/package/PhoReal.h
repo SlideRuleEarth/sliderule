@@ -123,4 +123,23 @@ class PhoReal: public GeoDataFrame::FrameRunner
         Icesat2Fields*  parms;
 };
 
+/******************************************************************************
+ * FUNCTIONS
+ ******************************************************************************/
+
+ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldArray<float,PhoReal::NUM_PERCENTILES>>& v, long start_index, long num_elements) {
+    const long total_elements = num_elements * PhoReal::NUM_PERCENTILES;
+    FieldUntypedColumn::column_t column = {
+        .data = new double[total_elements],
+        .size = total_elements
+    };
+    long index = 0;
+    for(long i = start_index; i < num_elements; i++) {
+        for(long j = 0; j < PhoReal::NUM_PERCENTILES; j++) {
+            column.data[index++] = static_cast<double>(v[i][j]);
+        }
+    }
+    return column;
+}
+
 #endif

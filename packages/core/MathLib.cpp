@@ -369,9 +369,37 @@ const char* MathLib::proj2str (proj_t projection)
     }
 }
 
-/******************************************************************************
- * PRIVATE METHODS
- ******************************************************************************/
+/*----------------------------------------------------------------------------
+ * quicksort
+ *----------------------------------------------------------------------------*/
+void MathLib::quicksort(double* array, long start, long end) // NOLINT(misc-no-recursion)
+{
+    if(start < end)
+    {
+        const int partition = quicksortpartition(array, start, end);
+        quicksort(array, start, partition);
+        quicksort(array, partition + 1, end);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * quicksortpartition
+ *----------------------------------------------------------------------------*/
+long MathLib::quicksortpartition(double* array, long start, long end)
+{
+    const double pivot = array[(start + end) / 2];
+    start--;
+    end++;
+    while(true)
+    {
+        while (array[++start] < pivot);
+        while (array[--end] > pivot);
+        if (start >= end) return end;
+        const double tmp = array[start];
+        array[start] = array[end];
+        array[end] = tmp;
+    }
+}
 
 /*----------------------------------------------------------------------------
  * swapComplex

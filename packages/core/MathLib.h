@@ -94,14 +94,17 @@ class MathLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static double   FFT         (double result[], const int input[], unsigned long size);
-        static point_t  coord2point (coord_t c, proj_t projection);
-        static coord_t  point2coord (point_t p, proj_t projection);
-        static bool     inpoly      (point_t* poly, int len, point_t point);
+        static double       FFT                 (double result[], const int input[], unsigned long size);
+        static point_t      coord2point         (coord_t c, proj_t projection);
+        static coord_t      point2coord         (point_t p, proj_t projection);
+        static bool         inpoly              (point_t* poly, int len, point_t point);
 
-        static std::string b64encode(const void* data, const size_t &len);
-        static std::string b64decode(const void* data, const size_t &len);
-        static const char* proj2str (proj_t projection);
+        static std::string  b64encode           (const void* data, const size_t &len);
+        static std::string  b64decode           (const void* data, const size_t &len);
+        static const char*  proj2str            (proj_t projection);
+
+        static void         quicksort           (double* array, long start, long end); // NOLINT(misc-no-recursion)
+        static long         quicksortpartition  (double* array, long start, long end);
 
     private:
 

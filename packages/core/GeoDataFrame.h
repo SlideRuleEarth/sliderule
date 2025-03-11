@@ -43,6 +43,7 @@
 #include "Field.h"
 #include "FieldDictionary.h"
 #include "FieldColumn.h"
+#include "FieldMap.h"
 #include "RecordObject.h"
 
 /******************************************************************************
@@ -186,10 +187,11 @@ class GeoDataFrame: public LuaObject, public Field
          * Data
          *--------------------------------------------------------------------*/
 
-        bool                        inError;
-        long                        numRows;
-        FieldDictionary             columnFields;
-        FieldDictionary             metaFields;
+        bool                            inError;
+        long                            numRows;
+        FieldDictionary                 columnFields;
+//        FieldMap<FieldUntypedColumn>    columnFields;
+        FieldDictionary                 metaFields;
 
     protected:
 

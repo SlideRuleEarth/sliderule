@@ -566,6 +566,21 @@ void SurfaceFitter::leastSquaresFit (const Atl03DataFrame& df, point_t* array, i
             result.longitude = longitude;
             result.time_ns = static_cast<int64_t>(time_ns);
             result.y_atc = (float)y_atc;
+
+            /* Ancillary Fields - Calculate G^-g and m */
+//            for(size_t a = 0; a < result.anc_values.size(); a++)
+//            {
+//                const double* values = result.anc_values[a];
+//                double value = 0;
+//                for(int p = 0; p < size; p++)
+//                {
+//                    const Atl03Reader::photon_t* ph = &extent->photons[array[p].p];
+//                    const double gig_1 = igtg_11 + (igtg_12_21 * ph->x_atc);   // G^-g row 1 element
+//                    value += gig_1 * values[p];
+//                }
+//                AncillaryFields::setValueAsDouble(&result.anc_fields[a], value);
+//            }
+
         }
     }
 }

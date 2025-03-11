@@ -257,4 +257,23 @@ class BathyDataFrame: public GeoDataFrame
         friend class UT_BathyRefractionCorrector; // necessary for the private constructor/destructor
 };
 
+/******************************************************************************
+ * FUNCTIONS
+ ******************************************************************************/
+
+inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>>& v, long start_index, long num_elements) {
+    const long total_elements = num_elements * BathyFields::NUM_CLASSIFIERS;
+    FieldUntypedColumn::column_t column = {
+        .data = new double[total_elements],
+        .size = total_elements
+    };
+    long index = 0;
+    for(long i = start_index; i < num_elements; i++) {
+        for(long j = 0; j < BathyFields::NUM_CLASSIFIERS; j++) {
+            column.data[index++] = static_cast<double>(v[i][j]);
+        }
+    }
+    return column;
+}
+
 #endif  /* __bathy_data_frame__ */
