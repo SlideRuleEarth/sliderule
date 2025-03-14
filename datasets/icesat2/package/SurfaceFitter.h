@@ -95,6 +95,11 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
             double      window_height = 0;
         };
 
+        typedef struct {
+            FieldColumn<double>* column;
+            GeoDataFrame::column_op_t op;
+        } ancillary_t;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -106,9 +111,9 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
         static void     leastSquaresFit         (const Atl03DataFrame& df, point_t* array, int32_t size, bool final, result_t& result);
         static void     quicksort               (point_t* array, int32_t start, int32_t end);
         static int      quicksortpartition      (point_t* array, int32_t start, int32_t end);
-        static void     createAncillaryColumns  (FieldMap<FieldColumn<double>>** ancillary_columns, const FieldList<string>& ancillary_fields);
-        static void     populateAncillaryColumns(FieldMap<FieldColumn<double>>* ancillary_columns, const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons);
-        static void     addAncillaryColumns     (FieldMap<FieldColumn<double>>* ancillary_columns, GeoDataFrame* dataframe);
+        static void     createAncillaryColumns  (Dictionary<ancillary_t>** ancillary_columns, const FieldList<string>& ancillary_fields);
+        static void     populateAncillaryColumns(Dictionary<ancillary_t>* ancillary_columns, const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons);
+        static void     addAncillaryColumns     (Dictionary<ancillary_t>* ancillary_columns, GeoDataFrame* dataframe);
 
         /*--------------------------------------------------------------------
          * Data

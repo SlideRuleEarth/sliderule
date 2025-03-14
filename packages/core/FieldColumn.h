@@ -624,6 +624,7 @@ double FieldColumn<T>::sum (long start_index, long num_elements) const
 template<class T>
 double FieldColumn<T>::mean (long start_index, long num_elements) const
 {
+    if(num_elements == 0) return 0.0;
     double avg;
     column_t column = toDoubles(*this, start_index, num_elements);
     double acc = 0;
@@ -642,9 +643,10 @@ double FieldColumn<T>::mean (long start_index, long num_elements) const
 template<class T>
 double FieldColumn<T>::median (long start_index, long num_elements) const
 {
+    if(num_elements == 0) return 0.0;
     double avg;
     column_t column = toDoubles(*this, start_index, num_elements);
-    MathLib::quicksort(column.data, 0, column.size);
+    MathLib::quicksort(column.data, 0, column.size - 1);
     if(column.size % 2 == 0) // even
     {
         const long i0 = (column.size - 1) / 2;
@@ -666,11 +668,10 @@ double FieldColumn<T>::median (long start_index, long num_elements) const
 template<class T>
 double FieldColumn<T>::mode (long start_index, long num_elements) const
 {
-    double avg;
+    if(num_elements <= 0) return 0.0;
     column_t column = toDoubles(*this, start_index, num_elements);
-    MathLib::quicksort(column.data, 0, column.size);
-    if(column.size > 0) avg = column.data[0];
-    else avg = 0.0;
+    MathLib::quicksort(column.data, 0, column.size - 1);
+    double avg = column.data[0];
     long highest_consecutive = 1;
     long current_consecutive = 1;
     for(long i = 1; i < column.size; i++)

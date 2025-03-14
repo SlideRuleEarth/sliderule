@@ -126,7 +126,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     FieldColumn<float>*     h_sigma         = new FieldColumn<float>;
 
     // create new ancillary dataframe columns
-    FieldMap<FieldColumn<double>>* ancillary_columns = NULL;
+    Dictionary<ancillary_t>* ancillary_columns = NULL;
     createAncillaryColumns(&ancillary_columns, parms->atl03GeoFields);
     createAncillaryColumns(&ancillary_columns, parms->atl03CorrFields);
     createAncillaryColumns(&ancillary_columns, parms->atl03PhFields);
@@ -624,23 +624,27 @@ int SurfaceFitter::quicksortpartition(point_t* array, int32_t start, int32_t end
 /*----------------------------------------------------------------------------
  * createAncillaryColumns
  *----------------------------------------------------------------------------*/
-void SurfaceFitter::createAncillaryColumns (FieldMap<FieldColumn<double>>** ancillary_columns, const FieldList<string>& ancillary_fields)
+void SurfaceFitter::createAncillaryColumns (Dictionary<ancillary_t>** ancillary_columns, const FieldList<string>& ancillary_fields)
 {
     // allocate field dictionary of ancillary columns
     // if needed and not already created
     if((*ancillary_columns == NULL) && (ancillary_fields.length() > 0))
     {
-        *ancillary_columns = new FieldMap<FieldColumn<double>>;
+        *ancillary_columns = new Dictionary<ancillary_t>;
     }
 
     // add columns to field dictionary
-    for(long i = 0; i < ancillary_fields.length(); i++) // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+    for(long i = 0; i < ancillary_fields.length(); i++)
     {
-        FieldColumn<double>* column = new FieldColumn<double>(); // static analyzer does not see that add() function captures reference to column
-        const bool status = (*ancillary_columns)->add(ancillary_fields[i].c_str(), column, false); // NOLINT(clang-analyzer-core.CallAndMessage)
+        const ancillary_t ancillary = {
+            .column = new FieldColumn<double>(),
+            .op = GeoDataFrame::extractColumnOperation(ancillary_fields[i])
+        };
+        const string name = GeoDataFrame::extractColumnName(ancillary_fields[i]);
+        const bool status = (*ancillary_columns)->add(name.c_str(), ancillary); // NOLINT(clang-analyzer-core.CallAndMessage)
         if(!status)
         {
-            delete column;
+            delete ancillary.column;
             mlog(CRITICAL, "failed to add column <%s> to ancillary columns", ancillary_fields[i].c_str());
         }
     }
@@ -649,17 +653,16 @@ void SurfaceFitter::createAncillaryColumns (FieldMap<FieldColumn<double>>** anci
 /*----------------------------------------------------------------------------
  * populateAncillaryColumns
  *----------------------------------------------------------------------------*/
-void SurfaceFitter::populateAncillaryColumns(FieldMap<FieldColumn<double>>* ancillary_columns, const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons)
+void SurfaceFitter::populateAncillaryColumns(Dictionary<ancillary_t>* ancillary_columns, const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons)
 {
     if(ancillary_columns)
     {
-        FieldMap<FieldColumn<double>>::entry_t entry;
-        const char* name = ancillary_columns->fields.first(&entry);
+        ancillary_t entry;
+        const char* name = ancillary_columns->first(&entry);
         while(name)
         {
             double value;
-            const GeoDataFrame::column_op_t op = GeoDataFrame::extractColumnOperation(name);
-            switch(op)
+            switch(entry.op)
             {
                 case GeoDataFrame::OP_NONE:     value = df[name].mean(start_photon, num_photons);   break;
                 case GeoDataFrame::OP_MEAN:     value = df[name].mean(start_photon, num_photons);   break;
@@ -668,8 +671,8 @@ void SurfaceFitter::populateAncillaryColumns(FieldMap<FieldColumn<double>>* anci
                 case GeoDataFrame::OP_SUM:      value = df[name].sum(start_photon, num_photons);    break;
                 default:                        value = 0.0;                                        break;
             }
-            entry.field->append(value);
-            name = ancillary_columns->fields.next(&entry);
+            entry.column->append(value);
+            name = ancillary_columns->next(&entry);
         }
     }
 }
@@ -677,17 +680,16 @@ void SurfaceFitter::populateAncillaryColumns(FieldMap<FieldColumn<double>>* anci
 /*----------------------------------------------------------------------------
  * populateAncillaryColumns
  *----------------------------------------------------------------------------*/
-void SurfaceFitter::addAncillaryColumns (FieldMap<FieldColumn<double>>* ancillary_columns, GeoDataFrame* dataframe)
+void SurfaceFitter::addAncillaryColumns (Dictionary<ancillary_t>* ancillary_columns, GeoDataFrame* dataframe)
 {
     if(ancillary_columns)
     {
-        FieldMap<FieldColumn<double>>::entry_t entry;
-        const char* key = ancillary_columns->fields.first(&entry);
-        while(key)
+        ancillary_t entry;
+        const char* name = ancillary_columns->first(&entry);
+        while(name)
         {
-            const string column_name = GeoDataFrame::extractColumnName(key);
-            dataframe->addExistingColumn(column_name.c_str(), entry.field);
-            key = ancillary_columns->fields.next(&entry);
+            dataframe->addExistingColumn(name, entry.column);
+            name = ancillary_columns->next(&entry);
         }
     }
 }

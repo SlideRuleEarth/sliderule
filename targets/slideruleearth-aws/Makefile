@@ -84,9 +84,9 @@ DOMAIN ?= testsliderule.org
 DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
-USERCFG ?=
+USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
 DISTRIBUTION_ID = $(shell aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" --output text)
-RUNNER ?= # valgrind, etc
+RUNNER ?= # e.g. valgrind
 
 CLANG_VER ?= ""
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)

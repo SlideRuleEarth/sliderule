@@ -20,13 +20,12 @@ if(NOT CMAKE_BUILD_PLATFORM)
 endif()
 
 # Configure static analysis
-if(CMAKE_BUILD_TYPE MATCHES "Debug")
+if(CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT SKIP_STATIC_ANALYSIS)
     message(STATUS "Enabling static analysis")
 
-### https://clang.llvm.org/extra/clang-tidy/
-
     # clang-tidy, tested with version 18.1.3
-     set (CLANG_TIDY_CHECKS
+    # https://clang.llvm.org/extra/clang-tidy/
+    set (CLANG_TIDY_CHECKS
         "clang-analyzer-*,"
         "portability-*,"
         "concurrency-*,"   # Several warnings were disabled in cpp files with NOLINT
