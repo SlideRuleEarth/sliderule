@@ -33,7 +33,9 @@
  * INCLUDE
  ******************************************************************************/
 
-#include "OsApi.h"
+ #include <regex>
+
+ #include "OsApi.h"
 #include "GeoDataFrame.h"
 #include "RequestFields.h"
 #include "LuaLibraryMsg.h"
@@ -649,6 +651,14 @@ void GeoDataFrame::populateDataframe (void)
 }
 
 /*----------------------------------------------------------------------------
+ * operator[]
+ *----------------------------------------------------------------------------*/
+const FieldUntypedColumn& GeoDataFrame::operator[](const char* key) const
+{
+    return *getColumn(key, true);
+}
+
+/*----------------------------------------------------------------------------
  * getKey
  *----------------------------------------------------------------------------*/
 okey_t GeoDataFrame::getKey (void) const
@@ -771,6 +781,39 @@ const Dictionary<GeoDataFrame::meta_entry_t>& GeoDataFrame::getMeta(void) const
 }
 
 /*----------------------------------------------------------------------------
+ * extractColumnName
+ *----------------------------------------------------------------------------*/
+string GeoDataFrame::extractColumnName (const string& column_description)
+{
+    const std::regex pattern(R"((\w+)\((\w+)\))");
+    std::smatch matches;
+    if(std::regex_match(column_description, matches, pattern))
+    {
+        return matches[2];
+    }
+    return column_description;
+}
+
+/*----------------------------------------------------------------------------
+ * extractColumnOperation
+ *----------------------------------------------------------------------------*/
+GeoDataFrame::column_op_t GeoDataFrame::extractColumnOperation (const string& column_description)
+{
+    const std::regex pattern(R"((\w+)\((\w+)\))");
+    std::smatch matches;
+    if(std::regex_match(column_description, matches, pattern))
+    {
+        const string function = matches[1];
+//      const string field = matches[2];
+        if(function == "mean") return OP_MEAN;
+        if(function == "median") return OP_MEDIAN;
+        if(function == "mode") return OP_MODE;
+        if(function == "sum") return OP_SUM;
+    }
+    return OP_NONE;
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoDataFrame::GeoDataFrame( lua_State* L,
@@ -887,11 +930,9 @@ void add_list_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_d
     if(!column)
     {
         column = new FieldColumn<FieldList<T>>(gdf_rec_data->encoding & ~Field::NESTED_MASK, GeoDataFrame::DEFAULT_RECEIVED_COLUMN_CHUNK_SIZE);
-        const char* _name = StringLib::duplicate(gdf_rec_data->name);
-        if(!dataframe->addColumn(_name, column, true))
+        if(!dataframe->addColumn(gdf_rec_data->name, column, true))
         {
             delete column;
-            delete [] _name;
             throw RunTimeException(ERROR, RTE_ERROR, "failed to add list column <%s> to dataframe", gdf_rec_data->name);
         }
     }

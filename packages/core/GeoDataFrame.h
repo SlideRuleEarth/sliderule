@@ -78,6 +78,15 @@ class GeoDataFrame: public LuaObject, public Field
          *--------------------------------------------------------------------*/
 
         typedef enum {
+            OP_NONE = 0,
+            OP_MEAN = 1,
+            OP_MEDIAN = 2,
+            OP_MODE = 3,
+            OP_SUM = 4,
+            NUM_OPS = 5
+        } column_op_t;
+
+        typedef enum {
             COLUMN_REC = 0,
             META_REC = 1,
             EOF_REC = 2
@@ -167,6 +176,7 @@ class GeoDataFrame: public LuaObject, public Field
         Field*                      getMetaData         (const char* name, Field::type_t _type=Field::FIELD, bool no_throw=false) const;
         bool                        deleteColumn        (const char* name);
         void                        populateDataframe   (void);
+        const FieldUntypedColumn&   operator[]          (const char* key) const;
 
         virtual okey_t              getKey              (void) const;
 
@@ -185,6 +195,9 @@ class GeoDataFrame: public LuaObject, public Field
 
         const Dictionary<column_entry_t>& getColumns(void) const;
         const Dictionary<meta_entry_t>& getMeta(void) const;
+
+        static string extractColumnName (const string& column_description);
+        static column_op_t extractColumnOperation (const string& column_description);
 
         /*--------------------------------------------------------------------
          * Data

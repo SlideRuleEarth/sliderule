@@ -102,10 +102,13 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
         SurfaceFitter  (lua_State* L, Icesat2Fields* _parms);
         ~SurfaceFitter (void) override;
 
-        result_t iterativeFitStage (const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons);
-        static void leastSquaresFit (const Atl03DataFrame& df, point_t* array, int32_t size, bool final, result_t& result);
-        static void quicksort(point_t* array, int start, int end);
-        static int quicksortpartition(point_t* array, int start, int end);
+        result_t        iterativeFitStage       (const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons);
+        static void     leastSquaresFit         (const Atl03DataFrame& df, point_t* array, int32_t size, bool final, result_t& result);
+        static void     quicksort               (point_t* array, int32_t start, int32_t end);
+        static int      quicksortpartition      (point_t* array, int32_t start, int32_t end);
+        static void     createAncillaryColumns  (FieldMap<FieldColumn<double>>** ancillary_columns, const FieldList<string>& ancillary_fields);
+        static void     populateAncillaryColumns(FieldMap<FieldColumn<double>>* ancillary_columns, const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons);
+        static void     addAncillaryColumns     (FieldMap<FieldColumn<double>>* ancillary_columns, GeoDataFrame* dataframe);
 
         /*--------------------------------------------------------------------
          * Data

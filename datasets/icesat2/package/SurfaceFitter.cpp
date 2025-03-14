@@ -125,6 +125,13 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     FieldColumn<float>*     rms_misfit      = new FieldColumn<float>;
     FieldColumn<float>*     h_sigma         = new FieldColumn<float>;
 
+    // create new ancillary dataframe columns
+    FieldMap<FieldColumn<double>>* ancillary_columns = NULL;
+    createAncillaryColumns(&ancillary_columns, parms->atl03GeoFields);
+    createAncillaryColumns(&ancillary_columns, parms->atl03CorrFields);
+    createAncillaryColumns(&ancillary_columns, parms->atl03PhFields);
+    createAncillaryColumns(&ancillary_columns, parms->atl08Fields);
+
     // for each photon
     int32_t i0 = 0; // start row
     while(i0 < df.length())
@@ -164,9 +171,10 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
             _pflags |= Icesat2Fields::PFLAG_TOO_FEW_PHOTONS;
         }
 
-        // run least squares fit
+        // add result row to surface fitter dataframe
         if(_pflags == 0 || parms->passInvalid)
         {
+            // run least squares fit
             const result_t result = iterativeFitStage(df, i0, num_photons);
             time_ns->append(static_cast<time8_t>(result.time_ns));
             latitude->append(result.latitude);
@@ -181,6 +189,9 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
             window_height->append(result.window_height);
             rms_misfit->append(result.rms_misfit);
             h_sigma->append(result.h_sigma);
+
+            // populate ancillary columns
+            populateAncillaryColumns(ancillary_columns, df, i0, num_photons);
         }
 
         // find start of next extent
@@ -200,23 +211,29 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     }
 
     // clear all columns from original dataframe
-    df.clear(); // frees memory
+    dataframe->clear(); // frees memory
 
     // install new columns into dataframe
-    df.addExistingColumn("time_ns",         time_ns);
-    df.addExistingColumn("latitude",        latitude);
-    df.addExistingColumn("longitude",       longitude);
-    df.addExistingColumn("x_atc",           x_atc);
-    df.addExistingColumn("y_atc",           y_atc);
-    df.addExistingColumn("photon_start",    photon_start);
-    df.addExistingColumn("photon_count",    photon_count);
-    df.addExistingColumn("pflags",          pflags);
-    df.addExistingColumn("h_mean",          h_mean);
-    df.addExistingColumn("dh_fit_dx",       dh_fit_dx);
-    df.addExistingColumn("window_height",   window_height);
-    df.addExistingColumn("rms_misfit",      rms_misfit);
-    df.addExistingColumn("h_sigma",         h_sigma);
-    df.populateDataframe();
+    dataframe->addExistingColumn("time_ns",         time_ns);
+    dataframe->addExistingColumn("latitude",        latitude);
+    dataframe->addExistingColumn("longitude",       longitude);
+    dataframe->addExistingColumn("x_atc",           x_atc);
+    dataframe->addExistingColumn("y_atc",           y_atc);
+    dataframe->addExistingColumn("photon_start",    photon_start);
+    dataframe->addExistingColumn("photon_count",    photon_count);
+    dataframe->addExistingColumn("pflags",          pflags);
+    dataframe->addExistingColumn("h_mean",          h_mean);
+    dataframe->addExistingColumn("dh_fit_dx",       dh_fit_dx);
+    dataframe->addExistingColumn("window_height",   window_height);
+    dataframe->addExistingColumn("rms_misfit",      rms_misfit);
+    dataframe->addExistingColumn("h_sigma",         h_sigma);
+
+    // install ancillary columns into dataframe
+    addAncillaryColumns (ancillary_columns, dataframe);
+    delete ancillary_columns;
+
+    // finalize dataframe
+    dataframe->populateDataframe();
 
     // update runtime and return success
     updateRunTime(TimeLib::latchtime() - start);
@@ -566,21 +583,6 @@ void SurfaceFitter::leastSquaresFit (const Atl03DataFrame& df, point_t* array, i
             result.longitude = longitude;
             result.time_ns = static_cast<int64_t>(time_ns);
             result.y_atc = (float)y_atc;
-
-            /* Ancillary Fields - Calculate G^-g and m */
-//            for(size_t a = 0; a < result.anc_values.size(); a++)
-//            {
-//                const double* values = result.anc_values[a];
-//                double value = 0;
-//                for(int p = 0; p < size; p++)
-//                {
-//                    const Atl03Reader::photon_t* ph = &extent->photons[array[p].p];
-//                    const double gig_1 = igtg_11 + (igtg_12_21 * ph->x_atc);   // G^-g row 1 element
-//                    value += gig_1 * values[p];
-//                }
-//                AncillaryFields::setValueAsDouble(&result.anc_fields[a], value);
-//            }
-
         }
     }
 }
@@ -588,11 +590,11 @@ void SurfaceFitter::leastSquaresFit (const Atl03DataFrame& df, point_t* array, i
 /*----------------------------------------------------------------------------
  * quicksort
  *----------------------------------------------------------------------------*/
-void SurfaceFitter::quicksort(point_t* array, int start, int end) // NOLINT(misc-no-recursion)
+void SurfaceFitter::quicksort(point_t* array, int32_t start, int32_t end) // NOLINT(misc-no-recursion)
 {
     if(start < end)
     {
-        const int partition = quicksortpartition(array, start, end);
+        const int32_t partition = quicksortpartition(array, start, end);
         quicksort(array, start, partition);
         quicksort(array, partition + 1, end);
     }
@@ -601,7 +603,7 @@ void SurfaceFitter::quicksort(point_t* array, int start, int end) // NOLINT(misc
 /*----------------------------------------------------------------------------
  * quicksortpartition
  *----------------------------------------------------------------------------*/
-int SurfaceFitter::quicksortpartition(point_t* array, int start, int end)
+int SurfaceFitter::quicksortpartition(point_t* array, int32_t start, int32_t end)
 {
     const double pivot = array[(start + end) / 2].r;
 
@@ -618,3 +620,75 @@ int SurfaceFitter::quicksortpartition(point_t* array, int start, int end)
         array[end] = tmp;
     }
 }
+
+/*----------------------------------------------------------------------------
+ * createAncillaryColumns
+ *----------------------------------------------------------------------------*/
+void SurfaceFitter::createAncillaryColumns (FieldMap<FieldColumn<double>>** ancillary_columns, const FieldList<string>& ancillary_fields)
+{
+    // allocate field dictionary of ancillary columns
+    // if needed and not already created
+    if((*ancillary_columns == NULL) && (ancillary_fields.length() > 0))
+    {
+        *ancillary_columns = new FieldMap<FieldColumn<double>>;
+    }
+
+    // add columns to field dictionary
+    for(long i = 0; i < ancillary_fields.length(); i++) // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+    {
+        FieldColumn<double>* column = new FieldColumn<double>(); // static analyzer does not see that add() function captures reference to column
+        const bool status = (*ancillary_columns)->add(ancillary_fields[i].c_str(), column, false); // NOLINT(clang-analyzer-core.CallAndMessage)
+        if(!status)
+        {
+            delete column;
+            mlog(CRITICAL, "failed to add column <%s> to ancillary columns", ancillary_fields[i].c_str());
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * populateAncillaryColumns
+ *----------------------------------------------------------------------------*/
+void SurfaceFitter::populateAncillaryColumns(FieldMap<FieldColumn<double>>* ancillary_columns, const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons)
+{
+    if(ancillary_columns)
+    {
+        FieldMap<FieldColumn<double>>::entry_t entry;
+        const char* name = ancillary_columns->fields.first(&entry);
+        while(name)
+        {
+            double value;
+            const GeoDataFrame::column_op_t op = GeoDataFrame::extractColumnOperation(name);
+            switch(op)
+            {
+                case GeoDataFrame::OP_NONE:     value = df[name].mean(start_photon, num_photons);   break;
+                case GeoDataFrame::OP_MEAN:     value = df[name].mean(start_photon, num_photons);   break;
+                case GeoDataFrame::OP_MEDIAN:   value = df[name].median(start_photon, num_photons); break;
+                case GeoDataFrame::OP_MODE:     value = df[name].mode(start_photon, num_photons);   break;
+                case GeoDataFrame::OP_SUM:      value = df[name].sum(start_photon, num_photons);    break;
+                default:                        value = 0.0;                                        break;
+            }
+            entry.field->append(value);
+            name = ancillary_columns->fields.next(&entry);
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * populateAncillaryColumns
+ *----------------------------------------------------------------------------*/
+void SurfaceFitter::addAncillaryColumns (FieldMap<FieldColumn<double>>* ancillary_columns, GeoDataFrame* dataframe)
+{
+    if(ancillary_columns)
+    {
+        FieldMap<FieldColumn<double>>::entry_t entry;
+        const char* key = ancillary_columns->fields.first(&entry);
+        while(key)
+        {
+            const string column_name = GeoDataFrame::extractColumnName(key);
+            dataframe->addExistingColumn(column_name.c_str(), entry.field);
+            key = ancillary_columns->fields.next(&entry);
+        }
+    }
+}
+
