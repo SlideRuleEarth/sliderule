@@ -40,13 +40,14 @@
 #include "LuaEngine.h"
 #include "Dictionary.h"
 #include "Field.h"
+#include "FieldColumn.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-template <class T>
-class FieldMap: public Field
+ template <class T>
+ class FieldMap: public Field
 {
     public:
 
@@ -55,7 +56,12 @@ class FieldMap: public Field
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            T* value;
+            const char* name;
+            T* field;
+        } init_entry_t;
+
+        typedef struct {
+            T* field;
             bool free_on_delete;
         } entry_t;
 
@@ -65,9 +71,10 @@ class FieldMap: public Field
 
                         FieldMap    (void);
                         FieldMap    (const FieldMap<T>& other);
+                        FieldMap    (std::initializer_list<init_entry_t> init_list);
         virtual         ~FieldMap   (void) override;
 
-        long            add         (const char* key, T* v, bool free_on_delete=true);
+        long            add         (const char* key, T* field, bool free_on_delete=true);
 
         void            clear       (void) override;
         long            length      (void) const override;
@@ -83,7 +90,7 @@ class FieldMap: public Field
          * Data
          *--------------------------------------------------------------------*/
 
-        Dictionary<entry_t> values;
+        Dictionary<entry_t> fields;
 };
 
 /******************************************************************************
@@ -95,7 +102,7 @@ class FieldMap: public Field
  *----------------------------------------------------------------------------*/
 template <class T>
 FieldMap<T>::FieldMap():
-    Field(LIST, getImpliedEncoding<T>())
+    Field(MAP, getImpliedEncoding<T>())
 {
 }
 
@@ -104,10 +111,23 @@ FieldMap<T>::FieldMap():
  *----------------------------------------------------------------------------*/
 template <class T>
 FieldMap<T>::FieldMap(const FieldMap<T>& other):
-    Field(LIST, getImpliedEncoding<T>()),
-    values(other.values)
+    Field(MAP, other.encoding),
+    fields(other.fields)
 {
 }
+
+/*----------------------------------------------------------------------------
+ * Destructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+FieldMap<T>::FieldMap(std::initializer_list<init_entry_t> init_list):
+    Field(MAP, getImpliedEncoding<T>())
+{
+    for(const init_entry_t& elem: init_list)
+    {
+        add(elem.name, elem.field, false);
+    }
+};
 
 /*----------------------------------------------------------------------------
  * Destructor
@@ -122,14 +142,14 @@ FieldMap<T>::~FieldMap(void)
  * add
  *----------------------------------------------------------------------------*/
 template<class T>
-long FieldMap<T>::add(const char* key, T* v, bool free_on_delete)
+long FieldMap<T>::add(const char* key, T* field, bool free_on_delete)
 {
     entry_t entry = {
-        .value = v,
+        .field = field,
         .free_on_delete = free_on_delete
     };
-    values.add(key, entry);
-    return values.length();
+    fields.add(key, entry);
+    return fields.length();
 }
 
 /*----------------------------------------------------------------------------
@@ -139,16 +159,16 @@ template<class T>
 void FieldMap<T>::clear(void)
 {
     entry_t entry;
-    const char* key = values.first(&entry);
+    const char* key = fields.first(&entry);
     while(key != NULL)
     {
         if(entry.free_on_delete)
         {
-            delete entry.value;
+            delete entry.field;
         }
-        key = values.next(&entry);
+        key = fields.next(&entry);
     }
-    return values.clear();
+    return fields.clear();
 }
 
 /*----------------------------------------------------------------------------
@@ -157,7 +177,7 @@ void FieldMap<T>::clear(void)
 template<class T>
 long FieldMap<T>::length(void) const
 {
-    return values.length();
+    return fields.length();
 }
 
 /*----------------------------------------------------------------------------
@@ -167,7 +187,7 @@ template<class T>
 FieldMap<T>& FieldMap<T>::operator= (const FieldMap<T>& other)
 {
     if(&other == this) return *this;
-    values = other.values;
+    fields = other.fields;
     return *this;
 }
 
@@ -177,7 +197,7 @@ FieldMap<T>& FieldMap<T>::operator= (const FieldMap<T>& other)
 template <class T>
 const T& FieldMap<T>::operator[](const char* key) const
 {
-    return *values[key].value;
+    return *fields[key].field;
 }
 
 /*----------------------------------------------------------------------------
@@ -186,14 +206,14 @@ const T& FieldMap<T>::operator[](const char* key) const
 template <class T>
 string FieldMap<T>::toJson (void) const
 {
-    typename Dictionary<entry_t>::Iterator iter(values);
+    typename Dictionary<entry_t>::Iterator iter(fields);
     string str("{");
     for(int i = 0; i < iter.length; i++)
     {
         str += "\"";
         str += iter[i].key;
         str += "\":";
-        str += convertToJson(*iter[i].value.value);
+        str += convertToJson(*iter[i].value.field);
         if(i < iter.length - 1) str += ",";
     }
     str += "}";
@@ -206,12 +226,12 @@ string FieldMap<T>::toJson (void) const
 template <class T>
 int FieldMap<T>::toLua (lua_State* L) const
 {
-    typename Dictionary<entry_t>::Iterator iter(values);
+    typename Dictionary<entry_t>::Iterator iter(fields);
     lua_newtable(L);
     for(int i = 0; i < iter.length; i++)
     {
         lua_pushstring(L, iter[i].key);
-        convertToLua(L, *iter[i].value.value);
+        convertToLua(L, *iter[i].value.field);
         lua_settable(L, -3);
     }
     return 1;
@@ -229,18 +249,20 @@ void FieldMap<T>::fromLua (lua_State* L, int index)
         lua_pushnil(L);
         while(lua_next(L, table_index) != 0)
         {
+            entry_t entry = {NULL, true};
             try
             {
                 const char* key = LuaObject::getLuaString(L, -2);
-                entry_t entry = {
-                    .value = new T,
-                    .free_on_delete = true
-                };
-                values.add(key, entry);
-                convertFromLua(L, -1, *entry.value);
+                entry.field = new T;
+                if(!fields.add(key, entry))
+                {
+                    throw RunTimeException(CRITICAL, RTE_ERROR, "failed to add entry <%s> to column fields", key);
+                }
+                convertFromLua(L, -1, *entry.field);
             }
             catch(const RunTimeException& e)
             {
+                delete entry.field;
                 mlog(ERROR, "Failed to read field: %s", e.what());
             }
             lua_pop(L, 1);

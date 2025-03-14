@@ -523,7 +523,7 @@ void appendPandasMetaData (const char* index_column_name, const shared_ptr<arrow
 void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const ArrowFields& parms, const GeoDataFrame& dataframe, const uint32_t trace_id)
 {
     // build columns
-    Dictionary<FieldDictionary::entry_t>::Iterator iter(dataframe.getColumns());
+    Dictionary<FieldMap<FieldUntypedColumn>::entry_t>::Iterator iter(dataframe.getColumns());
     for(int f = 0; f < iter.length; f++)
     {
         const char* name = iter[f].key;

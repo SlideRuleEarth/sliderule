@@ -280,7 +280,7 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldDictionary::entry_t>& init_list):
+Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldDictionary::init_entry_t>& init_list):
     RequestFields (L, key_space, asset_name, _resource, {
         {"srt",                 &surfaceType},
         {"pass_invalid",        &passInvalid},
@@ -315,9 +315,10 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset
         {"version",             &version} })
 {
     // add additional fields to dictionary
-    for(const FieldDictionary::entry_t elem: init_list)
+    for(const FieldDictionary::init_entry_t elem: init_list)
     {
-        fields.add(elem.name, elem);
+        const entry_t entry = {elem.field, false};
+        fields.add(elem.name, entry);
     }
 
     // add additional functions

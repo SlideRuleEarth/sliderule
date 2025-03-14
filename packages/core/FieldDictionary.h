@@ -58,22 +58,27 @@ class FieldDictionary: public Field
          * Types
          *--------------------------------------------------------------------*/
 
-        struct entry_t {
+        typedef struct {
             const char* name;
             Field* field;
-            bool free_on_delete = false;
-        };
+        } init_entry_t;
+
+        typedef struct {
+            Field* field;
+            bool free_on_delete;
+        } entry_t;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        FieldDictionary (std::initializer_list<entry_t> init_list, int hash_table_size=DEFAULT_INITIAL_HASH_TABLE_SIZE):
+        FieldDictionary (std::initializer_list<init_entry_t> init_list, int hash_table_size=DEFAULT_INITIAL_HASH_TABLE_SIZE):
             Field(DICTIONARY, 0),
             fields(hash_table_size) {
-            for(const entry_t& elem: init_list)
+            for(const init_entry_t& elem: init_list)
             {
-                fields.add(elem.name, elem);
+                entry_t entry = {elem.field, false};
+                fields.add(elem.name, entry);
             }
         };
 
@@ -85,24 +90,29 @@ class FieldDictionary: public Field
             FieldDictionary::clear();
         };
 
-        bool add (const entry_t& entry) {
-            return fields.add(entry.name, entry);
+        bool add (const char* name, Field* field, bool free_on_delete) {
+            entry_t entry = {field, free_on_delete};
+            return fields.add(name, entry);
         }
 
-        bool remove (const entry_t& entry) {
-            if(fields.remove(entry.name))
+        bool remove (const char* name) {
+            entry_t entry;
+            if(fields.find(name, &entry))
             {
-                if(entry.free_on_delete)
+                if(fields.remove(name))
                 {
-                    delete [] entry.name;
-                    delete entry.field;
+                    if(entry.free_on_delete)
+                    {
+                        delete entry.field;
+                    }
+                    else
+                    {
+                        // frees memory earlier than destructor
+                        entry.field->clear();
+                    }
+                    return true;
                 }
-                else
-                {
-                    // frees memory earlier than destructor
-                    entry.field->clear();
-                }
-                return true;
+                return false;
             }
             return false;
         }
@@ -122,7 +132,7 @@ class FieldDictionary: public Field
             {
                 const Dictionary<entry_t>::kv_t kv = iter[i];
                 str += "\"";
-                str += kv.value.name;
+                str += kv.key;
                 str += "\":";
                 str += kv.value.field->toJson();
                 if(i < iter.length - 1) str += ",";
@@ -137,7 +147,7 @@ class FieldDictionary: public Field
             for(int i = 0; i < iter.length; i++)
             {
                 const Dictionary<entry_t>::kv_t kv = iter[i];
-                lua_pushstring(L, kv.value.name);
+                lua_pushstring(L, kv.key);
                 kv.value.field->toLua(L);
                 lua_settable(L, -3);
             }
@@ -165,7 +175,7 @@ class FieldDictionary: public Field
                 for(int i = 0; i < iter.length; i++)
                 {
                     Dictionary<entry_t>::kv_t kv = iter[i];
-                    lua_getfield(L, index, kv.value.name);
+                    lua_getfield(L, index, kv.key);
                     try
                     {
                         kv.value.field->fromLua(L, -1);
@@ -174,7 +184,7 @@ class FieldDictionary: public Field
                     {
                         if(!lua_isnil(L, -1))
                         {
-                            mlog(ERROR, "Field <%s> using default value: %s", kv.value.name, e.what());
+                            mlog(ERROR, "Field <%s> using default value: %s", kv.key, e.what());
                         }
                     }
                     lua_pop(L, 1);
@@ -189,7 +199,6 @@ class FieldDictionary: public Field
             {
                 if(entry.free_on_delete)
                 {
-                    delete [] entry.name;
                     delete entry.field;
                 }
                 key = fields.next(&entry);

@@ -48,19 +48,25 @@
 
 struct FieldUntypedColumn: public Field
 {
+    using Field::toLua;
+
     typedef struct {
         double* data;
         long size;
     } column_t;
 
-    explicit FieldUntypedColumn (uint32_t _encoding):
+    explicit FieldUntypedColumn (uint32_t _encoding=0):
          Field(COLUMN, _encoding) {};
     ~FieldUntypedColumn (void) = default;
 
-    virtual double sum (long start_index, long num_elements) const = 0;
-    virtual double mean (long start_index, long num_elements) const = 0;
-    virtual double median (long start_index, long num_elements) const = 0;
-    virtual double mode (long start_index, long num_elements) const = 0;
+    virtual string toJson (void) const override {return string("{}");};
+    virtual int toLua (lua_State* L) const override {(void)L; return 0;};
+    virtual void fromLua (lua_State* L, int index) override {(void)L; (void)index;};
+
+    virtual double sum (long start_index, long num_elements) const {(void)start_index; (void)num_elements; return 0.0;};
+    virtual double mean (long start_index, long num_elements) const {(void)start_index; (void)num_elements; return 0.0;};
+    virtual double median (long start_index, long num_elements) const {(void)start_index; (void)num_elements; return 0.0;};
+    virtual double mode (long start_index, long num_elements) const {(void)start_index; (void)num_elements; return 0.0;};
 };
 
 template <class T>
@@ -122,7 +128,8 @@ class FieldColumn: public FieldUntypedColumn
  * FUNCTIONS
  ******************************************************************************/
 
-template <class T>
+inline uint32_t toEncoding(FieldUntypedColumn& v)   { (void)v; return Field::USER; };
+
 inline string convertToJson(const FieldUntypedColumn& v) {
     return v.toJson();
 }
@@ -132,7 +139,6 @@ inline string convertToJson(const FieldColumn<T>& v) {
     return v.toJson();
 }
 
-template <class T>
 inline int convertToLua(lua_State* L, const FieldUntypedColumn& v) {
     return v.toLua(L);
 }
@@ -142,7 +148,6 @@ inline int convertToLua(lua_State* L, const FieldColumn<T>& v) {
     return v.toLua(L);
 }
 
-template <class T>
 inline void convertFromLua(lua_State* L, int index, FieldUntypedColumn& v) {
     v.fromLua(L, index);
 }

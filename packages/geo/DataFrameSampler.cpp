@@ -77,7 +77,7 @@ DataFrameSampler::DataFrameSampler(lua_State* L, RequestFields* _parms):
     FrameRunner(L, LUA_META_NAME, LUA_META_TABLE),
     parms(_parms)
 {
-    const char* key = parms->samplers.values.first(NULL);
+    const char* key = parms->samplers.fields.first(NULL);
     while(key != NULL)
     {
         RasterObject* robj = RasterObject::cppCreate(parms, key);
@@ -91,7 +91,7 @@ DataFrameSampler::DataFrameSampler(lua_State* L, RequestFields* _parms):
         {
             mlog(CRITICAL, "Failed to create raster <%s>", key);
         }
-        key = parms->samplers.values.next(NULL);
+        key = parms->samplers.fields.next(NULL);
     }
 }
 

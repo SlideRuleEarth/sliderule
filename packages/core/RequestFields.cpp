@@ -287,16 +287,16 @@ int RequestFields::luaGetSamplers (lua_State* L)
 
         // loop through each GeoFields
         FieldMap<GeoFields>::entry_t entry;
-        const char* key = lua_obj->samplers.values.first(&entry);
+        const char* key = lua_obj->samplers.fields.first(&entry);
         while(key != NULL)
         {
             // create entry of GeoFields
             lua_pushstring(L, key);
-            entry.value->toLua(L);
+            entry.field->toLua(L);
             lua_settable(L, -3);
 
             // goto next geo field
-            key = lua_obj->samplers.values.next(&entry);
+            key = lua_obj->samplers.fields.next(&entry);
         }
 
         // return table
@@ -340,7 +340,7 @@ int RequestFields::luaSetCatalog (lua_State* L)
         const char* catalog = getLuaString(L, 3);
 
         // the long form of accessing this variable is because other methods are const
-        lua_obj->samplers.values[key].value->catalog.value = catalog;
+        lua_obj->samplers.fields[key].field->catalog.value = catalog;
     }
     catch(const RunTimeException& e)
     {
@@ -428,7 +428,7 @@ void RequestFields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<entry_t>& init_list):
+RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<init_entry_t>& init_list):
     LuaObject (L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     FieldDictionary ({
         {"asset",               &asset},
@@ -468,9 +468,10 @@ RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* asset
     }
 
     // add additional fields to dictionary
-    for(const entry_t elem: init_list)
+    for(const init_entry_t elem: init_list)
     {
-        fields.add(elem.name, elem);
+        const entry_t entry = {elem.field, false};
+        fields.add(elem.name, entry);
     }
 }
 
