@@ -180,7 +180,7 @@ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<T>& v, long star
         .size = num_elements
     };
     long index = 0;
-    for(long i = start_index; i < num_elements; i++) {
+    for(long i = start_index; i < (start_index + num_elements); i++) {
         column.data[index++] = static_cast<double>(v[i]);
     }
     return column;
@@ -191,7 +191,7 @@ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<time8_t>& v, lon
         .size = num_elements
     };
     long index = 0;
-    for(long i = start_index; i < num_elements; i++) {
+    for(long i = start_index; i < (start_index + num_elements); i++) {
         column.data[index++] = static_cast<double>(v[i].nanoseconds);
     }
     return column;
@@ -205,7 +205,7 @@ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<string>& v, long
 template<class T>
 inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldList<T>>& v, long start_index, long num_elements) {
     long total_elements = 0;
-    for(long i = start_index; i < num_elements; i++) {
+    for(long i = start_index; i < (start_index + num_elements); i++) {
         total_elements += v[i].length();
     }
     FieldUntypedColumn::column_t column = {
@@ -213,7 +213,7 @@ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldList<T>>& v
         .size = total_elements
     };
     long index = 0;
-    for(long i = start_index; i < num_elements; i++) {
+    for(long i = start_index; i < (start_index + num_elements); i++) {
         for(long j = 0; j < v[i].length(); j++) {
             column.data[index++] = static_cast<double>(v[i][j]);
         }
@@ -222,7 +222,7 @@ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldList<T>>& v
 }
 inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldList<time8_t>>& v, long start_index, long num_elements) {
     long total_elements = 0;
-    for(long i = start_index; i < num_elements; i++) {
+    for(long i = start_index; i < (start_index + num_elements); i++) {
         total_elements += v[i].length();
     }
     FieldUntypedColumn::column_t column = {
@@ -230,7 +230,7 @@ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldList<time8_
         .size = total_elements
     };
     long index = 0;
-    for(long i = start_index; i < num_elements; i++) {
+    for(long i = start_index; i < (start_index + num_elements); i++) {
         for(long j = 0; j < v[i].length(); j++) {
             column.data[index++] = static_cast<double>(v[i][j].nanoseconds);
         }
@@ -246,7 +246,7 @@ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldList<string
 template<class T>
 inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldColumn<T>>& v, long start_index, long num_elements) {
     long total_elements = 0;
-    for(long i = start_index; i < num_elements; i++) {
+    for(long i = start_index; i < (start_index + num_elements); i++) {
         total_elements += v[i].length();
     }
     FieldUntypedColumn::column_t column = {
@@ -254,7 +254,7 @@ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldColumn<T>>&
         .size = total_elements
     };
     long index = 0;
-    for(long i = start_index; i < num_elements; i++) {
+    for(long i = start_index; i < (start_index + num_elements); i++) {
         for(long j = 0; j < v[i].length(); j++) {
             column.data[index++] = static_cast<double>(v[i][j]);
         }
@@ -263,7 +263,7 @@ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldColumn<T>>&
 }
 inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldColumn<time8_t>>& v, long start_index, long num_elements) {
     long total_elements = 0;
-    for(long i = start_index; i < num_elements; i++) {
+    for(long i = start_index; i < (start_index + num_elements); i++) {
         total_elements += v[i].length();
     }
     FieldUntypedColumn::column_t column = {
@@ -271,7 +271,7 @@ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldColumn<time
         .size = total_elements
     };
     long index = 0;
-    for(long i = start_index; i < num_elements; i++) {
+    for(long i = start_index; i < (start_index + num_elements); i++) {
         for(long j = 0; j < v[i].length(); j++) {
             column.data[index++] = static_cast<double>(v[i][j].nanoseconds);
         }
@@ -407,6 +407,7 @@ long FieldColumn<T>::appendBuffer(const uint8_t* buffer, long size)
     assert(size % sizeof(T) == 0);
 
     const T* buf_ptr = reinterpret_cast<const T*>(buffer);
+    long buff_index = 0;
 
     long elements_remaining = size / sizeof(T);
     numElements += elements_remaining;
@@ -418,7 +419,7 @@ long FieldColumn<T>::appendBuffer(const uint8_t* buffer, long size)
 
         for(long i = 0; i < elements_to_copy; i++)
         {
-            chunks[currChunk][currChunkOffset++] = buf_ptr[i];
+            chunks[currChunk][currChunkOffset++] = buf_ptr[buff_index++];
         }
 
         elements_remaining -= elements_to_copy;

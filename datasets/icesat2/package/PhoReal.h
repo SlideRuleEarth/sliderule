@@ -134,7 +134,7 @@ class PhoReal: public GeoDataFrame::FrameRunner
         .size = total_elements
     };
     long index = 0;
-    for(long i = start_index; i < num_elements; i++) {
+    for(long i = start_index; i < (start_index + num_elements); i++) {
         for(long j = 0; j < PhoReal::NUM_PERCENTILES; j++) {
             column.data[index++] = static_cast<double>(v[i][j]);
         }

@@ -1220,7 +1220,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             df->quality_ph.append(static_cast<int8_t>(quality_ph));
             df->yapc_score.append(yapc_score);
             df->spacecraft_velocity.append(spacecraft_velocity);
-            df->ph_index.append(current_photon);
+            df->ph_index.append(current_photon + aoi.first_photon);
 
             /* Add Ancillary Elements */
             if(atl03.anc_geo_data.length() > 0)     atl03.anc_geo_data.addToGDF(df, current_segment);

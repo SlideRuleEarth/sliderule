@@ -58,6 +58,28 @@ class TestAtl03x:
         assert gdf["gt"].sum() == 42240
         assert abs(gdf["rms_misfit"].mean() - 0.2361071) < 0.0001
 
+    def test_ancillary(self, init):
+        parms = {
+            "track": 1,
+            "cnf": 0,
+            "fit": {"maxi": 3},
+            "atl03_ph_fields": ["ph_id_channel", "pce_mframe_cnt"],
+            "atl03_geo_fields": ["ref_elev", "ref_azimuth", "range_bias_corr"],
+            "atl03_corr_fields": ["geoid"],
+            "atl08_fields": ["sigma_topo"]
+        }
+        gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
+        assert init
+        assert len(gdf) == 2813
+        assert len(gdf.keys()) == 23
+        assert "ph_id_channel" in gdf.keys()
+        assert "pce_mframe_cnt" in gdf.keys()
+        assert "ref_elev" in gdf.keys()
+        assert "ref_azimuth" in gdf.keys()
+        assert "range_bias_corr" in gdf.keys()
+        assert "geoid" in gdf.keys()
+        assert "sigma_topo" in gdf.keys()
+
     def test_phoreal(self, init):
         resource = "ATL03_20181017222812_02950102_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))

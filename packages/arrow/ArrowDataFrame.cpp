@@ -68,7 +68,7 @@ void encode(const FieldColumn<T>* field_column, vector<shared_ptr<arrow::Array>>
 
     const long num_rows = field_column->length();
     (void)builder.Reserve(num_rows);
-    for(int i = 0; i < num_rows; i++)
+    for(long i = 0; i < num_rows; i++)
     {
         builder.UnsafeAppend((*field_column)[i]);
     }
@@ -87,7 +87,7 @@ void encodeTime8(const FieldColumn<time8_t>* field_column, vector<shared_ptr<arr
 
     const long num_rows = field_column->length();
     (void)builder.Reserve(num_rows);
-    for(int i = 0; i < num_rows; i++)
+    for(long i = 0; i < num_rows; i++)
     {
         builder.UnsafeAppend((*field_column)[i].nanoseconds);
     }
@@ -107,7 +107,7 @@ void encodeColumn(const FieldColumn<FieldColumn<T>>* field_column, vector<shared
 
     const long num_rows = field_column->length();
     arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
-    for(int i = 0; i < num_rows; i++)
+    for(long i = 0; i < num_rows; i++)
     {
         const FieldColumn<T>& field = (*field_column)[i];
         const long num_elements = field.length();
@@ -132,7 +132,7 @@ void encodeColumnTime8(const FieldColumn<FieldColumn<time8_t>>* field_column, ve
 
     const long num_rows = field_column->length();
     arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
-    for(int i = 0; i < num_rows; i++)
+    for(long i = 0; i < num_rows; i++)
     {
         const FieldColumn<time8_t>& field = (*field_column)[i];
         const long num_elements = field.length();
@@ -158,7 +158,7 @@ void encodeList(const FieldColumn<FieldList<T>>* field_column, vector<shared_ptr
 
     const long num_rows = field_column->length();
     arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
-    for(int i = 0; i < num_rows; i++)
+    for(long i = 0; i < num_rows; i++)
     {
         const FieldList<T>& field = (*field_column)[i];
         const long num_elements = field.length();
@@ -183,7 +183,7 @@ void encodeListTime8(const FieldColumn<FieldList<time8_t>>* field_column, vector
 
     const long num_rows = field_column->length();
     arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
-    for(int i = 0; i < num_rows; i++)
+    for(long i = 0; i < num_rows; i++)
     {
         const FieldList<time8_t>& field = (*field_column)[i];
         const long num_elements = field.length();
@@ -209,7 +209,7 @@ void encodeArray(const Field* field, vector<shared_ptr<arrow::Array>>& columns)
 
     const long num_rows = field->length();
     arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
-    for(int i = 0; i < num_rows; i++)
+    for(long i = 0; i < num_rows; i++)
     {
         const FieldUnsafeArray<T>* field_array = dynamic_cast<const FieldUnsafeArray<T>*>(field->get(i));
         const long num_elements = field_array->size;
@@ -234,7 +234,7 @@ void encodeArrayTime8(const Field* field, vector<shared_ptr<arrow::Array>>& colu
 
     const long num_rows = field->length();
     arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
-    for(int i = 0; i < num_rows; i++)
+    for(long i = 0; i < num_rows; i++)
     {
         const FieldUnsafeArray<time8_t>* field_array = dynamic_cast<const FieldUnsafeArray<time8_t>*>(field->get(i));
         const long num_elements = field_array->size;
@@ -268,7 +268,7 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
     arrow::BinaryBuilder builder;
     (void)builder.Reserve(num_rows);
     (void)builder.ReserveData(num_rows * sizeof(ArrowCommon::wkbpoint_t));
-    for(int i = 0; i < num_rows; i++)
+    for(long i = 0; i < num_rows; i++)
     {
         ArrowCommon::wkbpoint_t point = {
             #ifdef __be__
