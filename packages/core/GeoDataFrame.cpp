@@ -814,6 +814,79 @@ GeoDataFrame::column_op_t GeoDataFrame::extractColumnOperation (const string& co
 }
 
 /*----------------------------------------------------------------------------
+ * createAncillaryColumns
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::createAncillaryColumns (Dictionary<ancillary_t>** ancillary_columns, const FieldList<string>& ancillary_fields)
+{
+    // allocate field dictionary of ancillary columns
+    // if needed and not already created
+    if((*ancillary_columns == NULL) && (ancillary_fields.length() > 0))
+    {
+        *ancillary_columns = new Dictionary<ancillary_t>;
+    }
+
+    // add columns to field dictionary
+    for(long i = 0; i < ancillary_fields.length(); i++)
+    {
+        const ancillary_t ancillary = {
+            .column = new FieldColumn<double>(),
+            .op = GeoDataFrame::extractColumnOperation(ancillary_fields[i])
+        };
+        const string name = GeoDataFrame::extractColumnName(ancillary_fields[i]);
+        const bool status = (*ancillary_columns)->add(name.c_str(), ancillary); // NOLINT(clang-analyzer-core.CallAndMessage)
+        if(!status)
+        {
+            delete ancillary.column;
+            mlog(CRITICAL, "failed to add column <%s> to ancillary columns", ancillary_fields[i].c_str());
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * populateAncillaryColumns
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::populateAncillaryColumns(Dictionary<ancillary_t>* ancillary_columns, const GeoDataFrame& df, int32_t start_index, int32_t num_elements)
+{
+    if(ancillary_columns)
+    {
+        ancillary_t entry;
+        const char* name = ancillary_columns->first(&entry);
+        while(name)
+        {
+            double value;
+            switch(entry.op)
+            {
+                case GeoDataFrame::OP_NONE:     value = df[name].mean(start_index, num_elements);   break;
+                case GeoDataFrame::OP_MEAN:     value = df[name].mean(start_index, num_elements);   break;
+                case GeoDataFrame::OP_MEDIAN:   value = df[name].median(start_index, num_elements); break;
+                case GeoDataFrame::OP_MODE:     value = df[name].mode(start_index, num_elements);   break;
+                case GeoDataFrame::OP_SUM:      value = df[name].sum(start_index, num_elements);    break;
+                default:                        value = 0.0;                                        break;
+            }
+            entry.column->append(value);
+            name = ancillary_columns->next(&entry);
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * populateAncillaryColumns
+ *----------------------------------------------------------------------------*/
+void GeoDataFrame::addAncillaryColumns (Dictionary<ancillary_t>* ancillary_columns, GeoDataFrame* dataframe)
+{
+    if(ancillary_columns)
+    {
+        ancillary_t entry;
+        const char* name = ancillary_columns->first(&entry);
+        while(name)
+        {
+            dataframe->addExistingColumn(name, entry.column);
+            name = ancillary_columns->next(&entry);
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 GeoDataFrame::GeoDataFrame( lua_State* L,

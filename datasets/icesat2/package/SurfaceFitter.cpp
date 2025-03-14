@@ -126,11 +126,11 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     FieldColumn<float>*     h_sigma         = new FieldColumn<float>;
 
     // create new ancillary dataframe columns
-    Dictionary<ancillary_t>* ancillary_columns = NULL;
-    createAncillaryColumns(&ancillary_columns, parms->atl03GeoFields);
-    createAncillaryColumns(&ancillary_columns, parms->atl03CorrFields);
-    createAncillaryColumns(&ancillary_columns, parms->atl03PhFields);
-    createAncillaryColumns(&ancillary_columns, parms->atl08Fields);
+    Dictionary<GeoDataFrame::ancillary_t>* ancillary_columns = NULL;
+    GeoDataFrame::createAncillaryColumns(&ancillary_columns, parms->atl03GeoFields);
+    GeoDataFrame::createAncillaryColumns(&ancillary_columns, parms->atl03CorrFields);
+    GeoDataFrame::createAncillaryColumns(&ancillary_columns, parms->atl03PhFields);
+    GeoDataFrame::createAncillaryColumns(&ancillary_columns, parms->atl08Fields);
 
     // for each photon
     int32_t i0 = 0; // start row
@@ -191,7 +191,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
             h_sigma->append(result.h_sigma);
 
             // populate ancillary columns
-            populateAncillaryColumns(ancillary_columns, df, i0, num_photons);
+            GeoDataFrame::populateAncillaryColumns(ancillary_columns, df, i0, num_photons);
         }
 
         // find start of next extent
@@ -229,7 +229,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     dataframe->addExistingColumn("h_sigma",         h_sigma);
 
     // install ancillary columns into dataframe
-    addAncillaryColumns (ancillary_columns, dataframe);
+    GeoDataFrame::addAncillaryColumns (ancillary_columns, dataframe);
     delete ancillary_columns;
 
     // finalize dataframe
@@ -620,77 +620,3 @@ int SurfaceFitter::quicksortpartition(point_t* array, int32_t start, int32_t end
         array[end] = tmp;
     }
 }
-
-/*----------------------------------------------------------------------------
- * createAncillaryColumns
- *----------------------------------------------------------------------------*/
-void SurfaceFitter::createAncillaryColumns (Dictionary<ancillary_t>** ancillary_columns, const FieldList<string>& ancillary_fields)
-{
-    // allocate field dictionary of ancillary columns
-    // if needed and not already created
-    if((*ancillary_columns == NULL) && (ancillary_fields.length() > 0))
-    {
-        *ancillary_columns = new Dictionary<ancillary_t>;
-    }
-
-    // add columns to field dictionary
-    for(long i = 0; i < ancillary_fields.length(); i++)
-    {
-        const ancillary_t ancillary = {
-            .column = new FieldColumn<double>(),
-            .op = GeoDataFrame::extractColumnOperation(ancillary_fields[i])
-        };
-        const string name = GeoDataFrame::extractColumnName(ancillary_fields[i]);
-        const bool status = (*ancillary_columns)->add(name.c_str(), ancillary); // NOLINT(clang-analyzer-core.CallAndMessage)
-        if(!status)
-        {
-            delete ancillary.column;
-            mlog(CRITICAL, "failed to add column <%s> to ancillary columns", ancillary_fields[i].c_str());
-        }
-    }
-}
-
-/*----------------------------------------------------------------------------
- * populateAncillaryColumns
- *----------------------------------------------------------------------------*/
-void SurfaceFitter::populateAncillaryColumns(Dictionary<ancillary_t>* ancillary_columns, const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons)
-{
-    if(ancillary_columns)
-    {
-        ancillary_t entry;
-        const char* name = ancillary_columns->first(&entry);
-        while(name)
-        {
-            double value;
-            switch(entry.op)
-            {
-                case GeoDataFrame::OP_NONE:     value = df[name].mean(start_photon, num_photons);   break;
-                case GeoDataFrame::OP_MEAN:     value = df[name].mean(start_photon, num_photons);   break;
-                case GeoDataFrame::OP_MEDIAN:   value = df[name].median(start_photon, num_photons); break;
-                case GeoDataFrame::OP_MODE:     value = df[name].mode(start_photon, num_photons);   break;
-                case GeoDataFrame::OP_SUM:      value = df[name].sum(start_photon, num_photons);    break;
-                default:                        value = 0.0;                                        break;
-            }
-            entry.column->append(value);
-            name = ancillary_columns->next(&entry);
-        }
-    }
-}
-
-/*----------------------------------------------------------------------------
- * populateAncillaryColumns
- *----------------------------------------------------------------------------*/
-void SurfaceFitter::addAncillaryColumns (Dictionary<ancillary_t>* ancillary_columns, GeoDataFrame* dataframe)
-{
-    if(ancillary_columns)
-    {
-        ancillary_t entry;
-        const char* name = ancillary_columns->first(&entry);
-        while(name)
-        {
-            dataframe->addExistingColumn(name, entry.column);
-            name = ancillary_columns->next(&entry);
-        }
-    }
-}
-

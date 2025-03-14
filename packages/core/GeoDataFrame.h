@@ -78,15 +78,6 @@ class GeoDataFrame: public LuaObject, public Field
          *--------------------------------------------------------------------*/
 
         typedef enum {
-            OP_NONE = 0,
-            OP_MEAN = 1,
-            OP_MEDIAN = 2,
-            OP_MODE = 3,
-            OP_SUM = 4,
-            NUM_OPS = 5
-        } column_op_t;
-
-        typedef enum {
             COLUMN_REC = 0,
             META_REC = 1,
             EOF_REC = 2
@@ -108,6 +99,20 @@ class GeoDataFrame: public LuaObject, public Field
 
         typedef FieldMap<FieldUntypedColumn>::entry_t column_entry_t;
         typedef FieldDictionary::entry_t meta_entry_t;
+
+        typedef enum {
+            OP_NONE = 0,
+            OP_MEAN = 1,
+            OP_MEDIAN = 2,
+            OP_MODE = 3,
+            OP_SUM = 4,
+            NUM_OPS = 5
+        } column_op_t;
+
+        typedef struct {
+            FieldColumn<double>* column;
+            GeoDataFrame::column_op_t op;
+        } ancillary_t;
 
         /*--------------------------------------------------------------------
          * Subclasses
@@ -193,11 +198,14 @@ class GeoDataFrame: public LuaObject, public Field
         bool                        waitRunComplete     (int timeout);
         void                        signalRunComplete   (void);
 
-        const Dictionary<column_entry_t>& getColumns(void) const;
-        const Dictionary<meta_entry_t>& getMeta(void) const;
+        const Dictionary<column_entry_t>&   getColumns  (void) const;
+        const Dictionary<meta_entry_t>&     getMeta     (void) const;
 
-        static string extractColumnName (const string& column_description);
-        static column_op_t extractColumnOperation (const string& column_description);
+        static string       extractColumnName           (const string& column_description);
+        static column_op_t  extractColumnOperation      (const string& column_description);
+        static void         createAncillaryColumns      (Dictionary<ancillary_t>** ancillary_columns, const FieldList<string>& ancillary_fields);
+        static void         populateAncillaryColumns    (Dictionary<ancillary_t>* ancillary_columns, const GeoDataFrame& df, int32_t start_index, int32_t num_elements);
+        static void         addAncillaryColumns         (Dictionary<ancillary_t>* ancillary_columns, GeoDataFrame* dataframe);
 
         /*--------------------------------------------------------------------
          * Data

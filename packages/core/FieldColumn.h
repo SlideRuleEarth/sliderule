@@ -36,6 +36,8 @@
  * INCLUDES
  ******************************************************************************/
 
+ #include <limits>
+
 #include "OsApi.h"
 #include "MathLib.h"
 #include "LuaEngine.h"
@@ -630,7 +632,10 @@ double FieldColumn<T>::mean (long start_index, long num_elements) const
     double acc = 0;
     for(long i = 0; i < column.size; i++)
     {
-        acc += column.data[i];
+        if(column.data[i] < std::numeric_limits<float>::max())
+        {
+            acc += column.data[i];
+        }
     }
     avg = acc / static_cast<double>(num_elements);
     delete [] column.data;

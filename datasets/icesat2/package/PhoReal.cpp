@@ -131,6 +131,13 @@ bool PhoReal::run (GeoDataFrame* dataframe)
     FieldColumn<float>*     canopy_openness         = new FieldColumn<float>;                       // standard deviation of relief height for canopy photons
     FieldColumn<FieldArray<float,NUM_PERCENTILES>>* canopy_h_metrics = new FieldColumn<FieldArray<float,NUM_PERCENTILES>>;  // relief height at given percentile for canopy photons
 
+    // create new ancillary dataframe columns
+    Dictionary<GeoDataFrame::ancillary_t>* ancillary_columns = NULL;
+    GeoDataFrame::createAncillaryColumns(&ancillary_columns, parms->atl03GeoFields);
+    GeoDataFrame::createAncillaryColumns(&ancillary_columns, parms->atl03CorrFields);
+    GeoDataFrame::createAncillaryColumns(&ancillary_columns, parms->atl03PhFields);
+    GeoDataFrame::createAncillaryColumns(&ancillary_columns, parms->atl08Fields);
+
     // for each photon
     int32_t i0 = 0; // start row
     while(i0 < df.length())
@@ -200,6 +207,8 @@ bool PhoReal::run (GeoDataFrame* dataframe)
             landcover->append(df.landcover[center_ph]);
             snowcover->append(df.snowcover[center_ph]);
             solar_elevation->append(df.solar_elevation[center_ph]);
+
+            GeoDataFrame::populateAncillaryColumns(ancillary_columns, df, i0, num_photons);
         }
 
         // find start of next extent
@@ -219,30 +228,36 @@ bool PhoReal::run (GeoDataFrame* dataframe)
     }
 
     // clear all columns from original dataframe
-    df.clear(); // frees memory
+    dataframe->clear(); // frees memory
 
     // install new columns into dataframe
-    df.addExistingColumn("time_ns",                 time_ns);
-    df.addExistingColumn("latitude",                latitude);
-    df.addExistingColumn("longitude",               longitude);
-    df.addExistingColumn("x_atc",                   x_atc);
-    df.addExistingColumn("y_atc",                   y_atc);
-    df.addExistingColumn("photon_start",            photon_start);
-    df.addExistingColumn("photon_count",            photon_count);
-    df.addExistingColumn("pflags",                  pflags);
-    df.addExistingColumn("ground_photon_count",     ground_photon_count);
-    df.addExistingColumn("vegetation_photon_count", vegetation_photon_count);
-    df.addExistingColumn("landcover",               landcover);
-    df.addExistingColumn("snowcover",               snowcover);
-    df.addExistingColumn("solar_elevation",         solar_elevation);
-    df.addExistingColumn("h_te_median",             h_te_median);
-    df.addExistingColumn("h_max_canopy",            h_max_canopy);
-    df.addExistingColumn("h_min_canopy",            h_min_canopy);
-    df.addExistingColumn("h_mean_canopy",           h_mean_canopy);
-    df.addExistingColumn("h_canopy",                h_canopy);
-    df.addExistingColumn("canopy_openness",         canopy_openness);
-    df.addExistingColumn("canopy_h_metrics",        canopy_h_metrics);
-    df.populateDataframe();
+    dataframe->addExistingColumn("time_ns",                 time_ns);
+    dataframe->addExistingColumn("latitude",                latitude);
+    dataframe->addExistingColumn("longitude",               longitude);
+    dataframe->addExistingColumn("x_atc",                   x_atc);
+    dataframe->addExistingColumn("y_atc",                   y_atc);
+    dataframe->addExistingColumn("photon_start",            photon_start);
+    dataframe->addExistingColumn("photon_count",            photon_count);
+    dataframe->addExistingColumn("pflags",                  pflags);
+    dataframe->addExistingColumn("ground_photon_count",     ground_photon_count);
+    dataframe->addExistingColumn("vegetation_photon_count", vegetation_photon_count);
+    dataframe->addExistingColumn("landcover",               landcover);
+    dataframe->addExistingColumn("snowcover",               snowcover);
+    dataframe->addExistingColumn("solar_elevation",         solar_elevation);
+    dataframe->addExistingColumn("h_te_median",             h_te_median);
+    dataframe->addExistingColumn("h_max_canopy",            h_max_canopy);
+    dataframe->addExistingColumn("h_min_canopy",            h_min_canopy);
+    dataframe->addExistingColumn("h_mean_canopy",           h_mean_canopy);
+    dataframe->addExistingColumn("h_canopy",                h_canopy);
+    dataframe->addExistingColumn("canopy_openness",         canopy_openness);
+    dataframe->addExistingColumn("canopy_h_metrics",        canopy_h_metrics);
+
+    // install ancillary columns into dataframe
+    GeoDataFrame::addAncillaryColumns (ancillary_columns, dataframe);
+    delete ancillary_columns;
+
+    // finalize dataframe
+    dataframe->populateDataframe();
 
     // update runtime and return success
     updateRunTime(TimeLib::latchtime() - start);
