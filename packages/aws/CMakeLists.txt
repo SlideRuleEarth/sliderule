@@ -17,24 +17,24 @@ if (CURL_FOUND AND OPENSSL_FOUND)
 
     target_sources(slideruleLib
         PRIVATE
-            ${CMAKE_CURRENT_LIST_DIR}/aws.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/CredentialStore.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/S3CacheIODriver.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/S3CurlIODriver.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/aws.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/CredentialStore.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/S3CacheIODriver.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/S3CurlIODriver.cpp
     )
 
     target_include_directories (slideruleLib
         PUBLIC
             $<INSTALL_INTERFACE:${INCDIR}>
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/package>
     )
 
     install (
         FILES
-            ${CMAKE_CURRENT_LIST_DIR}/aws.h
-            ${CMAKE_CURRENT_LIST_DIR}/CredentialStore.h
-            ${CMAKE_CURRENT_LIST_DIR}/S3CacheIODriver.h
-            ${CMAKE_CURRENT_LIST_DIR}/S3CurlIODriver.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/aws.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/CredentialStore.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/S3CacheIODriver.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/S3CurlIODriver.h
         DESTINATION
             ${INCDIR}
     )

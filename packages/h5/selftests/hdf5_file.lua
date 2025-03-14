@@ -8,7 +8,7 @@ local asset = core.asset("local", "nil", "file", td, "empty.index")
 
 print('\n------------------\nTest01: File\n------------------')
 
-local f1 = h5.file(asset, "h5ex_d_gzip.h5")
+local f1 = h5.file(asset, "../data/h5ex_d_gzip.h5")
 local rsps1 = msg.subscribe("h5testq")
 f1:read({{dataset="DS1", col=2}}, "h5testq")
 local recdata = rsps1:recvrecord(3000)
@@ -27,7 +27,7 @@ print('\n------------------\nTest02: Read Dataset\n------------------')
 local dataq = "dataq"
 local rsps2 = msg.subscribe(dataq)
 
-local f2 = h5.dataset(streaming.READER, asset, "h5ex_d_gzip.h5", "/DS1", 0, true, core.INTEGER, 2, 0, core.ALL_ROWS)
+local f2 = h5.dataset(streaming.READER, asset, "../data/h5ex_d_gzip.h5", "/DS1", 0, true, core.INTEGER, 2, 0, core.ALL_ROWS)
 local r2 = streaming.reader(f2, dataq)
 
 local vals = rsps2:recvstring(3000)
@@ -46,7 +46,7 @@ print('\n------------------\nTest03: Read Dataset as Record\n------------------'
 local recq = "recq"
 local rsps3 = msg.subscribe(recq)
 
-local f3 = h5.dataset(streaming.READER, asset, "h5ex_d_gzip.h5", "/DS1", 5, false, core.INTEGER, 2, 0, core.ALL_ROWS)
+local f3 = h5.dataset(streaming.READER, asset, "../data/h5ex_d_gzip.h5", "/DS1", 5, false, core.INTEGER, 2, 0, core.ALL_ROWS)
 local r3 = streaming.reader(f3, recq)
 
 recdata = rsps3:recvrecord(3000)
@@ -65,7 +65,7 @@ print('\n------------------\nTest04: Read Dataset Raw\n------------------')
 
 local h5_file = "h5ex_d_gzip.bin"
 local o4 = streaming.writer(streaming.file(streaming.WRITER, streaming.BINARY, h5_file, streaming.FLUSHED), "h5rawq")
-local f4 = h5.dataset(streaming.READER, asset, "h5ex_d_gzip.h5", "/DS1", 0, true, core.DYNAMIC, 2)
+local f4 = h5.dataset(streaming.READER, asset, "../data/h5ex_d_gzip.h5", "/DS1", 0, true, core.DYNAMIC, 2)
 local r4 = streaming.reader(f4, "h5rawq")
 
 r4:waiton()

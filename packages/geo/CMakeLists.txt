@@ -27,53 +27,61 @@ if (GDAL_FOUND AND PROJ_FOUND AND TIFF_FOUND)
 
     target_sources(slideruleLib
         PRIVATE
-            ${CMAKE_CURRENT_LIST_DIR}/geo.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/DataFrameSampler.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/GdalRaster.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/GeoRaster.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/GeoIndexedRaster.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/GeoIndexedRasterSerial.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/GeoIndexedRasterBatch.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/GeoJsonRaster.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/GeoUserRaster.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/RasterObject.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/RasterSampler.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/RasterSubset.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/RasterFileDictionary.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/GeoFields.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/GeoLib.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/GeoRtree.cpp
-            $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_RasterSubset.cpp>
-            $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_RasterSample.cpp>
+            ${CMAKE_CURRENT_LIST_DIR}/package/geo.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/DataFrameSampler.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/GdalRaster.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/GeoRaster.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/GeoIndexedRaster.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/GeoIndexedRasterSerial.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/GeoIndexedRasterBatch.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/GeoJsonRaster.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/GeoUserRaster.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/RasterObject.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/RasterSampler.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/RasterSubset.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/RasterFileDictionary.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/GeoFields.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/GeoLib.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/GeoRtree.cpp
+            $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_RasterSubset.cpp>
+            $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_RasterSample.cpp>
         )
 
     target_include_directories (slideruleLib
         PUBLIC
             $<INSTALL_INTERFACE:${INCDIR}>
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/package>
     )
 
     install (
         FILES
-            ${CMAKE_CURRENT_LIST_DIR}/geo.h
-            ${CMAKE_CURRENT_LIST_DIR}/DataFrameSampler.h
-            ${CMAKE_CURRENT_LIST_DIR}/GdalRaster.h
-            ${CMAKE_CURRENT_LIST_DIR}/GeoRaster.h
-            ${CMAKE_CURRENT_LIST_DIR}/GeoIndexedRaster.h
-            ${CMAKE_CURRENT_LIST_DIR}/GeoJsonRaster.h
-            ${CMAKE_CURRENT_LIST_DIR}/GeoUserRaster.h
-            ${CMAKE_CURRENT_LIST_DIR}/RasterObject.h
-            ${CMAKE_CURRENT_LIST_DIR}/RasterSampler.h
-            ${CMAKE_CURRENT_LIST_DIR}/RasterSample.h
-            ${CMAKE_CURRENT_LIST_DIR}/RasterSubset.h
-            ${CMAKE_CURRENT_LIST_DIR}/RasterFileDictionary.h
-            ${CMAKE_CURRENT_LIST_DIR}/GeoFields.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/GeoLib.h
-            ${CMAKE_CURRENT_LIST_DIR}/GeoRtree.h
-            $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_RasterSubset.h>
-            $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/UT_RasterSample.h>
+            ${CMAKE_CURRENT_LIST_DIR}/package/geo.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/DataFrameSampler.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/GdalRaster.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/GeoRaster.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/GeoIndexedRaster.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/GeoJsonRaster.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/GeoUserRaster.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/RasterObject.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/RasterSampler.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/RasterSample.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/RasterSubset.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/RasterFileDictionary.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/GeoFields.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/GeoLib.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/GeoRtree.h
+            $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_RasterSubset.h>
+            $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_RasterSample.h>
         DESTINATION
             ${INCDIR}
+    )
+
+    install (
+        FILES
+            ${CMAKE_CURRENT_LIST_DIR}/endpoints/samples.lua
+            ${CMAKE_CURRENT_LIST_DIR}/endpoints/subsets.lua
+        DESTINATION
+            ${CONFDIR}/api
     )
 
 else ()

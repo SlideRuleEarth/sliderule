@@ -122,12 +122,12 @@ SlideRule is normally run wuth a lua script passed to it at startup in order to 
 
 A REST server running at port 9081 can be started via:
 ```bash
-$ sliderule scripts/apps/server.lua <config.json>
+$ sliderule targets/slideruleearth-aws/server.lua <config.json>
 ```
 
 A self-test that dynamically checks which packages are present and runs their associated unit tests can be started via:
 ```bash
-$ sliderule scripts/selftests/test_runner.lua
+$ sliderule targets/slideruleearth-aws/test_runner.lua
 ```
 
 Alternatively, SlideRule can be run as an interactive Lua interpreter.  Just type `sliderule` to start and `ctrl-c` to exit.  The interactive Lua environment is the same enviroment present to the scripts.

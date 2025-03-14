@@ -14,32 +14,32 @@ if (Arrow_FOUND AND Parquet_FOUND)
 
     target_sources(slideruleLib
         PRIVATE
-            ${CMAKE_CURRENT_LIST_DIR}/arrow.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowBuilder.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowBuilderImpl.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowCommon.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowDataFrame.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowFields.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowSampler.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowSamplerImpl.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/arrow.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/ArrowBuilder.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/ArrowBuilderImpl.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/ArrowCommon.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/ArrowDataFrame.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/ArrowFields.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/ArrowSampler.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/ArrowSamplerImpl.cpp
     )
 
     target_include_directories (slideruleLib
         PUBLIC
             $<INSTALL_INTERFACE:${INCDIR}>
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/package>
     )
 
     install (
         FILES
-            ${CMAKE_CURRENT_LIST_DIR}/arrow.h
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowBuilder.h
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowBuilderImpl.h
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowCommon.h
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowDataFrame.h
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowFields.h
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowSampler.h
-            ${CMAKE_CURRENT_LIST_DIR}/ArrowSamplerImpl.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/arrow.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/ArrowBuilder.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/ArrowBuilderImpl.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/ArrowCommon.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/ArrowDataFrame.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/ArrowFields.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/ArrowSampler.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/ArrowSamplerImpl.h
         DESTINATION
             ${INCDIR}
     )

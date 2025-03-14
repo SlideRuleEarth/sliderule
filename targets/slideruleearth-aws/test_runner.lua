@@ -1,3 +1,8 @@
+--TODO: Change test runner so that it searches all the directories for selftests/*.lua files and then runs all of them
+--it can be smart about checking if the __<package_name>__ exists
+
+
+
 local runner = require("test_executive")
 local td = runner.rootdir(arg[0]) -- root directory
 local incloud = arg[1] == "cloud"

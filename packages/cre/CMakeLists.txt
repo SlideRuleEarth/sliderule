@@ -17,24 +17,38 @@ if (CURL_FOUND AND RapidJSON_FOUND)
 
     target_sources(slideruleLib
         PRIVATE
-            ${CMAKE_CURRENT_LIST_DIR}/cre.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/CreFields.cpp
-            ${CMAKE_CURRENT_LIST_DIR}/ContainerRunner.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/cre.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/CreFields.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/package/ContainerRunner.cpp
     )
 
     target_include_directories (slideruleLib
         PUBLIC
             $<INSTALL_INTERFACE:${INCDIR}>
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/package>
     )
 
     install (
         FILES
-            ${CMAKE_CURRENT_LIST_DIR}/cre.h
-            ${CMAKE_CURRENT_LIST_DIR}/CreFields.h
-            ${CMAKE_CURRENT_LIST_DIR}/ContainerRunner.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/cre.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/CreFields.h
+            ${CMAKE_CURRENT_LIST_DIR}/package/ContainerRunner.h
         DESTINATION
             ${INCDIR}
+    )
+
+    install (
+        FILES
+            ${CMAKE_CURRENT_LIST_DIR}/extensions/container_runtime.lua
+        DESTINATION
+            ${CONFDIR}
+    )
+
+    install (
+        FILES
+            ${CMAKE_CURRENT_LIST_DIR}/endpoints/lscre.lua
+        DESTINATION
+            ${CONFDIR}/api
     )
 
 else ()
