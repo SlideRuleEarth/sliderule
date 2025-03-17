@@ -5,7 +5,11 @@ local console = require("console")
 --sys.setlvl(core.LOG, core.DEBUG)
 
 -- Check If Present --
-if not core.UNITTEST then return end
+
+if not core.UNITTEST then
+    print("Skipping ordering self test")
+    return
+end
 
 -- Unit Test --
 

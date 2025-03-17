@@ -2,7 +2,11 @@ local runner = require("test_executive")
 local console = require("console")
 
 -- Check If Present --
-if not core.UNITTEST then return end
+
+if not core.UNITTEST then
+    print("Skipping string self test")
+    return
+end
 
 -- Setup --
 

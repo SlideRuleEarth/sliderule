@@ -1,6 +1,13 @@
 local runner = require("test_executive")
 local console = require("console")
 
+-- Check Requirements --
+
+if not __legacy__ then
+	print("Skipping record dispatcher self test... missing legacy package")
+	return
+end
+
 -- Record Dispatcher Unit Test Setup --
 
 runner.command("DEFINE test.rec id 8")

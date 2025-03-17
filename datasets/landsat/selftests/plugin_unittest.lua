@@ -9,7 +9,11 @@ local _,td = runner.srcscript()
 -- sys.setlvl(core.LOG, core.DEBUG)
 
 -- Check If Present --
-if not core.UNITTEST then return end
+
+if not core.UNITTEST then
+    print("Skipping hls bluetopo self test")
+    return
+end
 
 -- Setup --
 local assets = asset.loaddir()

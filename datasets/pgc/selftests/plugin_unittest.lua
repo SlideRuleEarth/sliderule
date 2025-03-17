@@ -7,7 +7,11 @@ local assets = asset.loaddir()
 -- sys.setlvl(core.LOG, core.DEBUG)
 
 -- Check If Present --
-if not core.UNITTEST then return end
+
+if not core.UNITTEST then
+    print("Skipping pgc plugin self test")
+    return
+end
 
 -- Setup --
 

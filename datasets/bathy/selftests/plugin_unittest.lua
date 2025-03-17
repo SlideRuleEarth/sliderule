@@ -4,7 +4,10 @@ local console = require("console")
 
 -- Check If Present --
 
-if not core.UNITTEST then return end
+if not core.UNITTEST then
+    print("Skipping bathy plugin self test")
+    return
+end
 
 -- Setup --
 

@@ -406,10 +406,6 @@ if(${USE_SLIDERULEEARTH_TARGET})
     add_subdirectory (targets/slideruleearth-aws)
 endif()
 
-# Scripts #
-
-add_subdirectory (scripts)
-
 # Installation #
 
 install (TARGETS slideruleLib DESTINATION ${INSTALLDIR}/lib)

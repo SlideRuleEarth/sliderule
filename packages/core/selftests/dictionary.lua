@@ -1,14 +1,18 @@
 local runner = require("test_executive")
-local td = runner.rootdir(arg[0])
+local srcfile, dirpath = runner.srcscript()
 
--- Check If Present --
-if not core.UNITTEST then return end
+-- Check Required Packages --
+
+if not core.UNITTEST then
+    print("Skipping dictionary self test")
+    return
+end
 
 -- Dictionary Unit Test --
 
 local ut = core.ut_dictionary()
-runner.assert(ut:add_wordset("small", td.."../data/alphabet_words.txt", 26))
-runner.assert(ut:add_wordset("large", td.."../data/english_words.txt", 354983))
+runner.assert(ut:add_wordset("small", dirpath.."../data/alphabet_words.txt", 26))
+runner.assert(ut:add_wordset("large", dirpath.."../data/english_words.txt", 354983))
 runner.assert(ut:functional("small"))
 runner.assert(ut:functional("large"))
 runner.assert(ut:iterator("small"))

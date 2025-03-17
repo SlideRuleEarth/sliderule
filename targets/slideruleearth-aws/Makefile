@@ -239,8 +239,8 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
 	mkdir -p $(ILB_STAGE_DIR)
 	cp docker/intelligent-load-balancer/* $(ILB_STAGE_DIR)
-	cp $(ROOT)/scripts/extensions/json.lua $(ILB_STAGE_DIR)
-	cp $(ROOT)/scripts/extensions/prettyprint.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/packages/core/extensions/json.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
 	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ilb:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(VERSION)
 	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(MAJOR_VERSION)
@@ -335,19 +335,16 @@ distclean: ## fully remove all non-version controlled files and directories
 # Test Targets
 ########################
 
-TEST ?= $(ROOT)/scripts/selftests/test_runner.lua cloud
+TEST ?= $(ROOT)/targets/slideruleearth-aws/test_runner.lua cloud
 MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arcticdem_mosaic_perf.lua
 STRIPS_PERFORMANCE_TEST ?=  $(ROOT)/datasets/pgc/systests/arcticdem_strips_perf.lua
-SUBSET_PERFORMANCE_TEST ?=  $(ROOT)/scripts/systests/subset_perf_test.lua
+SUBSET_PERFORMANCE_TEST ?=  $(ROOT)/targets/slideruleearth-aws/systests/subset_perf_test.lua
 
 MOSAICS_SERIAL_VS_BATCH_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arcticdem_mosaic_serial_vs_batch_perf.lua
 STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST  ?= $(ROOT)/datasets/pgc/systests/arcticdem_strips_serial_vs_batch_perf.lua
 
 selftest: ## run the self test on the server code
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
-
-shorttest: ## run the short form self test on the server code
-	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(ROOT)/scripts/selftests/test_runner.lua short
 
 perfmtest: ## run mosaics performance test on the server code
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)

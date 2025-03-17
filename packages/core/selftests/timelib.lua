@@ -1,7 +1,11 @@
 local runner = require("test_executive")
 
 -- Check If Present --
-if not core.UNITTEST then return end
+
+if not core.UNITTEST then
+    print("Skipping timelib self test")
+    return
+end
 
 -- TimeLib Unit Test --
 
