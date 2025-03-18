@@ -61,7 +61,7 @@ if __geo__ then
     runner.script(td .. "packages/geo/selftests/geouser_raster.lua")
 end
 
--- Run ICESat-2 Plugin Self Tests
+-- Run ICESat-2 Self Tests
 if __icesat2__ and incloud then
     local icesat2_td = td .. "datasets/icesat2/selftests/"
     runner.script(icesat2_td .. "plugin_unittest.lua")
@@ -78,14 +78,14 @@ if __icesat2__ and incloud then
     runner.script(icesat2_td .. "s3_driver.lua")
 end
 
--- Run OPENDATA Plugin Self Tests
+-- Run OPENDATA Self Tests
 if __opendata__ and incloud then
     local opendata_td = td .. "datasets/opendata/selftests/"
     runner.script(opendata_td .. "worldcover_reader.lua")
     runner.script(opendata_td .. "globalcanopy_reader.lua")
 end
 
--- Run PGC Plugin Self Tests
+-- Run PGC Self Tests
 if __pgc__ and incloud then
     local pgc_td = td .. "datasets/pgc/selftests/"
     runner.script(pgc_td .. "plugin_unittest.lua")
@@ -101,27 +101,27 @@ if __pgc__ and incloud then
     runner.script(pgc_td .. "subset_test.lua")
 end
 
--- Run LANDSAT Plugin Self Tests
+-- Run LANDSAT Self Tests
 if __landsat__ and incloud then
     local landsat_td = td .. "datasets/landsat/selftests/"
     runner.script(landsat_td .. "plugin_unittest.lua")
     runner.script(landsat_td .. "landsat_reader.lua")
 end
 
--- Run USGS3DEP Plugin Self Tests
+-- Run USGS3DEP Self Tests
 if __usgs3dep__ and incloud then
     local usg2dep_td = td .. "datasets/usgs3dep/selftests/"
     runner.script(usg2dep_td.. "plugin_unittest.lua")
     runner.script(usg2dep_td .. "usgs3dep_reader.lua")
 end
 
--- Run GEBCO Plugin Self Tests
+-- Run GEBCO Self Tests
 if __gebco__ and incloud then
     local gebco_td = td .. "datasets/gebco/selftests/"
     runner.script(gebco_td .. "gebco_reader.lua")
 end
 
--- Run BLUETOPO Plugin Self Tests
+-- Run BLUETOPO Self Tests
 if __bluetopo__ and incloud then
     local bluetopo_td = td .. "datasets/bluetopo/selftests/"
     runner.script(bluetopo_td.. "plugin_unittest.lua")

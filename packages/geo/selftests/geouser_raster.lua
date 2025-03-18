@@ -1,13 +1,14 @@
 local runner = require("test_executive")
-console = require("console")
-local td = runner.rootdir(arg[0])
+local srcfile, dirpath = runner.srcscript()
 local base64 = require("base64")
 
 -- Setup --
+
+-- local console = require("console")
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
-local raster = td.."/geouser_test_raster.tif"
+local raster = dirpath.."../data/geouser_test_raster.tif"
 
 -- Unit Test --
 

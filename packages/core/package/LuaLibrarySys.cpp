@@ -45,6 +45,8 @@
 #include "DeviceObject.h"
 #include "core.h"
 
+namespace fs = std::filesystem;
+
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
@@ -74,6 +76,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"lsrec",       LuaLibrarySys::lsys_lsrec},
     {"lsobj",       LuaLibrarySys::lsys_lsobj},
     {"cwd",         LuaLibrarySys::lsys_cwd},
+    {"pathfind",    LuaLibrarySys::lsys_pathfind},
     {"fileexists",  LuaLibrarySys::lsys_fileexists},
     {"deletefile",  LuaLibrarySys::lsys_deletefile},
     {"memu",        LuaLibrarySys::lsys_memu},
@@ -603,6 +606,27 @@ int LuaLibrarySys::lsys_cwd (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * lsys_pathfind - recursively search directory looking for dir_name
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_pathfind (lua_State* L)
+{
+    const char* search_dir = ".";
+    if(lua_isstring(L, 1)) search_dir = lua_tostring(L, 1);
+    const string base_dir = search_dir;
+
+    int r = 1;
+    lua_newtable(L);
+    for (const auto& entry : fs::recursive_directory_iterator(base_dir)) {
+        if (entry.is_directory()) {
+            lua_pushstring(L, entry.path().c_str());
+            lua_rawseti(L, -2, r++);
+        }
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * lsys_fileexists - check if a file exists
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_fileexists (lua_State* L)
@@ -610,7 +634,7 @@ int LuaLibrarySys::lsys_fileexists (lua_State* L)
     if(lua_isstring(L, 1))
     {
         const char* filename = lua_tostring(L, 1);
-        lua_pushboolean(L, std::filesystem::exists(filename));
+        lua_pushboolean(L, fs::exists(filename));
     }
     else
     {
@@ -628,7 +652,7 @@ int LuaLibrarySys::lsys_deletefile (lua_State* L)
     if(lua_isstring(L, 1))
     {
         const char* filename = lua_tostring(L, 1);
-        if(std::filesystem::exists(filename))
+        if(fs::exists(filename))
         {
             const int rc = std::remove(filename);
             if(rc == 0)

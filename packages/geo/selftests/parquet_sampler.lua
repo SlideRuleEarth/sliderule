@@ -2,12 +2,12 @@ local runner = require("test_executive")
 local console = require("console")
 local asset = require("asset")
 local assets = asset.loaddir()
-local td = runner.rootdir(arg[0])
+local srcfile, dirpath = runner.srcscript()
 
 local outq_name = "outq-luatest"
 
-local in_geoparquet  = td.."atl06_10rows.geoparquet"
-local in_parquet     = td.."atl06_10rows.parquet"
+local in_geoparquet  = dirpath.."../data/atl06_10rows.geoparquet"
+local in_parquet     = dirpath.."../data/atl06_10rows.parquet"
 
 -- Indicates local file system (no s3 or client)
 local prefix = "file://"

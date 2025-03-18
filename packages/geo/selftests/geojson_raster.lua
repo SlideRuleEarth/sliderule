@@ -1,12 +1,13 @@
 local runner = require("test_executive")
-console = require("console")
-local td = runner.rootdir(arg[0])
+local srcfile, dirpath = runner.srcscript()
 
 -- Setup --
+
+-- local console = require("console")
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
-local geojsonfile = td.."/grandmesa.geojson"
+local geojsonfile = dirpath.."../data/grandmesa.geojson"
 
 -- Unit Test --
 

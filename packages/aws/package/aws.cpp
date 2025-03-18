@@ -68,7 +68,7 @@ int aws_open (lua_State *L)
     /* Set Globals */
     LuaEngine::setAttrStr (L, "DEFAULT_REGION", S3CurlIODriver::DEFAULT_REGION);
     LuaEngine::setAttrStr (L, "DEFAULT_IDENTITY", S3CurlIODriver::DEFAULT_IDENTITY);
-    
+
     return 1;
 }
 
