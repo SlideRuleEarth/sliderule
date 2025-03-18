@@ -1,14 +1,13 @@
 local runner = require("test_executive")
 local console = require("console")
 
--- Check If Present --
+-- Requirements --
 
 if not core.UNITTEST then
-    print("Skipping list self test")
-    return
+    return runner.skip()
 end
 
--- Unit Test --
+-- Self Test --
 
 local ut_list = core.ut_list()
 runner.assert(ut_list:addremove())

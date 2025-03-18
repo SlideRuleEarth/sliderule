@@ -1,11 +1,11 @@
 local runner = require("test_executive")
-local console = require("console")
 local asset = require("asset")
 local prettyprint = require("prettyprint")
 
 -- configure logging
-console.monitor:config(core.LOG, core.INFO)
-sys.setlvl(core.LOG, core.INFO)
+-- local console = require("console")
+-- console.monitor:config(core.LOG, core.INFO)
+-- sys.setlvl(core.LOG, core.INFO)
 
 -- load asset directory
 local _assets = asset.loaddir()

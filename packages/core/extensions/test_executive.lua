@@ -12,11 +12,21 @@ Function:   set_context
 local function set_context (testname)
     if results[testname] == nil then
         results[testname] = {}
+        results[testname]["skipped"] = false
         results[testname]["asserts"] = 0
         results[testname]["errors"] = 0
         results[testname]["messages"] = {}
     end
     context = testname
+end
+
+--[[
+Function:   isglobal
+ Purpose:   true if global context
+   Notes:   none
+]]
+local function isglobal ()
+    return context == "global"
 end
 
 --[[
@@ -130,6 +140,21 @@ local function unittest (testname, testfunc, skip)
 end
 
 --[[
+Function:   skip
+ Purpose:   identify current test as being skipped
+   Notes:   none
+]]
+local function skip (testname)
+    if testname ~= nil then
+        set_context(testname)
+    end
+    print("Skipping test: " .. context)
+    results[context]["skipped"] = true
+    set_context("global")
+    return true
+end
+
+--[[
 Function:   compare
  Purpose:   do a binary comparison of two arbitrary strings
    Notes:   necessary to work around strings created from userdata
@@ -178,24 +203,35 @@ Function:   report
    Notes:   none
 ]]
 local function report ()
+    local total_tests = 0
+    local total_skipped = 0
     local total_asserts = 0
     local total_errors = 0
     if context == "global" then --suppress report until the end
         for testname in pairs(results) do
-            set_context(testname)
-            total_asserts = total_asserts + results[context]["asserts"]
-            total_errors = total_errors + results[context]["errors"]
-            print("\n*********************************")
-            for i = 0, (results[context]["errors"]-1) do
-                print("FAIL: " .. results[context]["messages"][i])
+            total_tests = total_tests + 1
+            total_asserts = total_asserts + results[testname]["asserts"]
+            total_errors = total_errors + results[testname]["errors"]
+            if results[testname]["skipped"] then
+                total_skipped = total_skipped + 1
+                print("\n---------------------------------")
+                print("Skipped test: " .. testname)
+                print("---------------------------------")
+            else
+                print("\nvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
+                for i = 0, (results[testname]["errors"]-1) do
+                    print("FAIL: " .. results[testname]["messages"][i])
+                end
+                print("---------------------------------")
+                print("Executed test: " .. testname)
+                print("Number of asserts: " .. tostring(results[testname]["asserts"]))
+                print("Number of errors: " .. tostring(results[testname]["errors"]))
+                print("---------------------------------")
             end
-            print("---------------------------------")
-            print("Executed test: " .. context)
-            print("Number of asserts: " .. tostring(results[context]["asserts"]))
-            print("Number of errors: " .. tostring(results[context]["errors"]))
-            print("---------------------------------")
         end
         print("\n*********************************")
+        print("Total number of tests: " .. tostring(total_tests))
+        print("Total number of skipped tests: " .. tostring(total_skipped))
         print("Total number of asserts: " .. tostring(total_asserts))
         print("Total number of errors: " .. tostring(total_errors))
         print("*********************************")
@@ -213,12 +249,14 @@ for k,v in pairs(arg) do
 end
 
 local package = {
+    isglobal = isglobal,
     rootdir = rootdir,
     srcscript = srcscript,
     command = command,
     assert = assert,
     script = script,
     unittest = unittest,
+    skip = skip,
     compare = compare,
     cmpfloat = cmpfloat,
     report = report,

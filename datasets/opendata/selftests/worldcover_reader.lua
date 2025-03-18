@@ -1,16 +1,21 @@
 local runner = require("test_executive")
-console = require("console")
-asset = require("asset")
-csv = require("csv")
-json = require("json")
-local _,td = runner.srcscript()
+local asset = require("asset")
 
+-- Requirements --
+
+if (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
+end
+
+-- Setup --
+
+local assets = asset.loaddir()
+
+-- local console = require("console")
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
--- Setup --
-local assets = asset.loaddir()
--- Unit Test --
+-- Self Test --
 
 local  sigma = 1.0e-9
 local  lon =   -108.1
@@ -71,4 +76,3 @@ runner.assert(subsetCnt == 1, string.format("Received unexpected number of subse
 -- Report Results --
 
 runner.report()
-

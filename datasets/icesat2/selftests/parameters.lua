@@ -1,18 +1,15 @@
 local runner = require("test_executive")
 local asset = require("asset")
-local json = require("json")
 local prettyprint = require("prettyprint")
 
--- Setup Logging --
+-- Setup --
 
-local console = require("console")
-console.loglvl(core.INFO)
-
--- Setup Assets --
+-- local console = require("console")
+-- console.loglvl(core.INFO)
 
 local assets = asset.loaddir()
 
--- Unit Test --
+-- Self Test --
 
 runner.unittest("ICESat-2 Fields", function()
 

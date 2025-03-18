@@ -1,30 +1,23 @@
 local runner = require("test_executive")
-local console = require("console")
 local asset = require("asset")
-local assets = asset.loaddir()
-local json = require("json")
-local _,td = runner.srcscript()
+local srcfile, dirpath = runner.srcscript()
 
--- console.monitor:config(core.LOG, core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
+-- Requirements --
 
--- Check If Present --
-
-if not core.UNITTEST then
-    print("Skipping USGS 3DEP plugin self test")
-    return
+if (not core.UNITTEST) or (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
 end
 
 -- Setup --
 
 local assets = asset.loaddir()
 
-local geojsonfile = td.."../data/grand_mesa_1m_dem.geojson"
+local geojsonfile = dirpath.."../data/grand_mesa_1m_dem.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
 
--- Unit Test --
+-- Self Test --
 
 print(string.format("\n-------------------------------------------------\n3dep unit test\n-------------------------------------------------"))
 local demType = "usgs3dep-1meter-dem"
@@ -35,7 +28,7 @@ local ut = geo.ut_sample(dem)
 runner.assert(ut ~= nil)
 -- This test ignores lon, lat, lon_incr, lat_incr, pointCount as they are not used.
 -- It opens a test file with points.
-local pointsFile = td.."../../landsat/data/grand_mesa_poi.txt"
+local pointsFile = dirpath.."../../landsat/data/grand_mesa_poi.txt"
 print(string.format("Points file: %s", pointsFile))
 local pointsInFile = 26183   -- number of points in file
 local maxPointCount = 110

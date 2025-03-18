@@ -1,13 +1,11 @@
 local runner = require("test_executive")
-local console = require("console")
-local json = require("json")
 
 -- Setup --
 
 local endpoint = core.endpoint()
 local server   = core.httpd(9081):attach(endpoint, "/source"):untilup()
 
--- Unit Test --
+-- Self Test --
 
 local client = streaming.http("127.0.0.1", 9081)
 local rsps, code, status = client:request("GET", "/", "{}")
@@ -22,13 +20,12 @@ client:destroy()
 client = streaming.http("127.0.0.1", 9081)
 rsps, code, status = client:request("GET", "/source/health", "{}")
 runner.assert(status == true, "failed to remain healthy after invalid requests")
-client:destroy()
 
 -- Clean Up --
 
+client:destroy()
 server:destroy()
 
 -- Report Results --
 
 runner.report()
-

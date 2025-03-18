@@ -16,7 +16,7 @@ console.monitor:config(core.LOG, core.DEBUG)
 sys.setlvl(core.LOG, core.DEBUG)
 asset = core.asset("local", "nil", "file", td, "empty.index")
 
--- Unit Test --
+-- Self Test --
 print('\n------------------\nTest: Read Dataset\n------------------')
 
 dataq = "dataq"

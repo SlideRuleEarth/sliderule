@@ -63,6 +63,7 @@ int OsApi::io_maxsize = IO_DEFAULT_MAXSIZE;
 int64_t OsApi::launch_time = 0;
 const char* OsApi::environment_version = "unknown";
 bool OsApi::is_public = false;
+bool OsApi::in_cloud = false;
 const char* OsApi::cluster_name = "localhost";
 
 /******************************************************************************
@@ -403,7 +404,7 @@ const char* OsApi::getEnvVersion (void)
 }
 
 /*----------------------------------------------------------------------------
- * getEnvVersion
+ * setIsPublic
  *----------------------------------------------------------------------------*/
 void OsApi::setIsPublic (bool _is_public)
 {
@@ -411,7 +412,7 @@ void OsApi::setIsPublic (bool _is_public)
 }
 
 /*----------------------------------------------------------------------------
- * getEnvVersion
+ * getIsPublic
  *----------------------------------------------------------------------------*/
 bool OsApi::getIsPublic (void)
 {
@@ -419,7 +420,23 @@ bool OsApi::getIsPublic (void)
 }
 
 /*----------------------------------------------------------------------------
- * setEnvVersion
+ * setInCloud
+ *----------------------------------------------------------------------------*/
+void OsApi::setInCloud (bool _in_cloud)
+{
+    in_cloud = _in_cloud;
+}
+
+/*----------------------------------------------------------------------------
+ * getInCloud
+ *----------------------------------------------------------------------------*/
+bool OsApi::getInCloud (void)
+{
+    return in_cloud;
+}
+
+/*----------------------------------------------------------------------------
+ * setCluster
  *----------------------------------------------------------------------------*/
 void OsApi::setCluster (const char* cluster)
 {
@@ -427,7 +444,7 @@ void OsApi::setCluster (const char* cluster)
 }
 
 /*----------------------------------------------------------------------------
- * getEnvVersion
+ * getCluster
  *----------------------------------------------------------------------------*/
 const char* OsApi::getCluster (void)
 {

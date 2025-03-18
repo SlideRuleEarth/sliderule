@@ -2,11 +2,17 @@ local runner = require("test_executive")
 local asset = require("asset")
 local json = require("json")
 
-local console = require("console")
-console.monitor:config(core.LOG, core.INFO)
-sys.setlvl(core.LOG, core.INFO)
+-- Requirements --
+
+if (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
+end
 
 -- Setup --
+
+-- local console = require("console")
+-- console.monitor:config(core.LOG, core.INFO)
+-- sys.setlvl(core.LOG, core.INFO)
 
 local assets = asset.loaddir()
 local asset_name = "icesat2"
@@ -21,7 +27,7 @@ if not creds then
     aws.csput(identity, credential)
 end
 
--- Unit Test --
+-- Self Test --
 
 print('\n------------------\nTest01: Atl03 Reader \n------------------')
 

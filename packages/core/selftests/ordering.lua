@@ -1,17 +1,12 @@
 local runner = require("test_executive")
-local console = require("console")
 
---console.monitor:config(core.LOG, core.DEBUG)
---sys.setlvl(core.LOG, core.DEBUG)
-
--- Check If Present --
+-- Requirements --
 
 if not core.UNITTEST then
-    print("Skipping ordering self test")
-    return
+    return runner.skip()
 end
 
--- Unit Test --
+-- Self Test --
 
 local ut_ordering = core.ut_ordering()
 runner.assert(ut_ordering:addremove())
@@ -23,4 +18,3 @@ runner.assert(ut_ordering:assignment())
 -- Report Results --
 
 runner.report()
-

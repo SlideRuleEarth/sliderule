@@ -64,6 +64,8 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"setenvver",   LuaLibrarySys::lsys_setenvver},
     {"setispublic", LuaLibrarySys::lsys_setispublic},
     {"ispublic",    LuaLibrarySys::lsys_getispublic},
+    {"setincloud",  LuaLibrarySys::lsys_setincloud},
+    {"incloud",     LuaLibrarySys::lsys_getincloud},
     {"setcluster",  LuaLibrarySys::lsys_setcluster},
     {"type",        LuaLibrarySys::lsys_type},
     {"setstddepth", LuaLibrarySys::lsys_setstddepth},
@@ -77,6 +79,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"lsobj",       LuaLibrarySys::lsys_lsobj},
     {"cwd",         LuaLibrarySys::lsys_cwd},
     {"pathfind",    LuaLibrarySys::lsys_pathfind},
+    {"filefind",    LuaLibrarySys::lsys_filefind},
     {"fileexists",  LuaLibrarySys::lsys_fileexists},
     {"deletefile",  LuaLibrarySys::lsys_deletefile},
     {"memu",        LuaLibrarySys::lsys_memu},
@@ -323,16 +326,21 @@ int LuaLibrarySys::lsys_setenvver (lua_State* L)
 int LuaLibrarySys::lsys_setispublic (lua_State* L)
 {
     bool status = true;
-    const char* is_public_str = NULL;
-    if(lua_isstring(L, 1))
+
+    if(lua_isboolean(L, 1))
     {
-        is_public_str = lua_tostring(L, 1);
+        const bool is_public = lua_toboolean(L, 1);
+        OsApi::setIsPublic(is_public);
+    }
+    else if(lua_isstring(L, 1))
+    {
+        const char* is_public_str = lua_tostring(L, 1);
         const bool is_public = StringLib::match(is_public_str, "True");
         OsApi::setIsPublic(is_public);
     }
     else
     {
-        mlog(CRITICAL, "Invalid parameter supplied to setting is_public, must be a string 'True' or 'False'");
+        mlog(CRITICAL, "Invalid parameter supplied to setting is_public, must be 'True' or 'False'");
         status = false;
     }
 
@@ -346,6 +354,43 @@ int LuaLibrarySys::lsys_setispublic (lua_State* L)
 int LuaLibrarySys::lsys_getispublic (lua_State* L)
 {
     lua_pushboolean(L, OsApi::getIsPublic());
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_setincloud
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_setincloud (lua_State* L)
+{
+    bool status = true;
+
+    if(lua_isboolean(L, 1))
+    {
+        const bool in_cloud = lua_toboolean(L, 1);
+        OsApi::setInCloud(in_cloud);
+    }
+    else if(lua_isstring(L, 1))
+    {
+        const char* in_cloud_str = lua_tostring(L, 1);
+        const bool in_cloud = StringLib::match(in_cloud_str, "True");
+        OsApi::setInCloud(in_cloud);
+    }
+    else
+    {
+        mlog(CRITICAL, "Invalid parameter supplied to setting in_cloud, must be 'True' or 'False'");
+        status = false;
+    }
+
+    lua_pushboolean(L, status);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_getincloud
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_getincloud (lua_State* L)
+{
+    lua_pushboolean(L, OsApi::getInCloud());
     return 1;
 }
 
@@ -614,12 +659,59 @@ int LuaLibrarySys::lsys_pathfind (lua_State* L)
     if(lua_isstring(L, 1)) search_dir = lua_tostring(L, 1);
     const string base_dir = search_dir;
 
+    const char* match_dir = NULL;
+    string target_dir;
+    if(lua_isstring(L, 2))
+    {
+        match_dir = lua_tostring(L, 2);
+        target_dir = match_dir;
+    }
+
     int r = 1;
     lua_newtable(L);
-    for (const auto& entry : fs::recursive_directory_iterator(base_dir)) {
-        if (entry.is_directory()) {
-            lua_pushstring(L, entry.path().c_str());
-            lua_rawseti(L, -2, r++);
+    for(const auto& entry: fs::recursive_directory_iterator(base_dir))
+    {
+        if(entry.is_directory())
+        {
+            if(!match_dir || (entry.path().filename() == target_dir))
+            {
+                lua_pushstring(L, entry.path().c_str());
+                lua_rawseti(L, -2, r++);
+            }
+        }
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_filefind - search directory looking for file_name
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_filefind (lua_State* L)
+{
+    const char* search_dir = ".";
+    if(lua_isstring(L, 1)) search_dir = lua_tostring(L, 1);
+    const string base_dir = search_dir;
+
+    const char* match_extension = NULL;
+    string target_extension;
+    if(lua_isstring(L, 2))
+    {
+        match_extension = lua_tostring(L, 2);
+        target_extension = match_extension;
+    }
+
+    int r = 1;
+    lua_newtable(L);
+    for (const auto& entry: fs::directory_iterator(base_dir))
+    {
+        if (entry.is_regular_file())
+        {
+            if(!match_extension || (entry.path().extension() == target_extension))
+            {
+                lua_pushstring(L, entry.path().c_str());
+                lua_rawseti(L, -2, r++);
+            }
         }
     }
 

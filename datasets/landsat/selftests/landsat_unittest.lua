@@ -1,21 +1,21 @@
 local runner = require("test_executive")
-local console = require("console")
 local asset = require("asset")
 local assets = asset.loaddir()
 local json = require("json")
-local _,td = runner.srcscript()
+local srcfile, dirpath = runner.srcscript()
 
--- console.monitor:config(core.LOG, core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
+-- Requirements --
 
--- Check If Present --
-
-if not core.UNITTEST then
-    print("Skipping hls bluetopo self test")
-    return
+if (not core.UNITTEST) or (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
 end
 
 -- Setup --
+
+-- local console = require("console")
+-- console.monitor:config(core.LOG, core.DEBUG)
+-- sys.setlvl(core.LOG, core.DEBUG)
+
 local assets = asset.loaddir()
 
 local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"}
@@ -26,12 +26,12 @@ while not aws.csget("lpdaac-cloud") do
 end
 
 
-local geojsonfile = td.."../data/grand_mesa.geojson"
+local geojsonfile = dirpath.."../data/grand_mesa.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
 
--- Unit Test --
+-- Self Test --
 
 print(string.format("\n-------------------------------------------------\nLandsat Plugin test (NDVI)\n-------------------------------------------------"))
 local demType = "landsat-hls"
@@ -44,7 +44,7 @@ local ut = geo.ut_sample(dem)
 runner.assert(ut ~= nil)
 -- This test ignores lon, lat, lon_incr, lat_incr, pointCount as they are not used.
 -- It opens a test file with points.
-local pointsFile = td.."../data/grand_mesa_poi.txt"
+local pointsFile = dirpath.."../data/grand_mesa_poi.txt"
 local pointsInFile = 26183  -- number of points in file
 local maxPointCount = 1000  -- number of points to sample, 1000 will trigger all threaded code
 status = ut:test(0, 0, 0, 0, maxPointCount, pointsFile);

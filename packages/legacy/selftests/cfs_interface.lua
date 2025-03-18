@@ -1,8 +1,7 @@
 local runner = require("test_executive")
 local packet = require("packet")
-local console = require("console")
 
--- Cfs Interface Unit Test Start --
+-- Self Test --
 
 runner.command("NEW CFS_INTERFACE cfsif cfstlmq cfscmdq 127.0.0.1 5001 127.0.0.1 5002")
 runner.command("cfsif::DROP_INVALID FALSE")
@@ -81,9 +80,8 @@ packet.printPacket(Val)
 
 -- Clean Up --
 
--- runner.command("CLOSE cfsif")
+runner.command("CLOSE cfsif")
 
 -- Report Results --
 
 runner.report()
-

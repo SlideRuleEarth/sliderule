@@ -1,11 +1,17 @@
 local runner = require("test_executive")
--- local console = require("console")
 local asset = require("asset")
 local csv = require("csv")
 local json = require("json")
 
+-- Requirements --
+
+if (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
+end
+
 -- Setup --
 
+-- local console = require("console")
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
@@ -22,7 +28,7 @@ if not creds then
     aws.csput(identity, credential)
 end
 
--- Unit Test --
+-- Self Test --
 
 print('\n------------------\nTest01: Atl03 Indexer \n------------------')
 

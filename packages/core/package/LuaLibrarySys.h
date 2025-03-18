@@ -81,6 +81,8 @@ class LuaLibrarySys
         static int      lsys_setenvver      (lua_State* L);
         static int      lsys_setispublic    (lua_State* L);
         static int      lsys_getispublic    (lua_State* L);
+        static int      lsys_setincloud     (lua_State* L);
+        static int      lsys_getincloud     (lua_State* L);
         static int      lsys_setcluster     (lua_State* L);
         static int      lsys_type           (lua_State* L);
         static int      lsys_setstddepth    (lua_State* L);
@@ -94,6 +96,7 @@ class LuaLibrarySys
         static int      lsys_lsobj          (lua_State* L);
         static int      lsys_cwd            (lua_State* L);
         static int      lsys_pathfind       (lua_State* L);
+        static int      lsys_filefind       (lua_State* L);
         static int      lsys_fileexists     (lua_State* L);
         static int      lsys_deletefile     (lua_State* L);
         static int      lsys_memu           (lua_State* L);

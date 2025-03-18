@@ -1,7 +1,12 @@
 local runner = require("test_executive")
--- local console = require("console")
 local asset = require("asset")
 local json = require("json")
+
+-- Requirements --
+
+if (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
+end
 
 -- Setup --
 
@@ -18,8 +23,7 @@ if not creds then
     aws.csput(identity, credential)
 end
 
--- Unit Test --
-
+-- Self Test --
 
 print('\n------------------\nTest01: Atl03 Viewer Extent Record\n------------------')
 
@@ -30,7 +34,6 @@ local extentrec = recq:recvrecord(15000)
 print("Time to execute: "..tostring(time.latch() - tstart))
 
 runner.assert(extentrec, "Failed to read an extent record")
-
 
 if extentrec then
     runner.assert(extentrec:getvalue("track") == 1, extentrec:getvalue("track"))

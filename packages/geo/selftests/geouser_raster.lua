@@ -10,7 +10,7 @@ local base64 = require("base64")
 
 local raster = dirpath.."../data/geouser_test_raster.tif"
 
--- Unit Test --
+-- Self Test --
 
 local f = io.open(raster, "rb")
 local rasterfile = nil
@@ -74,4 +74,3 @@ runner.assert(math.abs(0.000083 - cellsize) < 0.000001)
 -- Report Results --
 
 runner.report()
-

@@ -1,6 +1,13 @@
 local runner = require("test_executive")
 local packet = require("packet")
 
+-- Requirements --
+
+if not __ccsds__ then
+    print("Skipping ccsds packetizer self test")
+    return
+end
+
 -- CCSDS Packetizer Unit Test --
 
 local cmdoutq = msg.subscribe("cmdoutq")

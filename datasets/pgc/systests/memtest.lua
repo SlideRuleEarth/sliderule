@@ -8,7 +8,7 @@ local json = require("json")
 -- sys.setlvl(core.LOG, core.DEBUG)
 
 
--- Unit Test --
+-- Self Test --
 
 local lon = -178.0
 local lat =   51.7

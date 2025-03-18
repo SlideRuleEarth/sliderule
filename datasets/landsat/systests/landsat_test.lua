@@ -24,7 +24,7 @@ local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
 
--- Unit Test --
+-- Self Test --
 
 local  lon = -179.0
 local  lat = 51.0

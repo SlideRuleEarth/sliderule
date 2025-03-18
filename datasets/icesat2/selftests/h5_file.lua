@@ -3,6 +3,12 @@ local asset = require("asset")
 local json = require("json")
 local pp = require("prettyprint")
 
+-- Requirements --
+
+if (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
+end
+
 -- Setup --
 
 local assets = asset.loaddir()
@@ -19,10 +25,10 @@ if not creds then
     aws.csput(identity, credential)
 end
 
--- Unit Test --
-
 local f = h5.file(atlas_asset, resource):name(resource)
 local rspq = msg.subscribe("h5testq")
+
+-- Self Test --
 
 f:read({{dataset="ancillary_data/atlas_sdp_gps_epoch"}}, "h5testq")
 
@@ -39,6 +45,8 @@ runner.assert(rectable.data[5] == 15)
 runner.assert(rectable.data[6] == 221)
 runner.assert(rectable.data[7] == 209)
 runner.assert(rectable.data[8] == 65)
+
+-- Clean Up --
 
 rspq:destroy()
 f:destroy()

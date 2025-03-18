@@ -1,14 +1,12 @@
 local runner = require("test_executive")
-local console = require("console")
 
--- Check If Present --
+-- Requirements --
 
 if not core.UNITTEST then
-    print("Skipping table self test")
-    return
+    return runner.skip()
 end
 
--- Unit Test --
+-- Self Test --
 
 local ut_table = core.ut_table()
 runner.assert(ut_table:addremove())
@@ -22,4 +20,3 @@ runner.assert(ut_table:stress())
 -- Report Results --
 
 runner.report()
-

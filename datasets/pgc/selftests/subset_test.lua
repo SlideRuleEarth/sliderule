@@ -1,15 +1,21 @@
 local runner = require("test_executive")
-console = require("console")
-asset = require("asset")
-csv = require("csv")
-json = require("json")
+local asset = require("asset")
 
+-- Requirements --
+
+if (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
+end
+
+-- Setup --
+
+-- local console = require("console")
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
 local assets = asset.loaddir()
 
--- Unit Test --
+-- Self Test --
 
 local sigma = 1.0e-9
 
@@ -62,7 +68,6 @@ for i = 1, #demTypes do
         end
     end
 end
-
 
 -- Report Results --
 

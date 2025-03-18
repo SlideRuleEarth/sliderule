@@ -8,7 +8,7 @@ local td = runner.rootdir(arg[0])
 
 local geojsonfile = td.."../selftests/grandmesa.geojson"
 
--- Unit Test --
+-- Self Test --
 
 local f = io.open(geojsonfile, "r")
 local vectorfile = nil

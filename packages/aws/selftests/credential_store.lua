@@ -1,7 +1,7 @@
 local runner = require("test_executive")
 local prettyprint = require("prettyprint")
 
--- Unit Test --
+-- Self Test --
 
 print('\n------------------\nTest01: Credential Storage\n------------------')
 

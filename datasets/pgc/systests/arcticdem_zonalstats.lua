@@ -9,7 +9,7 @@ json = require("json")
 
 local assets = asset.loaddir()
 
--- Unit Test --
+-- Self Test --
 
 local  lon = 180.00
 local  lat = 66.34  -- Arctic Circle lat

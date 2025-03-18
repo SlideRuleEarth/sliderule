@@ -1,21 +1,17 @@
 local runner = require("test_executive")
-local console = require("console")
 local asset = require("asset")
-local assets = asset.loaddir()
 
--- console.monitor:config(core.LOG, core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
+-- Requirements --
 
--- Check If Present --
-
-if not core.UNITTEST then
-    print("Skipping pgc plugin self test")
-    return
+if (not core.UNITTEST) or (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
 end
 
 -- Setup --
 
--- Unit Test --
+local assets = asset.loaddir()
+
+-- Self Test --
 
 print('\n------------------\nTest01 RasterSubset::rema-mosaic \n------------------')
 
@@ -71,10 +67,8 @@ status = ut:test(lon, lat, lon_incr, lat_incr, pointCount)
 runner.assert(status, "Failed sampling test")
 ut = nil
 
-
 -- Clean Up --
 
 -- Report Results --
 
 runner.report()
-

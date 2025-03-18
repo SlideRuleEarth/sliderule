@@ -1,7 +1,6 @@
 local runner = require("test_executive")
-console = require("console")
 
--- Unit Test --
+-- Self Test --
 
 sys.log(core.CRITICAL, "Hello World")
 
@@ -9,8 +8,8 @@ local monitor = core.getbyname("console.monitor")
 
 sys.wait(1)
 
-hello_found = false
-p,s = monitor:cat(1)
+local hello_found = false
+local p,s = monitor:cat(1)
 for _,msg in ipairs(p) do
     if msg:find("Hello World") then
         hello_found = true
@@ -24,4 +23,3 @@ runner.assert(hello_found, "Failed to find \"Hello World\" message")
 -- Report Results --
 
 runner.report()
-

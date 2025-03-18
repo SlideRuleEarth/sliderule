@@ -1,12 +1,10 @@
 local runner = require("test_executive")
 local asset = require("asset")
-local console = require("console")
 
--- Check If Present --
+-- Requirements --
 
-if not core.UNITTEST then
-    print("Skipping bathy plugin self test")
-    return
+if (not core.UNITTEST) or (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
 end
 
 -- Setup --
@@ -14,7 +12,7 @@ end
 local assets = asset.loaddir()
 local ut_refraction = bathy.ut_refraction()
 
--- Unit Test --
+-- Self Test --
 
 print('\n------------------\nTest RI Water\n------------------')
 runner.assert(ut_refraction:riwater(), "Failed ri water test")

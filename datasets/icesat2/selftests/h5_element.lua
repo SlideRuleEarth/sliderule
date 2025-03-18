@@ -1,7 +1,12 @@
 local runner = require("test_executive")
---local console = require("console")
 local asset = require("asset")
 local json = require("json")
+
+-- Requirements --
+
+if (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
+end
 
 -- Setup --
 
@@ -19,7 +24,7 @@ if not creds then
     aws.csput(identity, credential)
 end
 
--- Unit Test --
+-- Self Test --
 
 local value = h5.read(atlas_asset, resource, "ancillary_data/data_end_utc", core.STRING)
 runner.compare(value, "2018-10-15T23:28:00.056100Z", string.format("Failed to read string from dataset: %s", value))

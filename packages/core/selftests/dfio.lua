@@ -1,13 +1,7 @@
 local runner = require("test_executive")
 local prettyprint = require("prettyprint")
 
--- Configure Console
-
-local console = require("console")
-console.monitor:config(core.LOG, core.INFO)
-sys.setlvl(core.LOG, core.INFO)
-
--- Unit Test --
+-- Self Test --
 
 runner.unittest("DataFrame Import and Export", function()
 
@@ -31,7 +25,7 @@ runner.unittest("DataFrame Import and Export", function()
 
 end)
 
--- Unit Test --
+-- Self Test --
 
 runner.unittest("DataFrame Send and Receive", function()
 
@@ -61,7 +55,7 @@ runner.unittest("DataFrame Send and Receive", function()
 
 end)
 
--- Unit Test --
+-- Self Test --
 
 runner.unittest("DataFrame Multiple Senders and Merged Receive", function()
 

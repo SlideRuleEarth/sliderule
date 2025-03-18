@@ -3,10 +3,16 @@ local asset = require("asset")
 local json = require("json")
 local prettyprint = require("prettyprint")
 
+-- Requirements --
+
+if (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
+end
+
 -- Setup Logging --
 
-local console = require("console")
-console.loglvl(core.INFO)
+-- local console = require("console")
+-- console.loglvl(core.INFO)
 
 -- Setup Credentials --
 
@@ -34,7 +40,7 @@ local function check_expected(exp, df, index, t)
     end
 end
 
--- Unit Test --
+-- Self Test --
 
 runner.unittest("ATL03 DataFrame", function()
 
@@ -83,7 +89,7 @@ runner.unittest("ATL03 DataFrame", function()
 
 end)
 
--- Unit Test --
+-- Self Test --
 
 runner.unittest("ATL03 DataFrame - Ancillary Data", function()
 
@@ -146,7 +152,7 @@ runner.unittest("ATL03 DataFrame - Ancillary Data", function()
 
 end)
 
--- Unit Test --
+-- Self Test --
 
 runner.unittest("ATL06 Surface Fitter", function()
 

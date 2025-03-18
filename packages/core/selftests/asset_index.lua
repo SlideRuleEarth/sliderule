@@ -1,7 +1,5 @@
 local runner = require("test_executive")
 local asset = require("asset")
-local console = require("console")
-local td = sys.cwd() .. "/" .. runner.rootdir(arg[0])
 
 -- Setup --
 
@@ -25,7 +23,7 @@ local function check_query(act, exp)
     end
 end
 
--- Unit Test --
+-- Self Test --
 
 print('\n------------------\nTest01: Print Info\n------------------\n')
 for _,v in pairs(assets) do

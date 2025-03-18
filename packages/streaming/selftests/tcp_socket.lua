@@ -1,10 +1,10 @@
 local runner = require("test_executive")
 local console = require("console")
 
--- TcpSocket Unit Test --
+-- Self Test --
 
-local server = streaming.tcp("127.0.0.1", 35505, streaming.SERVER):name("server")
-local client = streaming.tcp("127.0.0.1", 35505, streaming.CLIENT):name("client")
+local server = streaming.tcp("127.0.0.1", 35505, streaming.SERVER)
+local client = streaming.tcp("127.0.0.1", 35505, streaming.CLIENT)
 
 sys.wait(2)
 
@@ -15,10 +15,11 @@ local actual_message = server:receive()
 print("Message: ", actual_message)
 runner.assert(expected_message == actual_message, "Failed to match messages")
 
+-- Clean Up --
+
 server:close()
 client:close()
 
 -- Report Results --
 
 runner.report()
-

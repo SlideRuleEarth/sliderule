@@ -1,8 +1,9 @@
 local runner = require("test_executive")
-local console = require("console")
 local asset = require("asset")
 local assets = asset.loaddir()
 local srcfile, dirpath = runner.srcscript()
+
+-- Setup --
 
 local outq_name = "outq-luatest"
 
@@ -24,9 +25,6 @@ local out_feather    = prefix .. _out_feather
 local out_csv        = prefix .. _out_csv
 local out_metadata   = prefix .. _out_metadata
 
--- console.monitor:config(core.LOG, core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
-
 local function getFileSize(filePath)
     local file = io.open(filePath, "rb")  -- 'rb' mode opens the file in binary mode
     if not file then
@@ -37,6 +35,8 @@ local function getFileSize(filePath)
     file:close()  -- Close the file
     return fileSize
 end
+
+-- Self Test --
 
 local dem1 = geo.raster(geo.parms({asset="arcticdem-mosaic", algorithm="NearestNeighbour", radius=30, zonal_stats=true}))
 runner.assert(dem1 ~= nil)
@@ -171,7 +171,8 @@ runner.assert(parquet_sampler == nil)
 -- There is no easy way to read parquet file in Lua, check the size of the output files
 -- the files were tested with python scripts
 
--- Remove the output files
+-- Clean Up --
+
 os.remove(_out_geoparquet)
 os.remove(_out_parquet)
 os.remove(_out_feather)
@@ -181,4 +182,3 @@ os.remove(_out_metadata)
 -- Report Results --
 
 runner.report()
-

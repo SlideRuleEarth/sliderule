@@ -1,8 +1,7 @@
 local runner = require("test_executive")
-local console = require("console")
 local json = require("json")
 
--- Unit Test --
+-- Self Test --
 
 local script = core.script("api/health", "")
 

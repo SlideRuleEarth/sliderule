@@ -1,11 +1,9 @@
 local runner = require("test_executive")
-local console = require("console")
 
--- Check Requirements --
+-- Requirements --
 
 if not __legacy__ then
-	print("Skipping limit dispatch self test... missing legacy package")
-	return
+	return runner.skip()
 end
 
 -- Limit Dispatch Unit Test Setup --

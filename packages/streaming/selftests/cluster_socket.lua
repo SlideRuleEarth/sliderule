@@ -1,13 +1,11 @@
 local runner = require("test_executive")
-local console = require("console")
 
--- Cluster Socket Unit Test --
+-- Self Test --
 
 local server = streaming.cluster(streaming.WRITER, streaming.QUEUE, "127.0.0.1", 34503, streaming.SERVER, "inq")
 local client = streaming.cluster(streaming.READER, streaming.QUEUE, "127.0.0.1", 34503, streaming.CLIENT, "outq")
 local writer = streaming.writer(server)
 local reader = streaming.reader(client)
-
 
 reader:block(true)
 local attempts = 10
@@ -27,9 +25,9 @@ runner.assert(inq:sendstring("HELLO WORLD 1"))
 runner.assert(inq:sendstring("HELLO WORLD 2"))
 runner.assert(inq:sendstring("HELLO WORLD 3"))
 
-message1 = outq:recvstring(5000)
-message2 = outq:recvstring(5000)
-message3 = outq:recvstring(5000)
+local message1 = outq:recvstring(5000)
+local message2 = outq:recvstring(5000)
+local message3 = outq:recvstring(5000)
 
 print("Received message 1: " .. message1)
 print("Received message 2: " .. message2)

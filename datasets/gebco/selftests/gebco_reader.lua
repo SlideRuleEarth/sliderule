@@ -1,19 +1,25 @@
 local runner = require("test_executive")
-local console = require("console")
 local asset = require("asset")
-local _,td = runner.srcscript()
 
--- console.monitor:config(core.LOG, core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
+-- Requirements --
+
+if (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
+end
 
 -- Setup --
+
 local assets = asset.loaddir()
+
+-- local console = require("console")
+-- console.monitor:config(core.LOG, core.DEBUG)
+-- sys.setlvl(core.LOG, core.DEBUG)
 
 -- Correct values test for different POIs
 
 local lons = {-40, -20, -120}
 local lats = { 70, -20,   20}
-height = 0
+local height = 0
 
 -- Updataed results for GEBCO 2024
 local expDepth = { -64,  -4940, -4072}
@@ -29,8 +35,8 @@ local dem = geo.raster(geo.parms({ asset = "gebco-bathy", algorithm = "NearestNe
 runner.assert(dem ~= nil)
 
 for j, lon in ipairs(lons) do
-    lat = lats[j]
-    tbl, err = dem:sample(lon, lat, height)
+    local lat = lats[j]
+    local tbl, err = dem:sample(lon, lat, height)
     runner.assert(err == 0)
     runner.assert(tbl ~= nil)
 
@@ -39,9 +45,9 @@ for j, lon in ipairs(lons) do
     else
         local el, fname
         for k, v in ipairs(tbl) do
-            value = v["value"]
+            local value = v["value"]
             fname = v["file"]
-            flags = v["flags"]
+            local flags = v["flags"]
             print(string.format("(%02d)   (%6.1f, %5.1f) %8.1fm  %02d  %s", k, lon, lat, value, flags, fname))
 
             assert( math.abs(value - expDepth[j]) < depth_tolerance, string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))
@@ -55,8 +61,8 @@ dem = geo.raster(geo.parms({ asset = "gebco-bathy", bands = {"2024"}, algorithm 
 runner.assert(dem ~= nil)
 
 for j, lon in ipairs(lons) do
-    lat = lats[j]
-    tbl, err = dem:sample(lon, lat, height)
+    local lat = lats[j]
+    local tbl, err = dem:sample(lon, lat, height)
     runner.assert(err == 0)
     runner.assert(tbl ~= nil)
 
@@ -65,9 +71,9 @@ for j, lon in ipairs(lons) do
     else
         local el, fname
         for k, v in ipairs(tbl) do
-            value = v["value"]
+            local value = v["value"]
             fname = v["file"]
-            flags = v["flags"]
+            local flags = v["flags"]
             print(string.format("(%02d)   (%6.1f, %5.1f) %8.1fm  %02d  %s", k, lon, lat, value, flags, fname))
 
             assert( math.abs(value - expDepth[j]) < depth_tolerance, string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))
@@ -85,8 +91,8 @@ dem = geo.raster(geo.parms({ asset = "gebco-bathy", bands = {"2023"}, algorithm 
 runner.assert(dem ~= nil)
 
 for j, lon in ipairs(lons) do
-    lat = lats[j]
-    tbl, err = dem:sample(lon, lat, height)
+    local lat = lats[j]
+    local tbl, err = dem:sample(lon, lat, height)
     runner.assert(err == 0)
     runner.assert(tbl ~= nil)
 
@@ -95,9 +101,9 @@ for j, lon in ipairs(lons) do
     else
         local el, fname
         for k, v in ipairs(tbl) do
-            value = v["value"]
+            local value = v["value"]
             fname = v["file"]
-            flags = v["flags"]
+            local flags = v["flags"]
             print(string.format("(%02d)   (%6.1f, %5.1f) %8.1fm  %02d  %s", k, lon, lat, value, flags, fname))
 
             assert( math.abs(value - expDepth[j]) < depth_tolerance, string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))

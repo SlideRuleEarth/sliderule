@@ -60,6 +60,12 @@ sys.setstddepth(msgq_depth)
 -- Configure Memory Limit --
 sys.setmemlimit(stream_mem_thresh)
 
+-- Configure In Cloud --
+local aws_meta_rsp = core.servicecheck("http://169.254.169.254/latest/meta-data/", 1)
+if aws_meta_rsp ~= 503 then
+    sys.setincloud(true)
+end
+
 -- Configure Monitoring --
 sys.setlvl(core.LOG | core.TRACE | core.METRIC, event_level) -- set level globally
 local log_monitor = core.monitor(core.LOG, core.DEBUG, event_format):tail(1024):name("LogMonitor") -- monitor logs and write to stdout
@@ -100,9 +106,9 @@ if authenticate_to_podaac then
     local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms)):name("PodaacAuthScript")
 end
 
--- Configure Container Registry -- 
+-- Configure Container Registry --
 if __cre__ then
-   cre.setregistry(container_registry) 
+   cre.setregistry(container_registry)
 end
 
 --------------------------------------------------

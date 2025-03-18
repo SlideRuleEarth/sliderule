@@ -1,10 +1,9 @@
 local runner = require("test_executive")
 
--- Check If Present --
+-- Requirements --
 
 if not core.UNITTEST then
-    print("Skipping timelib self test")
-    return
+    return runner.skip()
 end
 
 -- TimeLib Unit Test --
@@ -45,4 +44,3 @@ runner.assert(t1 - t2 == 3598518.0)
 -- Report Results --
 
 runner.report()
-

@@ -1,21 +1,20 @@
 local runner = require("test_executive")
-local console = require("console")
 local asset = require("asset")
 local assets = asset.loaddir()
 
--- console.monitor:config(core.LOG, core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
+-- Requirements --
 
--- Check If Present --
-
-if not core.UNITTEST then
-    print("Skipping bluetopo plugin self test")
-    return
+if (not core.UNITTEST) or (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
 end
 
 -- Setup --
 
--- Unit Test --
+-- local console = require("console")
+-- console.monitor:config(core.LOG, core.DEBUG)
+-- sys.setlvl(core.LOG, core.DEBUG)
+
+-- Self Test --
 
 lon = -80.87
 lat =  32.06

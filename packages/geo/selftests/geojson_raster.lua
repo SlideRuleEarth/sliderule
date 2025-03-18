@@ -9,7 +9,7 @@ local srcfile, dirpath = runner.srcscript()
 
 local geojsonfile = dirpath.."../data/grandmesa.geojson"
 
--- Unit Test --
+-- Self Test --
 
 local f = io.open(geojsonfile, "r")
 local vectorfile = nil
@@ -86,10 +86,8 @@ tbl, err = robj:sample(lon, lat, height)
 runner.assert(err ~= 0)
 runner.assert(#tbl == 0)
 
-
 -- Clean Up --
 
 -- Report Results --
 
 runner.report()
-

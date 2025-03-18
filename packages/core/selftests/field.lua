@@ -1,18 +1,12 @@
 local runner = require("test_executive")
-local console = require("console")
 
--- Check If Present --
+-- Requirements --
 
 if not core.UNITTEST then
-    print("Skipping field self test")
-    return
+    return runner.skip()
 end
 
--- Setup --
-console.monitor:config(core.LOG, core.INFO)
-sys.setlvl(core.LOG, core.INFO)
-
--- Unit Test --
+-- Self Test --
 
 local ut = core.ut_field()
 runner.assert(ut:element())

@@ -1,11 +1,12 @@
 local runner = require("test_executive")
-local console = require("console")
 local srcfile, dirpath = runner.srcscript()
 local h5_input_file = "../data/h5ex_d_gzip.h5"
 
+-- Setup --
+
 local asset = core.asset("local", "nil", "file", dirpath, "empty.index")
 
--- Unit Test --
+-- Self Test --
 
 print('\n------------------\nTest01: File\n------------------')
 
@@ -87,6 +88,8 @@ end
 
 f:close()
 os.remove(h5_file)
+
+-- Clean Up --
 
 -- Report Results --
 

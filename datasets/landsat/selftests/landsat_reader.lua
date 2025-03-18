@@ -1,14 +1,20 @@
 local runner = require("test_executive")
-local console = require("console")
 local asset = require("asset")
-local csv = require("csv")
 local json = require("json")
-local _,td = runner.srcscript()
+local srcfile, dirpath = runner.srcscript()
 
+-- Requirements --
+
+if (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
+end
+
+-- Setup --
+
+-- local console = require("console")
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
--- Setup --
 local assets = asset.loaddir()
 
 local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"}
@@ -18,14 +24,14 @@ while not aws.csget("lpdaac-cloud") do
     sys.wait(1)
 end
 
-local geojsonfile = td.."../data/hls_trimmed.geojson"
+local geojsonfile = dirpath.."../data/hls_trimmed.geojson"
 local f = io.open(geojsonfile, "r")
 runner.assert(f, "failed to open geojson file")
 if not f then return end
 local contents = f:read("*all")
 f:close()
 
--- Unit Test --
+-- Self Test --
 
 local  sigma = 1.0e-9
 
@@ -382,12 +388,12 @@ end
 local maxSamples = 100
 local linesRead = 0
 
-local geojsonfile = td.."../data/grand_mesa.geojson"
+local geojsonfile = dirpath.."../data/grand_mesa.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
 
-local poifile = td.."../data/grand_mesa_poi.txt"
+local poifile = dirpath.."../data/grand_mesa_poi.txt"
 local f = io.open(poifile, "r")
 -- read in array of POI from file
 local arr = {}
@@ -404,7 +410,7 @@ for l in f:lines() do
 end
 f:close()
 
-local ndvifile = td.."../data/grand_mesa_ndvi.txt"
+local ndvifile = dirpath.."../data/grand_mesa_ndvi.txt"
 local f = io.open(ndvifile, "r")
 -- read in array of NDVI values
 local ndvi_results = {}
@@ -451,8 +457,6 @@ print(string.format("POI sample %d points time: %.2f", sampleCnt, stoptime - sta
 runner.assert(sampleCnt == maxSamples)
 dem = nil
 
-
 -- Report Results --
 
 runner.report()
-

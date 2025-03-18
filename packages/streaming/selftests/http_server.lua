@@ -1,9 +1,8 @@
 local runner = require("test_executive")
-local console = require("console")
 
 -- Setup --
 
-json_object = '{ \
+local json_object = '{ \
     \"var1\": false, \
     \"var2\": \"*.rec\", \
     \"var3\": 4, \
@@ -16,7 +15,7 @@ json_object = '{ \
 
 local tmpfile = os.tmpname()
 
--- Unit Test --
+-- Self Test --
 
 local endpoint = core.endpoint()
 local server   = core.httpd(9081):attach(endpoint, "/source"):untilup()
@@ -47,4 +46,3 @@ os.remove(tmpfile)
 -- Report Results --
 
 runner.report()
-

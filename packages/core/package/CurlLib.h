@@ -74,6 +74,7 @@ class CurlLib
         static int          luaGet          (lua_State* L);
         static int          luaPut          (lua_State* L);
         static int          luaPost         (lua_State* L);
+        static int          luaCheck        (lua_State* L);
 
     private:
 

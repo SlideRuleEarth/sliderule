@@ -1,7 +1,10 @@
 local runner = require("test_executive")
-local console = require("console")
-local json = require("json")
-local pp = require("prettyprint")
+
+-- Requirements --
+
+if (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
+end
 
 -- Setup --
 
@@ -13,7 +16,7 @@ local status = false
 
 sys.wait(2)
 
--- Unit Test --
+-- Self Test --
 
 -- TEST #1: failed download
 status = aws.s3download(test_bucket, string.format("%s/%s", test_path, test_file), nil, nil, "/missing_path/missing_file.txt")

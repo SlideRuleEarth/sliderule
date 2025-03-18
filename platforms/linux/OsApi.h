@@ -254,6 +254,8 @@ class OsApi
         static const char*  getEnvVersion       (void);
         static void         setIsPublic         (bool _is_public);
         static bool         getIsPublic         (void);
+        static void         setInCloud          (bool _in_cloud);
+        static bool         getInCloud          (void);
         static void         setCluster          (const char* cluster);
         static const char*  getCluster          (void);
 
@@ -266,6 +268,7 @@ class OsApi
         static int64_t launch_time;
         static const char* environment_version;
         static bool is_public;
+        static bool in_cloud;
         static const char* cluster_name;
 };
 

@@ -566,6 +566,50 @@ int CurlLib::luaPost (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * luaCheck
+ *----------------------------------------------------------------------------*/
+int CurlLib::luaCheck (lua_State* L)
+{
+    long http_code = EndpointObject::Service_Unavailable;
+
+    try
+    {
+        /* Get Parameters */
+        const char* url             = LuaObject::getLuaString(L, 1);
+        const long  connect_timeout = LuaObject::getLuaInteger(L, 2);
+
+        /* Perform Connection Request */
+        CURL* curl = curl_easy_init();
+        if(curl)
+        {
+            /* Configure cURL Options */
+            curl_easy_setopt(curl, CURLOPT_URL, url);
+            curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, connect_timeout); // seconds
+
+            /* Perform the request, res will get the return code */
+            const CURLcode res = curl_easy_perform(curl);
+
+            /* Get HTTP Code */
+            if(res == CURLE_OK)
+            {
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+            }
+
+            /* Always Cleanup */
+            curl_easy_cleanup(curl);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error performing connection request: %s", e.what());
+    }
+
+    /* Return HTTP Code */
+    lua_pushinteger(L, http_code);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * CurlLib::combineResponse
  *----------------------------------------------------------------------------*/
 void CurlLib::combineResponse (List<data_t>* rsps_set, const char** response, int* size)

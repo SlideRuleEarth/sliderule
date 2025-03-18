@@ -1,23 +1,27 @@
 local runner = require("test_executive")
-local console = require("console")
 local asset = require("asset")
-local csv = require("csv")
-local json = require("json")
-local _,td = runner.srcscript()
+local srcfile, dirpath = runner.srcscript()
 
+-- Requirements --
+
+if (not sys.incloud() and not runner.isglobal()) then
+    return runner.skip()
+end
+
+-- Setup --
+
+-- local console = require("console")
 -- console.monitor:config(core.LOG, core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
--- Setup --
 local assets = asset.loaddir()
 
-local _,td = runner.srcscript()
-local geojsonfile = td.."../data/grand_mesa_1m_dem.geojson"
+local geojsonfile = dirpath.."../data/grand_mesa_1m_dem.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
 
--- Unit Test --
+-- Self Test --
 
 local  sigma = 1.0e-4
 local  lon =    -108.1
@@ -102,9 +106,6 @@ for i, v in ipairs(tbl) do
     runner.assert(size > 0)
 end
 
-
-
 -- Report Results --
 
 runner.report()
-

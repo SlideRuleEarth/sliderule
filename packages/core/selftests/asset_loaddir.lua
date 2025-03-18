@@ -1,13 +1,7 @@
 local runner = require("test_executive")
-local console = require("console")
 local asset = require("asset")
 
--- Setup --
-
---console.monitor:config(core.LOG, core.DEBUG)
---sys.setlvl(core.LOG, core.DEBUG)
-
--- Unit Test --
+-- Self Test --
 
 local assets = asset.loaddir()
 

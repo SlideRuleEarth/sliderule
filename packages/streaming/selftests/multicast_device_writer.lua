@@ -1,7 +1,6 @@
 local runner = require("test_executive")
-local console = require("console")
 
--- UdpSocket/Multicast/DeviceWriter Unit Test --
+-- Self Test --
 
 -- create writer
 
@@ -32,7 +31,7 @@ local actual_message = sockinq:recvstring(5000)
 print("Message: ", actual_message)
 runner.assert(expected_message == actual_message, "Failed to match messages")
 
--- clean up
+-- Clean Up --
 
 client:close()
 server:close()
@@ -40,4 +39,3 @@ server:close()
 -- Report Results --
 
 runner.report()
-
