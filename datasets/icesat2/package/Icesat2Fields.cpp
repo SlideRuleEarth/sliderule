@@ -123,6 +123,44 @@ void PhorealFields::fromLua (lua_State* L, int index)
 }
 
 /*----------------------------------------------------------------------------
+ * Constructor - Atl24Fields
+ *----------------------------------------------------------------------------*/
+Atl24Fields::Atl24Fields():
+    FieldDictionary({ {"compact",               &compact},
+                      {"atl24_class",           &class_ph},
+                      {"confidence_threshold",  &confidence_threshold},
+                      {"invalid_kd",            &invalid_kd},
+                      {"invalid_wind_speed",    &invalid_wind_speed},
+                      {"low_confidence",        &low_confidence},
+                      {"night",                 &night},
+                      {"sensor_depth_exceeded", &sensor_depth_exceeded} }),
+    provided(false)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * fromLua - Atl24Fields
+ *----------------------------------------------------------------------------*/
+void Atl24Fields::fromLua (lua_State* L, int index)
+{
+    if(lua_istable(L, index))
+    {
+        FieldDictionary::fromLua(L, index);
+
+        if( invalid_kd.anyDisabled() ||
+            invalid_wind_speed.anyDisabled() ||
+            low_confidence.anyDisabled() ||
+            night.anyDisabled() ||
+            sensor_depth_exceeded.anyDisabled() )
+        {
+            compact = false;
+        }
+
+        provided = true;
+    }
+}
+
+/*----------------------------------------------------------------------------
  * luaCreate - create(<parameter table>)
  *----------------------------------------------------------------------------*/
 int Icesat2Fields::luaCreate (lua_State* L)
@@ -975,5 +1013,179 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::surface_type_t& v)
     else if(!lua_isnil(L, index))
     {
         throw RunTimeException(CRITICAL, RTE_ERROR, "surface type is an invalid type: %d", lua_type(L, index));
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertToJson - class_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const Atl24Fields::class_t& v)
+{
+    switch(v)
+    {
+        case Atl24Fields::UNCLASSIFIED: return "\"unclassified\"";
+        case Atl24Fields::BATHYMETRY:   return "\"bathymetry\"";
+        case Atl24Fields::SEA_SURFACE:  return "\"sea_surface\"";
+        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid bathy class: %d", static_cast<int>(v));
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertToLua - class_t
+ *----------------------------------------------------------------------------*/
+int convertToLua(lua_State* L, const Atl24Fields::class_t& v)
+{
+    switch(v)
+    {
+        case Atl24Fields::UNCLASSIFIED: lua_pushstring(L, "unclassified");  break;
+        case Atl24Fields::BATHYMETRY:   lua_pushstring(L, "bathymetry");    break;
+        case Atl24Fields::SEA_SURFACE:  lua_pushstring(L, "sea_surface");   break;
+        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl24 class: %d", static_cast<int>(v));
+    }
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * convertFromLua - class_t
+ *----------------------------------------------------------------------------*/
+void convertFromLua(lua_State* L, int index, Atl24Fields::class_t& v)
+{
+    if(lua_isinteger(L, index))
+    {
+        long c = LuaObject::getLuaInteger(L, index);
+        switch(c)
+        {
+            case 0:     v = Atl24Fields::UNCLASSIFIED;  break;
+            case 1:     v = Atl24Fields::BATHYMETRY;    break;
+            case 2:     v = Atl24Fields::SEA_SURFACE;   break;
+            default:    throw RunTimeException(CRITICAL, RTE_ERROR, "bathy class is an invalid value: %ld", c);
+        }
+    }
+    else if(lua_isstring(L, index))
+    {
+        const char* str = LuaObject::getLuaString(L, index);
+        if     (StringLib::match(str, "unclassified"))      v = Atl24Fields::UNCLASSIFIED;
+        else if(StringLib::match(str, "bathymetry"))        v = Atl24Fields::BATHYMETRY;
+        else if(StringLib::match(str, "sea_surface"))       v = Atl24Fields::SEA_SURFACE;
+        else throw RunTimeException(CRITICAL, RTE_ERROR, "bathy class is an invalid value: %s", str);
+    }
+    else if(!lua_isnil(L, index))
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "bathy class is an invalid type: %d", lua_type(L, index));
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertToIndex - class_t
+ *----------------------------------------------------------------------------*/
+int convertToIndex(const Atl24Fields::class_t& v)
+{
+    switch(v)
+    {
+        case Atl24Fields::UNCLASSIFIED: return 0;
+        case Atl24Fields::BATHYMETRY:   return 1;
+        case Atl24Fields::SEA_SURFACE:  return 2;
+        default:                        return -1;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertFromIndex - class_t
+ *----------------------------------------------------------------------------*/
+void convertFromIndex(int index, Atl24Fields::class_t& v)
+{
+    switch(index)
+    {
+        case 0:     v = Atl24Fields::UNCLASSIFIED;  break;
+        case 1:     v = Atl24Fields::BATHYMETRY;    break;
+        case 2:     v = Atl24Fields::SEA_SURFACE;   break;
+        default:    v = Atl24Fields::NUM_CLASSES;   break;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertToJson - flag_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const Atl24Fields::flag_t& v)
+{
+    switch(v)
+    {
+        case Atl24Fields::FLAG_OFF: return "\"off\"";
+        case Atl24Fields::FLAG_ON:  return "\"on\"";
+        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid filter flag: %d", static_cast<int>(v));
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertToLua - flag_t
+ *----------------------------------------------------------------------------*/
+int convertToLua(lua_State* L, const Atl24Fields::flag_t& v)
+{
+    switch(v)
+    {
+        case Atl24Fields::FLAG_OFF: lua_pushstring(L, "off");   break;
+        case Atl24Fields::FLAG_ON:  lua_pushstring(L, "on");    break;
+        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid filter flag: %d", static_cast<int>(v));
+    }
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * convertFromLua - flag_t
+ *----------------------------------------------------------------------------*/
+void convertFromLua(lua_State* L, int index, Atl24Fields::flag_t& v)
+{
+    if(lua_isboolean(L, index))
+    {
+        bool f = LuaObject::getLuaBoolean(L, index);
+        if(f)   v = Atl24Fields::FLAG_ON;
+        else    v = Atl24Fields::FLAG_OFF;
+    }
+    else if(lua_isinteger(L, index))
+    {
+        long f = LuaObject::getLuaInteger(L, index);
+        switch(f)
+        {
+            case 0:     v = Atl24Fields::FLAG_OFF;  break;
+            case 1:     v = Atl24Fields::FLAG_ON;   break;
+            default:    throw RunTimeException(CRITICAL, RTE_ERROR, "flag filter is an invalid value: %ld", f);
+        }
+    }
+    else if(lua_isstring(L, index))
+    {
+        const char* str = LuaObject::getLuaString(L, index);
+        if     (StringLib::match(str, "off"))   v = Atl24Fields::FLAG_OFF;
+        else if(StringLib::match(str, "on"))    v = Atl24Fields::FLAG_ON;
+        else throw RunTimeException(CRITICAL, RTE_ERROR, "flag filter is an invalid value: %s", str);
+    }
+    else if(!lua_isnil(L, index))
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "flag filter is an invalid type: %d", lua_type(L, index));
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertToIndex - flag_t
+ *----------------------------------------------------------------------------*/
+int convertToIndex(const Atl24Fields::flag_t& v)
+{
+    switch(v)
+    {
+        case Atl24Fields::FLAG_OFF: return 0;
+        case Atl24Fields::FLAG_ON:  return 1;
+        default:                    return 0;
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertFromIndex - flag_t
+ *----------------------------------------------------------------------------*/
+void convertFromIndex(int index, Atl24Fields::flag_t& v)
+{
+    switch(index)
+    {
+        case 0:     v = Atl24Fields::FLAG_OFF;  break;
+        case 1:     v = Atl24Fields::FLAG_ON;   break;
+        default:    v = Atl24Fields::FLAG_OFF;  break;
     }
 }

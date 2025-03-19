@@ -60,6 +60,7 @@ class FieldEnumeration: public Field
 
         bool                    enabled             (int i) const;
         bool                    anyEnabled          (void) const;
+        bool                    anyDisabled         (void) const;
 
         FieldEnumeration<T,N>&  operator=           (const FieldEnumeration<T,N>& array);
         bool                    operator[]          (T i) const;
@@ -185,6 +186,20 @@ bool FieldEnumeration<T,N>::anyEnabled(void) const
     for(int i = 0; i < N; i++)
     {
         status = status || values[i];
+    }
+    return status;
+}
+
+/*----------------------------------------------------------------------------
+ * anyEnabled
+ *----------------------------------------------------------------------------*/
+template <class T, int N>
+bool FieldEnumeration<T,N>::anyDisabled(void) const
+{
+    bool status = false;
+    for(int i = 0; i < N; i++)
+    {
+        status = status || (!values[i]);
     }
     return status;
 }

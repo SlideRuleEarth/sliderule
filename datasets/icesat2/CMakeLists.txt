@@ -14,6 +14,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Dispatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13IODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Reader.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl24DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/CumulusIODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GTDArray.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Icesat2Fields.cpp
@@ -41,6 +42,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Dispatch.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13IODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Reader.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl24DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/CumulusIODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GTArray.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GTDArray.h
@@ -68,6 +70,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl08p.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl13s.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl13sp.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl24x.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/indexer.lua
     DESTINATION
         ${CONFDIR}/api

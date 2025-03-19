@@ -116,6 +116,42 @@ struct PhorealFields: public FieldDictionary
     bool provided;
 };
 
+/******************/
+/* Atl24 Fields */
+/******************/
+struct Atl24Fields: public FieldDictionary
+{
+    typedef enum {
+        UNCLASSIFIED        = 0,
+        BATHYMETRY          = 40,
+        SEA_SURFACE         = 41,
+        NUM_CLASSES         = 3
+    } class_t;
+
+    typedef enum {
+        FLAG_OFF = 0,
+        FLAG_ON = 1,
+        NUM_FLAGS = 2
+    } flag_t;
+
+    FieldElement<bool>                      compact {true};                     // reduce number of fields from atl24
+    FieldEnumeration<class_t,NUM_CLASSES>   class_ph {true, true, true};     // list of desired bathymetry classes of photons
+    FieldElement<double>                    confidence_threshold {0.0};         // filter based on confidence
+    FieldEnumeration<flag_t,NUM_FLAGS>      invalid_kd {true, true};            // filter on invalid kd flag
+    FieldEnumeration<flag_t,NUM_FLAGS>      invalid_wind_speed {true, true};    // filter on invalid wind speed
+    FieldEnumeration<flag_t,NUM_FLAGS>      low_confidence {true, true};        // filter on low confidence flag
+    FieldEnumeration<flag_t,NUM_FLAGS>      night {true, true};                 // filter based on night flag
+    FieldEnumeration<flag_t,NUM_FLAGS>      sensor_depth_exceeded {true, true}; // filter based on sensor depth exceeded flag
+    FieldList<string>                       anc_fields;                         // list of additional ATL24 fields
+
+    Atl24Fields(void);
+    ~Atl24Fields(void) override = default;
+
+    virtual void fromLua (lua_State* L, int index) override;
+
+    bool provided;
+};
+
 /*******************/
 /* ICESat-2 Fields */
 /*******************/
@@ -403,6 +439,7 @@ class Icesat2Fields: public RequestFields
         FitFields                                           fit;                                                    // settings used in the surface fitter algorithm
         YapcFields                                          yapc;                                                   // settings used in YAPC algorithm
         PhorealFields                                       phoreal;                                                // phoreal algorithm settings
+        Atl24Fields                                         atl24;                                                  // atl24 algorithm settings
         FieldElement<int>                                   maxIterations {5};                                      // DEPRECATED (use FitFields)
         FieldElement<double>                                minWindow {3.0};                                        // DEPRECATED (use FitFields)
         FieldElement<double>                                maxRobustDispersion {5.0};                              // DEPRECATED (use FitFields)
@@ -478,6 +515,18 @@ string convertToJson(const Icesat2Fields::surface_type_t& v);
 int convertToLua(lua_State* L, const Icesat2Fields::surface_type_t& v);
 void convertFromLua(lua_State* L, int index, Icesat2Fields::surface_type_t& v);
 
+string convertToJson(const Atl24Fields::class_t& v);
+int convertToLua(lua_State* L, const Atl24Fields::class_t& v);
+void convertFromLua(lua_State* L, int index, Atl24Fields::class_t& v);
+int convertToIndex(const Atl24Fields::class_t& v);
+void convertFromIndex(int index, Atl24Fields::class_t& v);
+
+string convertToJson(const Atl24Fields::flag_t& v);
+int convertToLua(lua_State* L, const Atl24Fields::flag_t& v);
+void convertFromLua(lua_State* L, int index, Atl24Fields::flag_t& v);
+int convertToIndex(const Atl24Fields::flag_t& v);
+void convertFromIndex(int index, Atl24Fields::flag_t& v);
+
 inline uint32_t toEncoding(Icesat2Fields::surface_type_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(Icesat2Fields::spot_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(Icesat2Fields::gt_t& v) { (void)v; return Field::INT32; }
@@ -485,5 +534,7 @@ inline uint32_t toEncoding(Icesat2Fields::atl08_class_t& v) { (void)v; return Fi
 inline uint32_t toEncoding(Icesat2Fields::quality_ph_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(Icesat2Fields::signal_conf_t& v) { (void)v; return Field::INT32; }
 inline uint32_t toEncoding(PhorealFields::phoreal_geoloc_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Atl24Fields::class_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(Atl24Fields::flag_t& v) { (void)v; return Field::INT32; }
 
 #endif  /* __icesat2_fields__ */

@@ -36,8 +36,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <atomic>
-
 #include "GeoDataFrame.h"
 #include "RecordObject.h"
 #include "List.h"
