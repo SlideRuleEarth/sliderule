@@ -182,8 +182,8 @@ okey_t Atl24DataFrame::getKey(void) const
  * AreaOfInterest::Constructor
  *----------------------------------------------------------------------------*/
 Atl24DataFrame::AreaOfInterest::AreaOfInterest (const Atl24DataFrame* df):
-    lat_ph    (df->hdf24, FString("/%s/%s", df->beam, "lat_ph").c_str()),
-    lon_ph    (df->hdf24, FString("/%s/%s", df->beam, "lon_ph").c_str()),
+    lat_ph    (df->hdf24, FString("%s/%s", df->beam, "lat_ph").c_str()),
+    lon_ph    (df->hdf24, FString("%s/%s", df->beam, "lon_ph").c_str()),
     inclusion_mask {NULL},
     inclusion_ptr  {NULL}
 {
@@ -371,22 +371,22 @@ void Atl24DataFrame::AreaOfInterest::rasterregion (const Atl24DataFrame* df)
  *----------------------------------------------------------------------------*/
 Atl24DataFrame::Atl24Data::Atl24Data (Atl24DataFrame* df, const AreaOfInterest& aoi):
     compact                 (df->parms->atl24.compact.value),
-    sc_orient               (                 df->hdf24,                            "/orbit_info/sc_orient"),
-    class_ph                (                 df->hdf24, FString("%s/%s", df->beam, "/class_ph").c_str(),                0, aoi.first_photon, aoi.num_photons),
-    confidence              (                 df->hdf24, FString("%s/%s", df->beam, "/confidence").c_str(),              0, aoi.first_photon, aoi.num_photons),
-    delta_time              (                 df->hdf24, FString("%s/%s", df->beam, "/delta_time").c_str(),              0, aoi.first_photon, aoi.num_photons),
-    ellipse_h               (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "/ellipse_h").c_str(),               0, aoi.first_photon, aoi.num_photons),
-    invalid_kd              (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "/invalid_kd").c_str(),              0, aoi.first_photon, aoi.num_photons),
-    invalid_wind_speed      (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "/invalid_wind_speed").c_str(),      0, aoi.first_photon, aoi.num_photons),
-    low_confidence_flag     (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "/low_confidence_flag").c_str(),     0, aoi.first_photon, aoi.num_photons),
-    night_flag              (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "/night_flag").c_str(),              0, aoi.first_photon, aoi.num_photons),
-    ortho_h                 (                 df->hdf24, FString("%s/%s", df->beam, "/ortho_h").c_str(),                 0, aoi.first_photon, aoi.num_photons),
-    sensor_depth_exceeded   (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "/sensor_depth_exceeded").c_str(),   0, aoi.first_photon, aoi.num_photons),
-    sigma_thu               (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "/sigma_thu").c_str(),               0, aoi.first_photon, aoi.num_photons),
-    sigma_tvu               (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "/sigma_tvu").c_str(),               0, aoi.first_photon, aoi.num_photons),
-    surface_h               (                 df->hdf24, FString("%s/%s", df->beam, "/surface_h").c_str(),               0, aoi.first_photon, aoi.num_photons),
-    x_atc                   (                 df->hdf24, FString("%s/%s", df->beam, "/x_atc").c_str(),                   0, aoi.first_photon, aoi.num_photons),
-    y_atc                   (                 df->hdf24, FString("%s/%s", df->beam, "/y_atc").c_str(),                   0, aoi.first_photon, aoi.num_photons),
+    sc_orient               (                 df->hdf24,                            "orbit_info/sc_orient"),
+    class_ph                (                 df->hdf24, FString("%s/%s", df->beam, "class_ph").c_str(),                0, aoi.first_photon, aoi.num_photons),
+    confidence              (                 df->hdf24, FString("%s/%s", df->beam, "confidence").c_str(),              0, aoi.first_photon, aoi.num_photons),
+    delta_time              (                 df->hdf24, FString("%s/%s", df->beam, "delta_time").c_str(),              0, aoi.first_photon, aoi.num_photons),
+    ellipse_h               (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "ellipse_h").c_str(),               0, aoi.first_photon, aoi.num_photons),
+    invalid_kd              (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "invalid_kd").c_str(),              0, aoi.first_photon, aoi.num_photons),
+    invalid_wind_speed      (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "invalid_wind_speed").c_str(),      0, aoi.first_photon, aoi.num_photons),
+    low_confidence_flag     (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "low_confidence_flag").c_str(),     0, aoi.first_photon, aoi.num_photons),
+    night_flag              (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "night_flag").c_str(),              0, aoi.first_photon, aoi.num_photons),
+    ortho_h                 (                 df->hdf24, FString("%s/%s", df->beam, "ortho_h").c_str(),                 0, aoi.first_photon, aoi.num_photons),
+    sensor_depth_exceeded   (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "sensor_depth_exceeded").c_str(),   0, aoi.first_photon, aoi.num_photons),
+    sigma_thu               (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "sigma_thu").c_str(),               0, aoi.first_photon, aoi.num_photons),
+    sigma_tvu               (compact ? NULL : df->hdf24, FString("%s/%s", df->beam, "sigma_tvu").c_str(),               0, aoi.first_photon, aoi.num_photons),
+    surface_h               (                 df->hdf24, FString("%s/%s", df->beam, "surface_h").c_str(),               0, aoi.first_photon, aoi.num_photons),
+    x_atc                   (                 df->hdf24, FString("%s/%s", df->beam, "x_atc").c_str(),                   0, aoi.first_photon, aoi.num_photons),
+    y_atc                   (                 df->hdf24, FString("%s/%s", df->beam, "y_atc").c_str(),                   0, aoi.first_photon, aoi.num_photons),
     anc_data                (                 df->parms->atl24.anc_fields, df->hdf24, FString("%s", df->beam).c_str(),  0, aoi.first_photon, aoi.num_photons)
 {
     /* Join Hardcoded Reads */
@@ -490,7 +490,7 @@ void* Atl24DataFrame::subsettingThread (void* parm)
             df->surface_h.append(atl24.surface_h[current_photon]);
             df->x_atc.append(atl24.x_atc[current_photon]);
             df->y_atc.append(atl24.y_atc[current_photon]);
-            if(parms.atl24.compact)
+            if(!parms.atl24.compact)
             {
                 df->ellipse_h.append(atl24.ellipse_h[current_photon]);
                 df->invalid_kd.append(atl24.invalid_kd[current_photon]);

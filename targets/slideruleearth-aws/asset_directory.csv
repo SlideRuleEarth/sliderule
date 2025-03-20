@@ -30,6 +30,7 @@ atlas-local,                local,          file,       /data/ATLAS,            
 gedi-local,                 local,          file,       /data/GEDI,                                                             nil,                local,          local
 swot-local,                 nil,            file,       /data/SWOT,                                                             nil,                local,          local
 atlas-s3,                   iam-role,       s3,         sliderule/data/ATLAS,                                                   nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
+atl24-s3,                   iam-role,       s3,         sliderule/data/ATL24,                                                   nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
 nsidc-s3,                   nsidc-cloud,    cumulus,    nsidc-cumulus-prod-protected,                                           nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
 swot-s3,                    iam-role,       s3,         sliderule/data/SWOT,                                                    nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
 viirsj1-s3,                 iam-role,       s3,         sliderule/data/VIIRSJ1,                                                 nil,                us-west-2,      https://s3.us-west-2.amazonaws.com

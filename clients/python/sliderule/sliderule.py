@@ -679,7 +679,7 @@ def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude
 #
 # Simplify Polygon
 #
-def simplifypolygon(parm):
+def simplifypolygon(parm, tolerance):
     if "parms" not in parm:
         return
 
@@ -690,7 +690,6 @@ def simplifypolygon(parm):
     else:
         return
 
-    tolerance = 0.01
     raw_multi_polygon = [[(tuple([(c['lon'], c['lat']) for c in polygon]), [])]]
     shape = MultiPolygon(*raw_multi_polygon)
     buffered_shape = shape.buffer(tolerance)
@@ -834,6 +833,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
     global service_url, service_org, rethrow_exceptions
     rsps = {}
     headers = None
+    tolerance = 0.001
     # Build Callbacks
     for c in __callbacks:
         if c not in callbacks:
@@ -873,7 +873,8 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
             complete = True
         except RetryRequest as e:
             logger.info("Retry requested by {}: {}".format(url, e))
-            simplifypolygon(parm)
+            simplifypolygon(parm, tolerance)
+            tolerance *= 10
         except requests.exceptions.SSLError as e:
             logger.debug("Exception in request to {}: {}".format(url, e))
             if rethrow_exceptions:

@@ -1,12 +1,17 @@
 --
--- ENDPOINT:    /source/atl03x
+-- ENDPOINT:    /source/atl24x
 --
 
 local dataframe = require("dataframe")
 local json      = require("json")
 local rqst      = json.decode(arg[1])
-local parms     = icesat2.parms(rqst["parms"], rqst["key_space"], "icesat2", rqst["resource"])
+local parms     = icesat2.parms(rqst["parms"], rqst["key_space"], "atl24-s3", rqst["resource"])
 local channels  = 6 -- number of dataframes per resource
+
+if sys.ispublic() then -- verify on a private cluster
+    print(string.format("request <%s> forbidden on public cluster... exiting", rspq))
+    return
+end
 
 dataframe.proxy("atl24x", parms, rqst["parms"], rspq, channels, function(userlog)
     local dataframes = {}
@@ -19,6 +24,5 @@ dataframe.proxy("atl24x", parms, rqst["parms"], rspq, channels, function(userlog
             userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> on %s failed to create dataframe for beam %s", rspq, resource, beam))
         end
     end
-    -- return back to proxy
     return dataframes, runners
 end)

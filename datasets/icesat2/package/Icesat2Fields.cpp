@@ -127,7 +127,7 @@ void PhorealFields::fromLua (lua_State* L, int index)
  *----------------------------------------------------------------------------*/
 Atl24Fields::Atl24Fields():
     FieldDictionary({ {"compact",               &compact},
-                      {"atl24_class",           &class_ph},
+                      {"class_ph",              &class_ph},
                       {"confidence_threshold",  &confidence_threshold},
                       {"invalid_kd",            &invalid_kd},
                       {"invalid_wind_speed",    &invalid_wind_speed},
@@ -335,6 +335,7 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset
         {"fit",                 &fit},
         {"yapc",                &yapc},
         {"phoreal",             &phoreal},
+        {"atl24",               &atl24},
         {"maxi",                &maxIterations},
         {"H_min_win",           &minWindow},
         {"sigma_r_max",         &maxRobustDispersion},
