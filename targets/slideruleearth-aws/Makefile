@@ -286,7 +286,7 @@ tag: ## create version tag in this repository and release it on GitHub
 	git tag -a $(VERSION) -m "Version $(VERSION)"
 	git push --tags && git push
 	gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/web/rtd/release_notes/release_notes.html"
-	make -C $(ROOT)/clients/nodejs publish
+#	make -C $(ROOT)/clients/nodejs publish
 
 release: ## release a version of sliderule; needs VERSION
 	make tag
