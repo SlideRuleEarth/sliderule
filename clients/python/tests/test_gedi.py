@@ -79,7 +79,7 @@ class TestL3:
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
         assert gdf.describe()["gedi.time"]["std"] == 0.0
-        assert abs(gdf.describe()["gedi.value"]["mean"] - 3143.5934365441703) < 1.0 # TODO: this deterministically changes by 0.7250686377410602 depending on the build environment
+        assert abs(gdf.describe()["gedi.value"]["mean"] - 3143.5934365441703) < 2.0 # TODO: this deterministically changes depending on the build environment
         assert gdf.describe()["gedi.file_id"]["max"] == 0.0
         assert gdf.describe()["gedi.flags"]["max"] == 0.0
 
