@@ -133,7 +133,8 @@ Atl24Fields::Atl24Fields():
                       {"invalid_wind_speed",    &invalid_wind_speed},
                       {"low_confidence",        &low_confidence},
                       {"night",                 &night},
-                      {"sensor_depth_exceeded", &sensor_depth_exceeded} }),
+                      {"sensor_depth_exceeded", &sensor_depth_exceeded},
+                      {"anc_fields",            &anc_fields} }),
     provided(false)
 {
 }

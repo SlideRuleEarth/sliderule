@@ -145,7 +145,7 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
     df:receive(proxyq_name, rspq, expected_concurrent_channels, parms["rqst_timeout"] * 1000)
 
     -- Proxy Request
-    local endpoint_proxy = core.proxy(endpoint, resources, json.encode(rqst), parms["node_timeout"], locks_per_node, proxyq_name, true, parms["num_nodes"], 1)
+    local endpoint_proxy = core.proxy(endpoint, resources, json.encode(rqst), parms["node_timeout"], locks_per_node, proxyq_name, true, parms["num_nodes"])
 
     -- Receive DataFrame (blocks until dataframe complete or timeout)
     if not df:waiton(parms["rqst_timeout"] * 1000) then

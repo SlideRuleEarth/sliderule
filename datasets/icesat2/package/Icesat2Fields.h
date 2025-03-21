@@ -135,7 +135,7 @@ struct Atl24Fields: public FieldDictionary
     } flag_t;
 
     FieldElement<bool>                      compact {true};                     // reduce number of fields from atl24
-    FieldEnumeration<class_t,NUM_CLASSES>   class_ph {true, true, true};     // list of desired bathymetry classes of photons
+    FieldEnumeration<class_t,NUM_CLASSES>   class_ph {false, true, false};      // list of desired bathymetry classes of photons
     FieldElement<double>                    confidence_threshold {0.0};         // filter based on confidence
     FieldEnumeration<flag_t,NUM_FLAGS>      invalid_kd {true, true};            // filter on invalid kd flag
     FieldEnumeration<flag_t,NUM_FLAGS>      invalid_wind_speed {true, true};    // filter on invalid wind speed
