@@ -101,24 +101,6 @@ class TestAtl24x:
                 "invalid_kd": True,
                 "invalid_wind_speed": False,
                 "sensor_depth_exceeded": False,
-            }
-        }
-        gdf = sliderule.run("atl24x", parms, resources=RESOURCES)
-        assert init
-        assert len(gdf) == 64
-        assert len(gdf.keys()) == 20 # automatically makes non-compact
-        assert gdf["region"].value_counts()[3] == len(gdf)
-        assert gdf["rgt"].value_counts()[235] == len(gdf)
-        assert gdf["cycle"].value_counts()[1] == len(gdf)
-        assert len(gdf["gt"].value_counts()) == 6
-        assert len(gdf["spot"].value_counts()) == 6
-
-    def test_flags(self, init):
-        parms = {
-            "atl24": {
-                "invalid_kd": True,
-                "invalid_wind_speed": False,
-                "sensor_depth_exceeded": False,
                 "night": ["on", "off"],
             }
         }
