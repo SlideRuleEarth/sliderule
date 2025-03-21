@@ -171,7 +171,7 @@ StatData = {
 --
 MaxLocksPerNode = 3 -- must be coordinated with proxy.lua extension
 ScrubInterval = 1 -- second(s)
-MaxTimeout = 60000 -- second(s) # effectively there is no maximum due to atl24g
+MaxTimeout = 600 -- second(s)
 
 --
 -- API: /discovery/register

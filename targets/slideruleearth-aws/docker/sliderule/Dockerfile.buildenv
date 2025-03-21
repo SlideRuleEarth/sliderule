@@ -43,12 +43,12 @@ RUN git clone https://github.com/Tencent/rapidjson.git && \
 # install arrow dependency
 RUN git clone https://github.com/apache/arrow.git && \
     cd arrow && \
-    #    VERSION=`git describe --tags --abbrev=0` && \  ### version apache-arrow-16.0.0.dev is the latest tag and has a double-free memory bug
-    #    git checkout $VERSION && \                     ### and arrow does not have releases, only tags, so the last stable tag is 15.0.2 (as of 4/3/24)
-    git checkout apache-arrow-15.0.2 && \
+    #    VERSION=`git describe --tags --abbrev=0` && \  ### arrow does not have releases, only tags
+    #    git checkout $VERSION && \                     ### and often the latest tagged versions are not stable (e.g. *.dev tags)
+    git checkout apache-arrow-19.0.1 && \
     mkdir -p /build/arrow && \
     cd /build/arrow && \
-    cmake /arrow/cpp -DARROW_PARQUET=ON -DARROW_WITH_ZLIB=ON -DARROW_WITH_SNAPPY=ON -D ARROW_CSV=ON && \
+    cmake /arrow/cpp -DARROW_PARQUET=ON -DARROW_WITH_ZLIB=ON -DARROW_WITH_SNAPPY=ON -D ARROW_CSV=ON -DARROW_FILESYSTEM=ON && \
     make -j8 && \
     make install && \
     ldconfig
@@ -114,7 +114,7 @@ RUN git clone --recursive https://github.com/dmlc/xgboost && \
     make install && \
     ldconfig
 
-    # configure any new shared libraries
+# configure any new shared libraries
 RUN echo "/usr/local/lib64" > /etc/ld.so.conf.d/local.conf && ldconfig
 
 # support interactive mode

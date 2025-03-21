@@ -72,8 +72,6 @@ OPENOCEANSPP_DIR = $(ROOT)/../ut-ATL24-oopp
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 
 VERSION ?= latest
-VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
-MAJOR_VERSION := $(word 1,$(VERSION_TOKENS))
 ECR := 742127912612.dkr.ecr.us-west-2.amazonaws.com
 GHCR := ghcr.io/slideruleearth
 DOCKEROPTS ?=
@@ -202,11 +200,9 @@ oceaneyes-docker:
 	rsync -a $(MAGIC_PYTORCH_DIR)/* $(OCEANEYES_STAGE_DIR)/magic_pytorch_env
 	cd $(OCEANEYES_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/oceaneyes:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/oceaneyes:latest $(ECR)/oceaneyes:$(VERSION)
-	docker tag $(ECR)/oceaneyes:latest $(ECR)/oceaneyes:$(MAJOR_VERSION)
 
 oceaneyes-push:
 	docker push $(ECR)/oceaneyes:$(VERSION)
-	docker push $(ECR)/oceaneyes:$(MAJOR_VERSION)
 
 sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
@@ -214,13 +210,11 @@ sliderule-buildenv-docker: ## build sliderule build environment docker image
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
 	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(VERSION)
-	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
 	docker tag $(ECR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
 	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
 
 sliderule-buildenv-docker-push: ## push build environment docker image to registry
 	docker push $(ECR)/sliderule-buildenv:$(VERSION)
-	docker push $(ECR)/sliderule-buildenv:$(MAJOR_VERSION)
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SLIDERULE_STAGE_DIR)
@@ -233,7 +227,6 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 	cp docker/sliderule/config.json $(SLIDERULE_STAGE_DIR)
 	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(VERSION)
-	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(MAJOR_VERSION)
 
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
@@ -243,7 +236,6 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
 	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ilb:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(VERSION)
-	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(MAJOR_VERSION)
 
 proxy-docker: # make the reverse proxy docker image; needs VERSION
 	-rm -Rf $(PROXY_STAGE_DIR)
@@ -251,7 +243,6 @@ proxy-docker: # make the reverse proxy docker image; needs VERSION
 	cp docker/proxy/* $(PROXY_STAGE_DIR)
 	cd $(PROXY_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/proxy:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/proxy:latest $(ECR)/proxy:$(VERSION)
-	docker tag $(ECR)/proxy:latest $(ECR)/proxy:$(MAJOR_VERSION)
 
 monitor-docker: ## build monitor docker image; needs VERSION
 	-rm -Rf $(MONITOR_STAGE_DIR)
@@ -261,7 +252,6 @@ monitor-docker: ## build monitor docker image; needs VERSION
 	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
 	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:latest $(DOCKER_PLATFORM) .
 	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(VERSION)
-	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(MAJOR_VERSION)
 
 cluster-docker: ## build all cluster docker images
 	make sliderule-docker
@@ -271,16 +261,12 @@ cluster-docker: ## build all cluster docker images
 
 cluster-docker-push: ## push all cluster images to docker container registries
 	docker push $(ECR)/sliderule:$(VERSION)
-	docker push $(ECR)/sliderule:$(MAJOR_VERSION)
 	docker push $(ECR)/ilb:$(VERSION)
-	docker push $(ECR)/ilb:$(MAJOR_VERSION)
 	docker push $(ECR)/proxy:$(VERSION)
-	docker push $(ECR)/proxy:$(MAJOR_VERSION)
 	docker push $(ECR)/monitor:$(VERSION)
-	docker push $(ECR)/monitor:$(MAJOR_VERSION)
 
 cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
-	cd packer; packer build -var version=$(MAJOR_VERSION) -var-file=arm64_cpu.json sliderule-base.pkr.hcl
+	cd packer; packer build -var version=$(VERSION) -var-file=arm64_cpu.json sliderule-base.pkr.hcl
 
 cluster-upload-terraform: ## upload the Cluster terraform for provisioning system; needs VERSION
 	-rm -Rf $(TF_STAGE_DIR)
@@ -289,7 +275,6 @@ cluster-upload-terraform: ## upload the Cluster terraform for provisioning syste
 	cp terraform/cluster/.terraform.lock.hcl $(TF_STAGE_DIR)
 	printf "variable \"environment_version\" {\n  default = \"$(ENVVER)\"\n}" > $(TF_STAGE_DIR)/version.tf
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(VERSION)
-	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(MAJOR_VERSION)
 
 tag: ## create version tag in this repository and release it on GitHub
 	echo $(VERSION) > $(ROOT)/version.txt
@@ -305,8 +290,8 @@ tag: ## create version tag in this repository and release it on GitHub
 
 release: ## release a version of sliderule; needs VERSION
 	make tag
-#	make sliderule-buildenv-docker
-#	make sliderule-buildenv-docker-push
+	make sliderule-buildenv-docker
+	make sliderule-buildenv-docker-push
 	make cluster-docker
 	make cluster-docker-push
 	make cluster-build-packer

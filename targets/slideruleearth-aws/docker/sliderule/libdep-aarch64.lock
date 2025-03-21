@@ -1,7 +1,7 @@
-arrow: apache-arrow-15.0.2-0-ge03105efc
-gdal: v3.9.3-0-g501754d048
-geos: 3.13.0-0-gd7957246c
-libgeotiff: 1.7.3-0-gd2c72db
-PROJ: 9.5.0-0-g0a407325
-rapidjson: v1.1.0-756-g858451e5
-xgboost: v2.1.2-0-gf1990391e
+arrow: apache-arrow-19.0.1-0-g07b05dad1
+gdal: v3.10.2-0-ge31053b64d
+geos: 3.13.1-0-g431568d6e
+libgeotiff: 1.7.4-0-g96024f6
+PROJ: 9.6.0-0-gcd190c47
+rapidjson: v1.1.0-763-g24b5e7a8
+xgboost: v3.0.0rc1-0-g4bfd4bf60
