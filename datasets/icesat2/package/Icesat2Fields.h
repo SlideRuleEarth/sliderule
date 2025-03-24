@@ -277,8 +277,9 @@ class Icesat2Fields: public RequestFields
             STAGE_ATL08 = 1,    // use ATL08 photon classifications
             STAGE_YAPC = 2,     // yet another photon classifier
             STAGE_PHOREAL = 3,  // atl08 vegetation science
-            NUM_STAGES = 4
-        } atl06_stages_t;
+            STAGE_ATL24 = 4,    // atl24 vegetation science
+            NUM_STAGES = 5
+        } stages_t;
 
         /* Ancillary Field Types */
         typedef enum {
@@ -457,7 +458,7 @@ class Icesat2Fields: public RequestFields
         FieldElement<int>                                   region {-1};                                            // ATL03 granule region
         FieldElement<int>                                   version {-1};                                           // ATL03 granule version
 
-        bool stages[NUM_STAGES] = {false, false, false, false};
+        bool stages[NUM_STAGES] = {false, false, false, false, false};
 
     protected:
 

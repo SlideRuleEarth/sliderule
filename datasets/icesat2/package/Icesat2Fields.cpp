@@ -250,6 +250,12 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
         }
     }
 
+    // handle ATL24 options
+    if(atl24.provided)
+    {
+        stages[STAGE_ATL24] = true;
+    }
+
     // handle ATL08 fields
     if(!atl08Fields.values.empty())
     {

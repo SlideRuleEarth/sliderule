@@ -23,7 +23,7 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
         assert init
         assert len(gdf) == 488670
-        assert len(gdf.keys()) == 20
+        assert len(gdf.keys()) == 15
         assert gdf.spot.value_counts()[5] == 386717
         assert gdf.spot.value_counts()[6] == 101953
         assert gdf.cycle.describe()["mean"] == 1.0
@@ -38,7 +38,7 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
         assert init
         assert len(gdf) == 488670
-        assert len(gdf.keys()) == 20
+        assert len(gdf.keys()) == 17
         assert gdf.spot.value_counts()[5] == 386717
         assert gdf.spot.value_counts()[6] == 101953
         assert gdf.cycle.describe()["mean"] == 1.0

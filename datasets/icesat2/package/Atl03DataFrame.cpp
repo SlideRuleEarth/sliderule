@@ -65,6 +65,7 @@ int Atl03DataFrame::luaCreate (lua_State* L)
     Icesat2Fields* _parms = NULL;
     H5Object* _hdf03 = NULL;
     H5Object* _hdf08 = NULL;
+    H5Object* _hdf24 = NULL;
 
     try
     {
@@ -73,16 +74,18 @@ int Atl03DataFrame::luaCreate (lua_State* L)
         _parms = dynamic_cast<Icesat2Fields*>(getLuaObject(L, 2, Icesat2Fields::OBJECT_TYPE));
         _hdf03 = dynamic_cast<H5Object*>(getLuaObject(L, 3, H5Object::OBJECT_TYPE));
         _hdf08 = dynamic_cast<H5Object*>(getLuaObject(L, 4, H5Object::OBJECT_TYPE, true, NULL));
-        const char* outq_name = getLuaString(L, 5, true, NULL);
+        _hdf24 = dynamic_cast<H5Object*>(getLuaObject(L, 5, H5Object::OBJECT_TYPE, true, NULL));
+        const char* outq_name = getLuaString(L, 6, true, NULL);
 
         /* Return Reader Object */
-        return createLuaObject(L, new Atl03DataFrame(L, beam_str, _parms, _hdf03, _hdf08, outq_name));
+        return createLuaObject(L, new Atl03DataFrame(L, beam_str, _parms, _hdf03, _hdf08, _hdf24, outq_name));
     }
     catch(const RunTimeException& e)
     {
         if(_parms) _parms->releaseLuaObject();
         if(_hdf03) _hdf03->releaseLuaObject();
         if(_hdf08) _hdf08->releaseLuaObject();
+        if(_hdf24) _hdf08->releaseLuaObject();
         mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
         return returnLuaStatus(L, false);
     }
@@ -91,7 +94,7 @@ int Atl03DataFrame::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf03, H5Object* _hdf08, const char* outq_name):
+Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf03, H5Object* _hdf08, H5Object* _hdf24, const char* outq_name):
     GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE,
     {
         {"time_ns",             &time_ns},
@@ -100,16 +103,11 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"x_atc",               &x_atc},
         {"y_atc",               &y_atc},
         {"height",              &height},
-        {"relief",              &relief},
         {"solar_elevation",     &solar_elevation},
         {"background_rate",     &background_rate},
         {"spacecraft_velocity", &spacecraft_velocity},
-        {"landcover",           &landcover},
-        {"snowcover",           &snowcover},
-        {"atl08_class",         &atl08_class},
         {"atl03_cnf",           &atl03_cnf},
         {"quality_ph",          &quality_ph},
-        {"yapc_score",          &yapc_score},
         {"ph_index",            &ph_index},
     },
     {
@@ -132,10 +130,38 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     outQ(NULL),
     parms(_parms),
     hdf03(_hdf03),
-    hdf08(_hdf08)
+    hdf08(_hdf08),
+    hdf24(_hdf24)
 {
     assert(_parms);
     assert(_hdf03);
+
+    /* Set Optional PhoREAL Columns */
+    if(parms->stages[Icesat2Fields::STAGE_PHOREAL])
+    {
+        addColumn("relief",             &relief,            false);
+        addColumn("landcover",          &landcover,         false);
+        addColumn("snowcover",          &snowcover,         false);
+    }
+
+    /* Set Optional YAPC Columns */
+    if(parms->stages[Icesat2Fields::STAGE_YAPC])
+    {
+        addColumn("yapc_score",         &yapc_score,        false);
+    }
+
+    /* Set Optional ATL08 Columns */
+    if(parms->stages[Icesat2Fields::STAGE_ATL08])
+    {
+        addColumn("atl08_class",        &atl08_class,       false);
+    }
+
+    /* Set Optional ATL24 Columns */
+    if(parms->stages[Icesat2Fields::STAGE_ATL24])
+    {
+        addColumn("atl24_class",        &atl24_class,       false);
+        addColumn("atl24_confidence",   &atl24_confidence,  false);
+    }
 
     /* Set Signal Confidence Index */
     if(parms->surfaceType != Icesat2Fields::SRT_DYNAMIC)
@@ -653,6 +679,66 @@ uint8_t Atl03DataFrame::Atl08Class::operator[] (int index) const
 }
 
 /*----------------------------------------------------------------------------
+ * Atl24Class::Constructor
+ *----------------------------------------------------------------------------*/
+Atl03DataFrame::Atl24Class::Atl24Class (Atl03DataFrame* df):
+    enabled             (df->parms->stages[Icesat2Fields::STAGE_ATL24]),
+    classification      {NULL},
+    confidence          {NULL},
+    atl24_index_ph      (enabled ? df->hdf24 : NULL, FString("%s/%s", df->beam, "index_ph").c_str()),
+    atl24_class_ph      (enabled ? df->hdf24 : NULL, FString("%s/%s", df->beam, "class_ph").c_str()),
+    atl24_confidence    (enabled ? df->hdf24 : NULL, FString("%s/%s", df->beam, "confidence").c_str())
+{
+}
+
+/*----------------------------------------------------------------------------
+ * Atl24Class::Destructor
+ *----------------------------------------------------------------------------*/
+Atl03DataFrame::Atl24Class::~Atl24Class (void)
+{
+    delete [] classification;
+    delete [] confidence;
+}
+
+/*----------------------------------------------------------------------------
+ * Atl24Class::classify
+ *----------------------------------------------------------------------------*/
+void Atl03DataFrame::Atl24Class::classify (const Atl03DataFrame* df, const AreaOfInterest& aoi, const Atl03Data& atl03)
+{
+    /* Do Nothing If Not Enabled */
+    if(!enabled) return;
+
+    /* Wait for Reads to Complete */
+    atl24_index_ph.join(df->readTimeoutMs, true);
+    atl24_class_ph.join(df->readTimeoutMs, true);
+    atl24_confidence.join(df->readTimeoutMs, true);
+
+    /* Allocate ATL08 Classification Array */
+    const long num_photons = atl03.dist_ph_along.size;
+    classification = new uint8_t [num_photons];
+    confidence = new float [num_photons];
+
+    /* Initialize Classification */
+    memset(classification, Atl24Fields::UNCLASSIFIED, sizeof(uint8_t) * num_photons);
+
+    /* Go To First Photon in ATL24 Data */
+    long i = 0;
+    while(atl24_index_ph[i] < aoi.first_photon) i++;
+
+    /* Populate ATL24 Classifications */
+    for(long j = i; j < atl24_index_ph.size; j++)
+    {
+        long index = atl24_index_ph[j] - aoi.first_photon;
+        if(index < num_photons)
+        {
+            classification[index] = atl24_class_ph[j];
+            confidence[index] = atl24_confidence[j];
+        }
+        else break;
+    }
+}
+
+/*----------------------------------------------------------------------------
  * YapcScore::Constructor
  *----------------------------------------------------------------------------*/
 Atl03DataFrame::YapcScore::YapcScore (const Atl03DataFrame* df, const AreaOfInterest& aoi, const Atl03Data& atl03):
@@ -1015,6 +1101,9 @@ void* Atl03DataFrame::subsettingThread (void* parm)
         /* Start Reading ATL08 Data */
         Atl08Class atl08(df);
 
+        /* Start Reading ATL24 Data */
+        Atl24Class atl24(df);
+
         /* Subset to AreaOfInterest of Interest */
         const AreaOfInterest aoi(df);
 
@@ -1030,6 +1119,9 @@ void* Atl03DataFrame::subsettingThread (void* parm)
 
         /* Perform ATL08 Classification (if requested) */
         atl08.classify(df, aoi, atl03);
+
+        /* Perform ATL24 Classification (if requested) */
+        atl24.classify(df, aoi, atl03);
 
         /* Initialize Indices */
         int32_t current_photon = -1;
@@ -1162,6 +1254,30 @@ void* Atl03DataFrame::subsettingThread (void* parm)
                 snowcover_flag = atl08.snowcover[current_photon];
             }
 
+            /* Set ATL24 Fields */
+            Atl24Fields::class_t atl24_class = Atl24Fields::UNCLASSIFIED;
+            float atl24_confidence = 0.0;
+            if(atl24.classification)
+            {
+                atl24_class = static_cast<Atl24Fields::class_t>(atl24.classification[current_photon]);
+                if(atl24_class != Atl24Fields::UNCLASSIFIED)
+                {
+                    atl24_confidence = atl24.confidence[current_photon];
+                }
+
+                /* Filter on ATL24 Class */
+                if(!parms.atl24.class_ph[atl24_class])
+                {
+                    continue;
+                }
+
+                /* Filter on ATL24 Confidence */
+                if(parms.atl24.confidence_threshold.value > atl24_confidence)
+                {
+                    continue;
+                }
+            }
+
             /* Calculate Spacecraft Velocity */
             const int32_t sc_v_offset = current_segment * 3;
             const double sc_v1 = atl03.velocity_sc[sc_v_offset + 0];
@@ -1210,17 +1326,39 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             df->x_atc.append(atl03.dist_ph_along[current_photon] + atl03.segment_dist_x[current_segment]);
             df->y_atc.append(atl03.dist_ph_across[current_photon]);
             df->height.append(atl03.h_ph[current_photon]);
-            df->relief.append(relief);
             df->solar_elevation.append(atl03.solar_elevation[current_segment]);
             df->background_rate.append(background_rate);
-            df->landcover.append(landcover_flag);
-            df->snowcover.append(snowcover_flag);
-            df->atl08_class.append(static_cast<uint8_t>(atl08_class));
             df->atl03_cnf.append(atl03_cnf);
             df->quality_ph.append(static_cast<int8_t>(quality_ph));
-            df->yapc_score.append(yapc_score);
             df->spacecraft_velocity.append(spacecraft_velocity);
             df->ph_index.append(current_photon + aoi.first_photon);
+
+            /* Add Optional PhoREAL Data */
+            if(atl08.phoreal)
+            {
+                df->relief.append(relief);
+                df->landcover.append(landcover_flag);
+                df->snowcover.append(snowcover_flag);
+            }
+
+            /* Add Optional YAPC Data */
+            if(yapc.score)
+            {
+                df->yapc_score.append(yapc_score);
+            }
+
+            /* Add Optional ATL08 Data */
+            if(atl08.classification)
+            {
+                df->atl08_class.append(static_cast<uint8_t>(atl08_class));
+            }
+
+            /* Add Optional ATL24 Data */
+            if(atl24.classification)
+            {
+                df->atl24_class.append(static_cast<uint8_t>(atl24_class));
+                df->atl24_confidence.append(static_cast<uint8_t>(atl24_confidence));
+            }
 
             /* Add Ancillary Elements */
             if(atl03.anc_geo_data.length() > 0)     atl03.anc_geo_data.addToGDF(df, current_segment);

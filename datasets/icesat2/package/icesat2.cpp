@@ -125,6 +125,7 @@ int icesat2_open (lua_State *L)
     LuaEngine::setAttrInt(L, "ATL08",                       Icesat2Fields::STAGE_ATL08);
     LuaEngine::setAttrInt(L, "YAPC",                        Icesat2Fields::STAGE_YAPC);
     LuaEngine::setAttrInt(L, "PHOREAL",                     Icesat2Fields::STAGE_PHOREAL);
+    LuaEngine::setAttrInt(L, "ATL24",                       Icesat2Fields::STAGE_ATL24);
 
     return 1;
 }

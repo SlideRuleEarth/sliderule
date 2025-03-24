@@ -25,10 +25,16 @@ dataframe.proxy("atl03x", parms, rqst["parms"], rspq, channels, function(userlog
     if parms:stage(icesat2.ATL08) then
         atl08h5 = h5.object(parms["asset"], resource:gsub("ATL03", "ATL08"))
     end
+    -- atl24
+    local atl24h5 = nil
+    if parms:stage(icesat2.ATL24) then
+        local atl24_filename = resource:gsub("ATL03", "ATL24"):gsub(".h5", "_001_01.h5")
+        atl24h5 = h5.object("atl24-s3", atl24_filename) -- asset will change once NSIDC releases ATL24
+    end
     -- atl03x
     local atl03h5 = h5.object(parms["asset"], resource)
     for _, beam in ipairs(parms["beams"]) do
-        dataframes[beam] = icesat2.atl03x(beam, parms, atl03h5, atl08h5, rspq)
+        dataframes[beam] = icesat2.atl03x(beam, parms, atl03h5, atl08h5, atl24h5, rspq)
         if not dataframes[beam] then
             userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> on %s failed to create dataframe for beam %s", rspq, resource, beam))
         end

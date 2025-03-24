@@ -76,17 +76,20 @@ class Atl03DataFrame: public GeoDataFrame
         FieldColumn<double>         x_atc;                          // double[]: dist_ph_along + segment_distance
         FieldColumn<float>          y_atc;                          // float[]: dist_ph_across
         FieldColumn<float>          height;                         // float[]: h_ph
-        FieldColumn<float>          relief;                         // float[]: ATL08 ph_h
         FieldColumn<float>          solar_elevation;                // degrees
         FieldColumn<float>          background_rate;                // PE per second
         FieldColumn<float>          spacecraft_velocity;            // meters per second
+        FieldColumn<int8_t>         atl03_cnf;                      // ATL03 confidence level
+        FieldColumn<int8_t>         quality_ph;                     // ATL03 photon quality
+        FieldColumn<uint32_t>       ph_index;                       // ATL03 photon index for the track
+
+        FieldColumn<float>          relief;                         // float[]: ATL08 ph_h
         FieldColumn<uint8_t>        landcover;                      // ATL08 land cover flags
         FieldColumn<uint8_t>        snowcover;                      // ATL08 snow cover flags
         FieldColumn<uint8_t>        atl08_class;                    // ATL08 classification
-        FieldColumn<int8_t>         atl03_cnf;                      // ATL03 confidence level
-        FieldColumn<int8_t>         quality_ph;                     // ATL03 photon quality
         FieldColumn<uint8_t>        yapc_score;                     // YAPC weight of photon
-        FieldColumn<uint32_t>       ph_index;                       // ATL03 photon index for the track
+        FieldColumn<uint8_t>        atl24_class;                    // ATL24 classification
+        FieldColumn<float>          atl24_confidence;               // ATL24 classification confidence score
 
         /* DataFrame MetaData */
         FieldElement<uint8_t>       spot;                           // 1, 2, 3, 4, 5, 6
@@ -227,6 +230,29 @@ class Atl03DataFrame: public GeoDataFrame
                 uint8_t*            score; // [num_photons]
         };
 
+        /* Atl24 Classification Subclass */
+        class Atl24Class
+        {
+            public:
+
+                /* Methods */
+                explicit Atl24Class (Atl03DataFrame* df);
+                ~Atl24Class         (void);
+                void classify       (const Atl03DataFrame* df, const AreaOfInterest& aoi, const Atl03Data& atl03);
+
+                /* Class Data */
+                bool                enabled;
+
+                /* Generated Data */
+                uint8_t*            classification; // [num_photons]
+                float*              confidence;     // [num_photons]
+
+                /* Read Data */
+                H5Array<int32_t>    atl24_index_ph;
+                H5Array<int8_t>     atl24_class_ph;
+                H5Array<double>     atl24_confidence;
+        };
+
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
@@ -246,13 +272,16 @@ class Atl03DataFrame: public GeoDataFrame
         Icesat2Fields*      parms;
         H5Object*           hdf03;  // atl03 granule
         H5Object*           hdf08;  // atl08 granule
+        H5Object*           hdf24;  // atl24 granule
         okey_t              dfKey;
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-                        Atl03DataFrame      (lua_State* L, const char* beam_str, Icesat2Fields* _parms, H5Object* _hdf03, H5Object* _hdf08, const char* outq_name);
+                        Atl03DataFrame      (lua_State* L, const char* beam_str, Icesat2Fields* _parms,
+                                             H5Object* _hdf03, H5Object* _hdf08, H5Object* _hdf24,
+                                             const char* outq_name);
                         ~Atl03DataFrame     (void) override;
         okey_t          getKey              (void) const override;
         static void*    subsettingThread    (void* parm);

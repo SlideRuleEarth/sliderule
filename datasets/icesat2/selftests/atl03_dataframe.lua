@@ -51,7 +51,7 @@ runner.unittest("ATL03 DataFrame", function()
     })
 
     local atl03h5 = h5.object(asset_name, parms["resource"])
-    local atl03df = icesat2.atl03x("gt1l", parms, atl03h5, nil, core.EVENTQ)
+    local atl03df = icesat2.atl03x("gt1l", parms, atl03h5, nil, nil, core.EVENTQ)
 
     runner.assert(atl03df:waiton(30000), "timed out creating dataframe", true)
     runner.assert(atl03df:inerror() == false, "dataframe encountered error")
@@ -105,7 +105,7 @@ runner.unittest("ATL03 DataFrame - Ancillary Data", function()
 
     local atl03h5 = h5.object(asset_name, parms["resource"])
     local atl08h5 = h5.object(asset_name, "ATL08_20200304065203_10470605_006_01.h5")
-    local atl03df = icesat2.atl03x("gt2r", parms, atl03h5, atl08h5, core.EVENTQ)
+    local atl03df = icesat2.atl03x("gt2r", parms, atl03h5, atl08h5, nil, core.EVENTQ)
 
     runner.assert(atl03df:waiton(180000), "timed out creating dataframe", true)
     runner.assert(atl03df:inerror() == false, "dataframe encountered error")
@@ -164,7 +164,7 @@ runner.unittest("ATL06 Surface Fitter", function()
     })
 
     local atl03h5 = h5.object(asset_name, parms["resource"])
-    local df = icesat2.atl03x("gt1l", parms, atl03h5, nil, core.EVENTQ)
+    local df = icesat2.atl03x("gt1l", parms, atl03h5, nil, nil, core.EVENTQ)
     local fitter = icesat2.fit(parms)
 
     df:run(fitter)
