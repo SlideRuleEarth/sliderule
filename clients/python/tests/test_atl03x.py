@@ -118,3 +118,17 @@ class TestAtl03x:
         assert abs(gdf["mosaic.value"].mean() - 1498.9387766321345) < 0.0001
         assert gdf["mosaic.fileid"].mean() == 0
         assert gdf["mosaic.time"].mean() == 1358108640.0
+
+    def test_atl24(self, init):
+        resource = "ATL03_20181014001920_02350103_006_02.h5"
+        parms = {
+            "track": 1,
+            "cnf": 0,
+            "atl24": {"class_ph": ["bathymetry", "sea_surface"]}
+        }
+        gdf = sliderule.run("atl03x", parms, resources=[resource])
+        assert init
+        assert len(gdf) == 49554
+        assert len(gdf.keys()) == 17
+        assert gdf["atl24_class"].value_counts()[41] == 49523
+        assert abs(gdf["atl24_confidence"].max() - 0.8872309) < 0.0001, gdf["atl24_confidence"].max()

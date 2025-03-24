@@ -206,6 +206,7 @@ Atl03DataFrame::~Atl03DataFrame (void)
     parms->releaseLuaObject();
     hdf03->releaseLuaObject();
     if(hdf08) hdf08->releaseLuaObject();
+    if(hdf24) hdf24->releaseLuaObject();
 }
 
 /*----------------------------------------------------------------------------
@@ -731,8 +732,8 @@ void Atl03DataFrame::Atl24Class::classify (const Atl03DataFrame* df, const AreaO
         const long index = atl24_index_ph[j] - aoi.first_photon;
         if(index < num_photons)
         {
-            classification[index] = atl24_class_ph[j];
-            confidence[index] = atl24_confidence[j];
+            classification[index] = static_cast<uint8_t>(atl24_class_ph[j]);
+            confidence[index] = static_cast<float>(atl24_confidence[j]);
         }
         else break;
     }
@@ -1265,13 +1266,13 @@ void* Atl03DataFrame::subsettingThread (void* parm)
                     atl24_confidence = atl24.confidence[current_photon];
                 }
 
-                /* Filter on ATL24 Class */
+                /* Check ATL24 Class */
                 if(!parms.atl24.class_ph[atl24_class])
                 {
                     continue;
                 }
 
-                /* Filter on ATL24 Confidence */
+                /* Check ATL24 Confidence */
                 if(parms.atl24.confidence_threshold.value > atl24_confidence)
                 {
                     continue;
@@ -1357,7 +1358,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             if(atl24.classification)
             {
                 df->atl24_class.append(static_cast<uint8_t>(atl24_class));
-                df->atl24_confidence.append(static_cast<uint8_t>(atl24_confidence));
+                df->atl24_confidence.append(atl24_confidence);
             }
 
             /* Add Ancillary Elements */
