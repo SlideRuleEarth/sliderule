@@ -57,7 +57,7 @@ runner.unittest("ATL03 DataFrame", function()
     runner.assert(atl03df:inerror() == false, "dataframe encountered error")
 
     runner.assert(atl03df:numrows() == 5912939, string.format("incorrect number of rows: %d", atl03df:numrows()))
-    runner.assert(atl03df:numcols() == 17, string.format("incorrect number of columns: %d", atl03df:numcols()))
+    runner.assert(atl03df:numcols() == 12, string.format("incorrect number of columns: %d", atl03df:numcols()))
 
     check_expected({
         time_ns = 1583304724130344448,
@@ -66,16 +66,11 @@ runner.unittest("ATL03 DataFrame", function()
         x_atc = 11132842.088085,
         y_atc = 3271.814941,
         height = 2178.863281,
-        relief = 0.0,
         solar_elevation = -11.243111,
         background_rate = 33019.824219,
         spacecraft_velocity = 7096.781738,
-        landcover = 255,
-        snowcover = 255,
-        atl08_class = 4,
         atl03_cnf = 4,
         quality_ph = 0,
-        yapc_score = 0,
         ph_index = 112
     }, atl03df, 100, 0.00001)
 
@@ -111,7 +106,7 @@ runner.unittest("ATL03 DataFrame - Ancillary Data", function()
     runner.assert(atl03df:inerror() == false, "dataframe encountered error")
 
     runner.assert(atl03df:numrows() == 19522774, string.format("incorrect number of rows: %d", atl03df:numrows()))
-    runner.assert(atl03df:numcols() == 26, string.format("incorrect number of columns: %d", atl03df:numcols()))
+    runner.assert(atl03df:numcols() == 22, string.format("incorrect number of columns: %d", atl03df:numcols()))
 
     check_expected({
         time_ns = 1583304724455644416,
@@ -120,16 +115,12 @@ runner.unittest("ATL03 DataFrame - Ancillary Data", function()
         x_atc = 11132821.369912,
         y_atc = -52.097466,
         height = 2180.452148,
-        relief = 0.0,
         solar_elevation = -11.265012,
         background_rate = 10853.832031,
         spacecraft_velocity = 7096.785645,
-        landcover = 255,
-        snowcover = 255,
         atl08_class = 1,
         atl03_cnf = 4,
         quality_ph = 0,
-        yapc_score = 0,
         ph_index = 108,
         knn = 14,
         pitch = -0.049935,

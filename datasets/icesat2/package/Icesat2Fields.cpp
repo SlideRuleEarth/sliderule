@@ -1060,7 +1060,7 @@ void convertFromLua(lua_State* L, int index, Atl24Fields::class_t& v)
 {
     if(lua_isinteger(L, index))
     {
-        long c = LuaObject::getLuaInteger(L, index);
+        const long c = LuaObject::getLuaInteger(L, index);
         switch(c)
         {
             case 0:     v = Atl24Fields::UNCLASSIFIED;  break;
@@ -1145,13 +1145,13 @@ void convertFromLua(lua_State* L, int index, Atl24Fields::flag_t& v)
 {
     if(lua_isboolean(L, index))
     {
-        bool f = LuaObject::getLuaBoolean(L, index);
+        const bool f = LuaObject::getLuaBoolean(L, index);
         if(f)   v = Atl24Fields::FLAG_ON;
         else    v = Atl24Fields::FLAG_OFF;
     }
     else if(lua_isinteger(L, index))
     {
-        long f = LuaObject::getLuaInteger(L, index);
+        const long f = LuaObject::getLuaInteger(L, index);
         switch(f)
         {
             case 0:     v = Atl24Fields::FLAG_OFF;  break;

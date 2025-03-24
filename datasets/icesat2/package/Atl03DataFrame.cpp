@@ -728,7 +728,7 @@ void Atl03DataFrame::Atl24Class::classify (const Atl03DataFrame* df, const AreaO
     /* Populate ATL24 Classifications */
     for(long j = i; j < atl24_index_ph.size; j++)
     {
-        long index = atl24_index_ph[j] - aoi.first_photon;
+        const long index = atl24_index_ph[j] - aoi.first_photon;
         if(index < num_photons)
         {
             classification[index] = atl24_class_ph[j];
