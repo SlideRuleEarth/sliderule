@@ -20,6 +20,13 @@ RUN apt-get update && \
 RUN gem install webrick
 RUN gem install jekyll bundler
 
+# Install SlideRule Client Build Dependencies
+RUN pip3 install shapely numpy
+
+# Install RTD Dependencies
+RUN pip3 install 'sphinx>=5.0' docutils sphinx_markdown_tables sphinx_panels sphinx_rtd_theme
+RUN pip3 install recommonmark
+
 # Build Jekyll Website
 COPY jekyll /jekyll
 RUN chmod -R 777 /jekyll
@@ -27,16 +34,9 @@ RUN cd /jekyll && bundle install
 RUN cd /jekyll && bundle exec jekyll build
 RUN chmod -R 744 /jekyll
 
-# Install SlideRule Client Build Dependencies
-RUN pip3 install Cython shapely==1.8.4 numpy fiona
-
 # Install SlideRule Python Client
 COPY sliderule/clients/python /sliderule/clients/python
 RUN cd /sliderule/clients/python && pip3 install .
-
-# Install RTD Dependencies
-RUN pip3 install 'sphinx>=5.0' docutils sphinx_markdown_tables sphinx_panels sphinx_rtd_theme
-RUN pip3 install recommonmark
 
 # Build RTD Website
 COPY rtd /rtd
