@@ -14,3 +14,12 @@ output "monitor_state" {
 output "monitor_id" {
     value = aws_instance.monitor.id
 }
+output "spot_max_price_out" {
+    value = var.spot_max_price
+}
+output "spot_allocation_stragtegy_out" {
+    value = var.spot_allocation_strategy
+}
+output "availability_zone_out" {
+    value = var.availability_zone
+}
