@@ -1,8 +1,8 @@
 main:
   - title: "Documentation"
     url: /rtd/
-  - title: "Demo"
-    url: https://demo.slideruleearth.io
+  - title: "Web Client"
+    url: https://client.slideruleearth.io
   - title: "Accounts"
     url: https://ps.slideruleearth.io
   - title: "Contact Us"

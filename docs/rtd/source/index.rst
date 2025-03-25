@@ -25,7 +25,7 @@ Where To Begin
     :img-top-cls: pl-2 pr-2 pt-2 pb-2
 
     ---
-    :img-top: assets/voila_demo.png
+    :img-top: assets/sliderule_web_client.png
 
     **SlideRule Demo**
     ^^^^^^^^^^^^^^^^^^
