@@ -61,4 +61,4 @@ jobs:
     - name: Run test
       run: |
        cd sliderule/targets/slideruleearth-aws
-       make selftest TEST=../../scripts/selftests/test_runner.lua
+       make selftest TEST=../../targets/slideruleearth-aws/test_runner.lua
