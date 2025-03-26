@@ -27,7 +27,7 @@ dataframe.proxy("atl03x", parms, rqst["parms"], rspq, channels, function(userlog
     end
     -- atl24
     local atl24h5 = nil
-    if parms:stage(icesat2.ATL24) then
+    if parms:stage(icesat2.ATL24) and not sys.ispublic() then -- will allow public once NSIDC releases ATL24
         local atl24_filename = resource:gsub("ATL03", "ATL24"):gsub(".h5", "_001_01.h5")
         atl24h5 = h5.object("atl24-s3", atl24_filename) -- asset will change once NSIDC releases ATL24
     end

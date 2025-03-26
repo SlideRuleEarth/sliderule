@@ -2,7 +2,8 @@ local runner = require("test_executive")
 local glb = require("global")
 
 -- Configure Running In Cloud --
-if core.servicecheck("http://169.254.169.254/latest/meta-data/", 1) ~= 503 then
+local aws_rsps_code = core.servicecheck("http://169.254.169.254/latest/meta-data/", 1)
+if aws_rsps_code >= 200 and aws_rsps_code < 300 then
     sys.setincloud(true)
 end
 

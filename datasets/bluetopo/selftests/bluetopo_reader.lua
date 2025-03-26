@@ -29,7 +29,7 @@ local elevation_tolerance = 0.01;
 
 print(string.format("\n--------------------------------\nTest: BlueTopo Correct Values\n--------------------------------"))
 local dem = geo.raster(geo.parms({ asset = "bluetopo-bathy", algorithm = "NearestNeighbour", bands = {"Elevation", "Uncertainty", "Contributor"}, sort_by_index = true }))
-runner.assert(dem ~= nil)
+runner.assert(dem ~= nil, "failed to create bluetopo-bathy raster", true)
 
 for j, lon in ipairs(lons) do
     local lat = lats[j]

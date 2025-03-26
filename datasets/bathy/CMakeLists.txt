@@ -79,15 +79,7 @@ install (
 
 install (
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl24g.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl24v.lua
     DESTINATION
         ${CONFDIR}/api
-)
-
-install (
-    FILES
-        ${CMAKE_CURRENT_LIST_DIR}/extensions/atl24_init.lua
-    DESTINATION
-        ${CONFDIR}
 )
