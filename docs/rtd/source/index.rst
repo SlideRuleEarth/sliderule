@@ -12,10 +12,16 @@ SlideRule |LatestRelease|
 :Conda: https://anaconda.org/conda-forge/sliderule
 :Node.js: https://www.npmjs.com/package/@sliderule/sliderule
 
-SlideRule is a web service for on-demand science data processing, which provides researchers and other Earth science data systems low-latency access to customized data products using processing parameters supplied at the time of the request. SlideRule runs in AWS us-west-2 and has access to ICESat-2, GEDI, Landsat, ArcticDEM, REMA, and a growing list of other datasets stored in S3.
+This documentation is intended to explain how to use `SlideRule` and its accompanying Python client. SlideRule is a web service for on-demand science data processing, which provides researchers and other Earth science data systems low-latency access to customized data products using processing parameters supplied at the time of the request. SlideRule runs in AWS us-west-2 and has access to ICESat-2, GEDI, Landsat, ArcticDEM, REMA, and a growing list of other datasets stored in S3.
+
+While `SlideRule` can be accessed by any http client (e.g. curl) by making GET and POST requests to the `SlideRule` service,
+the python packages in this repository provide higher level access to SlideRule by hiding the GET and POST requests inside python function
+calls that accept basic python variable types (e.g. dictionaries, lists, numbers), and returns GeoDataFrames.
+
+What Is It
+----------
 
 "Using SlideRule" typically means running a Python script you've developed to analyze Earth science data, and in that script calling functions in the **sliderule** Python package to make processing requests to SlideRule web services to perform some of the data intensive parts of your analysis.  Most of the documentation and examples we provide are focused on this use-case.  We do provide other means of interacting with SlideRule, most notably the web client at https://client.slideruleearth.io, both those aspects of the project are less documented.
-
 
 Where To Begin
 --------------
@@ -28,13 +34,13 @@ Where To Begin
     ---
     :img-top: assets/sliderule_web_client.png
 
-    **SlideRule Demo**
+    **Web Client**
     ^^^^^^^^^^^^^^^^^^
 
-    Try out an interactive widgets demo.
+    Try out an interactive web client.
 
-    .. link-button:: https://demo.slideruleearth.io
-        :text: Run Demo
+    .. link-button:: https://client.slideruleearth.io
+        :text: Go To Client
         :classes: stretched-link btn-outline-primary btn-block
 
     ---
@@ -76,34 +82,29 @@ Project Information
 The SlideRule project is funded by NASA's ICESat-2 program and is led by the University of Washington in collaboration with NASA Goddard Space Flight Center.  The first public release of SlideRule occurred in April 2021.  Since then we've continued to add new services, new algorithms, and new datasets, while also making improvements to our processing architecture.  Looking to the future, we hope to make SlideRule an indispensable component in the analysis of a broad array of Earth Science datasets that help us better understand the planet we call home.
 
 
-
 .. toctree::
    :hidden:
    :maxdepth: 1
    :caption: Getting Started
 
-   getting_started/Getting-Started.rst
    getting_started/Install.rst
+   getting_started/Getting-Started.rst
    getting_started/Examples.rst
-   getting_started/Project-Map.rst
+   getting_started/Contributing.rst
+   getting_started/License.rst
 
 .. toctree::
    :hidden:
    :maxdepth: 1
    :caption: Users Guide
 
-   user_guide/Background.rst
    user_guide/SlideRule.rst
    user_guide/ICESat-2.rst
    user_guide/GEDI.rst
-   user_guide/H5Coro.md
    user_guide/GeoParquet.md
    user_guide/GeoRaster.md
    user_guide/Private-Clusters.md
-   user_guide/Under-the-Hood.rst
-   user_guide/NASA-Earthdata.rst
-   user_guide/Contributing.rst
-   user_guide/License.rst
+   user_guide/H5Coro.md
 
 .. toctree::
    :hidden:
@@ -123,12 +124,24 @@ The SlideRule project is funded by NASA's ICESat-2 program and is led by the Uni
    :maxdepth: 1
    :caption: Tutorials
 
-   tutorials/user.rst
-   tutorials/developer.rst
+   tutorials/tutorials.rst
 
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: Release Notes
+   :caption: Developers Guide
 
-   release_notes/release_notes.rst
+   developer_guide/Project-Map.rst
+   developer_guide/Under-the-Hood.rst
+   developer_guide/how_tos/how_tos.rst
+   developer_guide/articles/articles.rst
+   developer_guide/design/design.rst
+   developer_guide/release_notes/release_notes.rst
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Background
+
+   background/ICESat-2.rst
+   background/NASA-Earthdata.rst

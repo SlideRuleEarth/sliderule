@@ -1,8 +1,8 @@
 ==========
-Background
+ICESat-2
 ==========
 
-ICESat-2
+Mission
 ########
 
 The `Ice Cloud and land Elevation Satellite-2 (ICESat-2) <https://icesat-2.gsfc.nasa.gov/>`_ is NASA's latest satellite laser altimeter.

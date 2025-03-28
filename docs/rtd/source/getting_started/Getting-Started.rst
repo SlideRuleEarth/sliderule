@@ -2,32 +2,14 @@
 Getting Started
 ===============
 
-This documentation is intended to explain how to use `SlideRule`, an on-demand science data processing service, and its accompanying Python client.
-`SlideRule` is hosted at ``slideruleearth.io`` and responds to REST API calls to process and return science results.
-The software was originally developed to support science applications for `NASA's Ice Cloud and land Elevation Satellite-2 (ICESat-2)`__,
-but has the goal of demonstrating a new paradigm for providing science data products to researchers.
-Future enhancements to SlideRule include adding datasets from new missions and including algorithms for different types of science applications.
-
-.. __: https://icesat-2.gsfc.nasa.gov/
-
-While `SlideRule` can be accessed by any http client (e.g. curl) by making GET and POST requests to the `SlideRule` service,
-the python packages in this repository provide higher level access to SlideRule by hiding the GET and POST requests inside python function
-calls that accept and return basic python variable types (e.g. dictionaries, lists, numbers), and GeoDataFrames.
-
-Installation
-############
-
 If you haven't already, install the SlideRule Python Client using the `instructions <Install.html>`_ provided.
-
-Basic Usage
-###########
 
 The `SlideRule` service provides a number of services which allow a user to process ICESat-2 and HDF5 data. For example, the ``icesat2.atl06p`` python function makes a request to the **atl06** service and returns calculated segment elevations from ATL03 data within a geospatial region.
 
 .. code-block:: bash
 
     # import (1)
-    from sliderule import icesat2
+    from sliderule import sliderule
 
     # region of interest (2)
     grand_mesa = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
