@@ -29,7 +29,7 @@ with open('../../sliderule/clients/python/version.txt') as fh:
     version = release[1:]
 
 rst_prolog = """
-.. |LatestRelease| replace:: {releasestr}, http://slideruleearth.io/web/rtd/release_notes/release_notes.html
+.. |LatestRelease| replace:: {releasestr}
 """.format(
 releasestr = release,
 )

@@ -1,19 +1,20 @@
 ================
-SlideRule
+SlideRule |LatestRelease|
 ================
 
-**Process Earth science datasets in the cloud through REST API calls to SlideRule web services.**
+**Process Earth science datasets in the cloud through API calls to SlideRule web services.**
 
-:Latest Version: |LatestRelease|
 :GitHub: https://github.com/SlideRuleEarth/sliderule
-:Web: https://slideruleearth.io/web/
+:Documentation: https://slideruleearth.io/web/
+:Web Client: https://client.slideruleearth.io/
+:Provisioning System: https://ps.slideruleearth.io/
 :PyPi: https://pypi.org/project/sliderule/
 :Conda: https://anaconda.org/conda-forge/sliderule
 :Node.js: https://www.npmjs.com/package/@sliderule/sliderule
 
-SlideRule is a web service for on-demand science data processing, which provides researchers and other Earth science data systems low-latency access to customized data products using processing parameters supplied at the time of the request. SlideRule runs in AWS us-west-2 and has access to ICESat-2, GEDI, Landsat, ArcticDEM, REMA, and other datasets stored in S3 (see `Assets <user_guide/SlideRule.html#assets>`_ for a full list).
+SlideRule is a web service for on-demand science data processing, which provides researchers and other Earth science data systems low-latency access to customized data products using processing parameters supplied at the time of the request. SlideRule runs in AWS us-west-2 and has access to ICESat-2, GEDI, Landsat, ArcticDEM, REMA, and a growing list of other datasets stored in S3.
 
-"Using SlideRule" typically means running a Python script you've developed to analyze Earth science data, and in that script calling functions in the **sliderule** Python package to make processing requests to SlideRule web services to perform some of the data intensive parts of your analysis.  Most of the documentation and examples we provide are focused on this use-case.  We do provide other means of interacting with SlideRule (most notably the current demo and future web client), but those features are still under development and documentation for them is sparse.
+"Using SlideRule" typically means running a Python script you've developed to analyze Earth science data, and in that script calling functions in the **sliderule** Python package to make processing requests to SlideRule web services to perform some of the data intensive parts of your analysis.  Most of the documentation and examples we provide are focused on this use-case.  We do provide other means of interacting with SlideRule, most notably the web client at https://client.slideruleearth.io, both those aspects of the project are less documented.
 
 
 Where To Begin
@@ -81,9 +82,8 @@ The SlideRule project is funded by NASA's ICESat-2 program and is led by the Uni
    :maxdepth: 1
    :caption: Getting Started
 
-   getting_started/SlideRule.rst
-   getting_started/Install.rst
    getting_started/Getting-Started.rst
+   getting_started/Install.rst
    getting_started/Examples.rst
    getting_started/Project-Map.rst
 
