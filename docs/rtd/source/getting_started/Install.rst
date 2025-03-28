@@ -61,7 +61,7 @@ For developers and contributors, to get the latest unreleased version of the Pyt
 If cloning, please consider forking into your own account before cloning onto your system.
 
 .. warning::
-    The `main` branch is used to match the public cluster running at `slideruleearth.io`.  Private clusters may be running versions of the server code provided in other branches or even forks of the repository.
+    The `main` branch is used for the public cluster running at `slideruleearth.io`.  Private clusters may be running versions of the server code provided in other branches or even forks of the repository.
 
 To clone the repository:
 

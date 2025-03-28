@@ -39,9 +39,10 @@ releasestr = release,
 # -- General configuration ---------------------------------------------------
 
 # Markdown Support
-from recommonmark.parser import CommonMarkParser
-source_parsers = {'.md': CommonMarkParser}
-source_suffix = ['.rst', '.md']
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -51,9 +52,9 @@ extensions = [
     'sphinx.ext.graphviz',
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
-    'recommonmark',
     'sphinx_markdown_tables',
     "sphinx_panels",
+    "myst_parser"
 ]
 
 # Add any paths that contain templates here, relative to this directory.
