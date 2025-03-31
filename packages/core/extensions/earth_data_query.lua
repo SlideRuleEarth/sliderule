@@ -142,7 +142,7 @@ local function cmr (parms, poly, with_meta)
     local dataset = DATASETS[short_name] or {}
     local cmr_parms = parms["cmr"] or {}
     local provider = dataset["provider"] or error("unable to determine provider for query")
-    local version = parms["version"] or dataset["version"]
+    local version = cmr_parms["version"] or dataset["version"]
     local polygon = cmr_parms["polygon"] or parms["poly"] or poly
     local t0 = parms["t0"] or '2018-01-01T00:00:00Z'
     local t1 = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
