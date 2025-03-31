@@ -67,6 +67,7 @@ LuaEngine::LuaEngine(const char* name, int lua_argc, char lua_argv[][MAX_LUA_ARG
 {
     /* Initialize Parameters */
     engineId        = engineIds++;
+    engineInError   = false;
     mode            = PROTECTED_MODE;
     traceId         = start_trace(CRITICAL, trace_id, "lua_engine", "{\"name\":\"%s\"}", name);
     dInfo           = NULL;
@@ -105,6 +106,7 @@ LuaEngine::LuaEngine(const char* script, const char* arg, uint32_t trace_id, lua
 {
     /* Initialize Parameters */
     engineId        = engineIds++;
+    engineInError   = false;
     mode            = DIRECT_MODE;
     traceId         = start_trace(CRITICAL, trace_id, "lua_engine", "{\"script\":\"%s\"}", script);
     pInfo           = NULL;
@@ -436,7 +438,14 @@ bool LuaEngine::executeEngine(int timeout_ms)
                 }
             }
 
-            status = !engineActive; // completion is true if engine no longer active
+            /*
+             * completion is true if engine no longer active
+             * and if there are no errors
+             */
+            status = (!engineActive) && (!engineInError);
+
+            /* Reset Error State */
+            engineInError = false;
         }
     }
     engineSignal.unlock();
@@ -565,6 +574,7 @@ void* LuaEngine::protectedThread (void* parm)
         if (status != LUA_OK || result == 0)
         {
             mlog(CRITICAL, "%s exited with error", p->argc > 0 ? p->argv[0] : "lua script");
+            p->engine->engineInError = true;
         }
         else
         {
@@ -607,6 +617,7 @@ void* LuaEngine::directThread (void* parm)
         /* Log Error */
         if (status != LUA_OK)
         {
+            d->engine->engineInError = true;
             d->engine->logErrorMessage();
         }
 

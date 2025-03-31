@@ -24,37 +24,43 @@ The SlideRule Python Client helps make the above steps a lot easier by providing
 4. The Python client handles the HTTPS connection to the SlideRule servers as well as any necessary authentication requests to the SlideRule Provisioning System when private clusters are being used.
 5. The Python client parses the response data from SlideRule and presents a standard GeoDataFrame result back to the user.
 
-## 3. Processing Requests
+## 3. Processing Request
 
-A SlideRule processing request has four main components, which will be gone over in detail in the sections below:
+A SlideRule processing request has four main components, which we will go over in detail in the sections below:
 * endpoint
 * parameters
 * area of interest
 * resources
 
-These four items are encoded into a typical HTTP request to the Sliderule servers.  The SlideRule servers then respond by executing the specified endpoint with the given parameters over the area of interest for each of the supplied resources.  The result is the streamed back to the user as an HTTP response.
+These four components are encoded into a typical HTTP request to the Sliderule servers.  The SlideRule servers then respond by executing the specified __endpoint__ with the given __parameters__ over the __area of interest__ for each of the supplied __resources__.  The result is the streamed back to the user as an HTTP response.
 
-## 4. Endpoint
+### Endpoint
 
 Endpoints in SlideRule are Lua scripts that define a processing function that the user wants to execute.  Technically, each endpoint is the last path item in the url when making an HTTP request to SlideRule.  For example, if a user makes a processing request for the `atl06s` endpoint, that translates into a `POST https://sliderule.slideruleearth.io/source/atl06s` and the execution of the `atl06s.lua` script within the SlideRule server-side system.
 
-There are many endpoints in SlideRule (and more are added as new functionality is developed), most important endpoints have a corresponding function in the Python SlideRule Client that hides which endpoint is being called.  For example, the `icesat2.atl06p` function performs a __POST__ to the `atl06p` endpoint, but that is taken care of automatically by the Python code.  Another example is the `definition` endpoint which provides low-level information about the response structures being returned to the user.  In all cases, the Python SlideRule Client will issue requests to that endpoint behind the scenes when it needs information on how to interpret a response, and the user never needs to know about it.
+There are many endpoints in SlideRule (and more are added as new functionality is developed), but most important endpoints have a corresponding function in the Python SlideRule Client that hides which endpoint is being called.  For example, the `icesat2.atl06p` function performs a __POST__ to the __atl06p__ endpoint, which is taken care of automatically by the Python code.  Another example is the `definition` endpoint which provides low-level information about the response structures being returned to the user.  In all cases, the Python SlideRule Client will issue requests to that endpoint behind the scenes when it needs information on how to interpret a response, and the user never needs to know about it.
 
-But there are cases when a user does supply the name of the endpoint in a processing request - the two cases are when the `sliderule.source` and the `sliderule.run` functions are used.  The `sliderule.source` function provides the ability to call any endpoint directly.  The `sliderule.run` function is a high-level interface for making SlideRule requests that work on dataframes and always return a GeoDataFrame; because all of those endpoints are so similar, instead of having a separate Python function for each one, there is one Python function and the first parameter is a string specifying which endpoint to call (but note, unlike the `sliderule.source` function, the `sliderule.run` function only works with some endpoints).
+But there are cases when a user does want to supply the name of the endpoint explicitly in a processing request, and for that there are two Python functions provided: `sliderule.source` and `sliderule.run`.  The `sliderule.source` function provides the ability to call any endpoint directly.  The `sliderule.run` function is a high-level interface for making SlideRule requests that work on dataframes and always return a GeoDataFrame; because all of those endpoints are so similar, instead of having a separate Python function for each one, there is one Python function and the first parameter is a string specifying which endpoint to call (but note, unlike the `sliderule.source` function, the `sliderule.run` function only works with some endpoints).
 
 :::{note}
-As a fun exercise, if you have access to a bash shell and cURL, you can issue the following command at your shell prompt to get the current version information from the SlideRule public cluster.
+As a fun exercise, if you have access to a bash shell and cURL, you can execute the `version` endpoint by issuing the following command at your shell prompt;  it will return the current version of the SlideRule software from the public cluster.
 ```bash
 curl https://sliderule.slideruleearth.io/source/version
 ```
 :::
 
+### Parameters
 
-## 5. Parameters
+SlideRule is an ___on-demand___ science data processing system, which means that the processing steps performed on the data is executed only when a user makes a request.  Because of this, the user can control how that processing is performed by supplying parameters in their request that enable/disable, configure, and specify how and what processing should occur.
 
-## 6. Area of Interest
+In the underlying HTTP request, parameters are json objects supplied in the body of the POST request.  At the Python Client level, parameters are passed to SlideRule Python APIs via the `parm` argument, and supplied as a dictionary.  In the next section on [basic usage](./basic_usage.html), we will discuss the base set of parameters available for all requests.  But for now, it is important to understand that given the endpoint being called, different parameters are available that define how that endpoint executes.  In that way, parameters build on top of each other.
 
-## 7. Resources
+For example, a call to the `atl06p` endpoint will have parameters specific to the __atl06__ processing algorithm (e.g. `maxi` defines the maximum iterations the least-sequares fitting algorithm will run), it may also include parameters available for all __ICESat-2__ endpoints (e.g. `res` stands for resolution and specifies the along-track distance of photons to aggregate for each result posting), and finally there may be parameters available to all endpoints (e.g. `resources` defines the list of granules or tiles to be processed).
+
+
+### Area of Interest
+
+### Resources
 
 When accessing SlideRule as a service, there are times when you need to specify which source datasets it should use when processing the data.
 A source dataset is called an **asset** and is specified by its name as a string.  SlideRule's asset directory is a list of datasets that SlideRule
@@ -90,3 +96,5 @@ the ones marked as rasters can be sampled; the ones that are not marked as raste
     rema-strips, x, PGC Reference Elevation Model of Antarctica Strips, pgc-opendata-dems
     atlas-s3, , Internal s3-bucket staged ICESat-2 Standard Data Products: ATL03/ATL06/ATL08, sliderule
     nsidc-s3, , Alias for icesat2 asset, nsidc-cumulus-prod-protected
+
+## 4. Processing Response

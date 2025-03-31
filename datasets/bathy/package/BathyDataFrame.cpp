@@ -124,7 +124,6 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"max_signal_conf",     &max_signal_conf},
         {"quality_ph",          &quality_ph},
         {"class_ph",            &class_ph},
-        {"predictions",         &predictions},
         {"geoid_corr_h",        &geoid_corr_h},
         // temporary columns for python code
         {"refracted_dZ",        &refracted_dZ},
@@ -734,7 +733,6 @@ void* BathyDataFrame::subsettingThread (void* parm)
         dataframe.surface_h.initialize(dataframe.length(), 0.0); // populated by sea surface finder
         dataframe.sigma_thu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
         dataframe.sigma_tvu.initialize(dataframe.length(), 0.0); // populated by uncertainty calculation
-        dataframe.predictions.initialize(dataframe.length(), {0, 0, 0, 0, 0, 0, 0, 0, 0});
 
         /* Initialize Temporary Columns to Support Python Code */
         dataframe.refracted_dZ.initialize(dataframe.length(), 0.0);

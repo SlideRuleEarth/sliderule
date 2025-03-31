@@ -77,26 +77,6 @@ int BathyFields::luaCreate (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaCreate - classifier(<index>)
- *----------------------------------------------------------------------------*/
-int BathyFields::luaClassifier (lua_State* L)
-{
-    try
-    {
-        BathyFields* lua_obj = dynamic_cast<BathyFields*>(getLuaSelf(L, 1));
-        const classifier_t classifier = static_cast<classifier_t>(getLuaInteger(L, 2));
-        lua_pushboolean(L, lua_obj->classifiers[classifier]);
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error getting classifier state: %s", e.what());
-        lua_pushboolean(L, false);
-    }
-
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
 void BathyFields::fromLua (lua_State* L, int index)
@@ -117,108 +97,9 @@ BathyFields::BathyFields(lua_State* L, uint64_t key_space, const char* asset_nam
           {"ph_in_extent",        &phInExtent},
           {"generate_ndwi",       &generateNdwi},
           {"use_bathy_mask",      &useBathyMask},
-          {"classifiers",         &classifiers},
           {"spots",               &spots},
           {"surface",             &surface},
           {"refraction",          &refraction},
-          {"uncertainty",         &uncertainty},
-          {"coastnet",            &coastnet},
-          {"qtrees",              &qtrees},
-          {"openoceanspp",        &openoceanspp},
-          {"coastnet_version",    &coastnetVersion},
-          {"qtrees_version",      &qtreesVersion},
-          {"openoceanspp_version",&openoceansppVersion} })
+          {"uncertainty",         &uncertainty} })
 {
-    LuaEngine::setAttrFunc(L, "classifier", luaClassifier);
-}
-
-/******************************************************************************
- * FUNCTIONS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * convertToJson - classifier_t
- *----------------------------------------------------------------------------*/
-string convertToJson(const BathyFields::classifier_t& v)
-{
-    switch(v)
-    {
-        case BathyFields::QTREES:           return FString("\"%s\"", BathyFields::QTREES_NAME).c_str();
-        case BathyFields::COASTNET:         return FString("\"%s\"", BathyFields::COASTNET_NAME).c_str();
-        case BathyFields::OPENOCEANSPP:     return FString("\"%s\"", BathyFields::OPENOCEANSPP_NAME).c_str();
-        case BathyFields::MEDIANFILTER:     return FString("\"%s\"", BathyFields::MEDIANFILTER_NAME).c_str();
-        case BathyFields::CSHELPH:          return FString("\"%s\"", BathyFields::CSHELPH_NAME).c_str();
-        case BathyFields::BATHYPATHFINDER:  return FString("\"%s\"", BathyFields::BATHYPATHFINDER_NAME).c_str();
-        case BathyFields::POINTNET:         return FString("\"%s\"", BathyFields::POINTNET_NAME).c_str();
-        case BathyFields::OPENOCEANS:       return FString("\"%s\"", BathyFields::OPENOCEANS_NAME).c_str();
-        case BathyFields::ENSEMBLE:         return FString("\"%s\"", BathyFields::ENSEMBLE_NAME).c_str();
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid classifier: %d", static_cast<int>(v));
-    }
-}
-
-/*----------------------------------------------------------------------------
- * convertToLua - classifier_t
- *----------------------------------------------------------------------------*/
-int convertToLua(lua_State* L, const BathyFields::classifier_t& v)
-{
-    switch(v)
-    {
-        case BathyFields::QTREES:           lua_pushstring(L, BathyFields::QTREES_NAME);            break;
-        case BathyFields::COASTNET:         lua_pushstring(L, BathyFields::COASTNET_NAME);          break;
-        case BathyFields::OPENOCEANSPP:     lua_pushstring(L, BathyFields::OPENOCEANSPP_NAME);      break;
-        case BathyFields::MEDIANFILTER:     lua_pushstring(L, BathyFields::MEDIANFILTER_NAME);      break;
-        case BathyFields::CSHELPH:          lua_pushstring(L, BathyFields::CSHELPH_NAME);           break;
-        case BathyFields::BATHYPATHFINDER:  lua_pushstring(L, BathyFields::BATHYPATHFINDER_NAME);   break;
-        case BathyFields::POINTNET:         lua_pushstring(L, BathyFields::POINTNET_NAME);          break;
-        case BathyFields::OPENOCEANS:       lua_pushstring(L, BathyFields::OPENOCEANS_NAME);        break;
-        case BathyFields::ENSEMBLE:         lua_pushstring(L, BathyFields::ENSEMBLE_NAME);          break;
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid classifier: %d", static_cast<int>(v));
-    }
-
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * convertFromLua - classifier_t
- *----------------------------------------------------------------------------*/
-void convertFromLua(lua_State* L, int index, BathyFields::classifier_t& v)
-{
-    if(lua_isinteger(L, index))
-    {
-        v = static_cast<BathyFields::classifier_t>(LuaObject::getLuaInteger(L, index));
-    }
-    else if(lua_isstring(L, index))
-    {
-        const char* str = LuaObject::getLuaString(L, index);
-        if     (StringLib::match(str, BathyFields::QTREES_NAME))            v = BathyFields::QTREES;
-        else if(StringLib::match(str, BathyFields::COASTNET_NAME))          v = BathyFields::COASTNET;
-        else if(StringLib::match(str, BathyFields::OPENOCEANSPP_NAME))      v = BathyFields::OPENOCEANSPP;
-        else if(StringLib::match(str, BathyFields::MEDIANFILTER_NAME))      v = BathyFields::MEDIANFILTER;
-        else if(StringLib::match(str, BathyFields::CSHELPH_NAME))           v = BathyFields::CSHELPH;
-        else if(StringLib::match(str, BathyFields::BATHYPATHFINDER_NAME))   v = BathyFields::BATHYPATHFINDER;
-        else if(StringLib::match(str, BathyFields::POINTNET_NAME))          v = BathyFields::POINTNET;
-        else if(StringLib::match(str, BathyFields::OPENOCEANS_NAME))        v = BathyFields::OPENOCEANS;
-        else if(StringLib::match(str, BathyFields::ENSEMBLE_NAME))          v = BathyFields::ENSEMBLE;
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "classifier is an invalid value: %d", static_cast<int>(v));
-    }
-    else if(!lua_isnil(L, index))
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "classifier is an invalid type: %d", lua_type(L, index));
-    }
-}
-
-/*----------------------------------------------------------------------------
- * convertToIndex - classifier_t
- *----------------------------------------------------------------------------*/
-int convertToIndex(const BathyFields::classifier_t& v)
-{
-    return static_cast<int>(v);
-}
-
-/*----------------------------------------------------------------------------
- * convertFromIndex - classifier_t
- *----------------------------------------------------------------------------*/
-void convertFromIndex(int index, BathyFields::classifier_t& v)
-{
-    v = static_cast<BathyFields::classifier_t>(index);
 }

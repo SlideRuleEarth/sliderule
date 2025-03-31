@@ -166,6 +166,7 @@ class LuaEngine
 
         uint64_t                        engineId;
         bool                            engineActive;
+        bool                            engineInError;
         Thread*                         engineThread;
         Cond                            engineSignal;
 

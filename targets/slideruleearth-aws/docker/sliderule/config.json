@@ -8,5 +8,5 @@
     "authenticate_to_podaac": true,
     "register_as_service": true,
     "authenticate_to_ps": false,
-    "post_startup_scripts": ["atl24_init"]
+    "post_startup_scripts": ["bathy_init"]
 }

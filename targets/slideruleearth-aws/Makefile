@@ -53,21 +53,6 @@ TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
 STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
-OCEANEYES_SRC_DIR = $(ROOT)/datasets/bathy/docker/oceaneyes
-OCEANEYES_STAGE_DIR = $(STAGE)/oceaneyes
-MAGIC_PYTORCH_DIR = $(ROOT)/../../miniconda3/envs/pointnet2
-CSHELPH_SOURCE_DIR ?= $(ROOT)/../ut-ATL24-C-shelph
-CSHELPH_SOURCE_FILE = $(CSHELPH_SOURCE_DIR)/c_shelph.py
-CSHELPH_VERSION = $(shell git --work-tree ${CSHELPH_SOURCE_DIR} --git-dir ${CSHELPH_SOURCE_DIR}/.git describe --abbrev --dirty --always --tags --long)
-MEDIANFILTER_SOURCE_DIR ?= $(ROOT)/../ut-ATL24-medianfilter
-MEDIANFILTER_SOURCE_FILE = $(MEDIANFILTER_SOURCE_DIR)/medianmodel.py
-MEDIANFILTER_VERSION = $(shell git --work-tree ${MEDIANFILTER_SOURCE_DIR} --git-dir ${MEDIANFILTER_SOURCE_DIR}/.git describe --abbrev --dirty --always --tags --long)
-ENSEMBLE_SOURCE_DIR ?= $(ROOT)/../ut-ATL24-track_stacker
-ENSEMBLE_SOURCE_FILE = $(ENSEMBLE_SOURCE_DIR)/apps/classify.py
-ENSEMBLE_VERSION = $(shell git --work-tree ${ENSEMBLE_SOURCE_DIR} --git-dir ${ENSEMBLE_SOURCE_DIR}/.git describe --abbrev --dirty --always --tags --long)
-COASTNET_DIR = $(ROOT)/../ut-ATL24-coastnet
-QTREES_DIR = $(ROOT)/../ut-ATL24-qtrees
-OPENOCEANSPP_DIR = $(ROOT)/../ut-ATL24-oopp
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 
@@ -172,37 +157,6 @@ static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform init
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
 	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
-
-oceaneyes-lock:
-	cd $(OCEANEYES_SRC_DIR) && conda-lock -p linux-$(ARCH) -f environment.yml
-	cd $(OCEANEYES_SRC_DIR) && conda-lock render -p linux-$(ARCH)
-
-oceaneyes-docker:
-	-rm -Rf $(OCEANEYES_STAGE_DIR)
-	mkdir -p $(OCEANEYES_STAGE_DIR)
-	cp $(OCEANEYES_SRC_DIR)/Dockerfile $(OCEANEYES_STAGE_DIR)
-	cp $(OCEANEYES_SRC_DIR)/conda-* $(OCEANEYES_STAGE_DIR)
-	cp $(OCEANEYES_SRC_DIR)/runner.* $(OCEANEYES_STAGE_DIR)
-	cp $(OCEANEYES_SRC_DIR)/atl24_iso_xml_template.txt $(OCEANEYES_STAGE_DIR)
-	mkdir $(OCEANEYES_STAGE_DIR)/cshelph
-	cp $(CSHELPH_SOURCE_FILE) $(OCEANEYES_STAGE_DIR)/cshelph
-	@echo $(CSHELPH_VERSION) > $(OCEANEYES_STAGE_DIR)/cshelph/cshelph_version.txt
-	mkdir $(OCEANEYES_STAGE_DIR)/medianfilter
-	cp $(MEDIANFILTER_SOURCE_FILE) $(OCEANEYES_STAGE_DIR)/medianfilter
-	@echo $(MEDIANFILTER_VERSION) > $(OCEANEYES_STAGE_DIR)/medianfilter/medianfilter_version.txt
-	mkdir $(OCEANEYES_STAGE_DIR)/ensemble
-	cp $(ENSEMBLE_SOURCE_FILE) $(OCEANEYES_STAGE_DIR)/ensemble
-	@echo $(ENSEMBLE_VERSION) > $(OCEANEYES_STAGE_DIR)/ensemble/ensemble_version.txt
-	cp -R $(OCEANEYES_SRC_DIR)/bathypathfinder $(OCEANEYES_STAGE_DIR)
-	cp -R $(OCEANEYES_SRC_DIR)/pointnet $(OCEANEYES_STAGE_DIR)
-	cp -R $(OCEANEYES_SRC_DIR)/openoceans $(OCEANEYES_STAGE_DIR)
-	mkdir $(OCEANEYES_STAGE_DIR)/magic_pytorch_env
-	rsync -a $(MAGIC_PYTORCH_DIR)/* $(OCEANEYES_STAGE_DIR)/magic_pytorch_env
-	cd $(OCEANEYES_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/oceaneyes:latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/oceaneyes:latest $(ECR)/oceaneyes:$(VERSION)
-
-oceaneyes-push:
-	docker push $(ECR)/oceaneyes:$(VERSION)
 
 sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
@@ -345,10 +299,6 @@ perfmsbtest: ## run mosaics serial and batch performance test comparing results
 
 perfssbtest: ## run strips serial and batch performance test comparing results
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST)
-
-OCEANEYES_SHARE=/data/AppServer.1
-oceaneyes-test: ## run oceaneyes
-	docker run -it --rm -v /data:/data -v $(OCEANEYES_SHARE):/share --name oceaneyes $(ECR)/oceaneyes:$(VERSION) /bin/bash /runner.sh $(OCEANEYES_SHARE)/settings.json
 
 ########################
 # Help Target

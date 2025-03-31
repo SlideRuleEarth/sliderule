@@ -42,15 +42,6 @@
 #include "RecordObject.h"
 
 /******************************************************************************
- * INCLUDES
- ******************************************************************************/
-
-#define COASTNET_MODEL  "coastnet_model-20241111.json"
-#define QTREES_MODEL    "qtrees_model-20241105.json"
-#define ENSEMBLE_MODEL  "ensemble_model-20250201.json"
-#define POINTNET_MODEL  "pointnet2_model.pth"
-
-/******************************************************************************
  * CLASSES
  ******************************************************************************/
 
@@ -114,63 +105,6 @@ struct UncertaintyFields: public FieldDictionary
     virtual ~UncertaintyFields(void) override = default;
 };
 
-/*******************/
-/* Coastnet Fields */
-/*******************/
-struct CoastnetFields: public FieldDictionary
-{
-    FieldElement<string>  model             {COASTNET_MODEL};
-    FieldElement<bool>    setClass          {true};
-    FieldElement<bool>    setSurface        {true};
-    FieldElement<bool>    verbose           {true};
-
-    CoastnetFields(void):
-        FieldDictionary({ {"model",             &model},
-                          {"set_class",         &setClass},
-                          {"set_surface",       &setSurface},
-                          {"verbose",           &verbose} }) {
-    };
-
-    virtual ~CoastnetFields(void) override = default;
-};
-
-/***********************/
-/* OpenOceansPP Fields */
-/***********************/
-struct OpenOceansPPFields: public FieldDictionary
-{
-    FieldElement<bool>      setClass                {false};
-    FieldElement<bool>      setSurface              {false};
-    FieldElement<bool>      verbose                 {true};
-
-    OpenOceansPPFields(void):
-        FieldDictionary({ {"set_class",                 &setClass},
-                          {"set_surface",               &setSurface},
-                          {"verbose",                   &verbose} }) {};
-
-    virtual ~OpenOceansPPFields(void) override = default;
-};
-
-/*****************/
-/* Qtrees Fields */
-/*****************/
-struct QtreesFields: public FieldDictionary
-{
-    FieldElement<string>  model         {QTREES_MODEL};
-    FieldElement<bool>    setClass      {false};
-    FieldElement<bool>    setSurface    {false};
-    FieldElement<bool>    verbose       {true};
-
-    QtreesFields(void):
-        FieldDictionary({ {"model",         &model},
-                          {"set_class",     &setClass},
-                          {"set_surface",   &setSurface},
-                          {"verbose",       &verbose} }) {
-    };
-
-    virtual ~QtreesFields(void) override = default;
-};
-
 /****************/
 /* Bathy Fields */
 /****************/
@@ -182,16 +116,6 @@ class BathyFields: public Icesat2Fields
          * Constants
          *--------------------------------------------------------------------*/
 
-        inline static const char* QTREES_NAME           = "qtrees";
-        inline static const char* COASTNET_NAME         = "coastnet";
-        inline static const char* OPENOCEANSPP_NAME     = "openoceanspp";
-        inline static const char* MEDIANFILTER_NAME     = "medianfilter";
-        inline static const char* CSHELPH_NAME          = "cshelph";
-        inline static const char* BATHYPATHFINDER_NAME  = "bathypathfinder";
-        inline static const char* POINTNET_NAME         = "pointnet";
-        inline static const char* OPENOCEANS_NAME       = "openoceans";
-        inline static const char* ENSEMBLE_NAME         = "ensemble";
-
         static const double NIGHT_SOLAR_ELEVATION_THRESHOLD;
         static const double MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY;
         static const double MINIMUM_VERTICAL_SUBAQUEOUS_UNCERTAINTY;
@@ -200,20 +124,6 @@ class BathyFields: public Icesat2Fields
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
-
-        /* Photon Classifiers */
-        typedef enum {
-            QTREES              = 0,
-            COASTNET            = 1,
-            OPENOCEANSPP        = 2,
-            MEDIANFILTER        = 3,
-            CSHELPH             = 4,
-            BATHYPATHFINDER     = 5,
-            POINTNET            = 6,
-            OPENOCEANS          = 7,
-            ENSEMBLE            = 8,
-            NUM_CLASSIFIERS     = 9
-        } classifier_t;
 
         /* Photon Classifications */
         typedef enum {
@@ -236,14 +146,6 @@ class BathyFields: public Icesat2Fields
             BATHY_CONFIDENCE        = 0x0000FF00,
             YAPC_SCORE              = 0x00FF0000,
             BATHY_SIGNAL            = 0xFF000000,
-            BATHY_QTREES            = 0x01000000,
-            BATHY_COASTNET          = 0x02000000,
-            BATHY_OPENOCEANSPP      = 0x04000000,
-            BATHY_MEDIANFILTER      = 0x08000000,
-            BATHY_CSHELPH           = 0x10000000,
-            BATHY_BATHYPATHFINDER   = 0x20000000,
-            BATHY_POINTNET          = 0x40000000,
-            BATHY_OPENOCEANS        = 0x80000000
         } flags_t;
 
         /*--------------------------------------------------------------------
@@ -266,17 +168,10 @@ class BathyFields: public Icesat2Fields
         FieldElement<int>                               phInExtent {8192};          // number of photons in each extent
         FieldElement<bool>                              generateNdwi {false};       // use HLS data to generate NDWI for each segment lat,lon
         FieldElement<bool>                              useBathyMask {true};        // global bathymetry mask downloaded in atl24 init lua routine
-        FieldEnumeration<classifier_t, NUM_CLASSIFIERS> classifiers {true, true, true, true, true, true, true, true, true}; // which bathymetry classifiers to run
         FieldEnumeration<spot_t, NUM_SPOTS>             spots = {true, true, true, true, true, true}; // only used by downstream algorithms
         SurfaceFields                                   surface;                    // surface finding fields
         RefractionFields                                refraction;                 // refraction correction fields
         UncertaintyFields                               uncertainty;                // uncertaintly calculation fields
-        CoastnetFields                                  coastnet;                   // coastnet fields
-        OpenOceansPPFields                              openoceanspp;               // openoceans++ fields
-        QtreesFields                                    qtrees;                     // qtrees fields
-        FieldElement<string>                            coastnetVersion {COASTNETINFO}; // git commit information for coastnet repo
-        FieldElement<string>                            qtreesVersion {QTREESINFO}; // git commit information for qtrees repo
-        FieldElement<string>                            openoceansppVersion {OPENOCEANSPPINFO}; // git commit information for openoceans repo
 
     protected:
 
@@ -287,17 +182,5 @@ class BathyFields: public Icesat2Fields
                 BathyFields     (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource);
         virtual ~BathyFields    (void) override = default;
 };
-
-/******************************************************************************
- * FUNCTIONS
- ******************************************************************************/
-
-string convertToJson(const BathyFields::classifier_t& v);
-int convertToLua(lua_State* L, const BathyFields::classifier_t& v);
-void convertFromLua(lua_State* L, int index, BathyFields::classifier_t& v);
-int convertToIndex(const BathyFields::classifier_t& v);
-void convertFromIndex(int index, BathyFields::classifier_t& v);
-
-inline uint32_t toEncoding(BathyFields::classifier_t& v) { (void)v; return Field::INT32; }
 
 #endif  /* __bathy_fields__ */

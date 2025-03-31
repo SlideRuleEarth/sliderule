@@ -9,5 +9,5 @@
     "register_as_service": true,
     "authenticate_to_ps": false,
     "container_registry": "742127912612.dkr.ecr.us-west-2.amazonaws.com",
-    "post_startup_scripts": ["atl24_init"]
+    "post_startup_scripts": ["bathy_init"]
 }

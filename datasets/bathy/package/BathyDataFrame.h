@@ -104,7 +104,6 @@ class BathyDataFrame: public GeoDataFrame
         FieldColumn<int8_t>         max_signal_conf;    // maximum value in the atl03 confidence table
         FieldColumn<int8_t>         quality_ph;         // atl03 quality flags
         FieldColumn<int8_t>         class_ph;           // photon classification
-        FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>> predictions; // photon classification from each of the classifiers
         FieldColumn<float>          background_rate;    // PE per second
         FieldColumn<float>          geoid_corr_h;       // orthometric height without refraction correction (passed to classifiers)
         FieldColumn<float>          wind_v;             // wind speed (in meters/second)
@@ -256,24 +255,5 @@ class BathyDataFrame: public GeoDataFrame
 
         friend class UT_BathyRefractionCorrector; // necessary for the private constructor/destructor
 };
-
-/******************************************************************************
- * FUNCTIONS
- ******************************************************************************/
-
-inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldArray<int8_t, BathyFields::NUM_CLASSIFIERS>>& v, long start_index, long num_elements) {
-    const long total_elements = num_elements * BathyFields::NUM_CLASSIFIERS;
-    FieldUntypedColumn::column_t column = {
-        .data = new double[total_elements],
-        .size = total_elements
-    };
-    long index = 0;
-    for(long i = start_index; i < (start_index + num_elements); i++) {
-        for(long j = 0; j < BathyFields::NUM_CLASSIFIERS; j++) {
-            column.data[index++] = static_cast<double>(v[i][j]);
-        }
-    }
-    return column;
-}
 
 #endif  /* __bathy_data_frame__ */

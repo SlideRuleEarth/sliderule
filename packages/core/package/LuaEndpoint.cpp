@@ -276,6 +276,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
             const char* result = engine->getResult();
             if(result)
             {
+                /* Success */
                 const int result_length = StringLib::size(result);
                 const int header_length = buildheader(header, OK, "text/plain", result_length, NULL, serverHead.c_str());
                 rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
@@ -283,23 +284,32 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
             }
             else
             {
-                const int header_length = buildheader(header, Not_Found);
+                const char* error_msg = "Does not exist";
+                const int result_length = StringLib::size(error_msg);
+                const int header_length = buildheader(header, Not_Found, "text/plain", result_length, NULL, serverHead.c_str());
                 rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
+                rspq->postCopy(error_msg, result_length, POST_TIMEOUT_MS);
             }
         }
         else
         {
             mlog(ERROR, "Failed to execute request: %s", scriptpath);
-            const int header_length = buildheader(header, Internal_Server_Error);
+            const char* error_msg = "Failed execution";
+            const int result_length = StringLib::size(error_msg);
+            const int header_length = buildheader(header, Internal_Server_Error, "text/plain", result_length, NULL, serverHead.c_str());
             rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
-        }
+            rspq->postCopy(error_msg, result_length, POST_TIMEOUT_MS);
+    }
     }
     else
     {
         mlog(CRITICAL, "Memory (%d%%) exceeded threshold, not performing request: %s", (int)(mem * 100.0), scriptpath);
-        const int header_length = buildheader(header, Service_Unavailable);
+        const char* error_msg = "Memory exceeded";
+        const int result_length = StringLib::size(error_msg);
+        const int header_length = buildheader(header, Service_Unavailable, "text/plain", result_length, NULL, serverHead.c_str());
         rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
-    }
+        rspq->postCopy(error_msg, result_length, POST_TIMEOUT_MS);
+}
 
     /* Clean Up */
     delete engine;
