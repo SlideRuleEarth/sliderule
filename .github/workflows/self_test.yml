@@ -18,24 +18,6 @@ jobs:
     container: ghcr.io/slideruleearth/sliderule-buildenv:latest
 
     steps:
-    - name: Checkout CoastNet
-      uses: actions/checkout@v3
-      with:
-        repository: SlideRuleEarth/ut-ATL24-coastnet
-        path: ut-ATL24-coastnet
-
-    - name: Checkout Qtrees
-      uses: actions/checkout@v3
-      with:
-        repository: SlideRuleEarth/ut-ATL24-qtrees
-        path: ut-ATL24-qtrees
-
-    - name: Checkout OpenOceans++
-      uses: actions/checkout@v3
-      with:
-        repository: SlideRuleEarth/ut-ATL24-oopp
-        path: ut-ATL24-oopp
-
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
