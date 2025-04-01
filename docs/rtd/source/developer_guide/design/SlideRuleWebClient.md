@@ -25,7 +25,7 @@ The SlideRule Web Client is a javascript application that runs in a user's brows
 
 The web client runs in a docker container inside a provisioned SlideRule cluster.  It is reached through the Intelligent Load Balancer (haproxy), and athentication proxy (NGINX), provided by the cluster.
 
-![Figure 1](../assets/web-client-context.png "SlideRule Web Client Context")
+![Figure 1](../../assets/web-client-context.png "SlideRule Web Client Context")
 
 A typical workflow for a user interacting with the web client is:
 1. An area of interest is drawn on the map
@@ -38,7 +38,7 @@ A typical workflow for a user interacting with the web client is:
 8. The user then uses the request record for the previous run to show that plot of the data again on a map view, they select a different ground track, but this time instead of using it to populate the parameters for an along-track request, they just directly plot the data into a scatter plot.
 9. The user then starts plotting different columns in the returned data set in that scatter plot to get a better understanding of the data.
 10. Once satisfied, the user saves all of the data from the original processing run into a GeoParquet file on their computer; they do the same thing for the along-track processing run.
-11. The user exits all browser tabs running the client, and the client clears all records and memory within the browser associated with what the user did. 
+11. The user exits all browser tabs running the client, and the client clears all records and memory within the browser associated with what the user did.
 
 The client will have four main views:
 1. A ***beginner*** view - a simple map interface that is intuitive and allows users to quickly access basic features of SlideRule
@@ -177,11 +177,11 @@ The UI shall maintain a set of results and request parameters for the processing
 
 #### SRWC-3.2: Basic Mode
 
-In basic mode, the control panel shall display the following controls: 
+In basic mode, the control panel shall display the following controls:
 1. A selection-type button for each supported API, to select which SlideRule request to make
 2. A "Run SlideRule" button that executes the request
 3. A "Manage Runs" button that navigates the user to the **request records** UI management view
-4. A "Clear All Runs" button that deletes all runs from memory and resets the display 
+4. A "Clear All Runs" button that deletes all runs from memory and resets the display
 
 #### SRWC-3.3: Advanced Mode
 
@@ -311,7 +311,7 @@ All request parameters supported by SlideRule for a given request shall be suppo
     - gedi04a
 
 * __General__: accordion header
-    - _Polygon_: label 
+    - _Polygon_: label
         - _Draw On Map_: radio button
         - _Upload_: radio button
             - _File Upload_: file upload button
@@ -326,7 +326,7 @@ All request parameters supported by SlideRule for a given request shall be suppo
     - _Timeout_: input number (seconds)
         - _rqst-timeout_: input number (seconds)
         - _node-timeout_: input number (seconds)
-        - _read-timeout_: input number (seconds)        
+        - _read-timeout_: input number (seconds)
 
 * __Granule Selection__: accordion header [ICESat-2]
     - _Track_: label

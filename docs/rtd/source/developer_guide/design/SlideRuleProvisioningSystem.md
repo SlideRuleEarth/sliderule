@@ -18,8 +18,6 @@ At the end of the semester, the owner accounts log into SlideRule and tear down 
 
 The SPS is a set of web services that provision and grant access to SlideRule clusters, and consist of both ***Front-End (FE)*** services used by _Organizations_ and _Users_ of SlideRule, and ***Back-End (BE)*** services used by the SlideRule _Development_ and _Management_ team.  Every FE and BE service is provided by a _REST_ (HTTP) interface and a _GUI_ (HTML) interface.
 
-![Figure 1](sliderule_system_architecture.png "SlideRule System Architecture")
-
 ## Requirements
 
 > **Users** - individuals accessing the front-end services of the SlideRule Provisioning System.

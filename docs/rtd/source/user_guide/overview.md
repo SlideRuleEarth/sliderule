@@ -24,13 +24,13 @@ The SlideRule Python Client helps make the above steps a lot easier by providing
 4. The Python client handles the HTTPS connection to the SlideRule servers as well as any necessary authentication requests to the SlideRule Provisioning System when private clusters are being used.
 5. The Python client parses the response data from SlideRule and presents a standard GeoDataFrame result back to the user.
 
-## 3. Processing Request
+## 3. Requests
 
 A SlideRule processing request has four main components, which we will go over in detail in the sections below:
 * endpoint
 * parameters
-* area of interest
 * resources
+* area of interest
 
 These four components are encoded into a typical HTTP request to the Sliderule servers.  The SlideRule servers then respond by executing the specified __endpoint__ with the given __parameters__ over the __area of interest__ for each of the supplied __resources__.  The result is the streamed back to the user as an HTTP response.
 
@@ -51,50 +51,105 @@ curl https://sliderule.slideruleearth.io/source/version
 
 ### Parameters
 
-SlideRule is an ___on-demand___ science data processing system, which means that the processing steps performed on the data is executed only when a user makes a request.  Because of this, the user can control how that processing is performed by supplying parameters in their request that enable/disable, configure, and specify how and what processing should occur.
+SlideRule is an ___on-demand___ science data processing system, which means that the processing steps performed on the data are executed only when a user makes a request.  Because of this, the user can control how that processing is performed by supplying parameters in their request.  Not all parameters need to be defined when making a request - typically only a few parameters are used for any given request; there are reasonable defaults used for each parameter so that only those parameters you want to customize need to be specified.
 
-In the underlying HTTP request, parameters are json objects supplied in the body of the POST request.  At the Python Client level, parameters are passed to SlideRule Python APIs via the `parm` argument, and supplied as a dictionary.  In the next section on [basic usage](./basic_usage.html), we will discuss the base set of parameters available for all requests.  But for now, it is important to understand that given the endpoint being called, different parameters are available that define how that endpoint executes.  In that way, parameters build on top of each other.
+In the underlying HTTP request, parameters are json objects supplied in the body of the POST request.  At the Python Client level, parameters are passed to SlideRule Python APIs as a dictionary via the `parm` argument.  In the next section on [basic usage](./basic_usage.html), we will discuss the base set of parameters available for all requests.  But for now, it is important to understand that given the endpoint being called, different parameters are available that define how that endpoint executes.
 
-For example, a call to the `atl06p` endpoint will have parameters specific to the __atl06__ processing algorithm (e.g. `maxi` defines the maximum iterations the least-sequares fitting algorithm will run), it may also include parameters available for all __ICESat-2__ endpoints (e.g. `res` stands for resolution and specifies the along-track distance of photons to aggregate for each result posting), and finally there may be parameters available to all endpoints (e.g. `resources` defines the list of granules or tiles to be processed).
+For example, a call to the `atl06p` endpoint will have parameters specific to the __atl06__ processing algorithm (e.g. `maxi` defines the maximum iterations the least-sequares fitting algorithm will run), it may also include parameters available for all __ICESat-2__ endpoints (e.g. `res` stands for resolution and specifies the along-track distance of photons to aggregate for each result posting), and finally there may be parameters available to all endpoints (e.g. `resources` defines the list of granules or tiles to be processed).  When making a request to `atl06p`, the user can supply a parameter dictionary with these options configured:
 
-
-### Area of Interest
+```Python
+parm = {
+    "fit": {"maxi": 5},
+    "res": 20,
+    "resources": ["ATL03_20181019065445_03150111_006_02.h5"]
+}
+```
 
 ### Resources
 
-When accessing SlideRule as a service, there are times when you need to specify which source datasets it should use when processing the data.
-A source dataset is called an **asset** and is specified by its name as a string.  SlideRule's asset directory is a list of datasets that SlideRule
-has access to.  Each entry in the asset directory describes a dataset and provides the necessary information to find, authenticate, and read that dataset.
+When making a request, there are two ways to specify what data needs to be processed, the first is by manually supplying the names of the resources (i.e. filenames); the second is to supply an area of interest and let the SlideRule servers determine which resources needed to be processed.  In both cases, an ___asset___ for those resoures must be defined.  An asset is a collection of resources that share a source location, software driver for reading, and credentials to access.
 
-The following datasets are currently provided in SlideRule's Asset Directory (with more being added as time goes on);
-the ones marked as rasters can be sampled; the ones that are not marked as rasters can be subsetted through different subsetting APIs.
+:::{note}
+For example, the ICESat-2 ATL03 data hosted by the NSIDC is a single asset in SlideRule (it is identified simply as `icesat2`).  All of the ATL03 data is stored in the NASA Cumulus S3 bucket, is stored as HDF5 files that use the H5Coro driver, and requires Earthdata Login credentials to read.
+:::
 
-.. csv-table::
-    :header: asset, raster, description, location
+Typically, for each endpoint, there is a default _asset_ which makes sense to use and the user does not need to worry about it.  But in some cases, a user may wish to override the default _asset_ and specify exactly where the data should be read from.  When that happens, the `asset` parameter in the parameter structure is used.  To find the full list of assets supported by SlideRule, see the [asset directory](https://github.com/SlideRuleEarth/sliderule/blob/main/targets/slideruleearth-aws/asset_directory.csv) in our GitHub repository.
 
-    icesat2, , The ICESat-2 Standard Data Products ATL03/ATL06/ATL08, nsidc-cumulus-prod-protected
-    gedil4a, , GEDI L4A Footprint Level Aboveground Biomass Density, ornl-cumulus-prod-protected
-    gedil4b, x, GEDI L4B Gridden Aboveground Biomass Density, ornl-cumulus-prod-protected
-    gedil3-elevation, x, GEDI L3 gridded ground elevation, ornl-cumulus-prod-protected
-    gedil3-canopy, x, GEDI L3 gridded canopy height, ornl-cumulus-prod-protected
-    gedil3-elevation-stddev, x, GEDI L3 gridded ground elevation-standard deviation, ornl-cumulus-prod-protected
-    gedil3-canopy-stddev, x, GEDI L3 gridded canopy heigh-standard deviation, ornl-cumulus-prod-protected
-    gedil3-counts, x, GEDI L3 gridded counts of valid laser footprints, ornl-cumulus-prod-protected
-    gedil2a, , GEDI L2A Elevation and Height Metrics Data Global Footprint, sliderule
-    gedil1b, , GEDI L1B Geolocated Waveforms, sliderule
-    merit-dem, x, MERIT Digital Elevation Model, sliderule
-    swot-sim-ecco-llc4320, x, Simulated SWOT Data, podaac-ops-cumulus-protected
-    swot-sim-glorys, x, Simulated SWOT Data, podaac-ops-cumulus-protected
-    usgs3dep-1meter-dem, x, USGS 3DEP 1m Digital Elevation Model, prd-tnm
-    esa-worldcover-10meter, x, Worldwide land cover mapping, esa-worldcover
-    meta-globalcanopy-1meter, x, Meta and World Resources Institute 1m global canopy height map, dataforgood-fb-data
-    gebco-bathy, x, General Bathymetric Chart of the Oceans, sliderule
-    landsat-hls, x, Harmonized LandSat Sentinal-2, lp-prod-protected
-    arcticdem-mosaic, x, PGC Arctic Digital Elevation Model Mosaic, pgc-opendata-dems
-    arcticdem-strips, x, PGC Arctic Digital Elevation Model Strips, pgc-opendata-dems
-    rema-mosaic, x, PGC Reference Elevation Model of Antarctica Mosaic, pgc-opendata-dems
-    rema-strips, x, PGC Reference Elevation Model of Antarctica Strips, pgc-opendata-dems
-    atlas-s3, , Internal s3-bucket staged ICESat-2 Standard Data Products: ATL03/ATL06/ATL08, sliderule
-    nsidc-s3, , Alias for icesat2 asset, nsidc-cumulus-prod-protected
+### Area of Interest
 
-## 4. Processing Response
+As mentioned above, the second way to specify which resources need to be processed is by supplying an area of interest.  An area of interest is a geographical area specified as a list of latitude and longitude coordinates.  All data within the geographical area is processed and returned to the user.
+
+Processing an area of interest can at times be complicated, and for that reason, there are multiple levels of support provided in SlideRule for handling different scenarios a user might need.  , The following functionality is provided in SlideRule for handling areas of interest (ordered from simplest to most complicated):
+
+Polygon with Resources
+    In the request parameters, the user provides a polygon and a list of resources in their request.  The SlideRule servers use the polygon directly to subset all of the resources specified.
+
+Parameters without Resources
+    In the request parameters, the user provides a polygon and/or other resource query parameters (e.g. name filter), without specifying which resources to process.  The SlideRule servers use the _asset_ (either provided as the default for the endpoint or manually supplied in the request) to determine which metadata respositories contain indexes for the source data.  The server-side code then issues a query to the appropriate metadata repository using the parameters in the request to obtain a list of resources to process.
+
+Python Client `toregion` - Raster
+    Using the SlideRule Python Client `toregion` function, the user can provide a raster image which acts as a mask over the area of interest defining which latitude/longitude cells are "on" and which cells are "off".  The source data is subsetted according to the mask.  This is useful for very complicated areas of interest that represent coastlines or islands where a simple polygon is insufficient.
+
+Python Client `toregion` - GeoJson/Shapfile/GeoDataFrame
+    Using the SlideRule Python Client, the user can define their area of interest using a __geojson__, __shapefile__, or __GeoDataFrame__, and still provide a properly formatted polygon in their request to SlideRule by converting the source definition using the `toregion` function.
+
+Python Client Earthdata
+    Instead of letting the SlideRule server-side code handle querying the appropriate metadata repositories to obtain a list of resources to process, the SlideRule Python Client includes the `earthdata` module which provides functions for directly querying NASA's Common Metadata Repository (CMR) and USGS's The National Map (TNM).  When the intended resources are supported by these metadata repositories, the user can query these repositories directly.
+
+Python Client Earthdata - Clusters
+    For extremely large areas of interest that are also very complicated (e.g. entire U.S. west coast coastline), the SlideRule Python Client provides functions in the `earthdata` module to break up the area of interest into smaller areas acceptable to CMR, issue individual CMR requests, and then combine all of the responses back into one list of resources to process.
+
+## 4. Responses
+
+A response from a SlideRule processing request, is an HTTP response provided directly back to the user with the data results in the payload of the response packets. There are two types of SlideRule responses corresponding to the two types of endpoints SlideRule supports: (1) normal endpoints, (2) streaming endpoints.
+
+#### Normal
+
+Normal endpoints are accessed via the GET HTTP method and return a discrete block of ASCII text, typically formatted as JSON.
+
+These services can easily be accessed via curl or other HTTP-based tools, and contain self-describing data. When using the SlideRule Python client, they are accessed via the `sliderule.source(..., stream=False)` call.
+
+#### Streaming
+
+Streaming endpoints are accessed via the POST HTTP method and return a serialized stream of binary records containing the results of the processing request.
+
+These services are more difficult to work with third-party tools since the returned data must be parsed and the data itself is not self-describing. When using the SlideRule Python client, they are accessed via the `sliderule.source(..., stream=True)` call, along with the many other API functions which make it easier to make processing requests. The SlideRule Python client takes care of any additional service calls needed in order to parse the streaming results and return a self-describing Python data structure (i.e. the elements of the data structure are named in such a way as to indicate the type and content of the returned data).
+
+:::{note}
+If you want to process streamed results outside of the SlideRule Python Client, then a brief description of the format of the data follows. For additional guidance, the hidden functions inside the sliderule.py source code provide the code which performs the stream processing for the SlideRule Python Client.
+
+Each response record is formatted as: <record header><record type><record data> where,
+
+record header
+    64-bit big endian structure providing the version and length of the record: <version:16 bits><type size:16 bits><data size:32 bits>.
+
+record type
+    null-terminated ASCII string containing the name of the record type
+
+record data
+    binary contents of data
+
+In order to know how to process the contents of the record data, the user must perform an additional query to the SlideRule definition service, providing the record type. The definition service returns a JSON response object that provides a format definition of the record type that can be used by the client to decode the binary record data. The format of the definition response object is:
+
+```Python
+{
+    "__datasize": # minimum size of record
+    "field_1":
+    {
+        "type": # data type (see sliderule.basictypes for full definition), or record type if a nested structure
+        "elements": # number of elements, 1 if not an array
+        "offset": # starting bit offset into record data
+        "flags": # processing flags - LE: little endian, BE: big endian, PTR: pointer
+    },
+    ...
+    "field_n":
+    {
+        ...
+    }
+}
+```
+:::
+
+#### Parquet
+
+Most SlideRule endpoints support streaming the data back as an Apache Arrow supported file (parquet, geoparquet, csv, feather).  The interface to SlideRule is still the streaming interface described above, but that interface is used only to transport the Apache Arrow file which is then subsequently reconstructed in the client and presented to the user.  In later sections, the `output` parameter options will be discussed in more detail, and they describe how these different output formats and options can be specified.
