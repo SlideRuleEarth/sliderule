@@ -43,6 +43,148 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * Constructor - GranuleFields
+ *----------------------------------------------------------------------------*/
+GranuleFields::GranuleFields():
+    FieldDictionary({ {"year",      &year},
+                      {"month",     &month},
+                      {"day",       &day},
+                      {"rgt",       &rgt},
+                      {"cycle",     &cycle},
+                      {"region",    &region},
+                      {"version",   &version} })
+{
+}
+
+/*----------------------------------------------------------------------------
+ * parseResource
+ *
+ *  ATL0x_YYYYMMDDHHMMSS_ttttccrr_vvv_ee
+ *      YYYY    - year
+ *      MM      - month
+ *      DD      - day
+ *      HH      - hour
+ *      MM      - minute
+ *      SS      - second
+ *      tttt    - reference ground track
+ *      cc      - cycle
+ *      rr      - region
+ *      vvv     - version
+ *      ee      - revision
+ *----------------------------------------------------------------------------*/
+void GranuleFields::parseResource (const char* resource)
+{
+    long val;
+
+    if(StringLib::size(resource) < 33)
+    {
+        return; // early exit on error
+    }
+
+    /* get year */
+    char year_str[5];
+    year_str[0] = resource[6];
+    year_str[1] = resource[7];
+    year_str[2] = resource[8];
+    year_str[3] = resource[9];
+    year_str[4] = '\0';
+    if(StringLib::str2long(year_str, &val, 10))
+    {
+        year = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse year from resource %s: %s", resource, year_str);
+    }
+
+    /* get month */
+    char month_str[3];
+    month_str[0] = resource[10];
+    month_str[1] = resource[11];
+    month_str[2] = '\0';
+    if(StringLib::str2long(month_str, &val, 10))
+    {
+        month = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse month from resource %s: %s", resource, month_str);
+    }
+
+    /* get day */
+    char day_str[3];
+    day_str[0] = resource[12];
+    day_str[1] = resource[13];
+    day_str[2] = '\0';
+    if(StringLib::str2long(day_str, &val, 10))
+    {
+        day = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse day from resource %s: %s", resource, day_str);
+    }
+
+    /* get RGT */
+    char rgt_str[5];
+    rgt_str[0] = resource[21];
+    rgt_str[1] = resource[22];
+    rgt_str[2] = resource[23];
+    rgt_str[3] = resource[24];
+    rgt_str[4] = '\0';
+    if(StringLib::str2long(rgt_str, &val, 10))
+    {
+        rgt = static_cast<uint16_t>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse RGT from resource %s: %s", resource, rgt_str);
+    }
+
+    /* get cycle */
+    char cycle_str[3];
+    cycle_str[0] = resource[25];
+    cycle_str[1] = resource[26];
+    cycle_str[2] = '\0';
+    if(StringLib::str2long(cycle_str, &val, 10))
+    {
+        cycle = static_cast<uint8_t>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse cycle from resource %s: %s", resource, cycle_str);
+    }
+
+    /* get region */
+    char region_str[3];
+    region_str[0] = resource[27];
+    region_str[1] = resource[28];
+    region_str[2] = '\0';
+    if(StringLib::str2long(region_str, &val, 10))
+    {
+        region = static_cast<uint8_t>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse region from resource %s: %s", resource, region_str);
+    }
+
+    char version_str[4];
+    version_str[0] = resource[30];
+    version_str[1] = resource[31];
+    version_str[2] = resource[32];
+    version_str[3] = '\0';
+    if(StringLib::str2long(version_str, &val, 10))
+    {
+        version = static_cast<uint8_t>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse version from resource %s: %s", resource, version_str);
+    }
+}
+
+/*----------------------------------------------------------------------------
  * Constructor - FitFields
  *----------------------------------------------------------------------------*/
 FitFields::FitFields():
@@ -197,7 +339,7 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
     // parse resource name
     if(!resource.value.empty())
     {
-        parseResource();
+        granuleFields.parseResource(resource.value.c_str());
     }
 
     // handle signal confidence options
@@ -352,13 +494,7 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset
         {"atl06_fields",        &atl06Fields},
         {"atl08_fields",        &atl08Fields},
         {"atl13_fields",        &atl13Fields},
-        {"year",                &year},
-        {"month",               &month},
-        {"day",                 &day},
-        {"rgt",                 &rgt},
-        {"cycle",               &cycle},
-        {"region",              &region},
-        {"version",             &version} })
+        {"granule",             &granuleFields} })
 {
     // add additional fields to dictionary
     for(const FieldDictionary::init_entry_t elem: init_list)
@@ -369,134 +505,6 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset
 
     // add additional functions
     LuaEngine::setAttrFunc(L, "stage", luaStage);
-}
-
-/*----------------------------------------------------------------------------
- * parseResource
- *
- *  ATL0x_YYYYMMDDHHMMSS_ttttccrr_vvv_ee
- *      YYYY    - year
- *      MM      - month
- *      DD      - day
- *      HH      - hour
- *      MM      - minute
- *      SS      - second
- *      tttt    - reference ground track
- *      cc      - cycle
- *      rr      - region
- *      vvv     - version
- *      ee      - revision
- *----------------------------------------------------------------------------*/
-void Icesat2Fields::parseResource (void)
-{
-    long val;
-
-    if(resource.value.size() < 33)
-    {
-        return; // early exit on error
-    }
-
-    /* get year */
-    char year_str[5];
-    year_str[0] = resource.value[6];
-    year_str[1] = resource.value[7];
-    year_str[2] = resource.value[8];
-    year_str[3] = resource.value[9];
-    year_str[4] = '\0';
-    if(StringLib::str2long(year_str, &val, 10))
-    {
-        year = static_cast<int>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse year from resource %s: %s", resource.value.c_str(), year_str);
-    }
-
-    /* get month */
-    char month_str[3];
-    month_str[0] = resource.value[10];
-    month_str[1] = resource.value[11];
-    month_str[2] = '\0';
-    if(StringLib::str2long(month_str, &val, 10))
-    {
-        month = static_cast<int>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse month from resource %s: %s", resource.value.c_str(), month_str);
-    }
-
-    /* get day */
-    char day_str[3];
-    day_str[0] = resource.value[12];
-    day_str[1] = resource.value[13];
-    day_str[2] = '\0';
-    if(StringLib::str2long(day_str, &val, 10))
-    {
-        day = static_cast<int>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse day from resource %s: %s", resource.value.c_str(), day_str);
-    }
-
-    /* get RGT */
-    char rgt_str[5];
-    rgt_str[0] = resource.value[21];
-    rgt_str[1] = resource.value[22];
-    rgt_str[2] = resource.value[23];
-    rgt_str[3] = resource.value[24];
-    rgt_str[4] = '\0';
-    if(StringLib::str2long(rgt_str, &val, 10))
-    {
-        rgt = static_cast<uint16_t>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse RGT from resource %s: %s", resource.value.c_str(), rgt_str);
-    }
-
-    /* get cycle */
-    char cycle_str[3];
-    cycle_str[0] = resource.value[25];
-    cycle_str[1] = resource.value[26];
-    cycle_str[2] = '\0';
-    if(StringLib::str2long(cycle_str, &val, 10))
-    {
-        cycle = static_cast<uint8_t>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse cycle from resource %s: %s", resource.value.c_str(), cycle_str);
-    }
-
-    /* get region */
-    char region_str[3];
-    region_str[0] = resource.value[27];
-    region_str[1] = resource.value[28];
-    region_str[2] = '\0';
-    if(StringLib::str2long(region_str, &val, 10))
-    {
-        region = static_cast<uint8_t>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse region from resource %s: %s", resource.value.c_str(), region_str);
-    }
-
-    char version_str[4];
-    version_str[0] = resource.value[30];
-    version_str[1] = resource.value[31];
-    version_str[2] = resource.value[32];
-    version_str[3] = '\0';
-    if(StringLib::str2long(version_str, &val, 10))
-    {
-        version = static_cast<uint8_t>(val);
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse version from resource %s: %s", resource.value.c_str(), version_str);
-    }
 }
 
 /*----------------------------------------------------------------------------

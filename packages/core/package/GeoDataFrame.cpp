@@ -731,6 +731,18 @@ const string& GeoDataFrame::getZColumnName (void) const
 }
 
 /*----------------------------------------------------------------------------
+ * getInfoAsJson
+ *----------------------------------------------------------------------------*/
+const string GeoDataFrame::getInfoAsJson (void) const
+{
+    return string(FString("{\"time\":\"%s\",\"x\":\"%s\",\"y\":\"%s\",\"z\":\"%s\"}",
+                    timeColumnName.c_str(),
+                    xColumnName.c_str(),
+                    yColumnName.c_str(),
+                    zColumnName.c_str()).c_str());
+}
+
+/*----------------------------------------------------------------------------
  * waitRunComplete
  *----------------------------------------------------------------------------*/
 bool GeoDataFrame::waitRunComplete (int timeout)

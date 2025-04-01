@@ -53,6 +53,27 @@
  * CLASSES
  ******************************************************************************/
 
+/******************/
+/* Granule Fields */
+/******************/
+struct GranuleFields: public FieldDictionary
+{
+
+    FieldElement<int>   year {-1};      // ATL03 granule observation date - year
+    FieldElement<int>   month {-1};     // ATL03 granule observation date - month
+    FieldElement<int>   day {-1};       // ATL03 granule observation date - day
+    FieldElement<int>   rgt {-1};       // ATL03 granule reference ground track
+    FieldElement<int>   cycle {-1};     // ATL03 granule cycle
+    FieldElement<int>   region {-1};    // ATL03 granule region
+    FieldElement<int>   version {-1};   // ATL03 granule version
+
+    GranuleFields(void);
+    ~GranuleFields(void) override = default;
+
+    void parseResource (const char* resource);
+};
+
+
 /**************/
 /* Fit Fields */
 /**************/
@@ -450,13 +471,7 @@ class Icesat2Fields: public RequestFields
         FieldList<string>                                   atl06Fields;                                            // list of ATL06 fields to associate with an ATL06 subsetting request
         FieldList<string>                                   atl08Fields;                                            // list of ATL08 fields to associate with an extent
         FieldList<string>                                   atl13Fields;                                            // list of ATL13 fields to associate with an extent
-        FieldElement<int>                                   year {-1};                                              // ATL03 granule observation date - year
-        FieldElement<int>                                   month {-1};                                             // ATL03 granule observation date - month
-        FieldElement<int>                                   day {-1};                                               // ATL03 granule observation date - day
-        FieldElement<int>                                   rgt {-1};                                               // ATL03 granule reference ground track
-        FieldElement<int>                                   cycle {-1};                                             // ATL03 granule cycle
-        FieldElement<int>                                   region {-1};                                            // ATL03 granule region
-        FieldElement<int>                                   version {-1};                                           // ATL03 granule version
+        GranuleFields                                       granuleFields;                                          // ATL03 granule attributes
 
         bool stages[NUM_STAGES] = {false, false, false, false, false};
 
@@ -469,7 +484,6 @@ class Icesat2Fields: public RequestFields
                 Icesat2Fields   (lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldDictionary::init_entry_t>& init_list);
         virtual ~Icesat2Fields  (void) override = default;
 
-        void parseResource (void);
         static int luaStage (lua_State* L);
 
 };

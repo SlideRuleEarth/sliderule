@@ -519,11 +519,11 @@ void* Atl06Reader::subsettingThread (void* parm)
 
             /* Populate Elevation */
             elevation_t* entry = &atl06_data->elevation[batch_index++];
-            entry->extent_id                = Icesat2Fields::generateExtentId(parms->rgt.value, parms->cycle.value, parms->region.value, info->track, info->pair, extent_counter) | Icesat2Fields::EXTENT_ID_ELEVATION;
+            entry->extent_id                = Icesat2Fields::generateExtentId(parms->granuleFields.rgt.value, parms->granuleFields.cycle.value, parms->granuleFields.region.value, info->track, info->pair, extent_counter) | Icesat2Fields::EXTENT_ID_ELEVATION;
             entry->time_ns                  = Icesat2Fields::deltatime2timestamp(atl06.delta_time[segment]);
             entry->segment_id               = atl06.segment_id[segment];
-            entry->rgt                      = parms->rgt.value;
-            entry->cycle                    = parms->cycle.value;
+            entry->rgt                      = parms->granuleFields.rgt.value;
+            entry->cycle                    = parms->granuleFields.cycle.value;
             entry->spot                     = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl06.sc_orient[0], (Icesat2Fields::track_t)info->track, info->pair);
             entry->gt                       = Icesat2Fields::getGroundTrack((Icesat2Fields::sc_orient_t)atl06.sc_orient[0], (Icesat2Fields::track_t)info->track, info->pair);
             entry->atl06_quality_summary    = atl06.atl06_quality_summary[segment];

@@ -4,4 +4,4 @@ geos: 3.13.1-0-g431568d6e
 libgeotiff: 1.7.4-0-g96024f6
 PROJ: 9.6.0-0-gcd190c47
 rapidjson: v1.1.0-763-g24b5e7a8
-xgboost: v3.0.0rc1-0-g4bfd4bf60
+xgboost:

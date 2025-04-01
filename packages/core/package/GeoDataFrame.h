@@ -194,6 +194,7 @@ class GeoDataFrame: public LuaObject, public Field
         const string&               getXColumnName      (void) const;
         const string&               getYColumnName      (void) const;
         const string&               getZColumnName      (void) const;
+        const string                getInfoAsJson       (void) const;
 
         bool                        waitRunComplete     (int timeout);
         void                        signalRunComplete   (void);

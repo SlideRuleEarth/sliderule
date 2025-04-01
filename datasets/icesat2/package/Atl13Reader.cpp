@@ -499,11 +499,11 @@ void* Atl13Reader::subsettingThread (void* parm)
 
             /* Populate Elevation */
             water_t* entry = &atl13_data->water[batch_index++];
-            entry->extent_id                = Icesat2Fields::generateExtentId(reader->parms->rgt.value, reader->parms->cycle.value, reader->parms->region.value, info->track, info->pair, extent_counter) | Icesat2Fields::EXTENT_ID_ELEVATION;
+            entry->extent_id                = Icesat2Fields::generateExtentId(reader->parms->granuleFields.rgt.value, reader->parms->granuleFields.cycle.value, reader->parms->granuleFields.region.value, info->track, info->pair, extent_counter) | Icesat2Fields::EXTENT_ID_ELEVATION;
             entry->time_ns                  = Icesat2Fields::deltatime2timestamp(atl13.delta_time[segment]);
             entry->segment_id               = atl13.segment_id_beg[segment];
-            entry->rgt                      = reader->parms->rgt.value;
-            entry->cycle                    = reader->parms->cycle.value;
+            entry->rgt                      = reader->parms->granuleFields.rgt.value;
+            entry->cycle                    = reader->parms->granuleFields.cycle.value;
             entry->spot                     = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl13.sc_orient[0], (Icesat2Fields::track_t)info->track, info->pair);
             entry->gt                       = Icesat2Fields::getGroundTrack((Icesat2Fields::sc_orient_t)atl13.sc_orient[0], (Icesat2Fields::track_t)info->track, info->pair);
             entry->latitude                 = region.latitude[segment];

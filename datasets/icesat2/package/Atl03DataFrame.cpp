@@ -170,9 +170,9 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     }
 
     /* Set MetaData from Parameters */
-    cycle = parms->cycle.value;
-    region = parms->region.value;
-    rgt = parms->rgt.value;
+    cycle = parms->granuleFields.cycle.value;
+    region = parms->granuleFields.region.value;
+    rgt = parms->granuleFields.rgt.value;
 
     /* Calculate Key */
     dfKey = 0;
@@ -439,7 +439,7 @@ void Atl03DataFrame::AreaOfInterest::rasterregion (const Atl03DataFrame* df)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest& aoi):
-    read_yapc           (df->parms->stages[Icesat2Fields::STAGE_YAPC] && (df->parms->yapc.version == 0) && (df->parms->version.value >= 6)),
+    read_yapc           (df->parms->stages[Icesat2Fields::STAGE_YAPC] && (df->parms->yapc.version == 0) && (df->parms->granuleFields.version.value >= 6)),
     sc_orient           (df->hdf03,                            "/orbit_info/sc_orient"),
     velocity_sc         (df->hdf03, FString("%s/%s", df->beam, "geolocation/velocity_sc").c_str(),      H5Coro::ALL_COLS, aoi.first_segment, aoi.num_segments),
     segment_delta_time  (df->hdf03, FString("%s/%s", df->beam, "geolocation/delta_time").c_str(),       0, aoi.first_segment, aoi.num_segments),

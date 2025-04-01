@@ -174,9 +174,6 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 	-rm -Rf $(SLIDERULE_STAGE_DIR)
 	mkdir -p $(SLIDERULE_STAGE_DIR)
 	rsync -a $(ROOT) $(SLIDERULE_STAGE_DIR)/sliderule --exclude build --exclude stage
-	rsync -a $(COASTNET_DIR) $(SLIDERULE_STAGE_DIR) --exclude models
-	rsync -a $(QTREES_DIR) $(SLIDERULE_STAGE_DIR) --exclude models
-	rsync -a $(OPENOCEANSPP_DIR) $(SLIDERULE_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/config.json $(SLIDERULE_STAGE_DIR)
 	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest $(DOCKER_PLATFORM) .

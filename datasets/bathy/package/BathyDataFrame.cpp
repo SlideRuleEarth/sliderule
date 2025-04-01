@@ -450,7 +450,7 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     h_ph                (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/h_ph").c_str(),                0, region.first_photon,  region.num_photons),
     signal_conf_ph      (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/signal_conf_ph").c_str(),      dataframe.signalConfColIndex, region.first_photon,  region.num_photons),
     quality_ph          (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/quality_ph").c_str(),          0, region.first_photon,  region.num_photons),
-    weight_ph           (dataframe.parms.version.value >= 6 ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam.value.c_str(), "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
+    weight_ph           (dataframe.parms.granuleFields.version.value >= 6 ? dataframe.hdf03 : NULL, FString("%s/%s", dataframe.beam.value.c_str(), "heights/weight_ph").c_str(), 0, region.first_photon,  region.num_photons),
     lat_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/lat_ph").c_str(),              0, region.first_photon,  region.num_photons),
     lon_ph              (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/lon_ph").c_str(),              0, region.first_photon,  region.num_photons),
     delta_time          (dataframe.hdf03, FString("%s/%s", dataframe.beam.value.c_str(), "heights/delta_time").c_str(),          0, region.first_photon,  region.num_photons),
@@ -476,7 +476,7 @@ BathyDataFrame::Atl03Data::Atl03Data (const BathyDataFrame& dataframe, const Reg
     h_ph.join(dataframe.readTimeoutMs, true);
     signal_conf_ph.join(dataframe.readTimeoutMs, true);
     quality_ph.join(dataframe.readTimeoutMs, true);
-    if(dataframe.parms.version.value >= 6) weight_ph.join(dataframe.readTimeoutMs, true);
+    if(dataframe.parms.granuleFields.version.value >= 6) weight_ph.join(dataframe.readTimeoutMs, true);
     lat_ph.join(dataframe.readTimeoutMs, true);
     lon_ph.join(dataframe.readTimeoutMs, true);
     delta_time.join(dataframe.readTimeoutMs, true);
@@ -633,7 +633,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
 
                 /* Set and Check YAPC Score */
                 uint8_t yapc_score = 0;
-                if(parms.version.value >= 6)
+                if(parms.granuleFields.version.value >= 6)
                 {
                     yapc_score = atl03.weight_ph[current_photon];
                     if(yapc_score < parms.yapc.score.value)

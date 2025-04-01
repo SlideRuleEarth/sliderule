@@ -445,7 +445,7 @@ void* Atl03Viewer::subsettingThread (void* parm)
 
             const segment_t segment = {
                 .time_ns   = Icesat2Fields::deltatime2timestamp(atl03.segment_delta_time[s]),
-                .extent_id = Icesat2Fields::generateExtentId(parms->rgt.value, parms->cycle.value, parms->region.value, info->track, info->pair, s),
+                .extent_id = Icesat2Fields::generateExtentId(parms->granuleFields.rgt.value, parms->granuleFields.cycle.value, parms->granuleFields.region.value, info->track, info->pair, s),
                 .latitude  = region.segment_lat[s],
                 .longitude = region.segment_lon[s],
                 .dist_x    = atl03.segment_dist_x[s],
@@ -464,13 +464,13 @@ void* Atl03Viewer::subsettingThread (void* parm)
                 /* Initialize Extent Record */
                 RecordObject record (batchRecType, batch_bytes);
                 extent_t* extent = reinterpret_cast<extent_t*>(record.getRecordData());
-                extent->region = parms->region.value;
+                extent->region = parms->granuleFields.region.value;
                 extent->track = info->track;
                 extent->pair = info->pair;
                 extent->spot = Icesat2Fields::getSpotNumber(static_cast<Icesat2Fields::sc_orient_t>(atl03.sc_orient[0]),
                                                            static_cast<Icesat2Fields::track_t>(info->track), info->pair);
-                extent->reference_ground_track = parms->rgt.value;
-                extent->cycle = parms->cycle.value;
+                extent->reference_ground_track = parms->granuleFields.rgt.value;
+                extent->cycle = parms->granuleFields.cycle.value;
 
                 /* Populate Segments */
                 for(int32_t i = 0; i < segments.length(); i++)

@@ -133,9 +133,9 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     }
 
     /* Set MetaData from Parameters */
-    cycle = parms->cycle.value;
-    region = parms->region.value;
-    rgt = parms->rgt.value;
+    cycle = parms->granuleFields.cycle.value;
+    region = parms->granuleFields.region.value;
+    rgt = parms->granuleFields.rgt.value;
 
     /* Calculate Key */
     dfKey = 0;

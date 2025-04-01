@@ -472,7 +472,7 @@ void Atl03Reader::Region::rasterregion (const info_t* info)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 Atl03Reader::Atl03Data::Atl03Data (const info_t* info, const Region& region):
-    read_yapc           (info->reader->parms->stages[Icesat2Fields::STAGE_YAPC] && (info->reader->parms->yapc.version == 0) && (info->reader->parms->version.value >= 6)),
+    read_yapc           (info->reader->parms->stages[Icesat2Fields::STAGE_YAPC] && (info->reader->parms->yapc.version == 0) && (info->reader->parms->granuleFields.version.value >= 6)),
     sc_orient           (info->reader->context,                                "/orbit_info/sc_orient"),
     velocity_sc         (info->reader->context, FString("%s/%s", info->prefix, "geolocation/velocity_sc").c_str(),      H5Coro::ALL_COLS, region.first_segment, region.num_segments),
     segment_delta_time  (info->reader->context, FString("%s/%s", info->prefix, "geolocation/delta_time").c_str(),       0, region.first_segment, region.num_segments),
@@ -1531,7 +1531,7 @@ void* Atl03Reader::subsettingThread (void* parm)
             if(state.extent_valid || parms->passInvalid)
             {
                 /* Generate Extent ID */
-                const uint64_t extent_id = Icesat2Fields::generateExtentId(parms->rgt.value, parms->cycle.value, parms->region.value, info->track, info->pair, extent_counter);
+                const uint64_t extent_id = Icesat2Fields::generateExtentId(parms->granuleFields.rgt.value, parms->granuleFields.cycle.value, parms->granuleFields.region.value, info->track, info->pair, extent_counter);
 
                 /* Build Extent and Ancillary Records */
                 vector<RecordObject*> rec_list;
@@ -1711,12 +1711,12 @@ void Atl03Reader::generateExtentRecord (uint64_t extent_id, const info_t* info, 
     RecordObject* record            = new RecordObject(exRecType, extent_bytes);
     extent_t* extent                = reinterpret_cast<extent_t*>(record->getRecordData());
     extent->extent_id               = extent_id;
-    extent->region                  = parms->region.value;
+    extent->region                  = parms->granuleFields.region.value;
     extent->track                   = info->track;
     extent->pair                    = info->pair;
     extent->spacecraft_orientation  = atl03.sc_orient[0];
-    extent->reference_ground_track  = parms->rgt.value;
-    extent->cycle                   = parms->cycle.value;
+    extent->reference_ground_track  = parms->granuleFields.rgt.value;
+    extent->cycle                   = parms->granuleFields.cycle.value;
     extent->segment_id              = calculateSegmentId(state, atl03);
     extent->segment_distance        = state.seg_distance;
     extent->extent_length           = state.extent_length;
