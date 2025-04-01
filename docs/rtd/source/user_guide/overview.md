@@ -67,7 +67,7 @@ parm = {
 
 ### Resources
 
-When making a request, there are two ways to specify what data needs to be processed, the first is by manually supplying the names of the resources (i.e. filenames); the second is to supply an area of interest and let the SlideRule servers determine which resources needed to be processed.  In both cases, an ___asset___ for those resoures must be defined.  An asset is a collection of resources that share a source location, software driver for reading, and credentials to access.
+When making a request, there are two ways to specify what data needs to be processed, the first is by manually supplying the names of the resources (i.e. filenames); the second is to supply an area of interest and let the SlideRule servers determine which resources needed to be processed.  In both cases, an ___asset___ for those resources must be defined.  An asset is a collection of resources that share a source location, software driver for reading, and credentials to access.
 
 :::{note}
 For example, the ICESat-2 ATL03 data hosted by the NSIDC is a single asset in SlideRule (it is identified simply as `icesat2`).  All of the ATL03 data is stored in the NASA Cumulus S3 bucket, is stored as HDF5 files that use the H5Coro driver, and requires Earthdata Login credentials to read.
@@ -85,7 +85,7 @@ Polygon with Resources
     In the request parameters, the user provides a polygon and a list of resources in their request.  The SlideRule servers use the polygon directly to subset all of the resources specified.
 
 Parameters without Resources
-    In the request parameters, the user provides a polygon and/or other resource query parameters (e.g. name filter), without specifying which resources to process.  The SlideRule servers use the _asset_ (either provided as the default for the endpoint or manually supplied in the request) to determine which metadata respositories contain indexes for the source data.  The server-side code then issues a query to the appropriate metadata repository using the parameters in the request to obtain a list of resources to process.
+    In the request parameters, the user provides a polygon and/or other resource query parameters (e.g. name filter), without specifying which resources to process.  The SlideRule servers use the _asset_ (either provided as the default for the endpoint or manually supplied in the request) to determine which metadata repositories contain indexes for the source data.  The server-side code then issues a query to the appropriate metadata repository using the parameters in the request to obtain a list of resources to process.
 
 Python Client `toregion` - Raster
     Using the SlideRule Python Client `toregion` function, the user can provide a raster image which acts as a mask over the area of interest defining which latitude/longitude cells are "on" and which cells are "off".  The source data is subsetted according to the mask.  This is useful for very complicated areas of interest that represent coastlines or islands where a simple polygon is insufficient.
