@@ -8,7 +8,7 @@ This document will provide a high level overview of the different components of 
 Component Organization
 ------------------------------------
 
-.. figure:: ../assets/sysorg.png
+.. figure:: ../assets/sliderule_system.png
     :align: center
     :alt: SlideRule System Components
 
