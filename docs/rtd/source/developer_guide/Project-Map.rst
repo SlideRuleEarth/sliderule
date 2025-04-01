@@ -30,7 +30,7 @@ Component Organization
 
     .
 
-:Data Lake: SlideRule expects the source datasets it processes to be in different formats and hosted on different platforms.  For ICESat-2, the three primary datasets used by SlideRule are in the HDF5 format and are hosted by the National Snow and Ice Data Center (NSIDC) in AWS's S3 in the us-west-2 region.  For those datasets, SlideRule takes care of Earthdata authentication and S3 interfacing, and makes it so that users do not need to worry about how the data is accessed.
+:Earthdata Cloud: For ICESat-2, the three primary datasets used by SlideRule are in the HDF5 format and are hosted by the National Snow and Ice Data Center (NSIDC) in AWS's S3 in the us-west-2 region.  For those datasets, SlideRule takes care of Earthdata authentication and interfacing with S3, and makes it so that users do not need to worry about how the data is accessed.
 
 
 Links to Project Resources
@@ -76,3 +76,4 @@ The SlideRule project consists of one main repository with a few supporting repo
 
   * The `sliderule-prov-sys <https://github.com/SlideRuleEarth/sliderule-prov-sys>`_ repository containing the source code for the SlideRule Provisioning System; written in Python/Django
 
+  * The `sliderule-web-client <https://github.com/SlideRuleEarth/sliderule-web-client>`_ repository containing the source code for the SlideRule Web Client; written in JavaScript

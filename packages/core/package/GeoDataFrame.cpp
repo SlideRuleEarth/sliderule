@@ -954,7 +954,7 @@ GeoDataFrame::~GeoDataFrame(void)
     while(recv_status > 0)
     {
         GeoDataFrame::FrameRunner* runner;
-        recv_status = subRunQ.receiveCopy(&runner, sizeof(runner), SYS_TIMEOUT);
+        recv_status = subRunQ.receiveCopy(&runner, sizeof(runner), IO_CHECK);
         if(recv_status > 0 && runner) runner->releaseLuaObject();
     }
 }
