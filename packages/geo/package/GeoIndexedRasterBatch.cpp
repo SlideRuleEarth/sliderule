@@ -33,13 +33,10 @@
  * INCLUDES
  ******************************************************************************/
 
+#include <algorithm> // Required for std::all_of
+
 #include "GeoRaster.h"
 #include "GeoIndexedRaster.h"
-
-
-/******************************************************************************
- * STATIC DATA
- ******************************************************************************/
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -50,7 +47,6 @@
  *----------------------------------------------------------------------------*/
 GeoIndexedRaster::PointSample::PointSample(const OGRPoint& _point, int64_t _pointIndex):
     point(_point), pointIndex(_pointIndex), ssErrors(SS_NO_ERRORS) {}
-
 
 /*----------------------------------------------------------------------------
  * PointSample Copy Constructor
