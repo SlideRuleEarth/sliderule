@@ -59,7 +59,7 @@ GranuleFields::GranuleFields():
 /*----------------------------------------------------------------------------
  * parseResource
  *
- *  ATL0x_YYYYMMDDHHMMSS_ttttccrr_vvv_ee
+ *  ATLxx_YYYYMMDDHHMMSS_ttttccrr_vvv_ee
  *      YYYY    - year
  *      MM      - month
  *      DD      - day
@@ -76,9 +76,15 @@ void GranuleFields::parseResource (const char* resource)
 {
     long val;
 
-    if(StringLib::size(resource) < 33)
+    /* check resource */
+    const int strsize = StringLib::size(resource);
+    if(strsize < 3 || resource[0] != 'A' || resource[1] !='T' || resource[2] != 'L')
     {
-        return; // early exit on error
+        return; // not an ICESat-2 standard data product
+    }
+    if(strsize < 33)
+    {
+        return; // insufficient size to parse all fields
     }
 
     /* get year */

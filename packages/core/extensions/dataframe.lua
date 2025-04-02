@@ -43,14 +43,12 @@ end
 --
 -- get_resources
 --
-local function get_resources(parms, rqst, q, userlog)
-    if rqst["resources"] and (#rqst["resources"] > 0) then
-        return RC_SUCCESS, rqst["resources"]
-    end
+local function get_resources(rqst, asset_name, q, userlog)
+    rqst["asset"] = asset_name
     local max_retries = 3
     local attempt = 1
     while true do
-        local rc, rsps = earthdata.search(parms:export())
+        local rc, rsps = earthdata.search(rqst)
         if rc == earthdata.SUCCESS then
             userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> retrieved %d resources", q, #rsps))
             return RC_SUCCESS, rsps
@@ -123,10 +121,16 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
     end
 
     -- Query EarthData for Resources to Process
-    local status, resources = get_resources(parms, rqst, rspq, userlog)
-    if status ~= RC_SUCCESS then
-        userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> earthdata queury failed: %d", rspq, status))
-        return status
+    local resources = nil
+    if rqst["resources"] and (#rqst["resources"] > 0) then
+        resources = rqst["resources"]
+    else
+        local status
+        status, resources = get_resources(rqst, parms["asset"], rspq, userlog)
+        if status ~= RC_SUCCESS then
+            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> earthdata queury failed: %d", rspq, status))
+            return status
+        end
     end
 
     -- Check Request Constraints

@@ -138,33 +138,37 @@ local function cmr (parms, poly, with_meta)
     local link_table = {}
 
     -- get parameters of request
-    local short_name = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
-    local dataset = DATASETS[short_name] or {}
-    local cmr_parms = parms["cmr"] or {}
-    local provider = dataset["provider"] or error("unable to determine provider for query")
-    local version = cmr_parms["version"] or dataset["version"]
-    local polygon = cmr_parms["polygon"] or parms["poly"] or poly
-    local t0 = parms["t0"] or '2018-01-01T00:00:00Z'
-    local t1 = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
-    local name_filter = parms["name_filter"]
+    local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
+    local dataset       = DATASETS[short_name] or {}
+    local cmr_parms     = parms["cmr"] or {}
+    local granule_parms = parms["granule"] or {}
+    local provider      = dataset["provider"] or error("unable to determine provider for query")
+    local version       = cmr_parms["version"] or dataset["version"]
+    local polygon       = cmr_parms["polygon"] or parms["poly"] or poly
+    local rgt           = parms["rgt"] or granule_parms["rgt"]
+    local cycle         = parms["cycle"] or granule_parms["cycle"]
+    local region        = parms["region"] or granule_parms["region"]
+    local t0            = parms["t0"] or '2018-01-01T00:00:00Z'
+    local t1            = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
+    local name_filter   = parms["name_filter"]
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
 
     -- build name filter
     if (not name_filter) and parms["asset"] and (parms["asset"] == "icesat2") then
         local name_filter_enabled = false
         local rgt_filter = '????'
-        if parms["rgt"] then
-            rgt_filter = string.format("%04d", parms["rgt"])
+        if rgt then
+            rgt_filter = string.format("%04d", rgt)
             name_filter_enabled = true
         end
         local cycle_filter = '??'
-        if parms["cycle"] then
-            cycle_filter = string.format("%02d", parms["cycle"])
+        if cycle then
+            cycle_filter = string.format("%02d", cycle)
             name_filter_enabled = true
         end
         local region_filter = '??'
-        if parms["region"] then
-            region_filter = string.format("%02d", parms["region"])
+        if region then
+            region_filter = string.format("%02d", region)
             name_filter_enabled = true
         end
         if name_filter_enabled then
@@ -305,13 +309,13 @@ local function stac (parms, poly)
     local geotable = {}
 
     -- get parameters of request
-    local short_name = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
-    local dataset = DATASETS[short_name] or {}
-    local provider = dataset["provider"] or error("unable to determine provider for query")
-    local collections = parms["collections"] or dataset["collections"]
-    local polygon = parms["poly"] or poly
-    local t0 = parms["t0"] or '2018-01-01T00:00:00Z'
-    local t1 = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
+    local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
+    local dataset       = DATASETS[short_name] or {}
+    local provider      = dataset["provider"] or error("unable to determine provider for query")
+    local collections   = parms["collections"] or dataset["collections"]
+    local polygon       = parms["poly"] or poly
+    local t0            = parms["t0"] or '2018-01-01T00:00:00Z'
+    local t1            = parms["t1"] or string.format('%04d-%02d-%02dT%02d:%02d:%02dZ', time.gps2date(time.gps()))
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
 
     -- build stac request
@@ -395,10 +399,10 @@ local function tnm (parms, poly)
     }
 
     -- get parameters of request
-    local short_name = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
-    local polygon = parms["poly"] or poly
-    local t0 = parms["t0"] or '2018-01-01'
-    local t1 = parms["t1"] or string.format('%04d-%02d-%02d', time.gps2date(time.gps()))
+    local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
+    local polygon       = parms["poly"] or poly
+    local t0            = parms["t0"] or '2018-01-01'
+    local t1            = parms["t1"] or string.format('%04d-%02d-%02d', time.gps2date(time.gps()))
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
 
     -- flatten polygon

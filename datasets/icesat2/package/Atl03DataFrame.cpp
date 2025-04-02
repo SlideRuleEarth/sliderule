@@ -1343,7 +1343,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             }
 
             /* Add Optional YAPC Data */
-            if(yapc.score)
+            if(parms.stages[Icesat2Fields::STAGE_YAPC])
             {
                 df->yapc_score.append(yapc_score);
             }

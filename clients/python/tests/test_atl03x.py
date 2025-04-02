@@ -132,3 +132,31 @@ class TestAtl03x:
         assert len(gdf.keys()) == 17
         assert gdf["atl24_class"].value_counts()[41] == 49523
         assert abs(gdf["atl24_confidence"].max() - 0.8872309) < 0.0001, gdf["atl24_confidence"].max()
+
+    def test_earthdata_atl24(self, init):
+        parms = {
+            "cnf": 0,
+            "poly": [ { "lon": -71.635926, "lat": 41.351689 },
+                    { "lon": -71.637573, "lat": 41.356567 },
+                    { "lon": -71.693417, "lat": 41.341954 },
+                    { "lon": -71.703369, "lat": 41.335941 },
+                    { "lon": -71.635926, "lat": 41.351689 } ],
+            "track": 1,
+            "beams": [ 10 ],
+            "rgt": 179,
+            "cycle": 8,
+            "atl24": {
+                "class_ph": [ "unclassified", "bathymetry", "sea_surface" ]
+            },
+            "yapc": {
+                "version": 0,
+                "score": 0
+            }
+        }
+        gdf = sliderule.run("atl03x", parms)
+        assert init
+        assert len(gdf) == 1066
+        assert len(gdf.keys()) == 18
+        assert gdf["yapc_score"].max() == 254
+        assert gdf["yapc_score"].min() == 0
+        assert gdf["atl24_class"].value_counts()[40] == 4
