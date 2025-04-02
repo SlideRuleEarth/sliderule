@@ -76,7 +76,7 @@ runner.unittest("TNM Query", function()
         }
     }
     local rc, rsps = earthdata.tnm(parms)
-    runner.assert(rc == earthdata.SUCCESS, string.format("failed tnm request: %d", rc))
+    runner.assert(rc == earthdata.SUCCESS, string.format("failed tnm request: %s", rsps))
     if rc == earthdata.SUCCESS then
         runner.assert(#rsps["features"] >= 56, string.format("failed to return enough results: %d", #rsps["features"]))
         runner.assert(#rsps["features"][1]["geometry"]["coordinates"][1] == 5, string.format("failed to return enough coordinates for each feature: %d", #rsps["features"][1]["geometry"]["coordinates"][1]))
