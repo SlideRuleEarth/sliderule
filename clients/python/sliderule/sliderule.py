@@ -65,6 +65,8 @@ DEFAULT_TRUST_ENV = False
 service_url = PUBLIC_URL
 service_org = PUBLIC_ORG
 
+ssl_verify = True
+
 session = requests.Session()
 session.trust_env = DEFAULT_TRUST_ENV
 
@@ -854,9 +856,9 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
                 url = 'http://%s%s/%s' % (service_url, path, api)
             # Perform Request
             if not stream:
-                data = session.get(url, data=rqst, headers=headers, timeout=request_timeout)
+                data = session.get(url, data=rqst, headers=headers, timeout=request_timeout, verify=ssl_verify)
             else:
-                data = session.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True)
+                data = session.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True, verify=ssl_verify)
             data.raise_for_status()
             # Parse Response
             stream = __StreamSource(data)
@@ -935,6 +937,27 @@ def set_url (url):
     global service_url
     service_url = url
     logger.info(f'Setting URL to {service_url}')
+
+#
+#  set_ssl_verify
+#
+def set_ssl_verify (verify):
+    '''
+    Configure SSL certification verification in requests made to SlideRule
+
+    Parameters
+    ----------
+        verify: bool
+                When true, SSL certificates are verified (default).  When false, SSL certificates are not verified.
+
+    Examples
+    --------
+        >>> import sliderule
+        >>> sliderule.set_ssl_verify(False)
+    '''
+    global ssl_verify
+    ssl_verify = verify
+    logger.info(f'Setting SSL verify to {ssl_verify}')
 
 #
 #  set_verbose
