@@ -459,10 +459,10 @@ local function tnm (parms, poly)
         -- build table from response
         local status, results = pcall(json.decode, rsps)
         if not status then
-            return RC_RSPS_UNPARSEABLE, "could not parse json in response from TNM"
+            return RC_RSPS_UNPARSEABLE, rsps
         end
         if not results["items"] then
-            return RC_RSPS_UNEXPECTED, "no items returned in request"
+            return RC_RSPS_UNEXPECTED, rsps
         end
 
         -- then build the geojson from the response
