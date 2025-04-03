@@ -3,7 +3,7 @@ local glb = require("global")
 
 -- Configure Running In Cloud --
 local aws_rsps_code = core.servicecheck("http://169.254.169.254/latest/meta-data/", 1)
-if aws_rsps_code >= 200 and aws_rsps_code < 300 then
+if aws_rsps_code >= 200 and aws_rsps_code < 500 then
     sys.setincloud(true)
 end
 
