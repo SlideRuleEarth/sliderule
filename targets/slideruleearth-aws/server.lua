@@ -1,6 +1,7 @@
 local global = require("global")
 local asset = require("asset")
 local json = require("json")
+local aws_utils = require("aws_utils")
 
 --------------------------------------------------
 -- Process Arguments
@@ -61,10 +62,7 @@ sys.setstddepth(msgq_depth)
 sys.setmemlimit(stream_mem_thresh)
 
 -- Configure In Cloud --
-local aws_meta_rsp = core.servicecheck("http://169.254.169.254/latest/meta-data/", 1)
-if aws_meta_rsp ~= 503 then
-    sys.setincloud(true)
-end
+aws_utils.config_aws()
 
 -- Configure Monitoring --
 sys.setlvl(core.LOG | core.TRACE | core.METRIC, event_level) -- set level globally
