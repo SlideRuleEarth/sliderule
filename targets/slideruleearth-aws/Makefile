@@ -63,7 +63,7 @@ DOCKEROPTS ?=
 BUILDX ?= # buildx
 DOCKER_PLATFORM ?= # --platform linux/arm64 | linux/amd64
 ARCH ?= $(shell arch)
-DOMAIN ?= testsliderule.org
+DOMAIN ?= slideruleearth.io
 DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
@@ -247,6 +247,9 @@ release: ## release a version of sliderule; needs VERSION
 	make cluster-docker-push
 	make cluster-build-packer
 	make cluster-upload-terraform
+	make static-website-docker
+	make static-website-export
+	make static-website-live-update
 
 docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(GHCR)/sliderule-buildenv:$(VERSION)

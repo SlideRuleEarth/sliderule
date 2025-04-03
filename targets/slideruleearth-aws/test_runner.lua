@@ -1,11 +1,9 @@
 local runner = require("test_executive")
 local glb = require("global")
+local aws_utils = require("aws_utils")
 
 -- Configure Running In Cloud --
-local aws_rsps_code = core.servicecheck("http://169.254.169.254/latest/meta-data/", 1)
-if aws_rsps_code >= 200 and aws_rsps_code < 300 then
-    sys.setincloud(true)
-end
+aws_utils.config_aws()
 
 -- Find All Self Test Directories --
 local selftests_dir_list = {}
