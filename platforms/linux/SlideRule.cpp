@@ -111,6 +111,10 @@
 #include "usgs3dep.h"
 #endif
 
+#ifdef __gedtm__
+#include "gedtm.h"
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <dlfcn.h>
@@ -408,6 +412,10 @@ int main (int argc, char* argv[])
         initusgs3dep();
     #endif
 
+    #ifdef __gedtm__
+        initgedtm();
+    #endif
+
     /* Load Plugins */
     ldplugins();
 
@@ -483,6 +491,10 @@ int main (int argc, char* argv[])
 
     #ifdef __usgs3dep__
         deinitusgs3dep();
+    #endif
+
+    #ifdef __gedtm__
+        deinitgedtm();
     #endif
 
     #ifdef __streaming__

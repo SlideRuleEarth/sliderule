@@ -35,3 +35,6 @@ nsidc-s3,                   nsidc-cloud,    cumulus,    nsidc-cumulus-prod-prote
 swot-s3,                    iam-role,       s3,         sliderule/data/SWOT,                                                    nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
 viirsj1-s3,                 iam-role,       s3,         sliderule/data/VIIRSJ1,                                                 nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
 sliderule-stage,            iam-role,       s3,         sliderule-public,                                                       nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
+gedtm-30meter,              nil,            nil,        /vsicurl/https://s3.opengeohub.org/global/edtm/legendtm_rf_30m_m_s_20000101_20231231_go_epsg.4326_v20250130.tif, nil, nil, nil
+gedtm-std,                  nil,            nil,        /vsicurl/https://s3.opengeohub.org/global/edtm/gendtm_rf_30m_std_s_20000101_20231231_go_epsg.4326_v20250209.tif, nil, nil, nil
+gedtm-dfm,                  nil,            nil,        /vsicurl/https://s3.opengeohub.org/global/dtm/v3/dfme_edtm_m_30m_s_20000101_20221231_go_epsg.4326_v20241230.tif, nil, nil, nil

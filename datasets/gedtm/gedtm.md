@@ -1,0 +1,1 @@
+Global Ensemble Digital Terrain Model (GEDTM) raster sampling

@@ -190,7 +190,8 @@ option (USE_LANDSAT_DATASET "Include the LandSat dataset" ON)
 option (USE_OPENDATA_DATASET "Include the OpenData dataset" ON)
 option (USE_PGC_DATASET "Include the PGC dataset" ON)
 option (USE_SWOT_DATASET "Include the SWOT dataset" ON)
-option (USE_USGS3DEP_DATASET "Include the USDS 3DEP dataset" ON)
+option (USE_USGS3DEP_DATASET "Include the USGS 3DEP dataset" ON)
+option (USE_GEDTM_DATASET "Include the GEDTM dataset" ON)
 
 # Target Options #
 
@@ -398,6 +399,10 @@ endif()
 
 if(${USE_USGS3DEP_DATASET})
     add_subdirectory (datasets/usgs3dep)
+endif()
+
+if(${USE_GEDTM_DATASET})
+    add_subdirectory (datasets/gedtm)
 endif()
 
 # Targets #
