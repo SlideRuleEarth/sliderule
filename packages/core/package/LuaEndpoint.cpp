@@ -236,7 +236,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
             }
             else
             {
-                const char* error_msg = "Does not exist";
+                const char* error_msg = "Missing results";
                 const int result_length = StringLib::size(error_msg);
                 const int header_length = buildheader(header, Not_Found, "text/plain", result_length, NULL, serverHead.c_str());
                 rspq->postCopy(header, header_length, POST_TIMEOUT_MS);

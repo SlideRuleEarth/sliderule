@@ -115,6 +115,7 @@ end
 
 -- Configure Application Endpoints --
 local source_endpoint = core.endpoint(normal_mem_thresh, stream_mem_thresh):name("SourceEndpoint")
+local arrow_endpoint = arrow.endpoint():name("ArrowEndpoint")
 
 -- Configure Provisioning System Authentication --
 core.psurl(ps_url)
@@ -122,11 +123,13 @@ core.psorg(org_name)
 if ps_auth then
     local authenticator = core.psauth()
     source_endpoint:auth(authenticator)
+    arrow_endpoint:auth(authenticator)
 end
 
 -- Run Application HTTP Server --
 local app_server = core.httpd(app_port):name("AppServer")
 app_server:attach(source_endpoint, "/source")
+app_server:attach(arrow_endpoint, "/arrow")
 
 --------------------------------------------------
 -- Register Service

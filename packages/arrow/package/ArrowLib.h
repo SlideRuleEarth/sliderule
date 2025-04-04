@@ -76,7 +76,7 @@ struct ArrowLib
 
     typedef struct {
         char        filename[FILE_NAME_MAX_LEN];
-        uint8_t     data[FILE_BUFFER_RSPS_SIZE];
+        uint8_t     data[];
     } arrow_file_data_t;
 
     typedef struct {
