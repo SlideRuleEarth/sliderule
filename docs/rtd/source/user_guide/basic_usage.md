@@ -1,11 +1,11 @@
 # Basic Usage
 
-## Parameters
+## Initializing the Client
 
-Parameters are passed to the SlideRule endpoints as JSON data structures (or as dictionaries to the Python client).  The parameters supported by Sliderule can be loosely divided into different groups based on the functionality they control.  The following parameter groups are generic parameters supported by most SlideRule services.  For parameters specific to a given SlideRule plugin, please refer to the plugin's documentation.
+## Defining Resources to Process
 
-Polygons
---------------
+
+#### Polygons
 
 All polygons provided to SlideRule must be provided as a list of dictionaries containing longitudes and latitudes in counter-clockwise order with the first and last point matching.
 
@@ -30,8 +30,7 @@ In order to facilitate other formats, the ``sliderule.toregion`` function can be
 
 There is no limit to the number of points in the polygon, but note that as the number of points grow, the amount of time it takes to perform the subsetting process also grows. For that reason, it is recommended that if your polygon has more than a few hundred points, it is best to enable the rasterization option described in the GeoJSON section below.
 
-GeoJSON
--------------
+#### GeoJSON
 
 One of the outputs of the ``sliderule.toregion`` function is a GeoJSON object that describes the region of interest.  It is available under the ``"region_mask"`` element of the returned dictionary.
 
@@ -51,8 +50,7 @@ The example code below shows how this option can be enabled and used (note, the 
         "region_mask": region['raster']
     }
 
-Time
-----------
+#### Time
 
 All times sent as request parameters are in GMT time.  All times returned in result records are in number of seconds (fractual, double precision) since the GPS epoch which is January 6, 1980 at midnight (1980-01-06:T00.00.00.000000Z).
 
@@ -73,44 +71,6 @@ Each request supports setting three different timeouts. These timeouts should on
 * ``"node_timeout"``: time in seconds for a single node to work on a distributed request (used for proxied requests)
 * ``"read_timeout"``: time in seconds for a single read of an asset to take
 * ``"timeout"``: global timeout setting that sets all timeouts at once (can be overridden by further specifying the other timeouts)
-
-Raster Sampling
---------------------------------
-
-SlideRule supports sampling raster datasets at the latitude and longitude of each calculated result from SlideRule processing.  When raster sampling is requested, the DataFrame returned by SlideRule includes columns for each requested raster with their associated values.
-
-To request raster sampling, the ``"samples"`` parameter must be populated as a dictionary in the request.  Each key in the dictionary is used to label the data returned for that raster in the returned DataFrame.
-
-* ``"samples"``: dictionary of rasters to sample
-    - ``"<key>"``: user supplied name used to identify results returned from sampling this raster
-        - ``"asset"``: name of the raster (as supplied in the Asset Directory) to be sampled
-        - ``"algorithm"``: algorithm to use to sample the raster; the available algorithms for sampling rasters are: NearestNeighbour, Bilinear, Cubic, CubicSpline, Lanczos, Average, Mode, Gauss
-        - ``"radius"``: the size of the kernel in meters when sampling a raster; the size of the region in meters for zonal statistics
-        - ``"zonal_stats"``: boolean whether to calculate and return zonal statistics for the region around the location being sampled
-        - ``"with_flags"``: boolean whether to include auxiliary information about the sampled pixel in the form of a 32-bit flag
-        - ``"t0"``: start time for filtering rasters to be sampled (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
-        - ``"t1"``: stop time for filtering rasters to be sampled (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
-        - ``"substr"``: substring filter for rasters to be sampled; the raster will only be sampled if the name of the raster includes the provided substring (useful for datasets that have multiple rasters for a given geolocation to be sampled)
-        - ``"closest_time"``: time used to filter rasters to be sampled; only the raster that is closest in time to the provided time will be sampled - can be multiple rasters if they all share the same time (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
-        - ``"use_poi_time"``: overrides the "closest_time" setting (or provides one if not set) with the time associated with the point of interest being sampled
-        - ``"catalog"``: geojson formatted stac query response (obtained through the `sliderule.earthdata.stac` Python API)
-        - ``"bands"``: list of bands to read out of the raster, or a predefined algorithm that combines bands for a given dataset
-        - ``"key_space"``: 64-bit integer defining the upper 32-bits of the ``file_id``; this in general should never be set as the server will typically do the right thing assigning a key space;   but for users that are parallelizing requests on the client-side, this parameter can be usedful when constructing the resulting file dictionaries that come back with the raster samples
-
-.. code-block:: python
-
-    parms {
-        "samples" : {
-            "mosaic": {"asset": "arcticdem-mosaic", "radius": 10.0, "zonal_stats": True},
-            "strips": {"asset": "arcticdem-strips", "algorithm": "CubicSpline"}
-        }
-    }
-
-The output returned in the DataFrame can take two different forms depending on the nature of the data requested.
-
-(1) If the raster being sampled includes on a single value for each latitude and longitude, then the data returned will be of the form {key}.value, {key}.time, {key}.file_id, {key}.{zonal stat} where the zonal stats are only present if requested.
-
-(2) If the raster being sampled has multiple values for a given latitude and longitude (e.g. multiple strips per scene, or multiple bands per image), then the data returned will still have the same column headers, but the values will be numpy arrays.  For a given row in a DataFrame, the length of the numpy array in each column associated with a raster should be the same.  From row to row, those lengths can be different.
 
 
 Output parameters

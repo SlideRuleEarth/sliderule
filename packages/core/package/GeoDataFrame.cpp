@@ -1103,9 +1103,6 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, int time
     // check if dataframe is in error
     if(inError) throw RunTimeException(ERROR, RTE_ERROR, "invalid dataframe");
 
-    // check if dataframe is empty
-    if(length() <= 0) throw RunTimeException(ERROR, RTE_ERROR, "empty dataframe");
-
     // create publisher
     Publisher pub(rspq);
 
@@ -1412,15 +1409,12 @@ void* GeoDataFrame::runThread (void* parm)
             {
                 if(runner)
                 {
-                    if(dataframe->length() > 0)
+                    // execute frame runner
+                    if(!runner->run(dataframe))
                     {
-                        // execute frame runner
-                        if(!runner->run(dataframe))
-                        {
-                            // exit loop on error
-                            mlog(CRITICAL, "error encountered in frame runner: %s", runner->getName());
-                            dataframe->active = false;
-                        }
+                        // exit loop on error
+                        mlog(CRITICAL, "error encountered in frame runner: %s", runner->getName());
+                        dataframe->active = false;
                     }
 
                     // release frame runner

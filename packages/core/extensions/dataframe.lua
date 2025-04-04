@@ -17,7 +17,6 @@ local RC_PROXY_FAILURE = -2
 local RC_ARROW_FAILURE = -3
 local RC_PARQUET_FAILURE = -4
 local RC_NO_RESOURCES = -5
-local RC_EMPTY_DATAFRAME = -6
 
 --
 -- populate_catalogs
@@ -160,7 +159,6 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
     -- Check DataFrame Constraints
     if df:numrows() <= 0 or df:numcols() <= 0 then
         userlog:alert(core.WARNING, core.RTE_INFO, string.format("request <%s> produced an empty dataframe", rspq));
-        return RC_EMPTY_DATAFRAME
     end
 
     -- Create Arrow DataFrame
@@ -194,7 +192,6 @@ local package = {
     PROXY_FAILURE = RC_PROXY_FAILURE,
     ARROW_FAILURE = RC_ARROW_FAILURE,
     NO_RESOURCES = RC_NO_RESOURCES,
-    EMPTY_DATAFRAME = RC_NO_RESOURCES,
     proxy = proxy
 }
 

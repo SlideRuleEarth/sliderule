@@ -405,7 +405,6 @@ long FieldColumn<T>::append(const T& v)
 template<class T>
 long FieldColumn<T>::appendBuffer(const uint8_t* buffer, long size)
 {
-    assert(size > 0);
     assert(size % sizeof(T) == 0);
 
     const T* buf_ptr = reinterpret_cast<const T*>(buffer);
