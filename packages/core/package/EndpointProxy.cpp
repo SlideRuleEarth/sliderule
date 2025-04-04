@@ -116,16 +116,7 @@ int EndpointProxy::luaCreate (lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error creating EndpointProxy: %s", e.what());
-
-        if(_resources) // unnecessary check, but supplied for static analysis
-        {
-            for(int i = 0; i < _num_resources; i++)
-            {
-                delete [] _resources[i];
-            }
-            delete [] _resources;
-        }
-
+        delete [] _resources;
         return returnLuaStatus(L, false);
     }
 }

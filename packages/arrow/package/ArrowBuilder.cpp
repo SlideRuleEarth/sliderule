@@ -294,14 +294,14 @@ ArrowBuilder::ArrowBuilder (lua_State* L, RequestFields* rqst_parms,
      */
 
     /* Get Paths */
-    outputMetadataPath = ArrowCommon::createMetadataFileName(parms.path.value.c_str());
+    outputMetadataPath = ArrowLib::createMetadataFileName(parms.path.value.c_str());
 
     /* Save Parameters */
     endpoint = StringLib::duplicate(_endpoint);
 
     /* Create Unique Temporary Filenames */
-    dataFile = ArrowCommon::getUniqueFileName(id);
-    metadataFile = ArrowCommon::createMetadataFileName(dataFile);
+    dataFile = ArrowLib::getUniqueFileName(id);
+    metadataFile = ArrowLib::createMetadataFileName(dataFile);
 
     /* Set Record Type */
     recType = StringLib::duplicate(rec_type);
@@ -523,12 +523,12 @@ void* ArrowBuilder::builderThread(void* parm)
     if(!builder->keepLocal)
     {
         /* Send File to User */
-        ArrowCommon::send2User(builder->dataFile, builder->parms.path.value.c_str(), trace_id, &builder->parms, builder->outQ);
+        ArrowLib::send2User(builder->dataFile, builder->parms.path.value.c_str(), trace_id, &builder->parms, builder->outQ);
 
         /* Send Metadata File to User */
-        if(ArrowCommon::fileExists(builder->metadataFile))
+        if(ArrowLib::fileExists(builder->metadataFile))
         {
-            ArrowCommon::send2User(builder->metadataFile, builder->outputMetadataPath, trace_id, &builder->parms, builder->outQ);
+            ArrowLib::send2User(builder->metadataFile, builder->outputMetadataPath, trace_id, &builder->parms, builder->outQ);
         }
     }
 

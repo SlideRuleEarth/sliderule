@@ -188,10 +188,8 @@ void HttpServer::Connection::initialize (const char* _name)
     rsps_state.stream_buf_index     = 0;
     rsps_state.stream_buf_size      = 0;
     rsps_state.stream_mem_size      = 0;
-    response_type = EndpointObject::INVALID;
-
-    /* Default Keep Alive to False */
-    keep_alive = false;
+    keep_alive                      = false;
+    streaming                       = false;
 
     /* Create Unique ID for Request */
     name = StringLib::duplicate(_name);
@@ -528,7 +526,7 @@ int HttpServer::onRead(int fd)
             try
             {
                 EndpointObject* endpoint = routeTable[path]->route;
-                connection->response_type = endpoint->handleRequest(connection->request);
+                connection->streaming = endpoint->handleRequest(connection->request);
                 connection->request = NULL; // no longer owned by HttpServer, owned by EndpointObject
             }
             catch(const RunTimeException& e)
@@ -570,7 +568,7 @@ int HttpServer::onWrite(int fd)
         const uint8_t* buffer;
         int bytes_left;
 
-        if(state->header_sent && connection->response_type == EndpointObject::STREAMING) /* Setup Streaming */
+        if(state->header_sent && connection->streaming) /* Setup Streaming */
         {
             /* Allocate Streaming Buffer (if necessary) */
             if(state->ref.size + STREAM_OVERHEAD_SIZE > state->stream_mem_size)
@@ -625,7 +623,7 @@ int HttpServer::onWrite(int fd)
                 status += bytes;
 
                 /* Update Write State */
-                if(state->header_sent && connection->response_type == EndpointObject::STREAMING)
+                if(state->header_sent && connection->streaming)
                 {
                     /* Update Streaming Write State */
                     state->stream_buf_index += bytes;

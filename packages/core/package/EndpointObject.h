@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "MsgQ.h"
 #include "StringLib.h"
 #include "Dictionary.h"
 #include "LuaObject.h"
@@ -53,12 +54,18 @@ class EndpointObject: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAX_HDR_SIZE = MAX_STR_SIZE;
-        static const int EXPECTED_MAX_HEADER_FIELDS = 32;
+        static const char* LUA_RESPONSE_QUEUE;
+        static const char* LUA_REQUEST_ID;
+
         static const char* OBJECT_TYPE;
 
+        static const int POST_TIMEOUT_MS = 60000;
+        static const int MAX_RESPONSE_TIME_MS = 60000;
+        static const int MAX_HDR_SIZE = MAX_STR_SIZE;
+        static const int EXPECTED_MAX_HEADER_FIELDS = 32;
+
         /*--------------------------------------------------------------------
-         * Enumerations
+         * Typedefs
          *--------------------------------------------------------------------*/
 
         typedef enum {
@@ -88,17 +95,25 @@ class EndpointObject: public LuaObject
             Service_Unavailable = 503
         } code_t;
 
-        typedef enum {
-            INVALID = -1,
-            NORMAL = 0,
-            STREAMING = 1
-        } rsptype_t;
+        typedef Dictionary<string*> HeaderDictionary;
 
         /*--------------------------------------------------------------------
-         * Typedefs
+         * Authenticator Subclass
          *--------------------------------------------------------------------*/
 
-        typedef Dictionary<string*> HeaderDictionary;
+         class Authenticator: public LuaObject
+         {
+             public:
+
+                 static const char* OBJECT_TYPE;
+                 static const char* LUA_META_NAME;
+                 static const struct luaL_Reg LUA_META_TABLE[];
+
+                 explicit Authenticator(lua_State* L);
+                 ~Authenticator(void) override;
+
+                 virtual bool isValid(const char* token) = 0;
+        };
 
         /*--------------------------------------------------------------------
          * Request Subclass
@@ -123,30 +138,28 @@ class EndpointObject: public LuaObject
         };
 
         /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            EndpointObject*     endpoint;
-            Request*            request;
-            bool                streaming;
-        } info_t;
-
-        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
                             EndpointObject      (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]);
                             ~EndpointObject     (void) override;
+        bool                authenticate        (Request* request) const;
 
         static verb_t       str2verb            (const char* str);
         static const char*  verb2str            (verb_t verb);
         static code_t       str2code            (const char* str);
         static const char*  code2str            (code_t code);
         static int          buildheader         (char hdr_str[MAX_HDR_SIZE], code_t code, const char* content_type=NULL, int content_length=0, const char* transfer_encoding=NULL, const char* server=NULL);
+        static int          luaAuth             (lua_State* L);
 
-        virtual rsptype_t   handleRequest       (Request* request) = 0;
+        virtual bool        handleRequest       (Request* request) = 0;
 
-};
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+         static FString     serverHead;
+         Authenticator*     authenticator;
+ };
 
 #endif  /* __endpoint_object__ */

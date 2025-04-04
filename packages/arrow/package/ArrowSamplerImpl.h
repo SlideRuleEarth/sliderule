@@ -36,7 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "ArrowCommon.h"
+#include "ArrowLib.h"
 #include "LuaObject.h"
 #include "ArrowSampler.h"
 #include "OsApi.h"
@@ -117,7 +117,7 @@ class ArrowSamplerImpl
         static void                   tableToFeather          (const std::shared_ptr<arrow::Table>& table,
                                                                const char* file_path);
         static std::shared_ptr<arrow::Table> removeGeometryColumn(std::shared_ptr<arrow::Table>& table);
-        static ArrowCommon::wkbpoint_t convertWKBToPoint      (const std::string& wkb_data);
+        static ArrowLib::wkbpoint_t convertWKBToPoint      (const std::string& wkb_data);
         static void                   printParquetMetadata    (const char* file_path);
         std::string                   createFileMap           (void);
         static void                   metadataToJson          (const std::shared_ptr<arrow::Table>& table,

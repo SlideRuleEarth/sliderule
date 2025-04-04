@@ -118,7 +118,7 @@ class HttpServer: public LuaObject
             rqst_state_t                rqst_state;
             rsps_state_t                rsps_state;
             bool                        keep_alive;
-            EndpointObject::rsptype_t   response_type;
+            bool                        streaming;
             EndpointObject::Request*    request;
         };
 

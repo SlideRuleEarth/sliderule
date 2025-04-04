@@ -1,6 +1,8 @@
 find_package (CURL)
 find_package (OpenSSL REQUIRED)
 
+message (STATUS "Including aws package")
+
 target_compile_definitions (slideruleLib PUBLIC __aws__)
 
 target_link_libraries (slideruleLib PUBLIC ${CURL_LIBRARIES})

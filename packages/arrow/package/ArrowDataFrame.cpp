@@ -52,7 +52,7 @@
 #include "FieldColumn.h"
 #include "ArrowDataFrame.h"
 #include "ArrowFields.h"
-#include "ArrowCommon.h"
+#include "ArrowLib.h"
 
 /******************************************************************************
  * FUNCTIONS
@@ -267,10 +267,10 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
 
     arrow::BinaryBuilder builder;
     (void)builder.Reserve(num_rows);
-    (void)builder.ReserveData(num_rows * sizeof(ArrowCommon::wkbpoint_t));
+    (void)builder.ReserveData(num_rows * sizeof(ArrowLib::wkbpoint_t));
     for(long i = 0; i < num_rows; i++)
     {
-        ArrowCommon::wkbpoint_t point = {
+        ArrowLib::wkbpoint_t point = {
             #ifdef __be__
             .byteOrder = 0,
             #else
@@ -280,7 +280,7 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
             .x = (*x)[i],
             .y = (*y)[i]
         };
-        builder.UnsafeAppend(reinterpret_cast<uint8_t*>(&point), sizeof(ArrowCommon::wkbpoint_t));
+        builder.UnsafeAppend(reinterpret_cast<uint8_t*>(&point), sizeof(ArrowLib::wkbpoint_t));
     }
 
     shared_ptr<arrow::Array> geo_column;
@@ -659,7 +659,7 @@ int ArrowDataFrame::luaCreate (lua_State* L)
 int ArrowDataFrame::luaExport (lua_State* L)
 {
     bool status = false;
-    const char* unique_filename = ArrowCommon::getUniqueFileName(NULL);
+    const char* unique_filename = ArrowLib::getUniqueFileName(NULL);
     const char* filename = NULL;
 
     try

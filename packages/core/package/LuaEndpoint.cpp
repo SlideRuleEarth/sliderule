@@ -43,41 +43,11 @@
 
 const char* LuaEndpoint::LUA_META_NAME = "LuaEndpoint";
 const struct luaL_Reg LuaEndpoint::LUA_META_TABLE[] = {
-    {"auth",        luaAuth},
     {NULL,          NULL}
 };
 
 const double LuaEndpoint::DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD = 1.0;
 const double LuaEndpoint::DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD = 1.0;
-
-FString LuaEndpoint::serverHead("sliderule/%s", LIBID);
-
-const char* LuaEndpoint::LUA_RESPONSE_QUEUE = "rspq";
-const char* LuaEndpoint::LUA_REQUEST_ID = "rqstid";
-
-
-/******************************************************************************
- * AUTHENTICATOR SUBCLASS
- ******************************************************************************/
-
-const char* LuaEndpoint::Authenticator::OBJECT_TYPE = "Authenticator";
-const char* LuaEndpoint::Authenticator::LUA_META_NAME = "Authenticator";
-const struct luaL_Reg LuaEndpoint::Authenticator::LUA_META_TABLE[] = {
-    {NULL,          NULL}
-};
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-LuaEndpoint::Authenticator::Authenticator(lua_State* L):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
-{
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-LuaEndpoint::Authenticator::~Authenticator(void) = default;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -121,8 +91,7 @@ int LuaEndpoint::luaCreate (lua_State* L)
 LuaEndpoint::LuaEndpoint(lua_State* L, double normal_mem_thresh, double stream_mem_thresh):
     EndpointObject(L, LUA_META_NAME, LUA_META_TABLE),
     normalRequestMemoryThreshold(normal_mem_thresh),
-    streamRequestMemoryThreshold(stream_mem_thresh),
-    authenticator(NULL)
+    streamRequestMemoryThreshold(stream_mem_thresh)
 {
 }
 
@@ -136,7 +105,7 @@ LuaEndpoint::~LuaEndpoint(void) = default;
  *----------------------------------------------------------------------------*/
 void* LuaEndpoint::requestThread (void* parm)
 {
-    EndpointObject::info_t* info = static_cast<EndpointObject::info_t*>(parm);
+    info_t* info = static_cast<info_t*>(parm);
     EndpointObject::Request* request = info->request;
     LuaEndpoint* lua_endpoint = dynamic_cast<LuaEndpoint*>(info->endpoint);
     const double start = TimeLib::latchtime();
@@ -148,41 +117,27 @@ void* LuaEndpoint::requestThread (void* parm)
     const uint32_t trace_id = start_trace(INFO, request->trace_id, "lua_endpoint", "{\"verb\":\"%s\", \"resource\":\"%s\"}", verb2str(request->verb), request->resource);
 
     /* Log Request */
-    const event_level_t log_level = info->streaming ? INFO : DEBUG;
+    const event_level_t log_level =  info->streaming ? INFO : DEBUG;
     mlog(log_level, "%s %s: %s", verb2str(request->verb), request->resource, request->body);
 
     /* Create Publisher */
     Publisher* rspq = new Publisher(request->id);
 
     /* Check Authentication */
-    bool authorized = false;
-    if(lua_endpoint->authenticator)
-    {
-        char* bearer_token = NULL;
-
-        /* Extract Bearer Token */
-        string* auth_hdr;
-        if(request->headers.find("Authorization", &auth_hdr) ||
-           request->headers.find("authorization", &auth_hdr) )
-        {
-            bearer_token = StringLib::find(auth_hdr->c_str(), ' ');
-            if(bearer_token) bearer_token += 1;
-        }
-
-        /* Validate Bearer Token */
-        authorized = lua_endpoint->authenticator->isValid(bearer_token);
-    }
-    else // no authentication required
-    {
-        authorized = true;
-    }
+    const bool authorized = lua_endpoint->authenticate(request);
 
     /* Dispatch Handle Request */
     if(authorized)
     {
         /* Handle Response */
-        if(info->streaming) lua_endpoint->streamResponse(script_pathname, request, rspq, trace_id);
-        else                lua_endpoint->normalResponse(script_pathname, request, rspq, trace_id);
+        if(info->streaming)
+        {
+            lua_endpoint->streamResponse(script_pathname, request, rspq, trace_id);
+        }
+        else
+        {
+            lua_endpoint->normalResponse(script_pathname, request, rspq, trace_id);
+        }
     }
     else
     {
@@ -214,13 +169,13 @@ void* LuaEndpoint::requestThread (void* parm)
 }
 
 /*----------------------------------------------------------------------------
- * handleRequest
+ * handleRequest - returns true if streaming (chunked) response
  *----------------------------------------------------------------------------*/
-EndpointObject::rsptype_t LuaEndpoint::handleRequest (Request* request)
+bool LuaEndpoint::handleRequest (Request* request)
 {
-    EndpointObject::info_t* info = new EndpointObject::info_t;
+    /* Allocate and Initialize Endpoint Info Struct */
+    info_t* info = new info_t;
     info->endpoint = this;
-
     info->request = request;
     info->streaming = true;
 
@@ -229,7 +184,7 @@ EndpointObject::rsptype_t LuaEndpoint::handleRequest (Request* request)
     {
         info->streaming = false;
     }
-    else // check header
+    else // check header (needed for node.js clients)
     {
         string* hdr_str;
         if(request->headers.find("x-sliderule-streaming", &hdr_str))
@@ -241,14 +196,11 @@ EndpointObject::rsptype_t LuaEndpoint::handleRequest (Request* request)
         }
     }
 
-    /* Determine Response Type before starting thread - thread frees info (race cond possible) */
-    const rsptype_t response_type = info->streaming ? STREAMING : NORMAL;
-
     /* Start Thread */
     const Thread pid(requestThread, info, false);
 
     /* Return Response Type */
-    return response_type;
+    return info->streaming;
 }
 
 /*----------------------------------------------------------------------------
@@ -354,38 +306,4 @@ void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publ
 
     /* Clean Up */
     delete engine;
-}
-
-/*----------------------------------------------------------------------------
- * luaAuth - :auth(<authentication object>)
- *
- * Note: NOT thread safe, must be called prior to attaching endpoint to server
- *----------------------------------------------------------------------------*/
-int LuaEndpoint::luaAuth (lua_State* L)
-{
-    bool status = false;
-    Authenticator* auth = NULL;
-
-    try
-    {
-        /* Get Self */
-        LuaEndpoint* lua_obj = dynamic_cast<LuaEndpoint*>(getLuaSelf(L, 1));
-
-        /* Get Authenticator */
-        auth = dynamic_cast<Authenticator*>(getLuaObject(L, 2, LuaEndpoint::Authenticator::OBJECT_TYPE));
-
-        /* Set Authenticator */
-        lua_obj->authenticator = auth;
-
-        /* Set return Status */
-        status = true;
-    }
-    catch(const RunTimeException& e)
-    {
-        if(auth) auth->releaseLuaObject();
-        mlog(e.level(), "Error setting authenticator: %s", e.what());
-    }
-
-    /* Return Status */
-    return returnLuaStatus(L, status);
 }

@@ -62,34 +62,6 @@ class LuaEndpoint: public EndpointObject
         static const double DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD;
         static const double DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD;
 
-        static const int POST_TIMEOUT_MS = 60000;
-        static const int MAX_RESPONSE_TIME_MS = 60000;
-        static const char* LUA_RESPONSE_QUEUE;
-        static const char* LUA_REQUEST_ID;
-
-        /*--------------------------------------------------------------------
-         * Authenticator Subclass
-         *--------------------------------------------------------------------*/
-
-        class Authenticator: public LuaObject
-        {
-            public:
-                static const char* OBJECT_TYPE;
-                static const char* LUA_META_NAME;
-                static const struct luaL_Reg LUA_META_TABLE[];
-
-                explicit Authenticator(lua_State* L);
-                ~Authenticator(void) override;
-
-                virtual bool isValid(const char* token) = 0;
-       };
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        static FString serverHead;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -100,6 +72,16 @@ class LuaEndpoint: public EndpointObject
     protected:
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+         typedef struct {
+            LuaEndpoint*    endpoint;
+            Request*        request;
+            bool            streaming;
+        } info_t;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -108,12 +90,11 @@ class LuaEndpoint: public EndpointObject
 
         static void*        requestThread   (void* parm);
 
-        rsptype_t           handleRequest   (Request* request) override;
+        bool                handleRequest   (Request* request) override;
 
         void                normalResponse  (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const;
         void                streamResponse  (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const;
 
-        static int          luaAuth         (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
@@ -121,7 +102,6 @@ class LuaEndpoint: public EndpointObject
 
         double              normalRequestMemoryThreshold;
         double              streamRequestMemoryThreshold;
-        Authenticator*      authenticator;
 };
 
 #endif  /* __lua_endpoint__ */

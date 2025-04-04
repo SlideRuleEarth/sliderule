@@ -35,9 +35,10 @@
 
 #include "OsApi.h"
 #include "arrow.h"
-#include "ArrowCommon.h"
+#include "ArrowLib.h"
 #include "ArrowFields.h"
 #include "ArrowBuilder.h"
+#include "ArrowEndpoint.h"
 #include "ArrowSampler.h"
 #include "ArrowDataFrame.h"
 
@@ -59,8 +60,9 @@ int arrow_open (lua_State* L)
     static const struct luaL_Reg arrow_functions[] = {
         {"builder",     ArrowBuilder::luaCreate},
         {"dataframe",   ArrowDataFrame::luaCreate},
+        {"endpoint",    ArrowEndpoint::luaCreate},
         {"sampler",     ArrowSampler::luaCreate},
-        {"send2user",   ArrowCommon::luaSend2User},
+        {"send2user",   ArrowLib::luaSend2User},
         {NULL,          NULL}
     };
 
@@ -85,9 +87,10 @@ extern "C" {
 void initarrow (void)
 {
     /* Initialize Modules */
-    ArrowCommon::init();
+    ArrowLib::init();
     ArrowBuilder::init();
     ArrowSampler::init();
+    ArrowEndpoint::init();
 
     /* Extend Lua */
     LuaEngine::extend(LUA_ARROW_LIBNAME, arrow_open);

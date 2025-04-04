@@ -1325,7 +1325,7 @@ void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordOb
 {
     arrow::BinaryBuilder builder;
     (void)builder.Reserve(num_rows);
-    (void)builder.ReserveData(num_rows * sizeof(ArrowCommon::wkbpoint_t));
+    (void)builder.ReserveData(num_rows * sizeof(ArrowLib::wkbpoint_t));
     for(int i = 0; i < record_batch.length(); i++)
     {
         ArrowBuilder::batch_t* batch = record_batch.get(i);
@@ -1333,7 +1333,7 @@ void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordOb
         const int32_t starting_y_offset = y_field.offset;
         for(int row = 0; row < batch->rows; row++)
         {
-            ArrowCommon::wkbpoint_t point = {
+            ArrowLib::wkbpoint_t point = {
                 #ifdef __be__
                 .byteOrder = 0,
                 #else
@@ -1343,7 +1343,7 @@ void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordOb
                 .x = batch->pri_record->getValueReal(x_field),
                 .y = batch->pri_record->getValueReal(y_field)
             };
-            builder.UnsafeAppend(reinterpret_cast<uint8_t*>(&point), sizeof(ArrowCommon::wkbpoint_t));
+            builder.UnsafeAppend(reinterpret_cast<uint8_t*>(&point), sizeof(ArrowLib::wkbpoint_t));
             if(x_field.flags & RecordObject::BATCH) x_field.offset += batch_row_size_bits;
             if(y_field.flags & RecordObject::BATCH) y_field.offset += batch_row_size_bits;
         }

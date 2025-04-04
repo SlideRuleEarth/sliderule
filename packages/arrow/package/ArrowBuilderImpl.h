@@ -36,7 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "ArrowCommon.h"
+#include "ArrowLib.h"
 #include "LuaObject.h"
 #include "Ordering.h"
 #include "RecordObject.h"

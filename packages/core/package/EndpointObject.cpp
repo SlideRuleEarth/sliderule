@@ -43,8 +43,35 @@
  ******************************************************************************/
 
 const char* EndpointObject::OBJECT_TYPE = "EndpointObject";
+const char* EndpointObject::LUA_RESPONSE_QUEUE = "rspq";
+const char* EndpointObject::LUA_REQUEST_ID = "rqstid";
+
+FString EndpointObject::serverHead("sliderule/%s", LIBID);
 
 /******************************************************************************
+ * AUTHENTICATOR SUBCLASS
+ ******************************************************************************/
+
+ const char* EndpointObject::Authenticator::OBJECT_TYPE = "Authenticator";
+ const char* EndpointObject::Authenticator::LUA_META_NAME = "Authenticator";
+ const struct luaL_Reg EndpointObject::Authenticator::LUA_META_TABLE[] = {
+     {NULL,          NULL}
+ };
+
+ /*----------------------------------------------------------------------------
+  * Constructor
+  *----------------------------------------------------------------------------*/
+ EndpointObject::Authenticator::Authenticator(lua_State* L):
+     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
+ {
+ }
+
+ /*----------------------------------------------------------------------------
+  * Destructor
+  *----------------------------------------------------------------------------*/
+ EndpointObject::Authenticator::~Authenticator(void) = default;
+
+ /******************************************************************************
  * REQUEST SUBCLASS
  ******************************************************************************/
 
@@ -84,14 +111,43 @@ EndpointObject::Request::~Request (void)
  * Constructor
  *----------------------------------------------------------------------------*/
 EndpointObject::EndpointObject (lua_State* L, const char* meta_name, const struct luaL_Reg meta_table[]):
-    LuaObject(L, OBJECT_TYPE, meta_name, meta_table)
+    LuaObject(L, OBJECT_TYPE, meta_name, meta_table),
+    authenticator(NULL)
 {
+    LuaEngine::setAttrFunc(L, "auth", luaAuth);
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-EndpointObject::~EndpointObject (void) = default;
+EndpointObject::~EndpointObject (void)
+{
+    if(authenticator) authenticator->releaseLuaObject();
+}
+
+/*----------------------------------------------------------------------------
+ * authorize
+ *----------------------------------------------------------------------------*/
+bool EndpointObject::authenticate (Request* request) const
+{
+    bool authorized = true;
+    if(authenticator)
+    {
+        char* bearer_token = NULL;
+
+        /* Extract Bearer Token */
+        string* auth_hdr;
+        if(request->headers.find("authorization", &auth_hdr))
+        {
+            bearer_token = StringLib::find(auth_hdr->c_str(), ' ');
+            if(bearer_token) bearer_token += 1;
+        }
+
+        /* Validate Bearer Token */
+        authorized = authenticator->isValid(bearer_token);
+    }
+    return authorized;
+}
 
 /*----------------------------------------------------------------------------
  * str2verb
@@ -179,4 +235,38 @@ int EndpointObject::buildheader (char hdr_str[MAX_HDR_SIZE], code_t code, const 
     StringLib::concat(hdr_str, "\r\n",  MAX_HDR_SIZE);
 
     return StringLib::size(hdr_str);
+}
+
+/*----------------------------------------------------------------------------
+ * luaAuth - :auth(<authentication object>)
+ *
+ * Note: NOT thread safe, must be called prior to attaching endpoint to server
+ *----------------------------------------------------------------------------*/
+int EndpointObject::luaAuth (lua_State* L)
+{
+    bool status = false;
+    Authenticator* auth = NULL;
+
+    try
+    {
+        /* Get Self */
+        EndpointObject* lua_obj = dynamic_cast<EndpointObject*>(getLuaSelf(L, 1));
+
+        /* Get Authenticator */
+        auth = dynamic_cast<Authenticator*>(getLuaObject(L, 2, EndpointObject::Authenticator::OBJECT_TYPE));
+
+        /* Set Authenticator */
+        lua_obj->authenticator = auth;
+
+        /* Set return Status */
+        status = true;
+    }
+    catch(const RunTimeException& e)
+    {
+        if(auth) auth->releaseLuaObject();
+        mlog(e.level(), "Error setting authenticator: %s", e.what());
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, status);
 }

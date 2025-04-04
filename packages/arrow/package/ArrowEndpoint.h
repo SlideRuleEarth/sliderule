@@ -29,55 +29,70 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arrow_common__
-#define __arrow_common__
+#ifndef __arrow_endpoint__
+#define __arrow_endpoint__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
+#include "EndpointObject.h"
 #include "OsApi.h"
+#include "StringLib.h"
+#include "Dictionary.h"
 #include "MsgQ.h"
-#include "ArrowFields.h"
-
+#include "LuaObject.h"
+#include "RecordObject.h"
 
 /******************************************************************************
- * NAMESPACES
+ * PISTACHE SERVER CLASS
  ******************************************************************************/
-namespace ArrowCommon
+
+class ArrowEndpoint: public EndpointObject
 {
-    /******************************************************************************
-     * TYPES
-     ******************************************************************************/
+    public:
 
-    typedef struct WKBPoint {
-        uint8_t                 byteOrder;
-        uint32_t                wkbType;
-        double                  x;
-        double                  y;
-    } ALIGN_PACKED wkbpoint_t;
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
 
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
-    /******************************************************************************
-     * METHODS
-     ******************************************************************************/
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
 
-    void        init       (void);
-    bool        send2User  (const char* fileName, const char* outputPath,
-                            uint32_t traceId, const ArrowFields* parms, Publisher* outQ);
-    bool        send2S3    (const char* fileName, const char* s3dst, const char* outputPath,
-                            const ArrowFields* parms, Publisher* outQ);
-    bool        send2Client(const char* fileName, const char* outPath,
-                            const ArrowFields* parms, Publisher* outQ);
+        static void         init            (void);
+        static int          luaCreate       (lua_State* L);
 
-    const char* getUniqueFileName(const char* id = NULL);
-    char*       createMetadataFileName(const char* fileName);
+    protected:
 
-    void        removeFile (const char* fileName);
-    void        renameFile (const char* oldName, const char* newName);
-    bool        fileExists (const char* fileName);
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
 
-    int         luaSend2User (lua_State* L);
-}
+        typedef struct {
+            ArrowEndpoint*  endpoint;
+            Request*        request;
+        } rqst_info_t;
 
-#endif  /* __arrow_common__ */
+        typedef struct {
+            uint32_t        trace_id;
+            const char*     rqst_id;
+        } rsps_info_t;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+                            ArrowEndpoint   (lua_State* L);
+                            ~ArrowEndpoint  (void) override;
+
+        static void*        requestThread   (void* parm); // executes lua script
+        static void*        responseThread  (void* parm); // processes response records before sending to http server
+
+        bool                handleRequest   (Request* request) override;
+};
+
+#endif  /* __arrow_endpoint__ */

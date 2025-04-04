@@ -38,7 +38,7 @@
 
 #include "OsApi.h"
 #include "RequestFields.h"
-#include "ArrowCommon.h"
+#include "ArrowLib.h"
 #include "RecordObject.h"
 
 #ifdef __aws__
@@ -46,77 +46,48 @@
 #endif
 
 /******************************************************************************
- * TYPES
+ * FILE DATA
  ******************************************************************************/
 
-static const int URL_MAX_LEN = 512;
-static const int FILE_NAME_MAX_LEN = 128;
-static const int FILE_BUFFER_RSPS_SIZE = 0x2000000; // 32MB
-
-typedef struct {
-    char        filename[FILE_NAME_MAX_LEN];
-    long        size;
-} arrow_file_meta_t;
-
-typedef struct {
-    char        filename[FILE_NAME_MAX_LEN];
-    uint8_t     data[FILE_BUFFER_RSPS_SIZE];
-} arrow_file_data_t;
-
-typedef struct {
-    char        filename[FILE_NAME_MAX_LEN];
-    uint64_t    checksum;
-} arrow_file_eof_t;
-
-typedef struct {
-    char        url[URL_MAX_LEN];
-    long        size;
-} arrow_file_remote_t;
-
+static const char* TMP_FILE_PREFIX = "/tmp/";
 
 /******************************************************************************
- * CONSTANTS
+ * STATIC DATA
  ******************************************************************************/
 
-static const char* metaRecType   = "arrowrec.meta";
-static const char* dataRecType   = "arrowrec.data";
-static const char* eofRecType    = "arrowrec.eof";
-static const char* remoteRecType = "arrowrec.remote";
+const char* ArrowLib::metaRecType   = "arrowrec.meta";
+const char* ArrowLib::dataRecType   = "arrowrec.data";
+const char* ArrowLib::eofRecType    = "arrowrec.eof";
+const char* ArrowLib::remoteRecType = "arrowrec.remote";
 
-static const RecordObject::fieldDef_t metaRecDef[] = {
+const RecordObject::fieldDef_t ArrowLib::metaRecDef[] = {
     {"filename",   RecordObject::STRING,   offsetof(arrow_file_meta_t, filename),  FILE_NAME_MAX_LEN,  NULL, NATIVE_FLAGS},
     {"size",       RecordObject::INT64,    offsetof(arrow_file_meta_t, size),                      1,  NULL, NATIVE_FLAGS}
 };
 
-static const RecordObject::fieldDef_t dataRecDef[] = {
+const RecordObject::fieldDef_t ArrowLib::dataRecDef[] = {
     {"filename",   RecordObject::STRING,   offsetof(arrow_file_data_t, filename),  FILE_NAME_MAX_LEN,  NULL, NATIVE_FLAGS},
     {"data",       RecordObject::UINT8,    offsetof(arrow_file_data_t, data),                      0,  NULL, NATIVE_FLAGS} // variable length
 };
 
-static const RecordObject::fieldDef_t eofRecDef[] = {
+const RecordObject::fieldDef_t ArrowLib::eofRecDef[] = {
     {"filename",   RecordObject::STRING,   offsetof(arrow_file_eof_t, filename),   FILE_NAME_MAX_LEN,  NULL, NATIVE_FLAGS},
     {"checksum",   RecordObject::UINT64,   offsetof(arrow_file_eof_t, checksum),                   1,  NULL, NATIVE_FLAGS}
 };
 
-static const RecordObject::fieldDef_t remoteRecDef[] = {
+const RecordObject::fieldDef_t ArrowLib::remoteRecDef[] = {
     {"url",   RecordObject::STRING,   offsetof(arrow_file_remote_t, url),                URL_MAX_LEN,  NULL, NATIVE_FLAGS},
     {"size",  RecordObject::INT64,    offsetof(arrow_file_remote_t, size),                         1,  NULL, NATIVE_FLAGS}
 };
 
-static const char* TMP_FILE_PREFIX = "/tmp/";
-
-
-
 /******************************************************************************
- * NAMESPACES
+ * CLASS METHODS
  ******************************************************************************/
-namespace ArrowCommon
-{
 
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void init(void)
+void ArrowLib::init(void)
 {
     static bool initialized = false;
     if(initialized) return;
@@ -131,7 +102,7 @@ void init(void)
 /*----------------------------------------------------------------------------
  * send2User
  *----------------------------------------------------------------------------*/
-bool send2User (const char* fileName, const char* outputPath,
+bool ArrowLib::send2User (const char* fileName, const char* outputPath,
                 uint32_t traceId, const ArrowFields* parms, Publisher* outQ)
 {
     bool status = false;
@@ -179,7 +150,7 @@ bool send2User (const char* fileName, const char* outputPath,
 /*----------------------------------------------------------------------------
  * send2S3
  *----------------------------------------------------------------------------*/
-bool send2S3 (const char* fileName, const char* s3dst, const char* outputPath,
+bool ArrowLib::send2S3 (const char* fileName, const char* s3dst, const char* outputPath,
               const ArrowFields* parms, Publisher* outQ)
 {
     #ifdef __aws__
@@ -265,7 +236,7 @@ bool send2S3 (const char* fileName, const char* s3dst, const char* outputPath,
 /*----------------------------------------------------------------------------
  * send2Client
  *----------------------------------------------------------------------------*/
-bool send2Client (const char* fileName, const char* outPath, const ArrowFields* parms, Publisher* outQ)
+bool ArrowLib::send2Client (const char* fileName, const char* outPath, const ArrowFields* parms, Publisher* outQ)
 {
     bool status = true;
 
@@ -361,7 +332,7 @@ bool send2Client (const char* fileName, const char* outPath, const ArrowFields* 
 /*----------------------------------------------------------------------------
  * getUniqueFileName
  *----------------------------------------------------------------------------*/
-const char* getUniqueFileName(const char* id)
+const char* ArrowLib::getUniqueFileName(const char* id)
 {
     char uuid_str[UUID_STR_LEN];
     uuid_t uuid;
@@ -380,7 +351,7 @@ const char* getUniqueFileName(const char* id)
 /*----------------------------------------------------------------------------
 * createMetadataFileName
 *----------------------------------------------------------------------------*/
-char* createMetadataFileName(const char* fileName)
+char* ArrowLib::createMetadataFileName(const char* fileName)
 {
     std::string path(fileName);
     const size_t dotIndex = path.find_last_of('.');
@@ -395,7 +366,7 @@ char* createMetadataFileName(const char* fileName)
 /*----------------------------------------------------------------------------
  * removeFile
  *----------------------------------------------------------------------------*/
-void removeFile(const char* fileName)
+void ArrowLib::removeFile(const char* fileName)
 {
     if(std::filesystem::exists(fileName))
     {
@@ -411,7 +382,7 @@ void removeFile(const char* fileName)
 /*----------------------------------------------------------------------------
  * renameFile
  *----------------------------------------------------------------------------*/
-void renameFile (const char* oldName, const char* newName)
+void ArrowLib::renameFile (const char* oldName, const char* newName)
 {
     if(std::filesystem::exists(oldName))
     {
@@ -427,7 +398,7 @@ void renameFile (const char* oldName, const char* newName)
 /*----------------------------------------------------------------------------
  * fileExists
  *----------------------------------------------------------------------------*/
-bool fileExists(const char* fileName)
+bool ArrowLib::fileExists(const char* fileName)
 {
     return std::filesystem::exists(fileName);
 }
@@ -435,7 +406,7 @@ bool fileExists(const char* fileName)
 /*----------------------------------------------------------------------------
  * luaSend2User -
  *----------------------------------------------------------------------------*/
-int luaSend2User (lua_State* L)
+int ArrowLib::luaSend2User (lua_State* L)
 {
     bool status = false;
     RequestFields* _parms = NULL;
@@ -473,5 +444,3 @@ int luaSend2User (lua_State* L)
     lua_pushboolean(L, status);
     return 1;
 }
-
-} /* namespace ArrowCommon */
