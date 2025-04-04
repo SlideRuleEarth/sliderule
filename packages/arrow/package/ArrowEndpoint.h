@@ -91,7 +91,7 @@ class ArrowEndpoint: public EndpointObject
 
         static void*        requestThread   (void* parm); // executes lua script
         static void*        responseThread  (void* parm); // processes response records before sending to http server
-
+        static bool         sendHeader      (Publisher* outq, code_t http_code, const char* error_msg=NULL);
         bool                handleRequest   (Request* request) override;
 };
 

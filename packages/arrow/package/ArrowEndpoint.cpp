@@ -121,11 +121,6 @@ void* ArrowEndpoint::requestThread (void* parm)
     /* Handle Request */
     if(authorized)
     {
-        /* Send Header */
-        char header[MAX_HDR_SIZE];
-        const int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", serverHead.c_str());
-        rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
-
         /* Create Engine */
         LuaEngine* engine = new LuaEngine(script_pathname, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
 
@@ -144,9 +139,7 @@ void* ArrowEndpoint::requestThread (void* parm)
     else
     {
         /* Respond with Unauthorized Error */
-        char header[MAX_HDR_SIZE];
-        const int header_length = buildheader(header, Unauthorized);
-        rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
+        sendHeader(rspq, Unauthorized, "Unauthorized");
     }
 
     /* End Response */
@@ -187,10 +180,13 @@ void* ArrowEndpoint::responseThread (void* parm)
     /* Create Publisher */
     Publisher rspq(info->rqst_id);
 
-    /* While Receiving Messages */
+    /* Initialize State Variables */
     long bytes_to_send = 0;
     bool complete = false;
-    while(!complete) // will also break on rspq being deleted
+    bool hdr_sent = false;
+
+    /* While Receiving Messages */
+    while(!complete)
     {
         Subscriber::msgRef_t ref;
         const int recv_status = inq.receiveRef(ref, SYS_TIMEOUT);
@@ -200,39 +196,53 @@ void* ArrowEndpoint::responseThread (void* parm)
             if(ref.size > 0)
             {
                 const RecordInterface record(reinterpret_cast<unsigned char*>(ref.data), ref.size);
+
+                /* Arrow Data Record */
                 if(StringLib::match(record.getRecordType(), ArrowLib::dataRecType))
                 {
                     const ArrowLib::arrow_file_data_t* file_data = reinterpret_cast<ArrowLib::arrow_file_data_t*>(record.getRecordData());
                     const long data_size = record.getAllocatedDataSize() - offsetof(ArrowLib::arrow_file_data_t, data);
 
-                    /* Post Arrow Bytes */
-                    int post_status = MsgQ::STATE_TIMEOUT;
-                    while(post_status == MsgQ::STATE_TIMEOUT)
+                    /* Check Size */
+                    if(data_size <= bytes_to_send)
                     {
-                        post_status = rspq.postCopy(file_data->data, data_size, SYS_TIMEOUT);
-                    }
-
-                    /* Check Send */
-                    if(post_status < 0)
-                    {
-                        mlog(CRITICAL, "Failed to post arrow data on <%s>: %d", rspq.getName(), post_status);
-                    }
-
-                    /* Check if Complete */
-                    bytes_to_send -= data_size;
-                    if(bytes_to_send <= 0)
-                    {
-                        complete = true;
-                        if(bytes_to_send < 0)
+                        /* Send Header */
+                        if(!hdr_sent)
                         {
-                            mlog(ERROR, "Corrupted transfer detected on <%s>, received %ld extra bytes", inq.getName(), bytes_to_send * -1);
+                            hdr_sent = sendHeader(&rspq, OK);
+                        }
+
+                        /* Post Arrow Bytes */
+                        const int rc = rspq.postCopy(file_data->data, data_size, POST_TIMEOUT_MS);
+                        if(rc <= 0) mlog(CRITICAL, "Failed to post arrow data on <%s>: %d", rspq.getName(), rc);
+
+                        /* Check if Complete */
+                        bytes_to_send -= data_size;
+                        if(bytes_to_send == 0)
+                        {
+                            complete = true;
                         }
                     }
+                    else // invalid size
+                    {
+                        /* Send Header */
+                        if(!hdr_sent)
+                        {
+                            hdr_sent = sendHeader(&rspq, Internal_Server_Error, "Corrupted transfer");
+                        }
+
+                        /* Mark Failure */
+                        mlog(ERROR, "Corrupted transfer detected on <%s>, received %ld bytes when only %ld bytes left to send", inq.getName(), data_size, bytes_to_send);
+                        complete = true;
+                    }
                 }
+                /* Arrow Meta Record */
                 else if(StringLib::match(record.getRecordType(), ArrowLib::metaRecType))
                 {
                     const ArrowLib::arrow_file_meta_t* file_meta = reinterpret_cast<ArrowLib::arrow_file_meta_t*>(record.getRecordData());
                     mlog(INFO, "Sending arrow file %s of size %ld", file_meta->filename, file_meta->size);
+
+                    /* Save Off Bytes to Send */
                     bytes_to_send = file_meta->size;
                 }
             }
@@ -240,8 +250,13 @@ void* ArrowEndpoint::responseThread (void* parm)
             /* Handle Terminator */
             if(ref.size == 0)
             {
-                // should never happen because file completion check above
-                // should exit the loop prior to receiving a terminator
+                /* Send Header */
+                if(!hdr_sent)
+                {
+                    hdr_sent = sendHeader(&rspq, Service_Unavailable, "Failed execution");
+                }
+
+                /* Mark Failure */
                 mlog(CRITICAL, "Unexpectedly received terminator on <%s>", inq.getName());
                 complete = true;
             }
@@ -251,22 +266,27 @@ void* ArrowEndpoint::responseThread (void* parm)
         }
         else if(recv_status != MsgQ::STATE_TIMEOUT)
         {
-            mlog(CRITICAL, "failed to receive data on input queue <%s>: %d\n", inq.getName(), recv_status);
+            /* Send Header */
+            if(!hdr_sent)
+            {
+                hdr_sent = sendHeader(&rspq, Internal_Server_Error, "Queing failure");
+            }
+
+            /* Mark Failure */
+            mlog(CRITICAL, "Failed to receive data on input queue <%s>: %d\n", inq.getName(), recv_status);
+            complete = true;
         }
     }
 
-    /* Post Terminator */
-    int post_status = MsgQ::STATE_TIMEOUT;
-    while(post_status == MsgQ::STATE_TIMEOUT)
+    /* (If Not Sent) Send Header */
+    if(!hdr_sent)
     {
-        post_status = rspq.postCopy("", 0, SYS_TIMEOUT);
+        sendHeader(&rspq, Internal_Server_Error, "Missing data");
     }
 
-    /* Check Terminator */
-    if(post_status < 0)
-    {
-        mlog(CRITICAL, "Failed to post terminator on <%s>: %d", rspq.getName(), post_status);
-    }
+    /* Post Terminator */
+    const int rc = rspq.postCopy("", 0, POST_TIMEOUT_MS);
+    if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on <%s>: %d", rspq.getName(), rc);
 
     /* Clean Up */
     delete info->rqst_id;
@@ -277,6 +297,46 @@ void* ArrowEndpoint::responseThread (void* parm)
 
     /* Return */
     return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * sendHeader
+ *----------------------------------------------------------------------------*/
+bool ArrowEndpoint::sendHeader (Publisher* outq, code_t http_code, const char* error_msg)
+{
+    bool hdr_sent = false;
+    if(http_code == OK)
+    {
+        char header[MAX_HDR_SIZE];
+        const int header_length = buildheader(header, http_code, "application/octet-stream", 0, "chunked", serverHead.c_str());
+        const int rc = outq->postCopy(header, header_length, POST_TIMEOUT_MS);
+        if(rc > 0)
+        {
+            hdr_sent = true;
+        }
+        else
+        {
+            mlog(CRITICAL, "Failed to post header on <%s>: %d", outq->getName(), rc);
+        }
+    }
+    else // error
+    {
+        char header[MAX_HDR_SIZE];
+        const int result_length = StringLib::size(error_msg);
+        const int header_length = buildheader(header, http_code, "text/plain", result_length, NULL, serverHead.c_str());
+        const int rc1 = outq->postCopy(header, header_length, POST_TIMEOUT_MS);
+        if(rc1 > 0)
+        {
+            hdr_sent = true;
+            const int rc2 = outq->postCopy(error_msg, result_length, POST_TIMEOUT_MS);
+            if(rc2 <= 0) mlog(CRITICAL, "Failed to post error message on <%s>: %d", outq->getName(), rc2);
+        }
+        else
+        {
+            mlog(CRITICAL, "Failed to post header on <%s>: %d", outq->getName(), rc1);
+        }
+    }
+    return hdr_sent;
 }
 
 /*----------------------------------------------------------------------------
