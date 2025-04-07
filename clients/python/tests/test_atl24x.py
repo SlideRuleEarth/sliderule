@@ -1,6 +1,5 @@
 """Tests for sliderule icesat2 atl06-sr algorithm."""
 
-import os
 import pytest
 from pathlib import Path
 from sliderule import sliderule

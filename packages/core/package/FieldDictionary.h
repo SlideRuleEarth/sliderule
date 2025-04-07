@@ -184,7 +184,7 @@ class FieldDictionary: public Field
                     {
                         if(!lua_isnil(L, -1))
                         {
-                            mlog(ERROR, "Field <%s> using default value: %s", kv.key, e.what());
+                            mlog(WARNING, "Field <%s> using default value: %s", kv.key, e.what());
                         }
                     }
                     lua_pop(L, 1);

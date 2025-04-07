@@ -272,9 +272,9 @@ bool ArrowLib::send2Client (const char* fileName, const char* outPath, const Arr
             long offset = 0;
             while(offset < file_size)
             {
-                const int bytes_left_to_send = file_size - offset;
-                const int bytes_to_send = MIN(bytes_left_to_send, FILE_BUFFER_RSPS_SIZE);
-                const int record_bytes = offsetof(arrow_file_data_t, data) + bytes_to_send;
+                const long bytes_left_to_send = file_size - offset;
+                const long bytes_to_send = MIN(bytes_left_to_send, FILE_BUFFER_RSPS_SIZE);
+                const long record_bytes = offsetof(arrow_file_data_t, data) + bytes_to_send;
                 RecordObject data_record(dataRecType, record_bytes, false);
                 arrow_file_data_t* data = reinterpret_cast<arrow_file_data_t*>(data_record.getRecordData());
                 StringLib::copy(&data->filename[0], outPath, FILE_NAME_MAX_LEN);

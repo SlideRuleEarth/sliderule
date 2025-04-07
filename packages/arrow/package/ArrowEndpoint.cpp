@@ -241,10 +241,8 @@ void* ArrowEndpoint::responseThread (void* parm)
                     /* Arrow Meta Record */
                     else if(StringLib::match(record.getRecordType(), ArrowLib::metaRecType))
                     {
-                        const ArrowLib::arrow_file_meta_t* file_meta = reinterpret_cast<ArrowLib::arrow_file_meta_t*>(record.getRecordData());
-                        mlog(INFO, "Sending arrow file %s of size %ld", file_meta->filename, file_meta->size);
-
                         /* Save Off Bytes to Send */
+                        const ArrowLib::arrow_file_meta_t* file_meta = reinterpret_cast<ArrowLib::arrow_file_meta_t*>(record.getRecordData());
                         bytes_to_send = file_meta->size;
                     }
                 }
