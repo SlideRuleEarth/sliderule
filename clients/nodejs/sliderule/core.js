@@ -27,9 +27,9 @@
 // OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 // ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import https from 'https';
-import netrc from 'netrc';
-import pkg from './package.json' assert { type: 'json' };
+const https = require('https');
+const netrc = require('netrc');
+const pkg = require('./package.json')
 
 //------------------------------------
 // File Data
@@ -113,7 +113,7 @@ function populateDefinition(rec_type) {
   }
   else {
     return new Promise((resolve, reject) => {
-      source("definition", {"rectype" : rec_type}).then(
+      exports.source("definition", {"rectype" : rec_type}).then(
         result => {
           recordDefinitions[rec_type] = result;
           resolve(recordDefinitions[rec_type]);
@@ -253,7 +253,7 @@ async function decodeRecord(rec_type, buffer, offset, rec_size) {
 //
 // parseResponse
 //
-function parseResponse(response, resolve, reject, callbacks) {
+function parseResponse (response, resolve, reject, callbacks) {
   // Check Response Code
   if (response.statusCode !== 200) {
     response.resume();
@@ -396,27 +396,27 @@ async function httpRequest(options, body, callbacks) {
 //
 // Initialize Client
 //
-export function init(config) {
+exports.init = (config) => {
   sysConfig = Object.assign(sysConfig, config)
 }
 
 //
 // Source Endpoint
 //
-export function source(api, parm=null, stream=false, callbacks={}) {
+exports.source = (api, parm=null, stream=false, callbacks={}) => {
 
   // Setup Request Options
   const options = {
     host: sysConfig.organization && (sysConfig.organization + '.' + sysConfig.domain) || sysConfig.domain,
     path: '/source/' + api,
-    method: 'POST',
+    method: stream && 'POST' || 'GET',
   };
 
   // Build Body
   let body = null;
   if (parm != null) {
     body = JSON.stringify(parm);
-    options["headers"] = {'Content-Type': 'application/json', 'Content-Length': body.length, 'x-sliderule-streaming': stream && 1 || 0};
+    options["headers"] = {'Content-Type': 'application/json', 'Content-Length': body.length};
   }
 
   // Make API Request
@@ -426,7 +426,7 @@ export function source(api, parm=null, stream=false, callbacks={}) {
 //
 // Authenticate User
 //
-export function authenticate(ps_username=null, ps_password=null) {
+exports.authenticate = (ps_username=null, ps_password=null) => {
 
     // Build Provisioning System URL
     let psHost = 'ps.' + sysConfig.domain;
@@ -480,8 +480,8 @@ export function authenticate(ps_username=null, ps_password=null) {
 //
 // Get Version
 //
-export function get_version() {
-  return source('version').then(
+exports.get_version = () => {
+  return exports.source('version').then(
     result => {
       result['client'] = {version: pkg['version']};
       result['organization'] = sysConfig.organization;
@@ -493,7 +493,7 @@ export function get_version() {
 //
 // Get Values
 //
-export function get_values(bytearray, fieldtype) {
+exports.get_values = (bytearray, fieldtype) => {
   let values = [];
   let buffer = Buffer.from(bytearray);
   switch (fieldtype) {

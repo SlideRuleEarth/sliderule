@@ -27,8 +27,9 @@
 // OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 // ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import mitt from 'mitt';
-import {core} from '../sliderule/index.js';
+const core = require('./core.js')
+const events = require('events');
+
 //------------------------------------
 // File Data
 //------------------------------------
@@ -69,7 +70,7 @@ const ATL08_ICE = 3;
 //
 // PhoREAL Percentiles
 //
-const P = { '5':   0, '10':  1, '15':  2, '20':  3, '25':  4, '30':  5, '35':  6, '40':  7, '45':  8, '50': 9,
+P = { '5':   0, '10':  1, '15':  2, '20':  3, '25':  4, '30':  5, '35':  6, '40':  7, '45':  8, '50': 9,
       '55': 10, '60': 11, '65': 12, '70': 13, '75': 14, '80': 15, '85': 16, '90': 17, '95': 18 };
 
 //------------------------------------
@@ -79,79 +80,41 @@ const P = { '5':   0, '10':  1, '15':  2, '20':  3, '25':  4, '30':  5, '35':  6
 //
 // ATL06P
 //
-export function atl06p(parm, resources, callbacks = null){
-    console.log("atl06p: ", parm, resources);
-    if (!('asset' in parm)) {
+exports.atl06p = (parm, resources, callbacks=null) => {
+    if ('asset' in parm === false) {
         parm['asset'] = 'icesat2';
     }
     let rqst = {
         "resources": resources,
         "parms": parm
-    };
+    }
     if (callbacks != null) {
         return core.source('atl06p', rqst, true, callbacks);
-    } else {
-        let emitter = mitt();
-
-        let total_recs = null;
-        let recs = [];
-        callbacks = {
+    }
+    else {
+        var event = new events.EventEmitter();
+        var total_recs = null;
+        var recs = [];
+        var callbacks = {
             atl06rec: (result) => {
                 recs.push(result["elevation"]);
-                if (total_recs != null && recs.length == total_recs) {
-                    emitter.emit('complete');
+                if ((total_recs != null) && (recs.length == total_recs)) {
+                    event.emit('complete');
                 }
             },
         };
         return new Promise(resolve => {
             core.source('atl06p', rqst, true, callbacks).then(
                 result => {
-                    const onComplete = () => {
+                    event.once('complete', () => {
                         resolve(recs.flat(1));
-                        emitter.off('complete', onComplete); // Remove the event listener after it's called
-                    };
-                    emitter.on('complete', onComplete);
-
+                    });
                     total_recs = result["atl06rec"] ?? 0;
                     if (recs.length == total_recs) {
-                        emitter.emit('complete');
+                        event.emit('complete');
                     }
                 }
             );
         });
     }
-};
-
-// Export any other constants or functions if necessary
-export {
-    CNF_POSSIBLE_TEP,
-    CNF_NOT_CONSIDERED,
-    CNF_BACKGROUND,
-    CNF_WITHIN_10M,
-    CNF_SURFACE_LOW,
-    CNF_SURFACE_MEDIUM,
-    CNF_SURFACE_HIGH,
-    SRT_LAND,
-    SRT_OCEAN,
-    SRT_SEA_ICE,
-    SRT_LAND_ICE,
-    SRT_INLAND_WATER,
-    MAX_COORDS_IN_POLYGON,
-    GT1L,
-    GT1R,
-    GT2L,
-    GT2R,
-    GT3L,
-    GT3R,
-    STRONG_SPOTS,
-    WEAK_SPOTS,
-    LEFT_PAIR,
-    RIGHT_PAIR,
-    SC_BACKWARD,
-    SC_FORWARD,
-    ATL08_WATER,
-    ATL08_LAND,
-    ATL08_SNOW,
-    ATL08_ICE
-  };
-  
+}

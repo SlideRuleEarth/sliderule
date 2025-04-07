@@ -27,7 +27,9 @@
 // OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 // ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import * as core from './core.js';
+const https = require('https');
+const core = require('./core.js')
+const events = require('events');
 
 //------------------------------------
 // File Data
@@ -41,7 +43,7 @@ const datatypes = {
     INTEGER:  2,
     DYNAMIC:  3
 };
-  
+
 //------------------------------------
 // Exported Functions
 //------------------------------------
@@ -49,7 +51,7 @@ const datatypes = {
 //
 // h5
 //
-export function h5(dataset, resource, asset, datatype=datatypes.DYNAMIC, col=0, startrow=0, numrows=ALL_ROWS, callbacks=null){
+exports.h5 = (dataset, resource, asset, datatype=datatypes.DYNAMIC, col=0, startrow=0, numrows=ALL_ROWS, callbacks=null) => {
     let parm = {
       asset: asset,
       resource: resource,
@@ -78,4 +80,3 @@ export function h5(dataset, resource, asset, datatype=datatypes.DYNAMIC, col=0, 
         });
     }
   }
-  

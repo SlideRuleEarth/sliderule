@@ -10,9 +10,6 @@ test-local: ## run unit tests against local running sliderule server
 test-developer: ## run unit tests against developers cluster
 	cd sliderule; jest $(TEST) --setupFiles $(ROOT)/sliderule/tests/developer.config.js
 
-test-uofmdtest: ## run unit tests against UofMDTest cluster in testsliderule.org domain
-	cd sliderule; jest $(TEST) --setupFiles $(ROOT)/sliderule/tests/uofmdtest.config.js
-
 publish: ## publish package to npm registry
 	cd sliderule; npm publish --access public
 

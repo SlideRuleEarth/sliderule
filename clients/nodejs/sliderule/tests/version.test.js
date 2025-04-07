@@ -21,4 +21,3 @@ test('source version api', () => {
         error => {throw new Error(error);}
     );
 });
-
