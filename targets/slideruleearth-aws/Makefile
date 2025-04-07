@@ -229,15 +229,15 @@ cluster-upload-terraform: ## upload the Cluster terraform for provisioning syste
 
 tag: ## create version tag in this repository and release it on GitHub
 	echo $(VERSION) > $(ROOT)/version.txt
-#	node $(ROOT)/clients/nodejs/utils/modpkg.js $(VERSION)
-#	git add $(ROOT)/clients/nodejs/sliderule/package.json
+	node $(ROOT)/clients/nodejs/utils/modpkg.js $(VERSION)
+	git add $(ROOT)/clients/nodejs/sliderule/package.json
 	cp $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git commit -m "Version $(VERSION)"
 	git tag -a $(VERSION) -m "Version $(VERSION)"
 	git push --tags && git push
 	gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/web/rtd/developer_guide/release_notes/release_notes.html"
-#	make -C $(ROOT)/clients/nodejs publish
+	make -C $(ROOT)/clients/nodejs publish
 
 release: ## release a version of sliderule; needs VERSION
 	make tag
