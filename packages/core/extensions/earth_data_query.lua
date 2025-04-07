@@ -154,26 +154,12 @@ local function cmr (parms, poly, with_meta)
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
 
     -- build name filter
-    if (not name_filter) and parms["asset"] and (parms["asset"] == "icesat2") then
-        local name_filter_enabled = false
-        local rgt_filter = '????'
-        if rgt then
-            rgt_filter = string.format("%04d", rgt)
-            name_filter_enabled = true
-        end
-        local cycle_filter = '??'
-        if cycle then
-            cycle_filter = string.format("%02d", cycle)
-            name_filter_enabled = true
-        end
-        local region_filter = '??'
-        if region then
-            region_filter = string.format("%02d", region)
-            name_filter_enabled = true
-        end
-        if name_filter_enabled then
-            name_filter = '*_' .. rgt_filter .. cycle_filter .. region_filter .. '_*'
-        end
+    if (not name_filter) and
+       (rgt or cycle or region) then
+        local rgt_filter = rgt and string.format("%04d", rgt) or '????'
+        local cycle_filter = cycle and string.format("%02d", cycle) or '??'
+        local region_filter = region and string.format("%02d", region) or '??'
+        name_filter = '*_' .. rgt_filter .. cycle_filter .. region_filter .. '_*'
     end
 
     -- flatten polygon
