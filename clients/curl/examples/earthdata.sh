@@ -1,0 +1,1 @@
+curl -X POST -d @earthdata.json https://sliderule.slideruleearth.io/source/earthdata
