@@ -2,6 +2,10 @@
 
 2023-02-24
 
+:::{warning}
+The functionality described in this article has been superceded by broad support for returning data via Apache Arrow based formats.
+:::
+
 ## Background
 
 Apache Parquet is an open source, column-oriented data file format designed for efficient data storage and retrieval. It has strong support in Python/DataFrames and is a popular data format for big data analytics.  See https://parquet.apache.org/ for more details.
@@ -12,7 +16,6 @@ GeoParquet is a meta data and file organization convention overlaid on top of th
 
 SlideRule currently supports returning results back to data users as GeoParquet files.  These files are built on the server and either streamed back directly to the user, or uploaded to a user-specified S3 bucket for later access. To specify the GeoParquet option, the request must include the `output` parameter with the `output.format` field set to **"parquet"**. See the section on [output parameters](./SlideRule.html#output-parameters) for more details.
 
-
 ### S3 as a destination
 
 To specify S3 as a destination, the `output.path` field must start with **"s3://"**.  (For example, "s3://mybucket/maps/grandmesa.parquet").
@@ -20,7 +23,6 @@ To specify S3 as a destination, the `output.path` field must start with **"s3://
 The SlideRule project does not maintain any S3 buckets that are open for public access; it is therefore incumbent on the user to provide a path to an S3 bucket they have access to, and to also provide the temporary credentials in their request for SlideRule to use to write to the bucket.
 
 Methods for obtaining temporary AWS credentials are outside the scope of this user guide, yet it is strongly encouraged that the credentials provided are as limited in scope as possible.  For the purposes of SlideRules, the only access that is necessary is "s3:PutObject".
-
 
 ### Constraints
 
