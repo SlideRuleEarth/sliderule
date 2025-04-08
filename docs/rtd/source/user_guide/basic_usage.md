@@ -68,7 +68,7 @@ sliderule.set_rqst_timeout
   Change how long to wait for the request to finish; needed when a user is making a very large processing request and needs to match the client timeouts to the server-side timeouts provided in the request parameters.
 
 sliderule.set_processing_flags
-  Certain streamed responses flag auxillary fields in their response structure that indicate those fields are not necessary for core functionality; the client can be configured to skip those fields in order to speed up processing large responses.
+  Certain streamed responses flag auxiliary fields in their response structure that indicate those fields are not necessary for core functionality; the client can be configured to skip those fields in order to speed up processing large responses.
 
 sliderule.update_available_servers
   Acquire the number of nodes in the cluster and make a request to change (e.g. request a capacity increase) the number of nodes in a cluster.
@@ -98,7 +98,7 @@ sliderule.source
 sliderule.run
   Implements a standard SlideRule convention for making requests to SlideRule endpoints that return a dataframe.  This uses the `sliderule.source()` routine.
 
-A user is always free to use one of the routines above for making requests to SlideRule, but many times it is more convenient to use one of the helper functions in the mission specific modules.  For instance, when making processing requests for ICESat-2 data, the `icesat2` module provides many routines that wrap calls to specific enpoints in an easy-to-use Python function.  For instance, when making a request to the `atl06p` endpoint, a user should use the `icesat2.atl06p()` Python routine.
+A user is always free to use one of the routines above for making requests to SlideRule, but many times it is more convenient to use one of the helper functions in the mission specific modules.  For instance, when making processing requests for ICESat-2 data, the `icesat2` module provides many routines that wrap calls to specific endpoints in an easy-to-use Python function.  For instance, when making a request to the `atl06p` endpoint, a user should use the `icesat2.atl06p()` Python routine.
 
 ## General Request Parameters
 

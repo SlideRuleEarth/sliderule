@@ -3,7 +3,7 @@
 2023-02-24
 
 :::{warning}
-The functionality described in this article has been superceded by broad support for returning data via Apache Arrow based formats.
+The functionality described in this article has been superseded by broad support for returning data via Apache Arrow based formats.
 :::
 
 ## Background
