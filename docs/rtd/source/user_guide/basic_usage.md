@@ -18,28 +18,28 @@ from sliderule import sliderule
 Here is a list of modules in the SlideRule Python client.
 
 sliderule
-  Core functionality: initialization and configuration, making requests, processing an area of interest.
+:   Core functionality: initialization and configuration, making requests, processing an area of interest.
 
 earthdata
-  Query for resources using CMR, CMR-STAC, TNM, and other services.
+:   Query for resources using CMR, CMR-STAC, TNM, and other services.
 
 h5
-  Directly read HDF5 data from the cloud using the server-side H5Coro implementation.
+:   Directly read HDF5 data from the cloud using the server-side H5Coro implementation.
 
 raster
-  Sample and subset supported raster datasets
+:   Sample and subset supported raster datasets
 
 icesat2
-  Issue processing requests for ICESat-2 standard and custom data products
+:   Issue processing requests for ICESat-2 standard and custom data products
 
 gedi
-  Issue processing requests for GEDI standard and custom data products
+:   Issue processing requests for GEDI standard and custom data products
 
 io
-  Read and write SlideRule output in different formats
+:   Read and write SlideRule output in different formats
 
 ipysliderule
-  Widgets and routines for building interactive interfaces to SlideRule in a Jupyter notebook
+:   Widgets and routines for building interactive interfaces to SlideRule in a Jupyter notebook
 
 If you wanted to use multiple modules from the SlideRule Python client, you could use the following code as an example:
 ```python
@@ -53,31 +53,31 @@ You can begin using the SlideRule Python client right away without any configura
 But the client provides numerous routines for configuring its behavior.  Here is a list and short description of each of the available routines.  See the API Reference for a more detailed description.
 
 sliderule.init
-  Primary routine for configuring client; attempts to capture as parameters the typical settings that a user would want to change.
+:   Primary routine for configuring client; attempts to capture as parameters the typical settings that a user would want to change.
 
 sliderule.set_url
-  Configure the domain that the client points to for the server-side cluster; defaults to `slideruleearth.io` but can be changed to things like `localhost` for local development.  Typically, this should not be changed.
+:   Configure the domain that the client points to for the server-side cluster; defaults to `slideruleearth.io` but can be changed to things like `localhost` for local development.  Typically, this should not be changed.
 
 sliderule.set_ssl_verify
-  Disable the SSL certification check when making processing requests to sliderule; by default the client verifies the cert, but in cases (usually development) when a cert is invalid but the user knows the server being pointed to is valid, this setting can be overridden to allow the requests to go through.  Typically, this should not be changed.
+:   Disable the SSL certification check when making processing requests to sliderule; by default the client verifies the cert, but in cases (usually development) when a cert is invalid but the user knows the server being pointed to is valid, this setting can be overridden to allow the requests to go through.  Typically, this should not be changed.
 
 sliderule.set_verbose
-  Change the verbosity of the log messages being generated; when enabled, server-side log messages will be printed to the user console.
+:   Change the verbosity of the log messages being generated; when enabled, server-side log messages will be printed to the user console.
 
 sliderule.set_rqst_timeout
-  Change how long to wait for the request to finish; needed when a user is making a very large processing request and needs to match the client timeouts to the server-side timeouts provided in the request parameters.
+:   Change how long to wait for the request to finish; needed when a user is making a very large processing request and needs to match the client timeouts to the server-side timeouts provided in the request parameters.
 
 sliderule.set_processing_flags
-  Certain streamed responses flag auxiliary fields in their response structure that indicate those fields are not necessary for core functionality; the client can be configured to skip those fields in order to speed up processing large responses.
+:   Certain streamed responses flag auxiliary fields in their response structure that indicate those fields are not necessary for core functionality; the client can be configured to skip those fields in order to speed up processing large responses.
 
 sliderule.update_available_servers
-  Acquire the number of nodes in the cluster and make a request to change (e.g. request a capacity increase) the number of nodes in a cluster.
+:   Acquire the number of nodes in the cluster and make a request to change (e.g. request a capacity increase) the number of nodes in a cluster.
 
 sliderule.scaleout
-  Increase the number of nodes in a cluster and wait for the cluster to reach the requested capacity
+:   Increase the number of nodes in a cluster and wait for the cluster to reach the requested capacity
 
 sliderule.authenticate
-  Configure the organization that the client points to for processing requests.  This is paired with the `sliderule.set_url()` routine to create the full URL for processing requests.  For example, if the user calls `sliderule.set_url("slideruleearth.io")` and then `sliderule.authenticate("uw")` then the client will make all requests to `https://uw.slideruleearth.io`.  This routine also handles authenticating to the organization when the associated cluster is a private cluster.
+:   Configure the organization that the client points to for processing requests.  This is paired with the `sliderule.set_url()` routine to create the full URL for processing requests.  For example, if the user calls `sliderule.set_url("slideruleearth.io")` and then `sliderule.authenticate("uw")` then the client will make all requests to `https://uw.slideruleearth.io`.  This routine also handles authenticating to the organization when the associated cluster is a private cluster.
 
 ### Define the Request Parameters
 
@@ -93,10 +93,10 @@ sliderule.run("atl03x", {"cnf":-1}, resources=["ATL03_20181019065445_03150111_00
 There are two general purpose routines provided in the SlideRule Python client for issuing processing requests.
 
 sliderule.source
-  Implements the low-level protocol for making requests to SlideRule and processing the results.  This can be used to issue a request to any SlideRule endpoint.
+:   Implements the low-level protocol for making requests to SlideRule and processing the results.  This can be used to issue a request to any SlideRule endpoint.
 
 sliderule.run
-  Implements a standard SlideRule convention for making requests to SlideRule endpoints that return a dataframe.  This uses the `sliderule.source()` routine.
+:   Implements a standard SlideRule convention for making requests to SlideRule endpoints that return a dataframe.  This uses the `sliderule.source()` routine.
 
 A user is always free to use one of the routines above for making requests to SlideRule, but many times it is more convenient to use one of the helper functions in the mission specific modules.  For instance, when making processing requests for ICESat-2 data, the `icesat2` module provides many routines that wrap calls to specific endpoints in an easy-to-use Python function.  For instance, when making a request to the `atl06p` endpoint, a user should use the `icesat2.atl06p()` Python routine.
 
@@ -118,17 +118,15 @@ The applicable parameters used to specify the polygon are:
 * `ignore_poly_for_cmr`: boolean for whether to use the polygon as a part of the request to CMR for obtaining the list of resources to process. By default the polygon is used and this is only here for unusual cases where SlideRule is able to handle a polygon for subsetting that CMR cannot, and the list of resources to process is obtained some other way.
 
 For example:
-
 ```python
-
-    region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
-               {"lon": -107.7677425431139, "lat": 38.90611184543033},
-               {"lon": -107.7818591266989, "lat": 39.26613714985466},
-               {"lon": -108.3605610678553, "lat": 39.25086131372244},
-               {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
-    parms = {
-        "poly": region['poly']
-    }
+region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
+            {"lon": -107.7677425431139, "lat": 38.90611184543033},
+            {"lon": -107.7818591266989, "lat": 39.26613714985466},
+            {"lon": -108.3605610678553, "lat": 39.25086131372244},
+            {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
+parms = {
+    "poly": region['poly']
+}
 ```
 
 In order to facilitate other formats, the `sliderule.toregion` function can be used to convert polygons from the GeoJSON and Shapefile formats into this format accepted by `SlideRule`.
@@ -144,12 +142,11 @@ When the GeoJSON is supplied in the parameters sent in the request, the server s
 The example code below shows how this option can be enabled and used (note, the `poly` parameter is still required):
 
 ```python
-
-    region = sliderule.toregion('examples/grandmesa.geojson', cellsize=0.02)
-    parms = {
-        "poly": region['poly'],
-        "region_mask": region['raster']
-    }
+region = sliderule.toregion('examples/grandmesa.geojson', cellsize=0.02)
+parms = {
+    "poly": region['poly'],
+    "region_mask": region['raster']
+}
 ```
 
 ### Timeouts

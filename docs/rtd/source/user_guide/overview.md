@@ -82,22 +82,22 @@ As mentioned above, the second way to specify which resources need to be process
 Processing an area of interest can at times be complicated, and for that reason, there are multiple levels of support provided in SlideRule for handling different scenarios a user might need.  , The following functionality is provided in SlideRule for handling areas of interest (ordered from simplest to most complicated):
 
 Polygon with Resources
-    In the request parameters, the user provides a polygon and a list of resources in their request.  The SlideRule servers use the polygon directly to subset all of the resources specified.
+:   In the request parameters, the user provides a polygon and a list of resources in their request.  The SlideRule servers use the polygon directly to subset all of the resources specified.
 
 Parameters without Resources
-    In the request parameters, the user provides a polygon and/or other resource query parameters (e.g. name filter), without specifying which resources to process.  The SlideRule servers use the _asset_ (either provided as the default for the endpoint or manually supplied in the request) to determine which metadata repositories contain indexes for the source data.  The server-side code then issues a query to the appropriate metadata repository using the parameters in the request to obtain a list of resources to process.
+:   In the request parameters, the user provides a polygon and/or other resource query parameters (e.g. name filter), without specifying which resources to process.  The SlideRule servers use the _asset_ (either provided as the default for the endpoint or manually supplied in the request) to determine which metadata repositories contain indexes for the source data.  The server-side code then issues a query to the appropriate metadata repository using the parameters in the request to obtain a list of resources to process.
 
 Python Client `toregion` - Raster
-    Using the SlideRule Python Client `toregion` function, the user can provide a raster image which acts as a mask over the area of interest defining which latitude/longitude cells are "on" and which cells are "off".  The source data is subsetted according to the mask.  This is useful for very complicated areas of interest that represent coastlines or islands where a simple polygon is insufficient.
+:   Using the SlideRule Python Client `toregion` function, the user can provide a raster image which acts as a mask over the area of interest defining which latitude/longitude cells are "on" and which cells are "off".  The source data is subsetted according to the mask.  This is useful for very complicated areas of interest that represent coastlines or islands where a simple polygon is insufficient.
 
 Python Client `toregion` - GeoJson/Shapfile/GeoDataFrame
-    Using the SlideRule Python Client, the user can define their area of interest using a __geojson__, __shapefile__, or __GeoDataFrame__, and still provide a properly formatted polygon in their request to SlideRule by converting the source definition using the `toregion` function.
+:   Using the SlideRule Python Client, the user can define their area of interest using a __geojson__, __shapefile__, or __GeoDataFrame__, and still provide a properly formatted polygon in their request to SlideRule by converting the source definition using the `toregion` function.
 
 Python Client Earthdata
-    Instead of letting the SlideRule server-side code handle querying the appropriate metadata repositories to obtain a list of resources to process, the SlideRule Python Client includes the `earthdata` module which provides functions for directly querying NASA's Common Metadata Repository (CMR) and USGS's The National Map (TNM).  When the intended resources are supported by these metadata repositories, the user can query these repositories directly.
+:   Instead of letting the SlideRule server-side code handle querying the appropriate metadata repositories to obtain a list of resources to process, the SlideRule Python Client includes the `earthdata` module which provides functions for directly querying NASA's Common Metadata Repository (CMR) and USGS's The National Map (TNM).  When the intended resources are supported by these metadata repositories, the user can query these repositories directly.
 
 Python Client Earthdata - Clusters
-    For extremely large areas of interest that are also very complicated (e.g. entire U.S. west coast coastline), the SlideRule Python Client provides functions in the `earthdata` module to break up the area of interest into smaller areas acceptable to CMR, issue individual CMR requests, and then combine all of the responses back into one list of resources to process.
+:   For extremely large areas of interest that are also very complicated (e.g. entire U.S. west coast coastline), the SlideRule Python Client provides functions in the `earthdata` module to break up the area of interest into smaller areas acceptable to CMR, issue individual CMR requests, and then combine all of the responses back into one list of resources to process.
 
 ## 4. Responses
 
@@ -129,13 +129,13 @@ If you want to process streamed results outside of the SlideRule Python Client, 
 Each response record is formatted as: <record header><record type><record data> where,
 
 record header
-    64-bit big endian structure providing the version and length of the record: <version:16 bits><type size:16 bits><data size:32 bits>.
+:   64-bit big endian structure providing the version and length of the record: <version:16 bits><type size:16 bits><data size:32 bits>.
 
 record type
-    null-terminated ASCII string containing the name of the record type
+:   null-terminated ASCII string containing the name of the record type
 
 record data
-    binary contents of data
+:   binary contents of data
 
 In order to know how to process the contents of the record data, the user must perform an additional query to the SlideRule definition service, providing the record type. The definition service returns a JSON response object that provides a format definition of the record type that can be used by the client to decode the binary record data. The format of the definition response object is:
 
