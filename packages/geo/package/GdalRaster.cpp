@@ -555,7 +555,6 @@ void GdalRaster::initAwsAccess(const GeoFields* _parms)
         VSISetPathSpecificOption(path, "AWS_REGION", region);
 
         if(!credentials.expiration.value.empty())
-        // if(1)
         {
             VSISetPathSpecificOption(path, "AWS_ACCESS_KEY_ID", credentials.accessKeyId.value.c_str());
             VSISetPathSpecificOption(path, "AWS_SECRET_ACCESS_KEY", credentials.secretAccessKey.value.c_str());
