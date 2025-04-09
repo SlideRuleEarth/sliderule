@@ -31,15 +31,8 @@ import time
 import logging
 import numpy
 import sliderule
-from sliderule import earthdata, logger
-
-###############################################################################
-# GLOBALS
-###############################################################################
-
-# profiling times for each major function
-profiles = {}
-
+from sliderule import logger
+from sliderule.session import Session
 
 ###############################################################################
 # APIs
@@ -48,7 +41,7 @@ profiles = {}
 #
 #  Initialize
 #
-def init (url=sliderule.service_url, verbose=False, loglevel=logging.CRITICAL, organization=sliderule.service_org, desired_nodes=None, time_to_live=60, bypass_dns=False):
+def init (url=Session.PUBLIC_URL, verbose=False, loglevel=logging.CRITICAL, organization=Session.PUBLIC_ORG, desired_nodes=None, time_to_live=60, bypass_dns=False):
     '''
     Initializes the Python client for use with SlideRule and should be called before other SWOT API calls.
     This function is a wrapper for the `sliderule.init(...) function </web/rtds/api_reference/sliderule.html#init>`_.
@@ -123,8 +116,6 @@ def swotl2p(parm, callbacks={}, resources=None):
         >>> rsps = swot.swotl2p(parms, asset=asset, resources=resources)
     '''
     try:
-        tstart = time.perf_counter()
-
         # Default the Asset
         rqst_parm = parm.copy()
         if "asset" not in rqst_parm:
@@ -166,7 +157,6 @@ def swotl2p(parm, callbacks={}, resources=None):
                     results[granule]['longitude'] = numpy.array(longitudes)
 
         # Return Results
-        profiles[swotl2p.__name__] = time.perf_counter() - tstart
         return results
 
     # Handle Runtime Errors

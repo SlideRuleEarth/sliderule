@@ -144,7 +144,7 @@ In order to know how to process the contents of the record data, the user must p
     "__datasize": # minimum size of record
     "field_1":
     {
-        "type": # data type (see sliderule.basictypes for full definition), or record type if a nested structure
+        "type": # data type (see session.BASIC_TYPES for full definition), or record type if a nested structure
         "elements": # number of elements, 1 if not an array
         "offset": # starting bit offset into record data
         "flags": # processing flags - LE: little endian, BE: big endian, PTR: pointer

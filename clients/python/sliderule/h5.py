@@ -36,7 +36,12 @@ from sliderule import logger
 # GLOBALS
 ###############################################################################
 
-profiles = {}
+DATATYPES = {
+    "TEXT":     0,
+    "REAL":     1,
+    "INTEGER":  2,
+    "DYNAMIC":  3
+}
 
 ALL_ROWS = -1
 
@@ -48,7 +53,7 @@ ALL_ROWS = -1
 #
 #  H5
 #
-def h5 (dataset, resource, asset, datatype=sliderule.datatypes["DYNAMIC"], col=0, startrow=0, numrows=ALL_ROWS):
+def h5 (dataset, resource, asset, datatype=DATATYPES["DYNAMIC"], col=0, startrow=0, numrows=ALL_ROWS):
     '''
     Reads a dataset from an HDF5 file and returns the values of the dataset in a list
 
@@ -60,12 +65,12 @@ def h5 (dataset, resource, asset, datatype=sliderule.datatypes["DYNAMIC"], col=0
     format that is easy to use in Python.  The compromise that this function takes is that it allows the user to supply the desired data type of the
     returned data via the **datatype** parameter, and the function will then return a **numpy** array of values with that data type.
 
-    The data type is supplied as a ``sliderule.datatypes`` enumeration:
+    The data type is supplied as a ``DATATYPES`` enumeration:
 
-    - ``sliderule.datatypes["TEXT"]``: return the data as a string of unconverted bytes
-    - ``sliderule.datatypes["INTEGER"]``: return the data as an array of integers
-    - ``sliderule.datatypes["REAL"]``: return the data as an array of double precision floating point numbers
-    - ``sliderule.datatypes["DYNAMIC"]``: return the data in the numpy data type that is the closest match to the data as it is stored in the HDF5 file
+    - ``DATATYPES["TEXT"]``: return the data as a string of unconverted bytes
+    - ``DATATYPES["INTEGER"]``: return the data as an array of integers
+    - ``DATATYPES["REAL"]``: return the data as an array of double precision floating point numbers
+    - ``DATATYPES["DYNAMIC"]``: return the data in the numpy data type that is the closest match to the data as it is stored in the HDF5 file
 
     Parameters
     ----------
@@ -97,11 +102,9 @@ def h5 (dataset, resource, asset, datatype=sliderule.datatypes["DYNAMIC"], col=0
         >>> longitudes  = h5.h5("/gt1r/land_ice_segments/longitude",   resource, asset)
         >>> df = pd.DataFrame(data=list(zip(heights, latitudes, longitudes)), index=segments, columns=["h_mean", "latitude", "longitude"])
     '''
-    tstart = time.perf_counter()
     datasets = [ { "dataset": dataset, "datatype": datatype, "col": col, "startrow": startrow, "numrows": numrows } ]
     values = h5p(datasets, resource, asset=asset)
     if len(values) > 0:
-        profiles[h5.__name__] = time.perf_counter() - tstart
         return values[dataset]
     else:
         return numpy.empty(0)
@@ -161,9 +164,6 @@ def h5p (datasets, resource, asset):
          '/gt1r/land_ice_segments/h_li': array([45.72632446, 45.76512574, 45.76337375, 45.77102473, 45.81307948]),
          '/gt3r/land_ice_segments/h_li': array([45.14954134, 45.18970635, 45.16637644, 45.15235916, 45.17135806])}
     '''
-    # Latch Start Time
-    tstart = time.perf_counter()
-
     # Baseline Request
     rqst = {
         "asset" : asset,
@@ -182,9 +182,6 @@ def h5p (datasets, resource, asset):
     results = {}
     for result in rsps:
         results[result["dataset"]] = sliderule.getvalues(result["data"], result["datatype"], result["size"])
-
-    # Update Profiles
-    profiles[h5p.__name__] = time.perf_counter() - tstart
 
     # Return Results
     return results

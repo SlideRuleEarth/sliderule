@@ -123,6 +123,10 @@ class TestInitialization:
         with pytest.raises(TypeError):
             icesat2.init(url=[])
 
+    def test_init_restore(self):
+            sliderule.init()
+            assert len(sliderule.source("version")) > 0
+
 #
 # Region of Interest APIs
 #

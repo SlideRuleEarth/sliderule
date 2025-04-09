@@ -2,6 +2,7 @@
 
 import pytest
 import sliderule
+from sliderule.session import Session
 
 @pytest.mark.network
 class TestProvisioning:
@@ -11,10 +12,8 @@ class TestProvisioning:
         assert status
 
     def test_refresh(self, domain, organization):
-        sliderule.set_url(domain)
-        status = sliderule.authenticate(organization)
-        headers = sliderule.buildauthheader(force_refresh=True)
-        assert status
+        session = Session(domain, organization=organization)
+        headers = session.__buildauthheader(force_refresh=True)
         assert len(headers['Authorization']) > 8
 
     def test_num_nodes_update(self, domain, organization):

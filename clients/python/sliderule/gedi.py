@@ -32,14 +32,8 @@ import logging
 import numpy
 import geopandas
 import sliderule
-from sliderule import earthdata, logger
-
-###############################################################################
-# GLOBALS
-###############################################################################
-
-# profiling times for each major function
-profiles = {}
+from sliderule import logger
+from sliderule.session import Session
 
 ###############################################################################
 # LOCAL FUNCTIONS
@@ -50,13 +44,13 @@ profiles = {}
 #
 def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array, height_key):
 
-    # Latch Start Time
-    tstart_flatten = time.perf_counter()
+    # Check Responses
+    if rsps == None or len(rsps) == 0:
+        return sliderule.emptyframe()
 
     # Check for Output Options
     if "output" in parm:
         gdf = sliderule.procoutputfile(parm, rsps)
-        profiles["flatten"] = time.perf_counter() - tstart_flatten
         return gdf
 
     # Flatten Records
@@ -119,7 +113,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
             # Initialize Columns
             sample_record = records[0][batch_column][0]
             for field in sample_record.keys():
-                fielddef = sliderule.get_definition(sample_record['__rectype'], field)
+                fielddef = sliderule.getdefinition(sample_record['__rectype'], field)
                 if len(fielddef) > 0:
                     if type(sample_record[field]) == tuple:
                         columns[field] = numpy.empty(num_records, dtype=object)
@@ -139,11 +133,9 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
     gdf = sliderule.todataframe(columns, height_key=height_key)
 
     # Merge Ancillary Fields
-    tstart_merge = time.perf_counter()
     for field_set in field_dictionary:
         df = geopandas.pd.DataFrame(field_dictionary[field_set])
         gdf = geopandas.pd.merge(gdf, df, how='left', on='shot_number').set_axis(gdf.index)
-    profiles["merge"] = time.perf_counter() - tstart_merge
 
     # Delete Shot Number Column
     if len(gdf) > 0 and not keep_id:
@@ -154,41 +146,29 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
         gdf.attrs['file_directory'] = file_dictionary
 
     # Return GeoDataFrame
-    profiles["flatten"] = time.perf_counter() - tstart_flatten
     return gdf
 
 #
 #  Perform Processing Request
 #
-def __processing_request(parm, asset, callbacks, resources, keep_id, as_numpy_array, api, rec, height_key, profile):
-    try:
-        tstart = time.perf_counter()
+def __processing_request(parm, asset, callbacks, resources, keep_id, as_numpy_array, api, rec, height_key):
 
-        # Default the Asset
-        rqst_parm = parm.copy()
-        if "asset" not in rqst_parm:
-            rqst_parm["asset"] = asset
+    # Default the Asset
+    rqst_parm = parm.copy()
+    if "asset" not in rqst_parm:
+        rqst_parm["asset"] = asset
 
-        # Build GEDI Request
-        rqst = {
-            "resources": resources,
-            "parms": rqst_parm
-        }
+    # Build GEDI Request
+    rqst = {
+        "resources": resources,
+        "parms": rqst_parm
+    }
 
-        # Make API Processing Request
-        rsps = sliderule.source(api, rqst, stream=True, callbacks=callbacks)
+    # Make API Processing Request
+    rsps = sliderule.source(api, rqst, stream=True, callbacks=callbacks)
 
-        # Flatten Responses
-        gdf = __flattenbatches(rsps, rec, 'footprint', parm, keep_id, as_numpy_array, height_key)
-
-        # Return Response
-        profiles[profile] = time.perf_counter() - tstart
-        return gdf
-
-    # Handle Runtime Errors
-    except RuntimeError as e:
-        logger.critical(e)
-        return sliderule.emptyframe()
+    # Return GeoDataFrame
+    return __flattenbatches(rsps, rec, 'footprint', parm, keep_id, as_numpy_array, height_key)
 
 ###############################################################################
 # APIs
@@ -197,7 +177,7 @@ def __processing_request(parm, asset, callbacks, resources, keep_id, as_numpy_ar
 #
 #  Initialize
 #
-def init (url=sliderule.service_url, verbose=False, loglevel=logging.CRITICAL, organization=sliderule.service_org, desired_nodes=None, time_to_live=60, bypass_dns=False):
+def init (url=Session.PUBLIC_URL, verbose=False, loglevel=logging.CRITICAL, organization=Session.PUBLIC_ORG, desired_nodes=None, time_to_live=60, bypass_dns=False):
     '''
     Initializes the Python client for use with SlideRule and should be called before other GEDI API calls.
     This function is a wrapper for the `sliderule.init(...) function </web/rtds/api_reference/sliderule.html#init>`_.
@@ -277,7 +257,7 @@ def gedi04ap(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=F
         >>> asset = "ornldaac-s3"
         >>> rsps = gedi.gedi04ap(parms, asset=asset, resources=resources)
     '''
-    return __processing_request(parm, "gedil4a", callbacks, resources, keep_id, as_numpy_array, 'gedi04ap', 'gedi04arec', height_key, gedi04ap.__name__)
+    return __processing_request(parm, "gedil4a", callbacks, resources, keep_id, as_numpy_array, 'gedi04ap', 'gedi04arec', height_key)
 
 #
 #  GEDI L2A
@@ -347,7 +327,7 @@ def gedi02ap(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=F
         >>> asset = "gedi-local"
         >>> rsps = gedi.gedi02ap(parms, asset=asset, resources=resources)
     '''
-    return __processing_request(parm, "gedil2a", callbacks, resources, keep_id, as_numpy_array, 'gedi02ap', 'gedi02arec', height_key, gedi02ap.__name__)
+    return __processing_request(parm, "gedil2a", callbacks, resources, keep_id, as_numpy_array, 'gedi02ap', 'gedi02arec', height_key)
 
 #
 #  GEDI L1B
@@ -417,4 +397,4 @@ def gedi01bp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=F
         >>> asset = "gedi-local"
         >>> rsps = gedi.gedi01bp(parms, asset=asset, resources=resources)
     '''
-    return __processing_request(parm, "gedil1b", callbacks, resources, keep_id, as_numpy_array, 'gedi01bp', 'gedi01brec', height_key, gedi01bp.__name__)
+    return __processing_request(parm, "gedil1b", callbacks, resources, keep_id, as_numpy_array, 'gedi01bp', 'gedi01brec', height_key)

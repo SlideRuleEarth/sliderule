@@ -28,693 +28,28 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
-import netrc
-import requests
-import socket
-import json
-import struct
-import ctypes
-import tempfile
-import time
 import logging
 import warnings
 import numpy
+import tempfile
 import geopandas
 from shapely.geometry import Polygon
 from shapely.geometry.multipolygon import MultiPolygon
 from datetime import datetime
 from sliderule import version
+from sliderule.session import Session, BASIC_TYPES, CODED_TYPE, FatalError, RetryRequest
+
+try:
+    from sklearn.cluster import KMeans
+except:
+    print("Unable to import sklearn... clustering support disabled")
 
 ###############################################################################
 # GLOBALS
 ###############################################################################
 
-# Coordinate Reference system definition for WGS84 Ellipsoid ensemble
-# Coordinate system on the surface of a sphere or ellipsoid of reference.
-EPSG_WGS84 = "EPSG:4326"
-
-# This is 3D CRS for ITRF2014 realization with 2010.0 epoch: https://epsg.io/7912
-# Note: using GRS80 ellipsoid, negligible difference in inverse flattening from WGS84
-SLIDERULE_EPSG = "EPSG:7912"
-
-PUBLIC_URL = "slideruleearth.io"
-PUBLIC_ORG = "sliderule"
-
-DEFAULT_TRUST_ENV = False
-
-service_url = PUBLIC_URL
-service_org = PUBLIC_ORG
-
-ssl_verify = True
-
-session = requests.Session()
-session.trust_env = DEFAULT_TRUST_ENV
-
-ps_refresh_token = None
-ps_access_token = None
-ps_token_exp = None
-
-MAX_PS_CLUSTER_WAIT_SECS = 600
-
-request_timeout = (10, 120) # (connection, read) in seconds
-decode_aux = True
-
 logger = logging.getLogger(__name__)
-console = None
-
-rethrow_exceptions = False
-
-clustering_enabled = False
-try:
-    from sklearn.cluster import KMeans
-    clustering_enabled = True
-except:
-    logger.info("Unable to import sklearn... clustering support disabled")
-
-recdef_table = {}
-
-arrow_file_table = {}
-
-profiles = {}
-
-gps_epoch = datetime(1980, 1, 6)
-tai_epoch = datetime(1970, 1, 1, 0, 0, 10)
-
-eventformats = {
-    "TEXT":     0,
-    "JSON":     1
-}
-
-eventlogger = {
-    0: logger.debug,
-    1: logger.info,
-    2: logger.warning,
-    3: logger.error,
-    4: logger.critical
-}
-
-exceptioncodes = {
-    "INFO": 0,
-    "ERROR": -1,
-    "TIMEOUT": -2,
-    "RESOURCE_DOES_NOT_EXIST": -3,
-    "EMPTY_SUBSET": -4,
-    "SIMPLIFY": -5
-}
-
-datatypes = {
-    "TEXT":     0,
-    "REAL":     1,
-    "INTEGER":  2,
-    "DYNAMIC":  3
-}
-
-basictypes = {
-    "INT8":     { "fmt": 'b', "size": 1, "nptype": numpy.int8   },
-    "INT16":    { "fmt": 'h', "size": 2, "nptype": numpy.int16  },
-    "INT32":    { "fmt": 'i', "size": 4, "nptype": numpy.int32  },
-    "INT64":    { "fmt": 'q', "size": 8, "nptype": numpy.int64  },
-    "UINT8":    { "fmt": 'B', "size": 1, "nptype": numpy.uint8  },
-    "UINT16":   { "fmt": 'H', "size": 2, "nptype": numpy.uint16 },
-    "UINT32":   { "fmt": 'I', "size": 4, "nptype": numpy.uint32 },
-    "UINT64":   { "fmt": 'Q', "size": 8, "nptype": numpy.uint64 },
-    "BITFIELD": { "fmt": 'x', "size": 0, "nptype": numpy.byte   },  # unsupported
-    "FLOAT":    { "fmt": 'f', "size": 4, "nptype": numpy.single },
-    "DOUBLE":   { "fmt": 'd', "size": 8, "nptype": numpy.double },
-    "TIME8":    { "fmt": 'q', "size": 8, "nptype": numpy.int64  }, # numpy.datetime64
-    "STRING":   { "fmt": 's', "size": 1, "nptype": numpy.byte   }
-}
-
-codedtype2str = {
-    0:  "INT8",
-    1:  "INT16",
-    2:  "INT32",
-    3:  "INT64",
-    4:  "UINT8",
-    5:  "UINT16",
-    6:  "UINT32",
-    7:  "UINT64",
-    8:  "BITFIELD",
-    9:  "FLOAT",
-    10: "DOUBLE",
-    11: "TIME8",
-    12: "STRING"
-}
-
-###############################################################################
-# CLIENT EXCEPTIONS
-###############################################################################
-
-class FatalError(RuntimeError):
-    pass
-
-class TransientError(RuntimeError):
-    pass
-
-class RetryRequest(RuntimeError):
-    pass
-
-###############################################################################
-# UTILITIES
-###############################################################################
-
-#
-# __StreamSource
-#
-class __StreamSource:
-    def __init__(self, data):
-        self.source = data
-    def __iter__(self):
-        for line in self.source.iter_content(None):
-            yield line
-
-#
-# __BufferSource
-#
-class __BufferSource:
-    def __init__(self, data):
-        self.source = data
-    def __iter__(self):
-        yield self.source
-
-#
-#  __populate
-#
-def __populate(rectype):
-    global recdef_table
-    if rectype not in recdef_table:
-        recdef_table[rectype] = source("definition", {"rectype" : rectype})
-    return recdef_table[rectype]
-
-#
-#  __parse_json
-#
-def __parse_json(data):
-    """
-    data: request response
-    """
-    lines = []
-    for line in data:
-        lines.append(line)
-    response = b''.join(lines)
-    return json.loads(response)
-
-#
-#  __decode_native
-#
-def __decode_native(rectype, rawdata):
-    """
-    rectype: record type supplied in response (string)
-    rawdata: payload supplied in response (byte array)
-    """
-    global recdef_table
-
-    # initialize record
-    rec = { "__rectype": rectype }
-
-    # get/populate record definition #
-    recdef = __populate(rectype)
-
-    # iterate through each field in definition
-    for fieldname in recdef.keys():
-
-        # double underline (__) as prefix indicates meta data
-        if fieldname.find("__") == 0:
-            continue
-
-        # get field properties
-        field = recdef[fieldname]
-        ftype = field["type"]
-        offset = int(field["offset"] / 8)
-        elems = field["elements"]
-        flags = field["flags"]
-
-        # do not process pointers
-        if "PTR" in flags:
-            continue
-
-        # check for mvp flag
-        if not decode_aux and "AUX" in flags:
-            continue
-
-        # get endianness
-        if "LE" in flags:
-            endian = '<'
-        else:
-            endian = '>'
-
-        # decode basic type
-        if ftype in basictypes:
-
-            # check if array
-            is_array = not (elems == 1)
-
-            # get number of elements
-            if elems <= 0:
-                elems = int((len(rawdata) - offset) / basictypes[ftype]["size"])
-
-            # build format string
-            fmt = endian + str(elems) + basictypes[ftype]["fmt"]
-
-            # parse data
-            value = struct.unpack_from(fmt, rawdata, offset)
-
-            # set field
-            if ftype == "STRING":
-                rec[fieldname] = ctypes.create_string_buffer(value[0]).value.decode('ascii')
-            elif is_array:
-                rec[fieldname] = value
-            else:
-                rec[fieldname] = value[0]
-
-        # decode user type
-        else:
-
-            # populate record definition (if needed) #
-            subrecdef = __populate(ftype)
-
-            # check if array
-            is_array = not (elems == 1)
-
-            # get number of elements
-            if elems <= 0:
-                elems = int((len(rawdata) - offset) / subrecdef["__datasize"])
-
-            # return parsed data
-            if is_array:
-                rec[fieldname] = []
-                for e in range(elems):
-                    rec[fieldname].append(__decode_native(ftype, rawdata[offset:]))
-                    offset += subrecdef["__datasize"]
-            else:
-                rec[fieldname] = __decode_native(ftype, rawdata[offset:])
-
-    # return record #
-    return rec
-
-#
-#  __parse_native
-#
-def __parse_native(data, callbacks):
-    """
-    data: request response
-    """
-    recs = []
-
-    rec_hdr_size = 8
-    rec_size_index = 0
-    rec_size_rsps = []
-
-    rec_size = 0
-    rec_index = 0
-    rec_rsps = []
-
-    duration = 0.0
-
-    for line in data:
-
-        # Capture Start Time (for duration)
-        tstart = time.perf_counter()
-
-        # Process Line Read
-        i = 0
-        while i < len(line):
-
-            # Parse Record Size
-            if(rec_size_index < rec_hdr_size):
-                bytes_available = len(line) - i
-                bytes_remaining = rec_hdr_size - rec_size_index
-                bytes_to_append = min(bytes_available, bytes_remaining)
-                rec_size_rsps.append(line[i:i+bytes_to_append])
-                rec_size_index += bytes_to_append
-                if(rec_size_index >= rec_hdr_size):
-                    raw = b''.join(rec_size_rsps)
-                    rec_version, rec_type_size, rec_data_size = struct.unpack('>hhi', raw)
-                    if rec_version != 2:
-                        raise FatalError("Invalid record format: %d" % (rec_version))
-                    rec_size = rec_type_size + rec_data_size
-                    rec_size_rsps.clear()
-                i += bytes_to_append
-
-            # Parse Record
-            elif(rec_size > 0):
-                bytes_available = len(line) - i
-                bytes_remaining = rec_size - rec_index
-                bytes_to_append = min(bytes_available, bytes_remaining)
-                rec_rsps.append(line[i:i+bytes_to_append])
-                rec_index += bytes_to_append
-                if(rec_index >= rec_size):
-                    # Decode Record
-                    rawbits = b''.join(rec_rsps)
-                    rectype = ctypes.create_string_buffer(rawbits).value.decode('ascii')
-                    rawdata = rawbits[len(rectype) + 1:]
-                    rec     = __decode_native(rectype, rawdata)
-                    if rectype == "conrec":
-                        # parse records contained in record
-                        buffer = __BufferSource(rawdata[rec["start"]:])
-                        contained_recs = __parse_native(buffer, callbacks)
-                        recs += contained_recs
-                    else:
-                        if callbacks != None and rectype in callbacks:
-                            # Execute Call-Back on Record
-                            callbacks[rectype](rec)
-                        else:
-                            # Append Record
-                            recs.append(rec)
-                    # Reset Record Parsing
-                    rec_rsps.clear()
-                    rec_size_index = 0
-                    rec_size = 0
-                    rec_index = 0
-                i += bytes_to_append
-
-            # Zero Sized Record
-            else:
-                rec_size_index = 0
-                rec_index = 0
-
-        # Capture Duration
-        duration = duration + (time.perf_counter() - tstart)
-
-    # Update Timing Profile
-    profiles[__parse_native.__name__] = duration
-
-    return recs
-
-
-###############################################################################
-# Overriding DNS
-###############################################################################
-
-#
-# local_dns - global dictionary of DNS entries to override
-#
-local_dns = {}
-
-#
-# __initdns - resets the global dictionary
-#
-def __initdns():
-    local_dns.clear()
-
-#
-# __dnsoverridden - checks if url is already overridden
-#
-def __dnsoverridden():
-    global service_org, service_url
-    url = service_org + "." + service_url
-    return url.lower() in local_dns
-
-#
-# __jamdns - override the dns entry
-#
-def __jamdns():
-    global service_url, service_org, request_timeout
-    url = service_org + "." + service_url
-    headers = buildauthheader()
-    host = "https://ps." + service_url + "/api/org_ip_adr/" + service_org + "/"
-    rsps = session.get(host, headers=headers, timeout=request_timeout).json()
-    if rsps["status"] == "SUCCESS":
-        ipaddr = rsps["ip_address"]
-        local_dns[url.lower()] = ipaddr
-        logger.info("Overriding DNS for {} with {}".format(url, ipaddr))
-
-#
-# __override_getaddrinfo - replaces the socket library callback
-#
-socket_getaddrinfo = socket.getaddrinfo
-def __override_getaddrinfo(*args):
-    url = args[0].lower()
-    if url in local_dns:
-        logger.info("getaddrinfo returned {} for {}".format(local_dns[url], url))
-        return socket_getaddrinfo(local_dns[url], *args[1:])
-    else:
-        return socket_getaddrinfo(*args)
-socket.getaddrinfo = __override_getaddrinfo
-
-
-###############################################################################
-# Default Record Processing
-###############################################################################
-
-#
-#  __logeventrec
-#
-def __logeventrec(rec):
-    eventlogger[rec['level']]('Log <%s, %d>: %s' % (rec["name"], rec["time"], rec["attr"]))
-
-#
-#  __exceptrec
-#
-def __exceptrec(rec):
-    if rec["code"] == exceptioncodes["SIMPLIFY"]:
-        raise RetryRequest("cmr simplification requested")
-    elif rec["code"] < 0:
-        eventlogger[rec["level"]]("Exception <%d>: %s", rec["code"], rec["text"])
-    else:
-        eventlogger[rec["level"]]("%s", rec["text"])
-
-#
-#  _arrowrec
-#
-def __arrowrec(rec):
-    global arrow_file_table
-    try :
-        filename = rec["filename"]
-        if rec["__rectype"] == 'arrowrec.meta':
-            if filename in arrow_file_table:
-                raise FatalError(f'File transfer already in progress for {filename}')
-            logger.info(f'Writing arrow file: {filename}')
-            arrow_file_table[filename] = { "fp": open(filename, "wb"), "size": rec["size"], "progress": 0 }
-        elif rec["__rectype"] == 'arrowrec.eof':
-            logger.info(f'Checksum of arrow file: {rec["checksum"]}')
-        else: # rec["__rectype"] == 'arrowrec.data'
-            data = rec['data']
-            file = arrow_file_table[filename]
-            file["fp"].write(bytearray(data))
-            file["progress"] += len(data)
-            if file["progress"] >= file["size"]:
-                file["fp"].close()
-                logger.info(f'Closing arrow file: {filename}')
-                del arrow_file_table[filename]
-    except Exception as e:
-        raise FatalError(f'Failed to process arrow file: {e}')
-
-#
-#  Globals
-#
-__callbacks = {'eventrec': __logeventrec, 'exceptrec': __exceptrec, 'arrowrec.meta': __arrowrec, 'arrowrec.data': __arrowrec, 'arrowrec.eof': __arrowrec}
-
-
-###############################################################################
-# INTERNAL APIs
-###############################################################################
-
-#
-#  buildauthheader
-#
-def buildauthheader(force_refresh=False):
-    """
-    Build authentication header for use with provisioning system
-    """
-    global service_url, ps_access_token, ps_refresh_token, ps_token_exp
-    headers = None
-    if ps_access_token:
-        # Check if Refresh Needed
-        if time.time() > ps_token_exp or force_refresh:
-            host = "https://ps." + service_url + "/api/org_token/refresh/"
-            rqst = {"refresh": ps_refresh_token}
-            hdrs = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ps_access_token}
-            rsps = session.post(host, data=json.dumps(rqst), headers=hdrs, timeout=request_timeout).json()
-            ps_refresh_token = rsps["refresh"]
-            ps_access_token = rsps["access"]
-            ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
-        # Build Authentication Header
-        headers = {'Authorization': 'Bearer ' + ps_access_token}
-    return headers
-
-#
-# GeoDataFrame to Polygon
-#
-def gdf2poly(gdf):
-
-    # latch start time
-    tstart = time.perf_counter()
-
-    # pull out coordinates
-    hull = gdf.unary_union.convex_hull
-    polygon = [{"lon": coord[0], "lat": coord[1]} for coord in list(hull.exterior.coords)]
-
-    # determine winding of polygon #
-    #              (x2               -    x1)             *    (y2               +    y1)
-    wind = sum([(polygon[i+1]["lon"] - polygon[i]["lon"]) * (polygon[i+1]["lat"] + polygon[i]["lat"]) for i in range(len(polygon) - 1)])
-    if wind > 0:
-        # reverse direction (make counter-clockwise) #
-        ccw_poly = []
-        for i in range(len(polygon), 0, -1):
-            ccw_poly.append(polygon[i - 1])
-        # replace region with counter-clockwise version #
-        polygon = ccw_poly
-
-    # Update Profile
-    profiles[gdf2poly.__name__] = time.perf_counter() - tstart
-
-    # return polygon
-    return polygon
-
-#
-#  Create Empty GeoDataFrame
-#
-def emptyframe(**kwargs):
-    # set default keyword arguments
-    kwargs['crs'] = SLIDERULE_EPSG
-    return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], [], []), crs=kwargs['crs'])
-
-#
-# Process Output File
-#
-def procoutputfile(parm, rsps):
-    output = parm["output"]
-    if "path" in output:
-        path = output["path"]
-    else:
-        path = None
-    # Check If Remote Record Is In Responses
-    for rsp in rsps:
-        if 'arrowrec.remote' == rsp['__rectype']:
-            path = rsp['url']
-            break
-    # Handle Local Files
-    if "open_on_complete" in output and output["open_on_complete"]:
-        if output["format"] == "parquet":
-            if "as_geo" in output and output["as_geo"]:
-                # Return GeoParquet File as GeoDataFrame
-                return geopandas.read_parquet(path)
-            else:
-                # Return Parquet File as DataFrame
-                return geopandas.pd.read_parquet(path)
-        elif output["format"] == "geoparquet":
-            # Return Parquet File as DataFrame
-            return geopandas.read_parquet(path)
-        elif output["format"] == "feather":
-            # Return Feather File as DataFrame
-            return geopandas.pd.read_feather(path)
-        elif output["format"] == "csv":
-            # Return CSV File as DataFrame
-            return geopandas.pd.read_csv(path)
-        else:
-            raise FatalError('unsupported output format: %s' % (output["format"]))
-    else:
-        # Return Parquet Filename
-        return path
-
-#
-#  Get Values from Raw Buffer
-#
-def getvalues(data, dtype, size, num_elements=0):
-    """
-    data:   tuple of bytes
-    dtype:  element of codedtype
-    size:   bytes in data
-    """
-
-    raw = bytes(data)
-    datatype = basictypes[codedtype2str[dtype]]["nptype"]
-    if num_elements == 0: # dynamically determine number of elements
-        num_elements = int(size / numpy.dtype(datatype).itemsize)
-    slicesize = num_elements * numpy.dtype(datatype).itemsize # truncates partial bytes
-    values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=num_elements)
-
-    return values
-
-#
-#  Dictionary to GeoDataFrame
-#
-def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude", height_key=None, **kwargs):
-
-    # Latch Start Time
-    tstart = time.perf_counter()
-
-    # Set Default Keyword Arguments
-    kwargs['index_key'] = "time"
-    kwargs['crs'] = SLIDERULE_EPSG
-
-    # Check Empty Columns
-    if len(columns) <= 0:
-        return emptyframe(**kwargs)
-
-    # Generate Time Column
-    columns['time'] = columns[time_key].astype('datetime64[ns]')
-
-    # Generate Geometry Column
-    # 3D point geometry
-    # This enables 3D CRS transformations using the to_crs() method
-    if height_key == None:
-        geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key])
-    else:
-        geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key], columns[height_key])
-    del columns[lon_key]
-    del columns[lat_key]
-
-    # Create Pandas DataFrame object
-    if type(columns) == dict:
-        df = geopandas.pd.DataFrame(columns)
-    else:
-        df = columns
-
-    # Build GeoDataFrame (default geometry is crs=SLIDERULE_EPSG)
-    gdf = geopandas.GeoDataFrame(df, geometry=geometry, crs=kwargs['crs'])
-
-    # Set index (default is Timestamp), can add `verify_integrity=True` to check for duplicates
-    # Can do this during DataFrame creation, but this allows input argument for desired column
-    gdf.set_index(kwargs['index_key'], inplace=True)
-
-    # Sort values for reproducible output despite async processing
-    gdf.sort_index(inplace=True)
-
-    # Update Profile
-    profiles[todataframe.__name__] = time.perf_counter() - tstart
-
-    # Return GeoDataFrame
-    return gdf
-
-#
-# Simplify Polygon
-#
-def simplifypolygon(parm, tolerance):
-    if "parms" not in parm:
-        return
-
-    if "cmr" in parm["parms"]:
-        polygon = parm["parms"]["cmr"]["polygon"]
-    elif "poly" in parm["parms"]:
-        polygon = parm["parms"]["poly"]
-    else:
-        return
-
-    raw_multi_polygon = [[(tuple([(c['lon'], c['lat']) for c in polygon]), [])]]
-    shape = MultiPolygon(*raw_multi_polygon)
-    buffered_shape = shape.buffer(tolerance)
-    simplified_shape = buffered_shape.simplify(tolerance)
-    simplified_coords = list(simplified_shape.exterior.coords)
-
-    simplified_polygon = []
-    for coord in simplified_coords:
-        point = {"lon": coord[0], "lat": coord[1]}
-        simplified_polygon.insert(0, point)
-
-    if "cmr" not in parm["parms"]:
-        parm["parms"]["cmr"] = {}
-    parm["parms"]["cmr"]["polygon"] = simplified_polygon
-
-    logger.warning('Using simplified polygon (for CMR request only!), {} points using tolerance of {}'.format(len(simplified_coords), tolerance))
-
-#
-# rethrow
-#
-def rethrow():
-    global rethrow_exceptions
-    return rethrow_exceptions
+slideruleSession = Session()
 
 ###############################################################################
 # APIs
@@ -724,7 +59,7 @@ def rethrow():
 #  Initialize
 #
 def init (
-    url=PUBLIC_URL,
+    url=Session.PUBLIC_URL,
     verbose=False,
     loglevel=logging.INFO,
     organization=0,
@@ -732,10 +67,8 @@ def init (
     time_to_live=60,
     bypass_dns=False,
     plugins=[],
-    trust_env=DEFAULT_TRUST_ENV,
     log_handler=None,
-    rethrow=None
-):
+    rethrow=False ):
     '''
     Initializes the Python client for use with SlideRule, and should be called before other ICESat-2 API calls.
     This function is a wrapper for a handful of sliderule functions that would otherwise all have to be called in order to initialize the client.
@@ -761,7 +94,7 @@ def init (
         log_handler:    logger
                         user provided logging handler
         rethrow:        bool
-                        configure client to throw any exceptions it encounters instead of automatic retries
+                        client rethrows exceptions to be handled by calling code
 
     Returns
     -------
@@ -773,29 +106,25 @@ def init (
         >>> import sliderule
         >>> sliderule.init()
     '''
-    global session, logger, rethrow_exceptions
-    # massage function parameters
-    if organization == 0:
-        organization = PUBLIC_ORG
-    # reconfigure session (if necessary)
-    if session.trust_env != trust_env:
-        session.trust_env = trust_env
-    # configure logging
-    if log_handler != None:
-        logger.addHandler(log_handler)
-    set_verbose(verbose, loglevel)
-    # configure client
-    if rethrow != None:
-        rethrow_exceptions = rethrow
-    set_url(url) # configure domain
-    authenticate(organization) # configure credentials (if any) for organization
-    scaleout(desired_nodes, time_to_live, bypass_dns) # set cluster to desired number of nodes (if permitted based on credentials)
-    return check_version(plugins=plugins) # verify compatibility between client and server versions
+    global slideruleSession
+    # create new global session
+    slideruleSession = Session(
+        url=url,
+        verbose=verbose,
+        loglevel=loglevel,
+        organization=organization,
+        desired_nodes=desired_nodes,
+        time_to_live=time_to_live,
+        bypass_dns=bypass_dns,
+        log_handler=log_handler,
+        rethrow=rethrow)
+    # verify compatibility between client and server versions
+    return check_version(plugins=plugins)
 
 #
 #  source
 #
-def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=False):
+def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=False, session=slideruleSession):
     '''
     Perform API call to SlideRule service
 
@@ -832,93 +161,18 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
         >>> print(rsps)
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
-    global service_url, service_org, rethrow_exceptions
-    rsps = {}
-    headers = None
-    tolerance = 0.001
-    # Build Callbacks
-    for c in __callbacks:
-        if c not in callbacks:
-            callbacks[c] = __callbacks[c]
-    # Attempt Request
-    complete = False
-    attempts = 3
-    while not complete and attempts > 0:
-        attempts -= 1
+    for tolerance in [0.0001, 0.001, 0.01, 0.1, 1.0, None]:
         try:
-            # Dump Parameters to Request JSON String
-            rqst = json.dumps(parm)
-            # Construct Request URL and Authorization
-            if service_org:
-                url = 'https://%s.%s%s/%s' % (service_org, service_url, path, api)
-                headers = buildauthheader()
-            else:
-                url = 'http://%s%s/%s' % (service_url, path, api)
-            # Perform Request
-            if not stream:
-                data = session.get(url, data=rqst, headers=headers, timeout=request_timeout, verify=ssl_verify)
-            else:
-                data = session.post(url, data=rqst, headers=headers, timeout=request_timeout, stream=True, verify=ssl_verify)
-            data.raise_for_status()
-            # Parse Response
-            stream = __StreamSource(data)
-            format = data.headers['Content-Type']
-            if format == 'text/plain':
-                rsps = __parse_json(stream)
-            elif format == 'application/json':
-                rsps = __parse_json(stream)
-            elif format == 'application/octet-stream':
-                rsps = __parse_native(stream, callbacks)
-            else:
-                raise FatalError('unsupported content type: %s' % (format))
-            # Success
-            complete = True
+            return session.source(api, parm=parm, stream=stream, callbacks=callbacks, path=path, silence=silence)
         except RetryRequest as e:
-            logger.info("Retry requested by {}: {}".format(url, e))
+            logger.info(f'Retry requested by {api}: {e}')
             simplifypolygon(parm, tolerance)
-            tolerance *= 10
-        except requests.exceptions.SSLError as e:
-            logger.debug("Exception in request to {}: {}".format(url, e))
-            if rethrow_exceptions:
-                raise
-            if not silence:
-                logger.error("Unable to verify SSL certificate for {} ...retrying request".format(url))
-        except requests.ConnectionError as e:
-            logger.debug("Exception in request to {}: {}".format(url, e))
-            if rethrow_exceptions:
-                raise
-            if not silence:
-                logger.error("Connection error to endpoint {} ...retrying request".format(url))
-        except requests.Timeout as e:
-            logger.debug("Exception in request to {}: {}".format(url, e))
-            if rethrow_exceptions:
-                raise
-            if not silence:
-                logger.error("Timed-out waiting for response from endpoint {} ...retrying request".format(url))
-        except requests.exceptions.ChunkedEncodingError as e:
-            logger.debug("Exception in request to {}: {}".format(url, e))
-            if rethrow_exceptions:
-                raise
-            if not silence:
-                logger.error("Unexpected termination of response from endpoint {} ...retrying request".format(url))
-        except requests.HTTPError as e:
-            logger.debug("Exception in request to {}: {}".format(url, e))
-            if e.response.status_code == 503:
-                raise TransientError("Server experiencing heavy load, stalling on request to {}".format(url))
-            else:
-                raise FatalError("HTTP error {} from endpoint {}".format(e.response.status_code, url))
-        except:
-            raise
-    # Check Success
-    if not complete:
-        raise FatalError("Unable to complete request due to errors")
-    # Return Response
-    return rsps
+    return None
 
 #
 #  set_url
 #
-def set_url (url):
+def set_url (url, session=slideruleSession):
     '''
     Configure sliderule package with URL of service
 
@@ -934,35 +188,12 @@ def set_url (url):
         >>> import sliderule
         >>> sliderule.set_url("service.my-sliderule-server.org")
     '''
-    global service_url
-    service_url = url
-    logger.info(f'Setting URL to {service_url}')
-
-#
-#  set_ssl_verify
-#
-def set_ssl_verify (verify):
-    '''
-    Configure SSL certification verification in requests made to SlideRule
-
-    Parameters
-    ----------
-        verify: bool
-                When true, SSL certificates are verified (default).  When false, SSL certificates are not verified.
-
-    Examples
-    --------
-        >>> import sliderule
-        >>> sliderule.set_ssl_verify(False)
-    '''
-    global ssl_verify
-    ssl_verify = verify
-    logger.info(f'Setting SSL verify to {ssl_verify}')
+    session.service_url = url
 
 #
 #  set_verbose
 #
-def set_verbose (enable, loglevel=logging.INFO):
+def set_verbose (enable, loglevel=logging.INFO, session=slideruleSession):
     '''
     Sets up a console logger to print log messages to screen
 
@@ -982,38 +213,12 @@ def set_verbose (enable, loglevel=logging.INFO):
         >>> import sliderule
         >>> sliderule.set_verbose(True, loglevel=logging.INFO)
     '''
-    global console, logger
-    # massage loglevel parameter if passed in as a string
-    if loglevel == "DEBUG":
-        loglevel = logging.DEBUG
-    elif loglevel == "INFO":
-        loglevel = logging.INFO
-    elif loglevel == "WARNING":
-        loglevel = logging.WARNING
-    elif loglevel == "WARN":
-        loglevel = logging.WARN
-    elif loglevel == "ERROR":
-        loglevel = logging.ERROR
-    elif loglevel == "FATAL":
-        loglevel = logging.FATAL
-    elif loglevel == "CRITICAL":
-        loglevel = logging.CRITICAL
-    # enable/disable logging to console
-    if (enable == True) and (console == None):
-        console = logging.StreamHandler()
-        logger.addHandler(console)
-    elif (enable == False) and (console != None):
-        logger.removeHandler(console)
-        console = None
-    # always set level to requested
-    logger.setLevel(loglevel)
-    if console != None:
-        console.setLevel(loglevel)
+    session.set_verbose(enable, loglevel)
 
 #
 # set_rqst_timeout
 #
-def set_rqst_timeout (timeout):
+def set_rqst_timeout (timeout, session=slideruleSession):
     '''
     Sets the TCP/IP connection and reading timeouts for future requests made to sliderule servers.
     Setting it lower means the client will failover more quickly, but may generate false positives if a processing request stalls or takes a long time returning data.
@@ -1029,16 +234,15 @@ def set_rqst_timeout (timeout):
         >>> import sliderule
         >>> sliderule.set_rqst_timeout((10, 60))
     '''
-    global request_timeout
     if type(timeout) == tuple:
-        request_timeout = timeout
+        session.rqst_timeout = timeout
     else:
         raise FatalError('timeout must be a tuple (<connection timeout>, <read timeout>)')
 
 #
 # set_processing_flags
 #
-def set_processing_flags (aux=True):
+def set_processing_flags (aux=True, session=slideruleSession):
     '''
     Sets flags used when processing the record definitions
 
@@ -1052,9 +256,8 @@ def set_processing_flags (aux=True):
         >>> import sliderule
         >>> sliderule.set_processing_flags(aux=False)
     '''
-    global decode_aux
     if type(aux) == bool:
-        decode_aux = aux
+        session.decode_aux = aux
     else:
         raise FatalError('aux must be a boolean')
 
@@ -1062,7 +265,7 @@ def set_processing_flags (aux=True):
 #
 # update_available_servers
 #
-def update_available_servers (desired_nodes=None, time_to_live=None):
+def update_available_servers (desired_nodes=None, time_to_live=None, session=slideruleSession):
     '''
     Manages the number of servers in the cluster.
     If the desired_nodes parameter is set, then a request is made to change the number of servers in the cluster to the number specified.
@@ -1088,60 +291,12 @@ def update_available_servers (desired_nodes=None, time_to_live=None):
         >>> import sliderule
         >>> num_servers, max_workers = sliderule.update_available_servers(10)
     '''
-    global service_url, service_org, request_timeout, rethrow_exceptions
-    requested_nodes = 0
-
-    # Update number of nodes
-    if type(desired_nodes) == int:
-        rsps_body = {}
-        requested_nodes = desired_nodes
-        headers = buildauthheader()
-
-        # Get boundaries of cluster and calculate nodes to request
-        try:
-            host = "https://ps." + service_url + "/api/org_num_nodes/" + service_org + "/"
-            rsps = session.get(host, headers=headers, timeout=request_timeout)
-            rsps_body = rsps.json()
-            rsps.raise_for_status()
-            requested_nodes = max(min(desired_nodes, rsps_body["max_nodes"]), rsps_body["min_nodes"])
-            if requested_nodes != desired_nodes:
-                logger.info("Provisioning system desired nodes overridden to {}".format(requested_nodes))
-        except requests.exceptions.HTTPError as e:
-            logger.info('{}'.format(e))
-            logger.info('Provisioning system status request returned error => {}'.format(rsps_body["error_msg"]))
-            if rethrow_exceptions:
-                raise
-
-        # Request number of nodes in cluster
-        try:
-            if type(time_to_live) == int:
-                host = "https://ps." + service_url + "/api/desired_org_num_nodes_ttl/" + service_org + "/" + str(requested_nodes) + "/" + str(time_to_live) + "/"
-                rsps = session.post(host, headers=headers, timeout=request_timeout)
-            else:
-                host = "https://ps." + service_url + "/api/desired_org_num_nodes/" + service_org + "/" + str(requested_nodes) + "/"
-                rsps = session.put(host, headers=headers, timeout=request_timeout)
-            rsps_body = rsps.json()
-            rsps.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            logger.info('{}'.format(e))
-            logger.error('Provisioning system update request error => {}'.format(rsps_body["error_msg"]))
-            if rethrow_exceptions:
-                raise
-
-    # Get number of nodes currently registered
-    try:
-        rsps = source("status", parm={"service":"sliderule"}, path="/discovery", silence=True)
-        available_servers = rsps["nodes"]
-    except FatalError as e:
-        logger.debug("Failed to retrieve number of nodes registered: {}".format(e))
-        available_servers = 0
-
-    return available_servers, requested_nodes
+    return session.update_available_servers(desired_nodes, time_to_live)
 
 #
 # scaleout
 #
-def scaleout(desired_nodes, time_to_live, bypass_dns):
+def scaleout(desired_nodes, time_to_live, bypass_dns, session=slideruleSession):
     '''
     Scale the cluster and wait for cluster to reach desired state
 
@@ -1159,39 +314,12 @@ def scaleout(desired_nodes, time_to_live, bypass_dns):
         >>> import sliderule
         >>> sliderule.scaleout(4, 300, False)
     '''
-    if desired_nodes is None:
-        return # nothing needs to be done
-    if desired_nodes < 0:
-        raise FatalError("Number of desired nodes must be greater than zero ({})".format(desired_nodes))
-    # Initialize DNS
-    __initdns() # clear cache of DNS lookups for clusters
-    if bypass_dns:
-        __jamdns() # use ip address for cluster
-    # Send Initial Request for Desired Cluster State
-    start = time.time()
-    available_nodes,requested_nodes = update_available_servers(desired_nodes=desired_nodes, time_to_live=time_to_live)
-    scale_up_needed = False
-    # Wait for Cluster to Reach Desired State
-    while available_nodes < requested_nodes:
-        scale_up_needed = True
-        logger.info("Waiting while cluster scales to desired capacity (currently at {} nodes, desired is {} nodes)... {} seconds".format(available_nodes, desired_nodes, int(time.time() - start)))
-        time.sleep(10.0)
-        available_nodes,_ = update_available_servers()
-        # Override DNS if Cluster is Starting
-        if available_nodes == 0 and not __dnsoverridden():
-            __jamdns()
-        # Timeout Occurred
-        if int(time.time() - start) > MAX_PS_CLUSTER_WAIT_SECS:
-            logger.error("Maximum time allowed waiting for cluster has been exceeded")
-            break
-    # Log Final Message if Cluster Needed State Change
-    if scale_up_needed:
-        logger.info("Cluster has reached capacity of {} nodes... {} seconds".format(available_nodes, int(time.time() - start)))
+    return session.scaleout(desired_nodes, time_to_live, bypass_dns)
 
 #
 # authenticate
 #
-def authenticate (ps_organization, ps_username=None, ps_password=None, github_token=None):
+def authenticate (ps_organization, ps_username=None, ps_password=None, github_token=None, session=slideruleSession):
     '''
     Authenticate to SlideRule Provisioning System
     The username and password can be provided the following way in order of priority:
@@ -1224,70 +352,12 @@ def authenticate (ps_organization, ps_username=None, ps_password=None, github_to
         >>> sliderule.authenticate("myorg")
         True
     '''
-    global service_org, ps_refresh_token, ps_access_token, ps_token_exp
-    login_status = False
-    ps_url = "ps." + service_url
-
-    # set organization on any authentication request
-    service_org = ps_organization
-
-    # check for direct or public access
-    if service_org == None:
-        return True
-
-    # attempt retrieving from environment
-    if not github_token and not ps_username and not ps_password:
-        github_token = os.environ.get("PS_GITHUB_TOKEN")
-        ps_username = os.environ.get("PS_USERNAME")
-        ps_password = os.environ.get("PS_PASSWORD")
-
-    # attempt retrieving from netrc file
-    if not github_token and not ps_username and not ps_password:
-        try:
-            netrc_file = netrc.netrc()
-            login_credentials = netrc_file.hosts[ps_url]
-            ps_username = login_credentials[0]
-            ps_password = login_credentials[2]
-        except Exception as e:
-            if ps_organization != PUBLIC_ORG:
-                logger.warning("Unable to retrieve username and password from netrc file for machine: {}".format(e))
-
-    # build authentication request
-    user = None
-    if github_token:
-        user = "github"
-        rqst = {"org_name": ps_organization, "access_token": github_token}
-        headers = {'Content-Type': 'application/json'}
-        api = "https://" + ps_url + "/api/org_token_github/"
-    elif ps_username or ps_password:
-        user = "local"
-        rqst = {"username": ps_username, "password": ps_password, "org_name": ps_organization}
-        headers = {'Content-Type': 'application/json'}
-        api = "https://" + ps_url + "/api/org_token/"
-
-    # authenticate to provisioning system
-    if user:
-        try:
-            rsps = session.post(api, data=json.dumps(rqst), headers=headers, timeout=request_timeout)
-            rsps.raise_for_status()
-            rsps = rsps.json()
-            ps_refresh_token = rsps["refresh"]
-            ps_access_token = rsps["access"]
-            ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
-            login_status = True
-        except:
-            if ps_organization != PUBLIC_ORG:
-                logger.error("Unable to authenticate %s user to %s" % (user, api))
-
-    # return login status
-    if ps_organization != PUBLIC_ORG:
-        logger.info(f'Login status to {service_url}/{service_org}: {login_status and "success" or "failure"}')
-    return login_status
+    return session.authenticate(ps_organization, ps_username, ps_password, github_token)
 
 #
 # gps2utc
 #
-def gps2utc (gps_time, as_str=True):
+def gps2utc (gps_time, as_str=True, session=slideruleSession):
     '''
     Convert a GPS based time returned from SlideRule into a UTC time.
 
@@ -1309,47 +379,16 @@ def gps2utc (gps_time, as_str=True):
         >>> sliderule.gps2utc(1235331234)
         '2019-02-27 19:34:03'
     '''
-    rsps = source("time", {"time": int(gps_time * 1000), "input": "GPS", "output": "DATE"})
+    rsps = session.source("time", {"time": int(gps_time * 1000), "input": "GPS", "output": "DATE"})
     if as_str:
         return rsps["time"]
     else:
         return datetime.strptime(rsps["time"], '%Y-%m-%dT%H:%M:%SZ')
-#
-# get_definition
-#
-def get_definition (rectype, fieldname):
-    '''
-    Get the underlying format specification of a field in a return record.
-
-    Parameters
-    ----------
-    rectype:    str
-                the name of the type of the record (i.e. "atl03rec")
-    fieldname:  str
-                the name of the record field (i.e. "cycle")
-
-    Returns
-    -------
-    dict
-        description of each field; see the `sliderule.basictypes` variable for different field types
-
-    Examples
-    --------
-        >>> import sliderule
-        >>> sliderule.set_url("slideruleearth.io")
-        >>> sliderule.get_definition("atl03rec", "cycle")
-        {'fmt': 'H', 'size': 2, 'nptype': <class 'numpy.uint16'>}
-    '''
-    recdef = __populate(rectype)
-    if fieldname in recdef and recdef[fieldname]["type"] in basictypes:
-        return basictypes[recdef[fieldname]["type"]]
-    else:
-        return {}
 
 #
 # get_version
 #
-def get_version ():
+def get_version (session=slideruleSession):
     '''
     Get the version information for the running servers and Python client
 
@@ -1358,16 +397,15 @@ def get_version ():
     dict
         dictionary of version information
     '''
-    global service_org
-    rsps = source("version", {})
+    rsps = session.source("version", {})
     rsps["client"] = {"version": version.full_version}
-    rsps["organization"] = service_org
+    rsps["organization"] = session.service_org
     return rsps
 
 #
 # check_version
 #
-def check_version (plugins=[]):
+def check_version (plugins=[], session=slideruleSession):
     '''
     Check that the version of the client matches the version of the server and any additionally requested plugins
 
@@ -1382,12 +420,14 @@ def check_version (plugins=[]):
         True if at least minor version matches; False if major or minor version doesn't match
     '''
     status = True
-    info = get_version()
+    info = get_version(session=session)
+
     # populate version info
     versions = {}
     for entity in ['server', 'client'] + plugins:
         s = info[entity]['version'][1:].split('.')
         versions[entity] = (int(s[0]), int(s[1]), int(s[2]))
+
     # check major version mismatches
     if versions['server'][0] != versions['client'][0]:
         raise RuntimeError("Client (version {}) is incompatible with the server (version {})".format(versions['client'], versions['server']))
@@ -1395,6 +435,7 @@ def check_version (plugins=[]):
         for pkg in plugins:
             if versions[pkg][0] != versions['client'][0]:
                 raise RuntimeError("Client (version {}) is incompatible with the {} plugin (version {})".format(versions['client'], pkg, versions[pkg]))
+
     # check minor version mismatches
     if versions['server'][1] > versions['client'][1]:
         logger.warning("Client (version {}) is out of date with the server (version {})".format(versions['client'], versions['server']))
@@ -1404,6 +445,7 @@ def check_version (plugins=[]):
             if versions[pkg][1] > versions['client'][1]:
                 logger.warning("Client (version {}) is out of date with the {} plugin (version {})".format(versions['client'], pkg, versions['server']))
                 status = False
+
     # return if version check is successful
     return status
 
@@ -1488,25 +530,23 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         }
     ]
     '''
-
-    tstart = time.perf_counter()
-    tempfile = "temp.geojson"
+    tmp_file_name = "temp.geojson"
 
     if isinstance(source, geopandas.GeoDataFrame):
         # user provided GeoDataFrame instead of a file
         gdf = source
         # Convert to geojson file
-        gdf.to_file(tempfile, driver="GeoJSON")
-        with open(tempfile, mode='rt') as file:
+        gdf.to_file(tmp_file_name, driver="GeoJSON")
+        with open(tmp_file_name, mode='rt') as file:
             datafile = file.read()
-        os.remove(tempfile)
+        os.remove(tmp_file_name)
 
     elif isinstance(source, Polygon):
-        gdf = geopandas.GeoDataFrame(geometry=[source], crs=EPSG_WGS84)
-        gdf.to_file(tempfile, driver="GeoJSON")
-        with open(tempfile, mode='rt') as file:
+        gdf = geopandas.GeoDataFrame(geometry=[source], crs=Session.EPSG_WGS84)
+        gdf.to_file(tmp_file_name, driver="GeoJSON")
+        with open(tmp_file_name, mode='rt') as file:
             datafile = file.read()
-        os.remove(tempfile)
+        os.remove(tmp_file_name)
 
     elif isinstance(source, list) and (len(source) >= 4) and (len(source) % 2 == 0):
         # create lat/lon lists
@@ -1519,34 +559,34 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
 
         # create geodataframe
         p = Polygon([point for point in zip(lons, lats)])
-        gdf = geopandas.GeoDataFrame(geometry=[p], crs=EPSG_WGS84)
+        gdf = geopandas.GeoDataFrame(geometry=[p], crs=Session.EPSG_WGS84)
 
         # Convert to geojson file
-        gdf.to_file(tempfile, driver="GeoJSON")
-        with open(tempfile, mode='rt') as file:
+        gdf.to_file(tmp_file_name, driver="GeoJSON")
+        with open(tmp_file_name, mode='rt') as file:
             datafile = file.read()
-        os.remove(tempfile)
+        os.remove(tmp_file_name)
 
     elif isinstance(source, list) and (len(source) >= 4) and isinstance(source[0], dict):
 
         # create geodataframe
         p = Polygon([(c["lon"], c["lat"]) for c in source])
-        gdf = geopandas.GeoDataFrame(geometry=[p], crs=EPSG_WGS84)
+        gdf = geopandas.GeoDataFrame(geometry=[p], crs=Session.EPSG_WGS84)
 
         # Convert to geojson file
-        gdf.to_file(tempfile, driver="GeoJSON")
-        with open(tempfile, mode='rt') as file:
+        gdf.to_file(tmp_file_name, driver="GeoJSON")
+        with open(tmp_file_name, mode='rt') as file:
             datafile = file.read()
-        os.remove(tempfile)
+        os.remove(tmp_file_name)
 
     elif isinstance(source, str) and (source.find(".shp") > 1):
         # create geodataframe
         gdf = geopandas.read_file(source)
         # Convert to geojson file
-        gdf.to_file(tempfile, driver="GeoJSON")
-        with open(tempfile, mode='rt') as file:
+        gdf.to_file(tmp_file_name, driver="GeoJSON")
+        with open(tmp_file_name, mode='rt') as file:
             datafile = file.read()
-        os.remove(tempfile)
+        os.remove(tmp_file_name)
 
     elif isinstance(source, str) and (source.find(".geojson") > 1):
         # create geodataframe
@@ -1556,7 +596,6 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
 
     else:
         raise FatalError("incorrect filetype: please use a .geojson, .shp, or a geodataframe")
-
 
     # If user provided raster we don't have gdf, geopandas cannot easily convert it
     polygon = clusters = None
@@ -1574,28 +613,22 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         # generate clusters
         clusters = []
         if n_clusters > 1:
-            if clustering_enabled:
-                # pull out centroids of each geometry object
-                if "CenLon" in gdf and "CenLat" in gdf:
-                    X = numpy.column_stack((gdf["CenLon"], gdf["CenLat"]))
-                else:
-                    s = gdf.centroid
-                    X = numpy.column_stack((s.x, s.y))
-                # run k means clustering algorithm against polygons in gdf
-                kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=5, max_iter=400)
-                y_kmeans = kmeans.fit_predict(X)
-                k = geopandas.pd.DataFrame(y_kmeans, columns=['cluster'])
-                gdf = gdf.join(k)
-                # build polygon for each cluster
-                for n in range(n_clusters):
-                    c_gdf = gdf[gdf["cluster"] == n]
-                    c_poly = gdf2poly(c_gdf)
-                    clusters.append(c_poly)
+            # pull out centroids of each geometry object
+            if "CenLon" in gdf and "CenLat" in gdf:
+                X = numpy.column_stack((gdf["CenLon"], gdf["CenLat"]))
             else:
-                raise FatalError("Clustering support not enabled; unable to import sklearn package")
-
-    # update timing profiles
-    profiles[toregion.__name__] = time.perf_counter() - tstart
+                s = gdf.centroid
+                X = numpy.column_stack((s.x, s.y))
+            # run k means clustering algorithm against polygons in gdf
+            kmeans = KMeans(n_clusters=n_clusters, init='k-means++', random_state=5, max_iter=400)
+            y_kmeans = kmeans.fit_predict(X)
+            k = geopandas.pd.DataFrame(y_kmeans, columns=['cluster'])
+            gdf = gdf.join(k)
+            # build polygon for each cluster
+            for n in range(n_clusters):
+                c_gdf = gdf[gdf["cluster"] == n]
+                c_poly = gdf2poly(c_gdf)
+                clusters.append(c_poly)
 
     # return region
     return {
@@ -1612,8 +645,26 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
 #
 # Run: API Request to SlideRule
 #
-def run(api, parms, aoi=None, resources=None):
+def run(api, parms, aoi=None, resources=None, session=slideruleSession):
+    '''
+    Execute the requested endpoint and return the results as a GeoDataFrame
 
+    Parameters
+    ----------
+        api:        str
+                    endpoint to run
+        parms:      dict
+                    parameter dictionary
+        aoi:        dict
+                    area of interest, passed to `sliderule.toregion()` function and polygon supplied in request
+        resources:  list
+                    list of resource names as strings
+
+    Returns
+    -------
+    GeoDataFrame
+        result of executing the request endpoint
+    '''
     # add region
     if aoi != None:
         region = toregion(aoi)
@@ -1634,7 +685,7 @@ def run(api, parms, aoi=None, resources=None):
         }
 
     # make request
-    rsps = source(api, {"parms": parms}, stream=True)
+    rsps = source(api, {"parms": parms}, stream=True, session=session)
 
     # build geodataframe
     gdf = procoutputfile(parms, rsps)
@@ -1645,3 +696,182 @@ def run(api, parms, aoi=None, resources=None):
 
     # return geodataframe
     return gdf
+
+###############################################################################
+# INTERNAL APIs
+###############################################################################
+
+#
+# Get Record Field Definition
+#
+def getdefinition (rectype, fieldname, session=slideruleSession):
+    return session.get_definition(rectype, fieldname)
+#
+# GeoDataFrame to Polygon
+#
+def gdf2poly(gdf):
+
+    # pull out coordinates
+    hull = gdf.unary_union.convex_hull
+    polygon = [{"lon": coord[0], "lat": coord[1]} for coord in list(hull.exterior.coords)]
+
+    # determine winding of polygon #
+    #              (x2               -    x1)             *    (y2               +    y1)
+    wind = sum([(polygon[i+1]["lon"] - polygon[i]["lon"]) * (polygon[i+1]["lat"] + polygon[i]["lat"]) for i in range(len(polygon) - 1)])
+    if wind > 0:
+        # reverse direction (make counter-clockwise) #
+        ccw_poly = []
+        for i in range(len(polygon), 0, -1):
+            ccw_poly.append(polygon[i - 1])
+        # replace region with counter-clockwise version #
+        polygon = ccw_poly
+
+    # return polygon
+    return polygon
+
+#
+# Create Empty GeoDataFrame
+#
+def emptyframe(**kwargs):
+    # set default keyword arguments
+    kwargs['crs'] = Session.SLIDERULE_EPSG
+    return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], [], []), crs=kwargs['crs'])
+
+#
+# Get Values from Raw Buffer
+#
+def getvalues(data, dtype, size, num_elements=0):
+    """
+    data:   tuple of bytes
+    dtype:  element of codedtype
+    size:   bytes in data
+    """
+    raw = bytes(data)
+    datatype = BASIC_TYPES[CODED_TYPE[dtype]]["nptype"]
+    if num_elements == 0: # dynamically determine number of elements
+        num_elements = int(size / numpy.dtype(datatype).itemsize)
+    slicesize = num_elements * numpy.dtype(datatype).itemsize # truncates partial bytes
+    values = numpy.frombuffer(raw[:slicesize], dtype=datatype, count=num_elements)
+    return values
+
+#
+# Process Output File
+#
+def procoutputfile(parm, rsps):
+    '''
+    parm: request parameters
+    rsps: response
+    '''
+    output = parm["output"]
+
+    # Get file path to read from
+    if "path" in output:
+        path = output["path"]
+    else:
+        path = None
+
+    # Check if it is a remote path
+    for rsp in rsps:
+        if 'arrowrec.remote' == rsp['__rectype']:
+            path = rsp['url']
+            break
+
+    # Handle local files
+    if "open_on_complete" in output and output["open_on_complete"]:
+        if output["format"] == "parquet":
+            if "as_geo" in output and output["as_geo"]:
+                # Return GeoParquet file as GeoDataFrame
+                return geopandas.read_parquet(path)
+            else:
+                # Return parquet file as DataFrame
+                return geopandas.pd.read_parquet(path)
+        elif output["format"] == "geoparquet":
+            # Return geoparquet file as GeoDataFrame
+            return geopandas.read_parquet(path)
+        elif output["format"] == "feather":
+            # Return feather file as DataFrame
+            return geopandas.pd.read_feather(path)
+        elif output["format"] == "csv":
+            # Return CSV file as DataFrame
+            return geopandas.pd.read_csv(path)
+        else:
+            raise FatalError('unsupported output format: %s' % (output["format"]))
+    else:
+        # Return parquet filename
+        return path
+
+#
+# Dictionary to GeoDataFrame
+#
+def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude", height_key=None, **kwargs):
+
+    # Set Default Keyword Arguments
+    kwargs['index_key'] = "time"
+    kwargs['crs'] = Session.SLIDERULE_EPSG
+
+    # Check Empty Columns
+    if len(columns) <= 0:
+        return emptyframe(**kwargs)
+
+    # Generate Time Column
+    columns['time'] = columns[time_key].astype('datetime64[ns]')
+
+    # Generate Geometry Column
+    # 3D point geometry
+    # This enables 3D CRS transformations using the to_crs() method
+    if height_key == None:
+        geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key])
+    else:
+        geometry = geopandas.points_from_xy(columns[lon_key], columns[lat_key], columns[height_key])
+    del columns[lon_key]
+    del columns[lat_key]
+
+    # Create Pandas DataFrame object
+    if type(columns) == dict:
+        df = geopandas.pd.DataFrame(columns)
+    else:
+        df = columns
+
+    # Build GeoDataFrame (default geometry is crs=SLIDERULE_EPSG)
+    gdf = geopandas.GeoDataFrame(df, geometry=geometry, crs=kwargs['crs'])
+
+    # Set index (default is Timestamp), can add `verify_integrity=True` to check for duplicates
+    # Can do this during DataFrame creation, but this allows input argument for desired column
+    gdf.set_index(kwargs['index_key'], inplace=True)
+
+    # Sort values for reproducible output despite async processing
+    gdf.sort_index(inplace=True)
+
+    # Return GeoDataFrame
+    return gdf
+
+#
+# Simplify Polygon
+#
+def simplifypolygon(parm, tolerance):
+    if "parms" not in parm:
+        return
+
+    if "cmr" in parm["parms"]:
+        polygon = parm["parms"]["cmr"]["polygon"]
+    elif "poly" in parm["parms"]:
+        polygon = parm["parms"]["poly"]
+    else:
+        return
+
+    raw_multi_polygon = [[(tuple([(c['lon'], c['lat']) for c in polygon]), [])]]
+    shape = MultiPolygon(*raw_multi_polygon)
+    buffered_shape = shape.buffer(tolerance)
+    simplified_shape = buffered_shape.simplify(tolerance)
+    simplified_coords = list(simplified_shape.exterior.coords)
+
+    simplified_polygon = []
+    for coord in simplified_coords:
+        point = {"lon": coord[0], "lat": coord[1]}
+        simplified_polygon.insert(0, point)
+
+    if "cmr" not in parm["parms"]:
+        parm["parms"]["cmr"] = {}
+    parm["parms"]["cmr"]["polygon"] = simplified_polygon
+
+    logger.warning('Using simplified polygon (for CMR request only!), {} points using tolerance of {}'.format(len(simplified_coords), tolerance))

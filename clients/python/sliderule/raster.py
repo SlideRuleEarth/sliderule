@@ -101,7 +101,7 @@ def sample(asset, coordinates, parms={}):
             num_records += 1
 
     # Build Initial Columns
-    value_nptype = sliderule.get_definition("rsrec.sample", "value")['nptype']
+    value_nptype = sliderule.getdefinition("rsrec.sample", "value")['nptype']
     columns = {
         'time': numpy.empty(num_records, numpy.int64),
         'latitude': numpy.empty(num_records, numpy.double),
@@ -110,19 +110,19 @@ def sample(asset, coordinates, parms={}):
         'value': numpy.empty(num_records, value_nptype)
     }
     if 'with_flags' in parms:
-        flags_nptype    = sliderule.get_definition("rsrec.sample", "flags")['nptype']
+        flags_nptype    = sliderule.getdefinition("rsrec.sample", "flags")['nptype']
         columns         = {
             'flags': numpy.empty(num_records, flags_nptype),
             **columns
         }
     if 'zonal_stats' in parms:
-        count_nptype    = sliderule.get_definition("zsrec.sample", "count")['nptype']
-        min_nptype      = sliderule.get_definition("zsrec.sample", "min")['nptype']
-        max_nptype      = sliderule.get_definition("zsrec.sample", "max")['nptype']
-        mean_nptype     = sliderule.get_definition("zsrec.sample", "mean")['nptype']
-        median_nptype   = sliderule.get_definition("zsrec.sample", "median")['nptype']
-        stdev_nptype    = sliderule.get_definition("zsrec.sample", "stdev")['nptype']
-        mad_nptype      = sliderule.get_definition("zsrec.sample", "mad")['nptype']
+        count_nptype    = sliderule.getdefinition("zsrec.sample", "count")['nptype']
+        min_nptype      = sliderule.getdefinition("zsrec.sample", "min")['nptype']
+        max_nptype      = sliderule.getdefinition("zsrec.sample", "max")['nptype']
+        mean_nptype     = sliderule.getdefinition("zsrec.sample", "mean")['nptype']
+        median_nptype   = sliderule.getdefinition("zsrec.sample", "median")['nptype']
+        stdev_nptype    = sliderule.getdefinition("zsrec.sample", "stdev")['nptype']
+        mad_nptype      = sliderule.getdefinition("zsrec.sample", "mad")['nptype']
         columns         = {
             'count': numpy.empty(num_records, count_nptype),
             'min': numpy.empty(num_records, min_nptype),
