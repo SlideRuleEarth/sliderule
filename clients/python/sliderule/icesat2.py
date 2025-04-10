@@ -27,7 +27,6 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import time
 import logging
 import numpy
 import geopandas
@@ -74,348 +73,6 @@ ATL08_ICE = 3
 # phoreal percentiles
 P = { '5':   0, '10':  1, '15':  2, '20':  3, '25':  4, '30':  5, '35':  6, '40':  7, '45':  8, '50': 9,
       '55': 10, '60': 11, '65': 12, '70': 13, '75': 14, '80': 15, '85': 16, '90': 17, '95': 18 }
-
-###############################################################################
-# LOCAL FUNCTIONS
-###############################################################################
-
-#
-# Calculate Laser Spot
-#
-def __calcspot(df):
-
-    # Create dictionary mapping (sc_orient, track, pair) to spot
-    map_spot = {(SC_BACKWARD,   1,  LEFT_PAIR):     1,
-                (SC_BACKWARD,   1,  RIGHT_PAIR):    2,
-                (SC_BACKWARD,   2,  LEFT_PAIR):     3,
-                (SC_BACKWARD,   2,  RIGHT_PAIR):    4,
-                (SC_BACKWARD,   3,  LEFT_PAIR):     5,
-                (SC_BACKWARD,   3,  RIGHT_PAIR):    6,
-                (SC_FORWARD,    1,  LEFT_PAIR):     6,
-                (SC_FORWARD,    1,  RIGHT_PAIR):    5,
-                (SC_FORWARD,    2,  LEFT_PAIR):     4,
-                (SC_FORWARD,    2,  RIGHT_PAIR):    3,
-                (SC_FORWARD,    3,  LEFT_PAIR):     2,
-                (SC_FORWARD,    3,  RIGHT_PAIR):    1}
-    # return spot column
-    return geopandas.pd.Series(zip(df['sc_orient'], df['track'], df['pair'])).map(map_spot).values
-
-#
-# Get Ancillary Field Name
-#
-def __getancillaryfield(parm, field_rec):
-    if field_rec['anc_type'] == 0:
-        return parm['atl03_ph_fields'][field_rec['field_index']]
-    if field_rec['anc_type'] == 1:
-        return parm['atl03_geo_fields'][field_rec['field_index']]
-    if field_rec['anc_type'] == 2:
-        return parm['atl08_fields'][field_rec['field_index']]
-    if field_rec['anc_type'] == 3:
-        return parm['atl06_fields'][field_rec['field_index']]
-    raise sliderule.FatalError(f'Invalid ancillary field type {field_rec["anc_type"]}')
-
-#
-# Flatten Batches
-#
-def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array, height_key):
-
-    # Check for Responses
-    if rsps == None or len(rsps) == 0:
-        return sliderule.emptyframe()
-
-    # Check for Output Options
-    if "output" in parm:
-        gdf = sliderule.procoutputfile(parm, rsps)
-        return gdf
-
-    # Flatten Records
-    columns = {}
-    records = []
-    num_records = 0
-    field_dictionary = {} # [<field_name>] = {"extent_id": [], <field_name>: []}
-    file_dictionary = {} # [id] = "filename"
-    if len(rsps) > 0:
-        # Sort Records
-        for rsp in rsps:
-            if rectype in rsp['__rectype']:
-                records += rsp,
-                num_records += len(rsp[batch_column])
-            elif 'ancfrec' == rsp['__rectype']:
-                for field_rec in rsp['fields']:
-                    extent_id = numpy.uint64(rsp['extent_id'])
-                    field_name = __getancillaryfield(parm, field_rec)
-                    if field_name not in field_dictionary:
-                        field_dictionary[field_name] = {'extent_id': [], field_name: []}
-                    field_dictionary[field_name]['extent_id'] += extent_id,
-                    field_dictionary[field_name][field_name] += sliderule.getvalues(field_rec['value'], field_rec['datatype'], len(field_rec['value']), num_elements=1)[0],
-            elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype']:
-                if rsp["num_samples"] <= 0:
-                    continue
-                # Get field names and set
-                sample = rsp["samples"][0]
-                field_names = list(sample.keys())
-                field_names.remove("__rectype")
-                field_set = rsp['key']
-                if rsp["num_samples"] > 1:
-                    as_numpy_array = True
-                # On first time, build empty dictionary for field set associated with raster
-                if field_set not in field_dictionary:
-                    field_dictionary[field_set] = {'extent_id': []}
-                    for field in field_names:
-                        field_dictionary[field_set][field_set + "." + field] = []
-                # Populate dictionary for field set
-                field_dictionary[field_set]['extent_id'] += numpy.uint64(rsp['index']),
-                for field in field_names:
-                    if as_numpy_array:
-                        data = []
-                        for s in rsp["samples"]:
-                            data += s[field],
-                        field_dictionary[field_set][field_set + "." + field] += numpy.array(data),
-                    else:
-                        field_dictionary[field_set][field_set + "." + field] += sample[field],
-            elif 'waverec' == rsp['__rectype']:
-                field_set = rsp['__rectype']
-                field_names = list(rsp.keys())
-                field_names.remove("__rectype")
-                if field_set not in field_dictionary:
-                    field_dictionary[field_set] = {'extent_id': []}
-                    for field in field_names:
-                        field_dictionary[field_set][field] = []
-                for field in field_names:
-                    if type(rsp[field]) == tuple:
-                        field_dictionary[field_set][field] += numpy.array(rsp[field]),
-                    elif field == 'extent_id':
-                        field_dictionary[field_set][field] += numpy.uint64(rsp[field]),
-                    else:
-                        field_dictionary[field_set][field] += rsp[field],
-            elif 'fileidrec' == rsp['__rectype']:
-                file_dictionary[rsp["file_id"]] = rsp["file_name"]
-
-        # Build Columns
-        if num_records > 0:
-            # Initialize Columns
-            sample_record = records[0][batch_column][0]
-            for field in sample_record.keys():
-                fielddef = sliderule.getdefinition(sample_record['__rectype'], field)
-                if len(fielddef) > 0:
-                    if type(sample_record[field]) == tuple:
-                        columns[field] = numpy.empty(num_records, dtype=object)
-                    else:
-                        columns[field] = numpy.empty(num_records, fielddef["nptype"])
-            # Populate Columns
-            cnt = 0
-            for record in records:
-                for batch in record[batch_column]:
-                    for field in columns:
-                        columns[field][cnt] = batch[field]
-                    cnt += 1
-    else:
-        logger.debug("No response returned")
-
-    # Build Initial GeoDataFrame
-    gdf = sliderule.todataframe(columns, height_key=height_key)
-
-    # Merge Ancillary Fields
-    for field_set in field_dictionary:
-        df = geopandas.pd.DataFrame(field_dictionary[field_set])
-        gdf = geopandas.pd.merge(gdf, df, how='left', on='extent_id').set_axis(gdf.index)
-
-    # Delete Extent ID Column
-    if len(gdf) > 0 and not keep_id:
-        del gdf["extent_id"]
-
-    # Attach Metadata
-    if len(file_dictionary) > 0:
-        gdf.attrs['file_directory'] = file_dictionary
-
-    # Return GeoDataFrame
-    return gdf
-
-#
-# Flatten Batches - ATL03
-#
-def __flattenbatches03(rsps, parm, keep_id, height_key):
-
-    # Check for Responses
-    if rsps == None or len(rsps) == 0:
-        return sliderule.emptyframe()
-
-    # Check for Output Options
-    if "output" in parm:
-        return sliderule.procoutputfile(parm, rsps)
-
-    else: # Native Output
-        # Flatten Responses
-        columns = {}
-        sample_photon_record = None
-        photon_records = []
-        num_photons = 0
-        photon_dictionary = {}
-        photon_field_types = {} # ['field_name'] = nptype
-        if len(rsps) > 0:
-            # Sort Records
-            for rsp in rsps:
-                if 'atl03rec' in rsp['__rectype']:
-                    photon_records += rsp,
-                    num_photons += len(rsp['photons'])
-                    if sample_photon_record == None and len(rsp['photons']) > 0:
-                        sample_photon_record = rsp
-                elif 'ancerec' == rsp['__rectype']:
-                    # Get Field Name and Type
-                    field_name = __getancillaryfield(parm, rsp)
-                    if field_name not in photon_field_types:
-                        photon_field_types[field_name] = BASIC_TYPES[CODED_TYPE[rsp['datatype']]]["nptype"]
-                    # Initialize Extent Dictionary Entry
-                    extent_id = rsp['extent_id']
-                    if extent_id not in photon_dictionary:
-                        photon_dictionary[extent_id] = {}
-                    # Save of Values per Extent ID per Field Name
-                    data = sliderule.getvalues(rsp['data'], rsp['datatype'], len(rsp['data']))
-                    photon_dictionary[extent_id][field_name] = data
-            # Build Elevation Columns
-            if num_photons > 0:
-                # Initialize Columns
-                for field in sample_photon_record.keys():
-                    fielddef = sliderule.getdefinition("atl03rec", field)
-                    if len(fielddef) > 0 and field != "photons":
-                        columns[field] = numpy.empty(num_photons, fielddef["nptype"])
-                for field in sample_photon_record["photons"][0].keys():
-                    fielddef = sliderule.getdefinition("atl03rec.photons", field)
-                    if len(fielddef) > 0:
-                        columns[field] = numpy.empty(num_photons, fielddef["nptype"])
-                for field in photon_field_types.keys():
-                    columns[field] = numpy.empty(num_photons, photon_field_types[field])
-                # Populate Columns
-                ph_cnt = 0
-                for record in photon_records:
-                    # Add Ancillary Extent Fields
-                    ph_index = 0
-                    extent_id = record['extent_id']
-                    if extent_id in photon_dictionary:
-                        for photon in record["photons"]:
-                            for field_name, field_array in photon_dictionary[extent_id].items():
-                                columns[field_name][ph_cnt + ph_index] = field_array[ph_index]
-                            ph_index += 1
-                    # For Each Photon in Extent
-                    for photon in record["photons"]:
-                        # Add per Extent Fields
-                        for field in record.keys():
-                            if field in columns:
-                                columns[field][ph_cnt] = record[field]
-                        # Add per Photon Fields
-                        for field in photon.keys():
-                            if field in columns:
-                                columns[field][ph_cnt] = photon[field]
-                        # Goto Next Photon
-                        ph_cnt += 1
-
-                # Delete Extent ID Column
-                if "extent_id" in columns and not keep_id:
-                    del columns["extent_id"]
-
-                # Create DataFrame
-                gdf = sliderule.todataframe(columns, height_key=height_key)
-
-                # Calculate Spot Column
-                gdf['spot'] = __calcspot(gdf)
-
-                # Return Response
-                return gdf
-            else:
-                logger.debug("No photons returned")
-        else:
-            logger.debug("No response returned")
-
-    # Return Empty Response
-    return sliderule.emptyframe()
-
-#
-# Flatten Batches - ATL03 Viewer
-#
-def __flattenbatches03v(rsps, parm, keep_id):
-
-    # Check for Responses
-    if rsps == None or len(rsps) == 0:
-        return sliderule.emptyframe()
-
-    # Check for Output Options
-    if "output" in parm:
-        return sliderule.procoutputfile(parm, rsps)
-
-    else: # Native Output
-        # Flatten Responses
-        columns = {}
-        sample_segment_record = None
-        extent_records = []
-        num_segments = 0
-        if len(rsps) > 0:
-            # Sort Records
-            for rsp in rsps:
-                if 'atl03vrec' in rsp['__rectype']:
-                    extent_records += rsp,
-                    num_segments += len(rsp['segments'])
-                    if sample_segment_record == None and len(rsp['segments']) > 0:
-                        sample_segment_record = rsp
-            # Build Segments Columns
-            if num_segments > 0:
-                # Initialize Columns
-                for field in sample_segment_record.keys():
-                    fielddef = sliderule.getdefinition("atl03vrec", field)
-                    if len(fielddef) > 0 and field != "segments":
-                        columns[field] = numpy.empty(num_segments, fielddef["nptype"])
-                for field in sample_segment_record["segments"][0].keys():
-                    fielddef = sliderule.getdefinition("atl03vrec.segments", field)
-                    if len(fielddef) > 0:
-                        columns[field] = numpy.empty(num_segments, fielddef["nptype"])
-                # Populate Columns
-                seg_cnt = 0
-                for record in extent_records:
-                    # For Each Segment in Extent
-                    for segment in record["segments"]:
-                        # Add per Extent Fields
-                        for field in record.keys():
-                            if field in columns:
-                                columns[field][seg_cnt] = record[field]
-                        # Add per Segments Fields
-                        for field in segment.keys():
-                            if field in columns:
-                                columns[field][seg_cnt] = segment[field]
-                        # Goto Next Segment
-                        seg_cnt += 1
-
-                # Delete Extent ID Column
-                if "extent_id" in columns and not keep_id:
-                    del columns["extent_id"]
-
-                # Create DataFrame
-                gdf = sliderule.todataframe(columns)
-
-                # Return Response
-                return gdf
-            else:
-                logger.debug("No segment counts returned")
-        else:
-            logger.debug("No response returned")
-
-    # Error Case
-    return sliderule.emptyframe()
-
-#
-# Build Request
-#
-def __build_request(parm, resources, default_asset='icesat2'):
-
-    # Default the Asset
-    rqst_parm = parm.copy()
-    if "asset" not in rqst_parm:
-        rqst_parm["asset"] = default_asset
-
-    # Build Request
-    return {
-        "resources": resources,
-        "parms": rqst_parm
-    }
-
 
 ###############################################################################
 # APIs
@@ -867,3 +524,344 @@ def atl24v(parm, resource):
 
     # Return Response
     return rsps
+
+###############################################################################
+# LOCAL FUNCTIONS
+###############################################################################
+
+#
+# Calculate Laser Spot
+#
+def __calcspot(df):
+
+    # Create dictionary mapping (sc_orient, track, pair) to spot
+    map_spot = {(SC_BACKWARD,   1,  LEFT_PAIR):     1,
+                (SC_BACKWARD,   1,  RIGHT_PAIR):    2,
+                (SC_BACKWARD,   2,  LEFT_PAIR):     3,
+                (SC_BACKWARD,   2,  RIGHT_PAIR):    4,
+                (SC_BACKWARD,   3,  LEFT_PAIR):     5,
+                (SC_BACKWARD,   3,  RIGHT_PAIR):    6,
+                (SC_FORWARD,    1,  LEFT_PAIR):     6,
+                (SC_FORWARD,    1,  RIGHT_PAIR):    5,
+                (SC_FORWARD,    2,  LEFT_PAIR):     4,
+                (SC_FORWARD,    2,  RIGHT_PAIR):    3,
+                (SC_FORWARD,    3,  LEFT_PAIR):     2,
+                (SC_FORWARD,    3,  RIGHT_PAIR):    1}
+    # return spot column
+    return geopandas.pd.Series(zip(df['sc_orient'], df['track'], df['pair'])).map(map_spot).values
+
+#
+# Get Ancillary Field Name
+#
+def __getancillaryfield(parm, field_rec):
+    if field_rec['anc_type'] == 0:
+        return parm['atl03_ph_fields'][field_rec['field_index']]
+    if field_rec['anc_type'] == 1:
+        return parm['atl03_geo_fields'][field_rec['field_index']]
+    if field_rec['anc_type'] == 2:
+        return parm['atl08_fields'][field_rec['field_index']]
+    if field_rec['anc_type'] == 3:
+        return parm['atl06_fields'][field_rec['field_index']]
+    raise sliderule.FatalError(f'Invalid ancillary field type {field_rec["anc_type"]}')
+
+#
+# Flatten Batches
+#
+def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array, height_key):
+
+    # Check for Responses
+    if rsps == None:
+        return sliderule.emptyframe()
+
+    # Check for Output Options
+    if "output" in parm:
+        gdf = sliderule.procoutputfile(parm, rsps)
+        return gdf
+
+    # Flatten Records
+    columns = {}
+    records = []
+    num_records = 0
+    field_dictionary = {} # [<field_name>] = {"extent_id": [], <field_name>: []}
+    file_dictionary = {} # [id] = "filename"
+    if len(rsps) > 0:
+        # Sort Records
+        for rsp in rsps:
+            if rectype in rsp['__rectype']:
+                records += rsp,
+                num_records += len(rsp[batch_column])
+            elif 'ancfrec' == rsp['__rectype']:
+                for field_rec in rsp['fields']:
+                    extent_id = numpy.uint64(rsp['extent_id'])
+                    field_name = __getancillaryfield(parm, field_rec)
+                    if field_name not in field_dictionary:
+                        field_dictionary[field_name] = {'extent_id': [], field_name: []}
+                    field_dictionary[field_name]['extent_id'] += extent_id,
+                    field_dictionary[field_name][field_name] += sliderule.getvalues(field_rec['value'], field_rec['datatype'], len(field_rec['value']), num_elements=1)[0],
+            elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype']:
+                if rsp["num_samples"] <= 0:
+                    continue
+                # Get field names and set
+                sample = rsp["samples"][0]
+                field_names = list(sample.keys())
+                field_names.remove("__rectype")
+                field_set = rsp['key']
+                if rsp["num_samples"] > 1:
+                    as_numpy_array = True
+                # On first time, build empty dictionary for field set associated with raster
+                if field_set not in field_dictionary:
+                    field_dictionary[field_set] = {'extent_id': []}
+                    for field in field_names:
+                        field_dictionary[field_set][field_set + "." + field] = []
+                # Populate dictionary for field set
+                field_dictionary[field_set]['extent_id'] += numpy.uint64(rsp['index']),
+                for field in field_names:
+                    if as_numpy_array:
+                        data = []
+                        for s in rsp["samples"]:
+                            data += s[field],
+                        field_dictionary[field_set][field_set + "." + field] += numpy.array(data),
+                    else:
+                        field_dictionary[field_set][field_set + "." + field] += sample[field],
+            elif 'waverec' == rsp['__rectype']:
+                field_set = rsp['__rectype']
+                field_names = list(rsp.keys())
+                field_names.remove("__rectype")
+                if field_set not in field_dictionary:
+                    field_dictionary[field_set] = {'extent_id': []}
+                    for field in field_names:
+                        field_dictionary[field_set][field] = []
+                for field in field_names:
+                    if type(rsp[field]) == tuple:
+                        field_dictionary[field_set][field] += numpy.array(rsp[field]),
+                    elif field == 'extent_id':
+                        field_dictionary[field_set][field] += numpy.uint64(rsp[field]),
+                    else:
+                        field_dictionary[field_set][field] += rsp[field],
+            elif 'fileidrec' == rsp['__rectype']:
+                file_dictionary[rsp["file_id"]] = rsp["file_name"]
+
+        # Build Columns
+        if num_records > 0:
+            # Initialize Columns
+            sample_record = records[0][batch_column][0]
+            for field in sample_record.keys():
+                fielddef = sliderule.getdefinition(sample_record['__rectype'], field)
+                if len(fielddef) > 0:
+                    if type(sample_record[field]) == tuple:
+                        columns[field] = numpy.empty(num_records, dtype=object)
+                    else:
+                        columns[field] = numpy.empty(num_records, fielddef["nptype"])
+            # Populate Columns
+            cnt = 0
+            for record in records:
+                for batch in record[batch_column]:
+                    for field in columns:
+                        columns[field][cnt] = batch[field]
+                    cnt += 1
+    else:
+        logger.debug("No response returned")
+
+    # Build Initial GeoDataFrame
+    gdf = sliderule.todataframe(columns, height_key=height_key)
+
+    # Merge Ancillary Fields
+    for field_set in field_dictionary:
+        df = geopandas.pd.DataFrame(field_dictionary[field_set])
+        gdf = geopandas.pd.merge(gdf, df, how='left', on='extent_id').set_axis(gdf.index)
+
+    # Delete Extent ID Column
+    if len(gdf) > 0 and not keep_id:
+        del gdf["extent_id"]
+
+    # Attach Metadata
+    if len(file_dictionary) > 0:
+        gdf.attrs['file_directory'] = file_dictionary
+
+    # Return GeoDataFrame
+    return gdf
+
+#
+# Flatten Batches - ATL03
+#
+def __flattenbatches03(rsps, parm, keep_id, height_key):
+
+    # Check for Responses
+    if rsps == None:
+        return sliderule.emptyframe()
+
+    # Check for Output Options
+    if "output" in parm:
+        return sliderule.procoutputfile(parm, rsps)
+
+    else: # Native Output
+        # Flatten Responses
+        columns = {}
+        sample_photon_record = None
+        photon_records = []
+        num_photons = 0
+        photon_dictionary = {}
+        photon_field_types = {} # ['field_name'] = nptype
+        if len(rsps) > 0:
+            # Sort Records
+            for rsp in rsps:
+                if 'atl03rec' in rsp['__rectype']:
+                    photon_records += rsp,
+                    num_photons += len(rsp['photons'])
+                    if sample_photon_record == None and len(rsp['photons']) > 0:
+                        sample_photon_record = rsp
+                elif 'ancerec' == rsp['__rectype']:
+                    # Get Field Name and Type
+                    field_name = __getancillaryfield(parm, rsp)
+                    if field_name not in photon_field_types:
+                        photon_field_types[field_name] = BASIC_TYPES[CODED_TYPE[rsp['datatype']]]["nptype"]
+                    # Initialize Extent Dictionary Entry
+                    extent_id = rsp['extent_id']
+                    if extent_id not in photon_dictionary:
+                        photon_dictionary[extent_id] = {}
+                    # Save of Values per Extent ID per Field Name
+                    data = sliderule.getvalues(rsp['data'], rsp['datatype'], len(rsp['data']))
+                    photon_dictionary[extent_id][field_name] = data
+            # Build Elevation Columns
+            if num_photons > 0:
+                # Initialize Columns
+                for field in sample_photon_record.keys():
+                    fielddef = sliderule.getdefinition("atl03rec", field)
+                    if len(fielddef) > 0 and field != "photons":
+                        columns[field] = numpy.empty(num_photons, fielddef["nptype"])
+                for field in sample_photon_record["photons"][0].keys():
+                    fielddef = sliderule.getdefinition("atl03rec.photons", field)
+                    if len(fielddef) > 0:
+                        columns[field] = numpy.empty(num_photons, fielddef["nptype"])
+                for field in photon_field_types.keys():
+                    columns[field] = numpy.empty(num_photons, photon_field_types[field])
+                # Populate Columns
+                ph_cnt = 0
+                for record in photon_records:
+                    # Add Ancillary Extent Fields
+                    ph_index = 0
+                    extent_id = record['extent_id']
+                    if extent_id in photon_dictionary:
+                        for photon in record["photons"]:
+                            for field_name, field_array in photon_dictionary[extent_id].items():
+                                columns[field_name][ph_cnt + ph_index] = field_array[ph_index]
+                            ph_index += 1
+                    # For Each Photon in Extent
+                    for photon in record["photons"]:
+                        # Add per Extent Fields
+                        for field in record.keys():
+                            if field in columns:
+                                columns[field][ph_cnt] = record[field]
+                        # Add per Photon Fields
+                        for field in photon.keys():
+                            if field in columns:
+                                columns[field][ph_cnt] = photon[field]
+                        # Goto Next Photon
+                        ph_cnt += 1
+
+                # Delete Extent ID Column
+                if "extent_id" in columns and not keep_id:
+                    del columns["extent_id"]
+
+                # Create DataFrame
+                gdf = sliderule.todataframe(columns, height_key=height_key)
+
+                # Calculate Spot Column
+                gdf['spot'] = __calcspot(gdf)
+
+                # Return Response
+                return gdf
+            else:
+                logger.debug("No photons returned")
+        else:
+            logger.debug("No response returned")
+
+    # Return Empty Response
+    return sliderule.emptyframe()
+
+#
+# Flatten Batches - ATL03 Viewer
+#
+def __flattenbatches03v(rsps, parm, keep_id):
+
+    # Check for Responses
+    if rsps == None:
+        return sliderule.emptyframe()
+
+    # Check for Output Options
+    if "output" in parm:
+        return sliderule.procoutputfile(parm, rsps)
+
+    else: # Native Output
+        # Flatten Responses
+        columns = {}
+        sample_segment_record = None
+        extent_records = []
+        num_segments = 0
+        if len(rsps) > 0:
+            # Sort Records
+            for rsp in rsps:
+                if 'atl03vrec' in rsp['__rectype']:
+                    extent_records += rsp,
+                    num_segments += len(rsp['segments'])
+                    if sample_segment_record == None and len(rsp['segments']) > 0:
+                        sample_segment_record = rsp
+            # Build Segments Columns
+            if num_segments > 0:
+                # Initialize Columns
+                for field in sample_segment_record.keys():
+                    fielddef = sliderule.getdefinition("atl03vrec", field)
+                    if len(fielddef) > 0 and field != "segments":
+                        columns[field] = numpy.empty(num_segments, fielddef["nptype"])
+                for field in sample_segment_record["segments"][0].keys():
+                    fielddef = sliderule.getdefinition("atl03vrec.segments", field)
+                    if len(fielddef) > 0:
+                        columns[field] = numpy.empty(num_segments, fielddef["nptype"])
+                # Populate Columns
+                seg_cnt = 0
+                for record in extent_records:
+                    # For Each Segment in Extent
+                    for segment in record["segments"]:
+                        # Add per Extent Fields
+                        for field in record.keys():
+                            if field in columns:
+                                columns[field][seg_cnt] = record[field]
+                        # Add per Segments Fields
+                        for field in segment.keys():
+                            if field in columns:
+                                columns[field][seg_cnt] = segment[field]
+                        # Goto Next Segment
+                        seg_cnt += 1
+
+                # Delete Extent ID Column
+                if "extent_id" in columns and not keep_id:
+                    del columns["extent_id"]
+
+                # Create DataFrame
+                gdf = sliderule.todataframe(columns)
+
+                # Return Response
+                return gdf
+            else:
+                logger.debug("No segment counts returned")
+        else:
+            logger.debug("No response returned")
+
+    # Error Case
+    return sliderule.emptyframe()
+
+#
+# Build Request
+#
+def __build_request(parm, resources, default_asset='icesat2'):
+
+    # Default the Asset
+    rqst_parm = parm.copy()
+    if "asset" not in rqst_parm:
+        rqst_parm["asset"] = default_asset
+
+    # Build Request
+    return {
+        "resources": resources,
+        "parms": rqst_parm
+    }

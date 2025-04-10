@@ -45,7 +45,7 @@ from sliderule.session import Session
 def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array, height_key):
 
     # Check Responses
-    if rsps == None or len(rsps) == 0:
+    if rsps == None:
         return sliderule.emptyframe()
 
     # Check for Output Options

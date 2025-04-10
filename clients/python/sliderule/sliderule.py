@@ -124,7 +124,7 @@ def init (
 #
 #  source
 #
-def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=False, session=slideruleSession):
+def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=False, session=None):
     '''
     Perform API call to SlideRule service
 
@@ -161,6 +161,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
         >>> print(rsps)
         {'time': 1300556199523.0, 'format': 'GPS'}
     '''
+    session = checksession(session)
     for tolerance in [0.0001, 0.001, 0.01, 0.1, 1.0, None]:
         try:
             return session.source(api, parm=parm, stream=stream, callbacks=callbacks, path=path, silence=silence)
@@ -172,7 +173,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
 #
 #  set_url
 #
-def set_url (url, session=slideruleSession):
+def set_url (url, session=None):
     '''
     Configure sliderule package with URL of service
 
@@ -188,12 +189,13 @@ def set_url (url, session=slideruleSession):
         >>> import sliderule
         >>> sliderule.set_url("service.my-sliderule-server.org")
     '''
+    session = checksession(session)
     session.service_url = url
 
 #
 #  set_verbose
 #
-def set_verbose (enable, loglevel=logging.INFO, session=slideruleSession):
+def set_verbose (enable, loglevel=logging.INFO, session=None):
     '''
     Sets up a console logger to print log messages to screen
 
@@ -213,12 +215,13 @@ def set_verbose (enable, loglevel=logging.INFO, session=slideruleSession):
         >>> import sliderule
         >>> sliderule.set_verbose(True, loglevel=logging.INFO)
     '''
+    session = checksession(session)
     session.set_verbose(enable, loglevel)
 
 #
 # set_rqst_timeout
 #
-def set_rqst_timeout (timeout, session=slideruleSession):
+def set_rqst_timeout (timeout, session=None):
     '''
     Sets the TCP/IP connection and reading timeouts for future requests made to sliderule servers.
     Setting it lower means the client will failover more quickly, but may generate false positives if a processing request stalls or takes a long time returning data.
@@ -234,6 +237,7 @@ def set_rqst_timeout (timeout, session=slideruleSession):
         >>> import sliderule
         >>> sliderule.set_rqst_timeout((10, 60))
     '''
+    session = checksession(session)
     if type(timeout) == tuple:
         session.rqst_timeout = timeout
     else:
@@ -242,7 +246,7 @@ def set_rqst_timeout (timeout, session=slideruleSession):
 #
 # set_processing_flags
 #
-def set_processing_flags (aux=True, session=slideruleSession):
+def set_processing_flags (aux=True, session=None):
     '''
     Sets flags used when processing the record definitions
 
@@ -256,6 +260,7 @@ def set_processing_flags (aux=True, session=slideruleSession):
         >>> import sliderule
         >>> sliderule.set_processing_flags(aux=False)
     '''
+    session = checksession(session)
     if type(aux) == bool:
         session.decode_aux = aux
     else:
@@ -265,7 +270,7 @@ def set_processing_flags (aux=True, session=slideruleSession):
 #
 # update_available_servers
 #
-def update_available_servers (desired_nodes=None, time_to_live=None, session=slideruleSession):
+def update_available_servers (desired_nodes=None, time_to_live=None, session=None):
     '''
     Manages the number of servers in the cluster.
     If the desired_nodes parameter is set, then a request is made to change the number of servers in the cluster to the number specified.
@@ -291,12 +296,13 @@ def update_available_servers (desired_nodes=None, time_to_live=None, session=sli
         >>> import sliderule
         >>> num_servers, max_workers = sliderule.update_available_servers(10)
     '''
+    session = checksession(session)
     return session.update_available_servers(desired_nodes, time_to_live)
 
 #
 # scaleout
 #
-def scaleout(desired_nodes, time_to_live, bypass_dns, session=slideruleSession):
+def scaleout(desired_nodes, time_to_live, bypass_dns, session=None):
     '''
     Scale the cluster and wait for cluster to reach desired state
 
@@ -314,12 +320,13 @@ def scaleout(desired_nodes, time_to_live, bypass_dns, session=slideruleSession):
         >>> import sliderule
         >>> sliderule.scaleout(4, 300, False)
     '''
+    session = checksession(session)
     return session.scaleout(desired_nodes, time_to_live, bypass_dns)
 
 #
 # authenticate
 #
-def authenticate (ps_organization, ps_username=None, ps_password=None, github_token=None, session=slideruleSession):
+def authenticate (ps_organization, ps_username=None, ps_password=None, github_token=None, session=None):
     '''
     Authenticate to SlideRule Provisioning System
     The username and password can be provided the following way in order of priority:
@@ -352,12 +359,13 @@ def authenticate (ps_organization, ps_username=None, ps_password=None, github_to
         >>> sliderule.authenticate("myorg")
         True
     '''
+    session = checksession(session)
     return session.authenticate(ps_organization, ps_username, ps_password, github_token)
 
 #
 # gps2utc
 #
-def gps2utc (gps_time, as_str=True, session=slideruleSession):
+def gps2utc (gps_time, as_str=True, session=None):
     '''
     Convert a GPS based time returned from SlideRule into a UTC time.
 
@@ -379,6 +387,7 @@ def gps2utc (gps_time, as_str=True, session=slideruleSession):
         >>> sliderule.gps2utc(1235331234)
         '2019-02-27 19:34:03'
     '''
+    session = checksession(session)
     rsps = session.source("time", {"time": int(gps_time * 1000), "input": "GPS", "output": "DATE"})
     if as_str:
         return rsps["time"]
@@ -388,7 +397,7 @@ def gps2utc (gps_time, as_str=True, session=slideruleSession):
 #
 # get_version
 #
-def get_version (session=slideruleSession):
+def get_version (session=None):
     '''
     Get the version information for the running servers and Python client
 
@@ -397,6 +406,7 @@ def get_version (session=slideruleSession):
     dict
         dictionary of version information
     '''
+    session = checksession(session)
     rsps = session.source("version", {})
     rsps["client"] = {"version": version.full_version}
     rsps["organization"] = session.service_org
@@ -405,7 +415,7 @@ def get_version (session=slideruleSession):
 #
 # check_version
 #
-def check_version (plugins=[], session=slideruleSession):
+def check_version (plugins=[], session=None):
     '''
     Check that the version of the client matches the version of the server and any additionally requested plugins
 
@@ -419,8 +429,9 @@ def check_version (plugins=[], session=slideruleSession):
     bool
         True if at least minor version matches; False if major or minor version doesn't match
     '''
-    status = True
+    session = checksession(session)
     info = get_version(session=session)
+    status = True
 
     # populate version info
     versions = {}
@@ -448,6 +459,63 @@ def check_version (plugins=[], session=slideruleSession):
 
     # return if version check is successful
     return status
+
+#
+# Run: API Request to SlideRule
+#
+def run(api, parms, aoi=None, resources=None, session=None):
+    '''
+    Execute the requested endpoint and return the results as a GeoDataFrame
+
+    Parameters
+    ----------
+        api:        str
+                    endpoint to run
+        parms:      dict
+                    parameter dictionary
+        aoi:        dict
+                    area of interest, passed to `sliderule.toregion()` function and polygon supplied in request
+        resources:  list
+                    list of resource names as strings
+
+    Returns
+    -------
+    GeoDataFrame
+        result of executing the request endpoint
+    '''
+    session = checksession(session)
+
+    # add region
+    if aoi != None:
+        region = toregion(aoi)
+        parms["poly"] = region["poly"]
+
+    # add resources
+    if type(resources) == list:
+        parms["resources"] = resources
+
+    # add output
+    delete_tempfile = False
+    if "output" not in parms:
+        delete_tempfile = True
+        parms["output"] = {
+            "path": tempfile.mktemp(),
+            "format": "geoparquet",
+            "open_on_complete": True
+        }
+
+    # make request
+    rsps = source(api, {"parms": parms}, stream=True, session=session)
+
+    # build geodataframe
+    gdf = procoutputfile(parms, rsps)
+
+    # delete tempfile
+    if delete_tempfile and os.path.exists(parms["output"]["path"]):
+        os.remove(parms["output"]["path"])
+
+    # return geodataframe
+    return gdf
 
 #
 # Format Region Specification
@@ -642,61 +710,6 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         }
     }
 
-#
-# Run: API Request to SlideRule
-#
-def run(api, parms, aoi=None, resources=None, session=slideruleSession):
-    '''
-    Execute the requested endpoint and return the results as a GeoDataFrame
-
-    Parameters
-    ----------
-        api:        str
-                    endpoint to run
-        parms:      dict
-                    parameter dictionary
-        aoi:        dict
-                    area of interest, passed to `sliderule.toregion()` function and polygon supplied in request
-        resources:  list
-                    list of resource names as strings
-
-    Returns
-    -------
-    GeoDataFrame
-        result of executing the request endpoint
-    '''
-    # add region
-    if aoi != None:
-        region = toregion(aoi)
-        parms["poly"] = region["poly"]
-
-    # add resources
-    if type(resources) == list:
-        parms["resources"] = resources
-
-    # add output
-    delete_tempfile = False
-    if "output" not in parms:
-        delete_tempfile = True
-        parms["output"] = {
-            "path": tempfile.mktemp(),
-            "format": "geoparquet",
-            "open_on_complete": True
-        }
-
-    # make request
-    rsps = source(api, {"parms": parms}, stream=True, session=session)
-
-    # build geodataframe
-    gdf = procoutputfile(parms, rsps)
-
-    # delete tempfile
-    if delete_tempfile and os.path.exists(parms["output"]["path"]):
-        os.remove(parms["output"]["path"])
-
-    # return geodataframe
-    return gdf
-
 ###############################################################################
 # INTERNAL APIs
 ###############################################################################
@@ -875,3 +888,10 @@ def simplifypolygon(parm, tolerance):
     parm["parms"]["cmr"]["polygon"] = simplified_polygon
 
     logger.warning('Using simplified polygon (for CMR request only!), {} points using tolerance of {}'.format(len(simplified_coords), tolerance))
+
+#
+# Set Session
+#
+def checksession(session):
+    global slideruleSession
+    return session if session != None else slideruleSession

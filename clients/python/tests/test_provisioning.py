@@ -13,7 +13,7 @@ class TestProvisioning:
 
     def test_refresh(self, domain, organization):
         session = Session(domain, organization=organization)
-        headers = session.__buildauthheader(force_refresh=True)
+        headers = session._Session__buildauthheader(force_refresh=True)
         assert len(headers['Authorization']) > 8
 
     def test_num_nodes_update(self, domain, organization):

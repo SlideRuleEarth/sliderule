@@ -105,12 +105,11 @@ class TestInitialization:
             assert len(rsps) > 0
 
     def test_init_badurl(self):
-        with pytest.raises( (sliderule.FatalError) ):
+        with pytest.raises( (sliderule.session.FatalError) ):
             icesat2.init('incorrect.org:8877')
-            sliderule.source("version")
 
     def test_set_badurl(self):
-        with pytest.raises( (sliderule.FatalError) ):
+        with pytest.raises( (sliderule.session.FatalError) ):
             sliderule.set_rqst_timeout((1, 60))
             sliderule.set_url('incorrect.org:8877')
             sliderule.source("version")
