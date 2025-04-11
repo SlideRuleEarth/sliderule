@@ -4,12 +4,12 @@
     {
       "Effect": "Allow",
       "Action": ["s3:ListBucket"],
-      "Resource": ["arn:aws:s3:::sliderule", "arn:aws:s3:::pgc-opendata-dems", "arn:aws:s3:::prd-tnm", "arn:aws:s3:::esa-worldcover"]
+      "Resource": ["arn:aws:s3:::sliderule", "arn:aws:s3:::pgc-opendata-dems", "arn:aws:s3:::prd-tnm", "arn:aws:s3:::esa-worldcover", "arn:aws:s3:::noaa-ocs-nationalbathymetry-pds"]
     },
     {
       "Effect": "Allow",
       "Action": ["s3:GetObject"],
-      "Resource": ["arn:aws:s3:::sliderule/*", "arn:aws:s3:::pgc-opendata-dems/*", "arn:aws:s3:::prd-tnm/*", "arn:aws:s3:::esa-worldcover/*"]
+      "Resource": ["arn:aws:s3:::sliderule/*", "arn:aws:s3:::pgc-opendata-dems/*", "arn:aws:s3:::prd-tnm/*", "arn:aws:s3:::esa-worldcover/*", "arn:aws:s3:::noaa-ocs-nationalbathymetry-pds/*"]
     },
     {
       "Effect": "Allow",
