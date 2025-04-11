@@ -201,8 +201,13 @@ local function cmr (parms, poly, with_meta)
         -- add search after link for future page requests
         headers["cmr-search-after"] = hdrs["cmr-search-after"]
 
-        -- get number of cmr hits
+        -- get and check number of cmr hits
         local cmr_hits = tonumber(hdrs["cmr-hits"])
+        if cmr_hits > max_resources then
+            return RC_RSPS_TRUNCATED, string.format("number of CMR hits <%d> exceeded maximum allowed <%d> for %s", cmr_hits, max_resources, short_name)
+        elseif total_links > max_resources then
+            return RC_RSPS_TRUNCATED, string.format("number of total links found <%d> exceeded maximum allowed <%d> for %s", total_links, max_resources, short_name)
+        end
 
         -- decode response text (json) into lua table
         local rc, results = pcall(json.decode, rsps)
@@ -218,6 +223,10 @@ local function cmr (parms, poly, with_meta)
         -- loop through each response entry and pull out the desired links
         local num_links = 0
         for _,e in ipairs(results["feed"]["entry"]) do
+            -- check total links
+            if total_links >= max_resources then
+                break
+            end
             -- build metadata with polygon and time stamps
             local poly_table = {}
             if e["polygons"] then
@@ -231,12 +240,12 @@ local function cmr (parms, poly, with_meta)
                 end
             end
             local metadata = { poly = poly_table, t0 = e["time_start"], t1 = e["time_end"] }
-            -- loop through links
+            -- loop through links to see if a link matching the criteria is found
             local links = e["links"]
             if links then
                 for _,l in ipairs(links) do
                     local link = l["href"]
-                    if link and (total_links < max_resources) then
+                    if link then
                         -- exclude opendap links - this is a hack, but is the only way
                         -- to currently remove these duplicate responses (and is the way
                         -- CMR code currently does it as well)
@@ -255,6 +264,7 @@ local function cmr (parms, poly, with_meta)
                                         num_links = num_links + 1
                                         total_links = total_links + 1
                                     end
+                                    -- desired link is found
                                     break
                                 end
                             end
@@ -269,8 +279,6 @@ local function cmr (parms, poly, with_meta)
             break -- all done
         elseif num_links == 0 then -- no links added with last request
             break -- all done
-        elseif total_links > max_resources then -- maximum number of links allowed exceeded
-            return RC_RSPS_TRUNCATED, string.format("number of matched resources at %d exceeded maximum allowed for %s", total_links, short_name)
         end
     end
 
