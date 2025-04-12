@@ -10,6 +10,11 @@ end
 -- Setup --
 
 local assets = asset.loaddir()
+local role_auth_script = core.script("iam_role_auth")
+while not aws.csget("iam-role") do
+    print("Waiting to establish IAM role...")
+    sys.wait(1)
+end
 
 -- local console = require("console")
 -- console.monitor:config(core.LOG, core.DEBUG)
@@ -24,9 +29,11 @@ local  lon =    -62.0
 local  lat =     -3.0
 local  height =   0.0
 
+local path = '/vsis3/sliderule/data/GEDTM/'
+
 print(string.format("\n-------------------------------------------------\nGEDTM 30 meter sample\n-------------------------------------------------"))
 
-local expResults = {{379.0,  1422230418.00, '/vsicurl/https://s3.opengeohub.org/global/edtm/legendtm_rf_30m_m_s_20000101_20231231_go_epsg.4326_v20250130.tif'}}
+local expResults = {{379.0,  1422230418.00, path .. 'legendtm_rf_30m_m_s_20000101_20231231_go_epsg.4326_v20250130.tif'}}
 local demType = "gedtm-30meter"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
 local starttime = time.latch();
@@ -52,10 +59,9 @@ for i, v in ipairs(tbl) do
 end
 runner.assert(sampleCnt == #expResults, string.format("Received unexpected number of samples: %d instead of %d", sampleCnt, #expResults))
 
-
 print(string.format("\n-------------------------------------------------\nGEDTM Standard Deviation sample\n-------------------------------------------------"))
 
-expResults = {{74.0,  1423094418.00, '/vsicurl/https://s3.opengeohub.org/global/edtm/gendtm_rf_30m_std_s_20000101_20231231_go_epsg.4326_v20250209.tif'}}
+expResults = {{74.0,  1423094418.00, path .. 'gendtm_rf_30m_std_s_20000101_20231231_go_epsg.4326_v20250209.tif'}}
 demType = "gedtm-std"
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
 starttime = time.latch();
@@ -85,7 +91,7 @@ runner.assert(sampleCnt == #expResults, string.format("Received unexpected numbe
 
 print(string.format("\n-------------------------------------------------\nGEDTM Distance From Mean sample\n-------------------------------------------------"))
 
-expResults = {{16.0,  1419552018.00, '/vsicurl/https://s3.opengeohub.org/global/dtm/v3/dfme_edtm_m_30m_s_20000101_20221231_go_epsg.4326_v20241230.tif'}}
+expResults = {{16.0,  1419552018.00, path .. 'dfme_edtm_m_30m_s_20000101_20221231_go_epsg.4326_v20241230.tif'}}
 demType = "gedtm-dfm"
 dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
 starttime = time.latch();
@@ -110,6 +116,7 @@ for i, v in ipairs(tbl) do
     runner.assert(fname == expResults[i][3])
 end
 runner.assert(sampleCnt == #expResults, string.format("Received unexpected number of samples: %d instead of %d", sampleCnt, #expResults))
+
 -- Report Results --
 
 runner.report()
