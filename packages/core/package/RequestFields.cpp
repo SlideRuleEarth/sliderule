@@ -404,7 +404,7 @@ void RequestFields::fromLua (lua_State* L, int index)
     if(pointsInPolygon.value > 0)
     {
         // determine best projection to use
-        if(projection == MathLib::AUTOMATIC)
+        if(projection == MathLib::AUTOMATIC_PROJECTION)
         {
             if(polygon[0].lat > 70.0) projection = MathLib::NORTH_POLAR;
             else if(polygon[0].lat < -70.0) projection = MathLib::SOUTH_POLAR;
@@ -436,6 +436,7 @@ RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* asset
         {"resources",           &resources},
         {"poly",                &polygon},
         {"proj",                &projection},
+        {"datum",               &datum},
         {"points_in_polygon",   &pointsInPolygon},
         {"timeout",             &timeout},
         {"rqst_timeout",        &rqstTimeout},
@@ -580,11 +581,11 @@ string convertToJson(const MathLib::proj_t& v)
 {
     switch(v)
     {
-        case MathLib::AUTOMATIC:    return "\"auto\"";
-        case MathLib::PLATE_CARREE: return "\"plate_carree\"";
-        case MathLib::NORTH_POLAR:  return "\"north_polar\"";
-        case MathLib::SOUTH_POLAR:  return "\"south_polar\"";
-        default:                    return "\"unknown\"";
+        case MathLib::AUTOMATIC_PROJECTION: return "\"auto\"";
+        case MathLib::PLATE_CARREE:         return "\"plate_carree\"";
+        case MathLib::NORTH_POLAR:          return "\"north_polar\"";
+        case MathLib::SOUTH_POLAR:          return "\"south_polar\"";
+        default:                            return "\"unknown\"";
     }
 }
 
@@ -595,11 +596,11 @@ int convertToLua(lua_State* L, const MathLib::proj_t& v)
 {
     switch(v)
     {
-        case MathLib::AUTOMATIC:    lua_pushstring(L, "auto");          break;
-        case MathLib::PLATE_CARREE: lua_pushstring(L, "plate_carree");  break;
-        case MathLib::NORTH_POLAR:  lua_pushstring(L, "north_polar");   break;
-        case MathLib::SOUTH_POLAR:  lua_pushstring(L, "south_polar");   break;
-        default:                    lua_pushstring(L, "unknown");       break;
+        case MathLib::AUTOMATIC_PROJECTION: lua_pushstring(L, "auto");          break;
+        case MathLib::PLATE_CARREE:         lua_pushstring(L, "plate_carree");  break;
+        case MathLib::NORTH_POLAR:          lua_pushstring(L, "north_polar");   break;
+        case MathLib::SOUTH_POLAR:          lua_pushstring(L, "south_polar");   break;
+        default:                            lua_pushstring(L, "unknown");       break;
     }
     return 1;
 }
@@ -616,9 +617,57 @@ void convertFromLua(lua_State* L, int index, MathLib::proj_t& v)
     else if(lua_isstring(L, index))
     {
         const char* proj_str = LuaObject::getLuaString(L, index);
-        if(StringLib::match(proj_str, "auto"))              v = MathLib::AUTOMATIC;
+        if(StringLib::match(proj_str, "auto"))              v = MathLib::AUTOMATIC_PROJECTION;
         else if(StringLib::match(proj_str, "plate_carree")) v = MathLib::PLATE_CARREE;
         else if(StringLib::match(proj_str, "north_polar"))  v = MathLib::NORTH_POLAR;
         else if(StringLib::match(proj_str, "south_polar"))  v = MathLib::SOUTH_POLAR;
+   }
+}
+
+/*----------------------------------------------------------------------------
+ * convertToJson - MathLib::datum_t
+ *----------------------------------------------------------------------------*/
+string convertToJson(const MathLib::datum_t& v)
+{
+    switch(v)
+    {
+        case MathLib::ITRF2014: return "\"ITRF2014\"";
+        case MathLib::EGM08:    return "\"EGM08\"";
+        case MathLib::NAVD88:   return "\"NAVD88\"";
+        default:                return "\"unspecified\"";
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * convertToLua - MathLib::datum_t
+ *----------------------------------------------------------------------------*/
+int convertToLua(lua_State* L, const MathLib::datum_t& v)
+{
+    switch(v)
+    {
+        case MathLib::ITRF2014: lua_pushstring(L, "ITRF2014");      break;
+        case MathLib::EGM08:    lua_pushstring(L, "EGM08");         break;
+        case MathLib::NAVD88:   lua_pushstring(L, "NAVD88");        break;
+        default:                lua_pushstring(L, "unspecified");   break;
+    }
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * convertFromLua - MathLib::datum_t
+ *----------------------------------------------------------------------------*/
+void convertFromLua(lua_State* L, int index, MathLib::datum_t& v)
+{
+    if(lua_isnumber(L, index))
+    {
+        v = static_cast<MathLib::datum_t>(LuaObject::getLuaInteger(L, index));
+    }
+    else if(lua_isstring(L, index))
+    {
+        const char* proj_str = LuaObject::getLuaString(L, index);
+        if(StringLib::match(proj_str, "unspecified"))   v = MathLib::UNSPECIFIED_DATUM;
+        else if(StringLib::match(proj_str, "ITRF2014")) v = MathLib::ITRF2014;
+        else if(StringLib::match(proj_str, "EGM08"))    v = MathLib::EGM08;
+        else if(StringLib::match(proj_str, "NAVD88"))   v = MathLib::NAVD88;
    }
 }

@@ -144,6 +144,7 @@ class Atl03DataFrame: public GeoDataFrame
                 ~Atl03Data          (void) = default;
 
                 bool                read_yapc;
+                bool                read_geoid;
 
                 H5Array<int8_t>     sc_orient;
                 H5Array<float>      velocity_sc;
@@ -162,6 +163,7 @@ class Atl03DataFrame: public GeoDataFrame
                 H5Array<double>     delta_time;
                 H5Array<double>     bckgrd_delta_time;
                 H5Array<float>      bckgrd_rate;
+                H5Array<float>      geoid;
 
                 H5VarSet            anc_geo_data;
                 H5VarSet            anc_corr_data;

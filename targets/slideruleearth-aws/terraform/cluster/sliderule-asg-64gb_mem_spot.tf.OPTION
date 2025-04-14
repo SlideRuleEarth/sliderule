@@ -33,7 +33,6 @@ resource "aws_launch_template" "sliderule_template" {
     export CONTAINER_REGISTRY=${var.container_repo}
     aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${var.container_repo}
     aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-sliderule.yml ./docker-compose.yml
-    docker pull ${var.container_repo}/oceaneyes
     docker-compose -p cluster up --detach
   EOF
   )

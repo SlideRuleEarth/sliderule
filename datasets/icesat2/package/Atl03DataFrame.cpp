@@ -440,6 +440,7 @@ void Atl03DataFrame::AreaOfInterest::rasterregion (const Atl03DataFrame* df)
  *----------------------------------------------------------------------------*/
 Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest& aoi):
     read_yapc           (df->parms->stages[Icesat2Fields::STAGE_YAPC] && (df->parms->yapc.version == 0) && (df->parms->granuleFields.version.value >= 6)),
+    read_geoid          (df->parms->datum == MathLib::EGM08),
     sc_orient           (df->hdf03,                            "/orbit_info/sc_orient"),
     velocity_sc         (df->hdf03, FString("%s/%s", df->beam, "geolocation/velocity_sc").c_str(),      H5Coro::ALL_COLS, aoi.first_segment, aoi.num_segments),
     segment_delta_time  (df->hdf03, FString("%s/%s", df->beam, "geolocation/delta_time").c_str(),       0, aoi.first_segment, aoi.num_segments),
@@ -457,9 +458,10 @@ Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest& 
     delta_time          (df->hdf03, FString("%s/%s", df->beam, "heights/delta_time").c_str(),           0, aoi.first_photon,  aoi.num_photons),
     bckgrd_delta_time   (df->hdf03, FString("%s/%s", df->beam, "bckgrd_atlas/delta_time").c_str()),
     bckgrd_rate         (df->hdf03, FString("%s/%s", df->beam, "bckgrd_atlas/bckgrd_rate").c_str()),
-    anc_geo_data        (df->parms->atl03GeoFields,  df->hdf03, FString("%s/%s", df->beam, "geolocation").c_str(),  0, aoi.first_segment, aoi.num_segments),
-    anc_corr_data       (df->parms->atl03CorrFields, df->hdf03, FString("%s/%s", df->beam, "geophys_corr").c_str(), 0, aoi.first_segment, aoi.num_segments),
-    anc_ph_data         (df->parms->atl03PhFields,   df->hdf03, FString("%s/%s", df->beam, "heights").c_str(),      0, aoi.first_photon,  aoi.num_photons)
+    geoid               (read_geoid ? df->hdf03 : NULL,         FString("%s/%s", df->beam, "geophys_corr/geoid").c_str(), 0, aoi.first_segment, aoi.num_segments),
+    anc_geo_data        (df->parms->atl03GeoFields,  df->hdf03, FString("%s/%s", df->beam, "geolocation").c_str(),        0, aoi.first_segment, aoi.num_segments),
+    anc_corr_data       (df->parms->atl03CorrFields, df->hdf03, FString("%s/%s", df->beam, "geophys_corr").c_str(),       0, aoi.first_segment, aoi.num_segments),
+    anc_ph_data         (df->parms->atl03PhFields,   df->hdf03, FString("%s/%s", df->beam, "heights").c_str(),            0, aoi.first_photon,  aoi.num_photons)
 {
     /* Join Hardcoded Reads */
     sc_orient.join(df->readTimeoutMs, true);
@@ -479,6 +481,7 @@ Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest& 
     delta_time.join(df->readTimeoutMs, true);
     bckgrd_delta_time.join(df->readTimeoutMs, true);
     bckgrd_rate.join(df->readTimeoutMs, true);
+    if(read_geoid) geoid.join(df->readTimeoutMs, true);
 
     /* Join and Add Ancillary Columns */
     anc_geo_data.joinToGDF(df, df->readTimeoutMs, true);
@@ -1319,6 +1322,10 @@ void* Atl03DataFrame::subsettingThread (void* parm)
                 background_index++;
             }
 
+            /* Calculate Height */
+            float height = atl03.h_ph[current_photon];
+            if(atl03.read_geoid) height -= atl03.geoid[current_segment];
+
             /* Add Photon to DataFrame */
             df->addRow();
             df->time_ns.append(Icesat2Fields::deltatime2timestamp(atl03.delta_time[current_photon]));
@@ -1326,7 +1333,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             df->longitude.append(atl03.lon_ph[current_photon]);
             df->x_atc.append(atl03.dist_ph_along[current_photon] + atl03.segment_dist_x[current_segment]);
             df->y_atc.append(atl03.dist_ph_across[current_photon]);
-            df->height.append(atl03.h_ph[current_photon]);
+            df->height.append(height);
             df->solar_elevation.append(atl03.solar_elevation[current_segment]);
             df->background_rate.append(background_rate);
             df->atl03_cnf.append(atl03_cnf);

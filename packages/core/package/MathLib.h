@@ -63,7 +63,7 @@ class MathLib
             NORTH_POLAR,
             SOUTH_POLAR,
             PLATE_CARREE,
-            AUTOMATIC
+            AUTOMATIC_PROJECTION
         } proj_t;
 
         /* Geospatial Coordinate */
@@ -71,6 +71,14 @@ class MathLib
             double  lon;
             double  lat;
         } coord_t;
+
+        /* Geospatial Datum */
+        typedef enum {
+            UNSPECIFIED_DATUM = 0,
+            ITRF2014 = 1,
+            EGM08 = 2,
+            NAVD88 = 3,
+        } datum_t;
 
         /* Cartesian Coordinate */
         typedef struct {

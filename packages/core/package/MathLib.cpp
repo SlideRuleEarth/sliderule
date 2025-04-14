@@ -361,11 +361,11 @@ const char* MathLib::proj2str (proj_t projection)
 {
     switch(projection)
     {
-        case NORTH_POLAR:   return "NORTH_POLAR";
-        case SOUTH_POLAR:   return "SOUTH_POLAR";
-        case PLATE_CARREE:  return "PLATE_CARREE";
-        case AUTOMATIC:     return "AUTOMATIC";
-        default:            return "UNKNOWN";
+        case NORTH_POLAR:           return "NORTH_POLAR";
+        case SOUTH_POLAR:           return "SOUTH_POLAR";
+        case PLATE_CARREE:          return "PLATE_CARREE";
+        case AUTOMATIC_PROJECTION:  return "AUTOMATIC_PROJECTION";
+        default:                    return "UNKNOWN";
     }
 }
 

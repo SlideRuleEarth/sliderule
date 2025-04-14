@@ -118,7 +118,8 @@ class RequestFields: public LuaObject, public FieldDictionary
         FieldElement<string>            resource;           // granule name (including file extension)
         FieldList<string>               resources;          // list of granule names
         FieldColumn<MathLib::coord_t>   polygon;
-        FieldElement<MathLib::proj_t>   projection          {MathLib::AUTOMATIC};
+        FieldElement<MathLib::proj_t>   projection          {MathLib::AUTOMATIC_PROJECTION};
+        FieldElement<MathLib::datum_t>  datum               {MathLib::UNSPECIFIED_DATUM};
         FieldElement<int>               pointsInPolygon     {0};
         FieldElement<int>               timeout             {INVALID_TIMEOUT}; // global timeout
         FieldElement<int>               rqstTimeout         {INVALID_TIMEOUT};
@@ -158,9 +159,14 @@ string convertToJson(const MathLib::proj_t& v);
 int convertToLua(lua_State* L, const MathLib::proj_t& v);
 void convertFromLua(lua_State* L, int index, MathLib::proj_t& v);
 
+string convertToJson(const MathLib::datum_t& v);
+int convertToLua(lua_State* L, const MathLib::datum_t& v);
+void convertFromLua(lua_State* L, int index, MathLib::datum_t& v);
+
 inline uint32_t toEncoding(MathLib::coord_t& v) { (void)v; return Field::USER; }
 inline uint32_t toEncoding(MathLib::point_t& v) { (void)v; return Field::USER; };
 inline uint32_t toEncoding(MathLib::proj_t& v) { (void)v; return Field::USER; };
+inline uint32_t toEncoding(MathLib::datum_t& v) { (void)v; return Field::USER; };
 
 inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<MathLib::coord_t>& v, long start_index, long num_elements) {
     (void)v;
