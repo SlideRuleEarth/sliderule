@@ -236,6 +236,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
             }
             else
             {
+                mlog(ERROR, "Script returned no results: %s", scriptpath);
                 const char* error_msg = "Missing results";
                 const int result_length = StringLib::size(error_msg);
                 const int header_length = buildheader(header, Not_Found, "text/plain", result_length, NULL, serverHead.c_str());
@@ -251,7 +252,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
             const int header_length = buildheader(header, Internal_Server_Error, "text/plain", result_length, NULL, serverHead.c_str());
             rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
             rspq->postCopy(error_msg, result_length, POST_TIMEOUT_MS);
-    }
+        }
     }
     else
     {

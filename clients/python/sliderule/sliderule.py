@@ -124,7 +124,7 @@ def init (
 #
 #  source
 #
-def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=False, session=None):
+def source (api, parm={}, stream=False, callbacks={}, path="/source", session=None):
     '''
     Perform API call to SlideRule service
 
@@ -140,8 +140,6 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
                     record type callbacks (advanced use)
         path:       str
                     path to api being requested
-        silence:    bool
-                    whether error log messages should be generated
 
     Returns
     -------
@@ -164,7 +162,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", silence=Fa
     session = checksession(session)
     for tolerance in [0.0001, 0.001, 0.01, 0.1, 1.0, None]:
         try:
-            return session.source(api, parm=parm, stream=stream, callbacks=callbacks, path=path, silence=silence)
+            return session.source(api, parm=parm, stream=stream, callbacks=callbacks, path=path)
         except RetryRequest as e:
             logger.info(f'Retry requested by {api}: {e}')
             simplifypolygon(parm, tolerance)

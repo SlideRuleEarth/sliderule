@@ -473,19 +473,22 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
                     /* Get Request Completed */
                     rqst_complete = true;
                 }
-                else if(info.index > 0)
-                {
-                    mlog(CRITICAL, "cURL error (%d) encountered after partial response (%ld): %s", res, info.index, key_ptr);
-                    break; // re-initialize headers with new range and try again
-                }
-                else if(res == CURLE_OPERATION_TIMEDOUT)
-                {
-                    mlog(CRITICAL, "cURL call timed out (%d) for request: %s", res, key_ptr);
-                }
                 else
                 {
-                    mlog(CRITICAL, "cURL call failed (%d) for request: %s", res, key_ptr);
+                    if(info.index > 0)
+                    {
+                        mlog(CRITICAL, "cURL error (%d) encountered after partial response (%ld): %s", res, info.index, key_ptr);
+                    }
+                    else if(res == CURLE_OPERATION_TIMEDOUT)
+                    {
+                        mlog(CRITICAL, "cURL call timed out (%d) for request: %s", res, key_ptr);
+                    }
+                    else // unexpected issue
+                    {
+                        mlog(CRITICAL, "cURL call failed (%d) for request: %s", res, key_ptr);
+                    }
                     OsApi::performIOTimeout();
+                    break; // re-initialize headers (with potentially updated range) and try again
                 }
             }
 

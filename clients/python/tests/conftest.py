@@ -36,7 +36,7 @@ def desired_nodes(request):
 
 @pytest.fixture(scope='function')
 def init(domain, organization, desired_nodes):
-    return sliderule.init(domain, verbose=True, loglevel=logging.DEBUG, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    return sliderule.init(domain, verbose=True, loglevel=logging.DEBUG, organization=organization, desired_nodes=desired_nodes)
 
 @pytest.fixture(scope='session')
 def performance(request):

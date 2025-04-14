@@ -143,7 +143,7 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
     local locks_per_node = (rqst["poly"] and not parms["ignore_poly_for_cmr"]) and 1 or core.MAX_LOCKS_PER_NODE
 
     -- Create Receiving DataFrame
-    local df = core.dataframe()
+    local df = core.dataframe({}, {endpoint=endpoint})
     local expected_concurrent_channels = #resources * channels
     df:receive(proxyq_name, rspq, expected_concurrent_channels, parms["rqst_timeout"] * 1000)
 

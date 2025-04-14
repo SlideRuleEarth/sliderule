@@ -29,7 +29,7 @@ jobs:
     - name: Upload Cluster Terraform
       run: |
        cd sliderule/targets/slideruleearth-aws
-       make cluster-upload-terraform
+       make cluster-upload-terraform VERSION=unstable
 
     - name: Set Up Docker Buildx
       uses: docker/setup-buildx-action@v3
