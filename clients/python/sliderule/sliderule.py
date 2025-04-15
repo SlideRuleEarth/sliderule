@@ -431,6 +431,10 @@ def check_version (plugins=[], session=None):
     info = get_version(session=session)
     status = True
 
+    # check response from server
+    if info == None:
+        raise FatalError(f'Failed to get response from server at {session.service_org}.{session.service_url}')
+
     # populate version info
     versions = {}
     for entity in ['server', 'client'] + plugins:
@@ -439,11 +443,11 @@ def check_version (plugins=[], session=None):
 
     # check major version mismatches
     if versions['server'][0] != versions['client'][0]:
-        raise RuntimeError("Client (version {}) is incompatible with the server (version {})".format(versions['client'], versions['server']))
+        raise FatalError("Client (version {}) is incompatible with the server (version {})".format(versions['client'], versions['server']))
     else:
         for pkg in plugins:
             if versions[pkg][0] != versions['client'][0]:
-                raise RuntimeError("Client (version {}) is incompatible with the {} plugin (version {})".format(versions['client'], pkg, versions[pkg]))
+                raise FatalError("Client (version {}) is incompatible with the {} plugin (version {})".format(versions['client'], pkg, versions[pkg]))
 
     # check minor version mismatches
     if versions['server'][1] > versions['client'][1]:

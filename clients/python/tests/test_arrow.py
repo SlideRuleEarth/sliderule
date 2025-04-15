@@ -42,9 +42,9 @@ class TestArrow:
             "output": {"format": "parquet"},
             "resources": ["ATL24_20181014001920_02350103_006_02_001_01.h5"]
         })
-        assert type(df) != type(None)
+        assert isinstance(df, pandas.DataFrame)
         assert len(df) == 63
-        assert len(df.keys()) == 13 # this is not a GDF, so there is one more column since lat and lon are not compbined into geometry
+        assert len(df.keys()) == 13 # this is not a GDF, so there is one more column since lat and lon are not combined into geometry
         assert df["gt"].sum() == 2160
 
     def test_atl03x(self, domain, organization):
@@ -54,7 +54,7 @@ class TestArrow:
             "beams": "gt1l",
             "cnf": 4
         })
-        assert type(df) != type(None)
+        assert isinstance(df, pandas.DataFrame)
         assert len(df) == 5814857
         assert len(df.keys()) == 16
         assert df["gt"].sum() == 58148570

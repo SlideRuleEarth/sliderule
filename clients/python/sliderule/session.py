@@ -287,10 +287,12 @@ class Session:
                         raise FatalError(f'Exception in request to {url}: {e}')
                 logger.error(f'HTTP error <{e.response.status_code}> returned in request to {url} ...retrying request')
 
-            except Exception as e:
-                if self.throw_exceptions or force_throw:
-                    raise FatalError(f'Exception in request to {url}: {e}')
-                logger.error(f'Unexpected exception >> {e} << occurred in request to {url} ...retrying request')
+        # Check Complete
+        if not complete:
+            if self.throw_exceptions or force_throw:
+                raise FatalError(f'Request to {url} did not complete')
+            else:
+                rsps = None
 
         # Return Response
         return rsps

@@ -106,13 +106,14 @@ class TestInitialization:
 
     def test_init_badurl(self):
         with pytest.raises( (sliderule.session.FatalError) ):
-            icesat2.init('incorrect.org:8877')
+            icesat2.init('incorrect.org:8877', rethrow=True)
 
     def test_set_badurl(self):
-        with pytest.raises( (sliderule.session.FatalError) ):
-            sliderule.set_rqst_timeout((1, 60))
-            sliderule.set_url('incorrect.org:8877')
-            sliderule.source("version")
+        sliderule.init() # resets session state
+        sliderule.set_rqst_timeout((1, 60))
+        sliderule.set_url('incorrect.org:8877')
+        rsps = sliderule.source("version")
+        assert rsps == None
 
     def test_seturl_empty(self):
         with pytest.raises(TypeError, match=('url')):

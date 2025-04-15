@@ -314,15 +314,13 @@ int GeoDataFrame::luaCreate (lua_State* L)
                 if(lua_isstring(L, -2))
                 {
                     const char* key = lua_tostring(L, -2);
-                    bool provided = false; // test type of metadata
-                    getLuaFloat(L, -1, true, 0.0, &provided);
-                    if(provided) // treat as a double
+                    if(lua_isnumber(L, -1)) // treat as a double
                     {
                         FieldElement<double>* element = new FieldElement<double>();
                         element->setEncodingFlags(META_COLUMN);
                         dataframe->metaFields.add(key, element, true);
                     }
-                    else // assume it is a string
+                    else if(lua_isstring(L, -1))
                     {
                         FieldElement<string>* element = new FieldElement<string>();
                         element->setEncodingFlags(META_COLUMN);
