@@ -79,5 +79,5 @@ __Step 5__: Display a summary of the results.
 
 262163 rows × 19 columns
 ```
-For a full description of all of the fields returned from the `atl06p` function, see the [elevations](../../user_guide/ICESat-2.html#elevations) documentation.
+For a full description of all of the fields returned from the `atl06p` function, see the [elevations](../../user_guide/icesat2.html#elevations) documentation.
 

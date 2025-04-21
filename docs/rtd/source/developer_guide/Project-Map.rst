@@ -44,7 +44,7 @@ Links to Project Resources
 
     Python Client ICESat-2 API Reference: `ICESat-2 Reference Documentation <../api_reference/icesat2.html>`_
 
-    ICESat-2 Data Processing User's Guide: `User Documentation <../user_guide/ICESat-2.html>`_
+    ICESat-2 Data Processing User's Guide: `User Documentation <../user_guide/icesat2.html>`_
 
     Additional Information on CMR: `CMR Website <https://cmr.earthdata.nasa.gov>`_
 

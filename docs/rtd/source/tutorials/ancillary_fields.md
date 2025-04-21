@@ -78,7 +78,7 @@ time                                                                            
 
 [250448 rows x 18 columns]
 ```
-For a full description of all of the fields returned from the `atl06p` function, see the [elevations](../../user_guide/ICESat-2.html#elevations) documentation.
+For a full description of all of the fields returned from the `atl06p` function, see the [elevations](../../user_guide/icesat2.html#elevations) documentation.
 
 
 ## Including an Ancillary Field in an `atl03sp` request
@@ -136,9 +136,9 @@ time                                                                            
 
 [20060 rows x 19 columns]
 ```
-For a full description of all of the fields returned from the `atl03sp` function, see the [photons](../../user_guide/ICESat-2.html#segmented-photon-data) documentation.
+For a full description of all of the fields returned from the `atl03sp` function, see the [photons](../../user_guide/icesat2.html#segmented-photon-data) documentation.
 
 
 ## Next Steps
 
-For more information on the ancillary field parameters, see the [User's Guide](../../user_guide/ICESat-2.html#ancillary-field-parameters).
+For more information on the ancillary field parameters, see the [User's Guide](../../user_guide/icesat2.html#ancillary-field-parameters).

@@ -66,7 +66,7 @@ def sample(asset, coordinates, parms={}):
     Parameters
     ----------
     asset:          str
-                    data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
+                    data source asset (see `Assets </web/rtd/user_guide/icesat2.html#assets>`_)
     coordinates:    list
                     list of coordinates as [longitude, latitude]
     parms:          dict
@@ -173,7 +173,7 @@ def subset(asset, extents, parms={}):
     Parameters
     ----------
     asset:          str
-                    data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
+                    data source asset (see `Assets </web/rtd/user_guide/icesat2.html#assets>`_)
     extents:        list
                     list of extent coordinates as [minimum longitude, minimum latitude, maximum longitude, maximum latitude]
     parms:          dict

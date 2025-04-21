@@ -55,7 +55,7 @@ __Step 3__: Create a list of coordinates that represent the Grand Mesa region of
 ```
 The **grandmesa.geojson** file used in this example can be downloaded by navigating to our [downloads](/rtd/tutorials/downloads.html) page; alternatively, you can create your own GeoJSON file at [geojson.io](https://geojson.io).
 
-The `toregion` function creates a representation of the geospatial region that is understood by SlideRule.  It accepts both GeoJSON files and Shapefiles.  For a full description of the function, see the [toregion](../../user_guide/ICESat-2.html#toregion) documentation.
+The `toregion` function creates a representation of the geospatial region that is understood by SlideRule.  It accepts both GeoJSON files and Shapefiles.  For a full description of the function, see the [toregion](../../user_guide/icesat2.html#toregion) documentation.
 
 __Step 4__: Create a dictionary of processing parameters specifying how the elevations for the region should be calculated.
 ```python
@@ -67,7 +67,7 @@ __Step 4__: Create a dictionary of processing parameters specifying how the elev
     "res": 20.0
 }
 ```
-For a full description of the different processing parameters that are accepted by SlideRule, see [parameters](../../user_guide/ICESat-2.html#parameters).  The parameters of interest here are _len_ which specifies the total along-track length of the segment used to calculate an elevation, and _res_ which specifies the along-track posting interval of the calculation.
+For a full description of the different processing parameters that are accepted by SlideRule, see [parameters](../../user_guide/icesat2.html#parameters).  The parameters of interest here are _len_ which specifies the total along-track length of the segment used to calculate an elevation, and _res_ which specifies the along-track posting interval of the calculation.
 
 __Step 5__: Issue the processing request to SlideRule.
 ```python
@@ -94,7 +94,7 @@ max        39.194233    1767.000000    -107.735253      24.634544  ...    3737.0
 
 [8 rows x 13 columns]
 ```
-For a full description of all of the fields returned from the `atl06p` function, see the [elevations](../../user_guide/ICESat-2.html#elevations) documentation.
+For a full description of all of the fields returned from the `atl06p` function, see the [elevations](../../user_guide/icesat2.html#elevations) documentation.
 
 __Step 7__: Plot the geolocated elevations returned by SlideRule using measurements collected by ICESat-2 in the Grand Mesa region.
 ```python
@@ -109,5 +109,3 @@ The resulting plot should look something like:
 ## Next Steps
 
 Once you've completed this walk-through and are comfortable issuing processing requests to SlideRule, you should take a look at the [Documentation](../../) and the example [Jupyter Notebooks](../../getting_started/Examples.html).
-
-There is also a [Demo Application](https://demo.slideruleearth.io/) which renders a simple [widgets-based notebook](https://github.com/SlideRuleEarth/sliderule-python/blob/main/examples/voila_demo.ipynb) using *voila* that allows you to try different processing parameters and see the output on an interactive map.

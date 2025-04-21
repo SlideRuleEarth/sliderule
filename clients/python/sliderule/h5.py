@@ -79,7 +79,7 @@ def h5 (dataset, resource, asset, datatype=DATATYPES["DYNAMIC"], col=0, startrow
         resource:   str
                     HDF5 filename
         asset:      str
-                    data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
+                    data source asset (see `Assets </web/rtd/user_guide/icesat2.html#assets>`_)
         datatype:   int
                     the type of data the returned dataset list should be in (datasets that are naturally of a different type undergo a best effort conversion to the specified data type before being returned)
         col:        int
@@ -129,7 +129,7 @@ def h5p (datasets, resource, asset):
         resource:   str
                     HDF5 filename
         asset:      str
-                    data source asset (see `Assets </web/rtd/user_guide/ICESat-2.html#assets>`_)
+                    data source asset (see `Assets </web/rtd/user_guide/icesat2.html#assets>`_)
 
     Returns
     -------
