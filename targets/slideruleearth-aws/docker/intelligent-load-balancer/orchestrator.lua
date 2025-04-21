@@ -575,14 +575,14 @@ local function api_prometheus(applet)
 
     -- create member count metrics
     local member_count_metric = ""
-    for member_metric,_ in pairs(StatData["memberCounts"]) do
+    for member_metric,_ in pairs(StatData.memberCounts) do
         member_count_metric = member_count_metric .. string.format([[
 
 # TYPE %s counter
 %s %d
 ]], member_metric,
     member_metric,
-    StatData["memberCounts"][member_metric])
+    StatData.memberCounts[member_metric])
     end
 
     -- build full response
@@ -658,17 +658,43 @@ local function api_metric(applet)
     local metric_value = tonumber(request["attr"])
     local metric_type = request["flags"]
 
-    -- store metrics
-    if metric_type == 0 then
+    -- check name provided
+    if not metric_name then
+        StatData.countAppMetrics['ilb_metric_not_provided'] = (StatData.countAppMetrics['ilb_metric_not_provided'] or 0) + 1
+        applet:set_status(400)
+
+    -- check name is a string
+    elseif type(metric_name) ~= 'string' then
+        StatData.countAppMetrics['ilb_metric_wrong_type'] = (StatData.countAppMetrics['ilb_metric_wrong_type'] or 0) + 1
+        applet:set_status(400)
+
+    -- check name length
+    elseif #metric_name == 0 or #metric_name > 32 then
+        StatData.countAppMetrics['ilb_metric_too_long'] = (StatData.countAppMetrics['ilb_metric_too_long'] or 0) + 1
+        applet:set_status(400)
+
+    -- check name characters
+    elseif not metric_name:match("^%w+$") then
+        StatData.countAppMetrics['ilb_metric_invalid_char'] = (StatData.countAppMetrics['ilb_metric_invalid_char'] or 0) + 1
+        applet:set_status(400)
+
+    -- update count metric
+    elseif metric_type == 0 then
         StatData.countAppMetrics[metric_name] = (StatData.countAppMetrics[metric_name] or 0) + metric_value
         applet:set_status(200)
+
+    -- update gauge metric
     elseif metric_type == 1 then
         StatData.gaugeAppMetrics[metric_name] = metric_value
         StatData.gaugeAppMetrics[metric_name .. "_sum"] = (StatData.gaugeAppMetrics[metric_name .. "_sum"] or 0.0) + metric_value
         StatData.countAppMetrics[metric_name .. "_count"] = (StatData.countAppMetrics[metric_name .. "_count"] or 0) + 1
         applet:set_status(200)
+
+    -- invalid metric type
     else
+        StatData.countAppMetrics['ilb_metric_invalid_type'] = (StatData.countAppMetrics['ilb_metric_invalid_type'] or 0) + 1
         applet:set_status(400)
+
     end
 
     -- send response
@@ -752,7 +778,7 @@ local function backgroud_scrubber()
                 service_registry[address] = nil
             end
             -- set member count
-            StatData["memberCounts"][service.."_members"] = total_num_members
+            StatData.memberCounts[service.."_members"] = total_num_members
         end
 
         -- scrub timed-out transactions
