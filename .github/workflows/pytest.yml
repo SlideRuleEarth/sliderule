@@ -12,7 +12,7 @@ on:
 jobs:
   test:
     name: ${{ matrix.CONDA_ENV }}-test
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
