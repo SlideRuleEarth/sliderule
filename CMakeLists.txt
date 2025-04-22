@@ -152,7 +152,6 @@ endif()
 # Project Options #
 
 option (SHARED_LIBRARY "Create shared library instead of sliderule binary" OFF)
-option (SERVER_APP "Create sliderule server binary" ON)
 
 # Library Options #
 

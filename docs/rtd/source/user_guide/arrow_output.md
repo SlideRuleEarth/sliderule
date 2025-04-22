@@ -76,6 +76,6 @@ To use this feature, the following parameters can be used:
 
 The `sliderule-stage` asset tells sliderule to stage the output in SlideRule's own bucket.  The full path of the file is then returned back to the user so that the user can later open the file directly.  For instance, in the above example, a call to `icesat2.atl06p` could return "s3://sliderule-public/myfile.parquet".  If no `path` is specified, the server code generates a random file name and uses it to store the results.  The generated file name including the path is returned back to the user.
 
-There are a couple of contraints to using this feature:
+There are a couple of constraints to using this feature:
 * In order to access the file staged in the SlideRule owned bucket, the user has to have read-access to the bucket.  Typically, this is only provided through partnered organizations like [CryoCloud](https://cryointhecloud.com/).  When running on CryoCloud, a user can specify the "sliderule-stage" asset, and know that they returned file path is immediately accessible from their environment.
 * Files are only stored for a short period of time before they are automatically deleted.  Typically, the retention time is 2 weeks.
