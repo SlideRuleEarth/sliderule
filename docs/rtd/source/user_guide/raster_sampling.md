@@ -74,9 +74,9 @@ The zonal statistic columns added to a GeoDataFrame for each sampled raster data
 - __"stdev"__: standard deviation of pixel values of pixels that constributed to sample value
 - __"mad"__: median absolute deviation of pixel values of pixels that constributed to sample value
 
-## Special Case - HLS
+## Providing your own catalog
 
-Unlike the other datasets supported by SlideRule, the HLS dataset (identified as `landsat-hls` in the Asset Directory) requires the user to first query NASA's EarthData CMR system, and provide the results of that query in the request to SlideRule.
+By default, the SlideRule server code will inspect each request and will automatically make queries to the appropriate catalog for each raster that needs to be sampled. But sometimes the user may wish to have more control over which files are sampled; when that is the case, the user can supply a STAC response directly in their request.
 
 For example, if you wanted to sample all HLS rasters that intersect the following polygon:
 ```python
@@ -91,7 +91,7 @@ collected in the month of January in year 2021,
 time_start = "2021-01-01T00:00:00Z"
 time_end = "2021-02-01T23:59:59Z"
 ```
-Then you would first have to perform a STAC query with those parameters like so:
+Then you could perform a STAC query yourself with those parameters like so:
 ```python
 catalog = earthdata.stac(short_name="HLS", polygon=polygon, time_start=time_start, time_end=time_end, as_str=True)
 ```
@@ -99,3 +99,4 @@ and then include the response in the request parameters under the `catalog` fiel
 ```python
 rqst = {"samples": {"asset": "landsat-hls", "catalog": catalog, "bands": ["B02"]}}
 ```
+In general, if you are using the SlideRule Python Client to query for the catalog, then there is no difference in just supplying those parameters in your request.  But the example above highlights the ability to take control of the query on the client side.

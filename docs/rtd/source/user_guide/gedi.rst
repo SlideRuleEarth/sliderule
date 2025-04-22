@@ -1,6 +1,6 @@
-======================
-GEDI Plugin Module
-======================
+===========
+GEDI Module
+===========
 
 
 1. Overview
@@ -150,11 +150,13 @@ In these cases, certain APIs in the SlideRule Python client allow the calling ap
 If a callback is supplied, the API will not return back to the calling application anything associated with the supplied record types, but assumes the callback fully handles processing the data.
 The callback function takes the following form:
 
-.. py:function:: callback (record)
+.. py:function:: callback (record, session)
 
     Callback that handles the results of a processing request for the given record.
 
     :param dict record: the record object, usually a dictionary containing data
+
+    :param class session: the session object, containing settings for the current connection to the sliderule servers
 
 Here is an example of a callback being used for the ``gedi01bp`` function:
 
@@ -162,7 +164,7 @@ Here is an example of a callback being used for the ``gedi01bp`` function:
 
         rec_cnt = 0
 
-        def gedi01bp_cb(rec):
+        def gedi01bp_cb(rec, session):
             global rec_cnt
             rec_cnt += 1
             print("{} {}".format(rec_cnt, rec["shot_number"]), end='\r')
