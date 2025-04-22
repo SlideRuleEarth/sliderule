@@ -1,11 +1,11 @@
-# sliderule
+# sliderule <img src="https://slideruleearth.io/web/assets/images/SlideRule-whiteBelly.png" alt="SlideRule Logo" style="float:right; margin: 0 15px 15px 0; width:50px;">
 [![DOI](https://zenodo.org/badge/261318746.svg)](https://zenodo.org/badge/latestdoi/261318746)
 [![Python Tests](https://github.com/SlideRuleEarth/sliderule/actions/workflows/pytest.yml/badge.svg?event=workflow_run)](https://github.com/SlideRuleEarth/sliderule/actions/workflows/pytest.yml)
 [![Self Tests](https://github.com/SlideRuleEarth/sliderule/actions/workflows/self_test.yml/badge.svg)](https://github.com/SlideRuleEarth/sliderule/actions/workflows/self_test.yml)
 
-### A cloud-native framework for on-demand science data processing. Hosted at [slideruleearth.io](https://slideruleearth.io).
+#### A cloud-native framework for on-demand science data processing, hosted at [slideruleearth.io](https://slideruleearth.io).
 
-<img src="https://slideruleearth.io/web/assets/images/SlideRule-whiteBelly.png" alt="SlideRule Logo" style="float:left; margin: 0 15px 15px 0; width:150px;"> This repository is for SlideRule developers and contains the source code for the SlideRule server, clients, and supporting services like the documentation website. If you are a science data user interested in using SlideRule, you can get started right away with our [web client](https://client.slideruleearth.io) or check out our [website](https://slideruleearth.io) where you will find [installation instructions](https://slideruleearth.io/rtd/getting_started/Install.html) for our Python client, and [contact information](https://slideruleearth.io/web/contact/) for reaching out to us.
+ This repository is for SlideRule developers and contains the source code for the SlideRule server, clients, and supporting services like the documentation website. If you are a science data user interested in using SlideRule, you can get started right away with our [web client](https://client.slideruleearth.io) or check out our [website](https://slideruleearth.io) where you will find [installation instructions](https://slideruleearth.io/rtd/getting_started/Install.html) for our Python client, and [contact information](https://slideruleearth.io/web/contact/) for reaching out to us.
 
 
 ## I. Prerequisites
