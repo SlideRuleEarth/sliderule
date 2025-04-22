@@ -803,7 +803,37 @@ def tnm(short_name, polygon=None, time_start=None, time_end=datetime.utcnow().st
 #  Search
 #
 def search(parm, resources=None):
+    '''
+    Return granules and populate catalogs for all required resources using the supplied parameters.  This is the highest-level API call and attempts to automatically determine which servies need to be queried when making a request.
 
+    Parameters
+    ----------
+        parm:               dict
+                            request parameters
+        resources:          list
+                            list of granules to process
+
+    Returns
+    -------
+    list
+        list of granules to process
+
+    Notes
+    -----
+    The ``parm`` argument will be modified in place.
+    The ``asset`` parameter must be supplied
+
+    Examples
+    --------
+        >>> from sliderule import earthdata
+        >>> region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
+        ...            {"lon": -107.7677425431139, "lat": 38.90611184543033},
+        ...            {"lon": -107.7818591266989, "lat": 39.26613714985466},
+        ...            {"lon": -108.3605610678553, "lat": 39.25086131372244},
+        ...            {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
+        >>> parms = {"asset": "icesat2", "poly": region, "cycle": 20, "rgt": 232}
+        >>> resources = earthdata.search(parms)
+    '''
     # Initialize Resources
     if resources == None:
         resources = []

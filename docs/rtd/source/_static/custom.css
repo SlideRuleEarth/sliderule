@@ -1,0 +1,7 @@
+/* Style captions for code-blocks in sphinx_rtd_theme */
+
+div.literal-block-wrapper .code-block-caption {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #030242;
+}

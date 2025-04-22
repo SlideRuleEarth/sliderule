@@ -48,14 +48,7 @@ ATL03 contains a set of photon classification values, that are designed to ident
 The signal confidence can be supplied as strings {"atl03_tep", "atl03_not_considered", "atl03_background", "atl03_within_10m", "atl03_low", "atl03_medium", "atl03_high"} or as numbers {-2, -1, 0, 1, 2, 3, 4}.
 The default values, of srt=3, cnf=0, and quality_ph=0 will return all photons not flagged as instrumental artifacts, and the 'cnf' parameter will match the land-ice classification.
 
-2.2.2 ATL08 classification
-##########################################
-
-If ATL08 classification parameters are specified, the ATL08 (vegetation height) files corresponding to the ATL03 files are queried for the more advanced classification scheme available in those files.  Photons are then selected based on the classification values specified.  Note that srt=0 (land) and cnf=0 (no native filtering) should be specified to allow all ATL08 photons to be used.
-
-* ``"atl08_class"``: list of ATL08 classifications used to select which photons are used in the processing (the available classifications are: "atl08_noise", "atl08_ground", "atl08_canopy", "atl08_top_of_canopy", "atl08_unclassified")
-
-2.2.3 YAPC classification
+2.2.2 YAPC classification
 ##########################################
 
 The experimental YAPC (Yet Another Photon Classifier) photon-classification scheme assigns each photon a score based on the number of adjacent photons.  YAPC parameters are provided as a dictionary, with entries described below:
@@ -79,6 +72,13 @@ To run the YAPC algorithm, specify the YAPC settings as a sub-dictionary. Here i
         "len": 20.0,
         "res": 20.0
     }
+
+2.2.3 ATL08 classification
+##########################################
+
+If ATL08 classification parameters are specified, the ATL08 (vegetation height) files corresponding to the ATL03 files are queried for the more advanced classification scheme available in those files.  Photons are then selected based on the classification values specified.  Note that srt=0 (land) and cnf=0 (no native filtering) should be specified to allow all ATL08 photons to be used.
+
+* ``"atl08_class"``: list of ATL08 classifications used to select which photons are used in the processing (the available classifications are: "atl08_noise", "atl08_ground", "atl08_canopy", "atl08_top_of_canopy", "atl08_unclassified")
 
 2.2.4 ATL24 classification
 ##########################################
