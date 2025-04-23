@@ -395,6 +395,19 @@ The vegetation GeoDataFrame has the following columns:
 - ``"canopy_h_metrics"``: relief height at given percentile for canopy photons
 
 
+3.4 Processing Flags
+------------------------------
+
+The following processing flags are used for all ICESat-2 APIs:
+
+- ``"0x0001"``: Along track spread too short
+- ``"0x0002"``: Too few photons
+- ``"0x0004"``: Maximum iterations reached
+- ``"0x0008"``: Out of bounds
+- ``"0x0010"``: Underflow
+- ``"0x0020"``: Overflow
+
+
 4. Callbacks
 ============
 For large processing requests, it is possible that the data returned from the API is too large or impractical to fit in the local memory of the Python interpreter making the request.

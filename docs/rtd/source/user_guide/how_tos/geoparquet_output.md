@@ -7,7 +7,7 @@
 
 This tutorial walks you through the steps necessary to return data from SlideRule in the GeoParquet format.
 
-**Prerequisites**: This walk-through assumes you have already installed the SlideRule Python client and familiar with how to use it. See the [installation](../../getting_started/Install.html) instructions in the reference documentation if you need help installing the SlideRule Python client.  See the [Making Your First Request](./first_request.html) tutorial if you've never made a SlideRule processing request before.
+**Prerequisites**: This walk-through assumes you have already installed the SlideRule Python client and familiar with how to use it. See the [installation](/getting_started/Install) instructions in the reference documentation if you need help installing the SlideRule Python client.  See the [Making Your First Request](./first_request) tutorial if you've never made a SlideRule processing request before.
 
 
 ## Background
@@ -41,7 +41,7 @@ __Step 2__: Create parameters for a typical `atl06p` processing request (it coul
     "res": 20.0
 }
 ```
-The **grandmesa.geojson** file used in this example can be downloaded by navigating to our [downloads](/rtd/tutorials/downloads.html) page; alternatively, you can create your own GeoJSON file at [geojson.io](https://geojson.io).
+The **grandmesa.geojson** file used in this example can be downloaded by navigating to our [downloads](./downloads) page; alternatively, you can create your own GeoJSON file at [geojson.io](https://geojson.io).
 
 __Step 3__: Specify the GeoParquet format.
 ```python

@@ -804,7 +804,7 @@ def tnm(short_name, polygon=None, time_start=None, time_end=datetime.utcnow().st
 #
 def search(parm, resources=None):
     '''
-    Return granules and populate catalogs for all required resources using the supplied parameters.  This is the highest-level API call and attempts to automatically determine which servies need to be queried when making a request.
+    Return granules and populate catalogs for all required resources using the supplied parameters.  This is the highest-level API call and attempts to automatically determine which services need to be queried when making a request.
 
     Parameters
     ----------

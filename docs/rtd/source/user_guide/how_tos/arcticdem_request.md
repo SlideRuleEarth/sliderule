@@ -9,7 +9,7 @@ This tutorial walks you through the steps necessary to sample the ArcticDEM at t
 
 For a full set of code associated with this tutorial, see: https://github.com/SlideRuleEarth/sliderule-python/blob/development/examples/arcticdem.ipynb.
 
-**Prerequisites**: This walk-through assumes you have already installed the SlideRule Python client and familiar with how to use it. See the [installation](../../getting_started/Install.html) instructions in the reference documentation if you need help installing the SlideRule Python client.  See the [Making Your First Request](./first_request.html) tutorial if you've never made a SlideRule processing request before.
+**Prerequisites**: This walk-through assumes you have already installed the SlideRule Python client and familiar with how to use it. See the [installation](/getting_started/Install) instructions in the reference documentation if you need help installing the SlideRule Python client.  See the [Making Your First Request](./first_request) tutorial if you've never made a SlideRule processing request before.
 
 
 ## Background
@@ -39,7 +39,7 @@ __Step 2__: Create parameters for a typical `atl06p` processing request.
     "res": 20.0
 }
 ```
-The **dicksonfjord.geojson** file used in this example can be downloaded by navigating to our [downloads](/rtd/tutorials/downloads.html) page; alternatively, you can create your own GeoJSON file at [geojson.io](https://geojson.io).  Be sure that your region of interest is in the arctic, otherwise there will be no data in the ArcticDEM for it.
+The **dicksonfjord.geojson** file used in this example can be downloaded by navigating to our [downloads](./downloads) page; alternatively, you can create your own GeoJSON file at [geojson.io](https://geojson.io).  Be sure that your region of interest is in the arctic, otherwise there will be no data in the ArcticDEM for it.
 
 __Step 3__: Specify sampling the ArcticDEM mosaic.
 ```python

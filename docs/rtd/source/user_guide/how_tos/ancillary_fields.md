@@ -7,7 +7,7 @@
 
 This tutorial walks you through the steps necessary to include ancillary fields in the data returned for `atl03sp` and `atl06p` requests.  Ancillary fields are fields present in the ATL03 ICESat-2 Standard Product, but are not included in the base results returned by SlideRule.
 
-**Prerequisites**: This walk-through assumes you have already installed the SlideRule Python client and familiar with how to use it. See the [installation](../../getting_started/Install.html) instructions in the reference documentation if you need help installing the SlideRule Python client.  See the [Making Your First Request](./first_request.html) tutorial if you've never made a SlideRule processing request before.
+**Prerequisites**: This walk-through assumes you have already installed the SlideRule Python client and familiar with how to use it. See the [installation](/getting_started/Install) instructions in the reference documentation if you need help installing the SlideRule Python client.  See the [Making Your First Request](./first_request) tutorial if you've never made a SlideRule processing request before.
 
 
 ## Background
@@ -45,7 +45,7 @@ __Step 2__: Create parameters for a typical `atl06p` processing request.
     "res": 20.0
 }
 ```
-The **grandmesa.geojson** file used in this example can be downloaded by navigating to our [downloads](/rtd/tutorials/downloads.html) page; alternatively, you can create your own GeoJSON file at [geojson.io](https://geojson.io).
+The **grandmesa.geojson** file used in this example can be downloaded by navigating to our [downloads](./downloads) page; alternatively, you can create your own GeoJSON file at [geojson.io](https://geojson.io).
 
 __Step 3__: Add ancillary fields to the request.
 ```python
@@ -102,7 +102,7 @@ __Step 2__: Create parameters for a typical `atl06p` processing request.
     "res": 20.0
 }
 ```
-The **grandmesa.geojson** file used in this example can be downloaded by navigating to our [downloads](/rtd/tutorials/downloads.html) page; alternatively, you can create your own GeoJSON file at [geojson.io](https://geojson.io).
+The **grandmesa.geojson** file used in this example can be downloaded by navigating to our [downloads](./downloads) page; alternatively, you can create your own GeoJSON file at [geojson.io](https://geojson.io).
 
 __Step 3__: Add ancillary fields to the request.
 ```python

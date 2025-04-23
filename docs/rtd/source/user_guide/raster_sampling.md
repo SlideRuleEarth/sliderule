@@ -67,12 +67,12 @@ The standard columns added to a GeoDataFrame for each sampled raster dataset are
 The zonal statistic columns added to a GeoDataFrame for each sampled raster dataset are:
 
 - __"count"__: number of pixels read to calculate sample value
-- __"min"__: minimum pixel value of pixels that constributed to sample value
-- __"max"__: maximum pixel value of pixels that constributed to sample value
-- __"mean"__: average/mean pixel value of pixels that constributed to sample value
-- __"median"__: average/median pixel value of pixels that constributed to sample value
-- __"stdev"__: standard deviation of pixel values of pixels that constributed to sample value
-- __"mad"__: median absolute deviation of pixel values of pixels that constributed to sample value
+- __"min"__: minimum pixel value of pixels that contributed to sample value
+- __"max"__: maximum pixel value of pixels that contributed to sample value
+- __"mean"__: average/mean pixel value of pixels that contributed to sample value
+- __"median"__: average/median pixel value of pixels that contributed to sample value
+- __"stdev"__: standard deviation of pixel values of pixels that contributed to sample value
+- __"mad"__: median absolute deviation of pixel values of pixels that contributed to sample value
 
 ## Providing your own catalog
 
