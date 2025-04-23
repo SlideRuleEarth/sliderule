@@ -203,7 +203,7 @@ curl https://sliderule.slideruleearth.io/source/defaults
 |geojson|Geometry of area of interest|geojson string||
 |cellsize|Resolution of rasterized area of interest|degrees||
 
-### Core Request Fields
+### ICESat-2 Request Fields
 
 |Parameter|Description|Units|Default|
 |---------|-----------|-----|-------|
