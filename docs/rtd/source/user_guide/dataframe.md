@@ -72,7 +72,7 @@ The default resulting DataFrame from this API contains the following columns:
 |confidence|Bathymetry confidence|0 to 1.0, higher is more confident (float)||
 |ellipse_h|Elliptical height of photon (elevation above ellipse)|meters (float)|ITRF2014, Optional: `compact` set to false|
 |invalid_kd|Kd was not able to be retrieved for time and location of photon|0:valid, 1:invalid|used in uncertainty calculation, Optional: `compact` set to false|
-|invalid_wind_speed|wind speed was not able to be retrieved for time and location of photon|0:valid, 1:invalid|used in uncertainty calcuation, Optional: `compact` set to false|
+|invalid_wind_speed|wind speed was not able to be retrieved for time and location of photon|0:valid, 1:invalid|used in uncertainty calculation, Optional: `compact` set to false|
 |low_confidence_Flag|Bathymetry confidence is less than 0.6|0:high confidence, 1:low confidence|Optional: `compact` set to false|
 |night_flag|Photon collected at night, solar elevation < 5 degrees|0:day, 1:night|Optional: `compact` set to false|
 |sensor_depth_exceeded|Turbidity of water and depth of photon indicate unlikely return|0:valid, 1:exceeded|Optional: `compact` set to false|
@@ -210,7 +210,7 @@ curl https://sliderule.slideruleearth.io/source/defaults
 |srt|Surface reference type to use when assigning ATL03 Confidence|-1:dynamic, 0:land, 1:ocean, 2:sea ice, 3:land ice, 4:inland water|dynamic|
 |pass_invalid|Include results that fail quality checks|boolean|false|
 |dist_in_seg|Treat all distance parameters as being expressed in segments|boolean|false|
-|cnf|ATL03 confidence filter, when supplied as single value, used as minumum|list/int; -2:tep, -1:not considered, 0:background, 1:within 10m, 2:low, 3:medium, 4:high|2|
+|cnf|ATL03 confidence filter, when supplied as single value, used as minimum|list/int; -2:tep, -1:not considered, 0:background, 1:within 10m, 2:low, 3:medium, 4:high|2|
 |quality_ph|ATL03 quality filter|list; 0:nominal, 1:afterpulse, 2:impulse, 3:tep|0|
 |atl08_class|ATL08 classification filter|list; 0:noise, 1:ground, 2:canopy, 3:top of canopy, 4:unclassified|when using `phoreal` and not specified, will default to ground, canopy, and top of canopy|
 |beams|Beam selection|list; 'gt1l', 'gt1r', 'gt2l', 'gt2r', 'gt3l', 'gt3r'|all|
@@ -235,7 +235,7 @@ curl https://sliderule.slideruleearth.io/source/defaults
 
 |Parameter|Description|Units|Default|
 |---------|-----------|-----|-------|
-|maxi|Maximum interations on least squares fit|int|5|
+|maxi|Maximum iterations on least squares fit|int|5|
 |h_win|Minimum window|double; meters|3.0|
 |sigma_r|Maximum robust dispersion|double; meters|5.0|
 
@@ -246,7 +246,7 @@ curl https://sliderule.slideruleearth.io/source/defaults
 |score|Minimum allowed weight of photon|int|0|
 |version|YAPC algorithm version|0:read from ATL03 granule, 1-3:algorithm version|3|
 |knn|k-nearest neighbors (version 2 only)|int|0|
-|min_knn|minimum number of k-nearest neighors (version 3 only)|int|5|
+|min_knn|minimum number of k-nearest neighbors (version 3 only)|int|5|
 |win_h|window height (overrides calculated value if non-zero)|double|6.0|
 |win_x|window width|double|15.0|
 
