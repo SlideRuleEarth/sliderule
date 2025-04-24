@@ -87,7 +87,7 @@ def list_rows(table, time_field):
 #
 @status.route('/request_counts/<field>', methods=['GET'])
 def request_counts(field):
-    return value_counts("requests", field, ['source_ip', 'client', 'endpoint', 'status_code', 'organization', 'version'], "request_time")
+    return value_counts("requests", field, ['source_ip_hash', 'source_ip_location', 'client', 'endpoint', 'status_code', 'organization', 'version'], "request_time")
 
 #
 # Alarm Counts
