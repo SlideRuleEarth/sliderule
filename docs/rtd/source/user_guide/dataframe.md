@@ -275,7 +275,7 @@ curl https://sliderule.slideruleearth.io/source/defaults
 
 |Parameter|Description|Units|Default|
 |---------|-----------|-----|-------|
-|rgt|Reference ground track|int||
-|cycle|Orbit cycle|int||
-|region|ATL03 region|int; 1-14||
-|version|ATL03 release version||
+|rgt|Reference ground track|int|all|
+|cycle|Orbit cycle|int|all|
+|region|ATL03 region|int; 1-14|all|
+|version|ATL03 release version|latest supported release|
