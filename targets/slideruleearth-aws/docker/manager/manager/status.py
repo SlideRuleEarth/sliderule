@@ -1,6 +1,6 @@
 from flask import (Blueprint, g, request)
 from werkzeug.exceptions import abort
-from supervisor.db import get_db
+from manager.db import get_db
 import json
 
 ####################
@@ -14,6 +14,24 @@ status = Blueprint('status', __name__, url_prefix='/status')
 ####################
 
 #
+# Build Time Range Query
+#
+def build_time_range_query(time_field):
+    duration = request.args.get('duration')
+    t0 = request.args.get('t0')
+    t1 = request.args.get('t1')
+    if duration != None and int(duration) > 0:
+        return f'WHERE {time_field} >= NOW() - INTERVAL {duration} seconds'
+    elif t0 != None and t1 != None:
+        return f'WHERE {time_field} BETWEEN {t0} AND {t1}'
+    elif t0 != None:
+        return f'WHERE {time_field} >= {t0}'
+    elif t1 != None:
+        return f'WHERE {time_field} <= {t1}'
+    else:
+        return ''
+
+#
 # Value Counts
 #
 def value_counts(table, field, valid_fields, time_field):
@@ -24,29 +42,9 @@ def value_counts(table, field, valid_fields, time_field):
             cmd = f"""
                 SELECT {field}, COUNT(*) AS count
                 FROM {table}
+                {build_time_range_query(time_field)}
                 GROUP BY {field}
             """
-            # conditionally add duration
-            duration = request.args.get('duration')
-            if duration != None and int(duration) > 0:
-                cmd += f"""
-                    WHERE {time_field} >= NOW() - INTERVAL {duration} seconds
-                """
-            # conditionally add t0 and t1
-            t0 = request.args.get('t0')
-            t1 = request.args.get('t1')
-            if t0 != None and t1 != None:
-                cmd += f"""
-                    WHERE {time_field} BETWEEN {t0} AND {t1}
-                """
-            elif t0 != None:
-                cmd += f"""
-                    WHERE {time_field} BETWEEN {t0} AND NOW()
-                """
-            else: # t1 != None
-                cmd += f"""
-                    WHERE {time_field} < {t1}
-                """
             # execute request
             db = get_db()
             result = db.execute(cmd).fetchall()
@@ -63,32 +61,12 @@ def value_counts(table, field, valid_fields, time_field):
 #
 def list_rows(table, time_field):
     try:
-        # build initial query
+        # build query
         cmd = f"""
-            SELECT *
+            SELECT * EXCLUDE (aoi)
             FROM {table}
+            {build_time_range_query(time_field)}
         """
-        # conditionally add duration
-        duration = request.args.get('duration')
-        if duration != None and int(duration) > 0:
-            cmd += f"""
-                WHERE {time_field} >= NOW() - INTERVAL {duration} seconds
-            """
-        # conditionally add t0 and t1
-        t0 = request.args.get('t0')
-        t1 = request.args.get('t1')
-        if t0 != None and t1 != None:
-            cmd += f"""
-                WHERE {time_field} BETWEEN {t0} AND {t1}
-            """
-        elif t0 != None:
-            cmd += f"""
-                WHERE {time_field} BETWEEN {t0} AND NOW()
-            """
-        else: # t1 != None
-            cmd += f"""
-                WHERE {time_field} < {t1}
-            """
         # execute request
         db = get_db()
         cursor = db.execute(cmd)
@@ -123,11 +101,11 @@ def alarm_counts(field):
 #
 @status.route('/request_list', methods=['GET'])
 def request_list():
-    return list_rows("requests")
+    return list_rows("requests", "request_time")
 
 #
 # Alarm List
 #
 @status.route('/alarm_list', methods=['GET'])
 def alarm_list():
-    return list_rows("alarms")
+    return list_rows("alarms", "alarm_time")

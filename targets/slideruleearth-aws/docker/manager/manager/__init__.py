@@ -20,6 +20,10 @@ def create_app(test_config=None):
     from . import db
     db.init_app(app)
 
+    # initialize geolite2
+    from . import geo
+    geo.init_app(app)
+
     # bring in metrics subsystem
     from . import metrics
     app.register_blueprint(metrics.metrics)

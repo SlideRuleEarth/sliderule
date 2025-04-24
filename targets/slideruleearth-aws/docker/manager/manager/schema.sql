@@ -1,6 +1,7 @@
 CREATE OR REPLACE TABLE requests (
     request_time TIMESTAMP,
-    source_ip TEXT,
+    source_ip_hash TEXT,
+    source_ip_location TEXT,
     aoi GEOMETRY,
     client TEXT,
     endpoint TEXT,
