@@ -28,6 +28,14 @@ def locateit(source_ip):
         print(f'Failed to get location information: {e}')
         return f'unknown, unknown'
 
+def allcolumns(table, db):
+    columns = db.execute(f"""
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = '{table}'
+    """).fetchall()
+    return [col[0] for col in columns]
+
 ####################
 # APIs
 ####################
@@ -52,8 +60,9 @@ def record_request():
                   data['version'],
                   data['message'] )
         db = get_db()
-        db.execute("""
-            INSERT INTO requests (request_time, source_ip_hash, source_ip_location, aoi, client, endpoint, duration, status_code, organization, version, message)
+        columns = allcolumns("requests", db)
+        db.execute(f"""
+            INSERT INTO requests ({', '.join(columns)})
             VALUES (?, ?, ?, ST_Point(?, ?), ?, ?, ?, ?, ?, ?, ?)
         """, entry)
     except Exception as e:
@@ -73,7 +82,11 @@ def issue_alarm():
                   data['version'],
                   data['message'] )
         db = get_db()
-        db.execute("INSERT INTO alarms (alarm_time, status_code, organization, version, message) VALUES (?, ?, ?, ?, ?)", entry)
+        columns = allcolumns("alarms", db)
+        db.execute(f"""
+            INSERT INTO alarms ({', '.join(columns)})
+            VALUES (?, ?, ?, ?, ?)
+        """, entry)
     except Exception as e:
         abort(400, f'Alarm record failed to post: {e}')
     return f'Alarm record successfully posted'
