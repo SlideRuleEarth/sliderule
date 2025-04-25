@@ -41,18 +41,17 @@ BUILD = $(ROOT)/build
 STAGE = $(ROOT)/stage
 
 SLIDERULE_BUILD_DIR = $(BUILD)/sliderule
-PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
-PYTHON_CLIENT_DIR = $(ROOT)/clients/python
-NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
 SLIDERULE_STAGE_DIR = $(STAGE)/sliderule
 BUILDENV_STAGE_DIR = $(STAGE)/buildenv
-MONITOR_STAGE_DIR = $(STAGE)/monitor
 ILB_STAGE_DIR = $(STAGE)/ilb
 PROXY_STAGE_DIR = $(STAGE)/proxy
+MONITOR_STAGE_DIR = $(STAGE)/monitor
+MANAGER_STAGE_DIR = $(STAGE)/manager
 TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
 STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
+PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 
@@ -109,18 +108,13 @@ run: ## run the server locally
 run-buildenv: ## run the build environment docker container
 	docker run -it -v $(ROOT):/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)
 
-########################
-# Cluster Targets
-########################
-
 sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
-	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(VERSION)
-	docker tag $(ECR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
+	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:$(VERSION) $(DOCKER_PLATFORM) .
 	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
+	docker tag $(ECR)/sliderule-buildenv:$(VERSION) $(GHCR)/sliderule-buildenv:$(VERSION)
 
 sliderule-buildenv-docker-push: ## push build environment docker image to registry
 	docker push $(ECR)/sliderule-buildenv:$(VERSION)
@@ -131,8 +125,7 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 	rsync -a $(ROOT) $(SLIDERULE_STAGE_DIR)/sliderule --exclude build --exclude stage
 	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/config.json $(SLIDERULE_STAGE_DIR)
-	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(VERSION)
+	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:$(VERSION) $(DOCKER_PLATFORM) .
 
 ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	-rm -Rf $(ILB_STAGE_DIR)
@@ -140,15 +133,13 @@ ilb-docker: ## build intelligent load balancer docker image; needs VERSION
 	cp docker/intelligent-load-balancer/* $(ILB_STAGE_DIR)
 	cp $(ROOT)/packages/core/extensions/json.lua $(ILB_STAGE_DIR)
 	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
-	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ilb:latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(VERSION)
+	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ilb:$(VERSION) $(DOCKER_PLATFORM) .
 
 proxy-docker: # make the reverse proxy docker image; needs VERSION
 	-rm -Rf $(PROXY_STAGE_DIR)
 	mkdir -p $(PROXY_STAGE_DIR)
 	cp docker/proxy/* $(PROXY_STAGE_DIR)
-	cd $(PROXY_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/proxy:latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/proxy:latest $(ECR)/proxy:$(VERSION)
+	cd $(PROXY_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/proxy:$(VERSION) $(DOCKER_PLATFORM) .
 
 monitor-docker: ## build monitor docker image; needs VERSION
 	-rm -Rf $(MONITOR_STAGE_DIR)
@@ -156,20 +147,45 @@ monitor-docker: ## build monitor docker image; needs VERSION
 	cp docker/monitor/* $(MONITOR_STAGE_DIR)
 	cp docker/monitor/Dockerfile.$(ARCH) $(MONITOR_STAGE_DIR)/Dockerfile
 	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
-	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(VERSION)
+	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:$(VERSION) $(DOCKER_PLATFORM) .
+
+manager-lock:
+	cd docker/manager && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd docker/manager && conda-lock render -p linux-$(ARCH)
+
+manager-docker:
+	-rm -Rf $(MANAGER_STAGE_DIR)
+	mkdir -p $(MANAGER_STAGE_DIR)
+	cp docker/manager/Dockerfile.$(ARCH) $(MANAGER_STAGE_DIR)/Dockerfile
+	cp docker/manager/conda-* $(MANAGER_STAGE_DIR)
+	cp docker/manager/docker-entrypoint.sh $(MANAGER_STAGE_DIR)
+	chmod +x $(MANAGER_STAGE_DIR)/docker-entrypoint.sh
+	mkdir $(MANAGER_STAGE_DIR)/manager
+	cp docker/manager/manager/*.py $(MANAGER_STAGE_DIR)/manager
+	cp docker/manager/manager/*.sql $(MANAGER_STAGE_DIR)/manager
+	cd $(MANAGER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/manager:$(VERSION) $(DOCKER_PLATFORM) .
+
+manager-run:
+	docker run -it -p 5000:5000 --rm --name manager $(ECR)/manager:$(VERSION)
+
+########################
+# Cluster Targets
+########################
 
 cluster-docker: ## build all cluster docker images
 	make sliderule-docker
 	make ilb-docker
 	make proxy-docker
 	make monitor-docker
+	make manager-lock
+	make manager-docker
 
 cluster-docker-push: ## push all cluster images to docker container registries
 	docker push $(ECR)/sliderule:$(VERSION)
 	docker push $(ECR)/ilb:$(VERSION)
 	docker push $(ECR)/proxy:$(VERSION)
 	docker push $(ECR)/monitor:$(VERSION)
+	docker push $(ECR)/manager:$(VERSION)
 
 cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
 	cd packer; packer build -var version=$(VERSION) -var-file=arm64_cpu.json sliderule-base.pkr.hcl
@@ -198,17 +214,17 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
 	cp docker/static-website/nginx.conf $(STATIC_WEB_STAGE_DIR)
 	cp docker/static-website/docker-entrypoint.sh $(STATIC_WEB_STAGE_DIR)
-	cd $(STATIC_WEB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/static-website:latest $(DOCKER_PLATFORM) .
+	cd $(STATIC_WEB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/static-website:$(VERSION) $(DOCKER_PLATFORM) .
 
 static-website-run: ## locally run the static website; needs VERSION
-	docker run -it -p 8080:4000 --rm --name website $(ECR)/static-website:latest
+	docker run -it -p 8080:4000 --rm --name website $(ECR)/static-website:$(VERSION)
 
 static-website-export: ## export static website to local host directory
 	-rm -Rf $(STATIC_WEB_EXPORT_DIR)
 	mkdir -p $(STATIC_WEB_EXPORT_DIR)
-	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:latest /host/export_dist.sh
+	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:$(VERSION) /host/export_dist.sh
 
-static-website-live-update: # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
+static-website-live-update: static-website-export # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
 	aws s3 sync $(STATIC_WEB_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
 	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*"
 
@@ -247,8 +263,8 @@ tag: ## create version tag in this repository and release it on GitHub
 	echo $(VERSION) > $(ROOT)/version.txt
 	node $(ROOT)/clients/nodejs/utils/modpkg.js $(VERSION)
 	git add $(ROOT)/clients/nodejs/sliderule/package.json
-	cp $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
-	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
+	cp $(ROOT)/version.txt $(ROOT)/clients/python/version.txt
+	git add $(ROOT)/version.txt $(ROOT)/clients/python/version.txt
 	git commit -m "Version $(VERSION)"
 	git tag -a $(VERSION) -m "Version $(VERSION)"
 	git push --tags && git push
@@ -286,6 +302,7 @@ distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(STAGE)
 	- cd $(ROOT)/docs && ./clean.sh
 	- cd $(ROOT)/clients/python && ./clean.sh
+	- cd $(ROOT)/targets/slideruleearth-aws/docker/manager && ./clean.sh
 	- find $(ROOT) -name ".cookies" -exec rm {} \;
 	- rm -f report.pdf
 	- rm -f report.xml
@@ -325,9 +342,6 @@ perfssbtest: ## run strips serial and batch performance test comparing results
 ########################
 
 help: ## That's me!
-	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
-	@printf "\033[37m%-30s\033[0m %s\n" "# Makefile Help                                                                          |"
-	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
 	@printf "\033[37m%-30s\033[0m %s\n" "#-target-----------------------description------------------------------------------------"
 	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 	@echo ENVVER:$(ENVVER)
