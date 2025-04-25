@@ -110,63 +110,6 @@ run-buildenv: ## run the build environment docker container
 	docker run -it -v $(ROOT):/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)
 
 ########################
-# Certbot Targets
-########################
-
-certbot-package: ## create the lambda python package for the certbot
-	cd terraform/certbot/python && ./package.sh
-
-certbot-deploy: certbot-package ## deploy certbot using terraform; needs DOMAIN
-	cd terraform/certbot && terraform init
-	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot || terraform workspace new $(DOMAIN)-certbot
-	cd terraform/certbot && terraform apply
-
-certbot-destroy: certbot-package ## destroy certbot using terraform; needs DOMAIN
-	cd terraform/certbot && terraform init
-	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot|| terraform workspace new $(DOMAIN)-certbot
-	cd terraform/certbot && terraform destroy
-
-########################
-# Static Website Targets
-########################
-
-static-website-docker: ## make the static website docker image; needs VERSION
-	-rm -Rf $(STATIC_WEB_STAGE_DIR)
-	mkdir -p $(STATIC_WEB_STAGE_DIR)
-	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
-	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
-	rsync -a $(ROOT) $(STATIC_WEB_STAGE_DIR)/sliderule --exclude build --exclude stage
-	-cp $(PYTHON_EXAMPLES_DIR)/examples/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
-	-cp $(PYTHON_EXAMPLES_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
-	-cp -R /data/web $(STATIC_WEB_STAGE_DIR)/rtd/source/_static/html
-	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
-	cp docker/static-website/nginx.conf $(STATIC_WEB_STAGE_DIR)
-	cp docker/static-website/docker-entrypoint.sh $(STATIC_WEB_STAGE_DIR)
-	cd $(STATIC_WEB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/static-website:latest $(DOCKER_PLATFORM) .
-
-static-website-run: ## locally run the static website; needs VERSION
-	docker run -it -p 8080:4000 --rm --name website $(ECR)/static-website:latest
-
-static-website-export: ## export static website to local host directory
-	-rm -Rf $(STATIC_WEB_EXPORT_DIR)
-	mkdir -p $(STATIC_WEB_EXPORT_DIR)
-	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:latest /host/export_dist.sh
-
-static-website-live-update: # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
-	aws s3 sync $(STATIC_WEB_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
-	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*"
-
-static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
-	cd terraform/static-website && terraform init
-	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform apply -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
-
-static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
-	cd terraform/static-website && terraform init
-	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
-
-########################
 # Cluster Targets
 ########################
 
@@ -238,6 +181,67 @@ cluster-upload-terraform: ## upload the Cluster terraform for provisioning syste
 	cp terraform/cluster/.terraform.lock.hcl $(TF_STAGE_DIR)
 	printf "variable \"environment_version\" {\n  default = \"$(ENVVER)\"\n}" > $(TF_STAGE_DIR)/version.tf
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(VERSION)
+
+########################
+# Static Website Targets
+########################
+
+static-website-docker: ## make the static website docker image; needs VERSION
+	-rm -Rf $(STATIC_WEB_STAGE_DIR)
+	mkdir -p $(STATIC_WEB_STAGE_DIR)
+	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
+	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
+	rsync -a $(ROOT) $(STATIC_WEB_STAGE_DIR)/sliderule --exclude build --exclude stage
+	-cp $(PYTHON_EXAMPLES_DIR)/examples/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
+	-cp $(PYTHON_EXAMPLES_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
+	-cp -R /data/web $(STATIC_WEB_STAGE_DIR)/rtd/source/_static/html
+	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
+	cp docker/static-website/nginx.conf $(STATIC_WEB_STAGE_DIR)
+	cp docker/static-website/docker-entrypoint.sh $(STATIC_WEB_STAGE_DIR)
+	cd $(STATIC_WEB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/static-website:latest $(DOCKER_PLATFORM) .
+
+static-website-run: ## locally run the static website; needs VERSION
+	docker run -it -p 8080:4000 --rm --name website $(ECR)/static-website:latest
+
+static-website-export: ## export static website to local host directory
+	-rm -Rf $(STATIC_WEB_EXPORT_DIR)
+	mkdir -p $(STATIC_WEB_EXPORT_DIR)
+	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:latest /host/export_dist.sh
+
+static-website-live-update: # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
+	aws s3 sync $(STATIC_WEB_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
+	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*"
+
+static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
+	cd terraform/static-website && terraform init
+	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
+	cd terraform/static-website && terraform apply -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+
+static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
+	cd terraform/static-website && terraform init
+	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
+	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+
+########################
+# Certbot Targets
+########################
+
+certbot-package: ## create the lambda python package for the certbot
+	cd terraform/certbot/python && ./package.sh
+
+certbot-deploy: certbot-package ## deploy certbot using terraform; needs DOMAIN
+	cd terraform/certbot && terraform init
+	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot || terraform workspace new $(DOMAIN)-certbot
+	cd terraform/certbot && terraform apply
+
+certbot-destroy: certbot-package ## destroy certbot using terraform; needs DOMAIN
+	cd terraform/certbot && terraform init
+	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot|| terraform workspace new $(DOMAIN)-certbot
+	cd terraform/certbot && terraform destroy
+
+########################
+# Tag & Release Targets
+########################
 
 tag: ## create version tag in this repository and release it on GitHub
 	echo $(VERSION) > $(ROOT)/version.txt
