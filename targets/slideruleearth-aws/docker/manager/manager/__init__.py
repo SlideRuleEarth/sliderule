@@ -1,5 +1,24 @@
+import os
 from flask import Flask
 
+# Set Version
+version_found = False
+possible_version_paths = [
+    '../../../../../version.txt', # repository
+    '/version.txt' # docker
+]
+for path in possible_version_paths:
+    if os.path.exists(path):
+        with open(path) as file:
+            __version__ = file.read()[1:].strip()
+            version_found = True
+            break
+if not version_found:
+    __version__ = "0.0.0"
+
+#
+# Application Factory
+#
 def create_app(test_config=None):
 
     # create and configure the app

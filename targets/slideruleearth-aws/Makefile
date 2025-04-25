@@ -58,7 +58,7 @@ INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 VERSION ?= latest
 ECR := 742127912612.dkr.ecr.us-west-2.amazonaws.com
 GHCR := ghcr.io/slideruleearth
-DOCKEROPTS ?=
+DOCKEROPTS ?= # --progress=plain --no-cache
 BUILDX ?= # buildx
 DOCKER_PLATFORM ?= # --platform linux/arm64 | linux/amd64
 ARCH ?= $(shell arch)
@@ -158,7 +158,9 @@ manager-docker:
 	mkdir -p $(MANAGER_STAGE_DIR)
 	cp docker/manager/Dockerfile.$(ARCH) $(MANAGER_STAGE_DIR)/Dockerfile
 	cp docker/manager/conda-* $(MANAGER_STAGE_DIR)
+	cp docker/manager/pyproject.toml $(MANAGER_STAGE_DIR)
 	cp docker/manager/docker-entrypoint.sh $(MANAGER_STAGE_DIR)
+	cp $(ROOT)/version.txt $(MANAGER_STAGE_DIR)
 	chmod +x $(MANAGER_STAGE_DIR)/docker-entrypoint.sh
 	mkdir $(MANAGER_STAGE_DIR)/manager
 	cp docker/manager/manager/*.py $(MANAGER_STAGE_DIR)/manager
