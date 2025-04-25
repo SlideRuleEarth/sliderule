@@ -1,1 +1,1 @@
-/env/bin/flask --app manager run --debug
+/env/bin/gunicorn 'manager:create_app()'

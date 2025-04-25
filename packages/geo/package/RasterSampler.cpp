@@ -311,6 +311,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
             if(!stats_rec.post(outQ))
             {
                 status = false;
+                break; // exit early, unlikely to recover from error
             }
         }
         else
@@ -332,6 +333,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
             if(!sample_rec.post(outQ))
             {
                 status = false;
+                break; // exit early, unlikely to recover from error
             }
         }
     }
@@ -366,7 +368,10 @@ bool RasterSampler::processTermination (void)
         file_directory_entry_t* entry = reinterpret_cast<file_directory_entry_t*>(record.getRecordData());
         entry->file_id = fileId;
         StringLib::copy(entry->file_name, raster->fileDictGet(fileId), file_name_len);
-        record.post(outQ);
+        if(!record.post(outQ))
+        {
+            return false; // exit immediately, unlikely to recover from error
+        }
     }
 
     return true;

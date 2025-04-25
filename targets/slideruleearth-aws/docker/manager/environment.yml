@@ -6,6 +6,7 @@ dependencies:
   - flask
   - python-duckdb
   - geoip2
+  - gunicorn
   - pytest
   - coverage
   - pip
