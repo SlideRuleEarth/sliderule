@@ -168,7 +168,7 @@ manager-docker:
 	cd $(MANAGER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/manager:$(VERSION) $(DOCKER_PLATFORM) .
 
 manager-run:
-	docker run -it -p 5000:5000 --rm --name manager $(ECR)/manager:$(VERSION)
+	docker run -it -p 8000:8000 --rm --name manager $(ECR)/manager:$(VERSION) /bin/bash /docker-entrypoint.sh
 
 ########################
 # Cluster Targets

@@ -282,6 +282,21 @@ package:
     sha256: 1aa4c1a8ec5e9c87875f250e5e4ce775861c1242ece212dc1739acb417b68c92
   category: main
   optional: false
+- name: gunicorn
+  version: 23.0.0
+  manager: conda
+  platform: linux-aarch64
+  dependencies:
+    packaging: ''
+    python: '>=3.13.0rc1,<3.14.0a0'
+    python_abi: 3.13.*
+    setuptools: '>=3.0'
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/gunicorn-23.0.0-py313hd81a959_1.conda
+  hash:
+    md5: 19fcdec2a534ae7498da9fc295d1a8a6
+    sha256: 8c4f336cd306d127010138845821fe3ee40312d11b1a8860e17fd3685565efae
+  category: main
+  optional: false
 - name: h2
   version: 4.2.0
   manager: conda
@@ -763,6 +778,18 @@ package:
   hash:
     md5: a9b9368f3701a417eac9edbcae7cb737
     sha256: d701ca1136197aa121bbbe0e8c18db6b5c94acbd041c2b43c70e5ae104e1d8ad
+  category: main
+  optional: false
+- name: setuptools
+  version: 79.0.1
+  manager: conda
+  platform: linux-aarch64
+  dependencies:
+    python: '>=3.9'
+  url: https://conda.anaconda.org/conda-forge/noarch/setuptools-79.0.1-pyhff2d567_0.conda
+  hash:
+    md5: fa6669cc21abd4b7b6c5393b7bc71914
+    sha256: 5ebc4bb71fbdc8048b08848519150c8d44b8eb18445711d3258c9d402ba87a2c
   category: main
   optional: false
 - name: tk

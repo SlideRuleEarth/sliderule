@@ -8,7 +8,7 @@ import hashlib
 # Initialization
 ####################
 
-metrics = Blueprint('metrics', __name__, url_prefix='/metrics')
+metrics = Blueprint('metrics', __name__, url_prefix='/manager/metrics')
 
 ####################
 # Helper Functions

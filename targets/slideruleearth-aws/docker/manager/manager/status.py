@@ -7,7 +7,7 @@ import json
 # Initialization
 ####################
 
-status = Blueprint('status', __name__, url_prefix='/status')
+status = Blueprint('status', __name__, url_prefix='/manager/status')
 
 ####################
 # Helper Functions

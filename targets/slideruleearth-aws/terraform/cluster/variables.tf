@@ -24,6 +24,10 @@ variable  "availability_zone" {
 # -------------------------------------------------------------
 # Network Variables
 # -------------------------------------------------------------
+variable "manager_ip" {
+  type        = string
+  default     = "10.0.1.3"
+}
 variable "monitor_ip" {
   type        = string
   default     = "10.0.1.4"

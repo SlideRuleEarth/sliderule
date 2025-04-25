@@ -27,7 +27,7 @@ COPY pyproject.toml /
 COPY docker-entrypoint.sh /
 COPY version.txt /
 RUN cd / && /env/bin/python -m build --wheel
-#RUN /env/bin/pip install /dist/manager-*.whl
+RUN /env/bin/pip install /dist/manager-*.whl
 
 # container defaults
 SHELL ["/bin/bash", "-c"]
