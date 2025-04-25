@@ -109,18 +109,26 @@ run: ## run the server locally
 run-buildenv: ## run the build environment docker container
 	docker run -it -v $(ROOT):/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)
 
-manager-package: ## create the lambda python package for the manager
-	cd terraform/manager/python && ./package.sh
+########################
+# Certbot Targets
+########################
 
-manager-deploy: ## deploy manager using terraform; needs DOMAIN
-	cd terraform/manager && terraform init
-	cd terraform/manager && terraform workspace select $(DOMAIN)-manager || terraform workspace new $(DOMAIN)-manager
-	cd terraform/manager && terraform apply
+certbot-package: ## create the lambda python package for the certbot
+	cd terraform/certbot/python && ./package.sh
 
-manager-destroy: ## destroy manager using terraform; needs DOMAIN
-	cd terraform/manager && terraform init
-	cd terraform/manager && terraform workspace select $(DOMAIN)-manager|| terraform workspace new $(DOMAIN)-manager
-	cd terraform/manager && terraform destroy
+certbot-deploy: certbot-package ## deploy certbot using terraform; needs DOMAIN
+	cd terraform/certbot && terraform init
+	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot || terraform workspace new $(DOMAIN)-certbot
+	cd terraform/certbot && terraform apply
+
+certbot-destroy: certbot-package ## destroy certbot using terraform; needs DOMAIN
+	cd terraform/certbot && terraform init
+	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot|| terraform workspace new $(DOMAIN)-certbot
+	cd terraform/certbot && terraform destroy
+
+########################
+# Static Website Targets
+########################
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
@@ -157,6 +165,10 @@ static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform init
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
 	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+
+########################
+# Cluster Targets
+########################
 
 sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
@@ -250,6 +262,10 @@ release: ## release a version of sliderule; needs VERSION
 	make static-website-docker
 	make static-website-export
 	make static-website-live-update
+
+########################
+# Clean Up Targets
+########################
 
 docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(GHCR)/sliderule-buildenv:$(VERSION)
