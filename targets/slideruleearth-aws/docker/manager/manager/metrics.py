@@ -56,7 +56,7 @@ def record_request():
                   data['endpoint'],
                   data['duration'],
                   data['status_code'],
-                  data['organization'],
+                  data['account'],
                   data['version'],
                   data['message'] )
         db = get_db()
@@ -78,7 +78,7 @@ def issue_alarm():
         data = request.get_json()
         entry = ( data['alarm_time'],
                   data['status_code'],
-                  data['organization'],
+                  data['account'],
                   data['version'],
                   data['message'] )
         db = get_db()

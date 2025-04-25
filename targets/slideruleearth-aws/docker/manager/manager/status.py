@@ -32,6 +32,15 @@ def build_time_range_query(time_field):
         return ''
 
 #
+# Build Exclude List
+#
+def build_exclude_list(exclude_list):
+    if exclude_list != None and len(exclude_list) > 0:
+        return f'EXCLUDE ({', '.join(exclude_list)})'
+    else:
+        return ''
+
+#
 # Value Counts
 #
 def value_counts(table, field, valid_fields, time_field):
@@ -59,11 +68,12 @@ def value_counts(table, field, valid_fields, time_field):
 #
 # List Rows
 #
-def list_rows(table, time_field):
+def list_rows(table, time_field, exclude_list=None):
     try:
         # build query
         cmd = f"""
-            SELECT * EXCLUDE (aoi)
+            SELECT *
+            {build_exclude_list(exclude_list)}
             FROM {table}
             {build_time_range_query(time_field)}
         """
@@ -87,21 +97,21 @@ def list_rows(table, time_field):
 #
 @status.route('/request_counts/<field>', methods=['GET'])
 def request_counts(field):
-    return value_counts("requests", field, ['source_ip_hash', 'source_ip_location', 'client', 'endpoint', 'status_code', 'organization', 'version'], "request_time")
+    return value_counts("requests", field, ['source_ip_hash', 'source_ip_location', 'client', 'endpoint', 'status_code', 'account', 'version'], "request_time")
 
 #
 # Alarm Counts
 #
 @status.route('/alarm_counts/<field>', methods=['GET'])
 def alarm_counts(field):
-    return value_counts("alarms", field, ['status_code', 'organization', 'version'], "alarm_time")
+    return value_counts("alarms", field, ['status_code', 'account', 'version'], "alarm_time")
 
 #
 # Request List
 #
 @status.route('/request_list', methods=['GET'])
 def request_list():
-    return list_rows("requests", "request_time")
+    return list_rows("requests", "request_time", ["aoi"])
 
 #
 # Alarm List

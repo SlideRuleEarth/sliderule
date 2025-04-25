@@ -10,7 +10,7 @@ def test_nominal(client):
         "endpoint":"defaults",
         "duration": 1.0,
         "status_code": 0,
-        "organization": "sliderule",
+        "account": "sliderule",
         "version": "v4.5.1",
         "message": "success"
     }
@@ -26,7 +26,7 @@ def test_value_counts(client):
         "endpoint":"defaults",
         "duration": 1.0,
         "status_code": 0,
-        "organization": "sliderule",
+        "account": "sliderule",
         "version": "v4.5.1",
         "message": "success"
     }
@@ -64,7 +64,7 @@ def test_list(client):
         "endpoint":"defaults",
         "duration": 1.0,
         "status_code": 0,
-        "organization": "sliderule",
+        "account": "sliderule",
         "version": "v4.5.1",
         "message": "success"
     })
@@ -79,7 +79,7 @@ def test_list(client):
         "endpoint":"defaults",
         "duration": 1.0,
         "status_code": 0,
-        "organization": "sliderule",
+        "account": "sliderule",
         "version": "v4.5.1",
         "message": "success"
     })
@@ -94,7 +94,7 @@ def test_list(client):
         "endpoint":"defaults",
         "duration": 1.0,
         "status_code": 0,
-        "organization": "sliderule",
+        "account": "sliderule",
         "version": "v4.5.1",
         "message": "success"
     })
@@ -148,3 +148,23 @@ def test_list(client):
     assert len(data) == 2
     assert data[0]['request_time'] == two_years_ago + ' 00:00:00'
     assert data[1]['request_time'] == three_years_ago + ' 00:00:00'
+
+def test_geo(client):
+    response = client.post('/metrics/record_request', json={
+        "request_time": f'{date.today().strftime('%Y-%m-%d')}',
+        "source_ip": "128.154.178.80",
+        "aoi": {"x": 30.0, "y": 57.0},
+        "client": "pytest",
+        "endpoint":"defaults",
+        "duration": 1.0,
+        "status_code": 0,
+        "account": "sliderule",
+        "version": "v4.5.1",
+        "message": "success"
+    })
+    assert response.data == b'Request record successfully posted'
+    response = client.get(f'/status/request_list?duration=86400')
+    data = json.loads(response.data.decode("utf-8"))
+    assert response.status_code == 200
+    assert len(data) == 1
+    assert data[0]['source_ip_location'] == "United States, Catonsville"

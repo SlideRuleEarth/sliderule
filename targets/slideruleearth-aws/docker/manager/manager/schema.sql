@@ -7,7 +7,7 @@ CREATE OR REPLACE TABLE requests (
     endpoint TEXT,
     duration REAL, /* seconds */
     status_code INTEGER,
-    organization TEXT,
+    account TEXT,
     version TEXT,
     message TEXT
 );
@@ -15,7 +15,7 @@ CREATE OR REPLACE TABLE requests (
 CREATE OR REPLACE TABLE alarms (
     alarm_time TIMESTAMP,
     status_code INTEGER,
-    organization TEXT,
+    account TEXT,
     version TEXT,
     message TEXT
 );
