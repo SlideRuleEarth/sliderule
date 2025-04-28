@@ -161,10 +161,10 @@ bool EventLib::setLvl (type_t type, event_level_t lvl)
 {
     switch(type)
     {
-        case LOG:       logLevel = lvl;    return true;
-        case TRACE:     traceLevel = lvl;  return true;
-        case TELEMETRY:    telemetryLevel = lvl; return true;
-        default:                           return false;
+        case LOG:       logLevel = lvl;         return true;
+        case TRACE:     traceLevel = lvl;       return true;
+        case TELEMETRY: telemetryLevel = lvl;   return true;
+        default:                                return false;
     }
 }
 
@@ -177,7 +177,7 @@ event_level_t EventLib::getLvl (type_t type)
     {
         case LOG:       return logLevel;
         case TRACE:     return traceLevel;
-        case TELEMETRY:    return telemetryLevel;
+        case TELEMETRY: return telemetryLevel;
         default:        return INVALID_EVENT_LEVEL;
     }
 }
@@ -223,7 +223,7 @@ const char* EventLib::type2str (type_t type)
     {
         case LOG:       return "LOG";
         case TRACE:     return "TRACE";
-        case TELEMETRY:    return "TELEMETRY";
+        case TELEMETRY: return "TELEMETRY";
         default:        return NULL;
     }
 }
@@ -394,16 +394,16 @@ uint32_t EventLib::grabId (void)
 }
 
 /*----------------------------------------------------------------------------
- * generateMetric
+ * recordTlm
  *----------------------------------------------------------------------------*/
-bool EventLib::captureMetric (event_level_t lvl, int code, float duration, MathLib::coord_t aoi, const char* client, const char* account, const char* msg_fmt, ...)
+bool EventLib::recordTlm (event_level_t lvl, int code, const char* endpoint, float duration, MathLib::coord_t aoi, const char* client, const char* account, const char* msg_fmt, ...)
 {
     telemetry_t event;
 
     /* Return Here If Nothing to Do */
     if(lvl < telemetryLevel) return;
 
-    /* Initialize Metric Message */
+    /* Initialize Telemetry Message */
     event.systime   = TimeLib::gpstime();
     event.level     = lvl;
     event.code      = code;
@@ -411,6 +411,7 @@ bool EventLib::captureMetric (event_level_t lvl, int code, float duration, MathL
     event.aoi       = aoi;
 
     /* Copy String Arguments */
+    StringLib::copy(event.endpoint, endpoint, EventLib::MAX_METRIC_STR);
     StringLib::copy(event.client, client, EventLib::MAX_METRIC_STR);
     StringLib::copy(event.account, account, EventLib::MAX_METRIC_STR);
     StringLib::copy(event.version, LIBID, EventLib::MAX_METRIC_STR);
@@ -426,7 +427,7 @@ bool EventLib::captureMetric (event_level_t lvl, int code, float duration, MathL
     event.message[msg_size - 1] = '\0';
     va_end(args);
 
-    /* Post Metric Message */
+    /* Post Telemetry Message */
     const int event_record_size = offsetof(telemetry_t, message) + msg_size;
     RecordObject record(telemetryRecType, event_record_size, false);
     telemetry_t* data = reinterpret_cast<telemetry_t*>(record.getRecordData());

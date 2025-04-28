@@ -56,7 +56,7 @@
 #define stop_trace(lvl,id,...) {(void)lvl; (void)id;}
 #endif
 
-#define telemeter(lvl,code,duration,aoi,client,account,...) EventLib::recordTlm(lvl,code,duration,aoi,client,account,__VA_ARGS__)
+#define telemeter(lvl,code,endpoint,duration,aoi,client,account,...) EventLib::recordTlm(lvl,code,endpoint,duration,aoi,client,account,__VA_ARGS__)
 
 /******************************************************************************
  * EVENT LIBRARY CLASS
@@ -114,6 +114,7 @@ class EventLib
             MathLib::coord_t aoi;                   // area of interest (single point representing area)
             uint16_t    level;                      // event_level_t
             char        ipv4[SockLib::IPV4_STR_LEN];// ip address of local host
+            char        endpoint[MAX_METRIC_STR];   // server-side API
             char        client[MAX_METRIC_STR];     // Python Client, Web Client, etc
             char        account[MAX_METRIC_STR];    // username
             char        version[MAX_METRIC_STR];    // sliderule version
@@ -134,9 +135,9 @@ class EventLib
         } flags_t;
 
         typedef enum {
-            LOG     = 0x01,
-            TRACE   = 0x02,
-            TELEMETRY  = 0x04
+            LOG         = 0x01,
+            TRACE       = 0x02,
+            TELEMETRY   = 0x04
         } type_t;
 
         /*--------------------------------------------------------------------
@@ -160,7 +161,7 @@ class EventLib
         static void             stashId         (uint32_t id);
         static uint32_t         grabId          (void);
 
-        static bool             recordTlm       (event_level_t lvl, int code, float duration, MathLib::coord_t aoi, const char* client, const char* account, const char* msg_fmt, ...) VARG_CHECK(printf, 7, 8);
+        static bool             recordTlm       (event_level_t lvl, int code, const char* endpoint, float duration, MathLib::coord_t aoi, const char* client, const char* account, const char* msg_fmt, ...) VARG_CHECK(printf, 8, 9);
 
     private:
 

@@ -70,8 +70,6 @@ int LogMonitor::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void LogMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size)
 {
-    char event_buffer[MAX_LOG_OUTPUT_SIZE];
-
     /* Cast to Log Message */
     const EventLib::log_t* event = reinterpret_cast<const EventLib::log_t*>(event_buf_ptr);
 
@@ -79,6 +77,7 @@ void LogMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size
     if(event->level < eventLevel) return;
 
     /* Format Event */
+    char event_buffer[MAX_LOG_OUTPUT_SIZE];
     if(outputFormat == CLOUD)
     {
         event_size = cloudOutput(event, event_buffer);
@@ -91,13 +90,16 @@ void LogMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size
 
     /* Write Log Message */
     fwrite(event_buf_ptr, 1, event_size, stdout);
+
+    /* Post Alarm to Manager */
+    ManagerLib::alarm();
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 LogMonitor::LogMonitor(lua_State* L, event_level_t level, const char* eventq_name):
-    Monitor(L, level, PROCESS_AS_DATA, eventq_name)
+    Monitor(L, level, eventq_name)
 {
 }
 
@@ -123,37 +125,6 @@ int LogMonitor::textOutput (const EventLib::log_t* event, char* event_buffer)
 
     /* Populate Message */
     msg += StringLib::formats(msg, MAX_LOG_OUTPUT_SIZE - (msg - event_buffer), "%s\n", event->message);
-
-    /* Return Size of Message */
-    return msg - event_buffer + 1;
-}
-
-/*----------------------------------------------------------------------------
- * jsonOutput
- *----------------------------------------------------------------------------*/
-int LogMonitor::jsonOutput (const EventLib::trace_t* event, char* event_buffer)
-{
-    char* msg = event_buffer;
-
-    /* Populate Message */
-    if(event->attr[0] == '{')
-    {
-        /* Attribute String with No Quotes */
-        msg += StringLib::formats(msg, MAX_LOG_OUTPUT_SIZE,
-            "{\"systime\":%ld,\"ipv4\":\"%s\",\"flags\":%d,\"type\":\"%s\",\"level\":\"%s\",\"tid\":%ld,\"id\":%ld,\"parent\":%ld,\"name\":\"%s\",\"attr\":%s}\n",
-            event->systime, event->ipv4, event->flags,
-            EventLib::type2str((EventLib::type_t)event->type), EventLib::lvl2str((event_level_t)event->level),
-            event->tid, (long)event->id, (long)event->parent, event->name, event->attr);
-    }
-    else
-    {
-        /* Attribute String Quoted */
-        msg += StringLib::formats(msg, MAX_LOG_OUTPUT_SIZE,
-            "{\"systime\":%ld,\"ipv4\":\"%s\",\"flags\":%d,\"type\":\"%s\",\"level\":\"%s\",\"tid\":%ld,\"id\":%ld,\"parent\":%ld,\"name\":\"%s\",\"attr\":\"%s\"}\n",
-            event->systime, event->ipv4, event->flags,
-            EventLib::type2str((EventLib::type_t)event->type), EventLib::lvl2str((event_level_t)event->level),
-            event->tid, (long)event->id, (long)event->parent, event->name, event->attr);
-    }
 
     /* Return Size of Message */
     return msg - event_buffer + 1;

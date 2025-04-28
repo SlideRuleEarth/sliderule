@@ -56,10 +56,9 @@ const struct luaL_Reg Monitor::LUA_META_TABLE[] = {
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Monitor::Monitor(lua_State* L, event_level_t level, process_format_t fmt,  const char* eventq_name):
+Monitor::Monitor(lua_State* L, event_level_t level, const char* eventq_name):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    eventLevel(level),
-    processFormat(fmt)
+    eventLevel(level)
 {
     /* Initialize Event Monitor Thread*/
     active = true;
@@ -102,19 +101,11 @@ void* Monitor::monitorThread (void* parm)
             {
                 try
                 {
-                    if(monitor->processFormat == PROCESS_AS_DATA)
-                    {
-                        /* Process Event Data */
-                        RecordInterface record(msg, len);
-                        unsigned char* event_data = record.getRecordData();
-                        int event_size = record.getAllocatedDataSize();
-                        monitor->processEvent(event_data, event_size);
-                    }
-                    else if(monitor->processFormat == PROCESS_AS_RECORD)
-                    {
-                        /* Process Event Record */
-                        monitor->processEvent(msg, len);
-                    }
+                    /* Process Event Data */
+                    RecordInterface record(msg, len);
+                    unsigned char* event_data = record.getRecordData();
+                    int event_size = record.getAllocatedDataSize();
+                    monitor->processEvent(event_data, event_size);
                 }
                 catch (const RunTimeException& e)
                 {

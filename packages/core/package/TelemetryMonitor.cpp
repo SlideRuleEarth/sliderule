@@ -71,15 +71,24 @@ int TelemetryMonitor::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void TelemetryMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size)
 {
-    outQ->postCopy(event_buf_ptr, event_size);
-    OrchestratorLib::metric(event_buf_ptr, event_size);
+    /* Cast to Log Message */
+    const EventLib::telemetry_t* event = reinterpret_cast<const EventLib::telemetry_t*>(event_buf_ptr);
+
+    /* Filter Events */
+    if(event->level < eventLevel) return;
+
+    /* Post Telemetry to Manager */
+    ManagerLib::telemetry();
+
+    /* Post Metric to Orchestrator */
+    OrchestratorLib::metric(event->endpoint, event->duration);
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 TelemetryMonitor::TelemetryMonitor(lua_State* L, event_level_t level, const char* eventq_name, const char* outq_name):
-    Monitor(L, level, PROCESS_AS_RECORD, eventq_name)
+    Monitor(L, level, eventq_name)
 {
     outQ = new Publisher(outq_name);
 }

@@ -58,15 +58,6 @@ class Monitor: public LuaObject
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef enum {
-            PROCESS_AS_RECORD = 0,
-            PROCESS_AS_DATA = 1
-        } process_format_t;
-
     protected:
 
         /*--------------------------------------------------------------------
@@ -74,7 +65,7 @@ class Monitor: public LuaObject
          *--------------------------------------------------------------------*/
 
         virtual void processEvent   (const unsigned char* event_buf_ptr, int event_size) = 0;
-                     Monitor        (lua_State* L, event_level_t level, process_format_t fmt, const char* eventq_name);
+                     Monitor        (lua_State* L, event_level_t level, const char* eventq_name);
                      ~Monitor       (void) override;
 
         /*--------------------------------------------------------------------
@@ -82,7 +73,6 @@ class Monitor: public LuaObject
          *--------------------------------------------------------------------*/
 
         event_level_t eventLevel;
-        process_format_t processFormat;
 
     private:
 

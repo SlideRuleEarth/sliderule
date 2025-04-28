@@ -305,13 +305,13 @@ bool OrchestratorLib::health (void)
 /*----------------------------------------------------------------------------
  * metric
  *----------------------------------------------------------------------------*/
-bool OrchestratorLib::metric (const unsigned char* metric_buf, int buf_size)
+bool OrchestratorLib::metric (const char* name, double value)
 {
-    (void)buf_size;
-
     bool status = false;
 
-    const rsps_t rsps = request(EndpointObject::POST, "/discovery/metric", reinterpret_cast<const char*>(metric_buf));
+    FString data("{\"name\":\"%s\",\"value\":\"%lf\"}", name, value);
+
+    const rsps_t rsps = request(EndpointObject::POST, "/discovery/metric", data.c_str());
     if(rsps.code == EndpointObject::OK)
     {
         status = true;
