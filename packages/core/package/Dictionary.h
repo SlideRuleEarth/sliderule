@@ -198,7 +198,7 @@ typename Dictionary<T>::kv_t Dictionary<T>::Iterator::operator[](int index)
         return Dictionary<T>::kv_t(source.hashTable[table_index].key, source.hashTable[table_index].data);
     }
 
-    throw RunTimeException(CRITICAL, RTE_ERROR, "Dictionary::Iterator index out of range");
+    throw RunTimeException(CRITICAL, RTE_FAILURE, "Dictionary::Iterator index out of range");
 }
 
 /******************************************************************************
@@ -359,7 +359,7 @@ T& Dictionary<T>::get(const char* key) const
 {
     const unsigned int index = getNode(key);
     if(index != NULL_INDEX) return hashTable[index].data;
-    throw RunTimeException(CRITICAL, RTE_ERROR, "key <%s> not found", key);
+    throw RunTimeException(CRITICAL, RTE_FAILURE, "key <%s> not found", key);
 }
 
 /*----------------------------------------------------------------------------

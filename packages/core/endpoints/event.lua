@@ -3,7 +3,7 @@
 --
 -- INPUT:       arg[1] -
 --              {
---                  "type":     <core.LOG | core.TRACE | core.TELEMETRY>
+--                  "type":     <core.LOG | core.TRACE | core.TELEMETRY | core.ALERT>
 --                  "duration": <seconds to hold connection open | 0 for indefinite>
 --              }
 --
@@ -25,9 +25,10 @@ local dispatcher = streaming.dispatcher(core.EVENTQ)
 local publisher = streaming.publish(rspq)
 
 -- Attach publisher to specified record types
-if type & core.LOG      then dispatcher:attach(publisher, "eventrec")   end
-if type & core.TRACE    then dispatcher:attach(publisher, "tracerec")   end
-if type & core.TELEMETRY   then dispatcher:attach(publisher, "metricrec")  end
+if type & core.LOG          then dispatcher:attach(publisher, "eventrec")       end
+if type & core.TRACE        then dispatcher:attach(publisher, "tracerec")       end
+if type & core.TELEMETRY    then dispatcher:attach(publisher, "telemetryrec")   end
+if type & core.ALERT        then dispatcher:attach(publisher, "exceptrec")      end
 
 -- Run dispatcher
 dispatcher:run()

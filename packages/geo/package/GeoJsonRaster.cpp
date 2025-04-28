@@ -67,7 +67,7 @@ int GeoJsonRaster::luaCreate (lua_State* L)
         if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields))
         {
             delete geo_fields;
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to add default geo fields");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to add default geo fields");
         }
         LuaObject::referenceLuaObject(rqst_parms); // GeoJsonRaster expects a LuaObject created from a Lua script
         return createLuaObject(L, new GeoJsonRaster(L, rqst_parms, GeoFields::DEFAULT_KEY, geojstr, cellsize));
@@ -93,7 +93,7 @@ GeoJsonRaster* GeoJsonRaster::create (const string& geojson, double cellsize)
         if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields))
         {
             delete geo_fields;
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to add default geo fields");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to add default geo fields");
         }
         LuaObject::referenceLuaObject(rqst_parms); // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
         return new GeoJsonRaster(NULL, rqst_parms, GeoFields::DEFAULT_KEY, geojson.c_str(), cellsize);
@@ -170,10 +170,10 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, RequestFields* rqst_parms, const char
     geojstr = StringLib::duplicate(_geojstr);
 
     if (geojstr == NULL)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid file pointer (NULL)");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid file pointer (NULL)");
 
     if (cellsize <= 0.0)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid cellSize: %.2lf:", cellsize);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid cellSize: %.2lf:", cellsize);
 
     try
     {
@@ -262,9 +262,9 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, RequestFields* rqst_parms, const char
 
         /* Sanity check for cols/rows/cellsize */
         if((cols != getCols()) || (rows != getRows()))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid raster dimensions: %d x %d", cols, rows);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid raster dimensions: %d x %d", cols, rows);
         if(cellsize != getCellSize())
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid cellsize: %.2lf", cellsize);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid cellsize: %.2lf", cellsize);
 
         bbox = getBbox();
         rasterCreated = true;
@@ -283,5 +283,5 @@ GeoJsonRaster::GeoJsonRaster(lua_State* L, RequestFields* rqst_parms, const char
    GDALClose(reinterpret_cast<GDALDatasetH>(rasterDset));
 
    if(!rasterCreated)
-       throw RunTimeException(CRITICAL, RTE_ERROR, "GeoJsonRaster failed");
+       throw RunTimeException(CRITICAL, RTE_FAILURE, "GeoJsonRaster failed");
 }

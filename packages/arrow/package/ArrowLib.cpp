@@ -179,7 +179,7 @@ bool ArrowLib::send2S3 (const char* fileName, const char* s3dst, const char* out
     if(status)
     {
         /* Send Initial Status */
-        alert(INFO, RTE_INFO, outQ, NULL, "Initiated upload of results to S3, bucket = %s, key = %s", bucket, key);
+        alert(INFO, RTE_STATUS, outQ, NULL, "Initiated upload of results to S3, bucket = %s, key = %s", bucket, key);
 
         /* Upload to S3 */
         int attempt = 0;
@@ -192,14 +192,14 @@ bool ArrowLib::send2S3 (const char* fileName, const char* s3dst, const char* out
             }
             catch(const RunTimeException& e)
             {
-                alert(e.level(), RTE_ERROR, outQ, NULL, "S3 PUT failed attempt %d, bucket = %s, key = %s, error = %s", attempt, bucket, key, e.what());
+                alert(e.level(), RTE_FAILURE, outQ, NULL, "S3 PUT failed attempt %d, bucket = %s, key = %s, error = %s", attempt, bucket, key, e.what());
             }
         }
 
         if(bytes_uploaded > 0)
         {
             /* Send Successful Status */
-            alert(INFO, RTE_INFO, outQ, NULL, "Upload to S3 completed, bucket = %s, key = %s, size = %ld", bucket, key, bytes_uploaded);
+            alert(INFO, RTE_STATUS, outQ, NULL, "Upload to S3 completed, bucket = %s, key = %s, size = %ld", bucket, key, bytes_uploaded);
 
             /* Send Remote Record */
             RecordObject remote_record(remoteRecType);
@@ -217,7 +217,7 @@ bool ArrowLib::send2S3 (const char* fileName, const char* s3dst, const char* out
             status = false;
 
             /* Send Error Status */
-            alert(CRITICAL, RTE_ERROR, outQ, NULL, "Upload to S3 failed, bucket = %s, key = %s", bucket, key);
+            alert(CRITICAL, RTE_FAILURE, outQ, NULL, "Upload to S3 failed, bucket = %s, key = %s", bucket, key);
         }
     }
 
@@ -228,7 +228,7 @@ bool ArrowLib::send2S3 (const char* fileName, const char* s3dst, const char* out
     return status;
 
     #else
-    alert(CRITICAL, RTE_ERROR, outQ, NULL, "Output path specifies S3, but server compiled without AWS support");
+    alert(CRITICAL, RTE_FAILURE, outQ, NULL, "Output path specifies S3, but server compiled without AWS support");
     return false;
     #endif
 }

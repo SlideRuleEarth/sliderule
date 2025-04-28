@@ -21,6 +21,14 @@ def close_db(e=None):
     if db is not None:
         db.close()
 
+def allcolumns(table, db):
+    columns = db.execute(f"""
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = '{table}'
+    """).fetchall()
+    return [col[0] for col in columns]
+
 @click.command('init-db')
 def init_db_command():
     """Clear the existing data and create new tables."""

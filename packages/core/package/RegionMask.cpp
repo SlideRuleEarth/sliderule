@@ -99,7 +99,7 @@ void RegionMask::fromLua (lua_State* L, int index)
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "unable to rasterize geojson - function unregistered");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to rasterize geojson - function unregistered");
         }
     }
 }

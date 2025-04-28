@@ -840,7 +840,7 @@ int ArrowDataFrame::luaImport (lua_State* L)
         ArrowDataFrame* lua_obj = dynamic_cast<ArrowDataFrame*>(getLuaSelf(L, 1));
         (void)lua_obj;
 
-        throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "unsupported");
     }
     catch(const RunTimeException& e)
     {

@@ -92,14 +92,14 @@ void GeoFields::fromLua (lua_State* L, int index)
     /* Sampling Radius */
     if(sampling_radius.value < 0)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid sampling radius: %d:", sampling_radius.value);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid sampling radius: %d:", sampling_radius.value);
     }
 
     /* Start Time */
     if(!t0.value.empty())
     {
         const int64_t gps = TimeLib::str2gpstime(t0.value.c_str());
-        if(gps <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to parse time supplied: %s", t0.value.c_str());
+        if(gps <= 0) throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to parse time supplied: %s", t0.value.c_str());
         start_time = TimeLib::gps2gmttime(gps);
         filter_time = true;
         const TimeLib::date_t start_date = TimeLib::gmt2date(start_time);
@@ -110,7 +110,7 @@ void GeoFields::fromLua (lua_State* L, int index)
     if(!t1.value.empty())
     {
         const int64_t gps = TimeLib::str2gpstime(t1.value.c_str());
-        if(gps <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to parse time supplied: %s", t1.value.c_str());
+        if(gps <= 0) throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to parse time supplied: %s", t1.value.c_str());
         stop_time = TimeLib::gps2gmttime(gps);
         filter_time = true;
         const TimeLib::date_t stop_date = TimeLib::gmt2date(stop_time);
@@ -137,7 +137,7 @@ void GeoFields::fromLua (lua_State* L, int index)
     if(!tc.value.empty())
     {
         const int64_t gps = TimeLib::str2gpstime(tc.value.c_str());
-        if(gps <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to parse time supplied: %s", tc.value.c_str());
+        if(gps <= 0) throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to parse time supplied: %s", tc.value.c_str());
         filter_closest_time = true;
         closest_time = TimeLib::gps2gmttime(gps);
         const TimeLib::date_t closest_date = TimeLib::gmt2date(closest_time);
@@ -156,12 +156,12 @@ void GeoFields::fromLua (lua_State* L, int index)
             start_pos++;
         }
         if(!TimeLib::str2doyrange(doy_range.value.substr(start_pos).c_str(), doy_start, doy_end))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "unable to parse day of year range supplied: %s", doy_range.value.substr(start_pos).c_str());
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to parse day of year range supplied: %s", doy_range.value.substr(start_pos).c_str());
 
         if((doy_start > doy_end) || (doy_start == doy_end) ||
             (doy_start < 1 || doy_start > 366) ||
             (doy_end   < 1 || doy_end   > 366))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid day of year range: %d:%d", doy_start, doy_end);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid day of year range: %d:%d", doy_start, doy_end);
 
         filter_doy_range = true;
         mlog(DEBUG, "Setting day of year to %02d:%02d, doy_keep_inrange: %s", doy_start, doy_end, doy_keep_inrange ? "true" : "false");
@@ -276,7 +276,7 @@ string convertToJson(const GeoFields::sampling_algo_t& v)
         case GeoFields::AVERAGE_ALGO:          return "Average";
         case GeoFields::MODE_ALGO:             return "Mode";
         case GeoFields::GAUSS_ALGO:            return "Gauss";
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "Unknown sampling algorithm: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown sampling algorithm: %d", static_cast<int>(v));
     }
 }
 
@@ -295,7 +295,7 @@ int convertToLua(lua_State* L, const GeoFields::sampling_algo_t& v)
         case GeoFields::AVERAGE_ALGO:          lua_pushstring(L, "Average");            break;
         case GeoFields::MODE_ALGO:             lua_pushstring(L, "Mode");               break;
         case GeoFields::GAUSS_ALGO:            lua_pushstring(L, "Gauss");              break;
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "Unknown sampling algorithm: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown sampling algorithm: %d", static_cast<int>(v));
     }
 
     return 1;
@@ -317,7 +317,7 @@ void convertFromLua(lua_State* L, int index, GeoFields::sampling_algo_t& v)
         else if (StringLib::match(str, "Average"))          v = GeoFields::AVERAGE_ALGO;
         else if (StringLib::match(str, "Mode"))             v = GeoFields::MODE_ALGO;
         else if (StringLib::match(str, "Gauss"))            v = GeoFields::GAUSS_ALGO;
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "Unknown sampling algorithm: %s", str);
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown sampling algorithm: %s", str);
     }
     else
     {
@@ -332,7 +332,7 @@ void convertFromLua(lua_State* L, int index, GeoFields::sampling_algo_t& v)
             case GeoFields::AVERAGE_ALGO:          break; // valid value
             case GeoFields::MODE_ALGO:             break; // valid value
             case GeoFields::GAUSS_ALGO:            break; // valid value
-            default: throw RunTimeException(CRITICAL, RTE_ERROR, "Unknown sampling algorithm: %ld", n);
+            default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown sampling algorithm: %ld", n);
         }
     }
 }
@@ -403,11 +403,11 @@ void convertFromLua(lua_State* L, int index, GeoFields::bbox_t& v)
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "bounding box must be supplied as a table of four points [lon_min, lat_min, lon_max, lat_max]");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "bounding box must be supplied as a table of four points [lon_min, lat_min, lon_max, lat_max]");
         }
     }
     else
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "bounding box must be supplied as a table [lon_min, lat_min, lon_max, lat_max]");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "bounding box must be supplied as a table [lon_min, lat_min, lon_max, lat_max]");
     }
 }

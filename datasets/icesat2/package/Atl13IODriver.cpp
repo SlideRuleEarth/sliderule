@@ -69,7 +69,7 @@ Atl13IODriver::Atl13IODriver (const Asset* _asset, const char* resource):
     char elements[NUM_ELEMENTS][MAX_STR_SIZE];
 
     const int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
-    if(num_toks < 5) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid atl13 resource: %s", resource);
+    if(num_toks < 5) throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid atl13 resource: %s", resource);
 
     const char* product = elements[0];
     const char* version = elements[3];
@@ -99,7 +99,7 @@ Atl13IODriver::Atl13IODriver (const Asset* _asset, const char* resource):
     ioKey = ioBucket;
     while(*ioKey != '\0' && *ioKey != '/') ioKey++;
     if(*ioKey == '/') *ioKey = '\0';
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid S3 url: %s", resource);
+    else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid S3 url: %s", resource);
     ioKey++;
 }
 

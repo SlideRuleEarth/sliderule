@@ -70,7 +70,7 @@ int LogMonitor::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void LogMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size)
 {
-    /* Cast to Log Message */
+    /* Cast to Log Structure */
     const EventLib::log_t* event = reinterpret_cast<const EventLib::log_t*>(event_buf_ptr);
 
     /* Filter Events */
@@ -90,9 +90,6 @@ void LogMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size
 
     /* Write Log Message */
     fwrite(event_buf_ptr, 1, event_size, stdout);
-
-    /* Post Alarm to Manager */
-    ManagerLib::alarm();
 }
 
 /*----------------------------------------------------------------------------
@@ -116,7 +113,7 @@ int LogMonitor::textOutput (const EventLib::log_t* event, char* event_buffer)
     char* msg = event_buffer;
 
     /* Populate Prefix */
-    const TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(event->systime);
+    const TimeLib::gmt_time_t timeinfo = TimeLib::gps2gmttime(event->time);
     const TimeLib::date_t dateinfo = TimeLib::gmt2date(timeinfo);
     const double seconds = (double)timeinfo.second + ((double)timeinfo.millisecond / 1000.0);
     msg += StringLib::formats(msg, MAX_LOG_OUTPUT_SIZE, "%04d-%02d-%02dT%02d:%02d:%.03lfZ %s:%s:%s ",

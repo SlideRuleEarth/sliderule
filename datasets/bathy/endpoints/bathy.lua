@@ -34,7 +34,7 @@ dataframe.proxy("atl24x", parms, rqst["parms"], rspq, channels, function(userlog
     for _, beam in ipairs(parms["beams"]) do
         dataframes[beam] = bathy.dataframe(beam, parms, bathymask, atl03h5, atl09h5, rspq)
         if not dataframes[beam] then
-            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> on %s failed to create bathy dataframe for beam %s", rspq, resource, beam))
+            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> on %s failed to create bathy dataframe for beam %s", rspq, resource, beam))
         end
     end
 

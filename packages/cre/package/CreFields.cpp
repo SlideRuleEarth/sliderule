@@ -73,7 +73,7 @@ void CreFields::fromLua (lua_State* L, int index)
         const int c = *c_iter;
         if(!isalnum(c) && (c != '/') && (c != '.') && (c != ':') && (c != '-'))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid character found in image name: %c", c);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid character found in image name: %c", c);
         }
     }
 }

@@ -83,8 +83,8 @@ int BathyDataFrame::luaCreate (lua_State* L)
         const char* rqstq_name = getLuaString(L, 6, true, NULL);
 
         /* Check for Null Resource and Asset */
-        if(_parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a resource to process");
-        else if(_parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a valid asset");
+        if(_parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a resource to process");
+        else if(_parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a valid asset");
 
         /* Return Reader Object */
         return createLuaObject(L, new BathyDataFrame(L, beam_str, _parms, _hdf03, _hdf09, rqstq_name, _mask));
@@ -495,7 +495,7 @@ BathyDataFrame::Atl09Class::Atl09Class (const BathyDataFrame& dataframe):
 {
     try
     {
-        if(!dataframe.hdf09) throw RunTimeException(CRITICAL, RTE_ERROR, "invalid HDF5 ATL09 object");
+        if(!dataframe.hdf09) throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid HDF5 ATL09 object");
         met_u10m.join(dataframe.readTimeoutMs, true);
         met_v10m.join(dataframe.readTimeoutMs, true);
         delta_time.join(dataframe.readTimeoutMs, true);
@@ -662,7 +662,7 @@ void* BathyDataFrame::subsettingThread (void* parm)
                 const GeoLib::point_t coord = utm_transform.calculateCoordinates(latitude, longitude);
                 if(utm_transform.in_error)
                 {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "unable to convert %lf,%lf to UTM zone %d", latitude, longitude, utm_transform.zone);
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to convert %lf,%lf to UTM zone %d", latitude, longitude, utm_transform.zone);
                 }
 
                 /* Save Off Latest Delta Time */

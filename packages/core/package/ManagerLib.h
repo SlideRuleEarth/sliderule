@@ -29,66 +29,55 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef __manager_lib__
+#define __manager_lib__
+
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "H5Coro.h"
-#include "H5Object.h"
+#include "EndpointObject.h"
+#include "EventLib.h"
+#include "LuaEngine.h"
 
 /******************************************************************************
- * STATIC DATA
+ * MANAGER LIBRARY CLASS
  ******************************************************************************/
 
-const char* H5Object::OBJECT_TYPE = "H5Object";
-const char* H5Object::LUA_META_NAME = "H5Object";
-const struct luaL_Reg H5Object::LUA_META_TABLE[] = {
-    {NULL,          NULL}
+class ManagerLib
+{
+    public:
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef struct {
+            long code;
+            const char* response;
+            int size;
+        } rsps_t;
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static void             init                (void);
+        static void             deinit              (void);
+
+        static rsps_t           request             (EndpointObject::verb_t verb, const char* resource, const char* data);
+
+        static bool             recordTelemetry     (const EventLib::telemetry_t* event);
+        static bool             issueAlert          (const EventLib::alert_t* event);
+
+        static int              luaUrl              (lua_State* L);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        static const char*  URL;
 };
 
-/******************************************************************************
- * ATL03 READER CLASS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * luaCreate - create(...)
- *----------------------------------------------------------------------------*/
-int H5Object::luaCreate (lua_State* L)
-{
-    Asset* _asset = NULL;
-    try
-    {
-        const char* asset_name = getLuaString(L, 1);
-        const char* resource = getLuaString(L, 2);
-
-        _asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
-        if(!_asset) throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find asset %s", asset_name);
-
-        return createLuaObject(L, new H5Object(L, _asset, resource));
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Error creating H5Object: %s", e.what());
-        if(_asset) _asset->releaseLuaObject();
-        return returnLuaStatus(L, false);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * Constructor
- *----------------------------------------------------------------------------*/
-H5Object::H5Object (lua_State* L, Asset* _asset, const char* resource):
-    LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
-    H5Coro::Context(_asset, resource),
-    asset(_asset)
-{
-}
-
-/*----------------------------------------------------------------------------
- * Destructor
- *----------------------------------------------------------------------------*/
-H5Object::~H5Object (void)
-{
-    asset->releaseLuaObject();
-}
+#endif  /* __manager_lib__ */

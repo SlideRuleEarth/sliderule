@@ -120,7 +120,7 @@ string convertToJson(const GediFields::beam_t& v)
         case GediFields::BEAM0110:  return "\"beam6\"";
         case GediFields::BEAM1000:  return "\"beam8\"";
         case GediFields::BEAM1011:  return "\"beam11\"";
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam number: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam number: %d", static_cast<int>(v));
     }
 }
 
@@ -139,7 +139,7 @@ int convertToLua(lua_State* L, const GediFields::beam_t& v)
         case GediFields::BEAM0110:  lua_pushstring(L, "beam6"); break;
         case GediFields::BEAM1000:  lua_pushstring(L, "beam8"); break;
         case GediFields::BEAM1011:  lua_pushstring(L, "beam11"); break;
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam number: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam number: %d", static_cast<int>(v));
     }
 
     return 1;
@@ -165,11 +165,11 @@ void convertFromLua(lua_State* L, int index, GediFields::beam_t& v)
         else if(StringLib::match(str, "beam6"))     v = GediFields::BEAM0110;
         else if(StringLib::match(str, "beam8"))     v = GediFields::BEAM1000;
         else if(StringLib::match(str, "beam11"))    v = GediFields::BEAM1011;
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "beam number is an invalid value: %d", static_cast<int>(v));
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "beam number is an invalid value: %d", static_cast<int>(v));
     }
     else if(!lua_isnil(L, index))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "beam number is an invalid type: %d", lua_type(L, index));
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "beam number is an invalid type: %d", lua_type(L, index));
     }
 }
 
@@ -188,7 +188,7 @@ int convertToIndex(const GediFields::beam_t& v)
         case GediFields::BEAM0110:  return 5;
         case GediFields::BEAM1000:  return 6;
         case GediFields::BEAM1011:  return 7;
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam number: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam number: %d", static_cast<int>(v));
     }
 }
 
@@ -207,6 +207,6 @@ void convertFromIndex(int index, GediFields::beam_t& v)
         case 5:  v = GediFields::BEAM0110; break;
         case 6:  v = GediFields::BEAM1000; break;
         case 7:  v = GediFields::BEAM1011; break;
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam index: %d", index);
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam index: %d", index);
     }
 }

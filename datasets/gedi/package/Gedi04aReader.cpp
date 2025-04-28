@@ -85,8 +85,8 @@ int Gedi04aReader::luaCreate (lua_State* L)
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */
-        if(parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a resource to process");
-        else if(parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a valid asset");
+        if(parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a resource to process");
+        else if(parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a valid asset");
 
         /* Return Reader Object */
         return createLuaObject(L, new Gedi04aReader(L, outq_name, parms, send_terminator));
@@ -180,7 +180,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
         const Gedi04a gedi04a(info, region);
         if(!reader->readAncillaryData(info, region.first_footprint, region.num_footprints))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read ancillary data");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to read ancillary data");
         }
 
         /* Increment Read Statistics */

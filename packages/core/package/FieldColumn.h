@@ -202,7 +202,7 @@ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<string>& v, long
     (void)v;
     (void)start_index;
     (void)num_elements;
-    throw RunTimeException(CRITICAL, RTE_ERROR, "column format <string> does not support conversion to doubles");
+    throw RunTimeException(CRITICAL, RTE_FAILURE, "column format <string> does not support conversion to doubles");
 }
 template<class T>
 inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldList<T>>& v, long start_index, long num_elements) {
@@ -243,7 +243,7 @@ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldList<string
     (void)v;
     (void)start_index;
     (void)num_elements;
-    throw RunTimeException(CRITICAL, RTE_ERROR, "column format <string> does not support conversion to doubles");
+    throw RunTimeException(CRITICAL, RTE_FAILURE, "column format <string> does not support conversion to doubles");
 }
 template<class T>
 inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldColumn<T>>& v, long start_index, long num_elements) {
@@ -284,7 +284,7 @@ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<FieldColumn<stri
     (void)v;
     (void)start_index;
     (void)num_elements;
-    throw RunTimeException(CRITICAL, RTE_ERROR, "column format <string> does not support conversion to doubles");
+    throw RunTimeException(CRITICAL, RTE_FAILURE, "column format <string> does not support conversion to doubles");
 }
 
 /******************************************************************************

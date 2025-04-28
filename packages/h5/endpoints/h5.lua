@@ -33,7 +33,7 @@ local id = parm["id"] or 0
 local asset = core.getbyname(asset_name)
 if not asset then
     local userlog = msg.publish(rspq)
-    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("invalid asset specified: %s", asset_name))
+    userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("invalid asset specified: %s", asset_name))
     return
 end
 

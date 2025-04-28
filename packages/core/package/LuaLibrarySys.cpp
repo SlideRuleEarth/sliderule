@@ -529,6 +529,7 @@ int LuaLibrarySys::lsys_seteventlvl (lua_State* L)
             if(type_mask & EventLib::LOG) EventLib::setLvl(EventLib::LOG, lvl);
             if(type_mask & EventLib::TRACE) EventLib::setLvl(EventLib::TRACE, lvl);
             if(type_mask & EventLib::TELEMETRY) EventLib::setLvl(EventLib::TELEMETRY, lvl);
+            if(type_mask & EventLib::ALERT) EventLib::setLvl(EventLib::ALERT, lvl);
             status = true;
         }
         else
@@ -554,7 +555,8 @@ int LuaLibrarySys::lsys_geteventlvl (lua_State* L)
     lua_pushnumber(L, EventLib::getLvl(EventLib::LOG));
     lua_pushnumber(L, EventLib::getLvl(EventLib::TRACE));
     lua_pushnumber(L, EventLib::getLvl(EventLib::TELEMETRY));
-    return 3;
+    lua_pushnumber(L, EventLib::getLvl(EventLib::ALERT));
+    return 4;
 }
 
 /*----------------------------------------------------------------------------

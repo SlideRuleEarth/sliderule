@@ -78,35 +78,35 @@ int h5_read (lua_State* L)
         /* Perform Read */
         switch(dtype)
         {
-            case RecordObject::INT8:    
+            case RecordObject::INT8:
             {
                 H5Element<int8_t> element(&context, variable);
                 element.join(timeout, true);
                 lua_pushinteger(L, element.value);
                 break;
             }
-            case RecordObject::INT16: 
+            case RecordObject::INT16:
             {
                 H5Element<int16_t> element(&context, variable);
                 element.join(timeout, true);
                 lua_pushinteger(L, element.value);
                 break;
-            }            
-            case RecordObject::INT32: 
+            }
+            case RecordObject::INT32:
             {
                 H5Element<int32_t> element(&context, variable);
                 element.join(timeout, true);
                 lua_pushinteger(L, element.value);
                 break;
             }
-            case RecordObject::INT64: 
+            case RecordObject::INT64:
             {
                 H5Element<int64_t> element(&context, variable);
                 element.join(timeout, true);
                 lua_pushinteger(L, element.value);
                 break;
             }
-            case RecordObject::UINT8: 
+            case RecordObject::UINT8:
             {
                 H5Element<uint8_t> element(&context, variable);
                 element.join(timeout, true);
@@ -134,7 +134,7 @@ int h5_read (lua_State* L)
                 lua_pushinteger(L, element.value);
                 break;
             }
-            case RecordObject::FLOAT: 
+            case RecordObject::FLOAT:
             {
                 H5Element<float> element(&context, variable);
                 element.join(timeout, true);
@@ -148,7 +148,7 @@ int h5_read (lua_State* L)
                 lua_pushnumber(L, element.value);
                 break;
             }
-            case RecordObject::TIME8:     
+            case RecordObject::TIME8:
             {
                 H5Element<int64_t> element(&context, variable);
                 element.join(timeout, true);
@@ -162,7 +162,7 @@ int h5_read (lua_State* L)
                 lua_pushlstring(L, element.value, element.size);
                 break;
             }
-            default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid data type specified <%d>", static_cast<int>(dtype));
+            default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid data type specified <%d>", static_cast<int>(dtype));
         }
     }
     catch(const RunTimeException& e)

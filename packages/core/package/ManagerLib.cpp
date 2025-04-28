@@ -30,93 +30,151 @@
  */
 
 /******************************************************************************
- * INCLUDE
+ * INCLUDES
  ******************************************************************************/
 
+#include <rapidjson/document.h>
+
+#include "ManagerLib.h"
 #include "OsApi.h"
-#include "AssetField.h"
+#include "TimeLib.h"
+#include "LuaEngine.h"
+#include "EndpointObject.h"
+#include "CurlLib.h"
 
 /******************************************************************************
- * CLASS METHODS
+ * ORCHESTRATOR LIBRARY CLASS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Constructor - AssetField
+ * Static Data
  *----------------------------------------------------------------------------*/
-AssetField::AssetField(void):
-    Field(ELEMENT, Field::STRING),
-    asset(NULL)
+
+const char* ManagerLib::URL = NULL;
+
+/*----------------------------------------------------------------------------
+ * init
+ *----------------------------------------------------------------------------*/
+void ManagerLib::init (void)
 {
+    URL = StringLib::duplicate("http://127.0.0.1:8000");
 }
 
 /*----------------------------------------------------------------------------
- * Constructor - AssetField
+ * deinit
  *----------------------------------------------------------------------------*/
-AssetField::AssetField(const char* asset_name):
-    Field(ELEMENT, Field::STRING),
-    asset(NULL)
+void ManagerLib::deinit (void)
 {
-    // only initialize if provided
-    if(asset_name)
+    delete [] URL;
+}
+
+/*----------------------------------------------------------------------------
+ * deinit
+ *----------------------------------------------------------------------------*/
+ManagerLib::rsps_t ManagerLib::request (EndpointObject::verb_t verb, const char* resource, const char* data)
+{
+    rsps_t rsps;
+    const FString path("%s%s", URL, resource);
+    rsps.code = CurlLib::request(verb, path.c_str(), data, &rsps.response, &rsps.size);
+    return rsps;
+}
+
+/*----------------------------------------------------------------------------
+ * recordTelemetry
+ *----------------------------------------------------------------------------*/
+bool ManagerLib::recordTelemetry (const EventLib::telemetry_t* event)
+{
+    bool status = true;
+
+    TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(event->time);
+    TimeLib::date_t date = TimeLib::gmt2date(gmt);
+
+    const FString rqst(R"json({
+        "request_time": "%04d-%02d-%02d %02d:%02d:02d",
+        "source_ip": "%s",
+        "aoi": {"x": %lf, "y": %lf},
+        "client": "%s",
+        "endpoint": "%s",
+        "duration": %f,
+        "status_code": %d,
+        "account": "%s",
+        "version": "%s",
+        "message": "%s"
+    })json",
+        date.year, date.month, date.day,
+        gmt.hour, gmt.minute, gmt.second,
+        event->ipv4,
+        event->aoi.lon, event->aoi.lat,
+        event->client,
+        event->endpoint,
+        event->duration,
+        event->code,
+        event->account,
+        event->version,
+        event->message);
+
+    const rsps_t rsps = request(EndpointObject::POST, "/manager/telemetry/record", rqst.c_str());
+    if(rsps.code != EndpointObject::OK)
     {
-        // get asset
-        asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
-
-        // throw error on asset not found
-        if(!asset) throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find asset %s", asset_name);
+        mlog(CRITICAL, "Failed to record request to %s: %s", event->endpoint, rsps.response);
+        status = false;
     }
+
+    delete [] rsps.response;
+
+    return status;
 }
 
 /*----------------------------------------------------------------------------
- * Destructor
+ * issueAlert
  *----------------------------------------------------------------------------*/
-AssetField::~AssetField(void)
+bool ManagerLib::issueAlert (const EventLib::alert_t* event)
 {
-    if(asset) asset->releaseLuaObject();
+    bool status = true;
+
+    TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(TimeLib::gpstime());
+    TimeLib::date_t date = TimeLib::gmt2date(gmt);
+
+    const FString rqst(R"json({
+	    "alert_time": "%s",
+        "status_code": %d,
+        "account": "%s",
+        "version": "%s",
+        "message": "%s"
+    })json");
+
+    const rsps_t rsps = request(EndpointObject::POST, "/manager/alert/issue", rqst.c_str());
+    if(rsps.code != EndpointObject::OK)
+    {
+        mlog(CRITICAL, "Failed to issue alarm %d: %s", event->code, rsps.response);
+        status = false;
+    }
+
+    delete [] rsps.response;
+
+    return status;
 }
 
 /*----------------------------------------------------------------------------
- * getName
+ * luaUrl - orchurl(<URL>)
  *----------------------------------------------------------------------------*/
-const char* AssetField::getName (void) const
+int ManagerLib::luaUrl(lua_State* L)
 {
-    if(asset) return asset->getName();
-    else return "<nil>";
-}
+    try
+    {
+        const char* _url = LuaObject::getLuaString(L, 1);
 
-/*----------------------------------------------------------------------------
- * toLua
- *----------------------------------------------------------------------------*/
-string AssetField::toJson (void) const
-{
-    return FString("\"%s\"", getName()).c_str();
-}
+        delete [] URL;
+        URL = StringLib::duplicate(_url);
+    }
+    catch(const RunTimeException& e)
+    {
+        // silently fail... allows calling lua script to set nil
+        // as way of keeping and returning the current value
+        (void)e;
+    }
 
-/*----------------------------------------------------------------------------
- * toLua
- *----------------------------------------------------------------------------*/
-int AssetField::toLua (lua_State* L) const
-{
-    if(asset) lua_pushstring(L, asset->getName());
-    else lua_pushnil(L);
+    lua_pushstring(L, URL);
+
     return 1;
-}
-
-/*----------------------------------------------------------------------------
- * fromLua
- *----------------------------------------------------------------------------*/
-void AssetField::fromLua (lua_State* L, int index)
-{
-    // get asset name (or throw if not provided)
-    const char* asset_name = LuaObject::getLuaString(L, index);
-
-     // if we successfully got a name then release asset if already set
-    if(asset) asset->releaseLuaObject();
-    asset = NULL;
-
-    // get asset
-    asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
-
-    // throw error on asset not found
-    if(!asset) throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find asset %s", asset_name);
 }

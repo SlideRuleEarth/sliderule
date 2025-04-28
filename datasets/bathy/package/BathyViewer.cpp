@@ -159,7 +159,7 @@ BathyViewer::BathyViewer (lua_State* L, Icesat2Fields* _parms):
         /* Check if Readers Created */
         if(threadCount == 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "No reader threads were created, invalid track specified: %d\n", parms->track.value);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "No reader threads were created, invalid track specified: %d\n", parms->track.value);
         }
     }
     catch(const RunTimeException& e)

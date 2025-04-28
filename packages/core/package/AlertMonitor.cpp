@@ -33,71 +33,63 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "OsApi.h"
-#include "H5Coro.h"
-#include "H5VarSet.h"
+#include "AlertMonitor.h"
+#include "Monitor.h"
+#include "EventLib.h"
+#include "TimeLib.h"
+#include "RecordObject.h"
+#include "OrchestratorLib.h"
+#include "ManagerLib.h"
 
 /******************************************************************************
- * CLASS METHODS
+ * METHODS
  ******************************************************************************/
 
+/*----------------------------------------------------------------------------
+ * luaCreate - create(<level>)
+ *----------------------------------------------------------------------------*/
+int AlertMonitor::luaCreate (lua_State* L)
+{
+    try
+    {
+        /* Get Parmeters */
+        const event_level_t level = static_cast<event_level_t>(getLuaInteger(L, 1));
+        const char* eventq_name = getLuaString(L, 2, true, EVENTQ);
+
+        /* Return Dispatch Object */
+        return createLuaObject(L, new AlertMonitor(L, level, eventq_name));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error creating %s: %s", LUA_META_NAME, e.what());
+        return returnLuaStatus(L, false);
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * processEvent
+ *----------------------------------------------------------------------------*/
+void AlertMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size)
+{
+    /* Cast to Alert Structure */
+    const EventLib::alert_t* event = reinterpret_cast<const EventLib::alert_t*>(event_buf_ptr);
+
+    /* Filter Events */
+    if(event->level < eventLevel) return;
+
+    /* Post Alert to Manager */
+    ManagerLib::issueAlert(event);
+}
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-H5VarSet::H5VarSet(const FieldList<string>& variable_list, H5Coro::Context* context, const char* group, long col, long startrow, long numrows):
-    variables(getDictSize(variable_list.length()))
+AlertMonitor::AlertMonitor(lua_State* L, event_level_t level, const char* eventq_name):
+    Monitor(L, level, eventq_name)
 {
-    for(int i = 0; i < variable_list.length(); i++)
-    {
-        const string& field_name = GeoDataFrame::extractColumnName(variable_list[i]);
-        const FString dataset_name("%s%s%s", group ? group : "", group ? "/" : "", field_name.c_str());
-        H5DArray* array = new H5DArray(context, dataset_name.c_str(), col, startrow, numrows);
-        const bool status = variables.add(field_name.c_str(), array);
-        if(!status)
-        {
-            delete array;
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add dataset <%s>", dataset_name.c_str());
-        }
-    }
 }
 
 /*----------------------------------------------------------------------------
- * joinToGDF
+ * Destructor
  *----------------------------------------------------------------------------*/
-void H5VarSet::joinToGDF(GeoDataFrame* gdf, int timeout_ms, bool throw_exception)
-{
-    H5DArray* array = NULL;
-    const char* dataset_name = variables.first(&array);
-    while(dataset_name != NULL)
-    {
-        array->join(timeout_ms, throw_exception);
-        if(!gdf->addNewColumn(dataset_name, array->elementType()))
-        {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to join array for <%s>", dataset_name);
-        }
-        dataset_name = variables.next(&array);
-    }
-}
-
-/*----------------------------------------------------------------------------
- * addToGDF
- *----------------------------------------------------------------------------*/
-void H5VarSet::addToGDF(GeoDataFrame* gdf, long element) const
-{
-    Dictionary<H5DArray*>::Iterator iter(variables);
-    for(int i = 0; i < iter.length; i++)
-    {
-        const char* dataset_name = iter[i].key;
-        H5DArray* array = iter[i].value;
-        if(element != static_cast<int32_t>(INVALID_KEY))
-        {
-            gdf->appendFromBuffer(dataset_name, array->referenceElement(element), array->elementSize());
-        }
-        else
-        {
-            const uint8_t nodata_buf[8] = {0,0,0,0,0,0,0,0};
-            gdf->appendFromBuffer(dataset_name, nodata_buf, 8);
-        }
-    }
-}
+AlertMonitor::~AlertMonitor(void) = default;

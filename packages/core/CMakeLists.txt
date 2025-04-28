@@ -27,6 +27,7 @@ target_link_libraries (slideruleLib PUBLIC ${READLINE_LIB})
 target_sources (slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/core.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/AlertMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Asset.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AssetField.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/CurlLib.cpp
@@ -81,6 +82,7 @@ target_include_directories (slideruleLib
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/core.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/AlertMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Asset.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AssetField.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AssetIndex.h

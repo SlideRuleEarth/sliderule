@@ -27,14 +27,14 @@ local function proxy(resources, parms_tbl, endpoint, rec)
     if geo_parms then
         for dataset,raster_parms in pairs(geo_parms) do
             if not raster_parms["catalog"] then
-                userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> querying resources for %s", rspq, dataset))
+                userlog:alert(core.INFO, core.RTE_STATUS, string.format("proxy request <%s> querying resources for %s", rspq, dataset))
                 local rc, rsps = earthdata.search(raster_parms, parms_tbl["poly"])
                 if rc == earthdata.SUCCESS then
                     parms_tbl[geo.PARMS][dataset]["catalog"] = json.encode(rsps)
                     local num_features = parms_tbl[geo.PARMS][dataset]["catalog"]["features"] and #parms_tbl[geo.PARMS][dataset]["catalog"]["features"] or 0
-                    userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> returned %d resources for %s", rspq, num_features, dataset))
+                    userlog:alert(core.INFO, core.RTE_STATUS, string.format("proxy request <%s> returned %d resources for %s", rspq, num_features, dataset))
                 elseif rc ~= earthdata.UNSUPPORTED then
-                    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to get catalog for %s <%d>: %s", rspq, dataset, rc, rsps))
+                    userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to get catalog for %s <%d>: %s", rspq, dataset, rc, rsps))
                 end
             end
         end
@@ -45,7 +45,7 @@ local function proxy(resources, parms_tbl, endpoint, rec)
         local rc, rsps = earthdata.cmr(parms_tbl)
         if rc == earthdata.SUCCESS then
             resources = rsps
-            userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> retrieved %d resources from CMR", rspq, #resources))
+            userlog:alert(core.INFO, core.RTE_STATUS, string.format("request <%s> retrieved %d resources from CMR", rspq, #resources))
         else
             userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("request <%s> failed to make CMR request <%d>: %s", rspq, rc, rsps))
             return
@@ -110,7 +110,7 @@ local function proxy(resources, parms_tbl, endpoint, rec)
                 if robj then
                     georasters[key] = robj
                 else
-                    userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed to create raster %s", rspq, key))
+                    userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed to create raster %s", rspq, key))
                 end
             end
          end
@@ -136,7 +136,7 @@ local function proxy(resources, parms_tbl, endpoint, rec)
                     userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> timed-out after %d seconds waiting for arrow sampler", rspq, duration))
                     do return end
                 end
-                userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> continuing to sample rasters after %d seconds...", rspq, duration))
+                userlog:alert(core.INFO, core.RTE_STATUS, string.format("request <%s> continuing to sample rasters after %d seconds...", rspq, duration))
             end
         end
     end

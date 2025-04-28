@@ -475,7 +475,7 @@ int OrchestratorLib::luaUnlock(lua_State* L)
 
         if(!lua_istable(L, 1))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "must supply table for parameter #1");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "must supply table for parameter #1");
         }
 
         const int num_transactions = lua_rawlen(L, 1);

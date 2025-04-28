@@ -87,7 +87,7 @@ int RasterObject::luaCreate( lua_State* L )
     {
         /* Get Parameters */
         rqst_parms = dynamic_cast<RequestFields*>(getLuaObject(L, 1, RequestFields::OBJECT_TYPE));
-        if(rqst_parms == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get request parameters");
+        if(rqst_parms == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to get request parameters");
 
         const char* key = getLuaString(L, 2, true, GeoFields::DEFAULT_KEY);
         const GeoFields* geo_fields = &rqst_parms->samplers[key];
@@ -102,11 +102,11 @@ int RasterObject::luaCreate( lua_State* L )
         factoryMut.unlock();
 
         /* Check Factory */
-        if(!found) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to find registered raster for %s", geo_fields->asset.getName());
+        if(!found) throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to find registered raster for %s", geo_fields->asset.getName());
 
         /* Create Raster */
         RasterObject* _raster = factory.create(L, rqst_parms, key);
-        if(_raster == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create raster of type: %s", geo_fields->asset.getName());
+        if(_raster == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create raster of type: %s", geo_fields->asset.getName());
 
         /* Return Object */
         return createLuaObject(L, _raster);
@@ -434,7 +434,7 @@ int RasterObject::luaBatchSamples(lua_State *L)
         /* Validate Input Arguments */
         if (!lua_istable(L, 2) || !lua_istable(L, 3) || !lua_istable(L, 4))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Expected three arrays (tables) as arguments for lon, lat, and height");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Expected three arrays (tables) as arguments for lon, lat, and height");
         }
 
         /* Get Self */
@@ -456,7 +456,7 @@ int RasterObject::luaBatchSamples(lua_State *L)
                 }
                 else
                 {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "Non-numeric value found in table");
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "Non-numeric value found in table");
                 }
                 lua_pop(L, 1); // Remove value, keep key for next iteration
             }
@@ -470,7 +470,7 @@ int RasterObject::luaBatchSamples(lua_State *L)
         /* Validate Sizes */
         if (lonVec.size() != latVec.size() || lonVec.size() != heightVec.size())
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Input arrays (lon, lat, height) must have the same size");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Input arrays (lon, lat, height) must have the same size");
         }
 
         const char* closest_time_str = getLuaString(L, 5, true, NULL);
@@ -518,7 +518,7 @@ int RasterObject::luaBatchSamples(lua_State *L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get samples");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to get samples");
         }
     }
     catch (const RunTimeException &e)

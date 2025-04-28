@@ -138,14 +138,14 @@ bool BathySeaSurfaceFinder::run(GeoDataFrame* dataframe)
             /* check if photons are left to process */
             if(heights.empty())
             {
-                throw RunTimeException(WARNING, RTE_INFO, "No valid photons when determining sea surface");
+                throw RunTimeException(WARNING, RTE_STATUS, "No valid photons when determining sea surface");
             }
 
             /* calculate and check range */
             const double range_h = max_h - min_h;
             if(range_h <= 0 || range_h > surface_parms.maxRange.value)
             {
-                throw RunTimeException(ERROR, RTE_ERROR, "Invalid range <%lf> when determining sea surface", range_h);
+                throw RunTimeException(ERROR, RTE_FAILURE, "Invalid range <%lf> when determining sea surface", range_h);
             }
 
             /* calculate and check number of bins in histogram
@@ -154,7 +154,7 @@ bool BathySeaSurfaceFinder::run(GeoDataFrame* dataframe)
             const long num_bins = static_cast<long>(std::ceil(range_h / surface_parms.binSize.value)) + 1;
             if(num_bins <= 0 || num_bins > surface_parms.maxBins.value)
             {
-                throw RunTimeException(ERROR, RTE_ERROR, "Invalid combination of range <%lf> and bin size <%lf> produced out of range histogram size <%ld>", range_h, surface_parms.binSize.value, num_bins);
+                throw RunTimeException(ERROR, RTE_FAILURE, "Invalid combination of range <%lf> and bin size <%lf> produced out of range histogram size <%ld>", range_h, surface_parms.binSize.value, num_bins);
             }
 
             /* calculate average background */
@@ -269,7 +269,7 @@ bool BathySeaSurfaceFinder::run(GeoDataFrame* dataframe)
             const double signal_threshold = bckgnd + (stddev * surface_parms.signalThreshold.value);
             if(highest_peak < signal_threshold)
             {
-                throw RunTimeException(WARNING, RTE_INFO, "Unable to determine sea surface (%lf < %lf)", highest_peak, signal_threshold);
+                throw RunTimeException(WARNING, RTE_STATUS, "Unable to determine sea surface (%lf < %lf)", highest_peak, signal_threshold);
             }
 
             /* calculate width of highest peak */

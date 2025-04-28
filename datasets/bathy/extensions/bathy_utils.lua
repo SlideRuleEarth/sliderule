@@ -20,14 +20,14 @@ local function get_atl09(parms, t0, t1, userlog, resource)
                 resource09 = rsps2[1]
                 break -- success
             else
-                userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("returned an invalid number of resources for ATL09 CMR request for %s: %d", resource, #rsps2))
+                userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("returned an invalid number of resources for ATL09 CMR request for %s: %d", resource, #rsps2))
                 break -- failure
             end
         else
-            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed attempt %d to make ATL09 CMR request <%d>: %s", atl09_attempt, rc2, rsps2))
+            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("failed attempt %d to make ATL09 CMR request <%d>: %s", atl09_attempt, rc2, rsps2))
             atl09_attempt = atl09_attempt + 1
             if atl09_attempt > atl09_max_retries then
-                userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("failed to make ATL09 CMR request for %s... aborting!", resource))
+                userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("failed to make ATL09 CMR request for %s... aborting!", resource))
                 break -- failure
             end
         end

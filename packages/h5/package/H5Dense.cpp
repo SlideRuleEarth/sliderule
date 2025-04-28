@@ -110,7 +110,7 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
     bool shared_attributes = isTypeSharedAttrs(H5Dataset::ATTRIBUTE_MSG);
     if(shared_attributes)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "sharedAttribute reading is not implemented");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "sharedAttribute reading is not implemented");
     }
 #endif
 
@@ -123,13 +123,13 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
     /* Signature check */
     if(signature != H5Dataset::H5_V2TREE_SIGNATURE_LE)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header signature: 0x%llX", (unsigned long long)signature);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid btree header signature: 0x%llX", (unsigned long long)signature);
     }
     /* Version check */
     const uint8_t version = (uint8_t) h5filePtr_->readField(1, &pos);
     if(version != 0)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid btree header version: %hhu", version);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid btree header version: %hhu", version);
     }
 
     /* Record type extraction */
@@ -152,11 +152,11 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
             nrec_size = sizeof(btree2_type8_densename_rec_t);
             break;
         default:
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented type for nrec_size: %d", type);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Unimplemented type for nrec_size: %d", type);
     }
 
     if (node_size == 0) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "0 return in bt2_node_size, failure suspect in openBtreeV2");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "0 return in bt2_node_size, failure suspect in openBtreeV2");
     }
 
     /*** END BTREE HDR ***/
@@ -186,7 +186,7 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
         }
     }
     else {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Critical natural offset init failure");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Critical natural offset init failure");
     }
 
     /* Compute size to compute num records in each record */
@@ -244,7 +244,7 @@ H5BTreeV2::H5BTreeV2(uint64_t _fheap_addr, uint64_t name_bt2_addr, const char *_
 
     /*** ATTRIBUTE STATUS SUCCESS ***/
     if (!found_attr) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "FAILED to locate attribute with dense btreeV2 reading");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "FAILED to locate attribute with dense btreeV2 reading");
     }
     /*** END ***/
 }
@@ -472,7 +472,7 @@ void H5BTreeV2::safeAssigned(T& type_verify, V& value) {
         type_verify = (T)value;
     }
     else {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Type V value exceeds maximum representation of type T");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Type V value exceeds maximum representation of type T");
     }
 }
 
@@ -585,7 +585,7 @@ void H5BTreeV2::fheapLocate(const void * _id) {
     id_flags = *id;
 
     if ((id_flags & H5HF_ID_VERS_MASK) != H5HF_ID_VERS_CURR) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Incorrect heap ID version");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Incorrect heap ID version");
     }
 
     /* Check type of object in heap */
@@ -595,14 +595,14 @@ void H5BTreeV2::fheapLocate(const void * _id) {
     }
     else if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_HUGE) {
         /* NOT IMPLEMENTED - Operate on 'huge' object from file */
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Huge heap ID reading not supported");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Huge heap ID reading not supported");
     }
     else if ((id_flags & H5HF_ID_TYPE_MASK) == H5HF_ID_TYPE_TINY) {
         /* NOT IMPLEMENTED - Operate on 'tiny' object from file */
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Tiny heap ID reading not supported");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Tiny heap ID reading not supported");
     }
     else {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unsupported Heap ID");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unsupported Heap ID");
     }
 
 }
@@ -797,7 +797,7 @@ void H5BTreeV2::fheapLocateManaged(uint8_t* id){
             msg_size_out = msg_size;
             break;
         default:
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented hdr->type message read: %d", type);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Unimplemented hdr->type message read: %d", type);
     }
 
 }
@@ -838,7 +838,7 @@ void H5BTreeV2::compareType8Record(const void *_bt2_rec, int32_t *result)
 
         /* Check if shared fractal heap - NOT IMPLEMENTED */
         if (bt2_rec->flags & H5O_MSG_FLAG_SHARED) {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "No support implemented for shared fractal heaps");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "No support implemented for shared fractal heaps");
         }
 
         /* Locate object in fractal heap */
@@ -869,7 +869,7 @@ void H5BTreeV2::locateRecordBTreeV2(uint32_t nrec, const size_t *rec_off, const 
                 compareType8Record(native + rec_off[my_idx], cmp);
                 break;
             default:
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented type compare: %d", type);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "Unimplemented type compare: %d", type);
         }
         if (*cmp < 0)
             hi = my_idx;
@@ -894,19 +894,19 @@ void H5BTreeV2::openInternalNode(btree2_internal_t *internal, uint64_t internal_
     /* Signature sanity check */
     const uint32_t signature = (uint32_t) h5filePtr_->readField(4, &internal_pos);
     if (signature != H5Dataset::H5_V2TREE_INTERNAL_SIGNATURE_LE) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match internal node: %u", signature);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Signature does not match internal node: %u", signature);
     }
 
     /* Version check */
     const uint8_t version = (uint8_t) h5filePtr_->readField(1, &internal_pos);
     if (version != 0) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid version for internal node: %u", version);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid version for internal node: %u", version);
     }
 
     /* B-tree Type check */
     const uint8_t _type = (uint8_t) h5filePtr_->readField(1, &internal_pos);
     if ((btree2_subid_t)_type != type) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid type for internal node: %u, expected from hdr: %u", _type, type);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid type for internal node: %u, expected from hdr: %u", _type, type);
     }
 
     /* Data Intake Prep -  H5B2__cache_int_deserialize */
@@ -924,7 +924,7 @@ void H5BTreeV2::openInternalNode(btree2_internal_t *internal, uint64_t internal_
                 internal_pos = decodeType8Record(internal_pos, native);
                 break;
             default:
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented type for decode: %d", type);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "Unimplemented type for decode: %d", type);
         }
 
         /* Move to next record */
@@ -975,19 +975,19 @@ uint64_t H5BTreeV2::openLeafNode(const btree2_node_ptr_t *curr_node_ptr, btree2_
     /* Signature Check*/
     const uint32_t signature = (uint32_t) h5filePtr_->readField(4, &internal_pos);
     if (signature != H5Dataset::H5_V2TREE_LEAF_SIGNATURE_LE) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Signature does not match leaf node: %u", signature);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Signature does not match leaf node: %u", signature);
     }
 
     /* Version check */
     const uint8_t version = (uint8_t) h5filePtr_->readField(1, &internal_pos);
     if (version != 0) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Version does not match leaf node: %u", version);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Version does not match leaf node: %u", version);
     }
 
     /* Type check */
     const uint8_t _type = (uint8_t) h5filePtr_->readField(1, &internal_pos);
     if ((btree2_subid_t) _type != type) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Type of leaf node: %u, does not match header type: %u", _type, type);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Type of leaf node: %u, does not match header type: %u", _type, type);
     }
 
     /* Allocate space for the native keys in memory & set num records */
@@ -1003,7 +1003,7 @@ uint64_t H5BTreeV2::openLeafNode(const btree2_node_ptr_t *curr_node_ptr, btree2_
                 break;
 
             default:
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Unimplemented type for decode: %d", type);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "Unimplemented type for decode: %d", type);
         }
         /* move to populate next record*/
         native += nrec_size;

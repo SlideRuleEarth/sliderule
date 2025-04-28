@@ -1,6 +1,6 @@
 from flask import (Blueprint, request, current_app)
 from werkzeug.exceptions import abort
-from manager.db import get_db
+from manager.db import get_db, allcolumns
 from manager.geo import get_geo
 import hashlib
 
@@ -8,7 +8,7 @@ import hashlib
 # Initialization
 ####################
 
-metrics = Blueprint('metrics', __name__, url_prefix='/manager/metrics')
+telemetry = Blueprint('telemetry', __name__, url_prefix='/manager/telemetry')
 
 ####################
 # Helper Functions
@@ -28,26 +28,18 @@ def locateit(source_ip):
         print(f'Failed to get location information: {e}')
         return f'unknown, unknown'
 
-def allcolumns(table, db):
-    columns = db.execute(f"""
-        SELECT column_name
-        FROM information_schema.columns
-        WHERE table_name = '{table}'
-    """).fetchall()
-    return [col[0] for col in columns]
-
 ####################
 # APIs
 ####################
 
 #
-# Record Request
+# Record
 #
-@metrics.route('/record_request', methods=['POST'])
-def record_request():
+@telemetry.route('/record', methods=['POST'])
+def record():
     try:
         data = request.get_json()
-        entry = ( data["request_time"],
+        entry = ( data["record_time"],
                   hashit(data['source_ip']),
                   locateit(data['source_ip']),
                   data['aoi']['x'],
@@ -60,33 +52,11 @@ def record_request():
                   data['version'],
                   data['message'] )
         db = get_db()
-        columns = allcolumns("requests", db)
+        columns = allcolumns("telemetry", db)
         db.execute(f"""
-            INSERT INTO requests ({', '.join(columns)})
+            INSERT INTO telemetry ({', '.join(columns)})
             VALUES (?, ?, ?, ST_Point(?, ?), ?, ?, ?, ?, ?, ?, ?)
         """, entry)
     except Exception as e:
-        abort(400, f'Request record failed to post: {e}')
-    return f'Request record successfully posted'
-
-#
-# Issue Alarm
-#
-@metrics.route('/issue_alarm', methods=['POST'])
-def issue_alarm():
-    try:
-        data = request.get_json()
-        entry = ( data['alarm_time'],
-                  data['status_code'],
-                  data['account'],
-                  data['version'],
-                  data['message'] )
-        db = get_db()
-        columns = allcolumns("alarms", db)
-        db.execute(f"""
-            INSERT INTO alarms ({', '.join(columns)})
-            VALUES (?, ?, ?, ?, ?)
-        """, entry)
-    except Exception as e:
-        abort(400, f'Alarm record failed to post: {e}')
-    return f'Alarm record successfully posted'
+        abort(400, f'Telemetry record failed to post: {e}')
+    return f'Telemetry record successfully posted'

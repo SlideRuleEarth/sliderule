@@ -274,7 +274,7 @@ void H5Coro::Context::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, i
         /* Check Enough Data was Read */
         if(entry.size < size)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read %ld bytes of data: %ld", size, entry.size);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to read %ld bytes of data: %ld", size, entry.size);
         }
 
         /* Handle Caching */
@@ -320,7 +320,7 @@ void H5Coro::Context::ioRequest (uint64_t* pos, int64_t size, uint8_t* buffer, i
                     else
                     {
                         mut.unlock();
-                        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to make room in cache");
+                        throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to make room in cache");
                     }
 
                     /* Count Cache Replacement */
@@ -696,12 +696,12 @@ H5Coro::info_t H5Coro::read (Context* context, const char* datasetname, RecordOb
             operator delete[](info.data, std::align_val_t(H5CORO_DATA_ALIGNMENT));
             info.data = NULL;
             info.datasize = 0;
-            throw RunTimeException(CRITICAL, RTE_ERROR, "data translation failed for %s: [%d] %d --> %d", datasetname, info.typesize, (int)info.datatype, (int)valtype);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "data translation failed for %s: [%d] %d --> %d", datasetname, info.typesize, (int)info.datatype, (int)valtype);
         }
     }
     else if(!_meta_only)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read dataset: %s", datasetname);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to read dataset: %s", datasetname);
     }
 
     /* Stop Trace */

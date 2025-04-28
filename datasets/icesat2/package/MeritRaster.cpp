@@ -106,7 +106,7 @@ MeritRaster::MeritRaster(lua_State *L, RequestFields* rqst_parms, const char* ke
 
     /*  Inintialize Asset */
     asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(ASSET_NAME, Asset::OBJECT_TYPE));
-    if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to find asset %s", ASSET_NAME);
+    if(!asset) throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to find asset %s", ASSET_NAME);
 }
 
 /*----------------------------------------------------------------------------

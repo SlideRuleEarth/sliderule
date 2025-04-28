@@ -112,8 +112,8 @@ int Atl06Reader::luaCreate (lua_State* L)
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */
-        if(_parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a resource to process");
-        else if(_parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a valid asset");
+        if(_parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a resource to process");
+        else if(_parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a valid asset");
 
         /* Return Reader Object */
         return createLuaObject(L, new Atl06Reader(L, outq_name, _parms, send_terminator));
@@ -198,7 +198,7 @@ Atl06Reader::Atl06Reader (lua_State* L, const char* outq_name, Icesat2Fields* _p
         /* Check if Readers Created */
         if(threadCount == 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "No reader threads were created, invalid track specified: %d\n", parms->track.value);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "No reader threads were created, invalid track specified: %d\n", parms->track.value);
         }
     }
     catch(const RunTimeException& e)

@@ -271,21 +271,21 @@ bool HttpServer::processHttpHeader (char* buf, EndpointObject::Request* request)
         request->verb = EndpointObject::str2verb(verb_str);
         if(request->verb == EndpointObject::UNRECOGNIZED)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "unrecognized HTTP verb: %s", verb_str);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "unrecognized HTTP verb: %s", verb_str);
         }
 
         /* Get Version */
         request->version = StringLib::duplicate(version);
         if(request->version == NULL)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR,  "no HTTP version specified");
+            throw RunTimeException(CRITICAL, RTE_FAILURE,  "no HTTP version specified");
         }
 
         /* Get Endpoint and URL */
         extractPath(url_str, &request->path, &request->resource);
         if(!request->path || !request->resource)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "unable to extract endpoint and url: %s", url_str);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to extract endpoint and url: %s", url_str);
         }
 
         /* Parse Headers */

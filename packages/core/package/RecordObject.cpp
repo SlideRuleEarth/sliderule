@@ -208,7 +208,7 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory, bool clea
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid memory allocation in record creation for <%s>: %d + %d + %d < %d", rec_type, allocated_memory, (int)sizeof(rec_hdr_t), recordDefinition->type_size, recordDefinition->record_size);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid memory allocation in record creation for <%s>: %d + %d + %d < %d", rec_type, allocated_memory, (int)sizeof(rec_hdr_t), recordDefinition->type_size, recordDefinition->record_size);
         }
 
         /* Allocate Record Memory */
@@ -232,7 +232,7 @@ RecordObject::RecordObject(const char* rec_type, int allocated_memory, bool clea
     }
     else
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "could not locate record definition %s", rec_type);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "could not locate record definition %s", rec_type);
     }
 }
 
@@ -261,12 +261,12 @@ RecordObject::RecordObject(const unsigned char* buffer, int size)
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "buffer passed in not large enough to populate record");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "buffer passed in not large enough to populate record");
         }
     }
     else
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "buffer did not contain defined record");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "buffer did not contain defined record");
     }
 }
 
@@ -593,7 +593,7 @@ void RecordObject::setValueText(const field_t& f, const char* val, int element)
     if(f.flags & POINTER)
     {
         const field_t ptr_field = getPointedToField(f, false, element);
-        if(val == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Cannot null existing pointer!");
+        if(val == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Cannot null existing pointer!");
         setValueText(ptr_field, val);
     }
     else if(val_type == TEXT)
@@ -641,7 +641,7 @@ void RecordObject::setValueText(const field_t& f, const char* val, int element)
  *----------------------------------------------------------------------------*/
 void RecordObject::setValueReal(const field_t& f, double val, int element)
 {
-    if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
+    if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_FAILURE, "Out of range access");
     const uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
     type_cast_t* cast = reinterpret_cast<type_cast_t*>(recordData + elem_offset);
 
@@ -699,7 +699,7 @@ void RecordObject::setValueReal(const field_t& f, double val, int element)
  *----------------------------------------------------------------------------*/
 void RecordObject::setValueInteger(const field_t& f, long val, int element)
 {
-    if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
+    if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_FAILURE, "Out of range access");
     const uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
     type_cast_t* cast = reinterpret_cast<type_cast_t*>(recordData + elem_offset);
 
@@ -815,7 +815,7 @@ const char* RecordObject::getValueText(const field_t& f, char* valbuf, int eleme
  *----------------------------------------------------------------------------*/
 double RecordObject::getValueReal(const field_t& f, int element)
 {
-    if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
+    if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_FAILURE, "Out of range access");
     const uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
     type_cast_t* cast = reinterpret_cast<type_cast_t*>(recordData + elem_offset);
 
@@ -869,7 +869,7 @@ double RecordObject::getValueReal(const field_t& f, int element)
  *----------------------------------------------------------------------------*/
 long RecordObject::getValueInteger(const field_t& f, int element)
 {
-    if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of range access");
+    if(f.elements > 0 && element > 0 && element >= f.elements) throw RunTimeException(CRITICAL, RTE_FAILURE, "Out of range access");
     const uint32_t elem_offset = TOBYTES(f.offset) + (element * FIELD_TYPE_BYTES[f.type]);
     type_cast_t* cast = reinterpret_cast<type_cast_t*>(recordData + elem_offset);
 
@@ -1560,13 +1560,13 @@ RecordObject::field_t RecordObject::getPointedToField(field_t f, bool allow_null
         // Check Offset
         if(f.offset == 0 && !allow_null)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Attempted to dereference null pointer field!");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Attempted to dereference null pointer field!");
         }
         if(f.offset > ((memoryAllocated - recordDefinition->type_size) * 8))
         {
             // Note that this check is only performed when memory has been allocated
             // this means that for a RecordInterface access to the record memory goes unchecked
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Pointer access exceeded size of memory allocated!");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Pointer access exceeded size of memory allocated!");
         }
     }
 
@@ -1635,7 +1635,7 @@ RecordObject::field_t RecordObject::getUserField (definition_t* def, const char*
                 /* Get Element */
                 if(!StringLib::str2long(element_str, &element))
                 {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid array element!");
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid array element!");
                 }
             }
         }
@@ -1829,8 +1829,8 @@ RecordObject::definition_t* RecordObject::getDefinition(const char* rec_type)
 RecordObject::definition_t* RecordObject::getDefinition(const unsigned char* buffer, int size)
 {
     /* Check Parameters */
-    if(buffer == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Null buffer used to retrieve record definition");
-    if(size <= (int)sizeof(rec_hdr_t)) throw RunTimeException(CRITICAL, RTE_ERROR, "Buffer too small to retrieve record definition");
+    if(buffer == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Null buffer used to retrieve record definition");
+    if(size <= (int)sizeof(rec_hdr_t)) throw RunTimeException(CRITICAL, RTE_FAILURE, "Buffer too small to retrieve record definition");
 
     /* Get Record Definitions */
     const char* rec_type = reinterpret_cast<const char*>(&buffer[sizeof(rec_hdr_t)]);
@@ -1864,11 +1864,11 @@ RecordInterface::RecordInterface(const unsigned char* buffer, int size)
                 memoryAllocated = size;
                 memoryUsed = memoryAllocated;
             }
-            else throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to differentiate the record type from record data");
+            else throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to differentiate the record type from record data");
         }
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "Buffer passed in not large enough to populate record");
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "Buffer passed in not large enough to populate record");
     }
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "Could not find a definition that matches the record buffer");
+    else throw RunTimeException(CRITICAL, RTE_FAILURE, "Could not find a definition that matches the record buffer");
 }
 
 /*----------------------------------------------------------------------------

@@ -78,7 +78,7 @@ int EndpointProxy::luaCreate (lua_State* L)
         const int resources_parm_index = 2;
         if(!lua_istable(L, resources_parm_index))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "must supply table for resource list");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "must supply table for resource list");
         }
 
         /* Get List of Resources */
@@ -296,7 +296,7 @@ void* EndpointProxy::collatorThread (void* parm)
     EndpointProxy* proxy = reinterpret_cast<EndpointProxy*>(parm);
     int current_resource = 0;
 
-    alert(INFO, RTE_INFO, proxy->outQ, NULL, "Starting proxy for %s to process %d resource(s) with %d thread(s)", proxy->endpoint, proxy->numResources, proxy->numProxyThreads);
+    alert(INFO, RTE_STATUS, proxy->outQ, NULL, "Starting proxy for %s to process %d resource(s) with %d thread(s)", proxy->endpoint, proxy->numResources, proxy->numProxyThreads);
 
     while(proxy->active && (proxy->outQ->getSubCnt() > 0) && (current_resource < proxy->numResources))
     {
@@ -326,7 +326,7 @@ void* EndpointProxy::collatorThread (void* parm)
                     status = proxy->rqstPub->postCopy(&current_resource, sizeof(current_resource), SYS_TIMEOUT);
                     if(status < 0)
                     {
-                        alert(ERROR, RTE_ERROR, proxy->outQ, NULL, "Failed (%d) to post request for %s", status, proxy->resources[current_resource]);
+                        alert(ERROR, RTE_FAILURE, proxy->outQ, NULL, "Failed (%d) to post request for %s", status, proxy->resources[current_resource]);
                         break;
                     }
                 }
@@ -417,7 +417,7 @@ void* EndpointProxy::proxyThread (void* parm)
                         const FString data("{\"resource\": \"%s\", \"key_space\": %d, \"parms\": %s}", resource, current_resource, proxy->parameters);
                         const long http_code = CurlLib::postAsRecord(url.c_str(), data.c_str(), proxy->outQ, false, proxy->timeout, &proxy->active);
                         if(http_code == EndpointObject::OK) valid = true;
-                        else throw RunTimeException(CRITICAL, RTE_ERROR, "Error code returned from request to %s: %d", node->member, (int)http_code);
+                        else throw RunTimeException(CRITICAL, RTE_FAILURE, "Error code returned from request to %s: %d", node->member, (int)http_code);
                     }
                     catch(const RunTimeException& e)
                     {
@@ -480,7 +480,7 @@ void* EndpointProxy::proxyThread (void* parm)
             }
 
             /* Post Status */
-            const int code = valid ? RTE_INFO : RTE_ERROR;
+            const int code = valid ? RTE_STATUS : RTE_FAILURE;
             const event_level_t level = valid ? INFO : ERROR;
             alert(level, code, proxy->outQ, NULL, "%s processing resource [%d out of %d]: %s",
                                                     valid ? "Successfully completed" : "Failed to complete",

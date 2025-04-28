@@ -69,16 +69,8 @@ class TelemetryMonitor: public Monitor
          * Methods
          *--------------------------------------------------------------------*/
 
-        TelemetryMonitor  (lua_State* L, event_level_t level, const char* eventq_name, const char* outq_name);
+        TelemetryMonitor  (lua_State* L, event_level_t level, const char* eventq_name);
         ~TelemetryMonitor (void) override;
-
-        static int jsonOutput (const EventLib::trace_t* event, char* event_buffer);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        Publisher* outQ;
     };
 
 #endif  /* __publish_monitor__ */

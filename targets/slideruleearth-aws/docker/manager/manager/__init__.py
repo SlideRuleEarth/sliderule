@@ -43,9 +43,13 @@ def create_app(test_config=None):
     from . import geo
     geo.init_app(app)
 
-    # bring in metrics subsystem
-    from . import metrics
-    app.register_blueprint(metrics.metrics)
+    # bring in telemetry subsystem
+    from . import telemetry
+    app.register_blueprint(telemetry.telemetry)
+
+    # bring in alerts subsystem
+    from . import alerts
+    app.register_blueprint(alerts.alerts)
 
     # bring in status subsystem
     from . import status

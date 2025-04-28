@@ -33,6 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "AlertMonitor.h"
 #include "Asset.h"
 #include "AssetIndex.h"
 #include "CurlLib.h"
@@ -118,6 +119,7 @@ static int core_open (lua_State *L)
         {"script",          LuaScript::luaCreate},
         {"monitor",         LogMonitor::luaCreate},
         {"tmon",            TelemetryMonitor::luaCreate},
+        {"amon",            AlertMonitor::luaCreate},
         {"httpd",           HttpServer::luaCreate},
         {"endpoint",        LuaEndpoint::luaCreate},
         {"asset",           Asset::luaCreate},
@@ -169,6 +171,7 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "LOG",                      EventLib::LOG);
     LuaEngine::setAttrInt   (L, "TRACE",                    EventLib::TRACE);
     LuaEngine::setAttrInt   (L, "TELEMETRY",                EventLib::TELEMETRY);
+    LuaEngine::setAttrInt   (L, "ALERT",                    EventLib::ALERT);
     LuaEngine::setAttrInt   (L, "FMT_TEXT",                 LogMonitor::TEXT);
     LuaEngine::setAttrInt   (L, "FMT_CLOUD",                LogMonitor::CLOUD);
     LuaEngine::setAttrStr   (L, "EVENTQ",                   EVENTQ);
@@ -182,8 +185,8 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "CHECK",                    IO_CHECK);
     LuaEngine::setAttrInt   (L, "SUBSCRIBER_OF_OPPORUNITY", MsgQ::SUBSCRIBER_OF_OPPORTUNITY);
     LuaEngine::setAttrInt   (L, "SUBSCRIBER_OF_CONFIDENCE", MsgQ::SUBSCRIBER_OF_CONFIDENCE);
-    LuaEngine::setAttrInt   (L, "RTE_INFO",                 RTE_INFO);
-    LuaEngine::setAttrInt   (L, "RTE_ERROR",                RTE_ERROR);
+    LuaEngine::setAttrInt   (L, "RTE_STATUS",                 RTE_STATUS);
+    LuaEngine::setAttrInt   (L, "RTE_FAILURE",                RTE_FAILURE);
     LuaEngine::setAttrInt   (L, "RTE_TIMEOUT",              RTE_TIMEOUT);
     LuaEngine::setAttrInt   (L, "RTE_RESOURCE_DOES_NOT_EXIST",  RTE_RESOURCE_DOES_NOT_EXIST);
     LuaEngine::setAttrInt   (L, "RTE_EMPTY_SUBSET",         RTE_EMPTY_SUBSET);

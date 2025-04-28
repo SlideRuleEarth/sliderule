@@ -90,7 +90,7 @@ int GeoUserRaster::luaCreate (lua_State* L)
         if(!rqst_parms->samplers.add(GeoFields::DEFAULT_KEY, geo_fields))
         {
             delete geo_fields;
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to add default geo fields");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to add default geo fields");
         }
         geo_fields->fromLua(L, lua_gettop(L));
         LuaObject::referenceLuaObject(rqst_parms); // GeoUserRaster expects a LuaObject created from a Lua script
@@ -103,7 +103,7 @@ int GeoUserRaster::luaCreate (lua_State* L)
         /* Check maximum size */
         const uint32_t maxSize = 64*1024*1024;
         if(rasterlength > maxSize)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "User raster too big, size is: %lu, max allowed: %u", rasterlength, maxSize);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "User raster too big, size is: %lu, max allowed: %u", rasterlength, maxSize);
 
         /* If raster has elevation assume it is in the first band */
         const int elevationBandNum = iselevation ? 1 : GdalRaster::NO_BAND;
@@ -143,10 +143,10 @@ GeoUserRaster::GeoUserRaster(lua_State *L, RequestFields* rqst_parms, const char
     data(NULL)
 {
     if(file == NULL)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid file pointer (NULL)");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid file pointer (NULL)");
 
     if(filelength <= 0)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid filelength: %ld:", filelength);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid filelength: %ld:", filelength);
 
     try
     {

@@ -29,26 +29,48 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __gedtm_time_utils__
-#define __gedtm_time_utils__
+#ifndef __alert_monitor__
+#define __alert_monitor__
 
-#include <string>
-#include <regex>
-#include <stdexcept>
-#include "TimeLib.h"
+/******************************************************************************
+ * INCLUDES
+ ******************************************************************************/
 
-inline int64_t extractGPSTime(const std::string& path)
+#include "Monitor.h"
+#include "OsApi.h"
+#include "EventLib.h"
+#include "MsgQ.h"
+
+/******************************************************************************
+ * CLASS
+ ******************************************************************************/
+
+class AlertMonitor: public Monitor
 {
-    std::regex versionRegex(R"(v(\d{4})(\d{2})(\d{2}))");
-    std::smatch match;
-    if (std::regex_search(path, match, versionRegex) && match.size() == 4)
-    {
-        int year = std::stoi(match[1]);
-        int month = std::stoi(match[2]);
-        int day = std::stoi(match[3]);
-        return TimeLib::datetime2gps(year, month, day, 0, 0, 0);
-    }
-    throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to extract GPS time from file name");
-}
+    public:
 
-#endif  /* __gedtm_time_utils__ */
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        static int luaCreate (lua_State* L);
+
+    protected:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        void processEvent (const unsigned char* event_buf_ptr, int event_size) override;
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        AlertMonitor  (lua_State* L, event_level_t level, const char* eventq_name);
+        ~AlertMonitor (void) override;
+    };
+
+#endif  /* __publish_monitor__ */

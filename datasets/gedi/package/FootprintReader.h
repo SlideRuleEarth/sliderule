@@ -242,7 +242,7 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, const char* outq_n
 
         if(threadCount == 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "No valid beams specified, must be 0, 1, 2, 3, 5, 6, 8, 11, or -1 for all");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "No valid beams specified, must be 0, 1, 2, 3, 5, 6, 8, 11, or -1 for all");
         }
     }
     catch(const RunTimeException& e)

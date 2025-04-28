@@ -95,27 +95,27 @@ def list_rows(table, time_field, exclude_list=None):
 #
 # Request Counts
 #
-@status.route('/request_counts/<field>', methods=['GET'])
-def request_counts(field):
+@status.route('/telemetry_counts/<field>', methods=['GET'])
+def telemetry_counts(field):
     return value_counts("requests", field, ['source_ip_hash', 'source_ip_location', 'client', 'endpoint', 'status_code', 'account', 'version'], "request_time")
 
 #
 # Alarm Counts
 #
-@status.route('/alarm_counts/<field>', methods=['GET'])
-def alarm_counts(field):
+@status.route('/alert_counts/<field>', methods=['GET'])
+def alert_counts(field):
     return value_counts("alarms", field, ['status_code', 'account', 'version'], "alarm_time")
 
 #
 # Request List
 #
-@status.route('/request_list', methods=['GET'])
-def request_list():
+@status.route('/telemetry_list', methods=['GET'])
+def telemetry_list():
     return list_rows("requests", "request_time", ["aoi"])
 
 #
 # Alarm List
 #
-@status.route('/alarm_list', methods=['GET'])
-def alarm_list():
+@status.route('/alert_list', methods=['GET'])
+def alert_list():
     return list_rows("alarms", "alarm_time")

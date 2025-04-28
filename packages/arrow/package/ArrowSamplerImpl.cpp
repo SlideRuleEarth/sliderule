@@ -98,7 +98,7 @@ void ArrowSamplerImpl::processInputFile(const char* file_path, std::vector<point
     catch(const parquet::ParquetStatusException& e)
     {
         /* Rethrow as a runtime exception */
-        throw RunTimeException(CRITICAL, RTE_ERROR, "%s", e.what());
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", e.what());
     }
 
     getMetadata();
@@ -188,7 +188,7 @@ void ArrowSamplerImpl::createOutpuFiles(void)
             break;
 
         default:
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Unsupported file format");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Unsupported file format");
         }
 
         /* Generate metadata file since csv/feather writers ignore it */
@@ -200,7 +200,7 @@ void ArrowSamplerImpl::createOutpuFiles(void)
     catch(const parquet::ParquetStatusException& e)
     {
         /* Rethrow as a runtime exception */
-        throw RunTimeException(CRITICAL, RTE_ERROR, "%s", e.what());
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", e.what());
     }
 }
 
@@ -228,7 +228,7 @@ void ArrowSamplerImpl::getMetadata(void)
             doc.Parse(value.c_str());
             if(doc.HasParseError())
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to parse metadata JSON: %s", value.c_str());
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to parse metadata JSON: %s", value.c_str());
             }
 
             if(doc.HasMember("recordinfo"))
@@ -243,7 +243,7 @@ void ArrowSamplerImpl::getMetadata(void)
                 /* Make sure the keys are not empty */
                 if(_timeKey[0] == '\0' || _xKey[0] == '\0' || _yKey[0] == '\0')
                 {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid recordinfo in sliderule metadata.");
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid recordinfo in sliderule metadata.");
                 }
 
                 timeKey = StringLib::duplicate(_timeKey);
@@ -253,13 +253,13 @@ void ArrowSamplerImpl::getMetadata(void)
                 foundIt = true;
                 break;
             }
-            else throw RunTimeException(CRITICAL, RTE_ERROR, "No 'recordinfo' key found in 'sliderule' metadata.");
+            else throw RunTimeException(CRITICAL, RTE_FAILURE, "No 'recordinfo' key found in 'sliderule' metadata.");
         }
     }
 
     if(!foundIt)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "No 'sliderule' metadata found in parquet file.");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "No 'sliderule' metadata found in parquet file.");
     }
 }
 
@@ -309,10 +309,10 @@ void ArrowSamplerImpl::getXYPoints(std::vector<point_info_t>& points)
 
     const std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
     const int x_column_index = table->schema()->GetFieldIndex(xKey);
-    if(x_column_index == -1) throw RunTimeException(ERROR, RTE_ERROR, "X column not found.");
+    if(x_column_index == -1) throw RunTimeException(ERROR, RTE_FAILURE, "X column not found.");
 
     const int y_column_index = table->schema()->GetFieldIndex(yKey);
-    if(y_column_index == -1) throw RunTimeException(ERROR, RTE_ERROR, "Y column not found.");
+    if(y_column_index == -1) throw RunTimeException(ERROR, RTE_FAILURE, "Y column not found.");
 
     auto x_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(x_column_index)->chunk(0));
     auto y_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(y_column_index)->chunk(0));
@@ -338,7 +338,7 @@ void ArrowSamplerImpl::getGeoPoints(std::vector<point_info_t>& points)
 
     const std::shared_ptr<arrow::Table> table = inputFileToTable(columnNames);
     const int geometry_column_index = table->schema()->GetFieldIndex(geocol);
-    if(geometry_column_index == -1) throw RunTimeException(ERROR, RTE_ERROR, "Geometry column not found.");
+    if(geometry_column_index == -1) throw RunTimeException(ERROR, RTE_FAILURE, "Geometry column not found.");
 
     auto geometry_column = std::static_pointer_cast<arrow::BinaryArray>(table->column(geometry_column_index)->chunk(0));
     mlog(DEBUG, "Geometry column elements: %ld", geometry_column->length());
@@ -1053,5 +1053,5 @@ void ArrowSamplerImpl::metadataToJson(const std::shared_ptr<arrow::Table>& table
         fwrite(buffer.GetString(), 1, buffer.GetSize(), jsonFile);
         fclose(jsonFile);
     }
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open metadata file: %s", file_path);
+    else throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to open metadata file: %s", file_path);
 }

@@ -233,7 +233,7 @@ int UT_BathyRefractionCorrector::luaRefractionTest (lua_State* L)
 
         // run refraction code
         status = refraction->run(&dataframe);
-        if(!status) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to run refraction code");
+        if(!status) throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to run refraction code");
 
         // check results
         double acc_err = 0.0;

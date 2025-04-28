@@ -53,7 +53,7 @@ PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, RequestFields* rqst_parms, 
 {
     const std::size_t pos = path2geocells.find(demName);
     if (pos == std::string::npos)
-        throw RunTimeException(DEBUG, RTE_ERROR, "Invalid path to geocells: %s", path2geocells.c_str());
+        throw RunTimeException(DEBUG, RTE_FAILURE, "Invalid path to geocells: %s", path2geocells.c_str());
 
     filePath = path2geocells.substr(0, pos);
 }
@@ -263,7 +263,7 @@ bool PgcDemStripsRaster::findRasters(raster_finder_t* finder)
                 std::string fileName(fname);
                 std::size_t pos = fileName.find(demName);
                 if (pos == std::string::npos)
-                    throw RunTimeException(DEBUG, RTE_ERROR, "Could not find marker %s in file", demName.c_str());
+                    throw RunTimeException(DEBUG, RTE_FAILURE, "Could not find marker %s in file", demName.c_str());
 
                 fileName = filePath + fileName.substr(pos);
 

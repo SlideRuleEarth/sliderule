@@ -29,7 +29,7 @@ local resources = rqst["resources"]
 local timeout = rqst["timeout"] or core.RQST_TIMEOUT
 
 -- Post Initial Status Progress --
-userlog:alert(core.DEBUG, core.RTE_INFO, string.format("atl03 indexing initiated on %s data...", atl03_asset))
+userlog:alert(core.DEBUG, core.RTE_STATUS, string.format("atl03 indexing initiated on %s data...", atl03_asset))
 
 -- Index Asset --
 local atl03 = core.getbyname(atl03_asset)
@@ -49,9 +49,9 @@ while (userlog:numsubs() > 0) and not indexer:waiton(interval * 1000) do
     -- Get Stats --
     local stats = indexer:stats()
     -- Dispay Progress --
-    userlog:alert(core.DEBUG, core.RTE_INFO, string.format("processed %d entries from %d threads", stats.processed, stats.threads))
+    userlog:alert(core.DEBUG, core.RTE_STATUS, string.format("processed %d entries from %d threads", stats.processed, stats.threads))
 end
 
 -- Processing Complete
-userlog:alert(core.DEBUG, core.RTE_INFO, string.format("processing complete"))
+userlog:alert(core.DEBUG, core.RTE_STATUS, string.format("processing complete"))
 return

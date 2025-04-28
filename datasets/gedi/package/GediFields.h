@@ -111,7 +111,7 @@ class GediFields: public RequestFields
                 case 5:  return "BEAM0110";
                 case 6:  return "BEAM1000";
                 case 7:  return "BEAM1011";
-                default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam index: %d", beam_index);
+                default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam index: %d", beam_index);
             }
         }
 

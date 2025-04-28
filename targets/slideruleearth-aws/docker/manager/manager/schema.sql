@@ -1,5 +1,5 @@
-CREATE OR REPLACE TABLE requests (
-    request_time TIMESTAMP,
+CREATE OR REPLACE TABLE telemetry (
+    record_time TIMESTAMP,
     source_ip_hash TEXT,
     source_ip_location TEXT,
     aoi GEOMETRY,
@@ -12,8 +12,8 @@ CREATE OR REPLACE TABLE requests (
     message TEXT
 );
 
-CREATE OR REPLACE TABLE alarms (
-    alarm_time TIMESTAMP,
+CREATE OR REPLACE TABLE alerts (
+    record_time TIMESTAMP,
     status_code INTEGER,
     account TEXT,
     version TEXT,

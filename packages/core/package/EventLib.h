@@ -46,7 +46,6 @@
  ******************************************************************************/
 
 #define mlog(lvl,...) EventLib::logMsg(__FILE__,__LINE__,lvl,__VA_ARGS__)
-#define alert(lvl,code,outq,active,...) EventLib::alertMsg(__FILE__,__LINE__,lvl,code,outq,active,__VA_ARGS__)
 
 #ifdef __tracing__
 #define start_trace(lvl,parent,name,fmt,...) EventLib::startTrace(parent,name,lvl,fmt,__VA_ARGS__)
@@ -56,7 +55,9 @@
 #define stop_trace(lvl,id,...) {(void)lvl; (void)id;}
 #endif
 
-#define telemeter(lvl,code,endpoint,duration,aoi,client,account,...) EventLib::recordTlm(lvl,code,endpoint,duration,aoi,client,account,__VA_ARGS__)
+#define telemeter(lvl,code,endpoint,duration,aoi,client,account,...) EventLib::sendTlm(lvl,code,endpoint,duration,aoi,client,account,__VA_ARGS__)
+
+#define alert(lvl,code,outq,active,...) EventLib::sendAlert(lvl,code,outq,active,__VA_ARGS__)
 
 /******************************************************************************
  * EVENT LIBRARY CLASS
@@ -74,7 +75,7 @@ class EventLib
         static const int MAX_SRC_STR = 32;
         static const int MAX_NAME_STR = 32;
         static const int MAX_ATTR_STR = 1024;
-        static const int MAX_METRIC_STR = 32;
+        static const int MAX_TLM_STR = 32;
         static const int MAX_ALERT_STR = 256;
 
         static const char* logRecType;
@@ -87,57 +88,55 @@ class EventLib
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            int64_t     systime;                    // time of event
-            int64_t     tid;                        // task id
-            uint16_t    level;                      // event_level_t
+            int64_t     time;                       // time of event
+            uint32_t    level;                      // event_level_t
             char        ipv4[SockLib::IPV4_STR_LEN];// ip address of local host
             char        source[MAX_SRC_STR];        // source filename and line
             char        message[MAX_MSG_STR];       // caller defined string
         } log_t;
 
         typedef struct {
-            int64_t     systime;                    // time of event
+            int64_t     time;                       // time of event
             int64_t     tid;                        // task id
             uint32_t    id;                         // event id
             uint32_t    parent;                     // parent event id
-            uint16_t    flags;                      // flags_t
-            uint16_t    level;                      // event_level_t
+            uint32_t    flags;                      // flags_t
+            uint32_t    level;                      // event_level_t
             char        ipv4[SockLib::IPV4_STR_LEN];// ip address of local host
             char        name[MAX_NAME_STR];         // name of event
             char        attr[MAX_ATTR_STR];         // attributes associated with event
         } trace_t;
 
         typedef struct {
-            int64_t     systime;                    // time of event
-            int32_t     code;                       // same as alert codes
+            int64_t     time;                       // time of event
+            int32_t     code;                       // alert codes
+            uint32_t    level;                      // event_level_t
             float       duration;                   // seconds
             MathLib::coord_t aoi;                   // area of interest (single point representing area)
-            uint16_t    level;                      // event_level_t
             char        ipv4[SockLib::IPV4_STR_LEN];// ip address of local host
-            char        endpoint[MAX_METRIC_STR];   // server-side API
-            char        client[MAX_METRIC_STR];     // Python Client, Web Client, etc
-            char        account[MAX_METRIC_STR];    // username
-            char        version[MAX_METRIC_STR];    // sliderule version
+            char        endpoint[MAX_TLM_STR];      // server-side API
+            char        client[MAX_TLM_STR];        // Python Client, Web Client, etc
+            char        account[MAX_TLM_STR];       // username
+            char        version[MAX_TLM_STR];       // sliderule version
             char        message[MAX_MSG_STR];       // caller defined string
         } telemetry_t;
 
         typedef struct {
-            int32_t code;
-            int32_t level;
-            char    text[MAX_ALERT_STR];
+            int32_t     code;
+            uint32_t    level;
+            char        text[MAX_ALERT_STR];
         } alert_t;
 
         typedef enum {
-            START   = 0x01,
-            STOP    = 0x02,
-            REQUEST = 0x04,
-            ALARM   = 0x08
+            START       = 0x01,
+            STOP        = 0x02
         } flags_t;
 
         typedef enum {
             LOG         = 0x01,
             TRACE       = 0x02,
-            TELEMETRY   = 0x04
+            TELEMETRY   = 0x04,
+            ALERT       = 0x08
         } type_t;
 
         /*--------------------------------------------------------------------
@@ -154,14 +153,15 @@ class EventLib
         static  const char*     type2str        (type_t type);
 
         static bool             logMsg          (const char* file_name, unsigned int line_number, event_level_t lvl, const char* msg_fmt, ...) VARG_CHECK(printf, 4, 5);
-        static bool             alertMsg        (const char* file_name, unsigned int line_number, event_level_t lvl, int code, void* rspsq, const bool* active, const char* errmsg, ...) VARG_CHECK(printf, 7, 8);
 
         static uint32_t         startTrace      (uint32_t parent, const char* name, event_level_t lvl, const char* attr_fmt, ...) VARG_CHECK(printf, 4, 5);
         static void             stopTrace       (uint32_t id, event_level_t lvl);
         static void             stashId         (uint32_t id);
         static uint32_t         grabId          (void);
 
-        static bool             recordTlm       (event_level_t lvl, int code, const char* endpoint, float duration, MathLib::coord_t aoi, const char* client, const char* account, const char* msg_fmt, ...) VARG_CHECK(printf, 8, 9);
+        static bool             sendTlm         (event_level_t lvl, int code, const char* endpoint, float duration, MathLib::coord_t aoi, const char* client, const char* account, const char* msg_fmt, ...) VARG_CHECK(printf, 8, 9);
+
+        static bool             sendAlert       (event_level_t lvl, int code, void* rspsq, const bool* active, const char* errmsg, ...) VARG_CHECK(printf, 5, 6);
 
     private:
 
@@ -175,6 +175,7 @@ class EventLib
         static event_level_t logLevel;
         static event_level_t traceLevel;
         static event_level_t telemetryLevel;
+        static event_level_t alertLevel;
 };
 
 #endif  /* __eventlib__ */

@@ -256,7 +256,7 @@ void FieldMap<T>::fromLua (lua_State* L, int index)
                 entry.field = new T;
                 if(!fields.add(key, entry))
                 {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "failed to add entry <%s> to column fields", key);
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add entry <%s> to column fields", key);
                 }
                 convertFromLua(L, -1, *entry.field);
             }

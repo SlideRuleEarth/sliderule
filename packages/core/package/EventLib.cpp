@@ -59,8 +59,7 @@ static Publisher* outq;
 static RecordObject::fieldDef_t logRecDef[] =
 {
     {"time",    RecordObject::INT64,    offsetof(EventLib::log_t, systime),     1,                        NULL, NATIVE_FLAGS},
-    {"tid",     RecordObject::INT64,    offsetof(EventLib::log_t, tid),         1,                        NULL, NATIVE_FLAGS},
-    {"level",   RecordObject::UINT16,   offsetof(EventLib::log_t, level),       1,                        NULL, NATIVE_FLAGS},
+    {"level",   RecordObject::UINT32,   offsetof(EventLib::log_t, level),       1,                        NULL, NATIVE_FLAGS},
     {"ipv4",    RecordObject::STRING,   offsetof(EventLib::log_t, ipv4),        SockLib::IPV4_STR_LEN,    NULL, NATIVE_FLAGS},
     {"source",  RecordObject::STRING,   offsetof(EventLib::log_t, source),      EventLib::MAX_SRC_STR,    NULL, NATIVE_FLAGS},
     {"message", RecordObject::STRING,   offsetof(EventLib::log_t, message),     0,                        NULL, NATIVE_FLAGS}
@@ -72,10 +71,10 @@ static RecordObject::fieldDef_t traceRecDef[] =
     {"tid",     RecordObject::INT64,    offsetof(EventLib::trace_t, tid),       1,                        NULL, NATIVE_FLAGS},
     {"id",      RecordObject::UINT32,   offsetof(EventLib::trace_t, id),        1,                        NULL, NATIVE_FLAGS},
     {"parent",  RecordObject::UINT32,   offsetof(EventLib::trace_t, parent),    1,                        NULL, NATIVE_FLAGS},
-    {"flags",   RecordObject::UINT16,   offsetof(EventLib::trace_t, flags),     1,                        NULL, NATIVE_FLAGS},
-    {"level",   RecordObject::UINT16,   offsetof(EventLib::trace_t, level),     1,                        NULL, NATIVE_FLAGS},
+    {"flags",   RecordObject::UINT32,   offsetof(EventLib::trace_t, flags),     1,                        NULL, NATIVE_FLAGS},
+    {"level",   RecordObject::UINT32,   offsetof(EventLib::trace_t, level),     1,                        NULL, NATIVE_FLAGS},
     {"ipv4",    RecordObject::STRING,   offsetof(EventLib::trace_t, ipv4),      SockLib::IPV4_STR_LEN,    NULL, NATIVE_FLAGS},
-    {"name",    RecordObject::STRING,   offsetof(EventLib::trace_t, name),      EventLib::MAX_NAME_STR,  NULL, NATIVE_FLAGS},
+    {"name",    RecordObject::STRING,   offsetof(EventLib::trace_t, name),      EventLib::MAX_NAME_STR,   NULL, NATIVE_FLAGS},
     {"attr",    RecordObject::STRING,   offsetof(EventLib::trace_t, attr),      0,                        NULL, NATIVE_FLAGS}
 };
 
@@ -88,17 +87,17 @@ static RecordObject::fieldDef_t metricRecDef[] =
     {"longitude",   RecordObject::DOUBLE,   offsetof(EventLib::telemetry_t, aoi) + offsetof(MathLib::coord_t, lon), 1, NULL, NATIVE_FLAGS},
     {"level",       RecordObject::UINT16,   offsetof(EventLib::telemetry_t, level),    1,                        NULL, NATIVE_FLAGS},
     {"ipv4",        RecordObject::STRING,   offsetof(EventLib::telemetry_t, ipv4),     SockLib::IPV4_STR_LEN,    NULL, NATIVE_FLAGS},
-    {"client",      RecordObject::STRING,   offsetof(EventLib::telemetry_t, client),   EventLib::MAX_METRIC_STR, NULL, NATIVE_FLAGS},
-    {"account",     RecordObject::STRING,   offsetof(EventLib::telemetry_t, account),  EventLib::MAX_METRIC_STR, NULL, NATIVE_FLAGS},
-    {"version",     RecordObject::STRING,   offsetof(EventLib::telemetry_t, version),  EventLib::MAX_METRIC_STR, NULL, NATIVE_FLAGS},
+    {"client",      RecordObject::STRING,   offsetof(EventLib::telemetry_t, client),   EventLib::MAX_TLM_STR, NULL, NATIVE_FLAGS},
+    {"account",     RecordObject::STRING,   offsetof(EventLib::telemetry_t, account),  EventLib::MAX_TLM_STR, NULL, NATIVE_FLAGS},
+    {"version",     RecordObject::STRING,   offsetof(EventLib::telemetry_t, version),  EventLib::MAX_TLM_STR, NULL, NATIVE_FLAGS},
     {"message",     RecordObject::STRING,   offsetof(EventLib::telemetry_t, message),  0,                        NULL, NATIVE_FLAGS}
 };
 
 static RecordObject::fieldDef_t alertRecDef[] =
 {
     {"code",    RecordObject::INT32,    offsetof(EventLib::alert_t, code),      1,                        NULL, NATIVE_FLAGS},
-    {"level",   RecordObject::INT32,    offsetof(EventLib::alert_t, level),     1,                        NULL, NATIVE_FLAGS},
-    {"text",    RecordObject::STRING,   offsetof(EventLib::alert_t, text),      EventLib::MAX_ALERT_STR, NULL, NATIVE_FLAGS}
+    {"level",   RecordObject::UINT32,   offsetof(EventLib::alert_t, level),     1,                        NULL, NATIVE_FLAGS},
+    {"text",    RecordObject::STRING,   offsetof(EventLib::alert_t, text),      EventLib::MAX_ALERT_STR,  NULL, NATIVE_FLAGS}
 };
 
 /******************************************************************************
@@ -164,6 +163,7 @@ bool EventLib::setLvl (type_t type, event_level_t lvl)
         case LOG:       logLevel = lvl;         return true;
         case TRACE:     traceLevel = lvl;       return true;
         case TELEMETRY: telemetryLevel = lvl;   return true;
+        case ALERT:     alertLevel = lvl;       return true;
         default:                                return false;
     }
 }
@@ -178,6 +178,7 @@ event_level_t EventLib::getLvl (type_t type)
         case LOG:       return logLevel;
         case TRACE:     return traceLevel;
         case TELEMETRY: return telemetryLevel;
+        case ALERT:     return alertLevel;
         default:        return INVALID_EVENT_LEVEL;
     }
 }
@@ -224,6 +225,7 @@ const char* EventLib::type2str (type_t type)
         case LOG:       return "LOG";
         case TRACE:     return "TRACE";
         case TELEMETRY: return "TELEMETRY";
+        case ALERT:     return "ALERT";
         default:        return NULL;
     }
 }
@@ -239,8 +241,7 @@ bool EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
     if(lvl < logLevel) return true;
 
     /* Initialize Log Message */
-    event.systime   = TimeLib::gpstime();
-    event.tid       = Thread::getId();
+    event.time      = TimeLib::gpstime();
     event.level     = lvl;
 
     /* Copy IP Address */
@@ -268,40 +269,6 @@ bool EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
 }
 
 /*----------------------------------------------------------------------------
- * alertMsg
- *----------------------------------------------------------------------------*/
-bool EventLib::alertMsg (const char* file_name, unsigned int line_number, event_level_t lvl, int code, void* rspsq, const bool* active, const char* errmsg, ...)
-{
-    bool status = true;
-
-    /* Allocate and Initialize Alert Record */
-    RecordObject record(alertRecType);
-    alert_t* alert = reinterpret_cast<alert_t*>(record.getRecordData());
-    alert->code = code;
-    alert->level = (int32_t)lvl;
-
-    /* Build Message */
-    va_list args;
-    va_start(args, errmsg);
-    const int vlen = vsnprintf(alert->text, MAX_ALERT_STR - 1, errmsg, args);
-    const int attr_size = MAX(MIN(vlen + 1, MAX_ALERT_STR), 1);
-    alert->text[attr_size - 1] = '\0';
-    va_end(args);
-
-    /* Generate Corresponding Log Message */
-    EventLib::logMsg(file_name, line_number, lvl, "%s", alert->text);
-
-    /* Post Alert Record */
-    if(rspsq)
-    {
-        Publisher* rspsq_ptr = reinterpret_cast<Publisher*>(rspsq); // avoids cyclic dependency with RecordObject
-        status = record.post(rspsq_ptr, 0, active);
-    }
-
-    return status;
-}
-
-/*----------------------------------------------------------------------------
  * startTrace
  *----------------------------------------------------------------------------*/
 uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t lvl, const char* attr_fmt, ...)
@@ -312,7 +279,7 @@ uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t l
     if(lvl < traceLevel) return parent;
 
     /* Initialize Trace */
-    event.systime   = TimeLib::latchtime() * 1000000; // us
+    event.time      = TimeLib::latchtime() * 1000000; // us
     event.tid       = Thread::getId();
     event.id        = trace_id++;;
     event.parent    = parent;
@@ -357,7 +324,7 @@ void EventLib::stopTrace(uint32_t id, event_level_t lvl)
     if(lvl < traceLevel) return;
 
     /* Initialize Trace */
-    event.systime   = TimeLib::latchtime() * 1000000; // us
+    event.time      = TimeLib::latchtime() * 1000000; // us
     event.tid       = 0;
     event.id        = id;
     event.parent    = ORIGIN;
@@ -394,9 +361,9 @@ uint32_t EventLib::grabId (void)
 }
 
 /*----------------------------------------------------------------------------
- * recordTlm
+ * sendTlm
  *----------------------------------------------------------------------------*/
-bool EventLib::recordTlm (event_level_t lvl, int code, const char* endpoint, float duration, MathLib::coord_t aoi, const char* client, const char* account, const char* msg_fmt, ...)
+bool EventLib::sendTlm (event_level_t lvl, int code, const char* endpoint, float duration, MathLib::coord_t aoi, const char* client, const char* account, const char* msg_fmt, ...)
 {
     telemetry_t event;
 
@@ -404,17 +371,17 @@ bool EventLib::recordTlm (event_level_t lvl, int code, const char* endpoint, flo
     if(lvl < telemetryLevel) return;
 
     /* Initialize Telemetry Message */
-    event.systime   = TimeLib::gpstime();
+    event.time      = TimeLib::gpstime();
     event.level     = lvl;
     event.code      = code;
     event.duration  = duration;
     event.aoi       = aoi;
 
     /* Copy String Arguments */
-    StringLib::copy(event.endpoint, endpoint, EventLib::MAX_METRIC_STR);
-    StringLib::copy(event.client, client, EventLib::MAX_METRIC_STR);
-    StringLib::copy(event.account, account, EventLib::MAX_METRIC_STR);
-    StringLib::copy(event.version, LIBID, EventLib::MAX_METRIC_STR);
+    StringLib::copy(event.endpoint, endpoint, EventLib::MAX_TLM_STR);
+    StringLib::copy(event.client, client, EventLib::MAX_TLM_STR);
+    StringLib::copy(event.account, account, EventLib::MAX_TLM_STR);
+    StringLib::copy(event.version, LIBID, EventLib::MAX_TLM_STR);
 
     /* Copy IP Address */
     StringLib::copy(event.ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
@@ -433,4 +400,41 @@ bool EventLib::recordTlm (event_level_t lvl, int code, const char* endpoint, flo
     telemetry_t* data = reinterpret_cast<telemetry_t*>(record.getRecordData());
     memcpy(data, &event, event_record_size);
     return record.post(outq, 0, NULL, false);
+}
+
+/*----------------------------------------------------------------------------
+ * sendAlert
+ *----------------------------------------------------------------------------*/
+bool EventLib::sendAlert (event_level_t lvl, int code, void* rspsq, const bool* active, const char* errmsg, ...)
+{
+    bool status = true;
+
+    /* Allocate and Initialize Alert Record */
+    RecordObject record(alertRecType);
+    alert_t* event = reinterpret_cast<alert_t*>(record.getRecordData());
+    event->code = code;
+    event->level = (int32_t)lvl;
+
+    /* Build Message */
+    va_list args;
+    va_start(args, errmsg);
+    const int vlen = vsnprintf(event->text, MAX_ALERT_STR - 1, errmsg, args);
+    const int text_size = MAX(MIN(vlen + 1, MAX_ALERT_STR), 1);
+    event->text[text_size - 1] = '\0';
+    va_end(args);
+
+    /* Post to Event Q */
+    status = status && record.post(outq, 0, active);
+
+    /* Post to Response Q */
+    if(rspsq)
+    {
+        Publisher* rspsq_ptr = reinterpret_cast<Publisher*>(rspsq); // avoids cyclic dependency with RecordObject
+        status = status && record.post(rspsq_ptr, 0, active);
+    }
+
+    /* Log Alert */
+    mlog(static_cast<event_level_t>(event->level), "<alert=%d> %s", event->code, event->text);
+
+    return status;
 }

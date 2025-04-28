@@ -65,9 +65,10 @@ sys.setmemlimit(stream_mem_thresh)
 aws_utils.config_aws()
 
 -- Configure Monitoring --
-sys.setlvl(core.LOG | core.TRACE | core.TELEMETRY, event_level) -- set level globally
+sys.setlvl(core.LOG | core.TRACE | core.TELEMETRY | core.ALERT, event_level) -- set level globally
 local log_monitor = core.monitor(core.DEBUG, event_format):name("LogMonitor") -- monitor logs and write to stdout
 local telemetry_monitor = core.tmon(core.DEBUG):name("TelemetryMonitor") -- monitor telementry and push to orchestrator and manager
+local alert_monitor = core.amon(core.DEBUG):name("AlertMonitor") -- monitor alerts and push to manager
 
 -- Configure Assets --
 local assets = asset.loaddir(asset_directory)

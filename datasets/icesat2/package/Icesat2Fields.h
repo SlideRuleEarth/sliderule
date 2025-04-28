@@ -377,12 +377,12 @@ class Icesat2Fields: public RequestFields
             if(beam[2] == '1') track = RPT_1;
             else if(beam[2] == '2') track = RPT_2;
             else if(beam[2] == '3') track = RPT_3;
-            else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam: %s", beam);
+            else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
 
             int pair;
             if(beam[3] == 'l') pair = Icesat2Fields::RPT_L;
             else if(beam[3] == 'r') pair = Icesat2Fields::RPT_R;
-            else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam: %s", beam);
+            else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
 
             return getSpotNumber(sc_orient, track, pair);
         }
@@ -394,21 +394,21 @@ class Icesat2Fields: public RequestFields
             {
                 if(beam[3] == 'l') return Icesat2Fields::GT1L;
                 else if(beam[3] == 'r') return Icesat2Fields::GT1R;
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam: %s", beam);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
             }
             else if(beam[2] == '2')
             {
                 if(beam[3] == 'l') return Icesat2Fields::GT2L;
                 else if(beam[3] == 'r') return Icesat2Fields::GT2R;
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam: %s", beam);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
             }
             else if(beam[2] == '3')
             {
                 if(beam[3] == 'l') return Icesat2Fields::GT3L;
                 else if(beam[3] == 'r') return Icesat2Fields::GT3R;
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam: %s", beam);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
             }
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam: %s", beam);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam: %s", beam);
         }
 
         // returns ground track number 10 - 60

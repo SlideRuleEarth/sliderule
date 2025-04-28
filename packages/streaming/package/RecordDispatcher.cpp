@@ -72,7 +72,7 @@ int RecordDispatcher::luaCreate (lua_State* L)
         /* Check Number of Threads */
         if(num_threads < 1)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid number of threads supplied (must be >= 1)");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid number of threads supplied (must be >= 1)");
         }
 
         /* Set Key Mode */
@@ -81,7 +81,7 @@ int RecordDispatcher::luaCreate (lua_State* L)
         calcFunc_f  key_func = NULL;
         if(key_mode == INVALID_KEY_MODE)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid key mode specified: %s", key_mode_str);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid key mode specified: %s", key_mode_str);
         }
 
         if(key_mode == FIELD_KEY_MODE)
@@ -263,7 +263,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
         /* Check if Active */
         if(lua_obj->dispatcherActive)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Cannot attach %s to a running dispatcher", dispatch->getName());
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Cannot attach %s to a running dispatcher", dispatch->getName());
         }
 
         /* Attach Dispatches */
@@ -284,7 +284,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
                     {
                         if(old_dispatch.list[d] == dispatch)
                         {
-                            throw RunTimeException(CRITICAL, RTE_ERROR, "Dispatch already attached to %s", rec_type);
+                            throw RunTimeException(CRITICAL, RTE_FAILURE, "Dispatch already attached to %s", rec_type);
                         }
                     }
 
@@ -318,7 +318,7 @@ int RecordDispatcher::luaAttachDispatch(lua_State* L)
             if(!lua_obj->dispatchTable.add(rec_type, new_dispatch))
             {
                 delete [] new_dispatch.list;
-                throw RunTimeException(CRITICAL, RTE_ERROR, "unable to register dispatch for %s", rec_type);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to register dispatch for %s", rec_type);
             }
         }
 

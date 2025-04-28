@@ -53,13 +53,13 @@ BlueTopoBathyRaster::BlueTopoBathyRaster(lua_State* L, RequestFields* rqst_parms
 {
     if(!validateBandNames())
     {
-        throw RunTimeException(DEBUG, RTE_ERROR, "Invalid band name specified");
+        throw RunTimeException(DEBUG, RTE_FAILURE, "Invalid band name specified");
     }
 
     const std::string bucketPath = filePath + indexBucket;
     if(!findIndexFileInS3Bucket(bucketPath))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create BlueTopoBathyRaster");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create BlueTopoBathyRaster");
     }
 }
 

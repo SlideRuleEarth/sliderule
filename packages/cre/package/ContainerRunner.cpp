@@ -82,7 +82,7 @@ int ContainerRunner::luaCreate (lua_State* L)
         /* Check Environment */
         if(REGISTRY == NULL)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "container registry must be set before a container can be run");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "container registry must be set before a container can be run");
         }
 
         /* Create Container Runner */
@@ -155,7 +155,7 @@ int ContainerRunner::luaCreateUnique (lua_State* L)
         if(!std::filesystem::create_directory(host_shared_directory))
         {
             char err_buf[256];
-            throw RunTimeException(CRITICAL, RTE_ERROR, "%s", strerror_r(errno, err_buf, sizeof(err_buf)));
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", strerror_r(errno, err_buf, sizeof(err_buf)));
         }
         status = true;
     }
@@ -183,12 +183,12 @@ int ContainerRunner::luaDeleteUnique (lua_State* L)
         const char* host_shared_directory = getLuaString(L, 1, true, NULL);
         if(host_shared_directory == NULL)
         {
-            throw RunTimeException(DEBUG, RTE_INFO, "shared directory does not exist");
+            throw RunTimeException(DEBUG, RTE_STATUS, "shared directory does not exist");
         }
         if(!std::filesystem::remove_all(host_shared_directory))
         {
             char err_buf[256];
-            throw RunTimeException(CRITICAL, RTE_ERROR, "%s", strerror_r(errno, err_buf, sizeof(err_buf)));
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "%s", strerror_r(errno, err_buf, sizeof(err_buf)));
         }
         status = true;
     }
@@ -311,8 +311,8 @@ void* ContainerRunner::controlThread (void* parm)
     const FString create_url("http://localhost/%s/containers/create", api_version);
     const char* create_response = NULL;
     const long create_http_code = CurlLib::request(EndpointObject::POST, create_url.c_str(), data.c_str(), &create_response, NULL, false, false, cr->parms->timeout.value, &headers, unix_socket);
-    if(create_http_code != EndpointObject::Created) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to create container <%s>: %ld - %s", cr->parms->container_image.value.c_str(), create_http_code, create_response);
-    else alert(INFO, RTE_INFO, cr->outQ, NULL, "Created container <%s/%s> with parameters: %s", cr->parms->container_image.value.c_str(), cr->parms->container_name.value.c_str(), data.c_str());
+    if(create_http_code != EndpointObject::Created) alert(CRITICAL, RTE_FAILURE, cr->outQ, NULL, "Failed to create container <%s>: %ld - %s", cr->parms->container_image.value.c_str(), create_http_code, create_response);
+    else alert(INFO, RTE_STATUS, cr->outQ, NULL, "Created container <%s/%s> with parameters: %s", cr->parms->container_image.value.c_str(), cr->parms->container_name.value.c_str(), data.c_str());
 
     /* Run Container */
     if(create_http_code == EndpointObject::Created)
@@ -334,8 +334,8 @@ void* ContainerRunner::controlThread (void* parm)
         const FString start_url("http://localhost/%s/containers/%s/start", api_version, container_id);
         const char* start_response = NULL;
         const long start_http_code = CurlLib::request(EndpointObject::POST, start_url.c_str(), NULL, &start_response, NULL, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
-        if(start_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to start container <%s>: %ld - %s", container_name_str.c_str(), start_http_code, start_response);
-        else alert(INFO, RTE_INFO, cr->outQ, NULL, "Started container <%s>", container_name_str.c_str());
+        if(start_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_FAILURE, cr->outQ, NULL, "Failed to start container <%s>: %ld - %s", container_name_str.c_str(), start_http_code, start_response);
+        else alert(INFO, RTE_STATUS, cr->outQ, NULL, "Started container <%s>", container_name_str.c_str());
         delete [] start_response;
 
         /* Wait Until Container Has Completed */
@@ -348,7 +348,7 @@ void* ContainerRunner::controlThread (void* parm)
             time_left -= WAIT_TIMEOUT;
             if(time_left <= 0)
             {
-                alert(ERROR, RTE_ERROR, cr->outQ, NULL, "Timeout reached for container <%s> after %d seconds", container_name_str.c_str(), cr->parms->timeout.value);
+                alert(ERROR, RTE_FAILURE, cr->outQ, NULL, "Timeout reached for container <%s> after %d seconds", container_name_str.c_str(), cr->parms->timeout.value);
                 done = true;
                 in_error = true;
             }
@@ -359,12 +359,12 @@ void* ContainerRunner::controlThread (void* parm)
             const long wait_http_code = CurlLib::request(EndpointObject::POST, wait_url.c_str(), NULL, &wait_response, NULL, false, false, WAIT_TIMEOUT, NULL, unix_socket);
             if(wait_http_code == EndpointObject::OK)
             {
-                alert(INFO, RTE_INFO, cr->outQ, NULL, "Container <%s> completed", container_name_str.c_str());
+                alert(INFO, RTE_STATUS, cr->outQ, NULL, "Container <%s> completed", container_name_str.c_str());
                 done = true;
             }
             else if(wait_http_code != EndpointObject::Service_Unavailable) // curl timed out which is normal if container is still running
             {
-                alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to wait for container <%s>: %ld - %s", container_name_str.c_str(), wait_http_code, wait_response);
+                alert(CRITICAL, RTE_FAILURE, cr->outQ, NULL, "Failed to wait for container <%s>: %ld - %s", container_name_str.c_str(), wait_http_code, wait_response);
                 done = true;
                 in_error = true;
             }
@@ -377,7 +377,7 @@ void* ContainerRunner::controlThread (void* parm)
             const char* log_response = NULL;
             int log_response_size = 0;
             const long log_http_code = CurlLib::request(EndpointObject::GET, log_url.c_str(), NULL, &log_response, &log_response_size, false, false, WAIT_TIMEOUT, NULL, unix_socket);
-            if(log_http_code != EndpointObject::OK) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to get logs container <%s>: %ld - %s", container_name_str.c_str(), log_http_code, log_response);
+            if(log_http_code != EndpointObject::OK) alert(CRITICAL, RTE_FAILURE, cr->outQ, NULL, "Failed to get logs container <%s>: %ld - %s", container_name_str.c_str(), log_http_code, log_response);
             else processContainerLogs(log_response, log_response_size, container_id);
             delete [] log_response;
 
@@ -389,7 +389,7 @@ void* ContainerRunner::controlThread (void* parm)
                 const long status_http_code = CurlLib::request(EndpointObject::GET, status_url.c_str(), NULL, &status_response, NULL, false, false, WAIT_TIMEOUT, NULL, unix_socket);
                 if(status_http_code != EndpointObject::OK)
                 {
-                    alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to get status of container <%s>: %ld - %s", container_name_str.c_str(), status_http_code, status_response);
+                    alert(CRITICAL, RTE_FAILURE, cr->outQ, NULL, "Failed to get status of container <%s>: %ld - %s", container_name_str.c_str(), status_http_code, status_response);
                     done = true;
                     in_error = true;
                 }
@@ -400,22 +400,22 @@ void* ContainerRunner::controlThread (void* parm)
                     const char* container_status = status_json["State"]["Status"].GetString();
                     if(StringLib::match(container_status, "running"))
                     {
-                        const bool rspq_status = alert(INFO, RTE_INFO, cr->outQ, NULL, "Container <%s> still running... %d seconds left", container_name_str.c_str(), time_left);
+                        const bool rspq_status = alert(INFO, RTE_STATUS, cr->outQ, NULL, "Container <%s> still running... %d seconds left", container_name_str.c_str(), time_left);
                         if(!rspq_status) in_error = true;
                     }
                     else if(StringLib::match(container_status, "stopped"))
                     {
-                        alert(INFO, RTE_INFO, cr->outQ, NULL, "Container <%s> has stopped", container_name_str.c_str());
+                        alert(INFO, RTE_STATUS, cr->outQ, NULL, "Container <%s> has stopped", container_name_str.c_str());
                         done = true;
                     }
                     else if(StringLib::match(container_status, "exited"))
                     {
-                        alert(INFO, RTE_INFO, cr->outQ, NULL, "Container <%s> has exited", container_name_str.c_str());
+                        alert(INFO, RTE_STATUS, cr->outQ, NULL, "Container <%s> has exited", container_name_str.c_str());
                         done = true;
                     }
                     else
                     {
-                        alert(ERROR, RTE_ERROR, cr->outQ, NULL, "Container <%s> is in an unexpected state: %s", container_name_str.c_str(), container_status);
+                        alert(ERROR, RTE_FAILURE, cr->outQ, NULL, "Container <%s> is in an unexpected state: %s", container_name_str.c_str(), container_status);
                         done = true;
                         in_error = true;
                     }
@@ -430,8 +430,8 @@ void* ContainerRunner::controlThread (void* parm)
             const FString stop_url("http://localhost/%s/containers/%s/stop", api_version, container_id);
             const char* stop_response = NULL;
             const long stop_http_code = CurlLib::request(EndpointObject::POST, stop_url.c_str(), NULL, &stop_response, NULL, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
-            if(stop_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to force stop container <%s>: %ld - %s", cr->parms->container_image.value.c_str(), stop_http_code, stop_response);
-            else alert(INFO, RTE_INFO, cr->outQ, NULL, "Force stopped container <%s>", container_name_str.c_str());
+            if(stop_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_FAILURE, cr->outQ, NULL, "Failed to force stop container <%s>: %ld - %s", cr->parms->container_image.value.c_str(), stop_http_code, stop_response);
+            else alert(INFO, RTE_STATUS, cr->outQ, NULL, "Force stopped container <%s>", container_name_str.c_str());
             delete [] stop_response;
         }
 
@@ -439,8 +439,8 @@ void* ContainerRunner::controlThread (void* parm)
         const FString remove_url("http://localhost/%s/containers/%s", api_version, container_id);
         const char* remove_response = NULL;
         const long remove_http_code = CurlLib::request(EndpointObject::DELETE, remove_url.c_str(), NULL, &remove_response, NULL, false, false, CurlLib::DATA_TIMEOUT, NULL, unix_socket);
-        if(remove_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_ERROR, cr->outQ, NULL, "Failed to delete container <%s>: %ld - %s", cr->parms->container_image.value.c_str(), remove_http_code, remove_response);
-        else alert(INFO, RTE_INFO, cr->outQ, NULL, "Removed container <%s>", container_name_str.c_str());
+        if(remove_http_code != EndpointObject::No_Content) alert(CRITICAL, RTE_FAILURE, cr->outQ, NULL, "Failed to delete container <%s>: %ld - %s", cr->parms->container_image.value.c_str(), remove_http_code, remove_response);
+        else alert(INFO, RTE_STATUS, cr->outQ, NULL, "Removed container <%s>", container_name_str.c_str());
         delete [] remove_response;
     }
 
