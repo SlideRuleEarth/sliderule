@@ -33,32 +33,31 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "PublishMonitor.h"
+#include "TelemetryMonitor.h"
 #include "Monitor.h"
 #include "EventLib.h"
 #include "TimeLib.h"
 #include "RecordObject.h"
+#include "OrchestratorLib.h"
 
 /******************************************************************************
- * PUBLIC METHODS
+ * METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create([<type mask>], [<level>], [<output format>], <outputq>)
+ * luaCreate - create(<level>)
  *----------------------------------------------------------------------------*/
-int PublishMonitor::luaCreate (lua_State* L)
+int TelemetryMonitor::luaCreate (lua_State* L)
 {
     try
     {
         /* Get Parmeters */
-        const uint8_t type_mask = (uint8_t)getLuaInteger(L, 1, true, (long)EventLib::LOG);
-        const event_level_t level = (event_level_t)getLuaInteger(L, 2, true, CRITICAL);
-        const format_t format = (format_t)getLuaInteger(L, 3, true, RECORD);
-        const char* eventq_name = getLuaString(L, 4, true, EVENTQ);
-        const char* outq_name = getLuaString(L, 5, true, NULL);
+        const event_level_t level = static_cast<event_level_t>(getLuaInteger(L, 1));
+        const char* eventq_name = getLuaString(L, 2, true, EVENTQ);
+        const char* outq_name = getLuaString(L, 3);
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new PublishMonitor(L, type_mask, level, format, eventq_name, outq_name));
+        return createLuaObject(L, new TelemetryMonitor(L, level, eventq_name, outq_name));
     }
     catch(const RunTimeException& e)
     {
@@ -67,27 +66,20 @@ int PublishMonitor::luaCreate (lua_State* L)
     }
 }
 
-/******************************************************************************
- * PROTECTED METHODS
- ******************************************************************************/
-
 /*----------------------------------------------------------------------------
  * processEvent
  *----------------------------------------------------------------------------*/
-void PublishMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size)
+void TelemetryMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size)
 {
-    outQ->postCopy(event_buf_ptr, event_size, IO_CHECK);
+    outQ->postCopy(event_buf_ptr, event_size);
+    OrchestratorLib::metric(event_buf_ptr, event_size);
 }
-
-/******************************************************************************
- * PRIVATE METHODS
- ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-PublishMonitor::PublishMonitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* eventq_name, const char* outq_name):
-    Monitor(L, type_mask, level, format, eventq_name)
+TelemetryMonitor::TelemetryMonitor(lua_State* L, event_level_t level, const char* eventq_name, const char* outq_name):
+    Monitor(L, level, PROCESS_AS_RECORD, eventq_name)
 {
     outQ = new Publisher(outq_name);
 }
@@ -95,7 +87,36 @@ PublishMonitor::PublishMonitor(lua_State* L, uint8_t type_mask, event_level_t le
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-PublishMonitor::~PublishMonitor(void)
+TelemetryMonitor::~TelemetryMonitor(void)
 {
     delete outQ;
+}
+
+/*----------------------------------------------------------------------------
+ * jsonOutput
+ *----------------------------------------------------------------------------*/
+int TelemetryMonitor::jsonOutput (const EventLib::trace_t* event, char* event_buffer)
+{
+    char* msg = event_buffer;
+
+    /* Populate Message */
+    if(event->attr[0] == '{')
+    {
+        /* Attribute String with No Quotes */
+        msg += StringLib::formats(msg, 1024,
+            "{\"systime\":%ld,\"ipv4\":\"%s\",\"flags\":%d,\"level\":\"%s\",\"tid\":%ld,\"id\":%ld,\"parent\":%ld,\"name\":\"%s\",\"attr\":%s}\n",
+            event->systime, event->ipv4, event->flags, EventLib::lvl2str((event_level_t)event->level),
+            event->tid, (long)event->id, (long)event->parent, event->name, event->attr);
+    }
+    else
+    {
+        /* Attribute String Quoted */
+        msg += StringLib::formats(msg, 1024,
+            "{\"systime\":%ld,\"ipv4\":\"%s\",\"flags\":%d,\"level\":\"%s\",\"tid\":%ld,\"id\":%ld,\"parent\":%ld,\"name\":\"%s\",\"attr\":\"%s\"}\n",
+            event->systime, event->ipv4, event->flags, EventLib::lvl2str((event_level_t)event->level),
+            event->tid, (long)event->id, (long)event->parent, event->name, event->attr);
+    }
+
+    /* Return Size of Message */
+    return msg - event_buffer + 1;
 }

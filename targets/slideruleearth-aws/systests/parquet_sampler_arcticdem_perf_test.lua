@@ -5,7 +5,7 @@ local assets = asset.loaddir()
 local td = runner.rootdir(arg[0])
 
 -- Setup --
--- console.monitor:config(core.LOG, core.DEBUG)
+-- console.monitor:config(core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
 local outq_name = "outq-luatest"
@@ -21,7 +21,7 @@ local prefix = "file://"
 local _out_parquet   = "/data/arcticdem/output/alaska.parquet"
 local out_parquet    = prefix .. _out_parquet
 
--- console.monitor:config(core.LOG, core.DEBUG)
+-- console.monitor:config(core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
 function getFileSize(filePath)

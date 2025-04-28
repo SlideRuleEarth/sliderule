@@ -3,7 +3,7 @@ console = require("console")
 local td = runner.rootdir(arg[0])
 
 -- Setup --
--- console.monitor:config(core.LOG, core.DEBUG)
+-- console.monitor:config(core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
 local geojsonfile = td.."../selftests/grandmesa.geojson"

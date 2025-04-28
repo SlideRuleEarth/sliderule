@@ -6,7 +6,7 @@ local json = require("json")
 local prettyprint = require("prettyprint")
 
 -- Setup --
--- console.monitor:config(core.LOG, core.DEBUG)
+-- console.monitor:config(core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
 

@@ -55,9 +55,9 @@ class MetricRecord: public RecordObject
             int32_t     src_offset;     // pointer to serialized source record
             int32_t     src_size;       // size of serialized source record
             uint64_t    size;           // size of entire serialized record including type (since it is variable length)
-        } metric_t;
+        } telemetry_t;
 
-        metric_t*   metric;
+        telemetry_t*   metric;
         char*       text;
         char*       name;
         void*       src;

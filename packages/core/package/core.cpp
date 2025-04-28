@@ -44,7 +44,9 @@
 #include "FileIODriver.h"
 #include "GeoDataFrame.h"
 #include "HttpServer.h"
+#include "IntervalIndex.h"
 #include "List.h"
+#include "LogMonitor.h"
 #include "LuaEndpoint.h"
 #include "LuaEngine.h"
 #include "LuaLibraryMsg.h"
@@ -53,13 +55,11 @@
 #include "LuaObject.h"
 #include "LuaScript.h"
 #include "MathLib.h"
-#include "MetricMonitor.h"
 #include "Monitor.h"
 #include "MsgQ.h"
 #include "OrchestratorLib.h"
 #include "Ordering.h"
 #include "ProvisioningSystemLib.h"
-#include "PublishMonitor.h"
 #include "RecordObject.h"
 #include "RegionMask.h"
 #include "RequestFields.h"
@@ -67,7 +67,7 @@
 #include "SpatialIndex.h"
 #include "StringLib.h"
 #include "Table.h"
-#include "IntervalIndex.h"
+#include "TelemetryMonitor.h"
 #include "TimeLib.h"
 #include "OsApi.h"
 #ifdef __unittesting__
@@ -116,7 +116,8 @@ static int core_open (lua_State *L)
     static const struct luaL_Reg core_functions[] = {
         {"getbyname",       LuaObject::luaGetByName},
         {"script",          LuaScript::luaCreate},
-        {"monitor",         Monitor::luaCreate},
+        {"monitor",         LogMonitor::luaCreate},
+        {"tmon",            TelemetryMonitor::luaCreate},
         {"httpd",           HttpServer::luaCreate},
         {"endpoint",        LuaEndpoint::luaCreate},
         {"asset",           Asset::luaCreate},
@@ -142,8 +143,6 @@ static int core_open (lua_State *L)
         {"pslogin",         ProvisioningSystemLib::luaLogin},
         {"psvalidate",      ProvisioningSystemLib::luaValidate},
         {"psauth",          ProvisioningSystemLib::Authenticator::luaCreate},
-        {"pmonitor",        PublishMonitor::luaCreate},
-        {"mmonitor",        MetricMonitor::luaCreate},
         {"parms",           RequestFields::luaCreate},
 #ifdef __unittesting__
         {"ut_dictionary",   UT_Dictionary::luaCreate},
@@ -169,11 +168,9 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "CRITICAL",                 CRITICAL);
     LuaEngine::setAttrInt   (L, "LOG",                      EventLib::LOG);
     LuaEngine::setAttrInt   (L, "TRACE",                    EventLib::TRACE);
-    LuaEngine::setAttrInt   (L, "METRIC",                   EventLib::METRIC);
-    LuaEngine::setAttrInt   (L, "FMT_TEXT",                 Monitor::TEXT);
-    LuaEngine::setAttrInt   (L, "FMT_JSON",                 Monitor::JSON);
-    LuaEngine::setAttrInt   (L, "FMT_CLOUD",                Monitor::CLOUD);
-    LuaEngine::setAttrInt   (L, "FMT_RECORD",               Monitor::RECORD);
+    LuaEngine::setAttrInt   (L, "TELEMETRY",                EventLib::TELEMETRY);
+    LuaEngine::setAttrInt   (L, "FMT_TEXT",                 LogMonitor::TEXT);
+    LuaEngine::setAttrInt   (L, "FMT_CLOUD",                LogMonitor::CLOUD);
     LuaEngine::setAttrStr   (L, "EVENTQ",                   EVENTQ);
     LuaEngine::setAttrInt   (L, "STRING",                   RecordObject::TEXT);
     LuaEngine::setAttrInt   (L, "REAL",                     RecordObject::REAL);

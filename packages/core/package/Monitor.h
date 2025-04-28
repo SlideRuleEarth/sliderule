@@ -63,23 +63,9 @@ class Monitor: public LuaObject
          *--------------------------------------------------------------------*/
 
         typedef enum {
-            TEXT,
-            JSON,
-            CLOUD,
-            RECORD
-        } format_t;
-
-        typedef enum {
-            TERM = 0,
-            LOCAL = 1,
-            MSGQ = 2
-        } cat_mode_t;
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        static int luaCreate (lua_State* L);
+            PROCESS_AS_RECORD = 0,
+            PROCESS_AS_DATA = 1
+        } process_format_t;
 
     protected:
 
@@ -87,32 +73,25 @@ class Monitor: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        virtual void processEvent   (const unsigned char* event_buf_ptr, int event_size);
-                     Monitor        (lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* eventq_name);
+        virtual void processEvent   (const unsigned char* event_buf_ptr, int event_size) = 0;
+                     Monitor        (lua_State* L, event_level_t level, process_format_t fmt, const char* eventq_name);
                      ~Monitor       (void) override;
 
-    private:
-
         /*--------------------------------------------------------------------
-         * Constants
+         * Data
          *--------------------------------------------------------------------*/
 
-        static const int MAX_EVENT_SIZE = 1280;
-        static const int MAX_TAIL_SIZE = 65536;
+        event_level_t eventLevel;
+        process_format_t processFormat;
+
+    private:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
         static void*    monitorThread   (void* parm);
-
-        static int      textOutput      (EventLib::event_t* event, char* event_buffer);
-        static int      jsonOutput      (EventLib::event_t* event, char* event_buffer);
-        static int      cloudOutput     (EventLib::event_t* event, char* event_buffer);
-
         static int      luaConfig       (lua_State* L);
-        static int      luaTail         (lua_State* L);
-        static int      luaCat          (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
@@ -121,12 +100,6 @@ class Monitor: public LuaObject
         bool            active;
         Thread*         pid;
         Subscriber*     inQ;
-        uint8_t         eventTypeMask;
-        event_level_t   eventLevel;
-        format_t        outputFormat;
-        char*           eventTailArray; // [][MAX_EVENT_SIZE]
-        int             eventTailSize;
-        int             eventTailIndex;
 };
 
 #endif  /* __monitor__ */

@@ -62,7 +62,7 @@ event
          - description
          - default
        * - **type**
-         - type of event message to monitor: "LOG", "TRACE", "METRIC"
+         - type of event message to monitor: "LOG", "TRACE", "TELEMETRY"
          - "LOG"
        * - **level**
          - minimum event level to monitor: "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
@@ -100,7 +100,7 @@ event
 
 **Response Payload** *(application/octet-stream)*
 
-    Serialized stream of event records of the type ``eventrec``.  See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to process binary response records.
+    Serialized stream of event records of the type ``logrec``.  See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to process binary response records.
 
 
 

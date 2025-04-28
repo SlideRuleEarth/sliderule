@@ -264,7 +264,7 @@ int LuaLibrarySys::lsys_metric (lua_State* L)
         lua_settable(L, -3);
 
         lua_pushstring(L, "type");
-        lua_pushstring(L, EventLib::subtype2str(EventLib::GAUGE));
+        lua_pushstring(L, "GAUGE");
         lua_settable(L, -3);
     }
     lua_settable(L, -3);
@@ -528,7 +528,7 @@ int LuaLibrarySys::lsys_seteventlvl (lua_State* L)
             const event_level_t lvl = (event_level_t)lua_tointeger(L, 2);
             if(type_mask & EventLib::LOG) EventLib::setLvl(EventLib::LOG, lvl);
             if(type_mask & EventLib::TRACE) EventLib::setLvl(EventLib::TRACE, lvl);
-            if(type_mask & EventLib::METRIC) EventLib::setLvl(EventLib::METRIC, lvl);
+            if(type_mask & EventLib::TELEMETRY) EventLib::setLvl(EventLib::TELEMETRY, lvl);
             status = true;
         }
         else
@@ -553,7 +553,7 @@ int LuaLibrarySys::lsys_geteventlvl (lua_State* L)
 {
     lua_pushnumber(L, EventLib::getLvl(EventLib::LOG));
     lua_pushnumber(L, EventLib::getLvl(EventLib::TRACE));
-    lua_pushnumber(L, EventLib::getLvl(EventLib::METRIC));
+    lua_pushnumber(L, EventLib::getLvl(EventLib::TELEMETRY));
     return 3;
 }
 

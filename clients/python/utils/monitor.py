@@ -17,7 +17,7 @@ TRACE_START = 1
 TRACE_STOP = 2
 LOG = 1
 TRACE = 2
-METRIC = 4
+TELEMETRY = 4
 COLOR_MAP = [8421631, 8454143, 8454016, 16777088, 16744703, 16777215]
 
 names = {} # dictionary of unique trace names
@@ -123,31 +123,28 @@ def sta_output(filter_list, depth, names, traces):
 def process_event(rec):
     global names, traces, origins
     # Populate traces dictionary
-    if rec["type"] == LOG:
-        print('%s:%s:%s' % (rec["ipv4"], rec["name"], rec["attr"]))
-    elif rec["type"] == TRACE:
-        trace_id = rec['id']
-        if rec["flags"] & TRACE_START:
-            if trace_id not in traces.keys():
-                # Populate start of span
-                name = str(rec['name']) + "." + str(rec['tid'])
-                traces[trace_id] = {"id": trace_id, "name": name, "start": rec, "stop": None, "children": []}
-                # Link to parent
-                parent_trace_id = rec['parent']
-                if parent_trace_id in traces.keys():
-                    traces[parent_trace_id]["children"].append(traces[trace_id])
-                else:
-                    origins.append(traces[trace_id])
-                # Populate name
-                names[name] = True
+    trace_id = rec['id']
+    if rec["flags"] & TRACE_START:
+        if trace_id not in traces.keys():
+            # Populate start of span
+            name = str(rec['name']) + "." + str(rec['tid'])
+            traces[trace_id] = {"id": trace_id, "name": name, "start": rec, "stop": None, "children": []}
+            # Link to parent
+            parent_trace_id = rec['parent']
+            if parent_trace_id in traces.keys():
+                traces[parent_trace_id]["children"].append(traces[trace_id])
             else:
-                print('warning: double start for %s' % (rec['name']))
-        elif rec["flags"] & TRACE_STOP:
-            if trace_id in traces.keys():
-                # Populate stop of span
-                traces[trace_id]["stop"] = rec
-            else:
-                print('warning: stop without start for %s' % (rec['name']))
+                origins.append(traces[trace_id])
+            # Populate name
+            names[name] = True
+        else:
+            print('warning: double start for %s' % (rec['name']))
+    elif rec["flags"] & TRACE_STOP:
+        if trace_id in traces.keys():
+            # Populate stop of span
+            traces[trace_id]["stop"] = rec
+        else:
+            print('warning: stop without start for %s' % (rec['name']))
 
 ###############################################################################
 # MAIN
@@ -170,7 +167,6 @@ if __name__ == '__main__':
     # Default Request
     rqst = {
         "type": LOG | TRACE,
-        "level" : "INFO",
         "duration": 30
     }
 
@@ -182,7 +178,7 @@ if __name__ == '__main__':
     sliderule.authenticate(parms["organization"])
 
     # Connect to SlideRule
-    rsps = sliderule.source("event", rqst, stream=True, callbacks={'eventrec': process_event})
+    rsps = sliderule.source("event", rqst, stream=True, callbacks={'tracerec': process_event})
 
     # Flatten Names to Get Indexes
     names = list(names)

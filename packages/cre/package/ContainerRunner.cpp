@@ -485,7 +485,7 @@ void ContainerRunner::processContainerLogs (const char* buffer, int buffer_size,
         message_length |= buffer[buffer_index++];
 
         /* Get Message */
-        const int log_message_length = MIN(EventLib::MAX_ATTR_SIZE, message_length);
+        const int log_message_length = MIN(EventLib::MAX_MSG_STR, message_length);
         char* message = new char [log_message_length + 1];
         StringLib::copy(message, &buffer[buffer_index], log_message_length + 1);
         buffer_index += message_length;

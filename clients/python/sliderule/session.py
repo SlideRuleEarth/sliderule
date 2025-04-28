@@ -188,8 +188,8 @@ class Session:
 
         # configure callbacks
         self.callbacks = {
-            'eventrec': Session.__logeventrec,
-            'exceptrec': Session.__exceptrec,
+            'eventrec': Session.__logrec,
+            'exceptrec': Session.__alertrec,
             'arrowrec.meta': Session.__arrowrec,
             'arrowrec.data': Session.__arrowrec,
             'arrowrec.eof': Session.__arrowrec
@@ -791,17 +791,17 @@ class Session:
         sliderule_dns = self.local_dns
 
     #
-    #  __logeventrec
+    #  __logrec
     #
     @staticmethod
-    def __logeventrec (rec, session):
-        eventlogger[rec['level']]('Log <%s, %d>: %s' % (rec["name"], rec["time"], rec["attr"]))
+    def __logrec (rec, session):
+        eventlogger[rec['level']]('%d:%s: %s' % (rec["time"], rec['source'], rec["message"]))
 
     #
-    #  __exceptrec
+    #  __alertrec
     #
     @staticmethod
-    def __exceptrec (rec, session):
+    def __alertrec (rec, session):
         if rec["code"] == EXCEPTION_CODES["SIMPLIFY"]:
             raise RetryRequest("cmr simplification requested")
         elif rec["code"] < 0:

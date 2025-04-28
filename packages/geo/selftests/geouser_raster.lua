@@ -5,7 +5,7 @@ local base64 = require("base64")
 -- Setup --
 
 -- local console = require("console")
--- console.monitor:config(core.LOG, core.DEBUG)
+-- console.monitor:config(core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
 local raster = dirpath.."../data/geouser_test_raster.tif"

@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __metric_monitor__
-#define __metric_monitor__
+#ifndef __log_monitor__
+#define __log_monitor__
 
 /******************************************************************************
  * INCLUDES
@@ -43,12 +43,27 @@
 #include "EventLib.h"
 
 /******************************************************************************
- * METRIC MONITOR CLASS
+ * LOG MONITOR CLASS
  ******************************************************************************/
 
-class MetricMonitor: public Monitor
+class LogMonitor: public Monitor
 {
     public:
+
+        /*--------------------------------------------------------------------
+         * Constants
+         *--------------------------------------------------------------------*/
+
+        static const int MAX_LOG_OUTPUT_SIZE = 1280;
+
+        /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef enum {
+            TEXT,
+            CLOUD,
+        } format_t;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -70,8 +85,18 @@ class MetricMonitor: public Monitor
          * Methods
          *--------------------------------------------------------------------*/
 
-        MetricMonitor  (lua_State* L, event_level_t level, const char* eventq_name);
-        ~MetricMonitor (void) override;
+        LogMonitor  (lua_State* L, event_level_t level, const char* eventq_name);
+        ~LogMonitor (void) override;
+
+        static int textOutput (const EventLib::log_t* event, char* event_buffer);
+        static int cloudOutput (const EventLib::log_t* event, char* event_buffer);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        format_t outputFormat;
+
 };
 
 #endif  /* __publish_monitor__ */

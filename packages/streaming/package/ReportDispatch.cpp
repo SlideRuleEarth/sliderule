@@ -296,7 +296,7 @@ ReportDispatch::ReportDispatch (lua_State* L, const char* _filename, format_t _f
     report(L ,_filename, _format)
 {
     /* Define Metric Record */
-    RecordObject::defineRecord(MetricRecord::rec_type, NULL, sizeof(MetricRecord::metric_t), MetricRecord::rec_def, MetricRecord::rec_elem);
+    RecordObject::defineRecord(MetricRecord::rec_type, NULL, sizeof(MetricRecord::telemetry_t), MetricRecord::rec_def, MetricRecord::rec_elem);
 
     /* Initialize Attributes */
     lastIndex = INVALID_KEY;

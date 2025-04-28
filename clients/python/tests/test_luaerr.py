@@ -6,7 +6,7 @@ from sliderule import icesat2
 
 def catchlogs(rec, session):
     global GLOBAL_message
-    GLOBAL_message = rec["attr"]
+    GLOBAL_message = rec["message"]
 
 def catchexceptions(rec, session):
     global GLOBAL_message

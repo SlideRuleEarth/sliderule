@@ -4,7 +4,7 @@ local asset = require("asset")
 local csv = require("csv")
 local json = require("json")
 
--- console.monitor:config(core.LOG, core.DEBUG)
+-- console.monitor:config(core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
 -- Setup --
