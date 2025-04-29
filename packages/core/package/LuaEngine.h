@@ -128,15 +128,15 @@ class LuaEngine
          * Types
          *--------------------------------------------------------------------*/
 
-        typedef struct {
-            const char*     lib_name;
-            luaOpenLibFunc  lib_func;
-        } libInitEntry_t;
+        struct libInitEntry_t {
+            const char*     lib_name = NULL;
+            luaOpenLibFunc  lib_func = NULL;
+        };
 
-        typedef struct {
-            const char*     pkg_name;
-            const char*     pkg_version;
-        } pkgInitEntry_t;
+        struct pkgInitEntry_t {
+            const char*     pkg_name = NULL;
+            const char*     pkg_version = NULL;
+        };
 
         typedef struct {
             LuaEngine*      engine;

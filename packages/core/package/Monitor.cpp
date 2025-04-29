@@ -102,9 +102,9 @@ void* Monitor::monitorThread (void* parm)
                 try
                 {
                     /* Process Event Data */
-                    RecordInterface record(msg, len);
+                    const RecordInterface record(msg, len);
                     unsigned char* event_data = record.getRecordData();
-                    int event_size = record.getAllocatedDataSize();
+                    const int event_size = record.getAllocatedDataSize();
                     monitor->processEvent(event_data, event_size);
                 }
                 catch (const RunTimeException& e)

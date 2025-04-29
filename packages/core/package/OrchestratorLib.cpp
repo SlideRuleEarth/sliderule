@@ -309,7 +309,7 @@ bool OrchestratorLib::metric (const char* name, double value)
 {
     bool status = false;
 
-    FString data("{\"name\":\"%s\",\"value\":\"%lf\"}", name, value);
+    const FString data("{\"name\":\"%s\",\"value\":\"%lf\"}", name, value);
 
     const rsps_t rsps = request(EndpointObject::POST, "/discovery/metric", data.c_str());
     if(rsps.code == EndpointObject::OK)

@@ -86,8 +86,8 @@ bool ManagerLib::recordTelemetry (const EventLib::telemetry_t* event)
 {
     bool status = true;
 
-    TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(event->time);
-    TimeLib::date_t date = TimeLib::gmt2date(gmt);
+    const TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(event->time);
+    const TimeLib::date_t date = TimeLib::gmt2date(gmt);
 
     const FString rqst(R"json({
         "record_time": "%04d-%02d-%02d %02d:%02d:%02d",
@@ -132,9 +132,8 @@ bool ManagerLib::issueAlert (const EventLib::alert_t* event)
 {
     bool status = true;
 
-    TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(TimeLib::gpstime());
-    TimeLib::date_t date = TimeLib::gmt2date(gmt);
-
+    const TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(TimeLib::gpstime());
+    const TimeLib::date_t date = TimeLib::gmt2date(gmt);
 
     const FString rqst(R"json({
         "record_time": "%04d-%02d-%02d %02d:%02d:%02d",
