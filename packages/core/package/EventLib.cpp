@@ -422,7 +422,7 @@ bool EventLib::sendAlert (event_level_t lvl, int code, void* rspsq, const bool* 
     /* Post to Event Q
      *  - must allocate here so that the record is still owned for the call to
      *    post it below. */
-    bool status = record.post(outq, 0, active, SYS_TIMEOUT, RecordObject::ALLOCATE);
+    bool status = record.post(outq, 0, active, false, SYS_TIMEOUT, RecordObject::ALLOCATE);
 
     /* Post to Response Q */
     if(rspsq)
