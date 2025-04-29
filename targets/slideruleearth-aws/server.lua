@@ -67,9 +67,9 @@ aws_utils.config_aws()
 
 -- Configure Monitoring --
 sys.setlvl(core.LOG | core.TRACE | core.TELEMETRY | core.ALERT, event_level) -- set level globally
-local log_monitor = core.monitor(core.DEBUG, event_format):name("LogMonitor") -- monitor logs and write to stdout
-local telemetry_monitor = core.tmon(core.DEBUG):name("TelemetryMonitor") -- monitor telementry and push to orchestrator and manager
-local alert_monitor = core.amon(core.DEBUG):name("AlertMonitor") -- monitor alerts and push to manager
+local log_monitor = core.logmon(core.DEBUG, event_format):name("LogMonitor") -- monitor logs and write to stdout
+local telemetry_monitor = core.tlmmon(core.DEBUG):name("TelemetryMonitor") -- monitor telementry and push to orchestrator and manager
+local alert_monitor = core.alrmon(core.DEBUG):name("AlertMonitor") -- monitor alerts and push to manager
 
 -- Configure Assets --
 local assets = asset.loaddir(asset_directory)
@@ -80,13 +80,14 @@ local iam_role_max_wait = 10
 while not aws.csget("iam-role") do
     iam_role_max_wait = iam_role_max_wait - 1
     if iam_role_max_wait == 0 then
-        print("Failed to establish IAM role credentials at startup")
+        sys.log(core.CRITICAL, "Failed to establish IAM role credentials at startup")
         break
     else
-        print("Waiting to establish IAM role...")
+        sys.log(core.CRITICAL, "Waiting to establish IAM role...")
         sys.wait(1)
     end
 end
+sys.log(core.CRITICAL, "IAM role established")
 
 -- Run Earth Data Authentication Scripts --
 if authenticate_to_nsidc then

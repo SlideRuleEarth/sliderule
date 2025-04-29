@@ -56,7 +56,7 @@ const struct luaL_Reg Monitor::LUA_META_TABLE[] = {
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-Monitor::Monitor(lua_State* L, event_level_t level, const char* eventq_name):
+Monitor::Monitor(lua_State* L, event_level_t level, const char* eventq_name, const char* rec_type):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE),
     eventLevel(level)
 {
@@ -64,6 +64,7 @@ Monitor::Monitor(lua_State* L, event_level_t level, const char* eventq_name):
     active = true;
     inQ = new Subscriber(eventq_name);
     pid = new Thread(monitorThread, this);
+    recType = StringLib::duplicate(rec_type);
 }
 
 /*----------------------------------------------------------------------------
@@ -74,6 +75,7 @@ Monitor::~Monitor(void)
     active = false;
     delete pid;
     delete inQ;
+    delete [] recType;
 }
 
 /******************************************************************************
@@ -101,11 +103,14 @@ void* Monitor::monitorThread (void* parm)
             {
                 try
                 {
-                    /* Process Event Data */
                     const RecordInterface record(msg, len);
-                    unsigned char* event_data = record.getRecordData();
-                    const int event_size = record.getAllocatedDataSize();
-                    monitor->processEvent(event_data, event_size);
+                    if(StringLib::match(record.getRecordType(), monitor->recType))
+                    {
+                        /* Process Event Data */
+                        unsigned char* event_data = record.getRecordData();
+                        const int event_size = record.getAllocatedDataSize();
+                        monitor->processEvent(event_data, event_size);
+                    }
                 }
                 catch (const RunTimeException& e)
                 {

@@ -90,7 +90,7 @@ void TelemetryMonitor::processEvent(const unsigned char* event_buf_ptr, int even
  * Constructor
  *----------------------------------------------------------------------------*/
 TelemetryMonitor::TelemetryMonitor(lua_State* L, event_level_t level, const char* eventq_name):
-    Monitor(L, level, eventq_name)
+    Monitor(L, level, eventq_name, EventLib::telemetryRecType)
 {
 }
 

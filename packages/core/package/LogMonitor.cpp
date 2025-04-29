@@ -53,10 +53,11 @@ int LogMonitor::luaCreate (lua_State* L)
     {
         /* Get Parmeters */
         const event_level_t level = static_cast<event_level_t>(getLuaInteger(L, 1));
-        const char* eventq_name = getLuaString(L, 2, true, EVENTQ);
+        const format_t output_format = static_cast<format_t>(getLuaInteger(L, 2));
+        const char* eventq_name = getLuaString(L, 3, true, EVENTQ);
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new LogMonitor(L, level, eventq_name));
+        return createLuaObject(L, new LogMonitor(L, level, output_format, eventq_name));
     }
     catch(const RunTimeException& e)
     {
@@ -89,14 +90,15 @@ void LogMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size
     else return; // unsupported format
 
     /* Write Log Message */
-    fwrite(event_buf_ptr, 1, event_size, stdout);
+    fwrite(event_buffer, 1, event_size, stdout);
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LogMonitor::LogMonitor(lua_State* L, event_level_t level, const char* eventq_name):
-    Monitor(L, level, eventq_name)
+LogMonitor::LogMonitor(lua_State* L, event_level_t level, format_t output_format, const char* eventq_name):
+    Monitor(L, level, eventq_name, EventLib::logRecType),
+    outputFormat(output_format)
 {
 }
 

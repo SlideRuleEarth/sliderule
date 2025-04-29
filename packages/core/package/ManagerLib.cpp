@@ -73,9 +73,18 @@ void ManagerLib::deinit (void)
  *----------------------------------------------------------------------------*/
 ManagerLib::rsps_t ManagerLib::request (EndpointObject::verb_t verb, const char* resource, const char* data)
 {
+    // build headers
+    List<const string*> headers;
+    const string* content_type_header = new const string("Content-Type: application/json");
+    headers.add(content_type_header);
+
+    // make request
     rsps_t rsps;
     const FString path("%s%s", URL, resource);
-    rsps.code = CurlLib::request(verb, path.c_str(), data, &rsps.response, &rsps.size);
+    rsps.code = CurlLib::request(verb, path.c_str(), data, &rsps.response, &rsps.size,
+                                 false, false, CurlLib::DATA_TIMEOUT, &headers);
+
+    // return response
     return rsps;
 }
 
@@ -149,7 +158,8 @@ bool ManagerLib::issueAlert (const EventLib::alert_t* event)
         LIBID,
         event->text);
 
-    const rsps_t rsps = request(EndpointObject::POST, "/manager/alert/issue", rqst.c_str());
+    const rsps_t rsps = request(EndpointObject::POST, "/manager/alerts/issue", rqst.c_str());
+
     if(rsps.code != EndpointObject::OK)
     {
         mlog(CRITICAL, "Failed to issue alarm %d: %s", event->code, rsps.response);

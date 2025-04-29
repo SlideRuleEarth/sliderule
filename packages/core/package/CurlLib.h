@@ -65,12 +65,12 @@ class CurlLib
 
         static long         request         (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size,
                                              bool verify_peer=false, bool verify_hostname=false, int timeout=DATA_TIMEOUT,
-                                             List<string*>* headers=NULL,
+                                             List<const string*>* headers=NULL,
                                              const char* unix_socket=NULL,
-                                             List<string*>* rsps_headers=NULL);
+                                             List<const string*>* rsps_headers=NULL);
         static long         postAsStream    (const char* url, const char* data, Publisher* outq, bool with_terminator);
         static long         postAsRecord    (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, const bool* active=NULL);
-        static int          getHeaders      (lua_State* L, int index, List<string*>& header_list);
+        static int          getHeaders      (lua_State* L, int index, List<const string*>& header_list);
         static int          luaGet          (lua_State* L);
         static int          luaPut          (lua_State* L);
         static int          luaPost         (lua_State* L);

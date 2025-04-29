@@ -127,9 +127,9 @@ event_level_t EventLib::alertLevel;
 void EventLib::init (const char* eventq)
 {
     /* Define Records */
-    RECDEF(logRecType, logRecDef, offsetof(log_t, message) + 1, NULL);
-    RECDEF(traceRecType, traceRecDef, offsetof(trace_t, attr) + 1, NULL);
-    RECDEF(telemetryRecType, metricRecDef, offsetof(telemetry_t, message) + 1, NULL);
+    RECDEF(logRecType, logRecDef, sizeof(log_t), NULL);
+    RECDEF(traceRecType, traceRecDef, sizeof(trace_t), NULL);
+    RECDEF(telemetryRecType, metricRecDef, sizeof(telemetry_t), NULL);
     RECDEF(alertRecType, alertRecDef, sizeof(alert_t), "code");
 
     /* Create Thread Global */
@@ -237,36 +237,33 @@ const char* EventLib::type2str (type_t type)
  *----------------------------------------------------------------------------*/
 bool EventLib::logMsg(const char* file_name, unsigned int line_number, event_level_t lvl, const char* msg_fmt, ...)
 {
-    log_t event;
-
     /* Return Here If Nothing to Do */
     if(lvl < logLevel) return true;
 
     /* Initialize Log Message */
-    event.time      = TimeLib::gpstime();
-    event.level     = lvl;
+    RecordObject record(logRecType, 0, false);
+    log_t* event    = reinterpret_cast<log_t*>(record.getRecordData());
+    event->time     = TimeLib::gpstime();
+    event->level    = lvl;
 
     /* Copy IP Address */
-    StringLib::copy(event.ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
+    StringLib::copy(event->ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
 
     /* Build Name - <Filename>:<Line Number> */
     const char* last_path_delimeter = StringLib::find(file_name, PATH_DELIMETER, false);
     const char* file_name_only = last_path_delimeter ? last_path_delimeter + 1 : file_name;
-    StringLib::format(event.source, MAX_SRC_STR, "%s:%d", file_name_only, line_number);
+    StringLib::format(event->source, MAX_SRC_STR, "%s:%d", file_name_only, line_number);
 
     /* Build Message - <log message> */
     va_list args;
     va_start(args, msg_fmt);
-    const int vlen = vsnprintf(event.message, MAX_MSG_STR - 1, msg_fmt, args);
+    const int vlen = vsnprintf(event->message, MAX_MSG_STR - 1, msg_fmt, args);
     const int msg_size = MAX(MIN(vlen + 1, MAX_MSG_STR), 1);
-    event.message[msg_size - 1] = '\0';
+    event->message[msg_size - 1] = '\0';
     va_end(args);
 
     /* Post Log Message */
-    const int event_record_size = offsetof(log_t, message) + msg_size;
-    RecordObject record(logRecType, event_record_size, false);
-    log_t* data = reinterpret_cast<log_t*>(record.getRecordData());
-    memcpy(data, &event, event_record_size);
+    record.setUsedData(offsetof(log_t, message) + msg_size);
     return record.post(outq, 0, NULL, false);
 }
 
@@ -275,44 +272,43 @@ bool EventLib::logMsg(const char* file_name, unsigned int line_number, event_lev
  *----------------------------------------------------------------------------*/
 uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t lvl, const char* attr_fmt, ...)
 {
-    trace_t event;
+    const uint32_t id = trace_id++;
 
     /* Return Here If Nothing to Do */
     if(lvl < traceLevel) return parent;
 
     /* Initialize Trace */
-    event.time      = TimeLib::latchtime() * 1000000; // us
-    event.tid       = Thread::getId();
-    event.id        = trace_id++;;
-    event.parent    = parent;
-    event.flags     = START;
-    event.level     = lvl;
-    event.name[0]   = '\0';
-    event.attr[0]   = '\0';
+    RecordObject record(traceRecType, 0, false);
+    trace_t* event  = reinterpret_cast<trace_t*>(record.getRecordData());
+    event->time     = TimeLib::latchtime() * 1000000; // us
+    event->tid      = Thread::getId();
+    event->id       = id;
+    event->parent   = parent;
+    event->flags    = START;
+    event->level    = lvl;
+    event->name[0]  = '\0';
+    event->attr[0]  = '\0';
 
     /* Copy IP Address */
-    StringLib::copy(event.ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
+    StringLib::copy(event->ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
 
     /* Copy Name */
-    StringLib::copy(event.name, name, MAX_NAME_STR);
+    StringLib::copy(event->name, name, MAX_NAME_STR);
 
     /* Build Attribute */
     va_list args;
     va_start(args, attr_fmt);
-    const int vlen = vsnprintf(event.attr, MAX_ATTR_STR - 1, attr_fmt, args);
+    const int vlen = vsnprintf(event->attr, MAX_ATTR_STR - 1, attr_fmt, args);
     const int attr_size = MAX(MIN(vlen + 1, MAX_ATTR_STR), 1);
-    event.attr[attr_size - 1] = '\0';
+    event->attr[attr_size - 1] = '\0';
     va_end(args);
 
     /* Send Event */
-    const int event_record_size = offsetof(trace_t, attr) + attr_size;
-    RecordObject record(traceRecType, event_record_size, false);
-    trace_t* data = reinterpret_cast<trace_t*>(record.getRecordData());
-    memcpy(data, &event, event_record_size);
+    record.setUsedData(offsetof(trace_t, attr) + attr_size);
     record.post(outq, 0, NULL, false);
 
     /* Return Trace ID */
-    return event.id;
+    return id;
 }
 
 /*----------------------------------------------------------------------------
@@ -320,29 +316,26 @@ uint32_t EventLib::startTrace(uint32_t parent, const char* name, event_level_t l
  *----------------------------------------------------------------------------*/
 void EventLib::stopTrace(uint32_t id, event_level_t lvl)
 {
-    trace_t event;
-
     /* Return Here If Nothing to Do */
     if(lvl < traceLevel) return;
 
     /* Initialize Trace */
-    event.time      = TimeLib::latchtime() * 1000000; // us
-    event.tid       = 0;
-    event.id        = id;
-    event.parent    = ORIGIN;
-    event.flags     = STOP;
-    event.level     = lvl;
-    event.name[0]   = '\0';
-    event.attr[0]   = '\0';
+    RecordObject record(traceRecType, 0, false);
+    trace_t* event  = reinterpret_cast<trace_t*>(record.getRecordData());
+    event->time     = TimeLib::latchtime() * 1000000; // us
+    event->tid      = 0;
+    event->id       = id;
+    event->parent   = ORIGIN;
+    event->flags    = STOP;
+    event->level    = lvl;
+    event->name[0]  = '\0';
+    event->attr[0]  = '\0';
 
     /* Copy IP Address */
-    StringLib::copy(event.ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
+    StringLib::copy(event->ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
 
     /* Send Event */
-    const int event_record_size = offsetof(trace_t, attr) + 1;
-    RecordObject record(traceRecType, event_record_size, false);
-    trace_t* data = reinterpret_cast<trace_t*>(record.getRecordData());
-    memcpy(data, &event, event_record_size);
+    record.setUsedData(offsetof(trace_t, attr) + 1);
     record.post(outq, 0, NULL, false);
 }
 
@@ -367,40 +360,37 @@ uint32_t EventLib::grabId (void)
  *----------------------------------------------------------------------------*/
 bool EventLib::sendTlm (event_level_t lvl, int code, const char* endpoint, float duration, MathLib::coord_t aoi, const char* client, const char* account, const char* msg_fmt, ...)
 {
-    telemetry_t event;
-
     /* Return Here If Nothing to Do */
     if(lvl < telemetryLevel) return true;
 
     /* Initialize Telemetry Message */
-    event.time      = TimeLib::gpstime();
-    event.level     = lvl;
-    event.code      = code;
-    event.duration  = duration;
-    event.aoi       = aoi;
+    RecordObject record(telemetryRecType, 0, false);
+    telemetry_t* event  = reinterpret_cast<telemetry_t*>(record.getRecordData());
+    event->time         = TimeLib::gpstime();
+    event->level        = lvl;
+    event->code         = code;
+    event->duration     = duration;
+    event->aoi          = aoi;
 
     /* Copy String Arguments */
-    StringLib::copy(event.endpoint, endpoint, EventLib::MAX_TLM_STR);
-    StringLib::copy(event.client, client, EventLib::MAX_TLM_STR);
-    StringLib::copy(event.account, account, EventLib::MAX_TLM_STR);
-    StringLib::copy(event.version, LIBID, EventLib::MAX_TLM_STR);
+    StringLib::copy(event->endpoint, endpoint, EventLib::MAX_TLM_STR);
+    StringLib::copy(event->client, client, EventLib::MAX_TLM_STR);
+    StringLib::copy(event->account, account, EventLib::MAX_TLM_STR);
+    StringLib::copy(event->version, LIBID, EventLib::MAX_TLM_STR);
 
     /* Copy IP Address */
-    StringLib::copy(event.ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
+    StringLib::copy(event->ipv4, SockLib::sockipv4(), SockLib::IPV4_STR_LEN);
 
     /* Build Message - <message> */
     va_list args;
     va_start(args, msg_fmt);
-    const int vlen = vsnprintf(event.message, MAX_MSG_STR - 1, msg_fmt, args);
+    const int vlen = vsnprintf(event->message, MAX_MSG_STR - 1, msg_fmt, args);
     const int msg_size = MAX(MIN(vlen + 1, MAX_MSG_STR), 1);
-    event.message[msg_size - 1] = '\0';
+    event->message[msg_size - 1] = '\0';
     va_end(args);
 
     /* Post Telemetry Message */
-    const int event_record_size = offsetof(telemetry_t, message) + msg_size;
-    RecordObject record(telemetryRecType, event_record_size, false);
-    telemetry_t* data = reinterpret_cast<telemetry_t*>(record.getRecordData());
-    memcpy(data, &event, event_record_size);
+    record.setUsedData(offsetof(telemetry_t, message) + msg_size);
     return record.post(outq, 0, NULL, false);
 }
 
@@ -409,16 +399,14 @@ bool EventLib::sendTlm (event_level_t lvl, int code, const char* endpoint, float
  *----------------------------------------------------------------------------*/
 bool EventLib::sendAlert (event_level_t lvl, int code, void* rspsq, const bool* active, const char* errmsg, ...)
 {
-    bool status = true;
-
     /* Return Here If Nothing to Do */
     if(lvl < alertLevel) return true;
 
     /* Allocate and Initialize Alert Record */
-    RecordObject record(alertRecType);
-    alert_t* event = reinterpret_cast<alert_t*>(record.getRecordData());
-    event->code = code;
-    event->level = (int32_t)lvl;
+    RecordObject record(alertRecType, 0, false);
+    alert_t* event  = reinterpret_cast<alert_t*>(record.getRecordData());
+    event->code     = code;
+    event->level    = (int32_t)lvl;
 
     /* Build Message */
     va_list args;
@@ -428,8 +416,13 @@ bool EventLib::sendAlert (event_level_t lvl, int code, void* rspsq, const bool* 
     event->text[text_size - 1] = '\0';
     va_end(args);
 
-    /* Post to Event Q */
-    status = status && record.post(outq, 0, active);
+    /* Log Alert */
+    mlog(static_cast<event_level_t>(event->level), "<alert=%d> %s", event->code, event->text);
+
+    /* Post to Event Q
+     *  - must allocate here so that the record is still owned for the call to
+     *    post it below. */
+    bool status = record.post(outq, 0, active, SYS_TIMEOUT, RecordObject::ALLOCATE);
 
     /* Post to Response Q */
     if(rspsq)
@@ -437,9 +430,6 @@ bool EventLib::sendAlert (event_level_t lvl, int code, void* rspsq, const bool* 
         Publisher* rspsq_ptr = reinterpret_cast<Publisher*>(rspsq); // avoids cyclic dependency with RecordObject
         status = status && record.post(rspsq_ptr, 0, active);
     }
-
-    /* Log Alert */
-    mlog(static_cast<event_level_t>(event->level), "<alert=%d> %s", event->code, event->text);
 
     return status;
 }

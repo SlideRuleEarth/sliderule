@@ -278,8 +278,8 @@ void* ContainerRunner::controlThread (void* parm)
     const char* api_version = "v1.43";
 
     /* Configure HTTP Headers */
-    List<string*> headers(5);
-    string* content_type = new string("Content-Type: application/json");
+    List<const string*> headers(5);
+    const string* content_type = new const string("Content-Type: application/json");
     headers.add(content_type);
 
     /* Build Container Command Parameter */

@@ -85,7 +85,7 @@ class LogMonitor: public Monitor
          * Methods
          *--------------------------------------------------------------------*/
 
-        LogMonitor  (lua_State* L, event_level_t level, const char* eventq_name);
+        LogMonitor  (lua_State* L, event_level_t level, format_t output_format, const char* eventq_name);
         ~LogMonitor (void) override;
 
         static int textOutput (const EventLib::log_t* event, char* event_buffer);

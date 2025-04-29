@@ -364,14 +364,19 @@ int RecordObject::serialize(unsigned char** buffer, serialMode_t mode, int size)
 
 /*----------------------------------------------------------------------------
  * post
+ *  - by default this can only be called once for a record because the serial
+ *    mode is set to TAKE_OWNERSHIP which means the record memory is given
+ *    to the message queue and freed by the queue when it is dereferenced
+ *  - to call this function multiple times for a given record, the mode must
+ *    be set to ALLOCATE
  *----------------------------------------------------------------------------*/
-bool RecordObject::post(Publisher* outq, int size, const bool* active, bool verbose, int timeout)
+bool RecordObject::post(Publisher* outq, int size, const bool* active, bool verbose, int timeout, serialMode_t mode)
 {
     bool status = true;
 
     /* Serialize Record */
     uint8_t* rec_buf = NULL;
-    const int rec_bytes = serialize(&rec_buf, RecordObject::TAKE_OWNERSHIP, size);
+    const int rec_bytes = serialize(&rec_buf, mode, size);
 
     /* Post Record */
     int post_status = MsgQ::STATE_TIMEOUT;
@@ -1853,7 +1858,7 @@ RecordInterface::RecordInterface(const unsigned char* buffer, int size)
     recordDefinition = getDefinition(buffer, size);
     if(recordDefinition != NULL)
     {
-        if (size >= recordDefinition->record_size)
+        if (size >= static_cast<int>(sizeof(rec_hdr_t)))
         {
             const char** recordMemoryCast = const_cast<const char**>(reinterpret_cast<char**>(&recordMemory));
             const unsigned char** recordDataCast = const_cast<const unsigned char**>(&recordData);

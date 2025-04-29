@@ -118,9 +118,9 @@ static int core_open (lua_State *L)
     static const struct luaL_Reg core_functions[] = {
         {"getbyname",       LuaObject::luaGetByName},
         {"script",          LuaScript::luaCreate},
-        {"monitor",         LogMonitor::luaCreate},
-        {"tmon",            TelemetryMonitor::luaCreate},
-        {"amon",            AlertMonitor::luaCreate},
+        {"logmon",          LogMonitor::luaCreate},
+        {"tlmmon",          TelemetryMonitor::luaCreate},
+        {"alrmon",          AlertMonitor::luaCreate},
         {"httpd",           HttpServer::luaCreate},
         {"endpoint",        LuaEndpoint::luaCreate},
         {"asset",           Asset::luaCreate},
@@ -220,6 +220,12 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrBool(L, "UNITTEST",                   true);
 #else
     LuaEngine::setAttrBool(L, "UNITTEST",                   false);
+#endif
+
+#ifdef __tracing__
+    LuaEngine::setAttrBool(L, "TRACING",                    true);
+#else
+    LuaEngine::setAttrBool(L, "TRACING",                    false);
 #endif
 
     return 1;

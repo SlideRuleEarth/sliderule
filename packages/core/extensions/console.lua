@@ -1,4 +1,4 @@
-local console_monitor = core.monitor(core.INFO, core.FMT_TEXT):name("console.monitor")
+local console_monitor = core.logmon(core.INFO, core.FMT_TEXT):name("console.monitor")
 
 local function loglvl (lvl)
     console_monitor:config(lvl)
