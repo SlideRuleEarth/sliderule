@@ -55,6 +55,7 @@
 #include "LuaLibraryTime.h"
 #include "LuaObject.h"
 #include "LuaScript.h"
+#include "ManagerLib.h"
 #include "MathLib.h"
 #include "Monitor.h"
 #include "MsgQ.h"
@@ -145,6 +146,7 @@ static int core_open (lua_State *L)
         {"pslogin",         ProvisioningSystemLib::luaLogin},
         {"psvalidate",      ProvisioningSystemLib::luaValidate},
         {"psauth",          ProvisioningSystemLib::Authenticator::luaCreate},
+        {"mngrurl",         ManagerLib::luaUrl},
         {"parms",           RequestFields::luaCreate},
 #ifdef __unittesting__
         {"ut_dictionary",   UT_Dictionary::luaCreate},

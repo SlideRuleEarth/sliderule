@@ -34,10 +34,11 @@ local normal_mem_thresh         = cfgtbl["normal_mem_thresh"] or 1.0
 local stream_mem_thresh         = cfgtbl["stream_mem_thresh"] or 0.75
 local msgq_depth                = cfgtbl["msgq_depth"] or 10000
 local environment_version       = cfgtbl["environment_version"] or os.getenv("ENVIRONMENT_VERSION") or "unknown"
-local orchestrator_url          = cfgtbl["orchestrator"] or os.getenv("ORCHESTRATOR")
+local orchestrator_url          = cfgtbl["orchestrator"] or os.getenv("ORCHESTRATOR") or "http://127.0.0.1:8050"
 local org_name                  = cfgtbl["cluster"] or os.getenv("CLUSTER")
 local ps_url                    = cfgtbl["provisioning_system"] or os.getenv("PROVISIONING_SYSTEM")
 local ps_auth                   = cfgtbl["authenticate_to_ps"] -- nil is false
+local manager_url               = cfgtbl["manager"] or os.getenv("MANAGER") or "http://127.0.0.1:8000"
 local container_registry        = cfgtbl["container_registry"] or os.getenv("CONTAINER_REGISTRY")
 local is_public                 = cfgtbl["is_public"] or os.getenv("IS_PUBLIC") or "False"
 local post_startup_scripts      = cfgtbl["post_startup_scripts"] or {}
@@ -133,7 +134,7 @@ app_server:attach(source_endpoint, "/source")
 app_server:attach(arrow_endpoint, "/arrow")
 
 --------------------------------------------------
--- Register Service
+-- Register Services
 --------------------------------------------------
 
 -- Initialize Orchestrator --
@@ -141,6 +142,9 @@ core.orchurl(orchestrator_url)
 if register_as_service then
     local service_script = core.script("service_registry", "http://"..sys.ipv4()..":"..tostring(app_port)):name("ServiceScript")
 end
+
+-- Initialize Manager --
+core.mngrurl(manager_url)
 
 --------------------------------------------------
 -- Post Startup

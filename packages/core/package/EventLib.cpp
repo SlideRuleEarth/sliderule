@@ -139,7 +139,7 @@ void EventLib::init (const char* eventq)
     /* Set Default Event Level */
     logLevel = INFO;
     traceLevel = INFO;
-    telemetryLevel = CRITICAL;
+    telemetryLevel = INFO;
     alertLevel = INFO;
 
     /* Create Output Q */

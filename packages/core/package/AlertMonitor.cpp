@@ -71,6 +71,8 @@ int AlertMonitor::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void AlertMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size)
 {
+    (void)event_size;
+
     /* Cast to Alert Structure */
     const EventLib::alert_t* event = reinterpret_cast<const EventLib::alert_t*>(event_buf_ptr);
 

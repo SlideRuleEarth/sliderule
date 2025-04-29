@@ -109,6 +109,7 @@ void* LuaEndpoint::requestThread (void* parm)
     EndpointObject::Request* request = info->request;
     LuaEndpoint* lua_endpoint = dynamic_cast<LuaEndpoint*>(info->endpoint);
     const double start = TimeLib::latchtime();
+    int status_code = RTE_STATUS;
 
     /* Get Request Script */
     const char* script_pathname = LuaEngine::sanitize(request->resource);
@@ -132,11 +133,11 @@ void* LuaEndpoint::requestThread (void* parm)
         /* Handle Response */
         if(info->streaming)
         {
-            lua_endpoint->streamResponse(script_pathname, request, rspq, trace_id);
+            status_code = lua_endpoint->streamResponse(script_pathname, request, rspq, trace_id);
         }
         else
         {
-            lua_endpoint->normalResponse(script_pathname, request, rspq, trace_id);
+            status_code = lua_endpoint->normalResponse(script_pathname, request, rspq, trace_id);
         }
     }
     else
@@ -145,15 +146,23 @@ void* LuaEndpoint::requestThread (void* parm)
         char header[MAX_HDR_SIZE];
         const int header_length = buildheader(header, Unauthorized);
         rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
+        status_code = RTE_UNAUTHORIZED;
     }
 
     /* End Response */
     const int rc = rspq->postCopy("", 0, POST_TIMEOUT_MS);
-    if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on %s: %d", rspq->getName(), rc);
+    if(rc <= 0)
+    {
+        mlog(CRITICAL, "Failed to post terminator on %s: %d", rspq->getName(), rc);
+        status_code = RTE_DID_NOT_COMPLETE;
+    }
 
-    /* Generate Metric for Endpoint */
-//    const double duration = TimeLib::latchtime() - start;
-//    telemeter(INFO, request->resource, duration);
+    /* Generate Telemetry */
+    const double duration = TimeLib::latchtime() - start;
+    const char* account = "anonymous";
+    const char* client = "unknown";
+    const MathLib::coord_t aoi = { .lon = 0.0, .lat = 0.0};
+    telemeter(INFO, status_code, request->resource, duration, aoi, client, account, "%s", "");
 
     /* Clean Up */
     delete rspq;
@@ -206,8 +215,9 @@ bool LuaEndpoint::handleRequest (Request* request)
 /*----------------------------------------------------------------------------
  * normalResponse
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const
+int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const
 {
+    int status_code = RTE_STATUS;
     char header[MAX_HDR_SIZE];
     double mem;
 
@@ -242,6 +252,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
                 const int header_length = buildheader(header, Not_Found, "text/plain", result_length, NULL, serverHead.c_str());
                 rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
                 rspq->postCopy(error_msg, result_length, POST_TIMEOUT_MS);
+                status_code = RTE_SCRIPT_DOES_NOT_EXIST;
             }
         }
         else
@@ -252,6 +263,7 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
             const int header_length = buildheader(header, Internal_Server_Error, "text/plain", result_length, NULL, serverHead.c_str());
             rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
             rspq->postCopy(error_msg, result_length, POST_TIMEOUT_MS);
+            status_code = RTE_FAILURE;
         }
     }
     else
@@ -262,17 +274,22 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
         const int header_length = buildheader(header, Service_Unavailable, "text/plain", result_length, NULL, serverHead.c_str());
         rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
         rspq->postCopy(error_msg, result_length, POST_TIMEOUT_MS);
+        status_code = RTE_NOT_ENOUGH_MEMORY;
 }
 
     /* Clean Up */
     delete engine;
+
+    /* Return Status Code */
+    return status_code;
 }
 
 /*----------------------------------------------------------------------------
  * streamResponse
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const
+int LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const
 {
+    int status_code = RTE_STATUS;
     char header[MAX_HDR_SIZE];
     double mem;
 
@@ -294,17 +311,30 @@ void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publ
         engine->setString(LUA_REQUEST_ID, request->id);
 
         /* Execute Engine
-        *  The call to execute the script blocks on completion of the script. The lua state context
-        *  is locked and cannot be accessed until the script completes */
-        engine->executeEngine(IO_PEND);
+         *  The call to execute the script blocks on completion of the script. The lua state context
+         *  is locked and cannot be accessed until the script completes */
+        const bool status = engine->executeEngine(IO_PEND);
+
+        /* Check Status
+         *  At this point the http header has already been sent, so an error header cannot be sent;
+         *  but we can log the error and report it as such in telemetry */
+        if(!status)
+        {
+            mlog(CRITICAL, "Failed to execute script %s", scriptpath);
+            status_code = RTE_FAILURE;
+        }
     }
     else
     {
         mlog(CRITICAL, "Memory (%d%%) exceeded threshold, not performing request: %s", (int)(mem * 100.0), scriptpath);
         const int header_length = buildheader(header, Service_Unavailable);
         rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
+        status_code = RTE_NOT_ENOUGH_MEMORY;
     }
 
     /* Clean Up */
     delete engine;
+
+    /* Return Status Code */
+    return status_code;
 }
