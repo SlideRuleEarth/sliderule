@@ -25,6 +25,8 @@ resource "aws_instance" "manager" {
       export MANAGER_SECRET_SALT='${local.secrets.manager_secret_salt}'
       export DOMAIN=${var.domain}
       export MANAGER_IMAGE=${var.container_repo}/monitor:${var.cluster_version}
+      mkdir /data
+      aws s3 cp s3://sliderule/config/manager.db /data/manager.db
       aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-manager.yml ./docker-compose.yml
       docker-compose -p cluster up --detach
     EOF
