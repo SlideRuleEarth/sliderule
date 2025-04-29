@@ -58,7 +58,7 @@ static Publisher* outq;
 
 static RecordObject::fieldDef_t logRecDef[] =
 {
-    {"time",    RecordObject::INT64,    offsetof(EventLib::log_t, systime),     1,                        NULL, NATIVE_FLAGS},
+    {"time",    RecordObject::INT64,    offsetof(EventLib::log_t, time),        1,                        NULL, NATIVE_FLAGS},
     {"level",   RecordObject::UINT32,   offsetof(EventLib::log_t, level),       1,                        NULL, NATIVE_FLAGS},
     {"ipv4",    RecordObject::STRING,   offsetof(EventLib::log_t, ipv4),        SockLib::IPV4_STR_LEN,    NULL, NATIVE_FLAGS},
     {"source",  RecordObject::STRING,   offsetof(EventLib::log_t, source),      EventLib::MAX_SRC_STR,    NULL, NATIVE_FLAGS},
@@ -67,7 +67,7 @@ static RecordObject::fieldDef_t logRecDef[] =
 
 static RecordObject::fieldDef_t traceRecDef[] =
 {
-    {"time",    RecordObject::INT64,    offsetof(EventLib::trace_t, systime),   1,                        NULL, NATIVE_FLAGS},
+    {"time",    RecordObject::INT64,    offsetof(EventLib::trace_t, time),      1,                        NULL, NATIVE_FLAGS},
     {"tid",     RecordObject::INT64,    offsetof(EventLib::trace_t, tid),       1,                        NULL, NATIVE_FLAGS},
     {"id",      RecordObject::UINT32,   offsetof(EventLib::trace_t, id),        1,                        NULL, NATIVE_FLAGS},
     {"parent",  RecordObject::UINT32,   offsetof(EventLib::trace_t, parent),    1,                        NULL, NATIVE_FLAGS},
@@ -80,17 +80,17 @@ static RecordObject::fieldDef_t traceRecDef[] =
 
 static RecordObject::fieldDef_t metricRecDef[] =
 {
-    {"time",        RecordObject::INT64,    offsetof(EventLib::telemetry_t, systime),  1,                        NULL, NATIVE_FLAGS},
-    {"code",        RecordObject::INT32,    offsetof(EventLib::telemetry_t, code),     1,                        NULL, NATIVE_FLAGS},
-    {"duration",    RecordObject::FLOAT,    offsetof(EventLib::telemetry_t, duration), 1,                        NULL, NATIVE_FLAGS},
+    {"time",        RecordObject::INT64,    offsetof(EventLib::telemetry_t, time),      1,                          NULL, NATIVE_FLAGS},
+    {"code",        RecordObject::INT32,    offsetof(EventLib::telemetry_t, code),      1,                          NULL, NATIVE_FLAGS},
+    {"duration",    RecordObject::FLOAT,    offsetof(EventLib::telemetry_t, duration),  1,                          NULL, NATIVE_FLAGS},
     {"latitude",    RecordObject::DOUBLE,   offsetof(EventLib::telemetry_t, aoi) + offsetof(MathLib::coord_t, lat), 1, NULL, NATIVE_FLAGS},
     {"longitude",   RecordObject::DOUBLE,   offsetof(EventLib::telemetry_t, aoi) + offsetof(MathLib::coord_t, lon), 1, NULL, NATIVE_FLAGS},
-    {"level",       RecordObject::UINT16,   offsetof(EventLib::telemetry_t, level),    1,                        NULL, NATIVE_FLAGS},
-    {"ipv4",        RecordObject::STRING,   offsetof(EventLib::telemetry_t, ipv4),     SockLib::IPV4_STR_LEN,    NULL, NATIVE_FLAGS},
-    {"client",      RecordObject::STRING,   offsetof(EventLib::telemetry_t, client),   EventLib::MAX_TLM_STR, NULL, NATIVE_FLAGS},
-    {"account",     RecordObject::STRING,   offsetof(EventLib::telemetry_t, account),  EventLib::MAX_TLM_STR, NULL, NATIVE_FLAGS},
-    {"version",     RecordObject::STRING,   offsetof(EventLib::telemetry_t, version),  EventLib::MAX_TLM_STR, NULL, NATIVE_FLAGS},
-    {"message",     RecordObject::STRING,   offsetof(EventLib::telemetry_t, message),  0,                        NULL, NATIVE_FLAGS}
+    {"level",       RecordObject::UINT16,   offsetof(EventLib::telemetry_t, level),     1,                          NULL, NATIVE_FLAGS},
+    {"ipv4",        RecordObject::STRING,   offsetof(EventLib::telemetry_t, ipv4),      SockLib::IPV4_STR_LEN,      NULL, NATIVE_FLAGS},
+    {"client",      RecordObject::STRING,   offsetof(EventLib::telemetry_t, client),    EventLib::MAX_TLM_STR,      NULL, NATIVE_FLAGS},
+    {"account",     RecordObject::STRING,   offsetof(EventLib::telemetry_t, account),   EventLib::MAX_TLM_STR,      NULL, NATIVE_FLAGS},
+    {"version",     RecordObject::STRING,   offsetof(EventLib::telemetry_t, version),   EventLib::MAX_TLM_STR,      NULL, NATIVE_FLAGS},
+    {"message",     RecordObject::STRING,   offsetof(EventLib::telemetry_t, message),   0,                          NULL, NATIVE_FLAGS}
 };
 
 static RecordObject::fieldDef_t alertRecDef[] =
@@ -115,6 +115,7 @@ Thread::key_t EventLib::trace_key;
 event_level_t EventLib::logLevel;
 event_level_t EventLib::traceLevel;
 event_level_t EventLib::telemetryLevel;
+event_level_t EventLib::alertLevel;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -139,6 +140,7 @@ void EventLib::init (const char* eventq)
     logLevel = INFO;
     traceLevel = INFO;
     telemetryLevel = CRITICAL;
+    alertLevel = INFO;
 
     /* Create Output Q */
     outq = new Publisher(eventq);
@@ -368,7 +370,7 @@ bool EventLib::sendTlm (event_level_t lvl, int code, const char* endpoint, float
     telemetry_t event;
 
     /* Return Here If Nothing to Do */
-    if(lvl < telemetryLevel) return;
+    if(lvl < telemetryLevel) return true;
 
     /* Initialize Telemetry Message */
     event.time      = TimeLib::gpstime();
@@ -408,6 +410,9 @@ bool EventLib::sendTlm (event_level_t lvl, int code, const char* endpoint, float
 bool EventLib::sendAlert (event_level_t lvl, int code, void* rspsq, const bool* active, const char* errmsg, ...)
 {
     bool status = true;
+
+    /* Return Here If Nothing to Do */
+    if(lvl < alertLevel) return true;
 
     /* Allocate and Initialize Alert Record */
     RecordObject record(alertRecType);

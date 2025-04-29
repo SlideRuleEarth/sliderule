@@ -42,7 +42,9 @@ from sliderule.session import Session, BASIC_TYPES, CODED_TYPE, FatalError, Retr
 try:
     from sklearn.cluster import KMeans
 except:
-    print("Unable to import sklearn... clustering support disabled")
+    # clustering unsupported in `toregion` function
+    # n_clusters restricted to a value of 1
+    pass
 
 ###############################################################################
 # GLOBALS

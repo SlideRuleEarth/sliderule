@@ -152,8 +152,8 @@ void* LuaEndpoint::requestThread (void* parm)
     if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on %s: %d", rspq->getName(), rc);
 
     /* Generate Metric for Endpoint */
-    const double duration = TimeLib::latchtime() - start;
-    metric(INFO, request->resource, duration);
+//    const double duration = TimeLib::latchtime() - start;
+//    telemeter(INFO, request->resource, duration);
 
     /* Clean Up */
     delete rspq;

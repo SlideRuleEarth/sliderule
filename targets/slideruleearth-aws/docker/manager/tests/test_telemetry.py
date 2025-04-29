@@ -15,7 +15,7 @@ def test_nominal(client):
         "message": "success"
     }
     response = client.post('/manager/telemetry/record', json=request)
-    assert response.data == b'Request record successfully posted'
+    assert response.data == b'Telemetry record successfully posted'
 
 def test_value_counts(client):
     request = {
@@ -32,10 +32,10 @@ def test_value_counts(client):
     }
     # first request
     response = client.post('/manager/telemetry/record', json=request)
-    assert response.data == b'Request record successfully posted'
+    assert response.data == b'Telemetry record successfully posted'
     # second request
     response = client.post('/manager/telemetry/record', json=request)
-    assert response.data == b'Request record successfully posted'
+    assert response.data == b'Telemetry record successfully posted'
     # value counts - endpoint
     response = client.get('/manager/status/telemetry_counts/endpoint')
     data = json.loads(response.data.decode("utf-8"))
@@ -68,7 +68,7 @@ def test_list(client):
         "version": "v4.5.1",
         "message": "success"
     })
-    assert response.data == b'Request record successfully posted'
+    assert response.data == b'Telemetry record successfully posted'
     # second request - 2 years ago
     two_years_ago = (date.today() - timedelta(days=730)).strftime('%Y-%m-%d')
     response = client.post('/manager/telemetry/record', json={
@@ -83,7 +83,7 @@ def test_list(client):
         "version": "v4.5.1",
         "message": "success"
     })
-    assert response.data == b'Request record successfully posted'
+    assert response.data == b'Telemetry record successfully posted'
     # third request - 3 years ago
     three_years_ago = (date.today() - timedelta(days=1095)).strftime('%Y-%m-%d')
     response = client.post('/manager/telemetry/record', json={
@@ -98,7 +98,7 @@ def test_list(client):
         "version": "v4.5.1",
         "message": "success"
     })
-    assert response.data == b'Request record successfully posted'
+    assert response.data == b'Telemetry record successfully posted'
     # list - 1 year (and a day)
     response = client.get('/manager/status/telemetry_list?duration=31622400')
     data = json.loads(response.data.decode("utf-8"))
@@ -162,7 +162,7 @@ def test_geo(client):
         "version": "v4.5.1",
         "message": "success"
     })
-    assert response.data == b'Request record successfully posted'
+    assert response.data == b'Telemetry record successfully posted'
     response = client.get(f'/manager/status/telemetry_list?duration=86400')
     data = json.loads(response.data.decode("utf-8"))
     assert response.status_code == 200

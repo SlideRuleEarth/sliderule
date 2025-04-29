@@ -90,7 +90,7 @@ bool ManagerLib::recordTelemetry (const EventLib::telemetry_t* event)
     TimeLib::date_t date = TimeLib::gmt2date(gmt);
 
     const FString rqst(R"json({
-        "request_time": "%04d-%02d-%02d %02d:%02d:02d",
+        "record_time": "%04d-%02d-%02d %02d:%02d:%02d",
         "source_ip": "%s",
         "aoi": {"x": %lf, "y": %lf},
         "client": "%s",
@@ -135,13 +135,20 @@ bool ManagerLib::issueAlert (const EventLib::alert_t* event)
     TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(TimeLib::gpstime());
     TimeLib::date_t date = TimeLib::gmt2date(gmt);
 
+
     const FString rqst(R"json({
-	    "alert_time": "%s",
+        "record_time": "%04d-%02d-%02d %02d:%02d:%02d",
         "status_code": %d,
         "account": "%s",
         "version": "%s",
         "message": "%s"
-    })json");
+    })json",
+        date.year, date.month, date.day,
+        gmt.hour, gmt.minute, gmt.second,
+        event->code,
+        "anonymous",
+        LIBID,
+        event->text);
 
     const rsps_t rsps = request(EndpointObject::POST, "/manager/alert/issue", rqst.c_str());
     if(rsps.code != EndpointObject::OK)

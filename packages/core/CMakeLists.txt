@@ -27,7 +27,7 @@ target_link_libraries (slideruleLib PUBLIC ${READLINE_LIB})
 target_sources (slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/core.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/AlertMonitor.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/AlertMonitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Asset.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AssetField.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/CurlLib.cpp
@@ -46,6 +46,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaLibraryTime.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaScript.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/ManagerLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/MathLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Monitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/MsgQ.cpp
@@ -112,6 +113,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaLibraryTime.h
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaObject.h
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaScript.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/ManagerLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/MathLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Monitor.h
         ${CMAKE_CURRENT_LIST_DIR}/package/MsgQ.h

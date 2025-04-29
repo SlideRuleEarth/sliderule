@@ -713,7 +713,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
                 appendPandasMetaData(dataframe.getTimeColumnName().c_str(), metadata, schema);
                 metadata->Append("sliderule", parms.toJson());
                 metadata->Append("meta", dataframe.metaFields.toJson());
-                metadata->Append("info", dataframe.getInfoAsJson());
+                metadata->Append("recordinfo", dataframe.getInfoAsJson());
                 schema = schema->WithMetadata(metadata);
 
                 // create parquet writer

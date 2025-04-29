@@ -10,7 +10,7 @@ def test_nominal(client):
         "message": "success"
     }
     response = client.post('/manager/alerts/issue', json=request)
-    assert response.data == b'Alarm record successfully posted'
+    assert response.data == b'Alert record successfully posted'
 
 def test_value_counts(client):
     request = {
@@ -22,10 +22,10 @@ def test_value_counts(client):
     }
     # first alarm
     response = client.post('/manager/alerts/issue', json=request)
-    assert response.data == b'Alarm record successfully posted'
+    assert response.data == b'Alert record successfully posted'
     # second alarm
     response = client.post('/manager/alerts/issue', json=request)
-    assert response.data == b'Alarm record successfully posted'
+    assert response.data == b'Alert record successfully posted'
     # value counts - status_code
     response = client.get('/manager/status/alert_counts/status_code')
     data = json.loads(response.data.decode("utf-8"))
@@ -47,7 +47,7 @@ def test_list(client):
         "version": "v4.5.1",
         "message": "success"
     })
-    assert response.data == b'Alarm record successfully posted'
+    assert response.data == b'Alert record successfully posted'
     # second request - 2 years ago
     two_years_ago = (date.today() - timedelta(days=730)).strftime('%Y-%m-%d')
     response = client.post('/manager/alerts/issue', json={
@@ -57,7 +57,7 @@ def test_list(client):
         "version": "v4.5.1",
         "message": "success"
     })
-    assert response.data == b'Alarm record successfully posted'
+    assert response.data == b'Alert record successfully posted'
     # third request - 3 years ago
     three_years_ago = (date.today() - timedelta(days=1095)).strftime('%Y-%m-%d')
     response = client.post('/manager/alerts/issue', json={
@@ -67,7 +67,7 @@ def test_list(client):
         "version": "v4.5.1",
         "message": "success"
     })
-    assert response.data == b'Alarm record successfully posted'
+    assert response.data == b'Alert record successfully posted'
     # list - 1 year (and a day)
     response = client.get('/manager/status/alert_list?duration=31622400')
     data = json.loads(response.data.decode("utf-8"))

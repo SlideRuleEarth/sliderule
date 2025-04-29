@@ -148,7 +148,7 @@ void* ArrowEndpoint::requestThread (void* parm)
 
     /* Generate Metric for Endpoint */
     const double duration = TimeLib::latchtime() - start;
-    metric(INFO, request->resource, duration);
+    //telemeter(INFO, request->resource, duration);
 
     /* Clean Up */
     delete rspq;

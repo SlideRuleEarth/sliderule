@@ -71,6 +71,8 @@ int TelemetryMonitor::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 void TelemetryMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size)
 {
+    (void)event_size;
+
     /* Cast to Telemetry Structure */
     const EventLib::telemetry_t* event = reinterpret_cast<const EventLib::telemetry_t*>(event_buf_ptr);
 

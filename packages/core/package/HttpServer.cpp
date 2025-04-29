@@ -97,8 +97,6 @@ HttpServer::HttpServer(lua_State* L, const char* _ip_addr, int _port, int max_co
     active = true;
     listening = false;
     listenerPid = new Thread(listenerThread, this);
-
-    metricId = EventLib::INVALID_METRIC;
 }
 
 /*----------------------------------------------------------------------------
