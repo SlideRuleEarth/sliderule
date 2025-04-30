@@ -97,7 +97,7 @@ struct FitFields: public FieldDictionary
 struct YapcFields: public FieldDictionary
 {
     FieldElement<uint8_t>   score {0};      // minimum allowed weight of photon using yapc algorithm
-    FieldElement<int>       version {3};    // version of the yapc algorithm to run
+    FieldElement<int>       version {0};    // version of the yapc algorithm to run
     FieldElement<int>       knn {0};        // (version 2 only) k-nearest neighbors
     FieldElement<int>       min_knn {5};    // (version 3 only) minimum number of k-nearest neighbors
     FieldElement<double>    win_h {6.0};    // window height (overrides calculated value if non-zero)
