@@ -11,8 +11,7 @@ def test_nominal(client):
         "duration": 1.0,
         "status_code": 0,
         "account": "sliderule",
-        "version": "v4.5.1",
-        "message": "success"
+        "version": "v4.5.1"
     }
     response = client.post('/manager/telemetry/record', json=request)
     assert response.data == b'Telemetry record successfully posted'
@@ -27,8 +26,7 @@ def test_value_counts(client):
         "duration": 1.0,
         "status_code": 0,
         "account": "sliderule",
-        "version": "v4.5.1",
-        "message": "success"
+        "version": "v4.5.1"
     }
     # first request
     response = client.post('/manager/telemetry/record', json=request)
@@ -65,8 +63,7 @@ def test_list(client):
         "duration": 1.0,
         "status_code": 0,
         "account": "sliderule",
-        "version": "v4.5.1",
-        "message": "success"
+        "version": "v4.5.1"
     })
     assert response.data == b'Telemetry record successfully posted'
     # second request - 2 years ago
@@ -80,8 +77,7 @@ def test_list(client):
         "duration": 1.0,
         "status_code": 0,
         "account": "sliderule",
-        "version": "v4.5.1",
-        "message": "success"
+        "version": "v4.5.1"
     })
     assert response.data == b'Telemetry record successfully posted'
     # third request - 3 years ago
@@ -95,8 +91,7 @@ def test_list(client):
         "duration": 1.0,
         "status_code": 0,
         "account": "sliderule",
-        "version": "v4.5.1",
-        "message": "success"
+        "version": "v4.5.1"
     })
     assert response.data == b'Telemetry record successfully posted'
     # list - 1 year (and a day)
@@ -159,8 +154,7 @@ def test_geo(client):
         "duration": 1.0,
         "status_code": 0,
         "account": "sliderule",
-        "version": "v4.5.1",
-        "message": "success"
+        "version": "v4.5.1"
     })
     assert response.data == b'Telemetry record successfully posted'
     response = client.get(f'/manager/status/telemetry_list?duration=86400')

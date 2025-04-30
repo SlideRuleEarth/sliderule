@@ -21,14 +21,13 @@ def issue():
         data = request.get_json()
         entry = ( data['record_time'],
                   data['status_code'],
-                  data['account'],
                   data['version'],
                   data['message'] )
         db = get_db()
         columns = allcolumns("alerts", db)
         db.execute(f"""
             INSERT INTO alerts ({', '.join(columns)})
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?)
         """, entry)
     except Exception as e:
         abort(400, f'Alert record failed to post: {e}')

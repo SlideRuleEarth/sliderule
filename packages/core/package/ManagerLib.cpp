@@ -107,20 +107,18 @@ bool ManagerLib::recordTelemetry (const EventLib::telemetry_t* event)
         "duration": %f,
         "status_code": %d,
         "account": "%s",
-        "version": "%s",
-        "message": "%s"
+        "version": "%s"
     })json",
         date.year, date.month, date.day,
         gmt.hour, gmt.minute, gmt.second,
-        event->ipv4,
-        event->aoi.lon, event->aoi.lat,
+        event->source_ip,
+        event->longitude, event->latitude,
         event->client,
         event->endpoint,
         event->duration,
         event->code,
         event->account,
-        event->version,
-        event->message);
+        event->version);
 
     const rsps_t rsps = request(EndpointObject::POST, "/manager/telemetry/record", rqst.c_str());
     if(rsps.code != EndpointObject::OK)
@@ -147,14 +145,12 @@ bool ManagerLib::issueAlert (const EventLib::alert_t* event)
     const FString rqst(R"json({
         "record_time": "%04d-%02d-%02d %02d:%02d:%02d",
         "status_code": %d,
-        "account": "%s",
         "version": "%s",
         "message": "%s"
     })json",
         date.year, date.month, date.day,
         gmt.hour, gmt.minute, gmt.second,
         event->code,
-        "anonymous",
         LIBID,
         event->text);
 

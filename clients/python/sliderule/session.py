@@ -37,6 +37,7 @@ import ctypes
 import time
 import logging
 import numpy
+from sliderule import version
 
 ###############################################################################
 # LOGGING
@@ -212,7 +213,7 @@ class Session:
         '''
         # initialize local variables
         rsps = {}
-        headers = None
+        headers = {'x-sliderule-client': f'python-{version.full_version}'}
 
         # build callbacks
         for c in self.callbacks:
@@ -233,7 +234,7 @@ class Session:
             try:
                 # Build Authorization Header
                 if self.service_org:
-                    headers = self.__buildauthheader()
+                    self.__buildauthheader(headers)
 
                 # Perform Request
                 if not stream:
@@ -363,9 +364,10 @@ class Session:
 
         # update number of nodes
         if type(desired_nodes) == int:
+            headers = {}
             rsps_body = {}
             requested_nodes = desired_nodes
-            headers = self.__buildauthheader()
+            self.__buildauthheader(headers)
 
             # get boundaries of cluster and calculate nodes to request
             try:
@@ -540,12 +542,11 @@ class Session:
     #
     #  __buildauthheader
     #
-    def __buildauthheader(self, force_refresh=False):
+    def __buildauthheader(self, headers, force_refresh=False):
         '''
         builds the necessary authentication header for the http request to private
         clusters by using the bearer token from the provisioning system
         '''
-        headers = None
         if self.ps_access_token:
             # Check if Refresh Needed
             if time.time() > self.ps_token_exp or force_refresh:
@@ -557,8 +558,7 @@ class Session:
                 self.ps_access_token = rsps["access"]
                 self.ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
             # Build Authentication Header
-            headers = {'Authorization': 'Bearer ' + self.ps_access_token}
-        return headers
+            headers['Authorization'] = 'Bearer ' + self.ps_access_token
 
     #
     #  __populate
@@ -780,8 +780,9 @@ class Session:
         override the dns entry
         '''
         global sliderule_dns
+        headers = {}
         url = self.service_org + "." + self.service_url
-        headers = self.__buildauthheader()
+        self.__buildauthheader(headers)
         host = "https://ps." + self.service_url + "/api/org_ip_adr/" + self.service_org + "/"
         rsps = self.session.get(host, headers=headers, timeout=self.rqst_timeout).json()
         if rsps["status"] == "SUCCESS":

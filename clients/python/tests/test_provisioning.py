@@ -12,8 +12,9 @@ class TestProvisioning:
         assert status
 
     def test_refresh(self, domain, organization):
+        headers = {}
         session = Session(domain, organization=organization)
-        headers = session._Session__buildauthheader(force_refresh=True)
+        session._Session__buildauthheader(headers, force_refresh=True)
         assert len(headers['Authorization']) > 8
 
     def test_num_nodes_update(self, domain, organization):

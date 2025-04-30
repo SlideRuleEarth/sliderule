@@ -162,11 +162,15 @@ void* ArrowEndpoint::requestThread (void* parm)
     }
 
     /* Generate Metric for Endpoint */
-    const double duration = TimeLib::latchtime() - start;
-    const char* account = "anonymous";
-    const char* client = "unknown";
-    const MathLib::coord_t aoi = {.lon = 0.0, .lat = 0.0};
-    telemeter(INFO, status_code, request->resource, duration, aoi, client, account, "%s", "");
+    const EventLib::tlm_input_t tlm = {
+        .code = status_code,
+        .duration = static_cast<float>(TimeLib::latchtime() - start),
+        .source_ip = request->getHdrSourceIp(),
+        .endpoint = request->resource,
+        .client = request->getHdrClient(),
+        .account = request->getHdrAccount()
+    };
+    telemeter(INFO, tlm);
 
     /* Clean Up */
     delete rspq;

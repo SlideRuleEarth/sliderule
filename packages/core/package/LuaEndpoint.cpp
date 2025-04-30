@@ -101,6 +101,46 @@ LuaEndpoint::LuaEndpoint(lua_State* L, double normal_mem_thresh, double stream_m
 LuaEndpoint::~LuaEndpoint(void) = default;
 
 /*----------------------------------------------------------------------------
+ * handleRequest - returns true if streaming (chunked) response
+ *----------------------------------------------------------------------------*/
+bool LuaEndpoint::handleRequest (Request* request)
+{
+    // Allocate and Initialize Endpoint Info Struct
+    info_t* info = new info_t;
+    info->endpoint = this;
+    info->request = request;
+    info->streaming = true;
+
+    // Determine Streaming
+    if(request->verb == GET)
+    {
+        info->streaming = false;
+    }
+    else
+    {
+        // Check Header (needed for node.js clients, potentially others)
+        // some clients do not allow a GET to have a request body
+        // but SlideRule supports GETs on endpoints that use a
+        // request body to determine what is sent in the response;
+        // in those cases, the client can issue a POST with a request
+        // body and provide this header set to "0", and SlideRule
+        // will treat it like a GET and return a normal response
+        // based on the contents of the request body.
+        const char* streaming_header = request->getHdrStreaming();
+        if(streaming_header != NULL && StringLib::match(streaming_header, "0"))
+        {
+                info->streaming = false;
+        }
+    }
+
+    // Start Thread
+    const Thread pid(requestThread, info, false);
+
+    // Return Response Type
+    return info->streaming;
+}
+
+/*----------------------------------------------------------------------------
  * requestThread
  *----------------------------------------------------------------------------*/
 void* LuaEndpoint::requestThread (void* parm)
@@ -158,11 +198,15 @@ void* LuaEndpoint::requestThread (void* parm)
     }
 
     /* Generate Telemetry */
-    const double duration = TimeLib::latchtime() - start;
-    const char* account = "anonymous";
-    const char* client = "unknown";
-    const MathLib::coord_t aoi = { .lon = 0.0, .lat = 0.0};
-    telemeter(INFO, status_code, request->resource, duration, aoi, client, account, "%s", "");
+    const EventLib::tlm_input_t tlm = {
+        .code = status_code,
+        .duration = static_cast<float>(TimeLib::latchtime() - start),
+        .source_ip = request->getHdrSourceIp(),
+        .endpoint = request->resource,
+        .client = request->getHdrClient(),
+        .account = request->getHdrAccount()
+    };
+    telemeter(INFO, tlm);
 
     /* Clean Up */
     delete rspq;
@@ -175,41 +219,6 @@ void* LuaEndpoint::requestThread (void* parm)
 
     /* Return */
     return NULL;
-}
-
-/*----------------------------------------------------------------------------
- * handleRequest - returns true if streaming (chunked) response
- *----------------------------------------------------------------------------*/
-bool LuaEndpoint::handleRequest (Request* request)
-{
-    /* Allocate and Initialize Endpoint Info Struct */
-    info_t* info = new info_t;
-    info->endpoint = this;
-    info->request = request;
-    info->streaming = true;
-
-    /* Determine Streaming */
-    if(request->verb == GET)
-    {
-        info->streaming = false;
-    }
-    else // check header (needed for node.js clients)
-    {
-        string* hdr_str;
-        if(request->headers.find("x-sliderule-streaming", &hdr_str))
-        {
-            if(*hdr_str == "0")
-            {
-                info->streaming = false;
-            }
-        }
-    }
-
-    /* Start Thread */
-    const Thread pid(requestThread, info, false);
-
-    /* Return Response Type */
-    return info->streaming;
 }
 
 /*----------------------------------------------------------------------------
@@ -246,6 +255,7 @@ int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publi
             }
             else
             {
+                /* Missing Results */
                 mlog(ERROR, "Script returned no results: %s", scriptpath);
                 const char* error_msg = "Missing results";
                 const int result_length = StringLib::size(error_msg);
@@ -257,6 +267,7 @@ int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publi
         }
         else
         {
+            /* Failed Execution */
             mlog(ERROR, "Failed to execute request: %s", scriptpath);
             const char* error_msg = "Failed execution";
             const int result_length = StringLib::size(error_msg);
@@ -268,6 +279,7 @@ int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publi
     }
     else
     {
+        /* Memory Exceeded */
         mlog(CRITICAL, "Memory (%d%%) exceeded threshold, not performing request: %s", (int)(mem * 100.0), scriptpath);
         const char* error_msg = "Memory exceeded";
         const int result_length = StringLib::size(error_msg);

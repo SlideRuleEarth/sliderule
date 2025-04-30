@@ -5,7 +5,6 @@ def test_nominal(client):
     request = {
 	    "record_time": "2024-04-21 14:30:00.345",
         "status_code": 0,
-        "account": "sliderule",
         "version": "v4.5.1",
         "message": "success"
     }
@@ -16,7 +15,6 @@ def test_value_counts(client):
     request = {
 	    "record_time": "2024-04-21 14:30:00.345",
         "status_code": 0,
-        "account": "sliderule",
         "version": "v4.5.1",
         "message": "success"
     }
@@ -43,7 +41,6 @@ def test_list(client):
     response = client.post('/manager/alerts/issue', json={
         "record_time": f'{one_year_ago}',
         "status_code": 0,
-        "account": "sliderule",
         "version": "v4.5.1",
         "message": "success"
     })
@@ -53,7 +50,6 @@ def test_list(client):
     response = client.post('/manager/alerts/issue', json={
         "record_time": f'{two_years_ago}',
         "status_code": 0,
-        "account": "sliderule",
         "version": "v4.5.1",
         "message": "success"
     })
@@ -63,7 +59,6 @@ def test_list(client):
     response = client.post('/manager/alerts/issue', json={
         "record_time": f'{three_years_ago}',
         "status_code": 0,
-        "account": "sliderule",
         "version": "v4.5.1",
         "message": "success"
     })

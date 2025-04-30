@@ -37,8 +37,6 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "MathLib.h"
-
 #include <atomic>
 
 /******************************************************************************
@@ -55,7 +53,7 @@
 #define stop_trace(lvl,id,...) {(void)lvl; (void)id;}
 #endif
 
-#define telemeter(lvl,code,endpoint,duration,aoi,client,account,...) EventLib::sendTlm(lvl,code,endpoint,duration,aoi,client,account,__VA_ARGS__)
+#define telemeter(lvl,tlm) EventLib::sendTlm(lvl,tlm)
 
 #define alert(lvl,code,outq,active,...) EventLib::sendAlert(lvl,code,outq,active,__VA_ARGS__)
 
@@ -112,13 +110,13 @@ class EventLib
             int32_t     code;                       // alert codes
             uint32_t    level;                      // event_level_t
             float       duration;                   // seconds
-            MathLib::coord_t aoi;                   // area of interest (single point representing area)
-            char        ipv4[SockLib::IPV4_STR_LEN];// ip address of local host
+            double      latitude;                   // area of interest (single point representing area)
+            double      longitude;                  // area of interest (single point representing area)
+            char        source_ip[MAX_TLM_STR];     // ip address of local host
             char        endpoint[MAX_TLM_STR];      // server-side API
             char        client[MAX_TLM_STR];        // Python Client, Web Client, etc
             char        account[MAX_TLM_STR];       // username
             char        version[MAX_TLM_STR];       // sliderule version
-            char        message[MAX_MSG_STR];       // caller defined string
         } telemetry_t;
 
         typedef struct {
@@ -138,6 +136,17 @@ class EventLib
             TELEMETRY   = 0x04,
             ALERT       = 0x08
         } type_t;
+
+        struct tlm_input_t {
+            int32_t             code = RTE_STATUS;
+            float               duration = 0.0;
+            double              latitude = 0.0;
+            double              longitude = 0.0;
+            const char*         source_ip = NULL;
+            const char*         endpoint = NULL;
+            const char*         client = NULL;
+            const char*         account = NULL;
+        };
 
         /*--------------------------------------------------------------------
          * Methods
@@ -159,7 +168,7 @@ class EventLib
         static void             stashId         (uint32_t id);
         static uint32_t         grabId          (void);
 
-        static bool             sendTlm         (event_level_t lvl, int code, const char* endpoint, float duration, MathLib::coord_t aoi, const char* client, const char* account, const char* msg_fmt, ...) VARG_CHECK(printf, 8, 9);
+        static bool             sendTlm         (event_level_t lvl, const tlm_input_t& tlm);
 
         static bool             sendAlert       (event_level_t lvl, int code, void* rspsq, const bool* active, const char* errmsg, ...) VARG_CHECK(printf, 5, 6);
 

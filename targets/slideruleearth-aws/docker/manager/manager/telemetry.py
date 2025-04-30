@@ -49,13 +49,12 @@ def record():
                   data['duration'],
                   data['status_code'],
                   data['account'],
-                  data['version'],
-                  data['message'] )
+                  data['version'])
         db = get_db()
         columns = allcolumns("telemetry", db)
         db.execute(f"""
             INSERT INTO telemetry ({', '.join(columns)})
-            VALUES (?, ?, ?, ST_Point(?, ?), ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ST_Point(?, ?), ?, ?, ?, ?, ?, ?)
         """, entry)
     except Exception as e:
         abort(400, f'Telemetry record failed to post: {e}')

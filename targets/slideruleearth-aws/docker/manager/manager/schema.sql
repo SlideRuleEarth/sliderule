@@ -9,13 +9,11 @@ CREATE OR REPLACE TABLE telemetry (
     status_code INTEGER,
     account TEXT,
     version TEXT,
-    message TEXT
 );
 
 CREATE OR REPLACE TABLE alerts (
     record_time TIMESTAMP,
     status_code INTEGER,
-    account TEXT,
     version TEXT,
     message TEXT
 );

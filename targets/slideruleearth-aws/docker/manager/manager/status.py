@@ -104,7 +104,7 @@ def telemetry_counts(field):
 #
 @status.route('/alert_counts/<field>', methods=['GET'])
 def alert_counts(field):
-    return value_counts("alerts", field, ['status_code', 'account', 'version'], "record_time")
+    return value_counts("alerts", field, ['status_code', 'version'], "record_time")
 
 #
 # Request List

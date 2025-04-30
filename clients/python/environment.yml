@@ -3,6 +3,7 @@ name: sliderule
 channels:
   - conda-forge
 dependencies:
+  - coverage
   - geopandas
   - numpy
   - pandas
