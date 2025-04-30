@@ -235,7 +235,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
                 fp->solar_elevation         = gedi01b.solar_elevation[footprint];
                 fp->beam                    = static_cast<uint8_t>(info->beam);
                 fp->flags                   = 0;
-                fp->track                   = parms->granule_fields.track;
+                fp->track                   = parms->granule_fields.track.value;
                 fp->tx_size                 = gedi01b.tx_sample_count[footprint];
                 fp->rx_size                 = gedi01b.rx_sample_count[footprint];
 

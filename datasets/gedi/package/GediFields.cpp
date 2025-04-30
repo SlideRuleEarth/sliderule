@@ -77,7 +77,7 @@ void GediGranuleFields::parseResource (const char* resource)
     /* check resource */
     const int strsize = StringLib::size(resource);
     if( strsize < 57 || 
-        resource[0] != 'G' || resource[1] !='E' || resource[2] != 'D' || resource[3] != 'E' ||
+        resource[0] != 'G' || resource[1] !='E' || resource[2] != 'D' || resource[3] != 'I' ||
         resource[23] != 'O' || resource[33] != 'T' || resource[50] != 'V')
     {
         return; // not a GEDI standard data product
@@ -124,7 +124,7 @@ void GediGranuleFields::parseResource (const char* resource)
     orbit_str[5] = '\0';
     if(StringLib::str2long(orbit_str, &val, 10))
     {
-        orbit = static_cast<uint8_t>(val);
+        orbit = static_cast<int>(val);
     }
     else
     {
@@ -137,7 +137,7 @@ void GediGranuleFields::parseResource (const char* resource)
     region_str[1] = '\0';
     if(StringLib::str2long(region_str, &val, 10))
     {
-        region = static_cast<uint8_t>(val);
+        region = static_cast<int>(val);
     }
     else
     {
@@ -154,7 +154,7 @@ void GediGranuleFields::parseResource (const char* resource)
     track_str[5] = '\0';
     if(StringLib::str2long(track_str, &val, 10))
     {
-        track = static_cast<uint8_t>(val);
+        track = static_cast<int>(val);
     }
     else
     {
@@ -169,7 +169,7 @@ void GediGranuleFields::parseResource (const char* resource)
     version_str[3] = '\0';
     if(StringLib::str2long(version_str, &val, 10))
     {
-        version = static_cast<uint8_t>(val);
+        version = static_cast<int>(val);
     }
     else
     {

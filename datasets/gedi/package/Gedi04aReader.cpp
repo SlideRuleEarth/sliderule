@@ -253,7 +253,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
                 fp->sensitivity     = gedi04a.sensitivity[footprint];
                 fp->beam            = static_cast<int>(info->beam);
                 fp->flags           = 0;
-                fp->track           = parms->granule_fields.track;
+                fp->track           = parms->granule_fields.track.value;
                 if(gedi04a.degrade_flag[footprint])     fp->flags |= GediFields::DEGRADE_FLAG_MASK;
                 if(gedi04a.l2_quality_flag[footprint])  fp->flags |= GediFields::L2_QUALITY_FLAG_MASK;
                 if(gedi04a.l4_quality_flag[footprint])  fp->flags |= GediFields::L4_QUALITY_FLAG_MASK;
