@@ -58,7 +58,8 @@ const RecordObject::fieldDef_t Gedi02aReader::fpRecDef[] = {
     {"solar_elevation", RecordObject::FLOAT,    offsetof(g02a_footprint_t, solar_elevation),         1,  NULL, NATIVE_FLAGS},
     {"sensitivity",     RecordObject::FLOAT,    offsetof(g02a_footprint_t, sensitivity),             1,  NULL, NATIVE_FLAGS},
     {"beam",            RecordObject::UINT8,    offsetof(g02a_footprint_t, beam),                    1,  NULL, NATIVE_FLAGS},
-    {"flags",           RecordObject::UINT8,    offsetof(g02a_footprint_t, flags),                   1,  NULL, NATIVE_FLAGS}
+    {"flags",           RecordObject::UINT8,    offsetof(g02a_footprint_t, flags),                   1,  NULL, NATIVE_FLAGS},
+    {"track",           RecordObject::UINT16,   offsetof(g02a_footprint_t, track),                   1,  NULL, NATIVE_FLAGS}
 };
 
 const char* Gedi02aReader::batchRecType = "gedi02arec";
@@ -241,6 +242,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
                 fp->sensitivity             = gedi02a.sensitivity[footprint];
                 fp->beam                    = static_cast<uint8_t>(info->beam);
                 fp->flags                   = 0;
+                fp->track                   = parms->granule_fields.track;
                 if(gedi02a.degrade_flag[footprint]) fp->flags |= GediFields::DEGRADE_FLAG_MASK;
                 if(gedi02a.quality_flag[footprint]) fp->flags |= GediFields::L2_QUALITY_FLAG_MASK;
                 if(gedi02a.surface_flag[footprint]) fp->flags |= GediFields::SURFACE_FLAG_MASK;

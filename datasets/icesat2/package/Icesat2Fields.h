@@ -56,7 +56,7 @@
 /******************/
 /* Granule Fields */
 /******************/
-struct GranuleFields: public FieldDictionary
+struct Atl03GranuleFields: public FieldDictionary
 {
 
     FieldElement<int>   year {-1};      // ATL03 granule observation date - year
@@ -67,12 +67,11 @@ struct GranuleFields: public FieldDictionary
     FieldElement<int>   region {-1};    // ATL03 granule region
     FieldElement<int>   version {-1};   // ATL03 granule version
 
-    GranuleFields(void);
-    ~GranuleFields(void) override = default;
+    Atl03GranuleFields(void);
+    ~Atl03GranuleFields(void) override = default;
 
     void parseResource (const char* resource);
 };
-
 
 /**************/
 /* Fit Fields */
@@ -137,9 +136,9 @@ struct PhorealFields: public FieldDictionary
     bool provided;
 };
 
-/******************/
+/****************/
 /* Atl24 Fields */
-/******************/
+/****************/
 struct Atl24Fields: public FieldDictionary
 {
     typedef enum {
@@ -471,7 +470,7 @@ class Icesat2Fields: public RequestFields
         FieldList<string>                                   atl06Fields;                                            // list of ATL06 fields to associate with an ATL06 subsetting request
         FieldList<string>                                   atl08Fields;                                            // list of ATL08 fields to associate with an extent
         FieldList<string>                                   atl13Fields;                                            // list of ATL13 fields to associate with an extent
-        GranuleFields                                       granuleFields;                                          // ATL03 granule attributes
+        Atl03GranuleFields                                  granuleFields;                                          // ATL03 granule attributes
 
         bool stages[NUM_STAGES] = {false, false, false, false, false};
 

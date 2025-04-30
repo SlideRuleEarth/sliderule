@@ -43,9 +43,9 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Constructor - GranuleFields
+ * Constructor - Atl03GranuleFields
  *----------------------------------------------------------------------------*/
-GranuleFields::GranuleFields():
+Atl03GranuleFields::Atl03GranuleFields():
     FieldDictionary({ {"year",      &year},
                       {"month",     &month},
                       {"day",       &day},
@@ -72,19 +72,15 @@ GranuleFields::GranuleFields():
  *      vvv     - version
  *      ee      - revision
  *----------------------------------------------------------------------------*/
-void GranuleFields::parseResource (const char* resource)
+void Atl03GranuleFields::parseResource (const char* resource)
 {
     long val;
 
     /* check resource */
     const int strsize = StringLib::size(resource);
-    if(strsize < 3 || resource[0] != 'A' || resource[1] !='T' || resource[2] != 'L')
+    if(strsize < 33 || resource[0] != 'A' || resource[1] !='T' || resource[2] != 'L')
     {
         return; // not an ICESat-2 standard data product
-    }
-    if(strsize < 33)
-    {
-        return; // insufficient size to parse all fields
     }
 
     /* get year */
@@ -175,6 +171,7 @@ void GranuleFields::parseResource (const char* resource)
         throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to parse region from resource %s: %s", resource, region_str);
     }
 
+    /* get version */
     char version_str[4];
     version_str[0] = resource[30];
     version_str[1] = resource[31];

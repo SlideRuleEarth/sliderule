@@ -65,6 +65,7 @@ typedef struct {
     double          solar_elevation;
     uint8_t         beam;
     uint8_t         flags;
+    uint16_t        track;
     uint16_t        tx_size;
     uint16_t        rx_size;
     float           tx_waveform[G01B_MAX_TX_SAMPLES];

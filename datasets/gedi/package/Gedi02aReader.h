@@ -63,6 +63,7 @@ typedef struct {
     float           sensitivity;
     uint8_t         beam;
     uint8_t         flags;
+    uint16_t        track;
 } g02a_footprint_t;
 
 /******************************************************************************

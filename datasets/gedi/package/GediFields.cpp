@@ -43,6 +43,141 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * Constructor - Atl03GranuleFields
+ *----------------------------------------------------------------------------*/
+GediGranuleFields::GediGranuleFields():
+    FieldDictionary({ {"year",      &year},
+                      {"doy",       &doy},
+                      {"orbit",     &orbit},
+                      {"region",    &region},
+                      {"track",     &track},
+                      {"version",   &version} })
+{
+}
+
+/*----------------------------------------------------------------------------
+ * parseResource
+ *
+ *  GEDI02_A_2019108185228_O01971_03_T00922_02_003_01_V002.h5
+ *    - GEDI02_A = Product Short Name
+ *    - 2019108 = Julian Date of Acquisition in YYYYDDD
+ *    - 185228 = Hours, Minutes and Seconds of Acquisition (HHMMSS)
+ *    - O01971 = O = Orbit, 01971 = Orbit Number
+ *    - 03 = Sub-Orbit Granule Number (1-4)
+ *    - T00922 = T = Track, 00922 = Track Number
+ *    - 02 = Positioning and Pointing Determination System (PPDS) type (00 is predict, 01 rapid, 02 and higher is final.)
+ *    - 003 = PGE Version Number
+ *    - 01 = Granule Production Version
+ *    - V002 = LP DAAC Release Number
+ *----------------------------------------------------------------------------*/
+void GediGranuleFields::parseResource (const char* resource)
+{
+    long val;
+
+    /* check resource */
+    const int strsize = StringLib::size(resource);
+    if( strsize < 57 || 
+        resource[0] != 'G' || resource[1] !='E' || resource[2] != 'D' || resource[3] != 'E' ||
+        resource[23] != 'O' || resource[33] != 'T' || resource[50] != 'V')
+    {
+        return; // not a GEDI standard data product
+    }
+
+    /* get year */
+    char year_str[5];
+    year_str[0] = resource[9];
+    year_str[1] = resource[10];
+    year_str[2] = resource[11];
+    year_str[3] = resource[12];
+    year_str[4] = '\0';
+    if(StringLib::str2long(year_str, &val, 10))
+    {
+        year = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to parse year from resource %s: %s", resource, year_str);
+    }
+
+    /* get doy */
+    char doy_str[4];
+    doy_str[0] = resource[13];
+    doy_str[1] = resource[14];
+    doy_str[2] = resource[15];
+    doy_str[3] = '\0';
+    if(StringLib::str2long(doy_str, &val, 10))
+    {
+        doy = static_cast<int>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to parse day of year from resource %s: %s", resource, doy_str);
+    }
+
+    /* get orbit */
+    char orbit_str[6];
+    orbit_str[0] = resource[24];
+    orbit_str[1] = resource[25];
+    orbit_str[2] = resource[26];
+    orbit_str[3] = resource[27];
+    orbit_str[4] = resource[28];
+    orbit_str[5] = '\0';
+    if(StringLib::str2long(orbit_str, &val, 10))
+    {
+        orbit = static_cast<uint8_t>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to parse orbit from resource %s: %s", resource, orbit_str);
+    }
+
+    /* get region */
+    char region_str[2];
+    region_str[0] = resource[31];
+    region_str[1] = '\0';
+    if(StringLib::str2long(region_str, &val, 10))
+    {
+        region = static_cast<uint8_t>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to parse region from resource %s: %s", resource, region_str);
+    }
+
+    /* get track */
+    char track_str[6];
+    track_str[0] = resource[34];
+    track_str[1] = resource[35];
+    track_str[2] = resource[36];
+    track_str[3] = resource[37];
+    track_str[4] = resource[38];
+    track_str[5] = '\0';
+    if(StringLib::str2long(track_str, &val, 10))
+    {
+        track = static_cast<uint8_t>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to parse track from resource %s: %s", resource, track_str);
+    }
+
+    /* get version */
+    char version_str[4];
+    version_str[0] = resource[51];
+    version_str[1] = resource[52];
+    version_str[2] = resource[53];
+    version_str[3] = '\0';
+    if(StringLib::str2long(version_str, &val, 10))
+    {
+        version = static_cast<uint8_t>(val);
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to parse version from resource %s: %s", resource, version_str);
+    }
+}
+
+/*----------------------------------------------------------------------------
  * luaCreate - create(<parameter table>, <key_space>, [<default asset>], [<default resource>])
  *----------------------------------------------------------------------------*/
 int GediFields::luaCreate (lua_State* L)
@@ -79,6 +214,7 @@ GediFields::GediFields(lua_State* L , uint64_t key_space, const char* asset_name
           {"l4_quality_filter", &l4_quality_filter},
           {"surface_filter",    &surface_filter},
           {"anc_fields",        &anc_fields},
+          {"granule",           &granule_fields},
           // backwards compatibility
           {"beam",              &beams},
           {"degrade_flag",      &degrade_flag},
@@ -95,10 +231,17 @@ void GediFields::fromLua (lua_State* L, int index)
 {
     RequestFields::fromLua(L, index);
 
+    // set filters
     if(degrade_flag == 1) degrade_filter = true;
     if(l2_quality_flag == 1) l2_quality_filter = true;
     if(l4_quality_flag == 1) l4_quality_filter = true;
     if(surface_flag == 1) surface_filter = true;
+
+    // parse resource name
+    if(!resource.value.empty())
+    {
+        granule_fields.parseResource(resource.value.c_str());
+    }
 }
 
 /******************************************************************************
