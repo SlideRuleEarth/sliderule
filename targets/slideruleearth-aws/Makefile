@@ -219,7 +219,7 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	cd $(STATIC_WEB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/static-website:$(VERSION) $(DOCKER_PLATFORM) .
 
 static-website-run: ## locally run the static website; needs VERSION
-	docker run -it -p 8080:4000 --rm --name website $(ECR)/static-website:$(VERSION)
+	docker run -it -p 4000:4000 --rm --name website $(ECR)/static-website:$(VERSION)
 
 static-website-export: ## export static website to local host directory
 	-rm -Rf $(STATIC_WEB_EXPORT_DIR)

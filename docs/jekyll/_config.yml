@@ -146,6 +146,7 @@ collections:
 include:
   - .htaccess
   - _pages
+  - favicon.ico
 exclude:
   - "*.sublime-project"
   - "*.sublime-workspace"
