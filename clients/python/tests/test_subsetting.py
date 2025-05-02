@@ -5,6 +5,9 @@ from sliderule import icesat2, sliderule
 from pathlib import Path
 import os.path
 
+import pandas as pd
+import numpy as np
+
 TESTDIR = Path(__file__).parent
 
 @pytest.mark.network
@@ -27,6 +30,22 @@ class TestSubsetting:
         assert len(gdf) == 953
         assert abs(gdf["h_mean"].describe()["mean"] - 1749.8443895024502) < 0.1
         assert abs(gdf["y_atc"].describe()["mean"] - -5516.94775390625) < 0.1
+
+        # This part is a regression test for issue #358
+        # Compare values for h_mean and y_atc and validate segment_ids against expected values
+
+        # Load expected data
+        expected_df = pd.read_csv(os.path.join(TESTDIR, "expected_subsetting_values.txt"))
+
+        # Ensure same length
+        assert len(expected_df) == len(gdf), "Mismatch in row count"
+
+        # Compare each value with high precision
+        for i in range(len(expected_df)):
+            assert expected_df["segment_id"].iloc[i] == gdf["segment_id"].iloc[i], f"Row {i} mismatch in segment_id"
+            assert np.isclose(expected_df["h_mean"].iloc[i], gdf["h_mean"].iloc[i], atol=1e-14), f"Row {i} mismatch in h_mean"
+            assert np.isclose(expected_df["y_atc"].iloc[i], gdf["y_atc"].iloc[i], atol=1e-14), f"Row {i} mismatch in y_atc"
+
 
     def test_180_edge(self, init):
         resource = "ATL03_20221012073759_03291712_005_01.h5"
