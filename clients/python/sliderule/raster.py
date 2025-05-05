@@ -32,6 +32,7 @@ import base64
 import sliderule
 import geopandas
 from shapely.geometry import Polygon
+from sliderule.icesat2 import ICESAT2_CRS
 
 ###############################################################################
 # GLOBALS
@@ -59,7 +60,7 @@ def poly2bbox(poly):
 #
 # Sample
 #
-def sample(asset, coordinates, parms={}):
+def sample(asset, coordinates, parms={}, crs=ICESAT2_CRS):
     '''
     Sample a raster dataset at the coordinates provided
 
@@ -71,6 +72,8 @@ def sample(asset, coordinates, parms={}):
                     list of coordinates as [longitude, latitude]
     parms:          dict
                     dictionary of sampling parameters
+    crs:            str
+                    coordinate reference system to use in GeoDataFrame
 
     Returns
     -------
@@ -92,7 +95,7 @@ def sample(asset, coordinates, parms={}):
 
     # Sanity Check Response
     if len(rsps) <= 0:
-        return sliderule.emptyframe()
+        return sliderule.emptyframe(crs=crs)
 
     # Count Records
     num_records = 0
@@ -160,13 +163,13 @@ def sample(asset, coordinates, parms={}):
             i += 1
 
     # Build GeoDataFrame
-    gdf = sliderule.todataframe(columns)
+    gdf = sliderule.todataframe(columns, crs=crs)
     return gdf
 
 #
 # Subset
 #
-def subset(asset, extents, parms={}):
+def subset(asset, extents, parms={}, crs=ICESAT2_CRS):
     '''
     Subset a raster dataset at the extent coordinates provided
 
@@ -178,6 +181,8 @@ def subset(asset, extents, parms={}):
                     list of extent coordinates as [minimum longitude, minimum latitude, maximum longitude, maximum latitude]
     parms:          dict
                     dictionary of sampling parameters
+    crs:            str
+                    coordinate reference system to use in GeoDataFrame
 
     Returns
     -------
@@ -236,6 +241,6 @@ def subset(asset, extents, parms={}):
 
     # Build and Return GeoDataFrame
     df = geopandas.pd.DataFrame(columns)
-    gdf = geopandas.GeoDataFrame(df, geometry=geometry, crs=sliderule.SLIDERULE_EPSG)
+    gdf = geopandas.GeoDataFrame(df, geometry=geometry, crs=crs)
     gdf.set_index("time", inplace=True)
     return gdf

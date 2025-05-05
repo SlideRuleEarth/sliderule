@@ -41,6 +41,7 @@ from datetime import datetime
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry import Polygon
 from sliderule import logger
+from sliderule.icesat2 import ICESAT2_CRS
 import sliderule
 
 
@@ -160,10 +161,10 @@ def __cmr_filter_urls(search_results, data_formats):
     # return filtered urls
     return urls
 
-def __cmr_granule_metadata(search_results):
+def __cmr_granule_metadata(search_results, crs=ICESAT2_CRS):
     """Get the metadata for CMR returned granules"""
     # GeoDataFrame with granule metadata
-    granule_metadata = sliderule.emptyframe()
+    granule_metadata = sliderule.emptyframe(crs=crs)
     # return empty dataframe if no CMR entries
     if 'feed' not in search_results or 'entry' not in search_results['feed']:
         return granule_metadata
@@ -195,7 +196,7 @@ def __cmr_granule_metadata(search_results):
         else:
             geometry, = geopandas.points_from_xy([None], [None])
         # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
-        gdf = geopandas.GeoDataFrame(df, geometry=[geometry], crs=sliderule.SLIDERULE_EPSG)
+        gdf = geopandas.GeoDataFrame(df, geometry=[geometry], crs=crs)
         # append to combined GeoDataFrame and catch warnings
         granule_metadata = geopandas.pd.concat([granule_metadata, gdf])
     # return granule metadata
@@ -239,6 +240,7 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
     kwargs.setdefault('polygon',None)
     kwargs.setdefault('name_filter',None)
     kwargs.setdefault('return_metadata',False)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     # build params
     params = '&short_name={0}'.format(short_name)
     if version != None:
@@ -265,7 +267,7 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
 
     urls = []
     # GeoDataFrame with granule metadata
-    metadata = sliderule.emptyframe()
+    metadata = sliderule.emptyframe(crs=kwargs['crs'])
     while True:
         req = urllib.request.Request(cmr_query_url)
         if cmr_search_after:
@@ -286,7 +288,7 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
         urls += url_scroll_results
         # query for granule metadata and polygons
         if kwargs['return_metadata']:
-            metadata_results = __cmr_granule_metadata(search_page)
+            metadata_results = __cmr_granule_metadata(search_page, crs=kwargs['crs'])
         else:
             metadata_results = geopandas.pd.DataFrame([None for _ in url_scroll_results])
 

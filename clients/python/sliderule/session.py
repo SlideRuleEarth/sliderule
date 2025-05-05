@@ -136,8 +136,6 @@ class RetryRequest(RuntimeError):
 #
 class Session:
 
-    EPSG_WGS84 = "EPSG:4326"
-    SLIDERULE_EPSG = "EPSG:7912"
     PUBLIC_URL = "slideruleearth.io"
     PUBLIC_ORG = "sliderule"
     MAX_PS_CLUSTER_WAIT_SECS = 600

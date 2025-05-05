@@ -36,6 +36,13 @@ from sliderule import logger
 from sliderule.session import Session
 
 ###############################################################################
+# GLOBAL DATA
+###############################################################################
+
+# CRS used in GEDI Standard Data Products
+GEDI_CRS = "EPSG:7912"
+
+###############################################################################
 # LOCAL FUNCTIONS
 ###############################################################################
 
@@ -46,7 +53,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
 
     # Check Responses
     if rsps == None:
-        return sliderule.emptyframe()
+        return sliderule.emptyframe(crs=GEDI_CRS)
 
     # Check for Output Options
     if "output" in parm:
@@ -130,7 +137,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
         logger.debug("No response returned")
 
     # Build Initial GeoDataFrame
-    gdf = sliderule.todataframe(columns, height_key=height_key)
+    gdf = sliderule.todataframe(columns, height_key=height_key, crs=GEDI_CRS)
 
     # Merge Ancillary Fields
     for field_set in field_dictionary:

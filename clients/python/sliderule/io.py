@@ -34,7 +34,7 @@ import warnings
 import datetime
 import numpy as np
 from sliderule import logger
-from sliderule.session import Session
+from sliderule.icesat2 import ICESAT2_CRS
 
 # imports with warnings if not present
 try:
@@ -391,7 +391,7 @@ def from_region(polygon):
 # convert geodataframe vector object to a list of sliderule regions
 def from_geodataframe(gdf):
     # verify that geodataframe is in latitude/longitude
-    geodataframe = gdf.to_crs(Session.SLIDERULE_EPSG)
+    geodataframe = gdf.to_crs(ICESAT2_CRS)
     # create a list of regions
     regions = []
     # for each region
@@ -405,7 +405,7 @@ def to_json(filename, **kwargs):
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs',Session.SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     # import optional dependencies
     pyproj = import_optional_dependency(
         "pyproj", extra="pyproj is required for CRS conversion."
@@ -478,7 +478,7 @@ def to_parquet(gdf, filename, **kwargs):
     kwargs.setdefault('schema_version',None)
     kwargs.setdefault('parameters',dict())
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs',Session.SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     # import optional dependencies
     pyproj = import_optional_dependency(
         "pyproj", extra="pyproj is required for CRS conversion."
@@ -528,7 +528,7 @@ def to_parquet(gdf, filename, **kwargs):
 
 def from_parquet(filename, **kwargs):
     # set default keyword arguments
-    kwargs.setdefault('crs',Session.SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('return_parameters',False)
     kwargs.setdefault('return_regions',False)
     # import optional dependencies
@@ -579,7 +579,7 @@ def to_nc(gdf, filename, **kwargs):
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs',Session.SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('units','seconds since 2018-01-01T00:00:00')
@@ -629,7 +629,7 @@ def to_nc(gdf, filename, **kwargs):
     # save geodataframe coordinate system
     fileID.crs = kwargs['crs']
     # add geospatial attributes
-    if kwargs['crs'] in ('EPSG:4326', Session.SLIDERULE_EPSG):
+    if kwargs['crs'] in ('EPSG:4326', ICESAT2_CRS):
         fileID.geospatial_lat_units = \
             attributes['geospatial_lat_units']
         fileID.geospatial_lon_units = \
@@ -675,7 +675,7 @@ def from_nc(filename, **kwargs):
     # add warning that function is deprecated
     logger.critical(f"Deprecated. Will be removed in a future release")
     # set default crs
-    kwargs.setdefault('crs',Session.SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('index_key','time')
@@ -770,7 +770,7 @@ def to_hdf(gdf, filename, **kwargs):
     kwargs.setdefault('driver','pytables')
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs',Session.SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('units','seconds since 2018-01-01T00:00:00')
@@ -802,7 +802,7 @@ def write_pytables(df, filename, attributes, **kwargs):
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs',Session.SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     # write data to a pytables HDF5 file
     df.to_hdf(filename, 'sliderule_segments', format="table", mode="w")
     # add file attributes
@@ -815,7 +815,7 @@ def write_pytables(df, filename, attributes, **kwargs):
     # set coordinate reference system as attribute
     fileID.root._v_attrs.crs = kwargs['crs']
     # add geospatial attributes
-    if kwargs['crs'] in ('EPSG:4326', Session.SLIDERULE_EPSG):
+    if kwargs['crs'] in ('EPSG:4326', ICESAT2_CRS):
         fileID.root._v_attrs.geospatial_lat_units = \
             attributes['geospatial_lat_units']
         fileID.root._v_attrs.geospatial_lon_units = \
@@ -862,7 +862,7 @@ def write_h5py(df, filename, attributes, **kwargs):
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs',Session.SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('units','seconds since 2018-01-01T00:00:00')
     # open HDF5 file object
     fileID = h5py.File(filename, mode='w')
@@ -898,7 +898,7 @@ def write_h5py(df, filename, attributes, **kwargs):
     # set coordinate reference system as attribute
     fileID.attrs['crs'] = kwargs['crs']
     # add geospatial attributes
-    if kwargs['crs'] in ('EPSG:4326', Session.SLIDERULE_EPSG):
+    if kwargs['crs'] in ('EPSG:4326', ICESAT2_CRS):
         fileID.attrs['geospatial_lat_units'] = \
             attributes['geospatial_lat_units']
         fileID.attrs['geospatial_lon_units'] = \
@@ -942,7 +942,7 @@ def write_h5py(df, filename, attributes, **kwargs):
 def from_hdf(filename, **kwargs):
     # set default keyword arguments
     kwargs.setdefault('driver','pytables')
-    kwargs.setdefault('crs',Session.SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('return_parameters',False)
@@ -961,7 +961,7 @@ def read_pytables(filename, **kwargs):
     # add warning that function is deprecated
     logger.critical(f"Deprecated. Will be removed in a future release")
     # set default crs
-    kwargs.setdefault('crs',Session.SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('return_parameters',False)
@@ -1031,7 +1031,7 @@ def read_h5py(filename, **kwargs):
     # add warning that function is deprecated
     logger.critical(f"Deprecated. Will be removed in a future release")
     # set default crs
-    kwargs.setdefault('crs',Session.SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('index_key','time')

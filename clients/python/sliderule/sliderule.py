@@ -50,6 +50,7 @@ except:
 # GLOBALS
 ###############################################################################
 
+DEFAULT_CRS = "EPSG:4326"
 logger = logging.getLogger(__name__)
 slideruleSession = Session()
 
@@ -614,7 +615,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         os.remove(tmp_file_name)
 
     elif isinstance(source, Polygon):
-        gdf = geopandas.GeoDataFrame(geometry=[source], crs=Session.EPSG_WGS84)
+        gdf = geopandas.GeoDataFrame(geometry=[source], crs=DEFAULT_CRS)
         gdf.to_file(tmp_file_name, driver="GeoJSON")
         with open(tmp_file_name, mode='rt') as file:
             datafile = file.read()
@@ -631,7 +632,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
 
         # create geodataframe
         p = Polygon([point for point in zip(lons, lats)])
-        gdf = geopandas.GeoDataFrame(geometry=[p], crs=Session.EPSG_WGS84)
+        gdf = geopandas.GeoDataFrame(geometry=[p], crs=DEFAULT_CRS)
 
         # Convert to geojson file
         gdf.to_file(tmp_file_name, driver="GeoJSON")
@@ -643,7 +644,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
 
         # create geodataframe
         p = Polygon([(c["lon"], c["lat"]) for c in source])
-        gdf = geopandas.GeoDataFrame(geometry=[p], crs=Session.EPSG_WGS84)
+        gdf = geopandas.GeoDataFrame(geometry=[p], crs=DEFAULT_CRS)
 
         # Convert to geojson file
         gdf.to_file(tmp_file_name, driver="GeoJSON")
@@ -751,7 +752,7 @@ def gdf2poly(gdf):
 #
 def emptyframe(**kwargs):
     # set default keyword arguments
-    kwargs['crs'] = Session.SLIDERULE_EPSG
+    kwargs.setdefault('crs',DEFAULT_CRS)
     return geopandas.GeoDataFrame(geometry=geopandas.points_from_xy([], [], []), crs=kwargs['crs'])
 
 #
@@ -823,8 +824,8 @@ def procoutputfile(parm, rsps):
 def todataframe(columns, time_key="time", lon_key="longitude", lat_key="latitude", height_key=None, **kwargs):
 
     # Set Default Keyword Arguments
-    kwargs['index_key'] = "time"
-    kwargs['crs'] = Session.SLIDERULE_EPSG
+    kwargs.setdefault('index_key','time')
+    kwargs.setdefault('crs',DEFAULT_CRS)
 
     # Check Empty Columns
     if len(columns) <= 0:
