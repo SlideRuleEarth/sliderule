@@ -264,11 +264,11 @@ curl https://sliderule.slideruleearth.io/source/defaults
 |compact|reduces number of fields to minimal viable set|boolean|true|
 |class_ph|ATL24 classification filter|list; 0:unclassified, 40:bathymetry, 41:sea surface|bathymetry|
 |confidence_threshold|minimal bathymetry confidence score|double; 0 to 1.0|0|
-|invalid_kd|invalid kd flag values to allow|list of booleans|all|
-|invalid_wind_speed|invalid wind speed flag values to allow|list of booleans|all|
-|low_confidence|low confidence flag values to allow|list of booleans|all|
-|night|night flag values to allow|list of booleans|all|
-|sensor_depth_exceeded|sensor depth exceeded flag values to allow|list of booleans|all|
+|invalid_kd|invalid kd flag values to allow|"on": includes only photons with invalid kd; "off": includes only photons without invalid kd; defaults to both when not specified|all|
+|invalid_wind_speed|invalid wind speed flag values to allow|"on": includes only photons with invalid wind speed; "off": includes only photons without invalid wind speed; defaults to both when not specified|all|
+|low_confidence|low confidence flag values to allow|"on": includes only low confidence photons; "off": includes only high confidence photons; defaults to both when not specified|all|
+|night|night flag values to allow|"on": includes only photons collected at night; "off": includes only photons collected during the day; defaults to both when not specified|all|
+|sensor_depth_exceeded|sensor depth exceeded flag values to allow|"on": includes only photons at a depth greater than the sensor depth; "off": includes only photons at a depth less then the sensor depth; defaults to both when not specified|all|
 |anc_fields|ATL24 ancillary fields|list of strings||
 
 #### Granule
