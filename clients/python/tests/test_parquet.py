@@ -367,7 +367,7 @@ class TestParquet:
         os.remove("testfile11.parquet")
         assert init
         assert len(gdf) == 21
-        assert len(gdf.keys()) == 11
+        assert len(gdf.keys()) == 12
         assert gdf["flags"].iloc[0] == 0
         assert gdf["tx_size"].iloc[0] == 128
 
@@ -383,7 +383,7 @@ class TestParquet:
         os.remove("testfile12.parquet")
         assert init
         assert len(gdf) == 4825
-        assert len(gdf.keys()) == 8
+        assert len(gdf.keys()) == 9
         assert gdf["flags"].mean() == 130.0
 
     def test_gedi04a(self, init):
@@ -398,6 +398,6 @@ class TestParquet:
         os.remove("testfile13.parquet")
         assert init
         assert len(gdf) == 4559
-        assert len(gdf.keys()) == 8
+        assert len(gdf.keys()) == 9
         assert gdf["flags"].nunique() == 2
         assert gdf["flags"].min() == 130
