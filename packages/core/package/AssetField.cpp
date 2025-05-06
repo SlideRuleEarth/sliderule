@@ -63,7 +63,7 @@ AssetField::AssetField(const char* asset_name):
         asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
 
         // throw error on asset not found
-        if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", asset_name);
+        if(!asset) throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find asset %s", asset_name);
     }
 }
 
@@ -118,5 +118,5 @@ void AssetField::fromLua (lua_State* L, int index)
     asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
 
     // throw error on asset not found
-    if(!asset) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", asset_name);
+    if(!asset) throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find asset %s", asset_name);
 }

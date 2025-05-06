@@ -157,35 +157,35 @@ RasterSampler::RasterSampler (lua_State* L, RasterObject* _raster, const char* r
 
     /* Get Record Meta Data */
     RecordObject::meta_t* rec_meta = RecordObject::getRecordMetaFields(rec_type);
-    if(rec_meta == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get meta data for %s", rec_type);
+    if(rec_meta == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to get meta data for %s", rec_type);
 
     /* Determine Record Batch Size */
     const RecordObject::field_t batch_rec_field = RecordObject::getDefinedField(rec_type, rec_meta->batch_field);
-    if(batch_rec_field.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get batch size <%s> for %s", rec_meta->batch_field, rec_type);
+    if(batch_rec_field.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to get batch size <%s> for %s", rec_meta->batch_field, rec_type);
     batchRecordSizeBytes = RecordObject::getRecordDataSize(batch_rec_field.exttype);
 
     /* Determine Record Size */
     recordSizeBytes = RecordObject::getRecordDataSize(rec_type) + batchRecordSizeBytes;
-    if(recordSizeBytes <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get record size for %s", rec_type);
+    if(recordSizeBytes <= 0) throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to get record size for %s", rec_type);
 
     /* Get Index Field (e.g. Extent Id) */
     indexField = RecordObject::getDefinedField(rec_type, rec_meta->index_field);
-    if(indexField.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get index field <%s> for %s", rec_meta->index_field, rec_type);
+    if(indexField.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to get index field <%s> for %s", rec_meta->index_field, rec_type);
 
     /* Get Longitude Field */
     lonField = RecordObject::getDefinedField(rec_type, rec_meta->x_field);
-    if(lonField.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get longitude field <%s> for %s", rec_meta->x_field, rec_type);
+    if(lonField.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to get longitude field <%s> for %s", rec_meta->x_field, rec_type);
 
     /* Get Latitude Field */
     latField = RecordObject::getDefinedField(rec_type, rec_meta->y_field);
-    if(latField.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get latitude field <%s> for %s", rec_meta->y_field, rec_type);
+    if(latField.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to get latitude field <%s> for %s", rec_meta->y_field, rec_type);
 
     /* Get Time Field */
     timeField.type = RecordObject::INVALID_FIELD;
     if(use_time)
     {
         timeField = RecordObject::getDefinedField(rec_type, rec_meta->time_field);
-        if(timeField.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get time field <%s> for %s", rec_meta->time_field, rec_type);
+        if(timeField.type == RecordObject::INVALID_FIELD) throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to get time field <%s> for %s", rec_meta->time_field, rec_type);
     }
 
     /* Get Height Field
@@ -286,7 +286,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
         /* Generate Error Messages */
         if(err & SS_THREADS_LIMIT_ERROR)
         {
-            alert(CRITICAL, RTE_ERROR, outQ, NULL,
+            alert(CRITICAL, RTE_FAILURE, outQ, NULL,
                     "Too many rasters to sample %s at %.3lf,%.3lf,%3lf: max allowed: %d, limit your AOI/temporal range or use filters",
                     rasterKey, lon_val, lat_val, height_val, GeoIndexedRaster::MAX_READER_THREADS);
         }
@@ -311,6 +311,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
             if(!stats_rec.post(outQ))
             {
                 status = false;
+                break; // exit early, unlikely to recover from error
             }
         }
         else
@@ -332,6 +333,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
             if(!sample_rec.post(outQ))
             {
                 status = false;
+                break; // exit early, unlikely to recover from error
             }
         }
     }
@@ -366,7 +368,10 @@ bool RasterSampler::processTermination (void)
         file_directory_entry_t* entry = reinterpret_cast<file_directory_entry_t*>(record.getRecordData());
         entry->file_id = fileId;
         StringLib::copy(entry->file_name, raster->fileDictGet(fileId), file_name_len);
-        record.post(outQ);
+        if(!record.post(outQ))
+        {
+            return false; // exit immediately, unlikely to recover from error
+        }
     }
 
     return true;

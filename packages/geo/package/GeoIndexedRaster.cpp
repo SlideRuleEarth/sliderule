@@ -179,7 +179,7 @@ bool GeoIndexedRaster::openGeoIndex(const std::string& newFile, OGRGeometry* fil
         if (dset == NULL)
         {
             mlog(CRITICAL, "Failed to open vector index file: %s", newFile.c_str());
-            throw RunTimeException(ERROR, RTE_ERROR, "Failed to open vector index file: %s:", newFile.c_str());
+            throw RunTimeException(ERROR, RTE_FAILURE, "Failed to open vector index file: %s:", newFile.c_str());
         }
 
         indexFile = newFile;

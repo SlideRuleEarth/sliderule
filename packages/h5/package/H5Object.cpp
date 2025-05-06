@@ -63,7 +63,7 @@ int H5Object::luaCreate (lua_State* L)
         const char* resource = getLuaString(L, 2);
 
         _asset = dynamic_cast<Asset*>(LuaObject::getLuaObjectByName(asset_name, Asset::OBJECT_TYPE));
-        if(!_asset) throw RunTimeException(CRITICAL, RTE_ERROR, "unable to find asset %s", asset_name);
+        if(!_asset) throw RunTimeException(CRITICAL, RTE_FAILURE, "unable to find asset %s", asset_name);
 
         return createLuaObject(L, new H5Object(L, _asset, resource));
     }

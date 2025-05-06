@@ -100,7 +100,7 @@ UT_Field::UT_Field (lua_State* L):
      try
      {
          // initialize test
-         lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));        
+         lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));
          ut_initialize(lua_obj);
 
         const struct hi {
@@ -141,7 +141,7 @@ int UT_Field::testArray(lua_State* L)
     try
     {
         // initialize test
-        lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));        
+        lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));
         ut_initialize(lua_obj);
 
         const struct hi {
@@ -188,7 +188,7 @@ string convertToJson(const ut_field_enum_t& v) {
         case UT_FIELD_ENUM_0:   return "\"enum0\"";
         case UT_FIELD_ENUM_1:   return "\"enum1\"";
         case UT_FIELD_ENUM_2:   return "\"enum2\"";
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid enumeration: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid enumeration: %d", static_cast<int>(v));
     }
 }
 
@@ -197,7 +197,7 @@ int convertToLua(lua_State* L, const ut_field_enum_t& v) {
         case UT_FIELD_ENUM_0:   lua_pushstring(L, "enum0");  break;
         case UT_FIELD_ENUM_1:   lua_pushstring(L, "enum1");  break;
         case UT_FIELD_ENUM_2:   lua_pushstring(L, "enum2");  break;
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid enumeration: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid enumeration: %d", static_cast<int>(v));
     }
     return 1;
 }
@@ -208,10 +208,10 @@ void convertFromLua(lua_State* L, int index, ut_field_enum_t& v) {
         if     (StringLib::match(str, "enum0")) v = UT_FIELD_ENUM_0;
         else if(StringLib::match(str, "enum1")) v = UT_FIELD_ENUM_1;
         else if(StringLib::match(str, "enum2")) v = UT_FIELD_ENUM_2;
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "ground track is an invalid value: %d", static_cast<int>(v));
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "ground track is an invalid value: %d", static_cast<int>(v));
     }
     else if(!lua_isnil(L, index)) {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "ground track is an invalid type: %d", lua_type(L, index));
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "ground track is an invalid type: %d", lua_type(L, index));
     }
 }
 
@@ -223,7 +223,7 @@ void convertFromIndex(int index, ut_field_enum_t& v) {
     v = static_cast<ut_field_enum_t>(index * 10);
 }
 
-inline uint32_t toEncoding(ut_field_enum_t& v) { 
+inline uint32_t toEncoding(ut_field_enum_t& v) {
     (void)v; return Field::INT32;
 };
 
@@ -233,7 +233,7 @@ int UT_Field::testEnumeration(lua_State* L)
     try
     {
         // initialize test
-        lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));        
+        lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));
         ut_initialize(lua_obj);
 
         FieldEnumeration<ut_field_enum_t,NUM_UT_FIELD_ENUMS> e = {true, false, true};
@@ -267,7 +267,7 @@ int UT_Field::testList(lua_State* L)
     try
     {
         // initialize test
-        lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));        
+        lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));
         ut_initialize(lua_obj);
 
         FieldList<string>   pstring;
@@ -302,7 +302,7 @@ int UT_Field::testColumn(lua_State* L)
     try
     {
         // initialize test
-        lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));        
+        lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));
         ut_initialize(lua_obj);
 
         FieldColumn<bool>      pbool;
@@ -327,11 +327,11 @@ int UT_Field::testColumn(lua_State* L)
         ut_assert(lua_obj, pint.append(3) == 3, "failed to append");
         ut_assert(lua_obj, pint.append(4) == 4, "failed to append");
         ut_assert(lua_obj, pint.append(5) == 5, "failed to append");
-        
+
         // populate double column
         ut_assert(lua_obj, pdouble.append(1.1) == 1, "failed to append");
         ut_assert(lua_obj, pdouble.append(2.2) == 2, "failed to append");
-        
+
         // return status
         lua_pushboolean(L, ut_status(lua_obj));
         return 1;
@@ -353,7 +353,7 @@ int UT_Field::testDictionary(lua_State* L)
     try
     {
         // initialize test
-        lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));        
+        lua_obj = dynamic_cast<UT_Field*>(getLuaSelf(L, 1));
         ut_initialize(lua_obj);
 
         struct parms: public FieldDictionary

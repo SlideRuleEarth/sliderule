@@ -1,7 +1,7 @@
-local console_monitor = core.monitor(core.LOG, core.INFO, core.FMT_TEXT):tail(1024):name("console.monitor")
+local console_monitor = core.logmon(core.INFO, core.FMT_TEXT):name("console.monitor")
 
 local function loglvl (lvl)
-    console_monitor:config(core.LOG, lvl)
+    console_monitor:config(lvl)
     sys.setlvl(core.LOG, lvl)
 end
 

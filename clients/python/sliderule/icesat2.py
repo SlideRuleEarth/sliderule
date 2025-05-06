@@ -38,6 +38,9 @@ from sliderule.session import Session, BASIC_TYPES, CODED_TYPE
 # GLOBALS
 ###############################################################################
 
+# CRS used in ICESat-2 Standard Data Products
+ICESAT2_CRS = "EPSG:7912"
+
 # icesat2 parameters
 CNF_POSSIBLE_TEP = -2
 CNF_NOT_CONSIDERED = -1
@@ -571,7 +574,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
 
     # Check for Responses
     if rsps == None:
-        return sliderule.emptyframe()
+        return sliderule.emptyframe(crs=ICESAT2_CRS)
 
     # Check for Output Options
     if "output" in parm:
@@ -663,7 +666,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
         logger.debug("No response returned")
 
     # Build Initial GeoDataFrame
-    gdf = sliderule.todataframe(columns, height_key=height_key)
+    gdf = sliderule.todataframe(columns, height_key=height_key, crs=ICESAT2_CRS)
 
     # Merge Ancillary Fields
     for field_set in field_dictionary:
@@ -688,7 +691,7 @@ def __flattenbatches03(rsps, parm, keep_id, height_key):
 
     # Check for Responses
     if rsps == None:
-        return sliderule.emptyframe()
+        return sliderule.emptyframe(crs=ICESAT2_CRS)
 
     # Check for Output Options
     if "output" in parm:
@@ -764,7 +767,7 @@ def __flattenbatches03(rsps, parm, keep_id, height_key):
                     del columns["extent_id"]
 
                 # Create DataFrame
-                gdf = sliderule.todataframe(columns, height_key=height_key)
+                gdf = sliderule.todataframe(columns, height_key=height_key, crs=ICESAT2_CRS)
 
                 # Calculate Spot Column
                 gdf['spot'] = __calcspot(gdf)
@@ -777,7 +780,7 @@ def __flattenbatches03(rsps, parm, keep_id, height_key):
             logger.debug("No response returned")
 
     # Return Empty Response
-    return sliderule.emptyframe()
+    return sliderule.emptyframe(crs=ICESAT2_CRS)
 
 #
 # Flatten Batches - ATL03 Viewer
@@ -786,7 +789,7 @@ def __flattenbatches03v(rsps, parm, keep_id):
 
     # Check for Responses
     if rsps == None:
-        return sliderule.emptyframe()
+        return sliderule.emptyframe(crs=ICESAT2_CRS)
 
     # Check for Output Options
     if "output" in parm:
@@ -838,7 +841,7 @@ def __flattenbatches03v(rsps, parm, keep_id):
                     del columns["extent_id"]
 
                 # Create DataFrame
-                gdf = sliderule.todataframe(columns)
+                gdf = sliderule.todataframe(columns, crs=ICESAT2_CRS)
 
                 # Return Response
                 return gdf
@@ -848,7 +851,7 @@ def __flattenbatches03v(rsps, parm, keep_id):
             logger.debug("No response returned")
 
     # Error Case
-    return sliderule.emptyframe()
+    return sliderule.emptyframe(crs=ICESAT2_CRS)
 
 #
 # Build Request

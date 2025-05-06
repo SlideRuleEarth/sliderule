@@ -94,7 +94,7 @@ class OrchestratorLib
         static vector<Node*>*   lock                (const char* service, int nodes_needed, int timeout_secs, int locks_per_node, bool verbose=false);
         static bool             unlock              (long transactions[], int num_transactions, bool verbose=false);
         static bool             health              (void);
-        static bool             metric              (const unsigned char* metric_buf, int buf_size);
+        static bool             metric              (const char* name, double value);
         static int              getNodes            (void);
 
         static int              luaUrl              (lua_State* L);

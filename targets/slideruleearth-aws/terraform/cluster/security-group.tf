@@ -74,6 +74,32 @@ resource "aws_security_group" "ilb-sg" {
   }
 }
 
+# Security Group for Manager
+resource "aws_security_group" "manager-sg" {
+  vpc_id       = aws_vpc.sliderule-vpc.id
+  name         = "${var.cluster_name}-manager-sg"
+  description  = "Manager Security Group"
+  tags = {
+    Name = "${var.cluster_name}-manager-sg"
+  }
+
+  # HAProxy - TCP
+  ingress {
+    cidr_blocks = [var.vpcCIDRblock]
+    from_port   = 8000
+    to_port     = 8000
+    protocol    = "tcp"
+  }
+
+  # Outbound - ALL
+  egress {
+    cidr_blocks = [var.publicCIDRblock]
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+  }
+}
+
 # Security Group for SlideRule
 resource "aws_security_group" "sliderule-sg" {
   vpc_id       = aws_vpc.sliderule-vpc.id

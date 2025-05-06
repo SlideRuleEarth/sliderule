@@ -66,9 +66,9 @@ GebcoBathyRaster::GebcoBathyRaster(lua_State* L, RequestFields* rqst_parms, cons
             /* Clear params->bands */
             const_cast<FieldList<std::string>&>(parms->bands).clear();
         }
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid band name specified");
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid band name specified");
     }
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid number of bands specified");
+    else throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid number of bands specified");
 
     /* Build data path on s3 */
     filePath += "/" + year;

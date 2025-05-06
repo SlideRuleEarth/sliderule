@@ -6,7 +6,7 @@
 
 This tutorial walks you through the steps necessary to make your first request to SlideRule. By the end of this tutorial you will have used SlideRule to calculate and plot elevations over Grand Mesa, Colorado, using ICESat-2 photon cloud data.
 
-**Prerequisites**: This walk-through assumes you are comfortable using `git` and the `conda` Python packaging system. See the [installation](../../getting_started/Install.html) instructions in the reference documentation for details on other methods of installation.
+**Prerequisites**: This walk-through assumes you are comfortable using `git` and the `conda` Python packaging system. See the [installation](/getting_started/Install) instructions in the reference documentation for details on other methods of installation.
 
 ## Background
 
@@ -47,13 +47,13 @@ __Step 2__: Initialize the `icesat2` package .
 ```python
 >>> icesat2.init("slideruleearth.io", verbose=False)
 ```
-In general, it is only necessary to provide the _url_ to the `init` function; but for this example we are also turning on _verbose_ log messages so we can get more insight into what is happening.  For a full description of the options available when initializing the `icesat2` package, see the [init](../../api_reference/icesat2.html#init) documentation.
+In general, it is only necessary to provide the _url_ to the `init` function; but for this example we are also turning on _verbose_ log messages so we can get more insight into what is happening.  For a full description of the options available when initializing the `icesat2` package, see the [init](/api_reference/icesat2) documentation.
 
 __Step 3__: Create a list of coordinates that represent the Grand Mesa region of interest.
 ```python
 >>> grand_mesa = sliderule.toregion('grandmesa.geojson')
 ```
-The **grandmesa.geojson** file used in this example can be downloaded by navigating to our [downloads](/rtd/tutorials/downloads.html) page; alternatively, you can create your own GeoJSON file at [geojson.io](https://geojson.io).
+The **grandmesa.geojson** file used in this example can be downloaded by navigating to our [downloads](./downloads) page; alternatively, you can create your own GeoJSON file at [geojson.io](https://geojson.io).
 
 The `toregion` function creates a representation of the geospatial region that is understood by SlideRule.  It accepts both GeoJSON files and Shapefiles.  For a full description of the function, see the [toregion](../../user_guide/icesat2.html#toregion) documentation.
 
@@ -108,4 +108,4 @@ The resulting plot should look something like:
 
 ## Next Steps
 
-Once you've completed this walk-through and are comfortable issuing processing requests to SlideRule, you should take a look at the [Documentation](../../) and the example [Jupyter Notebooks](../../getting_started/Examples.html).
+Once you've completed this walk-through and are comfortable issuing processing requests to SlideRule, you should take a look at the [Documentation](/) and the example [Jupyter Notebooks](/getting_started/Examples).

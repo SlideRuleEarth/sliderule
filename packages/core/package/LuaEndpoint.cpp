@@ -101,6 +101,46 @@ LuaEndpoint::LuaEndpoint(lua_State* L, double normal_mem_thresh, double stream_m
 LuaEndpoint::~LuaEndpoint(void) = default;
 
 /*----------------------------------------------------------------------------
+ * handleRequest - returns true if streaming (chunked) response
+ *----------------------------------------------------------------------------*/
+bool LuaEndpoint::handleRequest (Request* request)
+{
+    // Allocate and Initialize Endpoint Info Struct
+    info_t* info = new info_t;
+    info->endpoint = this;
+    info->request = request;
+    info->streaming = true;
+
+    // Determine Streaming
+    if(request->verb == GET)
+    {
+        info->streaming = false;
+    }
+    else
+    {
+        // Check Header (needed for node.js clients, potentially others)
+        // some clients do not allow a GET to have a request body
+        // but SlideRule supports GETs on endpoints that use a
+        // request body to determine what is sent in the response;
+        // in those cases, the client can issue a POST with a request
+        // body and provide this header set to "0", and SlideRule
+        // will treat it like a GET and return a normal response
+        // based on the contents of the request body.
+        const char* streaming_header = request->getHdrStreaming();
+        if(streaming_header != NULL && StringLib::match(streaming_header, "0"))
+        {
+                info->streaming = false;
+        }
+    }
+
+    // Start Thread
+    const Thread pid(requestThread, info, false);
+
+    // Return Response Type
+    return info->streaming;
+}
+
+/*----------------------------------------------------------------------------
  * requestThread
  *----------------------------------------------------------------------------*/
 void* LuaEndpoint::requestThread (void* parm)
@@ -109,6 +149,7 @@ void* LuaEndpoint::requestThread (void* parm)
     EndpointObject::Request* request = info->request;
     LuaEndpoint* lua_endpoint = dynamic_cast<LuaEndpoint*>(info->endpoint);
     const double start = TimeLib::latchtime();
+    int status_code = RTE_STATUS;
 
     /* Get Request Script */
     const char* script_pathname = LuaEngine::sanitize(request->resource);
@@ -132,11 +173,11 @@ void* LuaEndpoint::requestThread (void* parm)
         /* Handle Response */
         if(info->streaming)
         {
-            lua_endpoint->streamResponse(script_pathname, request, rspq, trace_id);
+            status_code = lua_endpoint->streamResponse(script_pathname, request, rspq, trace_id);
         }
         else
         {
-            lua_endpoint->normalResponse(script_pathname, request, rspq, trace_id);
+            status_code = lua_endpoint->normalResponse(script_pathname, request, rspq, trace_id);
         }
     }
     else
@@ -145,15 +186,27 @@ void* LuaEndpoint::requestThread (void* parm)
         char header[MAX_HDR_SIZE];
         const int header_length = buildheader(header, Unauthorized);
         rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
+        status_code = RTE_UNAUTHORIZED;
     }
 
     /* End Response */
     const int rc = rspq->postCopy("", 0, POST_TIMEOUT_MS);
-    if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on %s: %d", rspq->getName(), rc);
+    if(rc <= 0)
+    {
+        mlog(CRITICAL, "Failed to post terminator on %s: %d", rspq->getName(), rc);
+        status_code = RTE_DID_NOT_COMPLETE;
+    }
 
-    /* Generate Metric for Endpoint */
-    const double duration = TimeLib::latchtime() - start;
-    gauge_metric(INFO, request->resource, duration);
+    /* Generate Telemetry */
+    const EventLib::tlm_input_t tlm = {
+        .code = status_code,
+        .duration = static_cast<float>(TimeLib::latchtime() - start),
+        .source_ip = request->getHdrSourceIp(),
+        .endpoint = request->resource,
+        .client = request->getHdrClient(),
+        .account = request->getHdrAccount()
+    };
+    telemeter(INFO, tlm);
 
     /* Clean Up */
     delete rspq;
@@ -169,45 +222,11 @@ void* LuaEndpoint::requestThread (void* parm)
 }
 
 /*----------------------------------------------------------------------------
- * handleRequest - returns true if streaming (chunked) response
- *----------------------------------------------------------------------------*/
-bool LuaEndpoint::handleRequest (Request* request)
-{
-    /* Allocate and Initialize Endpoint Info Struct */
-    info_t* info = new info_t;
-    info->endpoint = this;
-    info->request = request;
-    info->streaming = true;
-
-    /* Determine Streaming */
-    if(request->verb == GET)
-    {
-        info->streaming = false;
-    }
-    else // check header (needed for node.js clients)
-    {
-        string* hdr_str;
-        if(request->headers.find("x-sliderule-streaming", &hdr_str))
-        {
-            if(*hdr_str == "0")
-            {
-                info->streaming = false;
-            }
-        }
-    }
-
-    /* Start Thread */
-    const Thread pid(requestThread, info, false);
-
-    /* Return Response Type */
-    return info->streaming;
-}
-
-/*----------------------------------------------------------------------------
  * normalResponse
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const
+int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const
 {
+    int status_code = RTE_STATUS;
     char header[MAX_HDR_SIZE];
     double mem;
 
@@ -236,43 +255,53 @@ void LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publ
             }
             else
             {
+                /* Missing Results */
                 mlog(ERROR, "Script returned no results: %s", scriptpath);
                 const char* error_msg = "Missing results";
                 const int result_length = StringLib::size(error_msg);
                 const int header_length = buildheader(header, Not_Found, "text/plain", result_length, NULL, serverHead.c_str());
                 rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
                 rspq->postCopy(error_msg, result_length, POST_TIMEOUT_MS);
+                status_code = RTE_SCRIPT_DOES_NOT_EXIST;
             }
         }
         else
         {
+            /* Failed Execution */
             mlog(ERROR, "Failed to execute request: %s", scriptpath);
             const char* error_msg = "Failed execution";
             const int result_length = StringLib::size(error_msg);
             const int header_length = buildheader(header, Internal_Server_Error, "text/plain", result_length, NULL, serverHead.c_str());
             rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
             rspq->postCopy(error_msg, result_length, POST_TIMEOUT_MS);
+            status_code = RTE_FAILURE;
         }
     }
     else
     {
+        /* Memory Exceeded */
         mlog(CRITICAL, "Memory (%d%%) exceeded threshold, not performing request: %s", (int)(mem * 100.0), scriptpath);
         const char* error_msg = "Memory exceeded";
         const int result_length = StringLib::size(error_msg);
         const int header_length = buildheader(header, Service_Unavailable, "text/plain", result_length, NULL, serverHead.c_str());
         rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
         rspq->postCopy(error_msg, result_length, POST_TIMEOUT_MS);
+        status_code = RTE_NOT_ENOUGH_MEMORY;
 }
 
     /* Clean Up */
     delete engine;
+
+    /* Return Status Code */
+    return status_code;
 }
 
 /*----------------------------------------------------------------------------
  * streamResponse
  *----------------------------------------------------------------------------*/
-void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const
+int LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const
 {
+    int status_code = RTE_STATUS;
     char header[MAX_HDR_SIZE];
     double mem;
 
@@ -294,17 +323,30 @@ void LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publ
         engine->setString(LUA_REQUEST_ID, request->id);
 
         /* Execute Engine
-        *  The call to execute the script blocks on completion of the script. The lua state context
-        *  is locked and cannot be accessed until the script completes */
-        engine->executeEngine(IO_PEND);
+         *  The call to execute the script blocks on completion of the script. The lua state context
+         *  is locked and cannot be accessed until the script completes */
+        const bool status = engine->executeEngine(IO_PEND);
+
+        /* Check Status
+         *  At this point the http header has already been sent, so an error header cannot be sent;
+         *  but we can log the error and report it as such in telemetry */
+        if(!status)
+        {
+            mlog(CRITICAL, "Failed to execute script %s", scriptpath);
+            status_code = RTE_FAILURE;
+        }
     }
     else
     {
         mlog(CRITICAL, "Memory (%d%%) exceeded threshold, not performing request: %s", (int)(mem * 100.0), scriptpath);
         const int header_length = buildheader(header, Service_Unavailable);
         rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
+        status_code = RTE_NOT_ENOUGH_MEMORY;
     }
 
     /* Clean Up */
     delete engine;
+
+    /* Return Status Code */
+    return status_code;
 }

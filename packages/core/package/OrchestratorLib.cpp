@@ -50,7 +50,7 @@
  * Static Data
  *----------------------------------------------------------------------------*/
 
-const char*     OrchestratorLib::URL = NULL;
+const char* OrchestratorLib::URL = NULL;
 
 /*----------------------------------------------------------------------------
  * init
@@ -305,13 +305,13 @@ bool OrchestratorLib::health (void)
 /*----------------------------------------------------------------------------
  * metric
  *----------------------------------------------------------------------------*/
-bool OrchestratorLib::metric (const unsigned char* metric_buf, int buf_size)
+bool OrchestratorLib::metric (const char* name, double value)
 {
-    (void)buf_size;
-
     bool status = false;
 
-    const rsps_t rsps = request(EndpointObject::POST, "/discovery/metric", reinterpret_cast<const char*>(metric_buf));
+    const FString data("{\"name\":\"%s\",\"value\":\"%lf\"}", name, value);
+
+    const rsps_t rsps = request(EndpointObject::POST, "/discovery/metric", data.c_str());
     if(rsps.code == EndpointObject::OK)
     {
         status = true;
@@ -475,7 +475,7 @@ int OrchestratorLib::luaUnlock(lua_State* L)
 
         if(!lua_istable(L, 1))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "must supply table for parameter #1");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "must supply table for parameter #1");
         }
 
         const int num_transactions = lua_rawlen(L, 1);

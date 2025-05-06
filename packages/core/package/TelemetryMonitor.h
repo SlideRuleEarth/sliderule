@@ -29,24 +29,23 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __metric_monitor__
-#define __metric_monitor__
+#ifndef __telemetry_monitor__
+#define __telemetry_monitor__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "MsgQ.h"
 #include "Monitor.h"
-#include "RecordObject.h"
 #include "OsApi.h"
 #include "EventLib.h"
+#include "MsgQ.h"
 
 /******************************************************************************
- * METRIC MONITOR CLASS
+ * CLASS
  ******************************************************************************/
 
-class MetricMonitor: public Monitor
+class TelemetryMonitor: public Monitor
 {
     public:
 
@@ -70,8 +69,8 @@ class MetricMonitor: public Monitor
          * Methods
          *--------------------------------------------------------------------*/
 
-        MetricMonitor  (lua_State* L, event_level_t level, const char* eventq_name);
-        ~MetricMonitor (void) override;
-};
+        TelemetryMonitor  (lua_State* L, event_level_t level, const char* eventq_name);
+        ~TelemetryMonitor (void) override;
+    };
 
 #endif  /* __publish_monitor__ */

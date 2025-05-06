@@ -29,10 +29,12 @@
 
 import sys
 import json
+import ctypes
 import warnings
 import datetime
 import numpy as np
-from sliderule import logger, SLIDERULE_EPSG
+from sliderule import logger
+from sliderule.icesat2 import ICESAT2_CRS
 
 # imports with warnings if not present
 try:
@@ -44,10 +46,14 @@ try:
     from geopandas.io.arrow import _geopandas_to_arrow
     from geopandas._compat import import_optional_dependency
 except ModuleNotFoundError as e:
-    sys.stderr.write("Warning: missing packages, some functions will throw an exception if called. (%s)\n" % (str(e)))  
+    sys.stderr.write("Warning: missing packages, some functions will throw an exception if called. (%s)\n" % (str(e)))
 try:
     import h5py
 except ModuleNotFoundError as e:
+    sys.stderr.write("Warning: missing packages, some functions will throw an exception if called. (%s)\n" % (str(e)))
+try:
+    import pyarrow.parquet as pq
+except:
     sys.stderr.write("Warning: missing packages, some functions will throw an exception if called. (%s)\n" % (str(e)))
 
 # attributes for ATL06-SR and ATL03 variables
@@ -385,7 +391,7 @@ def from_region(polygon):
 # convert geodataframe vector object to a list of sliderule regions
 def from_geodataframe(gdf):
     # verify that geodataframe is in latitude/longitude
-    geodataframe = gdf.to_crs(SLIDERULE_EPSG)
+    geodataframe = gdf.to_crs(ICESAT2_CRS)
     # create a list of regions
     regions = []
     # for each region
@@ -399,7 +405,7 @@ def to_json(filename, **kwargs):
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs',SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     # import optional dependencies
     pyproj = import_optional_dependency(
         "pyproj", extra="pyproj is required for CRS conversion."
@@ -472,7 +478,7 @@ def to_parquet(gdf, filename, **kwargs):
     kwargs.setdefault('schema_version',None)
     kwargs.setdefault('parameters',dict())
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs',SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     # import optional dependencies
     pyproj = import_optional_dependency(
         "pyproj", extra="pyproj is required for CRS conversion."
@@ -504,7 +510,7 @@ def to_parquet(gdf, filename, **kwargs):
         geometry['coordinates'].append([[ln,lt] for ln,lt in zip(lon,lat)])
         output['features'].append(dict(type="Feature", geometry=geometry))
     # dump the attributes to encoded JSON-format
-    sliderule_metadata = json.dumps(output).encode('utf-8') 
+    sliderule_metadata = json.dumps(output).encode('utf-8')
     # convert geodataframe to arrow table
     table = _geopandas_to_arrow(gdf,
         index=kwargs['index'],
@@ -522,7 +528,7 @@ def to_parquet(gdf, filename, **kwargs):
 
 def from_parquet(filename, **kwargs):
     # set default keyword arguments
-    kwargs.setdefault('crs',SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('return_parameters',False)
     kwargs.setdefault('return_regions',False)
     # import optional dependencies
@@ -573,7 +579,7 @@ def to_nc(gdf, filename, **kwargs):
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs',SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('units','seconds since 2018-01-01T00:00:00')
@@ -623,7 +629,7 @@ def to_nc(gdf, filename, **kwargs):
     # save geodataframe coordinate system
     fileID.crs = kwargs['crs']
     # add geospatial attributes
-    if kwargs['crs'] in ('EPSG:4326', SLIDERULE_EPSG):
+    if kwargs['crs'] in ('EPSG:4326', ICESAT2_CRS):
         fileID.geospatial_lat_units = \
             attributes['geospatial_lat_units']
         fileID.geospatial_lon_units = \
@@ -669,7 +675,7 @@ def from_nc(filename, **kwargs):
     # add warning that function is deprecated
     logger.critical(f"Deprecated. Will be removed in a future release")
     # set default crs
-    kwargs.setdefault('crs',SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('index_key','time')
@@ -764,7 +770,7 @@ def to_hdf(gdf, filename, **kwargs):
     kwargs.setdefault('driver','pytables')
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs',SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('units','seconds since 2018-01-01T00:00:00')
@@ -796,7 +802,7 @@ def write_pytables(df, filename, attributes, **kwargs):
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs',SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     # write data to a pytables HDF5 file
     df.to_hdf(filename, 'sliderule_segments', format="table", mode="w")
     # add file attributes
@@ -809,7 +815,7 @@ def write_pytables(df, filename, attributes, **kwargs):
     # set coordinate reference system as attribute
     fileID.root._v_attrs.crs = kwargs['crs']
     # add geospatial attributes
-    if kwargs['crs'] in ('EPSG:4326', SLIDERULE_EPSG):
+    if kwargs['crs'] in ('EPSG:4326', ICESAT2_CRS):
         fileID.root._v_attrs.geospatial_lat_units = \
             attributes['geospatial_lat_units']
         fileID.root._v_attrs.geospatial_lon_units = \
@@ -856,7 +862,7 @@ def write_h5py(df, filename, attributes, **kwargs):
     # set default keyword arguments
     kwargs.setdefault('parameters',None)
     kwargs.setdefault('regions',[])
-    kwargs.setdefault('crs',SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('units','seconds since 2018-01-01T00:00:00')
     # open HDF5 file object
     fileID = h5py.File(filename, mode='w')
@@ -892,7 +898,7 @@ def write_h5py(df, filename, attributes, **kwargs):
     # set coordinate reference system as attribute
     fileID.attrs['crs'] = kwargs['crs']
     # add geospatial attributes
-    if kwargs['crs'] in ('EPSG:4326', SLIDERULE_EPSG):
+    if kwargs['crs'] in ('EPSG:4326', ICESAT2_CRS):
         fileID.attrs['geospatial_lat_units'] = \
             attributes['geospatial_lat_units']
         fileID.attrs['geospatial_lon_units'] = \
@@ -936,7 +942,7 @@ def write_h5py(df, filename, attributes, **kwargs):
 def from_hdf(filename, **kwargs):
     # set default keyword arguments
     kwargs.setdefault('driver','pytables')
-    kwargs.setdefault('crs',SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('return_parameters',False)
@@ -955,7 +961,7 @@ def read_pytables(filename, **kwargs):
     # add warning that function is deprecated
     logger.critical(f"Deprecated. Will be removed in a future release")
     # set default crs
-    kwargs.setdefault('crs',SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('return_parameters',False)
@@ -1025,7 +1031,7 @@ def read_h5py(filename, **kwargs):
     # add warning that function is deprecated
     logger.critical(f"Deprecated. Will be removed in a future release")
     # set default crs
-    kwargs.setdefault('crs',SLIDERULE_EPSG)
+    kwargs.setdefault('crs',ICESAT2_CRS)
     kwargs.setdefault('lon_key','longitude')
     kwargs.setdefault('lat_key','latitude')
     kwargs.setdefault('index_key','time')
@@ -1128,3 +1134,15 @@ def from_file(filename, format='parquet', **kwargs):
         return geopandas.from_file(filename, **kwargs)
     elif format.lower() in ('geoparquet','parquet'):
         return from_parquet(filename, **kwargs)
+
+# read metadata from parquet file
+def read_meta(parquet_file):
+    metadata_dict = {}
+    metadata = pq.read_metadata(parquet_file)
+    for key in metadata.metadata.keys():
+        try:
+            element = json.loads(ctypes.create_string_buffer(metadata.metadata[key]).value.decode('ascii'))
+            metadata_dict[key.decode('utf-8')] = element
+        except:
+            pass
+    return metadata_dict

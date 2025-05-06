@@ -36,7 +36,7 @@ dataframe.proxy("atl03x", parms, rqst["parms"], rspq, channels, function(userlog
     for _, beam in ipairs(parms["beams"]) do
         dataframes[beam] = icesat2.atl03x(beam, parms, atl03h5, atl08h5, atl24h5, rspq)
         if not dataframes[beam] then
-            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> on %s failed to create dataframe for beam %s", rspq, resource, beam))
+            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> on %s failed to create dataframe for beam %s", rspq, resource, beam))
         end
     end
     -- return back to proxy

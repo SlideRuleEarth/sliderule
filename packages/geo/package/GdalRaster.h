@@ -52,7 +52,7 @@ do                                                                            \
 {                                                                             \
     if ((p) == NULL)                                                          \
     {                                                                         \
-        throw RunTimeException(CRITICAL, RTE_ERROR,                           \
+        throw RunTimeException(CRITICAL, RTE_FAILURE,                           \
               "NULL pointer detected (%s():%d)", __FUNCTION__, __LINE__);     \
     }                                                                         \
 } while (0)
@@ -63,7 +63,7 @@ do                                                                            \
 {                                                                             \
     if ((e))   /* CPLErr and OGRErr types have 0 for no error  */             \
     {                                                                         \
-        throw RunTimeException(CRITICAL, RTE_ERROR,                           \
+        throw RunTimeException(CRITICAL, RTE_FAILURE,                           \
               "GDAL ERROR detected: %d (%s():%d)", e, __FUNCTION__, __LINE__);\
     }                                                                         \
 } while (0)

@@ -1,6 +1,6 @@
-======================
-ICESat-2 Plugin Module
-======================
+===============
+ICESat-2 Module
+===============
 
 
 1. Overview
@@ -31,12 +31,6 @@ The photon-input parameters allow the user to select an area, a time range, or a
 * ``"t1"``: stop time for filtering granuels (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
 
 
-2.1.1 Time Conversions
-#######################
-
-Result times returned by SlideRule for ICESat-2 are in standard GPS units (fractional seconds since the GPS epoch).  To convert standard GPS time to an ATLAS SDP time, you need to subtract the number of seconds between the GPS epoch which is January 6, 2018 at midnight (1980-01-06T00:00:00.000000Z) and the ATLAS SDP epoch of January 1, 2018 at midnight (2018-01-01T00:00:00.000000Z). That number is ``1198800018`` seconds.
-
-
 2.2 Photon-selection parameters
 --------------------------------
 
@@ -54,14 +48,7 @@ ATL03 contains a set of photon classification values, that are designed to ident
 The signal confidence can be supplied as strings {"atl03_tep", "atl03_not_considered", "atl03_background", "atl03_within_10m", "atl03_low", "atl03_medium", "atl03_high"} or as numbers {-2, -1, 0, 1, 2, 3, 4}.
 The default values, of srt=3, cnf=0, and quality_ph=0 will return all photons not flagged as instrumental artifacts, and the 'cnf' parameter will match the land-ice classification.
 
-2.2.2 ATL08 classification
-##########################################
-
-If ATL08 classification parameters are specified, the ATL08 (vegetation height) files corresponding to the ATL03 files are queried for the more advanced classification scheme available in those files.  Photons are then selected based on the classification values specified.  Note that srt=0 (land) and cnf=0 (no native filtering) should be specified to allow all ATL08 photons to be used.
-
-* ``"atl08_class"``: list of ATL08 classifications used to select which photons are used in the processing (the available classifications are: "atl08_noise", "atl08_ground", "atl08_canopy", "atl08_top_of_canopy", "atl08_unclassified")
-
-2.2.3 YAPC classification
+2.2.2 YAPC classification
 ##########################################
 
 The experimental YAPC (Yet Another Photon Classifier) photon-classification scheme assigns each photon a score based on the number of adjacent photons.  YAPC parameters are provided as a dictionary, with entries described below:
@@ -85,6 +72,20 @@ To run the YAPC algorithm, specify the YAPC settings as a sub-dictionary. Here i
         "len": 20.0,
         "res": 20.0
     }
+
+2.2.3 ATL08 classification
+##########################################
+
+If ATL08 classification parameters are specified, the ATL08 (vegetation height) files corresponding to the ATL03 files are queried for the more advanced classification scheme available in those files.  Photons are then selected based on the classification values specified.  Note that srt=0 (land) and cnf=0 (no native filtering) should be specified to allow all ATL08 photons to be used.
+
+* ``"atl08_class"``: list of ATL08 classifications used to select which photons are used in the processing (the available classifications are: "atl08_noise", "atl08_ground", "atl08_canopy", "atl08_top_of_canopy", "atl08_unclassified")
+
+2.2.4 ATL24 classification
+##########################################
+
+If ATL24 classification parameters are specified, the ATL24 (bathymetry) files corresponding to the ATL03 files are queried for the more advanced classification scheme available in those files.  Photons are then selected based on the classification values specified.  Note that srt=-1 (dynamic) and cnf=-1 (no native filtering) should be specified to allow all ATL24 photons to be used.
+
+* ``"atl24_class"``: list of ATL24 classifications used to select which photons are used in the processing (the available classifications are: "bathymetry", "sea_surface", "unclassified")
 
 2.3 Photon-extent parameters
 ----------------------------
@@ -199,6 +200,9 @@ To obtain fewer false-positive returns, this set of parameters can be modified w
    * - ``"atl08_class"``
      - Integer/List or String/List
      -
+   * - ``"atl24_class"``
+     - Integer/List or String/List
+     -
    * - ``"ats"``
      - Float - meters
      - 20.0
@@ -286,6 +290,8 @@ All data returned by the ICESat-2 APIs are organized around the concept of an ``
 Each extent is uniquely identified by an extent ID. The extent ID is analogous to the ATL03 segment ID, and is consistently generated for any extent given the same input parameters.  This means subsequent runs of SlideRule with the same request parameters will return the same extent IDs.
 
 NOTE - while all data returned from SlideRule for ATL03/06/08 endpoints include the extent ID (as ``"extent_id"``), by default the Python client strips it out when it creates the final GeoDataFrame. There is an option to keep the extend ID by setting the "keep_id" argument in the atl03/06/08 group of Python functions to True.  This is useful when performing merges on GeoDataFrames from multiple APIs (for example, you can combine results from atl06 and atl08 endpoints and created a single GeoDataFrame with both elevation and vegatation data in it).
+
+NOTE - result times returned by SlideRule for ICESat-2 are in standard Unix nanoseconds, while times provided in the ICESat-2 standard data products are in seconds from the ATLAS Epoch. The server-side code performs this conversion for you.  But if you are using ICESat-2 products direction in addition to SlideRule results, and need to convert between them, you must first convert the unix time to standard GPS time, and then you need to 0subtract the number of seconds between the GPS epoch which is January 6, 2018 at midnight (1980-01-06T00:00:00.000000Z) and the ATLAS SDP epoch of January 1, 2018 at midnight (2018-01-01T00:00:00.000000Z). That number is ``1198800018`` seconds.
 
 
 3.1 Segmented Photon Data (ATL03)
@@ -389,6 +395,19 @@ The vegetation GeoDataFrame has the following columns:
 - ``"canopy_h_metrics"``: relief height at given percentile for canopy photons
 
 
+3.4 Processing Flags
+------------------------------
+
+The following processing flags are used for all ICESat-2 APIs:
+
+- ``"0x0001"``: Along track spread too short
+- ``"0x0002"``: Too few photons
+- ``"0x0004"``: Maximum iterations reached
+- ``"0x0008"``: Out of bounds
+- ``"0x0010"``: Underflow
+- ``"0x0020"``: Overflow
+
+
 4. Callbacks
 ============
 For large processing requests, it is possible that the data returned from the API is too large or impractical to fit in the local memory of the Python interpreter making the request.
@@ -396,11 +415,13 @@ In these cases, certain APIs in the SlideRule Python client allow the calling ap
 If a callback is supplied, the API will not return back to the calling application anything associated with the supplied record types, but assumes the callback fully handles processing the data.
 The callback function takes the following form:
 
-.. py:function:: callback (record)
+.. py:function:: callback (record, session)
 
     Callback that handles the results of a processing request for the given record.
 
     :param dict record: the record object, usually a dictionary containing data
+
+    :param class session: the session object, containing settings for the current connection to the sliderule servers
 
 Here is an example of a callback being used for the ``atl03sp`` function:
 
@@ -409,7 +430,7 @@ Here is an example of a callback being used for the ``atl03sp`` function:
         rec_cnt = 0
         ph_cnt = 1
 
-        def atl03rec_cb(rec):
+        def atl03rec_cb(rec, session):
             global rec_cnt, ph_cnt
             rec_cnt += 1
             ph_cnt += rec["count"][0] + rec["count"][1]
@@ -417,185 +438,3 @@ Here is an example of a callback being used for the ``atl03sp`` function:
 
         gdf = icesat2.atl03sp({}, callbacks = {"atl03rec": atl03rec_cb})
 
-
-
-5. Endpoints
-============
-
-atl06
------
-
-``POST /source/atl06 <request payload>``
-
-    Perform ATL06-SR processing on ATL03 data and return geolocated elevations
-
-**Request Payload** *(application/json)*
-
-    .. list-table::
-       :header-rows: 1
-
-       * - parameter
-         - description
-         - default
-       * - **resource**
-         - ATL03 HDF5 filename
-         - *required*
-       * - **parms**
-         - ATL06-SR algorithm processing configuration (see `Parameters <#parameters>`_)
-         - *required*
-       * - **timeout**
-         - number of seconds to wait for first response
-         - wait forever
-
-    **HTTP Example**
-
-    .. code-block:: http
-
-        POST /source/atl06 HTTP/1.1
-        Host: my-sliderule-server:9081
-        Content-Length: 179
-
-        {"resource": "ATL03_20181019065445_03150111_003_01.h5", "parms": {"asset": "atlas-local", "cnf": 4, "ats": 20.0, "cnt": 10, "len": 40.0, "res": 20.0, "maxi": 1}}
-
-    **Python Example**
-
-    .. code-block:: python
-
-        # Build ATL06 Parameters
-        parms = {
-            "asset": "atlas-local",
-            "cnf": 4,
-            "ats": 20.0,
-            "cnt": 10,
-            "len": 40.0,
-            "res": 20.0
-        }
-
-        # Build ATL06 Request
-        rqst = {
-            "resource": "ATL03_20181019065445_03150111_003_01.h5",
-            "parms": parms
-        }
-
-        # Execute ATL06 Algorithm
-        rsps = sliderule.source("atl06", rqst, stream=True)
-
-**Response Payload** *(application/octet-stream)*
-
-    Serialized stream of geolocated elevations of type ``atl06rec``.  See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to process binary response records.
-
-
-
-atl03s
-------
-
-``POST /source/atl03s <request payload>``
-
-    Subset ATL03 data and return segments of photons
-
-**Request Payload** *(application/json)*
-
-    .. list-table::
-       :header-rows: 1
-
-       * - parameter
-         - description
-         - default
-       * - **resource**
-         - ATL03 HDF5 filename
-         - *required*
-       * - **parms**
-         - ATL06-SR algorithm processing configuration (see `Parameters <#parameters>`_)
-         - *required*
-       * - **timeout**
-         - number of seconds to wait for first response
-         - wait forever
-
-    **HTTP Example**
-
-    .. code-block:: http
-
-        POST /source/atl03s HTTP/1.1
-        Host: my-sliderule-server:9081
-        Content-Length: 134
-
-        {"resource": "ATL03_20181019065445_03150111_003_01.h5", "parms": {"asset": "atlas-local", "len": 40.0, "res": 20.0}}
-
-    **Python Example**
-
-    .. code-block:: python
-
-        # Build ATL06 Parameters
-        parms = {
-            "asset": "atlas-local",
-            "len": 40.0,
-            "res": 20.0,
-        }
-
-        # Build ATL06 Request
-        rqst = {
-            "resource": "ATL03_20181019065445_03150111_003_01.h5",
-            "parms": parms
-        }
-
-        # Execute ATL06 Algorithm
-        rsps = sliderule.source("atl03s", rqst, stream=True)
-
-**Response Payload** *(application/octet-stream)*
-
-    Serialized stream of photon segments of type ``atl03rec``.  See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to process binary response records.
-
-
-
-indexer
--------
-
-``POST /source/indexer <request payload>``
-
-    Return a set of meta-data index records for each ATL03 resource (i.e. H5 file) listed in the request.
-    Index records are used to create local indexes of the resources available to be processed,
-    which in turn support spatial and temporal queries.
-    Note, while SlideRule supports native meta-data indexing, this feature is typically not used in favor of accessing the
-    NASA CMR system directly.
-
-**Request Payload** *(application/json)*
-
-    .. list-table::
-       :header-rows: 1
-
-       * - parameter
-         - description
-         - default
-       * - **resources**
-         - List of ATL03 HDF5 filenames
-         - *required*
-       * - **timeout**
-         - number of seconds to wait for first response
-         - wait forever
-
-    **HTTP Example**
-
-    .. code-block:: http
-
-        POST /source/indexer HTTP/1.1
-        Host: my-sliderule-server:9081
-        Content-Length: 131
-
-        {"asset": "atlas-local", "resources": ["ATL03_20181019065445_03150111_003_01.h5", "ATL03_20190512123214_06760302_003_01.h5"]}
-
-    **Python Example**
-
-    .. code-block:: python
-
-        # Build Indexer Request
-        rqst = {
-            "asset" : "atlas-local",
-            "resources": ["ATL03_20181019065445_03150111_003_01.h5", "ATL03_20190512123214_06760302_003_01.h5"],
-        }
-
-        # Execute ATL06 Algorithm
-        rsps = sliderule.source("indexer", rqst, stream=True)
-
-**Response Payload** *(application/octet-stream)*
-
-    Serialized stream of ATL03 meta-data index records of type ``atl03rec.index``.  See `De-serialization <./SlideRule.html#de-serialization>`_ for a description of how to process binary response records.

@@ -90,9 +90,9 @@ bool H5DArray::join(int timeout, bool throw_exception) const
             {
                 switch(rc)
                 {
-                    case H5Coro::Future::INVALID:   throw RunTimeException(ERROR, RTE_ERROR, "H5Coro::Future read failure on %s", name);
+                    case H5Coro::Future::INVALID:   throw RunTimeException(ERROR, RTE_FAILURE, "H5Coro::Future read failure on %s", name);
                     case H5Coro::Future::TIMEOUT:   throw RunTimeException(ERROR, RTE_TIMEOUT, "H5Coro::Future read timeout on %s", name);
-                    default:                        throw RunTimeException(ERROR, RTE_ERROR, "H5Coro::Future unknown error on %s", name);
+                    default:                        throw RunTimeException(ERROR, RTE_FAILURE, "H5Coro::Future unknown error on %s", name);
                 }
             }
         }
@@ -102,7 +102,7 @@ bool H5DArray::join(int timeout, bool throw_exception) const
         status = false;
         if(throw_exception)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "H5Coro::Future null join on %s", name);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "H5Coro::Future null join on %s", name);
         }
     }
 
@@ -204,7 +204,7 @@ uint64_t H5DArray::serialize (uint8_t* buffer, int64_t start_element, int64_t nu
     }
     else
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid typesize of %d for %s when trying to serialize", h5f->info.typesize, name);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid typesize of %d for %s when trying to serialize", h5f->info.typesize, name);
     }
 
     /* Return Number of Bytes Serialized */
@@ -233,7 +233,7 @@ uint64_t H5DArray::serializeRow (uint8_t* buffer, int64_t row) const
 uint8_t* H5DArray::referenceElement (int64_t element) const
 {
     const uint64_t byte_offset = RecordObject::FIELD_TYPE_BYTES[h5f->info.datatype] * element;
-    if(byte_offset > (h5f->info.datasize - h5f->info.typesize)) throw RunTimeException(CRITICAL, RTE_ERROR, "Out of bounds buffer access of element of size %u: %lu > %lu", h5f->info.typesize, byte_offset, h5f->info.datasize);
+    if(byte_offset > (h5f->info.datasize - h5f->info.typesize)) throw RunTimeException(CRITICAL, RTE_FAILURE, "Out of bounds buffer access of element of size %u: %lu > %lu", h5f->info.typesize, byte_offset, h5f->info.datasize);
     return &h5f->info.data[byte_offset];
 }
 

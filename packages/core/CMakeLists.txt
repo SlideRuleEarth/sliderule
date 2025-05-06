@@ -27,6 +27,7 @@ target_link_libraries (slideruleLib PUBLIC ${READLINE_LIB})
 target_sources (slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/core.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/AlertMonitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Asset.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/AssetField.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/CurlLib.cpp
@@ -36,6 +37,8 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/FileIODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoDataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/HttpServer.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/IntervalIndex.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/LogMonitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaEndpoint.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaEngine.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaLibraryMsg.cpp
@@ -43,21 +46,20 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaLibraryTime.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaScript.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/ManagerLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/MathLib.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/MetricMonitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Monitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/MsgQ.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/OrchestratorLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/PointIndex.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/ProvisioningSystemLib.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/PublishMonitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RecordObject.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RegionMask.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestFields.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestMetrics.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/SpatialIndex.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/StringLib.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/IntervalIndex.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/TelemetryMonitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/TimeLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/UnitTest.cpp
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Dictionary.cpp>
@@ -81,6 +83,7 @@ target_include_directories (slideruleLib
 install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/core.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/AlertMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Asset.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AssetField.h
         ${CMAKE_CURRENT_LIST_DIR}/package/AssetIndex.h
@@ -100,7 +103,9 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/FileIODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoDataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/HttpServer.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/IntervalIndex.h
         ${CMAKE_CURRENT_LIST_DIR}/package/List.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/LogMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaEndpoint.h
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaEngine.h
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaLibraryMsg.h
@@ -108,15 +113,14 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaLibraryTime.h
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaObject.h
         ${CMAKE_CURRENT_LIST_DIR}/package/LuaScript.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/ManagerLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/MathLib.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/MetricMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Monitor.h
         ${CMAKE_CURRENT_LIST_DIR}/package/MsgQ.h
         ${CMAKE_CURRENT_LIST_DIR}/package/OrchestratorLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Ordering.h
         ${CMAKE_CURRENT_LIST_DIR}/package/PointIndex.h
         ${CMAKE_CURRENT_LIST_DIR}/package/ProvisioningSystemLib.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/PublishMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RecordObject.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RegionMask.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestFields.h
@@ -124,7 +128,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/SpatialIndex.h
         ${CMAKE_CURRENT_LIST_DIR}/package/StringLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Table.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/IntervalIndex.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/TelemetryMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/package/TimeLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/UnitTest.h
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Dictionary.h>
@@ -178,9 +182,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/geo.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/health.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/index.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/metric.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/prometheus.lua
-        ${CMAKE_CURRENT_LIST_DIR}/endpoints/tail.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/time.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/version.lua
     DESTINATION

@@ -5,7 +5,7 @@ local assets = asset.loaddir()
 local td = runner.rootdir(arg[0])
 
 -- Setup --
-console.monitor:config(core.LOG, core.DEBUG)
+console.monitor:config(core.DEBUG)
 sys.setlvl(core.LOG, core.DEBUG)
 
 local outq_name = "outq-luatest"
@@ -26,7 +26,7 @@ local contents = f:read("*all")
 f:close()
 
 
--- console.monitor:config(core.LOG, core.DEBUG)
+-- console.monitor:config(core.DEBUG)
 -- sys.setlvl(core.LOG, core.DEBUG)
 
 function getFileSize(filePath)

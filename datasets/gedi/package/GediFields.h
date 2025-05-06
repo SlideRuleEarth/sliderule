@@ -47,6 +47,28 @@
  * CLASS
  ******************************************************************************/
 
+/******************/
+/* Granule Fields */
+/******************/
+struct GediGranuleFields: public FieldDictionary
+{
+
+    FieldElement<int>   year {-1};      // GEDI granule observation date - year
+    FieldElement<int>   doy {-1};       // GEDI granule observation date - day of year
+    FieldElement<int>   orbit {-1};     // GEDI granule orbit
+    FieldElement<int>   region {-1};    // GEDI granule region
+    FieldElement<int>   track {-1};     // GEDI granule region
+    FieldElement<int>   version {-1};   // GEDI granule version
+
+    GediGranuleFields(void);
+    ~GediGranuleFields(void) override = default;
+
+    void parseResource (const char* resource);
+};
+
+/***************/
+/* GEDI Fields */
+/***************/
 class GediFields: public RequestFields
 {
     public:
@@ -111,7 +133,7 @@ class GediFields: public RequestFields
                 case 5:  return "BEAM0110";
                 case 6:  return "BEAM1000";
                 case 7:  return "BEAM1011";
-                default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid beam index: %d", beam_index);
+                default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid beam index: %d", beam_index);
             }
         }
 
@@ -128,6 +150,7 @@ class GediFields: public RequestFields
         FieldElement<bool>                      l4_quality_filter {false};
         FieldElement<bool>                      surface_filter {false};
         FieldList<string>                       anc_fields; // list of fields to associate with an GEDI subsetting request
+        GediGranuleFields                       granule_fields;  // GEDI granule attributes
 
         // backwards compatibility
         FieldElement<int>                       degrade_flag {0};

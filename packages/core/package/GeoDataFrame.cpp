@@ -104,7 +104,7 @@ int GeoDataFrame::FrameColumn::luaGetData (lua_State* L)
         const long index = getLuaInteger(L, 2) - 1; // lua indexing starts at 1, convert to c indexing that starts at 0
 
         // check index
-        if(index < 0) throw RunTimeException(CRITICAL, RTE_ERROR, "invalid index: %ld", index + 1);
+        if(index < 0) throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid index: %ld", index + 1);
 
         // check the metatable for the key (to support functions)
         luaL_getmetatable(L, lua_obj->LuaMetaName);
@@ -221,7 +221,7 @@ bool GeoDataFrame::FrameSender::run(GeoDataFrame* dataframe)
     catch (const RunTimeException& e)
     {
         Publisher pubq(rspq);
-        alert(ERROR, RTE_ERROR, &pubq, &dataframe->active, "request <%s> failed to send dataframe: %s", rspq, e.what());
+        alert(ERROR, RTE_FAILURE, &pubq, &dataframe->active, "request <%s> failed to send dataframe: %s", rspq, e.what());
     }
 
     /* Update Run Time */
@@ -299,7 +299,7 @@ int GeoDataFrame::luaCreate (lua_State* L)
                 }
                 else if(dataframe->numRows != field->length())
                 {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "number of rows must match for all columns, %ld != %ld", dataframe->numRows, field->length());
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "number of rows must match for all columns, %ld != %ld", dataframe->numRows, field->length());
                 }
             }
         }
@@ -553,7 +553,7 @@ FieldUntypedColumn* GeoDataFrame::getColumn (const char* name, bool no_throw) co
     if(!no_throw)
     {
         const FieldMap<FieldUntypedColumn>::entry_t entry = columnFields.fields[name];
-        if(!entry.field) throw RunTimeException(CRITICAL, RTE_ERROR, "%s field is null", name);
+        if(!entry.field) throw RunTimeException(CRITICAL, RTE_FAILURE, "%s field is null", name);
         return entry.field;
     }
     else
@@ -583,8 +583,8 @@ Field* GeoDataFrame::getMetaData (const char* name, Field::type_t _type, bool no
     if(!no_throw)
     {
         const meta_entry_t entry = metaFields.fields[name];
-        if(!entry.field) throw RunTimeException(CRITICAL, RTE_ERROR, "%s field is null", name);
-        if(_type != entry.field->type) throw RunTimeException(CRITICAL, RTE_ERROR, "%s is incorrect type: %d", name, static_cast<int>(entry.field->type));
+        if(!entry.field) throw RunTimeException(CRITICAL, RTE_FAILURE, "%s field is null", name);
+        if(_type != entry.field->type) throw RunTimeException(CRITICAL, RTE_FAILURE, "%s is incorrect type: %d", name, static_cast<int>(entry.field->type));
         return entry.field;
     }
     else
@@ -984,12 +984,12 @@ void add_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data)
         if(!dataframe->addColumn(gdf_rec_data->name, column, true))
         {
             delete column;
-            throw RunTimeException(ERROR, RTE_ERROR, "failed to add column <%s> to dataframe", gdf_rec_data->name);
+            throw RunTimeException(ERROR, RTE_FAILURE, "failed to add column <%s> to dataframe", gdf_rec_data->name);
         }
     }
     else if(column->encoding != gdf_rec_data->encoding)
     {
-        throw RunTimeException(ERROR, RTE_ERROR, "column <%s> had mismatched encoding: %X != %X", gdf_rec_data->name, column->encoding, gdf_rec_data->encoding);
+        throw RunTimeException(ERROR, RTE_FAILURE, "column <%s> had mismatched encoding: %X != %X", gdf_rec_data->name, column->encoding, gdf_rec_data->encoding);
     }
 
     // append data to column
@@ -1007,7 +1007,7 @@ void add_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data)
     }
     else
     {
-        throw RunTimeException(ERROR, RTE_ERROR, "failed to add column <%u> with invalid type", gdf_rec_data->type);
+        throw RunTimeException(ERROR, RTE_FAILURE, "failed to add column <%u> with invalid type", gdf_rec_data->type);
     }
 }
 
@@ -1027,12 +1027,12 @@ void add_list_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_d
         if(!dataframe->addColumn(gdf_rec_data->name, column, true))
         {
             delete column;
-            throw RunTimeException(ERROR, RTE_ERROR, "failed to add list column <%s> to dataframe", gdf_rec_data->name);
+            throw RunTimeException(ERROR, RTE_FAILURE, "failed to add list column <%s> to dataframe", gdf_rec_data->name);
         }
     }
     else if((column->encoding & ~Field::NESTED_MASK) != (gdf_rec_data->encoding & ~Field::NESTED_MASK))
     {
-        throw RunTimeException(ERROR, RTE_ERROR, "column <%s> had mismatched encoding: %X != %X", gdf_rec_data->name, column->encoding, gdf_rec_data->encoding);
+        throw RunTimeException(ERROR, RTE_FAILURE, "column <%s> had mismatched encoding: %X != %X", gdf_rec_data->name, column->encoding, gdf_rec_data->encoding);
     }
 
     // append data to column
@@ -1051,7 +1051,7 @@ void add_list_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_d
     }
     else
     {
-        throw RunTimeException(ERROR, RTE_ERROR, "failed to add list column <%u> with invalid type", gdf_rec_data->type);
+        throw RunTimeException(ERROR, RTE_FAILURE, "failed to add list column <%u> with invalid type", gdf_rec_data->type);
     }
 }
 
@@ -1080,7 +1080,7 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data)
             case FLOAT:     add_list_column<float>   (this, gdf_rec_data); break;
             case DOUBLE:    add_list_column<double>  (this, gdf_rec_data); break;
             case TIME8:     add_list_column<time8_t> (this, gdf_rec_data); break;
-            default:        throw RunTimeException(ERROR, RTE_ERROR, "failed to add nested column <%s> with unsupported encoding %X", gdf_rec_data->name, gdf_rec_data->encoding); break;
+            default:        throw RunTimeException(ERROR, RTE_FAILURE, "failed to add nested column <%s> with unsupported encoding %X", gdf_rec_data->name, gdf_rec_data->encoding); break;
         }
     }
     else
@@ -1099,7 +1099,7 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data)
             case FLOAT:     add_column<float>   (this, gdf_rec_data); break;
             case DOUBLE:    add_column<double>  (this, gdf_rec_data); break;
             case TIME8:     add_column<time8_t> (this, gdf_rec_data); break;
-            default:        throw RunTimeException(ERROR, RTE_ERROR, "failed to add column <%s> with unsupported encoding %X", gdf_rec_data->name, gdf_rec_data->encoding); break;
+            default:        throw RunTimeException(ERROR, RTE_FAILURE, "failed to add column <%s> with unsupported encoding %X", gdf_rec_data->name, gdf_rec_data->encoding); break;
         }
     }
 }
@@ -1110,7 +1110,7 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data)
 void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, int timeout) const
 {
     // check if dataframe is in error
-    if(inError) throw RunTimeException(ERROR, RTE_ERROR, "invalid dataframe");
+    if(inError) throw RunTimeException(ERROR, RTE_FAILURE, "invalid dataframe");
 
     // create publisher
     Publisher pub(rspq);
@@ -1127,7 +1127,7 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, int time
         // get encodings
         const uint32_t value_encoding = kv.value.field->getValueEncoding();
         const uint32_t encoded_type = kv.value.field->getEncodedType();
-        if(encoded_type >= RecordObject::NUM_FIELD_TYPES) throw RunTimeException(ERROR, RTE_ERROR, "unsupported value encoding: %X", encoded_type);
+        if(encoded_type >= RecordObject::NUM_FIELD_TYPES) throw RunTimeException(ERROR, RTE_FAILURE, "unsupported value encoding: %X", encoded_type);
 
         if(value_encoding == encoded_type)
         {
@@ -1147,7 +1147,7 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, int time
 
             // serialize column data into record
             const long bytes_serialized = kv.value.field->serialize(gdf_rec_data->data, column_size);
-            if(bytes_serialized != column_size) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to serialize column %s: %ld", gdf_rec_data->name, bytes_serialized);
+            if(bytes_serialized != column_size) throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to serialize column %s: %ld", gdf_rec_data->name, bytes_serialized);
 
             // send column record
             gdf_rec.post(&pub, 0, NULL, true, timeout);
@@ -1224,7 +1224,7 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, int time
 
         // serialize metadata element into record
         const long bytes_serialized = kv.value.field->serialize(gdf_rec_data->data, element_size);
-        if(bytes_serialized != element_size) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to serialize metadata %s: %ld", gdf_rec_data->name, bytes_serialized);
+        if(bytes_serialized != element_size) throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to serialize metadata %s: %ld", gdf_rec_data->name, bytes_serialized);
 
         // send meta record
         gdf_rec.post(&pub, 0, NULL, true, timeout);
@@ -1283,20 +1283,20 @@ void* GeoDataFrame::receiveThread (void* parm)
                 if(TimeLib::latchtime() > timelimit)
                 {
                     // timeout has occurred
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "timeout occurred receiving dataframe");
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "timeout occurred receiving dataframe");
                 }
             }
             else if(recv_status < 0)
             {
                 // error in receiving
                 inq.dereference(ref);
-                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to receive records from queue <%s>: %d", inq.getName(), recv_status);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to receive records from queue <%s>: %d", inq.getName(), recv_status);
             }
             else if(ref.size < 0)
             {
                 // error in data
                 inq.dereference(ref);
-                throw RunTimeException(CRITICAL, RTE_ERROR, "received record of invalid size from queue <%s>: %d", inq.getName(), ref.size);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "received record of invalid size from queue <%s>: %d", inq.getName(), ref.size);
             }
             else if(ref.size > 0)
             {
@@ -1317,7 +1317,7 @@ void* GeoDataFrame::receiveThread (void* parm)
                         {
                             delete df_rec_list;
                             inq.dereference(ref);
-                            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to add record list to table");
+                            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add record list to table");
                         }
                     }
 
@@ -1338,7 +1338,7 @@ void* GeoDataFrame::receiveThread (void* parm)
                         // check number of columns
                         if(info->dataframe->columnFields.length() < eof_subrec.num_columns)
                         {
-                            throw RunTimeException(CRITICAL, RTE_ERROR, "incomplete number of columns received: %ld < %u", info->dataframe->length(), eof_subrec.num_columns);
+                            throw RunTimeException(CRITICAL, RTE_FAILURE, "incomplete number of columns received: %ld < %u", info->dataframe->length(), eof_subrec.num_columns);
                         }
 
                         // remove key'ed dataframe list from table
@@ -1374,7 +1374,7 @@ void* GeoDataFrame::receiveThread (void* parm)
     }
     catch(const RunTimeException& e)
     {
-        alert(e.level(), RTE_ERROR, &outq, NULL, "Error receiving dataframe: %s", e.what());
+        alert(e.level(), RTE_FAILURE, &outq, NULL, "Error receiving dataframe: %s", e.what());
         info->dataframe->inError = true;
 
         // deference any outstanding messages in any of the lists
@@ -1608,7 +1608,7 @@ int GeoDataFrame::luaReceive(lua_State* L)
         // check if already received
         if(dataframe->receivePid)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "dataframe already received");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "dataframe already received");
         }
 
         // kick off receive thread
@@ -1654,7 +1654,7 @@ int GeoDataFrame::luaGetRowData(lua_State* L)
         const long index = getLuaInteger(L, 2) - 1; // indexing in lua starts at 1
 
         // check index
-        if(index < 0) throw RunTimeException(CRITICAL, RTE_ERROR, "invalid index: %ld", index + 1);
+        if(index < 0) throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid index: %ld", index + 1);
 
         // create table and populate with column values
         lua_newtable(L);
@@ -1762,7 +1762,7 @@ int GeoDataFrame::luaRun  (lua_State* L)
             const int post_state = lua_obj->pubRunQ.postCopy(&runner, sizeof(runner));
             if(post_state != MsgQ::STATE_OKAY)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "run queue post failed: %d", post_state);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "run queue post failed: %d", post_state);
             }
         }
     }

@@ -33,6 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "AlertMonitor.h"
 #include "Asset.h"
 #include "AssetIndex.h"
 #include "CurlLib.h"
@@ -44,7 +45,9 @@
 #include "FileIODriver.h"
 #include "GeoDataFrame.h"
 #include "HttpServer.h"
+#include "IntervalIndex.h"
 #include "List.h"
+#include "LogMonitor.h"
 #include "LuaEndpoint.h"
 #include "LuaEngine.h"
 #include "LuaLibraryMsg.h"
@@ -52,14 +55,13 @@
 #include "LuaLibraryTime.h"
 #include "LuaObject.h"
 #include "LuaScript.h"
+#include "ManagerLib.h"
 #include "MathLib.h"
-#include "MetricMonitor.h"
 #include "Monitor.h"
 #include "MsgQ.h"
 #include "OrchestratorLib.h"
 #include "Ordering.h"
 #include "ProvisioningSystemLib.h"
-#include "PublishMonitor.h"
 #include "RecordObject.h"
 #include "RegionMask.h"
 #include "RequestFields.h"
@@ -67,7 +69,7 @@
 #include "SpatialIndex.h"
 #include "StringLib.h"
 #include "Table.h"
-#include "IntervalIndex.h"
+#include "TelemetryMonitor.h"
 #include "TimeLib.h"
 #include "OsApi.h"
 #ifdef __unittesting__
@@ -116,7 +118,9 @@ static int core_open (lua_State *L)
     static const struct luaL_Reg core_functions[] = {
         {"getbyname",       LuaObject::luaGetByName},
         {"script",          LuaScript::luaCreate},
-        {"monitor",         Monitor::luaCreate},
+        {"logmon",          LogMonitor::luaCreate},
+        {"tlmmon",          TelemetryMonitor::luaCreate},
+        {"alrmon",          AlertMonitor::luaCreate},
         {"httpd",           HttpServer::luaCreate},
         {"endpoint",        LuaEndpoint::luaCreate},
         {"asset",           Asset::luaCreate},
@@ -142,8 +146,7 @@ static int core_open (lua_State *L)
         {"pslogin",         ProvisioningSystemLib::luaLogin},
         {"psvalidate",      ProvisioningSystemLib::luaValidate},
         {"psauth",          ProvisioningSystemLib::Authenticator::luaCreate},
-        {"pmonitor",        PublishMonitor::luaCreate},
-        {"mmonitor",        MetricMonitor::luaCreate},
+        {"mngrurl",         ManagerLib::luaUrl},
         {"parms",           RequestFields::luaCreate},
 #ifdef __unittesting__
         {"ut_dictionary",   UT_Dictionary::luaCreate},
@@ -169,11 +172,10 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "CRITICAL",                 CRITICAL);
     LuaEngine::setAttrInt   (L, "LOG",                      EventLib::LOG);
     LuaEngine::setAttrInt   (L, "TRACE",                    EventLib::TRACE);
-    LuaEngine::setAttrInt   (L, "METRIC",                   EventLib::METRIC);
-    LuaEngine::setAttrInt   (L, "FMT_TEXT",                 Monitor::TEXT);
-    LuaEngine::setAttrInt   (L, "FMT_JSON",                 Monitor::JSON);
-    LuaEngine::setAttrInt   (L, "FMT_CLOUD",                Monitor::CLOUD);
-    LuaEngine::setAttrInt   (L, "FMT_RECORD",               Monitor::RECORD);
+    LuaEngine::setAttrInt   (L, "TELEMETRY",                EventLib::TELEMETRY);
+    LuaEngine::setAttrInt   (L, "ALERT",                    EventLib::ALERT);
+    LuaEngine::setAttrInt   (L, "FMT_TEXT",                 LogMonitor::TEXT);
+    LuaEngine::setAttrInt   (L, "FMT_CLOUD",                LogMonitor::CLOUD);
     LuaEngine::setAttrStr   (L, "EVENTQ",                   EVENTQ);
     LuaEngine::setAttrInt   (L, "STRING",                   RecordObject::TEXT);
     LuaEngine::setAttrInt   (L, "REAL",                     RecordObject::REAL);
@@ -185,8 +187,8 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "CHECK",                    IO_CHECK);
     LuaEngine::setAttrInt   (L, "SUBSCRIBER_OF_OPPORUNITY", MsgQ::SUBSCRIBER_OF_OPPORTUNITY);
     LuaEngine::setAttrInt   (L, "SUBSCRIBER_OF_CONFIDENCE", MsgQ::SUBSCRIBER_OF_CONFIDENCE);
-    LuaEngine::setAttrInt   (L, "RTE_INFO",                 RTE_INFO);
-    LuaEngine::setAttrInt   (L, "RTE_ERROR",                RTE_ERROR);
+    LuaEngine::setAttrInt   (L, "RTE_STATUS",                 RTE_STATUS);
+    LuaEngine::setAttrInt   (L, "RTE_FAILURE",                RTE_FAILURE);
     LuaEngine::setAttrInt   (L, "RTE_TIMEOUT",              RTE_TIMEOUT);
     LuaEngine::setAttrInt   (L, "RTE_RESOURCE_DOES_NOT_EXIST",  RTE_RESOURCE_DOES_NOT_EXIST);
     LuaEngine::setAttrInt   (L, "RTE_EMPTY_SUBSET",         RTE_EMPTY_SUBSET);
@@ -218,6 +220,12 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrBool(L, "UNITTEST",                   true);
 #else
     LuaEngine::setAttrBool(L, "UNITTEST",                   false);
+#endif
+
+#ifdef __tracing__
+    LuaEngine::setAttrBool(L, "TRACING",                    true);
+#else
+    LuaEngine::setAttrBool(L, "TRACING",                    false);
 #endif
 
     return 1;

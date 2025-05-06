@@ -103,6 +103,58 @@ EndpointObject::Request::~Request (void)
     delete [] id;
 }
 
+/*----------------------------------------------------------------------------
+ * getHdrSourceIp
+ *----------------------------------------------------------------------------*/
+const char* EndpointObject::Request::getHdrSourceIp (void) const
+{
+    string* hdr_str;
+    if(headers.find("x-forwarded-for", &hdr_str))
+    {
+        return hdr_str->c_str();
+    }
+    return "0.0.0.0";
+}
+
+/*----------------------------------------------------------------------------
+ * getHdrClient
+ *----------------------------------------------------------------------------*/
+const char* EndpointObject::Request::getHdrClient (void) const
+{
+    string* hdr_str;
+    if(headers.find("x-sliderule-client", &hdr_str))
+    {
+        return hdr_str->c_str();
+    }
+    return "unknown";
+}
+
+/*----------------------------------------------------------------------------
+ * getHdrAccount
+ *----------------------------------------------------------------------------*/
+const char* EndpointObject::Request::getHdrAccount (void) const
+{
+    string* hdr_str;
+    if(headers.find("x-sliderule-account", &hdr_str))
+    {
+        return hdr_str->c_str();
+    }
+    return "anonymous";
+}
+
+/*----------------------------------------------------------------------------
+ * getHdrStreaming
+ *----------------------------------------------------------------------------*/
+const char* EndpointObject::Request::getHdrStreaming (void) const
+{
+    string* hdr_str;
+    if(headers.find("x-sliderule-streaming", &hdr_str))
+    {
+        return hdr_str->c_str();
+    }
+    return NULL; // special default case
+}
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/

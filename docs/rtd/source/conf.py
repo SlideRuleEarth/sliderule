@@ -100,6 +100,7 @@ html_theme_options = {
 html_logo = "../../jekyll/assets/images/SlideRule-blueBG.png"
 html_favicon = "../../jekyll/favicon.ico"
 html_static_path = ['_static']
+html_css_files = ['custom.css']
 repository_url = f"https://github.com/SlideRuleEarth/sliderule"
 html_context = {
     "menu_links": [

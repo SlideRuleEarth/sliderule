@@ -248,7 +248,7 @@ class RecordObject
         /* Overloaded Methods */
         virtual bool            deserialize         (unsigned char* buffer, int size);
         virtual int             serialize           (unsigned char** buffer, serialMode_t mode=ALLOCATE, int size=0);
-        bool                    post                (Publisher* outq, int size=0, const bool* active=NULL, bool verbose=true, int timeout=SYS_TIMEOUT);
+        bool                    post                (Publisher* outq, int size=0, const bool* active=NULL, bool verbose=true, int timeout=SYS_TIMEOUT, serialMode_t mode=TAKE_OWNERSHIP);
 
         /* Attribute Methods */
         bool                    isRecordType        (const char* rec_type) const;

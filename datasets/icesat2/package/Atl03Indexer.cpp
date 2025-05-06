@@ -96,7 +96,7 @@ int Atl03Indexer::luaCreate (lua_State* L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "parm #1 must be a table of resource names");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "parm #1 must be a table of resource names");
         }
 
         /* Return Indexer Object */

@@ -37,14 +37,14 @@ local datasets = parm["datasets"]
 local asset = core.getbyname(asset_name)
 if not asset then
     local userlog = msg.publish(rspq)
-    userlog:alert(core.INFO, core.RTE_ERROR, string.format("invalid asset specified: %s", asset_name))
+    userlog:alert(core.INFO, core.RTE_FAILURE, string.format("invalid asset specified: %s", asset_name))
     return
 end
 
 local f = h5.file(asset, resource)
 if not f then
     local userlog = msg.publish(rspq)
-    userlog:alert(core.INFO, core.RTE_ERROR, string.format("failed to open resource: %s", resource))
+    userlog:alert(core.INFO, core.RTE_FAILURE, string.format("failed to open resource: %s", resource))
     return
 end
 

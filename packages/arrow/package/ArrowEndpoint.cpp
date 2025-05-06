@@ -97,6 +97,7 @@ ArrowEndpoint::~ArrowEndpoint(void) = default;
  *----------------------------------------------------------------------------*/
 void* ArrowEndpoint::requestThread (void* parm)
 {
+    int status_code = RTE_STATUS;
     rqst_info_t* info = static_cast<rqst_info_t*>(parm);
     EndpointObject::Request* request = info->request;
     ArrowEndpoint* arrow_endpoint = dynamic_cast<ArrowEndpoint*>(info->endpoint);
@@ -131,7 +132,16 @@ void* ArrowEndpoint::requestThread (void* parm)
         /* Execute Engine
          *  The call to execute the script blocks on completion of the script. The lua state context
          *  is locked and cannot be accessed until the script completes */
-        engine->executeEngine(IO_PEND);
+        const bool status = engine->executeEngine(IO_PEND);
+
+        /* Check Status
+         *  At this point the http header has already been sent, so an error header cannot be sent;
+         *  but we can log the error and report it as such in telemetry */
+        if(!status)
+        {
+            mlog(CRITICAL, "Failed to execute script %s", script_pathname);
+            status_code = RTE_FAILURE;
+        }
 
         /* Clean Up */
         delete engine;
@@ -140,15 +150,27 @@ void* ArrowEndpoint::requestThread (void* parm)
     {
         /* Respond with Unauthorized Error */
         sendHeader(rspq, Unauthorized, "Unauthorized");
+        status_code = RTE_UNAUTHORIZED;
     }
 
     /* End Response */
     const int rc = rspq->postCopy("", 0, POST_TIMEOUT_MS);
-    if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on %s: %d", rspq->getName(), rc);
+    if(rc <= 0)
+    {
+        mlog(CRITICAL, "Failed to post terminator on %s: %d", rspq->getName(), rc);
+        status_code = RTE_DID_NOT_COMPLETE;
+    }
 
     /* Generate Metric for Endpoint */
-    const double duration = TimeLib::latchtime() - start;
-    gauge_metric(INFO, request->resource, duration);
+    const EventLib::tlm_input_t tlm = {
+        .code = status_code,
+        .duration = static_cast<float>(TimeLib::latchtime() - start),
+        .source_ip = request->getHdrSourceIp(),
+        .endpoint = request->resource,
+        .client = request->getHdrClient(),
+        .account = request->getHdrAccount()
+    };
+    telemeter(INFO, tlm);
 
     /* Clean Up */
     delete rspq;

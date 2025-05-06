@@ -81,7 +81,7 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, RequestFields* rqst_parms, cons
     if(!validateBandNames())
     {
         VSIUnlink(indexFile.c_str());
-        throw RunTimeException(DEBUG, RTE_ERROR, "Invalid band names specified");
+        throw RunTimeException(DEBUG, RTE_FAILURE, "Invalid band names specified");
     }
 
 
@@ -323,7 +323,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
     if(pos != std::string::npos) isS2 = true;
 
     if(!isL8 && !isS2)
-        throw RunTimeException(DEBUG, RTE_ERROR, "Could not find valid Landsat8/Sentinel2 groupId");
+        throw RunTimeException(DEBUG, RTE_FAILURE, "Could not find valid Landsat8/Sentinel2 groupId");
 
     const double invalid = -999999.0;
     double green;
@@ -464,7 +464,7 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
     }
     else
     {
-        throw RunTimeException(DEBUG, RTE_ERROR, "Invalid sample mode");
+        throw RunTimeException(DEBUG, RTE_FAILURE, "Invalid sample mode");
     }
 
     const double groupTime = rgroup->gpsTime;

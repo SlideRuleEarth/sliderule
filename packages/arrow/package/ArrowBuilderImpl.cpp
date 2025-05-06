@@ -644,7 +644,7 @@ void ArrowBuilderImpl::createMetadataFile(void)
         fwrite(buffer.GetString(), 1, buffer.GetSize(), jsonFile);
         fclose(jsonFile);
     }
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open metadata file: %s", file_path);
+    else throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to open metadata file: %s", file_path);
 }
 
 /*----------------------------------------------------------------------------
@@ -1385,7 +1385,7 @@ void ArrowBuilderImpl::processAncillaryFields (vector<shared_ptr<arrow::Array>>&
                 string name;
                 const uint8_t field_index = field_array->fields[k].field_index;
                 if(field_index < ancillary_fields.length()) name = ancillary_fields[field_index];
-                else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid field index: %d", field_index);
+                else throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid field index: %d", field_index);
 
                 /* Add to Field Table */
                 field_table[name.c_str()].push_back(&(field_array->fields[k]));
@@ -1622,7 +1622,7 @@ void ArrowBuilderImpl::processAncillaryElements (vector<shared_ptr<arrow::Array>
             /* Get Name */
             string name;
             if(element_array->field_index < ancillary_fields.length()) name = ancillary_fields[element_array->field_index];
-            else throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid field index: %d", element_array->field_index);
+            else throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid field index: %d", element_array->field_index);
 
             /* Add to Element Table */
             element_table[name.c_str()].push_back(element_array);

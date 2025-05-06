@@ -29,24 +29,23 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __publish_monitor__
-#define __publish_monitor__
+#ifndef __alert_monitor__
+#define __alert_monitor__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "MsgQ.h"
 #include "Monitor.h"
-#include "RecordObject.h"
 #include "OsApi.h"
 #include "EventLib.h"
+#include "MsgQ.h"
 
 /******************************************************************************
- * PUBLISH MONITOR CLASS
+ * CLASS
  ******************************************************************************/
 
-class PublishMonitor: public Monitor
+class AlertMonitor: public Monitor
 {
     public:
 
@@ -70,14 +69,8 @@ class PublishMonitor: public Monitor
          * Methods
          *--------------------------------------------------------------------*/
 
-        PublishMonitor  (lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* eventq_name, const char* outq_name);
-        ~PublishMonitor (void) override;
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        Publisher* outQ;
-};
+        AlertMonitor  (lua_State* L, event_level_t level, const char* eventq_name);
+        ~AlertMonitor (void) override;
+    };
 
 #endif  /* __publish_monitor__ */

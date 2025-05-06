@@ -57,7 +57,7 @@ H5VarSet::H5VarSet(const FieldList<string>& variable_list, H5Coro::Context* cont
         if(!status)
         {
             delete array;
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to add dataset <%s>", dataset_name.c_str());
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to add dataset <%s>", dataset_name.c_str());
         }
     }
 }
@@ -74,7 +74,7 @@ void H5VarSet::joinToGDF(GeoDataFrame* gdf, int timeout_ms, bool throw_exception
         array->join(timeout_ms, throw_exception);
         if(!gdf->addNewColumn(dataset_name, array->elementType()))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to join array for <%s>", dataset_name);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to join array for <%s>", dataset_name);
         }
         dataset_name = variables.next(&array);
     }

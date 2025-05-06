@@ -262,7 +262,7 @@ ArrowBuilder::ArrowBuilder (lua_State* L, RequestFields* rqst_parms,
     RecordObject::meta_t* rec_meta = RecordObject::getRecordMetaFields(rec_type);
     if(rec_meta == NULL)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get meta data for %s", rec_type);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to get meta data for %s", rec_type);
     }
 
     /* Build Geometry Fields */
@@ -271,21 +271,21 @@ ArrowBuilder::ArrowBuilder (lua_State* L, RequestFields* rqst_parms,
         /* Check if Record has Geospatial Fields */
         if((rec_meta->x_field == NULL) || (rec_meta->y_field == NULL))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to get x and y coordinates for %s", rec_type);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to get x and y coordinates for %s", rec_type);
         }
 
         /* Get X Field */
         geoData.x_field = RecordObject::getDefinedField(rec_type, rec_meta->x_field);
         if(geoData.x_field.type == RecordObject::INVALID_FIELD)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract x field [%s] from record type <%s>", rec_meta->x_field, rec_type);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to extract x field [%s] from record type <%s>", rec_meta->x_field, rec_type);
         }
 
         /* Get Y Field */
         geoData.y_field = RecordObject::getDefinedField(rec_type, rec_meta->y_field);
         if(geoData.y_field.type == RecordObject::INVALID_FIELD)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to extract y field [%s] from record type <%s>", rec_meta->y_field, rec_type);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to extract y field [%s] from record type <%s>", rec_meta->y_field, rec_type);
         }
     }
 
@@ -488,7 +488,7 @@ void* ArrowBuilder::builderThread(void* parm)
                     const bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8);
                     if(!status)
                     {
-                        alert(INFO, RTE_ERROR, builder->outQ, NULL, "Failed to process record batch for %s", builder->parms.path.value.c_str());
+                        alert(INFO, RTE_FAILURE, builder->outQ, NULL, "Failed to process record batch for %s", builder->parms.path.value.c_str());
                         builder->active = false; // breaks out of loop
                     }
                     builder->recordBatch.clear();
@@ -513,7 +513,7 @@ void* ArrowBuilder::builderThread(void* parm)
 
     /* Process Remaining Records */
     const bool status = builder->impl->processRecordBatch(builder->recordBatch, row_cnt, builder->batchRowSizeBytes * 8, true);
-    if(!status) alert(INFO, RTE_ERROR, builder->outQ, NULL, "Failed to process last record batch for %s", builder->parms.path.value.c_str());
+    if(!status) alert(INFO, RTE_FAILURE, builder->outQ, NULL, "Failed to process last record batch for %s", builder->parms.path.value.c_str());
     builder->recordBatch.clear();
 
     /* Check if Keeping Local

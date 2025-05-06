@@ -508,7 +508,7 @@ int64_t S3CurlIODriver::get (uint8_t* data, int64_t size, uint64_t pos, const ch
     /* Throw Exception on Failure */
     if(!status)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL fixed request to S3 failed");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "cURL fixed request to S3 failed");
     }
 
     /* Return Success */
@@ -620,7 +620,7 @@ int64_t S3CurlIODriver::get (uint8_t** data, const char* bucket, const char* key
     /* Throw Exception on Failure */
     if(!status)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL streaming request to S3 failed");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "cURL streaming request to S3 failed");
     }
 
     /* Return Success */
@@ -714,7 +714,7 @@ int64_t S3CurlIODriver::get (const char* filename, const char* bucket, const cha
     /* Throw Exception on Failure */
     if(!status)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL file request to S3 failed");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "cURL file request to S3 failed");
     }
 
     /* Return Success */
@@ -813,7 +813,7 @@ int64_t S3CurlIODriver::put (const char* filename, const char* bucket, const cha
     /* Throw Exception on Failure */
     if(!status)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "cURL file request to S3 failed");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "cURL file request to S3 failed");
     }
 
     /* Return Success */
@@ -853,7 +853,7 @@ int S3CurlIODriver::luaGet(lua_State* L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read %s/%s", bucket, key);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to read %s/%s", bucket, key);
         }
     }
     catch(const RunTimeException& e)
@@ -890,7 +890,7 @@ int S3CurlIODriver::luaDownload(lua_State* L)
 
         /* Push Contents */
         if(rsps_size > 0)   status = true;
-        else                throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read %s/%s", bucket, key);
+        else                throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to read %s/%s", bucket, key);
     }
     catch(const RunTimeException& e)
     {
@@ -921,8 +921,8 @@ int S3CurlIODriver::luaRead(lua_State* L)
         const char* identity    = LuaObject::getLuaString(L, 6, true, S3CurlIODriver::DEFAULT_IDENTITY);
 
         /* Check Parameters */
-        if(size <= 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid size: %ld", size);
-        if(pos < 0) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid position: %ld", pos);
+        if(size <= 0) throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid size: %ld", size);
+        if(pos < 0) throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid position: %ld", pos);
 
         /* Get Credentials */
         const CredentialStore::Credential credentials = CredentialStore::get(identity);
@@ -941,7 +941,7 @@ int S3CurlIODriver::luaRead(lua_State* L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read %s/%s", bucket, key);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to read %s/%s", bucket, key);
         }
     }
     catch(const RunTimeException& e)
@@ -984,7 +984,7 @@ int S3CurlIODriver::luaUpload(lua_State* L)
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to upload %s/%s", bucket, key);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to upload %s/%s", bucket, key);
         }
     }
     catch(const RunTimeException& e)
@@ -1030,7 +1030,7 @@ S3CurlIODriver::S3CurlIODriver (const Asset* _asset, const char* resource):
     ioKey = ioBucket;
     while(*ioKey != '\0' && *ioKey != '/') ioKey++;
     if(*ioKey == '/') *ioKey = '\0';
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid S3 url: %s", resource);
+    else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid S3 url: %s", resource);
     ioKey++;
 
     /* Get Latest Credentials */

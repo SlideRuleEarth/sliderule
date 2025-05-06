@@ -9,7 +9,7 @@
     local td = runner.rootdir(arg[0])
 
     -- Setup --
-    console.monitor:config(core.LOG, core.DEBUG)
+    console.monitor:config(core.DEBUG)
     sys.setlvl(core.LOG, core.DEBUG)
     asset = core.asset("local", "nil", "file", td, "empty.index")
 

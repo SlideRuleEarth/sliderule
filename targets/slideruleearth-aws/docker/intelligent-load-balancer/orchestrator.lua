@@ -646,7 +646,6 @@ end
 --  {
 --      "name": "<metric name>"
 --      "value": "<metric value>"
---      "flags": "<metric type; 0: COUNTER, 1: GAUGE>"
 --  }
 --
 local function api_metric(applet)
@@ -655,8 +654,7 @@ local function api_metric(applet)
     local body = applet:receive()
     local request = json.decode(body)
     local metric_name = request["name"]
-    local metric_value = tonumber(request["attr"])
-    local metric_type = request["flags"]
+    local metric_value = tonumber(request["value"])
 
     -- check name provided
     if not metric_name then
@@ -678,22 +676,12 @@ local function api_metric(applet)
         StatData.countAppMetrics['ilb_metric_invalid_char'] = (StatData.countAppMetrics['ilb_metric_invalid_char'] or 0) + 1
         applet:set_status(400)
 
-    -- update count metric
-    elseif metric_type == 0 then
-        StatData.countAppMetrics[metric_name] = (StatData.countAppMetrics[metric_name] or 0) + metric_value
-        applet:set_status(200)
-
-    -- update gauge metric
-    elseif metric_type == 1 then
+    -- update metrics
+    else
         StatData.gaugeAppMetrics[metric_name] = metric_value
         StatData.gaugeAppMetrics[metric_name .. "_sum"] = (StatData.gaugeAppMetrics[metric_name .. "_sum"] or 0.0) + metric_value
         StatData.countAppMetrics[metric_name .. "_count"] = (StatData.countAppMetrics[metric_name .. "_count"] or 0) + 1
         applet:set_status(200)
-
-    -- invalid metric type
-    else
-        StatData.countAppMetrics['ilb_metric_invalid_type'] = (StatData.countAppMetrics['ilb_metric_invalid_type'] or 0) + 1
-        applet:set_status(400)
 
     end
 

@@ -72,7 +72,7 @@ GediIODriver::GediIODriver (const Asset* _asset, const char* resource):
     char resource_buffer[57];
 
     const int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
-    if(num_toks < NUM_ELEMENTS) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid gedi s3 resource: %s", resource);
+    if(num_toks < NUM_ELEMENTS) throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid gedi s3 resource: %s", resource);
 
     const char* product = elements[0];
     const char* level = elements[1];
@@ -100,7 +100,7 @@ GediIODriver::GediIODriver (const Asset* _asset, const char* resource):
     ioKey = ioBucket;
     while(*ioKey != '\0' && *ioKey != '/') ioKey++;
     if(*ioKey == '/') *ioKey = '\0';
-    else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid S3 url: %s", resource);
+    else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid S3 url: %s", resource);
     ioKey++;
 }
 

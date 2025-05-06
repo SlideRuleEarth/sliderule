@@ -198,7 +198,7 @@ typename Ordering<T,K>::kv_t Ordering<T,K>::Iterator::operator[](int index) cons
         return pair;
     }
 
-    throw RunTimeException(CRITICAL, RTE_ERROR, "Ordering::Iterator index out of range");
+    throw RunTimeException(CRITICAL, RTE_FAILURE, "Ordering::Iterator index out of range");
 }
 
 /******************************************************************************
@@ -291,7 +291,7 @@ T& Ordering<T,K>::get(K key, searchMode_t smode)
     }
 
     if(found) return curr->data;
-    throw RunTimeException(CRITICAL, RTE_ERROR, "key not found");
+    throw RunTimeException(CRITICAL, RTE_FAILURE, "key not found");
 }
 
 /*----------------------------------------------------------------------------

@@ -172,7 +172,7 @@ inline FieldUntypedColumn::column_t toDoubles(const FieldColumn<MathLib::coord_t
     (void)v;
     (void)start_index;
     (void)num_elements;
-    throw RunTimeException(CRITICAL, RTE_ERROR, "column format <coord_t> does not support conversion to doubles");
+    throw RunTimeException(CRITICAL, RTE_FAILURE, "column format <coord_t> does not support conversion to doubles");
 }
 
 #endif  /* __request_fields__ */

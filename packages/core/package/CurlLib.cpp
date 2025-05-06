@@ -64,9 +64,9 @@ void CurlLib::deinit (void)
  *----------------------------------------------------------------------------*/
 long CurlLib::request (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size,
                        bool verify_peer, bool verify_hostname, int timeout,
-                       List<string*>* headers,
+                       List<const string*>* headers,
                        const char* unix_socket,
-                       List<string*>* rsps_headers)
+                       List<const string*>* rsps_headers)
 {
     long http_code = 0;
     CURL* curl = NULL;
@@ -268,7 +268,7 @@ long CurlLib::postAsStream (const char* url, const char* data, Publisher* outq, 
 }
 
 /*----------------------------------------------------------------------------
- * postAsRecord
+ * postAsRecord - SlideRule Native Protocol
  *----------------------------------------------------------------------------*/
 long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, const bool* active)
 {
@@ -309,6 +309,12 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
         curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)rqst.size);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlLib::postRecords);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &parser);
+
+        /* Add Headers */
+        struct curl_slist* hdr_slist = NULL;
+        const FString client_hdr("x-sliderule-client: core-%s", LIBID);
+        hdr_slist = curl_slist_append(hdr_slist, client_hdr.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hdr_slist);
 
         /* Perform the request, res will get the return code */
         const CURLcode res = curl_easy_perform(curl);
@@ -356,7 +362,7 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
 /*----------------------------------------------------------------------------
  * getHeaders
  *----------------------------------------------------------------------------*/
-int CurlLib::getHeaders (lua_State* L, int index, List<string*>& header_list)
+int CurlLib::getHeaders (lua_State* L, int index, List<const string*>& header_list)
 {
     int num_hdrs = 0;
 
@@ -371,7 +377,7 @@ int CurlLib::getHeaders (lua_State* L, int index, List<string*>& header_list)
             lua_rawgeti(L, index, i+1);
             if(lua_isstring(L, -1))
             {
-                string* header = new string(LuaObject::getLuaString(L, -1));
+                const string* header = new const string(LuaObject::getLuaString(L, -1));
                 header_list.add(header);
                 num_hdrs++;
             }
@@ -388,7 +394,7 @@ int CurlLib::getHeaders (lua_State* L, int index, List<string*>& header_list)
             {
                 const char* key = LuaObject::getLuaString(L, -2);
                 const char* value = LuaObject::getLuaString(L, -1);
-                string* header = new string(FString("%s: %s", key, value).c_str());
+                const string* header = new const string(FString("%s: %s", key, value).c_str());
                 header_list.add(header);
                 num_hdrs++;
                 lua_pop(L, 1);
@@ -406,8 +412,8 @@ int CurlLib::luaGet (lua_State* L)
 {
     bool status = false;
     int num_ret = 2;
-    List<string*> header_list(EXPECTED_MAX_HEADERS);
-    List<string*>* rsps_headers = NULL;
+    List<const string*> header_list(EXPECTED_MAX_HEADERS);
+    List<const string*>* rsps_headers = NULL;
 
     try
     {
@@ -422,7 +428,7 @@ int CurlLib::luaGet (lua_State* L)
         /* Optionally Allocate List to Hold Response Headers */
         if(get_rsps_hdrs)
         {
-            rsps_headers = new List<string*>();
+            rsps_headers = new List<const string*>();
             num_ret++;
         }
 
@@ -487,7 +493,7 @@ int CurlLib::luaGet (lua_State* L)
 int CurlLib::luaPut (lua_State* L)
 {
     bool status = false;
-    List<string*> header_list(EXPECTED_MAX_HEADERS);
+    List<const string*> header_list(EXPECTED_MAX_HEADERS);
 
     try
     {
@@ -530,7 +536,7 @@ int CurlLib::luaPut (lua_State* L)
 int CurlLib::luaPost (lua_State* L)
 {
     bool status = false;
-    List<string*> header_list(EXPECTED_MAX_HEADERS);
+    List<const string*> header_list(EXPECTED_MAX_HEADERS);
 
     try
     {
@@ -773,8 +779,8 @@ size_t CurlLib::readData(void* buffer, size_t size, size_t nmemb, void *userp)
  *----------------------------------------------------------------------------*/
 size_t CurlLib::writerHeader(const void* buffer, size_t size, size_t nmemb, void *userp)
 {
-    List<string*>* rsps_headers = reinterpret_cast<List<string*>*>(userp);
-    string* header = new string(static_cast<const char*>(buffer));
+    List<const string*>* rsps_headers = reinterpret_cast<List<const string*>*>(userp);
+    const string* header = new const string(static_cast<const char*>(buffer));
     rsps_headers->add(header);
     const size_t total_size = size * nmemb;
     return total_size;

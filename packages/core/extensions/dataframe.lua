@@ -25,13 +25,13 @@ local function populate_catalogs(rqst, q, userlog)
     if rqst[geo.PARMS] then
         for dataset,raster_parms in pairs(rqst[geo.PARMS]) do
             if not raster_parms["catalog"] then
-                userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> querying resources for %s", q, dataset))
+                userlog:alert(core.INFO, core.RTE_STATUS, string.format("proxy request <%s> querying resources for %s", q, dataset))
                 local rc, rsps = earthdata.search(raster_parms, rqst["poly"])
                 if rc == RC_SUCCESS then
                     rqst[geo.PARMS][dataset]["catalog"] = json.encode(rsps)
-                    userlog:alert(core.INFO, core.RTE_INFO, string.format("proxy request <%s> returned %d resources for %s", q, rsps and #rsps["features"] or 0, dataset))
+                    userlog:alert(core.INFO, core.RTE_STATUS, string.format("proxy request <%s> returned %d resources for %s", q, rsps and #rsps["features"] or 0, dataset))
                 elseif rc ~= RC_UNSUPPORTED then
-                    userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to get catalog for %s <%d>: %s", q, dataset, rc, rsps))
+                    userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to get catalog for %s <%d>: %s", q, dataset, rc, rsps))
                     rqst[geo.PARMS][dataset]["catalog"] = {}
                 end
             end
@@ -49,13 +49,13 @@ local function get_resources(rqst, asset_name, q, userlog)
     while true do
         local rc, rsps = earthdata.search(rqst)
         if rc == earthdata.SUCCESS then
-            userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> retrieved %d resources", q, #rsps))
+            userlog:alert(core.INFO, core.RTE_STATUS, string.format("request <%s> retrieved %d resources", q, #rsps))
             return RC_SUCCESS, rsps
         else
-            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed attempt %d <%d>: %s", q, attempt, rc, rsps))
+            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed attempt %d <%d>: %s", q, attempt, rc, rsps))
             attempt = attempt + 1
             if attempt > max_retries then
-                userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> failed query... aborting!", q))
+                userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed query... aborting!", q))
                 return RC_EARTHDATA_FAILURE, nil
             end
         end
@@ -108,7 +108,7 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
             local remaining_timeout = math.tointeger(current_timeout)
             local status = df:finished(remaining_timeout, rspq)
             if status then
-                userlog:alert(core.INFO, core.RTE_INFO, string.format("request <%s> on %s sent dataframe [%s] with %d rows and %s columns", rspq, parms["resource"], key, df:numrows(), df:numcols()))
+                userlog:alert(core.INFO, core.RTE_STATUS, string.format("request <%s> on %s sent dataframe [%s] with %d rows and %s columns", rspq, parms["resource"], key, df:numrows(), df:numcols()))
             else
                 userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> on %s timed out waiting for dataframe [%s] to complete", rspq, parms["resource"], key))
             end
@@ -127,14 +127,14 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
         local status
         status, resources = get_resources(rqst, parms["asset"], rspq, userlog)
         if status ~= RC_SUCCESS then
-            userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> earthdata queury failed: %d", rspq, status))
+            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> earthdata queury failed: %d", rspq, status))
             return status
         end
     end
 
     -- Check Request Constraints
     if #resources <= 0 then
-        userlog:alert(core.CRITICAL, core.RTE_ERROR, string.format("request <%s> has no resources to process", rspq))
+        userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> has no resources to process", rspq))
         return RC_NO_RESOURCES
     end
 
@@ -152,26 +152,26 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
 
     -- Receive DataFrame (blocks until dataframe complete or timeout)
     if not df:waiton(parms["rqst_timeout"] * 1000) then
-        userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to receive proxied dataframe"));
+        userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to receive proxied dataframe"));
         return RC_PROXY_FAILURE
     end
 
     -- Check DataFrame Constraints
     if df:numrows() <= 0 or df:numcols() <= 0 then
-        userlog:alert(core.WARNING, core.RTE_INFO, string.format("request <%s> produced an empty dataframe", rspq));
+        userlog:alert(core.WARNING, core.RTE_STATUS, string.format("request <%s> produced an empty dataframe", rspq));
     end
 
     -- Create Arrow DataFrame
     local arrow_dataframe = arrow.dataframe(parms, df)
     if not arrow_dataframe then
-        userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to create arrow dataframe", rspq))
+        userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to create arrow dataframe", rspq))
         return RC_ARROW_FAILURE
     end
 
     -- Write DataFrame to Parquet File
     local arrow_filename = arrow_dataframe:export()
     if not arrow_filename then
-        userlog:alert(core.ERROR, core.RTE_ERROR, string.format("request <%s> failed to write dataframe", rspq))
+        userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to write dataframe", rspq))
         return RC_PARQUET_FAILURE
     end
 

@@ -465,10 +465,10 @@ int LuaLibraryMsg::lmsg_alert (lua_State* L)
     }
 
     /* Get Exception Code */
-    rte_t code = RTE_INFO;
+    alert_code_t code = RTE_STATUS;
     if(lua_isinteger(L, 3))
     {
-        code = (rte_t)lua_tointeger(L, 3);
+        code = (alert_code_t)lua_tointeger(L, 3);
     }
     else
     {

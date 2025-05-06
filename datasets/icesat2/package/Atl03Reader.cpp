@@ -108,8 +108,8 @@ int Atl03Reader::luaCreate (lua_State* L)
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */
-        if(_parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a resource to process");
-        else if(_parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a valid asset");
+        if(_parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a resource to process");
+        else if(_parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a valid asset");
 
         /* Return Reader Object */
         return createLuaObject(L, new Atl03Reader(L, outq_name, _parms, send_terminator));
@@ -212,7 +212,7 @@ Atl03Reader::Atl03Reader (lua_State* L, const char* outq_name, Icesat2Fields* _p
         /* Check if Readers Created */
         if(threadCount == 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "No reader threads were created, invalid track specified: %d\n", parms->track.value);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "No reader threads were created, invalid track specified: %d\n", parms->track.value);
         }
     }
     catch(const RunTimeException& e)
@@ -852,7 +852,7 @@ Atl03Reader::YapcScore::YapcScore (const info_t* info, const Region& region, con
     }
     else if(info->reader->parms->yapc.version != 0) // read from file
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid YAPC version specified: %d", info->reader->parms->yapc.version.value);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid YAPC version specified: %d", info->reader->parms->yapc.version.value);
     }
 }
 
@@ -1349,7 +1349,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                         /* Check Signal Confidence Level */
                         if(atl03_cnf < Icesat2Fields::CNF_POSSIBLE_TEP || atl03_cnf > Icesat2Fields::CNF_SURFACE_HIGH)
                         {
-                            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 signal confidence: %d", atl03_cnf);
+                            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl03 signal confidence: %d", atl03_cnf);
                         }
                         if(!parms->atl03Cnf[static_cast<Icesat2Fields::signal_conf_t>(atl03_cnf)])
                         {
@@ -1360,7 +1360,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                         const Icesat2Fields::quality_ph_t quality_ph = static_cast<Icesat2Fields::quality_ph_t>(atl03.quality_ph[current_photon]);
                         if(quality_ph < Icesat2Fields::QUALITY_NOMINAL || quality_ph > Icesat2Fields::QUALITY_POSSIBLE_TEP)
                         {
-                            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 photon quality: %d", quality_ph);
+                            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl03 photon quality: %d", quality_ph);
                         }
                         if(!parms->qualityPh[quality_ph])
                         {
@@ -1374,7 +1374,7 @@ void* Atl03Reader::subsettingThread (void* parm)
                             atl08_class = static_cast<Icesat2Fields::atl08_class_t>(atl08[current_photon]);
                             if(atl08_class < 0 || atl08_class >= Icesat2Fields::NUM_ATL08_CLASSES)
                             {
-                                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl08 classification: %d", atl08_class);
+                                throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl08 classification: %d", atl08_class);
                             }
                             if(!parms->atl08Class[atl08_class])
                             {

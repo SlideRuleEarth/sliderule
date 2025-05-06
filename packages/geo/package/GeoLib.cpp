@@ -180,7 +180,7 @@ GeoLib::TIFFImage::TIFFImage(lua_State* L, const char* filename, long driver):
     if(driver == LIBTIFF_DRIVER)
     {
         TIFF* tif = TIFFOpen(filename, "r");
-        if(!tif) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to open tiff file: %s", filename);
+        if(!tif) throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to open tiff file: %s", filename);
 
         TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
         TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height);
@@ -196,7 +196,7 @@ GeoLib::TIFFImage::TIFFImage(lua_State* L, const char* filename, long driver):
         if(!TIFFReadRGBAImage(tif, width, height, _raster, 0))
         {
             operator delete[](raster, std::align_val_t(RASTER_DATA_ALIGNMENT));
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read tiff file: %s", filename);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to read tiff file: %s", filename);
         }
 
         TIFFClose(tif);
@@ -204,7 +204,7 @@ GeoLib::TIFFImage::TIFFImage(lua_State* L, const char* filename, long driver):
     else if(driver == GDAL_DRIVER)
     {
         GDALDataset* dataset = static_cast<GDALDataset*>(GDALOpen(filename, GA_ReadOnly));
-        if(!dataset) throw RunTimeException(CRITICAL, RTE_ERROR, "failed to open tiff file: %s", filename);
+        if(!dataset) throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to open tiff file: %s", filename);
         width = dataset->GetRasterXSize();
         height = dataset->GetRasterYSize();
         GDALRasterBand* band = dataset->GetRasterBand(1);
@@ -237,12 +237,12 @@ GeoLib::TIFFImage::TIFFImage(lua_State* L, const char* filename, long driver):
         if(err != CE_None)
         {
             operator delete[](raster, std::align_val_t(RASTER_DATA_ALIGNMENT));
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read tiff file: %s", filename);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to read tiff file: %s", filename);
         }
     }
     else
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid driver selected: %ld", driver);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid driver selected: %ld", driver);
     }
 }
 
@@ -345,7 +345,7 @@ int GeoLib::TIFFImage::luaPixel (lua_State* L)
         const int y = getLuaInteger(L, 3);
         if(x < 0 || x >= (int)lua_obj->width || y < 0 || y >= (int)lua_obj->height)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "out of bounds (%d, %d) ^ (%d, %d)", x, y, lua_obj->width, lua_obj->height);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "out of bounds (%d, %d) ^ (%d, %d)", x, y, lua_obj->width, lua_obj->height);
         }
         const val_t val = lua_obj->getPixel(x, y);
         switch(type)
@@ -360,7 +360,7 @@ int GeoLib::TIFFImage::luaPixel (lua_State* L)
             case RecordObject::UINT64:  lua_pushnumber(L, val.u64); break;
             case RecordObject::FLOAT:   lua_pushnumber(L, val.f32); break;
             case RecordObject::DOUBLE:  lua_pushnumber(L, val.f64); break;
-            default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid type: %d", type);
+            default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid type: %d", type);
         }
 
         status = true;
@@ -419,7 +419,7 @@ int GeoLib::TIFFImage::luaConvertToBMP (lua_State* L)
         }
         else if(lua_obj->typesize != 4)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "only 32-bit tiff files can be converted to BMP: %d", lua_obj->typesize);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "only 32-bit tiff files can be converted to BMP: %d", lua_obj->typesize);
         }
         else
         {
@@ -587,7 +587,7 @@ bool GeoLib::burnGeoJson(RegionMask& image)
     {
         // create geojson raster
         raster = GeoJsonRaster::create(image.geojson.value, image.cellSize.value);
-        if(!raster) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to create raster");
+        if(!raster) throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to create raster");
 
         // populate image attributes
         const GeoJsonRaster::bbox_t bbox = raster->getRasterBbox();

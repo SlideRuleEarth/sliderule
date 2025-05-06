@@ -713,7 +713,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
                 appendPandasMetaData(dataframe.getTimeColumnName().c_str(), metadata, schema);
                 metadata->Append("sliderule", parms.toJson());
                 metadata->Append("meta", dataframe.metaFields.toJson());
-                metadata->Append("info", dataframe.getInfoAsJson());
+                metadata->Append("recordinfo", dataframe.getInfoAsJson());
                 schema = schema->WithMetadata(metadata);
 
                 // create parquet writer
@@ -840,7 +840,7 @@ int ArrowDataFrame::luaImport (lua_State* L)
         ArrowDataFrame* lua_obj = dynamic_cast<ArrowDataFrame*>(getLuaSelf(L, 1));
         (void)lua_obj;
 
-        throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "unsupported");
     }
     catch(const RunTimeException& e)
     {

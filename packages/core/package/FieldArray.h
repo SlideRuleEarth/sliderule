@@ -289,7 +289,7 @@ void FieldArray<T,N>::fromLua (lua_State* L, int index)
     // check size
     if(num_elements != N)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "mismatch in array size, expected %d, got %d", N, num_elements);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "mismatch in array size, expected %d, got %d", N, num_elements);
     }
 
     // convert all elements from lua

@@ -235,7 +235,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
             content_length = StringLib::size(data);
             if(content_length >= MAX_RQST_BUF_LEN)
             {
-                throw RunTimeException(ERROR, RTE_ERROR, "data exceeds maximum allowed size: %d > %d", content_length, MAX_RQST_BUF_LEN);
+                throw RunTimeException(ERROR, RTE_FAILURE, "data exceeds maximum allowed size: %d > %d", content_length, MAX_RQST_BUF_LEN);
             }
         }
 
@@ -265,7 +265,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
             }
             else
             {
-                throw RunTimeException(ERROR, RTE_ERROR, "request exceeds maximum length: %d", rqst_len);
+                throw RunTimeException(ERROR, RTE_FAILURE, "request exceeds maximum length: %d", rqst_len);
             }
         }
         else if(content_length > 0)
@@ -278,13 +278,13 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
             }
             else
             {
-                throw RunTimeException(ERROR, RTE_ERROR, "request exceeds maximum length: %d", rqst_len);
+                throw RunTimeException(ERROR, RTE_FAILURE, "request exceeds maximum length: %d", rqst_len);
             }
         }
         else
         {
             /* Invalid Request */
-            throw RunTimeException(ERROR, RTE_ERROR, "raw requests cannot be null");
+            throw RunTimeException(ERROR, RTE_FAILURE, "raw requests cannot be null");
         }
 
         /* Issue Request */
@@ -293,7 +293,7 @@ bool HttpClient::makeRequest (EndpointObject::verb_t verb, const char* resource,
         /* Check Status */
         if(bytes_written != rqst_len)
         {
-            throw RunTimeException(ERROR, RTE_ERROR, "failed to send request: act=%d, exp=%d", bytes_written, rqst_len);
+            throw RunTimeException(ERROR, RTE_FAILURE, "failed to send request: act=%d, exp=%d", bytes_written, rqst_len);
         }
     }
     catch(const RunTimeException& e)
@@ -367,7 +367,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                                 rsps.code = sl.code;
                                 if(rsps.code != EndpointObject::OK)
                                 {
-                                    throw RunTimeException(CRITICAL, RTE_ERROR, "server returned error <%d> - %s", sl.code, sl.msg);
+                                    throw RunTimeException(CRITICAL, RTE_FAILURE, "server returned error <%d> - %s", sl.code, sl.msg);
                                 }
                             }
                             /* Parse Header Line */
@@ -386,7 +386,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                                     }
                                     else
                                     {
-                                        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid content length header => %s: %s", hdr.key, hdr.value);
+                                        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid content length header => %s: %s", hdr.key, hdr.value);
                                     }
                                 }
                                 /* Process Transfer Encoding Header */
@@ -434,12 +434,12 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                             }
                             else
                             {
-                                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid chunk length: %s", chunk_length_str);
+                                throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid chunk length: %s", chunk_length_str);
                             }
                         }
                         else if(line_term < 0) // the chunk was invalid
                         {
-                            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid chunk, missing length");
+                            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid chunk, missing length");
                         }
                         else // chunk header not complete
                         {
@@ -464,7 +464,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                         const int rsps_bytes = bytes_read - line_start;
                         if(rsps_bytes > content_remaining)
                         {
-                            throw RunTimeException(CRITICAL, RTE_ERROR, "received too many bytes in %sresponse - %d > %ld", unbounded_content ? "unbounded " : "", rsps_bytes, content_remaining);
+                            throw RunTimeException(CRITICAL, RTE_FAILURE, "received too many bytes in %sresponse - %d > %ld", unbounded_content ? "unbounded " : "", rsps_bytes, content_remaining);
                         }
 
                         /* Populate Response */
@@ -520,7 +520,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                                 {
                                     /* Handle Post Errors */
                                     delete [] rsps.response;
-                                    throw RunTimeException(CRITICAL, RTE_ERROR, "failed to post response: %d", post_status);
+                                    throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to post response: %d", post_status);
                                 }
                             }
 
@@ -548,7 +548,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                         }
                         else if(line_term > 0) // chunk invalid
                         {
-                            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid chunk, missing trailer");
+                            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid chunk, missing trailer");
                         }
                         else // chunk trailer not complete
                         {
@@ -563,7 +563,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
                     //////////////////////////
                     else
                     {
-                        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid http parsing state");
+                        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid http parsing state");
                     }
                 }
             }
@@ -574,7 +574,7 @@ HttpClient::rsps_t HttpClient::parseResponse (Publisher* outq, int timeout, int3
             }
             else if(bytes_read != TIMEOUT_RC)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to read socket: %d", bytes_read);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to read socket: %d", bytes_read);
             }
 
             /* Stop Trace */
@@ -662,12 +662,12 @@ HttpClient::status_line_t HttpClient::parseStatusLine (int start, int term)
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid code: %s", code_str);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid code: %s", code_str);
         }
     }
     else
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse status line");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to parse status line");
     }
 
     /* Return Code */
@@ -777,7 +777,7 @@ int HttpClient::luaRequest (lua_State* L)
         const EndpointObject::verb_t verb =  EndpointObject::str2verb(verb_str);
         if(verb == EndpointObject::UNRECOGNIZED)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid verb: %s", verb_str);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid verb: %s", verb_str);
         }
 
         /* Check if Blocking */

@@ -65,14 +65,14 @@ int CcsdsPacketInterleaver::luaCreate (lua_State* L)
         const int inq_table_index = 1;
         if(!lua_istable(L, inq_table_index))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply table of input queues");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply table of input queues");
         }
 
         /* Get number of names in table */
         const int num_names = lua_rawlen(L, inq_table_index);
         if(num_names <= 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply at least one input queue");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply at least one input queue");
         }
 
         /* Iterate through each name in table */
@@ -301,7 +301,7 @@ int CcsdsPacketInterleaver::luaSetStartTime (lua_State* L)
         const int64_t gmt_ms = TimeLib::str2gpstime(gmt_str);
         if(gmt_ms == 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to parse time string %s", gmt_str);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to parse time string %s", gmt_str);
         }
 
         /* Set Start Time */
@@ -335,7 +335,7 @@ int CcsdsPacketInterleaver::luaSetStopTime (lua_State* L)
         const int64_t gmt_ms = TimeLib::str2gpstime(gmt_str);
         if(gmt_ms == 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to parse time string %s", gmt_str);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to parse time string %s", gmt_str);
         }
 
         /* Set Stop Time */

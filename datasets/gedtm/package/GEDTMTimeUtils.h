@@ -48,7 +48,7 @@ inline int64_t extractGPSTime(const std::string& path)
         int day = std::stoi(match[3]);
         return TimeLib::datetime2gps(year, month, day, 0, 0, 0);
     }
-    throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to extract GPS time from file name");
+    throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to extract GPS time from file name");
 }
 
 #endif  /* __gedtm_time_utils__ */

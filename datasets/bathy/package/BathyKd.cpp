@@ -62,7 +62,7 @@ int BathyKd::luaCreate (lua_State* L)
     {
         parms = dynamic_cast<BathyFields*>(getLuaObject(L, 1, BathyFields::OBJECT_TYPE));
         const char* resource_kd = getLuaString(L, 2);
-        if(!parms->uncertainty.assetKd.asset) throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to open Kd resource, no asset provided");
+        if(!parms->uncertainty.assetKd.asset) throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to open Kd resource, no asset provided");
         _context = new H5Coro::Context(parms->uncertainty.assetKd.asset, resource_kd);
         parms->releaseLuaObject();
         return createLuaObject(L, new BathyKd(L, _context));
@@ -102,7 +102,7 @@ double BathyKd::getKd (double lon, double lat)
     /* calculate total offset */
     if(y < 0 || y >= 4320 || x < 0 || x >= 8640)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid Kd coordinates: %d, %d | %lf, %lf", y, x, degrees_of_latitude, degrees_of_longitude);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid Kd coordinates: %d, %d | %lf, %lf", y, x, degrees_of_latitude, degrees_of_longitude);
     }
     const long offset = (x * 4320) + y;
 

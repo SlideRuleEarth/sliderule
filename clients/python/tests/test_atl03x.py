@@ -160,3 +160,11 @@ class TestAtl03x:
         assert gdf["yapc_score"].max() == 254
         assert gdf["yapc_score"].min() == 0
         assert gdf["atl24_class"].value_counts()[40] == 4
+
+    def test_datum(self, init):
+        resource = "ATL03_20181014001920_02350103_006_02.h5"
+        gdf1 = sliderule.run("atl03x", {"track": 1, "cnf": 4, "datum": "ITRF2014"}, resources=[resource])
+        gdf2 = sliderule.run("atl03x", {"track": 1, "cnf": 4, "datum": "EGM08"}, resources=[resource])
+        assert init
+        assert len(gdf1) == len(gdf2)
+        assert gdf1.height.mean() < gdf2.height.mean()

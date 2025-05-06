@@ -63,7 +63,7 @@ int64_t FileIODriver::ioRead (uint8_t* data, int64_t size, uint64_t pos)
     /* Seek to New Position */
     if(fseek(ioFile, pos, SEEK_SET) != 0)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to go to I/O position: 0x%lx", pos);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to go to I/O position: 0x%lx", pos);
     }
 
     /* Read Data */
@@ -80,7 +80,7 @@ FileIODriver::FileIODriver (const Asset* _asset, const char* resource):
     ioFile = fopen(filepath.c_str(), "r");
     if(ioFile == NULL)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to open resource");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to open resource");
     }
 }
 

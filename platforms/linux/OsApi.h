@@ -134,13 +134,17 @@ typedef enum {
 
 /* Exceptions */
 typedef enum {
-    RTE_INFO                    =  0,
-    RTE_ERROR                   = -1,
+    RTE_STATUS                  =  0,
+    RTE_FAILURE                 = -1,
     RTE_TIMEOUT                 = -2,
     RTE_RESOURCE_DOES_NOT_EXIST = -3,
     RTE_EMPTY_SUBSET            = -4,
-    RTE_SIMPLIFY                = -5
-} rte_t;
+    RTE_SIMPLIFY                = -5,
+    RTE_NOT_ENOUGH_MEMORY       = -6,
+    RTE_SCRIPT_DOES_NOT_EXIST   = -7,
+    RTE_UNAUTHORIZED            = -8,
+    RTE_DID_NOT_COMPLETE        = -9
+} alert_code_t;
 
 /* Ordered Key */
 typedef unsigned long okey_t;

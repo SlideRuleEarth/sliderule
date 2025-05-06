@@ -224,7 +224,7 @@ bool FieldEnumeration<T,N>::operator[](T i) const
     const int index = convertToIndex(i);
     if(index < 0 || index >= N)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "index out of bounds: %d", index);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "index out of bounds: %d", index);
     }
     return values[index];
 }
@@ -238,7 +238,7 @@ bool& FieldEnumeration<T,N>::operator[](T i)
     const int index = convertToIndex(i);
     if(index < 0 || index >= N)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "index out of bounds: %d", index);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "index out of bounds: %d", index);
     }
     return values[index];
 }
@@ -338,7 +338,7 @@ void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
             }
             else
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "selection outside of bounds: %d", selection);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "selection outside of bounds: %d", selection);
             }
         }
 
@@ -355,7 +355,7 @@ void FieldEnumeration<T,N>::fromLua (lua_State* L, int index)
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "selection outside of bounds: %d", selection);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "selection outside of bounds: %d", selection);
         }
 
         providedAsSingle = true;

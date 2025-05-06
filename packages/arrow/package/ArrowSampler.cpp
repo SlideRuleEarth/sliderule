@@ -72,7 +72,7 @@ int ArrowSampler::luaCreate(lua_State* L)
         /* check if output path is empty */
         if(rqst_parms->output.path.value.empty())
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "output path must be set");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "output path must be set");
         }
 
         /* check if the parameter is a table */
@@ -86,8 +86,8 @@ int ArrowSampler::luaCreate(lua_State* L)
             const char*   rkey = getLuaString(L, -2);
             RasterObject* robj = dynamic_cast<RasterObject*>(getLuaObject(L, -1, RasterObject::OBJECT_TYPE));
 
-            if(!rkey) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid raster key");
-            if(!robj) throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid raster object");
+            if(!rkey) throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid raster key");
+            if(!robj) throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid raster object");
 
             user_rasters.push_back({rkey, robj});
 

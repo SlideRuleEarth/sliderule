@@ -766,7 +766,7 @@ Atl03DataFrame::YapcScore::YapcScore (const Atl03DataFrame* df, const AreaOfInte
     }
     else if(df->parms->yapc.version != 0) // read from file
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid YAPC version specified: %d", df->parms->yapc.version.value);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid YAPC version specified: %d", df->parms->yapc.version.value);
     }
 }
 
@@ -1148,7 +1148,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             /* Check Current Segment */
             if(current_segment >= atl03.segment_dist_x.size)
             {
-                throw RunTimeException(ERROR, RTE_ERROR, "Photons with no segments are detected in %s/%s (%d %ld %ld) (%d %d)", df->hdf03->name, df->beam, current_segment, atl03.segment_dist_x.size, aoi.num_segments, current_photon, current_count);
+                throw RunTimeException(ERROR, RTE_FAILURE, "Photons with no segments are detected in %s/%s (%d %ld %ld) (%d %d)", df->hdf03->name, df->beam, current_segment, atl03.segment_dist_x.size, aoi.num_segments, current_photon, current_count);
             }
 
             /* Check AreaOfInterest Mask */
@@ -1185,7 +1185,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             /* Check Signal Confidence Level */
             if(atl03_cnf < Icesat2Fields::CNF_POSSIBLE_TEP || atl03_cnf > Icesat2Fields::CNF_SURFACE_HIGH)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 signal confidence: %d", atl03_cnf);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl03 signal confidence: %d", atl03_cnf);
             }
             else if(!parms.atl03Cnf[static_cast<Icesat2Fields::signal_conf_t>(atl03_cnf)])
             {
@@ -1196,7 +1196,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
             const Icesat2Fields::quality_ph_t quality_ph = static_cast<Icesat2Fields::quality_ph_t>(atl03.quality_ph[current_photon]);
             if(quality_ph < Icesat2Fields::QUALITY_NOMINAL || quality_ph > Icesat2Fields::QUALITY_POSSIBLE_TEP)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl03 photon quality: %d", quality_ph);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl03 photon quality: %d", quality_ph);
             }
             else if(!parms.qualityPh[quality_ph])
             {
@@ -1210,7 +1210,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
                 atl08_class = static_cast<Icesat2Fields::atl08_class_t>(atl08[current_photon]);
                 if(atl08_class < 0 || atl08_class >= Icesat2Fields::NUM_ATL08_CLASSES)
                 {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl08 classification: %d", atl08_class);
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl08 classification: %d", atl08_class);
                 }
                 else if(!parms.atl08Class[atl08_class])
                 {

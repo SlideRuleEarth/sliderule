@@ -101,7 +101,7 @@ MetricDispatch::MetricDispatch(lua_State* L, const char* _data_field, const char
     DispatchObject(L, LUA_META_NAME, LUA_META_TABLE)
 {
     /* Define Metric Record */
-    RecordObject::defineRecord(MetricRecord::rec_type, NULL, sizeof(MetricRecord::metric_t), MetricRecord::rec_def, MetricRecord::rec_elem);
+    RecordObject::defineRecord(MetricRecord::rec_type, NULL, sizeof(MetricRecord::telemetry_t), MetricRecord::rec_def, MetricRecord::rec_elem);
 
     /* Initialize Settings */
     playbackSource  = false;

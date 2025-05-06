@@ -184,7 +184,7 @@ H5Dataset::H5Dataset (info_t* info, Context* context,
         tearDown();
 
         /* Rethrow Error */
-        throw RunTimeException(CRITICAL, RTE_ERROR, "%s (%s)", e.what(), dataset);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "%s (%s)", e.what(), dataset);
     }
 }
 
@@ -285,11 +285,11 @@ void H5Dataset::readDataset (info_t* info)
     /* Sanity Check Data Attributes */
     if(metaData.typesize <= 0)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "missing data type information");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "missing data type information");
     }
     if(metaData.ndims < 0)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "missing data dimension information");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "missing data dimension information");
     }
 
     /* Massage Hyperslice */
@@ -306,7 +306,7 @@ void H5Dataset::readDataset (info_t* info)
             (hyperslice[d].r1 > metaData.dimensions[d]) ||
             (hyperslice[d].r0 < 0) )
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Invalid hyperslice at dimension %d [%ld]: [%ld, %ld)", d, metaData.dimensions[d], hyperslice[d].r0, hyperslice[d].r1);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid hyperslice at dimension %d [%ld]: [%ld, %ld)", d, metaData.dimensions[d], hyperslice[d].r0, hyperslice[d].r1);
         }
     }
 
@@ -327,7 +327,7 @@ void H5Dataset::readDataset (info_t* info)
     {
         if(metaData.size != 0 && metaData.size < buffer_size)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid read: %ld < %ld", (long)metaData.size, (long)buffer_size);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid read: %ld < %ld", (long)metaData.size, (long)buffer_size);
         }
     }
 
@@ -370,7 +370,7 @@ void H5Dataset::readDataset (info_t* info)
             else if (metaData.typesize == 2) info->datatype = RecordObject::INT16;
             else if (metaData.typesize == 4) info->datatype = RecordObject::INT32;
             else if (metaData.typesize == 8) info->datatype = RecordObject::INT64;
-            else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid type size for signed integer: %d", metaData.typesize);
+            else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid type size for signed integer: %d", metaData.typesize);
         }
         else
         {
@@ -378,14 +378,14 @@ void H5Dataset::readDataset (info_t* info)
             else if (metaData.typesize == 2) info->datatype = RecordObject::UINT16;
             else if (metaData.typesize == 4) info->datatype = RecordObject::UINT32;
             else if (metaData.typesize == 8) info->datatype = RecordObject::UINT64;
-            else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid type size for unsigned integer: %d", metaData.typesize);
+            else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid type size for unsigned integer: %d", metaData.typesize);
         }
     }
     else if(metaData.type == FLOATING_POINT_TYPE)
     {
         if      (metaData.typesize == 4) info->datatype = RecordObject::FLOAT;
         else if (metaData.typesize == 8) info->datatype = RecordObject::DOUBLE;
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "invalid type size for floating point number: %d", metaData.typesize);
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid type size for floating point number: %d", metaData.typesize);
     }
     else if(metaData.type == STRING_TYPE)
     {
@@ -397,11 +397,11 @@ void H5Dataset::readDataset (info_t* info)
     {
         if(H5_INVALID(metaData.address))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "data not allocated in contiguous layout");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "data not allocated in contiguous layout");
         }
         if((metaData.filter[DEFLATE_FILTER] || metaData.filter[SHUFFLE_FILTER]) && ((metaData.layout == COMPACT_LAYOUT) || (metaData.layout == CONTIGUOUS_LAYOUT)))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "filters unsupported on non-chunked layouts");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "filters unsupported on non-chunked layouts");
         }
     }
 
@@ -423,7 +423,7 @@ void H5Dataset::readDataset (info_t* info)
                     const uint64_t buffer_offset = hyperslice[0].r0 * metaData.typesize;
                     if(metaData.size != 0 && metaData.size < ((int64_t)buffer_offset + buffer_size))
                     {
-                        throw RunTimeException(CRITICAL, RTE_ERROR, "read exceeds available data: %ld != %ld + %ld", (long)metaData.size, (long)buffer_offset, (long)buffer_size);
+                        throw RunTimeException(CRITICAL, RTE_FAILURE, "read exceeds available data: %ld != %ld + %ld", (long)metaData.size, (long)buffer_offset, (long)buffer_size);
                     }
                     uint64_t data_addr = metaData.address + buffer_offset;
                     ioContext->ioRequest(&data_addr, buffer_size, buffer, 0, false);
@@ -457,15 +457,15 @@ void H5Dataset::readDataset (info_t* info)
                 {
                     if(metaData.elementsize != metaData.typesize)
                     {
-                        throw RunTimeException(CRITICAL, RTE_ERROR, "chunk element size does not match data element size: %d != %d", metaData.elementsize, metaData.typesize);
+                        throw RunTimeException(CRITICAL, RTE_FAILURE, "chunk element size does not match data element size: %d != %d", metaData.elementsize, metaData.typesize);
                     }
                     if(metaData.chunkelements == 0)
                     {
-                        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid number of chunk elements: %ld", (long)metaData.chunkelements);
+                        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid number of chunk elements: %ld", (long)metaData.chunkelements);
                     }
                     if(metaData.ndims <= 0)
                     {
-                        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid number of dimensions for chunked layout: %ld", (long)metaData.ndims);
+                        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid number of dimensions for chunked layout: %ld", (long)metaData.ndims);
                     }
                 }
 
@@ -532,7 +532,7 @@ void H5Dataset::readDataset (info_t* info)
             {
                 if(H5CORO_ERROR_CHECKING)
                 {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "invalid data layout: %d", (int)metaData.layout);
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid data layout: %d", (int)metaData.layout);
                 }
             }
         }
@@ -551,13 +551,13 @@ uint64_t H5Dataset::readSuperblock (void)
     const uint64_t signature = readField(8, &pos);
     if(signature != H5_SIGNATURE_LE)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid h5 file signature: 0x%llX", (unsigned long long)signature);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid h5 file signature: 0x%llX", (unsigned long long)signature);
     }
 
     const uint64_t superblock_version = readField(1, &pos);
     if((superblock_version != 0) && (superblock_version != 2))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported h5 file superblock version: %d", (int)superblock_version);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "unsupported h5 file superblock version: %d", (int)superblock_version);
     }
 
     /* Super Block Version 0 */
@@ -569,13 +569,13 @@ uint64_t H5Dataset::readSuperblock (void)
             const uint64_t freespace_version = readField(1, &pos);
             if(freespace_version != 0)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported h5 file free space version: %d", (int)freespace_version);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "unsupported h5 file free space version: %d", (int)freespace_version);
             }
 
             const uint64_t roottable_version = readField(1, &pos);
             if(roottable_version != 0)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported h5 file root table version: %d", (int)roottable_version);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "unsupported h5 file root table version: %d", (int)roottable_version);
             }
         }
 
@@ -591,7 +591,7 @@ uint64_t H5Dataset::readSuperblock (void)
             const uint64_t base_address = readField(metaData.offsetsize, &pos);
             if(base_address != 0)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported h5 file base address: %lu", (unsigned long)base_address);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "unsupported h5 file base address: %lu", (unsigned long)base_address);
             }
         }
 
@@ -624,7 +624,7 @@ uint64_t H5Dataset::readSuperblock (void)
             const uint64_t base_address = readField(8, &pos);
             if(base_address != 0)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported h5 file base address: %lu", (unsigned long)base_address);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "unsupported h5 file base address: %lu", (unsigned long)base_address);
             }
         }
 
@@ -665,13 +665,13 @@ int H5Dataset::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_f
         const uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_FRHP_SIGNATURE_LE)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid heap signature: 0x%llX", (unsigned long long)signature);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid heap signature: 0x%llX", (unsigned long long)signature);
         }
 
         const uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid heap version: %d", (int)version);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid heap version: %d", (int)version);
         }
     }
 
@@ -758,7 +758,7 @@ int H5Dataset::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_f
         print2term("Size of Filtered Root Direct Block:                              %lu\n", (unsigned long)filter_root_dblk);
         print2term("I/O Filter Mask:                                                 %lu\n", (unsigned long)filter_mask);
 
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Filtering unsupported on fractal heap: %d", io_filter_len);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Filtering unsupported on fractal heap: %d", io_filter_len);
         // readMessage(FILTER_MSG, io_filter_len, pos, hdr_flags, dlvl); // this currently populates filter for dataset
     }
 
@@ -795,7 +795,7 @@ int H5Dataset::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_f
         const int bytes_read = readDirectBlock(heap_info_ptr, heap_info_ptr->starting_blk_size, root_blk_addr, hdr_flags, dlvl);
         if(H5CORO_ERROR_CHECKING && (bytes_read > heap_info_ptr->starting_blk_size))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "direct block contianed more bytes than specified: %d > %d", bytes_read, heap_info_ptr->starting_blk_size);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "direct block contianed more bytes than specified: %d > %d", bytes_read, heap_info_ptr->starting_blk_size);
         }
         pos += heap_info_ptr->starting_blk_size;
     }
@@ -805,7 +805,7 @@ int H5Dataset::readFractalHeap (msg_type_t msg_type, uint64_t pos, uint8_t hdr_f
         const int bytes_read = readIndirectBlock(heap_info_ptr, 0, root_blk_addr, hdr_flags, dlvl);
         if(H5CORO_ERROR_CHECKING && (bytes_read > heap_info_ptr->starting_blk_size))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "indirect block contianed more bytes than specified: %d > %d", bytes_read, heap_info_ptr->starting_blk_size);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "indirect block contianed more bytes than specified: %d > %d", bytes_read, heap_info_ptr->starting_blk_size);
         }
         pos += bytes_read;
     }
@@ -831,13 +831,13 @@ int H5Dataset::readDirectBlock (heap_info_t* heap_info, int block_size, uint64_t
         const uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_FHDB_SIGNATURE_LE)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid direct block signature: 0x%llX", (unsigned long long)signature);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid direct block signature: 0x%llX", (unsigned long long)signature);
         }
 
         const uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid direct block version: %d", (int)version);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid direct block version: %d", (int)version);
         }
     }
 
@@ -860,7 +860,7 @@ int H5Dataset::readDirectBlock (heap_info_t* heap_info, int block_size, uint64_t
         uint8_t block_offset_buf[MAX_BLOCK_OFFSET_SIZE];
         if(H5CORO_ERROR_CHECKING && (heap_info->blk_offset_size > MAX_BLOCK_OFFSET_SIZE))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "block offset size too large: %d", heap_info->blk_offset_size);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "block offset size too large: %d", heap_info->blk_offset_size);
         }
         readByteArray(block_offset_buf, heap_info->blk_offset_size, &pos); // Block Offset
         print2term("Heap Header Address:                                             0x%lx\n", heap_hdr_addr);
@@ -907,7 +907,7 @@ int H5Dataset::readDirectBlock (heap_info_t* heap_info, int block_size, uint64_t
         {
             if(data_left < 0)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "reading message exceeded end of direct block: 0x%lx", starting_position);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "reading message exceeded end of direct block: 0x%lx", starting_position);
             }
         }
 
@@ -942,13 +942,13 @@ int H5Dataset::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64
         const uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_FHIB_SIGNATURE_LE)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid direct block signature: 0x%llX", (unsigned long long)signature);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid direct block signature: 0x%llX", (unsigned long long)signature);
         }
 
         const uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid direct block version: %d", (int)version);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid direct block version: %d", (int)version);
         }
     }
 
@@ -971,7 +971,7 @@ int H5Dataset::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64
         uint8_t block_offset_buf[MAX_BLOCK_OFFSET_SIZE];
         if(H5CORO_ERROR_CHECKING && (heap_info->blk_offset_size > MAX_BLOCK_OFFSET_SIZE))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "block offset size too large: %d", heap_info->blk_offset_size);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "block offset size too large: %d", heap_info->blk_offset_size);
         }
         readByteArray(block_offset_buf, heap_info->blk_offset_size, &pos); // Block Offset
         print2term("Heap Header Address:                                             0x%lx\n", heap_hdr_addr);
@@ -1013,7 +1013,7 @@ int H5Dataset::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64
                 {
                     if(row >= K)
                     {
-                        throw RunTimeException(CRITICAL, RTE_ERROR, "unexpected direct block row: %d, %d >= %d\n", row_block_size, row, K);
+                        throw RunTimeException(CRITICAL, RTE_FAILURE, "unexpected direct block row: %d, %d >= %d\n", row_block_size, row, K);
                     }
                 }
 
@@ -1026,7 +1026,7 @@ int H5Dataset::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64
                     const int bytes_read = readDirectBlock(heap_info, row_block_size, direct_block_addr, hdr_flags, dlvl);
                     if(H5CORO_ERROR_CHECKING && (bytes_read > row_block_size))
                     {
-                        throw RunTimeException(CRITICAL, RTE_ERROR, "direct block contained more bytes than specified: %d > %d", bytes_read, row_block_size);
+                        throw RunTimeException(CRITICAL, RTE_FAILURE, "direct block contained more bytes than specified: %d > %d", bytes_read, row_block_size);
                     }
                 }
             }
@@ -1036,7 +1036,7 @@ int H5Dataset::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64
                 {
                     if(row < K || row >= N)
                     {
-                        throw RunTimeException(CRITICAL, RTE_ERROR, "unexpected indirect block row: %d, %d, %d\n", row_block_size, row, N);
+                        throw RunTimeException(CRITICAL, RTE_FAILURE, "unexpected indirect block row: %d, %d, %d\n", row_block_size, row, N);
                     }
                 }
 
@@ -1048,7 +1048,7 @@ int H5Dataset::readIndirectBlock (heap_info_t* heap_info, int block_size, uint64
                     const int bytes_read = readIndirectBlock(heap_info, row_block_size, indirect_block_addr, hdr_flags, dlvl);
                     if(H5CORO_ERROR_CHECKING && (bytes_read > row_block_size))
                     {
-                        throw RunTimeException(CRITICAL, RTE_ERROR, "indirect block contained more bytes than specified: %d > %d", bytes_read, row_block_size);
+                        throw RunTimeException(CRITICAL, RTE_FAILURE, "indirect block contained more bytes than specified: %d > %d", bytes_read, row_block_size);
                     }
                 }
             }
@@ -1081,13 +1081,13 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
         const uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_TREE_SIGNATURE_LE)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid b-tree signature: 0x%llX", (unsigned long long)signature);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid b-tree signature: 0x%llX", (unsigned long long)signature);
         }
 
         const uint8_t node_type = (uint8_t)readField(1, &pos);
         if(node_type != 1)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "only raw data chunk b-trees supported: %d", node_type);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "only raw data chunk b-trees supported: %d", node_type);
         }
     }
 
@@ -1197,7 +1197,7 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
                     buffer_index = chunk_offset - buffer_offset;
                     if(buffer_index >= buffer_size)
                     {
-                        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid location to read data: %ld, %lu", (unsigned long)chunk_offset, (unsigned long)buffer_offset);
+                        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid location to read data: %ld, %lu", (unsigned long)chunk_offset, (unsigned long)buffer_offset);
                     }
                 }
 
@@ -1208,7 +1208,7 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
                     chunk_index = buffer_offset - chunk_offset;
                     if((int64_t)chunk_index >= dataChunkBufferSize)
                     {
-                        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid location to read chunk: %ld, %lu", (unsigned long)chunk_offset, (unsigned long)buffer_offset);
+                        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid location to read chunk: %ld, %lu", (unsigned long)chunk_offset, (unsigned long)buffer_offset);
                     }
                 }
 
@@ -1216,7 +1216,7 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
                 int64_t chunk_bytes = dataChunkBufferSize - chunk_index;
                 if(chunk_bytes < 0)
                 {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "no bytes of chunk data to read: %ld, %lu", (long)chunk_bytes, (unsigned long)chunk_index);
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "no bytes of chunk data to read: %ld, %lu", (long)chunk_bytes, (unsigned long)chunk_index);
                 }
                 if((buffer_index + chunk_bytes) > buffer_size)
                 {
@@ -1276,11 +1276,11 @@ int H5Dataset::readBTreeV1 (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
                     {
                         if(metaData.filter[SHUFFLE_FILTER])
                         {
-                            throw RunTimeException(CRITICAL, RTE_ERROR, "shuffle filter unsupported on uncompressed chunk");
+                            throw RunTimeException(CRITICAL, RTE_FAILURE, "shuffle filter unsupported on uncompressed chunk");
                         }
                         if(dataChunkBufferSize != curr_node.chunk_size)
                         {
-                            throw RunTimeException(CRITICAL, RTE_ERROR, "mismatch in chunk size: %lu, %lu", (unsigned long)curr_node.chunk_size, (unsigned long)dataChunkBufferSize);
+                            throw RunTimeException(CRITICAL, RTE_FAILURE, "mismatch in chunk size: %lu, %lu", (unsigned long)curr_node.chunk_size, (unsigned long)dataChunkBufferSize);
                         }
                     }
 
@@ -1384,7 +1384,7 @@ H5Dataset::btree_node_t H5Dataset::readBTreeNodeV1 (int ndims, uint64_t* pos)
     {
         if(trailing_zero % metaData.typesize != 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "key did not include a trailing zero: %lu", trailing_zero);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "key did not include a trailing zero: %lu", trailing_zero);
         }
         if(H5CORO_VERBOSE && H5CORO_EXTRA_DEBUG)
         {
@@ -1413,19 +1413,19 @@ int H5Dataset::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dlvl)
         const uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_SNOD_SIGNATURE_LE)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid symbol table signature: 0x%llX", (unsigned long long)signature);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid symbol table signature: 0x%llX", (unsigned long long)signature);
         }
 
         const uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 1)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "incorrect version of symbole table: %d", (int)version);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "incorrect version of symbole table: %d", (int)version);
         }
 
         const uint8_t reserved0 = (uint8_t)readField(1, &pos);
         if(reserved0 != 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "incorrect reserved value: %d", (int)reserved0);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "incorrect reserved value: %d", (int)reserved0);
         }
     }
 
@@ -1447,7 +1447,7 @@ int H5Dataset::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dlvl)
         {
             if(i >= STR_BUFF_SIZE)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "link name string exceeded maximum length: %d, 0x%lx\n", i, (unsigned long)pos);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "link name string exceeded maximum length: %d, 0x%lx\n", i, (unsigned long)pos);
             }
 
             const uint8_t c = (uint8_t)readField(1, &link_name_addr);
@@ -1472,7 +1472,7 @@ int H5Dataset::readSymbolTable (uint64_t pos, uint64_t heap_data_addr, int dlvl)
             {
                 if(cache_type == 2)
                 {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "symbolic links are unsupported (%s)", link_name);
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "symbolic links are unsupported (%s)", link_name);
                 }
                 highestDataLevel = dlvl + 1;
                 readObjHdr(obj_hdr_addr, highestDataLevel);
@@ -1508,13 +1508,13 @@ int H5Dataset::readObjHdr (uint64_t pos, int dlvl)
         const uint64_t signature = readField(4, &pos);
         if(signature != H5_OHDR_SIGNATURE_LE)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid header signature: 0x%llX", (unsigned long long)signature);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid header signature: 0x%llX", (unsigned long long)signature);
         }
 
         const uint64_t version = readField(1, &pos);
         if(version != 2)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid header version: %d", (int)version);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid header version: %d", (int)version);
         }
     }
 
@@ -1602,7 +1602,7 @@ int H5Dataset::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, int 
         const int bytes_read = readMessage((msg_type_t)msg_type, msg_size, pos, hdr_flags, dlvl);
         if(H5CORO_ERROR_CHECKING && (bytes_read != msg_size))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "header message different size than specified: %d != %d", bytes_read, msg_size);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "header message different size than specified: %d != %d", bytes_read, msg_size);
         }
 
         /* Check if Dataset Found */
@@ -1621,7 +1621,7 @@ int H5Dataset::readMessages (uint64_t pos, uint64_t end, uint8_t hdr_flags, int 
     {
         if(pos != end)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "did not read correct number of bytes: %lu != %lu", (unsigned long)pos, (unsigned long)end);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "did not read correct number of bytes: %lu != %lu", (unsigned long)pos, (unsigned long)end);
         }
     }
 
@@ -1647,13 +1647,13 @@ int H5Dataset::readObjHdrV1 (uint64_t pos, int dlvl)
         const uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 1)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid header version: %d", (int)version);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid header version: %d", (int)version);
         }
 
         const uint8_t reserved0 = (uint8_t)readField(1, &pos);
         if(reserved0 != 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid reserved field: %d", (int)reserved0);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid reserved field: %d", (int)reserved0);
         }
     }
 
@@ -1726,7 +1726,7 @@ int H5Dataset::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags, in
             const uint16_t reserved2 = (uint16_t)readField(2, &pos);
             if((reserved1 != 0) && (reserved2 != 0))
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid reserved fields: %d, %d", (int)reserved1, (int)reserved2);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid reserved fields: %d, %d", (int)reserved1, (int)reserved2);
             }
         }
 
@@ -1737,7 +1737,7 @@ int H5Dataset::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags, in
         if((bytes_read % 8) > 0) bytes_read += 8 - (bytes_read % 8);
         if(H5CORO_ERROR_CHECKING && (bytes_read != msg_size))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "message of type %d at position 0x%lx different size than specified: %d != %d", (int)msg_type, (unsigned long)pos, bytes_read, msg_size);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "message of type %d at position 0x%lx different size than specified: %d != %d", (int)msg_type, (unsigned long)pos, bytes_read, msg_size);
         }
 
         /* Check if Dataset Found */
@@ -1759,7 +1759,7 @@ int H5Dataset::readMessagesV1 (uint64_t pos, uint64_t end, uint8_t hdr_flags, in
     {
         if(pos != end)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "did not read correct number of bytes: %lu != %lu", (unsigned long)pos, (unsigned long)end);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "did not read correct number of bytes: %lu != %lu", (unsigned long)pos, (unsigned long)end);
         }
     }
 
@@ -1822,17 +1822,17 @@ int H5Dataset::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     {
         if(version != 1 && version != 2)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid dataspace version: %d", (int)version);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid dataspace version: %d", (int)version);
         }
 
         if(flags & PERM_INDEX_PRESENT)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported permutation indexes");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "unsupported permutation indexes");
         }
 
         if(dimensionality > MAX_NDIMS)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported number of dimensions: %d", dimensionality);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "unsupported number of dimensions: %d", dimensionality);
         }
     }
 
@@ -1897,7 +1897,7 @@ int H5Dataset::readLinkInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     {
         if(version != 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link info version: %d", (int)version);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid link info version: %d", (int)version);
         }
     }
 
@@ -1981,7 +1981,7 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     {
         if(version != 1)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid datatype version: %d", (int)version);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid datatype version: %d", (int)version);
         }
     }
 
@@ -2063,7 +2063,7 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         case VARIABLE_LENGTH_TYPE:
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "variable length data types require reading a global heap, which is not yet supported");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "variable length data types require reading a global heap, which is not yet supported");
 #if 0
             if(H5CORO_VERBOSE)
             {
@@ -2119,7 +2119,7 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             if(H5CORO_ERROR_CHECKING)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "unsupported datatype: %d", (int)metaData.type);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "unsupported datatype: %d", (int)metaData.type);
             }
             break;
         }
@@ -2145,7 +2145,7 @@ int H5Dataset::readFillValueMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     {
         if((version != 2) && (version != 3))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid fill value version: %d", (int)version);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid fill value version: %d", (int)version);
         }
     }
 
@@ -2243,7 +2243,7 @@ int H5Dataset::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     {
         if(version != 1)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link version: %d", (int)version);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid link version: %d", (int)version);
         }
     }
 
@@ -2297,7 +2297,7 @@ int H5Dataset::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     const int link_name_len_of_len = 1 << (flags & SIZE_OF_LEN_OF_NAME_MASK);
     if(H5CORO_ERROR_CHECKING && (link_name_len_of_len > 8))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link name length of length: %d", link_name_len_of_len);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid link name length of length: %d", link_name_len_of_len);
     }
 
     const uint64_t link_name_len = readField(link_name_len_of_len, &pos);
@@ -2356,7 +2356,7 @@ int H5Dataset::readLinkMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     }
     else if(H5CORO_ERROR_CHECKING)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link type: %d", link_type);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid link type: %d", link_type);
     }
 
     /* Return Bytes Read */
@@ -2381,7 +2381,7 @@ int H5Dataset::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     {
         if(version != 3)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid data layout version: %d", (int)version);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid data layout version: %d", (int)version);
         }
     }
 
@@ -2421,7 +2421,7 @@ int H5Dataset::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             {
                 if((metaData.ndims != UNKNOWN_VALUE) && (chunk_num_dim != metaData.ndims))
                 {
-                    throw RunTimeException(CRITICAL, RTE_ERROR, "number of chunk dimensions does not match data dimensions: %d != %d", chunk_num_dim, metaData.ndims);
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "number of chunk dimensions does not match data dimensions: %d != %d", chunk_num_dim, metaData.ndims);
                 }
             }
 
@@ -2460,7 +2460,7 @@ int H5Dataset::readDataLayoutMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             if(H5CORO_ERROR_CHECKING)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid data layout: %d", (int)metaData.layout);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid data layout: %d", (int)metaData.layout);
             }
         }
     }
@@ -2487,7 +2487,7 @@ int H5Dataset::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     {
         if((version != 1) && (version != 2))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid filter version: %d", (int)version);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid filter version: %d", (int)version);
         }
     }
 
@@ -2528,7 +2528,7 @@ int H5Dataset::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         {
             if((flags != 0) && (flags != 1))
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid flags in filter message: %02X", (int)flags);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid flags in filter message: %02X", (int)flags);
             }
         }
 
@@ -2558,7 +2558,7 @@ int H5Dataset::readFilterMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid filter specified: %d", filter);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid filter specified: %d", filter);
         }
 
         /* Client Data (unused) */
@@ -2598,11 +2598,11 @@ int H5Dataset::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, uint
 
         if(version != 1 && version != 3)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid attribute version: %d", (int)version);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid attribute version: %d", (int)version);
         }
         if(reserved0 != 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid reserved field: %d", (int)reserved0);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid reserved field: %d", (int)reserved0);
         }
     }
     else
@@ -2618,7 +2618,7 @@ int H5Dataset::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, uint
     /* Read Attribute Name */
     if(name_size > STR_BUFF_SIZE)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "attribute name string exceeded maximum length: %lu, 0x%lx\n", static_cast<unsigned long>(name_size), static_cast<unsigned long>(pos));
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "attribute name string exceeded maximum length: %lu, 0x%lx\n", static_cast<unsigned long>(name_size), static_cast<unsigned long>(pos));
     }
     uint8_t attr_name[STR_BUFF_SIZE];
 
@@ -2644,7 +2644,7 @@ int H5Dataset::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, uint
         if(attr_name[name_size - 1] != '\0')
         {
             attr_name[name_size -1] = '\0';
-            throw RunTimeException(CRITICAL, RTE_ERROR, "attribute name string is not null terminated: %s, 0x%lx\n", attr_name, (unsigned long)pos);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "attribute name string is not null terminated: %s, 0x%lx\n", attr_name, (unsigned long)pos);
         }
     }
     else
@@ -2678,7 +2678,7 @@ int H5Dataset::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, uint
     const int datatype_bytes_read = readDatatypeMsg(pos, hdr_flags, dlvl);
     if(H5CORO_ERROR_CHECKING && datatype_bytes_read > static_cast<int>(datatype_size))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for datatype message: %d > %d\n", datatype_bytes_read, static_cast<int>(datatype_size));
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to read expected bytes for datatype message: %d > %d\n", datatype_bytes_read, static_cast<int>(datatype_size));
     }
 
     pos += datatype_bytes_read;
@@ -2691,7 +2691,7 @@ int H5Dataset::readAttributeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl, uint
     const int dataspace_bytes_read = readDataspaceMsg(pos, hdr_flags, dlvl);
     if(H5CORO_ERROR_CHECKING && dataspace_bytes_read > static_cast<int>(dataspace_size))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read expected bytes for dataspace message: %d > %d\n", dataspace_bytes_read, static_cast<int>(dataspace_size));
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to read expected bytes for dataspace message: %d > %d\n", dataspace_bytes_read, static_cast<int>(dataspace_size));
     }
 
     pos += dataspace_bytes_read;
@@ -2731,7 +2731,7 @@ int H5Dataset::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
     {
         if(version != 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid link info version: %d", static_cast<int>(version));
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid link info version: %d", static_cast<int>(version));
         }
     }
 
@@ -2795,7 +2795,7 @@ int H5Dataset::readAttributeInfoMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             readAttributeMsg(curr_btreev2.pos_out, curr_btreev2.hdr_flags_out, curr_btreev2.hdr_dlvl_out, curr_btreev2.msg_size_out);
         }
         else {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "FAILED to locate attribute with dense btreeV2 reading");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "FAILED to locate attribute with dense btreeV2 reading");
         }
 
     }
@@ -2840,7 +2840,7 @@ int H5Dataset::readHeaderContMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             const uint64_t signature = readField(4, &pos);
             if(signature != H5_OCHK_SIGNATURE_LE)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid header continuation signature: 0x%llX", static_cast<unsigned long long>(signature));
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid header continuation signature: 0x%llX", static_cast<unsigned long long>(signature));
             }
         }
         else
@@ -2897,13 +2897,13 @@ int H5Dataset::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         const uint32_t signature = (uint32_t)readField(4, &pos);
         if(signature != H5_HEAP_SIGNATURE_LE)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid heap signature: 0x%llX", static_cast<unsigned long long>(signature));
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid heap signature: 0x%llX", static_cast<unsigned long long>(signature));
         }
 
         const uint8_t version = (uint8_t)readField(1, &pos);
         if(version != 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "incorrect version of heap: %d", version);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "incorrect version of heap: %d", version);
         }
 
         pos += 19;
@@ -2924,13 +2924,13 @@ int H5Dataset::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             const uint32_t signature = (uint32_t)readField(4, &pos);
             if(signature != H5_TREE_SIGNATURE_LE)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid group b-tree signature: 0x%llX", static_cast<unsigned long long>(signature));
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid group b-tree signature: 0x%llX", static_cast<unsigned long long>(signature));
             }
 
             const uint8_t node_type = (uint8_t)readField(1, &pos);
             if(node_type != 0)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "only group b-trees supported: %d", node_type);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "only group b-trees supported: %d", node_type);
             }
         }
 
@@ -2986,19 +2986,19 @@ int H5Dataset::readSymbolTableMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
             const uint32_t signature = (uint32_t)readField(4, &pos);
             if(signature != H5_TREE_SIGNATURE_LE)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "invalid group b-tree signature: 0x%llX", static_cast<unsigned long long>(signature));
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid group b-tree signature: 0x%llX", static_cast<unsigned long long>(signature));
             }
 
             const uint8_t node_type = (uint8_t)readField(1, &pos);
             if(node_type != 0)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "only group b-trees supported: %d", node_type);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "only group b-trees supported: %d", node_type);
             }
 
             const uint8_t node_level = (uint8_t)readField(1, &pos);
             if(node_level != 0)
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "traversed to non-leaf node: %d", node_level);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "traversed to non-leaf node: %d", node_level);
             }
         }
     }
@@ -3224,7 +3224,7 @@ int H5Dataset::inflateChunk (uint8_t* input, uint32_t input_size, uint8_t* outpu
     status = inflateInit(&strm);
     if(status != Z_OK)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to initialize z_stream: %d", status);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to initialize z_stream: %d", status);
     }
 
     /* Decompress Until Entire Chunk is Processed */
@@ -3246,7 +3246,7 @@ int H5Dataset::inflateChunk (uint8_t* input, uint32_t input_size, uint8_t* outpu
     /* Check Decompression Complete */
     if(status != Z_STREAM_END)
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "failed to inflate entire z_stream: %d", status);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to inflate entire z_stream: %d", status);
     }
 
     return 0;
@@ -3261,7 +3261,7 @@ int H5Dataset::shuffleChunk (const uint8_t* input, uint32_t input_size, uint8_t*
     {
         if(type_size <= 0 || type_size > 8)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid data size to perform shuffle on: %d", type_size);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid data size to perform shuffle on: %d", type_size);
         }
     }
 
@@ -3325,7 +3325,7 @@ void H5Dataset::metaGetUrl (char* url, const char* resource, const char* dataset
     /* Check URL Fits (at least 2 null terminators) */
     if(url[MAX_META_NAME_SIZE - 2] != '\0')
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "truncated meta repository url: %s", url);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "truncated meta repository url: %s", url);
     }
 }
 

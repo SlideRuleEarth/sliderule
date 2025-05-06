@@ -177,7 +177,7 @@ const T& List<T>::Iterator::operator[](int index) const
         return block->data[node_offset];
     }
 
-    throw RunTimeException(CRITICAL, RTE_ERROR, "List::Iterator index out of range");
+    throw RunTimeException(CRITICAL, RTE_FAILURE, "List::Iterator index out of range");
 }
 
 
@@ -369,7 +369,7 @@ T& List<T>::get(int index)
         return curr->data[node_offset];
     }
 
-    throw RunTimeException(CRITICAL, RTE_ERROR, "List::get index out of range");
+    throw RunTimeException(CRITICAL, RTE_FAILURE, "List::get index out of range");
 }
 
 /*----------------------------------------------------------------------------
@@ -529,7 +529,7 @@ T* List<T>::array(void)
 
     /* Return Array */
     return data;
-  }
+ }
 
 /*----------------------------------------------------------------------------
  * [] - rvalue
@@ -553,7 +553,7 @@ T List<T>::operator[](int index) const
         return curr->data[node_offset];
     }
 
-    throw RunTimeException(CRITICAL, RTE_ERROR, "List::get index out of range");
+    throw RunTimeException(CRITICAL, RTE_FAILURE, "List::get index out of range");
 }
 
 /*----------------------------------------------------------------------------

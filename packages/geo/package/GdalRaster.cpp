@@ -110,14 +110,14 @@ void GdalRaster::open(void)
     {
         dset = static_cast<GDALDataset*>(GDALOpenEx(fileName.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL));
         if(dset == NULL)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to open raster: %s:", fileName.c_str());
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to open raster: %s:", fileName.c_str());
 
         mlog(DEBUG, "Opened %s", fileName.c_str());
 
         const int bandCount = dset->GetRasterCount();
         if (bandCount == 0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "No bands found in raster: %s:", fileName.c_str());
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "No bands found in raster: %s:", fileName.c_str());
         }
 
         /* Populate the mapping of band names to band numbers*/
@@ -158,7 +158,7 @@ void GdalRaster::open(void)
         CHECK_GDALERR(err);
         if(!GDALInvGeoTransform(geoTransform, invGeoTransform))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get inverted geo transform: %s:", fileName.c_str());
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to get inverted geo transform: %s:", fileName.c_str());
         }
 
         /* Get raster boundry box */
@@ -176,7 +176,7 @@ void GdalRaster::open(void)
         /* Limit maximum sampling radius */
         if(radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR,
+            throw RunTimeException(CRITICAL, RTE_FAILURE,
                 "Sampling radius is too big: %d: max allowed %d meters",
                 parms->sampling_radius.value, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(cellSize));
         }
@@ -223,7 +223,7 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi, int bandNum)
         const double z = poi->getZ();
         // mlog(DEBUG, "Before transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
         if(poi->transform(transf) != OGRERR_NONE)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi->getX(), poi->getY(), poi->getZ());
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Coordinates Transform failed for x,y,z (%lf, %lf, %lf)", poi->getX(), poi->getY(), poi->getZ());
         // mlog(DEBUG, "After  transform x,y,z: (%.4lf, %.4lf, %.4lf)", poi->getX(), poi->getY(), poi->getZ());
 
         /*
@@ -307,9 +307,9 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly, int bandNum)
 
         /* Project AOI to map/raster coordinates */
         if(!transf->Transform(1, &env.MinX, &env.MinY))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for (%.2lf, %.2lf)", env.MinX, env.MinY);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Coordinates Transform failed for (%.2lf, %.2lf)", env.MinX, env.MinY);
         if(!transf->Transform(1, &env.MaxX, &env.MaxY))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Coordinates Transform failed for (%.2lf, %.2lf)", env.MaxX, env.MaxY);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Coordinates Transform failed for (%.2lf, %.2lf)", env.MaxX, env.MaxY);
 
         double aoi_minx = std::min(env.MinX, env.MaxX);
         double aoi_maxx = std::max(env.MinX, env.MaxX);
@@ -329,16 +329,16 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly, int bandNum)
          * This is not an error.
          */
         if(aoi_maxx < raster_minx)
-            throw RunTimeException(DEBUG, RTE_INFO, "AOI out of bounds, aoi_max < raster_minx");
+            throw RunTimeException(DEBUG, RTE_STATUS, "AOI out of bounds, aoi_max < raster_minx");
 
         if(aoi_minx > raster_maxx)
-            throw RunTimeException(DEBUG, RTE_INFO, "AOI out of bounds, aoi_minx > raster_maxx");
+            throw RunTimeException(DEBUG, RTE_STATUS, "AOI out of bounds, aoi_minx > raster_maxx");
 
         if(aoi_maxy < raster_miny)
-            throw RunTimeException(DEBUG, RTE_INFO, "AOI out of bounds, aoi_maxy < raster_miny");
+            throw RunTimeException(DEBUG, RTE_STATUS, "AOI out of bounds, aoi_maxy < raster_miny");
 
         if(aoi_miny > raster_maxy)
-            throw RunTimeException(DEBUG, RTE_INFO, "AOI out of bounds, aoi_miny  > raster_maxy");
+            throw RunTimeException(DEBUG, RTE_STATUS, "AOI out of bounds, aoi_miny  > raster_maxy");
 
         /* AOI intersects with raster, adjust AOI if needed */
         if(aoi_minx < raster_minx)
@@ -383,14 +383,14 @@ RasterSubset* GdalRaster::subsetAOI(OGRPolygon* poly, int bandNum)
         if(raster_ulx != 0 || raster_uly != 0)
         {
             ssError |= SS_OUT_OF_BOUNDS_ERROR;
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Raster's upleft pixel (%d, %d) is not (0, 0)", raster_ulx, raster_uly);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Raster's upleft pixel (%d, %d) is not (0, 0)", raster_ulx, raster_uly);
         }
 
         /* Sanity check for AOI top left corner pixel, must be < raster */
         if(ulx < raster_ulx || uly < raster_uly)
         {
             ssError |= SS_OUT_OF_BOUNDS_ERROR;
-            throw RunTimeException(CRITICAL, RTE_ERROR, "AOI upleft pixel (%d, %d) < raster upleft pixel (%d, %d)", ulx, uly, raster_ulx, raster_uly);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "AOI upleft pixel (%d, %d) < raster upleft pixel (%d, %d)", ulx, uly, raster_ulx, raster_uly);
         }
 
         subset = getSubset(ulx, uly, _xsize, _ysize, bandNum);
@@ -424,10 +424,10 @@ uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint
             open();
 
         if(ulx >= xsize)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Upleft pixel's x out of bounds: %u", ulx);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Upleft pixel's x out of bounds: %u", ulx);
 
         if(uly >= ysize)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Upleft pixel's y out of bounds: %u", uly);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Upleft pixel's y out of bounds: %u", uly);
 
         if(_xsize == 0)
         {
@@ -442,10 +442,10 @@ uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint
         }
 
         if(ulx + _xsize > xsize)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "columns out of bounds");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "columns out of bounds");
 
         if(uly + _ysize > ysize)
-            throw RunTimeException(CRITICAL, RTE_ERROR, "rows out of bounds");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "rows out of bounds");
 
         GDALRasterBand* band = dset->GetRasterBand(bandNum);
         CHECKPTR(band);
@@ -478,7 +478,7 @@ uint8_t* GdalRaster::getPixels(uint32_t ulx, uint32_t uly, uint32_t _xsize, uint
         if(err != CE_None)
         {
             ssError |= SS_READ_ERROR;
-            throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed: %d", err);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "RasterIO call failed: %d", err);
         }
 
         mlog(DEBUG, "read %ld bytes (%.1fMB), pixel_ulx: %d, pixel_uly: %d, cols2read: %d, rows2read: %d, datatype %s\n",
@@ -629,7 +629,7 @@ void GdalRaster::readPixel(const OGRPoint* poi, GDALRasterBand* band, RasterSamp
         if(block == NULL)
         {
             ssError |= SS_READ_ERROR;
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to get block: %d, %d", xblk, yblk);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to get block: %d, %d", xblk, yblk);
         }
 
         /* Get data block pointer, no memory copied but block is locked */
@@ -724,7 +724,7 @@ void GdalRaster::readPixel(const OGRPoint* poi, GDALRasterBand* band, RasterSamp
              * Complex numbers are supported but not needed at this point.
              */
             block->DropLock();
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Unsuported data type %d, in raster: %s:", band->GetRasterDataType(), fileName.c_str());
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Unsuported data type %d, in raster: %s:", band->GetRasterDataType(), fileName.c_str());
         }
 
         /* Done reading, release block lock */
@@ -930,7 +930,7 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, GDALRasterBand* band, Ra
         }
         else
         {
-            throw RunTimeException(WARNING, RTE_ERROR, "sampling window outside of raster bbox");
+            throw RunTimeException(WARNING, RTE_FAILURE, "sampling window outside of raster bbox");
         }
     }
     catch(const RunTimeException& e)
@@ -991,7 +991,7 @@ void GdalRaster::createTransform(void)
     {
         /* User specified proj pipeline */
         if(!options.SetCoordinateOperation(parms->proj_pipeline.value.c_str(), false))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to set user projlib pipeline");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to set user projlib pipeline");
         mlog(DEBUG, "Set projlib  pipeline: %s", parms->proj_pipeline.value.c_str());
     }
 
@@ -1006,7 +1006,7 @@ void GdalRaster::createTransform(void)
     if(useaoi)
     {
         if(!options.SetAreaOfInterest(aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max))
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to set AOI");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to set AOI");
 
         mlog(DEBUG, "Limited projlib extent: (%.2lf, %.2lf) (%.2lf, %.2lf)",
              aoi->lon_min, aoi->lat_min, aoi->lon_max, aoi->lat_max);
@@ -1018,7 +1018,7 @@ void GdalRaster::createTransform(void)
 
     transf = OGRCreateCoordinateTransformation(&sourceCRS, &targetCRS, options);
     if(transf == NULL)
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to create coordinates transform");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create coordinates transform");
 }
 
 /*----------------------------------------------------------------------------
@@ -1075,7 +1075,7 @@ void GdalRaster::readWithRetry(GDALRasterBand* band, int x, int y, int _xsize, i
     if (err != CE_None)
     {
         ssError |= SS_READ_ERROR;
-        throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed: %d", err);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "RasterIO call failed: %d", err);
     }
 }
 
@@ -1128,7 +1128,7 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
             if(err != CE_None)
             {
                 ssError |= SS_READ_ERROR;
-                throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed: %d", err);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "RasterIO call failed: %d", err);
             }
 
             mlog(DEBUG, "read %ld bytes (%.1fMB), pixel_ulx: %d, pixel_uly: %d, cols2read: %u, rows2read: %u, datatype %s",
@@ -1148,7 +1148,7 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
             if(err != CE_None)
             {
                 ssError |= SS_WRITE_ERROR;
-                throw RunTimeException(CRITICAL, RTE_ERROR, "RasterIO call failed: %d", err);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "RasterIO call failed: %d", err);
             }
 
             mlog(DEBUG, "Created new subraster %s", subset->rasterName.c_str());
@@ -1168,7 +1168,7 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
             if(err != CE_None)
             {
                 ssError |= SS_SUBRASTER_ERROR;
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to set geotransform: %d", err);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to set geotransform: %d", err);
             }
 
             /* Set projection */
@@ -1178,7 +1178,7 @@ RasterSubset* GdalRaster::getSubset(uint32_t ulx, uint32_t uly, uint32_t _xsize,
             if(err != CE_None)
             {
                 ssError |= SS_SUBRASTER_ERROR;
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Failed to set projection: %d", err);
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to set projection: %d", err);
             }
 
             /* Cleanup */

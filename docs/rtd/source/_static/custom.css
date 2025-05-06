@@ -1,0 +1,23 @@
+/* Style captions for code-blocks in sphinx_rtd_theme */
+
+div.literal-block-wrapper .code-block-caption {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #030242;
+}
+
+/* Force text wrapping inside markdown tables */
+.wy-table-responsive table td {
+    white-space: normal !important;
+    word-wrap: break-word;
+  }
+
+/* Make level-2 headers stand out */
+h3 {
+    background-color: #6278a0;
+    color: #012b55;
+    padding: 0.5em 1em;
+    border-left: 5px solid #007acc;
+    font-weight: bold;
+    margin-top: 1.5em;
+}

@@ -40,9 +40,7 @@ import geopandas
 from datetime import datetime
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry import Polygon
-from sliderule import logger
-import sliderule
-
+from sliderule import sliderule, logger
 
 ###############################################################################
 # GLOBALS
@@ -160,10 +158,10 @@ def __cmr_filter_urls(search_results, data_formats):
     # return filtered urls
     return urls
 
-def __cmr_granule_metadata(search_results):
+def __cmr_granule_metadata(search_results, crs=sliderule.DEFAULT_CRS):
     """Get the metadata for CMR returned granules"""
     # GeoDataFrame with granule metadata
-    granule_metadata = sliderule.emptyframe()
+    granule_metadata = sliderule.emptyframe(crs=crs)
     # return empty dataframe if no CMR entries
     if 'feed' not in search_results or 'entry' not in search_results['feed']:
         return granule_metadata
@@ -195,7 +193,7 @@ def __cmr_granule_metadata(search_results):
         else:
             geometry, = geopandas.points_from_xy([None], [None])
         # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
-        gdf = geopandas.GeoDataFrame(df, geometry=[geometry], crs=sliderule.SLIDERULE_EPSG)
+        gdf = geopandas.GeoDataFrame(df, geometry=[geometry], crs=crs)
         # append to combined GeoDataFrame and catch warnings
         granule_metadata = geopandas.pd.concat([granule_metadata, gdf])
     # return granule metadata
@@ -239,6 +237,7 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
     kwargs.setdefault('polygon',None)
     kwargs.setdefault('name_filter',None)
     kwargs.setdefault('return_metadata',False)
+    kwargs.setdefault('crs',sliderule.DEFAULT_CRS)
     # build params
     params = '&short_name={0}'.format(short_name)
     if version != None:
@@ -265,7 +264,7 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
 
     urls = []
     # GeoDataFrame with granule metadata
-    metadata = sliderule.emptyframe()
+    metadata = sliderule.emptyframe(crs=kwargs['crs'])
     while True:
         req = urllib.request.Request(cmr_query_url)
         if cmr_search_after:
@@ -286,7 +285,7 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
         urls += url_scroll_results
         # query for granule metadata and polygons
         if kwargs['return_metadata']:
-            metadata_results = __cmr_granule_metadata(search_page)
+            metadata_results = __cmr_granule_metadata(search_page, crs=kwargs['crs'])
         else:
             metadata_results = geopandas.pd.DataFrame([None for _ in url_scroll_results])
 
@@ -803,7 +802,37 @@ def tnm(short_name, polygon=None, time_start=None, time_end=datetime.utcnow().st
 #  Search
 #
 def search(parm, resources=None):
+    '''
+    Return granules and populate catalogs for all required resources using the supplied parameters.  This is the highest-level API call and attempts to automatically determine which services need to be queried when making a request.
 
+    Parameters
+    ----------
+        parm:               dict
+                            request parameters
+        resources:          list
+                            list of granules to process
+
+    Returns
+    -------
+    list
+        list of granules to process
+
+    Notes
+    -----
+    The ``parm`` argument will be modified in place.
+    The ``asset`` parameter must be supplied
+
+    Examples
+    --------
+        >>> from sliderule import earthdata
+        >>> region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
+        ...            {"lon": -107.7677425431139, "lat": 38.90611184543033},
+        ...            {"lon": -107.7818591266989, "lat": 39.26613714985466},
+        ...            {"lon": -108.3605610678553, "lat": 39.25086131372244},
+        ...            {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
+        >>> parms = {"asset": "icesat2", "poly": region, "cycle": 20, "rgt": 232}
+        >>> resources = earthdata.search(parms)
+    '''
     # Initialize Resources
     if resources == None:
         resources = []

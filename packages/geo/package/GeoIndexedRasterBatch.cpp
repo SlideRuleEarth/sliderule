@@ -129,7 +129,7 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
 
         if(!indexOpenedOk)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Error opening index file");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Error opening index file");
         }
 
         {
@@ -139,13 +139,13 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
             /* For all points create a vector of raster group lists */
             if(!findAllGroups(&points, pointsGroups, rasterToPointsMap))
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Error creating groups");
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "Error creating groups");
             }
 
             /* For all points create a vector of unique rasters */
             if(!findUniqueRasters(uniqueRasters, pointsGroups, rasterToPointsMap))
             {
-                throw RunTimeException(CRITICAL, RTE_ERROR, "Error finding unique rasters");
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "Error finding unique rasters");
             }
 
             /* rastersToPointsMap is no longer needed */
@@ -154,13 +154,13 @@ uint32_t GeoIndexedRaster::getSamples(const std::vector<point_info_t>& points, L
         /* Sample all unique rasters */
         if(!sampleUniqueRasters(uniqueRasters))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Error sampling unique rasters");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Error sampling unique rasters");
         }
 
         /* Populate sllist with samples */
         if(!collectSamples(pointsGroups, sllist))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Error collecting samples");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Error collecting samples");
         }
     }
     catch (const RunTimeException &e)
@@ -665,7 +665,7 @@ bool GeoIndexedRaster::findAllGroups(const std::vector<point_info_t>* points,
         if(pointsGroups.size() != points->size())
         {
             mlog(ERROR, "Number of points groups: %zu does not match number of points: %zu", pointsGroups.size(), points->size());
-            throw RunTimeException(CRITICAL, RTE_ERROR, "Number of points groups does not match number of points");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Number of points groups does not match number of points");
         }
 
         /* Reduce memory usage */

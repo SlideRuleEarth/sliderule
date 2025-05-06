@@ -43,9 +43,9 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Constructor - GranuleFields
+ * Constructor - Atl03GranuleFields
  *----------------------------------------------------------------------------*/
-GranuleFields::GranuleFields():
+Atl03GranuleFields::Atl03GranuleFields():
     FieldDictionary({ {"year",      &year},
                       {"month",     &month},
                       {"day",       &day},
@@ -72,19 +72,15 @@ GranuleFields::GranuleFields():
  *      vvv     - version
  *      ee      - revision
  *----------------------------------------------------------------------------*/
-void GranuleFields::parseResource (const char* resource)
+void Atl03GranuleFields::parseResource (const char* resource)
 {
     long val;
 
     /* check resource */
     const int strsize = StringLib::size(resource);
-    if(strsize < 3 || resource[0] != 'A' || resource[1] !='T' || resource[2] != 'L')
+    if(strsize < 33 || resource[0] != 'A' || resource[1] !='T' || resource[2] != 'L')
     {
         return; // not an ICESat-2 standard data product
-    }
-    if(strsize < 33)
-    {
-        return; // insufficient size to parse all fields
     }
 
     /* get year */
@@ -100,7 +96,7 @@ void GranuleFields::parseResource (const char* resource)
     }
     else
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse year from resource %s: %s", resource, year_str);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to parse year from resource %s: %s", resource, year_str);
     }
 
     /* get month */
@@ -114,7 +110,7 @@ void GranuleFields::parseResource (const char* resource)
     }
     else
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse month from resource %s: %s", resource, month_str);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to parse month from resource %s: %s", resource, month_str);
     }
 
     /* get day */
@@ -128,7 +124,7 @@ void GranuleFields::parseResource (const char* resource)
     }
     else
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse day from resource %s: %s", resource, day_str);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to parse day from resource %s: %s", resource, day_str);
     }
 
     /* get RGT */
@@ -144,7 +140,7 @@ void GranuleFields::parseResource (const char* resource)
     }
     else
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse RGT from resource %s: %s", resource, rgt_str);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to parse RGT from resource %s: %s", resource, rgt_str);
     }
 
     /* get cycle */
@@ -158,7 +154,7 @@ void GranuleFields::parseResource (const char* resource)
     }
     else
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse cycle from resource %s: %s", resource, cycle_str);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to parse cycle from resource %s: %s", resource, cycle_str);
     }
 
     /* get region */
@@ -172,9 +168,10 @@ void GranuleFields::parseResource (const char* resource)
     }
     else
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse region from resource %s: %s", resource, region_str);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to parse region from resource %s: %s", resource, region_str);
     }
 
+    /* get version */
     char version_str[4];
     version_str[0] = resource[30];
     version_str[1] = resource[31];
@@ -186,7 +183,7 @@ void GranuleFields::parseResource (const char* resource)
     }
     else
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "Unable to parse version from resource %s: %s", resource, version_str);
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Unable to parse version from resource %s: %s", resource, version_str);
     }
 }
 
@@ -263,7 +260,7 @@ void PhorealFields::fromLua (lua_State* L, int index)
 
         if(binsize.value <= 0.0)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid binsize: %lf", binsize.value);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid binsize: %lf", binsize.value);
         }
 
         provided = true;
@@ -524,7 +521,7 @@ int Icesat2Fields::luaStage (lua_State* L)
         const long stage = getLuaInteger(L, 2);
         if(stage < 0 || stage >= NUM_STAGES)
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid stage %ld", stage);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid stage %ld", stage);
         }
 
         lua_pushboolean(L, lua_obj->stages[stage]);
@@ -552,7 +549,7 @@ string convertToJson(const PhorealFields::phoreal_geoloc_t& v)
         case PhorealFields::MEAN:   return "\"mean\"";
         case PhorealFields::MEDIAN: return "\"median\"";
         case PhorealFields::CENTER: return "\"center\"";
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid PhoREAL geolocation: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid PhoREAL geolocation: %d", static_cast<int>(v));
     }
 }
 
@@ -566,7 +563,7 @@ int convertToLua(lua_State* L, const PhorealFields::phoreal_geoloc_t& v)
         case PhorealFields::MEAN:   lua_pushstring(L, "mean");          break;
         case PhorealFields::MEDIAN: lua_pushstring(L, "median");        break;
         case PhorealFields::CENTER: lua_pushstring(L, "center");        break;
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid PhoREAL geolocation: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid PhoREAL geolocation: %d", static_cast<int>(v));
     }
 
     return 1;
@@ -587,11 +584,11 @@ void convertFromLua(lua_State* L, int index, PhorealFields::phoreal_geoloc_t& v)
         if     (StringLib::match(fmt_str, "mean"))      v = PhorealFields::MEAN;
         else if(StringLib::match(fmt_str, "median"))    v = PhorealFields::MEDIAN;
         else if(StringLib::match(fmt_str, "center"))    v = PhorealFields::CENTER;
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "geolocation is an invalid value: %d", static_cast<int>(v));
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "geolocation is an invalid value: %d", static_cast<int>(v));
     }
     else if(!lua_isnil(L, index))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "geolocation is an invalid type:%d", lua_type(L, index));
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "geolocation is an invalid type:%d", lua_type(L, index));
     }
 }
 
@@ -609,7 +606,7 @@ string convertToJson(const Icesat2Fields::signal_conf_t& v)
         case Icesat2Fields::CNF_SURFACE_LOW:    return "\"atl03_low\"";
         case Icesat2Fields::CNF_SURFACE_MEDIUM: return "\"atl03_medium\"";
         case Icesat2Fields::CNF_SURFACE_HIGH:   return "\"atl03_high\"";
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid signal confidence: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid signal confidence: %d", static_cast<int>(v));
     }
 }
 
@@ -627,7 +624,7 @@ int convertToLua(lua_State* L, const Icesat2Fields::signal_conf_t& v)
         case Icesat2Fields::CNF_SURFACE_LOW:    lua_pushstring(L, "atl03_low");             break;
         case Icesat2Fields::CNF_SURFACE_MEDIUM: lua_pushstring(L, "atl03_medium");          break;
         case Icesat2Fields::CNF_SURFACE_HIGH:   lua_pushstring(L, "atl03_high");            break;
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid signal confidence: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid signal confidence: %d", static_cast<int>(v));
     }
 
     return 1;
@@ -652,11 +649,11 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::signal_conf_t& v)
         else if(StringLib::match(str, "atl03_low"))             v = Icesat2Fields::CNF_SURFACE_LOW;
         else if(StringLib::match(str, "atl03_medium"))          v = Icesat2Fields::CNF_SURFACE_MEDIUM;
         else if(StringLib::match(str, "atl03_high"))            v = Icesat2Fields::CNF_SURFACE_HIGH;
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "signal confidence is an invalid value: %d", static_cast<int>(v));
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "signal confidence is an invalid value: %d", static_cast<int>(v));
     }
     else if(!lua_isnil(L, index))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "signal confidence is an invalid type: %d", lua_type(L, index));
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "signal confidence is an invalid type: %d", lua_type(L, index));
     }
 }
 
@@ -687,7 +684,7 @@ string convertToJson(const Icesat2Fields::quality_ph_t& v)
         case Icesat2Fields::QUALITY_POSSIBLE_AFTERPULSE:        return "\"atl03_quality_afterpulse\"";
         case Icesat2Fields::QUALITY_POSSIBLE_IMPULSE_RESPONSE:  return "\"atl03_quality_impulse_response\"";
         case Icesat2Fields::QUALITY_POSSIBLE_TEP:               return "\"atl03_quality_tep\"";
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid photon quality: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid photon quality: %d", static_cast<int>(v));
     }
 }
 
@@ -702,7 +699,7 @@ int convertToLua(lua_State* L, const Icesat2Fields::quality_ph_t& v)
         case Icesat2Fields::QUALITY_POSSIBLE_AFTERPULSE:        lua_pushstring(L, "atl03_quality_afterpulse");          break;
         case Icesat2Fields::QUALITY_POSSIBLE_IMPULSE_RESPONSE:  lua_pushstring(L, "atl03_quality_impulse_response");    break;
         case Icesat2Fields::QUALITY_POSSIBLE_TEP:               lua_pushstring(L, "atl03_quality_tep");                 break;
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid photon quality: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid photon quality: %d", static_cast<int>(v));
     }
 
     return 1;
@@ -724,11 +721,11 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::quality_ph_t& v)
         else if(StringLib::match(str, "atl03_quality_afterpulse"))          v = Icesat2Fields::QUALITY_POSSIBLE_AFTERPULSE;
         else if(StringLib::match(str, "atl03_quality_impulse_response"))    v = Icesat2Fields::QUALITY_POSSIBLE_IMPULSE_RESPONSE;
         else if(StringLib::match(str, "atl03_quality_tep"))                 v = Icesat2Fields::QUALITY_POSSIBLE_TEP;
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "photon quality is an invalid value: %d", static_cast<int>(v));
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "photon quality is an invalid value: %d", static_cast<int>(v));
     }
     else if(!lua_isnil(L, index))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "photon quality is an invalid type: %d", lua_type(L, index));
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "photon quality is an invalid type: %d", lua_type(L, index));
     }
 }
 
@@ -760,7 +757,7 @@ string convertToJson(const Icesat2Fields::atl08_class_t& v)
         case Icesat2Fields::ATL08_CANOPY:           return "\"atl08_canopy\"";
         case Icesat2Fields::ATL08_TOP_OF_CANOPY:    return "\"atl08_top_of_canopy\"";
         case Icesat2Fields::ATL08_UNCLASSIFIED:     return "\"atl08_unclassified\"";
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl08 classification: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl08 classification: %d", static_cast<int>(v));
     }
 }
 
@@ -776,7 +773,7 @@ int convertToLua(lua_State* L, const Icesat2Fields::atl08_class_t& v)
         case Icesat2Fields::ATL08_CANOPY:           lua_pushstring(L, "atl08_canopy");          break;
         case Icesat2Fields::ATL08_TOP_OF_CANOPY:    lua_pushstring(L, "atl08_top_of_canopy");   break;
         case Icesat2Fields::ATL08_UNCLASSIFIED:     lua_pushstring(L, "atl08_unclassified");    break;
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl08 classification: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl08 classification: %d", static_cast<int>(v));
     }
 
     return 1;
@@ -799,11 +796,11 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::atl08_class_t& v)
         else if(StringLib::match(str, "atl08_canopy"))          v = Icesat2Fields::ATL08_CANOPY;
         else if(StringLib::match(str, "atl08_top_of_canopy"))   v = Icesat2Fields::ATL08_TOP_OF_CANOPY;
         else if(StringLib::match(str, "atl08_unclassified"))    v = Icesat2Fields::ATL08_UNCLASSIFIED;
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "atl08 classification is an invalid value: %d", static_cast<int>(v));
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "atl08 classification is an invalid value: %d", static_cast<int>(v));
     }
     else if(!lua_isnil(L, index))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "atl08 classification is an invalid type: %d", lua_type(L, index));
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "atl08 classification is an invalid type: %d", lua_type(L, index));
     }
 }
 
@@ -836,7 +833,7 @@ string convertToJson(const Icesat2Fields::gt_t& v)
         case Icesat2Fields::GT2R:   return "\"gt2r\"";
         case Icesat2Fields::GT3L:   return "\"gt3l\"";
         case Icesat2Fields::GT3R:   return "\"gt3r\"";
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid ground track: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid ground track: %d", static_cast<int>(v));
     }
 }
 
@@ -853,7 +850,7 @@ int convertToLua(lua_State* L, const Icesat2Fields::gt_t& v)
         case Icesat2Fields::GT2R:   lua_pushstring(L, "gt2r");  break;
         case Icesat2Fields::GT3L:   lua_pushstring(L, "gt3l");  break;
         case Icesat2Fields::GT3R:   lua_pushstring(L, "gt3r");  break;
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid ground track: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid ground track: %d", static_cast<int>(v));
     }
 
     return 1;
@@ -877,11 +874,11 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::gt_t& v)
         else if(StringLib::match(str, "gt2r"))  v = Icesat2Fields::GT2R;
         else if(StringLib::match(str, "gt3l"))  v = Icesat2Fields::GT3L;
         else if(StringLib::match(str, "gt3r"))  v = Icesat2Fields::GT3R;
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "ground track is an invalid value: %d", static_cast<int>(v));
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "ground track is an invalid value: %d", static_cast<int>(v));
     }
     else if(!lua_isnil(L, index))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "ground track is an invalid type: %d", lua_type(L, index));
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "ground track is an invalid type: %d", lua_type(L, index));
     }
 }
 
@@ -914,7 +911,7 @@ string convertToJson(const Icesat2Fields::spot_t& v)
         case Icesat2Fields::SPOT_4:   return "4";
         case Icesat2Fields::SPOT_5:   return "5";
         case Icesat2Fields::SPOT_6:   return "6";
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid spot: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid spot: %d", static_cast<int>(v));
     }
 }
 
@@ -931,7 +928,7 @@ int convertToLua(lua_State* L, const Icesat2Fields::spot_t& v)
         case Icesat2Fields::SPOT_4:   lua_pushinteger(L, 4);  break;
         case Icesat2Fields::SPOT_5:   lua_pushinteger(L, 5);  break;
         case Icesat2Fields::SPOT_6:   lua_pushinteger(L, 6);  break;
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid spot: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid spot: %d", static_cast<int>(v));
     }
 
     return 1;
@@ -951,12 +948,12 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::spot_t& v)
         }
         else
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "invalid spot: %d", i);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid spot: %d", i);
         }
     }
     else if(!lua_isnil(L, index))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "spot is an invalid type: %d", lua_type(L, index));
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "spot is an invalid type: %d", lua_type(L, index));
     }
 }
 
@@ -989,7 +986,7 @@ string convertToJson(const Icesat2Fields::surface_type_t& v)
         case Icesat2Fields::SRT_SEA_ICE:        return "\"sea_ice\"";
         case Icesat2Fields::SRT_LAND_ICE:       return "\"land_ice\"";
         case Icesat2Fields::SRT_INLAND_WATER:   return "\"inland_water\"";
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid surface type: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid surface type: %d", static_cast<int>(v));
     }
 }
 
@@ -1006,7 +1003,7 @@ int convertToLua(lua_State* L, const Icesat2Fields::surface_type_t& v)
         case Icesat2Fields::SRT_SEA_ICE:        lua_pushstring(L, "sea_ice");       break;
         case Icesat2Fields::SRT_LAND_ICE:       lua_pushstring(L, "land_ice");      break;
         case Icesat2Fields::SRT_INLAND_WATER:   lua_pushstring(L, "inland_water");  break;
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid surface type: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid surface type: %d", static_cast<int>(v));
     }
 
     return 1;
@@ -1030,11 +1027,11 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::surface_type_t& v)
         else if(StringLib::match(str, "sea_ice"))       v = Icesat2Fields::SRT_SEA_ICE;
         else if(StringLib::match(str, "land_ice"))      v = Icesat2Fields::SRT_LAND_ICE;
         else if(StringLib::match(str, "inland_water"))  v = Icesat2Fields::SRT_INLAND_WATER;
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "surface type is an invalid value: %d", static_cast<int>(v));
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "surface type is an invalid value: %d", static_cast<int>(v));
     }
     else if(!lua_isnil(L, index))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "surface type is an invalid type: %d", lua_type(L, index));
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "surface type is an invalid type: %d", lua_type(L, index));
     }
 }
 
@@ -1048,7 +1045,7 @@ string convertToJson(const Atl24Fields::class_t& v)
         case Atl24Fields::UNCLASSIFIED: return "\"unclassified\"";
         case Atl24Fields::BATHYMETRY:   return "\"bathymetry\"";
         case Atl24Fields::SEA_SURFACE:  return "\"sea_surface\"";
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid bathy class: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid bathy class: %d", static_cast<int>(v));
     }
 }
 
@@ -1062,7 +1059,7 @@ int convertToLua(lua_State* L, const Atl24Fields::class_t& v)
         case Atl24Fields::UNCLASSIFIED: lua_pushstring(L, "unclassified");  break;
         case Atl24Fields::BATHYMETRY:   lua_pushstring(L, "bathymetry");    break;
         case Atl24Fields::SEA_SURFACE:  lua_pushstring(L, "sea_surface");   break;
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid atl24 class: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl24 class: %d", static_cast<int>(v));
     }
     return 1;
 }
@@ -1080,7 +1077,7 @@ void convertFromLua(lua_State* L, int index, Atl24Fields::class_t& v)
             case 0:     v = Atl24Fields::UNCLASSIFIED;  break;
             case 1:     v = Atl24Fields::BATHYMETRY;    break;
             case 2:     v = Atl24Fields::SEA_SURFACE;   break;
-            default:    throw RunTimeException(CRITICAL, RTE_ERROR, "bathy class is an invalid value: %ld", c);
+            default:    throw RunTimeException(CRITICAL, RTE_FAILURE, "bathy class is an invalid value: %ld", c);
         }
     }
     else if(lua_isstring(L, index))
@@ -1089,11 +1086,11 @@ void convertFromLua(lua_State* L, int index, Atl24Fields::class_t& v)
         if     (StringLib::match(str, "unclassified"))      v = Atl24Fields::UNCLASSIFIED;
         else if(StringLib::match(str, "bathymetry"))        v = Atl24Fields::BATHYMETRY;
         else if(StringLib::match(str, "sea_surface"))       v = Atl24Fields::SEA_SURFACE;
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "bathy class is an invalid value: %s", str);
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "bathy class is an invalid value: %s", str);
     }
     else if(!lua_isnil(L, index))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "bathy class is an invalid type: %d", lua_type(L, index));
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "bathy class is an invalid type: %d", lua_type(L, index));
     }
 }
 
@@ -1134,7 +1131,7 @@ string convertToJson(const Atl24Fields::flag_t& v)
     {
         case Atl24Fields::FLAG_OFF: return "\"off\"";
         case Atl24Fields::FLAG_ON:  return "\"on\"";
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid filter flag: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid filter flag: %d", static_cast<int>(v));
     }
 }
 
@@ -1147,7 +1144,7 @@ int convertToLua(lua_State* L, const Atl24Fields::flag_t& v)
     {
         case Atl24Fields::FLAG_OFF: lua_pushstring(L, "off");   break;
         case Atl24Fields::FLAG_ON:  lua_pushstring(L, "on");    break;
-        default: throw RunTimeException(CRITICAL, RTE_ERROR, "invalid filter flag: %d", static_cast<int>(v));
+        default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid filter flag: %d", static_cast<int>(v));
     }
     return 1;
 }
@@ -1170,7 +1167,7 @@ void convertFromLua(lua_State* L, int index, Atl24Fields::flag_t& v)
         {
             case 0:     v = Atl24Fields::FLAG_OFF;  break;
             case 1:     v = Atl24Fields::FLAG_ON;   break;
-            default:    throw RunTimeException(CRITICAL, RTE_ERROR, "flag filter is an invalid value: %ld", f);
+            default:    throw RunTimeException(CRITICAL, RTE_FAILURE, "flag filter is an invalid value: %ld", f);
         }
     }
     else if(lua_isstring(L, index))
@@ -1178,11 +1175,11 @@ void convertFromLua(lua_State* L, int index, Atl24Fields::flag_t& v)
         const char* str = LuaObject::getLuaString(L, index);
         if     (StringLib::match(str, "off"))   v = Atl24Fields::FLAG_OFF;
         else if(StringLib::match(str, "on"))    v = Atl24Fields::FLAG_ON;
-        else throw RunTimeException(CRITICAL, RTE_ERROR, "flag filter is an invalid value: %s", str);
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "flag filter is an invalid value: %s", str);
     }
     else if(!lua_isnil(L, index))
     {
-        throw RunTimeException(CRITICAL, RTE_ERROR, "flag filter is an invalid type: %d", lua_type(L, index));
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "flag filter is an invalid type: %d", lua_type(L, index));
     }
 }
 

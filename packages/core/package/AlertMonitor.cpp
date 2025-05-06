@@ -33,32 +33,31 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "PublishMonitor.h"
+#include "AlertMonitor.h"
 #include "Monitor.h"
 #include "EventLib.h"
 #include "TimeLib.h"
 #include "RecordObject.h"
+#include "OrchestratorLib.h"
+#include "ManagerLib.h"
 
 /******************************************************************************
- * PUBLIC METHODS
+ * METHODS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * luaCreate - create([<type mask>], [<level>], [<output format>], <outputq>)
+ * luaCreate - create(<level>)
  *----------------------------------------------------------------------------*/
-int PublishMonitor::luaCreate (lua_State* L)
+int AlertMonitor::luaCreate (lua_State* L)
 {
     try
     {
         /* Get Parmeters */
-        const uint8_t type_mask = (uint8_t)getLuaInteger(L, 1, true, (long)EventLib::LOG);
-        const event_level_t level = (event_level_t)getLuaInteger(L, 2, true, CRITICAL);
-        const format_t format = (format_t)getLuaInteger(L, 3, true, RECORD);
-        const char* eventq_name = getLuaString(L, 4, true, EVENTQ);
-        const char* outq_name = getLuaString(L, 5, true, NULL);
+        const event_level_t level = static_cast<event_level_t>(getLuaInteger(L, 1));
+        const char* eventq_name = getLuaString(L, 2, true, EVENTQ);
 
         /* Return Dispatch Object */
-        return createLuaObject(L, new PublishMonitor(L, type_mask, level, format, eventq_name, outq_name));
+        return createLuaObject(L, new AlertMonitor(L, level, eventq_name));
     }
     catch(const RunTimeException& e)
     {
@@ -67,35 +66,32 @@ int PublishMonitor::luaCreate (lua_State* L)
     }
 }
 
-/******************************************************************************
- * PROTECTED METHODS
- ******************************************************************************/
-
 /*----------------------------------------------------------------------------
  * processEvent
  *----------------------------------------------------------------------------*/
-void PublishMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size)
+void AlertMonitor::processEvent(const unsigned char* event_buf_ptr, int event_size)
 {
-    outQ->postCopy(event_buf_ptr, event_size, IO_CHECK);
-}
+    (void)event_size;
 
-/******************************************************************************
- * PRIVATE METHODS
- ******************************************************************************/
+    /* Cast to Alert Structure */
+    const EventLib::alert_t* event = reinterpret_cast<const EventLib::alert_t*>(event_buf_ptr);
+
+    /* Filter Events */
+    if(event->level < eventLevel) return;
+
+    /* Post Alert to Manager */
+    ManagerLib::issueAlert(event);
+}
 
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-PublishMonitor::PublishMonitor(lua_State* L, uint8_t type_mask, event_level_t level, format_t format, const char* eventq_name, const char* outq_name):
-    Monitor(L, type_mask, level, format, eventq_name)
+AlertMonitor::AlertMonitor(lua_State* L, event_level_t level, const char* eventq_name):
+    Monitor(L, level, eventq_name, EventLib::alertRecType)
 {
-    outQ = new Publisher(outq_name);
 }
 
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-PublishMonitor::~PublishMonitor(void)
-{
-    delete outQ;
-}
+AlertMonitor::~AlertMonitor(void) = default;

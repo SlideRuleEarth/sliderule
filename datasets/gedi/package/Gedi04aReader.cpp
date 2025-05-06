@@ -58,7 +58,8 @@ const RecordObject::fieldDef_t Gedi04aReader::fpRecDef[] = {
     {"solar_elevation", RecordObject::FLOAT,    offsetof(g04a_footprint_t, solar_elevation), 1,  NULL, NATIVE_FLAGS},
     {"sensitivity",     RecordObject::FLOAT,    offsetof(g04a_footprint_t, sensitivity),     1,  NULL, NATIVE_FLAGS},
     {"beam",            RecordObject::UINT8,    offsetof(g04a_footprint_t, beam),            1,  NULL, NATIVE_FLAGS},
-    {"flags",           RecordObject::UINT8,    offsetof(g04a_footprint_t, flags),           1,  NULL, NATIVE_FLAGS}
+    {"flags",           RecordObject::UINT8,    offsetof(g04a_footprint_t, flags),           1,  NULL, NATIVE_FLAGS},
+    {"track",           RecordObject::UINT16,   offsetof(g04a_footprint_t, track),           1,  NULL, NATIVE_FLAGS}
 };
 
 const char* Gedi04aReader::batchRecType = "gedi04arec";
@@ -85,8 +86,8 @@ int Gedi04aReader::luaCreate (lua_State* L)
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */
-        if(parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a resource to process");
-        else if(parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a valid asset");
+        if(parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a resource to process");
+        else if(parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a valid asset");
 
         /* Return Reader Object */
         return createLuaObject(L, new Gedi04aReader(L, outq_name, parms, send_terminator));
@@ -180,7 +181,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
         const Gedi04a gedi04a(info, region);
         if(!reader->readAncillaryData(info, region.first_footprint, region.num_footprints))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read ancillary data");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to read ancillary data");
         }
 
         /* Increment Read Statistics */
@@ -252,6 +253,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
                 fp->sensitivity     = gedi04a.sensitivity[footprint];
                 fp->beam            = static_cast<int>(info->beam);
                 fp->flags           = 0;
+                fp->track           = parms->granule_fields.track.value;
                 if(gedi04a.degrade_flag[footprint])     fp->flags |= GediFields::DEGRADE_FLAG_MASK;
                 if(gedi04a.l2_quality_flag[footprint])  fp->flags |= GediFields::L2_QUALITY_FLAG_MASK;
                 if(gedi04a.l4_quality_flag[footprint])  fp->flags |= GediFields::L4_QUALITY_FLAG_MASK;

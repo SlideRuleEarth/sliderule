@@ -11,7 +11,7 @@ end
 -- Setup --
 
 -- local console = require("console")
--- console.monitor:config(core.LOG, core.INFO)
+-- console.monitor:config(core.INFO)
 -- sys.setlvl(core.LOG, core.INFO)
 
 local assets = asset.loaddir()

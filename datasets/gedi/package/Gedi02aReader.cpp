@@ -58,7 +58,8 @@ const RecordObject::fieldDef_t Gedi02aReader::fpRecDef[] = {
     {"solar_elevation", RecordObject::FLOAT,    offsetof(g02a_footprint_t, solar_elevation),         1,  NULL, NATIVE_FLAGS},
     {"sensitivity",     RecordObject::FLOAT,    offsetof(g02a_footprint_t, sensitivity),             1,  NULL, NATIVE_FLAGS},
     {"beam",            RecordObject::UINT8,    offsetof(g02a_footprint_t, beam),                    1,  NULL, NATIVE_FLAGS},
-    {"flags",           RecordObject::UINT8,    offsetof(g02a_footprint_t, flags),                   1,  NULL, NATIVE_FLAGS}
+    {"flags",           RecordObject::UINT8,    offsetof(g02a_footprint_t, flags),                   1,  NULL, NATIVE_FLAGS},
+    {"track",           RecordObject::UINT16,   offsetof(g02a_footprint_t, track),                   1,  NULL, NATIVE_FLAGS}
 };
 
 const char* Gedi02aReader::batchRecType = "gedi02arec";
@@ -85,8 +86,8 @@ int Gedi02aReader::luaCreate (lua_State* L)
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */
-        if(parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a resource to process");
-        else if(parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a valid asset");
+        if(parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a resource to process");
+        else if(parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a valid asset");
 
         /* Return Reader Object */
         return createLuaObject(L, new Gedi02aReader(L, outq_name, parms, send_terminator));
@@ -179,7 +180,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
         const Gedi02a gedi02a(info, region);
         if(!reader->readAncillaryData(info, region.first_footprint, region.num_footprints))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read ancillary data");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to read ancillary data");
         }
 
         /* Increment Read Statistics */
@@ -241,6 +242,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
                 fp->sensitivity             = gedi02a.sensitivity[footprint];
                 fp->beam                    = static_cast<uint8_t>(info->beam);
                 fp->flags                   = 0;
+                fp->track                   = parms->granule_fields.track.value;
                 if(gedi02a.degrade_flag[footprint]) fp->flags |= GediFields::DEGRADE_FLAG_MASK;
                 if(gedi02a.quality_flag[footprint]) fp->flags |= GediFields::L2_QUALITY_FLAG_MASK;
                 if(gedi02a.surface_flag[footprint]) fp->flags |= GediFields::SURFACE_FLAG_MASK;

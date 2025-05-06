@@ -79,11 +79,11 @@ CcsdsSpacePacket::CcsdsSpacePacket(int len): CcsdsPacket(SPACE_PACKET)
 {
     if(len < CCSDS_SPACE_HEADER_SIZE)
     {
-        throw RunTimeException(ERROR, RTE_ERROR, "buffer size must be greater than CCSDS header size");
+        throw RunTimeException(ERROR, RTE_FAILURE, "buffer size must be greater than CCSDS header size");
     }
     else if(len < CCSDS_MAX_SPACE_PACKET_SIZE)
     {
-        throw RunTimeException(ERROR, RTE_ERROR, "buffer size cannot be greater than maximum CCSDS packet size");
+        throw RunTimeException(ERROR, RTE_FAILURE, "buffer size cannot be greater than maximum CCSDS packet size");
     }
     else
     {
@@ -102,7 +102,7 @@ CcsdsSpacePacket::CcsdsSpacePacket(uint16_t apid, int len, bool clear): CcsdsPac
 {
     if(len < CCSDS_SPACE_HEADER_SIZE)
     {
-        throw RunTimeException(ERROR, RTE_ERROR, "buffer must be present and of positive length");
+        throw RunTimeException(ERROR, RTE_FAILURE, "buffer must be present and of positive length");
     }
     else
     {
@@ -121,7 +121,7 @@ CcsdsSpacePacket::CcsdsSpacePacket(unsigned char* buf, int size, bool copy): Ccs
 {
     if(buf == NULL || size < CCSDS_SPACE_HEADER_SIZE)
     {
-        throw RunTimeException(ERROR, RTE_ERROR, "buffer must be present and of positive length");
+        throw RunTimeException(ERROR, RTE_FAILURE, "buffer must be present and of positive length");
     }
     else if(copy)
     {
@@ -782,11 +782,11 @@ CcsdsEncapPacket::CcsdsEncapPacket(int len): CcsdsPacket(ENCAPSULATION_PACKET)
 {
     if(len < CCSDS_ENCAP_HEADER_SIZE)
     {
-        throw RunTimeException(ERROR, RTE_ERROR, "buffer size must be greater than CCSDS header size");
+        throw RunTimeException(ERROR, RTE_FAILURE, "buffer size must be greater than CCSDS header size");
     }
     else if(len < CCSDS_MAX_ENCAP_PACKET_SIZE)
     {
-        throw RunTimeException(ERROR, RTE_ERROR, "buffer size cannot be greater than maximum CCSDS packet size");
+        throw RunTimeException(ERROR, RTE_FAILURE, "buffer size cannot be greater than maximum CCSDS packet size");
     }
     else
     {

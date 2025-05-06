@@ -184,7 +184,7 @@ SwotL2Reader::SwotL2Reader (lua_State* L, const char* outq_name, SwotFields* _pa
         else
         {
             /* Report Empty Region */
-            alert(INFO, RTE_INFO, outQ, &active, "Empty spatial region for %s", resource);
+            alert(INFO, RTE_STATUS, outQ, &active, "Empty spatial region for %s", resource);
 
             /* Terminate */
             checkComplete();

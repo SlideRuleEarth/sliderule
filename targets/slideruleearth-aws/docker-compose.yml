@@ -20,6 +20,7 @@ services:
     environment:
       - IPV4=127.0.0.1
       - ORCHESTRATOR=http://127.0.0.1:8050
+      - MANAGER=http://127.0.0.1:8000
       - IS_PUBLIC=False
       - CLUSTER=localhost
       - PROVISIONING_SYSTEM=https://ps.localhost
@@ -73,6 +74,16 @@ services:
       - CLIENT_SECRET=$CLIENT_SECRET
       - DOMAIN=$DOMAIN
       - REDIRECT_URI_SCHEME=http
+  manager:
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/manager:latest
+    network_mode: "host"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    entrypoint: /docker-entrypoint.sh
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    volumes:
+      - /data:/data # manager.db
   website:
     image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/static-website:latest
     network_mode: "host"

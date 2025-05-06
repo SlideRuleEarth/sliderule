@@ -58,6 +58,7 @@ const RecordObject::fieldDef_t Gedi01bReader::fpRecDef[] = {
     {"solar_elevation", RecordObject::DOUBLE,   offsetof(g01b_footprint_t, solar_elevation),    1,  NULL, NATIVE_FLAGS},
     {"beam",            RecordObject::UINT8,    offsetof(g01b_footprint_t, beam),               1,  NULL, NATIVE_FLAGS},
     {"flags",           RecordObject::UINT8,    offsetof(g01b_footprint_t, flags),              1,  NULL, NATIVE_FLAGS},
+    {"track",           RecordObject::UINT16,   offsetof(g01b_footprint_t, track),              1,  NULL, NATIVE_FLAGS},
     {"tx_size",         RecordObject::UINT16,   offsetof(g01b_footprint_t, tx_size),            1,  NULL, NATIVE_FLAGS},
     {"rx_size",         RecordObject::UINT16,   offsetof(g01b_footprint_t, rx_size),            1,  NULL, NATIVE_FLAGS},
     {"tx_waveform",     RecordObject::FLOAT,    offsetof(g01b_footprint_t, tx_waveform),        G01B_MAX_TX_SAMPLES,  NULL, NATIVE_FLAGS},
@@ -88,8 +89,8 @@ int Gedi01bReader::luaCreate (lua_State* L)
         const bool send_terminator = getLuaBoolean(L, 3, true, true);
 
         /* Check for Null Resource and Asset */
-        if(parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a resource to process");
-        else if(parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_ERROR, "Must supply a valid asset");
+        if(parms->resource.value.empty()) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a resource to process");
+        else if(parms->asset.asset == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "Must supply a valid asset");
 
         /* Return Reader Object */
         return createLuaObject(L, new Gedi01bReader(L, outq_name, parms, send_terminator));
@@ -183,7 +184,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
         const Gedi01b gedi01b(info, region);
         if(!reader->readAncillaryData(info, region.first_footprint, region.num_footprints))
         {
-            throw RunTimeException(CRITICAL, RTE_ERROR, "failed to read ancillary data");
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to read ancillary data");
         }
 
         /* Read Waveforms */
@@ -234,8 +235,9 @@ void* Gedi01bReader::subsettingThread (void* parm)
                 fp->solar_elevation         = gedi01b.solar_elevation[footprint];
                 fp->beam                    = static_cast<uint8_t>(info->beam);
                 fp->flags                   = 0;
+                fp->track                   = parms->granule_fields.track.value;
                 fp->tx_size                 = gedi01b.tx_sample_count[footprint];
-                fp->rx_size                 = gedi01b.rx_sample_count[footprint];;
+                fp->rx_size                 = gedi01b.rx_sample_count[footprint];
 
                 /* Set Flags */
                 if(gedi01b.degrade_flag[footprint]) fp->flags |= GediFields::DEGRADE_FLAG_MASK;

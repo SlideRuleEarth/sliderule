@@ -41,25 +41,24 @@ BUILD = $(ROOT)/build
 STAGE = $(ROOT)/stage
 
 SLIDERULE_BUILD_DIR = $(BUILD)/sliderule
-PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
-PYTHON_CLIENT_DIR = $(ROOT)/clients/python
-NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
 SLIDERULE_STAGE_DIR = $(STAGE)/sliderule
 BUILDENV_STAGE_DIR = $(STAGE)/buildenv
-MONITOR_STAGE_DIR = $(STAGE)/monitor
 ILB_STAGE_DIR = $(STAGE)/ilb
 PROXY_STAGE_DIR = $(STAGE)/proxy
+MONITOR_STAGE_DIR = $(STAGE)/monitor
+MANAGER_STAGE_DIR = $(STAGE)/manager
 TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
 STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
+PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 
 VERSION ?= latest
 ECR := 742127912612.dkr.ecr.us-west-2.amazonaws.com
 GHCR := ghcr.io/slideruleearth
-DOCKEROPTS ?=
+DOCKEROPTS ?= # --progress=plain --no-cache
 BUILDX ?= # buildx
 DOCKER_PLATFORM ?= # --platform linux/arm64 | linux/amd64
 ARCH ?= $(shell arch)
@@ -109,18 +108,101 @@ run: ## run the server locally
 run-buildenv: ## run the build environment docker container
 	docker run -it -v $(ROOT):/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)
 
-manager-package: ## create the lambda python package for the manager
-	cd terraform/manager/python && ./package.sh
+sliderule-buildenv-docker: ## build sliderule build environment docker image
+	-rm -Rf $(BUILDENV_STAGE_DIR)
+	mkdir -p $(BUILDENV_STAGE_DIR)
+	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
+	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:$(VERSION) $(DOCKER_PLATFORM) .
+	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
+	docker tag $(ECR)/sliderule-buildenv:$(VERSION) $(GHCR)/sliderule-buildenv:$(VERSION)
 
-manager-deploy: ## deploy manager using terraform; needs DOMAIN
-	cd terraform/manager && terraform init
-	cd terraform/manager && terraform workspace select $(DOMAIN)-manager || terraform workspace new $(DOMAIN)-manager
-	cd terraform/manager && terraform apply
+sliderule-buildenv-docker-push: ## push build environment docker image to registry
+	docker push $(ECR)/sliderule-buildenv:$(VERSION)
 
-manager-destroy: ## destroy manager using terraform; needs DOMAIN
-	cd terraform/manager && terraform init
-	cd terraform/manager && terraform workspace select $(DOMAIN)-manager|| terraform workspace new $(DOMAIN)-manager
-	cd terraform/manager && terraform destroy
+sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
+	-rm -Rf $(SLIDERULE_STAGE_DIR)
+	mkdir -p $(SLIDERULE_STAGE_DIR)
+	rsync -a $(ROOT) $(SLIDERULE_STAGE_DIR)/sliderule --exclude build --exclude stage
+	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
+	cp docker/sliderule/config.json $(SLIDERULE_STAGE_DIR)
+	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:$(VERSION) $(DOCKER_PLATFORM) .
+
+ilb-docker: ## build intelligent load balancer docker image; needs VERSION
+	-rm -Rf $(ILB_STAGE_DIR)
+	mkdir -p $(ILB_STAGE_DIR)
+	cp docker/intelligent-load-balancer/* $(ILB_STAGE_DIR)
+	cp $(ROOT)/packages/core/extensions/json.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
+	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ilb:$(VERSION) $(DOCKER_PLATFORM) .
+
+proxy-docker: # make the reverse proxy docker image; needs VERSION
+	-rm -Rf $(PROXY_STAGE_DIR)
+	mkdir -p $(PROXY_STAGE_DIR)
+	cp docker/proxy/* $(PROXY_STAGE_DIR)
+	cd $(PROXY_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/proxy:$(VERSION) $(DOCKER_PLATFORM) .
+
+monitor-docker: ## build monitor docker image; needs VERSION
+	-rm -Rf $(MONITOR_STAGE_DIR)
+	mkdir -p $(MONITOR_STAGE_DIR)
+	cp docker/monitor/* $(MONITOR_STAGE_DIR)
+	cp docker/monitor/Dockerfile.$(ARCH) $(MONITOR_STAGE_DIR)/Dockerfile
+	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
+	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:$(VERSION) $(DOCKER_PLATFORM) .
+
+manager-lock:
+	cd docker/manager && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd docker/manager && conda-lock render -p linux-$(ARCH)
+
+manager-docker:
+	-rm -Rf $(MANAGER_STAGE_DIR)
+	mkdir -p $(MANAGER_STAGE_DIR)
+	cp docker/manager/Dockerfile.$(ARCH) $(MANAGER_STAGE_DIR)/Dockerfile
+	cp docker/manager/conda-* $(MANAGER_STAGE_DIR)
+	cp docker/manager/pyproject.toml $(MANAGER_STAGE_DIR)
+	cp docker/manager/docker-entrypoint.sh $(MANAGER_STAGE_DIR)
+	cp $(ROOT)/version.txt $(MANAGER_STAGE_DIR)
+	chmod +x $(MANAGER_STAGE_DIR)/docker-entrypoint.sh
+	mkdir $(MANAGER_STAGE_DIR)/manager
+	cp docker/manager/manager/*.py $(MANAGER_STAGE_DIR)/manager
+	cp docker/manager/manager/*.sql $(MANAGER_STAGE_DIR)/manager
+	cd $(MANAGER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/manager:$(VERSION) $(DOCKER_PLATFORM) .
+
+manager-run:
+	docker run -it -p 8000:8000 --rm --name manager $(ECR)/manager:$(VERSION) /bin/bash /docker-entrypoint.sh
+
+########################
+# Cluster Targets
+########################
+
+cluster-docker: ## build all cluster docker images
+	make sliderule-docker
+	make ilb-docker
+	make proxy-docker
+	make monitor-docker
+	make manager-lock
+	make manager-docker
+
+cluster-docker-push: ## push all cluster images to docker container registries
+	docker push $(ECR)/sliderule:$(VERSION)
+	docker push $(ECR)/ilb:$(VERSION)
+	docker push $(ECR)/proxy:$(VERSION)
+	docker push $(ECR)/monitor:$(VERSION)
+	docker push $(ECR)/manager:$(VERSION)
+
+cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
+	cd packer; packer build -var version=$(VERSION) -var-file=arm64_cpu.json sliderule-base.pkr.hcl
+
+cluster-upload-terraform: ## upload the Cluster terraform for provisioning system; needs VERSION
+	-rm -Rf $(TF_STAGE_DIR)
+	mkdir -p $(TF_STAGE_DIR)
+	cp terraform/cluster/*.* $(TF_STAGE_DIR)
+	cp terraform/cluster/.terraform.lock.hcl $(TF_STAGE_DIR)
+	printf "variable \"environment_version\" {\n  default = \"$(ENVVER)\"\n}" > $(TF_STAGE_DIR)/version.tf
+	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(VERSION)
+
+########################
+# Static Website Targets
+########################
 
 static-website-docker: ## make the static website docker image; needs VERSION
 	-rm -Rf $(STATIC_WEB_STAGE_DIR)
@@ -134,17 +216,17 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
 	cp docker/static-website/nginx.conf $(STATIC_WEB_STAGE_DIR)
 	cp docker/static-website/docker-entrypoint.sh $(STATIC_WEB_STAGE_DIR)
-	cd $(STATIC_WEB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/static-website:latest $(DOCKER_PLATFORM) .
+	cd $(STATIC_WEB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/static-website:$(VERSION) $(DOCKER_PLATFORM) .
 
 static-website-run: ## locally run the static website; needs VERSION
-	docker run -it -p 8080:4000 --rm --name website $(ECR)/static-website:latest
+	docker run -it -p 4000:4000 --rm --name website $(ECR)/static-website:$(VERSION)
 
 static-website-export: ## export static website to local host directory
 	-rm -Rf $(STATIC_WEB_EXPORT_DIR)
 	mkdir -p $(STATIC_WEB_EXPORT_DIR)
-	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:latest /host/export_dist.sh
+	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:$(VERSION) /host/export_dist.sh
 
-static-website-live-update: # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
+static-website-live-update: static-website-export # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
 	aws s3 sync $(STATIC_WEB_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
 	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*"
 
@@ -158,81 +240,33 @@ static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
 	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
 
-sliderule-buildenv-docker: ## build sliderule build environment docker image
-	-rm -Rf $(BUILDENV_STAGE_DIR)
-	mkdir -p $(BUILDENV_STAGE_DIR)
-	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
-	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/sliderule-buildenv:latest $(ECR)/sliderule-buildenv:$(VERSION)
-	docker tag $(ECR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
-	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
+########################
+# Certbot Targets
+########################
 
-sliderule-buildenv-docker-push: ## push build environment docker image to registry
-	docker push $(ECR)/sliderule-buildenv:$(VERSION)
+certbot-package: ## create the lambda python package for the certbot
+	cd terraform/certbot/python && ./package.sh
 
-sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
-	-rm -Rf $(SLIDERULE_STAGE_DIR)
-	mkdir -p $(SLIDERULE_STAGE_DIR)
-	rsync -a $(ROOT) $(SLIDERULE_STAGE_DIR)/sliderule --exclude build --exclude stage
-	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
-	cp docker/sliderule/config.json $(SLIDERULE_STAGE_DIR)
-	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(VERSION)
+certbot-deploy: certbot-package ## deploy certbot using terraform; needs DOMAIN
+	cd terraform/certbot && terraform init
+	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot || terraform workspace new $(DOMAIN)-certbot
+	cd terraform/certbot && terraform apply
 
-ilb-docker: ## build intelligent load balancer docker image; needs VERSION
-	-rm -Rf $(ILB_STAGE_DIR)
-	mkdir -p $(ILB_STAGE_DIR)
-	cp docker/intelligent-load-balancer/* $(ILB_STAGE_DIR)
-	cp $(ROOT)/packages/core/extensions/json.lua $(ILB_STAGE_DIR)
-	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
-	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ilb:latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(VERSION)
+certbot-destroy: certbot-package ## destroy certbot using terraform; needs DOMAIN
+	cd terraform/certbot && terraform init
+	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot|| terraform workspace new $(DOMAIN)-certbot
+	cd terraform/certbot && terraform destroy
 
-proxy-docker: # make the reverse proxy docker image; needs VERSION
-	-rm -Rf $(PROXY_STAGE_DIR)
-	mkdir -p $(PROXY_STAGE_DIR)
-	cp docker/proxy/* $(PROXY_STAGE_DIR)
-	cd $(PROXY_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/proxy:latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/proxy:latest $(ECR)/proxy:$(VERSION)
-
-monitor-docker: ## build monitor docker image; needs VERSION
-	-rm -Rf $(MONITOR_STAGE_DIR)
-	mkdir -p $(MONITOR_STAGE_DIR)
-	cp docker/monitor/* $(MONITOR_STAGE_DIR)
-	cp docker/monitor/Dockerfile.$(ARCH) $(MONITOR_STAGE_DIR)/Dockerfile
-	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
-	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:latest $(DOCKER_PLATFORM) .
-	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(VERSION)
-
-cluster-docker: ## build all cluster docker images
-	make sliderule-docker
-	make ilb-docker
-	make proxy-docker
-	make monitor-docker
-
-cluster-docker-push: ## push all cluster images to docker container registries
-	docker push $(ECR)/sliderule:$(VERSION)
-	docker push $(ECR)/ilb:$(VERSION)
-	docker push $(ECR)/proxy:$(VERSION)
-	docker push $(ECR)/monitor:$(VERSION)
-
-cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
-	cd packer; packer build -var version=$(VERSION) -var-file=arm64_cpu.json sliderule-base.pkr.hcl
-
-cluster-upload-terraform: ## upload the Cluster terraform for provisioning system; needs VERSION
-	-rm -Rf $(TF_STAGE_DIR)
-	mkdir -p $(TF_STAGE_DIR)
-	cp terraform/cluster/*.* $(TF_STAGE_DIR)
-	cp terraform/cluster/.terraform.lock.hcl $(TF_STAGE_DIR)
-	printf "variable \"environment_version\" {\n  default = \"$(ENVVER)\"\n}" > $(TF_STAGE_DIR)/version.tf
-	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(VERSION)
+########################
+# Tag & Release Targets
+########################
 
 tag: ## create version tag in this repository and release it on GitHub
 	echo $(VERSION) > $(ROOT)/version.txt
 	node $(ROOT)/clients/nodejs/utils/modpkg.js $(VERSION)
 	git add $(ROOT)/clients/nodejs/sliderule/package.json
-	cp $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
-	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
+	cp $(ROOT)/version.txt $(ROOT)/clients/python/version.txt
+	git add $(ROOT)/version.txt $(ROOT)/clients/python/version.txt
 	git commit -m "Version $(VERSION)"
 	git tag -a $(VERSION) -m "Version $(VERSION)"
 	git push --tags && git push
@@ -251,6 +285,10 @@ release: ## release a version of sliderule; needs VERSION
 	make static-website-export
 	make static-website-live-update
 
+########################
+# Clean Up Targets
+########################
+
 docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(GHCR)/sliderule-buildenv:$(VERSION)
 	- docker image rm $(ECR)/sliderule-buildenv:$(VERSION)
@@ -266,6 +304,7 @@ distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(STAGE)
 	- cd $(ROOT)/docs && ./clean.sh
 	- cd $(ROOT)/clients/python && ./clean.sh
+	- cd $(ROOT)/targets/slideruleearth-aws/docker/manager && ./clean.sh
 	- find $(ROOT) -name ".cookies" -exec rm {} \;
 	- rm -f report.pdf
 	- rm -f report.xml
@@ -305,9 +344,6 @@ perfssbtest: ## run strips serial and batch performance test comparing results
 ########################
 
 help: ## That's me!
-	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
-	@printf "\033[37m%-30s\033[0m %s\n" "# Makefile Help                                                                          |"
-	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
 	@printf "\033[37m%-30s\033[0m %s\n" "#-target-----------------------description------------------------------------------------"
 	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 	@echo ENVVER:$(ENVVER)

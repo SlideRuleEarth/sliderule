@@ -72,7 +72,7 @@ Thread::Thread(thread_func_t function, void* parm, bool _join):
     {
         char error_buf[256];
         dlog("Failed to create thread (%d): %s", ret, strerror_r(ret, error_buf, sizeof(error_buf)));  // Thread-safe error message
-        throw RunTimeException(CRITICAL, RTE_ERROR, "pthread_create failed");
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "pthread_create failed");
     }
 }
 
