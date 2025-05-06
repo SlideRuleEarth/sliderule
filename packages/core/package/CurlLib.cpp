@@ -312,7 +312,7 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
 
         /* Add Headers */
         struct curl_slist* hdr_slist = NULL;
-        FString client_hdr("x-sliderule-client: core-%s", LIBID);
+        const FString client_hdr("x-sliderule-client: core-%s", LIBID);
         hdr_slist = curl_slist_append(hdr_slist, client_hdr.c_str());
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hdr_slist);
 
