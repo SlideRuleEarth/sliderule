@@ -40,10 +40,7 @@ import geopandas
 from datetime import datetime
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry import Polygon
-from sliderule import logger
-from sliderule.icesat2 import ICESAT2_CRS
-import sliderule
-
+from sliderule import sliderule, logger
 
 ###############################################################################
 # GLOBALS
@@ -161,7 +158,7 @@ def __cmr_filter_urls(search_results, data_formats):
     # return filtered urls
     return urls
 
-def __cmr_granule_metadata(search_results, crs=ICESAT2_CRS):
+def __cmr_granule_metadata(search_results, crs=sliderule.DEFAULT_CRS):
     """Get the metadata for CMR returned granules"""
     # GeoDataFrame with granule metadata
     granule_metadata = sliderule.emptyframe(crs=crs)
@@ -240,7 +237,7 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
     kwargs.setdefault('polygon',None)
     kwargs.setdefault('name_filter',None)
     kwargs.setdefault('return_metadata',False)
-    kwargs.setdefault('crs',ICESAT2_CRS)
+    kwargs.setdefault('crs',sliderule.DEFAULT_CRS)
     # build params
     params = '&short_name={0}'.format(short_name)
     if version != None:

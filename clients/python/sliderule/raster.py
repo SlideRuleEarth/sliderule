@@ -29,10 +29,9 @@
 
 import numpy
 import base64
-import sliderule
 import geopandas
 from shapely.geometry import Polygon
-from sliderule.icesat2 import ICESAT2_CRS
+import sliderule
 
 ###############################################################################
 # GLOBALS
@@ -60,14 +59,14 @@ def poly2bbox(poly):
 #
 # Sample
 #
-def sample(asset, coordinates, parms={}, crs=ICESAT2_CRS):
+def sample(asset, coordinates, parms={}, crs=sliderule.DEFAULT_CRS):
     '''
     Sample a raster dataset at the coordinates provided
 
     Parameters
     ----------
     asset:          str
-                    data source asset (see `Assets </web/rtd/user_guide/icesat2.html#assets>`_)
+                    data source asset
     coordinates:    list
                     list of coordinates as [longitude, latitude]
     parms:          dict
@@ -169,14 +168,14 @@ def sample(asset, coordinates, parms={}, crs=ICESAT2_CRS):
 #
 # Subset
 #
-def subset(asset, extents, parms={}, crs=ICESAT2_CRS):
+def subset(asset, extents, parms={}, crs=sliderule.DEFAULT_CRS):
     '''
     Subset a raster dataset at the extent coordinates provided
 
     Parameters
     ----------
     asset:          str
-                    data source asset (see `Assets </web/rtd/user_guide/icesat2.html#assets>`_)
+                    data source asset
     extents:        list
                     list of extent coordinates as [minimum longitude, minimum latitude, maximum longitude, maximum latitude]
     parms:          dict

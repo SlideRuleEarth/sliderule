@@ -167,4 +167,4 @@ class TestAtl03x:
         gdf2 = sliderule.run("atl03x", {"track": 1, "cnf": 4, "datum": "EGM08"}, resources=[resource])
         assert init
         assert len(gdf1) == len(gdf2)
-        assert gdf1.height.mean < gdf2.height.mean
+        assert gdf1.height.mean() < gdf2.height.mean()
