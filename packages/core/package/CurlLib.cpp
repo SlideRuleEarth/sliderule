@@ -268,7 +268,7 @@ long CurlLib::postAsStream (const char* url, const char* data, Publisher* outq, 
 }
 
 /*----------------------------------------------------------------------------
- * postAsRecord
+ * postAsRecord - SlideRule Native Protocol
  *----------------------------------------------------------------------------*/
 long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, const bool* active)
 {
@@ -309,6 +309,12 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
         curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)rqst.size);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlLib::postRecords);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &parser);
+
+        /* Add Headers */
+        struct curl_slist* hdr_slist = NULL;
+        FString client_hdr("x-sliderule-client: core-%s", LIBID);
+        hdr_slist = curl_slist_append(hdr_slist, client_hdr.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hdr_slist);
 
         /* Perform the request, res will get the return code */
         const CURLcode res = curl_easy_perform(curl);

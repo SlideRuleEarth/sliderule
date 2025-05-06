@@ -20,10 +20,13 @@ def hashit(source_ip):
 
 def locateit(source_ip, debug_info):
     try:
-        geo_country, geo_city, geo_asn = get_geo()
-        country = geo_country.country(source_ip).country.name
-        city = geo_city.city(source_ip).city.name
-        return f'{country}, {city}'
+        if source_ip == "0.0.0.0":
+            return f'localhost, localhost'
+        else:
+            geo_country, geo_city, geo_asn = get_geo()
+            country = geo_country.country(source_ip).country.name
+            city = geo_city.city(source_ip).city.name
+            return f'{country}, {city}'
     except Exception as e:
         print(f'Failed to get location information for <{debug_info}>: {e}')
         return f'unknown, unknown'
