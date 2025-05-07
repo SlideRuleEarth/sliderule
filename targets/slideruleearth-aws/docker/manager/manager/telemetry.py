@@ -1,6 +1,6 @@
 from flask import (Blueprint, request, current_app)
 from werkzeug.exceptions import abort
-from manager.db import get_db, allcolumns
+from manager.db import execute_command_db, columns_db
 from manager.geo import get_geo
 import hashlib
 
@@ -56,12 +56,11 @@ def record():
                       data['status_code'],
                       data['account'],
                       data['version'] )
-            db = get_db()
-            columns = allcolumns("telemetry", db)
-            db.execute(f"""
-                INSERT INTO telemetry ({', '.join(columns)})
+            cmd = f"""
+                INSERT INTO telemetry ({', '.join(columns_db("telemetry"))})
                 VALUES (?, ?, ?, ST_Point(?, ?), ?, ?, ?, ?, ?, ?)
-            """, entry)
+            """
+            execute_command_db(cmd, entry)
     except Exception as e:
         abort(400, f'Telemetry record failed to post: {e}')
     return f'Telemetry record successfully posted'
