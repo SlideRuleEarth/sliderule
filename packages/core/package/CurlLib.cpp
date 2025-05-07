@@ -335,6 +335,9 @@ long CurlLib::postAsRecord (const char* url, const char* data, Publisher* outq, 
         /* Always Cleanup */
         curl_easy_cleanup(curl);
 
+        /* Clean Up Headers */
+        curl_slist_free_all(hdr_slist);
+
         /* Free Left-Over Response (if present) */
         if(parser.rec_size > 0)
         {
