@@ -64,9 +64,9 @@ class Gedi04bRaster: public GeoRaster
          Gedi04bRaster(lua_State *L, RequestFields* rqst_parms, const char* key) :
            GeoRaster(L, rqst_parms, key,
                     std::string(rqst_parms->geoFields(key)->asset.asset->getPath()).append("/").append(rqst_parms->geoFields(key)->asset.asset->getIndex()),
-                    TimeLib::datetime2gps(2021, 8, 4),
-                    1,                  /* elevationBandNum */
-                    GdalRaster::NO_BAND /* flagsBandNum     */) {}
+                    TimeLib::datetime2gps(2021, 8, 4) / 1000,
+                    GdalRaster::NO_BAND,  /* elevationBandNum: Level 4 rasters are not elevation and do not get vertical offset adjustment */
+                    1                     /* flagsBandNum     */) {}
 };
 
 #endif  /* __gedi04b_raster__ */

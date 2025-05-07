@@ -65,9 +65,10 @@ class Gedi03Raster: public GeoRaster
         Gedi03Raster(lua_State* L, RequestFields* rqst_parms, const char* key) :
          GeoRaster(L, rqst_parms, key,
                  std::string(rqst_parms->geoFields(key)->asset.asset->getPath()).append("/").append(rqst_parms->geoFields(key)->asset.asset->getIndex()),
-                 TimeLib::datetime2gps(2022, 1, 19),
-                 1,                  /* elevationBandNum */
-                 GdalRaster::NO_BAND /* flagsBandNum     */) {}
+                 TimeLib::datetime2gps(2022, 1, 19) / 1000,
+                 /* If the asset is 'gedil3-elevation', use band 1 for elevation (with vertical offset adjustment), otherwise, use band 1 as a quality flag band (no adjustment) */
+                 (rqst_parms->geoFields(key)->asset.asset->getName() == std::string("gedil3-elevation")) ? 1                   : GdalRaster::NO_BAND, /* elevationBandNum */
+                 (rqst_parms->geoFields(key)->asset.asset->getName() == std::string("gedil3-elevation")) ? GdalRaster::NO_BAND : 1                    /* flagsBandNum */) {}
 };
 
 #endif  /* __gedi03_raster__ */
