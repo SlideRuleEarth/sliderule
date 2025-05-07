@@ -12,6 +12,7 @@ services:
       - /data:/data
     environment:
       - MANAGER_SECRET_SALT=$MANAGER_SECRET_SALT
+      - DUCKDB_FILE=$DUCKDB_FILE
   autoheal:
     image: willfarrell/autoheal:latest
     tty: true

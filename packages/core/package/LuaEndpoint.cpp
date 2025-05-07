@@ -118,7 +118,7 @@ bool LuaEndpoint::handleRequest (Request* request)
     }
     else
     {
-        // Check Header (needed for node.js clients, potentially others)
+        // Check Header (needed for web javascript client, potentially others)
         // some clients do not allow a GET to have a request body
         // but SlideRule supports GETs on endpoints that use a
         // request body to determine what is sent in the response;
@@ -129,7 +129,7 @@ bool LuaEndpoint::handleRequest (Request* request)
         const char* streaming_header = request->getHdrStreaming();
         if(streaming_header != NULL && StringLib::match(streaming_header, "0"))
         {
-                info->streaming = false;
+            info->streaming = false;
         }
     }
 
