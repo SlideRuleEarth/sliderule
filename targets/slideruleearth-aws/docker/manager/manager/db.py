@@ -2,6 +2,7 @@ import duckdb
 import click
 from flask import current_app, g
 import threading
+import boto3
 
 def __getdb():
     if 'db' not in g:
@@ -36,6 +37,16 @@ def execute_command_db(cmd, entry=None):
     db, lock = __getdb()
     with lock:
         return db.execute(cmd, entry)
+
+def export_db():
+    db, lock = __getdb()
+    s3 = boto3.client('s3')
+    local_path = current_app.config['DATABASE']
+    remote_path = current_app.config['DATABASE_REMOTE'].split("s3://")[-1]
+    bucket_name = remote_path.split("/")[0]
+    key = '/'.join(remote_path.splot("/")[1:])
+    with lock:
+        s3.upload_file(local_path, bucket_name, key)
 
 def close_db(e=None):
     db = g.pop('db', None)

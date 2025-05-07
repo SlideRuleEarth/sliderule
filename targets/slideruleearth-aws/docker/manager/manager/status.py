@@ -1,4 +1,4 @@
-from flask import (Blueprint, request, g)
+from flask import (Blueprint, request)
 from werkzeug.exceptions import abort
 from manager.db import execute_command_db
 import json
