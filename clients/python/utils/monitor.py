@@ -1,12 +1,57 @@
+# Copyright (c) 2021, University of Washington
+# All rights reserved.
 #
-#   Uses the "event" endpoint to capture a set of traces
-#   and produce human readable results
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the University of Washington nor the names of its
+#    contributors may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
+# “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+# TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#
+#  Uses the "event" endpoint to capture a set of traces and produce human 
+#  readable results; also produces an output compatible with the GSFC
+#  Software Timing Analyzer developed by Steve Slegel.
 #
 
-import sys
+###############################################################################
+# IMPORTS
+###############################################################################
+
+import argparse
 import pandas
 import sliderule
-from utils import parse_command_line
+
+###############################################################################
+# COMMAND LINE ARGUMENTS
+###############################################################################
+
+parser = argparse.ArgumentParser(description="""monitor""")
+parser.add_argument('--domain',             type=str,               default="localhost")
+parser.add_argument('--organization',       type=str,               default=None)
+parser.add_argument('--verbose',            action='store_true',    default=False)
+parser.add_argument('--depth',              type=int,               default=0)
+parser.add_argument('--filter',             type=str, nargs='+',    default=[])
+args,_ = parser.parse_known_args()
 
 ###############################################################################
 # GLOBALS
@@ -120,7 +165,7 @@ def sta_output(filter_list, depth, names, traces):
     write_sta_events("pytrace.txt", df)
     write_sta_setup("pytrace.PerfIDSetup", perf_ids)
 
-def process_event(rec):
+def process_event(rec, session):
     global names, traces, origins
     # Populate traces dictionary
     trace_id = rec['id']
@@ -152,30 +197,14 @@ def process_event(rec):
 
 if __name__ == '__main__':
 
-    # Default Parameters
-    parms = {
-        "url": "localhost",
-        "organization": None,
-        "fmt": "console",
-        "depth": 0,
-        "filter": []
-    }
-
-    # Override Parameters
-    parse_command_line(sys.argv, parms)
+    # Initialize Client
+    sliderule.init(args.domain, organization=args.organization, verbose=args.verbose)
 
     # Default Request
     rqst = {
         "type": LOG | TRACE,
         "duration": 30
     }
-
-    # Override Request
-    parse_command_line(sys.argv, rqst)
-
-    # Set URL and Organization
-    sliderule.set_url(parms["url"])
-    sliderule.authenticate(parms["organization"])
 
     # Connect to SlideRule
     rsps = sliderule.source("event", rqst, stream=True, callbacks={'tracerec': process_event})
@@ -185,4 +214,4 @@ if __name__ == '__main__':
 
     # Output Traces
     console_output(origins)
-    sta_output(parms["filter"], parms["depth"], names, traces)
+    sta_output(args.filter, args.depth, names, traces)
