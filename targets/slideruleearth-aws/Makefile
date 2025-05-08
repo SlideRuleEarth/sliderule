@@ -272,7 +272,7 @@ tag: ## create version tag in this repository and release it on GitHub
 	gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/web/rtd/developer_guide/release_notes/release_notes.html"
 	make -C $(ROOT)/clients/nodejs publish
 
-release: ## release a version of sliderule; needs VERSION
+release: manager-lock ## release a version of sliderule; needs VERSION
 	make tag
 	make sliderule-buildenv-docker
 	make sliderule-buildenv-docker-push
@@ -281,7 +281,6 @@ release: ## release a version of sliderule; needs VERSION
 	make cluster-build-packer
 	make cluster-upload-terraform
 	make static-website-docker
-	make static-website-export
 	make static-website-live-update
 
 ########################
