@@ -28,14 +28,11 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # Imports
-import sliderule
 import argparse
-import requests
-import time
-import os
+from sliderule.session import Session
 
 # Command Line Arguments
-parser = argparse.ArgumentParser(description="""monitor""")
+parser = argparse.ArgumentParser(description="""usage report""")
 parser.add_argument('--domain',             type=str,               default="slideruleearth.io")
 parser.add_argument('--organization',       type=str,               default="sliderule")
 parser.add_argument('--verbose',            action='store_true',    default=False)
@@ -46,5 +43,7 @@ if args.organization == "None":
     args.organization = None
 
 # Initialize SlideRule Client
-sliderule.init(args.domain, organization=args.organization, verbose=args.verbose)
+session = Session(domain=args.domain, organization=args.organization, verbose=True)
 
+rsps = session.manager("telemetry_counts/endpoint")
+print(rsps)
