@@ -29,8 +29,8 @@
 
 # Imports
 import sliderule
-from sliderule import earthdata, icesat2
 import argparse
+import requests
 import time
 import os
 
