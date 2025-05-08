@@ -14,8 +14,8 @@ SECRET_ACCESS_KEY_ID = config.get('default', 'aws_secret_access_key')
 SESSION_TOKEN = config.get('default', 'aws_session_token')
 
 # Initialize SlideRule Client #
-#sliderule.init("slideruleearth.io", verbose=True)
-sliderule.init("localhost", organization=None, verbose=True)
+sliderule.init("slideruleearth.io", verbose=True)
+
 # Set Parameters #
 parms = {
     "output": {
