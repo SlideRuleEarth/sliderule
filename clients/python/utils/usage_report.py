@@ -43,7 +43,74 @@ if args.organization == "None":
     args.organization = None
 
 # Initialize SlideRule Client
-session = Session(domain=args.domain, organization=args.organization, verbose=True)
+session = Session(domain=args.domain, organization=args.organization, verbose=args.verbose)
 
-rsps = session.manager("telemetry_counts/endpoint")
-print(rsps)
+##############################
+# Helper Functions
+##############################
+
+# Sum Counts
+def sum_counts(counts, include_list=None):
+    total = 0
+    if include_list != None:
+        for item in include_list:
+            if item in counts:
+                total += counts[item]
+    else:
+        for item in counts:
+            total += counts[item]
+    return total
+
+# Sort Counts
+def sort_counts(counts):
+    return sorted(counts.items(), key=lambda item: item[1], reverse=True)
+
+# Display Sorted
+def display_sorted(title, counts):
+    print(f'\n===================\n{title}\n===================')
+    sorted_counts = sort_counts(counts)
+    for count in sorted_counts:
+        print(f'{count[0]}: {count[1]}')    
+
+##############################
+# Collect Statistics
+##############################
+
+# Gather Statistics on Usage
+unique_ip_counts = session.manager("telemetry_counts/source_ip_hash")
+source_location_counts = session.manager("telemetry_counts/source_ip_location")
+client_counts = session.manager("telemetry_counts/client")
+endpoint_counts = session.manager("telemetry_counts/endpoint")
+telemetry_status_code_counts = session.manager("telemetry_counts/status_code")
+alert_status_code_counts = session.manager("alert_counts/status_code")
+
+##############################
+# Process Statistics
+##############################
+
+# Process Request Counts
+total_requests = sum_counts(endpoint_counts)
+total_icesat2_granules = sum_counts(endpoint_counts, ['atl03x', 'atl03s', 'atl03v', 'atl06', 'atl06s', 'atl08', 'atl13s', 'atl24x'])
+total_icesat2_proxied_requests = sum_counts(endpoint_counts, ['atl03x', 'atl03sp', 'atl03vp', 'atl06p', 'atl06sp', 'atl08p', 'atl13sp', 'atl24x'])
+total_gedi_granules = sum_counts(endpoint_counts, ['gedi01b', 'gedi02a', 'gedi04a'])
+total_gedi_proxied_requests = sum_counts(endpoint_counts, ['gedi01bp', 'gedi02ap', 'gedi04ap'])
+
+##############################
+# Report Statistics
+##############################
+
+# Report Usage Statistics
+print(f'Unique IPs: {len(unique_ip_counts)}')
+print(f'Locations: {len(source_location_counts)}')
+print(f'Total Requests: {total_requests}')
+print(f'ICESat-2 Granules Processed: {total_icesat2_granules}')
+print(f'ICESat-2 Proxied Requests: {total_icesat2_proxied_requests}')
+print(f'GEDI Granules Processed: {total_gedi_granules}')
+print(f'GEDI Proxied Requests: {total_gedi_proxied_requests}')
+
+# Display Sorted
+display_sorted("Source Locations", source_location_counts)
+display_sorted("Clients", client_counts)
+display_sorted("Endpoints", endpoint_counts)
+display_sorted("Request Codes", telemetry_status_code_counts)
+display_sorted("Alert Codes", alert_status_code_counts)
