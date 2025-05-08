@@ -37,9 +37,8 @@
 #include "FootprintReader.h"
 #include "Gedi01bReader.h"
 #include "Gedi02aReader.h"
-#include "Gedi03Raster.h"
 #include "Gedi04aReader.h"
-#include "Gedi04bRaster.h"
+#include "GediRaster.h"
 #include "GediFields.h"
 #include "GediIODriver.h"
 
@@ -88,20 +87,19 @@ void initgedi (void)
     /* Initialize Modules */
     Gedi01bReader::init();
     Gedi02aReader::init();
-    Gedi03Raster::init();
     Gedi04aReader::init();
-    Gedi04bRaster::init();
+    GediRaster::init();
 
     /* Register GEDI IO Driver */
     Asset::registerDriver(GediIODriver::FORMAT, GediIODriver::create);
 
     /* Register Rasters */
-    RasterObject::registerRaster(LUA_GEDI_L03_ELEVATION_RASTER_NAME,        Gedi03Raster::create);
-    RasterObject::registerRaster(LUA_GEDI_L03_CANOPY_RASTER_NAME,           Gedi03Raster::create);
-    RasterObject::registerRaster(LUA_GEDI_L03_ELEVATION_STDDEV_RASTER_NAME, Gedi03Raster::create);
-    RasterObject::registerRaster(LUA_GEDI_L03_CANOPY_STDDEV_RASTER_NAME,    Gedi03Raster::create);
-    RasterObject::registerRaster(LUA_GEDI_L03_COUNTS_RASTER_NAME,           Gedi03Raster::create);
-    RasterObject::registerRaster(LUA_GEDI_L04B_RASTER_NAME,                 Gedi04bRaster::create);
+    RasterObject::registerRaster(LUA_GEDI_L03_ELEVATION_RASTER_NAME,        GediRaster::createL3ElevationRaster);
+    RasterObject::registerRaster(LUA_GEDI_L03_CANOPY_RASTER_NAME,           GediRaster::createL3DataRaster);
+    RasterObject::registerRaster(LUA_GEDI_L03_ELEVATION_STDDEV_RASTER_NAME, GediRaster::createL3DataRaster);
+    RasterObject::registerRaster(LUA_GEDI_L03_CANOPY_STDDEV_RASTER_NAME,    GediRaster::createL3DataRaster);
+    RasterObject::registerRaster(LUA_GEDI_L03_COUNTS_RASTER_NAME,           GediRaster::createL3DataRaster);
+    RasterObject::registerRaster(LUA_GEDI_L04B_RASTER_NAME,                 GediRaster::createL4DataRaster);
 
     /* Extend Lua */
     LuaEngine::extend(LUA_GEDI_LIBNAME, gedi_open);

@@ -24,9 +24,8 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/FootprintReader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi01bReader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi02aReader.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/Gedi03Raster.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Gedi04aReader.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/Gedi04bRaster.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/GediRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GediFields.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GediIODriver.h
     DESTINATION

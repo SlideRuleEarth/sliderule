@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __gedi04b_raster__
-#define __gedi04b_raster__
+#ifndef __gedi_raster__
+#define __gedi_raster__
 
 /******************************************************************************
  * INCLUDES
@@ -39,10 +39,10 @@
 #include "GeoRaster.h"
 
 /******************************************************************************
- * GEDI 04B RASTER CLASS
+ * GEDI RASTER CLASS
  ******************************************************************************/
 
-class Gedi04bRaster: public GeoRaster
+class GediRaster: public GeoRaster
 {
     public:
 
@@ -52,21 +52,28 @@ class Gedi04bRaster: public GeoRaster
 
         static void init (void) {}
 
-        static RasterObject* create (lua_State* L, RequestFields* rqst_parms, const char* key)
-        { return new Gedi04bRaster(L, rqst_parms, key); }
+        static RasterObject* createL3ElevationRaster (lua_State* L, RequestFields* rqst_parms, const char* key)
+        { return new GediRaster(L, rqst_parms, key, TimeLib::datetime2gps(2022, 1, 19), 1, GdalRaster::NO_BAND); }
+
+        static RasterObject* createL3DataRaster (lua_State* L, RequestFields* rqst_parms, const char* key)
+        { return new GediRaster(L, rqst_parms, key, TimeLib::datetime2gps(2022, 1, 19), GdalRaster::NO_BAND, 1); }
+
+        static RasterObject* createL4DataRaster (lua_State* L, RequestFields* rqst_parms, const char* key)
+        { return new GediRaster(L, rqst_parms, key, TimeLib::datetime2gps(2021, 8, 4), GdalRaster::NO_BAND, 1); }
 
     protected:
+
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-         Gedi04bRaster(lua_State *L, RequestFields* rqst_parms, const char* key) :
-           GeoRaster(L, rqst_parms, key,
-                    std::string(rqst_parms->geoFields(key)->asset.asset->getPath()).append("/").append(rqst_parms->geoFields(key)->asset.asset->getIndex()),
-                    TimeLib::datetime2gps(2021, 8, 4) / 1000,
-                    GdalRaster::NO_BAND,  /* elevationBandNum: Level 4 rasters are not elevation and do not get vertical offset adjustment */
-                    1                     /* flagsBandNum     */) {}
+        GediRaster(lua_State* L, RequestFields* rqst_parms, const char* key, int64_t gpsTime, int elevationBandNum, int flagsBandNum) :
+         GeoRaster(L, rqst_parms, key,
+                 std::string(rqst_parms->geoFields(key)->asset.asset->getPath()).append("/").append(rqst_parms->geoFields(key)->asset.asset->getIndex()),
+                 gpsTime / 1000,
+                 elevationBandNum,
+                 flagsBandNum) {}
 };
 
-#endif  /* __gedi04b_raster__ */
+#endif  /* __gedi_raster__ */
