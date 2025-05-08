@@ -101,7 +101,7 @@ total_gedi_proxied_requests = sum_counts(endpoint_counts, ['gedi01bp', 'gedi02ap
 
 # Report Usage Statistics
 print(f'Unique IPs: {len(unique_ip_counts)}')
-print(f'Locations: {len(source_location_counts)}')
+print(f'Unique Locations: {len(source_location_counts)}')
 print(f'Total Requests: {total_requests}')
 print(f'ICESat-2 Granules Processed: {total_icesat2_granules}')
 print(f'ICESat-2 Proxied Requests: {total_icesat2_proxied_requests}')
