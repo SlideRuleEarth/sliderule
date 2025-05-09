@@ -149,11 +149,11 @@ monitor-docker: ## build monitor docker image; needs VERSION
 	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
 	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:$(VERSION) $(DOCKER_PLATFORM) .
 
-manager-lock:
+manager-lock: ## update dependencies of manager
 	cd docker/manager && conda-lock -p linux-$(ARCH) -f environment.yml
 	cd docker/manager && conda-lock render -p linux-$(ARCH)
 
-manager-docker:
+manager-docker: ## build manager docker image; needs VERSION
 	-rm -Rf $(MANAGER_STAGE_DIR)
 	mkdir -p $(MANAGER_STAGE_DIR)
 	cp docker/manager/Dockerfile.$(ARCH) $(MANAGER_STAGE_DIR)/Dockerfile
@@ -179,7 +179,6 @@ cluster-docker: ## build all cluster docker images
 	make ilb-docker
 	make proxy-docker
 	make monitor-docker
-	make manager-lock
 	make manager-docker
 
 cluster-docker-push: ## push all cluster images to docker container registries
@@ -221,7 +220,7 @@ static-website-docker: ## make the static website docker image; needs VERSION
 static-website-run: ## locally run the static website; needs VERSION
 	docker run -it -p 4000:4000 --rm --name website $(ECR)/static-website:$(VERSION)
 
-static-website-export: ## export static website to local host directory
+static-website-export: ## export static website to local host directory; needs VERSION
 	-rm -Rf $(STATIC_WEB_EXPORT_DIR)
 	mkdir -p $(STATIC_WEB_EXPORT_DIR)
 	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:$(VERSION) /host/export_dist.sh
@@ -230,7 +229,7 @@ static-website-live-update: static-website-export # Update the static web site d
 	aws s3 sync $(STATIC_WEB_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
 	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*"
 
-static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
+static-website-deploy: ## deploy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform init
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
 	cd terraform/static-website && terraform apply -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
@@ -273,7 +272,7 @@ tag: ## create version tag in this repository and release it on GitHub
 	gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/web/rtd/developer_guide/release_notes/release_notes.html"
 	make -C $(ROOT)/clients/nodejs publish
 
-release: ## release a version of sliderule; needs VERSION
+release: manager-lock ## release a version of sliderule; needs VERSION
 	make tag
 	make sliderule-buildenv-docker
 	make sliderule-buildenv-docker-push
@@ -282,7 +281,6 @@ release: ## release a version of sliderule; needs VERSION
 	make cluster-build-packer
 	make cluster-upload-terraform
 	make static-website-docker
-	make static-website-export
 	make static-website-live-update
 
 ########################
@@ -306,8 +304,8 @@ distclean: ## fully remove all non-version controlled files and directories
 	- cd $(ROOT)/clients/python && ./clean.sh
 	- cd $(ROOT)/targets/slideruleearth-aws/docker/manager && ./clean.sh
 	- find $(ROOT) -name ".cookies" -exec rm {} \;
-	- rm -f report.pdf
-	- rm -f report.xml
+	- rm -f utilities/report.pdf
+	- rm -f utilities/report.xml
 
 ########################
 # Test Targets

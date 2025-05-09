@@ -3,7 +3,7 @@ import tempfile
 
 import pytest
 from manager import create_app
-from manager.db import execute_db, close_db
+from manager.db import execute_file_db, close_db
 
 @pytest.fixture
 def app():
@@ -15,11 +15,12 @@ def app():
         'SECRET_SALT': '',
         'GEOLITE2_ASN': '/data/GeoLite2-ASN.mmdb',
         'GEOLITE2_CITY': '/data/GeoLite2-City.mmdb',
-        'GEOLITE2_COUNTRY': '/data/GeoLite2-Country.mmdb'
+        'GEOLITE2_COUNTRY': '/data/GeoLite2-Country.mmdb',
+        'ENDPOINT_TLM_EXCLUSION': []
     })
 
     with app.app_context():
-        execute_db('schema.sql')
+        execute_file_db('schema.sql')
 
     yield app
 

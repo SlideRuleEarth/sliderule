@@ -144,7 +144,7 @@ class Session:
     # constructor
     #
     def __init__ (self,
-        url             = PUBLIC_URL,
+        domain          = PUBLIC_URL,
         verbose         = False,
         loglevel        = logging.INFO,
         organization    = 0,
@@ -183,7 +183,7 @@ class Session:
             logger.addHandler(log_handler)
 
         # configure domain
-        self.service_url = url
+        self.service_domain = domain
 
         # configure callbacks
         self.callbacks = {
@@ -207,7 +207,7 @@ class Session:
     #
     def source (self, api, parm={}, stream=False, callbacks={}, path="/source", force_throw=False):
         '''
-        handles making the HTTP request to the sliderule servers
+        handles making the HTTP request to the sliderule cluster nodes
         '''
         # initialize local variables
         rsps = {}
@@ -220,9 +220,9 @@ class Session:
 
         # Construct Request URL
         if self.service_org:
-            url = 'https://%s.%s%s/%s' % (self.service_org, self.service_url, path, api)
+            url = 'https://%s.%s%s/%s' % (self.service_org, self.service_domain, path, api)
         else:
-            url = 'http://%s%s/%s' % (self.service_url, path, api)
+            url = 'http://%s%s/%s' % (self.service_domain, path, api)
 
         # Attempt request
         complete = False
@@ -369,7 +369,7 @@ class Session:
 
             # get boundaries of cluster and calculate nodes to request
             try:
-                host = "https://ps." + self.service_url + "/api/org_num_nodes/" + self.service_org + "/"
+                host = "https://ps." + self.service_domain + "/api/org_num_nodes/" + self.service_org + "/"
                 rsps = self.session.get(host, headers=headers, timeout=self.rqst_timeout)
                 rsps_body = rsps.json()
                 rsps.raise_for_status()
@@ -385,10 +385,10 @@ class Session:
             # Request number of nodes in cluster
             try:
                 if type(time_to_live) == int:
-                    host = "https://ps." + self.service_url + "/api/desired_org_num_nodes_ttl/" + self.service_org + "/" + str(requested_nodes) + "/" + str(time_to_live) + "/"
+                    host = "https://ps." + self.service_domain + "/api/desired_org_num_nodes_ttl/" + self.service_org + "/" + str(requested_nodes) + "/" + str(time_to_live) + "/"
                     rsps = self.session.post(host, headers=headers, timeout=self.rqst_timeout)
                 else:
-                    host = "https://ps." + self.service_url + "/api/desired_org_num_nodes/" + self.service_org + "/" + str(requested_nodes) + "/"
+                    host = "https://ps." + self.service_domain + "/api/desired_org_num_nodes/" + self.service_org + "/" + str(requested_nodes) + "/"
                     rsps = self.session.put(host, headers=headers, timeout=self.rqst_timeout)
                 rsps_body = rsps.json()
                 rsps.raise_for_status()
@@ -460,7 +460,7 @@ class Session:
         '''
         # initialize local variables
         login_status = False
-        ps_url = "ps." + self.service_url
+        ps_url = "ps." + self.service_domain
 
         # set organization on any authentication request
         self.service_org = ps_organization
@@ -515,8 +515,58 @@ class Session:
 
         # return login status
         if ps_organization != self.PUBLIC_ORG:
-            logger.info(f'Login status to {self.service_url}/{self.service_org}: {login_status and "success" or "failure"}')
+            logger.info(f'Login status to {self.service_domain}/{self.service_org}: {login_status and "success" or "failure"}')
         return login_status
+
+    #
+    #  manager
+    #
+    def manager (self, api):
+        '''
+        handles making the HTTP request to the sliderule manager
+        '''
+        # initialize local variables
+        rsps = ""
+        headers = {}
+
+        # Construct Request URL
+        if self.service_org:
+            url = 'https://%s.%s/manager/status/%s' % (self.service_org, self.service_domain, api)
+        else:
+            url = 'http://%s/manager/status/%s' % (self.service_domain, api)
+
+        try:
+            # Build Authorization Header
+            if self.service_org:
+                self.__buildauthheader(headers)
+
+            # Perform Request
+            data = self.session.get(url, headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
+            data.raise_for_status()
+
+            # Parse Response
+            stream = self.__StreamSource(data)
+            lines = [line for line in stream]
+            rsps = b''.join(lines)
+            rsps = json.loads(rsps)
+
+        except requests.exceptions.SSLError as e:
+            logger.error(f'Unable to verify SSL certificate for {url}')
+
+        except requests.ConnectionError as e:
+            logger.error(f'Connection error to endpoint {url}')
+
+        except requests.Timeout as e:
+            logger.error(f'Timed-out waiting for response from endpoint {url}')
+
+        except requests.HTTPError as e:
+            logger.error(f'HTTP error <{e.response.status_code}> returned in request to {url}: {rsps}')
+
+        except Exception as e:
+            logger.error(f'Failed to make request to {url}: {e}')
+
+        # Return Response
+        return rsps
 
     #
     # __StreamSource
@@ -548,7 +598,7 @@ class Session:
         if self.ps_access_token:
             # Check if Refresh Needed
             if time.time() > self.ps_token_exp or force_refresh:
-                host = "https://ps." + self.service_url + "/api/org_token/refresh/"
+                host = "https://ps." + self.service_domain + "/api/org_token/refresh/"
                 rqst = {"refresh": self.ps_refresh_token}
                 hdrs = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + self.ps_access_token}
                 rsps = self.session.post(host, data=json.dumps(rqst), headers=hdrs, timeout=self.rqst_timeout).json()
@@ -767,7 +817,7 @@ class Session:
         '''
         checks if url is already overridden
         '''
-        url = self.service_org + "." + self.service_url
+        url = self.service_org + "." + self.service_domain
         return url.lower() in self.local_dns
 
     #
@@ -779,9 +829,9 @@ class Session:
         '''
         global sliderule_dns
         headers = {}
-        url = self.service_org + "." + self.service_url
+        url = self.service_org + "." + self.service_domain
         self.__buildauthheader(headers)
-        host = "https://ps." + self.service_url + "/api/org_ip_adr/" + self.service_org + "/"
+        host = "https://ps." + self.service_domain + "/api/org_ip_adr/" + self.service_org + "/"
         rsps = self.session.get(host, headers=headers, timeout=self.rqst_timeout).json()
         if rsps["status"] == "SUCCESS":
             ipaddr = rsps["ip_address"]

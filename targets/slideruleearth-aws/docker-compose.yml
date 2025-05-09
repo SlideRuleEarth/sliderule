@@ -84,10 +84,3 @@ services:
     tty: true # docker run -t
     volumes:
       - /data:/data # manager.db
-  website:
-    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/static-website:latest
-    network_mode: "host"
-    restart: unless-stopped
-    pull_policy: if_not_present
-    stdin_open: true # docker run -i
-    tty: true # docker run -t

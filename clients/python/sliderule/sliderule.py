@@ -112,7 +112,7 @@ def init (
     global slideruleSession
     # create new global session
     slideruleSession = Session(
-        url=url,
+        domain=url,
         verbose=verbose,
         loglevel=loglevel,
         organization=organization,
@@ -174,7 +174,7 @@ def source (api, parm={}, stream=False, callbacks={}, path="/source", session=No
 #
 #  set_url
 #
-def set_url (url, session=None):
+def set_url (domain, session=None):
     '''
     Configure sliderule package with URL of service
 
@@ -191,7 +191,7 @@ def set_url (url, session=None):
         >>> sliderule.set_url("service.my-sliderule-server.org")
     '''
     session = checksession(session)
-    session.service_url = url
+    session.service_domain = domain
 
 #
 #  set_verbose
@@ -436,7 +436,7 @@ def check_version (plugins=[], session=None):
 
     # check response from server
     if info == None:
-        raise FatalError(f'Failed to get response from server at {session.service_org}.{session.service_url}')
+        raise FatalError(f'Failed to get response from server at {session.service_org}.{session.service_domain}')
 
     # populate version info
     versions = {}

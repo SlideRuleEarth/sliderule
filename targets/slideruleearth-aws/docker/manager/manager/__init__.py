@@ -55,4 +55,8 @@ def create_app(test_config=None):
     from . import status
     app.register_blueprint(status.status)
 
+    # initalize background tasks
+    from . import background
+    background.database_backup_run()
+    
     return app

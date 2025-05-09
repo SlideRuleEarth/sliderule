@@ -1,6 +1,6 @@
-from flask import (Blueprint, g, request)
+from flask import (Blueprint, request)
 from werkzeug.exceptions import abort
-from manager.db import get_db
+from manager.db import execute_command_db
 import json
 
 ####################
@@ -55,8 +55,7 @@ def value_counts(table, field, valid_fields, time_field):
                 GROUP BY {field}
             """
             # execute request
-            db = get_db()
-            result = db.execute(cmd).fetchall()
+            result = execute_command_db(cmd).fetchall()
             # return response
             response = {key:value for (key,value) in result}
             return json.dumps(response)
@@ -78,8 +77,7 @@ def list_rows(table, time_field, exclude_list=None):
             {build_time_range_query(time_field)}
         """
         # execute request
-        db = get_db()
-        cursor = db.execute(cmd)
+        cursor = execute_command_db(cmd)
         result = cursor.fetchall()
         # return response
         columns = [desc[0] for desc in cursor.description]

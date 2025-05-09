@@ -34,12 +34,16 @@ import argparse
 import time
 import os
 
+# Globals
+ATL03_GRANULE_GRANDMESA = "ATL03_20181017222812_02950102_005_01.h5"
+ATL03_GRANULE_DICKSONFJORD = "ATL03_20190314093716_11600203_005_01.h5"
+
+# Generate Region Polygon
+region = sliderule.toregion("tests/data/grandmesa.geojson")
+
 # Command Line Arguments
 parser = argparse.ArgumentParser(description="""Subset granules""")
 parser.add_argument('--benchmarks',     '-b',   nargs='+', type=str,    default=[])
-parser.add_argument('--granule03',      '-p',   type=str,               default="ATL03_20181017222812_02950102_005_01.h5")
-parser.add_argument('--granule06',      '-c',   type=str,               default="ATL06_20181017222812_02950102_005_01.h5")
-parser.add_argument('--aoi',            '-a',   type=str,               default="tests/data/grandmesa.geojson")
 parser.add_argument('--domain',         '-d',   type=str,               default="slideruleearth.io")
 parser.add_argument('--organization',   '-o',   type=str,               default="sliderule")
 parser.add_argument('--desired_nodes',  '-n',   type=int,               default=None)
@@ -63,22 +67,13 @@ sliderule.init(args.domain, verbose=args.verbose, loglevel=args.loglvl, organiza
 if args.no_aux:
     sliderule.set_processing_flags(aux=False)
 
-# Generate Region Polygon
-region = sliderule.toregion(args.aoi)
-
 # ########################################################
 # Utilities
 # ########################################################
 
 # Display Results
 def display_results(name, gdf, duration):
-    print(f'{name}')
-    print("\t{:20} {} elements".format("output:", f'{len(gdf)} x {len(gdf.keys())}'))
-    print("\t{:20} {} secs".format("total:", f'{duration:.6f}'))
-    for key in sliderule.profiles:
-        print("\t{:20} {:.6f} secs".format(key + ":", sliderule.profiles[key]))
-    for key in icesat2.profiles:
-        print("\t{:20} {:.6f} secs".format(key + ":", icesat2.profiles[key]))
+    print(f'{name} <{len(gdf)} x {len(gdf.keys())}> - {duration:.6f} secs')
 
 # ########################################################
 # Benchmarks
@@ -103,7 +98,7 @@ def atl06_ancillary():
         "srt":              icesat2.SRT_LAND,
         "atl03_geo_fields": ["solar_elevation"]
     }
-    return icesat2.atl06p(parms, resources=[args.granule03])
+    return icesat2.atl06p(parms, resources=[ATL03_GRANULE_GRANDMESA])
 
 # ------------------------------------
 # Benchmark ATL03 Ancillary
@@ -114,7 +109,7 @@ def atl03_ancillary():
         "srt":              icesat2.SRT_LAND,
         "atl03_ph_fields":  ["ph_id_count"]
     }
-    return icesat2.atl06p(parms, resources=[args.granule03])
+    return icesat2.atl06p(parms, resources=[ATL03_GRANULE_GRANDMESA])
 
 # ------------------------------------
 # Benchmark ATL06 Parquet
@@ -129,7 +124,7 @@ def atl06_parquet():
         "len":              10.0,
         "res":              10.0,
         "output":           { "path": "testfile.parquet", "format": "parquet", "open_on_complete": True } }
-    gdf = icesat2.atl06p(parms, resources=[args.granule03])
+    gdf = icesat2.atl06p(parms, resources=[ATL03_GRANULE_GRANDMESA])
     if not args.nocleanup:
         os.remove("testfile.parquet")
     return gdf
@@ -147,7 +142,7 @@ def atl03_parquet():
         "len":              10.0,
         "res":              10.0,
         "output":           { "path": "testfile.parquet", "format": "parquet", "open_on_complete": True } }
-    gdf = icesat2.atl03sp(parms, resources=[args.granule03])
+    gdf = icesat2.atl03sp(parms, resources=[ATL03_GRANULE_GRANDMESA])
     if not args.nocleanup:
         os.remove("testfile.parquet")
     return gdf
@@ -168,7 +163,7 @@ def atl06_sample_landsat():
         "len": 40.0,
         "res": 20.0,
         "samples": {"ndvi": {"asset": "landsat-hls", "use_poi_time": True, "catalog": catalog, "bands": ["NDVI"]}} }
-    return icesat2.atl06p(parms, resources=[args.granule03])
+    return icesat2.atl06p(parms, resources=[ATL03_GRANULE_GRANDMESA])
 
 # ------------------------------------
 # Benchmark ATL06 Sample (Zonal) ArcticDEM
@@ -183,7 +178,7 @@ def atl06_sample_zonal_arcticdem():
         "res": 10.0,
         "maxi": 1,
         "samples": {"mosaic": {"asset": "arcticdem-mosaic", "radius": 10.0, "zonal_stats": True}} }
-    return icesat2.atl06p(parms, resources=["ATL03_20190314093716_11600203_005_01.h5"])
+    return icesat2.atl06p(parms, resources=[ATL03_GRANULE_DICKSONFJORD])
 
 # ------------------------------------
 # Benchmark ATL06 Sample (Nearest Neighbor) ArcticDEM
@@ -198,7 +193,7 @@ def atl06_sample_nn_arcticdem():
         "res": 10.0,
         "maxi": 1,
         "samples": {"mosaic": {"asset": "arcticdem-mosaic"}} }
-    return icesat2.atl06p(parms, resources=["ATL03_20190314093716_11600203_005_01.h5"])
+    return icesat2.atl06p(parms, resources=[ATL03_GRANULE_DICKSONFJORD])
 
 # ------------------------------------
 # Benchmark ATL06 Multi-Sample (Nearest Neighbor) ArcticDEM
@@ -213,7 +208,7 @@ def atl06_msample_nn_arcticdem():
         "res": 10.0,
         "maxi": 1,
         "samples": {"mosaic": {"asset": "arcticdem-mosaic"}} }
-    return icesat2.atl06p(parms)
+    return icesat2.atl06p(parms, resources=[ATL03_GRANULE_DICKSONFJORD])
 
 # ------------------------------------
 # Benchmark ATL06 No Sampling ArcticDEM
@@ -227,7 +222,7 @@ def atl06_no_sample_arcticdem():
         "len": 20.0,
         "res": 10.0,
         "maxi": 1 }
-    return icesat2.atl06p(parms)
+    return icesat2.atl06p(parms, resources=[ATL03_GRANULE_DICKSONFJORD])
 
 # ------------------------------------
 # Benchmark ATL03 Rasterized Subset
@@ -242,7 +237,7 @@ def atl03_rasterized_subset():
         "cnt": 10,
         "len": 40.0,
         "res": 20.0 }
-    return icesat2.atl03sp(parms, resources=[args.granule03])
+    return icesat2.atl03sp(parms, resources=[ATL03_GRANULE_GRANDMESA])
 
 # ------------------------------------
 # Benchmark ATL03 Polygon Subset
@@ -256,7 +251,7 @@ def atl03_polygon_subset():
         "cnt": 10,
         "len": 40.0,
         "res": 20.0 }
-    return icesat2.atl03sp(parms, resources=[args.granule03])
+    return icesat2.atl03sp(parms, resources=[ATL03_GRANULE_GRANDMESA])
 
 # ########################################################
 # Main

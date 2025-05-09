@@ -159,7 +159,7 @@ static headers_t buildReadHeadersV2 (const char* bucket, const char* key, const 
     const FString dateHeader("Date: %s", date.c_str());
     headers = curl_slist_append(headers, dateHeader.c_str());
 
-    if(credentials && !credentials->expiration.value.empty())
+    if(credentials)
     {
         /* Build SecurityToken Header */
         const FString securityTokenHeader("x-amz-security-token:%s", credentials->sessionToken.value.c_str());
@@ -208,7 +208,7 @@ static headers_t buildWriteHeadersV2 (const char* bucket, const char* key, const
     /* Initialize and Remove Unwanted Headers */
     headers = curl_slist_append(headers, "Transfer-Encoding:");
 
-    if(credentials && !credentials->expiration.value.empty())
+    if(credentials)
     {
         /* Build SecurityToken Header */
         const FString securityTokenHeader("x-amz-security-token:%s", credentials->sessionToken.value.c_str());

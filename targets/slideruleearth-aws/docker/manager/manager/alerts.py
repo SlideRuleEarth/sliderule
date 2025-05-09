@@ -1,6 +1,6 @@
 from flask import (Blueprint, request)
 from werkzeug.exceptions import abort
-from manager.db import get_db, allcolumns
+from manager.db import execute_command_db, columns_db
 
 ####################
 # Initialization
@@ -23,12 +23,11 @@ def issue():
                   data['status_code'],
                   data['version'],
                   data['message'] )
-        db = get_db()
-        columns = allcolumns("alerts", db)
-        db.execute(f"""
-            INSERT INTO alerts ({', '.join(columns)})
+        cmd = f"""
+            INSERT INTO alerts ({', '.join(columns_db("alerts"))})
             VALUES (?, ?, ?, ?)
-        """, entry)
+        """
+        execute_command_db(cmd, entry)
     except Exception as e:
         abort(400, f'Alert record failed to post: {e}')
     return f'Alert record successfully posted'

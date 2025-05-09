@@ -2,7 +2,6 @@ from pystac_client import Client
 import sliderule
 import requests
 import json
-import sys
 
 # parameters
 debug = False
