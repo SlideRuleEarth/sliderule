@@ -304,8 +304,8 @@ distclean: ## fully remove all non-version controlled files and directories
 	- cd $(ROOT)/clients/python && ./clean.sh
 	- cd $(ROOT)/targets/slideruleearth-aws/docker/manager && ./clean.sh
 	- find $(ROOT) -name ".cookies" -exec rm {} \;
-	- rm -f report.pdf
-	- rm -f report.xml
+	- rm -f utilities/report.pdf
+	- rm -f utilities/report.xml
 
 ########################
 # Test Targets
