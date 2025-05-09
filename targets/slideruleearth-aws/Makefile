@@ -273,9 +273,9 @@ tag: ## create version tag in this repository and release it on GitHub
 	make -C $(ROOT)/clients/nodejs publish
 
 release: manager-lock ## release a version of sliderule; needs VERSION
-	make tag
 	make sliderule-buildenv-docker
 	make sliderule-buildenv-docker-push
+	make tag
 	make cluster-docker
 	make cluster-docker-push
 	make cluster-build-packer

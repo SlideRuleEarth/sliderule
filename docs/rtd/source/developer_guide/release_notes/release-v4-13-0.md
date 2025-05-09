@@ -47,3 +47,20 @@ Version description of the v4.13.0 release of SlideRule Earth.
 ## Getting This Release
 
 [https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.13.0](https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.13.0)
+
+## Benchmarks
+
+```
+atl06_aoi <690326 x 16> - 39.621595 secs
+atl06_ancillary <914 x 17> - 2.990283 secs
+atl03_ancillary <914 x 17> - 2.724033 secs
+atl06_parquet <1577 x 18> - 2.700799 secs
+atl03_parquet <22833 x 23> - 1.515308 secs
+atl06_sample_landsat <914 x 20> - 8.168051 secs
+atl06_sample_zonal_arcticdem <1696 x 27> - 8.840394 secs
+atl06_sample_nn_arcticdem <1696 x 20> - 4.531418 secs
+atl06_msample_nn_arcticdem <1696 x 20> - 4.470971 secs
+atl06_no_sample_arcticdem <1696 x 16> - 2.554142 secs
+atl03_rasterized_subset <51968 x 22> - 2.303672 secs
+atl03_polygon_subset <50799 x 22> - 1.909250 secs
+```
