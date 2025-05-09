@@ -266,6 +266,9 @@ tag: ## create version tag in this repository and release it on GitHub
 	git add $(ROOT)/clients/nodejs/sliderule/package.json
 	cp $(ROOT)/version.txt $(ROOT)/clients/python/version.txt
 	git add $(ROOT)/version.txt $(ROOT)/clients/python/version.txt
+	git add $(ROOT)/targets/slideruleearth-aws/docker/manager/conda-linux-${ARCH}.lock
+	git add $(ROOT)/targets/slideruleearth-aws/docker/manager/conda-lock.yml
+	git add $(ROOT)/targets/slideruleearth-aws/docker/sliderule/libdep-${ARCH}.lock
 	git commit -m "Version $(VERSION)"
 	git tag -a $(VERSION) -m "Version $(VERSION)"
 	git push --tags && git push
@@ -273,8 +276,8 @@ tag: ## create version tag in this repository and release it on GitHub
 	make -C $(ROOT)/clients/nodejs publish
 
 release: manager-lock ## release a version of sliderule; needs VERSION
-	make sliderule-buildenv-docker
-	make sliderule-buildenv-docker-push
+#	make sliderule-buildenv-docker
+#	make sliderule-buildenv-docker-push
 	make tag
 	make cluster-docker
 	make cluster-docker-push
