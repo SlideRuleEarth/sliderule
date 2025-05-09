@@ -20,7 +20,7 @@ DATASETS = {
     ATL08 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
     ATL09 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
     ATL13 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
-    ATL24 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
+    ATL24 =                                               {provider = "NSIDC_CPRD",  version = "001",  api = "cmr",   formats = {".h5"},    collections = {}},
     GEDI01_B =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {}},
     GEDI02_A =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {}},
     GEDI_L3_LandSurface_Metrics_V2_1952 =                 {provider = "ORNL_CLOUD",  version = nil,    api = "cmr",   formats = {".h5"},    collections = {}},
@@ -55,7 +55,7 @@ ASSETS_TO_DATASETS = {
     ["icesat2-atl24"] = "ATL24",
     ["atlas-local"] = "ATL03",
     ["atlas-s3"] = "ATL03",
-    ["atl24-s3"] = "ATL03",
+    ["atl24-s3"] = "ATL24",
     ["nsidc-s3"] = "ATL03"
 }
 

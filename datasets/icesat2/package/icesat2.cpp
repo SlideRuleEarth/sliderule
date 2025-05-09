@@ -47,6 +47,7 @@
 #include "Atl13IODriver.h"
 #include "Atl13Reader.h"
 #include "Atl24DataFrame.h"
+#include "Atl24IODriver.h"
 #include "CumulusIODriver.h"
 #include "MeritRaster.h"
 #include "PhoReal.h"
@@ -149,6 +150,7 @@ void initicesat2 (void)
     /* Register IO Drivers */
     Asset::registerDriver(CumulusIODriver::FORMAT, CumulusIODriver::create);
     Asset::registerDriver(Atl13IODriver::FORMAT, Atl13IODriver::create);
+    Asset::registerDriver(Atl24IODriver::FORMAT, Atl24IODriver::create);
 
     /* Register Rasters */
     RasterObject::registerRaster(MeritRaster::ASSET_NAME, MeritRaster::create);

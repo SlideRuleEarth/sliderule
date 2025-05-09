@@ -99,3 +99,9 @@ This will go through and perform the following steps:
 * Tag the repository
 * Build and push the cluster
 * Build and push the static website
+
+#### (8) Update SlideRule Python Client
+
+The conda-forge feedstock for the SlideRule Python client will automatically generate a PR for the latest version, but merging the PR is manual.
+
+https://github.com/conda-forge/sliderule-feedstock

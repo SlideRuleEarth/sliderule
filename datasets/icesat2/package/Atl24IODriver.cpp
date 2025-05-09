@@ -33,7 +33,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "CumulusIODriver.h"
+#include "Atl24IODriver.h"
 #include "S3CurlIODriver.h"
 #include "OsApi.h"
 
@@ -41,7 +41,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* CumulusIODriver::FORMAT = "cumulus";
+const char* Atl24IODriver::FORMAT = "s3atl24";
 
 /******************************************************************************
  * FILE IO DRIVER CLASS
@@ -50,28 +50,27 @@ const char* CumulusIODriver::FORMAT = "cumulus";
 /*----------------------------------------------------------------------------
  * create
  *----------------------------------------------------------------------------*/
-Asset::IODriver* CumulusIODriver::create (const Asset* _asset, const char* resource)
+Asset::IODriver* Atl24IODriver::create (const Asset* _asset, const char* resource)
 {
-    return new CumulusIODriver(_asset, resource);
+    return new Atl24IODriver(_asset, resource);
 }
 
 /*----------------------------------------------------------------------------
  * Constructor
- *
- *  Example: /ATLAS/ATL06/004/2019/06/26/ATL06_20190626143632_13640310_005_01.h5
+ *  Example: /ATLAS/ATL24/001/2024/11/07/ATL24_20241107234251_08052501_006_01_001_01.h5
  *----------------------------------------------------------------------------*/
-CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
+Atl24IODriver::Atl24IODriver (const Asset* _asset, const char* resource):
     S3CurlIODriver(_asset)
 {
     /* Build Updated Resource Path Name */
-    const int NUM_ELEMENTS = 5;
+    const int NUM_ELEMENTS = 7;
     char elements[NUM_ELEMENTS][MAX_STR_SIZE];
 
     const int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
-    if(num_toks < NUM_ELEMENTS) throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid cumulus resource: %s", resource);
+    if(num_toks < NUM_ELEMENTS) throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid ATL24 resource: %s", resource);
 
     const char* product = elements[0];
-    const char* version = elements[3];
+    const char* version = elements[5];
     const char* date = elements[1];
 
     char year[5];
@@ -109,4 +108,4 @@ CumulusIODriver::CumulusIODriver (const Asset* _asset, const char* resource):
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-CumulusIODriver::~CumulusIODriver (void) = default;
+Atl24IODriver::~Atl24IODriver (void) = default;

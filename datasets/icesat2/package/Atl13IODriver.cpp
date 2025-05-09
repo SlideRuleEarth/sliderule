@@ -57,19 +57,16 @@ Asset::IODriver* Atl13IODriver::create (const Asset* _asset, const char* resourc
 
 /*----------------------------------------------------------------------------
  * Constructor
- *
- *  Example: /ATLAS/ATL06/004/2019/06/26/ATL06_20190626143632_13640310_005_01.h5
  *----------------------------------------------------------------------------*/
 Atl13IODriver::Atl13IODriver (const Asset* _asset, const char* resource):
     S3CurlIODriver(_asset)
 {
-
     /* Build Updated Resource Path Name */
     const int NUM_ELEMENTS = 5;
     char elements[NUM_ELEMENTS][MAX_STR_SIZE];
 
     const int num_toks = StringLib::tokenizeLine(resource, MAX_STR_SIZE, '_', NUM_ELEMENTS, elements);
-    if(num_toks < 5) throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid atl13 resource: %s", resource);
+    if(num_toks < NUM_ELEMENTS) throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid atl13 resource: %s", resource);
 
     const char* product = elements[0];
     const char* version = elements[3];
