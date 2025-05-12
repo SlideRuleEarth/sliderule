@@ -59,14 +59,14 @@ eventlogger = {
 sliderule_getaddrinfo = socket.getaddrinfo
 sliderule_dns = {}
 
-def __override_getaddrinfo(*args):
+def __override_getaddrinfo(*args, **kwargs):
     global sliderule_getaddrinfo, sliderule_dns
     url = args[0].lower()
     if url in sliderule_dns:
         logger.debug("getaddrinfo returned {} for {}".format(sliderule_dns[url], url))
-        return sliderule_getaddrinfo(sliderule_dns[url], *args[1:])
+        return sliderule_getaddrinfo(sliderule_dns[url], *args[1:], **kwargs)
     else:
-        return sliderule_getaddrinfo(*args)
+        return sliderule_getaddrinfo(*args, **kwargs)
 
 socket.getaddrinfo = __override_getaddrinfo
 
