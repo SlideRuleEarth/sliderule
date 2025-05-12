@@ -22,10 +22,6 @@ resource "aws_instance" "monitor" {
     user_data = <<-EOF
       #!/bin/bash
       echo ${var.cluster_name} > ./clustername.txt
-      aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-export_logs.sh ./export_logs.sh
-      chmod +x ./export_logs.sh
-      aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-cronjob.txt ./cronjob.txt
-      crontab ./cronjob.txt
       aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${var.container_repo}
       export CLIENT_ID='${local.secrets.client_id}'
       export CLIENT_SECRET='${local.secrets.client_secret}'
