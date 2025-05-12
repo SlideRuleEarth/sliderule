@@ -496,7 +496,7 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
             "version":"%s",
             "duration":%s,
             "packages":%s,
-            "commit":"%s",
+            "build":"%s",
             "launch":"%s"
         },
         "recordinfo":

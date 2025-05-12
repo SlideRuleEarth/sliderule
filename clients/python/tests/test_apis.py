@@ -64,12 +64,12 @@ class TestVersion:
         assert init
         assert 'server' in rsps
         assert 'version' in rsps['server']
-        assert 'commit' in rsps['server']
+        assert 'build' in rsps['server']
         assert 'launch' in rsps['server']
         assert 'duration' in rsps['server']
         assert 'packages' in rsps['server']
         assert '.' in rsps['server']['version']
-        assert len(rsps['server']['commit']) > 0
+        assert len(rsps['server']['build']) > 0
         assert ':' in rsps['server']['launch']
         assert rsps['server']['duration'] > 0
 
