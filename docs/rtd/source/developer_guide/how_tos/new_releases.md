@@ -73,7 +73,7 @@ pip install .
 pytest --domain localhost --organization None
 ```
 
-#### (6) Run Benchmarks
+#### (6) Run Benchmarks and Baseline
 
 While the latest private cluster is still deployed, run the benchmarks against it.  The private cluster should be running 7 nodes.
 From `sliderule/clients/python`
@@ -81,6 +81,7 @@ From `sliderule/clients/python`
 conda activate sliderule
 pip install .
 python utils/benchmarks.py --organization developers
+python utils/baseline.py --organization developers
 ```
 
 Then update the release notes and make sure all changes are committed and pushed.  There should be no new changes in the repository at this point; if there are, then the steps above need to be rerun.

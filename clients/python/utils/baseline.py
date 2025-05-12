@@ -102,9 +102,25 @@ def icesat2_atl06p():
     gdf = icesat2.atl06p(parms, resources=[resource])
     return gdf["h_mean"].mean()
 
+# ICESat-2 / PhoREAL
+def icesat2_phoreal():
+    parms = {
+        "poly": sliderule.toregion('tests/data/grandmesa.geojson')['poly'],
+        "t0": '2019-11-14T00:00:00Z',
+        "t1": '2019-11-15T00:00:00Z',
+        "srt": icesat2.SRT_LAND,
+        "len": 100,
+        "res": 100,
+        "pass_invalid": True, 
+        "atl08_class": ["atl08_ground", "atl08_canopy", "atl08_top_of_canopy"],
+        "phoreal": {"binsize": 1.0, "geoloc": "center"}
+    }
+    gdf = sliderule.run("atl03x", parms)
+    return gdf["h_mean_canopy"].mean()
 # 
 # Main
 #
 print(f'GEDI / 3DEP = {gedi_3dep()}')
 print(f'ICESat-2 / ArcticDEM = {icesat2_arcticdem()}')
 print(f'ICESat-2 / ATL06p = {icesat2_atl06p()}')
+print(f'ICESat-2 / PhoREAL = {icesat2_phoreal()}')

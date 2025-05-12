@@ -49,7 +49,7 @@ Version description of the v4.13.0 release of SlideRule Earth.
 [https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.13.0](https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.13.0)
 
 ## Benchmarks
-
+> clients/python/utils/benchmark.py
 ```
 atl06_aoi <690326 x 16> - 39.621595 secs
 atl06_ancillary <914 x 17> - 2.990283 secs
@@ -63,4 +63,13 @@ atl06_msample_nn_arcticdem <1696 x 20> - 4.470971 secs
 atl06_no_sample_arcticdem <1696 x 16> - 2.554142 secs
 atl03_rasterized_subset <51968 x 22> - 2.303672 secs
 atl03_polygon_subset <50799 x 22> - 1.909250 secs
+```
+
+## Baseline
+> clients/python/utils/baseline.py
+```
+GEDI / 3DEP = 2660.2507194650643
+ICESat-2 / ArcticDEM = 1603.1273510971787
+ICESat-2 / ATL06p = 1810.051657043249
+ICESat-2 / PhoREAL = 4.078258037567139
 ```
