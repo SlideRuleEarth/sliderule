@@ -105,7 +105,10 @@ LogMonitor::LogMonitor(lua_State* L, event_level_t level, format_t output_format
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-LogMonitor::~LogMonitor(void) = default;
+LogMonitor::~LogMonitor(void)
+{
+    stopMonitor();
+}
 
 /*----------------------------------------------------------------------------
  * textOutput

@@ -97,4 +97,7 @@ TelemetryMonitor::TelemetryMonitor(lua_State* L, event_level_t level, const char
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-TelemetryMonitor::~TelemetryMonitor(void) = default;
+TelemetryMonitor::~TelemetryMonitor(void)
+{
+    stopMonitor();
+}

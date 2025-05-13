@@ -80,8 +80,11 @@ AssetField::~AssetField(void)
  *----------------------------------------------------------------------------*/
 const char* AssetField::getName (void) const
 {
-    if(asset) return asset->getName();
-    else return "<nil>";
+    if(asset)
+    {
+        return asset->getName();
+    }
+    return "<nil>";
 }
 
 /*----------------------------------------------------------------------------

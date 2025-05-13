@@ -126,7 +126,7 @@ int GeoUserRaster::luaCreate (lua_State* L)
 GeoUserRaster::~GeoUserRaster(void)
 {
     VSIUnlink(rasterFileName.c_str());
-    free(data);
+    delete [] data;
 }
 
 /******************************************************************************
@@ -153,7 +153,7 @@ GeoUserRaster::GeoUserRaster(lua_State *L, RequestFields* rqst_parms, const char
         rasterFileName = getFileName();
 
         /* Make a copy of the raster data and pass the ownership to the VSIFile */
-        data = reinterpret_cast<GByte*>(malloc(filelength));
+        data = new GByte [filelength];
         memcpy(data, file, filelength);
 
         /* Load user raster to vsimem */

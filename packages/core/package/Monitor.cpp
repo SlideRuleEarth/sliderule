@@ -72,10 +72,21 @@ Monitor::Monitor(lua_State* L, event_level_t level, const char* eventq_name, con
  *----------------------------------------------------------------------------*/
 Monitor::~Monitor(void)
 {
-    active = false;
-    delete pid;
+    // ASSUMES stopMonitor has been called by the child class destructor
+    // ... since this is a pure virtual class, stopping the monitor thread
+    // ... must be done in the child class which gets destroyed first
+    // ... and then this can be called to clean up the rest of the object
     delete inQ;
     delete [] recType;
+}
+
+/*----------------------------------------------------------------------------
+ * stopMonitor
+ *----------------------------------------------------------------------------*/
+void Monitor::stopMonitor(void)
+{
+    active = false;
+    delete pid;
 }
 
 /******************************************************************************

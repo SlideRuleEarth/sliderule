@@ -36,9 +36,6 @@
 #include "AlertMonitor.h"
 #include "Monitor.h"
 #include "EventLib.h"
-#include "TimeLib.h"
-#include "RecordObject.h"
-#include "OrchestratorLib.h"
 #include "ManagerLib.h"
 
 /******************************************************************************
@@ -94,4 +91,7 @@ AlertMonitor::AlertMonitor(lua_State* L, event_level_t level, const char* eventq
 /*----------------------------------------------------------------------------
  * Destructor
  *----------------------------------------------------------------------------*/
-AlertMonitor::~AlertMonitor(void) = default;
+AlertMonitor::~AlertMonitor(void)
+{
+    stopMonitor();
+}

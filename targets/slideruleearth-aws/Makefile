@@ -297,6 +297,7 @@ docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(ECR)/ilb:$(VERSION)
 	- docker image rm $(ECR)/proxy:$(VERSION)
 	- docker image rm $(ECR)/monitor:$(VERSION)
+	- docker image rm $(ECR)/manager:$(VERSION)
 	- docker image rm $(ECR)/static-website:$(VERSION)
 	- docker system prune -f
 

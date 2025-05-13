@@ -41,18 +41,11 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT SKIP_STATIC_ANALYSIS)
         "-readability-identifier-length,"
         "-readability-simplify-boolean-expr,"
         "-readability-else-after-return,"
-        "-readability-avoid-const-params-in-decls,"
-        "-readability-avoid-unconditional-preprocessor-if,"
         "-readability-suspicious-call-argument,"
         "-readability-isolate-declaration,"
-        "-readability-misleading-indentation,"
-        "-readability-container-contains,"
 
         "misc-*,"
         "-misc-non-private-member-variables-in-classes,"
-        "-misc-include-cleaner,"
-        "-misc-use-anonymous-namespace,"
-        "-misc-no-recursion,"
 
         "hicpp-*,"
         "-hicpp-special-member-functions,"
@@ -66,7 +59,6 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT SKIP_STATIC_ANALYSIS)
         "-hicpp-use-auto,"
         "-hicpp-deprecated-headers,"
         "-hicpp-signed-bitwise,"
-        "-hicpp-no-malloc,"
 
         # Most are turned off but several are very useful - checks for correct c++ casting, c style stuff misc and hicpp missed
         "cppcoreguidelines-*,"
@@ -89,12 +81,9 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT SKIP_STATIC_ANALYSIS)
         "-cppcoreguidelines-prefer-member-initializer,"
         "-cppcoreguidelines-pro-type-const-cast,"
         "-cppcoreguidelines-pro-type-reinterpret-cast,"
-        "-cppcoreguidelines-virtual-class-destructor,"
-        "-cppcoreguidelines-use-default-member-init,"
         "-cppcoreguidelines-avoid-non-const-global-variables,"
         "-cppcoreguidelines-pro-type-union-access,"
         "-cppcoreguidelines-interfaces-global-init,"
-        "-cppcoreguidelines-no-malloc,"
 
         "-clang-diagnostic-unused-command-line-argument,"
     )
@@ -137,10 +126,6 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT SKIP_STATIC_ANALYSIS)
         "--suppress=knownConditionTrueFalse"                            # -1 < 0 etc
         "--suppress=constVariableReference:*/RasterObject.cpp"          # List [] const issue
         "--suppress=constVariableReference:*/GeoIndexedRaster.cpp"      # List [] const issue
-
-        "--suppress=*:*/coastnet.h"                                     # suppress all checks for coastnet
-        "--suppress=*:*/blunder_detection.h"                            # suppress all checks for blunder_detection
-        "--suppress=*:*/oopp/utils.h"                                   # suppress all checks for openoceans
     )
 
 endif()

@@ -893,7 +893,7 @@ int LuaEngine::pushline (int firstline)
     if (l > 0 && b[l-1] == '\n')    b[--l] = '\0'; /* line ends with newline? remove it */
     if (firstline && b[0] == '=')   lua_pushfstring(L, "return %s", b + 1); /* for compatibility with 5.2, change '=' to 'return' */
     else                            lua_pushlstring(L, b, l);
-    free(b);
+    free(b); // NOLINT
     return 1;
 }
 

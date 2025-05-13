@@ -79,16 +79,16 @@ FString EndpointObject::serverHead("sliderule/%s", LIBID);
  * Constructor
  *----------------------------------------------------------------------------*/
 EndpointObject::Request::Request (const char* _id):
-    headers(EXPECTED_MAX_HEADER_FIELDS)
+    path        (NULL),
+    resource    (NULL),
+    verb        (UNRECOGNIZED),
+    version     (NULL),
+    headers     (EXPECTED_MAX_HEADER_FIELDS),
+    body        (NULL),
+    length      (0),
+    trace_id    (ORIGIN),
+    id          (StringLib::duplicate(_id))
 {
-    id          = StringLib::duplicate(_id);
-    trace_id    = ORIGIN;
-    path        = NULL;
-    resource    = NULL;
-    verb        = UNRECOGNIZED;
-    version     = NULL;
-    body        = NULL;
-    length      = 0;
 }
 
 /*----------------------------------------------------------------------------

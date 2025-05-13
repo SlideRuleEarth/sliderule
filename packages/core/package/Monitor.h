@@ -67,6 +67,7 @@ class Monitor: public LuaObject
         virtual void processEvent   (const unsigned char* event_buf_ptr, int event_size) = 0;
                      Monitor        (lua_State* L, event_level_t level, const char* eventq_name, const char* rec_type);
                      ~Monitor       (void) override;
+        void         stopMonitor    (void); // stops monitor thread
 
         /*--------------------------------------------------------------------
          * Data

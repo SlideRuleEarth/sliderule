@@ -38,8 +38,6 @@
 
 #include "Monitor.h"
 #include "OsApi.h"
-#include "EventLib.h"
-#include "MsgQ.h"
 
 /******************************************************************************
  * CLASS

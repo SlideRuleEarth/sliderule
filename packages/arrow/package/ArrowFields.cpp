@@ -189,7 +189,7 @@ void convertFromLua(lua_State* L, int index, ArrowFields::format_t& v)
     else if(lua_isstring(L, index))
     {
         const char* str = LuaObject::getLuaString(L, index);
-             if(StringLib::match(str, "feather"))       v = ArrowFields::FEATHER;
+        if     (StringLib::match(str, "feather"))       v = ArrowFields::FEATHER;
         else if(StringLib::match(str, "parquet"))       v = ArrowFields::PARQUET;
         else if(StringLib::match(str, "geoparquet"))    v = ArrowFields::GEOPARQUET;
         else if(StringLib::match(str, "csv"))           v = ArrowFields::CSV;

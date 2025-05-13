@@ -110,8 +110,8 @@ int GeoDataFrame::FrameColumn::luaGetData (lua_State* L)
         luaL_getmetatable(L, lua_obj->LuaMetaName);
         lua_pushinteger(L, index);
         lua_rawget(L, -2);
-        if (!lua_isnil(L, -1))  return 1;
-        else lua_pop(L, 1);
+        if(!lua_isnil(L, -1)) return 1;
+        lua_pop(L, 1);
 
         // handle field access
         return lua_obj->column.toLua(L, index);

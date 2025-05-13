@@ -64,6 +64,7 @@
 
 #define IPV4_MULTICAST_START    0xE0000000
 #define IPV4_MULTICAST_STOP     0xF0000000
+#define ERRMSG_BUF_SIZE         256
 
 /******************************************************************************
  * TYPEDEFS
@@ -150,7 +151,7 @@ int SockLib::sockstream(const char* ip_addr, int port, bool is_server, const boo
     // server
     const int listen_socket = sock;
     int server_socket = INVALID_RC;
-    char err_buf[256];
+    char err_buf[ERRMSG_BUF_SIZE];
 
     /* Make Socket a Listen Socket */
     if(listen(listen_socket, 1) != 0)
@@ -299,7 +300,7 @@ int SockLib::socksend(int fd, const void* buf, int size, int timeout)
         }
         else if(timeout != IO_CHECK && c < 0)
         {
-            char err_buf[256];
+            char err_buf[ERRMSG_BUF_SIZE];
             dlog("Failed (%d) to send data to ready socket [0x%0X]: %s", c, revents, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
             c = SOCK_ERR_RC;
         }
@@ -344,7 +345,7 @@ int SockLib::sockrecv(int fd, void* buf, int size, int timeout)
         }
         else if(timeout != IO_CHECK && c < 0)
         {
-            char err_buf[256];
+            char err_buf[ERRMSG_BUF_SIZE];
             dlog("Failed (%d) to receive data from ready socket [0x%0X]: %s", c, revents, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
             c = SOCK_ERR_RC;
         }
@@ -445,7 +446,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
         }
         else
         {
-            char err_buf[256];
+            char err_buf[ERRMSG_BUF_SIZE];
             dlog("Failed to mark socket bound to %s:%d as a listen socket, %s", ip_addr ? ip_addr : "0.0.0.0", port, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
             listen_socket = INVALID_RC;
             status = -1;
@@ -479,8 +480,8 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                 /* Check Activity */
                 if(activity < 0)
                 {
-                    char errmsg[256];
-                    snprintf(errmsg, 256, "Poll error (%d)... exiting server", errno);
+                    char errmsg[ERRMSG_BUF_SIZE];
+                    snprintf(errmsg, ERRMSG_BUF_SIZE, "Poll error (%d)... exiting server", errno);
                     throw std::runtime_error(errmsg);
                 }
 
@@ -490,7 +491,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                 {
                     bool valid_fd = true;
                     int cb_stat = 0;
-                    char err_buf[256];
+                    char err_buf[ERRMSG_BUF_SIZE];
 
                     /* Handle Errors */
                     if(polllist[i].revents & POLLERR)
@@ -566,7 +567,7 @@ int SockLib::startserver(const char* ip_addr, int port, int max_num_connections,
                     socklen_t errlen = sizeof(error);
                     getsockopt(polllist[i].fd, SOL_SOCKET, SO_ERROR, static_cast<void*>(&error), &errlen);
 
-                    char err_buf[256];
+                    char err_buf[ERRMSG_BUF_SIZE];
                     dlog("Poll error (%d) detected [0x%X] on listener socket: %s", error, polllist[0].revents, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
                 }
                 else if(polllist[0].revents & POLLIN)
@@ -727,7 +728,7 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
             /* Handle Errors */
             bool valid_fd = true;
             int cb_stat = 0;
-            char err_buf[256];
+            char err_buf[ERRMSG_BUF_SIZE];
             if(polllist[0].revents & POLLERR)
             {
                 dlog("Poll error detected on client socket <%d>: %s", polllist[0].fd, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
@@ -815,7 +816,7 @@ int SockLib::sockcreate(int type, const char* ip_addr, int port, bool is_server,
         return TCP_ERR_RC;
     }
 
-    char err_buf[256];
+    char err_buf[ERRMSG_BUF_SIZE];
 
     /* Try each address until we successfully connect. */
     for(rp = result; rp != NULL; rp = rp->ai_next)
@@ -910,7 +911,7 @@ int SockLib::sockkeepalive(int socket_fd, int idle, int cnt, int intvl)
 {
     int               optval;
     const socklen_t   optlen = sizeof(optval);
-    char              err_buf[256];
+    char              err_buf[ERRMSG_BUF_SIZE];
 
     optval = 1; // set SO_KEEPALIVE on a socket to true (1)
     if (setsockopt(socket_fd, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen) < 0)
@@ -954,7 +955,7 @@ int SockLib::sockreuse(int socket_fd)
     optval = 1; // set SO_REUSEADDR on a socket to true (1)
     if(setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &optval, optlen) < 0)
     {
-        char err_buf[256];
+        char err_buf[ERRMSG_BUF_SIZE];
         dlog("Failed to set SO_REUSEADDR option on socket, %s", strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         return SOCK_ERR_RC;
     }
@@ -970,7 +971,7 @@ int SockLib::socknonblock(int socket_fd)
     const int flags = fcntl(socket_fd, F_GETFL, 0);
     if(flags < 0 || fcntl(socket_fd, F_SETFL, flags | O_NONBLOCK) < 0)
     {
-        char err_buf[256];
+        char err_buf[ERRMSG_BUF_SIZE];
         dlog("Failed to make socket non-blocking, %s", strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         return SOCK_ERR_RC;
     }
@@ -990,7 +991,7 @@ int SockLib::sockmulticast(int socket_fd, const char* group)
     optval.imr_interface.s_addr = htonl(INADDR_ANY);
     if(setsockopt(socket_fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, reinterpret_cast<char*>(&optval), optlen) < 0)
     {
-        char err_buf[256];
+        char err_buf[ERRMSG_BUF_SIZE];
         dlog("Failed to set IP_ADD_MEMBERSHIP option on socket, %s", strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
         return SOCK_ERR_RC;
     }

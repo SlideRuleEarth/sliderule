@@ -277,7 +277,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (const Atl03Reader::extent_t* 
                 {
                     if(values[j] < numeric_limits<float>::max())
                     {
-                        if(counts.count(values[j])) counts[values[j]] += 1;
+                        if(counts.contains(values[j])) counts[values[j]] += 1;
                         else counts[values[j]] = 1;
                     }
                 }
@@ -322,7 +322,7 @@ RecordObject* Atl08Dispatch::buildAncillaryRecord (const Atl03Reader::extent_t* 
                 std::map<int64_t, int> counts;
                 for(unsigned int j = 0; j < atl03_anc_rec->num_elements; j++)
                 {
-                    if(counts.count(values[j])) counts[values[j]] += 1;
+                    if(counts.contains(values[j])) counts[values[j]] += 1;
                     else counts[values[j]] = 1;
                 }
                 int64_t nearest = 0.0;

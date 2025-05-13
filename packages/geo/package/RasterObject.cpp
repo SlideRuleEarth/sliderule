@@ -392,7 +392,7 @@ void RasterObject::stopSampling(void)
     readersMut.lock();
     {
         for(const reader_t* reader : readers)
-            reader->robj->stopSampling();
+            reader->robj->samplingEnabled = false;
     }
     readersMut.unlock();
 }
