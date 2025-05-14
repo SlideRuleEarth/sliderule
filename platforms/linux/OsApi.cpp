@@ -61,10 +61,6 @@ OsApi::print_func_t OsApi::print_func = NULL;
 int OsApi::io_timeout = IO_DEFAULT_TIMEOUT;
 int OsApi::io_maxsize = IO_DEFAULT_MAXSIZE;
 int64_t OsApi::launch_time = 0;
-const char* OsApi::environment_version = "unknown";
-bool OsApi::is_public = false;
-bool OsApi::in_cloud = false;
-const char* OsApi::cluster_name = "localhost";
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -385,68 +381,4 @@ int OsApi::performIOTimeout(void)
 int64_t OsApi::getLaunchTime (void)
 {
     return launch_time;
-}
-
-/*----------------------------------------------------------------------------
- * setEnvVersion
- *----------------------------------------------------------------------------*/
-void OsApi::setEnvVersion (const char* verstr)
-{
-    OsApi::dupstr(&environment_version, verstr);
-}
-
-/*----------------------------------------------------------------------------
- * getEnvVersion
- *----------------------------------------------------------------------------*/
-const char* OsApi::getEnvVersion (void)
-{
-    return environment_version;
-}
-
-/*----------------------------------------------------------------------------
- * setIsPublic
- *----------------------------------------------------------------------------*/
-void OsApi::setIsPublic (bool _is_public)
-{
-    is_public = _is_public;
-}
-
-/*----------------------------------------------------------------------------
- * getIsPublic
- *----------------------------------------------------------------------------*/
-bool OsApi::getIsPublic (void)
-{
-    return is_public;
-}
-
-/*----------------------------------------------------------------------------
- * setInCloud
- *----------------------------------------------------------------------------*/
-void OsApi::setInCloud (bool _in_cloud)
-{
-    in_cloud = _in_cloud;
-}
-
-/*----------------------------------------------------------------------------
- * getInCloud
- *----------------------------------------------------------------------------*/
-bool OsApi::getInCloud (void)
-{
-    return in_cloud;
-}
-
-/*----------------------------------------------------------------------------
- * setCluster
- *----------------------------------------------------------------------------*/
-void OsApi::setCluster (const char* cluster)
-{
-    OsApi::dupstr(&cluster_name, cluster);
-}
-
-/*----------------------------------------------------------------------------
- * getCluster
- *----------------------------------------------------------------------------*/
-const char* OsApi::getCluster (void)
-{
-    return cluster_name;
 }

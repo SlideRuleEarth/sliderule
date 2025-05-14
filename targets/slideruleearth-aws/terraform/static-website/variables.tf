@@ -14,3 +14,9 @@ variable "cost_grouping" {
   type        = string
   default     = "docs"
 }
+
+variable  "sys_bucket" {
+  description = "S3 bucket used to store the sliderule system configuration"
+  type        = string
+  default     = "sliderule"
+}

@@ -4,7 +4,7 @@ local assets = asset.loaddir()
 
 -- Requirements --
 
-if (not core.UNITTEST) or (not sys.incloud() and not runner.isglobal()) then
+if (not core.UNITTEST) or (not sys.getcfg("in_cloud") and not runner.isglobal()) then
     return runner.skip()
 end
 

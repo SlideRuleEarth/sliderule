@@ -38,6 +38,7 @@
 
 #include "LuaLibrarySys.h"
 #include "LuaEngine.h"
+#include "SystemConfig.h"
 #include "OsApi.h"
 #include "TimeLib.h"
 #include "LuaObject.h"
@@ -61,20 +62,10 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"log",         LuaLibrarySys::lsys_log},
     {"metric",      LuaLibrarySys::lsys_metric},
     {"lsmsgq",      LuaLibrarySys::lsys_lsmsgq},
-    {"setenvver",   LuaLibrarySys::lsys_setenvver},
-    {"setispublic", LuaLibrarySys::lsys_setispublic},
-    {"ispublic",    LuaLibrarySys::lsys_getispublic},
-    {"setincloud",  LuaLibrarySys::lsys_setincloud},
-    {"incloud",     LuaLibrarySys::lsys_getincloud},
-    {"setcluster",  LuaLibrarySys::lsys_setcluster},
     {"type",        LuaLibrarySys::lsys_type},
-    {"setstddepth", LuaLibrarySys::lsys_setstddepth},
     {"setiosz",     LuaLibrarySys::lsys_setiosize},
     {"getiosz",     LuaLibrarySys::lsys_getiosize},
-    {"setlvl",      LuaLibrarySys::lsys_seteventlvl},
-    {"getlvl",      LuaLibrarySys::lsys_geteventlvl},
     {"healthy",     LuaLibrarySys::lsys_healthy},
-    {"ipv4",        LuaLibrarySys::lsys_ipv4},
     {"lsrec",       LuaLibrarySys::lsys_lsrec},
     {"lsobj",       LuaLibrarySys::lsys_lsobj},
     {"cwd",         LuaLibrarySys::lsys_cwd},
@@ -83,12 +74,12 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"fileexists",  LuaLibrarySys::lsys_fileexists},
     {"deletefile",  LuaLibrarySys::lsys_deletefile},
     {"memu",        LuaLibrarySys::lsys_memu},
-    {"setmemlimit", LuaLibrarySys::lsys_setmemlimit},
     {"lsdev",       DeviceObject::luaList},
+    {"initcfg",     SystemConfig::luaPopulate},
+    {"getcfg",      SystemConfig::luaGetField},
+    {"setcfg",      SystemConfig::luaSetField},
     {NULL,          NULL}
 };
-
-double LuaLibrarySys::memory_limit = 1.0;
 
 /******************************************************************************
  * SYSTEM LIBRARY EXTENSION METHODS
@@ -126,7 +117,7 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     /* Display Information on Terminal */
     print2term("SlideRule Version:   %s\n", LIBID);
     print2term("Build Information:   %s\n", BUILDINFO);
-    print2term("Environment Version: %s\n", OsApi::getEnvVersion());
+    print2term("Environment Version: %s\n", SystemConfig::settings().environmentVersion.value.c_str());
     print2term("Launch Time: %s\n", timestr.c_str());
     print2term("Duration: %.2lf days\n", (double)duration / 1000.0 / 60.0 / 60.0 / 24.0); // milliseconds / seconds / minutes / hours
     print2term("Packages: [ ");
@@ -145,7 +136,7 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     /* Return Information to Lua (and clean up package list) */
     lua_pushstring(L, LIBID);
     lua_pushstring(L, BUILDINFO);
-    lua_pushstring(L, OsApi::getEnvVersion());
+    lua_pushstring(L, SystemConfig::settings().environmentVersion.value.c_str());
     lua_pushstring(L, timestr.c_str());
     lua_pushinteger(L, duration);
     lua_newtable(L);
@@ -299,124 +290,6 @@ int LuaLibrarySys::lsys_lsmsgq (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * lsys_setenvver
- *----------------------------------------------------------------------------*/
-int LuaLibrarySys::lsys_setenvver (lua_State* L)
-{
-    bool status = true;
-    const char* version_str = NULL;
-    if(lua_isstring(L, 1))
-    {
-        version_str = lua_tostring(L, 1);
-        OsApi::setEnvVersion(version_str);
-    }
-    else
-    {
-        mlog(CRITICAL, "Invalid parameter supplied to set environment version, must be a string");
-        status = false;
-    }
-
-    lua_pushboolean(L, status);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * lsys_setispublic
- *----------------------------------------------------------------------------*/
-int LuaLibrarySys::lsys_setispublic (lua_State* L)
-{
-    bool status = true;
-
-    if(lua_isboolean(L, 1))
-    {
-        const bool is_public = lua_toboolean(L, 1);
-        OsApi::setIsPublic(is_public);
-    }
-    else if(lua_isstring(L, 1))
-    {
-        const char* is_public_str = lua_tostring(L, 1);
-        const bool is_public = StringLib::match(is_public_str, "True");
-        OsApi::setIsPublic(is_public);
-    }
-    else
-    {
-        mlog(CRITICAL, "Invalid parameter supplied to setting is_public, must be 'True' or 'False'");
-        status = false;
-    }
-
-    lua_pushboolean(L, status);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * lsys_getispublic
- *----------------------------------------------------------------------------*/
-int LuaLibrarySys::lsys_getispublic (lua_State* L)
-{
-    lua_pushboolean(L, OsApi::getIsPublic());
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * lsys_setincloud
- *----------------------------------------------------------------------------*/
-int LuaLibrarySys::lsys_setincloud (lua_State* L)
-{
-    bool status = true;
-
-    if(lua_isboolean(L, 1))
-    {
-        const bool in_cloud = lua_toboolean(L, 1);
-        OsApi::setInCloud(in_cloud);
-    }
-    else if(lua_isstring(L, 1))
-    {
-        const char* in_cloud_str = lua_tostring(L, 1);
-        const bool in_cloud = StringLib::match(in_cloud_str, "True");
-        OsApi::setInCloud(in_cloud);
-    }
-    else
-    {
-        mlog(CRITICAL, "Invalid parameter supplied to setting in_cloud, must be 'True' or 'False'");
-        status = false;
-    }
-
-    lua_pushboolean(L, status);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * lsys_getincloud
- *----------------------------------------------------------------------------*/
-int LuaLibrarySys::lsys_getincloud (lua_State* L)
-{
-    lua_pushboolean(L, OsApi::getInCloud());
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * lsys_setcluster
- *----------------------------------------------------------------------------*/
-int LuaLibrarySys::lsys_setcluster (lua_State* L)
-{
-    bool status = true;
-    const char* cluster_str = NULL;
-    if(lua_isstring(L, 1))
-    {
-        cluster_str = lua_tostring(L, 1);
-        OsApi::setCluster(cluster_str);
-    }
-    else
-    {
-        mlog(CRITICAL, "Invalid parameter supplied to set cluster, must be a string");
-        status = false;
-    }
-
-    lua_pushboolean(L, status);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
  * lsys_type - TODO - needs to handle userdata types
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_type (lua_State* L)
@@ -457,31 +330,6 @@ int LuaLibrarySys::lsys_type (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * lsys_setstddepth
- *----------------------------------------------------------------------------*/
-int LuaLibrarySys::lsys_setstddepth (lua_State* L)
-{
-    int depth = 0;
-    if(lua_isnumber(L, 1))
-    {
-        depth = lua_tointeger(L, 1);
-    }
-    else
-    {
-        mlog(CRITICAL, "Standard queue depth must be a number");
-        lua_pushboolean(L, false); /* push result as fail */
-        return 1;
-    }
-
-    /* Set Standard Depth */
-    MsgQ::setStdQDepth(depth);
-
-    /* Return Success */
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
  * lsys_setiosize
  *----------------------------------------------------------------------------*/
 int LuaLibrarySys::lsys_setiosize (lua_State* L)
@@ -514,52 +362,6 @@ int LuaLibrarySys::lsys_getiosize (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * lsys_seteventlvl
- *----------------------------------------------------------------------------*/
-int LuaLibrarySys::lsys_seteventlvl (lua_State* L)
-{
-    bool status = false;
-
-    if(lua_isnumber(L, 1))
-    {
-        const int type_mask = lua_tointeger(L, 1);
-        if(lua_isnumber(L, 2))
-        {
-            const event_level_t lvl = (event_level_t)lua_tointeger(L, 2);
-            if(type_mask & EventLib::LOG) EventLib::setLvl(EventLib::LOG, lvl);
-            if(type_mask & EventLib::TRACE) EventLib::setLvl(EventLib::TRACE, lvl);
-            if(type_mask & EventLib::TELEMETRY) EventLib::setLvl(EventLib::TELEMETRY, lvl);
-            if(type_mask & EventLib::ALERT) EventLib::setLvl(EventLib::ALERT, lvl);
-            status = true;
-        }
-        else
-        {
-            mlog(CRITICAL, "event level must be a number");
-        }
-    }
-    else
-    {
-        mlog(CRITICAL, "type mask must be a number");
-    }
-
-    /* Return Status */
-    lua_pushboolean(L, status);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * lsys_geteventlvl
- *----------------------------------------------------------------------------*/
-int LuaLibrarySys::lsys_geteventlvl (lua_State* L)
-{
-    lua_pushnumber(L, EventLib::getLvl(EventLib::LOG));
-    lua_pushnumber(L, EventLib::getLvl(EventLib::TRACE));
-    lua_pushnumber(L, EventLib::getLvl(EventLib::TELEMETRY));
-    lua_pushnumber(L, EventLib::getLvl(EventLib::ALERT));
-    return 4;
-}
-
-/*----------------------------------------------------------------------------
  * lsys_healthy
  *  - this is currently a placeholder for a more sophisticated health check
  *----------------------------------------------------------------------------*/
@@ -569,22 +371,13 @@ int LuaLibrarySys::lsys_healthy (lua_State* L)
 
     /* Check Memory Usage */
     const double current_memory_usage = OsApi::memusage();
-    if(current_memory_usage >= memory_limit)
+    if(current_memory_usage >= SystemConfig::settings().streamMemoryThreshold.value)
     {
         health = false;
     }
 
     /* Return Health */
     lua_pushboolean(L, health);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * lsys_ipv4
- *----------------------------------------------------------------------------*/
-int LuaLibrarySys::lsys_ipv4 (lua_State* L)
-{
-    lua_pushstring(L, SockLib::sockipv4());
     return 1;
 }
 
@@ -771,28 +564,5 @@ int LuaLibrarySys::lsys_memu (lua_State* L)
 {
     const double m = OsApi::memusage();
     lua_pushnumber(L, m);
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * lsys_setmemlimit - set memory limit
- *----------------------------------------------------------------------------*/
-int LuaLibrarySys::lsys_setmemlimit (lua_State* L)
-{
-    bool status = false;
-
-    if(!lua_isnumber(L, 1))
-    {
-        mlog(CRITICAL, "memory limit must be a number");
-    }
-    else
-    {
-        /* Set Memory Limit */
-        memory_limit = lua_tonumber(L, 1);
-        status = true;
-    }
-
-    /* Return Status */
-    lua_pushboolean(L, status);
     return 1;
 }

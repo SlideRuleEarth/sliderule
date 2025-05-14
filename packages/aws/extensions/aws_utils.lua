@@ -8,7 +8,7 @@ local function config_aws ()
     else
         print("Executing locally: "..tostring(http_code))
     end
-    sys.setincloud(status)
+    sys.setcfg("in_cloud", status)
     return status
 end
 

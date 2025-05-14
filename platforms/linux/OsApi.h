@@ -248,20 +248,13 @@ class OsApi
         static double       memusage            (void);
         static void         print               (const char* file_name, unsigned int line_number, const char* format_string, ...)  __attribute__((format(printf, 3, 4)));
 
+        /* system configuration */
         static bool         setIOMaxsize        (int maxsize);
         static int          getIOMaxsize        (void);
         static void         setIOTimeout        (int timeout);
         static int          getIOTimeout        (void);
         static int          performIOTimeout    (void);
         static int64_t      getLaunchTime       (void);
-        static void         setEnvVersion       (const char* verstr);
-        static const char*  getEnvVersion       (void);
-        static void         setIsPublic         (bool _is_public);
-        static bool         getIsPublic         (void);
-        static void         setInCloud          (bool _in_cloud);
-        static bool         getInCloud          (void);
-        static void         setCluster          (const char* cluster);
-        static const char*  getCluster          (void);
 
     private:
 
@@ -270,10 +263,6 @@ class OsApi
         static int io_timeout;
         static int io_maxsize;
         static int64_t launch_time;
-        static const char* environment_version;
-        static bool is_public;
-        static bool in_cloud;
-        static const char* cluster_name;
 };
 
 #endif  /* __osapi__ */

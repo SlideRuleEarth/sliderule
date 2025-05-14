@@ -42,6 +42,7 @@
 #include "ContainerRunner.h"
 #include "OsApi.h"
 #include "EventLib.h"
+#include "SystemConfig.h"
 #include "CurlLib.h"
 #include "EndpointObject.h"
 #include "TimeLib.h"
@@ -58,8 +59,6 @@ const struct luaL_Reg ContainerRunner::LUA_META_TABLE[] = {
 
 const char* ContainerRunner::SANDBOX_MOUNT = "/share";
 const char* ContainerRunner::HOST_DIRECTORY = "/data";
-
-const char* ContainerRunner::REGISTRY = NULL;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -78,12 +77,6 @@ int ContainerRunner::luaCreate (lua_State* L)
         _parms = dynamic_cast<CreFields*>(getLuaObject(L, 1, CreFields::OBJECT_TYPE));
         const char* host_shared_directory = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3, true, NULL);
-
-        /* Check Environment */
-        if(REGISTRY == NULL)
-        {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "container registry must be set before a container can be run");
-        }
 
         /* Create Container Runner */
         return createLuaObject(L, new ContainerRunner(L, _parms, host_shared_directory, outq_name));
@@ -108,14 +101,6 @@ void ContainerRunner::init (void)
  *----------------------------------------------------------------------------*/
 void ContainerRunner::deinit (void)
 {
-}
-
-/*----------------------------------------------------------------------------
- * getRegistry
- *----------------------------------------------------------------------------*/
-const char* ContainerRunner::getRegistry (void)
-{
-    return REGISTRY;
 }
 
 /*----------------------------------------------------------------------------
@@ -205,34 +190,6 @@ int ContainerRunner::luaDeleteUnique (lua_State* L)
     return returnLuaStatus(L, status);
 }
 
-/*----------------------------------------------------------------------------
- * luaSetRegistry - setregistry(<registry>)
- *
- *  - MUST BE SET BEFORE FIRST USE
- *----------------------------------------------------------------------------*/
-int ContainerRunner::luaSetRegistry (lua_State* L)
-{
-    bool status = false;
-    try
-    {
-        /* Get Parameters */
-        const char* registry_name = getLuaString(L, 1);
-
-        /* Set Registry */
-        if(REGISTRY == NULL)
-        {
-            REGISTRY = StringLib::duplicate(registry_name);
-            status = true;
-        }
-    }
-    catch(const RunTimeException& e)
-    {
-        mlog(e.level(), "Failed to set registry: %s", e.what());
-    }
-
-    return returnLuaStatus(L, status);
-}
-
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
@@ -303,7 +260,7 @@ void* ContainerRunner::controlThread (void* parm)
     const FString cmd("\"Cmd\": [%s]}", cmd_str.c_str());
 
     /* Build Container Parameters */
-    const FString image("\"Image\": \"%s/%s\"", REGISTRY, cr->parms->container_image.value.c_str());
+    const FString image("\"Image\": \"%s/%s\"", SystemConfig::settings().containerRegistry.value.c_str(), cr->parms->container_image.value.c_str());
     const FString host_config("\"HostConfig\": {\"Binds\": [\"%s:%s\", \"/data:/data\"]}", cr->hostSandboxDirectory, SANDBOX_MOUNT);
     const FString data("{%s, %s, %s}", image.c_str(), host_config.c_str(), cmd.c_str());
 

@@ -75,6 +75,7 @@ class EventLib
         static const int MAX_ATTR_STR = 1024;
         static const int MAX_TLM_STR = 32;
         static const int MAX_ALERT_STR = 256;
+        static const int MAX_IPV4_STR = 16;
 
         static const char* logRecType;
         static const char* traceRecType;
@@ -86,37 +87,37 @@ class EventLib
          *--------------------------------------------------------------------*/
 
         typedef struct {
-            int64_t     time;                       // time of event
-            uint32_t    level;                      // event_level_t
-            char        ipv4[SockLib::IPV4_STR_LEN];// ip address of local host
-            char        source[MAX_SRC_STR];        // source filename and line
-            char        message[MAX_MSG_STR];       // caller defined string
+            int64_t     time;                   // time of event
+            uint32_t    level;                  // event_level_t
+            char        ipv4[MAX_IPV4_STR];     // ip address of local host
+            char        source[MAX_SRC_STR];    // source filename and line
+            char        message[MAX_MSG_STR];   // caller defined string
         } log_t;
 
         typedef struct {
-            int64_t     time;                       // time of event
-            int64_t     tid;                        // task id
-            uint32_t    id;                         // event id
-            uint32_t    parent;                     // parent event id
-            uint32_t    flags;                      // flags_t
-            uint32_t    level;                      // event_level_t
-            char        ipv4[SockLib::IPV4_STR_LEN];// ip address of local host
-            char        name[MAX_NAME_STR];         // name of event
-            char        attr[MAX_ATTR_STR];         // attributes associated with event
+            int64_t     time;                   // time of event
+            int64_t     tid;                    // task id
+            uint32_t    id;                     // event id
+            uint32_t    parent;                 // parent event id
+            uint32_t    flags;                  // flags_t
+            uint32_t    level;                  // event_level_t
+            char        ipv4[MAX_IPV4_STR];     // ip address of local host
+            char        name[MAX_NAME_STR];     // name of event
+            char        attr[MAX_ATTR_STR];     // attributes associated with event
         } trace_t;
 
         typedef struct {
-            int64_t     time;                       // time of event
-            int32_t     code;                       // alert codes
-            uint32_t    level;                      // event_level_t
-            float       duration;                   // seconds
-            double      latitude;                   // area of interest (single point representing area)
-            double      longitude;                  // area of interest (single point representing area)
-            char        source_ip[MAX_TLM_STR];     // ip address of local host
-            char        endpoint[MAX_TLM_STR];      // server-side API
-            char        client[MAX_TLM_STR];        // Python Client, Web Client, etc
-            char        account[MAX_TLM_STR];       // username
-            char        version[MAX_TLM_STR];       // sliderule version
+            int64_t     time;                   // time of event
+            int32_t     code;                   // alert codes
+            uint32_t    level;                  // event_level_t
+            float       duration;               // seconds
+            double      latitude;               // area of interest (single point representing area)
+            double      longitude;              // area of interest (single point representing area)
+            char        source_ip[MAX_TLM_STR]; // ip address of local host
+            char        endpoint[MAX_TLM_STR];  // server-side API
+            char        client[MAX_TLM_STR];    // Python Client, Web Client, etc
+            char        account[MAX_TLM_STR];   // username
+            char        version[MAX_TLM_STR];   // sliderule version
         } telemetry_t;
 
         typedef struct {
@@ -155,8 +156,6 @@ class EventLib
         static void             init            (const char* eventq);
         static void             deinit          (void);
 
-        static  bool            setLvl          (type_t type, event_level_t lvl);
-        static  event_level_t   getLvl          (type_t type);
         static  const char*     lvl2str         (event_level_t lvl);
         static  const char*     lvl2str_lc      (event_level_t lvl);
         static  const char*     type2str        (type_t type);
@@ -180,11 +179,6 @@ class EventLib
 
         static std::atomic<uint32_t> trace_id;
         static Thread::key_t trace_key;
-
-        static event_level_t logLevel;
-        static event_level_t traceLevel;
-        static event_level_t telemetryLevel;
-        static event_level_t alertLevel;
 };
 
 #endif  /* __eventlib__ */

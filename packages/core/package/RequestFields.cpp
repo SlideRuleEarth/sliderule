@@ -35,6 +35,7 @@
 
 #include "OsApi.h"
 #include "RequestFields.h"
+#include "SystemConfig.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -422,7 +423,7 @@ void RequestFields::fromLua (lua_State* L, int index)
     // version info
     slideruleVersion = LIBID;
     buildInformation = BUILDINFO;
-    environmentVersion = OsApi::getEnvVersion();
+    environmentVersion = SystemConfig::settings().environmentVersion.value;
 }
 
 /*----------------------------------------------------------------------------

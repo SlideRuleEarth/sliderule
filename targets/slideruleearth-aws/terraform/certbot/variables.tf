@@ -11,6 +11,12 @@ variable "emails" {
   default     = ["jp.swinski@nasa.gov"]
 }
 
+variable  "sys_bucket" {
+  description = "S3 bucket used to store the sliderule system configuration"
+  type        = string
+  default     = "sliderule"
+}
+
 variable "upload_s3" {
   description = "The S3 bucket to upload certificates."
   type = object({
@@ -19,7 +25,7 @@ variable "upload_s3" {
     region = string,
   })
   default = {
-    bucket = "sliderule"
+    bucket = var.sys_bucket
     prefix = "config"
     region  = "us-west-2"
   }  

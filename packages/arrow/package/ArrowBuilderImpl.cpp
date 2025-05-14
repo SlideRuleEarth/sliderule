@@ -58,6 +58,7 @@
 #include "OsApi.h"
 #include "ArrowBuilderImpl.h"
 #include "AncillaryFields.h"
+#include "SystemConfig.h"
 
 #ifdef __aws__
 #include "aws.h"
@@ -508,7 +509,7 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
         }
     })json",
         rqststr.c_str(),
-        OsApi::getEnvVersion(),
+        SystemConfig::settings().environmentVersion.value.c_str(),
         LIBID,
         durationstr.c_str(),
         packagestr.c_str(),

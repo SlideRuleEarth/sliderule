@@ -2,14 +2,14 @@ local runner = require("test_executive")
 
 -- Requirements --
 
-if (not sys.incloud() and not runner.isglobal()) then
+if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
     return runner.skip()
 end
 
 -- Setup --
 
 local role_auth_script = core.script("iam_role_auth"):name("RoleAuthScript")
-local test_bucket = "sliderule"
+local test_bucket = sys.bucket()
 local test_path = "data/test"
 local test_file = "t8.shakespeare.txt"
 local status = false

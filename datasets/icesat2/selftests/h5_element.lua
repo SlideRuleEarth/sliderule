@@ -4,25 +4,16 @@ local json = require("json")
 
 -- Requirements --
 
-if (not sys.incloud() and not runner.isglobal()) then
+if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
     return runner.skip()
 end
 
 -- Setup --
 
-local assets = asset.loaddir()
-local asset_name = "icesat2"
-local atlas_asset = core.getbyname(asset_name)
-local name, identity, driver = atlas_asset:info()
-local resource = "ATL03_20181015231931_02650102_005_01.h5"
+runner.authenticate()
 
-local creds = aws.csget(identity)
-if not creds then
-    local earthdata_url = "https://data.nsidc.earthdatacloud.nasa.gov/s3credentials"
-    local response, _ = core.get(earthdata_url)
-    local _, credential = pcall(json.decode, response)
-    aws.csput(identity, credential)
-end
+local atlas_asset = core.getbyname("icesat2")
+local resource = "ATL03_20181015231931_02650102_005_01.h5"
 
 -- Self Test --
 

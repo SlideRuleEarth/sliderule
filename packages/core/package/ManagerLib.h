@@ -70,14 +70,6 @@ class ManagerLib
 
         static bool             recordTelemetry     (const EventLib::telemetry_t* event);
         static bool             issueAlert          (const EventLib::alert_t* event);
-
-        static int              luaUrl              (lua_State* L);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        static const char*  URL;
 };
 
 #endif  /* __manager_lib__ */

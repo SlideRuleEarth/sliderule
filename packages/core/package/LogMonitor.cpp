@@ -35,6 +35,7 @@
 
 #include "LogMonitor.h"
 #include "Monitor.h"
+#include "SystemConfig.h"
 #include "EventLib.h"
 #include "TimeLib.h"
 #include "RecordObject.h"
@@ -52,8 +53,8 @@ int LogMonitor::luaCreate (lua_State* L)
     try
     {
         /* Get Parmeters */
-        const event_level_t level = static_cast<event_level_t>(getLuaInteger(L, 1));
-        const format_t output_format = static_cast<format_t>(getLuaInteger(L, 2));
+        const event_level_t level = static_cast<event_level_t>(getLuaInteger(L, 1, true, SystemConfig::settings().logLevel.value));
+        const format_t output_format = static_cast<format_t>(getLuaInteger(L, 2, true, SystemConfig::settings().logFormat.value));
         const char* eventq_name = getLuaString(L, 3, true, EVENTQ);
 
         /* Return Dispatch Object */

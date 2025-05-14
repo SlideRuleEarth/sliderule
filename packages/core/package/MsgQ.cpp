@@ -37,6 +37,7 @@
 #include "OsApi.h"
 #include "Dictionary.h"
 #include "StringLib.h"
+#include "SystemConfig.h"
 
 #include <cstdarg>
 
@@ -44,7 +45,6 @@
  * STATIC DATA
  ******************************************************************************/
 
-int MsgQ::StandardQueueDepth = MsgQ::CFG_DEPTH_INFINITY;
 Dictionary<MsgQ::global_queue_t> MsgQ::queues;
 Mutex MsgQ::listmut;
 
@@ -87,7 +87,7 @@ MsgQ::MsgQ(const char* name, MsgQ::free_func_t free_func, int depth, int data_si
             msgQ->free_blocks       = 0;
 
             // Set depth
-            if(depth == CFG_DEPTH_STANDARD) msgQ->depth = StandardQueueDepth;
+            if(depth == CFG_DEPTH_STANDARD) msgQ->depth = SystemConfig::settings().msgQDepth.value;
             else                            msgQ->depth = depth;
 
             // Allocate free block stack
@@ -283,20 +283,6 @@ int MsgQ::listQ(queueDisplay_t* list, int list_size)
         curr_name = queues.next(&curr_q);
     }
     return j;
-}
-
-/*----------------------------------------------------------------------------
- * setStdQDepth
- *----------------------------------------------------------------------------*/
-bool MsgQ::setStdQDepth(int depth)
-{
-    if(depth >= 0)
-    {
-        StandardQueueDepth = depth;
-        return true;
-    }
-
-    return false;
 }
 
 /******************************************************************************

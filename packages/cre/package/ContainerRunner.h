@@ -70,10 +70,7 @@ class ContainerRunner: public LuaObject
         static int          luaCreate           (lua_State* L);
         static void         init                (void);
         static void         deinit              (void);
-        static const char*  getRegistry         (void);
         static int          luaList             (lua_State* L);
-        static int          luaSetRegistry      (lua_State* L);
-        static int          luaSettings         (lua_State* L);
         static int          luaCreateUnique     (lua_State* L);
         static int          luaDeleteUnique     (lua_State* L);
 
@@ -82,8 +79,6 @@ class ContainerRunner: public LuaObject
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-
-        static const char* REGISTRY;
 
         bool            active;
         Thread*         controlPid;

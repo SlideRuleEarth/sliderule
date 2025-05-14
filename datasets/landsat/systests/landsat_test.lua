@@ -1,22 +1,8 @@
 local runner = require("test_executive")
-console = require("console")
-asset = require("asset")
-csv = require("csv")
-json = require("json")
-
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
 
 -- Setup --
 
-local assets = asset.loaddir()
-local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"}
-local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms))
-while not aws.csget("lpdaac-cloud") do
-    print("Waiting to authenticate to LPDAAC...")
-    sys.wait(1)
-end
-
+runner.authenticate()
 
 local _,td = runner.srcscript()
 local geojsonfile = td.."../data/hls_trimmed.geojson"

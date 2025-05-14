@@ -1,3 +1,4 @@
+local console = require("console")
 
 -- Global Data
 local results = {}
@@ -198,6 +199,38 @@ local function cmpfloat (f1, f2, t)
 end
 
 --[[
+Function:   authenticate
+ Purpose:   populate credentials for access to authenticated datasets
+   Notes:   none
+]]
+local function authenticate()
+    local systems = {
+        ['nsidc-cloud'] = {earthdata="https://data.nsidc.earthdatacloud.nasa.gov/s3credentials", identity="nsidc-cloud"},
+        ['lpdaac-cloud'] = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"},
+        ['ornl-cloud'] = {earthdata="https://data.ornldaac.earthdata.nasa.gov/s3credentials", identity="ornl-cloud"},
+        ['podaac-cloud'] =  {earthdata="https://archive.podaac.earthdata.nasa.gov/s3credentials", identity="podaac-cloud"}
+    }
+    for identity,parms in pairs(systems) do
+        if not aws.csget(identity) then
+            core.script("earth_data_auth", json.encode(parms))
+        end
+        while not aws.csget(identity) do
+            print("Waiting to authenticate to "..identity.."...")
+            sys.wait(1)
+        end
+    end
+end
+
+--[[
+Function:   log
+ Purpose:   configure log level
+   Notes:   none
+]]
+local function log(lvl)
+    console.monitor:config(core.LOG, lvl)
+end
+
+--[[
 Function:   report
  Purpose:   display the results of the asserts as a summary
    Notes:   none
@@ -239,7 +272,6 @@ local function report ()
     return total_errors
 end
 
-
 -- Export Package
 
 set_context(context)
@@ -259,6 +291,8 @@ local package = {
     skip = skip,
     compare = compare,
     cmpfloat = cmpfloat,
+    authenticate = authenticate,
+    log = log,
     report = report,
 }
 

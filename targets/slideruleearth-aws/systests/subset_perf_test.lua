@@ -1,14 +1,9 @@
 local runner = require("test_executive")
-console = require("console")
-asset = require("asset")
-json = require("json")
 local td = runner.rootdir(arg[0])
 
 -- Setup --
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
 
-local assets = asset.loaddir()
+runner.authenticate()
 
 -- AOI extent (extent of grandmesa.geojson)
 local gm_llx = -108.3412
@@ -224,14 +219,6 @@ end
 
 demType = "landsat-hls"
 print(string.format("\n--------------------------\n%s\n--------------------------", demType))
-
-local script_parms = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"}
-local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms))
-while not aws.csget("lpdaac-cloud") do
-    print("Waiting to authenticate to LPDAAC...")
-    sys.wait(1)
-end
-
 
 local geojsonfile = td.."../../plugins/landsat/data/hls_trimmed.geojson"
 local f = io.open(geojsonfile, "r")

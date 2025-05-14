@@ -59,6 +59,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestMetrics.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/SpatialIndex.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/StringLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/SystemConfig.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/TelemetryMonitor.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/TimeLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/UnitTest.cpp
@@ -127,6 +128,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/RequestMetrics.h
         ${CMAKE_CURRENT_LIST_DIR}/package/SpatialIndex.h
         ${CMAKE_CURRENT_LIST_DIR}/package/StringLib.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/SystemConfig.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Table.h
         ${CMAKE_CURRENT_LIST_DIR}/package/TelemetryMonitor.h
         ${CMAKE_CURRENT_LIST_DIR}/package/TimeLib.h

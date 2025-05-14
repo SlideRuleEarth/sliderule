@@ -37,6 +37,7 @@
 
 #include "OrchestratorLib.h"
 #include "OsApi.h"
+#include "SystemConfig.h"
 #include "TimeLib.h"
 #include "LuaEngine.h"
 #include "EndpointObject.h"
@@ -47,17 +48,10 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Static Data
- *----------------------------------------------------------------------------*/
-
-const char* OrchestratorLib::URL = NULL;
-
-/*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
 void OrchestratorLib::init (void)
 {
-    URL = StringLib::duplicate("http://127.0.0.1:8050");
 }
 
 /*----------------------------------------------------------------------------
@@ -65,7 +59,6 @@ void OrchestratorLib::init (void)
  *----------------------------------------------------------------------------*/
 void OrchestratorLib::deinit (void)
 {
-    delete [] URL;
 }
 
 /*----------------------------------------------------------------------------
@@ -74,7 +67,7 @@ void OrchestratorLib::deinit (void)
 OrchestratorLib::rsps_t OrchestratorLib::request (EndpointObject::verb_t verb, const char* resource, const char* data)
 {
     rsps_t rsps;
-    const FString path("%s%s", URL, resource);
+    const FString path("%s%s", SystemConfig::settings().orchestratorURL.value.c_str(), resource);
     rsps.code = CurlLib::request(verb, path.c_str(), data, &rsps.response, &rsps.size);
     return rsps;
 }
@@ -130,7 +123,9 @@ bool OrchestratorLib::registerService (const char* service, int lifetime, const 
 long OrchestratorLib::selflock (const char* service, int timeout_secs, int locks_per_node, bool verbose)
 {
     long transaction = INVALID_TX_ID;
-    const FString rqst("{\"service\":\"%s\", \"address\": \"http://%s:9081\", \"timeout\": %d, \"locksPerNode\": %d}", service, SockLib::sockipv4(), timeout_secs, locks_per_node);
+    const char* service_ip = SystemConfig::settings().ipv4.value.c_str();
+    const int service_port = SystemConfig::settings().appPort.value;
+    const FString rqst("{\"service\":\"%s\", \"address\": \"http://%s:%d\", \"timeout\": %d, \"locksPerNode\": %d}", service, service_ip, service_port, timeout_secs, locks_per_node);
     const rsps_t rsps = request(EndpointObject::POST, "/discovery/selflock", rqst.c_str());
     if(rsps.code == EndpointObject::OK)
     {
@@ -354,30 +349,6 @@ int OrchestratorLib::getNodes (void)
     delete [] rsps.response;
 
     return num_nodes;
-}
-
-/*----------------------------------------------------------------------------
- * luaUrl - orchurl(<URL>)
- *----------------------------------------------------------------------------*/
-int OrchestratorLib::luaUrl(lua_State* L)
-{
-    try
-    {
-        const char* _url = LuaObject::getLuaString(L, 1);
-
-        delete [] URL;
-        URL = StringLib::duplicate(_url);
-    }
-    catch(const RunTimeException& e)
-    {
-        // silently fail... allows calling lua script to set nil
-        // as way of keeping and returning the current value
-        (void)e;
-    }
-
-    lua_pushstring(L, URL);
-
-    return 1;
 }
 
 /*----------------------------------------------------------------------------

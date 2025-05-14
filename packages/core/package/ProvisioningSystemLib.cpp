@@ -37,6 +37,7 @@
 
 #include "ProvisioningSystemLib.h"
 #include "OsApi.h"
+#include "SystemConfig.h"
 
 /******************************************************************************
  * PROVISIONING SYSTEM LIBRARY CLASS
@@ -54,19 +55,10 @@ size_t write2nothing(const char* ptr, size_t size, size_t nmemb, void* userdata)
 }
 
 /*----------------------------------------------------------------------------
- * Static Data
- *----------------------------------------------------------------------------*/
-
-const char* ProvisioningSystemLib::URL = NULL;
-const char* ProvisioningSystemLib::Organization = NULL;
-
-/*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
 void ProvisioningSystemLib::init (void)
 {
-    URL = StringLib::duplicate(DEFAULT_PS_URL);
-    Organization = StringLib::duplicate(DEFAULT_ORGANIZATION_NAME);
 }
 
 /*----------------------------------------------------------------------------
@@ -74,8 +66,6 @@ void ProvisioningSystemLib::init (void)
  *----------------------------------------------------------------------------*/
 void ProvisioningSystemLib::deinit (void)
 {
-    delete [] URL;
-    delete [] Organization;
 }
 
 /*----------------------------------------------------------------------------
@@ -88,7 +78,7 @@ const char* ProvisioningSystemLib::login (const char* username, const char* pass
     try
     {
         /* Build API URL */
-        const FString url_str("%s/api/org_token/", URL);
+        const FString url_str("%s/api/org_token/", SystemConfig::settings().provSysURL.value.c_str());
 
         /* Build Bearer Token Header */
         const FString hdr_str("Content-Type: application/json");
@@ -182,7 +172,9 @@ bool ProvisioningSystemLib::validate (const char* access_token, bool verbose)
     try
     {
         /* Build API URL */
-        const FString url_str("%s/api/membership_status/%s/", URL, Organization);
+        const char* url = SystemConfig::settings().provSysURL.value.c_str();
+        const char* organization = SystemConfig::settings().organization.value.c_str();
+        const FString url_str("%s/api/membership_status/%s/", url, organization);
 
         /* Build Bearer Token Header */
         const FString hdr_str("Authorization: Bearer %s", access_token);
@@ -238,54 +230,6 @@ bool ProvisioningSystemLib::validate (const char* access_token, bool verbose)
 
     /* Return Status */
     return status;
-}
-
-/*----------------------------------------------------------------------------
- * luaUrl - psurl(<URL>)
- *----------------------------------------------------------------------------*/
-int ProvisioningSystemLib::luaUrl(lua_State* L)
-{
-    try
-    {
-        const char* _url = LuaObject::getLuaString(L, 1);
-
-        delete [] URL;
-        URL = StringLib::duplicate(_url);
-    }
-    catch(const RunTimeException& e)
-    {
-        // silently fail... allows calling lua script to set nil
-        // as way of keeping and returning the current value
-        (void)e;
-    }
-
-    lua_pushstring(L, URL);
-
-    return 1;
-}
-
-/*----------------------------------------------------------------------------
- * luaSetOrganization - psorg(<organization>)
- *----------------------------------------------------------------------------*/
-int ProvisioningSystemLib::luaSetOrganization(lua_State* L)
-{
-    try
-    {
-        const char* _organization = LuaObject::getLuaString(L, 1);
-
-        delete [] Organization;
-        Organization = StringLib::duplicate(_organization);
-    }
-    catch(const RunTimeException& e)
-    {
-        // silently fail... allows calling lua script to set nil
-        // as way of keeping and returning the current value
-        (void)e;
-    }
-
-    lua_pushstring(L, Organization);
-
-    return 1;
 }
 
 /*----------------------------------------------------------------------------
@@ -374,11 +318,6 @@ ProvisioningSystemLib::Authenticator::~Authenticator (void) = default;
  *----------------------------------------------------------------------------*/
 bool ProvisioningSystemLib::Authenticator::isValid (const char* token)
 {
-    if(StringLib::match(ProvisioningSystemLib::Organization, DEFAULT_ORGANIZATION_NAME))
-    {
-        return true; // no authentication used for default organization name
-    }
-
     if(token != NULL)
     {
         return ProvisioningSystemLib::validate(token);

@@ -97,19 +97,12 @@ class OrchestratorLib
         static bool             metric              (const char* name, double value);
         static int              getNodes            (void);
 
-        static int              luaUrl              (lua_State* L);
         static int              luaRegisterService  (lua_State* L);
         static int              luaSelfLock         (lua_State* L);
         static int              luaLock             (lua_State* L);
         static int              luaUnlock           (lua_State* L);
         static int              luaHealth           (lua_State* L);
         static int              luaGetNodes         (lua_State* L);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        static const char*  URL;
 };
 
 #endif  /* __orchestrator_lib__ */

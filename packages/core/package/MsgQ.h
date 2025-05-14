@@ -110,7 +110,6 @@ class MsgQ
         static  bool    existQ          (const char* qname);
         static  int     numQ            (void); // number of registered queues
         static  int     listQ           (queueDisplay_t* list, int list_size);
-        static  bool    setStdQDepth    (int depth);
 
     protected:
 
@@ -169,7 +168,6 @@ class MsgQ
          * Data
          *--------------------------------------------------------------------*/
 
-        static int                          StandardQueueDepth;
         static Dictionary<global_queue_t>   queues;
         static Mutex                        listmut;
 

@@ -37,6 +37,7 @@
 
 #include "ManagerLib.h"
 #include "OsApi.h"
+#include "SystemConfig.h"
 #include "TimeLib.h"
 #include "LuaEngine.h"
 #include "EndpointObject.h"
@@ -47,17 +48,10 @@
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Static Data
- *----------------------------------------------------------------------------*/
-
-const char* ManagerLib::URL = NULL;
-
-/*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
 void ManagerLib::init (void)
 {
-    URL = StringLib::duplicate("http://127.0.0.1:8000");
 }
 
 /*----------------------------------------------------------------------------
@@ -65,7 +59,6 @@ void ManagerLib::init (void)
  *----------------------------------------------------------------------------*/
 void ManagerLib::deinit (void)
 {
-    delete [] URL;
 }
 
 /*----------------------------------------------------------------------------
@@ -80,7 +73,7 @@ ManagerLib::rsps_t ManagerLib::request (EndpointObject::verb_t verb, const char*
 
     // make request
     rsps_t rsps;
-    const FString path("%s%s", URL, resource);
+    const FString path("%s%s", SystemConfig::settings().managerURL.value.c_str(), resource);
     rsps.code = CurlLib::request(verb, path.c_str(), data, &rsps.response, &rsps.size,
                                  false, false, CurlLib::DATA_TIMEOUT, &headers);
 
@@ -165,28 +158,4 @@ bool ManagerLib::issueAlert (const EventLib::alert_t* event)
     delete [] rsps.response;
 
     return status;
-}
-
-/*----------------------------------------------------------------------------
- * luaUrl - orchurl(<URL>)
- *----------------------------------------------------------------------------*/
-int ManagerLib::luaUrl(lua_State* L)
-{
-    try
-    {
-        const char* _url = LuaObject::getLuaString(L, 1);
-
-        delete [] URL;
-        URL = StringLib::duplicate(_url);
-    }
-    catch(const RunTimeException& e)
-    {
-        // silently fail... allows calling lua script to set nil
-        // as way of keeping and returning the current value
-        (void)e;
-    }
-
-    lua_pushstring(L, URL);
-
-    return 1;
 }

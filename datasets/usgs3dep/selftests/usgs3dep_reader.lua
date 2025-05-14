@@ -4,7 +4,7 @@ local srcfile, dirpath = runner.srcscript()
 
 -- Requirements --
 
-if (not sys.incloud() and not runner.isglobal()) then
+if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
     return runner.skip()
 end
 

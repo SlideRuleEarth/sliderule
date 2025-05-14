@@ -59,9 +59,6 @@ class LuaEndpoint: public EndpointObject
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
-        static const double DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD;
-        static const double DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -85,21 +82,13 @@ class LuaEndpoint: public EndpointObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                            LuaEndpoint     (lua_State* L, double normal_mem_thresh, double stream_mem_thresh);
+                            LuaEndpoint     (lua_State* L);
                             ~LuaEndpoint    (void) override;
 
         bool                handleRequest   (Request* request) override;
         static void*        requestThread   (void* parm);
         int                 normalResponse  (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const;
         int                 streamResponse  (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const;
-
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        double              normalRequestMemoryThreshold;
-        double              streamRequestMemoryThreshold;
 };
 
 #endif  /* __lua_endpoint__ */

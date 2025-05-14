@@ -17,10 +17,11 @@
 local json = require("json")
 local parm = json.decode(arg[1] or "{}")
 
-local earthdata = parm["earthdata"] or "https://data.nsidc.earthdatacloud.nasa.gov/s3credentials"
-local identity = parm["identity"] or "nsidc-cloud"
-local bucket = parm["bucket"] or "sliderule"
+local earthdata = parm["earthdata"]
+local identity = parm["identity"]
 local netrc_key = parm["netrc_key"] or "/config/netrc"
+
+local bucket = sys.getcfg("sys_bucket")
 
 -- download netrc
 local netrc_present = false

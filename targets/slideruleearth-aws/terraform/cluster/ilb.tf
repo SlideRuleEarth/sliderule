@@ -24,7 +24,7 @@ resource "aws_instance" "ilb" {
       aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${var.container_repo}
       export OAUTH_HMAC_SECRET='${local.secrets.jwt_secret_key}'
       export IS_PUBLIC=${var.is_public}
-      export CLUSTER=${var.cluster_name}
+      export ORGANIZATION=${var.cluster_name}
       export DOMAIN=${var.domain}
       export ILB_IMAGE=${var.container_repo}/ilb:${var.cluster_version}
       mkdir -p /etc/ssl/private

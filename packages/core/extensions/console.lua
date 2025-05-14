@@ -2,7 +2,7 @@ local console_monitor = core.logmon(core.INFO, core.FMT_TEXT):name("console.moni
 
 local function loglvl (lvl)
     console_monitor:config(lvl)
-    sys.setlvl(core.LOG, lvl)
+    sys.setcfg("logLevel", lvl)
 end
 
 local package = {

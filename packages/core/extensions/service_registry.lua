@@ -1,4 +1,4 @@
-local default_name = "http://"..sys.ipv4()..":9081"
+local default_name = "http://"..sys.getcfg("ipv4")..":9081"
 local name = arg[1] or default_name
 local service = "sliderule"
 local lifetime = 120 -- seconds

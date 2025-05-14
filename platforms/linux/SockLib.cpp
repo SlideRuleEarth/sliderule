@@ -77,11 +77,8 @@ typedef struct sockaddr     client_address_t;
  * STATIC DATA
  ******************************************************************************/
 
-const char* SockLib::IPV4_ENV_VAR_NAME = "IPV4";
-
 bool SockLib::signal_exit = false;
 char SockLib::local_host_name[HOST_STR_LEN];
-char SockLib::ipv4[IPV4_STR_LEN];
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -92,29 +89,10 @@ char SockLib::ipv4[IPV4_STR_LEN];
  *----------------------------------------------------------------------------*/
 void SockLib::init()
 {
-    /* Initialize to Defaults */
-    snprintf(local_host_name, HOST_STR_LEN, "%s", "unknown_host");
-    snprintf(ipv4, IPV4_STR_LEN, "%s", "127.0.0.1");
-
     /* Attempt to Get Host Information */
-    struct hostent* host = NULL;
-    if(gethostname(local_host_name, HOST_STR_LEN) != -1)
+    if(gethostname(local_host_name, HOST_STR_LEN) == -1)
     {
-        host = gethostbyname(local_host_name); // NOLINT(concurrency-mt-unsafe)
-    }
-
-    /* Attempt to Get IP Address from Environment */
-    const char* ip_from_env = getenv(IPV4_ENV_VAR_NAME); // NOLINT(concurrency-mt-unsafe)
-
-    /* Get IP Address */
-    if(ip_from_env)
-    {
-        snprintf(ipv4, IPV4_STR_LEN, "%s", ip_from_env);
-    }
-    else if(host != NULL)
-    {
-        const uint32_t addr = reinterpret_cast<struct in_addr*>(host->h_addr_list[0])->s_addr;
-        snprintf(ipv4, IPV4_STR_LEN, "%u.%u.%u.%u", addr & 0xFF, (addr >> 8) & 0xFF, (addr >> 16) & 0xFF, (addr >> 24) & 0xFF);
+        snprintf(local_host_name, HOST_STR_LEN, "%s", "unknown_host");
     }
 }
 
@@ -767,22 +745,6 @@ int SockLib::startclient(const char* ip_addr, int port, int max_num_connections,
     }
 
     return 0;
-}
-
-/*----------------------------------------------------------------------------
- * sockhost
- *----------------------------------------------------------------------------*/
-const char* SockLib::sockhost (void)
-{
-    return local_host_name;
-}
-
-/*----------------------------------------------------------------------------
- * sockipv4
- *----------------------------------------------------------------------------*/
-const char* SockLib::sockipv4 (void)
-{
-    return ipv4;
 }
 
 /*----------------------------------------------------------------------------

@@ -78,20 +78,10 @@ class LuaLibrarySys
         static int      lsys_log            (lua_State* L);
         static int      lsys_metric         (lua_State* L);
         static int      lsys_lsmsgq         (lua_State* L);
-        static int      lsys_setenvver      (lua_State* L);
-        static int      lsys_setispublic    (lua_State* L);
-        static int      lsys_getispublic    (lua_State* L);
-        static int      lsys_setincloud     (lua_State* L);
-        static int      lsys_getincloud     (lua_State* L);
-        static int      lsys_setcluster     (lua_State* L);
         static int      lsys_type           (lua_State* L);
-        static int      lsys_setstddepth    (lua_State* L);
         static int      lsys_setiosize      (lua_State* L);
         static int      lsys_getiosize      (lua_State* L);
-        static int      lsys_seteventlvl    (lua_State* L);
-        static int      lsys_geteventlvl    (lua_State* L);
         static int      lsys_healthy        (lua_State* L);
-        static int      lsys_ipv4           (lua_State* L);
         static int      lsys_lsrec          (lua_State* L);
         static int      lsys_lsobj          (lua_State* L);
         static int      lsys_cwd            (lua_State* L);
@@ -100,7 +90,6 @@ class LuaLibrarySys
         static int      lsys_fileexists     (lua_State* L);
         static int      lsys_deletefile     (lua_State* L);
         static int      lsys_memu           (lua_State* L);
-        static int      lsys_setmemlimit    (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data

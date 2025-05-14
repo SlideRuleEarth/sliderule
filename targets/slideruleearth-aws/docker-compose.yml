@@ -22,7 +22,7 @@ services:
       - ORCHESTRATOR=http://127.0.0.1:8050
       - MANAGER=http://127.0.0.1:8000
       - IS_PUBLIC=False
-      - CLUSTER=localhost
+      - ORGANIZATION=localhost
       - PROVISIONING_SYSTEM=https://ps.localhost
       - CONTAINER_REGISTRY=742127912612.dkr.ecr.us-west-2.amazonaws.com
       - ENVIRONMENT_VERSION=$ENVIRONMENT_VERSION
@@ -43,7 +43,7 @@ services:
       - ./:/haproxy
       - /etc/ssl/private:/etc/ssl/private
     environment:
-      - CLUSTER=localhost
+      - ORGANIZATION=localhost
       - IS_PUBLIC=True
     healthcheck:
       test: curl http://localhost:8050/discovery/health || exit 1

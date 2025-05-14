@@ -35,6 +35,7 @@
 
 #include "LuaEndpoint.h"
 #include "OsApi.h"
+#include "SystemConfig.h"
 #include "TimeLib.h"
 
 /******************************************************************************
@@ -45,9 +46,6 @@ const char* LuaEndpoint::LUA_META_NAME = "LuaEndpoint";
 const struct luaL_Reg LuaEndpoint::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
-
-const double LuaEndpoint::DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD = 1.0;
-const double LuaEndpoint::DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD = 1.0;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -61,18 +59,14 @@ void LuaEndpoint::init (void)
 }
 
 /*----------------------------------------------------------------------------
- * luaCreate - endpoint([<normal memory threshold>], [<stream memory threshold>])
+ * luaCreate - endpoint()
  *----------------------------------------------------------------------------*/
 int LuaEndpoint::luaCreate (lua_State* L)
 {
     try
     {
-        /* Get Parameters */
-        const double normal_mem_thresh = getLuaFloat(L, 1, true, DEFAULT_NORMAL_REQUEST_MEMORY_THRESHOLD);
-        const double stream_mem_thresh = getLuaFloat(L, 2, true, DEFAULT_STREAM_REQUEST_MEMORY_THRESHOLD);
-
         /* Create Lua Endpoint */
-        return createLuaObject(L, new LuaEndpoint(L, normal_mem_thresh, stream_mem_thresh));
+        return createLuaObject(L, new LuaEndpoint(L));
     }
     catch(const RunTimeException& e)
     {
@@ -88,10 +82,8 @@ int LuaEndpoint::luaCreate (lua_State* L)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-LuaEndpoint::LuaEndpoint(lua_State* L, double normal_mem_thresh, double stream_mem_thresh):
-    EndpointObject(L, LUA_META_NAME, LUA_META_TABLE),
-    normalRequestMemoryThreshold(normal_mem_thresh),
-    streamRequestMemoryThreshold(stream_mem_thresh)
+LuaEndpoint::LuaEndpoint(lua_State* L):
+    EndpointObject(L, LUA_META_NAME, LUA_META_TABLE)
 {
 }
 
@@ -233,8 +225,8 @@ int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publi
     LuaEngine* engine = NULL;
 
     /* Check Memory */
-    if( (normalRequestMemoryThreshold >= 1.0) ||
-        ((mem = OsApi::memusage()) < normalRequestMemoryThreshold) )
+    if( (SystemConfig::settings().normalMemoryThreshold.value >= 1.0) ||
+        ((mem = OsApi::memusage()) < SystemConfig::settings().normalMemoryThreshold.value) )
     {
         /* Launch Engine */
         engine = new LuaEngine(scriptpath, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
@@ -308,8 +300,8 @@ int LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publi
     LuaEngine* engine = NULL;
 
     /* Check Memory */
-    if( (streamRequestMemoryThreshold >= 1.0) ||
-        ((mem = OsApi::memusage()) < streamRequestMemoryThreshold) )
+    if( (SystemConfig::settings().streamMemoryThreshold.value >= 1.0) ||
+        ((mem = OsApi::memusage()) < SystemConfig::settings().streamMemoryThreshold.value) )
     {
         /* Send Header */
         const int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", serverHead.c_str());

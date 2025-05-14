@@ -4,24 +4,13 @@ local json = require("json")
 
 -- Requirements --
 
-if (not sys.incloud() and not runner.isglobal()) then
+if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
     return runner.skip()
 end
 
 -- Setup --
 
-local assets = asset.loaddir()
-local script_parms = {earthdata = "https://data.ornldaac.earthdata.nasa.gov/s3credentials", identity = "ornl-cloud"}
-local earthdata_auth_script = core.script("earth_data_auth", json.encode(script_parms))
-while not aws.csget("ornl-cloud") do
-    print("Waiting to authenticate to ORNL...")
-    sys.wait(1)
-end
-
-
--- local console = require("console")
--- console.monitor:config(core.LOG, core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
+runner.authenticate()
 
 -- Self Test --
 

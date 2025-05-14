@@ -68,6 +68,7 @@
 #include "RequestMetrics.h"
 #include "SpatialIndex.h"
 #include "StringLib.h"
+#include "SystemConfig.h"
 #include "Table.h"
 #include "TelemetryMonitor.h"
 #include "TimeLib.h"
@@ -134,19 +135,15 @@ static int core_open (lua_State *L)
         {"dataframe",       GeoDataFrame::luaCreate},
         {"framesender",     GeoDataFrame::FrameSender::luaCreate},
         {"proxy",           EndpointProxy::luaCreate},
-        {"orchurl",         OrchestratorLib::luaUrl},
         {"orchreg",         OrchestratorLib::luaRegisterService},
         {"orchselflock",    OrchestratorLib::luaSelfLock},
         {"orchlock",        OrchestratorLib::luaLock},
         {"orchunlock",      OrchestratorLib::luaUnlock},
         {"orchhealth",      OrchestratorLib::luaHealth},
         {"orchnodes",       OrchestratorLib::luaGetNodes},
-        {"psurl",           ProvisioningSystemLib::luaUrl},
-        {"psorg",           ProvisioningSystemLib::luaSetOrganization},
         {"pslogin",         ProvisioningSystemLib::luaLogin},
         {"psvalidate",      ProvisioningSystemLib::luaValidate},
         {"psauth",          ProvisioningSystemLib::Authenticator::luaCreate},
-        {"mngrurl",         ManagerLib::luaUrl},
         {"parms",           RequestFields::luaCreate},
 #ifdef __unittesting__
         {"ut_dictionary",   UT_Dictionary::luaCreate},

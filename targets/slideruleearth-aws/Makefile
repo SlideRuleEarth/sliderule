@@ -56,8 +56,8 @@ PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 
 VERSION ?= latest
-ECR := 742127912612.dkr.ecr.us-west-2.amazonaws.com
-GHCR := ghcr.io/slideruleearth
+ECR ?= 742127912612.dkr.ecr.us-west-2.amazonaws.com
+GHCR ?= ghcr.io/slideruleearth
 DOCKEROPTS ?= # --progress=plain --no-cache
 BUILDX ?= # buildx
 DOCKER_PLATFORM ?= # --platform linux/arm64 | linux/amd64
