@@ -165,11 +165,11 @@ void* LuaEndpoint::requestThread (void* parm)
         /* Handle Response */
         if(info->streaming)
         {
-            status_code = lua_endpoint->streamResponse(script_pathname, request, rspq, trace_id);
+            status_code = streamResponse(script_pathname, request, rspq, trace_id);
         }
         else
         {
-            status_code = lua_endpoint->normalResponse(script_pathname, request, rspq, trace_id);
+            status_code = normalResponse(script_pathname, request, rspq, trace_id);
         }
     }
     else
@@ -216,7 +216,7 @@ void* LuaEndpoint::requestThread (void* parm)
 /*----------------------------------------------------------------------------
  * normalResponse
  *----------------------------------------------------------------------------*/
-int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const
+int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id)
 {
     int status_code = RTE_STATUS;
     char header[MAX_HDR_SIZE];
@@ -291,7 +291,7 @@ int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publi
 /*----------------------------------------------------------------------------
  * streamResponse
  *----------------------------------------------------------------------------*/
-int LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id) const
+int LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publisher* rspq, uint32_t trace_id)
 {
     int status_code = RTE_STATUS;
     char header[MAX_HDR_SIZE];

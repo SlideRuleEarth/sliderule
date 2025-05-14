@@ -1,19 +1,10 @@
 local runner = require("test_executive")
-local asset = require("asset")
 
 -- Requirements --
 
 if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
     return runner.skip()
 end
-
--- Setup --
-
--- local console = require("console")
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
-
-local assets = asset.loaddir()
 
 -- Self Test --
 

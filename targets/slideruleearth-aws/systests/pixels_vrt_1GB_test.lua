@@ -1,16 +1,8 @@
 local runner = require("test_executive")
-console = require("console")
-asset = require("asset")
-json = require("json")
-local td = runner.rootdir(arg[0])
 
 -- Setup --
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
 
-local assets = asset.loaddir()
 local loopcnt = 5
-
 
 local demType = "rema-mosaic"
 print(string.format("\n------------------------------\n%s\n------------------------------", demType))

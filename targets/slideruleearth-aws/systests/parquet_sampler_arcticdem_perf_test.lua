@@ -1,15 +1,8 @@
 local runner = require("test_executive")
-console = require("console")
-asset = require("asset")
-local assets = asset.loaddir()
-local td = runner.rootdir(arg[0])
 
 -- Setup --
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
 
 local outq_name = "outq-luatest"
-
 
 -- local in_parquet = '/data/arcticdem/alaska62k.parquet'
 -- local in_parquet = '/data/arcticdem/alaska962k.parquet'
@@ -20,9 +13,6 @@ local prefix = "file://"
 
 local _out_parquet   = "/data/arcticdem/output/alaska.parquet"
 local out_parquet    = prefix .. _out_parquet
-
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
 
 function getFileSize(filePath)
     local file = io.open(filePath, "rb")  -- 'rb' mode opens the file in binary mode

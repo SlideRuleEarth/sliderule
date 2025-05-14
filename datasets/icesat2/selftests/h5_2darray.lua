@@ -1,6 +1,4 @@
 local runner = require("test_executive")
-local asset = require("asset")
-local json = require("json")
 local pp = require("prettyprint")
 
 -- Requirements --
@@ -15,7 +13,7 @@ runner.authenticate()
 
 local atlas_asset = core.getbyname("icesat2")
 local resource = "ATL03_20190218011204_07880205_006_02.h5"
-local f = h5.file(atlas_asset, resource):name(resource)
+local f = h5.file(atlas_asset, resource)
 local rspq = msg.subscribe("h5testq")
 
 -- Self Test 1 --

@@ -1,13 +1,5 @@
-local runner = require("test_executive")
-console = require("console")
-asset = require("asset")
-csv = require("csv")
-json = require("json")
-
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
-
-local assets = asset.loaddir()
+local asset = require("asset")
+asset.loaddir()
 
 -- Self Test --
 

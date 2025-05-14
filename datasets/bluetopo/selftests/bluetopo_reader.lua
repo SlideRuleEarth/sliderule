@@ -1,5 +1,4 @@
 local runner = require("test_executive")
-local asset = require("asset")
 
 -- Requirements --
 
@@ -9,11 +8,7 @@ end
 
 -- Setup --
 
-local assets = asset.loaddir()
-
--- local console = require("console")
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
+runner.authenticate()
 
 -- Correct values test for different POIs
 

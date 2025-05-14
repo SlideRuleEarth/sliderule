@@ -170,7 +170,7 @@ int Monitor::luaConfig (lua_State* L)
         Monitor* lua_obj = dynamic_cast<Monitor*>(getLuaSelf(L, 1));
 
         /* Set Level */
-        const event_level_t level = (event_level_t)getLuaInteger(L, 1, true, static_cast<long>(CRITICAL), &provided);
+        const event_level_t level = (event_level_t)getLuaInteger(L, 2, true, static_cast<long>(CRITICAL), &provided);
         if(provided) lua_obj->eventLevel = level;
 
         /* Set Return Values */

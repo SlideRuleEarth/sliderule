@@ -1,15 +1,6 @@
 local runner = require("test_executive")
-local console = require("console")
-local asset = require("asset")
-local csv = require("csv")
-local json = require("json")
-
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
 
 -- Setup --
-
-local assets = asset.loaddir()
 
 local _,td = runner.srcscript()
 local geojsonfile = td.."../data/grand_mesa_1m_dem.geojson"

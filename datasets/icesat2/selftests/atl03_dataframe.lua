@@ -1,6 +1,4 @@
 local runner = require("test_executive")
-local asset = require("asset")
-local json = require("json")
 local prettyprint = require("prettyprint")
 
 -- Requirements --
@@ -12,6 +10,7 @@ end
 -- Setup --
 
 runner.authenticate()
+local asset_name = "icesat2"
 
 -- Helper Function --
 
@@ -87,7 +86,7 @@ runner.unittest("ATL03 DataFrame - Ancillary Data", function()
     local atl08h5 = h5.object(asset_name, "ATL08_20200304065203_10470605_006_01.h5")
     local atl03df = icesat2.atl03x("gt2r", parms, atl03h5, atl08h5, nil, core.EVENTQ)
 
-    runner.assert(atl03df:waiton(180000), "timed out creating dataframe", true)
+    runner.assert(atl03df:waiton(240000), "timed out creating dataframe", true)
     runner.assert(atl03df:inerror() == false, "dataframe encountered error")
 
     runner.assert(atl03df:numrows() == 19522774, string.format("incorrect number of rows: %d", atl03df:numrows()))

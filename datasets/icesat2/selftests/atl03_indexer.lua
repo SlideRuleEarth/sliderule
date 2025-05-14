@@ -1,7 +1,5 @@
 local runner = require("test_executive")
-local asset = require("asset")
 local csv = require("csv")
-local json = require("json")
 
 -- Requirements --
 
@@ -21,22 +19,23 @@ local filelist = { "ATL03_20181019065445_03150111_005_01.h5",
                    "ATL03_20200304065203_10470605_005_01.h5" }
 
 -- get index filename
+local nsidc_s3 = core.getbyname("icesat2")
 local name, identity, driver, path, index_filename, region, endpoint, status = nsidc_s3:info()
 runner.assert(status)
 
 -- setup index file writer
 local asset_index_file = streaming.file(streaming.WRITER, streaming.TEXT, index_filename)
-local writer = streaming.writer(asset_index_file, "indexq"):name("writer")
+local writer = streaming.writer(asset_index_file, "indexq")
 
 -- setup csv dispatch
 local indexrecq = msg.subscribe("indexrecq")
-local dispatcher = streaming.dispatcher("indexrecq"):name("dispatcher")
-local csvdispatch = streaming.csv({"name", "t0", "t1", "lat0", "lon0", "lat1", "lon1", "cycle", "rgt"}, "indexq"):name("csvdispatch")
+local dispatcher = streaming.dispatcher("indexrecq")
+local csvdispatch = streaming.csv({"name", "t0", "t1", "lat0", "lon0", "lat1", "lon1", "cycle", "rgt"}, "indexq")
 dispatcher:attach(csvdispatch, "atl03rec.index")
 dispatcher:run()
 
 -- create and run indexer
-local indexer = icesat2.atl03indexer(nsidc_s3, filelist, "indexrecq", 1):name("indexer")
+local indexer = icesat2.atl03indexer(nsidc_s3, filelist, "indexrecq", 1)
 
 -- read in index list
 local indexlist = {}

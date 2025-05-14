@@ -1,5 +1,4 @@
 local runner = require("test_executive")
-local asset = require("asset")
 
 -- Requirements --
 
@@ -8,12 +7,6 @@ if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
 end
 
 -- Setup --
-
-local assets = asset.loaddir()
-
--- local console = require("console")
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
 
 -- Correct values test for different POIs
 

@@ -1,12 +1,8 @@
 local runner = require("test_executive")
-console = require("console")
-asset = require("asset")
-local assets = asset.loaddir()
-local td = runner.rootdir(arg[0])
 
 -- Setup --
-console.monitor:config(core.DEBUG)
-sys.setlvl(core.LOG, core.DEBUG)
+
+runner.log(core.DEBUG)
 
 local outq_name = "outq-luatest"
 

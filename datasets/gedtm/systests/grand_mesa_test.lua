@@ -1,15 +1,7 @@
 local runner = require("test_executive")
-local console = require("console")
-local asset = require("asset")
-local csv = require("csv")
-local json = require("json")
-
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
 
 -- Setup --
 
-local assets = asset.loaddir()
 local _,td = runner.srcscript()
 local poifile = td.."../../landsat/data/grand_mesa_poi.txt"
 local f = io.open(poifile, "r")

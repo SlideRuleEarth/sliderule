@@ -9,17 +9,6 @@ end
 
 -- Setup --
 
-local assets = asset.loaddir()
-local role_auth_script = core.script("iam_role_auth")
-while not aws.csget("iam-role") do
-    print("Waiting to establish IAM role...")
-    sys.wait(1)
-end
-
--- local console = require("console")
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
-
 -- Self Test --
 
 local  sigma = 1.0e-9

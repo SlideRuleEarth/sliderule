@@ -1,13 +1,5 @@
 local runner = require("test_executive")
-local asset = require("asset")
 local prettyprint = require("prettyprint")
-
--- Setup --
-
--- local console = require("console")
--- console.loglvl(core.INFO)
-
-local assets = asset.loaddir()
 
 -- Self Test --
 

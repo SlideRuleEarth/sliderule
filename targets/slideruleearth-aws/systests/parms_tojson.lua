@@ -1,14 +1,8 @@
 local runner = require("test_executive")
-local console = require("console")
-local asset = require("asset")
-local assets = asset.loaddir()
 local json = require("json")
 local prettyprint = require("prettyprint")
 
 -- Setup --
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
-
 
 local poly = {
     {lat = 0.73734824791566,    lon = 172.51715474926},

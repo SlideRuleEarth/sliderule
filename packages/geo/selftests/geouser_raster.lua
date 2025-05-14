@@ -4,10 +4,6 @@ local base64 = require("base64")
 
 -- Setup --
 
--- local console = require("console")
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
-
 local raster = dirpath.."../data/geouser_test_raster.tif"
 
 -- Self Test --
@@ -26,7 +22,7 @@ local encodedRaster = base64.encode( rasterfile )
 local len = string.len(encodedRaster)
 local params = {data = encodedRaster, length = len, date = 0, elevation = true}
 
-local robj = geo.userraster(params):name("userraster")
+local robj = geo.userraster(params)
 runner.assert(robj ~= nil)
 
 

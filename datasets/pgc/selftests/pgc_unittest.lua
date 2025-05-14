@@ -1,15 +1,10 @@
 local runner = require("test_executive")
-local asset = require("asset")
 
 -- Requirements --
 
 if (not core.UNITTEST) or (not sys.getcfg("in_cloud") and not runner.isglobal()) then
     return runner.skip()
 end
-
--- Setup --
-
-local assets = asset.loaddir()
 
 -- Self Test --
 

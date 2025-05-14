@@ -2,14 +2,6 @@ local runner = require("test_executive")
 local asset = require("asset")
 local prettyprint = require("prettyprint")
 
--- configure logging
--- local console = require("console")
--- console.monitor:config(core.INFO)
--- sys.setlvl(core.LOG, core.INFO)
-
--- load asset directory
-local _assets = asset.loaddir()
-
 -- get default parameters
 local parms = bathy.parms()
 local ptable = parms:export()

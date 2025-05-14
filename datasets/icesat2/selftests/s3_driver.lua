@@ -8,8 +8,8 @@ end
 
 -- Setup --
 
-local role_auth_script = core.script("iam_role_auth"):name("RoleAuthScript")
-local test_bucket = sys.bucket()
+core.script("iam_role_auth")
+local test_bucket = sys.getcfg("sys_bucket")
 local test_path = "data/test"
 local test_file = "t8.shakespeare.txt"
 local status = false

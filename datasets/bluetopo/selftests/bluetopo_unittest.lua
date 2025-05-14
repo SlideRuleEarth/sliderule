@@ -1,6 +1,4 @@
 local runner = require("test_executive")
-local asset = require("asset")
-local assets = asset.loaddir()
 
 -- Requirements --
 

@@ -1,4 +1,9 @@
 local console = require("console")
+local json = require("json")
+local asset = require("asset")
+
+-- Global Setup
+asset.loaddir()
 
 -- Global Data
 local results = {}
@@ -204,6 +209,11 @@ Function:   authenticate
    Notes:   none
 ]]
 local function authenticate()
+    core.script("iam_role_auth")
+    while not aws.csget("iam-role") do
+        print("Waiting to establish IAM role...")
+        sys.wait(1)
+    end
     local systems = {
         ['nsidc-cloud'] = {earthdata="https://data.nsidc.earthdatacloud.nasa.gov/s3credentials", identity="nsidc-cloud"},
         ['lpdaac-cloud'] = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"},
@@ -227,7 +237,7 @@ Function:   log
    Notes:   none
 ]]
 local function log(lvl)
-    console.monitor:config(core.LOG, lvl)
+    console.loglvl(lvl)
 end
 
 --[[

@@ -1,5 +1,4 @@
 local runner = require("test_executive")
-local asset = require("asset")
 local srcfile, dirpath = runner.srcscript()
 
 -- Requirements --
@@ -9,8 +8,6 @@ if (not core.UNITTEST) or (not sys.getcfg("in_cloud") and not runner.isglobal())
 end
 
 -- Setup --
-
-local assets = asset.loaddir()
 
 local geojsonfile = dirpath.."../data/grand_mesa_1m_dem.geojson"
 local f = io.open(geojsonfile, "r")

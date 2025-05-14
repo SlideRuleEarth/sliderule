@@ -1,12 +1,6 @@
 local runner = require("test_executive")
-console = require("console")
-asset = require("asset")
-local assets = asset.loaddir()
-local td = runner.rootdir(arg[0])
 
 -- Setup --
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
 
 local outq_name = "outq-luatest"
 
@@ -24,10 +18,6 @@ local geojsonfile = "/data/3dep/wrzesien_mountain_snow_sieve_catalog.geojson"
 local f = io.open(geojsonfile, "r")
 local contents = f:read("*all")
 f:close()
-
-
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
 
 function getFileSize(filePath)
     local file = io.open(filePath, "rb")  -- 'rb' mode opens the file in binary mode

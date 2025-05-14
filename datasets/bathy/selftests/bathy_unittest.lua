@@ -1,5 +1,4 @@
 local runner = require("test_executive")
-local asset = require("asset")
 
 -- Requirements --
 
@@ -9,7 +8,6 @@ end
 
 -- Setup --
 
-local assets = asset.loaddir()
 local ut_refraction = bathy.ut_refraction()
 
 -- Self Test --
