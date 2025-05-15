@@ -39,6 +39,7 @@
 #include "ArrowBuilderImpl.h"
 #include "AncillaryFields.h"
 #include "ContainerRecord.h"
+#include "ArrowLib.h"
 
 #ifdef __aws__
 #include "aws.h"

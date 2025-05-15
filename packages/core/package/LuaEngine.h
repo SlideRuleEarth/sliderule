@@ -37,8 +37,6 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "EventLib.h"
-#include "StringLib.h"
 #include "List.h"
 
 #include <atomic>

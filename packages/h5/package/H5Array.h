@@ -37,7 +37,6 @@
  ******************************************************************************/
 
 #include "StringLib.h"
-#include "EventLib.h"
 #include "Asset.h"
 #include "H5Coro.h"
 
@@ -178,7 +177,7 @@ bool H5Array<T>::join(int timeout, bool throw_exception)
                 {
                     case H5Coro::Future::INVALID: throw RunTimeException(ERROR, RTE_FAILURE, "H5Coro::Future read failure on %s", name);
                     case H5Coro::Future::TIMEOUT: throw RunTimeException(ERROR, RTE_TIMEOUT, "H5Coro::Future read timeout on %s", name);
-                    default:                throw RunTimeException(ERROR, RTE_FAILURE, "H5Coro::Future unknown error on %s", name);
+                    default:                      throw RunTimeException(ERROR, RTE_FAILURE, "H5Coro::Future unknown error on %s", name);
                 }
             }
         }

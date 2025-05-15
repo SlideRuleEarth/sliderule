@@ -37,11 +37,10 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "LuaObject.h"
+#include "LuaEngine.h"
 #include "FieldDictionary.h"
 #include "FieldElement.h"
 #include "FieldList.h"
-#include "Asset.h"
 
 #ifdef __aws__
 #include "aws.h"

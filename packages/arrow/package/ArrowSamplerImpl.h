@@ -37,7 +37,6 @@
  ******************************************************************************/
 
 #include "ArrowLib.h"
-#include "LuaObject.h"
 #include "ArrowSampler.h"
 #include "OsApi.h"
 

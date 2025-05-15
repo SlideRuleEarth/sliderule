@@ -35,6 +35,7 @@
 
 #include "MsgBridge.h"
 #include "OsApi.h"
+#include "EventLib.h"
 
 /******************************************************************************
  * STATIC DATA

@@ -37,10 +37,8 @@
  ******************************************************************************/
 
 #include "MsgQ.h"
-#include "DispatchObject.h"
-#include "RecordObject.h"
 #include "OsApi.h"
-#include "EventLib.h"
+#include "LuaObject.h"
 
 /******************************************************************************
  * Monitor CLASS

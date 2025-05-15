@@ -43,7 +43,6 @@
 #include "List.h"
 #include "Ordering.h"
 #include "LuaObject.h"
-#include "LuaEngine.h"
 
 /******************************************************************************
  * ASSET INDEX CLASS

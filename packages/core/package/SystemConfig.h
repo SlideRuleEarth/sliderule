@@ -37,10 +37,10 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "LuaObject.h"
+#include "LuaEngine.h"
 #include "FieldDictionary.h"
 #include "FieldElement.h"
-#include "FieldMap.h"
+#include "FieldList.h"
 
 /******************************************************************************
  * SINGLETON CLASS

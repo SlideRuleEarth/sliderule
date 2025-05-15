@@ -36,6 +36,8 @@
 
 #include "LuaScript.h"
 #include "LuaEngine.h"
+#include "StringLib.h"
+#include "EventLib.h"
 #include "OsApi.h"
 
 /******************************************************************************

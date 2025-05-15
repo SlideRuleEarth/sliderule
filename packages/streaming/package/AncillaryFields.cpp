@@ -39,6 +39,7 @@
 
 #include "AncillaryFields.h"
 #include "OsApi.h"
+#include "RecordObject.h"
 
 /******************************************************************************
  * STATIC DATA

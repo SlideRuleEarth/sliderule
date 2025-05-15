@@ -39,8 +39,6 @@
 #include "OsApi.h"
 #include "LuaObject.h"
 #include "DeviceObject.h"
-#include "List.h"
-#include "Dictionary.h"
 
 /******************************************************************************
  * DEVICE I/O CLASS

@@ -39,7 +39,6 @@
 #include "MsgQ.h"
 #include "Table.h"
 #include "OsApi.h"
-#include "DeviceObject.h"
 #include "TcpSocket.h"
 
 /******************************************************************************

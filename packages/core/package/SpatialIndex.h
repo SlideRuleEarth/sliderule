@@ -40,7 +40,7 @@
 #include "Asset.h"
 #include "AssetIndex.h"
 #include "MathLib.h"
-#include "LuaObject.h"
+#include "LuaEngine.h"
 
 /******************************************************************************
  * TIME INDEX CLASS

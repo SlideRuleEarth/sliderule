@@ -36,14 +36,9 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "ArrowLib.h"
-#include "LuaObject.h"
-#include "Ordering.h"
 #include "RecordObject.h"
-#include "ArrowFields.h"
 #include "ArrowBuilder.h"
 #include "OsApi.h"
-#include "MsgQ.h"
 
 #include <parquet/arrow/schema.h>
 

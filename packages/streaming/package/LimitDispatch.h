@@ -40,9 +40,7 @@
 #include "LuaObject.h"
 #include "RecordObject.h"
 #include "DispatchObject.h"
-#include "Dictionary.h"
 #include "OsApi.h"
-#include "EventLib.h"
 #include "LimitRecord.h"
 
 /******************************************************************************

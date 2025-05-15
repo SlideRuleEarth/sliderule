@@ -36,6 +36,7 @@
 #include "FileIODriver.h"
 #include "OsApi.h"
 #include "Asset.h"
+#include "StringLib.h"
 
 /******************************************************************************
  * STATIC DATA

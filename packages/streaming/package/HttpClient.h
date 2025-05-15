@@ -38,10 +38,7 @@
 
 #include "MsgQ.h"
 #include "OsApi.h"
-#include "List.h"
-#include "StringLib.h"
 #include "TcpSocket.h"
-#include "LuaEngine.h"
 #include "LuaObject.h"
 #include "EndpointObject.h"
 

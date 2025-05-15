@@ -36,7 +36,7 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "LuaObject.h"
+#include "LuaEngine.h"
 #include "RecordObject.h"
 #include "DeviceObject.h"
 #include "Asset.h"

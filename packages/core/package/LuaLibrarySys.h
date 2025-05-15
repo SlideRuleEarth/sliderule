@@ -36,8 +36,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "MsgQ.h"
-#include "Ordering.h"
 #include "LuaEngine.h"
 
 /******************************************************************************
@@ -90,12 +88,6 @@ class LuaLibrarySys
         static int      lsys_fileexists     (lua_State* L);
         static int      lsys_deletefile     (lua_State* L);
         static int      lsys_memu           (lua_State* L);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        static double memory_limit;
 };
 
 #endif  /* __lua_library_sys__ */

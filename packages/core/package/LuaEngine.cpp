@@ -37,6 +37,8 @@
 
 #include "LuaEngine.h"
 #include "OsApi.h"
+#include "EventLib.h"
+#include "StringLib.h"
 
 /******************************************************************************
  * STATIC DATA

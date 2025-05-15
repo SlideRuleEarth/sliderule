@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "MetricDispatch.h"
+#include "MetricRecord.h"
 #include "OsApi.h"
 #include "TimeLib.h"
 

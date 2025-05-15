@@ -41,7 +41,6 @@
 #include "MsgQ.h"
 #include "Table.h"
 #include "OsApi.h"
-#include "StringLib.h"
 #include "LuaObject.h"
 #include "EndpointObject.h"
 

@@ -40,7 +40,6 @@
 #include "Dictionary.h"
 #include "DispatchObject.h"
 #include "OsApi.h"
-#include "MetricRecord.h"
 
 /******************************************************************************
  * METRIC DISPATCH CLASS

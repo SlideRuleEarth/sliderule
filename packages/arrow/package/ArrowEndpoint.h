@@ -38,11 +38,8 @@
 
 #include "EndpointObject.h"
 #include "OsApi.h"
-#include "StringLib.h"
-#include "Dictionary.h"
 #include "MsgQ.h"
-#include "LuaObject.h"
-#include "RecordObject.h"
+#include "LuaEngine.h"
 
 /******************************************************************************
  * PISTACHE SERVER CLASS

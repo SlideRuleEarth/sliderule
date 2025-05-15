@@ -38,9 +38,9 @@
 
 #include "Dictionary.h"
 #include "StringLib.h"
+#include "EventLib.h"
 #include "MsgQ.h"
 #include "OsApi.h"
-#include "EventLib.h"
 
 /******************************************************************************
  * DEFINES

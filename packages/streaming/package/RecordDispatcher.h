@@ -39,7 +39,6 @@
 #include "DispatchObject.h"
 #include "LuaObject.h"
 #include "Dictionary.h"
-#include "List.h"
 #include "MsgQ.h"
 #include "RecordObject.h"
 #include "OsApi.h"

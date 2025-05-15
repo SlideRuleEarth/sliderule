@@ -38,7 +38,6 @@
 
 #include "Asset.h"
 #include "RecordObject.h"
-#include "Dictionary.h"
 #include "H5Coro.h"
 
 using H5Coro::ALL_ROWS;

@@ -38,6 +38,7 @@
 #include "HttpClient.h"
 #include "EndpointObject.h"
 #include "LuaEngine.h"
+#include "EventLib.h"
 #include "OsApi.h"
 
 /******************************************************************************

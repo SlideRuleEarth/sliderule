@@ -35,6 +35,7 @@
 
 #include "MsgProcessor.h"
 #include "OsApi.h"
+#include "EventLib.h"
 
 /******************************************************************************
  * STATIC DATA

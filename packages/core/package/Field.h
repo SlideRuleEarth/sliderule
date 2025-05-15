@@ -37,7 +37,6 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "LuaEngine.h"
 #include "LuaObject.h"
 #include "RecordObject.h"
 #include "TimeLib.h"

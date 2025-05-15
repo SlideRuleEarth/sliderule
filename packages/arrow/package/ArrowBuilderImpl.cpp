@@ -59,6 +59,7 @@
 #include "ArrowBuilderImpl.h"
 #include "AncillaryFields.h"
 #include "SystemConfig.h"
+#include "ArrowLib.h"
 
 #ifdef __aws__
 #include "aws.h"

@@ -32,7 +32,6 @@
 #ifndef __ut_dictionary__
 #define __ut_dictionary__
 
-#include "StringLib.h"
 #include "Dictionary.h"
 #include "UnitTest.h"
 #include "OsApi.h"

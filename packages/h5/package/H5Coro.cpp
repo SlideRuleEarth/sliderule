@@ -35,6 +35,7 @@
 
 #include "MsgQ.h"
 #include "OsApi.h"
+#include "EventLib.h"
 #include "RecordObject.h"
 #include "H5Dataset.h"
 #include "H5Dense.h"

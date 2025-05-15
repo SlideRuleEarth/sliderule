@@ -39,6 +39,7 @@
 #include "OsApi.h"
 #include "LuaEngine.h"
 #include "Field.h"
+#include "EventLib.h"
 
 /******************************************************************************
  * CLASS

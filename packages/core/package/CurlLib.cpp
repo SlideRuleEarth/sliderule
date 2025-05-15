@@ -38,6 +38,7 @@
 #include "CurlLib.h"
 #include "OsApi.h"
 #include "RecordObject.h"
+#include "EventLib.h"
 
 /******************************************************************************
  * cURL LIBRARY CLASS

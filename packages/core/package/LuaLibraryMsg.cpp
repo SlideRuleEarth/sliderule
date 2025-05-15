@@ -35,6 +35,7 @@
 
 #include "LuaLibraryMsg.h"
 #include "OsApi.h"
+#include "EventLib.h"
 
 /******************************************************************************
  * STATIC DATA

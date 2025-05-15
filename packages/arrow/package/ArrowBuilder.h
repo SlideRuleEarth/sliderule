@@ -45,7 +45,6 @@
  ******************************************************************************/
 
 #include "LuaObject.h"
-#include "Ordering.h"
 #include "RecordObject.h"
 #include "RequestFields.h"
 #include "OsApi.h"

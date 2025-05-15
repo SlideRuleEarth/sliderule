@@ -37,6 +37,8 @@
 #include "UnitTest.h"
 #include "OsApi.h"
 #include "LuaObject.h"
+#include "StringLib.h"
+#include "EventLib.h"
 
 /******************************************************************************
  * STATIC DATA
