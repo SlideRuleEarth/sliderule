@@ -20,7 +20,7 @@ def hashit(source_ip):
 
 def locateit(source_ip, debug_info):
     try:
-        if source_ip == "0.0.0.0":
+        if source_ip == "0.0.0.0" or source_ip == "127.0.0.1":
             return f'localhost, localhost'
         else:
             geo_country, geo_city, geo_asn = get_geo()

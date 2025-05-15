@@ -932,9 +932,11 @@ char* StringLib::urlize(const char* str)
     {
         switch (*old_str)
         {
+            case ' ':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '0';   break;
             case '!':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '1';   break;
             case '#':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '3';   break;
             case '$':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '4';   break;
+            case '%':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '5';   break;
             case '&':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '6';   break;
             case '\'':  *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '7';   break;
             case '(':   *(new_str++) = '%';   *(new_str++) = '2';   *(new_str++) = '8';   break;
@@ -951,6 +953,49 @@ char* StringLib::urlize(const char* str)
             case '[':   *(new_str++) = '%';   *(new_str++) = '5';   *(new_str++) = 'B';   break;
             case ']':   *(new_str++) = '%';   *(new_str++) = '5';   *(new_str++) = 'D';   break;
             default:    *(new_str++) = *old_str;  break;
+        }
+        old_str++;
+    }
+    *(new_str++) = '\0';
+
+    /* Return Self */
+    return alloc_str;
+}
+
+/*----------------------------------------------------------------------------
+ * jsonize
+ *----------------------------------------------------------------------------*/
+char* StringLib::jsonize(const char* str)
+{
+    /* Get Size of Strings */
+    const int bytes = strlen(str) + 1;
+    const int new_size = bytes * 2;
+
+    /* Setup pointers to new and old strings */
+    char* alloc_str = new char [new_size];
+    char* new_str = alloc_str;
+    const char* old_str = str;
+
+    /* Translate old string into new string */
+    while(*old_str != '\0')
+    {
+        if(static_cast<int>(*old_str) < 32 || static_cast<int>(*old_str) > 126)
+        {
+            *(new_str++) = '.';
+        }
+        else if(*old_str == '"')
+        {
+            *(new_str++) = '\\';
+            *(new_str++) = '"';
+        }
+        else if(*old_str == '\\')
+        {
+            *(new_str++) = '\\';
+            *(new_str++) = '\\';
+        }
+        else
+        {
+            *(new_str++) = *old_str;
         }
         old_str++;
     }

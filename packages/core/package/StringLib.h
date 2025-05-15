@@ -100,6 +100,7 @@ class StringLib
         static char*            replace         (const char* str, const char* oldtxt, const char* newtxt);
         static char*            replace         (const char* str, const char* oldtxt[], const char* newtxt[], int num_replacements);
         static char*            urlize          (const char* str);
+        static char*            jsonize         (const char* str);
 
     private:
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ ! -e $DUCKDB_LOCAL_FILE ]; then
+if [ -z "$DUCKDB_LOCAL_FILE" ] || [ ! -e "$DUCKDB_LOCAL_FILE" ]; then
     echo "Creating local duckdb database: $DUCKDB_LOCAL_FILE"
     /env/bin/flask --app manager init-db
 fi

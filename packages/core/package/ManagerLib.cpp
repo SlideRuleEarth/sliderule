@@ -42,6 +42,7 @@
 #include "LuaEngine.h"
 #include "EndpointObject.h"
 #include "CurlLib.h"
+#include "StringLib.h"
 
 /******************************************************************************
  * ORCHESTRATOR LIBRARY CLASS
@@ -134,6 +135,7 @@ bool ManagerLib::issueAlert (const EventLib::alert_t* event)
 
     const TimeLib::gmt_time_t gmt = TimeLib::gps2gmttime(TimeLib::gpstime());
     const TimeLib::date_t date = TimeLib::gmt2date(gmt);
+    const char* encoded_str = StringLib::jsonize(event->text);
 
     const FString rqst(R"json({
         "record_time": "%04d-%02d-%02d %02d:%02d:%02d",
@@ -145,7 +147,7 @@ bool ManagerLib::issueAlert (const EventLib::alert_t* event)
         gmt.hour, gmt.minute, gmt.second,
         event->code,
         LIBID,
-        event->text);
+        encoded_str);
 
     const rsps_t rsps = request(EndpointObject::POST, "/manager/alerts/issue", rqst.c_str());
 
@@ -156,6 +158,7 @@ bool ManagerLib::issueAlert (const EventLib::alert_t* event)
     }
 
     delete [] rsps.response;
+    delete [] encoded_str;
 
     return status;
 }
