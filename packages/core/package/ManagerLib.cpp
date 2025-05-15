@@ -116,7 +116,7 @@ bool ManagerLib::recordTelemetry (const EventLib::telemetry_t* event)
     const rsps_t rsps = request(EndpointObject::POST, "/manager/telemetry/record", rqst.c_str());
     if(rsps.code != EndpointObject::OK)
     {
-        mlog(CRITICAL, "Failed to record request to %s: %s", event->endpoint, rsps.response);
+        mlog(WARNING, "Failed to record request to %s: %s", event->endpoint, rsps.response);
         status = false;
     }
 
@@ -151,7 +151,7 @@ bool ManagerLib::issueAlert (const EventLib::alert_t* event)
 
     if(rsps.code != EndpointObject::OK)
     {
-        mlog(CRITICAL, "Failed to issue alarm %d: %s", event->code, rsps.response);
+        mlog(WARNING, "Failed to issue alarm %d: %s", event->code, rsps.response);
         status = false;
     }
 

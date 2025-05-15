@@ -24,7 +24,7 @@ algo_disp:run()
 local reader = icesat2.atl03s("atl06-ancillary-recq", parms)
 
 while true do
-    local rec = resultq:recvrecord(20000)
+    local rec = resultq:recvrecord(30000)
     if rec == nil then
         break
     end
