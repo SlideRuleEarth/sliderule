@@ -499,7 +499,7 @@ void LuaObject::associateMetaTable (lua_State* L, const char* meta_name, const s
         luaL_setfuncs(L, meta_table, 0);
 
         /* Add Base Class Functions */
-        LuaEngine::setAttrFunc(L, "name", luaName);
+        LuaEngine::setAttrFunc(L, "global", luaName);
         LuaEngine::setAttrFunc(L, "getbyname", luaGetByName);
         LuaEngine::setAttrFunc(L, "waiton", luaWaitOn);
         LuaEngine::setAttrFunc(L, "destroy", luaDestroy);

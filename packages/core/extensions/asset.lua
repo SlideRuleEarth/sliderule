@@ -136,7 +136,7 @@ local function loaddir(file)
             assets[k] = asset
         else
             -- create asset
-            assets[k] = core.asset(k, v["identity"], v["driver"], v["path"], v["index"], v["region"], v["endpoint"]):name(k)
+            assets[k] = core.asset(k, v["identity"], v["driver"], v["path"], v["index"], v["region"], v["endpoint"]):global(k)
             -- load index file
             _loadindex(assets[k], path_prefix..v["index"])
         end
