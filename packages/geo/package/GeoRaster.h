@@ -36,8 +36,13 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "OsApi.h"
+#include "LuaEngine.h"
 #include "GdalRaster.h"
 #include "RasterObject.h"
+#include "RequestFields.h"
+#include "MathLib.h"
+#include "RasterSubset.h"
 
 /******************************************************************************
  * GEO RASTER CLASS

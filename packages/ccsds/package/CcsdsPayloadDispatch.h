@@ -37,7 +37,7 @@
  ******************************************************************************/
 
 #include "DispatchObject.h"
-#include "CcsdsRecord.h"
+#include "LuaEngine.h"
 #include "CcsdsPacket.h"
 #include "Dictionary.h"
 #include "MsgQ.h"

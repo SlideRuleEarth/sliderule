@@ -37,7 +37,6 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "Dictionary.h"
 #include "Asset.h"
 #include "CredentialStore.h"
 

@@ -36,8 +36,11 @@
  * INCLUDES
  ******************************************************************************/
 
+#include "OsApi.h"
+#include "LuaEngine.h"
 #include "GeoRaster.h"
 #include "GeoFields.h"
+#include "RequestFields.h"
 
 /******************************************************************************
  * GEOUSER RASTER CLASS

@@ -37,9 +37,8 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "LuaObject.h"
+#include "LuaEngine.h"
 #include "FieldElement.h"
-#include "FieldDictionary.h"
 #include "RequestFields.h"
 
 /******************************************************************************

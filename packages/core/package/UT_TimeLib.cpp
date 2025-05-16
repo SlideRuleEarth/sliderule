@@ -37,6 +37,7 @@
 #include "UnitTest.h"
 #include "TimeLib.h"
 #include "OsApi.h"
+#include "EventLib.h"
 
 /******************************************************************************
  * STATIC DATA

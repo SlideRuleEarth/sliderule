@@ -37,6 +37,7 @@
 #include "UT_List.h"
 #include "UnitTest.h"
 #include "OsApi.h"
+#include "EventLib.h"
 
 /******************************************************************************
  * STATIC DATA

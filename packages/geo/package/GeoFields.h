@@ -40,7 +40,6 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "Asset.h"
 #include "FieldDictionary.h"
 #include "FieldElement.h"
 #include "FieldList.h"

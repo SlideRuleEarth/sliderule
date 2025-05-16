@@ -40,6 +40,7 @@
 #include "OsApi.h"
 #include "MsgQ.h"
 #include "TimeLib.h"
+#include "SystemConfig.h"
 #include "core.h"
 #ifdef __streaming__
 #include "DeviceObject.h"
@@ -1539,11 +1540,7 @@ int CommandProcessor::qdepthMsgQCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOL
         return -1;
     }
 
-    if(!MsgQ::setStdQDepth(depth))
-    {
-        mlog(CRITICAL, "Failed to set queue depth to %ld", depth);
-        return -1;
-    }
+    SystemConfig::settings().msgQDepth = depth;
 
     return 0;
 }

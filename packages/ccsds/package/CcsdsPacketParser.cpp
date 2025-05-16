@@ -36,9 +36,10 @@
 #include "CcsdsPacketParser.h"
 #include "CcsdsParserModule.h"
 #include "OsApi.h"
+#include "EventLib.h"
+#include "StringLib.h"
 
 #include <float.h>
-
 
 /******************************************************************************
  * STATIC DATA

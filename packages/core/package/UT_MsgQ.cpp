@@ -36,6 +36,8 @@
 #include "UT_MsgQ.h"
 #include "UnitTest.h"
 #include "OsApi.h"
+#include "EventLib.h"
+#include "StringLib.h"
 
 /******************************************************************************
  * DEFINES

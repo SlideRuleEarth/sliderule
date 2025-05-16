@@ -35,6 +35,8 @@
 
 #include "CcsdsParserZFrameModule.h"
 #include "OsApi.h"
+#include "StringLib.h"
+#include "EventLib.h"
 
 /******************************************************************************
  * STATIC DATA

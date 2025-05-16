@@ -37,6 +37,7 @@
  ******************************************************************************/
 
 #include <ogrsf_frmts.h>
+#include "OsApi.h"
 #include "MathLib.h"
 
 /* GEOS C++ API is unstable, use C API */

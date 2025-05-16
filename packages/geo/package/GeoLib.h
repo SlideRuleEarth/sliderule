@@ -32,7 +32,7 @@
 #ifndef __geo_lib__
 #define __geo_lib__
 
-#include "LuaEngine.h"
+#include "OsApi.h"
 #include "LuaObject.h"
 #include "RecordObject.h"
 #include "RegionMask.h"
