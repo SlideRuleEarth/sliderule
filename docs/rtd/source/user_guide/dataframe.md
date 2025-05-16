@@ -4,7 +4,7 @@ SlideRule includes a set of APIs that are specifically geared for generating and
 
 DataFrame APIs are accessed via the following ***sliderule*** function and always produce a __GeoDataFrame__:
 ```python
-sliderule.run(api, parms, aoi=None, resources=None)
+gdf = sliderule.run(api, parms, aoi=None, resources=None)
 ```
 where:
 * `api` is a string that specifies which SlideRule API is being called
@@ -14,6 +14,16 @@ where:
 
 The columns in the returned __GeoDataFrame__ depend on the contents of the `parms` structure passed to the `api`.  Typically, there are a base set of columns defined for each `api`.  If __algorithms__ are specified in the `parms`, then the columns may be completely different depending upon the output of the __algorithms__.  If __ancillary fields__ or __raster samplers__ are specified, then there may be additional columns.
 
+Metadata returned with the results of the API is placed in the `attrs` attribute of the __GeoDataFrame__.  There are three groups of metadata:
+* `meta`: the metadata provided in the server-side dataframe; typically includes the `endpoint`, and the `srctbl` which correlates the `srcid` column values to source granules
+* `sliderule`: the server-side parameters used in processing the request along with versioning information
+* `recordinfo`: identifies special columns in the dataframe for generalized processing (e.g. time, x, y, z)
+
+Here is an example for accessing the source granule of an entry in the dataframe with a given `srcid`.
+```python
+gdf = sliderule.run(api, parms)
+gdf.attrs['meta']['srctbl'][f'{srcid}']
+```
 ## APIs
 
 The following APIs support the DataFrame interface.
