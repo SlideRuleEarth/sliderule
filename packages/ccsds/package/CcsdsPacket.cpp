@@ -1099,7 +1099,7 @@ unsigned char* CcsdsEncapPacket::getPayload(void)
 int CcsdsEncapPacket::getHdrSize(void) const
 {
     const int lol = buffer[0] & 0x03;
-         if(lol == 0) return 1;
+    if     (lol == 0) return 1;
     else if(lol == 1) return 2;
     else if(lol == 2) return 4;
     else              return 8; // lol == 3

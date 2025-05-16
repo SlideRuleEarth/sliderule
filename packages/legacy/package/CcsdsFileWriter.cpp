@@ -97,7 +97,7 @@ CommandableObject* CcsdsFileWriter::createObject(CommandProcessor* cmd_proc, con
  *----------------------------------------------------------------------------*/
 CcsdsFileWriter::fmt_t CcsdsFileWriter::str2fmt(const char* str)
 {
-         if(StringLib::match(str, "RAW_BINARY"))    return RAW_BINARY;
+    if     (StringLib::match(str, "RAW_BINARY"))    return RAW_BINARY;
     else if(StringLib::match(str, "RAW_ASCII"))     return RAW_ASCII;
     else if(StringLib::match(str, "TEXT"))          return TEXT;
     else if(StringLib::match(str, "USER_DEFINED"))  return USER_DEFINED;
@@ -109,7 +109,7 @@ CcsdsFileWriter::fmt_t CcsdsFileWriter::str2fmt(const char* str)
  *----------------------------------------------------------------------------*/
 const char* CcsdsFileWriter::fmt2str(CcsdsFileWriter::fmt_t _fmt)
 {
-         if(_fmt == RAW_BINARY)     return "RAW_BINARY";
+    if     (_fmt == RAW_BINARY)     return "RAW_BINARY";
     else if(_fmt == RAW_ASCII)      return "RAW_ASCII";
     else if(_fmt == TEXT)           return "TEXT";
     else if(_fmt == USER_DEFINED)   return "USER_DEFINED";
@@ -257,7 +257,7 @@ int CcsdsFileWriter::writeMsg(void* msg, int size, bool with_header)
  *----------------------------------------------------------------------------*/
 bool CcsdsFileWriter::isBinary (void)
 {
-         if(fmt == RAW_BINARY)  return true;
+    if     (fmt == RAW_BINARY)  return true;
     else if(fmt == RAW_ASCII)   return false;
     else if(fmt == TEXT)        return false;
     else                        return true;
