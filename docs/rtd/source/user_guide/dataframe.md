@@ -244,7 +244,7 @@ curl https://sliderule.slideruleearth.io/source/defaults
 |Parameter|Description|Units|Default|
 |---------|-----------|-----|-------|
 |score|Minimum allowed weight of photon|int|0|
-|version|YAPC algorithm version|0:read from ATL03 granule, 1-3:algorithm version|3|
+|version|YAPC algorithm version|0:read from ATL03 granule, 1-3:algorithm version (not supported by `atl03x`)|0|
 |knn|k-nearest neighbors (version 2 only)|int|0|
 |min_knn|minimum number of k-nearest neighbors (version 3 only)|int|5|
 |win_h|window height (overrides calculated value if non-zero)|double|6.0|
