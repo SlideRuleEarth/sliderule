@@ -720,7 +720,6 @@ void RasterObject::setLuaSamples(lua_State *L, const List<RasterSample*> &slist,
         LuaEngine::setAttrStr(L, "file", fileName);
         LuaEngine::setAttrNum(L, "value", sample->value);
         LuaEngine::setAttrNum(L, "time", sample->time);
-        LuaEngine::setAttrInt(L, "fileid", sample->fileId);
         LuaEngine::setAttrStr(L, "band", sample->bandName.c_str());
 
         /* Add zonal statistics if enabled */
