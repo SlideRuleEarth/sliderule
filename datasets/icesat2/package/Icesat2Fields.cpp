@@ -874,7 +874,7 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::gt_t& v)
         else if(StringLib::match(str, "gt2r"))  v = Icesat2Fields::GT2R;
         else if(StringLib::match(str, "gt3l"))  v = Icesat2Fields::GT3L;
         else if(StringLib::match(str, "gt3r"))  v = Icesat2Fields::GT3R;
-        else throw RunTimeException(CRITICAL, RTE_FAILURE, "ground track is an invalid value: %d", static_cast<int>(v));
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "ground track is an invalid value: %s", str);
     }
     else if(!lua_isnil(L, index))
     {
@@ -1027,7 +1027,7 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::surface_type_t& v)
         else if(StringLib::match(str, "sea_ice"))       v = Icesat2Fields::SRT_SEA_ICE;
         else if(StringLib::match(str, "land_ice"))      v = Icesat2Fields::SRT_LAND_ICE;
         else if(StringLib::match(str, "inland_water"))  v = Icesat2Fields::SRT_INLAND_WATER;
-        else throw RunTimeException(CRITICAL, RTE_FAILURE, "surface type is an invalid value: %d", static_cast<int>(v));
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "surface type is an invalid value: %s", str);
     }
     else if(!lua_isnil(L, index))
     {

@@ -66,7 +66,7 @@ To run the YAPC algorithm, specify the YAPC settings as a sub-dictionary. Here i
 
     parms = {
         "cnf": 0,
-        "yapc": { "score": 0, "knn": 4 },
+        "yapc": { "score": 0, "version": 3, "knn": 4 },
         "ats": 10.0,
         "cnt": 5,
         "len": 20.0,

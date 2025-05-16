@@ -206,26 +206,6 @@ class Atl03DataFrame: public GeoDataFrame
                 int32_t*            anc_seg_indices;
         };
 
-        /* YAPC Score Subclass */
-        class YapcScore
-        {
-            public:
-
-                YapcScore           (const Atl03DataFrame* df, const AreaOfInterest& aoi, const Atl03Data& atl03);
-                ~YapcScore          (void);
-
-                void yapcV2         (const Atl03DataFrame* df, const AreaOfInterest& aoi, const Atl03Data& atl03);
-                void yapcV3         (const Atl03DataFrame* df, const AreaOfInterest& aoi, const Atl03Data& atl03);
-
-                uint8_t operator[]  (int index) const;
-
-                /* Class Data */
-                bool                enabled;
-
-                /* Generated Data */
-                uint8_t*            score; // [num_photons]
-        };
-
         /* Atl24 Classification Subclass */
         class Atl24Class
         {

@@ -956,8 +956,8 @@ void Atl03Reader::YapcScore::yapcV2 (const info_t* info, const Region& region, c
         const double h_span = (nonzero_bins * HSPREAD_BINSIZE) / (double)N * (double)knn;
 
         /* Calculate Window Parameters */
-        const double half_win_x = settings.win_x / 2.0;
-        const double half_win_h = (settings.win_h != 0.0) ? settings.win_h / 2.0 : h_span / 2.0;
+        const double half_win_x = settings.win_x.value / 2.0;
+        const double half_win_h = (settings.win_h.value != 0.0) ? settings.win_h.value / 2.0 : h_span / 2.0;
 
         /* Calculate YAPC Score for all Photons in Center Segment */
         for(int y = ph_c0; y < ph_c1; y++)
@@ -1042,8 +1042,8 @@ void Atl03Reader::YapcScore::yapcV3 (const info_t* info, const Region& region, c
 {
     /* YAPC Parameters */
     const YapcFields& settings = info->reader->parms->yapc;
-    const double hWX = settings.win_x / 2; // meters
-    const double hWZ = settings.win_h / 2; // meters
+    const double hWX = settings.win_x.value / 2; // meters
+    const double hWZ = settings.win_h.value / 2; // meters
 
     /* Score Photons
      *
@@ -1074,7 +1074,7 @@ void Atl03Reader::YapcScore::yapcV3 (const info_t* info, const Region& region, c
         /* Initialize Segment Parameters */
         const int32_t N = region.segment_ph_cnt[segment_index];
         double* ph_weights = new double[N]; // local array freed below
-        int max_knn = settings.min_knn;
+        int max_knn = settings.min_knn.value;
         int32_t start_ph_index = ph_index;
 
         /* Traverse Each Photon in Segment*/
@@ -1133,7 +1133,7 @@ void Atl03Reader::YapcScore::yapcV3 (const info_t* info, const Region& region, c
 
             /* Calculate knn */
             const double n = sqrt(proximities.length());
-            const int knn = MAX(n, settings.min_knn);
+            const int knn = MAX(n, settings.min_knn.value);
             if(knn > max_knn) max_knn = knn;
 
             /* Calculate Sum of Weights*/

@@ -41,7 +41,6 @@
 #include "RecordObject.h"
 #include "DispatchObject.h"
 #include "OsApi.h"
-
 #include "Atl03Reader.h"
 #include "AncillaryFields.h"
 #include "Icesat2Fields.h"
