@@ -61,6 +61,8 @@ class GeoDataFrame: public LuaObject, public Field
         static const char* GDF;
         static const char* META;
         static const char* TERMINATE;
+        static const char* SOURCE_ID; // column
+        static const char* SOURCE_TABLE; // metadata
 
         static const int MAX_NAME_SIZE = 128;
         static const uint32_t INVALID_INDEX = 0xFFFFFFFF;
@@ -176,7 +178,7 @@ class GeoDataFrame: public LuaObject, public Field
         bool                        addNewColumn        (const char* name, uint32_t _type);
         bool                        addExistingColumn   (const char* name, FieldUntypedColumn* column);
         FieldUntypedColumn*         getColumn           (const char* name, bool no_throw=false) const;
-        void                        addMetaData         (const char* name, Field* meta, bool free_on_delete);
+        bool                        addMetaData         (const char* name, Field* meta, bool free_on_delete);
         Field*                      getMetaData         (const char* name, Field::type_t _type=Field::FIELD, bool no_throw=false) const;
         bool                        deleteColumn        (const char* name);
         void                        populateDataframe   (void);
@@ -263,7 +265,7 @@ class GeoDataFrame: public LuaObject, public Field
                                             const std::initializer_list<FieldDictionary::init_entry_t>& meta_list);
         virtual         ~GeoDataFrame       (void) override;
 
-        void            appendDataframe     (GeoDataFrame::gdf_rec_t* gdf_rec_data);
+        void            appendDataframe     (GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_t source_id);
         void            sendDataframe       (const char* rspq, uint64_t key_space, int timeout) const;
         static void*    receiveThread       (void* parm);
         static void*    runThread           (void* parm);

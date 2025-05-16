@@ -50,6 +50,8 @@ const char* GeoDataFrame::OBJECT_TYPE = "GeoDataFrame";
 const char* GeoDataFrame::GDF = "gdf";
 const char* GeoDataFrame::META = "meta";
 const char* GeoDataFrame::TERMINATE = "terminate";
+const char* GeoDataFrame::SOURCE_ID = "srcid";
+const char* GeoDataFrame::SOURCE_TABLE = "srctbl";
 
 const char* GeoDataFrame::LUA_META_NAME = "GeoDataFrame";
 const struct luaL_Reg GeoDataFrame::LUA_META_TABLE[] = {
@@ -570,9 +572,9 @@ FieldUntypedColumn* GeoDataFrame::getColumn (const char* name, bool no_throw) co
 /*----------------------------------------------------------------------------
  * addMetaData
  *----------------------------------------------------------------------------*/
-void GeoDataFrame::addMetaData (const char* name, Field* meta, bool free_on_delete)
+bool GeoDataFrame::addMetaData (const char* name, Field* meta, bool free_on_delete)
 {
-    metaFields.add(name, meta, free_on_delete);
+    return metaFields.add(name, meta, free_on_delete);
 }
 
 /*----------------------------------------------------------------------------
@@ -1012,6 +1014,53 @@ void add_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data)
 }
 
 /*----------------------------------------------------------------------------
+ * add_source_column
+ *----------------------------------------------------------------------------*/
+void add_source_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_t source_id)
+{
+    // get source id column from dataframe
+    FieldColumn<int32_t>* column = dynamic_cast<FieldColumn<int32_t>*>(dataframe->getColumn(GeoDataFrame::SOURCE_ID, true));
+
+    // create new source id column if not found
+    if(!column)
+    {
+        const uint32_t encoding_mask = 0;
+        column = new FieldColumn<int32_t>(encoding_mask, GeoDataFrame::DEFAULT_RECEIVED_COLUMN_CHUNK_SIZE);
+        if(!dataframe->addColumn(GeoDataFrame::SOURCE_ID, column, true))
+        {
+            delete column;
+            throw RunTimeException(ERROR, RTE_FAILURE, "failed to add column <%s> to dataframe", GeoDataFrame::SOURCE_ID);
+        }
+    }
+
+    // append source_id to column
+    dataframe->numRows = column->appendValue(source_id, gdf_rec_data->num_rows);
+
+    // get source table from metadata
+    FieldDictionary* dict = dynamic_cast<FieldDictionary*>(dataframe->getMetaData(GeoDataFrame::SOURCE_TABLE, Field::DICTIONARY, true));
+
+    // create new source table if not found
+    if(!dict)
+    {
+        dict = new FieldDictionary();
+        if(!dataframe->addMetaData(GeoDataFrame::SOURCE_TABLE, dict, true))
+        {
+            delete dict;
+            throw RunTimeException(ERROR, RTE_FAILURE, "failed to add metadata <%s> to dataframe", GeoDataFrame::SOURCE_TABLE);
+        }
+    }
+
+    // add source_id to meta data
+    const string value(reinterpret_cast<const char*>(gdf_rec_data->data), gdf_rec_data->size);
+    FieldElement<string>* source_id_field = new FieldElement<string>(value);
+    if(!dict->add(FString("%d", source_id).c_str(), source_id_field, true))
+    {
+        delete source_id_field;
+        throw RunTimeException(ERROR, RTE_FAILURE, "failed to add <%s=%d> to <%s>", GeoDataFrame::SOURCE_ID, source_id, GeoDataFrame::SOURCE_TABLE);
+    }
+}
+
+/*----------------------------------------------------------------------------
  * add_list_column
  *----------------------------------------------------------------------------*/
 template<class T>
@@ -1058,13 +1107,17 @@ void add_list_column(GeoDataFrame* dataframe, GeoDataFrame::gdf_rec_t* gdf_rec_d
 /*----------------------------------------------------------------------------
  * appendDataframe
  *----------------------------------------------------------------------------*/
-void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data)
+void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_t source_id)
 {
     const uint32_t value_encoding = gdf_rec_data->encoding & Field::VALUE_MASK;
     const uint32_t encoded_type = gdf_rec_data->encoding & Field::TYPE_MASK;
 
-    // add to column
-    if(value_encoding & (Field::NESTED_LIST | Field::NESTED_ARRAY | Field::NESTED_COLUMN))
+    if((gdf_rec_data->type == GeoDataFrame::META_REC) &&
+       (gdf_rec_data->encoding & GeoDataFrame::META_SOURCE_ID))
+    {
+        add_source_column(this, gdf_rec_data, source_id);
+    }
+    else if(value_encoding & (Field::NESTED_LIST | Field::NESTED_ARRAY | Field::NESTED_COLUMN))
     {
         switch(encoded_type)
         {
@@ -1257,6 +1310,7 @@ void* GeoDataFrame::receiveThread (void* parm)
     Publisher outq(info->outq_name);
     const double timelimit = TimeLib::latchtime() + (static_cast<double>(info->timeout) / 1000.0);
     bool complete = false;
+    int32_t source_id = 0;
     Subscriber::msgRef_t ref;
 
     // indicate thread is ready to receive
@@ -1331,7 +1385,7 @@ void* GeoDataFrame::receiveThread (void* parm)
                         // append columns and metadata to dataframe
                         for(rec_ref_t& entry: *df_rec_list)
                         {
-                            info->dataframe->appendDataframe(entry.rec);
+                            info->dataframe->appendDataframe(entry.rec, source_id);
                             inq.dereference(entry.ref);
                         }
 
@@ -1340,6 +1394,9 @@ void* GeoDataFrame::receiveThread (void* parm)
                         {
                             throw RunTimeException(CRITICAL, RTE_FAILURE, "incomplete number of columns received: %ld < %u", info->dataframe->length(), eof_subrec.num_columns);
                         }
+
+                        // bump source id now that dataframe is full appended
+                        source_id++;
 
                         // remove key'ed dataframe list from table
                         df_table.remove(key);

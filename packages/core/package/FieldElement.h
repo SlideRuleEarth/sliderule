@@ -108,6 +108,26 @@ class FieldElement: public Field
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
+ * length - specialization for string
+ *----------------------------------------------------------------------------*/
+template <>
+inline long FieldElement<string>::length() const
+{
+    return value.size();
+}
+
+/*----------------------------------------------------------------------------
+ * serialize - specialization for string
+ *----------------------------------------------------------------------------*/
+template <>
+inline long FieldElement<string>::serialize (uint8_t* buffer, size_t size) const
+{
+    const size_t bytes_to_copy = MIN(size, value.size());
+    memcpy(buffer, value.c_str(), bytes_to_copy);
+    return bytes_to_copy;
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 template <class T>

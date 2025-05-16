@@ -89,6 +89,7 @@ class Atl24DataFrame: public GeoDataFrame
         FieldElement<uint8_t>       region {0, Field::META_COLUMN};
         FieldElement<uint16_t>      rgt {0, Field::META_COLUMN};
         FieldElement<uint8_t>       gt {0, Field::META_COLUMN};     // Icesat2Fields::gt_t
+        FieldElement<string>        granule;                        // name of the ATL24 granule
 
         /*--------------------------------------------------------------------
          * Methods

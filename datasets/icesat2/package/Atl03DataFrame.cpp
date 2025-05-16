@@ -115,13 +115,15 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"cycle",               &cycle},
         {"region",              &region},
         {"rgt",                 &rgt},
-        {"gt",                  &gt}
+        {"gt",                  &gt},
+        {"granule",             &granule}
     }),
     spot(0, META_COLUMN),
-    cycle(0, META_COLUMN),
-    region(0, META_COLUMN),
-    rgt(0, META_COLUMN),
+    cycle(_parms->granuleFields.cycle.value, META_COLUMN),
+    region(_parms->granuleFields.region.value, META_COLUMN),
+    rgt(_parms->granuleFields.rgt.value, META_COLUMN),
     gt(0, META_COLUMN),
+    granule(_hdf03->name, META_SOURCE_ID),
     active(false),
     readerPid(NULL),
     readTimeoutMs(_parms->readTimeout.value * 1000),
@@ -168,11 +170,6 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     {
         signalConfColIndex = static_cast<int>(parms->surfaceType.value);
     }
-
-    /* Set MetaData from Parameters */
-    cycle = parms->granuleFields.cycle.value;
-    region = parms->granuleFields.region.value;
-    rgt = parms->granuleFields.rgt.value;
 
     /* Calculate Key */
     dfKey = 0;

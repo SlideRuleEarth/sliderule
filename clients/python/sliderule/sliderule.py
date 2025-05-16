@@ -795,28 +795,42 @@ def procoutputfile(parm, rsps):
             break
 
     # Handle local files
+    local_file = path # default to just returning the name of the parquet file
     if "open_on_complete" in output and output["open_on_complete"]:
-        if output["format"] == "parquet":
-            if "as_geo" in output and output["as_geo"]:
-                # Return GeoParquet file as GeoDataFrame
-                return geopandas.read_parquet(path)
-            else:
-                # Return parquet file as DataFrame
-                return geopandas.pd.read_parquet(path)
-        elif output["format"] == "geoparquet":
-            # Return geoparquet file as GeoDataFrame
-            return geopandas.read_parquet(path)
+
+        # Open the file as a DataFrame
+        if (output["format"] == "geoparquet") or (output["format"] == "parquet" and "as_geo" in output and output["as_geo"]):
+            local_file = geopandas.read_parquet(path) # GeoParquet
+        elif output["format"] == "parquet":
+            local_file = geopandas.pd.read_parquet(path) # Parquet
         elif output["format"] == "feather":
-            # Return feather file as DataFrame
-            return geopandas.pd.read_feather(path)
+            local_file = geopandas.pd.read_feather(path) # Feather
         elif output["format"] == "csv":
-            # Return CSV file as DataFrame
-            return geopandas.pd.read_csv(path)
+            local_file = geopandas.pd.read_csv(path) # CSV
         else:
             raise FatalError('unsupported output format: %s' % (output["format"]))
-    else:
-        # Return parquet filename
-        return path
+
+        # Read metadata from file
+        try:
+            # Imports needed just to read metadata
+            import pyarrow.parquet as pq
+            import ctypes
+            import json
+            # pull out metadata
+            metadata = pq.read_metadata(path)
+            sliderule_metadata = ctypes.create_string_buffer(metadata.metadata[b'sliderule']).value.decode('ascii')
+            meta_metadata = ctypes.create_string_buffer(metadata.metadata[b'meta']).value.decode('ascii')
+            recordinfo_metadata = ctypes.create_string_buffer(metadata.metadata[b'recordinfo']).value.decode('ascii')
+            # embed metadata into dataframe
+            local_file.attrs['sliderule'] = json.loads(sliderule_metadata)
+            local_file.attrs['meta'] = json.loads(meta_metadata)
+            local_file.attrs['recordinfo'] = json.loads(recordinfo_metadata)
+        except Exception as e:
+            # could fail for a multitude of reasons; just log and move on
+            logger.warning(f'Failed to read metadata from {path}: {e}')
+
+    # Return back to caller either path or opened dataframe
+    return local_file
 
 #
 # Dictionary to GeoDataFrame

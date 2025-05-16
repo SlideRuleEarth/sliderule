@@ -78,11 +78,12 @@ class Field
         static const uint32_t NESTED_COLUMN = 0x8000;
 
         // encodings - columns
-        static const uint32_t TIME_COLUMN   = 0x80000000;
-        static const uint32_t X_COLUMN      = 0x40000000;
-        static const uint32_t Y_COLUMN      = 0x20000000;
-        static const uint32_t Z_COLUMN      = 0x10000000;
-        static const uint32_t META_COLUMN   = 0x08000000; // used for metadata elements that are exported as dataframe columns
+        static const uint32_t TIME_COLUMN       = 0x80000000;
+        static const uint32_t X_COLUMN          = 0x40000000;
+        static const uint32_t Y_COLUMN          = 0x20000000;
+        static const uint32_t Z_COLUMN          = 0x10000000;
+        static const uint32_t META_COLUMN       = 0x08000000; // used for metadata elements that are exported as dataframe columns
+        static const uint32_t META_SOURCE_ID    = 0x04000000; // tags entries with a source id traceable back to a string
 
         /*--------------------------------------------------------------------
          * Types

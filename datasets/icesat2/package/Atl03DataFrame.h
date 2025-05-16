@@ -91,6 +91,7 @@ class Atl03DataFrame: public GeoDataFrame
         FieldElement<uint8_t>       region;
         FieldElement<uint16_t>      rgt;
         FieldElement<uint8_t>       gt;                             // Icesat2Fields::gt_t
+        FieldElement<string>        granule;                        // name of the ATL03 granule
 
         /*--------------------------------------------------------------------
          * Methods

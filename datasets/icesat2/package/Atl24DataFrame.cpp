@@ -106,8 +106,10 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"cycle",               &cycle},
         {"region",              &region},
         {"rgt",                 &rgt},
-        {"gt",                  &gt}
+        {"gt",                  &gt},
+        {"granule",             &granule}
     }),
+    granule(_hdf24->name, META_SOURCE_ID),
     active(false),
     readerPid(NULL),
     readTimeoutMs(_parms->readTimeout.value * 1000),
