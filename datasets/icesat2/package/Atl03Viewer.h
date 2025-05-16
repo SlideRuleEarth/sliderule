@@ -38,15 +38,11 @@
 
 #include <atomic>
 
-#include "List.h"
 #include "LuaObject.h"
 #include "RecordObject.h"
 #include "MsgQ.h"
 #include "OsApi.h"
-#include "StringLib.h"
-
 #include "H5Array.h"
-#include "H5DArray.h"
 #include "Icesat2Fields.h"
 
 /******************************************************************************

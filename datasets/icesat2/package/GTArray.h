@@ -38,8 +38,8 @@
 
 #include "Icesat2Parms.h"
 #include "H5Array.h"
+#include "H5Coro.h"
 #include "StringLib.h"
-#include "Asset.h"
 
 /******************************************************************************
  * GTArray TEMPLATE

@@ -38,16 +38,12 @@
 
 #include "OsApi.h"
 #include "LuaObject.h"
-#include "EndpointProxy.h"
-#include "AssetField.h"
-#include "MathLib.h"
 #include "RequestFields.h"
 #include "FieldElement.h"
 #include "FieldEnumeration.h"
 #include "FieldDictionary.h"
 #include "FieldList.h"
 #include "TimeLib.h"
-#include "Asset.h"
 
 /******************************************************************************
  * CLASSES

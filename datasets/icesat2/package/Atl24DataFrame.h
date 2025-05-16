@@ -37,15 +37,10 @@
  ******************************************************************************/
 
 #include "GeoDataFrame.h"
-#include "RecordObject.h"
-#include "List.h"
+#include "LuaObject.h"
 #include "MsgQ.h"
 #include "OsApi.h"
-#include "StringLib.h"
-#include "FieldList.h"
-
 #include "H5Array.h"
-#include "H5DArray.h"
 #include "H5VarSet.h"
 #include "H5Object.h"
 #include "Icesat2Fields.h"

@@ -38,6 +38,11 @@
 
 #include "RasterObject.h"
 #include "RasterSample.h"
+#include "LuaEngine.h"
+#include "MathLib.h"
+#include "OsApi.h"
+#include "RequestFields.h"
+#include "Asset.h"
 
 /******************************************************************************
  * MERIT RASTER CLASS

@@ -36,10 +36,10 @@
  * INCLUDES
  ******************************************************************************/
 
-#include "H5DArray.h"
 #include "Icesat2Fields.h"
-#include "StringLib.h"
-#include "Asset.h"
+#include "H5DArray.h"
+#include "H5Coro.h"
+#include "OsApi.h"
 
 /******************************************************************************
  * GT DYNAMIC ARRAY CLASS
