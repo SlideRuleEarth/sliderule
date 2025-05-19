@@ -23,7 +23,7 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
         assert init
         assert len(gdf) == 488670
-        assert len(gdf.keys()) == 15
+        assert len(gdf.keys()) == 16
         assert gdf.spot.value_counts()[5] == 386717
         assert gdf.spot.value_counts()[6] == 101953
         assert gdf.cycle.describe()["mean"] == 1.0
@@ -38,7 +38,7 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
         assert init
         assert len(gdf) == 488670
-        assert len(gdf.keys()) == 17
+        assert len(gdf.keys()) == 18
         assert gdf.spot.value_counts()[5] == 386717
         assert gdf.spot.value_counts()[6] == 101953
         assert gdf.cycle.describe()["mean"] == 1.0
@@ -54,7 +54,7 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
         assert init
         assert len(gdf) == 2815
-        assert len(gdf.keys()) == 16
+        assert len(gdf.keys()) == 17
         assert gdf["gt"].sum() == 42240
         assert abs(gdf["rms_misfit"].mean() - 0.2315002977848053) < 0.0001, f'{gdf["rms_misfit"].mean()}'
 
@@ -71,7 +71,7 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
         assert init
         assert len(gdf) == 2813
-        assert len(gdf.keys()) == 23
+        assert len(gdf.keys()) == 24
         assert gdf["ph_id_channel"].value_counts()[57.0] == 232
         assert gdf["pce_mframe_cnt"].max() == 110610389.0
         assert abs(gdf["ref_elev"].mean() - 1.5656124586346465) < 0.0001, f'{gdf["ref_elev"].mean()}'
@@ -92,7 +92,7 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, region["poly"], [resource])
         assert init
         assert len(gdf) == 774
-        assert len(gdf.keys()) == 24
+        assert len(gdf.keys()) == 25
         assert gdf["gt"].sum() == 43210
         assert gdf["vegetation_photon_count"].sum() == 23127
         assert abs(gdf["canopy_openness"].mean() - 3.8784506) < 0.000001
@@ -113,7 +113,7 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, region["poly"], [resource])
         assert init
         assert len(gdf) == 1279
-        assert len(gdf.keys()) == 19
+        assert len(gdf.keys()) == 20
         assert gdf["cycle"].mean() == 2
         assert abs(gdf["mosaic.value"].mean() - 1498.9387766321345) < 0.0001
         assert gdf["mosaic.fileid"].mean() == 0
@@ -129,7 +129,7 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms, resources=[resource])
         assert init
         assert len(gdf) == 49554
-        assert len(gdf.keys()) == 17
+        assert len(gdf.keys()) == 18
         assert gdf["atl24_class"].value_counts()[41] == 49523
         assert abs(gdf["atl24_confidence"].max() - 0.8872309) < 0.0001, gdf["atl24_confidence"].max()
 
@@ -156,7 +156,7 @@ class TestAtl03x:
         gdf = sliderule.run("atl03x", parms)
         assert init
         assert len(gdf) == 1066
-        assert len(gdf.keys()) == 18
+        assert len(gdf.keys()) == 19
         assert gdf["yapc_score"].max() == 254
         assert gdf["yapc_score"].min() == 0
         assert gdf["atl24_class"].value_counts()[40] == 4

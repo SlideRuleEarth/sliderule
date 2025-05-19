@@ -14,7 +14,7 @@ class TestAtl24x:
         gdf = sliderule.run("atl24x", {}, resources=RESOURCES)
         assert init
         assert len(gdf) == 63
-        assert len(gdf.keys()) == 12
+        assert len(gdf.keys()) == 13
         assert gdf["gt"].sum() == 2160
         assert gdf["spot"].sum() == 225
         assert gdf["region"].value_counts()[3] == len(gdf)
@@ -36,7 +36,7 @@ class TestAtl24x:
         gdf = sliderule.run("atl24x", parms, resources=RESOURCES)
         assert init
         assert len(gdf) == 63
-        assert len(gdf.keys()) == 20
+        assert len(gdf.keys()) == 21
         assert gdf["gt"].sum() == 2160
         assert gdf["spot"].sum() == 225
         assert gdf["region"].value_counts()[3] == len(gdf)
@@ -68,7 +68,7 @@ class TestAtl24x:
         gdf = sliderule.run("atl24x", parms, resources=RESOURCES)
         assert init
         assert len(gdf) == 241597
-        assert len(gdf.keys()) == 12
+        assert len(gdf.keys()) == 13
         assert gdf["gt"].sum() == 7959140
         assert gdf["spot"].sum() == 895265
         assert gdf["region"].value_counts()[3] == len(gdf)
@@ -87,7 +87,7 @@ class TestAtl24x:
         gdf = sliderule.run("atl24x", parms, resources=RESOURCES)
         assert init
         assert len(gdf) == 35
-        assert len(gdf.keys()) == 12
+        assert len(gdf.keys()) == 13
         assert gdf["region"].value_counts()[3] == len(gdf)
         assert gdf["rgt"].value_counts()[235] == len(gdf)
         assert gdf["cycle"].value_counts()[1] == len(gdf)
@@ -106,7 +106,7 @@ class TestAtl24x:
         gdf = sliderule.run("atl24x", parms, resources=RESOURCES)
         assert init
         assert len(gdf) == 63
-        assert len(gdf.keys()) == 20 # automatically makes non-compact
+        assert len(gdf.keys()) == 21 # automatically makes non-compact
         assert gdf["region"].value_counts()[3] == len(gdf)
         assert gdf["rgt"].value_counts()[235] == len(gdf)
         assert gdf["cycle"].value_counts()[1] == len(gdf)
@@ -124,7 +124,7 @@ class TestAtl24x:
         gdf = sliderule.run("atl24x", parms, resources=RESOURCES)
         assert init
         assert len(gdf) == 59
-        assert len(gdf.keys()) == 20 # automatically makes non-compact
+        assert len(gdf.keys()) == 21 # automatically makes non-compact
         assert gdf["region"].value_counts()[3] == len(gdf)
         assert gdf["rgt"].value_counts()[235] == len(gdf)
         assert gdf["cycle"].value_counts()[1] == len(gdf)
@@ -139,7 +139,7 @@ class TestAtl24x:
         gdf = sliderule.run("atl24x", parms, resources=RESOURCES)
         assert init
         assert len(gdf) == 35
-        assert len(gdf.keys()) == 20 # automatically makes non-compact
+        assert len(gdf.keys()) == 21 # automatically makes non-compact
         assert gdf["region"].value_counts()[3] == len(gdf)
         assert gdf["rgt"].value_counts()[235] == len(gdf)
         assert gdf["cycle"].value_counts()[1] == len(gdf)
@@ -154,7 +154,7 @@ class TestAtl24x:
         gdf = sliderule.run("atl24x", parms, resources=RESOURCES)
         assert init
         assert len(gdf) == 63
-        assert len(gdf.keys()) == 14
+        assert len(gdf.keys()) == 15
         assert gdf["region"].value_counts()[3] == len(gdf)
         assert gdf["rgt"].value_counts()[235] == len(gdf)
         assert gdf["cycle"].value_counts()[1] == len(gdf)

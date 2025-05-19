@@ -820,15 +820,14 @@ def procoutputfile(parm, rsps):
             # pull out metadata
             metadata = pq.read_metadata(path)
             sliderule_metadata = ctypes.create_string_buffer(metadata.metadata[b'sliderule']).value.decode('ascii')
-            meta_metadata = ctypes.create_string_buffer(metadata.metadata[b'meta']).value.decode('ascii')
-            recordinfo_metadata = ctypes.create_string_buffer(metadata.metadata[b'recordinfo']).value.decode('ascii')
-            # embed metadata into dataframe
             local_file.attrs['sliderule'] = json.loads(sliderule_metadata)
-            local_file.attrs['meta'] = json.loads(meta_metadata)
+            recordinfo_metadata = ctypes.create_string_buffer(metadata.metadata[b'recordinfo']).value.decode('ascii')
             local_file.attrs['recordinfo'] = json.loads(recordinfo_metadata)
+            meta_metadata = ctypes.create_string_buffer(metadata.metadata[b'meta']).value.decode('ascii')
+            local_file.attrs['meta'] = json.loads(meta_metadata)
         except Exception as e:
             # could fail for a multitude of reasons; just log and move on
-            logger.warning(f'Failed to read metadata from {path}: {e}')
+            logger.debug(f'Failed to read metadata from {path}: {e}')
 
     # Return back to caller either path or opened dataframe
     return local_file

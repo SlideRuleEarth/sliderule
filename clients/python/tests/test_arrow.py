@@ -47,7 +47,7 @@ class TestArrow:
         if organization == None or organization == sliderule.session.Session.PUBLIC_URL: # otherwise need to build authentication headers
             assert isinstance(df, pandas.DataFrame) or isinstance(df, pandas.core.frame.DataFrame)
             assert len(df) == 63
-            assert len(df.keys()) == 13 # this is not a GDF, so there is one more column since lat and lon are not combined into geometry
+            assert len(df.keys()) == 14 # this is not a GDF, so there is one more column since lat and lon are not combined into geometry
             assert df["gt"].sum() == 2160
         else:
             assert df == None
@@ -62,7 +62,7 @@ class TestArrow:
         if organization == None or organization == sliderule.session.Session.PUBLIC_URL: # otherwise need to build authentication headers
             assert isinstance(df, pandas.DataFrame) or isinstance(df, pandas.core.frame.DataFrame)
             assert len(df) == 5814857
-            assert len(df.keys()) == 16
+            assert len(df.keys()) == 17
             assert df["gt"].sum() == 58148570
         else:
             assert df == None
