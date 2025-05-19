@@ -106,3 +106,12 @@ This will go through and perform the following steps:
 The conda-forge feedstock for the SlideRule Python client will automatically generate a PR for the latest version, but merging the PR is manual.
 
 https://github.com/conda-forge/sliderule-feedstock
+
+#### (9) Update Usage Report
+
+Before updating the public cluster with the latest release, run the usage report:
+```Python
+python utils/usage_report.py
+```
+
+Then make sure the `/data/manager-sliderule.db` file is properly backed up to the `s3://sliderule/config` bucket.
