@@ -722,7 +722,8 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
 #
 # Get Record Field Definition
 #
-def getdefinition (rectype, fieldname, session=slideruleSession):
+def getdefinition (rectype, fieldname, session=None):
+    session = checksession(session)
     return session.get_definition(rectype, fieldname)
 #
 # GeoDataFrame to Polygon

@@ -63,6 +63,7 @@ typedef struct {
     double          elevation_start;
     double          elevation_stop;
     double          solar_elevation;
+    uint32_t        orbit;
     uint8_t         beam;
     uint8_t         flags;
     uint16_t        track;

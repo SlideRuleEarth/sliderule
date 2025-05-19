@@ -57,6 +57,7 @@ const RecordObject::fieldDef_t Gedi02aReader::fpRecDef[] = {
     {"elevation_hr",    RecordObject::FLOAT,    offsetof(g02a_footprint_t, elevation_highestreturn), 1,  NULL, NATIVE_FLAGS},
     {"solar_elevation", RecordObject::FLOAT,    offsetof(g02a_footprint_t, solar_elevation),         1,  NULL, NATIVE_FLAGS},
     {"sensitivity",     RecordObject::FLOAT,    offsetof(g02a_footprint_t, sensitivity),             1,  NULL, NATIVE_FLAGS},
+    {"orbit",           RecordObject::UINT32,   offsetof(g02a_footprint_t, orbit),                   1,  NULL, NATIVE_FLAGS},
     {"beam",            RecordObject::UINT8,    offsetof(g02a_footprint_t, beam),                    1,  NULL, NATIVE_FLAGS},
     {"flags",           RecordObject::UINT8,    offsetof(g02a_footprint_t, flags),                   1,  NULL, NATIVE_FLAGS},
     {"track",           RecordObject::UINT16,   offsetof(g02a_footprint_t, track),                   1,  NULL, NATIVE_FLAGS}
@@ -240,6 +241,7 @@ void* Gedi02aReader::subsettingThread (void* parm)
                 fp->elevation_highestreturn = gedi02a.elev_highestreturn[footprint];
                 fp->solar_elevation         = gedi02a.solar_elevation[footprint];
                 fp->sensitivity             = gedi02a.sensitivity[footprint];
+                fp->orbit                   = parms->granule_fields.orbit.value;
                 fp->beam                    = static_cast<uint8_t>(info->beam);
                 fp->flags                   = 0;
                 fp->track                   = parms->granule_fields.track.value;

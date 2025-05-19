@@ -57,6 +57,7 @@ const RecordObject::fieldDef_t Gedi04aReader::fpRecDef[] = {
     {"elevation",       RecordObject::FLOAT,    offsetof(g04a_footprint_t, elevation),       1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"solar_elevation", RecordObject::FLOAT,    offsetof(g04a_footprint_t, solar_elevation), 1,  NULL, NATIVE_FLAGS},
     {"sensitivity",     RecordObject::FLOAT,    offsetof(g04a_footprint_t, sensitivity),     1,  NULL, NATIVE_FLAGS},
+    {"orbit",           RecordObject::UINT32,   offsetof(g04a_footprint_t, orbit),           1,  NULL, NATIVE_FLAGS},
     {"beam",            RecordObject::UINT8,    offsetof(g04a_footprint_t, beam),            1,  NULL, NATIVE_FLAGS},
     {"flags",           RecordObject::UINT8,    offsetof(g04a_footprint_t, flags),           1,  NULL, NATIVE_FLAGS},
     {"track",           RecordObject::UINT16,   offsetof(g04a_footprint_t, track),           1,  NULL, NATIVE_FLAGS}
@@ -251,6 +252,7 @@ void* Gedi04aReader::subsettingThread (void* parm)
                 fp->elevation       = gedi04a.elev_lowestmode[footprint];
                 fp->solar_elevation = gedi04a.solar_elevation[footprint];
                 fp->sensitivity     = gedi04a.sensitivity[footprint];
+                fp->orbit           = parms->granule_fields.orbit.value;
                 fp->beam            = static_cast<int>(info->beam);
                 fp->flags           = 0;
                 fp->track           = parms->granule_fields.track.value;

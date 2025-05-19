@@ -61,6 +61,7 @@ typedef struct {
     float           elevation;
     float           solar_elevation;
     float           sensitivity;
+    uint32_t        orbit;
     uint8_t         beam;
     uint8_t         flags;
     uint16_t        track;

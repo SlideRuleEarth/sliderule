@@ -24,6 +24,7 @@ class TestL1B:
         assert gdf.describe()["flags"]["mean"] == 0.0
         assert gdf.describe()["tx_size"]["mean"] == 128.0
         assert gdf.describe()["rx_size"]["min"] == 737.000000
+        assert gdf["orbit"].sum() == 1988 * len(gdf)
         assert abs(gdf.describe()["elevation_start"]["min"] - 2882.457801) < 0.001
         assert abs(gdf.describe()["elevation_stop"]["min"] - 2738.054259) < 0.001
         assert abs(gdf.describe()["solar_elevation"]["min"] - 42.839184) < 0.001
@@ -49,6 +50,7 @@ class TestL2A:
         assert init
         assert gdf.describe()["beam"]["mean"] == 0.0
         assert gdf.describe()["flags"]["max"] == 130.0
+        assert gdf["orbit"].sum() == 21758 * len(gdf)
         assert abs(gdf.describe()["elevation_lm"]["min"] - 667.862000) < 0.001
         assert abs(gdf.describe()["elevation_hr"]["min"] - 667.862000) < 0.001
         assert abs(gdf.describe()["sensitivity"]["min"] - 0.785598) < 0.001
@@ -98,6 +100,7 @@ class TestL4A:
         assert init
         assert gdf.describe()["beam"]["mean"] == 0.0
         assert gdf.describe()["flags"]["max"] == 134.0
+        assert gdf["orbit"].sum() == 2202 * len(gdf)
         assert abs(gdf.describe()["elevation"]["min"] - 1499.137329) < 0.001
         assert abs(gdf.describe()["agbd"]["min"] - 0.919862) < 0.001
         assert abs(gdf.describe()["sensitivity"]["min"] - 0.900090) < 0.001

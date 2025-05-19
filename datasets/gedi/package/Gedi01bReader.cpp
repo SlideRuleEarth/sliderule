@@ -56,6 +56,7 @@ const RecordObject::fieldDef_t Gedi01bReader::fpRecDef[] = {
     {"elevation_start", RecordObject::DOUBLE,   offsetof(g01b_footprint_t, elevation_start),    1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD},
     {"elevation_stop",  RecordObject::DOUBLE,   offsetof(g01b_footprint_t, elevation_stop),     1,  NULL, NATIVE_FLAGS},
     {"solar_elevation", RecordObject::DOUBLE,   offsetof(g01b_footprint_t, solar_elevation),    1,  NULL, NATIVE_FLAGS},
+    {"orbit",           RecordObject::UINT32,   offsetof(g01b_footprint_t, orbit),              1,  NULL, NATIVE_FLAGS},
     {"beam",            RecordObject::UINT8,    offsetof(g01b_footprint_t, beam),               1,  NULL, NATIVE_FLAGS},
     {"flags",           RecordObject::UINT8,    offsetof(g01b_footprint_t, flags),              1,  NULL, NATIVE_FLAGS},
     {"track",           RecordObject::UINT16,   offsetof(g01b_footprint_t, track),              1,  NULL, NATIVE_FLAGS},
@@ -233,6 +234,7 @@ void* Gedi01bReader::subsettingThread (void* parm)
                 fp->elevation_start         = gedi01b.elev_bin0[footprint];
                 fp->elevation_stop          = gedi01b.elev_lastbin[footprint];
                 fp->solar_elevation         = gedi01b.solar_elevation[footprint];
+                fp->orbit                   = parms->granule_fields.orbit.value;
                 fp->beam                    = static_cast<uint8_t>(info->beam);
                 fp->flags                   = 0;
                 fp->track                   = parms->granule_fields.track.value;
