@@ -41,7 +41,7 @@ https://conda.anaconda.org/conda-forge/noarch/itsdangerous-2.2.0-pyhd8ed1ab_1.co
 https://conda.anaconda.org/conda-forge/noarch/jmespath-1.0.1-pyhd8ed1ab_1.conda#972bdca8f30147135f951847b30399ea
 https://conda.anaconda.org/conda-forge/linux-aarch64/markupsafe-3.0.2-py313h7815b11_1.conda#1dbae17ceddb4e6ab2f239a00c7b5e52
 https://conda.anaconda.org/conda-forge/noarch/maxminddb-2.6.2-pyhd8ed1ab_0.conda#36825ad83ea9eca4353b3ed346616b0f
-https://conda.anaconda.org/conda-forge/linux-aarch64/multidict-6.4.3-py313h857f82b_0.conda#99906f266a51af66aa45d91b2fd4cd4f
+https://conda.anaconda.org/conda-forge/linux-aarch64/multidict-6.4.4-py313h857f82b_0.conda#5ba2a2b5452eb4c0ce827b82afcf5f92
 https://conda.anaconda.org/conda-forge/noarch/packaging-25.0-pyh29332c3_1.conda#58335b26c38bf4a20f399384c33cbcf9
 https://conda.anaconda.org/conda-forge/noarch/pip-25.1.1-pyh145f28c_0.conda#01384ff1639c6330a0924791413b8714
 https://conda.anaconda.org/conda-forge/noarch/pluggy-1.6.0-pyhd8ed1ab_0.conda#7da7ccd349dbf6487a7778579d2bb971
@@ -70,7 +70,7 @@ https://conda.anaconda.org/conda-forge/noarch/flask-3.1.1-pyhd8ed1ab_0.conda#ffa
 https://conda.anaconda.org/conda-forge/noarch/pytest-8.3.5-pyhd8ed1ab_0.conda#c3c9316209dec74a705a36797970c6be
 https://conda.anaconda.org/conda-forge/linux-aarch64/zstandard-0.23.0-py313h31d5739_2.conda#08212d1111359076fb5147223f4f373b
 https://conda.anaconda.org/conda-forge/noarch/urllib3-2.4.0-pyhd8ed1ab_0.conda#c1e349028e0052c4eea844e94f773065
-https://conda.anaconda.org/conda-forge/noarch/botocore-1.38.18-pyge310_1234567_0.conda#4146ceddfc912c381ad3035c7b870e13
+https://conda.anaconda.org/conda-forge/noarch/botocore-1.38.19-pyge310_1234567_0.conda#ce1f72fe66eae5f54b092b8d730abe92
 https://conda.anaconda.org/conda-forge/noarch/requests-2.32.3-pyhd8ed1ab_1.conda#a9b9368f3701a417eac9edbcae7cb737
 https://conda.anaconda.org/conda-forge/noarch/geoip2-4.8.0-pyhd8ed1ab_0.conda#ff7200322cb572017ab08cb3e39993bd
 https://conda.anaconda.org/conda-forge/noarch/s3transfer-0.12.0-pyhd8ed1ab_0.conda#829c1fc60557253e117bc8a390d197b1
