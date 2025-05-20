@@ -1071,14 +1071,7 @@ void convertFromLua(lua_State* L, int index, Atl24Fields::class_t& v)
 {
     if(lua_isinteger(L, index))
     {
-        const long c = LuaObject::getLuaInteger(L, index);
-        switch(c)
-        {
-            case 0:     v = Atl24Fields::UNCLASSIFIED;  break;
-            case 1:     v = Atl24Fields::BATHYMETRY;    break;
-            case 2:     v = Atl24Fields::SEA_SURFACE;   break;
-            default:    throw RunTimeException(CRITICAL, RTE_FAILURE, "bathy class is an invalid value: %ld", c);
-        }
+        v = static_cast<Atl24Fields::class_t>(LuaObject::getLuaInteger(L, index));
     }
     else if(lua_isstring(L, index))
     {
