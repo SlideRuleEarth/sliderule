@@ -119,6 +119,24 @@ class TestAtl03x:
         assert gdf["mosaic.fileid"].mean() == 0
         assert gdf["mosaic.time"].mean() == 1358108640.0
 
+    def test_mixed_empty_beams(self, init):
+        resource = 'ATL03_20200512071854_07140706_006_01.h5'
+        grand_mesa = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
+                       {"lon": -107.7677425431139, "lat": 38.90611184543033},
+                       {"lon": -107.7818591266989, "lat": 39.26613714985466},
+                       {"lon": -108.3605610678553, "lat": 39.25086131372244},
+                       {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
+        parms = {
+            "poly": grand_mesa,
+            "track": 1,
+            "cnf": 0,
+            "fit": {}
+        }
+        gdf = sliderule.run("atl03x", parms, resources=[resource])
+        assert init
+        assert len(gdf) == 136
+        assert len(gdf.keys()) == 17
+
     def test_atl24(self, init):
         resource = "ATL03_20181014001920_02350103_006_02.h5"
         parms = {

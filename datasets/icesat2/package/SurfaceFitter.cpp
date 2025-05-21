@@ -107,9 +107,6 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
 
     Atl03DataFrame& df = *dynamic_cast<Atl03DataFrame*>(dataframe);
 
-    // check df not empty
-    if(df.length() <= 0) return true;
-
     // create new dataframe columns
     FieldColumn<time8_t>*   time_ns         = new FieldColumn<time8_t>(Field::TIME_COLUMN); // nanoseconds from GPS epoch
     FieldColumn<double>*    latitude        = new FieldColumn<double>(Field::Y_COLUMN);     // EPSG:7912
