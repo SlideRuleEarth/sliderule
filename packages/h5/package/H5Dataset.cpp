@@ -291,6 +291,10 @@ void H5Dataset::readDataset (info_t* info)
     {
         throw RunTimeException(CRITICAL, RTE_FAILURE, "missing data dimension information");
     }
+    if(static_cast<size_t>(highestDataLevel) != datasetPath.size())
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "incomplete search for dataset");
+    }
 
     /* Massage Hyperslice */
     for(int d = 0; d < metaData.ndims; d++)
@@ -300,7 +304,7 @@ void H5Dataset::readDataset (info_t* info)
     }
 
     /* Check for Valid Hyperslice */
-    for(int d = 1; d < metaData.ndims; d++)
+    for(int d = 0; d < metaData.ndims; d++)
     {
         if( (hyperslice[d].r1 < hyperslice[d].r0) ||
             (hyperslice[d].r1 > metaData.dimensions[d]) ||
@@ -315,7 +319,7 @@ void H5Dataset::readDataset (info_t* info)
     for(int d = 0; d < metaData.ndims; d++)
     {
         const int64_t elements_in_dimension = hyperslice[d].r1 - hyperslice[d].r0;
-        if(elements_in_dimension > 0) num_elements *= elements_in_dimension;
+        num_elements *= elements_in_dimension;
         shape[d] = elements_in_dimension;
         info->shape[d] = shape[d];
     }
@@ -3022,7 +3026,7 @@ void H5Dataset::parseDataset (void)
     /* Build Path to Dataset */
     while(true)
     {
-        datasetPath.push_back(gptr);                      // add group to dataset path
+        datasetPath.push_back(gptr);                // add group to dataset path
         char* nptr = StringLib::find(gptr, '/');    // look for next group marker
         if(nptr == NULL) break;                     // if not found, then exit
         *nptr = '\0';                               // terminate group string
