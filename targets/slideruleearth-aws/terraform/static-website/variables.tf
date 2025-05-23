@@ -1,6 +1,6 @@
 
 variable "domain" {
-    description = "domain name testsliderule.org"
+    description = "domain name e.g. testsliderule.org"
     # Must provide on cmd line
 }
 

@@ -80,7 +80,7 @@ variable "node_asg_max_capacity" {
 }
 variable "domain" {
   description = "root domain of sliderule cluster"
-  default     = "testsliderule.org"
+  default     = "slideruleearth.io"
 }
 variable "is_public" {
   description = "(True/False): The cluster is public (Note: public clusters do NOT require authentication)"
