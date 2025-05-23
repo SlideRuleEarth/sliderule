@@ -45,3 +45,54 @@ class TestApi:
         rsps = h5.h5p(datasets, ATL06_FILE1, "icesat2")
         assert init
         assert len(rsps) == 0
+
+
+    def test_missing_invalid(self, init):
+        resource = "ATL03_20181014012500_02350113_006_02.h5"
+        r1 = h5.h5p([
+            {'dataset': "/gt1r/signal_find_output/ocean/delta_time"},
+            {'dataset': "/gt1l/signal_find_output/ocean/delta_time"}
+        ], resource, "icesat2")
+        assert "/gt1r/signal_find_output/ocean/delta_time" in r1
+        assert "/gt1l/signal_find_output/ocean/delta_time" not in r1
+
+    def test_missing_valid(self, init):
+        resource = "ATL03_20181014012500_02350113_006_02.h5"
+        r2 = h5.h5p([
+            {'dataset': "/gt2r/signal_find_output/ocean/delta_time"},
+            {'dataset': "/gt2l/signal_find_output/ocean/delta_time"}
+        ], resource, "icesat2")
+        assert "/gt2r/signal_find_output/ocean/delta_time" in r2
+        assert "/gt2l/signal_find_output/ocean/delta_time" not in r2
+ 
+    def test_missing_valid_numrows_too_high(self, init):
+        resource = "ATL03_20181014012500_02350113_006_02.h5"
+        r3 = h5.h5p([
+            {'dataset': "/gt2r/signal_find_output/ocean/delta_time", 'numrows': 10},
+            {'dataset': "/gt2l/signal_find_output/ocean/delta_time", 'numrows': 10}
+        ], resource, "icesat2")
+        assert "/gt2r/signal_find_output/ocean/delta_time" in r3
+        assert "/gt2l/signal_find_output/ocean/delta_time" not in r3
+
+    def test_missing_valid_numrows_okay(self, init):
+        resource = "ATL03_20181014012500_02350113_006_02.h5"
+        r4 = h5.h5p([
+            {'dataset': "/gt2r/signal_find_output/ocean/delta_time", 'numrows': 3},
+            {'dataset': "/gt2l/signal_find_output/ocean/delta_time", 'numrows': 3}
+        ], resource, "icesat2")
+        assert "/gt2r/signal_find_output/ocean/delta_time" in r4
+        assert "/gt2l/signal_find_output/ocean/delta_time" not in r4
+ 
+    def test_numrows_zero(self, init):
+        resource = "ATL03_20181014012500_02350113_006_02.h5"
+        r5 = h5.h5p([
+            {'dataset': "/gt2r/signal_find_output/ocean/delta_time", 'numrows': 0},
+            {'dataset': "/gt2l/signal_find_output/ocean/delta_time", 'numrows': 0}
+        ], resource, "icesat2")
+        assert len(r5) == 0
+
+    def test_numrows_too_high(self, init):
+        resource = "ATL03_20181014012500_02350113_006_02.h5"
+        r6 = h5.h5("/gt1r/signal_find_output/ocean/delta_time", resource, "icesat2", numrows=100000)
+        assert len(r6) == 0
+ 
