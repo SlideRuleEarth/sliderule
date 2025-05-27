@@ -165,10 +165,10 @@ struct Atl13Fields: public FieldDictionary
         GLOBAL_RIVER_WIDTHS_FROM_LANDSAT    = 5
     } body_source_t;
     
-    FieldElement<int64_t>           reference_id {0};   // atl13refid
-    FieldElement<string>            name;               // lake name
-    FieldElement<MathLib::coord_t>  coordinate;         // lake coordinate (contains)
-    FieldList<string>               anc_fields;         // list of additional ATL13 fields
+    FieldElement<int64_t>           reference_id {0};       // atl13refid
+    FieldElement<string>            name;                   // lake name
+    FieldElement<MathLib::coord_t>  coordinate {{0.0, 0.0}};// lake coordinate (contains)
+    FieldList<string>               anc_fields;             // list of additional ATL13 fields
 
     Atl13Fields(void);
     ~Atl13Fields(void) override = default;

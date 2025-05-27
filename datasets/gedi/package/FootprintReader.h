@@ -407,12 +407,8 @@ void FootprintReader<footprint_t>::Region::rasterregion (const info_t* info)
             {
                 first_footprint_found = true;
                 first_footprint = footprint;
-                last_footprint = footprint;
             }
-            else
-            {
-                last_footprint = footprint;
-            }
+            last_footprint = footprint;
         }
 
         /* Bump Footprint */

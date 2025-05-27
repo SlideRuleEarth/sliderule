@@ -365,16 +365,13 @@ void Atl06Reader::Region::rasterregion (const info_t* info)
         inclusion_mask[segment] = inclusion;
 
         /* Check For First Segment */
-        if(!first_segment_found && inclusion)
+        if(inclusion)
         {
-            /* If Coordinate Is In Raster */
-            first_segment_found = true;
-            first_segment = segment;
-            last_segment = segment;
-        }
-        else if(first_segment_found && !inclusion)
-        {
-            /* Update Number of Segments to Current Segment Count */
+            if(!first_segment_found)
+            {
+                first_segment_found = true;
+                first_segment = segment;
+            }
             last_segment = segment;
         }
 

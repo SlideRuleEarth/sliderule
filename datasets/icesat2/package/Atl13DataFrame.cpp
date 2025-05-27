@@ -167,20 +167,41 @@ okey_t Atl13DataFrame::getKey(void) const
  * AreaOfInterest::Constructor
  *----------------------------------------------------------------------------*/
 Atl13DataFrame::AreaOfInterest::AreaOfInterest (const Atl13DataFrame* df):
+    atl13refid      (df->hdf13, FString("%s/%s", df->beam, "atl13refid").c_str()),
     latitude        (df->hdf13, FString("%s/%s", df->beam, "segment_lat").c_str()),
     longitude       (df->hdf13, FString("%s/%s", df->beam, "segment_lon").c_str()),
-    inclusion_mask  {NULL},
-    inclusion_ptr   {NULL}
+    inclusionMask  {NULL},
+    inclusionPtr   {NULL}
 {
     try
     {
-        /* Join Reads */
+        /* Join ATL13 Reference ID Read */
+        atl13refid.join(df->readTimeoutMs, true);
+
+        /* Perform Initial Reference ID Search */
+        lastSegment = -1;
+        firstSegment = 0;
+        bool first_segment_found = false;
+        for(long i = 0; i < atl13refid.size; i++)
+        {
+            if(atl13refid[i] == df->parms->atl13.reference_id.value)
+            {
+                if(!first_segment_found)
+                {
+                    first_segment_found = true;
+                    firstSegment = i;
+                }
+                lastSegment = i;
+            }
+        }
+
+        /* Calculate Initial Number of Segments */
+        numSegments = lastSegment - firstSegment + 1;
+        if(numSegments <= 0) throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "reference id not found");
+
+        /* Join Latitude/Longitude Reads */
         latitude.join(df->readTimeoutMs, true);
         longitude.join(df->readTimeoutMs, true);
-
-        /* Initialize Region */
-        first_segment = 0;
-        num_segments = H5Coro::ALL_ROWS;
 
         /* Determine Spatial Extent */
         if(df->parms->regionMask.valid())
@@ -191,20 +212,16 @@ Atl13DataFrame::AreaOfInterest::AreaOfInterest (const Atl13DataFrame* df):
         {
             polyregion(df);
         }
-        else
-        {
-            num_segments = latitude.size;
-        }
 
         /* Check If Anything to Process */
-        if(num_segments <= 0)
+        if(numSegments <= 0)
         {
             throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "empty spatial region");
         }
 
         /* Trim Geospatial Extent Datasets Read from HDF5 File */
-        latitude.trim(first_segment);
-        longitude.trim(first_segment);
+        latitude.trim(firstSegment);
+        longitude.trim(firstSegment);
     }
     catch(const RunTimeException& e)
     {
@@ -226,8 +243,8 @@ Atl13DataFrame::AreaOfInterest::~AreaOfInterest (void)
  *----------------------------------------------------------------------------*/
 void Atl13DataFrame::AreaOfInterest::cleanup (void)
 {
-    delete [] inclusion_mask;
-    inclusion_mask = NULL;
+    delete [] inclusionMask;
+    inclusionMask = NULL;
 }
 
 /*----------------------------------------------------------------------------
@@ -237,8 +254,8 @@ void Atl13DataFrame::AreaOfInterest::polyregion (const Atl13DataFrame* df)
 {
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
-    int segment = 0;
-    while(segment < latitude.size)
+    int segment = firstSegment;
+    while(segment < lastSegment)
     {
         /* Test Inclusion */
         const bool inclusion = df->parms->polyIncludes(longitude[segment], latitude[segment]);
@@ -248,7 +265,7 @@ void Atl13DataFrame::AreaOfInterest::polyregion (const Atl13DataFrame* df)
         {
             /* If Coordinate Is In Polygon */
             first_segment_found = true;
-            first_segment = segment;
+            firstSegment = segment;
         }
         else if(first_segment_found && !inclusion)
         {
@@ -263,7 +280,7 @@ void Atl13DataFrame::AreaOfInterest::polyregion (const Atl13DataFrame* df)
     /* Set Number of Segments */
     if(first_segment_found)
     {
-        num_segments = segment - first_segment;
+        numSegments = segment - firstSegment;
     }
 }
 
@@ -272,40 +289,29 @@ void Atl13DataFrame::AreaOfInterest::polyregion (const Atl13DataFrame* df)
  *----------------------------------------------------------------------------*/
 void Atl13DataFrame::AreaOfInterest::rasterregion (const Atl13DataFrame* df)
 {
-    /* Find First Segment In Polygon */
+    /* Find First Segment In Raster */
     bool first_segment_found = false;
 
-    /* Check Size */
-    if(latitude.size <= 0)
-    {
-        return;
-    }
-
     /* Allocate Inclusion Mask */
-    inclusion_mask = new bool [latitude.size];
-    inclusion_ptr = inclusion_mask;
+    inclusionMask = new bool [numSegments];
+    inclusionPtr = inclusionMask;
 
     /* Loop Throuh Segments */
-    long last_segment = 0;
-    int segment = 0;
-    while(segment < latitude.size)
+    const long orig_last_segment = lastSegment;
+    int segment = firstSegment;
+    while(segment < orig_last_segment)
     {
         /* Check Inclusion */
         const bool inclusion = df->parms->maskIncludes(longitude[segment], latitude[segment]);
-        inclusion_mask[segment] = inclusion;
-
-        /* Check For First Segment */
-        if(!first_segment_found && inclusion)
+        inclusionMask[segment] = inclusion;
+        if(inclusion)
         {
-            /* If Coordinate Is In Raster */
-            first_segment_found = true;
-            first_segment = segment;
-            last_segment = segment;
-        }
-        else if(first_segment_found && !inclusion)
-        {
-            /* Update Number of Segments to Current Segment Count */
-            last_segment = segment;
+            if(!first_segment_found)
+            {
+                first_segment_found = true;
+                firstSegment = segment;
+            }
+            lastSegment = segment;
         }
 
         /* Bump Segment */
@@ -315,10 +321,10 @@ void Atl13DataFrame::AreaOfInterest::rasterregion (const Atl13DataFrame* df)
     /* Set Number of Segments */
     if(first_segment_found)
     {
-        num_segments = last_segment - first_segment + 1;
+        numSegments = lastSegment - firstSegment + 1;
 
         /* Trim Inclusion Mask */
-        inclusion_ptr = &inclusion_mask[first_segment];
+        inclusionPtr = &inclusionMask[firstSegment];
     }
 }
 
@@ -327,13 +333,12 @@ void Atl13DataFrame::AreaOfInterest::rasterregion (const Atl13DataFrame* df)
  *----------------------------------------------------------------------------*/
 Atl13DataFrame::Atl13Data::Atl13Data (Atl13DataFrame* df, const AreaOfInterest& aoi):
     sc_orient               (df->hdf13,                            "/orbit_info/sc_orient"),
-    delta_time              (df->hdf13, FString("%s/%s", df->beam, "delta_time").c_str(),               0, aoi.first_segment, aoi.num_segments),
-    ht_ortho                (df->hdf13, FString("%s/%s", df->beam, "ht_ortho").c_str(),                 0, aoi.first_segment, aoi.num_segments),
-    ht_water_surf           (df->hdf13, FString("%s/%s", df->beam, "ht_water_surf").c_str(),            0, aoi.first_segment, aoi.num_segments),
-    stdev_water_surf        (df->hdf13, FString("%s/%s", df->beam, "stdev_water_surf").c_str(),         0, aoi.first_segment, aoi.num_segments),
-    water_depth             (df->hdf13, FString("%s/%s", df->beam, "water_depth").c_str(),              0, aoi.first_segment, aoi.num_segments),
-    atl13refid              (df->hdf13, FString("%s/%s", df->beam, "atl13refid").c_str(),               0, aoi.first_segment, aoi.num_segments),
-    anc_data                (df->parms->atl13.anc_fields, df->hdf13, FString("%s", df->beam).c_str(),   0, aoi.first_segment, aoi.num_segments)
+    delta_time              (df->hdf13, FString("%s/%s", df->beam, "delta_time").c_str(),               0, aoi.firstSegment, aoi.numSegments),
+    ht_ortho                (df->hdf13, FString("%s/%s", df->beam, "ht_ortho").c_str(),                 0, aoi.firstSegment, aoi.numSegments),
+    ht_water_surf           (df->hdf13, FString("%s/%s", df->beam, "ht_water_surf").c_str(),            0, aoi.firstSegment, aoi.numSegments),
+    stdev_water_surf        (df->hdf13, FString("%s/%s", df->beam, "stdev_water_surf").c_str(),         0, aoi.firstSegment, aoi.numSegments),
+    water_depth             (df->hdf13, FString("%s/%s", df->beam, "water_depth").c_str(),              0, aoi.firstSegment, aoi.numSegments),
+    anc_data                (df->parms->atl13.anc_fields, df->hdf13, FString("%s", df->beam).c_str(),   0, aoi.firstSegment, aoi.numSegments)
 {
     /* Join Hardcoded Reads */
     sc_orient.join(df->readTimeoutMs, true);
@@ -342,7 +347,6 @@ Atl13DataFrame::Atl13Data::Atl13Data (Atl13DataFrame* df, const AreaOfInterest& 
     ht_water_surf.join(df->readTimeoutMs, true);
     stdev_water_surf.join(df->readTimeoutMs, true);
     water_depth.join(df->readTimeoutMs, true);
-    atl13refid.join(df->readTimeoutMs, true);
 
     /* Join and Add Ancillary Columns */
     anc_data.joinToGDF(df, df->readTimeoutMs, true);
@@ -375,12 +379,12 @@ void* Atl13DataFrame::subsettingThread (void* parm)
 
         /* Traverse All Photons In Dataset */
         int32_t current_segment = -1;
-        while(df->active && (++current_segment < atl13.atl13refid.size))
+        while(df->active && (++current_segment < aoi.numSegments))
         {
             /* Check AreaOfInterest Mask */
-            if(aoi.inclusion_ptr)
+            if(aoi.inclusionPtr)
             {
-                if(!aoi.inclusion_ptr[current_segment])
+                if(!aoi.inclusionPtr[current_segment])
                 {
                     continue;
                 }

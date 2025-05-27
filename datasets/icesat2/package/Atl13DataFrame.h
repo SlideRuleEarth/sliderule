@@ -102,16 +102,17 @@ class Atl13DataFrame: public GeoDataFrame
                 void cleanup            (void);
                 void polyregion         (const Atl13DataFrame* df);
                 void rasterregion       (const Atl13DataFrame* df);
-                void pointregion        (const Atl13DataFrame* df);
 
+                H5Array<int64_t>        atl13refid;
                 H5Array<double>         latitude;
                 H5Array<double>         longitude;
 
-                bool*                   inclusion_mask;
-                bool*                   inclusion_ptr;
+                bool*                   inclusionMask;
+                bool*                   inclusionPtr;
 
-                long                    first_segment;
-                long                    num_segments;
+                long                    firstSegment;
+                long                    lastSegment;
+                long                    numSegments;
         };
 
         /* Atl03 Data Subclass */
@@ -128,7 +129,6 @@ class Atl13DataFrame: public GeoDataFrame
                 H5Array<float>      ht_water_surf;
                 H5Array<float>      stdev_water_surf;
                 H5Array<float>      water_depth;
-                H5Array<int64_t>    atl13refid;
 
                 H5VarSet            anc_data;
         };
