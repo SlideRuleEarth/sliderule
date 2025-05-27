@@ -268,6 +268,30 @@ void PhorealFields::fromLua (lua_State* L, int index)
 }
 
 /*----------------------------------------------------------------------------
+ * Constructor - Atl13Fields
+ *----------------------------------------------------------------------------*/
+Atl13Fields::Atl13Fields():
+    FieldDictionary({ {"reference_id",  &reference_id},
+                      {"name",          &name},
+                      {"coordinate",    &coordinate},
+                      {"anc_fields",    &anc_fields} }),
+    provided(false)
+{
+}
+
+/*----------------------------------------------------------------------------
+ * fromLua - Atl13Fields
+ *----------------------------------------------------------------------------*/
+void Atl13Fields::fromLua (lua_State* L, int index)
+{
+    if(lua_istable(L, index))
+    {
+        FieldDictionary::fromLua(L, index);
+        provided = true;
+    }
+}
+
+/*----------------------------------------------------------------------------
  * Constructor - Atl24Fields
  *----------------------------------------------------------------------------*/
 Atl24Fields::Atl24Fields():
@@ -487,6 +511,7 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset
         {"fit",                 &fit},
         {"yapc",                &yapc},
         {"phoreal",             &phoreal},
+        {"atl13",               &atl13},
         {"atl24",               &atl24},
         {"maxi",                &maxIterations},
         {"H_min_win",           &minWindow},

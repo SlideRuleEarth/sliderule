@@ -12,6 +12,7 @@ target_sources (slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Dispatch.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Dispatch.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl13DataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13IODriver.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Reader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24DataFrame.cpp
@@ -41,6 +42,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Dispatch.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl06Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl08Dispatch.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Atl13DataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13IODriver.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl13Reader.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Atl24DataFrame.h
@@ -72,6 +74,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl08p.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl13s.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl13sp.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl13x.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/atl24x.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/indexer.lua
     DESTINATION

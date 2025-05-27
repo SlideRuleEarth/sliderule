@@ -266,7 +266,6 @@ Atl13Reader::Region::Region (const info_t* info):
         cleanup();
         throw;
     }
-
 }
 
 /*----------------------------------------------------------------------------
@@ -390,7 +389,7 @@ Atl13Reader::Atl13Data::Atl13Data (const info_t* info, const Region& region):
     ht_ortho                (info->reader->context, FString("%s/%s", info->prefix, "ht_ortho").c_str(),              0, region.first_segment, region.num_segments),
     ht_water_surf           (info->reader->context, FString("%s/%s", info->prefix, "ht_water_surf").c_str(),         0, region.first_segment, region.num_segments),
     segment_azimuth         (info->reader->context, FString("%s/%s", info->prefix, "segment_azimuth").c_str(),       0, region.first_segment, region.num_segments),
-    segment_quality         (info->reader->context, FString("%s/%s", info->prefix, "segment_quality").c_str(),       H5Coro::ALL_ROWS, region.first_segment, region.num_segments),
+    segment_quality         (info->reader->context, FString("%s/%s", info->prefix, "segment_quality").c_str(),       H5Coro::ALL_COLS, region.first_segment, region.num_segments),
     segment_slope_trk_bdy   (info->reader->context, FString("%s/%s", info->prefix, "segment_slope_trk_bdy").c_str(), 0, region.first_segment, region.num_segments),
     water_depth             (info->reader->context, FString("%s/%s", info->prefix, "water_depth").c_str(),           0, region.first_segment, region.num_segments)
 {

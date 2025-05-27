@@ -44,6 +44,7 @@
 #include "Atl06Reader.h"
 #include "Atl06Dispatch.h"
 #include "Atl08Dispatch.h"
+#include "Atl13DataFrame.h"
 #include "Atl13IODriver.h"
 #include "Atl13Reader.h"
 #include "Atl24DataFrame.h"
@@ -84,6 +85,7 @@ int icesat2_open (lua_State *L)
         {"atl03x",              Atl03DataFrame::luaCreate},
         {"fit",                 SurfaceFitter::luaCreate},
         {"phoreal",             PhoReal::luaCreate},
+        {"atl13x",              Atl13DataFrame::luaCreate},
         {"atl24x",              Atl24DataFrame::luaCreate},
 #ifdef __unittesting__
         {"ut_atl06",            UT_Atl06Dispatch::luaCreate},

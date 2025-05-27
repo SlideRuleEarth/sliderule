@@ -133,6 +133,52 @@ struct PhorealFields: public FieldDictionary
 };
 
 /****************/
+/* Atl13 Fields */
+/****************/
+struct Atl13Fields: public FieldDictionary
+{
+    typedef enum {
+        LAKE                = 1,
+        KNOWN_RESERVOIR     = 2,
+        EPHEMERAL_WATER     = 4,
+        RIVER               = 5,
+        ESTUARY_BAY         = 6,
+        COASTAL_WATER       = 7
+    } body_type_t;
+
+    typedef enum {
+        GT_10000_KM2        = 1,
+        GT_1000_KM2         = 2,
+        GT_100_KM2          = 3,
+        GT_10_KM2           = 4,
+        GT_1_KM2            = 5,
+        GT_01_KM2           = 6,
+        GT_001_KM2          = 7,
+        NOT_ASSIGNED        = 9
+    } body_size_t;
+
+    typedef enum {
+        HYDRO_LAKES                         = 1,
+        GLOBAL_LAKES_AND_WETLANDS_DATABASE  = 2,
+        NAMED_MARINE_WATER_BODIES           = 3,
+        GSHHG_SHORELINE                     = 4,
+        GLOBAL_RIVER_WIDTHS_FROM_LANDSAT    = 5
+    } body_source_t;
+    
+    FieldElement<int64_t>           reference_id {0};   // atl13refid
+    FieldElement<string>            name;               // lake name
+    FieldElement<MathLib::coord_t>  coordinate;         // lake coordinate (contains)
+    FieldList<string>               anc_fields;         // list of additional ATL13 fields
+
+    Atl13Fields(void);
+    ~Atl13Fields(void) override = default;
+
+    virtual void fromLua (lua_State* L, int index) override;
+
+    bool provided;
+};
+
+/****************/
 /* Atl24 Fields */
 /****************/
 struct Atl24Fields: public FieldDictionary
@@ -456,6 +502,7 @@ class Icesat2Fields: public RequestFields
         FitFields                                           fit;                                                    // settings used in the surface fitter algorithm
         YapcFields                                          yapc;                                                   // settings used in YAPC algorithm
         PhorealFields                                       phoreal;                                                // phoreal algorithm settings
+        Atl13Fields                                         atl13;                                                  // atl13 subsetter parameters
         Atl24Fields                                         atl24;                                                  // atl24 algorithm settings
         FieldElement<int>                                   maxIterations {5};                                      // DEPRECATED (use FitFields)
         FieldElement<double>                                minWindow {3.0};                                        // DEPRECATED (use FitFields)
