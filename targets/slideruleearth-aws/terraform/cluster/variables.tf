@@ -105,3 +105,12 @@ variable "spot_allocation_strategy" {
   type        = string
   default     = "lowest-price"
 }
+
+# ------------------------------------------------------------
+# Provisioning System
+# ------------------------------------------------------------
+variable "prov_sys_handshake" {
+  description = "Well known output the provisioning system can key off of on a refresh command"
+  type        = string
+  default     = "sliderule"
+}
