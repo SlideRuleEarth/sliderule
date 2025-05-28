@@ -378,7 +378,7 @@ int H5File::luaReadColumn (lua_State* L)
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Failed to read resource: %s", e.what());
-        if(future) delete future;
+        delete future;
     }
 
     /* Return Status */

@@ -181,6 +181,7 @@ CompileTimeAssert(sizeof(bool)==1, TypeboolWrongSize);
 #define ACC_ERR_RC                  (-10)
 
 /* I/O Definitions */
+#define IO_INVALID_TIMEOUT          (-2)
 #define IO_PEND                     (-1)
 #define IO_CHECK                    (0)
 #define IO_DEFAULT_TIMEOUT          (1000) // ms

@@ -196,7 +196,7 @@ int H5Column::luaSum (lua_State* L)
         lua_obj->join(timeout);
 
         // calculate sum
-        double result = lua_obj->column->sum();
+        const double result = lua_obj->column->sum();
         lua_pushnumber(L, result);
         num_ret++;
     }
@@ -228,7 +228,7 @@ int H5Column::luaMean (lua_State* L)
         lua_obj->join(timeout);
 
         // calculate average (mean)
-        double result = lua_obj->column->mean();
+        const double result = lua_obj->column->mean();
         lua_pushnumber(L, result);
         num_ret++;
     }
@@ -260,7 +260,7 @@ int H5Column::luaMedian (lua_State* L)
         lua_obj->join(timeout);
 
         // calculate average (median)
-        double result = lua_obj->column->median();
+        const double result = lua_obj->column->median();
         lua_pushnumber(L, result);
         num_ret++;
     }
@@ -292,7 +292,7 @@ int H5Column::luaMode (lua_State* L)
         lua_obj->join(timeout);
 
         // calculate average (mode)
-        double result = lua_obj->column->mode();
+        const double result = lua_obj->column->mode();
         lua_pushnumber(L, result);
         num_ret++;
     }
@@ -321,7 +321,7 @@ int H5Column::luaUnique (lua_State* L)
         lua_obj->join(timeout);
 
         // calculate unique values
-        FieldUntypedColumn::unique_map_t result = lua_obj->column->unique();
+        const FieldUntypedColumn::unique_map_t result = lua_obj->column->unique();
 
         // return results in a table
         lua_newtable(L);

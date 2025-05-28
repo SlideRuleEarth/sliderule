@@ -395,10 +395,10 @@ void RequestFields::fromLua (lua_State* L, int index)
     FieldDictionary::fromLua(L, index);
 
     // set timeouts (if necessary)
-    if(timeout == INVALID_TIMEOUT)      timeout = SystemConfig::settings().requestTimeoutSec.value;
-    if(rqstTimeout == INVALID_TIMEOUT)  rqstTimeout = timeout;
-    if(nodeTimeout == INVALID_TIMEOUT)  nodeTimeout = timeout;
-    if(readTimeout == INVALID_TIMEOUT)  readTimeout = timeout;
+    if(timeout == IO_INVALID_TIMEOUT)      timeout = SystemConfig::settings().requestTimeoutSec.value;
+    if(rqstTimeout == IO_INVALID_TIMEOUT)  rqstTimeout = timeout;
+    if(nodeTimeout == IO_INVALID_TIMEOUT)  nodeTimeout = timeout;
+    if(readTimeout == IO_INVALID_TIMEOUT)  readTimeout = timeout;
 
     // project polygon (if necessary)
     pointsInPolygon = polygon.length();

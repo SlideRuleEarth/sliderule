@@ -70,7 +70,6 @@ class RequestFields: public LuaObject, public FieldDictionary
         static const struct luaL_Reg LUA_META_TABLE[];
 
         static const uint64_t DEFAULT_KEY_SPACE = INVALID_KEY;
-        static const int INVALID_TIMEOUT = -2;
 
         /*--------------------------------------------------------------------
          * Methods
@@ -113,10 +112,10 @@ class RequestFields: public LuaObject, public FieldDictionary
         FieldElement<MathLib::proj_t>   projection          {MathLib::AUTOMATIC_PROJECTION};
         FieldElement<MathLib::datum_t>  datum               {MathLib::UNSPECIFIED_DATUM};
         FieldElement<int>               pointsInPolygon     {0};
-        FieldElement<int>               timeout             {INVALID_TIMEOUT}; // global timeout
-        FieldElement<int>               rqstTimeout         {INVALID_TIMEOUT};
-        FieldElement<int>               nodeTimeout         {INVALID_TIMEOUT};
-        FieldElement<int>               readTimeout         {INVALID_TIMEOUT};
+        FieldElement<int>               timeout             {IO_INVALID_TIMEOUT}; // global timeout
+        FieldElement<int>               rqstTimeout         {IO_INVALID_TIMEOUT};
+        FieldElement<int>               nodeTimeout         {IO_INVALID_TIMEOUT};
+        FieldElement<int>               readTimeout         {IO_INVALID_TIMEOUT};
         FieldElement<int>               clusterSizeHint     {0};
         FieldElement<uint64_t>          keySpace            {INVALID_KEY};
         RegionMask                      regionMask;

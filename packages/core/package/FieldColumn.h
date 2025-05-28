@@ -714,7 +714,7 @@ double FieldColumn<T>::mode (long start_index, long num_elements) const
  * FieldUntypedColumn - mode
  *----------------------------------------------------------------------------*/
 template<class T>
-FieldColumn<T>::unique_map_t FieldColumn<T>::unique (long start_index, long num_elements, long scale) const
+typename FieldColumn<T>::unique_map_t FieldColumn<T>::unique (long start_index, long num_elements, long scale) const
 {
     unique_map_t unique_map;
     if(num_elements < 0) num_elements = length();
