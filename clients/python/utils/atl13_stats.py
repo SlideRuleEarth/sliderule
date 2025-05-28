@@ -1,11 +1,8 @@
 import os
+import json
 import argparse
-from sliderule import sliderule, earthdata
 from concurrent.futures import as_completed, ThreadPoolExecutor
-import threading
-import pandas as pd
-import geopandas as gpd
-import numpy as np
+from sliderule import sliderule, earthdata
 
 # -------------------------------------------
 # command line arguments
@@ -17,9 +14,8 @@ parser.add_argument('--domain',         type=str,               default="slideru
 parser.add_argument('--organization',   type=str,               default="developers")
 parser.add_argument('--granule',        type=str,               default=None) # "ATL13_20250302152414_11692601_006_01.h5"
 parser.add_argument('--input_file',     type=str,               default="/data/atl13_granules.txt")
-parser.add_argument('--output_file',    type=str,               default="/data/atl13_processed.txt")
-parser.add_argument('--database_file',  type=str,               default="/data/atl13_database.csv")
-parser.add_argument('--concurrency',    type=int,               default=6)
+parser.add_argument('--database_file',  type=str,               default="/data/atl13_database.json")
+parser.add_argument('--concurrency',    type=int,               default=8)
 parser.add_argument('--query',          action='store_true',    default=False)  # query CMR to build list of filenames
 parser.add_argument('--verbose',        action='store_true',    default=False)
 parser.add_argument('--dryrun',         action='store_true',    default=False)
@@ -37,7 +33,9 @@ if not args.dryrun:
 # globals
 # -------------------------------------------
 
-atl13_database = {} # refid => [granule, ...]
+atl13_id = 0
+atl13_refids = {} # refid => [granule_id, ...]
+atl13_granules = {} # granule_id => granule
 
 # -------------------------------------------
 # remote procedure to execute on sliderule
@@ -49,13 +47,28 @@ local json = require("json")
 
 local asset = core.getbyname("icesat2-atl13")
 local h5obj = h5.file(asset, "{granule}")
-local column = h5obj:readp("gt1r/atl13refid")
-local values = column:unique()
+
+local column_gt1l = h5obj:readp("gt1l/atl13refid")
+local column_gt1r = h5obj:readp("gt1r/atl13refid")
+local column_gt2l = h5obj:readp("gt2l/atl13refid")
+local column_gt2r = h5obj:readp("gt2r/atl13refid")
+local column_gt3l = h5obj:readp("gt3l/atl13refid")
+local column_gt3r = h5obj:readp("gt3r/atl13refid")
+
+local function count(results, column)
+    local values = column:unique()
+    for k,_ in pairs(values) do
+        results[tostring(k)] = true
+    end
+end
 
 local results = {{}}
-for k,v in pairs(values) do
-    results[tostring(k)] = v
-end
+count(results, column_gt1l)
+count(results, column_gt1r)
+count(results, column_gt2l)
+count(results, column_gt2r)
+count(results, column_gt3l)
+count(results, column_gt3r)
 
 return json.encode(results)
 """
@@ -66,9 +79,9 @@ return json.encode(results)
 
 def worker (granule):
     if args.dryrun:
-        return granule
+        return (granule, None)
     else:
-        return sliderule.source("ace", remote_procedure(granule))
+        return (granule, sliderule.source("ace", remote_procedure(granule)))
 
 # -------------------------------------------
 # query CMR for ATL13 granules
@@ -90,24 +103,18 @@ if args.query:
 # get list of ATL13 granules to process
 # -------------------------------------------
 
-# read list of granules already processed
-granules_already_processed = {}
-if os.path.exists(args.output_file):
-    with open(args.output_file, "r") as file:
-        for line in file.readlines():
-            filename = line.strip()
-            granules_already_processed[filename] = True
-
 # initialize list of granules to process
 granules_to_process = {}
 if args.granule != None:
-    granules_to_process[args.granule] = True
+    granules_to_process[args.granule] = atl13_id
+    atl13_granules[atl13_id] = args.granule
 else:
     with open(args.input_file, "r") as file:
         for line in file.readlines():
             filename = line.strip()
-            if filename not in granules_already_processed:
-                granules_to_process[filename] = True
+            granules_to_process[filename] = atl13_id
+            atl13_granules[atl13_id] = filename
+            atl13_id += 1
 
 # ---------------------------
 # run multiple workers
@@ -116,5 +123,25 @@ else:
 with ThreadPoolExecutor(max_workers=args.concurrency) as executor:
     futures = [executor.submit(worker, granule) for granule in granules_to_process]
     for future in as_completed(futures):
-        result = future.result()
-        print(result)
+        granule, result = future.result()
+        print(f'Processed {granule}: {len(result)} reference ids')
+        try:
+            for refid in result:
+                if refid not in atl13_refids:
+                    atl13_refids[refid] = set()
+                atl13_refids[refid].add(granules_to_process[granule])
+        except Exception as e:
+            print(f'Error parsing results for {granule}: {e}')
+            print(f'Returned: {result}')
+
+# ---------------------------
+# output atl13 database
+# ---------------------------
+
+# convert sets to list to make json serializable
+for refid in atl13_refids:
+    atl13_refids[refid] = list(atl13_refids[refid])
+
+# write out as json
+with open(args.database_file, "w") as file:
+    file.write(json.dumps({"refids": atl13_refids, "granules": atl13_granules}))
