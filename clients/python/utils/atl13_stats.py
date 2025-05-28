@@ -1,4 +1,3 @@
-import os
 import json
 import argparse
 from concurrent.futures import as_completed, ThreadPoolExecutor
@@ -14,7 +13,7 @@ parser.add_argument('--domain',         type=str,               default="slideru
 parser.add_argument('--organization',   type=str,               default="developers")
 parser.add_argument('--granule',        type=str,               default=None) # "ATL13_20250302152414_11692601_006_01.h5"
 parser.add_argument('--input_file',     type=str,               default="/data/atl13_granules.txt")
-parser.add_argument('--database_file',  type=str,               default="/data/atl13_database.json")
+parser.add_argument('--mapping_file',   type=str,               default="/data/atl13_mappings.json")
 parser.add_argument('--concurrency',    type=int,               default=8)
 parser.add_argument('--query',          action='store_true',    default=False)  # query CMR to build list of filenames
 parser.add_argument('--verbose',        action='store_true',    default=False)
@@ -135,7 +134,7 @@ with ThreadPoolExecutor(max_workers=args.concurrency) as executor:
             print(f'Returned: {result}')
 
 # ---------------------------
-# output atl13 database
+# output atl13 mappings
 # ---------------------------
 
 # convert sets to list to make json serializable
@@ -143,5 +142,5 @@ for refid in atl13_refids:
     atl13_refids[refid] = list(atl13_refids[refid])
 
 # write out as json
-with open(args.database_file, "w") as file:
+with open(args.mapping_file, "w") as file:
     file.write(json.dumps({"refids": atl13_refids, "granules": atl13_granules}))
