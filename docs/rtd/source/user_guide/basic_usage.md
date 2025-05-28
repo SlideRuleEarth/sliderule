@@ -133,10 +133,10 @@ In order to facilitate other formats, the `sliderule.toregion` function can be u
 
 #### Rasterized Area of Interest
 
-There is no limit to the number of points in the polygon, but note that as the number of points grow, the amount of time it takes to perform the subsetting process also grows. Also, some regions cannot be expressed as a single polygon because they have holes in them or define discrete unconnected areas. Because of this, one of the outputs of the `sliderule.toregion` function is a GeoJSON object for describing complex geometries.  It is available under the `"region_mask"` element of the returned dictionary.
+There is no limit to the number of points in the polygon, but note that as the number of points grow, the amount of time it takes to perform the subsetting process also grows. Also, some regions cannot be expressed as a single polygon because they have holes in them or define discrete unconnected areas. Because of this, one of the outputs of the `sliderule.toregion` function is a GeoJSON object for describing complex geometries.  It is available under the `"raster"` element of the returned dictionary.
 
-When the GeoJSON is supplied in the parameters sent in the request, the server side software forgoes using the polygon for subsetting operations, and instead builds a raster of the GeoJSON object using the specified cellsize, and then uses that raster image as a mask to determine which points in the source datasets are included in the region of interest.  The applicable parameters use to specify this functionality are:
-* `raster`: geojson describing region of interest, enables use of rasterized region for subsetting
+When the GeoJSON is supplied in the parameters sent in the request, the server side software forgoes using the polygon for subsetting operations, and instead builds a raster of the GeoJSON object using the specified cellsize, and then uses that raster image as a mask to determine which points in the source datasets are included in the region of interest.  The applicable parameters within the `"raster"` element used to specify this functionality are:
+* `geojson`: geojson describing region of interest, enables use of rasterized region for subsetting
 * `cellsize`: the resolution to rasterize the GeoJSON; currently the units are spherical degrees and no projections are supported, but support for projections will be included in future releases
 
 The example code below shows how this option can be enabled and used (note, the `poly` parameter is still required):

@@ -856,7 +856,7 @@ def search(parm, resources=None):
     # Build Name Filter
     name_filter_enabled = False
     if "asset" in parm:
-        if parm["asset"] == "icesat2":
+        if "icesat2" in parm["asset"]:
             rgt_filter = '????'
             if "rgt" in parm and parm["rgt"] != None:
                 rgt_filter = f'{parm["rgt"]}'.zfill(4)

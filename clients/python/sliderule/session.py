@@ -224,6 +224,12 @@ class Session:
         else:
             url = 'http://%s%s/%s' % (self.service_domain, path, api)
 
+        # Construct Payload
+        if type(parm) == dict:
+            payload = json.dumps(parm)
+        else:
+            payload = parm
+
         # Attempt request
         complete = False
         attempts = 3
@@ -236,9 +242,9 @@ class Session:
 
                 # Perform Request
                 if not stream:
-                    data = self.session.get(url, data=json.dumps(parm), headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
+                    data = self.session.get(url, data=payload, headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
                 else:
-                    data = self.session.post(url, data=json.dumps(parm), headers=headers, timeout=self.rqst_timeout, stream=True, verify=self.ssl_verify)
+                    data = self.session.post(url, data=payload, headers=headers, timeout=self.rqst_timeout, stream=True, verify=self.ssl_verify)
                 data.raise_for_status()
 
                 # Parse Response
