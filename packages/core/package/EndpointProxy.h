@@ -57,7 +57,6 @@ class EndpointProxy: public LuaObject
         static const int PROXY_QUEUE_DEPTH = 1000;
         static const int MAX_PROXY_THREADS = 200;
         static const int DEFAULT_PROXY_THREADS = 40; // when no better method to determine is available
-        static const int DEFAULT_TIMEOUT = 600; // seconds
         static const int NUM_RETRIES = 3;
 
         static const char* SERVICE;

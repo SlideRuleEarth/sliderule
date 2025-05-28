@@ -29,24 +29,23 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __h5_file__
-#define __h5_file__
+#ifndef __h5_column__
+#define __h5_column__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "OsApi.h"
 #include "LuaObject.h"
-#include "RecordObject.h"
-#include "Asset.h"
+#include "OsApi.h"
 #include "H5Coro.h"
+#include "FieldColumn.h"
 
 /******************************************************************************
- * HDF5 FILE CLASS
+ * CLASS
  ******************************************************************************/
 
-class H5File: public LuaObject
+class H5Column: public LuaObject
 {
     public:
 
@@ -54,68 +53,34 @@ class H5File: public LuaObject
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAX_NAME_STR = H5CORO_MAXIMUM_NAME_SIZE;
-
         static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 
-        static const char* recType;
-        static const RecordObject::fieldDef_t recDef[];
-
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            char        dataset[MAX_NAME_STR];
-            uint32_t    datatype; // RecordObject::fieldType_t
-            uint32_t    elements; // number of values
-            uint32_t    size; // total size in bytes
-        } h5file_t;
-
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int          luaCreate           (lua_State* L);
-        static void         init                (void);
+        H5Column    (lua_State* L, H5Coro::Future* _future);
+        ~H5Column   (void) override;
 
-    protected:
+        void        join        (int timeout_ms);
 
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef struct {
-            const char*             dataset;
-            RecordObject::valType_t valtype;
-            long                    col;
-            long                    startrow;
-            long                    numrows;
-            const char*             outqname;
-            H5File*                 h5file;
-        } dataset_info_t;
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-                            H5File              (lua_State* L, Asset* _asset, H5Coro::Context* _context);
-                            ~H5File             (void) override;
-
-        static void*        readThread          (void* parm);
-
-        static int          luaRead             (lua_State* L);
-        static int          luaInspect          (lua_State* L);
-        static int          luaReadColumn       (lua_State* L);
+        static int  luaTimeout  (lua_State* L);
+        static int  luaIndex    (lua_State* L);
+        static int  luaSum      (lua_State* L);
+        static int  luaMean     (lua_State* L);
+        static int  luaMedian   (lua_State* L);
+        static int  luaMode     (lua_State* L);
+        static int  luaUnique   (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        Asset*              asset;
-        H5Coro::Context*    context;
+        int timeoutMs;
+        H5Coro::Future* future;
+        FieldUntypedColumn* column;
 };
 
-#endif  /* __h5_file__ */
+#endif  /* __h5_object__ */

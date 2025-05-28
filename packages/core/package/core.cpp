@@ -204,9 +204,9 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "TIME8",                    RecordObject::TIME8);
     LuaEngine::setAttrInt   (L, "STRING",                   RecordObject::STRING);
     LuaEngine::setAttrInt   (L, "USER",                     RecordObject::USER);
-    LuaEngine::setAttrInt   (L, "RQST_TIMEOUT",             RequestFields::DEFAULT_TIMEOUT);
-    LuaEngine::setAttrInt   (L, "NODE_TIMEOUT",             RequestFields::DEFAULT_TIMEOUT);
-    LuaEngine::setAttrInt   (L, "READ_TIMEOUT",             RequestFields::DEFAULT_TIMEOUT);
+    LuaEngine::setAttrInt   (L, "RQST_TIMEOUT",             SystemConfig::settings().requestTimeoutSec.value);
+    LuaEngine::setAttrInt   (L, "NODE_TIMEOUT",             SystemConfig::settings().requestTimeoutSec.value);
+    LuaEngine::setAttrInt   (L, "READ_TIMEOUT",             SystemConfig::settings().requestTimeoutSec.value);
     LuaEngine::setAttrInt   (L, "CLUSTER_SIZE_HINT",        0);
     LuaEngine::setAttrInt   (L, "MAX_LOCKS_PER_NODE",       OrchestratorLib::MAX_LOCKS_PER_NODE);
     LuaEngine::setAttrInt   (L, "INVALID_TX_ID",            OrchestratorLib::INVALID_TX_ID);

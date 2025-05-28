@@ -41,6 +41,7 @@
 #include "MsgQ.h"
 #include "Table.h"
 #include "EventLib.h"
+#include "SystemConfig.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -1660,7 +1661,7 @@ int GeoDataFrame::luaReceive(lua_State* L)
         const char* inq_name = getLuaString(L, 2);
         const char* outq_name = getLuaString(L, 3);
         const int num_channels = getLuaInteger(L, 4, true, 1);
-        const int timeout = getLuaInteger(L, 5, true, RequestFields::DEFAULT_TIMEOUT * 1000);
+        const int timeout = getLuaInteger(L, 5, true, SystemConfig::settings().requestTimeoutSec.value * 1000);
 
         // check if already received
         if(dataframe->receivePid)

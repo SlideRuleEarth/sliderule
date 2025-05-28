@@ -9,6 +9,7 @@ target_link_libraries (slideruleLib PUBLIC ${ZLIB_LIBRARIES})
 target_sources(slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/h5.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/H5Column.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Coro.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Dense.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/H5DArray.cpp
@@ -29,6 +30,7 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/h5.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Array.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/H5Column.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Coro.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5Dense.h
         ${CMAKE_CURRENT_LIST_DIR}/package/H5DArray.h

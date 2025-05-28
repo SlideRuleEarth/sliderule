@@ -36,13 +36,16 @@
  * INCLUDES
  ******************************************************************************/
 
- #include <limits>
+#include <limits>
+#include <unordered_map>
 
 #include "OsApi.h"
 #include "MathLib.h"
 #include "LuaEngine.h"
 #include "Field.h"
 #include "FieldList.h"
+
+using std::unordered_map;
 
 /******************************************************************************
  * CLASS
@@ -57,6 +60,8 @@ struct FieldUntypedColumn: public Field
         long size;
     } column_t;
 
+    typedef unordered_map<int64_t, int64_t> unique_map_t;
+
     explicit FieldUntypedColumn (uint32_t _encoding=0):
          Field(COLUMN, _encoding) {};
     ~FieldUntypedColumn (void) = default;
@@ -65,10 +70,11 @@ struct FieldUntypedColumn: public Field
     virtual int toLua (lua_State* L) const override {(void)L; return 0;};
     virtual void fromLua (lua_State* L, int index) override {(void)L; (void)index;};
 
-    virtual double sum (long start_index, long num_elements) const {(void)start_index; (void)num_elements; return 0.0;};
-    virtual double mean (long start_index, long num_elements) const {(void)start_index; (void)num_elements; return 0.0;};
-    virtual double median (long start_index, long num_elements) const {(void)start_index; (void)num_elements; return 0.0;};
-    virtual double mode (long start_index, long num_elements) const {(void)start_index; (void)num_elements; return 0.0;};
+    virtual double sum (long start_index = 0, long num_elements = -1) const {(void)start_index; (void)num_elements; return 0.0;};
+    virtual double mean (long start_index = 0, long num_elements = -1) const {(void)start_index; (void)num_elements; return 0.0;};
+    virtual double median (long start_index = 0, long num_elements = -1) const {(void)start_index; (void)num_elements; return 0.0;};
+    virtual double mode (long start_index = 0, long num_elements = -1) const {(void)start_index; (void)num_elements; return 0.0;};
+    virtual unique_map_t unique (long start_index = 0, long num_elements = -1, long scale = 1) const {(void)start_index; (void)num_elements; (void)scale; return unique_map_t();};
 };
 
 template <class T>
@@ -105,11 +111,12 @@ class FieldColumn: public FieldUntypedColumn
         T               operator[]      (long i) const;
         T&              operator[]      (long i);
 
-        double          sum             (long start_index, long num_elements) const override;
-        double          mean            (long start_index, long num_elements) const override;
-        double          median          (long start_index, long num_elements) const override;
-        double          mode            (long start_index, long num_elements) const override;
-
+        double          sum             (long start_index = 0, long num_elements = -1) const override;
+        double          mean            (long start_index = 0, long num_elements = -1) const override;
+        double          median          (long start_index = 0, long num_elements = -1) const override;
+        double          mode            (long start_index = 0, long num_elements = -1) const override;
+        unique_map_t    unique          (long start_index = 0, long num_elements = -1, long scale = 1) const override;
+        
         string          toJson          (void) const override;
         int             toLua           (lua_State* L) const override;
         int             toLua           (lua_State* L, long key) const override;
@@ -609,6 +616,8 @@ T& FieldColumn<T>::operator[](long i)
 template<class T>
 double FieldColumn<T>::sum (long start_index, long num_elements) const
 {
+    if(num_elements < 0) num_elements = length();
+    if(num_elements == 0) return 0.0;
     double acc = 0;
     column_t column = toDoubles(*this, start_index, num_elements);
     for(long i = 0; i < column.size; i++)
@@ -625,6 +634,7 @@ double FieldColumn<T>::sum (long start_index, long num_elements) const
 template<class T>
 double FieldColumn<T>::mean (long start_index, long num_elements) const
 {
+    if(num_elements < 0) num_elements = length();
     if(num_elements == 0) return 0.0;
     double avg;
     column_t column = toDoubles(*this, start_index, num_elements);
@@ -647,6 +657,7 @@ double FieldColumn<T>::mean (long start_index, long num_elements) const
 template<class T>
 double FieldColumn<T>::median (long start_index, long num_elements) const
 {
+    if(num_elements < 0) num_elements = length();
     if(num_elements == 0) return 0.0;
     double avg;
     column_t column = toDoubles(*this, start_index, num_elements);
@@ -672,7 +683,8 @@ double FieldColumn<T>::median (long start_index, long num_elements) const
 template<class T>
 double FieldColumn<T>::mode (long start_index, long num_elements) const
 {
-    if(num_elements <= 0) return 0.0;
+    if(num_elements < 0) num_elements = length();
+    if(num_elements == 0) return 0.0;
     column_t column = toDoubles(*this, start_index, num_elements);
     MathLib::quicksort(column.data, 0, column.size - 1);
     double avg = column.data[0];
@@ -696,6 +708,32 @@ double FieldColumn<T>::mode (long start_index, long num_elements) const
     }
     delete [] column.data;
     return avg;
+}
+
+/*----------------------------------------------------------------------------
+ * FieldUntypedColumn - mode
+ *----------------------------------------------------------------------------*/
+template<class T>
+FieldColumn<T>::unique_map_t FieldColumn<T>::unique (long start_index, long num_elements, long scale) const
+{
+    unique_map_t unique_map;
+    if(num_elements < 0) num_elements = length();
+    if(num_elements > 0)
+    {
+        column_t column = toDoubles(*this, start_index, num_elements);
+        for(long i = 0; i < column.size; i++)
+        {
+            double value = column.data[i] * scale;
+            if(value >= static_cast<double>(std::numeric_limits<int64_t>::min()) &&
+            value <= static_cast<double>(std::numeric_limits<int64_t>::max())) 
+            {
+                int64_t scaled_key = static_cast<int64_t>(value);
+                unique_map[scaled_key]++; // no need to check, defaults to zero when doesn't exist
+            }
+        }
+        delete [] column.data;
+    }
+    return unique_map;
 }
 
 /*----------------------------------------------------------------------------

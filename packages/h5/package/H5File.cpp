@@ -36,6 +36,7 @@
 #include "OsApi.h"
 #include "H5File.h"
 #include "H5Array.h"
+#include "H5Column.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -46,6 +47,7 @@ const char* H5File::LUA_META_NAME = "H5File";
 const struct luaL_Reg H5File::LUA_META_TABLE[] = {
     {"read",        luaRead},
     {"inspect",     luaInspect},
+    {"readp",       luaReadColumn},
     {NULL,          NULL}
 };
 
@@ -349,4 +351,36 @@ int H5File::luaInspect (lua_State* L)
 
     /* Return Status */
     return returnLuaStatus(L, status);
+}
+
+/*----------------------------------------------------------------------------
+ * luaReadColumn - :readp(dataset) --> field column
+ *----------------------------------------------------------------------------*/
+int H5File::luaReadColumn (lua_State* L)
+{
+    H5File* lua_obj = NULL;
+    H5Coro::Future* future = NULL;
+
+    try
+    {
+        /* Get Parameters */
+        lua_obj = dynamic_cast<H5File*>(getLuaSelf(L, 1));
+        const char* dataset = getLuaString(L, 2);
+        const long startrow = getLuaInteger(L, 3, true, 0);
+        const long numrows = getLuaInteger(L, 4, true, H5Coro::ALL_ROWS);
+        const long col = getLuaInteger(L, 5, true, H5Coro::ALL_COLS);
+
+        /* Initiate Read */
+        H5Coro::range_t slice[2] = COLUMN_SLICE(col, startrow, numrows);
+        future = H5Coro::readp(lua_obj->context, dataset, RecordObject::DYNAMIC, slice, 2);
+        return createLuaObject(L, new H5Column(L, future));
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Failed to read resource: %s", e.what());
+        if(future) delete future;
+    }
+
+    /* Return Status */
+    return returnLuaStatus(L, false);
 }

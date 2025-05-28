@@ -114,6 +114,8 @@ class SystemConfig: public FieldDictionary
         FieldElement<bool>              inCloud                     {false};
         FieldElement<string>            systemBucket                {"sliderule"};
         FieldList<string>               postStartupScripts;
+        FieldElement<int>               publishTimeoutMs            {60000}; // 1 minute
+        FieldElement<int>               requestTimeoutSec           {600}; // 10 minutes
 
         // ENVIRONMENT VARIABLES
         FieldElement<string>            ipv4                        {"127.0.0.1"};

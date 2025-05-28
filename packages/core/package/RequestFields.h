@@ -70,15 +70,7 @@ class RequestFields: public LuaObject, public FieldDictionary
         static const struct luaL_Reg LUA_META_TABLE[];
 
         static const uint64_t DEFAULT_KEY_SPACE = INVALID_KEY;
-
-        /*--------------------------------------------------------------------
-         * Types
-         *--------------------------------------------------------------------*/
-
-        typedef enum {
-            DEFAULT_TIMEOUT = 600, // seconds
-            INVALID_TIMEOUT = -2
-        } timeout_settings_t;
+        static const int INVALID_TIMEOUT = -2;
 
         /*--------------------------------------------------------------------
          * Methods

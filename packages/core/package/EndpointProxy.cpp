@@ -41,6 +41,7 @@
 #include "CurlLib.h"
 #include "RequestFields.h"
 #include "EndpointProxy.h"
+#include "SystemConfig.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -101,7 +102,7 @@ int EndpointProxy::luaCreate (lua_State* L)
 
         /* Get Parameters Continued */
         const char* _parameters         = getLuaString(L, 3); // get request parameters
-        const int   _timeout_secs       = getLuaInteger(L, 4, true, EndpointProxy::DEFAULT_TIMEOUT); // get timeout in seconds
+        const int   _timeout_secs       = getLuaInteger(L, 4, true, SystemConfig::settings().requestTimeoutSec.value); // get timeout in seconds
         const int   _locks_per_node     = getLuaInteger(L, 5, true, 1); // get the number of locks per node to request
         const char* _outq_name          = getLuaString(L, 6); // get output queue
         const bool  _send_terminator    = getLuaBoolean(L, 7, true, false); // get send terminator flag

@@ -139,6 +139,8 @@ SystemConfig::SystemConfig(void):
         {"in_cloud",                    &inCloud},
         {"sys_bucket",                  &systemBucket},
         {"post_startup_scripts",        &postStartupScripts},
+        {"publish_timeout_ms",          &publishTimeoutMs},
+        {"request_timeout_sec",         &requestTimeoutSec},
         {"ipv4",                        &ipv4},
         {"environment_version",         &environmentVersion},
         {"orchestrator_url;",           &orchestratorURL},

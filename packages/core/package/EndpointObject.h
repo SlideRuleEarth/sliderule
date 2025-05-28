@@ -58,8 +58,6 @@ class EndpointObject: public LuaObject
 
         static const char* OBJECT_TYPE;
 
-        static const int POST_TIMEOUT_MS = 60000;
-        static const int MAX_RESPONSE_TIME_MS = 60000;
         static const int MAX_HDR_SIZE = MAX_STR_SIZE;
         static const int EXPECTED_MAX_HEADER_FIELDS = 32;
 

@@ -395,7 +395,7 @@ void RequestFields::fromLua (lua_State* L, int index)
     FieldDictionary::fromLua(L, index);
 
     // set timeouts (if necessary)
-    if(timeout == INVALID_TIMEOUT)      timeout = DEFAULT_TIMEOUT;
+    if(timeout == INVALID_TIMEOUT)      timeout = SystemConfig::settings().requestTimeoutSec.value;
     if(rqstTimeout == INVALID_TIMEOUT)  rqstTimeout = timeout;
     if(nodeTimeout == INVALID_TIMEOUT)  nodeTimeout = timeout;
     if(readTimeout == INVALID_TIMEOUT)  readTimeout = timeout;

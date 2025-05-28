@@ -177,12 +177,12 @@ void* LuaEndpoint::requestThread (void* parm)
         /* Respond with Unauthorized Error */
         char header[MAX_HDR_SIZE];
         const int header_length = buildheader(header, Unauthorized);
-        rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
+        rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
         status_code = RTE_UNAUTHORIZED;
     }
 
     /* End Response */
-    const int rc = rspq->postCopy("", 0, POST_TIMEOUT_MS);
+    const int rc = rspq->postCopy("", 0, SystemConfig::settings().publishTimeoutMs.value);
     if(rc <= 0)
     {
         mlog(CRITICAL, "Failed to post terminator on %s: %d", rspq->getName(), rc);
@@ -231,7 +231,7 @@ int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publi
         /* Launch Engine */
         engine = new LuaEngine(scriptpath, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
         engine->setString(LUA_REQUEST_ID, request->id);
-        const bool status = engine->executeEngine(MAX_RESPONSE_TIME_MS);
+        const bool status = engine->executeEngine(SystemConfig::settings().requestTimeoutSec.value);
 
         /* Send Response */
         if(status)
@@ -242,8 +242,8 @@ int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publi
                 /* Success */
                 const int result_length = StringLib::size(result);
                 const int header_length = buildheader(header, OK, "text/plain", result_length, NULL, serverHead.c_str());
-                rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
-                rspq->postCopy(result, result_length, POST_TIMEOUT_MS);
+                rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
+                rspq->postCopy(result, result_length, SystemConfig::settings().publishTimeoutMs.value);
             }
             else
             {
@@ -252,8 +252,8 @@ int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publi
                 const char* error_msg = "Missing results";
                 const int result_length = StringLib::size(error_msg);
                 const int header_length = buildheader(header, Not_Found, "text/plain", result_length, NULL, serverHead.c_str());
-                rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
-                rspq->postCopy(error_msg, result_length, POST_TIMEOUT_MS);
+                rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
+                rspq->postCopy(error_msg, result_length, SystemConfig::settings().publishTimeoutMs.value);
                 status_code = RTE_SCRIPT_DOES_NOT_EXIST;
             }
         }
@@ -264,8 +264,8 @@ int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publi
             const char* error_msg = "Failed execution";
             const int result_length = StringLib::size(error_msg);
             const int header_length = buildheader(header, Internal_Server_Error, "text/plain", result_length, NULL, serverHead.c_str());
-            rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
-            rspq->postCopy(error_msg, result_length, POST_TIMEOUT_MS);
+            rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
+            rspq->postCopy(error_msg, result_length, SystemConfig::settings().publishTimeoutMs.value);
             status_code = RTE_FAILURE;
         }
     }
@@ -276,8 +276,8 @@ int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publi
         const char* error_msg = "Memory exceeded";
         const int result_length = StringLib::size(error_msg);
         const int header_length = buildheader(header, Service_Unavailable, "text/plain", result_length, NULL, serverHead.c_str());
-        rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
-        rspq->postCopy(error_msg, result_length, POST_TIMEOUT_MS);
+        rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
+        rspq->postCopy(error_msg, result_length, SystemConfig::settings().publishTimeoutMs.value);
         status_code = RTE_NOT_ENOUGH_MEMORY;
 }
 
@@ -305,7 +305,7 @@ int LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publi
     {
         /* Send Header */
         const int header_length = buildheader(header, OK, "application/octet-stream", 0, "chunked", serverHead.c_str());
-        rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
+        rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
 
         /* Create Engine */
         engine = new LuaEngine(scriptpath, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
@@ -332,7 +332,7 @@ int LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publi
     {
         mlog(CRITICAL, "Memory (%d%%) exceeded threshold, not performing request: %s", (int)(mem * 100.0), scriptpath);
         const int header_length = buildheader(header, Service_Unavailable);
-        rspq->postCopy(header, header_length, POST_TIMEOUT_MS);
+        rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
         status_code = RTE_NOT_ENOUGH_MEMORY;
     }
 

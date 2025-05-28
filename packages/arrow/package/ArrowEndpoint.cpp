@@ -37,6 +37,7 @@
 #include "OsApi.h"
 #include "TimeLib.h"
 #include "ArrowLib.h"
+#include "SystemConfig.h"
 
 /******************************************************************************
  * STATIC DATA
@@ -154,7 +155,7 @@ void* ArrowEndpoint::requestThread (void* parm)
     }
 
     /* End Response */
-    const int rc = rspq->postCopy("", 0, POST_TIMEOUT_MS);
+    const int rc = rspq->postCopy("", 0, SystemConfig::settings().publishTimeoutMs.value);
     if(rc <= 0)
     {
         mlog(CRITICAL, "Failed to post terminator on %s: %d", rspq->getName(), rc);
@@ -237,7 +238,7 @@ void* ArrowEndpoint::responseThread (void* parm)
                             }
 
                             /* Post Arrow Bytes */
-                            const int rc = rspq.postCopy(file_data->data, data_size, POST_TIMEOUT_MS);
+                            const int rc = rspq.postCopy(file_data->data, data_size, SystemConfig::settings().publishTimeoutMs.value);
                             if(rc <= 0) mlog(CRITICAL, "Failed to post arrow data on <%s>: %d", rspq.getName(), rc);
 
                             /* Check if Complete */
@@ -320,7 +321,7 @@ void* ArrowEndpoint::responseThread (void* parm)
     }
 
     /* Post Terminator */
-    const int rc = rspq.postCopy("", 0, POST_TIMEOUT_MS);
+    const int rc = rspq.postCopy("", 0, SystemConfig::settings().publishTimeoutMs.value);
     if(rc <= 0) mlog(CRITICAL, "Failed to post terminator on <%s>: %d", rspq.getName(), rc);
 
     /* Clean Up */
@@ -343,13 +344,13 @@ bool ArrowEndpoint::sendHeader (Publisher* outq, code_t http_code, const char* e
     char header[MAX_HDR_SIZE];
 
     const int header_length = buildheader(header, http_code, "application/octet-stream", 0, "chunked", serverHead.c_str());
-    const int rc = outq->postCopy(header, header_length, POST_TIMEOUT_MS);
+    const int rc = outq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
     if(rc > 0)  hdr_sent = true;
     else        mlog(CRITICAL, "Failed to post header on <%s>: %d", outq->getName(), rc);
 
     if(http_code != OK)
     {
-        const int rc2 = outq->postCopy(error_msg, StringLib::size(error_msg), POST_TIMEOUT_MS);
+        const int rc2 = outq->postCopy(error_msg, StringLib::size(error_msg), SystemConfig::settings().publishTimeoutMs.value);
         if(rc2 <= 0) mlog(CRITICAL, "Failed to post error message on <%s>: %d", outq->getName(), rc2);
     }
 
