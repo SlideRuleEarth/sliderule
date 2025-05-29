@@ -12,8 +12,8 @@ parser = argparse.ArgumentParser(description="""ATL24""")
 parser.add_argument('--domain',         type=str,               default="slideruleearth.io")
 parser.add_argument('--organization',   type=str,               default="developers")
 parser.add_argument('--granule',        type=str,               default=None) # "ATL13_20250302152414_11692601_006_01.h5"
-parser.add_argument('--input_file',     type=str,               default="/data/atl13_granules.txt")
-parser.add_argument('--mapping_file',   type=str,               default="/data/atl13_mappings.json")
+parser.add_argument('--input_file',     type=str,               default="/data/ATL13/atl13_granules.txt")
+parser.add_argument('--mapping_file',   type=str,               default="/data/ATL13/atl13_mappings.json")
 parser.add_argument('--concurrency',    type=int,               default=8)
 parser.add_argument('--query',          action='store_true',    default=False)  # query CMR to build list of filenames
 parser.add_argument('--verbose',        action='store_true',    default=False)
