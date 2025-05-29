@@ -29,10 +29,13 @@ resource "aws_instance" "manager" {
       export DUCKDB_REMOTE_FILE='s3://sliderule/config/manager-${var.cluster_name}.db'
       export MANAGER_IMAGE=${var.container_repo}/manager:${var.cluster_version}
       mkdir /data
+      mkdir /data/ATL13
       aws s3 cp $DUCKDB_REMOTE_FILE $DUCKDB_LOCAL_FILE || true
       aws s3 cp s3://sliderule/config/GeoLite2-ASN.mmdb /data/GeoLite2-ASN.mmdb
       aws s3 cp s3://sliderule/config/GeoLite2-City.mmdb /data/GeoLite2-City.mmdb
       aws s3 cp s3://sliderule/config/GeoLite2-Country.mmdb /data/GeoLite2-Country.mmdb
+      aws s3 cp s3://sliderule/config/atl13_mappings.json /data/ATL13/atl13_mappings.json
+      aws s3 cp s3://sliderule/config/inland_water_body.parquet /data/ATL13/inland_water_body.parquet
       aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-manager.yml ./docker-compose.yml
       docker-compose -p cluster up --detach
     EOF
