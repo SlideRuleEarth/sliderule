@@ -537,9 +537,9 @@ class Session:
 
         # Construct Request URL
         if self.service_org:
-            url = 'https://%s.%s/manager/status/%s' % (self.service_org, self.service_domain, api)
+            url = 'https://%s.%s/manager/%s' % (self.service_org, self.service_domain, api)
         else:
-            url = 'http://%s/manager/status/%s' % (self.service_domain, api)
+            url = 'http://%s/manager/%s' % (self.service_domain, api)
 
         try:
             # Build Authorization Header

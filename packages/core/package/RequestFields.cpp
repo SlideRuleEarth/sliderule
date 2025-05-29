@@ -522,15 +522,18 @@ int convertToLua(lua_State* L, const MathLib::coord_t& v)
  *----------------------------------------------------------------------------*/
 void convertFromLua(lua_State* L, int index, MathLib::coord_t& v)
 {
-    // longitude
-    lua_getfield(L, index, "lon");
-    v.lon = LuaObject::getLuaFloat(L, -1);
-    lua_pop(L, 1);
+    if(lua_istable(L, index))
+    {
+        // longitude
+        lua_getfield(L, index, "lon");
+        v.lon = LuaObject::getLuaFloat(L, -1);
+        lua_pop(L, 1);
 
-    // latitude
-    lua_getfield(L, index, "lat");
-    v.lat = LuaObject::getLuaFloat(L, -1);
-    lua_pop(L, 1);
+        // latitude
+        lua_getfield(L, index, "lat");
+        v.lat = LuaObject::getLuaFloat(L, -1);
+        lua_pop(L, 1);
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -564,15 +567,18 @@ int convertToLua(lua_State* L, const MathLib::point_t& v)
  *----------------------------------------------------------------------------*/
 void convertFromLua(lua_State* L, int index, MathLib::point_t& v)
 {
-    // x
-    lua_rawgeti(L, index, 1);
-    v.x = LuaObject::getLuaInteger(L, -1);
-    lua_pop(L, 1);
+    if(lua_istable(L, index))
+    {
+        // x
+        lua_rawgeti(L, index, 1);
+        v.x = LuaObject::getLuaInteger(L, -1);
+        lua_pop(L, 1);
 
-    // y
-    lua_rawgeti(L, index, 1);
-    v.y = LuaObject::getLuaInteger(L, -1);
-    lua_pop(L, 1);
+        // y
+        lua_rawgeti(L, index, 1);
+        v.y = LuaObject::getLuaInteger(L, -1);
+        lua_pop(L, 1);
+    }
 }
 
 /*----------------------------------------------------------------------------

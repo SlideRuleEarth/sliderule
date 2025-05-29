@@ -67,6 +67,7 @@ class ManagerLib
         static void             deinit              (void);
 
         static rsps_t           request             (EndpointObject::verb_t verb, const char* resource, const char* data);
+        static int              luaRequest          (lua_State* L);
 
         static bool             recordTelemetry     (const EventLib::telemetry_t* event);
         static bool             issueAlert          (const EventLib::alert_t* event);

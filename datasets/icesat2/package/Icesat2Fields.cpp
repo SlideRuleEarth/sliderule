@@ -271,9 +271,9 @@ void PhorealFields::fromLua (lua_State* L, int index)
  * Constructor - Atl13Fields
  *----------------------------------------------------------------------------*/
 Atl13Fields::Atl13Fields():
-    FieldDictionary({ {"reference_id",  &reference_id},
+    FieldDictionary({ {"refid",         &reference_id},
                       {"name",          &name},
-                      {"coordinate",    &coordinate},
+                      {"coord",         &coordinate},
                       {"anc_fields",    &anc_fields} }),
     provided(false)
 {

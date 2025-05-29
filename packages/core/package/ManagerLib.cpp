@@ -33,8 +33,6 @@
  * INCLUDES
  ******************************************************************************/
 
-#include <rapidjson/document.h>
-
 #include "ManagerLib.h"
 #include "OsApi.h"
 #include "SystemConfig.h"
@@ -80,6 +78,55 @@ ManagerLib::rsps_t ManagerLib::request (EndpointObject::verb_t verb, const char*
 
     // return response
     return rsps;
+}
+
+/*----------------------------------------------------------------------------
+ * luaRequest - post(<verb>, <resource>, <data>)
+ *----------------------------------------------------------------------------*/
+int ManagerLib::luaRequest(lua_State* L)
+{
+    // initialize response
+    rsps_t rsps = {
+        .code = EndpointObject::Bad_Request,
+        .response = NULL,
+        .size = 0
+    };
+
+    try
+    {
+        // get parameters
+        const char* action = LuaObject::getLuaString(L, 1);
+        const char* resource = LuaObject::getLuaString(L, 2);
+        const char* data = LuaObject::getLuaString(L, 3, true, NULL);
+
+        // translate verb
+        const EndpointObject::verb_t verb = EndpointObject::str2verb(action);
+        if(verb == EndpointObject::UNRECOGNIZED)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid action: %s", action);
+        }
+
+        // make request
+        rsps = request(verb, resource, data);
+        if(rsps.code != EndpointObject::OK)
+        {
+            if(rsps.response) mlog(CRITICAL, "%s", rsps.response);
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "<%ld> returned from %s", rsps.code, resource);
+        }
+        
+        // return response
+        lua_pushlstring(L, rsps.response, rsps.size);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error in request to manager: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    // cleanup
+    delete [] rsps.response;
+
+    return 1;
 }
 
 /*----------------------------------------------------------------------------

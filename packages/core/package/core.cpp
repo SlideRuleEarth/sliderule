@@ -144,6 +144,7 @@ static int core_open (lua_State *L)
         {"pslogin",         ProvisioningSystemLib::luaLogin},
         {"psvalidate",      ProvisioningSystemLib::luaValidate},
         {"psauth",          ProvisioningSystemLib::Authenticator::luaCreate},
+        {"manager",         ManagerLib::luaRequest},
         {"parms",           RequestFields::luaCreate},
 #ifdef __unittesting__
         {"ut_dictionary",   UT_Dictionary::luaCreate},

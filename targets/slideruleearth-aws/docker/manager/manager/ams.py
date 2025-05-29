@@ -56,7 +56,7 @@ def init_app(app):
 ####################
 
 #
-# Record
+# ATL13
 #
 @ams.route('/atl13', methods=['GET'])
 def atl13():
@@ -81,6 +81,7 @@ def atl13():
             raise RuntimeError("must supply at least one query parameter (refid, name, lon and lat)")
         # build response
         response = {
+            "refid": int(refid),
             "hylak": int(mask.loc[refid, "Hylak_id"]),
             "name": mask.loc[refid, "Lake_name"],
             "country": mask.loc[refid, "Country"],

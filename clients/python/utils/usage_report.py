@@ -77,12 +77,12 @@ def display_sorted(title, counts):
 ##############################
 
 # Gather Statistics on Usage
-unique_ip_counts = session.manager("telemetry_counts/source_ip_hash")
-source_location_counts = session.manager("telemetry_counts/source_ip_location")
-client_counts = session.manager("telemetry_counts/client")
-endpoint_counts = session.manager("telemetry_counts/endpoint")
-telemetry_status_code_counts = session.manager("telemetry_counts/status_code")
-alert_status_code_counts = session.manager("alert_counts/status_code")
+unique_ip_counts = session.manager("status/telemetry_counts/source_ip_hash")
+source_location_counts = session.manager("status/telemetry_counts/source_ip_location")
+client_counts = session.manager("status/telemetry_counts/client")
+endpoint_counts = session.manager("status/telemetry_counts/endpoint")
+telemetry_status_code_counts = session.manager("status/telemetry_counts/status_code")
+alert_status_code_counts = session.manager("status/alert_counts/status_code")
 
 ##############################
 # Process Statistics
