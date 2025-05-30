@@ -7,10 +7,10 @@ provider "aws" {
   default_tags {
     tags = {
       Owner   = "SlideRule"
-      Project = "cluster-${var.cluster_name}"
+      Project = "cluster-${var.organization_name}"
       terraform-base-path = replace(path.cwd,
       "/^.*?(${local.terraform-git-repo}\\/)/", "$1")
-      cost-grouping = "${var.cluster_name}"
+      cost-grouping = "${var.organization_name}"
     }
   }
 }

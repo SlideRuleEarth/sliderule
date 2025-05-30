@@ -53,8 +53,13 @@ variable "publicCIDRblock" {
 #----------------------------------------------------------------
 # Deployment Variables
 #----------------------------------------------------------------
+variable "organization_name" {
+  description = "name for the sliderule organization"
+  type        = string
+  default     = "sliderule"
+}
 variable "cluster_name" {
-  description = "organization name for the sliderule cluster"
+  description = "name for the sliderule cluster"
   type        = string
   default     = "sliderule"
 }

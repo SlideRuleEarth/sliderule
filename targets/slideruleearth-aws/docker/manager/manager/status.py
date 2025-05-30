@@ -1,6 +1,6 @@
 from flask import (Blueprint, request)
 from werkzeug.exceptions import abort
-from manager.db import execute_command_db
+from manager.db import execute_command_db, export_db
 import json
 
 ####################
@@ -89,6 +89,16 @@ def list_rows(table, time_field, exclude_list=None):
 ####################
 # APIs
 ####################
+
+#
+# Export Database
+#
+@status.route('/export', methods=['POST'])
+def export():
+    try:
+        export_db()
+    except Exception as e:
+        abort(500, f'Export failed: {e}')
 
 #
 # Request Counts

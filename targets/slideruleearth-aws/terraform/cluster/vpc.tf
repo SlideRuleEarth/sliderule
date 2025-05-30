@@ -4,7 +4,7 @@ resource "aws_vpc" "sliderule-vpc" {
     enable_dns_support   = true
     instance_tenancy     = "default"
     tags = {
-      "Name" = "${var.cluster_name}-vpc"
+      "Name" = "${var.organization_name}-vpc"
     }
 }
 
@@ -14,14 +14,14 @@ resource "aws_subnet" "sliderule-subnet" {
     map_public_ip_on_launch = true
     availability_zone       = var.availability_zone
     tags = {
-        Name = "${var.cluster_name}-subnet"
+        Name = "${var.organization_name}-subnet"
     }
 }
 
 resource "aws_internet_gateway" "sliderule-gateway" {
     vpc_id = aws_vpc.sliderule-vpc.id
     tags = {
-        Name = "${var.cluster_name}-gateway"
+        Name = "${var.organization_name}-gateway"
     }
 }
 
@@ -32,7 +32,7 @@ resource "aws_route_table" "sliderule-route" {
         gateway_id = aws_internet_gateway.sliderule-gateway.id
     }
     tags = {
-        Name = "${var.cluster_name}-route"
+        Name = "${var.organization_name}-route"
     }
 }
 

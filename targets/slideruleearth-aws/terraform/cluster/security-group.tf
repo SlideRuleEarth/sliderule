@@ -4,7 +4,7 @@ resource "aws_security_group" "monitor-sg" {
   name         = "${var.cluster_name}-monitor-sg"
   description  = "Monitor Security Group"
   tags = {
-    Name = "${var.cluster_name}-monitor-sg"
+    Name = "${var.organization_name}-monitor-sg"
   }
 
   # Loki - TCP
@@ -38,7 +38,7 @@ resource "aws_security_group" "ilb-sg" {
   name         = "${var.cluster_name}-ilb-sg"
   description  = "Intelligent Load Balancer Security Group"
   tags = {
-    Name = "${var.cluster_name}-ilb-sg"
+    Name = "${var.organization_name}-ilb-sg"
   }
 
   # HAProxy - HTTPS
@@ -80,7 +80,7 @@ resource "aws_security_group" "manager-sg" {
   name         = "${var.cluster_name}-manager-sg"
   description  = "Manager Security Group"
   tags = {
-    Name = "${var.cluster_name}-manager-sg"
+    Name = "${var.organization_name}-manager-sg"
   }
 
   # HAProxy - TCP
@@ -106,7 +106,7 @@ resource "aws_security_group" "sliderule-sg" {
   name         = "${var.cluster_name}-sliderule-sg"
   description  = "SlideRule Security Group"
   tags = {
-    Name = "${var.cluster_name}-sliderule-sg"
+    Name = "${var.organization_name}-sliderule-sg"
   }
 
   # SlideRule (from ILB) - TCP

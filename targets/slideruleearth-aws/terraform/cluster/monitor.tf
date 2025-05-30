@@ -17,7 +17,7 @@ resource "aws_instance" "monitor" {
       delete_on_termination     = true
     }
     tags = {
-      "Name" = "${var.cluster_name}-monitor"
+      "Name" = "${var.organization_name}-monitor"
     }
     user_data = <<-EOF
       #!/bin/bash

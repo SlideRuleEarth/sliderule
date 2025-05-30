@@ -17,14 +17,14 @@ resource "aws_instance" "ilb" {
       delete_on_termination     = true
     }
     tags = {
-      "Name" = "${var.cluster_name}-ilb"
+      "Name" = "${var.organization_name}-ilb"
     }
     user_data = <<-EOF
       #!/bin/bash
       aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${var.container_repo}
       export OAUTH_HMAC_SECRET='${local.secrets.jwt_secret_key}'
       export IS_PUBLIC=${var.is_public}
-      export ORGANIZATION=${var.cluster_name}
+      export ORGANIZATION=${var.organization_name}
       export DOMAIN=${var.domain}
       export ILB_IMAGE=${var.container_repo}/ilb:${var.cluster_version}
       mkdir -p /etc/ssl/private
@@ -43,7 +43,7 @@ data "aws_route53_zone" "selected" {
 
 resource "aws_route53_record" "org" {
   zone_id         = data.aws_route53_zone.selected.zone_id
-  name            = "${var.cluster_name}.${data.aws_route53_zone.selected.name}"
+  name            = "${var.organization_name}.${data.aws_route53_zone.selected.name}"
   type            = "A"
   ttl             = 300
   allow_overwrite = true
