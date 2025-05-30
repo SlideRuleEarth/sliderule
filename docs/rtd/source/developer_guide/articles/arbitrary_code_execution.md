@@ -19,9 +19,9 @@ Researchers requested the ability to retrieve the exact set of ATL13 data genera
 
 The ATL13 global database contains the reference ID, name, and geometry of each body of water, but does not contain a list of ATL13 granules that intersect (and therefore have data for) thoes bodies of water.  We needed some way to know which granules contained data for each body of water; and we came up with two possibilities:
 1. Given a user query, use the global database to pull out the geometry.  Use the geometry to query CMR for a list of granules that intersect.
-2. Build a reverse lookup table of reference IDs and granules but reading every ATL13 granule and pulling out which reference IDs are contained there in.  Given a user query, the ATL13 global database can be used to get a reference ID, and the reverse lookup table can be used to get all of the granules with data for that reference ID.
+2. Build a reverse lookup table of reference IDs and granules by reading every ATL13 granule and pulling out which reference IDs are contained there in.  Given a user query, the ATL13 global database can be used to get a reference ID, and the reverse lookup table can be used to get all of the granules with data for that reference ID.
 
-The first option was the simplest but suffered from relying on CMR which is relatively slow and the possibility of having granules returned for other nearby bodies of water due to buffering on the along-tracak polygons CMR uses for their spatial queries.  The second option would result in the best performance, but required every ATL13 granule to be read in order to build the reverse lookup table.
+The first option was the simplest but suffered from relying on CMR which is relatively slow and the possibility of having granules returned for other nearby bodies of water due to buffering on the along-track polygons CMR uses for their spatial queries.  The second option would result in the best performance, but required every ATL13 granule to be read in order to build the reverse lookup table.
 
 The second option was chosen, and the Arbitrary Code Execution functionality in SlideRule was used to build the lookup table.  
 
@@ -68,32 +68,32 @@ count(results, column_gt3r)
 return json.encode(results)
 ```
 
-The above user provided script was sent to the SlideRule `ace` api to execute on a private cluster (in this case, the cluster was the **developers** cluster).  For the purposes of this article, I've annotated the script with comments for assist in the explanation below. Here are the steps it performed:
-1. User provided scripts can import external modules available to the SlideRule runtime; in this case the `json` module was needed and imported
-2. The granule name is modified in the script prior to being sent for each granule that needs to be read.  The script opens that granule so that it can be read from later in the script.
-3. Each of the reads to the datasets in the granule are asynchronous, meaning the code immediate returns and the read operation continues on in the background.
+The above user provided script was sent to the SlideRule `ace` api to execute on a private cluster (in this case, the cluster was the **developers** cluster).  For the purposes of this article, I've annotated the script with comments to assist in the explanation below. Here are the steps it performed:
+1. User provided scripts can import external modules available to the SlideRule runtime; in this case the `json` module was needed and imported.
+2. The granule name is modified in the script prior to being sent for each granule that needs to be read.
+3. Each of the reads to the datasets in the granule are asynchronous, meaning the code immediately returns and the read operation continues on in the background.
 4. Helper functions can be defined just like any other Lua script.
 5. The helper function is called and the reference IDs read from each of the beams are put into a single table.  This does two things: first it creates a unique list of reference IDs, and second, as soon as the helper function calls the `column:unique()` function, the code blocks until the dataset being read completes.  See the note below for more details.
-6. The results are returned as a json serialized object.  Lua scripts don't have to return json, but it is a best practice.
+6. The results are returned as a serialized json object.  Lua scripts don't have to return json, but it is a best practice.
 
 :::{note}
-The `h5obj:readp` function returns what is called an `H5Column` in SlideRule.  This can be somewhat be thought of like a numpy array, though the functionality is currently very limited.  An `H5Column` is an array of data read out of an H5 file that is internally represented as a _vector_ of _doubles_.  The following operations on `H%Columns` are currently supported: `sum`, `mean`, `median`, `mode`, `unique`.  In the future, more operations will be added.
+The `h5obj:readp` function returns what is called an `H5Column` in SlideRule.  An `H5Column` is an array of data read out of an H5 file that is internally represented as a _vector_ of _doubles_. This can somewhat be thought of like a numpy array, though the functionality is currently very limited.  The following operations on `H5Column`s are currently supported: `sum`, `mean`, `median`, `mode`, `unique`.  In the future, more operations will be added.
 :::
 
 #### User Python Script
 
-If the user provided script needs to only be run against a single granule, the no additional steps are necessary - the script can be set to the `ace` API as is and the results processed.  But if a user wants to execute the script against multiple granules and take advantage of the cluster computing capabilities of SlideRule, then the user must also write a Python program that manages the orchestration of those requests to SlideRule.
+If the user provided script needs to only be run against a single granule, then no additional steps are necessary - the script can be set to the `ace` API as is and the results processed.  But if a user wants to execute the script against multiple granules and take advantage of the cluster computing capabilities of SlideRule, then the user must also write a Python program that manages the orchestration of those requests to SlideRule.
 
 For the ATL13 use case, the Python program used to manage the execution of the above script against all ATL13 granules can be found here: [clients/python/utils/atl13_utils.py](https://github.com/SlideRuleEarth/sliderule/blob/main/clients/python/utils/atl13_utils.py).
 
-This script queries CMR for a complete list of ATL13 granules and then creates a thread pool of workers that go through that list and issue `ace` API calls for each granule. The default concurrency is set to 8 in the script, but could easily be set to 100 for a private cluster of 10 nodes. 
+This script queries CMR for a complete list of ATL13 granules and then creates a thread pool for workers that go through that list and issue `ace` API calls for each granule. The default concurrency is set to 8 in the script, but could easily be set to 100 for a private cluster of 10 nodes. 
 
-As can be seen in the script, the results of each API call were added to a master lookup table (a _dictionary_ of _sets_ in Python) to produce the final lookup table that uses a reference ID to return a list of granules containing data that ID.
+As can be seen in the script, the results of each API call are added to a master lookup table (a _dictionary_ of _sets_ in Python) to produce the final lookup table that uses a reference ID to return a list of granules containing data with that ID.
 
 ## Constraints
 
 There are some constraints on how the Arbitrary Code Execution works:
 
-* The `ace` API only supports non-streaming GET requests. This means that the user provided lua scripts must contain a __return__ statement, and only what is returned is passed back to the user.  In contrast, most of the high-level APIs provided by SlideRule are streaming and stream results back to the user via the __rspq__ response queue.
+* The `ace` API only supports non-streaming GET requests. This means that the user provided lua scripts must contain a __return__ statement, and only what is returned is passed back to the user.  In contrast, most of the high-level APIs provided by SlideRule are streaming and continuously return results back to the user via the __rspq__ response queue.
 
-* The `ace` API requests are not proxied.  This means that the orchestrator does not partition out the request and utilize the locking mechanism to guarantee an even and high utilization of the full cluster.  The requests are still load balanaced, so to some degree they will be spread out over the cluster; but it is on the user to appropriately feed large sets of request to the cluster in order to maintain a high utilization without exceeding the resources of any one node.
+* The `ace` API requests are not proxied.  This means that the orchestrator does not partition out the request and utilize the locking mechanism to guarantee an evenly distributed and high utilization of the full cluster.  The requests are still load balanaced, so to some degree they will be spread out over the cluster; but it is on the user to appropriately feed large sets of request to the cluster in order to maintain a high utilization without exceeding the resources of any one node.
