@@ -239,6 +239,11 @@ public-cluster-go-live: public-cluster-test-ip ## switch dns entry of public clu
 	cd terraform/dns && terraform workspace select dns-$(DOMAIN)-$(ORGANIZATION) || terraform workspace new dns-$(DOMAIN)-$(ORGANIZATION)
 	cd terraform/dns && terraform apply -var domain=$(DOMAIN) -var organization=$(ORGANIZATION) -var public_ip=$(PUBLIC_IP)
 
+public-cluster-take-offline: ## switch dns entry of public cluster; needs DOMAIN
+	cd terraform/dns && terraform init
+	cd terraform/dns && terraform workspace select dns-$(DOMAIN)-$(ORGANIZATION)
+	cd terraform/dns && terraform destroy
+
 ########################
 # Static Website Targets
 ########################

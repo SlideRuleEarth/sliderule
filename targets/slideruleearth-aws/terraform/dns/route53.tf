@@ -8,5 +8,5 @@ resource "aws_route53_record" "org" {
   type            = "A"
   ttl             = 300
   allow_overwrite = true
-  records         = "${var.public_ip}"
+  records         = [var.public_ip]
 }
