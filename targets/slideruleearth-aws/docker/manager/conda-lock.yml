@@ -417,7 +417,7 @@ package:
   category: main
   optional: false
 - name: botocore
-  version: 1.38.25
+  version: 1.38.26
   manager: conda
   platform: linux-aarch64
   dependencies:
@@ -425,10 +425,10 @@ package:
     python: '>=3.10'
     python-dateutil: '>=2.1,<3.0.0'
     urllib3: '>=1.25.4,!=2.2.0,<3'
-  url: https://conda.anaconda.org/conda-forge/noarch/botocore-1.38.25-pyge310_1234567_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/botocore-1.38.26-pyge310_1234567_0.conda
   hash:
-    md5: 958314fdbcffdb8f29bb80b7d386ae5e
-    sha256: 03150089311d8605a2036f9626933d3342767a9bad961583a3ade8517896e498
+    md5: 48ff0509cf0a093db02f592183224e83
+    sha256: 249ac77a05b5c24c0d84e4b24e7a1d79f55eb1bb176df7d99f7881dfb1d2d169
   category: main
   optional: false
 - name: branca
@@ -1827,16 +1827,16 @@ package:
   category: main
   optional: false
 - name: libsqlite
-  version: 3.49.2
+  version: 3.50.0
   manager: conda
   platform: linux-aarch64
   dependencies:
     libgcc: '>=13'
     libzlib: '>=1.3.1,<2.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libsqlite-3.49.2-h5eb1b54_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libsqlite-3.50.0-h5eb1b54_0.conda
   hash:
-    md5: 462e571b023e916587ff0925ae22522d
-    sha256: 6854a43b741c01fe5d25d99555a68014e2f653a78d32079e73bee81756d694d7
+    md5: 634a05a598cd4b3b852443f8e3b45003
+    sha256: b59232c8b4d5236a874b310aba6c396561e3889455d54092e4c793115c535ec7
   category: main
   optional: false
 - name: libssh2
@@ -2789,19 +2789,19 @@ package:
   category: main
   optional: false
 - name: sqlite
-  version: 3.49.2
+  version: 3.50.0
   manager: conda
   platform: linux-aarch64
   dependencies:
     libgcc: '>=13'
-    libsqlite: 3.49.2
+    libsqlite: 3.50.0
     libzlib: '>=1.3.1,<2.0a0'
     ncurses: '>=6.5,<7.0a0'
     readline: '>=8.2,<9.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/sqlite-3.49.2-h578a6b9_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/sqlite-3.50.0-h578a6b9_0.conda
   hash:
-    md5: 84448fe271b0be1571d0a0cde79864b8
-    sha256: d6a8eaa941e916dec7d7f58938bfccebcaac4f737d85fa02a3ea0ef1e2cb66cc
+    md5: e06f6d0a1f2bd5b86c092ac4cffdbd95
+    sha256: bfe9ebbb7d8b58a7bbffca8f37625696d965557b94080dbd2c4747cb789c9e32
   category: main
   optional: false
 - name: threadpoolctl
