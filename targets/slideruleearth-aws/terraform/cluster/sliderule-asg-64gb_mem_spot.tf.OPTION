@@ -26,7 +26,7 @@ resource "aws_launch_template" "sliderule_template" {
     #!/bin/bash
     export ENVIRONMENT_VERSION=${var.environment_version}
     export IPV4=$(hostname -I | awk '{print $1}')
-    export ORGANIZATION=${var.organization_name}
+    export ORGANIZATION=${local.organization}
     export IS_PUBLIC=${var.is_public}
     export SLIDERULE_IMAGE=${var.container_repo}/sliderule:${var.cluster_version}
     export PROVISIONING_SYSTEM="https://ps.${var.domain}"
@@ -40,11 +40,11 @@ resource "aws_launch_template" "sliderule_template" {
   tag_specifications {
     resource_type = "instance"
     tags = {
-      Name                = "${var.organization_name}-node"
+      Name                = "${local.organization}-node"
       Owner               = "SlideRule"
-      Project             = "cluster-${var.organization_name}"
+      Project             = "cluster-${local.organization}"
       terraform-base-path = replace(path.cwd, "/^.*?(${local.terraform-git-repo}\\/)/", "$1")
-      cost-grouping       = "${var.organization_name}"
+      cost-grouping       = "${local.organization}"
     }
   }
 }
@@ -86,7 +86,7 @@ resource "aws_autoscaling_group" "sliderule-cluster" {
 
   tag {
     key                 = "Name"
-    value               = "${var.organization_name}-node"
+    value               = "${local.organization}-node"
     propagate_at_launch = true
   }
 
@@ -99,7 +99,7 @@ resource "aws_autoscaling_group" "sliderule-cluster" {
 
   tag {
     key                 = "Project"
-    value               = "cluster-${var.organization_name}"
+    value               = "cluster-${local.organization}"
     propagate_at_launch = true
   }
 
@@ -111,7 +111,7 @@ resource "aws_autoscaling_group" "sliderule-cluster" {
 
   tag {
     key                 = "cost-grouping"
-    value               = "${var.organization_name}"
+    value               = "${local.organization}"
     propagate_at_launch = true
   }
 }

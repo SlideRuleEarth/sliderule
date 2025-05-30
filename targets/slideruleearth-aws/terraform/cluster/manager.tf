@@ -17,7 +17,7 @@ resource "aws_instance" "manager" {
       delete_on_termination     = true
     }
     tags = {
-      "Name" = "${var.organization_name}-manager"
+      "Name" = "${local.organization}-manager"
     }
     user_data = <<-EOF
       #!/bin/bash

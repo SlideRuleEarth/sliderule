@@ -70,6 +70,10 @@ USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
 DISTRIBUTION_ID = $(shell aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" --output text)
 RUNNER ?= # e.g. valgrind
 
+ORGANIZATION ?= sliderule
+PUBLIC_IP ?= # output from public-cluster-deploy
+COLOR ?= 
+
 CLANG_VER ?= ""
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
 
@@ -200,6 +204,42 @@ cluster-upload-terraform: ## upload the Cluster terraform for provisioning syste
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(VERSION)
 
 ########################
+# Deployment Targets
+########################
+
+public-cluster-test-color:
+	@if [ -z "$(COLOR)" ]; then \
+		echo "Error: COLOR must be set to green or blue"; \
+		exit 1; \
+	fi
+
+public-cluster-test-ip:
+	@if [ -z "$(PUBLIC_IP)" ]; then \
+		echo "Error: COLOR must be set to green or blue"; \
+		exit 1; \
+	fi
+
+public-cluster-status: public-cluster-test-color ## deploy public cluster using terraform; needs DOMAIN, COLOR
+	cd terraform/cluster && terraform init
+	cd terraform/cluster && terraform workspace select $(DOMAIN)-$(ORGANIZATION)-$(COLOR) || terraform workspace new $(DOMAIN)-$(ORGANIZATION)-$(COLOR)
+	cd terraform/cluster && terraform plan -refresh-only && terraform show
+
+public-cluster-deploy: public-cluster-test-color ## deploy public cluster using terraform; needs DOMAIN, VERSION, COLOR, ORGANIZATION
+	cd terraform/cluster && terraform init
+	cd terraform/cluster && terraform workspace select $(DOMAIN)-$(ORGANIZATION)-$(COLOR) || terraform workspace new $(DOMAIN)-$(ORGANIZATION)-$(COLOR)
+	cd terraform/cluster && terraform apply -var is_public=True -var cluster_name=$(ORGANIZATION)-$(COLOR) -var domain=$(DOMAIN) -var cluster_version=$(VERSION) -var organization_name=$(ORGANIZATION)
+
+public-cluster-destroy: public-cluster-test-color ## destroy public using terraform; needs DOMAIN, COLOR
+	cd terraform/cluster && terraform init
+	cd terraform/cluster && terraform workspace select $(DOMAIN)-$(ORGANIZATION)-$(COLOR)
+	cd terraform/cluster && terraform destroy
+
+public-cluster-go-live: public-cluster-test-ip ## switch dns entry of public cluster; needs DOMAIN, PUBLIC_IP
+	cd terraform/dns && terraform init
+	cd terraform/dns && terraform workspace select dns-$(DOMAIN)-$(ORGANIZATION) || terraform workspace new dns-$(DOMAIN)-$(ORGANIZATION)
+	cd terraform/dns && terraform apply -var domain=$(DOMAIN) -var organization=$(ORGANIZATION) -var public_ip=$(PUBLIC_IP)
+
+########################
 # Static Website Targets
 ########################
 
@@ -275,9 +315,10 @@ tag: ## create version tag in this repository and release it on GitHub
 	gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/web/rtd/developer_guide/release_notes/release_notes.html"
 	make -C $(ROOT)/clients/nodejs publish
 
-release: manager-lock ## release a version of sliderule; needs VERSION
+release: ## release a version of sliderule; needs VERSION
 	make sliderule-buildenv-docker
 	make sliderule-buildenv-docker-push
+	make manager-lock
 	make tag
 	make cluster-docker
 	make cluster-docker-push

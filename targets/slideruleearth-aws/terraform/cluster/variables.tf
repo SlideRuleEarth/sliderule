@@ -53,11 +53,6 @@ variable "publicCIDRblock" {
 #----------------------------------------------------------------
 # Deployment Variables
 #----------------------------------------------------------------
-variable "organization_name" {
-  description = "name for the sliderule organization"
-  type        = string
-  default     = "sliderule"
-}
 variable "cluster_name" {
   description = "name for the sliderule cluster"
   type        = string
@@ -71,7 +66,7 @@ variable "cluster_version" {
 variable "node_asg_desired_capacity" {
   description = "number of nodes in sliderule cluster"
   type        = number
-  default     = 2
+  default     = 7
 }
 variable "node_asg_min_capacity" {
   description = "minimum number of nodes in sliderule cluster"
@@ -109,6 +104,16 @@ variable "spot_allocation_strategy" {
   description = "strategy for allocating spot instances"
   type        = string
   default     = "lowest-price"
+}
+variable "organization_name" {
+  description = "name for the sliderule organization"
+  type        = string
+  default     = ""
+}
+locals {
+  organization = (
+    var.organization_name != "" ? var.organization_name : var.cluster_name
+  )
 }
 
 # ------------------------------------------------------------
