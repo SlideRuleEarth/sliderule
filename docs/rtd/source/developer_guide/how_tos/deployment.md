@@ -37,10 +37,10 @@ Using `sliderule-<cold>` as the organization, run the __pytests__ against the ne
 
 At targets/slideruleearth-aws/:
 ```
-make public-cluster-go-live COLOR=<cold>
+make public-cluster-go-live COLOR=<cold> PUBLIC_IP=<ip>
 ```
 
-This will update the DNS entry for "sliderule.slideruleearth.io" to point to the newly deployed cluster.
+This will update the DNS entry for "sliderule.slideruleearth.io" to point to the newly deployed cluster.  The `<ip>` address supplied in the command is the `ilb_ip_address` output from the deployment of the _cold_ cluster.
 
 #### (5) Wait 30 minutes
 
