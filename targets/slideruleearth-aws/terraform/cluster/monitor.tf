@@ -2,7 +2,7 @@ resource "aws_instance" "monitor" {
     ami                         = data.aws_ami.sliderule_cluster_ami.id
     availability_zone           = var.availability_zone
     ebs_optimized               = false
-    instance_type               = "c7g.large"
+    instance_type               = "c8g.large"
     monitoring                  = false
     key_name                    = var.key_pair_name
     vpc_security_group_ids      = [aws_security_group.monitor-sg.id]
