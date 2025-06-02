@@ -1,6 +1,7 @@
 from flask import (Blueprint, request)
 from werkzeug.exceptions import abort
 from manager.db import execute_command_db, export_db
+from manager.telemetry import get_metrics
 import json
 
 ####################
@@ -89,6 +90,29 @@ def list_rows(table, time_field, exclude_list=None):
 ####################
 # APIs
 ####################
+
+#
+# Metrics
+#
+@status.route('/prometheus', methods=['GET'])
+def prometheus():
+    try:
+        gauge_metrics, count_metrics = get_metrics()
+        metric_response = []
+        for name,value in count_metrics:
+            metric_response.append(f"""
+# TYPE {name} counter
+{name} {value}
+""")
+        for name,value in gauge_metrics:
+            metric_response.append(f"""
+# TYPE {name} gauge
+{name} {value}
+""")
+        return '\n\n'.join(metric_response)
+    except Exception as e:
+        abort(500, f'Metric request failed: {e}')
+
 
 #
 # Export Database

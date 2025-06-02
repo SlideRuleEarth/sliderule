@@ -8,6 +8,9 @@ import hashlib
 # Initialization
 ####################
 
+gauge_metrics = {}
+count_metrics = {}
+
 telemetry = Blueprint('telemetry', __name__, url_prefix='/manager/telemetry')
 
 ####################
@@ -31,6 +34,25 @@ def locateit(source_ip, debug_info):
         print(f'Failed to get location information for <{debug_info}>: {e}')
         return f'unknown, unknown'
 
+def captureit(endpoint, duration):
+    global gauge_metrics, count_metrics
+    if type(endpoint) != str:
+        raise RuntimeError('endpoint not provided: {endpoint}')
+    elif len(endpoint) == 0 or len(endpoint) > 32:
+        raise RuntimeError('endpoint name too long: {endpoint}')
+    elif not endpoint.isidentifier():
+        raise RuntimeError('invalid endpoint name: {endpoint}')
+    else:
+        gauge_metrics[endpoint] = duration
+        gauge_metrics[endpoint + "_sum"] = gauge_metrics.get(endpoint + "_sum", 0.0) + duration
+        count_metrics[endpoint + "_count"] = count_metrics.get(endpoint + "_count", 0) + 1
+
+
+
+def get_metrics():
+    global gauge_metrics, count_metrics
+    return gauge_metrics, count_metrics
+
 ####################
 # APIs
 ####################
@@ -42,17 +64,19 @@ def locateit(source_ip, debug_info):
 def record():
     try:
         data = request.get_json()
-        endpoint = data['endpoint']
         client = data['client']
+        endpoint = data['endpoint']
+        duration = data['duration']
+        captureit(endpoint, duration)
         if endpoint not in current_app.config['ENDPOINT_TLM_EXCLUSION']:
             entry = ( data["record_time"],
                       hashit(data['source_ip']),
                       locateit(data['source_ip'], f'{client},{endpoint}'),
                       data['aoi']['x'],
                       data['aoi']['y'],
-                      data['client'],
-                      data['endpoint'],
-                      data['duration'],
+                      client,
+                      endpoint,
+                      duration,
                       data['status_code'],
                       data['account'],
                       data['version'] )

@@ -161,9 +161,7 @@ StatData = {
     numTimeouts = 0,
     numStartups = 0,
     numActiveLocks = 0,
-    memberCounts = {},
-    gaugeAppMetrics = {},
-    countAppMetrics = {}
+    memberCounts = {}
 }
 
 --
@@ -549,30 +547,6 @@ end
 --
 local function api_prometheus(applet)
 
-    -- create application count metrics
-    local application_count_metric = ""
-    for name,value in pairs(StatData.countAppMetrics) do
-        application_count_metric = application_count_metric .. string.format([[
-
-# TYPE %s counter
-%s %d
-]], name,
-    name,
-    value)
-    end
-
-    -- create application gauge metrics
-    local application_gauge_metric = ""
-    for name,value in pairs(StatData.gaugeAppMetrics) do
-        application_gauge_metric = application_gauge_metric .. string.format([[
-
-# TYPE %s gauge
-%s %f
-]], name,
-    name,
-    value)
-    end
-
     -- create member count metrics
     local member_count_metric = ""
     for member_metric,_ in pairs(StatData.memberCounts) do
@@ -611,9 +585,7 @@ num_active_locks %d
     StatData["numTimeouts"],
     StatData["numStartups"],
     StatData["numActiveLocks"],
-    member_count_metric,
-    application_count_metric,
-    application_gauge_metric)
+    member_count_metric)
 
     -- send response
     applet:set_status(200)
@@ -635,58 +607,6 @@ local function api_health(applet)
     applet:start_response()
     applet:send(response)
 
-end
-
---
--- API: /discovery/metric
---
---  Updates metric data
---
---  INPUT:
---  {
---      "name": "<metric name>"
---      "value": "<metric value>"
---  }
---
-local function api_metric(applet)
-
-    -- process request
-    local body = applet:receive()
-    local request = json.decode(body)
-    local metric_name = request["name"]
-    local metric_value = tonumber(request["value"])
-
-    -- check name provided
-    if not metric_name then
-        StatData.countAppMetrics['ilb_metric_not_provided'] = (StatData.countAppMetrics['ilb_metric_not_provided'] or 0) + 1
-        applet:set_status(400)
-
-    -- check name is a string
-    elseif type(metric_name) ~= 'string' then
-        StatData.countAppMetrics['ilb_metric_wrong_type'] = (StatData.countAppMetrics['ilb_metric_wrong_type'] or 0) + 1
-        applet:set_status(400)
-
-    -- check name length
-    elseif #metric_name == 0 or #metric_name > 32 then
-        StatData.countAppMetrics['ilb_metric_too_long'] = (StatData.countAppMetrics['ilb_metric_too_long'] or 0) + 1
-        applet:set_status(400)
-
-    -- check name characters
-    elseif not metric_name:match("^%w+$") then
-        StatData.countAppMetrics['ilb_metric_invalid_char'] = (StatData.countAppMetrics['ilb_metric_invalid_char'] or 0) + 1
-        applet:set_status(400)
-
-    -- update metrics
-    else
-        StatData.gaugeAppMetrics[metric_name] = metric_value
-        StatData.gaugeAppMetrics[metric_name .. "_sum"] = (StatData.gaugeAppMetrics[metric_name .. "_sum"] or 0.0) + metric_value
-        StatData.countAppMetrics[metric_name .. "_count"] = (StatData.countAppMetrics[metric_name .. "_count"] or 0) + 1
-        applet:set_status(200)
-
-    end
-
-    -- send response
-    applet:start_response()
 end
 
 --
@@ -884,7 +804,6 @@ core.register_service("orchestrator_lock", "http", api_lock)
 core.register_service("orchestrator_unlock", "http", api_unlock)
 core.register_service("orchestrator_prometheus", "http", api_prometheus)
 core.register_service("orchestrator_health", "http", api_health)
-core.register_service("orchestrator_metric", "http", api_metric)
 core.register_service("orchestrator_status", "http", api_status)
 core.register_task(backgroud_scrubber)
 core.register_fetches("next_node", orchestrator_next_node)

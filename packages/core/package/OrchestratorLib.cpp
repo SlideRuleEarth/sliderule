@@ -298,26 +298,6 @@ bool OrchestratorLib::health (void)
 }
 
 /*----------------------------------------------------------------------------
- * metric
- *----------------------------------------------------------------------------*/
-bool OrchestratorLib::metric (const char* name, double value)
-{
-    bool status = false;
-
-    const FString data("{\"name\":\"%s\",\"value\":\"%lf\"}", name, value);
-
-    const rsps_t rsps = request(EndpointObject::POST, "/discovery/metric", data.c_str());
-    if(rsps.code == EndpointObject::OK)
-    {
-        status = true;
-    }
-
-    delete [] rsps.response;
-
-    return status;
-}
-
-/*----------------------------------------------------------------------------
  * getNodes
  *----------------------------------------------------------------------------*/
 int OrchestratorLib::getNodes (void)
