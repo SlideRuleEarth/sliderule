@@ -59,7 +59,7 @@ This will export the existing database to S3 and run a final usage report on the
 
 At targets/slideruleearth-aws/:
 ```
-make public-cluster-go-live COLOR=<hot>
+make public-cluster-destroy COLOR=<hot>
 ```
 
 The `<hot>` color is the color of the old cluster that we want to now destroy.
