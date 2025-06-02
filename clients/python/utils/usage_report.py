@@ -27,6 +27,12 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#
+# TODO: 
+#   1. Add option (defaulted to on) to export the database after running the report
+#   2. Add option to download from S3 all manager databases for a cluster and combine together for a report
+#     
+
 # Imports
 import argparse
 from sliderule.session import Session

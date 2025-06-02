@@ -4,7 +4,7 @@
 
 ## Overview
 
-Provided are a list of steps needed when a new SlideRule release is created and deployed.
+Provided are a list of steps needed when a new SlideRule release is created.
 
 ## Checklist
 
