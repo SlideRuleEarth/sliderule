@@ -99,30 +99,15 @@ def prometheus():
     try:
         gauge_metrics, count_metrics = get_metrics()
         metric_response = []
-        for name,value in count_metrics:
-            metric_response.append(f"""
-# TYPE {name} counter
-{name} {value}
-""")
-        for name,value in gauge_metrics:
-            metric_response.append(f"""
-# TYPE {name} gauge
-{name} {value}
-""")
-        return '\n\n'.join(metric_response)
+        for name,value in count_metrics.items():
+            metric_response.append(f"""# TYPE {name} counter\n{name} {value}\n""")
+            
+        for name,value in gauge_metrics.items():
+            metric_response.append(f"""# TYPE {name} gauge\n{name} {value}\n""")
+            
+        return '\n'.join(metric_response)
     except Exception as e:
         abort(500, f'Metric request failed: {e}')
-
-
-#
-# Export Database
-#
-@status.route('/export', methods=['POST'])
-def export():
-    try:
-        export_db()
-    except Exception as e:
-        abort(500, f'Export failed: {e}')
 
 #
 # Request Counts

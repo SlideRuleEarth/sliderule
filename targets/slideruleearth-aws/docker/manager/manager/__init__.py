@@ -38,6 +38,7 @@ def create_app(test_config=None):
     # initialize database
     from . import db
     db.init_app(app)
+    app.register_blueprint(db.db)
 
     # initialize geolite2
     from . import geo

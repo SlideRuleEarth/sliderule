@@ -1,8 +1,19 @@
 import duckdb
 import click
-from flask import current_app, g
+from flask import Blueprint, current_app, g
+from werkzeug.exceptions import abort
 import threading
 import boto3
+
+####################
+# Initialization
+####################
+
+db = Blueprint('db', __name__, url_prefix='/manager/db')
+
+####################
+# Helper Functions
+####################
 
 def __getdb():
     if 'db' not in g:
@@ -13,6 +24,10 @@ def __getdb():
         """)
         g.lock = threading.Lock()
     return g.db, g.lock
+
+####################
+# Module Functions
+####################
 
 def columns_db(table):
     db, lock = __getdb()
@@ -42,7 +57,7 @@ def export_db():
     db, lock = __getdb()
     s3 = boto3.client('s3')
     local_path = current_app.config['DATABASE']
-    remote_path = current_app.config['DATABASE_REMOTE'].split("s3://")[-1]
+    remote_path = current_app.config['REMOTE_DATABASE'].split("s3://")[-1]
     bucket_name = remote_path.split("/")[0]
     key = '/'.join(remote_path.splot("/")[1:])
     with lock:
@@ -62,3 +77,17 @@ def init_db_command():
 def init_app(app):
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
+
+####################
+# APIs
+####################
+
+#
+# Export Database
+#
+@db.route('/export', methods=['POST'])
+def export():
+    try:
+        export_db()
+    except Exception as e:
+        abort(500, f'Export failed: {e}')
