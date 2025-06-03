@@ -222,13 +222,65 @@ void ArrowSamplerImpl::getMetadata(void)
         const std::string key = file_metadata->key_value_metadata()->key(i);
         const std::string value = file_metadata->key_value_metadata()->value(i);
 
-        if(key == "sliderule")
+        if(key == "recordinfo")
         {
             rapidjson::Document doc;
             doc.Parse(value.c_str());
             if(doc.HasParseError())
             {
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to parse metadata JSON: %s", value.c_str());
+            }
+
+            const char* _timeKey = doc["time"].GetString();
+            const char* _xKey    = doc["x"].GetString();
+            const char* _yKey    = doc["y"].GetString();
+            const bool _asGeo    = doc["as_geo"].GetBool();
+
+            /* Make sure the keys are not empty */
+            if(_timeKey[0] == '\0' || _xKey[0] == '\0' || _yKey[0] == '\0')
+            {
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid recordinfo in sliderule metadata.");
+            }
+
+            timeKey = StringLib::duplicate(_timeKey);
+            xKey    = StringLib::duplicate(_xKey);
+            yKey    = StringLib::duplicate(_yKey);
+            asGeo   = _asGeo;
+            foundIt = true;
+            break;
+        }
+    }
+    
+    if(!foundIt)
+    {
+       foundIt = getMetadataLegacy();
+    }
+
+    if(!foundIt)
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "No metadata found in parquet file.");
+    }
+}
+
+/*----------------------------------------------------------------------------
+* getMetadataLegacy - this supports and older layout of the parquet file
+*----------------------------------------------------------------------------*/
+bool ArrowSamplerImpl::getMetadataLegacy(void)
+{
+    const std::shared_ptr<parquet::FileMetaData> file_metadata = reader->parquet_reader()->metadata();
+
+    for(int i = 0; i < file_metadata->key_value_metadata()->size(); i++)
+    {
+        const std::string key = file_metadata->key_value_metadata()->key(i);
+        const std::string value = file_metadata->key_value_metadata()->value(i);
+
+        if(key == "sliderule")
+        {
+            rapidjson::Document doc;
+            doc.Parse(value.c_str());
+            if(doc.HasParseError())
+            {
+                return false;
             }
 
             if(doc.HasMember("recordinfo"))
@@ -243,26 +295,21 @@ void ArrowSamplerImpl::getMetadata(void)
                 /* Make sure the keys are not empty */
                 if(_timeKey[0] == '\0' || _xKey[0] == '\0' || _yKey[0] == '\0')
                 {
-                    throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid recordinfo in sliderule metadata.");
+                    return false;
                 }
 
                 timeKey = StringLib::duplicate(_timeKey);
                 xKey    = StringLib::duplicate(_xKey);
                 yKey    = StringLib::duplicate(_yKey);
                 asGeo   = _asGeo;
-                foundIt = true;
-                break;
+                
+                /* Found it */
+                return true;
             }
-            else throw RunTimeException(CRITICAL, RTE_FAILURE, "No 'recordinfo' key found in 'sliderule' metadata.");
         }
     }
-
-    if(!foundIt)
-    {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "No 'sliderule' metadata found in parquet file.");
-    }
+    return false;
 }
-
 
 /*----------------------------------------------------------------------------
 * getPoints

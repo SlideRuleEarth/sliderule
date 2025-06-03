@@ -101,6 +101,7 @@ class ArrowSamplerImpl
          *--------------------------------------------------------------------*/
 
         void                          getMetadata             (void);
+        bool                          getMetadataLegacy       (void);
         void                          getPoints               (std::vector<point_info_t>& points);
         void                          getXYPoints             (std::vector<point_info_t>& points);
         void                          getGeoPoints            (std::vector<point_info_t>& points);

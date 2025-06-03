@@ -30,8 +30,8 @@ class TestParquet:
                   "output": { "path": "testfile1.parquet", "format": "geoparquet", "open_on_complete": True } }
         gdf = icesat2.atl06p(parms, resources=[resource])
         metadata = pq.read_metadata("testfile1.parquet")
-        sliderule_metadata = ctypes.create_string_buffer(metadata.metadata[b'sliderule']).value.decode('ascii')
-        metadata_dict = json.loads(sliderule_metadata)
+        recordinfo_metadata = ctypes.create_string_buffer(metadata.metadata[b'recordinfo']).value.decode('ascii')
+        metadata_dict = json.loads(recordinfo_metadata)
         os.remove("testfile1.parquet")
         assert init
         assert len(gdf) == 957
@@ -40,9 +40,9 @@ class TestParquet:
         assert gdf["cycle"].iloc[0] == 2
         assert gdf['segment_id'].describe()["min"] == 405231
         assert gdf['segment_id'].describe()["max"] == 405902
-        assert metadata_dict["recordinfo"]["time"] == "time", f'invalid time column: {metadata_dict["recordinfo"]["time"]}'
-        assert metadata_dict["recordinfo"]["x"] == "longitude", f'invalid x column: {metadata_dict["recordinfo"]["x"]}'
-        assert metadata_dict["recordinfo"]["y"] == "latitude", f'invalid y column: {metadata_dict["recordinfo"]["y"]}'
+        assert metadata_dict["time"] == "time", f'invalid time column: {metadata_dict["time"]}'
+        assert metadata_dict["x"] == "longitude", f'invalid x column: {metadata_dict["x"]}'
+        assert metadata_dict["y"] == "latitude", f'invalid y column: {metadata_dict["y"]}'
 
     def test_atl06_non_geo(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"
@@ -80,17 +80,17 @@ class TestParquet:
                   "output": { "path": "testfile3.parquet", "format": "geoparquet", "open_on_complete": True } }
         gdf = icesat2.atl06sp(parms, resources=[resource])
         metadata = pq.read_metadata("testfile3.parquet")
-        sliderule_metadata = ctypes.create_string_buffer(metadata.metadata[b'sliderule']).value.decode('ascii')
-        metadata_dict = json.loads(sliderule_metadata)
+        recordinfo_metadata = ctypes.create_string_buffer(metadata.metadata[b'recordinfo']).value.decode('ascii')
+        metadata_dict = json.loads(recordinfo_metadata)
         os.remove("testfile3.parquet")
         assert init
         assert len(gdf) == 1663
         assert len(gdf.keys()) == 22
         assert gdf["rgt"].iloc[0] == 1160
         assert gdf["cycle"].iloc[0] == 2
-        assert metadata_dict["recordinfo"]["time"] == "time", f'invalid time column: {metadata_dict["recordinfo"]["time"]}'
-        assert metadata_dict["recordinfo"]["x"] == "longitude", f'invalid x column: {metadata_dict["recordinfo"]["x"]}'
-        assert metadata_dict["recordinfo"]["y"] == "latitude", f'invalid y column: {metadata_dict["recordinfo"]["y"]}'
+        assert metadata_dict["time"] == "time", f'invalid time column: {metadata_dict["time"]}'
+        assert metadata_dict["x"] == "longitude", f'invalid x column: {metadata_dict["x"]}'
+        assert metadata_dict["y"] == "latitude", f'invalid y column: {metadata_dict["y"]}'
 
     def test_atl03(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"

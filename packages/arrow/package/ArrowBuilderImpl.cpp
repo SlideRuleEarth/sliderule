@@ -489,8 +489,8 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
     /* Build rqst String */
     const FString rqststr("{\"endpoint\": \"%s\", \"parms\": %s}", arrowBuilder->getEndpoint(), arrowBuilder->getParmsAsString().c_str());
 
-    /* Initialize Meta Data String */
-    string metastr(FString(R"json({
+    /* Initialize Server Meta Data String */
+    string server_metastr(FString(R"json({
         "server":
         {
             "rqst": %s,
@@ -500,13 +500,6 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
             "packages":%s,
             "build":"%s",
             "launch":"%s"
-        },
-        "recordinfo":
-        {
-            "time": "%s",
-            "as_geo": %s,
-            "x": "%s",
-            "y": "%s"
         }
     })json",
         rqststr.c_str(),
@@ -515,18 +508,31 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
         durationstr.c_str(),
         packagestr.c_str(),
         BUILDINFO,
-        timestr.c_str(),
+        timestr.c_str()).c_str());
+
+    /* Clean Up JSON String */
+    server_metastr = std::regex_replace(server_metastr, std::regex("    "), "");
+    server_metastr = std::regex_replace(server_metastr, std::regex("\n"), " ");
+
+    /* Initialize Record Info Meta Data String */
+    string recordinfo_metastr(FString(R"json({
+        "time": "%s",
+        "as_geo": %s,
+        "x": "%s",
+        "y": "%s"
+    })json",
         arrowBuilder->getTimeKey(),
         arrowBuilder->getParms()->format == ArrowFields::GEOPARQUET ? "true" : "false",
         arrowBuilder->getXKey(),
         arrowBuilder->getYKey()).c_str());
 
     /* Clean Up JSON String */
-    metastr = std::regex_replace(metastr, std::regex("    "), "");
-    metastr = std::regex_replace(metastr, std::regex("\n"), " ");
+    recordinfo_metastr = std::regex_replace(recordinfo_metastr, std::regex("    "), "");
+    recordinfo_metastr = std::regex_replace(recordinfo_metastr, std::regex("\n"), " ");
 
-    /* Append Meta String */
-    metadata->Append("sliderule", metastr);
+    /* Append Meta Strings */
+    metadata->Append("sliderule", server_metastr);
+    metadata->Append("recordinfo", recordinfo_metastr);
 }
 
 /*----------------------------------------------------------------------------
