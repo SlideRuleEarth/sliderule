@@ -71,6 +71,8 @@ class RequestFields: public LuaObject, public FieldDictionary
 
         static const uint64_t DEFAULT_KEY_SPACE = INVALID_KEY;
 
+        static const double INVALID_COORDINATE;
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
@@ -109,6 +111,7 @@ class RequestFields: public LuaObject, public FieldDictionary
         FieldElement<string>            resource;           // granule name (including file extension)
         FieldList<string>               resources;          // list of granule names
         FieldColumn<MathLib::coord_t>   polygon;
+        FieldElement<int>               maxResources;       // set in constructor using SystemConfig
         FieldElement<MathLib::proj_t>   projection          {MathLib::AUTOMATIC_PROJECTION};
         FieldElement<MathLib::datum_t>  datum               {MathLib::UNSPECIFIED_DATUM};
         FieldElement<int>               pointsInPolygon     {0};

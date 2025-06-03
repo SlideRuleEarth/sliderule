@@ -32,6 +32,7 @@ import logging
 import warnings
 import numpy
 import tempfile
+import json
 import geopandas
 from shapely.geometry import Polygon
 from shapely.geometry.multipolygon import MultiPolygon
@@ -603,70 +604,57 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
         }
     ]
     '''
-    tmp_file_name = "temp.geojson"
-
+    # GeoDataFrame
     if isinstance(source, geopandas.GeoDataFrame):
-        # user provided GeoDataFrame instead of a file
-        gdf = source
-        # Convert to geojson file
-        gdf.to_file(tmp_file_name, driver="GeoJSON")
-        with open(tmp_file_name, mode='rt') as file:
-            datafile = file.read()
-        os.remove(tmp_file_name)
+        gdf = source 
+        datafile = gdf.to_json()
 
+    # Polygon
     elif isinstance(source, Polygon):
         gdf = geopandas.GeoDataFrame(geometry=[source], crs=DEFAULT_CRS)
-        gdf.to_file(tmp_file_name, driver="GeoJSON")
-        with open(tmp_file_name, mode='rt') as file:
-            datafile = file.read()
-        os.remove(tmp_file_name)
+        datafile = gdf.to_json()
 
+    # bounding box as [lon lat lon lat]
     elif isinstance(source, list) and (len(source) >= 4) and (len(source) % 2 == 0):
-        # create lat/lon lists
         if len(source) == 4: # bounding box
             lons = [source[0], source[2], source[2], source[0], source[0]]
             lats = [source[1], source[1], source[3], source[3], source[1]]
         elif len(source) > 4: # polygon list
             lons = [source[i] for i in range(1,len(source),2)]
             lats = [source[i] for i in range(0,len(source),2)]
-
-        # create geodataframe
         p = Polygon([point for point in zip(lons, lats)])
         gdf = geopandas.GeoDataFrame(geometry=[p], crs=DEFAULT_CRS)
+        datafile = gdf.to_json()
 
-        # Convert to geojson file
-        gdf.to_file(tmp_file_name, driver="GeoJSON")
-        with open(tmp_file_name, mode='rt') as file:
-            datafile = file.read()
-        os.remove(tmp_file_name)
-
+    # List of lat/lon dictionaries
     elif isinstance(source, list) and (len(source) >= 4) and isinstance(source[0], dict):
-
-        # create geodataframe
         p = Polygon([(c["lon"], c["lat"]) for c in source])
         gdf = geopandas.GeoDataFrame(geometry=[p], crs=DEFAULT_CRS)
+        datafile = gdf.to_json()
 
-        # Convert to geojson file
-        gdf.to_file(tmp_file_name, driver="GeoJSON")
-        with open(tmp_file_name, mode='rt') as file:
-            datafile = file.read()
-        os.remove(tmp_file_name)
-
+    # Shapefile
     elif isinstance(source, str) and (source.find(".shp") > 1):
-        # create geodataframe
         gdf = geopandas.read_file(source)
-        # Convert to geojson file
-        gdf.to_file(tmp_file_name, driver="GeoJSON")
-        with open(tmp_file_name, mode='rt') as file:
-            datafile = file.read()
-        os.remove(tmp_file_name)
+        datafile = gdf.to_json()
 
+    # GeoJSON file
     elif isinstance(source, str) and (source.find(".geojson") > 1):
-        # create geodataframe
         gdf = geopandas.read_file(source)
         with open(source, mode='rt') as file:
             datafile = file.read()
 
+    # GeoJSON dictionary
+    elif isinstance(source, dict) and ("features" in source):
+        gdf = geopandas.GeoDataFrame.from_features(source["features"])
+        datafile = gdf.to_json()
+
+    # GeoJSON string
+    elif isinstance(source, str) and (source.find("FeatureCollection") > 0):
+        geojson_dict = json.loads(source)
+        gdf = geopandas.GeoDataFrame.from_features(geojson_dict["features"])
+        datafile = gdf.to_json()
+
+    # Unsupported
     else:
         raise FatalError("incorrect filetype: please use a .geojson, .shp, or a geodataframe")
 

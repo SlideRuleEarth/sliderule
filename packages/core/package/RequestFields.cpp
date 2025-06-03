@@ -58,6 +58,8 @@ const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
+const double RequestFields::INVALID_COORDINATE = -10000.0;
+
 /******************************************************************************
  * CLASS METHODS
  ******************************************************************************/
@@ -435,6 +437,7 @@ RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* asset
         {"asset",               &asset},
         {"resource",            &resource},
         {"resources",           &resources},
+        {"max_resources",       &maxResources},
         {"poly",                &polygon},
         {"proj",                &projection},
         {"datum",               &datum},
@@ -468,6 +471,9 @@ RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* asset
     {
         resource = _resource;
     }
+
+    // set maximum resources
+    maxResources = SystemConfig::settings().requestMaxResources.value;
 
     // add additional fields to dictionary
     for(const init_entry_t elem: init_list)

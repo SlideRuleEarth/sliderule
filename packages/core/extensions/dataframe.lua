@@ -42,8 +42,7 @@ end
 --
 -- get_resources
 --
-local function get_resources(rqst, asset_name, q, userlog)
-    rqst["asset"] = asset_name
+local function get_resources(rqst, q, userlog)
     local max_retries = 3
     local attempt = 1
     while true do
@@ -51,11 +50,17 @@ local function get_resources(rqst, asset_name, q, userlog)
         if rc == earthdata.SUCCESS then
             userlog:alert(core.INFO, core.RTE_STATUS, string.format("request <%s> retrieved %d resources", q, #rsps))
             return RC_SUCCESS, rsps
-        else
+        elseif rc == earthdata.RSPS_TRUNCATED then
+            userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("request <%s> failed query... response trucated", q))
+            return RC_EARTHDATA_FAILURE, nil
+        elseif rc == earthdata.UNSUPPORTED then
+            userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("request <%s> failed query... unsupported dataset", q))
+            return RC_EARTHDATA_FAILURE, nil
+        else -- retry
             userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed attempt %d <%d>: %s", q, attempt, rc, rsps))
             attempt = attempt + 1
             if attempt > max_retries then
-                userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed query... aborting!", q))
+                userlog:alert(core.CRITICAL, core.RTE_SIMPLIFY, string.format("request <%s> failed query... aborting!", q))
                 return RC_EARTHDATA_FAILURE, nil
             end
         end
@@ -125,7 +130,8 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
         resources = rqst["resources"]
     else
         local status
-        status, resources = get_resources(rqst, parms["asset"], rspq, userlog)
+        rqst["asset"] = parms["asset"]
+        status, resources = get_resources(rqst, rspq, userlog)
         if status ~= RC_SUCCESS then
             userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> earthdata queury failed: %d", rspq, status))
             return status
@@ -192,7 +198,8 @@ local package = {
     PROXY_FAILURE = RC_PROXY_FAILURE,
     ARROW_FAILURE = RC_ARROW_FAILURE,
     NO_RESOURCES = RC_NO_RESOURCES,
-    proxy = proxy
+    proxy = proxy,
+    get_resources = get_resources
 }
 
 return package

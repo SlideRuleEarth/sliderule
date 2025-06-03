@@ -286,7 +286,7 @@ int GeoDataFrame::luaCreate (lua_State* L)
 
                     // add column to dataframe
                     dataframe->columnFields.add(name, column, true);
-                    mlog(INFO, "Adding column %s of length %ld", name, column->length());
+                    mlog(DEBUG, "Adding column %s of length %ld", name, column->length());
                 }
                 lua_pop(L, 1); // remove the key
             }
@@ -329,7 +329,7 @@ int GeoDataFrame::luaCreate (lua_State* L)
                         element->setEncodingFlags(META_COLUMN);
                         dataframe->metaFields.add(key, element, true);
                     }
-                    mlog(INFO, "Adding metadata %s", key);
+                    mlog(DEBUG, "Adding metadata %s", key);
                 }
                 lua_pop(L, 1); // remove the key
             }
