@@ -65,6 +65,10 @@ if sys.getcfg("authenticate_to_podaac") then
     local script_parms = {earthdata="https://archive.podaac.earthdata.nasa.gov/s3credentials", identity="podaac-cloud"}
     core.script("earth_data_auth", json.encode(script_parms)):global("PodaacAuthScript")
 end
+if sys.getcfg("authenticate_to_asf") then
+    local script_parms = {earthdata="https://nisar.asf.earthdatacloud.nasa.gov/s3credentials", identity="asf-cloud"}
+    core.script("earth_data_auth", json.encode(script_parms)):global("AsfAuthScript")
+end
 
 --------------------------------------------------
 -- Application Server

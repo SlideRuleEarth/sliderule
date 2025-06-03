@@ -68,7 +68,7 @@ int SystemConfig::luaPopulate (lua_State* L)
         mlog(e.level(), "Error populating system configuration: %s", e.what());
         status = false;
     }
-    
+
     lua_pushboolean(L, status);
     return 1;
 }
@@ -129,6 +129,7 @@ SystemConfig::SystemConfig(void):
         {"authenticate_to_ornldaac",    &authenticateToORNLDAAC},
         {"authenticate_to_lpdaac",      &authenticateToLPDAAC},
         {"authenticate_to_podaac",      &authenticateToPODAAC},
+        {"authenticate_to_asf",         &authenticateToASF},
         {"register_as_service",         &registerAsService},
         {"asset_directory",             &assetDirectory},
         {"normal_mem_thresh",           &normalMemoryThreshold},
@@ -171,7 +172,7 @@ void SystemConfig::setIfProvided(FieldElement<string>& field, const char* env)
     const char* str = getenv(env); // NOLINT(concurrency-mt-unsafe)
     if(str) field = str;
 }
-        
+
 /******************************************************************************
  * FUNCTIONS
  ******************************************************************************/

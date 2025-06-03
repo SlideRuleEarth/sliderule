@@ -206,21 +206,38 @@ end
 --[[
 Function:   authenticate
  Purpose:   populate credentials for access to authenticated datasets
-   Notes:   none
+   Notes:   accepts optional list of identity keys to authenticate
 ]]
-local function authenticate()
+local function authenticate(identities_to_auth)
     core.script("iam_role_auth")
     while not aws.csget("iam-role") do
         print("Waiting to establish IAM role...")
         sys.wait(1)
     end
     local systems = {
-        ['nsidc-cloud'] = {earthdata="https://data.nsidc.earthdatacloud.nasa.gov/s3credentials", identity="nsidc-cloud"},
+        ['nsidc-cloud']  = {earthdata="https://data.nsidc.earthdatacloud.nasa.gov/s3credentials", identity="nsidc-cloud"},
         ['lpdaac-cloud'] = {earthdata="https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials", identity="lpdaac-cloud"},
-        ['ornl-cloud'] = {earthdata="https://data.ornldaac.earthdata.nasa.gov/s3credentials", identity="ornl-cloud"},
-        ['podaac-cloud'] =  {earthdata="https://archive.podaac.earthdata.nasa.gov/s3credentials", identity="podaac-cloud"}
+        ['ornl-cloud']   = {earthdata="https://data.ornldaac.earthdata.nasa.gov/s3credentials", identity="ornl-cloud"},
+        ['podaac-cloud'] = {earthdata="https://archive.podaac.earthdata.nasa.gov/s3credentials", identity="podaac-cloud"},
+        ['asf-cloud']    = {earthdata="https://nisar.asf.earthdatacloud.nasa.gov/s3credentials", identity="asf-cloud"}
     }
-    for identity,parms in pairs(systems) do
+
+    local target_systems = {}
+
+    if identities_to_auth then
+        -- Filter only the requested identities
+        for _, id in ipairs(identities_to_auth) do
+            if systems[id] then
+                target_systems[id] = systems[id]
+            else
+                print("Warning: Unknown identity: " .. id)
+            end
+        end
+    else
+        target_systems = systems
+    end
+
+    for identity, parms in pairs(target_systems) do
         if not aws.csget(identity) then
             core.script("earth_data_auth", json.encode(parms))
         end

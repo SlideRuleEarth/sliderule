@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __bluetopo_bathy_raster__
-#define __bluetopo_bathy_raster__
+#ifndef __nisar_dataset__
+#define __nisar_dataset__
 
 /******************************************************************************
  * INCLUDES
@@ -39,10 +39,10 @@
 #include "GeoIndexedRaster.h"
 
 /******************************************************************************
- * GEBCO BATHY RASTER CLASS
+ * NISAR DATASET CLASS
  ******************************************************************************/
 
-class BlueTopoBathyRaster: public GeoIndexedRaster
+class NisarDataset: public GeoIndexedRaster
 {
     public:
 
@@ -60,7 +60,7 @@ class BlueTopoBathyRaster: public GeoIndexedRaster
          *--------------------------------------------------------------------*/
 
         static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
-                          { return new BlueTopoBathyRaster(L, rqst_parms, key); }
+                          { return new NisarDataset(L, rqst_parms, key); }
 
 
     protected:
@@ -70,8 +70,8 @@ class BlueTopoBathyRaster: public GeoIndexedRaster
          *--------------------------------------------------------------------*/
         double  getGmtDate (const OGRFeature* feature, const char* field,  TimeLib::gmt_time_t& gmtDate) final;
 
-                BlueTopoBathyRaster (lua_State* L, RequestFields* rqst_parms, const char* key);
-               ~BlueTopoBathyRaster (void) override;
+                NisarDataset (lua_State* L, RequestFields* rqst_parms, const char* key);
+               ~NisarDataset (void) override;
 
         void    getIndexFile (const OGRGeometry* geo, std::string& file) final;
         void    getIndexFile (const std::vector<point_info_t>* points, std::string& file) final;
@@ -88,14 +88,12 @@ class BlueTopoBathyRaster: public GeoIndexedRaster
          *--------------------------------------------------------------------*/
 
         bool validateBandNames (void);
-        bool findIndexFileInS3Bucket (const std::string& bucketPath);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
         std::string filePath;
-        std::string indexBucket;
         std::string indexFile;
 };
 
-#endif  /* __bluetopo_bathy_raster__ */
+#endif  /* __nisar_dataset__ */

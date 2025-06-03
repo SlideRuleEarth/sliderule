@@ -176,6 +176,7 @@ option (USE_PGC_DATASET "Include the PGC dataset" ON)
 option (USE_SWOT_DATASET "Include the SWOT dataset" ON)
 option (USE_USGS3DEP_DATASET "Include the USGS 3DEP dataset" ON)
 option (USE_GEDTM_DATASET "Include the GEDTM dataset" ON)
+option (USE_NISAR_DATASET "Include the NISAR dataset" ON)
 
 # Target Options #
 
@@ -387,6 +388,10 @@ endif()
 
 if(${USE_GEDTM_DATASET})
     add_subdirectory (datasets/gedtm)
+endif()
+
+if(${USE_NISAR_DATASET})
+    add_subdirectory (datasets/nisar)
 endif()
 
 # Targets #

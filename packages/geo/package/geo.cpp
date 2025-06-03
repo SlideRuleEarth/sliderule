@@ -238,6 +238,20 @@ static void configGDAL(void)
     {
         mlog(CRITICAL, "PROJ library network capabilities are DISABLED");
     }
+
+    /*
+     * If user enabled CURL_VERBOSE or CPL_DEBUG then enable GDAL error reporting
+     * so that GDAL/CURL messages are logged
+     */
+    const char* debug = CPLGetConfigOption("CPL_DEBUG", "");
+    const char* curl_verbose = CPLGetConfigOption("CPL_CURL_VERBOSE", "");
+
+    if ((strcmp(debug, "ON") == 0 || strcmp(curl_verbose, "YES") == 0))
+    {
+        #ifndef GDAL_ERROR_REPORTING
+        #define GDAL_ERROR_REPORTING
+        #endif
+    }
 }
 
 /*----------------------------------------------------------------------------

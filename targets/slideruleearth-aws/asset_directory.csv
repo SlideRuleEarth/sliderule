@@ -39,3 +39,4 @@ sliderule-stage,            iam-role,       s3,         sliderule-public,       
 gedtm-30meter,              iam-role,       nil,        /vsis3/sliderule/data/GEDTM/legendtm_rf_30m_m_s_20000101_20231231_go_epsg.4326_v20250130.tif, nil, us-west-2, https://s3.us-west-2.amazonaws.com
 gedtm-std,                  iam-role,       nil,        /vsis3/sliderule/data/GEDTM/gendtm_rf_30m_std_s_20000101_20231231_go_epsg.4326_v20250209.tif, nil, us-west-2, https://s3.us-west-2.amazonaws.com
 gedtm-dfm,                  iam-role,       nil,        /vsis3/sliderule/data/GEDTM/dfme_edtm_m_30m_s_20000101_20221231_go_epsg.4326_v20241230.tif,   nil, us-west-2, https://s3.us-west-2.amazonaws.com
+nisar-L2-geoff,             asf-cloud,      nil,        /vsis3/sds-n-cumulus-prod-nisar-sample-data/,                           nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
