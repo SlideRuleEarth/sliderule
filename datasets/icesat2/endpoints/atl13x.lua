@@ -36,8 +36,10 @@ if parms["key_space"] == core.INVALID_KEY then
     -- apply polygon if supplied
     if resources_set_by_ams and parms:length("poly") > 0 then
         local userlog = msg.publish(rspq)
-        local status, cmr_response = dataframe.get_resources(parms, rspq, userlog)
+        rqst["parms"]["asset"] = parms["asset"] -- needed by earth data search function inside get_resources
+        local status, cmr_response = dataframe.get_resources(rqst["parms"], rspq, userlog)
         if status == RC_SUCCESS and type(cmr_response) == 'table' then
+
             -- pull out all resources from cmr query
             local resources_to_process = {}
             for _,resource in ipairs(cmr_response) do
