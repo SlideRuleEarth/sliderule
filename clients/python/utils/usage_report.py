@@ -35,8 +35,10 @@
 # Imports
 import os
 import sys
+import json
 import argparse
 import boto3
+import duckdb
 from sliderule.session import Session
 
 # Command Line Arguments
@@ -83,6 +85,22 @@ def display_sorted(title, counts):
     for count in sorted_counts:
         print(f'{count[0]}: {count[1]}')    
 
+def value_counts(table, field, db=None):
+    if db != None:
+        # build initial query
+        cmd = f"""
+            SELECT {field}, COUNT(*) AS count
+            FROM {table}
+            GROUP BY {field}
+        """
+        # execute request
+        result = db.execute(cmd).fetchall()
+        # return response
+        response = {key:value for (key,value) in result}
+        return json.dumps(response)
+    else:
+        return session.manager(f'status/{table}/{field}')
+
 ##############################
 # Export Database - Exits
 ##############################
@@ -96,7 +114,11 @@ if args.export:
 # Import Databases
 ##############################
 
+db = None
 if len(args.imports) > 0:
+    db_files = []
+
+    # download all database files locally
     for database_file in args.imports:
         path = database_file.split("s3://")[-1].split("/")
         bucket = path[0]
@@ -104,26 +126,43 @@ if len(args.imports) > 0:
         filename = os.path.join(args.localdir, path[-1])
         s3_client = boto3.client('s3')
         s3_client.download_file(bucket, key, filename)
+        db_files.append(filename)
         print(f'Downloaded {database_file}')
+
+    # create database connections
+    db = duckdb.connect()
+    for i, f in enumerate(db_files):
+        db.execute(f"ATTACH '{f}' AS db{i}")
+    value_counts(db, "source_ip_hash")
+
+    # combine telemetry tables
+    cmd = "CREATE VIEW combined_telemetry AS\n"
+    cmd += 'UNION ALL\n'.join([f'SELECT * FROM db{i}.telemetry\n' for i in range(len(db_files))])
+    db.execute(cmd)
+        
+    # combine telemetry tables
+    cmd = "CREATE VIEW combined_alerts AS\n"
+    cmd += 'UNION ALL\n'.join([f'SELECT * FROM db{i}.alerts\n' for i in range(len(db_files))])
+    db.execute(cmd)
 
 ##############################
 # Collect Statistics
 ##############################
 
 # Gather Statistics on Usage
-unique_ip_counts = session.manager("status/telemetry_counts/source_ip_hash")
-source_location_counts = session.manager("status/telemetry_counts/source_ip_location")
-client_counts = session.manager("status/telemetry_counts/client")
-endpoint_counts = session.manager("status/telemetry_counts/endpoint")
-telemetry_status_code_counts = session.manager("status/telemetry_counts/status_code")
-alert_status_code_counts = session.manager("status/alert_counts/status_code")
+unique_ip_counts                =  value_counts('telemetry_counts', 'source_ip_hash', db) 
+source_location_counts          =  value_counts('telemetry_counts', 'source_ip_location', db) 
+client_counts                   =  value_counts('telemetry_counts', 'client', db) 
+endpoint_counts                 =  value_counts('telemetry_counts', 'endpoint', db) 
+telemetry_status_code_counts    =  value_counts('telemetry_counts', 'status_code', db) 
+alert_status_code_counts        =  value_counts('alert_counts', 'status_code', db) 
 
 # Process Request Counts
-total_requests = sum_counts(endpoint_counts)
-total_icesat2_granules = sum_counts(endpoint_counts, ['atl03x', 'atl03s', 'atl03v', 'atl06', 'atl06s', 'atl08', 'atl13s', 'atl24x'])
-total_icesat2_proxied_requests = sum_counts(endpoint_counts, ['atl03x', 'atl03sp', 'atl03vp', 'atl06p', 'atl06sp', 'atl08p', 'atl13sp', 'atl24x'])
-total_gedi_granules = sum_counts(endpoint_counts, ['gedi01b', 'gedi02a', 'gedi04a'])
-total_gedi_proxied_requests = sum_counts(endpoint_counts, ['gedi01bp', 'gedi02ap', 'gedi04ap'])
+total_requests                  = sum_counts(endpoint_counts)
+total_icesat2_granules          = sum_counts(endpoint_counts, ['atl03x', 'atl03s', 'atl03v', 'atl06', 'atl06s', 'atl08', 'atl13s', 'atl24x'])
+total_icesat2_proxied_requests  = sum_counts(endpoint_counts, ['atl03x', 'atl03sp', 'atl03vp', 'atl06p', 'atl06sp', 'atl08p', 'atl13sp', 'atl24x'])
+total_gedi_granules             = sum_counts(endpoint_counts, ['gedi01b', 'gedi02a', 'gedi04a'])
+total_gedi_proxied_requests     = sum_counts(endpoint_counts, ['gedi01bp', 'gedi02ap', 'gedi04ap'])
 
 ##############################
 # Report Statistics

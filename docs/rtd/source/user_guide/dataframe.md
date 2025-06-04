@@ -62,6 +62,27 @@ The default resulting DataFrame from this API contains the following columns:
 |rgt|Reference Ground Track|||
 |gt|Beam|'gt1l', 'gt1r', 'gt2l', 'gt2r', 'gt3l', 'gt3r'|Dependent on spacecraft orientation|
 
+### atl13x
+
+This API is used to subset and operate on the ICESat-2 ATL13 inland lake data and is called via:
+```python
+sliderule.run('atl13x', parms)
+```
+The default resulting DataFrame from this API contains the following columns:
+|Field|Description|Units|Notes|
+|-----|-----------|-----|-----|
+|time_ns|Unix Time|nanoseconds|index column of DataFrame|
+|latitude|segment coordinate (replaced by geometry column when GeoDataFrame)|degrees (double)|EPSG:7912|
+|longitude|segment coordinate (replaced by geometry column when GeoDataFrame)|degrees (double)|EPSG:7912|
+|ht_ortho|Orthometric height of the water surface|meters (float)|EGM08|
+|ht_water_surf|Ellipsoidal height of the water surface|meters (float)|WGS84|
+|stdev_water_surf|Derived standard deviation of water surface|meters (float)||
+|water_depth|Depth from the mean water surface to detected bottom|meters (float)||
+|spot|ATLAS detector field of view|1-6|Independent of spacecraft orientation|
+|cycle|ATLAS orbit cycle number|||
+|rgt|Reference Ground Track|||
+|gt|Beam|'gt1l', 'gt1r', 'gt2l', 'gt2r', 'gt3l', 'gt3r'|Dependent on spacecraft orientation|
+
 ### atl24x
 
 This API is used to subset and operate on the ICESat-2 ATL24 bathymetry classified photons and is called via:
@@ -266,6 +287,15 @@ curl https://sliderule.slideruleearth.io/source/defaults
 |---------|-----------|-----|-------|
 |binsize|size of photon height bin|double; meters|1.0|
 |geoloc|how geolocation statistics are calculated|0:mean, 1:median, 2:center|median|
+
+#### ATL13
+
+|Parameter|Description|Units|Default|
+|---------|-----------|-----|-------|
+|refid|ATL13 reference id|integer||
+|name|lake (or body of water) name|string||
+|coordinate|latitude and longitude contained within the desired body of water|object {"lat": $lat, "lon": $lon}||
+|anc_fields|ATL13 ancillary fields|list of strings||
 
 #### ATL24
 
