@@ -11,10 +11,8 @@ end
 runner.authenticate({"asf-cloud"})
 runner.log(core.DEBUG)
 
--- TODO: This index file is from landsat hls but for now it will trick the reader into thinking it is from NISAR
---       Create a small geojson file with a few hdf5 files which would look like what CMR would return for NISAR query
 local srcfile, dirpath = runner.srcscript()
-local geojsonfile = dirpath.."../../landsat/data/hls_trimmed.geojson"
+local geojsonfile = dirpath.."../data/nisar_fake.geojson"
 local f = io.open(geojsonfile, "r")
 runner.assert(f, "failed to open geojson file")
 if not f then return end
@@ -23,8 +21,8 @@ f:close()
 
 -- Correct values test for different POIs
 
-local lons = {-116.9985}
-local lats = {   0.0011}
+local lons = {-117.9705}
+local lats = {  34.8005}
 local height = 0
 
 local expElevation   = {-14.10, -4.28, -17.18}
