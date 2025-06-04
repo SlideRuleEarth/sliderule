@@ -29,19 +29,24 @@
 
 #
 # TODO: 
-#   1. Add option (defaulted to on) to export the database after running the report
 #   2. Add option to download from S3 all manager databases for a cluster and combine together for a report
 #     
 
 # Imports
+import os
+import sys
 import argparse
+import boto3
 from sliderule.session import Session
 
 # Command Line Arguments
 parser = argparse.ArgumentParser(description="""usage report""")
 parser.add_argument('--domain',             type=str,               default="slideruleearth.io")
 parser.add_argument('--organization',       type=str,               default="sliderule")
+parser.add_argument('--localdir',           type=str,               default="/data/")
 parser.add_argument('--verbose',            action='store_true',    default=False)
+parser.add_argument('--export',             action='store_true',    default=False)
+parser.add_argument('--imports',            nargs='+', type=str,    default=[]) # s3://sliderule/data/manager/manager-developers-latest.db
 args,_ = parser.parse_known_args()
 
 # Initialize Organization
@@ -79,6 +84,29 @@ def display_sorted(title, counts):
         print(f'{count[0]}: {count[1]}')    
 
 ##############################
+# Export Database - Exits
+##############################
+
+if args.export:
+    response = session.manager("db/export", content_json=False, as_post=True)
+    print(response)
+    sys.exit(0)
+
+##############################
+# Import Databases
+##############################
+
+if len(args.imports) > 0:
+    for database_file in args.imports:
+        path = database_file.split("s3://")[-1].split("/")
+        bucket = path[0]
+        key = '/'.join(path[1:])
+        filename = os.path.join(args.localdir, path[-1])
+        s3_client = boto3.client('s3')
+        s3_client.download_file(bucket, key, filename)
+        print(f'Downloaded {database_file}')
+
+##############################
 # Collect Statistics
 ##############################
 
@@ -89,10 +117,6 @@ client_counts = session.manager("status/telemetry_counts/client")
 endpoint_counts = session.manager("status/telemetry_counts/endpoint")
 telemetry_status_code_counts = session.manager("status/telemetry_counts/status_code")
 alert_status_code_counts = session.manager("status/alert_counts/status_code")
-
-##############################
-# Process Statistics
-##############################
 
 # Process Request Counts
 total_requests = sum_counts(endpoint_counts)
