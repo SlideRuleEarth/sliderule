@@ -27,15 +27,9 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#
-# TODO: 
-#   2. Add option to download from S3 all manager databases for a cluster and combine together for a report
-#     
-
 # Imports
 import os
 import sys
-import json
 import argparse
 import boto3
 import duckdb
@@ -87,6 +81,7 @@ def display_sorted(title, counts):
 
 def value_counts(table, field, db=None):
     if db != None:
+        table = {"telemetry": "combined_telemetry", "alerts": "combined_alerts"}.get(table)
         # build initial query
         cmd = f"""
             SELECT {field}, COUNT(*) AS count
@@ -96,9 +91,9 @@ def value_counts(table, field, db=None):
         # execute request
         result = db.execute(cmd).fetchall()
         # return response
-        response = {key:value for (key,value) in result}
-        return json.dumps(response)
+        return {key:value for (key,value) in result}
     else:
+        table = {"telemetry": "telemetry_counts", "alerts": "alert_counts"}.get(table)
         return session.manager(f'status/{table}/{field}')
 
 ##############################
@@ -124,16 +119,18 @@ if len(args.imports) > 0:
         bucket = path[0]
         key = '/'.join(path[1:])
         filename = os.path.join(args.localdir, path[-1])
-        s3_client = boto3.client('s3')
-        s3_client.download_file(bucket, key, filename)
+        if not os.path.exists(filename):
+            s3_client = boto3.client('s3')
+            s3_client.download_file(bucket, key, filename)
+            print(f'Downloaded {database_file}')
+        else:
+            print(f'Using {filename}')
         db_files.append(filename)
-        print(f'Downloaded {database_file}')
 
     # create database connections
     db = duckdb.connect()
     for i, f in enumerate(db_files):
         db.execute(f"ATTACH '{f}' AS db{i}")
-    value_counts(db, "source_ip_hash")
 
     # combine telemetry tables
     cmd = "CREATE VIEW combined_telemetry AS\n"
@@ -150,12 +147,12 @@ if len(args.imports) > 0:
 ##############################
 
 # Gather Statistics on Usage
-unique_ip_counts                =  value_counts('telemetry_counts', 'source_ip_hash', db) 
-source_location_counts          =  value_counts('telemetry_counts', 'source_ip_location', db) 
-client_counts                   =  value_counts('telemetry_counts', 'client', db) 
-endpoint_counts                 =  value_counts('telemetry_counts', 'endpoint', db) 
-telemetry_status_code_counts    =  value_counts('telemetry_counts', 'status_code', db) 
-alert_status_code_counts        =  value_counts('alert_counts', 'status_code', db) 
+unique_ip_counts                =  value_counts('telemetry', 'source_ip_hash', db) 
+source_location_counts          =  value_counts('telemetry', 'source_ip_location', db) 
+client_counts                   =  value_counts('telemetry', 'client', db) 
+endpoint_counts                 =  value_counts('telemetry', 'endpoint', db) 
+telemetry_status_code_counts    =  value_counts('telemetry', 'status_code', db) 
+alert_status_code_counts        =  value_counts('alerts', 'status_code', db) 
 
 # Process Request Counts
 total_requests                  = sum_counts(endpoint_counts)
