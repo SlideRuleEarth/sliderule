@@ -1,6 +1,7 @@
 resource "aws_launch_template" "sliderule_template" {
   name_prefix   = "${var.cluster_name}-"
   image_id      = data.aws_ami.sliderule_cluster_ami.id
+  instance_type = "t4g.2xlarge"
 
   block_device_mappings {
     device_name = "/dev/xvda"
@@ -57,39 +58,9 @@ resource "aws_autoscaling_group" "sliderule-cluster" {
   health_check_type     = "EC2"
   vpc_zone_identifier   = [ aws_subnet.sliderule-subnet.id ]
 
-  mixed_instances_policy {
-    instances_distribution {
-      on_demand_base_capacity                  = var.node_asg_min_capacity
-      on_demand_percentage_above_base_capacity = 0
-      spot_allocation_strategy                 = var.spot_allocation_strategy
-      spot_max_price                           = var.spot_max_price
-    }
-
-    launch_template {
-      launch_template_specification {
-        launch_template_id = "${aws_launch_template.sliderule_template.id}"
-      }
-
-      override {
-        instance_type = "r8g.2xlarge"
-        weighted_capacity = 1
-      }
-
-      override {
-        instance_type = "r7g.2xlarge"
-        weighted_capacity = 1
-      }
-
-      override {
-        instance_type = "m7g.2xlarge"
-        weighted_capacity = 1
-      }
-
-      override {
-        instance_type = "c7g.4xlarge"
-        weighted_capacity = 1
-      }
-    }
+  launch_template {
+    id      = aws_launch_template.sliderule_template.id
+    version = "$Latest"
   }
 
   tag {

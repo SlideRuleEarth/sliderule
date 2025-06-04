@@ -81,9 +81,6 @@ void TelemetryMonitor::processEvent(const unsigned char* event_buf_ptr, int even
 
     /* Post Telemetry to Manager */
     ManagerLib::recordTelemetry(event);
-
-    /* Post Metric to Orchestrator */
-    OrchestratorLib::metric(event->endpoint, event->duration);
 }
 
 /*----------------------------------------------------------------------------

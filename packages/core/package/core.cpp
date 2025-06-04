@@ -213,6 +213,7 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "INVALID_TX_ID",            OrchestratorLib::INVALID_TX_ID);
     LuaEngine::setAttrInt   (L, "INVALID_KEY",              INVALID_KEY);
     LuaEngine::setAttrStr   (L, "TERMINATE",                GeoDataFrame::TERMINATE);
+    LuaEngine::setAttrNum   (L, "INVALID_COORDINATE",       RequestFields::INVALID_COORDINATE);
 
 #ifdef __unittesting__
     LuaEngine::setAttrBool(L, "UNITTEST",                   true);

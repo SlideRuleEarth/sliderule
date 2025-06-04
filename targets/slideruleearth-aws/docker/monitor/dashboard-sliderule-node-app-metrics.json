@@ -97,7 +97,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(atl03s{job=\"orchestrator_app\"}[1y])",
+          "expr": "max_over_time(atl03s{job=\"manager_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -183,7 +183,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(atl06{job=\"orchestrator_app\"}[1y])",
+          "expr": "max_over_time(atl06{job=\"manager_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -269,7 +269,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(atl08{job=\"orchestrator_app\"}[1y])",
+          "expr": "max_over_time(atl08{job=\"manager_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -355,7 +355,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(atl03sp{job=\"orchestrator_app\"}[1y])",
+          "expr": "max_over_time(atl03sp{job=\"manager_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -441,7 +441,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(atl06p{job=\"orchestrator_app\"}[1y])",
+          "expr": "max_over_time(atl06p{job=\"manager_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -527,7 +527,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(atl08p{job=\"orchestrator_app\"}[1y])",
+          "expr": "max_over_time(atl08p{job=\"manager_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -613,7 +613,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "atl03s_count{job=\"orchestrator_app\"} + atl06_count{job=\"orchestrator_app\"} + atl08_count{job=\"orchestrator_app\"}",
+          "expr": "atl03s_count{job=\"manager_app\"} + atl06_count{job=\"manager_app\"} + atl08_count{job=\"manager_app\"}",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -699,7 +699,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "atl03sp_count{job=\"orchestrator_app\"} + atl06p_count{job=\"orchestrator_app\"} + atl08p_count{job=\"orchestrator_app\"}",
+          "expr": "atl03sp_count{job=\"manager_app\"} + atl06p_count{job=\"manager_app\"} + atl08p_count{job=\"manager_app\"}",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -785,7 +785,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "gedi01bp_count{job=\"orchestrator_app\"} + gedi02ap_count{job=\"orchestrator_app\"} + gedi04ap_count{job=\"orchestrator_app\"}",
+          "expr": "gedi01bp_count{job=\"manager_app\"} + gedi02ap_count{job=\"manager_app\"} + gedi04ap_count{job=\"manager_app\"}",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -871,7 +871,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "gedi01b_count{job=\"orchestrator_app\"} + gedi02a_count{job=\"orchestrator_app\"} + gedi04a_count{job=\"orchestrator_app\"}",
+          "expr": "gedi01b_count{job=\"manager_app\"} + gedi02a_count{job=\"manager_app\"} + gedi04a_count{job=\"manager_app\"}",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -957,7 +957,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "version_count{job=\"orchestrator_app\"}",
+          "expr": "version_count{job=\"manager_app\"}",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -1043,7 +1043,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "samples_count{job=\"orchestrator_app\"} + subsets_count{job=\"orchestrator_app\"}",
+          "expr": "samples_count{job=\"manager_app\"} + subsets_count{job=\"manager_app\"}",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -1129,14 +1129,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "atl03s_count{job=\"orchestrator_app\"}",
+          "expr": "atl03s_count{job=\"manager_app\"}",
           "interval": "",
           "legendFormat": "atl03s",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "atl06_count{job=\"orchestrator_app\"}",
+          "expr": "atl06_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "atl06",
@@ -1144,7 +1144,7 @@
         },
         {
           "exemplar": true,
-          "expr": "atl08_count{job=\"orchestrator_app\"}",
+          "expr": "atl08_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "atl08",
@@ -1152,7 +1152,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi01b_count{job=\"orchestrator_app\"}",
+          "expr": "gedi01b_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi01b",
@@ -1160,7 +1160,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi02a_count{job=\"orchestrator_app\"}",
+          "expr": "gedi02a_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi02a",
@@ -1168,7 +1168,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi04a_count{job=\"orchestrator_app\"}",
+          "expr": "gedi04a_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi04a",
@@ -1176,7 +1176,7 @@
         },
         {
           "exemplar": true,
-          "expr": "h5_count{job=\"orchestrator_app\"}",
+          "expr": "h5_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "h5",
@@ -1258,14 +1258,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "atl03sp_count{job=\"orchestrator_app\"}",
+          "expr": "atl03sp_count{job=\"manager_app\"}",
           "interval": "",
           "legendFormat": "atl03sp",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "atl06p_count{job=\"orchestrator_app\"}",
+          "expr": "atl06p_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "atl06p",
@@ -1273,7 +1273,7 @@
         },
         {
           "exemplar": true,
-          "expr": "atl08p_count{job=\"orchestrator_app\"}",
+          "expr": "atl08p_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "atl08p",
@@ -1281,7 +1281,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi01bp_count{job=\"orchestrator_app\"}",
+          "expr": "gedi01bp_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi01bp",
@@ -1289,7 +1289,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi02ap_count{job=\"orchestrator_app\"}",
+          "expr": "gedi02ap_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi02ap",
@@ -1297,7 +1297,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi04ap_count{job=\"orchestrator_app\"}",
+          "expr": "gedi04ap_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi04ap",
@@ -1305,7 +1305,7 @@
         },
         {
           "exemplar": true,
-          "expr": "h5p_count{job=\"orchestrator_app\"}",
+          "expr": "h5p_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "h5p",
@@ -1387,14 +1387,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(atl03s_count{job=\"orchestrator_app\"}[1m])",
+          "expr": "rate(atl03s_count{job=\"manager_app\"}[1m])",
           "interval": "",
           "legendFormat": "atl03s",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "rate(atl06_count{job=\"orchestrator_app\"}[1m])",
+          "expr": "rate(atl06_count{job=\"manager_app\"}[1m])",
           "hide": false,
           "interval": "",
           "legendFormat": "atl06",
@@ -1402,7 +1402,7 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(atl08_count{job=\"orchestrator_app\"}[1m])",
+          "expr": "rate(atl08_count{job=\"manager_app\"}[1m])",
           "hide": false,
           "interval": "",
           "legendFormat": "atl08",
@@ -1410,7 +1410,7 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(gedi01b_count{job=\"orchestrator_app\"}[1m])",
+          "expr": "rate(gedi01b_count{job=\"manager_app\"}[1m])",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi01b",
@@ -1418,7 +1418,7 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(gedi02a_count{job=\"orchestrator_app\"}[1m])",
+          "expr": "rate(gedi02a_count{job=\"manager_app\"}[1m])",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi02a",
@@ -1426,7 +1426,7 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(gedi04a_count{job=\"orchestrator_app\"}[1m])  ",
+          "expr": "rate(gedi04a_count{job=\"manager_app\"}[1m])  ",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi04a",
@@ -1434,7 +1434,7 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(h5_count{job=\"orchestrator_app\"}[1m])  ",
+          "expr": "rate(h5_count{job=\"manager_app\"}[1m])  ",
           "hide": false,
           "interval": "",
           "legendFormat": "h5",
@@ -1516,14 +1516,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(atl03sp_count{job=\"orchestrator_app\"}[1m])",
+          "expr": "rate(atl03sp_count{job=\"manager_app\"}[1m])",
           "interval": "",
           "legendFormat": "atl03sp",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "rate(atl06p_count{job=\"orchestrator_app\"}[1m])",
+          "expr": "rate(atl06p_count{job=\"manager_app\"}[1m])",
           "hide": false,
           "interval": "",
           "legendFormat": "atl06p",
@@ -1531,7 +1531,7 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(atl08p_count{job=\"orchestrator_app\"}[1m])",
+          "expr": "rate(atl08p_count{job=\"manager_app\"}[1m])",
           "hide": false,
           "interval": "",
           "legendFormat": "atl08p",
@@ -1539,7 +1539,7 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(gedi01bp_count{job=\"orchestrator_app\"}[1m])",
+          "expr": "rate(gedi01bp_count{job=\"manager_app\"}[1m])",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi01bp",
@@ -1547,7 +1547,7 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(gedi02ap_count{job=\"orchestrator_app\"}[1m])",
+          "expr": "rate(gedi02ap_count{job=\"manager_app\"}[1m])",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi02ap",
@@ -1555,7 +1555,7 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(gedi04ap_count{job=\"orchestrator_app\"}[1m])  ",
+          "expr": "rate(gedi04ap_count{job=\"manager_app\"}[1m])  ",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi04ap",
@@ -1563,7 +1563,7 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(h5p_count{job=\"orchestrator_app\"}[1m]) ",
+          "expr": "rate(h5p_count{job=\"manager_app\"}[1m]) ",
           "hide": false,
           "interval": "",
           "legendFormat": "h5p",
@@ -1646,14 +1646,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "atl03s{job=\"orchestrator_app\"}",
+          "expr": "atl03s{job=\"manager_app\"}",
           "interval": "",
           "legendFormat": "atl03s-sampled",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "atl03s_sum{job=\"orchestrator_app\"} / atl03s_count{job=\"orchestrator_app\"}",
+          "expr": "atl03s_sum{job=\"manager_app\"} / atl03s_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "atl03s-average",
@@ -1736,14 +1736,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "atl03sp{job=\"orchestrator_app\"}",
+          "expr": "atl03sp{job=\"manager_app\"}",
           "interval": "",
           "legendFormat": "atl03sp-sampled",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "atl03sp_sum{job=\"orchestrator_app\"} / atl03sp_count{job=\"orchestrator_app\"}",
+          "expr": "atl03sp_sum{job=\"manager_app\"} / atl03sp_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "atl03sp-average",
@@ -1826,14 +1826,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "atl06{job=\"orchestrator_app\"}",
+          "expr": "atl06{job=\"manager_app\"}",
           "interval": "",
           "legendFormat": "atl06-sampled",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "atl06_sum{job=\"orchestrator_app\"} / atl06_count{job=\"orchestrator_app\"}",
+          "expr": "atl06_sum{job=\"manager_app\"} / atl06_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "atl06-average",
@@ -1916,14 +1916,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "atl06p{job=\"orchestrator_app\"}",
+          "expr": "atl06p{job=\"manager_app\"}",
           "interval": "",
           "legendFormat": "atl06p-sampled",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "atl06p_sum{job=\"orchestrator_app\"} / atl06p_count{job=\"orchestrator_app\"}",
+          "expr": "atl06p_sum{job=\"manager_app\"} / atl06p_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "atl06p-average",
@@ -2006,14 +2006,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "atl08{job=\"orchestrator_app\"}",
+          "expr": "atl08{job=\"manager_app\"}",
           "interval": "",
           "legendFormat": "atl08-sampled",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "atl08_sum{job=\"orchestrator_app\"} / atl08_count{job=\"orchestrator_app\"}",
+          "expr": "atl08_sum{job=\"manager_app\"} / atl08_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "atl08-average",
@@ -2096,14 +2096,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "atl08p{job=\"orchestrator_app\"}",
+          "expr": "atl08p{job=\"manager_app\"}",
           "interval": "",
           "legendFormat": "atl08p-sampled",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "atl08p_sum{job=\"orchestrator_app\"} / atl08p_count{job=\"orchestrator_app\"}",
+          "expr": "atl08p_sum{job=\"manager_app\"} / atl08p_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "atl08p-average",
@@ -2186,14 +2186,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "gedi01b{job=\"orchestrator_app\"}",
+          "expr": "gedi01b{job=\"manager_app\"}",
           "interval": "",
           "legendFormat": "gedi01b-sampled",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "gedi01b_sum{job=\"orchestrator_app\"} / gedi01b_count{job=\"orchestrator_app\"}",
+          "expr": "gedi01b_sum{job=\"manager_app\"} / gedi01b_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi01b-average",
@@ -2201,7 +2201,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi02a{job=\"orchestrator_app\"}",
+          "expr": "gedi02a{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi02a-sampled",
@@ -2209,7 +2209,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi02a_sum{job=\"orchestrator_app\"} / gedi02a_count{job=\"orchestrator_app\"}",
+          "expr": "gedi02a_sum{job=\"manager_app\"} / gedi02a_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi02a-average",
@@ -2217,7 +2217,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi04a{job=\"orchestrator_app\"}",
+          "expr": "gedi04a{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi04a-sampled",
@@ -2225,7 +2225,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi04a_sum{job=\"orchestrator_app\"} / gedi04a_count{job=\"orchestrator_app\"}",
+          "expr": "gedi04a_sum{job=\"manager_app\"} / gedi04a_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi04a-average",
@@ -2308,14 +2308,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "gedi01bp{job=\"orchestrator_app\"}",
+          "expr": "gedi01bp{job=\"manager_app\"}",
           "interval": "",
           "legendFormat": "gedi01bp-sampled",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "gedi01bp_sum{job=\"orchestrator_app\"} / gedi01bp_count{job=\"orchestrator_app\"}",
+          "expr": "gedi01bp_sum{job=\"manager_app\"} / gedi01bp_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi01bp-average",
@@ -2323,7 +2323,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi02ap{job=\"orchestrator_app\"}",
+          "expr": "gedi02ap{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi02ap-sampled",
@@ -2331,7 +2331,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi02ap_sum{job=\"orchestrator_app\"} / gedi02ap_count{job=\"orchestrator_app\"}",
+          "expr": "gedi02ap_sum{job=\"manager_app\"} / gedi02ap_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi02ap-average",
@@ -2339,7 +2339,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi04ap{job=\"orchestrator_app\"}",
+          "expr": "gedi04ap{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi04ap-sampled",
@@ -2347,7 +2347,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi04ap_sum{job=\"orchestrator_app\"} / gedi04ap_count{job=\"orchestrator_app\"}",
+          "expr": "gedi04ap_sum{job=\"manager_app\"} / gedi04ap_count{job=\"manager_app\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi04ap-average",

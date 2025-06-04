@@ -203,6 +203,12 @@ cluster-upload-terraform: ## upload the Cluster terraform for provisioning syste
 	printf "variable \"environment_version\" {\n  default = \"$(ENVVER)\"\n}" > $(TF_STAGE_DIR)/version.tf
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(VERSION)
 
+cluster: ## build all targets related to a cluster deployment and push to aws; needs VERSION
+	make cluster-docker
+	make cluster-docker-push
+	make cluster-build-packer
+	make cluster-upload-terraform
+
 ########################
 # Deployment Targets
 ########################

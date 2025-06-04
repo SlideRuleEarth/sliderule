@@ -527,7 +527,7 @@ class Session:
     #
     #  manager
     #
-    def manager (self, api):
+    def manager (self, api, content_json=True, as_post=False):
         '''
         handles making the HTTP request to the sliderule manager
         '''
@@ -547,14 +547,18 @@ class Session:
                 self.__buildauthheader(headers)
 
             # Perform Request
-            data = self.session.get(url, headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
+            if as_post:
+                data = self.session.post(url, headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
+            else:
+                data = self.session.get(url, headers=headers, timeout=self.rqst_timeout, verify=self.ssl_verify)
             data.raise_for_status()
 
             # Parse Response
             stream = self.__StreamSource(data)
             lines = [line for line in stream]
             rsps = b''.join(lines)
-            rsps = json.loads(rsps)
+            if content_json:
+                rsps = json.loads(rsps)
 
         except requests.exceptions.SSLError as e:
             logger.error(f'Unable to verify SSL certificate for {url}')

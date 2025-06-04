@@ -116,6 +116,7 @@ class SystemConfig: public FieldDictionary
         FieldList<string>               postStartupScripts;
         FieldElement<int>               publishTimeoutMs            {60000}; // 1 minute
         FieldElement<int>               requestTimeoutSec           {600}; // 10 minutes
+        FieldElement<int>               requestMaxResources         {300};
 
         // ENVIRONMENT VARIABLES
         FieldElement<string>            ipv4                        {"127.0.0.1"};

@@ -49,3 +49,9 @@ scrape_configs:
     static_configs:
       - targets: ['10.0.1.5:8050']
     metrics_path: "/discovery/prometheus"
+
+    # Application Metrics for Manager
+  - job_name: 'manager_app'
+    static_configs:
+      - targets: ['10.0.1.3:8000']
+    metrics_path: "/manager/status/prometheus"
