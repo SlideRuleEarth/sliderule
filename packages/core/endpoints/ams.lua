@@ -25,6 +25,6 @@ elseif parms["coord"]["lat"] or parms["coord"]["lon"] then
 end
 
 if response then
-    return json.encode(response)
+    return response
 end
 
