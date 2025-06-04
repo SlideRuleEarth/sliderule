@@ -54,8 +54,9 @@ def export_db():
     local_path = current_app.config['DATABASE']
     remote_path = current_app.config['REMOTE_DATABASE'].split("s3://")[-1]
     bucket_name = remote_path.split("/")[0]
-    key = '/'.join(remote_path.splot("/")[1:])
+    key = '/'.join(remote_path.split("/")[1:])
     s3.upload_file(local_path, bucket_name, key)
+    return f's3://{bucket_name}/{key}'
 
 def close_db(e=None):
     db = g.pop('db', None)
@@ -82,6 +83,7 @@ def init_app(app):
 @db.route('/export', methods=['POST'])
 def export():
     try:
-        export_db()
+        remote_file = export_db()
+        return f'Database successfully exported to: {remote_file}'
     except Exception as e:
         abort(500, f'Export failed: {e}')
