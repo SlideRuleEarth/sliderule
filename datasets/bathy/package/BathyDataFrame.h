@@ -95,7 +95,7 @@ class BathyDataFrame: public GeoDataFrame
         FieldColumn<double>         y_ph;               // the northing coordinate in meters of the photon for the given UTM zone
         FieldColumn<double>         x_atc;              // along track distance calculated from segment_dist_x and dist_ph_along
         FieldColumn<double>         y_atc;              // dist_ph_across
-        FieldColumn<double>         ortho_h {Field::Z_COLUMN}; // refraction corrected, geoid corrected height of photon
+        FieldColumn<float>          ortho_h {Field::Z_COLUMN}; // refraction corrected, geoid corrected height of photon
         FieldColumn<float>          surface_h;          // orthometric height of sea surface at each photon location
         FieldColumn<float>          ellipse_h;          // height of photon with respect to reference ellipsoid
         FieldColumn<float>          sigma_thu;          // total horizontal uncertainty

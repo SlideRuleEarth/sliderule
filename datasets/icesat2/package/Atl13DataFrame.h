@@ -67,7 +67,7 @@ class Atl13DataFrame: public GeoDataFrame
         FieldColumn<time8_t>        time_ns {Field::TIME_COLUMN};   // nanoseconds since GPS epoch
         FieldColumn<double>         latitude {Field::Y_COLUMN};
         FieldColumn<double>         longitude {Field::X_COLUMN};
-        FieldColumn<float>          ht_ortho;
+        FieldColumn<float>          ht_ortho {Field::Z_COLUMN};
         FieldColumn<float>          ht_water_surf;
         FieldColumn<float>          stdev_water_surf;
         FieldColumn<float>          water_depth;

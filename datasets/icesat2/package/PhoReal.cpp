@@ -124,7 +124,7 @@ bool PhoReal::run (GeoDataFrame* dataframe)
     FieldColumn<float>*     h_max_canopy            = new FieldColumn<float>;                       // maximum relief height for canopy photons
     FieldColumn<float>*     h_min_canopy            = new FieldColumn<float>;                       // minimum relief height for canopy photons
     FieldColumn<float>*     h_mean_canopy           = new FieldColumn<float>;                       // average relief height for canopy photons
-    FieldColumn<float>*     h_canopy                = new FieldColumn<float>;                       // 98th percentile relief height for canopy photons
+    FieldColumn<float>*     h_canopy                = new FieldColumn<float>(Field::Z_COLUMN);      // 98th percentile relief height for canopy photons
     FieldColumn<float>*     canopy_openness         = new FieldColumn<float>;                       // standard deviation of relief height for canopy photons
     FieldColumn<FieldArray<float,NUM_PERCENTILES>>* canopy_h_metrics = new FieldColumn<FieldArray<float,NUM_PERCENTILES>>;  // relief height at given percentile for canopy photons
 

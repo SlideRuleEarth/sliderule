@@ -656,7 +656,7 @@ void GeoDataFrame::populateDataframe (void)
         {
             assert(field->type == COLUMN);
             assert(field->getValueEncoding() == DOUBLE);
-            zColumn = dynamic_cast<const FieldColumn<double>*>(field);
+            zColumn = dynamic_cast<const FieldColumn<float>*>(field);
             zColumnName = name;
         }
     }
@@ -705,7 +705,7 @@ const FieldColumn<double>* GeoDataFrame::getYColumn (void) const
 /*----------------------------------------------------------------------------
  * getZColumn
  *----------------------------------------------------------------------------*/
-const FieldColumn<double>* GeoDataFrame::getZColumn (void) const
+const FieldColumn<float>* GeoDataFrame::getZColumn (void) const
 {
     return zColumn;
 }

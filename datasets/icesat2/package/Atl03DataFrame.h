@@ -69,7 +69,7 @@ class Atl03DataFrame: public GeoDataFrame
         FieldColumn<double>         longitude {Field::X_COLUMN};
         FieldColumn<double>         x_atc;                          // double[]: dist_ph_along + segment_distance
         FieldColumn<float>          y_atc;                          // float[]: dist_ph_across
-        FieldColumn<float>          height;                         // float[]: h_ph
+        FieldColumn<float>          height {Field::Z_COLUMN};       // float[]: h_ph
         FieldColumn<float>          solar_elevation;                // degrees
         FieldColumn<float>          background_rate;                // PE per second
         FieldColumn<float>          spacecraft_velocity;            // meters per second

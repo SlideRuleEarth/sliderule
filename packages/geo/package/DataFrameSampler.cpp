@@ -157,7 +157,7 @@ bool DataFrameSampler::populatePoints (GeoDataFrame* dataframe)
     const FieldColumn<time8_t>*  t_column = dataframe->getTimeColumn();
     const FieldColumn<double>*  x_column = dataframe->getXColumn();
     const FieldColumn<double>*  y_column = dataframe->getYColumn();
-    const FieldColumn<double>*  z_column = dataframe->getZColumn();
+    const FieldColumn<float>*   z_column = dataframe->getZColumn();
 
     // chech columns
     if(!x_column || !y_column)
@@ -184,7 +184,7 @@ bool DataFrameSampler::populatePoints (GeoDataFrame* dataframe)
     {
         for(long i = 0; i < dataframe->length(); i++)
         {
-            points[i].point3d.z = (*z_column)[i];
+            points[i].point3d.z = static_cast<double>((*z_column)[i]);
         }
     }
 

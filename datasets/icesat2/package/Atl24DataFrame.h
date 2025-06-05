@@ -75,7 +75,7 @@ class Atl24DataFrame: public GeoDataFrame
         FieldColumn<double>         lon_ph {Field::X_COLUMN};
         FieldColumn<uint8_t>        low_confidence_flag;
         FieldColumn<uint8_t>        night_flag;
-        FieldColumn<float>          ortho_h;
+        FieldColumn<float>          ortho_h {Field::Z_COLUMN};
         FieldColumn<uint8_t>        sensor_depth_exceeded;
         FieldColumn<float>          sigma_thu;
         FieldColumn<float>          sigma_tvu;

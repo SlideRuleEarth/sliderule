@@ -116,7 +116,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     FieldColumn<uint32_t>*  photon_start    = new FieldColumn<uint32_t>;                    // photon index of start of extent
     FieldColumn<uint32_t>*  photon_count    = new FieldColumn<uint32_t>;                    // number of photons used in final elevation calculation
     FieldColumn<uint16_t>*  pflags          = new FieldColumn<uint16_t>;                    // processing flags
-    FieldColumn<double>*    h_mean          = new FieldColumn<double>(Field::Z_COLUMN);     // meters from ellipsoid
+    FieldColumn<float>*     h_mean          = new FieldColumn<float>(Field::Z_COLUMN);      // meters from ellipsoid
     FieldColumn<float>*     dh_fit_dx       = new FieldColumn<float>;                       // along track slope
     FieldColumn<float>*     window_height   = new FieldColumn<float>;
     FieldColumn<float>*     rms_misfit      = new FieldColumn<float>;
@@ -181,7 +181,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
             photon_start->append(df.ph_index[i0]);
             photon_count->append(static_cast<uint32_t>(num_photons));
             pflags->append(result.pflags | _pflags);
-            h_mean->append(result.h_mean);
+            h_mean->append(static_cast<float>(result.h_mean));
             dh_fit_dx->append(result.dh_fit_dx);
             window_height->append(result.window_height);
             rms_misfit->append(result.rms_misfit);

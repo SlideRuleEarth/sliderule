@@ -117,7 +117,7 @@ bool BathySeaSurfaceFinder::run(GeoDataFrame* dataframe)
             vector<double> heights;
             for(long i = p0; i < p1; i++)
             {
-                const double height = df.ortho_h[i];
+                const double height = static_cast<double>(df.ortho_h[i]);
                 const double time_secs = static_cast<double>(df.time_ns[i].nanoseconds) / 1000000000.0;
 
                 /* get min and max height */

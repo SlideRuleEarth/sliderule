@@ -189,7 +189,7 @@ class GeoDataFrame: public LuaObject, public Field
         const FieldColumn<time8_t>* getTimeColumn       (void) const;
         const FieldColumn<double>*  getXColumn          (void) const;
         const FieldColumn<double>*  getYColumn          (void) const;
-        const FieldColumn<double>*  getZColumn          (void) const;
+        const FieldColumn<float>*   getZColumn          (void) const;
 
         const string&               getTimeColumnName   (void) const;
         const string&               getXColumnName      (void) const;
@@ -293,7 +293,7 @@ class GeoDataFrame: public LuaObject, public Field
         const FieldColumn<time8_t>* timeColumn;
         const FieldColumn<double>*  xColumn;
         const FieldColumn<double>*  yColumn;
-        const FieldColumn<double>*  zColumn;
+        const FieldColumn<float>*   zColumn;
 
         string                      timeColumnName;
         string                      xColumnName;

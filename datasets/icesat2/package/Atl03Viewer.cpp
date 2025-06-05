@@ -55,7 +55,7 @@ const RecordObject::fieldDef_t Atl03Viewer::segRecDef[] = {
     {"longitude",       RecordObject::DOUBLE,   offsetof(segment_t, longitude),      1,  NULL, NATIVE_FLAGS | RecordObject::X_COORD},
     {"segment_dist_x",  RecordObject::DOUBLE,   offsetof(segment_t, dist_x),         1,  NULL, NATIVE_FLAGS},
     {"segment_id",      RecordObject::UINT32,   offsetof(segment_t, id),             1,  NULL, NATIVE_FLAGS},
-    {"segment_ph_cnt",  RecordObject::UINT32,   offsetof(segment_t, ph_cnt),         1,  NULL, NATIVE_FLAGS}
+    {"segment_ph_cnt",  RecordObject::UINT32,   offsetof(segment_t, ph_cnt),         1,  NULL, NATIVE_FLAGS | RecordObject::Z_COORD}
 };
 
 const char* Atl03Viewer::batchRecType = "atl03vrec";
