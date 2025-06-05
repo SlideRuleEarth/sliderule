@@ -268,14 +268,14 @@ string convertToJson(const GeoFields::sampling_algo_t& v)
 {
     switch(v)
     {
-        case GeoFields::NEARESTNEIGHBOUR_ALGO: return "NearestNeighbour";
-        case GeoFields::BILINEAR_ALGO:         return "Bilinear";
-        case GeoFields::CUBIC_ALGO:            return "Cubic";
-        case GeoFields::CUBICSPLINE_ALGO:      return "CubicSpline";
-        case GeoFields::LANCZOS_ALGO:          return "Lanczos";
-        case GeoFields::AVERAGE_ALGO:          return "Average";
-        case GeoFields::MODE_ALGO:             return "Mode";
-        case GeoFields::GAUSS_ALGO:            return "Gauss";
+        case GeoFields::NEARESTNEIGHBOUR_ALGO: return "\"NearestNeighbour\"";
+        case GeoFields::BILINEAR_ALGO:         return "\"Bilinear\"";
+        case GeoFields::CUBIC_ALGO:            return "\"Cubic\"";
+        case GeoFields::CUBICSPLINE_ALGO:      return "\"CubicSpline\"";
+        case GeoFields::LANCZOS_ALGO:          return "\"Lanczos\"";
+        case GeoFields::AVERAGE_ALGO:          return "\"Average\"";
+        case GeoFields::MODE_ALGO:             return "\"Mode\"";
+        case GeoFields::GAUSS_ALGO:            return "\"Gauss\"";
         default: throw RunTimeException(CRITICAL, RTE_FAILURE, "Unknown sampling algorithm: %d", static_cast<int>(v));
     }
 }
