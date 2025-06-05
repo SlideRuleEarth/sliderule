@@ -122,6 +122,9 @@ Atl13DataFrame::Atl13DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     assert(_parms);
     assert(_hdf13);
 
+    /* Call Parent Class Initialization of GeoColumns */
+    populateDataframe();
+
     /* Calculate Key */
     dfKey = 0;
     const int exp_beam_str_len = 4;

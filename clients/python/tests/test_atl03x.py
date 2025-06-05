@@ -119,6 +119,30 @@ class TestAtl03x:
         assert gdf["mosaic.fileid"].mean() == 0
         assert gdf["mosaic.time"].mean() == 1358108640.0
 
+    def test_atl03_sampler(self, init):
+        parms = {
+            "asset": "icesat2",
+            "poly": [
+                {"lat": 59.86856921063384, "lon": -44.34985645709006},
+                {"lat": 59.85613150141896, "lon": -44.34985645709006},
+                {"lat": 59.85613150141896, "lon": -44.30692727565953},
+                {"lat": 59.86856921063384, "lon": -44.30692727565953},
+                {"lat": 59.86856921063384, "lon": -44.34985645709006}
+            ],
+            "samples": {
+                "mosaic": {
+                    "asset": "arcticdem-mosaic",
+                    "algorithm": "NearestNeighbour",
+                    "force_single_sample": True
+                }
+            }
+        }
+        gdf = sliderule.run("atl03x", parms, resources=["ATL03_20190105024336_01170205_006_02.h5"])
+        assert init
+        assert len(gdf) == 527
+        assert len(gdf.keys()) == 19
+        assert "mosaic.value" in gdf
+
     def test_mixed_empty_beams(self, init):
         resource = 'ATL03_20200512071854_07140706_006_01.h5'
         grand_mesa = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},

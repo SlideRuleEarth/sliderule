@@ -113,7 +113,7 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
             local remaining_timeout = math.tointeger(current_timeout)
             local status = df:finished(remaining_timeout, rspq)
             if status then
-                userlog:alert(core.INFO, core.RTE_STATUS, string.format("request <%s> on %s sent dataframe [%s] with %d rows and %s columns", rspq, parms["resource"], key, df:numrows(), df:numcols()))
+                userlog:alert(core.INFO, core.RTE_STATUS, string.format("request <%s> on %s generated dataframe [%s] with %d rows and %s columns", rspq, parms["resource"], key, df:numrows(), df:numcols()))
             else
                 userlog:alert(core.ERROR, core.RTE_TIMEOUT, string.format("request <%s> on %s timed out waiting for dataframe [%s] to complete", rspq, parms["resource"], key))
             end

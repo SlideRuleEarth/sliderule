@@ -165,6 +165,9 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         addColumn("atl24_confidence",   &atl24_confidence,  false);
     }
 
+    /* Call Parent Class Initialization of GeoColumns */
+    populateDataframe();
+
     /* Set Signal Confidence Index */
     if(parms->surfaceType != Icesat2Fields::SRT_DYNAMIC)
     {
