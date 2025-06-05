@@ -37,18 +37,6 @@
 #include "SystemConfig.h"
 
 /******************************************************************************
- * STATIC DATA
- ******************************************************************************/
-
-const char* SystemConfig::IPV4_ENV = "IPV4";
-const char* SystemConfig::ENVIRONMENT_VERSION_ENV = "ENVIRONMENT_VERSION";
-const char* SystemConfig::ORCHESTRATOR_URL_ENV = "ORCHESTRATOR";
-const char* SystemConfig::ORGANIZATION_ENV = "ORGANIZATION";
-const char* SystemConfig::PROV_SYS_URL_ENV = "PROVISIONING_SYSTEM";
-const char* SystemConfig::MANAGER_URL_ENV = "MANAGER";
-const char* SystemConfig::CONTAINER_REGISTRY_ENV = "CONTAINER_REGISTRY";
-
-/******************************************************************************
  * CLASS METHODS
  ******************************************************************************/
 
@@ -145,19 +133,21 @@ SystemConfig::SystemConfig(void):
         {"environment_version",         &environmentVersion},
         {"orchestrator_url;",           &orchestratorURL},
         {"organization",                &organization},
+        {"cluster",                     &cluster},
         {"prov_sys_url",                &provSysURL},
         {"manager_url",                 &managerURL},
         {"container_registry",          &containerRegistry}
     })
 {
     // populate environment variables
-    setIfProvided(ipv4, IPV4_ENV);
-    setIfProvided(environmentVersion, ENVIRONMENT_VERSION_ENV);
-    setIfProvided(orchestratorURL, ORCHESTRATOR_URL_ENV);
-    setIfProvided(organization, ORGANIZATION_ENV);
-    setIfProvided(provSysURL, PROV_SYS_URL_ENV);
-    setIfProvided(managerURL, MANAGER_URL_ENV);
-    setIfProvided(containerRegistry, CONTAINER_REGISTRY_ENV);
+    setIfProvided(ipv4, "IPV4");
+    setIfProvided(environmentVersion, "ENVIRONMENT_VERSION");
+    setIfProvided(orchestratorURL, "ORCHESTRATOR");
+    setIfProvided(organization, "ORGANIZATION");
+    setIfProvided(cluster, "CLUSTER");
+    setIfProvided(provSysURL, "PROVISIONING_SYSTEM");
+    setIfProvided(managerURL, "MANAGER");
+    setIfProvided(containerRegistry, "CONTAINER_REGISTRY");
 }
 
 /*----------------------------------------------------------------------------

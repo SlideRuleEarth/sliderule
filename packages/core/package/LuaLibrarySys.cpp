@@ -117,7 +117,6 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     /* Display Information on Terminal */
     print2term("SlideRule Version:   %s\n", LIBID);
     print2term("Build Information:   %s\n", BUILDINFO);
-    print2term("Environment Version: %s\n", SystemConfig::settings().environmentVersion.value.c_str());
     print2term("Launch Time: %s\n", timestr.c_str());
     print2term("Duration: %.2lf days\n", (double)duration / 1000.0 / 60.0 / 60.0 / 24.0); // milliseconds / seconds / minutes / hours
     print2term("Packages: [ ");
@@ -136,7 +135,6 @@ int LuaLibrarySys::lsys_version (lua_State* L)
     /* Return Information to Lua (and clean up package list) */
     lua_pushstring(L, LIBID);
     lua_pushstring(L, BUILDINFO);
-    lua_pushstring(L, SystemConfig::settings().environmentVersion.value.c_str());
     lua_pushstring(L, timestr.c_str());
     lua_pushinteger(L, duration);
     lua_newtable(L);
@@ -153,7 +151,7 @@ int LuaLibrarySys::lsys_version (lua_State* L)
         delete [] pkg_list;
     }
 
-    return 6;
+    return 5;
 }
 
 /*----------------------------------------------------------------------------

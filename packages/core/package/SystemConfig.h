@@ -51,18 +51,6 @@ class SystemConfig: public FieldDictionary
     public:
 
         /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
-
-        static const char* IPV4_ENV;
-        static const char* ENVIRONMENT_VERSION_ENV;
-        static const char* ORCHESTRATOR_URL_ENV;
-        static const char* ORGANIZATION_ENV;
-        static const char* PROV_SYS_URL_ENV;
-        static const char* MANAGER_URL_ENV;
-        static const char* CONTAINER_REGISTRY_ENV;
-
-        /*--------------------------------------------------------------------
          * Types
          *--------------------------------------------------------------------*/
 
@@ -123,6 +111,7 @@ class SystemConfig: public FieldDictionary
         FieldElement<string>            environmentVersion          {"unknown"};
         FieldElement<string>            orchestratorURL             {"http://127.0.0.1:8050"};
         FieldElement<string>            organization                {"localhost"};
+        FieldElement<string>            cluster                     {"localhost"};
         FieldElement<string>            provSysURL                  {"https://ps.localhost"};
         FieldElement<string>            managerURL                  {"http://127.0.0.1:8000"};
         FieldElement<string>            containerRegistry           {"742127912612.dkr.ecr.us-west-2.amazonaws.com"};

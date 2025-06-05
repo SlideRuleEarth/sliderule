@@ -156,8 +156,8 @@ alert_status_code_counts        =  value_counts('alerts', 'status_code', db)
 
 # Process Request Counts
 total_requests                  = sum_counts(endpoint_counts)
-total_icesat2_granules          = sum_counts(endpoint_counts, ['atl03x', 'atl03s', 'atl03v', 'atl06', 'atl06s', 'atl08', 'atl13s', 'atl24x'])
-total_icesat2_proxied_requests  = sum_counts(endpoint_counts, ['atl03x', 'atl03sp', 'atl03vp', 'atl06p', 'atl06sp', 'atl08p', 'atl13sp', 'atl24x'])
+total_icesat2_granules          = sum_counts(endpoint_counts, ['atl03x', 'atl03s', 'atl03v', 'atl06', 'atl06s', 'atl08', 'atl13s', 'atl13x', 'atl24x'])
+total_icesat2_proxied_requests  = sum_counts(endpoint_counts, ['atl03x', 'atl03sp', 'atl03vp', 'atl06p', 'atl06sp', 'atl08p', 'atl13sp', 'atl13x', 'atl24x'])
 total_gedi_granules             = sum_counts(endpoint_counts, ['gedi01b', 'gedi02a', 'gedi04a'])
 total_gedi_proxied_requests     = sum_counts(endpoint_counts, ['gedi01bp', 'gedi02ap', 'gedi04ap'])
 

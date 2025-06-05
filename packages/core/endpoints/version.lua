@@ -26,9 +26,20 @@
 local global = require("global")
 local json = require("json")
 
-local version, build, environment, launch, duration, packages = sys.version()
+local version, build, launch, duration, packages = sys.version()
 
-local rsps = {server={version=version, build=build, environment=environment, launch=launch, duration=duration, packages=packages}}
+local rsps = {
+    server = {
+        version=version,
+        build=build,
+        environment=sys.getcfg("environment_version"),
+        launch=launch,
+        duration=duration,
+        packages=packages,
+        cluster=sys.getcfg("cluster"),
+        organization=sys.getcfg("organization")
+    }
+}
 
 for _,package in ipairs(packages) do
     local package_exists = global.check(package)

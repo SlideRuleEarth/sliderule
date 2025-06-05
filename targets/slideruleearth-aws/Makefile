@@ -225,27 +225,27 @@ public-cluster-test-ip:
 		exit 1; \
 	fi
 
-public-cluster-status: public-cluster-test-color ## deploy public cluster using terraform; needs DOMAIN, COLOR
+public-cluster-status: public-cluster-test-color ## deploy public cluster using terraform; needs COLOR, uses DOMAIN
 	cd terraform/cluster && terraform init
 	cd terraform/cluster && terraform workspace select $(DOMAIN)-$(ORGANIZATION)-$(COLOR) || terraform workspace new $(DOMAIN)-$(ORGANIZATION)-$(COLOR)
 	cd terraform/cluster && terraform plan -refresh-only && terraform show
 
-public-cluster-deploy: public-cluster-test-color ## deploy public cluster using terraform; needs DOMAIN, VERSION, COLOR, ORGANIZATION
+public-cluster-deploy: public-cluster-test-color ## deploy public cluster using terraform; needs COLOR, VERSION, uses DOMAIN, ORGANIZATION, ENVVER
 	cd terraform/cluster && terraform init
 	cd terraform/cluster && terraform workspace select $(DOMAIN)-$(ORGANIZATION)-$(COLOR) || terraform workspace new $(DOMAIN)-$(ORGANIZATION)-$(COLOR)
-	cd terraform/cluster && terraform apply -var is_public=True -var cluster_name=$(ORGANIZATION)-$(COLOR) -var domain=$(DOMAIN) -var cluster_version=$(VERSION) -var organization_name=$(ORGANIZATION)
+	cd terraform/cluster && terraform apply -var is_public=True -var cluster_name=$(ORGANIZATION)-$(COLOR) -var domain=$(DOMAIN) -var cluster_version=$(VERSION) -var organization_name=$(ORGANIZATION) -var environment_version=$(ENVVER)
 
-public-cluster-destroy: public-cluster-test-color ## destroy public using terraform; needs DOMAIN, COLOR
+public-cluster-destroy: public-cluster-test-color ## destroy public using terraform; needs COLOR, uses DOMAIN
 	cd terraform/cluster && terraform init
 	cd terraform/cluster && terraform workspace select $(DOMAIN)-$(ORGANIZATION)-$(COLOR)
 	cd terraform/cluster && terraform destroy
 
-public-cluster-go-live: public-cluster-test-ip ## switch dns entry of public cluster; needs DOMAIN, PUBLIC_IP
+public-cluster-go-live: public-cluster-test-ip ## switch dns entry of public cluster; needs PUBLIC_IP, uses DOMAIN, ORGANIZATION
 	cd terraform/dns && terraform init
 	cd terraform/dns && terraform workspace select dns-$(DOMAIN)-$(ORGANIZATION) || terraform workspace new dns-$(DOMAIN)-$(ORGANIZATION)
 	cd terraform/dns && terraform apply -var domain=$(DOMAIN) -var organization=$(ORGANIZATION) -var public_ip=$(PUBLIC_IP)
 
-public-cluster-take-offline: ## destroy dns entry of public cluster; needs DOMAIN
+public-cluster-take-offline: ## destroy dns entry of public cluster; uses DOMAIN, ORGANIZATION
 	cd terraform/dns && terraform init
 	cd terraform/dns && terraform workspace select dns-$(DOMAIN)-$(ORGANIZATION)
 	cd terraform/dns && terraform destroy

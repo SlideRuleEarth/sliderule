@@ -410,8 +410,7 @@ def get_version (session=None):
     '''
     session = checksession(session)
     rsps = session.source("version", {})
-    rsps["client"] = {"version": version.full_version}
-    rsps["organization"] = session.service_org
+    rsps["client"] = {"version": version.full_version, "organization": session.service_org}
     return rsps
 
 #
