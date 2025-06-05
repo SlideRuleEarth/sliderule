@@ -655,7 +655,7 @@ void GeoDataFrame::populateDataframe (void)
         if(field->encoding & Z_COLUMN)
         {
             assert(field->type == COLUMN);
-            assert(field->getValueEncoding() == DOUBLE);
+            assert(field->getValueEncoding() == FLOAT);
             zColumn = dynamic_cast<const FieldColumn<float>*>(field);
             zColumnName = name;
         }
