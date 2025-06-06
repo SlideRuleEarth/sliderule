@@ -27,7 +27,7 @@ resource "aws_instance" "manager" {
       export MANAGER_SECRET_SALT='${local.secrets.manager_secret_salt}'
       export MANAGER_API_KEY='${local.secrets.manager_api_key}'
       export DUCKDB_LOCAL_FILE='/data/manager-${var.cluster_name}.db'
-      export DUCKDB_REMOTE_FILE='s3://sliderule/data/manager/manager-${var.cluster_name}-${var.cluster_version}.db'
+      export DUCKDB_REMOTE_FILE='s3://sliderule/data/manager/manager-${local.organization}-${var.cluster_version}.db'
       export MANAGER_IMAGE=${var.container_repo}/manager:${var.cluster_version}
       mkdir /data
       mkdir /data/ATL13
