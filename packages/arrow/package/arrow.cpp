@@ -35,8 +35,6 @@
 
 #include "OsApi.h"
 #include "arrow.h"
-#include "ArrowLib.h"
-#include "ArrowFields.h"
 #include "ArrowBuilder.h"
 #include "ArrowEndpoint.h"
 #include "ArrowSampler.h"
@@ -62,19 +60,11 @@ int arrow_open (lua_State* L)
         {"dataframe",   ArrowDataFrame::luaCreate},
         {"endpoint",    ArrowEndpoint::luaCreate},
         {"sampler",     ArrowSampler::luaCreate},
-        {"send2user",   ArrowLib::luaSend2User},
         {NULL,          NULL}
     };
 
     /* Set Library */
     luaL_newlib(L, arrow_functions);
-
-    /* Set Attributes */
-    LuaEngine::setAttrStr(L, "PARMS",       ArrowFields::PARMS);
-    LuaEngine::setAttrInt(L, "PARQUET",     ArrowFields::PARQUET);
-    LuaEngine::setAttrInt(L, "GEOPARQUET",  ArrowFields::GEOPARQUET);
-    LuaEngine::setAttrInt(L, "FEATHER",     ArrowFields::FEATHER);
-    LuaEngine::setAttrInt(L, "CSV",         ArrowFields::CSV);
 
     return 1;
 }
@@ -87,7 +77,6 @@ extern "C" {
 void initarrow (void)
 {
     /* Initialize Modules */
-    ArrowLib::init();
     ArrowBuilder::init();
     ArrowSampler::init();
     ArrowEndpoint::init();

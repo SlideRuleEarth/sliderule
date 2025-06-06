@@ -34,14 +34,14 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "ArrowFields.h"
+#include "OutputFields.h"
 #include "SystemConfig.h"
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
-const char* ArrowFields::PARMS = "output";
+const char* OutputFields::PARMS = "output";
 
 /******************************************************************************
  * CLASS METHODS
@@ -50,7 +50,7 @@ const char* ArrowFields::PARMS = "output";
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-ArrowFields::ArrowFields (void):
+OutputFields::OutputFields (void):
     FieldDictionary ({
         {"path",                &path},
         {"format",              &format},
@@ -71,16 +71,16 @@ ArrowFields::ArrowFields (void):
 /*----------------------------------------------------------------------------
  * fromLua
  *----------------------------------------------------------------------------*/
-void ArrowFields::fromLua (lua_State* L, int index)
+void OutputFields::fromLua (lua_State* L, int index)
 {
     FieldDictionary::fromLua(L, index);
 
     // check format
-    if(format.value == ArrowFields::PARQUET && asGeo)
+    if(format.value == OutputFields::PARQUET && asGeo)
     {
-        format.value = ArrowFields::GEOPARQUET;
+        format.value = OutputFields::GEOPARQUET;
     }
-    else if(format.value == ArrowFields::GEOPARQUET && !asGeo)
+    else if(format.value == OutputFields::GEOPARQUET && !asGeo)
     {
         asGeo = true;
     }
@@ -147,15 +147,15 @@ void ArrowFields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * convertToJson
  *----------------------------------------------------------------------------*/
-string convertToJson(const ArrowFields::format_t& v)
+string convertToJson(const OutputFields::format_t& v)
 {
     switch(v)
     {
-        case ArrowFields::FEATHER:      return "\"feather\"";
-        case ArrowFields::PARQUET:      return "\"parquet\"";
-        case ArrowFields::GEOPARQUET:   return "\"geoparquet\"";
-        case ArrowFields::CSV:          return "\"csv\"";
-        case ArrowFields::H5:           return "\"h5\"";
+        case OutputFields::FEATHER:      return "\"feather\"";
+        case OutputFields::PARQUET:      return "\"parquet\"";
+        case OutputFields::GEOPARQUET:   return "\"geoparquet\"";
+        case OutputFields::CSV:          return "\"csv\"";
+        case OutputFields::H5:           return "\"h5\"";
         default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid format: %d", static_cast<int>(v));
     }
 }
@@ -163,15 +163,15 @@ string convertToJson(const ArrowFields::format_t& v)
 /*----------------------------------------------------------------------------
  * convertToLua
  *----------------------------------------------------------------------------*/
-int convertToLua(lua_State* L, const ArrowFields::format_t& v)
+int convertToLua(lua_State* L, const OutputFields::format_t& v)
 {
     switch(v)
     {
-        case ArrowFields::FEATHER:      lua_pushstring(L, "feather");       break;
-        case ArrowFields::PARQUET:      lua_pushstring(L, "parquet");       break;
-        case ArrowFields::GEOPARQUET:   lua_pushstring(L, "geoparquet");    break;
-        case ArrowFields::CSV:          lua_pushstring(L, "csv");           break;
-        case ArrowFields::H5:           lua_pushstring(L, "h5");            break;
+        case OutputFields::FEATHER:      lua_pushstring(L, "feather");       break;
+        case OutputFields::PARQUET:      lua_pushstring(L, "parquet");       break;
+        case OutputFields::GEOPARQUET:   lua_pushstring(L, "geoparquet");    break;
+        case OutputFields::CSV:          lua_pushstring(L, "csv");           break;
+        case OutputFields::H5:           lua_pushstring(L, "h5");            break;
         default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid format: %d", static_cast<int>(v));
     }
 
@@ -181,20 +181,20 @@ int convertToLua(lua_State* L, const ArrowFields::format_t& v)
 /*----------------------------------------------------------------------------
  * convertFromLua
  *----------------------------------------------------------------------------*/
-void convertFromLua(lua_State* L, int index, ArrowFields::format_t& v)
+void convertFromLua(lua_State* L, int index, OutputFields::format_t& v)
 {
     if(lua_isinteger(L, index))
     {
-        v = static_cast<ArrowFields::format_t>(LuaObject::getLuaInteger(L, index));
+        v = static_cast<OutputFields::format_t>(LuaObject::getLuaInteger(L, index));
     }
     else if(lua_isstring(L, index))
     {
         const char* str = LuaObject::getLuaString(L, index);
-        if     (StringLib::match(str, "feather"))       v = ArrowFields::FEATHER;
-        else if(StringLib::match(str, "parquet"))       v = ArrowFields::PARQUET;
-        else if(StringLib::match(str, "geoparquet"))    v = ArrowFields::GEOPARQUET;
-        else if(StringLib::match(str, "csv"))           v = ArrowFields::CSV;
-        else if(StringLib::match(str, "h5"))            v = ArrowFields::H5;
+        if     (StringLib::match(str, "feather"))       v = OutputFields::FEATHER;
+        else if(StringLib::match(str, "parquet"))       v = OutputFields::PARQUET;
+        else if(StringLib::match(str, "geoparquet"))    v = OutputFields::GEOPARQUET;
+        else if(StringLib::match(str, "csv"))           v = OutputFields::CSV;
+        else if(StringLib::match(str, "h5"))            v = OutputFields::H5;
         else throw RunTimeException(CRITICAL, RTE_FAILURE, "format is an invalid value: %s", str);
     }
     else if(!lua_isnil(L, index))

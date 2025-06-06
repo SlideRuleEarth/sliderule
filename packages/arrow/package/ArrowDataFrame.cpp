@@ -51,8 +51,8 @@
 #include "FieldArray.h"
 #include "FieldColumn.h"
 #include "ArrowDataFrame.h"
-#include "ArrowFields.h"
-#include "ArrowLib.h"
+#include "OutputFields.h"
+#include "OutputLib.h"
 
 /******************************************************************************
  * FUNCTIONS
@@ -267,10 +267,10 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
 
     arrow::BinaryBuilder builder;
     (void)builder.Reserve(num_rows);
-    (void)builder.ReserveData(num_rows * sizeof(ArrowLib::wkbpoint_t));
+    (void)builder.ReserveData(num_rows * sizeof(OutputLib::wkbpoint_t));
     for(long i = 0; i < num_rows; i++)
     {
-        ArrowLib::wkbpoint_t point = {
+        OutputLib::wkbpoint_t point = {
             #ifdef __be__
             .byteOrder = 0,
             #else
@@ -280,7 +280,7 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
             .x = (*x)[i],
             .y = (*y)[i]
         };
-        builder.UnsafeAppend(reinterpret_cast<uint8_t*>(&point), sizeof(ArrowLib::wkbpoint_t));
+        builder.UnsafeAppend(reinterpret_cast<uint8_t*>(&point), sizeof(OutputLib::wkbpoint_t));
     }
 
     shared_ptr<arrow::Array> geo_column;
@@ -291,7 +291,7 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
 /*----------------------------------------------------------------------------
 * buildFieldList
 *----------------------------------------------------------------------------*/
-void buildFieldList (vector<shared_ptr<arrow::Field>>& fields, const ArrowFields& parms, const GeoDataFrame& dataframe)
+void buildFieldList (vector<shared_ptr<arrow::Field>>& fields, const OutputFields& parms, const GeoDataFrame& dataframe)
 {
     // loop through columns in data frame
     const vector<string> column_names = dataframe.getColumnNames();
@@ -300,7 +300,7 @@ void buildFieldList (vector<shared_ptr<arrow::Field>>& fields, const ArrowFields
         Field* field = dataframe.getColumn(name.c_str());
 
         // check for geometry columns
-        if(parms.format == ArrowFields::GEOPARQUET)
+        if(parms.format == OutputFields::GEOPARQUET)
         {
             // skip over source columns for geometry as they will be added
             // separately as a part of the dedicated geometry column
@@ -364,7 +364,7 @@ void buildFieldList (vector<shared_ptr<arrow::Field>>& fields, const ArrowFields
     }
 
     // add geometry column
-    if(parms.format == ArrowFields::GEOPARQUET)
+    if(parms.format == OutputFields::GEOPARQUET)
     {
         fields.push_back(arrow::field("geometry", arrow::binary()));
     }
@@ -520,7 +520,7 @@ void appendPandasMetaData (const char* index_column_name, const shared_ptr<arrow
 /*----------------------------------------------------------------------------
 * processDataFrame
 *----------------------------------------------------------------------------*/
-void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const ArrowFields& parms, const GeoDataFrame& dataframe, const uint32_t trace_id)
+void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const OutputFields& parms, const GeoDataFrame& dataframe, const uint32_t trace_id)
 {
     // build columns
     Dictionary<FieldMap<FieldUntypedColumn>::entry_t>::Iterator iter(dataframe.getColumns());
@@ -530,7 +530,7 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const ArrowFie
         const Field* field = iter[f].value.field;
 
         // check for geoparquet format
-        if( (parms.format == ArrowFields::GEOPARQUET) &&
+        if( (parms.format == OutputFields::GEOPARQUET) &&
             (field->encoding & Field::X_COLUMN ||
              field->encoding & Field::Y_COLUMN) )
         {
@@ -607,7 +607,7 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const ArrowFie
     }
 
     // build geo columns
-    if(parms.format == ArrowFields::GEOPARQUET)
+    if(parms.format == OutputFields::GEOPARQUET)
     {
         const uint32_t geo_trace_id = start_trace(INFO, trace_id, "encodeGeometry", "%s", "{}");
         encodeGeometry(dataframe, columns);
@@ -659,7 +659,7 @@ int ArrowDataFrame::luaCreate (lua_State* L)
 int ArrowDataFrame::luaExport (lua_State* L)
 {
     bool status = false;
-    const char* unique_filename = ArrowLib::getUniqueFileName(NULL);
+    const char* unique_filename = OutputLib::getUniqueFileName(NULL);
     const char* filename = NULL;
 
     try
@@ -667,12 +667,12 @@ int ArrowDataFrame::luaExport (lua_State* L)
         // get lua parameters
         ArrowDataFrame* lua_obj = dynamic_cast<ArrowDataFrame*>(getLuaSelf(L, 1));
         filename = getLuaString(L, 2, true, unique_filename);
-        const ArrowFields::format_t format = static_cast<ArrowFields::format_t>(getLuaInteger(L, 3, true, lua_obj->parms->output.format.value));
+        const OutputFields::format_t format = static_cast<OutputFields::format_t>(getLuaInteger(L, 3, true, lua_obj->parms->output.format.value));
 
         // get references
         const RequestFields& parms = *lua_obj->parms;
         const GeoDataFrame& dataframe = *lua_obj->dataframe;
-        const ArrowFields& arrow_parms = parms.output;
+        const OutputFields& arrow_parms = parms.output;
 
         // start trace
         const uint32_t parent_trace_id = EventLib::grabId();
@@ -689,7 +689,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
 
         // write out table
         const uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
-        if(format == ArrowFields::GEOPARQUET || format == ArrowFields::PARQUET)
+        if(format == OutputFields::GEOPARQUET || format == OutputFields::PARQUET)
         {
             // set arrow output stream
             shared_ptr<arrow::io::FileOutputStream> file_output_stream;
@@ -709,7 +709,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
 
                 // set metadata
                 auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-                if(format == ArrowFields::GEOPARQUET) appendGeoMetaData(metadata);
+                if(format == OutputFields::GEOPARQUET) appendGeoMetaData(metadata);
                 appendPandasMetaData(dataframe.getTimeColumnName().c_str(), metadata, schema);
                 metadata->Append("sliderule", parms.toJson());
                 metadata->Append("meta", dataframe.metaFields.toJson());
@@ -754,7 +754,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
                 mlog(CRITICAL, "Failed to open file output stream: %s", _result.status().ToString().c_str());
             }
         }
-        else if(format == ArrowFields::FEATHER)
+        else if(format == OutputFields::FEATHER)
         {
             // create feather writer
             auto result = arrow::io::FileOutputStream::Open(filename);
@@ -779,7 +779,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
                 mlog(CRITICAL, "Failed to open feather writer: %s", result.status().ToString().c_str());
             }
         }
-        else if(format == ArrowFields::CSV)
+        else if(format == OutputFields::CSV)
         {
             // create csv writer
             auto result = arrow::io::FileOutputStream::Open(filename);

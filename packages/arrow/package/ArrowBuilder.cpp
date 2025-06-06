@@ -34,12 +34,12 @@
  ******************************************************************************/
 
 #include "OsApi.h"
-#include "ArrowFields.h"
+#include "OutputFields.h"
 #include "ArrowBuilder.h"
 #include "ArrowBuilderImpl.h"
 #include "AncillaryFields.h"
 #include "ContainerRecord.h"
-#include "ArrowLib.h"
+#include "OutputLib.h"
 
 #ifdef __aws__
 #include "aws.h"
@@ -196,7 +196,7 @@ RecordObject::field_t& ArrowBuilder::getYField (void)
 /*----------------------------------------------------------------------------
  * getParms
  *----------------------------------------------------------------------------*/
-const ArrowFields* ArrowBuilder::getParms (void)
+const OutputFields* ArrowBuilder::getParms (void)
 {
     return &rqstParms->output;
 }
@@ -267,7 +267,7 @@ ArrowBuilder::ArrowBuilder (lua_State* L, RequestFields* rqst_parms,
     }
 
     /* Build Geometry Fields */
-    if(parms.format == ArrowFields::GEOPARQUET)
+    if(parms.format == OutputFields::GEOPARQUET)
     {
         /* Check if Record has Geospatial Fields */
         if((rec_meta->x_field == NULL) || (rec_meta->y_field == NULL))
@@ -295,14 +295,14 @@ ArrowBuilder::ArrowBuilder (lua_State* L, RequestFields* rqst_parms,
      */
 
     /* Get Paths */
-    outputMetadataPath = ArrowLib::createMetadataFileName(parms.path.value.c_str());
+    outputMetadataPath = OutputLib::createMetadataFileName(parms.path.value.c_str());
 
     /* Save Parameters */
     endpoint = StringLib::duplicate(_endpoint);
 
     /* Create Unique Temporary Filenames */
-    dataFile = ArrowLib::getUniqueFileName(id);
-    metadataFile = ArrowLib::createMetadataFileName(dataFile);
+    dataFile = OutputLib::getUniqueFileName(id);
+    metadataFile = OutputLib::createMetadataFileName(dataFile);
 
     /* Set Record Type */
     recType = StringLib::duplicate(rec_type);
@@ -524,12 +524,12 @@ void* ArrowBuilder::builderThread(void* parm)
     if(!builder->keepLocal)
     {
         /* Send File to User */
-        ArrowLib::send2User(builder->dataFile, builder->parms.path.value.c_str(), trace_id, &builder->parms, builder->outQ);
+        OutputLib::send2User(builder->dataFile, builder->parms.path.value.c_str(), trace_id, &builder->parms, builder->outQ);
 
         /* Send Metadata File to User */
-        if(ArrowLib::fileExists(builder->metadataFile))
+        if(OutputLib::fileExists(builder->metadataFile))
         {
-            ArrowLib::send2User(builder->metadataFile, builder->outputMetadataPath, trace_id, &builder->parms, builder->outQ);
+            OutputLib::send2User(builder->metadataFile, builder->outputMetadataPath, trace_id, &builder->parms, builder->outQ);
         }
     }
 
