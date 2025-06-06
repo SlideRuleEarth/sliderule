@@ -12,6 +12,7 @@ services:
       - /data:/data
     environment:
       - MANAGER_SECRET_SALT=$MANAGER_SECRET_SALT
+      - MANAGER_API_KEY=$MANAGER_API_KEY
       - DUCKDB_LOCAL_FILE=$DUCKDB_LOCAL_FILE
       - DUCKDB_REMOTE_FILE=$DUCKDB_REMOTE_FILE
   autoheal:

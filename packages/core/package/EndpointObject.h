@@ -137,6 +137,7 @@ class EndpointObject: public LuaObject
                 const char* getHdrClient    (void) const;
                 const char* getHdrAccount   (void) const;
                 const char* getHdrStreaming (void) const;
+                const char* getHdrApiKey    (void) const;
         };
 
         /*--------------------------------------------------------------------

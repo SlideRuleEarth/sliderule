@@ -527,13 +527,12 @@ class Session:
     #
     #  manager
     #
-    def manager (self, api, content_json=True, as_post=False):
+    def manager (self, api, content_json=True, as_post=False, headers={}):
         '''
         handles making the HTTP request to the sliderule manager
         '''
         # initialize local variables
         rsps = ""
-        headers = {}
 
         # Construct Request URL
         if self.service_org:

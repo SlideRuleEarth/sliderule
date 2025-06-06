@@ -155,6 +155,19 @@ const char* EndpointObject::Request::getHdrStreaming (void) const
     return NULL; // special default case
 }
 
+/*----------------------------------------------------------------------------
+ * getHdrApiKey
+ *----------------------------------------------------------------------------*/
+const char* EndpointObject::Request::getHdrApiKey (void) const
+{
+    string* hdr_str;
+    if(headers.find("x-sliderule-api-key", &hdr_str))
+    {
+        return hdr_str->c_str();
+    }
+    return NULL; // special default case
+}
+
 /******************************************************************************
  * PUBLIC METHODS
  ******************************************************************************/
