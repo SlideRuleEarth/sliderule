@@ -154,7 +154,8 @@ option (USE_AWS_PACKAGE "Include the AWS package" ON)
 option (USE_CCSDS_PACKAGE "Include the CCSDS package" OFF)
 option (USE_CRE_PACKAGE "Include the container runtime environment package" ON)
 option (USE_GEO_PACKAGE "Include the geospatial library (GDAL) package" ON)
-option (USE_H5_PACKAGE "Include the HDF5 (H5Coro) package" ON)
+option (USE_H5_PACKAGE "Include the H5Coro package" ON)
+option (USE_HDF_PACKAGE "Include the HDFGroup package" OFF)
 option (USE_LEGACY_PACKAGE "Include the legacy (CommandProcessor) package" OFF)
 option (USE_STREAMING_PACKAGE "Include the streaming (RecordDispatcher) package" ON)
 
@@ -333,6 +334,10 @@ endif()
 
 if(${USE_H5_PACKAGE})
     add_subdirectory (packages/h5)
+endif()
+
+if(${USE_HDF_PACKAGE})
+    add_subdirectory (packages/hdf)
 endif()
 
 if(${USE_LEGACY_PACKAGE})
