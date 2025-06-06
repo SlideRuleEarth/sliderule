@@ -1,6 +1,6 @@
 import duckdb
 import click
-from flask import Blueprint, current_app, g
+from flask import Blueprint, current_app, request, g
 from werkzeug.exceptions import abort
 import threading
 import boto3
@@ -83,6 +83,9 @@ def init_app(app):
 @db.route('/export', methods=['POST'])
 def export():
     try:
+        api_key = request.headers.get("x-sliderule-api-key")
+        if api_key != current_app.config['API_KEY']:
+            raise RuntimeError(f'Invalid api key')
         remote_file = export_db()
         return f'Database successfully exported to: {remote_file}'
     except Exception as e:

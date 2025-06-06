@@ -41,6 +41,7 @@ parser.add_argument('--domain',             type=str,               default="sli
 parser.add_argument('--organization',       type=str,               default="sliderule")
 parser.add_argument('--localdir',           type=str,               default="/data/")
 parser.add_argument('--verbose',            action='store_true',    default=False)
+parser.add_argument('--apikey',             type=str,               default="")
 parser.add_argument('--export',             action='store_true',    default=False)
 parser.add_argument('--imports',            nargs='+', type=str,    default=[]) # s3://sliderule/data/manager/manager-developers-latest.db
 args,_ = parser.parse_known_args()
@@ -101,7 +102,7 @@ def value_counts(table, field, db=None):
 ##############################
 
 if args.export:
-    response = session.manager("db/export", content_json=False, as_post=True)
+    response = session.manager("db/export", content_json=False, as_post=True, headers={"x-sliderule-api-key": args.apikey})
     print(response)
     sys.exit(0)
 

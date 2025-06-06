@@ -13,6 +13,7 @@ def app():
         'TESTING': True,
         'DATABASE': tmpname,
         'SECRET_SALT': '',
+        'API_KEY': '',
         'GEOLITE2_ASN': '/data/GeoLite2-ASN.mmdb',
         'GEOLITE2_CITY': '/data/GeoLite2-City.mmdb',
         'GEOLITE2_COUNTRY': '/data/GeoLite2-Country.mmdb',
