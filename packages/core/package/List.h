@@ -105,6 +105,11 @@ class List
         T&      operator[]  (int index);
         List&   operator=   (const List& l1);
 
+        /* inlines */
+        int push (const T& data) { return add(data); }
+        bool pop (void) { return remove(len - 1); }
+        T& top (void) { return get(len - 1); }
+
     protected:
 
         /*--------------------------------------------------------------------

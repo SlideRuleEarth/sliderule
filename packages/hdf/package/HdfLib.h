@@ -63,14 +63,27 @@ struct HdfLib
         uint8_t*                    data;       // point to allocated data buffer
     } info_t;
     
+    typedef enum {
+        GROUP = 0,
+        VARIABLE = 1,
+        ATTRIBUTE = 2,
+        PARENT = 3
+    } dataset_type_t;
+
+    typedef struct {
+        string name;
+        dataset_type_t dataset_type;
+        RecordObject::valType_t value_type;
+        void* data;
+        long size;
+    } dataset_t;
+
     /*--------------------------------------------------------------------
      * Methods
      *--------------------------------------------------------------------*/
 
-    static void                         init            (void);
-    static void                         deinit          (void);
+    static bool                         write           (const char* filename, List<dataset_t> datasets);
     static info_t                       read            (const char* filename, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows);
-    static bool                         traverse        (const char* filename, int max_depth, const char* start_group);
     static RecordObject::fieldType_t    h5type2datatype (int h5type, int typesize);
 };
 

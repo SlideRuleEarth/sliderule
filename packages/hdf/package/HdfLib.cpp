@@ -42,98 +42,88 @@
 #include "OsApi.h"
 
 /******************************************************************************
- * TYPEDEFS
- ******************************************************************************/
-
-typedef union {
-    struct {
-        uint32_t depth;
-        uint32_t max;
-    } curr;
-    uint64_t data;
-} rdepth_t;
-
-/******************************************************************************
- * LOCAL FUNCTIONS
+ * CLASS
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * hdf5_iter_op_func
+ * write
  *----------------------------------------------------------------------------*/
-herr_t hdf5_iter_op_func (hid_t loc_id, const char* name, const H5L_info_t* info, void* operator_data)
+bool HdfLib::write (const char* filename, List<dataset_t> datasets)
 {
-    (void)info;
+    List<hid_t> hid_stack;
 
-    herr_t      retval = 0;
-    rdepth_t    recurse = { .data = (uint64_t)operator_data };
+    const hid_t file_id = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    hid_stack.push(file_id);
 
-    for(unsigned i = 0; i < recurse.curr.depth; i++) print2term("  ");
-
-    H5O_info_t object_info;
-    H5Oget_info_by_name(loc_id, name, &object_info, H5P_DEFAULT);
-    switch (object_info.type)
+    for(int i = 0; i < datasets.length(); i++)
     {
-        case H5O_TYPE_GROUP:
+        const dataset_t& dataset = datasets[i];
+        if(dataset.dataset_type == GROUP)
         {
-            H5L_info_t link_info;
-            H5Lget_info(loc_id, name, &link_info, H5P_DEFAULT);
-            if(link_info.type == H5L_TYPE_HARD)
+            const hid_t group_id = H5Gcreate2(hid_stack.top(), dataset.name.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+            hid_stack.push(group_id);
+        }
+        else if(dataset.dataset_type == VARIABLE)
+        {
+            const int size_of_element = RecordObject::FIELD_TYPE_BYTES[dataset.value_type];
+            const long number_of_elements = dataset.size / size_of_element;
+            if(number_of_elements <= 0)
             {
-                print2term("%s: {", name);
-                recurse.curr.depth++;
-                if(recurse.curr.depth < recurse.curr.max)
-                {
-                    print2term("\n");
-                    retval = H5Literate_by_name(loc_id, name, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, hdf5_iter_op_func, (void*)recurse.data, H5P_DEFAULT);
-                    for(unsigned i = 0; i < recurse.curr.depth - 1; i++) print2term("  ");
-                    print2term("}\n");
-                }
-                else
-                {
-                    print2term(" }\n");
-                }
+                mlog(CRITICAL, "Invalid dataset supplied: %s of size %d bytes and type %d", dataset.name.c_str(), dataset.size, dataset.value_type);
+                return false;
             }
-            else
+            hsize_t dims[1] = {number_of_elements};
+            const hid_t dataspace_id = H5Screate_simple(1, dims, NULL);
+            long h5tc; // hdf5 create
+            long h5tw; // hdf5 write
+            switch(dataset.value_type)
             {
-                print2term("*%s\n", name);
+                case RecordObject::INT8:      h5tc = H5T_STD_I8LE;      h5tw = H5T_NATIVE_INT8;     break;
+                case RecordObject::INT16:     h5tc = H5T_STD_I16LE;     h5tw = H5T_NATIVE_INT16;    break;
+                case RecordObject::INT32:     h5tc = H5T_STD_I32LE;     h5tw = H5T_NATIVE_INT32;    break;
+                case RecordObject::INT64:     h5tc = H5T_STD_I64LE;     h5tw = H5T_NATIVE_INT64;    break;
+                case RecordObject::UINT8:     h5tc = H5T_STD_U8LE;      h5tw = H5T_NATIVE_UINT8;    break;
+                case RecordObject::UINT16:    h5tc = H5T_STD_U16LE;     h5tw = H5T_NATIVE_UINT16;   break;
+                case RecordObject::UINT32:    h5tc = H5T_STD_U32LE;     h5tw = H5T_NATIVE_UINT32;   break;
+                case RecordObject::UINT64:    h5tc = H5T_STD_U64LE;     h5tw = H5T_NATIVE_UINT64;   break;
+                case RecordObject::FLOAT:     h5tc = H5T_IEEE_F32LE;    h5tw = H5T_NATIVE_DOUBLE;   break;
+                case RecordObject::DOUBLE:    h5tc = H5T_IEEE_F64LE;    h5tw = H5T_NATIVE_DOUBLE;   break;
+                case RecordObject::TIME8:     h5tc = H5T_STD_I64LE;     h5tw = H5T_NATIVE_INT64;    break;
+                default:                      mlog(CRITICAL, "Invalid dataset tyoe supplied for %s: %d", dataset.name.c_str(), dataset.value_type);
+                                              return false;
             }
-            break;
+            const hid_t dataset_id = H5Dcreate2(hid_stack.top(), dataset.name.c_str(), h5tc, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+            const herr_t status = H5Dwrite(dataset_id, h5tw, H5S_ALL, H5S_ALL, H5P_DEFAULT, dataset.data);
+            if(status < 0)
+            {
+                mlog(CRITICAL, "Failed to write dataset %s of size %d and type %d", dataset.name.c_str(), number_of_elements, dataset.value_type);
+                return false;
+            }
+            H5Sclose(dataspace_id);
+            hid_stack.push(dataset_id);
         }
-        case H5O_TYPE_DATASET:
+        else if(dataset.dataset_type == ATTRIBUTE)
         {
-            print2term("%s\n", name);
-            break;
+            const hid_t attr_dataspace_id = H5Screate(H5S_SCALAR);
+            const hid_t attr_id = H5Acreate2(hid_stack.top(), dataset.name.c_str(), H5T_NATIVE_DOUBLE, attr_dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
+            H5Awrite(attr_id, H5T_NATIVE_DOUBLE, &value);
+            H5Aclose(attr_id);
+            H5Sclose(attr_dataspace_id);
         }
-        case H5O_TYPE_NAMED_DATATYPE:
+        else if(dataset.dataset_type == PARENT)
         {
-            print2term("%s (type)\n", name);
-            break;
-        }
-        default:
-        {
-            print2term("%s (unknown)\n", name);
+            H5I_type_t type = H5Iget_type(hid_stack.top());
+            switch(type)
+            {
+                case H5I_FILE: H5Fclose(hid_stack.top()); break;
+                case H5I_GROUP: H5Gclose(hid_stack.top()); break;
+                case H5I_DATASET: H5Dclose(hid_stack.top()); break;
+                default: break;
+            }
+            hid_stack.pop();
         }
     }
-
-    return retval;
-}
-
-/******************************************************************************
- * HDF5 LIBRARY CLASS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * init
- *----------------------------------------------------------------------------*/
-void HdfLib::init (void)
-{
-}
-
-/*----------------------------------------------------------------------------
- * deinit
- *----------------------------------------------------------------------------*/
-void HdfLib::deinit (void)
-{
+    return true;
 }
 
 /*----------------------------------------------------------------------------
@@ -145,7 +135,7 @@ HdfLib::info_t HdfLib::read (const char* filename, const char* datasetname, Reco
     bool status = false;
 
     /* Start with Invalid Handles */
-    hid_t fapl = H5P_DEFAULT;
+    const hid_t fapl = H5P_DEFAULT;
     hid_t file = INVALID_RC;
     hid_t dataset = INVALID_RC;
     hid_t memspace = H5S_ALL;
@@ -195,10 +185,10 @@ HdfLib::info_t HdfLib::read (const char* filename, const char* datasetname, Reco
         }
 
         /* Get Type Size */
-        size_t typesize = H5Tget_size(datatype);
+        const size_t typesize = H5Tget_size(datatype);
 
         /* Get Dimensions of Data */
-        int ndims = H5Sget_simple_extent_ndims(dataspace);
+        const int ndims = H5Sget_simple_extent_ndims(dataspace);
         hsize_t* dims = new hsize_t[ndims + 1];
         H5Sget_simple_extent_dims(dataspace, dims, NULL);
 
@@ -236,7 +226,7 @@ HdfLib::info_t HdfLib::read (const char* filename, const char* datasetname, Reco
         delete [] count;
 
         /* Get Size of Data */
-        long datasize = elements * typesize;
+        const long datasize = elements * typesize;
 
         /* Allocate Data Buffer */
         uint8_t* data = NULL;
@@ -252,8 +242,8 @@ HdfLib::info_t HdfLib::read (const char* filename, const char* datasetname, Reco
 
         /* Start Trace */
         mlog(INFO, "Reading %d elements (%ld bytes) from %s %s", elements, datasize, filename, datasetname);
-        uint32_t parent_trace_id = EventLib::grabId();
-        uint32_t trace_id = start_trace(INFO, parent_trace_id, "HdfLib_read", "{\"filename\":\"%s\", \"dataset\":\"%s\"}", filename, datasetname);
+        const uint32_t parent_trace_id = EventLib::grabId();
+        const uint32_t trace_id = start_trace(INFO, parent_trace_id, "HdfLib_read", "{\"filename\":\"%s\", \"dataset\":\"%s\"}", filename, datasetname);
 
         /* Read Dataset */
         if(H5Dread(dataset, datatype, memspace, dataspace, H5P_DEFAULT, data) >= 0)
@@ -290,57 +280,6 @@ HdfLib::info_t HdfLib::read (const char* filename, const char* datasetname, Reco
     /* Return Info */
     if(status)  return info;
     else        throw RunTimeException(CRITICAL, RTE_FAILURE, "HdfLib failed to read dataset");
-}
-
-/*----------------------------------------------------------------------------
- * traverse
- *----------------------------------------------------------------------------*/
-bool HdfLib::traverse (const char* filename, int max_depth, const char* start_group)
-{
-    bool        status = false;
-    hid_t       file = INVALID_RC;
-    hid_t       group = INVALID_RC;
-    hid_t       fapl = H5P_DEFAULT;
-
-    do
-    {
-        /* Initialize Recurse Data */
-        rdepth_t recurse = {.data = 0};
-        recurse.curr.max = max_depth;
-
-        /* Open File */
-        file = H5Fopen(filename, H5F_ACC_RDONLY, fapl);
-        if(file < 0)
-        {
-            mlog(CRITICAL, "Failed to open file: %s", filename);
-            break;
-        }
-
-        /* Open Group */
-        if(start_group)
-        {
-            group = H5Gopen(file, start_group, H5P_DEFAULT);
-            if(group < 0)
-            {
-                mlog(CRITICAL, "Failed to open group: %s", start_group);
-                break;
-            }
-        }
-
-        /* Display File Structure */
-        if(H5Literate(group > 0 ? group : file, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, hdf5_iter_op_func, (void*)recurse.data) >= 0)
-        {
-            status = true;
-        }
-    }
-    while(false);
-
-    /* Clean Up */
-    if(file > 0) H5Fclose(file);
-    if(group > 0) H5Gclose(group);
-
-    /* Return Status */
-    return status;
 }
 
 /*----------------------------------------------------------------------------

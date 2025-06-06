@@ -104,7 +104,8 @@ RUN git clone https://github.com/HDFGroup/hdf5.git && \
     VERSION=`curl -s https://api.github.com/repos/HDFGroup/hdf5/releases/latest | jq '.tag_name' | tr -d "\""` && \
     git checkout $VERSION && \
     mkdir -p /build/hdf5 && \
-    CFLAGS=-fPIC ../configure --prefix=/usr/local --disable-shared --enable-build-mode=production --enable-threadsafe --disable-hl && \
+    cd /build/hdf5 && \
+    CFLAGS=-fPIC /hdf5/configure --prefix=/usr/local --disable-shared --enable-build-mode=production --enable-threadsafe --disable-hl && \
     make install -j8 && \
     ldconfig
 
