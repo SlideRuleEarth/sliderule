@@ -45,13 +45,6 @@
 struct HdfLib
 {
     /*--------------------------------------------------------------------
-     * Constants
-     *--------------------------------------------------------------------*/
-    
-    static const long ALL_ROWS = -1;
-    static const long ALL_COLS = -1;
-
-    /*--------------------------------------------------------------------
      * Types
      *--------------------------------------------------------------------*/
 
@@ -78,11 +71,20 @@ struct HdfLib
         long size;
     } dataset_t;
 
+     /*--------------------------------------------------------------------
+     * Constants
+     *--------------------------------------------------------------------*/
+    
+    static const long ALL_ROWS = -1;
+    static const long ALL_COLS = -1;
+
+    static const dataset_t PARENT_DATASET;
+
     /*--------------------------------------------------------------------
      * Methods
      *--------------------------------------------------------------------*/
 
-    static bool                         write           (const char* filename, List<dataset_t> datasets);
+    static bool                         write           (const char* filename, List<dataset_t>& datasets);
     static info_t                       read            (const char* filename, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows);
     static RecordObject::fieldType_t    h5type2datatype (int h5type, int typesize);
 };

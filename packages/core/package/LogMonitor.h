@@ -98,4 +98,4 @@ class LogMonitor: public Monitor
 
 };
 
-#endif  /* __publish_monitor__ */
+#endif  /* __log_monitor__ */

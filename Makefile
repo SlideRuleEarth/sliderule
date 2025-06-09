@@ -14,7 +14,7 @@ FULL_CFG += -DUSE_CCSDS_PACKAGE=ON
 FULL_CFG += -DUSE_CRE_PACKAGE=ON
 FULL_CFG += -DUSE_GEO_PACKAGE=ON
 FULL_CFG += -DUSE_H5_PACKAGE=ON
-FULL_CFG += -DUSE_HDF5_PACKAGE=ON
+FULL_CFG += -DUSE_HDF_PACKAGE=ON
 FULL_CFG += -DUSE_LEGACY_PACKAGE=ON
 FULL_CFG += -DUSE_STREAMING_PACKAGE=ON
 
@@ -29,6 +29,10 @@ config: prep ## configure make for release version of sliderule
 	cd $(BUILD) && \
 	cmake -DCMAKE_BUILD_TYPE=Release -DSHARED_LIBRARY=ON $(USERCFG) $(ROOT)
 
+config-all: prep ## configure make for release version of sliderule
+	cd $(BUILD) && \
+	cmake -DCMAKE_BUILD_TYPE=Release -DSHARED_LIBRARY=ON $(FULL_CFG) $(ROOT)
+
 config-debug: prep ## configure make for static analysis and debug runs
 	cd $(BUILD) && \
 	export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && \
@@ -36,6 +40,7 @@ config-debug: prep ## configure make for static analysis and debug runs
 
 install: ## install sliderule to system
 	make -C $(BUILD) install
+	ldconfig
 
 uninstall: ## uninstall most recent install of sliderule from system
 	xargs rm < $(BUILD)/install_manifest.txt

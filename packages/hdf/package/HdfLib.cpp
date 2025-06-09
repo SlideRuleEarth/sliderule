@@ -42,6 +42,12 @@
 #include "OsApi.h"
 
 /******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
+
+const HdfLib::dataset_t HdfLib::PARENT_DATASET = {"", PARENT, RecordObject::INVALID_FIELD, NULL, 0};
+
+ /******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
 
@@ -63,7 +69,7 @@ static void close_hid(hid_t hid)
 /*----------------------------------------------------------------------------
  * write
  *----------------------------------------------------------------------------*/
-bool HdfLib::write (const char* filename, List<dataset_t> datasets)
+bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
 {
     List<hid_t> hid_stack;
 

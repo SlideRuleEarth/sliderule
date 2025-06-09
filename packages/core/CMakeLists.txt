@@ -122,8 +122,8 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/MsgQ.h
         ${CMAKE_CURRENT_LIST_DIR}/package/OrchestratorLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Ordering.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/OutputFields.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/OutputLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/OutputFields.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/OutputLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/PointIndex.h
         ${CMAKE_CURRENT_LIST_DIR}/package/ProvisioningSystemLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RecordObject.h

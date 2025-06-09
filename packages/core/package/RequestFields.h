@@ -42,6 +42,7 @@
 #include "FieldElement.h"
 #include "FieldColumn.h"
 #include "FieldMap.h"
+#include "AssetField.h"
 #include "RegionMask.h"
 #include "MathLib.h"
 #include "OutputFields.h"
