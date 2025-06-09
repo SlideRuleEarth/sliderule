@@ -158,12 +158,16 @@ class Field
         };
 
         uint32_t getValueEncoding(void) const {
-            return encoding & 0xFFFF;
+            return encoding & VALUE_MASK;
         };
 
         uint32_t setEncodingFlags(uint32_t flags) {
             encoding |= flags;
             return encoding;
+        }
+
+        int getTypeSize(void) const {
+            return RecordObject::FIELD_TYPE_BYTES[getEncodedType()];
         }
 
         /*--------------------------------------------------------------------

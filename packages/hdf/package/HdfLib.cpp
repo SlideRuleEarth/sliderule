@@ -1,31 +1,31 @@
 /*
  * Copyright (c) 2021, University of Washington
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, 
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, 
- *    this list of conditions and the following disclaimer in the documentation 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the University of Washington nor the names of its 
- *    contributors may be used to endorse or promote products derived from this 
+ *
+ * 3. Neither the name of the University of Washington nor the names of its
+ *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS
- * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+ * “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR 
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -45,7 +45,7 @@
  * STATIC DATA
  ******************************************************************************/
 
-const HdfLib::dataset_t HdfLib::PARENT_DATASET = {"", PARENT, RecordObject::INVALID_FIELD, NULL, 0};
+const HdfLib::dataset_t HdfLib::PARENT_DATASET = {NULL, PARENT, RecordObject::INVALID_FIELD, NULL, 0};
 
  /******************************************************************************
  * LOCAL FUNCTIONS
@@ -81,7 +81,7 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
         const dataset_t& dataset = datasets[i];
         if(dataset.dataset_type == GROUP)
         {
-            const hid_t group_id = H5Gcreate2(hid_stack.top(), dataset.name.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+            const hid_t group_id = H5Gcreate2(hid_stack.top(), dataset.name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
             hid_stack.push(group_id);
         }
         else if(dataset.dataset_type == VARIABLE)
@@ -90,7 +90,7 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
             const unsigned long number_of_elements = static_cast<unsigned long>(dataset.size / size_of_element);
             if(number_of_elements <= 0)
             {
-                mlog(CRITICAL, "Invalid dataset supplied: %s of size %ld bytes and type %d", dataset.name.c_str(), dataset.size, dataset.data_type);
+                mlog(CRITICAL, "Invalid dataset supplied: %s of size %ld bytes and type %d", dataset.name, dataset.size, dataset.data_type);
                 return false;
             }
             hsize_t dims[1] = {number_of_elements};
@@ -110,14 +110,14 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
                 case RecordObject::FLOAT:     h5tc = H5T_IEEE_F32LE;    h5tw = H5T_NATIVE_DOUBLE;   break;
                 case RecordObject::DOUBLE:    h5tc = H5T_IEEE_F64LE;    h5tw = H5T_NATIVE_DOUBLE;   break;
                 case RecordObject::TIME8:     h5tc = H5T_STD_I64LE;     h5tw = H5T_NATIVE_INT64;    break;
-                default:                      mlog(CRITICAL, "Invalid dataset tyoe supplied for %s: %d", dataset.name.c_str(), dataset.data_type);
+                default:                      mlog(CRITICAL, "Invalid dataset tyoe supplied for %s: %d", dataset.name, dataset.data_type);
                                               return false;
             }
-            const hid_t dataset_id = H5Dcreate2(hid_stack.top(), dataset.name.c_str(), h5tc, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+            const hid_t dataset_id = H5Dcreate2(hid_stack.top(), dataset.name, h5tc, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
             const herr_t status = H5Dwrite(dataset_id, h5tw, H5S_ALL, H5S_ALL, H5P_DEFAULT, dataset.data);
             if(status < 0)
             {
-                mlog(CRITICAL, "Failed to write dataset %s of size %ld and type %d", dataset.name.c_str(), number_of_elements, dataset.data_type);
+                mlog(CRITICAL, "Failed to write dataset %s of size %ld and type %d", dataset.name, number_of_elements, dataset.data_type);
                 return false;
             }
             H5Sclose(dataspace_id);
@@ -148,12 +148,12 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
                 }
                 default:
                 {
-                    mlog(CRITICAL, "Invalid dataset tyoe supplied for %s: %d", dataset.name.c_str(), dataset.data_type);
+                    mlog(CRITICAL, "Invalid dataset tyoe supplied for %s: %d", dataset.name, dataset.data_type);
                     return false;
                 }
             }
             const hid_t attr_dataspace_id = H5Screate(H5S_SCALAR);
-            const hid_t attr_id = H5Acreate2(hid_stack.top(), dataset.name.c_str(), h5t, attr_dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
+            const hid_t attr_id = H5Acreate2(hid_stack.top(), dataset.name, h5t, attr_dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
             H5Awrite(attr_id, h5t, dataset.data);
             H5Aclose(attr_id);
             H5Sclose(attr_dataspace_id);
@@ -177,7 +177,7 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
  * read
  *----------------------------------------------------------------------------*/
 HdfLib::info_t HdfLib::read (const char* filename, const char* datasetname, RecordObject::valType_t valtype, long col, long startrow, long numrows)
-{    
+{
     info_t info;
     bool status = false;
 
