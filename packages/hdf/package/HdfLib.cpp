@@ -165,10 +165,10 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
             hid_stack.pop();
         }
     }
-    while(true)
+    while(!hid_stack.empty())
     {
         close_hid(hid_stack.top());
-        if(!hid_stack.pop()) break;
+        hid_stack.pop();
     }
     return true;
 }
