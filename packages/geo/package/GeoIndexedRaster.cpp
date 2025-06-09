@@ -84,11 +84,12 @@ void GeoIndexedRaster::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoIndexedRaster::GeoIndexedRaster(lua_State *L, RequestFields* rqst_parms, const char* key, GdalRaster::overrideCRS_t cb):
+GeoIndexedRaster::GeoIndexedRaster(lua_State *L, RequestFields* rqst_parms, const char* key, GdalRaster::overrideGeoTransform_t gtf_cb, GdalRaster::overrideCRS_t crs_cb):
     RasterObject    (L, rqst_parms, key),
     cache           (MAX_READER_THREADS),
     ssErrors        (SS_NO_ERRORS),
-    crscb           (cb),
+    gtfcb           (gtf_cb),
+    crscb           (crs_cb),
     bbox            {0, 0, 0, 0},
     rows            (0),
     cols            (0),

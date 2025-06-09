@@ -34,10 +34,29 @@
  ******************************************************************************/
 
 #include "NisarDataset.h"
+#include "GdalRaster.h"
+#include <regex>
 
-/* Valid Bands for BlueTopo Bathy Raster */
-const char* NisarDataset::validBands[] = {"azimuthOffset", "rangeOffset"};  // For now we only support these
-#define validBandsCnt (sizeof (validBands) / sizeof (const char *))
+/******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
+
+const char* NisarDataset::URL_str = "https://sds-n-cumulus-prod-nisar-sample-data.s3.us-west-2.amazonaws.com";
+
+/* Valid L2 GOFF bands */
+const char* NisarDataset::validL2GOFFbands[] = {"//science/LSAR/GOFF/grids/frequencyA/pixelOffsets/HH/layer1/alongTrackOffset",
+                                                "//science/LSAR/GOFF/grids/frequencyA/pixelOffsets/HH/layer2/alongTrackOffset",
+                                                "//science/LSAR/GOFF/grids/frequencyA/pixelOffsets/HH/layer3/alongTrackOffset",
+                                                "//science/LSAR/GOFF/grids/frequencyA/pixelOffsets/HH/layer1/slantRangeOffset",
+                                                "//science/LSAR/GOFF/grids/frequencyA/pixelOffsets/HH/layer2/slantRangeOffset",
+                                                "//science/LSAR/GOFF/grids/frequencyA/pixelOffsets/HH/layer3/slantRangeOffset"};
+
+#define validL2GOFFbandsCnt (sizeof (validL2GOFFbands) / sizeof (const char *))
+
+Mutex NisarDataset::transfMutex;
+Mutex NisarDataset::crsMutex;
+std::unordered_map<std::string, std::array<double, 6>> NisarDataset::transformCache;
+std::unordered_map<std::string, int>                   NisarDataset::crsCache;
 
 /******************************************************************************
  * PROTECTED METHODS
@@ -47,15 +66,10 @@ const char* NisarDataset::validBands[] = {"azimuthOffset", "rangeOffset"};  // F
  * Constructor
  *----------------------------------------------------------------------------*/
 NisarDataset::NisarDataset(lua_State* L, RequestFields* rqst_parms, const char* key):
- GeoIndexedRaster(L, rqst_parms, key),
+ GeoIndexedRaster(L, rqst_parms, key, overrideGeoTransform, overrideTargetCRS),
  filePath(parms->asset.asset->getPath()),
  indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson")
 {
-    if(!validateBandNames())
-    {
-        throw RunTimeException(DEBUG, RTE_FAILURE, "Invalid band name specified");
-    }
-
     /* Create in memory index file (geojson) */
     VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(),
                                         const_cast<GByte*>(reinterpret_cast<const GByte*>(parms->catalog.value.c_str())), // source bytes
@@ -98,42 +112,46 @@ void NisarDataset::getIndexFile(const std::vector<point_info_t>* points, std::st
  *----------------------------------------------------------------------------*/
 bool NisarDataset::findRasters(raster_finder_t* finder)
 {
-    static_cast<void>(finder);
-
-    const std::string h5file = "/vsis3/sds-n-cumulus-prod-nisar-sample-data/GOFF/NISAR_L2_PR_GOFF_001_030_A_019_002_2000_SH_20081012T060911_20081012T060925_20081127T061000_20081127T061014_D00404_N_F_J_001/NISAR_L2_PR_GOFF_001_030_A_019_002_2000_SH_20081012T060911_20081012T060925_20081127T061000_20081127T061014_D00404_N_F_J_001.h5";
-    // const std::string h5file = "/data/NISAR/NISAR_L2_PR_GOFF_001_030_A_019_002_2000_SH_20081012T060911_20081012T060925_20081127T061000_20081127T061014_D00404_N_F_J_001.h5"
-    // const std::string ds1 = "HDF5:\"" + h5file + "\"" + "://science/LSAR/GCOV/metadata/radarGrid/alongTrackUnitVectorX";
-    // const std::string ds2 = "HDF5:\"" + h5file + "\"" + "://science/LSAR/GCOV/metadata/radarGrid/alongTrackUnitVectorY";
-
-    const std::string ds1 = R"(HDF5:"/vsis3/sds-n-cumulus-prod-nisar-sample-data/GOFF/NISAR_L2_PR_GOFF_001_030_A_019_002_2000_SH_20081012T060911_20081012T060925_20081127T061000_20081127T061014_D00404_N_F_J_001/NISAR_L2_PR_GOFF_001_030_A_019_002_2000_SH_20081012T060911_20081012T060925_20081127T061000_20081127T061014_D00404_N_F_J_001.h5"://science/LSAR/GOFF/grids/frequencyA/pixelOffsets/HH/layer1/alongTrackOffset)";
-    const std::vector<std::string> datasets = {ds1};
+    const std::vector<OGRFeature*>* flist = finder->featuresList;
+    const OGRGeometry* geo = finder->geo;
+    const uint32_t start   = 0;
+    const uint32_t end     = flist->size();
 
     try
     {
-        for(uint32_t i = 0; i < datasets.size(); i++)
+        /* Search through feature list */
+        for(uint32_t i = start; i < end; i++)
         {
+            OGRFeature* feature = flist->at(i);
+            OGRGeometry *rastergeo = feature->GetGeometryRef();
+
+            if (!rastergeo->Intersects(geo)) continue;
+
             rasters_group_t* rgroup = new rasters_group_t;
-            // rgroup->gpsTime = getGmtDate(feature, "Delivered_Date", rgroup->gmtDate) / 1000.0;
+            rgroup->gpsTime = getGmtDate(feature, DATE_TAG, rgroup->gmtDate) / 1000.0;
 
-            const std::string& fullPath = datasets[i];
+            const char* fname = feature->GetFieldAsString("url");
+            if(fname && strlen(fname) > 0)
+            {
+                const std::string fileName(fname);
+                const size_t pos = strlen(URL_str);
+                const std::string hdf5file = filePath + fileName.substr(pos);
 
-            raster_info_t rinfo;
-            rinfo.elevationBandNum = 0;
-            rinfo.tag = VALUE_TAG;
-            rinfo.fileId = finder->fileDict.add(fullPath);
-            rgroup->infovect.push_back(rinfo);
-            rgroup->infovect.shrink_to_fit();
-
-            mlog(DEBUG, "Added group with %ld rasters", rgroup->infovect.size());
-            for(unsigned j = 0; j < rgroup->infovect.size(); j++)
-                mlog(DEBUG, "  %s", finder->fileDict.get(rgroup->infovect[j].fileId));
-
-            // Add the group
+                /* Build two data sets: along track and slant range offsets */
+                for(uint32_t j = 0; j < validL2GOFFbandsCnt; j++)
+                {
+                    raster_info_t rinfo;
+                    rinfo.elevationBandNum   = 0;
+                    rinfo.tag                = VALUE_TAG;
+                    const std::string dsName = "HDF5:\"" + hdf5file + "\":" + validL2GOFFbands[j];
+                    rinfo.fileId             = finder->fileDict.add(dsName);
+                    rgroup->infovect.push_back(rinfo);
+                }
+            }
+            // mlog(DEBUG, "Added group with %ld rasters", rgroup->infovect.size());
             finder->rasterGroups.push_back(rgroup);
         }
-        finder->rasterGroups.shrink_to_fit();
-
-        mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
+        // mlog(DEBUG, "Found %ld raster groups", finder->rasterGroups.size());
     }
     catch (const RunTimeException &e)
     {
@@ -145,85 +163,245 @@ bool NisarDataset::findRasters(raster_finder_t* finder)
 
 
 /*----------------------------------------------------------------------------
- * getGmtDate
+ * getSerialGroupSamples
  *----------------------------------------------------------------------------*/
-double NisarDataset::getGmtDate(const OGRFeature* feature, const char* field, TimeLib::gmt_time_t& gmtDate)
+void NisarDataset::getSerialGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags)
 {
-    const int i = feature->GetFieldIndex(field);
-    if(i == -1)
+    //TODO: for L2 GEOFF we will be processing all 3 layers of datasets, for now return them all
+    for(const auto& rinfo : rgroup->infovect)
     {
-        mlog(ERROR, "Time field: %s not found, unable to get GMT date", field);
-        return 0;
-    }
-
-    double gpstime = 0;
-    double seconds;
-    int year;
-    int month;
-    int day;
-    int hour;
-    int minute;
-
-    /*
-    * The raster's 'Delivered_Date' in the GPKG index file is not in ISO8601 format.
-    * Instead, it uses the format "YYYY-MM-DD HH:MM:SS".
-    */
-    if(const char* dateStr = feature->GetFieldAsString(i))
-    {
-        if(sscanf(dateStr, "%04d-%02d-%02d %02d:%02d:%lf",
-            &year, &month, &day, &hour, &minute, &seconds) == 6)
+        const char* key = fileDictGet(rinfo.fileId);
+        cacheitem_t* item;
+        if(cache.find(key, &item) && !item->bandSample.empty())
         {
-            gmtDate.year = year;
-            gmtDate.doy = TimeLib::dayofyear(year, month, day);
-            gmtDate.hour = hour;
-            gmtDate.minute = minute;
-            gmtDate.second = seconds;
-            gmtDate.millisecond = 0;
-            gpstime = TimeLib::gmt2gpstime(gmtDate);
-            // mlog(DEBUG, "%04d:%02d:%02d:%02d:%02d:%02d", year, month, day, hour, minute, (int)seconds);
-        }
-        else mlog(DEBUG, "Unable to parse date string [%s]", dateStr);
-    }
-    else mlog(DEBUG, "Date field is invalid");
+            RasterSample* sample = new RasterSample(*item->bandSample[0]);
 
-    return gpstime;
+            /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
+            if(sample == NULL) continue;
+
+            sample->flags = flags;
+            slist.add(sample);
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * getSerialGroupSamples
+ *----------------------------------------------------------------------------*/
+uint32_t NisarDataset::getBatchGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx)
+{
+    static_cast<void>(pointIndx);
+
+    //TODO: for L2 GEOFF we will be processing all 3 layers of datasets, for now return them all
+    for(const auto& rinfo : rgroup->infovect)
+    {
+        const char* key = fileDictGet(rinfo.fileId);
+        cacheitem_t* item;
+        if(cache.find(key, &item) && !item->bandSample.empty())
+        {
+            RasterSample* sample = new RasterSample(*item->bandSample[0]);
+
+            /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
+            if(sample == NULL) continue;
+
+            sample->flags = flags;
+            slist->add(sample);
+        }
+    }
+
+    return SS_NO_ERRORS;
+}
+
+/*----------------------------------------------------------------------------
+ * overrideGeoTransform
+ *----------------------------------------------------------------------------*/
+CPLErr NisarDataset::overrideGeoTransform(double* gtf, const void* param)
+{
+    const char* datasetPath = static_cast<const char*>(param);
+#if 0
+    gtf[0] =   365520.0;
+    gtf[1] =       80.0;
+    gtf[2] =        0.0;
+    gtf[3] = 03913580.0;
+    gtf[4] =        0.0;
+    gtf[5] =      -80.0;
+#else
+    const std::regex pattern(R"(HDF5:\"([^\"]+)\":(.*))");
+    std::cmatch match;
+    if (!std::regex_match(datasetPath, match, pattern) || match.size() < 3)
+        return CE_Failure;
+
+    const std::string hdf5File = match[1];
+    const std::string datasetSubpath = match[2];
+
+    /* Strip trailing dataset name (e.g., /alongTrackOffset, /slantRangeOffset) */
+    const size_t lastSlash = datasetSubpath.find_last_of('/');
+    if (lastSlash == std::string::npos)
+        return CE_Failure;
+
+    std::string layerPrefix = datasetSubpath.substr(0, lastSlash);
+
+    /* All 3 layers uset the same grids, for performance always use the first layer */
+    if (!layerPrefix.empty())
+    {
+        const char lastChar = layerPrefix.back();
+        if (lastChar == '2' || lastChar == '3')
+            layerPrefix.back() = '1';
+    }
+
+    /* Check cache first */
+    transfMutex.lock();
+    {
+        auto it = transformCache.find(layerPrefix);
+        if (it != transformCache.end())
+        {
+            std::copy(it->second.begin(), it->second.end(), gtf);
+            transfMutex.unlock();
+            return CE_None;
+        }
+    }
+    transfMutex.unlock();
+
+    /* Not cached, compute geoTransform */
+
+    const std::string xPath = "HDF5:\"" + hdf5File + "\":" + layerPrefix + "/xCoordinates";
+    const std::string yPath = "HDF5:\"" + hdf5File + "\":" + layerPrefix + "/yCoordinates";
+
+    GDALDataset* xDset = static_cast<GDALDataset*>(GDALOpen(xPath.c_str(), GA_ReadOnly));
+    if (!xDset)
+    {
+        return CE_Failure;
+    }
+    GDALRasterBand* xBand = xDset->GetRasterBand(1);
+    if (!xBand)
+    {
+        GDALClose(xDset);
+        return CE_Failure;
+    }
+
+    GDALDataset* yDset = static_cast<GDALDataset*>(GDALOpen(yPath.c_str(), GA_ReadOnly));
+    if (!yDset)
+    {
+        GDALClose(xDset);
+        return CE_Failure;
+    }
+    GDALRasterBand* yBand = yDset->GetRasterBand(1);
+    if (!yBand)
+    {
+        GDALClose(xDset);
+        GDALClose(yDset);
+        return CE_Failure;
+    }
+
+    double xVals[2], yVals[2];
+    if (xBand->RasterIO(GF_Read, 0, 0, 2, 1, &xVals[0], 2, 1, GDT_Float64, 0, 0) != CE_None ||
+        yBand->RasterIO(GF_Read, 0, 0, 2, 1, &yVals[0], 2, 1, GDT_Float64, 0, 0) != CE_None)
+    {
+        GDALClose(xDset);
+        GDALClose(yDset);
+        return CE_Failure;
+    }
+
+    /* Set GeoTransform */
+    gtf[0] = xVals[0];
+    gtf[1] = xVals[1] - xVals[0];
+    gtf[2] = 0.0;
+    gtf[3] = yVals[0];
+    gtf[4] = 0.0;
+    gtf[5] = yVals[1] - yVals[0];
+
+    GDALClose(xDset);
+    GDALClose(yDset);
+
+    /* Add to cache, make sure another thread did not do it already */
+    transfMutex.lock();
+    {
+        auto it = transformCache.find(layerPrefix);
+        if (it == transformCache.end())
+            transformCache[layerPrefix] = {gtf[0], gtf[1], gtf[2], gtf[3], gtf[4], gtf[5]};
+    }
+    transfMutex.unlock();
+#endif
+
+    return CE_None;
+}
+
+/*----------------------------------------------------------------------------
+ * overrideTargetCRS
+ *----------------------------------------------------------------------------*/
+OGRErr NisarDataset::overrideTargetCRS(OGRSpatialReference& target, const void* param)
+{
+    const char* datasetPath = static_cast<const char*>(param);
+
+#if 0
+    target.importFromEPSG(32611);
+#else
+    const std::regex pattern(R"(HDF5:\"([^\"]+)\":(.*))");
+    std::cmatch match;
+    if (!std::regex_match(datasetPath, match, pattern) || match.size() < 3)
+        return OGRERR_FAILURE;
+
+    const std::string hdf5File = match[1];
+    const std::string datasetSubpath = match[2];
+
+    /* Extract pixelOffsets group prefix (e.g., /science/LSAR/GOFF/grids/frequencyA/pixelOffsets) */
+    const std::string anchor = "/pixelOffsets";
+    const size_t pos = datasetSubpath.find(anchor);
+    if (pos == std::string::npos)
+        return OGRERR_FAILURE;
+
+    /* All three layers use the same projection and the grids are identical */
+    const std::string pixelOffsetGroup = datasetSubpath.substr(0, pos + anchor.size());
+
+    /* Check cache first */
+    crsMutex.lock();
+    {
+        auto it = crsCache.find(pixelOffsetGroup);
+        if (it != crsCache.end())
+        {
+            const OGRErr err = target.importFromEPSG(it->second);
+            crsMutex.unlock();
+            return err;
+        }
+    }
+    crsMutex.unlock();
+
+    /* Not cached, get CRS from root HDF5 file */
+
+    GDALDataset* dset = static_cast<GDALDataset*>(GDALOpen(hdf5File.c_str(), GA_ReadOnly));
+    if (!dset)
+        return OGRERR_FAILURE;
+
+    const std::string epsgKey = "science_LSAR_GOFF_grids_frequencyA_pixelOffsets_projection_epsg_code";
+    const char* epsgStr = dset->GetMetadataItem(epsgKey.c_str());
+    if (epsgStr == NULL)
+    {
+        GDALClose(dset);
+        return OGRERR_FAILURE;
+    }
+
+    const int epsg = std::atoi(epsgStr);
+    if(target.importFromEPSG(epsg) != OGRERR_NONE)
+    {
+        GDALClose(dset);
+        return OGRERR_FAILURE;
+    }
+
+    /* Store in cache, make sure another thread did not do it already */
+    crsMutex.lock();
+    {
+        auto it = crsCache.find(pixelOffsetGroup);
+        if (it == crsCache.end())
+            crsCache[pixelOffsetGroup] = epsg;
+    }
+    crsMutex.unlock();
+
+    GDALClose(dset);
+#endif
+    return OGRERR_NONE;
 }
 
 
 /******************************************************************************
  * PRIVATE METHODS
  ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * validateBandNames
- *----------------------------------------------------------------------------*/
-bool NisarDataset::validateBandNames(void)
-{
-    if(parms->bands.length() == 0)
-    {
-        mlog(ERROR, "No bands specified");
-        return false;
-    }
-
-    for (int i = 0; i < parms->bands.length(); i++)
-    {
-        bool valid = false;
-        for(size_t j = 0; j < validBandsCnt; j++)
-        {
-            /* Raster band names are case insensitive */
-            if(strcmp(parms->bands[i].c_str(), validBands[j]) == 0)
-            {
-                valid = true;
-                break;
-            }
-        }
-
-        if(!valid)
-        {
-            mlog(ERROR, "Invalid band name: %s", parms->bands[i].c_str());
-            return false;
-        }
-    }
-
-    return true;
-}

@@ -363,6 +363,7 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
                                         ur->rinfo->fileId,
                                         ur->rinfo->elevationBandNum,
                                         ur->rinfo->flagsBandNum,
+                                        breader->obj->gtfcb,
                                         breader->obj->crscb,
                                         &breader->obj->bbox);
 

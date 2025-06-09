@@ -47,7 +47,7 @@ static const std::vector<const char*> dates = {"start_datetime", "end_datetime"}
  * Constructor
  *----------------------------------------------------------------------------*/
 PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, RequestFields* rqst_parms, const char* key, const char* dem_name, const char* geo_suffix, GdalRaster::overrideCRS_t cb):
-    GeoIndexedRaster(L, rqst_parms, key, cb),
+    GeoIndexedRaster(L, rqst_parms, key, NULL, cb),
     demName(dem_name),
     path2geocells(parms->asset.asset->getPath() + std::string(geo_suffix))
 {

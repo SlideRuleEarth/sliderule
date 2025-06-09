@@ -9,7 +9,7 @@ end
 -- Setup --
 
 runner.authenticate({"asf-cloud"})
-runner.log(core.DEBUG)
+-- runner.log(core.DEBUG)
 
 local srcfile, dirpath = runner.srcscript()
 local geojsonfile = dirpath.."../data/nisar_fake.geojson"
@@ -21,52 +21,87 @@ f:close()
 
 -- Correct values test for different POIs
 
-local lons = {-117.9705}
-local lats = {  34.8005}
+local numPoints = 10000  -- Set to 1 to use a specific fixed point
 local height = 0
 
-local expElevation   = {-14.10, -4.28, -17.18}
-local expUncertainty = {  2.58,  0.34,  1.32}
-local expContributor = { 63846, 24955, 45641}
+local lons, lats = {}, {}
 
-local elevation_tolerance = 50.0 -- BlueTopo is updated constantly; we just want to check that a valid elevation (within reason) can be sampled
+if numPoints == 1 then
+    -- Use hardcoded test point
+    lons = { -117.9705 }
+    lats = {   34.8005 }
+else
+    -- Generate lon/lat arrays across the geographic extent
+    -- Original extent
+    local lonMin, lonMax = -118.4603, -117.4807
+    local latMin, latMax =  34.2325,   35.3646
 
-print(string.format("\n--------------------------------\nTest: NISAR L2 Correct Values\n--------------------------------"))
-local dem = geo.raster(geo.parms({ asset = "nisar-L2-geoff", algorithm = "NearestNeighbour", bands = {"azimuthOffset", "rangeOffset"}, catalog = contents, sort_by_index = true }))
+    -- Contract the extent by margin %, to avoid edge cases with many 'nan' values
+    local margin = 0.25
+    local lonRange = lonMax - lonMin
+    local latRange = latMax - latMin
+
+    lonMin = lonMin + margin * lonRange
+    lonMax = lonMax - margin * lonRange
+    latMin = latMin + margin * latRange
+    latMax = latMax - margin * latRange
+
+    -- Generate points
+    for i = 1, numPoints do
+        local t = (i - 1) / (numPoints - 1)
+        table.insert(lons, lonMin + t * (lonMax - lonMin))
+        table.insert(lats, latMin + t * (latMax - latMin))
+    end
+end
+
+print(string.format("\n--------------------------------\nTest: NISAR L2 GEOFF (%d point%s)\n--------------------------------", numPoints, numPoints == 1 and "" or "s"))
+
+local starttime = time.latch();
+
+local dem = geo.raster(geo.parms({
+    asset = "nisar-L2-geoff",
+    algorithm = "NearestNeighbour",
+    catalog = contents,
+    sort_by_index = true
+}))
 runner.assert(dem ~= nil, "failed to create nisar-L2 dataset", true)
 
-for j, lon in ipairs(lons) do
+local nanCount = 0
+local totalCount = 0
+local failedSamples = 0
+
+for j = 1, numPoints do
+    local lon = lons[j]
     local lat = lats[j]
     local tbl, err = dem:sample(lon, lat, height)
---[[
+
     runner.assert(err == 0)
     runner.assert(tbl ~= nil)
 
     if err ~= 0 then
-        print(string.format("Point: %d, (%.3f, %.3f) ======> FAILED to read, err# %d",j, lon, lat, err))
+        print(string.format("Point: %d, (%.5f, %.5f) ======> FAILED to read, err# %d", j, lon, lat, err))
+        failedSamples = failedSamples + 1
     else
-        local el, fname
         for k, v in ipairs(tbl) do
-            local band = v["band"]
             local value = v["value"]
-            fname = v["file"]
-            print(string.format("(%6.2f, %6.2f)  Band: %11s %8.2f  %s", lon, lat, band, value, fname))
-
-            if band == "Elevation" then
-                runner.assert(math.abs(value - expElevation[j]) < elevation_tolerance, string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))
-            elseif band == "Uncertainty" then
-                runner.assert(math.abs(value - expUncertainty[j]) < elevation_tolerance, string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))
-            elseif band == "Contributor" then
-                runner.assert(value == expContributor[j], string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))
+            local fname = v["file"]
+            totalCount = totalCount + 1
+            if tostring(value) == "nan" then
+                nanCount = nanCount + 1
             end
+            -- print(string.format("(%.5f, %.5f)  %8.4f", lon, lat, value))
+            -- print(string.format("(%.5f, %.5f)  %8.4f  %s", lon, lat, value, fname))
         end
-        print("\n")
     end
---]]
 end
 
--- Report Results --
+local stoptime = time.latch()
+local dtime = stoptime-starttime
+local percentNaN = (nanCount / totalCount) * 100
+print(string.format("%d points, %d samples, ExecTime: %f, failed reads: %d, NaN Values: %d (%.2f%%)", numPoints, totalCount, dtime, failedSamples, nanCount, percentNaN))
 
+
+-- Report Results --
 runner.report()
 
 

@@ -66,10 +66,14 @@ class ArcticDemMosaicRaster: public GeoRaster
                   TimeLib::datetime2gps(2023, 01, 18, 20, 23, 42) / 1000,
                   1,                   /* elevationBandNum */
                   GdalRaster::NO_BAND, /* maskBandNum      */
+                  NULL,                /* overrideGeoTransform */
                   &overrideTargetCRS) {}
 
-        static OGRErr overrideTargetCRS(OGRSpatialReference& target)
-        { return target.importFromWkt(getArcticDemWkt2()); }
+        static OGRErr overrideTargetCRS(OGRSpatialReference& target, const void* param=NULL)
+        {
+            static_cast<void>(param);
+            return target.importFromWkt(getArcticDemWkt2());
+        }
 };
 
 #endif  /* __arcticdem_mosaic_raster__ */

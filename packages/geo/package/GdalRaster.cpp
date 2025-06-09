@@ -58,12 +58,14 @@
 GdalRaster::GdalRaster(const GeoFields* _parms, const std::string& _fileName,
                        double _gpsTime, uint64_t _fileId,
                        int _elevationBandNum, int _flagsBandNum,
-                       overrideCRS_t cb, bbox_t* aoi_bbox_override):
+                       overrideGeoTransform_t gtf_cb, overrideCRS_t crs_cb,
+                       bbox_t* aoi_bbox_override):
    parms      (_parms),
    gpsTime    (_gpsTime),
    fileId     (_fileId),
    transf     (NULL),
-   overrideCRS(cb),
+   overrideGeoTransform(gtf_cb),
+   overrideCRS(crs_cb),
    fileName   (_fileName),
    dset       (NULL),
    elevationBandNum(_elevationBandNum),
@@ -154,7 +156,16 @@ void GdalRaster::open(void)
         xsize = dset->GetRasterXSize();
         ysize = dset->GetRasterYSize();
 
-        const CPLErr err = dset->GetGeoTransform(geoTransform);
+        CPLErr err = CE_None;
+        if(overrideGeoTransform)
+        {
+            err = overrideGeoTransform(geoTransform, reinterpret_cast<const void*>(fileName.c_str()));
+        }
+        else
+        {
+            err = dset->GetGeoTransform(geoTransform);
+        }
+
         CHECK_GDALERR(err);
         if(!GDALInvGeoTransform(geoTransform, invGeoTransform))
         {
@@ -168,7 +179,7 @@ void GdalRaster::open(void)
         bbox.lat_max = geoTransform[3];
         bbox.lat_min = geoTransform[3] + ysize * geoTransform[5];
 
-        // mlog(DEBUG, "Extent: (%.2lf, %.2lf), (%.2lf, %.2lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
+        mlog(DEBUG, "Extent: (%.2lf, %.2lf), (%.2lf, %.2lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
 
         cellSize = geoTransform[1];
         radiusInPixels = radius2pixels(parms->sampling_radius.value);
@@ -972,19 +983,21 @@ void GdalRaster::createTransform(void)
 {
     OGRErr ogrerr = sourceCRS.importFromEPSG(SLIDERULE_EPSG);
     CHECK_GDALERR(ogrerr);
-
     const char* projref = dset->GetProjectionRef();
-    CHECKPTR(projref);
-    ogrerr = targetCRS.importFromWkt(projref);
-    CHECK_GDALERR(ogrerr);
-    // mlog(DEBUG, "CRS from raster: %s", projref);
+
+    /* Use projref from raster if specified and not and empty string */
+    if(projref && strlen(projref) > 0)
+    {
+        ogrerr = targetCRS.importFromWkt(projref);
+        // mlog(DEBUG, "CRS from raster: %s", projref);
+    }
 
     if(overrideCRS)
     {
-        ogrerr = overrideCRS(targetCRS);
-        CHECK_GDALERR(ogrerr);
-        // mlog(DEBUG, "CRS from raster: %s", projref);
+        ogrerr = overrideCRS(targetCRS, reinterpret_cast<const void*>(fileName.c_str()));
     }
+
+    CHECK_GDALERR(ogrerr);
 
     OGRCoordinateTransformationOptions options;
     if(!parms->proj_pipeline.value.empty())

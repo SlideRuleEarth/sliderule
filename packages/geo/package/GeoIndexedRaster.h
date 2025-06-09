@@ -216,7 +216,7 @@ class GeoIndexedRaster: public RasterObject
          * Methods
          *--------------------------------------------------------------------*/
 
-                         GeoIndexedRaster      (lua_State* L, RequestFields* _parms, const char* key, GdalRaster::overrideCRS_t cb=NULL);
+                         GeoIndexedRaster      (lua_State* L, RequestFields* _parms, const char* key, GdalRaster::overrideGeoTransform_t gtf_cb=NULL, GdalRaster::overrideCRS_t crs_cb=NULL);
         virtual uint32_t getBatchGroupSamples  (const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx);
         static  uint32_t getBatchGroupFlags    (const rasters_group_t* rgroup, uint32_t pointIndx);
 
@@ -281,6 +281,7 @@ class GeoIndexedRaster: public RasterObject
         List<reader_t*>           serialReaders;
         List<batch_reader_t*>     batchReaders;
         perf_stats_t              perfStats;
+        GdalRaster::overrideGeoTransform_t gtfcb;
         GdalRaster::overrideCRS_t crscb;
 
         std::string               indexFile;
