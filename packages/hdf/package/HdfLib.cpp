@@ -42,6 +42,21 @@
 #include "OsApi.h"
 
 /******************************************************************************
+ * LOCAL FUNCTIONS
+ ******************************************************************************/
+
+static void close_hid(hid_t hid)
+{
+    H5I_type_t type = H5Iget_type(hid);
+    switch(type)
+    {
+        case H5I_FILE: H5Fclose(hid); break;
+        case H5I_GROUP: H5Gclose(hid); break;
+        case H5I_DATASET: H5Dclose(hid); break;
+        default: break;
+    }
+}
+ /******************************************************************************
  * CLASS
  ******************************************************************************/
 
@@ -65,18 +80,18 @@ bool HdfLib::write (const char* filename, List<dataset_t> datasets)
         }
         else if(dataset.dataset_type == VARIABLE)
         {
-            const int size_of_element = RecordObject::FIELD_TYPE_BYTES[dataset.value_type];
-            const long number_of_elements = dataset.size / size_of_element;
+            const int size_of_element = RecordObject::FIELD_TYPE_BYTES[dataset.data_type];
+            const unsigned long number_of_elements = static_cast<unsigned long>(dataset.size / size_of_element);
             if(number_of_elements <= 0)
             {
-                mlog(CRITICAL, "Invalid dataset supplied: %s of size %d bytes and type %d", dataset.name.c_str(), dataset.size, dataset.value_type);
+                mlog(CRITICAL, "Invalid dataset supplied: %s of size %ld bytes and type %d", dataset.name.c_str(), dataset.size, dataset.data_type);
                 return false;
             }
             hsize_t dims[1] = {number_of_elements};
             const hid_t dataspace_id = H5Screate_simple(1, dims, NULL);
             long h5tc; // hdf5 create
             long h5tw; // hdf5 write
-            switch(dataset.value_type)
+            switch(dataset.data_type)
             {
                 case RecordObject::INT8:      h5tc = H5T_STD_I8LE;      h5tw = H5T_NATIVE_INT8;     break;
                 case RecordObject::INT16:     h5tc = H5T_STD_I16LE;     h5tw = H5T_NATIVE_INT16;    break;
@@ -89,14 +104,14 @@ bool HdfLib::write (const char* filename, List<dataset_t> datasets)
                 case RecordObject::FLOAT:     h5tc = H5T_IEEE_F32LE;    h5tw = H5T_NATIVE_DOUBLE;   break;
                 case RecordObject::DOUBLE:    h5tc = H5T_IEEE_F64LE;    h5tw = H5T_NATIVE_DOUBLE;   break;
                 case RecordObject::TIME8:     h5tc = H5T_STD_I64LE;     h5tw = H5T_NATIVE_INT64;    break;
-                default:                      mlog(CRITICAL, "Invalid dataset tyoe supplied for %s: %d", dataset.name.c_str(), dataset.value_type);
+                default:                      mlog(CRITICAL, "Invalid dataset tyoe supplied for %s: %d", dataset.name.c_str(), dataset.data_type);
                                               return false;
             }
             const hid_t dataset_id = H5Dcreate2(hid_stack.top(), dataset.name.c_str(), h5tc, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
             const herr_t status = H5Dwrite(dataset_id, h5tw, H5S_ALL, H5S_ALL, H5P_DEFAULT, dataset.data);
             if(status < 0)
             {
-                mlog(CRITICAL, "Failed to write dataset %s of size %d and type %d", dataset.name.c_str(), number_of_elements, dataset.value_type);
+                mlog(CRITICAL, "Failed to write dataset %s of size %ld and type %d", dataset.name.c_str(), number_of_elements, dataset.data_type);
                 return false;
             }
             H5Sclose(dataspace_id);
@@ -104,24 +119,50 @@ bool HdfLib::write (const char* filename, List<dataset_t> datasets)
         }
         else if(dataset.dataset_type == ATTRIBUTE)
         {
+            hid_t h5t; // hdf5 create
+            switch(dataset.data_type)
+            {
+                case RecordObject::INT8:    h5t = H5T_NATIVE_INT8;     break;
+                case RecordObject::INT16:   h5t = H5T_NATIVE_INT16;    break;
+                case RecordObject::INT32:   h5t = H5T_NATIVE_INT32;    break;
+                case RecordObject::INT64:   h5t = H5T_NATIVE_INT64;    break;
+                case RecordObject::UINT8:   h5t = H5T_NATIVE_UINT8;    break;
+                case RecordObject::UINT16:  h5t = H5T_NATIVE_UINT16;   break;
+                case RecordObject::UINT32:  h5t = H5T_NATIVE_UINT32;   break;
+                case RecordObject::UINT64:  h5t = H5T_NATIVE_UINT64;   break;
+                case RecordObject::FLOAT:   h5t = H5T_NATIVE_DOUBLE;   break;
+                case RecordObject::DOUBLE:  h5t = H5T_NATIVE_DOUBLE;   break;
+                case RecordObject::TIME8:   h5t = H5T_NATIVE_INT64;    break;
+                case RecordObject::STRING:
+                {
+                    h5t = H5Tcopy(H5T_C_S1);
+                    H5Tset_size(h5t, dataset.size);
+                    H5Tset_strpad(h5t, H5T_STR_NULLTERM);  // Pad with null terminator
+                    break;
+                }
+                default:
+                {
+                    mlog(CRITICAL, "Invalid dataset tyoe supplied for %s: %d", dataset.name.c_str(), dataset.data_type);
+                    return false;
+                }
+            }
             const hid_t attr_dataspace_id = H5Screate(H5S_SCALAR);
-            const hid_t attr_id = H5Acreate2(hid_stack.top(), dataset.name.c_str(), H5T_NATIVE_DOUBLE, attr_dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
-            H5Awrite(attr_id, H5T_NATIVE_DOUBLE, &value);
+            const hid_t attr_id = H5Acreate2(hid_stack.top(), dataset.name.c_str(), h5t, attr_dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
+            H5Awrite(attr_id, h5t, dataset.data);
             H5Aclose(attr_id);
             H5Sclose(attr_dataspace_id);
+            if(dataset.data_type == RecordObject::STRING) H5Tclose(h5t);
         }
         else if(dataset.dataset_type == PARENT)
         {
-            H5I_type_t type = H5Iget_type(hid_stack.top());
-            switch(type)
-            {
-                case H5I_FILE: H5Fclose(hid_stack.top()); break;
-                case H5I_GROUP: H5Gclose(hid_stack.top()); break;
-                case H5I_DATASET: H5Dclose(hid_stack.top()); break;
-                default: break;
-            }
+            close_hid(hid_stack.top());
             hid_stack.pop();
         }
+    }
+    while(true)
+    {
+        close_hid(hid_stack.top());
+        if(!hid_stack.pop()) break;
     }
     return true;
 }

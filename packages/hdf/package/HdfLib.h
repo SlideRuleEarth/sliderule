@@ -73,7 +73,7 @@ struct HdfLib
     typedef struct {
         string name;
         dataset_type_t dataset_type;
-        RecordObject::valType_t value_type;
+        RecordObject::fieldType_t data_type;
         void* data;
         long size;
     } dataset_t;
