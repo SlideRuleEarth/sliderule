@@ -107,7 +107,7 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
                 case RecordObject::UINT16:    h5tc = H5T_STD_U16LE;     h5tw = H5T_NATIVE_UINT16;   break;
                 case RecordObject::UINT32:    h5tc = H5T_STD_U32LE;     h5tw = H5T_NATIVE_UINT32;   break;
                 case RecordObject::UINT64:    h5tc = H5T_STD_U64LE;     h5tw = H5T_NATIVE_UINT64;   break;
-                case RecordObject::FLOAT:     h5tc = H5T_IEEE_F32LE;    h5tw = H5T_NATIVE_DOUBLE;   break;
+                case RecordObject::FLOAT:     h5tc = H5T_IEEE_F32LE;    h5tw = H5T_NATIVE_FLOAT;    break;
                 case RecordObject::DOUBLE:    h5tc = H5T_IEEE_F64LE;    h5tw = H5T_NATIVE_DOUBLE;   break;
                 case RecordObject::TIME8:     h5tc = H5T_STD_I64LE;     h5tw = H5T_NATIVE_INT64;    break;
                 default:                      mlog(CRITICAL, "Invalid dataset tyoe supplied for %s: %d", dataset.name, dataset.data_type);
@@ -136,7 +136,7 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
                 case RecordObject::UINT16:  h5t = H5T_NATIVE_UINT16;   break;
                 case RecordObject::UINT32:  h5t = H5T_NATIVE_UINT32;   break;
                 case RecordObject::UINT64:  h5t = H5T_NATIVE_UINT64;   break;
-                case RecordObject::FLOAT:   h5t = H5T_NATIVE_DOUBLE;   break;
+                case RecordObject::FLOAT:   h5t = H5T_NATIVE_FLOAT;    break;
                 case RecordObject::DOUBLE:  h5t = H5T_NATIVE_DOUBLE;   break;
                 case RecordObject::TIME8:   h5t = H5T_NATIVE_INT64;    break;
                 case RecordObject::STRING:
