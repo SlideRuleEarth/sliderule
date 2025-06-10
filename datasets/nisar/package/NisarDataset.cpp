@@ -190,13 +190,57 @@ void NisarDataset::getSerialGroupSamples(const rasters_group_t* rgroup, List<Ras
  *----------------------------------------------------------------------------*/
 uint32_t NisarDataset::getBatchGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx)
 {
-    // TODO: implement
-    static_cast<void>(rgroup);
-    static_cast<void>(slist);
-    static_cast<void>(flags);
-    static_cast<void>(pointIndx);
+    /* NISAR L2 GOFF dataset uses one internal band */
+    const int INNER_BAND_INDX = 0;
 
-    return SS_NO_ERRORS;
+    uint32_t errors = SS_NO_ERRORS;
+
+    for(const auto& rinfo : rgroup->infovect)
+    {
+        /* This is the unique raster we are looking for, it cannot be NULL */
+        unique_raster_t* ur = rinfo.uraster;
+        assert(ur);
+
+        /* Get the sample for this point from unique raster */
+        for(point_sample_t& ps : ur->pointSamples)
+        {
+            if(ps.pointIndex == pointIndx)
+            {
+                RasterSample* sample = NULL;
+
+                /* bandSample can be empty if raster failed to open */
+                if(!ps.bandSample.empty())
+                {
+                    sample = ps.bandSample[INNER_BAND_INDX];
+                }
+
+                /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
+                if(sample == NULL) break;
+
+                RasterSample* s;
+                if(!ps.bandSampleReturned[INNER_BAND_INDX]->exchange(true))
+                {
+                    s = sample;
+                }
+                else
+                {
+                    /* Sample has already been returned, must create a copy */
+                    s = new RasterSample(*sample);
+                }
+
+                /* Set time for this sample */
+                s->time = rgroup->gpsTime;
+
+                /* Set flags for this sample, add it to the list */
+                s->flags = flags;
+                slist->add(s);
+                errors |= ps.ssErrors;
+                break;
+            }
+        }
+    }
+
+    return errors;
 }
 
 /*----------------------------------------------------------------------------
