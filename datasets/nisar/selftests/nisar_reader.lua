@@ -21,7 +21,8 @@ f:close()
 
 -- Correct values test for different POIs
 
-local numPoints = 10000  -- Set to 1 to use a specific fixed point
+local numPoints = 1  -- Set to 1 to use a specific fixed point
+--local numPoints = 10000
 local height = 0
 
 local lons, lats = {}, {}
@@ -90,7 +91,7 @@ for j = 1, numPoints do
                 nanCount = nanCount + 1
             end
             -- print(string.format("(%.5f, %.5f)  %8.4f", lon, lat, value))
-            -- print(string.format("(%.5f, %.5f)  %8.4f  %s", lon, lat, value, fname))
+            print(string.format("(%.5f, %.5f)  %8.4f  %s\n", lon, lat, value, fname))
         end
     end
 end
