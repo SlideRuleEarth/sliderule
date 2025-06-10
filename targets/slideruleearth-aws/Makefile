@@ -31,7 +31,7 @@
 #     1. Login to GitHub Container Registry; {my_github_key} is a file storing an access key created for your account
 #        $ cat {my_github_key} | docker login ghcr.io -u jpswinski --password-stdin
 #     2. Build the docker build environment on x86 machine (x86 is IMPORTANT to match GitHub actions environment)
-#        $ make sliderule-buildenv-docker
+#        $ make buildenv-docker
 #     3. Push to GitHub container registry
 #        $ docker push ghcr.io/slideruleearth/sliderule-buildenv:latest
 #
@@ -112,9 +112,9 @@ run: ## run the server locally
 	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth-aws/server.lua config.json
 
 buildenv: ## run the build environment docker container
-	docker run -it -v $(shell realpath ~/.ssh):/root/.ssh -v $(ROOT):$(ROOT) -v /data:/data -e ROOT=$(ROOT) -e GITNAME="$(shell git config user.name)" -e GITEMAIL="$(shell git config user.email)" --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)
+	docker run -it --network host -v $(shell realpath ~/.ssh):/root/.ssh -v $(ROOT):$(ROOT) -v /data:/data -e ROOT=$(ROOT) -e GITNAME="$(shell git config user.name)" -e GITEMAIL="$(shell git config user.email)" --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)
 
-sliderule-buildenv-docker: ## build sliderule build environment docker image
+buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
@@ -123,7 +123,7 @@ sliderule-buildenv-docker: ## build sliderule build environment docker image
 	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
 	docker tag $(ECR)/sliderule-buildenv:$(VERSION) $(GHCR)/sliderule-buildenv:$(VERSION)
 
-sliderule-buildenv-docker-push: ## push build environment docker image to registry
+buildenv-docker-push: ## push build environment docker image to registry
 	docker push $(ECR)/sliderule-buildenv:$(VERSION)
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
@@ -330,8 +330,8 @@ tag: ## create version tag in this repository and release it on GitHub
 	make -C $(ROOT)/clients/nodejs publish
 
 release: ## release a version of sliderule; needs VERSION
-	make sliderule-buildenv-docker
-	make sliderule-buildenv-docker-push
+	make buildenv-docker
+	make buildenv-docker-push
 	make manager-lock
 	make tag
 	make cluster-docker
