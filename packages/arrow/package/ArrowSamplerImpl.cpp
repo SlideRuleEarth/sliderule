@@ -93,7 +93,7 @@ void ArrowSamplerImpl::processInputFile(const char* file_path, std::vector<point
     {
         /* Open the input file */
         PARQUET_ASSIGN_OR_THROW(inputFile, arrow::io::ReadableFile::Open(file_path, arrow::default_memory_pool()));
-        PARQUET_THROW_NOT_OK(parquet::arrow::OpenFile(inputFile, arrow::default_memory_pool(), &reader));
+        PARQUET_ASSIGN_OR_THROW(reader, parquet::arrow::OpenFile(inputFile, arrow::default_memory_pool()));
     }
     catch(const parquet::ParquetStatusException& e)
     {
@@ -250,7 +250,7 @@ void ArrowSamplerImpl::getMetadata(void)
             break;
         }
     }
-    
+
     if(!foundIt)
     {
        foundIt = getMetadataLegacy();
@@ -302,7 +302,7 @@ bool ArrowSamplerImpl::getMetadataLegacy(void)
                 xKey    = StringLib::duplicate(_xKey);
                 yKey    = StringLib::duplicate(_yKey);
                 asGeo   = _asGeo;
-                
+
                 /* Found it */
                 return true;
             }
@@ -1001,7 +1001,7 @@ void ArrowSamplerImpl::printParquetMetadata(const char* file_path)
     PARQUET_ASSIGN_OR_THROW(infile, arrow::io::ReadableFile::Open(file_path, arrow::default_memory_pool()));
 
     std::unique_ptr<parquet::arrow::FileReader> _reader;
-    PARQUET_THROW_NOT_OK(parquet::arrow::OpenFile(infile, arrow::default_memory_pool(), &_reader));
+    PARQUET_ASSIGN_OR_THROW(_reader, parquet::arrow::OpenFile(infile, arrow::default_memory_pool()));
 
     const std::shared_ptr<parquet::FileMetaData> file_metadata = _reader->parquet_reader()->metadata();
     print2term("***********************************************************\n");
