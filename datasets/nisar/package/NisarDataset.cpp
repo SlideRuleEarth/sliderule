@@ -241,7 +241,7 @@ CPLErr NisarDataset::overrideGeoTransform(double* gtf, const void* param)
 
     std::string layerPrefix = datasetSubpath.substr(0, lastSlash);
 
-    /* All 3 layers uset the same grids, for performance always use the first layer */
+    /* All three layers uset the same grids, for performance always use the first layer */
     if (!layerPrefix.empty())
     {
         const char lastChar = layerPrefix.back();
@@ -249,10 +249,13 @@ CPLErr NisarDataset::overrideGeoTransform(double* gtf, const void* param)
             layerPrefix.back() = '1';
     }
 
+    /* Build a cache key unique per file+layer*/
+    const std::string cacheKey = hdf5File + "|" + layerPrefix;
+
     /* Check cache first */
     transfMutex.lock();
     {
-        auto it = transformCache.find(layerPrefix);
+        auto it = transformCache.find(cacheKey);
         if (it != transformCache.end())
         {
             std::copy(it->second.begin(), it->second.end(), gtf);
@@ -316,7 +319,7 @@ CPLErr NisarDataset::overrideGeoTransform(double* gtf, const void* param)
     /* Add to cache, make sure another thread did not do it already */
     transfMutex.lock();
     {
-        auto it = transformCache.find(layerPrefix);
+        auto it = transformCache.find(cacheKey);
         if (it == transformCache.end())
             transformCache[layerPrefix] = {gtf[0], gtf[1], gtf[2], gtf[3], gtf[4], gtf[5]};
     }
@@ -350,13 +353,16 @@ OGRErr NisarDataset::overrideTargetCRS(OGRSpatialReference& target, const void* 
     if (pos == std::string::npos)
         return OGRERR_FAILURE;
 
-    /* All three layers use the same projection and the grids are identical */
+    /* All three layers use the same projection and grids */
     const std::string pixelOffsetGroup = datasetSubpath.substr(0, pos + anchor.size());
+
+    /* Build a cache key unique per file+pixelOffsets group */
+    const std::string cacheKey = hdf5File + "|" + pixelOffsetGroup;
 
     /* Check cache first */
     crsMutex.lock();
     {
-        auto it = crsCache.find(pixelOffsetGroup);
+        auto it = crsCache.find(cacheKey);
         if (it != crsCache.end())
         {
             const OGRErr err = target.importFromEPSG(it->second);
@@ -390,7 +396,7 @@ OGRErr NisarDataset::overrideTargetCRS(OGRSpatialReference& target, const void* 
     /* Store in cache, make sure another thread did not do it already */
     crsMutex.lock();
     {
-        auto it = crsCache.find(pixelOffsetGroup);
+        auto it = crsCache.find(cacheKey);
         if (it == crsCache.end())
             crsCache[pixelOffsetGroup] = epsg;
     }
