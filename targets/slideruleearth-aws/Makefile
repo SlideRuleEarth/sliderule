@@ -36,7 +36,7 @@
 #        $ docker push ghcr.io/slideruleearth/sliderule-buildenv:latest
 #
 
-ROOT = $(shell pwd)/../..
+ROOT = $(shell realpath $(shell pwd)/../..)
 BUILD = $(ROOT)/build
 STAGE = $(ROOT)/stage
 
@@ -72,7 +72,7 @@ RUNNER ?= # e.g. valgrind
 
 ORGANIZATION ?= sliderule
 PUBLIC_IP ?= # output from public-cluster-deploy
-COLOR ?= 
+COLOR ?=
 
 CLANG_VER ?= ""
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
@@ -111,13 +111,14 @@ sliderule: ## build the server using the local configuration
 run: ## run the server locally
 	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth-aws/server.lua config.json
 
-run-buildenv: ## run the build environment docker container
-	docker run -it -v $(ROOT):/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)
+buildenv: ## run the build environment docker container
+	docker run -it -v $(shell realpath ~/.ssh):/root/.ssh -v $(ROOT):$(ROOT) -v /data:/data -e ROOT=$(ROOT) -e GITNAME="$(shell git config user.name)" -e GITEMAIL="$(shell git config user.email)" --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)
 
 sliderule-buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
+	cp docker/sliderule/.bashrc $(BUILDENV_STAGE_DIR)
 	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:$(VERSION) $(DOCKER_PLATFORM) .
 	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
 	docker tag $(ECR)/sliderule-buildenv:$(VERSION) $(GHCR)/sliderule-buildenv:$(VERSION)

@@ -9,3 +9,5 @@ alias pc="cd $ROOT/clients/python"
 alias cores="ls /var/lib/systemd/coredump/"
 
 git config --global --add safe.directory $ROOT
+git config --global user.name $GITNAME
+git config --global user.email $GITEMAIL
