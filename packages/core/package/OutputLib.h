@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arrow_lib__
-#define __arrow_lib__
+#ifndef __output_lib__
+#define __output_lib__
 
 /******************************************************************************
  * INCLUDES
@@ -38,14 +38,14 @@
 
 #include "OsApi.h"
 #include "MsgQ.h"
-#include "ArrowFields.h"
+#include "OutputFields.h"
 #include "RecordObject.h"
 
 /******************************************************************************
  * CLASS
  ******************************************************************************/
 
-struct ArrowLib
+struct OutputLib
 {
     /******************************************************************************
      * Constants
@@ -72,22 +72,22 @@ struct ArrowLib
     typedef struct {
         char        filename[FILE_NAME_MAX_LEN];
         long        size;
-    } arrow_file_meta_t;
+    } output_file_meta_t;
 
     typedef struct {
         char        filename[FILE_NAME_MAX_LEN];
         uint8_t     data[];
-    } arrow_file_data_t;
+    } output_file_data_t;
 
     typedef struct {
         char        filename[FILE_NAME_MAX_LEN];
         uint64_t    checksum;
-    } arrow_file_eof_t;
+    } output_file_eof_t;
 
     typedef struct {
         char        url[URL_MAX_LEN];
         long        size;
-    } arrow_file_remote_t;
+    } output_file_remote_t;
 
     typedef struct WKBPoint {
         uint8_t                 byteOrder;
@@ -101,9 +101,9 @@ struct ArrowLib
      ******************************************************************************/
 
     static void        init         (void);
-    static bool        send2User    (const char* fileName, const char* outputPath, uint32_t traceId, const ArrowFields* parms, Publisher* outQ);
-    static bool        send2S3      (const char* fileName, const char* s3dst, const char* outputPath, const ArrowFields* parms, Publisher* outQ);
-    static bool        send2Client  (const char* fileName, const char* outPath, const ArrowFields* parms, Publisher* outQ);
+    static bool        send2User    (const char* fileName, const char* outputPath, uint32_t traceId, const OutputFields* parms, Publisher* outQ);
+    static bool        send2S3      (const char* fileName, const char* s3dst, const char* outputPath, const OutputFields* parms, Publisher* outQ);
+    static bool        send2Client  (const char* fileName, const char* outPath, const OutputFields* parms, Publisher* outQ);
 
     static const char* getUniqueFileName        (const char* id = NULL);
     static char*       createMetadataFileName   (const char* fileName);
@@ -111,8 +111,9 @@ struct ArrowLib
     static void        removeFile   (const char* fileName);
     static void        renameFile   (const char* oldName, const char* newName);
     static bool        fileExists   (const char* fileName);
+    static bool        isArrow      (OutputFields::format_t fmt);
 
     static int         luaSend2User (lua_State* L);
 };
 
-#endif  /* __arrow_lib__ */
+#endif  /* __output_lib__ */

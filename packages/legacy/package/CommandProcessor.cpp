@@ -1178,7 +1178,7 @@ int CommandProcessor::addFieldCmd (int argc, char argv[][MAX_CMD_SIZE]) // NOLIN
 
     const char*                 rec_type    = StringLib::StringLib::checkNullStr(argv[0]);
     const char*                 field_name  = StringLib::StringLib::checkNullStr(argv[1]);
-    const RecordObject::fieldType_t   field_type  = RecordObject::str2ft(argv[2]);
+    const RecordObject::fieldType_t field_type = RecordObject::str2ft(argv[2]);
     const char*                 offset_str  = argv[3];
     const char*                 size_str    = argv[4];
     const char*                 flags_str   = argv[5];

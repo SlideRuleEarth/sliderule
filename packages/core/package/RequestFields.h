@@ -42,12 +42,10 @@
 #include "FieldElement.h"
 #include "FieldColumn.h"
 #include "FieldMap.h"
+#include "AssetField.h"
 #include "RegionMask.h"
 #include "MathLib.h"
-
-#ifdef __arrow__
-#include "ArrowFields.h"
-#endif
+#include "OutputFields.h"
 
 #ifdef __geo__
 #include "GeoFields.h"
@@ -86,7 +84,8 @@ class RequestFields: public LuaObject, public FieldDictionary
         static int luaGetField (lua_State* L);
         static int luaSetField (lua_State* L);
         static int luaGetLength (lua_State* L);
-        static int luaWithArrowOutput (lua_State* L);
+        static int luaHasOutput (lua_State* L);
+        static int luaHasArrowOutput (lua_State* L);
         static int luaGetSamplers (lua_State* L);
         static int luaWithSamplers (lua_State* L);
         static int luaSetCatalog (lua_State* L);
@@ -125,10 +124,7 @@ class RequestFields: public LuaObject, public FieldDictionary
         FieldElement<string>            slideruleVersion;
         FieldElement<string>            buildInformation;
         FieldElement<string>            environmentVersion;
-
-        #ifdef __arrow__
-        ArrowFields                     output;
-        #endif
+        OutputFields                    output;
 
         #ifdef __geo__
         FieldMap<GeoFields>             samplers;

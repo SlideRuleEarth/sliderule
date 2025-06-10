@@ -89,6 +89,7 @@ class List
 
       explicit  List        (int list_block_size=DEFAULT_LIST_BLOCK_SIZE);
                 List        (const List& l1);
+                List        (std::initializer_list<T> init_list, int list_block_size=DEFAULT_LIST_BLOCK_SIZE);
                 ~List       (void);
 
         int     add         (const T& data);
@@ -104,6 +105,11 @@ class List
         T       operator[]  (int index) const;
         T&      operator[]  (int index);
         List&   operator=   (const List& l1);
+
+        /* inlines */
+        int push (const T& data) { return add(data); }
+        bool pop (void) { return remove(len - 1); }
+        T& top (void) { return get(len - 1); }
 
     protected:
 
@@ -208,6 +214,22 @@ List<T>::List(const List<T>& l1)
     head.data = new T [listBlockSize];
     initialize();
     copy(l1);
+}
+
+/*----------------------------------------------------------------------------
+ * Initialized Constructor
+ *----------------------------------------------------------------------------*/
+template <class T>
+List<T>::List(std::initializer_list<T> init_list,int list_block_size)
+{
+    assert(listBlockSize >= 0);
+    listBlockSize = listBlockSize == 0 ? DEFAULT_LIST_BLOCK_SIZE : listBlockSize;
+    head.data = new T [listBlockSize];
+    initialize();
+    for(const T& elem: init_list)
+    {
+        add(elem);
+    }
 }
 
 /*----------------------------------------------------------------------------

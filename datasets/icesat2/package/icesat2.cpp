@@ -48,6 +48,7 @@
 #include "Atl13IODriver.h"
 #include "Atl13Reader.h"
 #include "Atl24DataFrame.h"
+#include "Atl24Granule.h"
 #include "Atl24IODriver.h"
 #include "CumulusIODriver.h"
 #include "MeritRaster.h"
@@ -87,6 +88,7 @@ int icesat2_open (lua_State *L)
         {"phoreal",             PhoReal::luaCreate},
         {"atl13x",              Atl13DataFrame::luaCreate},
         {"atl24x",              Atl24DataFrame::luaCreate},
+        {"atl24granule",        Atl24Granule::luaCreate},
 #ifdef __unittesting__
         {"ut_atl06",            UT_Atl06Dispatch::luaCreate},
 #endif

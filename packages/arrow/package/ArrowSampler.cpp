@@ -191,12 +191,12 @@ void* ArrowSampler::mainThread(void* parm)
             s->impl->createOutpuFiles();
 
             /* Send Data File to User */
-            ArrowLib::send2User(s->dataFile, s->parms.path.value.c_str(), trace_id, &s->parms, s->outQ);
+            OutputLib::send2User(s->dataFile, s->parms.path.value.c_str(), trace_id, &s->parms, s->outQ);
 
             /* Send Metadata File to User */
-            if(ArrowLib::fileExists(s->metadataFile))
+            if(OutputLib::fileExists(s->metadataFile))
             {
-                ArrowLib::send2User(s->metadataFile, s->outputMetadataPath, trace_id, &s->parms, s->outQ);
+                OutputLib::send2User(s->metadataFile, s->outputMetadataPath, trace_id, &s->parms, s->outQ);
             }
         }
     }
@@ -218,7 +218,7 @@ void* ArrowSampler::mainThread(void* parm)
 /*----------------------------------------------------------------------------
  * getParms
  *----------------------------------------------------------------------------*/
-const ArrowFields* ArrowSampler::getParms(void)
+const OutputFields* ArrowSampler::getParms(void)
 {
     return &parms;
 }
@@ -287,11 +287,11 @@ ArrowSampler::ArrowSampler(lua_State* L, RequestFields* rqst_parms, const char* 
         impl = new ArrowSamplerImpl(this);
 
         /* Get Paths */
-        outputMetadataPath = ArrowLib::createMetadataFileName(parms.path.value.c_str());
+        outputMetadataPath = OutputLib::createMetadataFileName(parms.path.value.c_str());
 
         /* Create Unique Temporary Filenames */
-        dataFile = ArrowLib::getUniqueFileName();
-        metadataFile = ArrowLib::createMetadataFileName(dataFile);
+        dataFile = OutputLib::getUniqueFileName();
+        metadataFile = OutputLib::createMetadataFileName(dataFile);
 
         /* Initialize Queues */
         const int qdepth = 0x4000000;   // 64MB

@@ -59,7 +59,7 @@
 #include "ArrowBuilderImpl.h"
 #include "AncillaryFields.h"
 #include "SystemConfig.h"
-#include "ArrowLib.h"
+#include "OutputLib.h"
 
 #ifdef __aws__
 #include "aws.h"
@@ -80,7 +80,7 @@ ArrowBuilderImpl::ArrowBuilderImpl (ArrowBuilder* _builder):
 {
     /* Build Field List and Iterator */
     buildFieldList(arrowBuilder->getRecType(), 0, 0);
-    if(arrowBuilder->getParms()->format == ArrowFields::GEOPARQUET) fieldVector.push_back(arrow::field("geometry", arrow::binary()));
+    if(arrowBuilder->getParms()->format == OutputFields::GEOPARQUET) fieldVector.push_back(arrow::field("geometry", arrow::binary()));
 }
 
 /*----------------------------------------------------------------------------
@@ -94,7 +94,7 @@ ArrowBuilderImpl::~ArrowBuilderImpl (void) = default;
 bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_rows, int batch_row_size_bits, bool file_finished)
 {
     bool status = false;
-    const ArrowFields::format_t format = arrowBuilder->getParms()->format.value;
+    const OutputFields::format_t format = arrowBuilder->getParms()->format.value;
 
     /* Start Trace */
     const uint32_t parent_trace_id = EventLib::grabId();
@@ -120,7 +120,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
     }
 
     /* Add Geometry Column (if GeoParquet) */
-    if(format == ArrowFields::GEOPARQUET)
+    if(format == OutputFields::GEOPARQUET)
     {
         const uint32_t geo_trace_id = start_trace(INFO, trace_id, "geo_column", "%s", "{}");
         shared_ptr<arrow::Array> column;
@@ -145,7 +145,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
         }
     }
 
-    if(format == ArrowFields::GEOPARQUET || format == ArrowFields::PARQUET)
+    if(format == OutputFields::GEOPARQUET || format == OutputFields::PARQUET)
     {
         /* Build and Write Table */
         const uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
@@ -161,7 +161,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
             (void)parquetWriter->Close();
         }
     }
-    else if(format == ArrowFields::FEATHER)
+    else if(format == OutputFields::FEATHER)
     {
         /* Write the Table to a FEATHER file */
         const uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
@@ -177,7 +177,7 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
             (void)featherWriter->Close();
         }
     }
-    else if(format == ArrowFields::CSV)
+    else if(format == OutputFields::CSV)
     {
         /* Write the Table to a CSV file */
         const shared_ptr<arrow::Table> table = arrow::Table::Make(schema, columns);
@@ -209,12 +209,12 @@ bool ArrowBuilderImpl::processRecordBatch (batch_list_t& record_batch, int num_r
 bool ArrowBuilderImpl::createSchema (void)
 {
     bool status = true;
-    const ArrowFields::format_t format = arrowBuilder->getParms()->format.value;
+    const OutputFields::format_t format = arrowBuilder->getParms()->format.value;
 
     /* Create Schema */
     schema = make_shared<arrow::Schema>(fieldVector);
 
-    if(format == ArrowFields::GEOPARQUET || format == ArrowFields::PARQUET)
+    if(format == OutputFields::GEOPARQUET || format == OutputFields::PARQUET)
     {
         /* Set Arrow Output Stream */
         shared_ptr<arrow::io::FileOutputStream> file_output_stream;
@@ -234,7 +234,7 @@ bool ArrowBuilderImpl::createSchema (void)
 
             /* Set MetaData */
             auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-            if(arrowBuilder->getParms()->format == ArrowFields::GEOPARQUET) appendGeoMetaData(metadata);
+            if(arrowBuilder->getParms()->format == OutputFields::GEOPARQUET) appendGeoMetaData(metadata);
             appendServerMetaData(metadata);
             appendPandasMetaData(metadata);
             schema = schema->WithMetadata(metadata);
@@ -257,7 +257,7 @@ bool ArrowBuilderImpl::createSchema (void)
             status = false;
         }
     }
-    else if(format == ArrowFields::FEATHER)
+    else if(format == OutputFields::FEATHER)
     {
         createMetadataFile();
 
@@ -273,7 +273,7 @@ bool ArrowBuilderImpl::createSchema (void)
             status = false;
         }
     }
-    else if(format == ArrowFields::CSV)
+    else if(format == OutputFields::CSV)
     {
         createMetadataFile();
 
@@ -314,7 +314,7 @@ bool ArrowBuilderImpl::buildFieldList (const char* rec_type, int offset, int fla
         bool add_field_to_list = true;
 
         /* Check for Geometry Columns */
-        if(arrowBuilder->getParms()->format == ArrowFields::GEOPARQUET)
+        if(arrowBuilder->getParms()->format == OutputFields::GEOPARQUET)
         {
             /* skip over source columns for geometry as they will be added
              * separately as a part of the dedicated geometry column */
@@ -522,7 +522,7 @@ void ArrowBuilderImpl::appendServerMetaData (const std::shared_ptr<arrow::KeyVal
         "y": "%s"
     })json",
         arrowBuilder->getTimeKey(),
-        arrowBuilder->getParms()->format == ArrowFields::GEOPARQUET ? "true" : "false",
+        arrowBuilder->getParms()->format == OutputFields::GEOPARQUET ? "true" : "false",
         arrowBuilder->getXKey(),
         arrowBuilder->getYKey()).c_str());
 
@@ -1333,7 +1333,7 @@ void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordOb
 {
     arrow::BinaryBuilder builder;
     (void)builder.Reserve(num_rows);
-    (void)builder.ReserveData(num_rows * sizeof(ArrowLib::wkbpoint_t));
+    (void)builder.ReserveData(num_rows * sizeof(OutputLib::wkbpoint_t));
     for(int i = 0; i < record_batch.length(); i++)
     {
         ArrowBuilder::batch_t* batch = record_batch.get(i);
@@ -1341,7 +1341,7 @@ void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordOb
         const int32_t starting_y_offset = y_field.offset;
         for(int row = 0; row < batch->rows; row++)
         {
-            ArrowLib::wkbpoint_t point = {
+            OutputLib::wkbpoint_t point = {
                 #ifdef __be__
                 .byteOrder = 0,
                 #else
@@ -1351,7 +1351,7 @@ void ArrowBuilderImpl::processGeometry (RecordObject::field_t& x_field, RecordOb
                 .x = batch->pri_record->getValueReal(x_field),
                 .y = batch->pri_record->getValueReal(y_field)
             };
-            builder.UnsafeAppend(reinterpret_cast<uint8_t*>(&point), sizeof(ArrowLib::wkbpoint_t));
+            builder.UnsafeAppend(reinterpret_cast<uint8_t*>(&point), sizeof(OutputLib::wkbpoint_t));
             if(x_field.flags & RecordObject::BATCH) x_field.offset += batch_row_size_bits;
             if(y_field.flags & RecordObject::BATCH) y_field.offset += batch_row_size_bits;
         }

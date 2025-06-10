@@ -131,11 +131,24 @@ RUN git clone https://github.com/OSGeo/gdal.git && \
     make install && \
     ldconfig
 
+# install hdf5 library dependency
+RUN git clone https://github.com/HDFGroup/hdf5.git && \
+    cd hdf5 && \
+    VERSION=`curl -s https://api.github.com/repos/HDFGroup/hdf5/releases/latest | jq '.tag_name' | tr -d "\""` && \
+    git checkout $VERSION && \
+    mkdir -p /build/hdf5 && \
+    cd /build/hdf5 && \
+    CFLAGS=-fPIC /hdf5/configure --prefix=/usr/local --disable-shared --enable-build-mode=production --enable-threadsafe --disable-hl && \
+    make install -j8 && \
+    ldconfig
+
 # configure any new shared libraries
-RUN echo "/usr/local/lib64" > /etc/ld.so.conf.d/local.conf && ldconfig
+RUN echo "/usr/local/lib64" > /etc/ld.so.conf.d/local.conf
+RUN echo "/usr/local/lib" >> /etc/ld.so.conf.d/local.conf
+RUN ldconfig
 
 # support interactive mode
-WORKDIR /
+COPY .bashrc /root/.bashrc
 CMD ["/bin/bash"]
 
 

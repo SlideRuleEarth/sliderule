@@ -47,7 +47,6 @@
  * STATIC DATA
  ******************************************************************************/
 
-const char* Atl03DataFrame::OBJECT_TYPE = "Atl03DataFrame";
 const char* Atl03DataFrame::LUA_META_NAME = "Atl03DataFrame";
 const struct luaL_Reg Atl03DataFrame::LUA_META_TABLE[] = {
     {NULL,          NULL}

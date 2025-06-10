@@ -56,7 +56,6 @@ class Atl24DataFrame: public GeoDataFrame
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const char* OBJECT_TYPE;
         static const char* LUA_META_NAME;
         static const struct luaL_Reg LUA_META_TABLE[];
 

@@ -29,71 +29,18 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/******************************************************************************
- *INCLUDES
- ******************************************************************************/
-
-#include "OsApi.h"
-#include "arrow.h"
-#include "ArrowBuilder.h"
-#include "ArrowEndpoint.h"
-#include "ArrowSampler.h"
-#include "ArrowDataFrame.h"
+#ifndef __h5pkg__
+#define __h5pkg__
 
 /******************************************************************************
- * DEFINES
- ******************************************************************************/
-
-#define LUA_ARROW_LIBNAME   "arrow"
-
-/******************************************************************************
- * LOCAL FUNCTIONS
- ******************************************************************************/
-
-/*----------------------------------------------------------------------------
- * arrow_open
- *----------------------------------------------------------------------------*/
-int arrow_open (lua_State* L)
-{
-    static const struct luaL_Reg arrow_functions[] = {
-        {"builder",     ArrowBuilder::luaCreate},
-        {"dataframe",   ArrowDataFrame::luaCreate},
-        {"endpoint",    ArrowEndpoint::luaCreate},
-        {"sampler",     ArrowSampler::luaCreate},
-        {NULL,          NULL}
-    };
-
-    /* Set Library */
-    luaL_newlib(L, arrow_functions);
-
-    return 1;
-}
-
-/******************************************************************************
- * EXPORTED FUNCTIONS
+ * PROTOTYPES
  ******************************************************************************/
 
 extern "C" {
-void initarrow (void)
-{
-    /* Initialize Modules */
-    ArrowBuilder::init();
-    ArrowSampler::init();
-    ArrowEndpoint::init();
-
-    /* Extend Lua */
-    LuaEngine::extend(LUA_ARROW_LIBNAME, arrow_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_ARROW_LIBNAME, LIBID);
-
-    /* Display Status */
-    print2term("%s package initialized (%s)\n", LUA_ARROW_LIBNAME, LIBID);
+void inith5 (void);
+void deinith5 (void);
 }
 
-void deinitarrow (void)
-{
-    ArrowBuilder::deinit();
-    ArrowSampler::deinit();
-}
-}
+#endif  /* __h5pkg__ */
+
+

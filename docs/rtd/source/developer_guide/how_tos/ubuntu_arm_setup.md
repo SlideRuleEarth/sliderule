@@ -136,8 +136,8 @@ The most reliable way to install all of the dependencies needed to build slideru
 Alternatively, the `sliderule-buildenv` Docker image can be built and used as your development environment.  To do so, run the following commands from the root of the sliderule repository.
 ```bash
 cd targets/slideruleearth-aws
-make sliderule-buildenv-docker
-make run-buildenv
+make buildenv-docker
+make buildenv
 ```
 Then, inside the container, you'll find the sliderule repository at `/host/sliderule`.  Change directory there and you will then be able to build the sliderule code however you'd like use the provided makefiles under the root and `targets` directory.
 
