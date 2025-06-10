@@ -94,7 +94,14 @@ class GdalRaster
         *     Callback definition for overriding Spatial Reference System.
         *     NOTE: implementation must be thread-safe
         *--------------------------------------------------------------------*/
-        typedef OGRErr (*overrideCRS_t)(OGRSpatialReference& crs);
+        typedef OGRErr (*overrideCRS_t)(OGRSpatialReference& crs, const void* param);
+
+        /*--------------------------------------------------------------------
+        * overrideGeoTransform_t
+        *     Callback definition for overriding GeoTransform
+        *     NOTE: implementation must be thread-safe
+        *--------------------------------------------------------------------*/
+        typedef CPLErr (*overrideGeoTransform_t)(double* gtf, const void* param);
 
         /* import bbox_t into this namespace from GeoFields.h */
         using bbox_t=GeoFields::bbox_t;
@@ -106,7 +113,8 @@ class GdalRaster
                            GdalRaster     (const GeoFields* _parms, const std::string& _fileName,
                                            double _gpsTime, uint64_t _fileId,
                                            int _elevationBandNum, int _flagsBandNum,
-                                           overrideCRS_t cb, bbox_t* aoi_bbox_override=NULL);
+                                           overrideGeoTransform_t gtf_cb, overrideCRS_t crs_cb,
+                                           bbox_t* aoi_bbox_override=NULL);
 
         virtual           ~GdalRaster     (void);
         void               open           (void);
@@ -121,6 +129,7 @@ class GdalRaster
         uint32_t           getSSerror     (void) const { return ssError; }
         int                getElevationBandNum (void) const { return elevationBandNum; }
         int                getFLagsBandNum (void) const { return flagsBandNum; }
+        overrideGeoTransform_t getOverrideGeoTransform(void) const { return overrideGeoTransform; }
         overrideCRS_t      getOverrideCRS (void) const { return overrideCRS; }
         double             getGpsTime     (void) const { return gpsTime; }
         int                getBandNumber  (const std::string& bandName);
@@ -147,9 +156,10 @@ class GdalRaster
         uint64_t            fileId;   /* unique identifier of raster file used for downstream processing */
 
         OGRCoordinateTransformation* transf;
-        OGRSpatialReference sourceCRS;
-        OGRSpatialReference targetCRS;
-        overrideCRS_t       overrideCRS;
+        OGRSpatialReference    sourceCRS;
+        OGRSpatialReference    targetCRS;
+        overrideGeoTransform_t overrideGeoTransform;
+        overrideCRS_t          overrideCRS;
 
         std::string     fileName;
         GDALDataset    *dset;

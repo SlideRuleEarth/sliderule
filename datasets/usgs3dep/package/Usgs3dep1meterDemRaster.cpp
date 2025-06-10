@@ -58,7 +58,7 @@ const char* Usgs3dep1meterDemRaster::URL_str = "https://prd-tnm.s3.amazonaws.com
  * Constructor
  *----------------------------------------------------------------------------*/
 Usgs3dep1meterDemRaster::Usgs3dep1meterDemRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
- GeoIndexedRaster(L, rqst_parms, key, &overrideTargetCRS),
+ GeoIndexedRaster(L, rqst_parms, key, NULL, &overrideTargetCRS),
  filePath(parms->asset.asset->getPath()),
  indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson")
 {
@@ -152,8 +152,9 @@ bool Usgs3dep1meterDemRaster::findRasters(raster_finder_t* finder)
 /*----------------------------------------------------------------------------
  * overrideTargetCRS
  *----------------------------------------------------------------------------*/
-OGRErr Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target)
+OGRErr Usgs3dep1meterDemRaster::overrideTargetCRS(OGRSpatialReference& target, const void* param)
 {
+    static_cast<void>(param);
     OGRErr ogrerr   = OGRERR_FAILURE;
     int northFlag   = 0;
     const int utm   = target.GetUTMZone(&northFlag);

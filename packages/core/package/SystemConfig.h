@@ -77,7 +77,7 @@ class SystemConfig: public FieldDictionary
         SystemConfig& operator=(const SystemConfig&) = delete;
         SystemConfig(SystemConfig&&) = delete;
         SystemConfig& operator=(SystemConfig&&) = delete;
-        
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
@@ -92,6 +92,7 @@ class SystemConfig: public FieldDictionary
         FieldElement<bool>              authenticateToORNLDAAC      {true};
         FieldElement<bool>              authenticateToLPDAAC        {true};
         FieldElement<bool>              authenticateToPODAAC        {true};
+        FieldElement<bool>              authenticateToASF           {true};
         FieldElement<bool>              registerAsService           {true};
         FieldElement<string>            assetDirectory              {"asset_directory.csv"};
         FieldElement<float>             normalMemoryThreshold       {1.0};
@@ -117,7 +118,7 @@ class SystemConfig: public FieldDictionary
         FieldElement<string>            containerRegistry           {"742127912612.dkr.ecr.us-west-2.amazonaws.com"};
 
     private:
- 
+
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/

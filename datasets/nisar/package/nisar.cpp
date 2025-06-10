@@ -29,49 +29,65 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __remadem_strips_raster__
-#define __remadem_strips_raster__
-
 /******************************************************************************
- * INCLUDES
+ *INCLUDES
  ******************************************************************************/
 
-#include "PgcDemStripsRaster.h"
-#include "PgcWkt.h"
+#include "OsApi.h"
+#include "nisar.h"
 
 /******************************************************************************
- * REMA DEM STRIPS RASTER CLASS
+ * DEFINES
  ******************************************************************************/
 
-class RemaDemStripsRaster: public PgcDemStripsRaster
+#define LUA_NISAR_LIBNAME         "nisar"
+#define LUA_NISAR_L2_DATASET_NAME "nisar-L2-geoff"
+
+/******************************************************************************
+ * LOCAL FUNCTIONS
+ ******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * bluetopo_open
+ *----------------------------------------------------------------------------*/
+int nisar_open (lua_State *L)
 {
-    public:
+    static const struct luaL_Reg nisar_functions[] = {
+        {NULL, NULL}
+    };
 
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
+    /* Set Library */
+    luaL_newlib(L, nisar_functions);
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+    return 1;
+}
 
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
-        { return new RemaDemStripsRaster(L, rqst_parms, key); }
+/******************************************************************************
+ * EXPORTED FUNCTIONS
+ ******************************************************************************/
 
-    protected:
+extern "C" {
+void initnisar(void)
+{
+    /* Initialize Modules */
+    NisarDataset::init();
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+    /* Register Rasters */
+    RasterObject::registerRaster(LUA_NISAR_L2_DATASET_NAME, NisarDataset::create);
 
-        RemaDemStripsRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
-          PgcDemStripsRaster(L, rqst_parms, key, "rema", "/s", &overrideTargetCRS) {}
+    /* Extend Lua */
+    LuaEngine::extend(LUA_NISAR_LIBNAME, nisar_open);
 
-        static OGRErr overrideTargetCRS(OGRSpatialReference& target, const void* param=NULL)
-        {
-            static_cast<void>(param);
-            return target.importFromWkt(getRemaWkt2());
-        }
-};
+    /* Indicate Presence of Package */
+    LuaEngine::indicate(LUA_NISAR_LIBNAME, LIBID);
 
-#endif  /* __remadem_strips_raster__ */
+    /* Display Status */
+    print2term("%s package initialized (%s)\n", LUA_NISAR_LIBNAME, LIBID);
+}
+
+void deinitnisar(void)
+{
+    /* Uninitialize Modules */
+    NisarDataset::deinit();
+}
+}

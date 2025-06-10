@@ -1,0 +1,27 @@
+{
+  "_comment1": "This is a fake query result, when CMR supports NISAR replace it with an actual CMR query result",
+  "_comment2": "The Polygon is the bounding box from the h5 file used here, the h5 file is from NISAR samples, the rest is made up",
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "nisar-goff-001",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-118.460221357625, 34.235748204922],
+            [-117.480816711884, 34.235748204922],
+            [-117.480816711884, 35.3645719098044],
+            [-118.460221357625, 35.3645719098044],
+            [-118.460221357625, 34.235748204922]
+          ]
+        ]
+      },
+      "properties": {
+        "datetime": "2008-11-04T06:09:42.000000+00:00",
+        "url": "https://sds-n-cumulus-prod-nisar-sample-data.s3.us-west-2.amazonaws.com/GOFF/NISAR_L2_PR_GOFF_001_030_A_019_002_2000_SH_20081012T060911_20081012T060925_20081127T061000_20081127T061014_D00404_N_F_J_001/NISAR_L2_PR_GOFF_001_030_A_019_002_2000_SH_20081012T060911_20081012T060925_20081127T061000_20081127T061014_D00404_N_F_J_001.h5"
+      }
+    }
+  ]
+}

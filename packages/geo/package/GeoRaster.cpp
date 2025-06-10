@@ -56,10 +56,10 @@ void GeoRaster::deinit (void)
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GeoRaster::GeoRaster(lua_State *L, RequestFields* rqst_parms, const char* key, const std::string& _fileName,
-                     double _gpsTime, int elevationBandNum, int flagsBandNum, GdalRaster::overrideCRS_t cb):
+GeoRaster::GeoRaster(lua_State *L, RequestFields* rqst_parms, const char* key, const std::string& _fileName, double _gpsTime,
+                     int elevationBandNum, int flagsBandNum, GdalRaster::overrideGeoTransform_t gtf_cb, GdalRaster::overrideCRS_t crs_cb):
     RasterObject(L, rqst_parms, key),
-    raster(parms, _fileName, _gpsTime, fileDict.add(_fileName, true), elevationBandNum, flagsBandNum, cb)
+    raster(parms, _fileName, _gpsTime, fileDict.add(_fileName, true), elevationBandNum, flagsBandNum, gtf_cb, crs_cb)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);
@@ -144,6 +144,7 @@ uint32_t GeoRaster::getSubsets(const MathLib::extent_t& extent, int64_t gps, Lis
                                              raster.getGpsTime(),
                                              raster.getElevationBandNum(),
                                              raster.getFLagsBandNum(),
+                                             raster.getOverrideGeoTransform(),
                                              raster.getOverrideCRS());
                 slist.add(subset);
 

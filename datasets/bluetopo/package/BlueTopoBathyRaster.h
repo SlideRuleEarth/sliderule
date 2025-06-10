@@ -98,4 +98,4 @@ class BlueTopoBathyRaster: public GeoIndexedRaster
         std::string indexFile;
 };
 
-#endif  /* __gebco_bathy_raster__ */
+#endif  /* __bluetopo_bathy_raster__ */

@@ -450,6 +450,7 @@ void* GeoIndexedRaster::serialReaderThread(void *param)
                                                         raster->getGpsTime(),
                                                         raster->getElevationBandNum(),
                                                         raster->getFLagsBandNum(),
+                                                        raster->getOverrideGeoTransform(),
                                                         raster->getOverrideCRS());
 
                             entry->bandSubset.push_back(subset);
@@ -546,6 +547,7 @@ bool GeoIndexedRaster::updateSerialCache(uint32_t& rasters2sample, const GroupOr
                                               rinfo.fileId,
                                               rinfo.elevationBandNum,
                                               rinfo.flagsBandNum,
+                                              gtfcb,
                                               crscb,
                                               &bbox);
                 const bool status = cache.add(key, item);

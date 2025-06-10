@@ -29,26 +29,33 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __remadem_strips_raster__
-#define __remadem_strips_raster__
+#ifndef __nisar_dataset__
+#define __nisar_dataset__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "PgcDemStripsRaster.h"
-#include "PgcWkt.h"
+#include "GeoIndexedRaster.h"
+#include <unordered_map>
 
 /******************************************************************************
- * REMA DEM STRIPS RASTER CLASS
+ * NISAR DATASET CLASS
  ******************************************************************************/
 
-class RemaDemStripsRaster: public PgcDemStripsRaster
+class NisarDataset: public GeoIndexedRaster
 {
     public:
 
         /*--------------------------------------------------------------------
          * Constants
+         *--------------------------------------------------------------------*/
+        static const char* validL2GOFFbands[];
+        static const char* URL_str;
+
+
+        /*--------------------------------------------------------------------
+         * Typedefs
          *--------------------------------------------------------------------*/
 
         /*--------------------------------------------------------------------
@@ -56,22 +63,49 @@ class RemaDemStripsRaster: public PgcDemStripsRaster
          *--------------------------------------------------------------------*/
 
         static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
-        { return new RemaDemStripsRaster(L, rqst_parms, key); }
+                          { return new NisarDataset(L, rqst_parms, key); }
+
 
     protected:
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
+                NisarDataset (lua_State* L, RequestFields* rqst_parms, const char* key);
+               ~NisarDataset (void) override;
 
-        RemaDemStripsRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
-          PgcDemStripsRaster(L, rqst_parms, key, "rema", "/s", &overrideTargetCRS) {}
+        void    getIndexFile (const OGRGeometry* geo, std::string& file) final;
+        void    getIndexFile (const std::vector<point_info_t>* points, std::string& file) final;
+        bool    findRasters  (raster_finder_t* finder) final;
 
-        static OGRErr overrideTargetCRS(OGRSpatialReference& target, const void* param=NULL)
-        {
-            static_cast<void>(param);
-            return target.importFromWkt(getRemaWkt2());
-        }
+        void    getSerialGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags) final;
+        uint32_t getBatchGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx) final;
+
+        static CPLErr overrideGeoTransform (double* gtf, const void* param);
+        static OGRErr overrideTargetCRS(OGRSpatialReference& target, const void* param=NULL);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+    private:
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+        bool validateL2GOFFbandNames (void);
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+        std::string filePath;
+        std::string indexFile;
+
+        static Mutex transfMutex;
+        static Mutex crsMutex;
+        static std::unordered_map<std::string, std::array<double, 6>> transformCache;
+        static std::unordered_map<std::string, int> crsCache;
 };
 
-#endif  /* __remadem_strips_raster__ */
+#endif  /* __nisar_dataset__ */

@@ -29,49 +29,24 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __remadem_strips_raster__
-#define __remadem_strips_raster__
+#ifndef __nisar_plugin__
+#define __nisar_plugin__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
-#include "PgcDemStripsRaster.h"
-#include "PgcWkt.h"
+#include "NisarDataset.h"
 
 /******************************************************************************
- * REMA DEM STRIPS RASTER CLASS
+ * PROTOTYPES
  ******************************************************************************/
 
-class RemaDemStripsRaster: public PgcDemStripsRaster
-{
-    public:
+extern "C" {
+void initnisar(void);
+void deinitnisar(void);
+}
 
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
+#endif  /* __nisar_plugin__ */
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
 
-        static RasterObject* create(lua_State* L, RequestFields* rqst_parms, const char* key)
-        { return new RemaDemStripsRaster(L, rqst_parms, key); }
-
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        RemaDemStripsRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
-          PgcDemStripsRaster(L, rqst_parms, key, "rema", "/s", &overrideTargetCRS) {}
-
-        static OGRErr overrideTargetCRS(OGRSpatialReference& target, const void* param=NULL)
-        {
-            static_cast<void>(param);
-            return target.importFromWkt(getRemaWkt2());
-        }
-};
-
-#endif  /* __remadem_strips_raster__ */

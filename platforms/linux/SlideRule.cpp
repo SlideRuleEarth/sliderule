@@ -115,6 +115,10 @@
 #include "gedtm.h"
 #endif
 
+#ifdef __nisar__
+#include "nisar.h"
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <dlfcn.h>
@@ -416,6 +420,10 @@ int main (int argc, char* argv[])
         initgedtm();
     #endif
 
+    #ifdef __nisar__
+        initnisar();
+    #endif
+
     /* Load Plugins */
     ldplugins();
 
@@ -495,6 +503,10 @@ int main (int argc, char* argv[])
 
     #ifdef __gedtm__
         deinitgedtm();
+    #endif
+
+    #ifdef __nisar__
+        deinitnisar();
     #endif
 
     #ifdef __streaming__
