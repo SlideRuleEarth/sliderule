@@ -338,13 +338,13 @@ void H5Dataset::readDataset (info_t* info)
     if(!metaOnly && buffer_size > 0)
     {
         /* Add Space for Terminator for Strings */
-        const int64_t extra_space_for_terminator = (metaData.type == STRING_TYPE);
+        const int64_t extra_space_for_terminator = (metaData.type == STRING_TYPE || metaData.type == VL_STRING_TYPE);
 
         /* Allocate */
         buffer = new (std::align_val_t(H5CORO_DATA_ALIGNMENT)) uint8_t [buffer_size + extra_space_for_terminator];
 
         /* Gaurantee Termination of String */
-        if(metaData.type == STRING_TYPE)
+        if(metaData.type == STRING_TYPE || metaData.type == VL_STRING_TYPE)
         {
             buffer[buffer_size] = '\0';
         }
@@ -391,7 +391,7 @@ void H5Dataset::readDataset (info_t* info)
         else if (metaData.typesize == 8) info->datatype = RecordObject::DOUBLE;
         else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid type size for floating point number: %d", metaData.typesize);
     }
-    else if(metaData.type == STRING_TYPE)
+    else if(metaData.type == STRING_TYPE || metaData.type == VL_STRING_TYPE)
     {
         info->datatype = RecordObject::STRING;
     }
@@ -417,7 +417,11 @@ void H5Dataset::readDataset (info_t* info)
             case COMPACT_LAYOUT:
             case CONTIGUOUS_LAYOUT:
             {
-                if(metaData.ndims == 0)
+                if(metaData.type == VL_STRING_TYPE)
+                {
+                    readVLString(metaData.address, buffer, buffer_size);
+                }
+                else if(metaData.ndims == 0)
                 {
                     uint64_t data_addr = metaData.address;
                     ioContext->ioRequest(&data_addr, buffer_size, buffer, 0, false);
@@ -1806,6 +1810,102 @@ int H5Dataset::readMessage (msg_type_t msg_type, uint64_t size, uint64_t pos, ui
 }
 
 /*----------------------------------------------------------------------------
+ * readVLString
+ *----------------------------------------------------------------------------*/
+int H5Dataset::readVLString (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
+{
+    const uint64_t starting_position    = pos;
+    const uint32_t vl_length            = (uint32_t)readField(4, &pos);
+    const uint64_t global_heap_address  = (uint64_t)readField(metaData.offsetsize, &pos);
+    const uint32_t vl_index             = (uint32_t)readField(4, &pos);
+    const uint64_t ending_position      = pos;
+
+    if(H5CORO_VERBOSE)
+    {
+        print2term("\n----------------\n");
+        print2term("Variable Length String: 0x%lx\n", (unsigned long)starting_position);
+        print2term("----------------\n");
+        print2term("Length:                                                          %u\n", (unsigned)vl_length);
+        print2term("Dimensionality:                                                  0x%lx\n", (unsigned long)global_heap_address);
+        print2term("Index:                                                           %u\n", (unsigned)vl_index);
+    }
+
+    // go to global heap
+    pos = global_heap_address;
+    if(H5CORO_ERROR_CHECKING)
+    {
+        // read and check signature
+        const uint64_t signature = readField(4, &pos);
+        if(signature != H5_GCOL_SIGNATURE_LE)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid global collection signature: 0x%llX", static_cast<unsigned long long>(signature));
+        }
+
+        // read and check version
+        const uint8_t version = (uint8_t)readField(1, &pos);
+        if(version != 1)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid global collection version: %d", (int)version);
+        }
+
+        // reserved
+        pos += 3;
+    }
+    else
+    {
+        pos += 8;
+    }
+
+    // get size of global heap
+    const uint64_t global_heap_size = readField(metaData.offsetsize, &pos);
+    if(H5CORO_VERBOSE)
+    {
+        print2term("\n----------------\n");
+        print2term("Global Heap Collection: 0x%lx\n", (unsigned long)global_heap_address);
+        print2term("----------------\n");
+        print2term("Heap Size:                                                       %lu\n", (unsigned long)global_heap_size);
+    }
+
+    // read from global heap looking for object
+    uint64_t end_of_heap = pos + global_heap_size;
+    while(pos < end_of_heap)
+    {
+        const uint64_t object_index = readField(2, &pos);
+        pos += 2; // reference count
+        pos += 4; // reserved
+        const uint64_t object_length = readField(metaData.lengthsize, &pos);
+        if(object_index == vl_index)
+        {
+            if(H5CORO_ERROR_CHECKING)
+            {
+                if(object_length != vl_length)
+                {
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "inconsistent lengths %u != %lu", vl_length, object_length);
+                }
+                if(object_length > buffer_size)
+                {
+                    throw RunTimeException(CRITICAL, RTE_FAILURE, "buffer too small %lu < %lu", buffer_size, object_length);
+                }
+            }
+            if(H5CORO_VERBOSE)
+            {
+                print2term("Object Index:                                                    %lu\n", (unsigned long)object_index);
+                print2term("Object Size:                                                     %lu\n", (unsigned long)object_length);
+            }
+
+            ioContext->ioRequest(&pos, object_length, buffer, 0, false);
+        }
+        else
+        {
+            pos += object_length;
+        }
+    }
+
+    // return bytes read (not including global heap collection)
+    return ending_position - starting_position;
+}
+
+/*----------------------------------------------------------------------------
  * readDataspaceMsg
  *----------------------------------------------------------------------------*/
 int H5Dataset::readDataspaceMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
@@ -2067,17 +2167,15 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         case VARIABLE_LENGTH_TYPE:
         {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "variable length data types require reading a global heap, which is not yet supported");
-#if 0
+            const unsigned int vl_type = databits & 0xF; // variable length type
+            const unsigned int padding = (databits & 0xF0) >> 4;
+            const unsigned int charset = (databits & 0xF00) >> 8;
+
             if(H5CORO_VERBOSE)
             {
-                unsigned int vt_type = databits & 0xF; // variable length type
-                unsigned int padding = (databits & 0xF0) >> 4;
-                unsigned int charset = (databits & 0xF00) >> 8;
-
-                const char* vt_type_str = "unknown";
-                if(vt_type == 0) vt_type_str = "Sequence";
-                else if(vt_type == 1) vt_type_str = "String";
+                const char* vl_type_str = "unknown";
+                if(vl_type == 0) vl_type_str = "Sequence";
+                else if(vl_type == 1) vl_type_str = "String";
 
                 const char* padding_str = "unknown";
                 if(padding == 0) padding_str = "Null Terminate";
@@ -2088,22 +2186,34 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 if(charset == 0) charset_str = "ASCII";
                 else if(charset == 1) charset_str = "UTF-8";
 
-                print2term("Variable Type:                                                   %d %s\n", (int)vt_type, vt_type_str);
+                print2term("Variable Type:                                                   %d %s\n", (int)vl_type, vl_type_str);
                 print2term("Padding Type:                                                    %d %s\n", (int)padding, padding_str);
                 print2term("Character Set:                                                   %d %s\n", (int)charset, charset_str);
             }
+
+            // recursively read data type message
+            const int vlen_typesize = metaData.typesize; // save type size
             pos += readDatatypeMsg (pos, hdr_flags, dlvl);
+            metaData.typesize = vlen_typesize; // restore type size
+
+            // set new data type
+            if(vl_type == 0) metaData.type = VL_SEQUENCE_TYPE;
+            else if(vl_type == 1) metaData.type = VL_STRING_TYPE;
+
+            // set signed attribute
+            if(charset == 0) metaData.signedval = true; // ascii
+            else if(charset == 1) metaData.signedval = false; // utf-8
+
             break;
-#endif
         }
 
         case STRING_TYPE:
         {
+            const unsigned int padding = databits & 0x0F;
+            const unsigned int charset = (databits & 0xF0) >> 4;
+
             if(H5CORO_VERBOSE)
             {
-                const unsigned int padding = databits & 0x0F;
-                const unsigned int charset = (databits & 0xF0) >> 4;
-
                 const char* padding_str = "unknown";
                 if(padding == 0) padding_str = "Null Terminate";
                 else if(padding == 1) padding_str = "Null Pad";
@@ -2116,6 +2226,11 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
                 print2term("Padding Type:                                                    %d %s\n", (int)padding, padding_str);
                 print2term("Character Set:                                                   %d %s\n", (int)charset, charset_str);
             }
+
+            // set signed attribute
+            if(charset == 0) metaData.signedval = true; // ascii
+            else if(charset == 1) metaData.signedval = false; // utf-8
+
             break;
         }
 
@@ -3181,6 +3296,8 @@ const char* H5Dataset::type2str (data_type_t datatype)
         case ENUMERATED_TYPE:       return "ENUMERATED_TYPE";
         case VARIABLE_LENGTH_TYPE:  return "VARIABLE_LENGTH_TYPE";
         case ARRAY_TYPE:            return "ARRAY_TYPE";
+        case VL_STRING_TYPE:        return "VL_STRING_TYPE";
+        case VL_SEQUENCE_TYPE:      return "VL_SEQUENCE_TYPE";
         default:                    return "UNKNOWN_TYPE";
     }
 }
