@@ -53,7 +53,7 @@ const HdfLib::dataset_t HdfLib::PARENT_DATASET = {NULL, PARENT, RecordObject::IN
 
 static void close_hid(hid_t hid)
 {
-    H5I_type_t type = H5Iget_type(hid);
+    const H5I_type_t type = H5Iget_type(hid);
     switch(type)
     {
         case H5I_FILE: H5Fclose(hid); break;

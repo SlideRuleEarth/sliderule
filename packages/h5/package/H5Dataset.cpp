@@ -1867,7 +1867,7 @@ int H5Dataset::readVLString (uint64_t pos, uint8_t* buffer, uint64_t buffer_size
     }
 
     // read from global heap looking for object
-    uint64_t end_of_heap = pos + global_heap_size;
+    const uint64_t end_of_heap = pos + global_heap_size;
     while(pos < end_of_heap)
     {
         const uint64_t object_index = readField(2, &pos);
@@ -2168,11 +2168,12 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
         case VARIABLE_LENGTH_TYPE:
         {
             const unsigned int vl_type = databits & 0xF; // variable length type
-            const unsigned int padding = (databits & 0xF0) >> 4;
             const unsigned int charset = (databits & 0xF00) >> 8;
 
             if(H5CORO_VERBOSE)
             {
+                const unsigned int padding = (databits & 0xF0) >> 4;
+
                 const char* vl_type_str = "unknown";
                 if(vl_type == 0) vl_type_str = "Sequence";
                 else if(vl_type == 1) vl_type_str = "String";
@@ -2209,11 +2210,12 @@ int H5Dataset::readDatatypeMsg (uint64_t pos, uint8_t hdr_flags, int dlvl)
 
         case STRING_TYPE:
         {
-            const unsigned int padding = databits & 0x0F;
             const unsigned int charset = (databits & 0xF0) >> 4;
 
             if(H5CORO_VERBOSE)
             {
+                const unsigned int padding = databits & 0x0F;
+
                 const char* padding_str = "unknown";
                 if(padding == 0) padding_str = "Null Terminate";
                 else if(padding == 1) padding_str = "Null Pad";
