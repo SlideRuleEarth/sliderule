@@ -59,8 +59,9 @@ struct HdfLib
     typedef enum {
         GROUP                       = 0,
         VARIABLE                    = 1,
-        ATTRIBUTE                   = 2,
-        PARENT                      = 3
+        SCALAR                      = 2,
+        ATTRIBUTE                   = 3,
+        PARENT                      = 4
     } dataset_type_t;
 
     typedef struct {

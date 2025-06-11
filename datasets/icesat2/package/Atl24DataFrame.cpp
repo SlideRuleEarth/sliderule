@@ -513,7 +513,7 @@ void* Atl24DataFrame::subsettingThread (void* parm)
     }
 
     /* Dataframe Complete */
-    mlog(INFO, "Completed processing resource %s beam %s", df->hdf24->name, df->beam);
+    mlog(INFO, "Completed processing resource %s beam %s with %ld rows", df->hdf24->name, df->beam, df->length());
     df->signalComplete();
 
     /* Stop Trace */

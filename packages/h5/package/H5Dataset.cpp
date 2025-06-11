@@ -335,16 +335,16 @@ void H5Dataset::readDataset (info_t* info)
         }
     }
 
-    if(!metaOnly && buffer_size > 0)
+    if((!metaOnly) && (buffer_size > 0) && (metaData.type != VL_STRING_TYPE))
     {
         /* Add Space for Terminator for Strings */
-        const int64_t extra_space_for_terminator = (metaData.type == STRING_TYPE || metaData.type == VL_STRING_TYPE);
+        const int64_t extra_space_for_terminator = (metaData.type == STRING_TYPE);
 
         /* Allocate */
         buffer = new (std::align_val_t(H5CORO_DATA_ALIGNMENT)) uint8_t [buffer_size + extra_space_for_terminator];
 
         /* Gaurantee Termination of String */
-        if(metaData.type == STRING_TYPE || metaData.type == VL_STRING_TYPE)
+        if(metaData.type == STRING_TYPE)
         {
             buffer[buffer_size] = '\0';
         }
@@ -419,7 +419,12 @@ void H5Dataset::readDataset (info_t* info)
             {
                 if(metaData.type == VL_STRING_TYPE)
                 {
-                    readVLString(metaData.address, buffer, buffer_size);
+                    /*
+                     * The length of Variable Length Data is not known ahead of time
+                     * which means the info->data and info->datasize must be set here
+                     * in the readVLString function.
+                     */
+                    info->datasize = readVLString(metaData.address, &info->data);
                 }
                 else if(metaData.ndims == 0)
                 {
@@ -1812,19 +1817,23 @@ int H5Dataset::readMessage (msg_type_t msg_type, uint64_t size, uint64_t pos, ui
 /*----------------------------------------------------------------------------
  * readVLString
  *----------------------------------------------------------------------------*/
-int H5Dataset::readVLString (uint64_t pos, uint8_t* buffer, uint64_t buffer_size)
+uint64_t H5Dataset::readVLString (uint64_t pos, uint8_t** buffer)
 {
-    const uint64_t starting_position    = pos;
-    const uint32_t vl_length            = (uint32_t)readField(4, &pos);
-    const uint64_t global_heap_address  = (uint64_t)readField(metaData.offsetsize, &pos);
-    const uint32_t vl_index             = (uint32_t)readField(4, &pos);
-    const uint64_t ending_position      = pos;
+    uint64_t buffer_size = 0;
 
     if(H5CORO_VERBOSE)
     {
         print2term("\n----------------\n");
-        print2term("Variable Length String: 0x%lx\n", (unsigned long)starting_position);
+        print2term("Variable Length String: 0x%lx\n", (unsigned long)pos);
         print2term("----------------\n");
+    }
+
+    const uint32_t vl_length            = (uint32_t)readField(4, &pos);
+    const uint64_t global_heap_address  = (uint64_t)readField(metaData.offsetsize, &pos);
+    const uint32_t vl_index             = (uint32_t)readField(4, &pos);
+
+    if(H5CORO_VERBOSE)
+    {
         print2term("Length:                                                          %u\n", (unsigned)vl_length);
         print2term("Dimensionality:                                                  0x%lx\n", (unsigned long)global_heap_address);
         print2term("Index:                                                           %u\n", (unsigned)vl_index);
@@ -1882,10 +1891,6 @@ int H5Dataset::readVLString (uint64_t pos, uint8_t* buffer, uint64_t buffer_size
                 {
                     throw RunTimeException(CRITICAL, RTE_FAILURE, "inconsistent lengths %u != %lu", vl_length, object_length);
                 }
-                if(object_length > buffer_size)
-                {
-                    throw RunTimeException(CRITICAL, RTE_FAILURE, "buffer too small %lu < %lu", buffer_size, object_length);
-                }
             }
             if(H5CORO_VERBOSE)
             {
@@ -1893,16 +1898,24 @@ int H5Dataset::readVLString (uint64_t pos, uint8_t* buffer, uint64_t buffer_size
                 print2term("Object Size:                                                     %lu\n", (unsigned long)object_length);
             }
 
-            ioContext->ioRequest(&pos, object_length, buffer, 0, false);
+            // allocate new buffer and read data into it
+            buffer_size = object_length + 1; // for termination of C-style strings
+            *buffer = new (std::align_val_t(H5CORO_DATA_ALIGNMENT)) uint8_t [buffer_size];
+            ioContext->ioRequest(&pos, object_length, *buffer, 0, false);
+            (*buffer)[object_length] = '\0';
         }
         else
         {
             pos += object_length;
         }
+
+        // align to next 8 byte alignment
+        const uint64_t alignment_padding = ((8 - (object_length % 8)) % 8);
+        pos += alignment_padding;
     }
 
-    // return bytes read (not including global heap collection)
-    return ending_position - starting_position;
+    // return size of variable length data
+    return buffer_size;
 }
 
 /*----------------------------------------------------------------------------

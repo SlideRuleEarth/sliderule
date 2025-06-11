@@ -232,7 +232,7 @@ class H5Dataset
         int                 readObjHdrV1          (uint64_t pos, int dlvl);
         int                 readMessagesV1        (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl);
         int                 readMessage           (msg_type_t type, uint64_t size, uint64_t pos, uint8_t hdr_flags, int dlvl);
-        int                 readVLString          (uint64_t pos, uint8_t* buffer, uint64_t buffer_size);
+        uint64_t            readVLString          (uint64_t pos, uint8_t** buffer);
 
         int                 readDataspaceMsg      (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readLinkInfoMsg       (uint64_t pos, uint8_t hdr_flags, int dlvl);

@@ -90,7 +90,7 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
             const unsigned long number_of_elements = static_cast<unsigned long>(dataset.size / size_of_element);
             if(number_of_elements <= 0)
             {
-                mlog(CRITICAL, "Invalid dataset supplied: %s of size %ld bytes and type %d", dataset.name, dataset.size, dataset.data_type);
+                mlog(CRITICAL, "Invalid variable supplied: %s of size %ld bytes and type %d", dataset.name, dataset.size, dataset.data_type);
                 return false;
             }
             hsize_t dims[1] = {number_of_elements};
@@ -99,27 +99,87 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
             long h5tw; // hdf5 write
             switch(dataset.data_type)
             {
-                case RecordObject::INT8:      h5tc = H5T_STD_I8LE;      h5tw = H5T_NATIVE_INT8;     break;
-                case RecordObject::INT16:     h5tc = H5T_STD_I16LE;     h5tw = H5T_NATIVE_INT16;    break;
-                case RecordObject::INT32:     h5tc = H5T_STD_I32LE;     h5tw = H5T_NATIVE_INT32;    break;
-                case RecordObject::INT64:     h5tc = H5T_STD_I64LE;     h5tw = H5T_NATIVE_INT64;    break;
-                case RecordObject::UINT8:     h5tc = H5T_STD_U8LE;      h5tw = H5T_NATIVE_UINT8;    break;
-                case RecordObject::UINT16:    h5tc = H5T_STD_U16LE;     h5tw = H5T_NATIVE_UINT16;   break;
-                case RecordObject::UINT32:    h5tc = H5T_STD_U32LE;     h5tw = H5T_NATIVE_UINT32;   break;
-                case RecordObject::UINT64:    h5tc = H5T_STD_U64LE;     h5tw = H5T_NATIVE_UINT64;   break;
-                case RecordObject::FLOAT:     h5tc = H5T_IEEE_F32LE;    h5tw = H5T_NATIVE_FLOAT;    break;
-                case RecordObject::DOUBLE:    h5tc = H5T_IEEE_F64LE;    h5tw = H5T_NATIVE_DOUBLE;   break;
-                case RecordObject::TIME8:     h5tc = H5T_STD_I64LE;     h5tw = H5T_NATIVE_INT64;    break;
-                default:                      mlog(CRITICAL, "Invalid dataset tyoe supplied for %s: %d", dataset.name, dataset.data_type);
-                                              return false;
+                case RecordObject::INT8:    h5tc = H5T_STD_I8LE;    h5tw = H5T_NATIVE_INT8;     break;
+                case RecordObject::INT16:   h5tc = H5T_STD_I16LE;   h5tw = H5T_NATIVE_INT16;    break;
+                case RecordObject::INT32:   h5tc = H5T_STD_I32LE;   h5tw = H5T_NATIVE_INT32;    break;
+                case RecordObject::INT64:   h5tc = H5T_STD_I64LE;   h5tw = H5T_NATIVE_INT64;    break;
+                case RecordObject::UINT8:   h5tc = H5T_STD_U8LE;    h5tw = H5T_NATIVE_UINT8;    break;
+                case RecordObject::UINT16:  h5tc = H5T_STD_U16LE;   h5tw = H5T_NATIVE_UINT16;   break;
+                case RecordObject::UINT32:  h5tc = H5T_STD_U32LE;   h5tw = H5T_NATIVE_UINT32;   break;
+                case RecordObject::UINT64:  h5tc = H5T_STD_U64LE;   h5tw = H5T_NATIVE_UINT64;   break;
+                case RecordObject::FLOAT:   h5tc = H5T_IEEE_F32LE;  h5tw = H5T_NATIVE_FLOAT;    break;
+                case RecordObject::DOUBLE:  h5tc = H5T_IEEE_F64LE;  h5tw = H5T_NATIVE_DOUBLE;   break;
+                case RecordObject::TIME8:   h5tc = H5T_STD_I64LE;   h5tw = H5T_NATIVE_INT64;    break;
+                case RecordObject::STRING:
+                {
+                    h5tc = H5Tcopy(H5T_C_S1);
+                    H5Tset_size(h5tc, dataset.size);
+                    H5Tset_strpad(h5tc, H5T_STR_NULLTERM);  // Pad with null terminator
+                    h5tw = h5tc;
+                    break;
+                }
+                default:
+                {
+                    mlog(CRITICAL, "Invalid variable type supplied for %s: %d", dataset.name, dataset.data_type);
+                    return false;
+                }
             }
             const hid_t dataset_id = H5Dcreate2(hid_stack.top(), dataset.name, h5tc, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
             const herr_t status = H5Dwrite(dataset_id, h5tw, H5S_ALL, H5S_ALL, H5P_DEFAULT, dataset.data);
             if(status < 0)
             {
-                mlog(CRITICAL, "Failed to write dataset %s of size %ld and type %d", dataset.name, number_of_elements, dataset.data_type);
+                mlog(CRITICAL, "Failed to write variable %s of size %ld and type %d", dataset.name, number_of_elements, dataset.data_type);
                 return false;
             }
+            if(dataset.data_type == RecordObject::STRING) H5Tclose(h5tc);
+            H5Sclose(dataspace_id);
+            hid_stack.push(dataset_id);
+        }
+        else if(dataset.dataset_type == SCALAR)
+        {
+            const int size_of_element = RecordObject::FIELD_TYPE_BYTES[dataset.data_type];
+            const unsigned long number_of_elements = static_cast<unsigned long>(dataset.size / size_of_element);
+            if(number_of_elements <= 0)
+            {
+                mlog(CRITICAL, "Invalid scalar supplied: %s of size %ld bytes and type %d", dataset.name, dataset.size, dataset.data_type);
+                return false;
+            }
+            const hid_t dataspace_id = H5Screate(H5S_SCALAR);
+            hid_t datatype_id;
+            switch(dataset.data_type)
+            {
+                case RecordObject::INT8:    datatype_id = H5T_NATIVE_INT8;     break;
+                case RecordObject::INT16:   datatype_id = H5T_NATIVE_INT16;    break;
+                case RecordObject::INT32:   datatype_id = H5T_NATIVE_INT32;    break;
+                case RecordObject::INT64:   datatype_id = H5T_NATIVE_INT64;    break;
+                case RecordObject::UINT8:   datatype_id = H5T_NATIVE_UINT8;    break;
+                case RecordObject::UINT16:  datatype_id = H5T_NATIVE_UINT16;   break;
+                case RecordObject::UINT32:  datatype_id = H5T_NATIVE_UINT32;   break;
+                case RecordObject::UINT64:  datatype_id = H5T_NATIVE_UINT64;   break;
+                case RecordObject::FLOAT:   datatype_id = H5T_NATIVE_FLOAT;    break;
+                case RecordObject::DOUBLE:  datatype_id = H5T_NATIVE_DOUBLE;   break;
+                case RecordObject::TIME8:   datatype_id = H5T_NATIVE_INT64;    break;
+                case RecordObject::STRING:
+                {
+                    datatype_id = H5Tcopy(H5T_C_S1);
+                    H5Tset_size(datatype_id, dataset.size);
+                    H5Tset_strpad(datatype_id, H5T_STR_NULLTERM);
+                    break;
+                }
+                default:
+                {
+                    mlog(CRITICAL, "Invalid scalar type supplied for %s: %d", dataset.name, dataset.data_type);
+                    return false;
+                }
+            }
+            const hid_t dataset_id = H5Dcreate2(hid_stack.top(), dataset.name, datatype_id, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+            const herr_t status = H5Dwrite(dataset_id, datatype_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, dataset.data);
+            if(status < 0)
+            {
+                mlog(CRITICAL, "Failed to write scalar %s of size %ld and type %d", dataset.name, number_of_elements, dataset.data_type);
+                return false;
+            }
+            if(dataset.data_type == RecordObject::STRING) H5Tclose(datatype_id);
             H5Sclose(dataspace_id);
             hid_stack.push(dataset_id);
         }
@@ -148,7 +208,7 @@ bool HdfLib::write (const char* filename, List<dataset_t>& datasets)
                 }
                 default:
                 {
-                    mlog(CRITICAL, "Invalid dataset tyoe supplied for %s: %d", dataset.name, dataset.data_type);
+                    mlog(CRITICAL, "Invalid atttribute type supplied for %s: %d", dataset.name, dataset.data_type);
                     return false;
                 }
             }
