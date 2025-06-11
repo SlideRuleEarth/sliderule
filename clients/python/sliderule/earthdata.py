@@ -541,7 +541,7 @@ def set_max_resources (max_resources):
     Examples
     --------
         >>> from sliderule import icesat2
-        >>> icesat2.set_max_resources(1000)
+        >>> earthdata.set_max_resources(1000)
     '''
     global max_requested_resources
     max_requested_resources = max_resources
