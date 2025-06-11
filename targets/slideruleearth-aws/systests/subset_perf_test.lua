@@ -3,7 +3,7 @@ local td = runner.rootdir(arg[0])
 
 -- Setup --
 
-runner.authenticate()
+runner.authenticate({'lpdaac-cloud'})
 
 -- AOI extent (extent of grandmesa.geojson)
 local gm_llx = -108.3412

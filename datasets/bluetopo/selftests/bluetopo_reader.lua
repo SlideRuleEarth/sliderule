@@ -8,7 +8,7 @@ end
 
 -- Setup --
 
-runner.authenticate()
+runner.authenticate({})
 
 -- Correct values test for different POIs
 

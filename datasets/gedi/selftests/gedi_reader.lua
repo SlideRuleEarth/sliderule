@@ -10,7 +10,7 @@ end
 
 -- Setup --
 
-runner.authenticate()
+runner.authenticate({'ornl-cloud', 'lpdaac-cloud'})
 
 -- Self Test --
 
