@@ -159,7 +159,7 @@ runner.unittest("ATL06 Surface Fitter", function()
         longitude = -40.964800696036,
         x_atc = 11134877.680426,
         y_atc = 3271.8671875,
-        h_mean = 2183.622559, --NOTE: this used to be 2183.6225845824; not sure how resolve what changed
+        h_mean = 2183.622559,
         dh_fit_dx = 0.0041639762930572,
         window_height = 3.0,
         rms_misfit = 0.12183286994696,
