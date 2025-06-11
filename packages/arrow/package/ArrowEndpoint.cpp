@@ -36,7 +36,7 @@
 #include "ArrowEndpoint.h"
 #include "OsApi.h"
 #include "TimeLib.h"
-#include "ArrowLib.h"
+#include "OutputLib.h"
 #include "SystemConfig.h"
 
 /******************************************************************************
@@ -223,10 +223,10 @@ void* ArrowEndpoint::responseThread (void* parm)
                     const RecordInterface record(reinterpret_cast<unsigned char*>(ref.data), ref.size);
 
                     /* Arrow Data Record */
-                    if(StringLib::match(record.getRecordType(), ArrowLib::dataRecType))
+                    if(StringLib::match(record.getRecordType(), OutputLib::dataRecType))
                     {
-                        const ArrowLib::arrow_file_data_t* file_data = reinterpret_cast<ArrowLib::arrow_file_data_t*>(record.getRecordData());
-                        const long data_size = record.getAllocatedDataSize() - offsetof(ArrowLib::arrow_file_data_t, data);
+                        const OutputLib::output_file_data_t* file_data = reinterpret_cast<OutputLib::output_file_data_t*>(record.getRecordData());
+                        const long data_size = record.getAllocatedDataSize() - offsetof(OutputLib::output_file_data_t, data);
 
                         /* Check Size */
                         if(data_size <= bytes_to_send)
@@ -262,10 +262,10 @@ void* ArrowEndpoint::responseThread (void* parm)
                         }
                     }
                     /* Arrow Meta Record */
-                    else if(StringLib::match(record.getRecordType(), ArrowLib::metaRecType))
+                    else if(StringLib::match(record.getRecordType(), OutputLib::metaRecType))
                     {
                         /* Save Off Bytes to Send */
-                        const ArrowLib::arrow_file_meta_t* file_meta = reinterpret_cast<ArrowLib::arrow_file_meta_t*>(record.getRecordData());
+                        const OutputLib::output_file_meta_t* file_meta = reinterpret_cast<OutputLib::output_file_meta_t*>(record.getRecordData());
                         bytes_to_send = file_meta->size;
                     }
                 }

@@ -119,6 +119,7 @@ class H5Dataset
         static const uint64_t   H5_TREE_SIGNATURE_LE            = 0x45455254LL; // binary tree version 1
         static const uint64_t   H5_HEAP_SIGNATURE_LE            = 0x50414548LL; // local heap
         static const uint64_t   H5_SNOD_SIGNATURE_LE            = 0x444F4E53LL; // symbol table
+        static const uint64_t   H5_GCOL_SIGNATURE_LE            = 0x4C4F4347LL; // global collection
         static const uint64_t   H5_V2TREE_SIGNATURE_LE          = 0x44485442LL; // v2 btree header
         static const uint64_t   H5_V2TREE_INTERNAL_SIGNATURE_LE = 0x4E495442LL; // v2 internal node
         static const uint64_t   H5_V2TREE_LEAF_SIGNATURE_LE     = 0x464C5442LL; // v2 leaf node
@@ -148,7 +149,9 @@ class H5Dataset
             ENUMERATED_TYPE         = 8,
             VARIABLE_LENGTH_TYPE    = 9,
             ARRAY_TYPE              = 10,
-            UNKNOWN_TYPE            = 11
+            UNKNOWN_TYPE            = 11,
+            VL_STRING_TYPE          = 12,
+            VL_SEQUENCE_TYPE        = 13
         } data_type_t;
 
         typedef enum {
@@ -229,6 +232,7 @@ class H5Dataset
         int                 readObjHdrV1          (uint64_t pos, int dlvl);
         int                 readMessagesV1        (uint64_t pos, uint64_t end, uint8_t hdr_flags, int dlvl);
         int                 readMessage           (msg_type_t type, uint64_t size, uint64_t pos, uint8_t hdr_flags, int dlvl);
+        uint64_t            readVLString          (uint64_t pos, uint8_t** buffer);
 
         int                 readDataspaceMsg      (uint64_t pos, uint8_t hdr_flags, int dlvl);
         int                 readLinkInfoMsg       (uint64_t pos, uint8_t hdr_flags, int dlvl);

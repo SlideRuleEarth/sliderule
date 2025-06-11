@@ -9,7 +9,7 @@ end
 
 -- Setup --
 
-runner.authenticate()
+runner.authenticate({'nsidc-cloud'})
 
 -- Self Test --
 

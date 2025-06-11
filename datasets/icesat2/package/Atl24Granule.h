@@ -29,23 +29,25 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __log_monitor__
-#define __log_monitor__
+#ifndef __atl24_granule__
+#define __atl24_granule__
 
 /******************************************************************************
  * INCLUDES
  ******************************************************************************/
 
+#include "LuaObject.h"
 #include "MsgQ.h"
-#include "Monitor.h"
 #include "OsApi.h"
-#include "EventLib.h"
+#include "H5Coro.h"
+#include "H5Object.h"
+#include "BathyFields.h"
 
 /******************************************************************************
- * LOG MONITOR CLASS
+ * CLASS
  ******************************************************************************/
 
-class LogMonitor: public Monitor
+class Atl24Granule: public LuaObject, public FieldDictionary
 {
     public:
 
@@ -53,49 +55,71 @@ class LogMonitor: public Monitor
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAX_LOG_OUTPUT_SIZE = 1280;
+        static const char* OBJECT_TYPE;
 
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
-
-        typedef enum {
-            TEXT,
-            CLOUD,
-        } format_t;
+        static const char* LUA_META_NAME;
+        static const struct luaL_Reg LUA_META_TABLE[];
 
         /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int luaCreate (lua_State* L);
-
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        void processEvent (const unsigned char* event_buf_ptr, int event_size) override;
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        LogMonitor  (lua_State* L, event_level_t level, format_t output_format, const char* eventq_name);
-        ~LogMonitor (void) override;
-
-        static int textOutput (const EventLib::log_t* event, char* event_buffer);
-        static int cloudOutput (const EventLib::log_t* event, char* event_buffer);
+        static int  luaCreate   (lua_State* L);
+        static int  luaExport   (lua_State* L);
 
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
 
-        format_t outputFormat;
+        FieldElement<double>        atlas_sdp_gps_epoch;
+        FieldElement<string>        data_end_utc;
+        FieldElement<string>        data_start_utc;
+        FieldElement<double>        end_delta_time;
+        FieldElement<int32_t>       end_geoseg;
+        FieldElement<double>        end_gpssow;
+        FieldElement<int32_t>       end_gpsweek;
+        FieldElement<int32_t>       end_orbit;
+        FieldElement<string>        release;
+        FieldElement<string>        granule_end_utc;
+        FieldElement<string>        granule_start_utc;
+        FieldElement<double>        start_delta_time;
+        FieldElement<int32_t>       start_geoseg;
+        FieldElement<double>        start_gpssow;
+        FieldElement<int32_t>       start_gpsweek;
+        FieldElement<int32_t>       start_orbit;
+        FieldElement<string>        version;
+        FieldElement<double>        crossing_time;
+        FieldElement<double>        lan;
+        FieldElement<int16_t>       orbit_number;
+        FieldElement<int8_t>        sc_orient;
+        FieldElement<double>        sc_orient_time;
+        FieldElement<string>        sliderule;
+        FieldElement<string>        profile;
+        FieldElement<string>        stats;
+        FieldElement<string>        extent;
 
+    private:
+
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        bool                        active;
+        Thread*                     pid;
+        Icesat2Fields*              parmsPtr;
+        const Icesat2Fields&        parms;
+        Publisher                   rqstQ;
+        int                         readTimeoutMs;
+        H5Object*                   hdf24; // ATL24 file
+
+        /*--------------------------------------------------------------------
+         * Methods
+         *--------------------------------------------------------------------*/
+
+                        Atl24Granule    (lua_State* L, Icesat2Fields* _parms, H5Object* _hdf24, const char* rqstq_name);
+        virtual         ~Atl24Granule   (void) override;
+
+        static void*    readingThread   (void* parm);
 };
 
-#endif  /* __log_monitor__ */
+#endif  /* __atl24_granule__ */

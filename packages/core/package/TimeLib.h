@@ -89,6 +89,8 @@ class TimeLib
          *--------------------------------------------------------------------*/
 
         static const int64_t USE_CURRENT_TIME = -1;
+        static const int LEAP_SECS_AT_GPS_EPOCH  = 10; // seconds
+        static const int GPS_EPOCH_START = 315964800; // seconds
 
         /*--------------------------------------------------------------------
          * Types
@@ -136,14 +138,12 @@ class TimeLib
         static bool         str2doyrange    (const char* doy_range_str, int& doy_start, int& doy_end);
         static bool         doyinrange      (const gmt_time_t& gmt_time, int doy_start, int doy_end); // returns true if in range
 
-        private:
+    private:
 
         /*--------------------------------------------------------------------
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int LEAP_SECS_AT_GPS_EPOCH  = 10; // seconds
-        static const int GPS_EPOCH_START = 315964800; // seconds
         static const char* NIST_LIST_FILENAME;
 
         static const int HEARTBEAT_PERIOD_MS = 1;

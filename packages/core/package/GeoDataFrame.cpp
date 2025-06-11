@@ -587,7 +587,7 @@ Field* GeoDataFrame::getMetaData (const char* name, Field::type_t _type, bool no
     {
         const meta_entry_t entry = metaFields.fields[name];
         if(!entry.field) throw RunTimeException(CRITICAL, RTE_FAILURE, "%s field is null", name);
-        if(_type != entry.field->type) throw RunTimeException(CRITICAL, RTE_FAILURE, "%s is incorrect type: %d", name, static_cast<int>(entry.field->type));
+        if(_type != Field::FIELD && _type != entry.field->type) throw RunTimeException(CRITICAL, RTE_FAILURE, "%s is incorrect type: %d", name, static_cast<int>(entry.field->type));
         return entry.field;
     }
     else
@@ -595,7 +595,7 @@ Field* GeoDataFrame::getMetaData (const char* name, Field::type_t _type, bool no
         meta_entry_t entry;
         if(metaFields.fields.find(name, &entry))
         {
-            if(_type == entry.field->type)
+            if(_type == Field::FIELD || _type == entry.field->type)
             {
                 return entry.field;
             }

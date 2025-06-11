@@ -100,4 +100,3 @@ end)
 -- Report Results --
 
 runner.report()
-

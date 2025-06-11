@@ -29,73 +29,53 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __log_monitor__
-#define __log_monitor__
-
 /******************************************************************************
- * INCLUDES
+ *INCLUDES
  ******************************************************************************/
 
-#include "MsgQ.h"
-#include "Monitor.h"
 #include "OsApi.h"
-#include "EventLib.h"
+#include "LuaEngine.h"
+#include "HdfLib.h"
 
 /******************************************************************************
- * LOG MONITOR CLASS
+ * DEFINES
  ******************************************************************************/
 
-class LogMonitor: public Monitor
+#define LUA_HDF_LIBNAME  "hdf"
+
+/*----------------------------------------------------------------------------
+ * hdf_open
+ *----------------------------------------------------------------------------*/
+int hdf_open (lua_State *L)
 {
-    public:
+    static const struct luaL_Reg hdf_functions[] = {
+        {NULL,          NULL}
+    };
 
-        /*--------------------------------------------------------------------
-         * Constants
-         *--------------------------------------------------------------------*/
+    /* Set Library */
+    luaL_newlib(L, hdf_functions);
 
-        static const int MAX_LOG_OUTPUT_SIZE = 1280;
+    return 1;
+}
 
-        /*--------------------------------------------------------------------
-         * Typedefs
-         *--------------------------------------------------------------------*/
+/******************************************************************************
+ * EXPORTED FUNCTIONS
+ ******************************************************************************/
 
-        typedef enum {
-            TEXT,
-            CLOUD,
-        } format_t;
+extern "C" {
+void inithdf (void)
+{
+    /* Extend Lua */
+    LuaEngine::extend(LUA_HDF_LIBNAME, hdf_open);
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
+    /* Indicate Presence of Package */
+    LuaEngine::indicate(LUA_HDF_LIBNAME, LIBID);
 
-        static int luaCreate (lua_State* L);
+    /* Display Status */
+    print2term("%s package initialized (%s)\n", LUA_HDF_LIBNAME, LIBID);
+}
 
-    protected:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        void processEvent (const unsigned char* event_buf_ptr, int event_size) override;
-
-    private:
-
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        LogMonitor  (lua_State* L, event_level_t level, format_t output_format, const char* eventq_name);
-        ~LogMonitor (void) override;
-
-        static int textOutput (const EventLib::log_t* event, char* event_buffer);
-        static int cloudOutput (const EventLib::log_t* event, char* event_buffer);
-
-        /*--------------------------------------------------------------------
-         * Data
-         *--------------------------------------------------------------------*/
-
-        format_t outputFormat;
-
-};
-
-#endif  /* __log_monitor__ */
+void deinithdf (void)
+{
+}
+}

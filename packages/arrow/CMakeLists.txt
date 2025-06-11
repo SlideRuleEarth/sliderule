@@ -15,8 +15,6 @@ target_sources(slideruleLib
         ${CMAKE_CURRENT_LIST_DIR}/package/ArrowBuilderImpl.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/ArrowDataFrame.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/ArrowEndpoint.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/ArrowFields.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/package/ArrowLib.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/ArrowSampler.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/ArrowSamplerImpl.cpp
 )
@@ -34,8 +32,6 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/ArrowBuilderImpl.h
         ${CMAKE_CURRENT_LIST_DIR}/package/ArrowDataFrame.h
         ${CMAKE_CURRENT_LIST_DIR}/package/ArrowEndpoint.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/ArrowFields.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/ArrowLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/ArrowSampler.h
         ${CMAKE_CURRENT_LIST_DIR}/package/ArrowSamplerImpl.h
     DESTINATION

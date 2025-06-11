@@ -2,7 +2,7 @@ local runner = require("test_executive")
 
 -- Setup --
 
-runner.authenticate()
+runner.authenticate({'lpdaac-cloud'})
 
 local outq_name = "outq-luatest"
 

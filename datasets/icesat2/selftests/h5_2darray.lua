@@ -9,7 +9,7 @@ end
 
 -- Setup --
 
-runner.authenticate()
+runner.authenticate({'nsidc-cloud'})
 
 local atlas_asset = core.getbyname("icesat2")
 local resource = "ATL03_20190218011204_07880205_006_02.h5"

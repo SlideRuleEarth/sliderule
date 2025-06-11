@@ -294,7 +294,7 @@ curl https://sliderule.slideruleearth.io/source/defaults
 |---------|-----------|-----|-------|
 |refid|ATL13 reference id|integer||
 |name|lake (or body of water) name|string||
-|coordinate|latitude and longitude contained within the desired body of water|object {"lat": $lat, "lon": $lon}||
+|coord|latitude and longitude coordinates contained within the desired body of water|object {"lat": $lat, "lon": $lon}||
 |anc_fields|ATL13 ancillary fields|list of strings||
 
 #### ATL24

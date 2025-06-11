@@ -65,7 +65,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/RasterSample.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RasterSubset.h
         ${CMAKE_CURRENT_LIST_DIR}/package/RasterFileDictionary.h
-        ${CMAKE_CURRENT_LIST_DIR}/package/GeoFields.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/GeoFields.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoLib.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GeoRtree.h
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_RasterSubset.h>

@@ -61,6 +61,8 @@
 #include "MsgQ.h"
 #include "OrchestratorLib.h"
 #include "Ordering.h"
+#include "OutputFields.h"
+#include "OutputLib.h"
 #include "ProvisioningSystemLib.h"
 #include "RecordObject.h"
 #include "RegionMask.h"
@@ -146,6 +148,7 @@ static int core_open (lua_State *L)
         {"psauth",          ProvisioningSystemLib::Authenticator::luaCreate},
         {"manager",         ManagerLib::luaRequest},
         {"parms",           RequestFields::luaCreate},
+        {"send2user",       OutputLib::luaSend2User},
 #ifdef __unittesting__
         {"ut_dictionary",   UT_Dictionary::luaCreate},
         {"ut_field",        UT_Field::luaCreate},
@@ -185,10 +188,10 @@ static int core_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "CHECK",                    IO_CHECK);
     LuaEngine::setAttrInt   (L, "SUBSCRIBER_OF_OPPORUNITY", MsgQ::SUBSCRIBER_OF_OPPORTUNITY);
     LuaEngine::setAttrInt   (L, "SUBSCRIBER_OF_CONFIDENCE", MsgQ::SUBSCRIBER_OF_CONFIDENCE);
-    LuaEngine::setAttrInt   (L, "RTE_STATUS",                 RTE_STATUS);
-    LuaEngine::setAttrInt   (L, "RTE_FAILURE",                RTE_FAILURE);
+    LuaEngine::setAttrInt   (L, "RTE_STATUS",               RTE_STATUS);
+    LuaEngine::setAttrInt   (L, "RTE_FAILURE",              RTE_FAILURE);
     LuaEngine::setAttrInt   (L, "RTE_TIMEOUT",              RTE_TIMEOUT);
-    LuaEngine::setAttrInt   (L, "RTE_RESOURCE_DOES_NOT_EXIST",  RTE_RESOURCE_DOES_NOT_EXIST);
+    LuaEngine::setAttrInt   (L, "RTE_RESOURCE_DOES_NOT_EXIST", RTE_RESOURCE_DOES_NOT_EXIST);
     LuaEngine::setAttrInt   (L, "RTE_EMPTY_SUBSET",         RTE_EMPTY_SUBSET);
     LuaEngine::setAttrInt   (L, "RTE_SIMPLIFY",             RTE_SIMPLIFY);
     LuaEngine::setAttrInt   (L, "INT8",                     RecordObject::INT8);
@@ -254,6 +257,7 @@ void initcore (void)
     GeoDataFrame::init();
     RequestMetrics::init();
     CurlLib::init();
+    OutputLib::init();
     OrchestratorLib::init();
     ProvisioningSystemLib::init();
 #ifdef __unittesting__

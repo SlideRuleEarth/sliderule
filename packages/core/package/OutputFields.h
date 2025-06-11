@@ -29,8 +29,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __arrow_fields__
-#define __arrow_fields__
+#ifndef __output_fields__
+#define __output_fields__
 
 /******************************************************************************
  * INCLUDES
@@ -50,7 +50,7 @@
  * ARROW PARAMETERS CLASS
  ******************************************************************************/
 
-class ArrowFields: public FieldDictionary
+class OutputFields: public FieldDictionary
 {
     public:
 
@@ -94,8 +94,8 @@ class ArrowFields: public FieldDictionary
         * Methods
         *--------------------------------------------------------------------*/
 
-        ArrowFields     (void);
-        ~ArrowFields    (void) override = default;
+        OutputFields     (void);
+        ~OutputFields    (void) override = default;
 
         void fromLua    (lua_State* L, int index) override;
 };
@@ -104,11 +104,11 @@ class ArrowFields: public FieldDictionary
  * FUNCTIONS
  ******************************************************************************/
 
-string convertToJson(const ArrowFields::format_t& v);
-int convertToLua(lua_State* L, const ArrowFields::format_t& v);
-void convertFromLua(lua_State* L, int index, ArrowFields::format_t& v);
+string convertToJson(const OutputFields::format_t& v);
+int convertToLua(lua_State* L, const OutputFields::format_t& v);
+void convertFromLua(lua_State* L, int index, OutputFields::format_t& v);
 
-inline uint32_t toEncoding(ArrowFields::format_t& v) { (void)v; return Field::INT32; }
+inline uint32_t toEncoding(OutputFields::format_t& v) { (void)v; return Field::INT32; }
 
 
-#endif  /* __arrow_fields__ */
+#endif  /* __output_fields__ */
