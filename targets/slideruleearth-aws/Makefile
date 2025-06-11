@@ -112,7 +112,19 @@ run: ## run the server locally
 	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth-aws/server.lua config.json
 
 buildenv: ## run the build environment docker container
-	docker run -it --network host -v $(shell realpath ~/.ssh):/root/.ssh -v $(ROOT):$(ROOT) -v /data:/data -e ROOT=$(ROOT) -e GITNAME="$(shell git config user.name)" -e GITEMAIL="$(shell git config user.email)" --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)
+	docker run \
+		-it \
+		--network host \
+		-v $(shell realpath ~/.ssh):/root/.ssh \
+		-v $(ROOT):$(ROOT) \
+		-v /data:/data \
+		-e MYIP=$(MYIP) \
+		-e ROOT=$(ROOT) \
+		-e GITNAME="$(shell git config user.name)" \
+		-e GITEMAIL="$(shell git config user.email)" \
+		--rm \
+		--name buildenv \
+		$(ECR)/sliderule-buildenv:$(VERSION)
 
 buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
@@ -407,3 +419,4 @@ help: ## That's me!
 	@echo DOMAIN: $(DOMAIN)
 	@echo DOMAIN_ROOT: $(DOMAIN_ROOT)
 	@echo DISTRIBUTION_ID: $(DISTRIBUTION_ID)
+	@echo MYIP: $(MYIP)
