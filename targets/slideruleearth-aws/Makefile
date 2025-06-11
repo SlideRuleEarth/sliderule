@@ -115,10 +115,10 @@ buildenv: ## run the build environment docker container
 	docker run \
 		-it \
 		--network host \
+		--user $(id -u):$(id -g) \
 		-v $(shell realpath ~/.ssh):/root/.ssh \
 		-v $(ROOT):$(ROOT) \
 		-v /data:/data \
-		-e USER=$(shell whoami)
 		-e MYIP=$(MYIP) \
 		-e ROOT=$(ROOT) \
 		-e GITNAME="$(shell git config user.name)" \
