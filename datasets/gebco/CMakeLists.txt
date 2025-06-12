@@ -19,5 +19,5 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/gebco.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GebcoBathyRaster.h
     DESTINATION
-        ${INCDIR}/gebco
+        ${INCDIR}
 )

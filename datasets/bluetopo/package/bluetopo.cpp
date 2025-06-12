@@ -69,9 +69,6 @@ int bluetopo_open (lua_State *L)
 extern "C" {
 void initbluetopo(void)
 {
-    /* Initialize Modules */
-    BlueTopoBathyRaster::init();
-
     /* Register Rasters */
     RasterObject::registerRaster(LUA_BLUETOPO_RASTER_NAME, BlueTopoBathyRaster::create);
 
@@ -87,7 +84,5 @@ void initbluetopo(void)
 
 void deinitbluetopo(void)
 {
-    /* Uninitialize Modules */
-    BlueTopoBathyRaster::deinit();
 }
 }

@@ -70,9 +70,6 @@ int opendata_open (lua_State *L)
 extern "C" {
 void initopendata(void)
 {
-    /* Initialize Modules */
-    EsaWorldCover10meterRaster::init();
-
     /* Register Rasters */
     RasterObject::registerRaster(LUA_ESA_WORLDCOVER_10METER_RASTER_NAME, EsaWorldCover10meterRaster::create);
     RasterObject::registerRaster(LUA_META_GLOBAL_CANOPY_1METER_RASTER_NAME, MetaGlobalCanopy1meterRaster::create);
@@ -89,8 +86,5 @@ void initopendata(void)
 
 void deinitopendata (void)
 {
-    /* Uninitialize Modules */
-    EsaWorldCover10meterRaster::deinit();
-    MetaGlobalCanopy1meterRaster::deinit();
 }
 }

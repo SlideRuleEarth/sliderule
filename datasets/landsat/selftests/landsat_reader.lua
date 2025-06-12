@@ -11,7 +11,7 @@ end
 
 -- Setup --
 
-runner.authenticate()
+runner.authenticate({'lpdaac-cloud'})
 
 local geojsonfile = dirpath.."../data/hls_trimmed.geojson"
 local f = io.open(geojsonfile, "r")

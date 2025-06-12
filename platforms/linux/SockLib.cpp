@@ -87,7 +87,7 @@ char SockLib::local_host_name[HOST_STR_LEN];
 /*----------------------------------------------------------------------------
  * init
  *----------------------------------------------------------------------------*/
-void SockLib::init()
+void SockLib::init(void)
 {
     /* Attempt to Get Host Information */
     if(gethostname(local_host_name, HOST_STR_LEN) == -1)

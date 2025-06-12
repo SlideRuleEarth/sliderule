@@ -35,6 +35,7 @@
 
 #include "OsApi.h"
 #include "RequestFields.h"
+#include "OutputLib.h"
 #include "SystemConfig.h"
 
 /******************************************************************************
@@ -51,7 +52,8 @@ const struct luaL_Reg RequestFields::LUA_META_TABLE[] = {
     {"__index",     luaGetField},
     {"__newindex",  luaSetField},
     {"length",      luaGetLength},
-    {"hasoutput",   luaWithArrowOutput},
+    {"hasoutput",   luaHasOutput},
+    {"witharrow",   luaHasArrowOutput},
     {"samplers",    luaGetSamplers},
     {"withsamplers",luaWithSamplers},
     {"setcatalog",  luaSetCatalog},
@@ -258,14 +260,33 @@ int RequestFields::luaGetLength (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * luaWithArrowOutput
+ * luaHasOutput
  *----------------------------------------------------------------------------*/
-int RequestFields::luaWithArrowOutput (lua_State* L)
+int RequestFields::luaHasOutput (lua_State* L)
 {
     try
     {
         RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
         lua_pushboolean(L, !lua_obj->output.path.value.empty());
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "error retrieving field: %s", e.what());
+        lua_pushboolean(L, false);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaHasArrowOutput
+ *----------------------------------------------------------------------------*/
+int RequestFields::luaHasArrowOutput (lua_State* L)
+{
+    try
+    {
+        RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
+        lua_pushboolean(L, !lua_obj->output.path.value.empty() && OutputLib::isArrow(lua_obj->output.format.value));
     }
     catch(const RunTimeException& e)
     {
@@ -452,9 +473,7 @@ RequestFields::RequestFields(lua_State* L, uint64_t key_space, const char* asset
         {"sliderule_version",   &slideruleVersion},
         {"build_information",   &buildInformation},
         {"environment_version", &environmentVersion},
-        #ifdef __arrow__
-        {ArrowFields::PARMS,    &output},
-        #endif
+        {OutputFields::PARMS,   &output},
         #ifdef __geo__
         {GeoFields::PARMS,      &samplers},
         #endif

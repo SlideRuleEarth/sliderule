@@ -45,7 +45,7 @@
  ******************************************************************************/
 
 #include "LuaObject.h"
-#include "ArrowFields.h"
+#include "OutputFields.h"
 #include "RequestFields.h"
 #include "RasterObject.h"
 #include "OsApi.h"
@@ -102,9 +102,8 @@ class ArrowSampler: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int                           luaCreate       (lua_State* L);
-        static void                          init            (void);
-        static void                          deinit          (void);
-        const ArrowFields*                   getParms        (void);
+
+        const OutputFields*                  getParms        (void);
         const char*                          getDataFile     (void);
         const char*                          getMetadataFile (void);
         const std::vector<batch_sampler_t*>& getBatchSamplers(void);
@@ -122,7 +121,7 @@ class ArrowSampler: public LuaObject
         bool                          active;
         Thread*                       mainPid;
         RequestFields*                rqstParms;
-        const ArrowFields&            parms;
+        const OutputFields&            parms;
         Publisher*                    outQ;
         std::vector<point_info_t>     points;
         std::vector<batch_sampler_t*> batchSamplers;

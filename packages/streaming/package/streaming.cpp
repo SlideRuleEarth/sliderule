@@ -115,7 +115,7 @@ static int stream_open (lua_State *L)
     LuaEngine::setAttrInt   (L, "FIFO",                     File::FIFO);
     LuaEngine::setAttrInt   (L, "FLUSHED",                  File::FLUSHED);
     LuaEngine::setAttrInt   (L, "CACHED",                   File::CACHED);
-    
+
     return 1;
 }
 

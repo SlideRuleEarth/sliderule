@@ -78,9 +78,6 @@ int cre_open (lua_State* L)
 extern "C" {
 void initcre (void)
 {
-    /* Initialize Modules */
-    ContainerRunner::init();
-
     /* Extend Lua */
     LuaEngine::extend(LUA_CRE_LIBNAME, cre_open);
 
@@ -93,6 +90,5 @@ void initcre (void)
 
 void deinitcre (void)
 {
-    ContainerRunner::deinit();
 }
 }

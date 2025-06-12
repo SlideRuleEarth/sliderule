@@ -9,7 +9,7 @@ end
 
 -- Setup --
 
-runner.authenticate()
+runner.authenticate({'lpdaac-cloud'})
 
 local geojsonfile = dirpath.."../data/grand_mesa.geojson"
 local f = io.open(geojsonfile, "r")

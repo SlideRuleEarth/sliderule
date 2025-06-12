@@ -19,5 +19,5 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/bluetopo.h
         ${CMAKE_CURRENT_LIST_DIR}/package/BlueTopoBathyRaster.h
     DESTINATION
-        ${INCDIR}/bluetopo
+        ${INCDIR}
 )

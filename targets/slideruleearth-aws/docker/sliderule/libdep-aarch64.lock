@@ -2,6 +2,5 @@ arrow: apache-arrow-19.0.1-0-g07b05dad1
 gdal: v3.11.0-0-g447eb5238b
 geos: 3.13.1-0-g431568d6e
 libgeotiff: 1.7.4-0-g96024f6
-PROJ: 9.6.0-0-gcd190c47
+PROJ: 9.6.2-0-g7c3d4a1f
 rapidjson: v1.1.0-763-g24b5e7a8
-xgboost:

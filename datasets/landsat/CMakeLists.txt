@@ -19,5 +19,5 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/landsat.h
         ${CMAKE_CURRENT_LIST_DIR}/package/LandsatHlsRaster.h
     DESTINATION
-        ${INCDIR}/landsat
+        ${INCDIR}
 )

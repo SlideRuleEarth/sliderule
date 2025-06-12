@@ -69,9 +69,6 @@ int landsat_open (lua_State *L)
 extern "C" {
 void initlandsat(void)
 {
-    /* Initialize Modules */
-    LandsatHlsRaster::init();
-
     /* Register Rasters */
     RasterObject::registerRaster(LUA_LANDSAT_HLS_RASTER_NAME, LandsatHlsRaster::create);
 
@@ -87,7 +84,5 @@ void initlandsat(void)
 
 void deinitlandsat (void)
 {
-    /* Uninitialize Modules */
-    LandsatHlsRaster::deinit();
 }
 }

@@ -19,5 +19,5 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/nisar.h
         ${CMAKE_CURRENT_LIST_DIR}/package/NisarDataset.h
     DESTINATION
-        ${INCDIR}/nisar
+        ${INCDIR}
 )

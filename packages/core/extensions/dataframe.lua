@@ -17,6 +17,7 @@ local RC_PROXY_FAILURE = -2
 local RC_ARROW_FAILURE = -3
 local RC_PARQUET_FAILURE = -4
 local RC_NO_RESOURCES = -5
+local RC_SEND_FAILURE = -6
 
 --
 -- populate_catalogs
@@ -29,7 +30,7 @@ local function populate_catalogs(rqst, q, userlog)
                 local rc, rsps = earthdata.search(raster_parms, rqst["poly"])
                 if rc == RC_SUCCESS then
                     rqst[geo.PARMS][dataset]["catalog"] = json.encode(rsps)
-                    userlog:alert(core.INFO, core.RTE_STATUS, string.format("proxy request <%s> returned %d resources for %s", q, rsps and #rsps["features"] or 0, dataset))
+                    userlog:alert(core.INFO, core.RTE_STATUS, string.format("proxy request <%s> returned %d resources for %s", q, rsps and rsps["features"] and #rsps["features"] or 0, dataset))
                 elseif rc ~= RC_UNSUPPORTED then
                     userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to get catalog for %s <%d>: %s", q, dataset, rc, rsps))
                     rqst[geo.PARMS][dataset]["catalog"] = {}
@@ -167,25 +168,34 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
         userlog:alert(core.WARNING, core.RTE_STATUS, string.format("request <%s> produced an empty dataframe", rspq));
     end
 
-    -- Create Arrow DataFrame
-    local arrow_dataframe = arrow.dataframe(parms, df)
-    if not arrow_dataframe then
-        userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to create arrow dataframe", rspq))
-        return RC_ARROW_FAILURE
+    -- Return to User
+    local rc = RC_SUCCESS
+    local result = nil
+    if parms:witharrow() then
+        -- Create Arrow DataFrame
+        local arrow_dataframe = arrow.dataframe(parms, df)
+        if not arrow_dataframe then
+            userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to create arrow dataframe", rspq))
+            return RC_ARROW_FAILURE
+        end
+
+        -- Write DataFrame to Parquet File
+        local arrow_filename = arrow_dataframe:export()
+        if not arrow_filename then
+            userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to write dataframe", rspq))
+            return RC_PARQUET_FAILURE
+        end
+
+        -- Send Parquet File to User
+        local status = core.send2user(arrow_filename, parms, rspq)
+        if not status then rc = RC_SEND_FAILURE end
+    else
+        -- Return Dataframe back to User
+        result = df
     end
 
-    -- Write DataFrame to Parquet File
-    local arrow_filename = arrow_dataframe:export()
-    if not arrow_filename then
-        userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("request <%s> failed to write dataframe", rspq))
-        return RC_PARQUET_FAILURE
-    end
-
-    -- Send Parquet File to User
-    arrow.send2user(arrow_filename, parms, rspq)
-
-    -- Success --
-    return RC_SUCCESS
+    -- Return Code --
+    return rc, result
 
 end
 
@@ -198,6 +208,7 @@ local package = {
     PROXY_FAILURE = RC_PROXY_FAILURE,
     ARROW_FAILURE = RC_ARROW_FAILURE,
     NO_RESOURCES = RC_NO_RESOURCES,
+    SEND_FAILURE = RC_SEND_FAILURE,
     proxy = proxy,
     get_resources = get_resources
 }

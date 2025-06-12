@@ -29,7 +29,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/GediFields.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GediIODriver.h
     DESTINATION
-        ${INCDIR}/gedi
+        ${INCDIR}
 )
 
 install (

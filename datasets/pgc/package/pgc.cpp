@@ -74,12 +74,6 @@ int pgc_open (lua_State *L)
 extern "C" {
 void initpgc(void)
 {
-    /* Initialize Modules */
-    ArcticDemMosaicRaster::init();
-    ArcticDemStripsRaster::init();
-    RemaDemMosaicRaster::init();
-    RemaDemStripsRaster::init();
-
     parseWktFiles();
 
     /* Register Rasters */
@@ -100,10 +94,5 @@ void initpgc(void)
 
 void deinitpgc (void)
 {
-    /* Uninitialize Modules */
-    ArcticDemMosaicRaster::deinit();
-    ArcticDemStripsRaster::deinit();
-    RemaDemMosaicRaster::deinit();
-    RemaDemStripsRaster::deinit();
 }
 }

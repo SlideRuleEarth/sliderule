@@ -116,8 +116,6 @@ class ArrowBuilder: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int              luaCreate       (lua_State* L);
-        static void             init            (void);
-        static void             deinit          (void);
 
         static const char*      getSubField     (const char* field_name);
         const char*             getFileName     (void);
@@ -129,7 +127,7 @@ class ArrowBuilder: public LuaObject
         const char*             getYKey         (void);
         RecordObject::field_t&  getXField       (void);
         RecordObject::field_t&  getYField       (void);
-        const ArrowFields*      getParms        (void);
+        const OutputFields*      getParms        (void);
         bool                    hasAncFields    (void) const;
         bool                    hasAncElements  (void) const;
         const string&           getParmsAsString(void);
@@ -149,7 +147,7 @@ class ArrowBuilder: public LuaObject
 
         Thread*             builderPid;
         RequestFields*      rqstParms;
-        const ArrowFields&  parms;
+        const OutputFields&  parms;
         bool                active;
         Subscriber*         inQ;
         const char*         recType;

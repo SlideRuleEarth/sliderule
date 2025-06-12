@@ -31,12 +31,12 @@
 #     1. Login to GitHub Container Registry; {my_github_key} is a file storing an access key created for your account
 #        $ cat {my_github_key} | docker login ghcr.io -u jpswinski --password-stdin
 #     2. Build the docker build environment on x86 machine (x86 is IMPORTANT to match GitHub actions environment)
-#        $ make sliderule-buildenv-docker
+#        $ make buildenv-docker
 #     3. Push to GitHub container registry
 #        $ docker push ghcr.io/slideruleearth/sliderule-buildenv:latest
 #
 
-ROOT = $(shell pwd)/../..
+ROOT = $(shell realpath $(shell pwd)/../..)
 BUILD = $(ROOT)/build
 STAGE = $(ROOT)/stage
 
@@ -72,20 +72,22 @@ RUNNER ?= # e.g. valgrind
 
 ORGANIZATION ?= sliderule
 PUBLIC_IP ?= # output from public-cluster-deploy
-COLOR ?= 
+COLOR ?=
 
 CLANG_VER ?= ""
 CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
 
+COMMON_CFG := -DINSTALLDIR=$(INSTALLDIR)
+COMMON_CFG += -DUSE_HDF_PACKAGE=ON
+COMMON_CFG += $(USERCFG)
+
 DEBUG_CFG := -DCMAKE_BUILD_TYPE=Debug
-DEBUG_CFG += -DINSTALLDIR=$(INSTALLDIR)
 DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 DEBUG_CFG += -DENABLE_ADDRESS_SANITIZER=ON
-DEBUG_CFG += $(USERCFG)
+DEBUG_CFG += $(COMMON_CFG)
 
 RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
-RELEASE_CFG += -DINSTALLDIR=$(INSTALLDIR)
-RELEASE_CFG += $(USERCFG)
+RELEASE_CFG += $(COMMON_CFG)
 
 ########################
 # Build Targets
@@ -109,24 +111,41 @@ sliderule: ## build the server using the local configuration
 run: ## run the server locally
 	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth-aws/server.lua config.json
 
-run-buildenv: ## run the build environment docker container
-	docker run -it -v $(ROOT):/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION)
+buildenv: ## run the build environment docker container
+	docker run \
+		-it \
+		--network host \
+		--user $(id -u):$(id -g) \
+		-v $(shell realpath ~/.ssh):/root/.ssh \
+		-v $(ROOT):$(ROOT) \
+		-v /data:/data \
+		-e MYIP=$(MYIP) \
+		-e ROOT=$(ROOT) \
+		-e GITNAME="$(shell git config user.name)" \
+		-e GITEMAIL="$(shell git config user.email)" \
+		--rm \
+		--name buildenv \
+		$(ECR)/sliderule-buildenv:$(VERSION)
 
-sliderule-buildenv-docker: ## build sliderule build environment docker image
+buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
+	cp docker/sliderule/.bashrc $(BUILDENV_STAGE_DIR)
 	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:$(VERSION) $(DOCKER_PLATFORM) .
 	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
 	docker tag $(ECR)/sliderule-buildenv:$(VERSION) $(GHCR)/sliderule-buildenv:$(VERSION)
 
-sliderule-buildenv-docker-push: ## push build environment docker image to registry
+buildenv-docker-push: ## push build environment docker image to registry
 	docker push $(ECR)/sliderule-buildenv:$(VERSION)
+
+buildenv-docker-push-github: ## push build environment docker image to GitHub registry
+	docker push $(GHCR)/sliderule-buildenv:$(VERSION)
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SLIDERULE_STAGE_DIR)
 	mkdir -p $(SLIDERULE_STAGE_DIR)
-	rsync -a $(ROOT) $(SLIDERULE_STAGE_DIR)/sliderule --exclude build --exclude stage
+	rsync -a $(ROOT) $(SLIDERULE_STAGE_DIR) --exclude build --exclude stage
 	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/config.json $(SLIDERULE_STAGE_DIR)
 	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:$(VERSION) $(DOCKER_PLATFORM) .
@@ -259,7 +278,7 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	mkdir -p $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
-	rsync -a $(ROOT) $(STATIC_WEB_STAGE_DIR)/sliderule --exclude build --exclude stage
+	rsync -a $(ROOT) $(STATIC_WEB_STAGE_DIR) --exclude build --exclude stage
 	-cp $(PYTHON_EXAMPLES_DIR)/examples/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp $(PYTHON_EXAMPLES_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp -R /data/web $(STATIC_WEB_STAGE_DIR)/rtd/source/_static/html
@@ -327,8 +346,8 @@ tag: ## create version tag in this repository and release it on GitHub
 	make -C $(ROOT)/clients/nodejs publish
 
 release: ## release a version of sliderule; needs VERSION
-	make sliderule-buildenv-docker
-	make sliderule-buildenv-docker-push
+	make buildenv-docker
+	make buildenv-docker-push
 	make manager-lock
 	make tag
 	make cluster-docker
@@ -404,3 +423,4 @@ help: ## That's me!
 	@echo DOMAIN: $(DOMAIN)
 	@echo DOMAIN_ROOT: $(DOMAIN_ROOT)
 	@echo DISTRIBUTION_ID: $(DISTRIBUTION_ID)
+	@echo MYIP: $(MYIP)

@@ -55,20 +55,6 @@ size_t write2nothing(const char* ptr, size_t size, size_t nmemb, void* userdata)
 }
 
 /*----------------------------------------------------------------------------
- * init
- *----------------------------------------------------------------------------*/
-void ProvisioningSystemLib::init (void)
-{
-}
-
-/*----------------------------------------------------------------------------
- * deinit
- *----------------------------------------------------------------------------*/
-void ProvisioningSystemLib::deinit (void)
-{
-}
-
-/*----------------------------------------------------------------------------
  * validate
  *----------------------------------------------------------------------------*/
 const char* ProvisioningSystemLib::login (const char* username, const char* password, const char* organization, bool verbose)
