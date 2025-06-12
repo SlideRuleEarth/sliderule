@@ -35,7 +35,7 @@ resource "aws_launch_template" "sliderule_template" {
     export CONTAINER_REGISTRY=${var.container_repo}
     aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${var.container_repo}
     aws s3 cp s3://sliderule/config/ /plugin/ --recursive --exclude "*" --include "*.so"
-    aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-sliderule.yml ./docker-compose.yml
+    aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-node.yml ./docker-compose.yml
     docker-compose -p cluster up --detach
   EOF
   )
