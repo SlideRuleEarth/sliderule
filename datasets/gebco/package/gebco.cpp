@@ -69,9 +69,6 @@ int gebco_open (lua_State *L)
 extern "C" {
 void initgebco(void)
 {
-    /* Initialize Modules */
-    GebcoBathyRaster::init();
-
     /* Register Rasters */
     RasterObject::registerRaster(LUA_GEBCO_RASTER_NAME, GebcoBathyRaster::create);
 
@@ -87,7 +84,5 @@ void initgebco(void)
 
 void deinitgebco(void)
 {
-    /* Uninitialize Modules */
-    GebcoBathyRaster::deinit();
 }
 }

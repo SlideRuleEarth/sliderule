@@ -50,8 +50,6 @@ class GediRaster: public GeoRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void init (void) {}
-
         static RasterObject* createL3ElevationRaster (lua_State* L, RequestFields* rqst_parms, const char* key)
         { return new GediRaster(L, rqst_parms, key, TimeLib::datetime2gps(2022, 1, 19), 1, GdalRaster::NO_BAND); }
 

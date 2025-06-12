@@ -251,15 +251,12 @@ void initcore (void)
     EventLib::init(EVENTQ);  /* Must be called first to handle events (mlog msgs) */
     MsgQ::init();
     SockLib::init();
-    TTYLib::init();
     TimeLib::init();
     LuaEngine::init();
     GeoDataFrame::init();
     RequestMetrics::init();
     CurlLib::init();
     OutputLib::init();
-    OrchestratorLib::init();
-    ProvisioningSystemLib::init();
 #ifdef __unittesting__
     UT_TimeLib::init();
 #endif
@@ -267,9 +264,6 @@ void initcore (void)
     /* Register IO Drivers */
     Asset::registerDriver("nil", Asset::IODriver::create);
     Asset::registerDriver(FileIODriver::FORMAT, FileIODriver::create);
-
-    /* Initialize Modules */
-    LuaEndpoint::init();
 
     /* Initialize Lua Extensions */
     LuaLibrarySys::lsys_init();
@@ -297,13 +291,10 @@ void initcore (void)
 void deinitcore (void)
 {
     print2term("Exiting... ");
-    ProvisioningSystemLib::deinit();
-    OrchestratorLib::deinit();
     CurlLib::deinit();
     LuaEngine::deinit();
     EventLib::deinit();
     TimeLib::deinit();
-    TTYLib::deinit();
     SockLib::deinit();
     MsgQ::deinit();
     OsApi::deinit();

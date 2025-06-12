@@ -69,9 +69,6 @@ int nisar_open (lua_State *L)
 extern "C" {
 void initnisar(void)
 {
-    /* Initialize Modules */
-    NisarDataset::init();
-
     /* Register Rasters */
     RasterObject::registerRaster(LUA_NISAR_L2_DATASET_NAME, NisarDataset::create);
 
@@ -87,7 +84,5 @@ void initnisar(void)
 
 void deinitnisar(void)
 {
-    /* Uninitialize Modules */
-    NisarDataset::deinit();
 }
 }

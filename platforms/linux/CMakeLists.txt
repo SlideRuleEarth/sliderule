@@ -103,6 +103,5 @@ set_target_properties (sliderule PROPERTIES VERSION ${TGTVER})
 set_target_properties (sliderule PROPERTIES OUTPUT_NAME sliderule)
 set_target_properties (sliderule PROPERTIES ENABLE_EXPORTS true)
 
-target_link_libraries (sliderule PUBLIC slideruleLib)
-
+target_link_libraries (sliderule PUBLIC "-Wl,--whole-archive" slideruleLib "-Wl,--no-whole-archive")
 install (TARGETS sliderule DESTINATION ${INSTALLDIR}/bin)

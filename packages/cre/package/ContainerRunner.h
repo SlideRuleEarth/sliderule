@@ -68,8 +68,6 @@ class ContainerRunner: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int          luaCreate           (lua_State* L);
-        static void         init                (void);
-        static void         deinit              (void);
         static int          luaList             (lua_State* L);
         static int          luaCreateUnique     (lua_State* L);
         static int          luaDeleteUnique     (lua_State* L);

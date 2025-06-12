@@ -94,9 +94,6 @@ int bathy_open (lua_State *L)
 extern "C" {
 void initbathy (void)
 {
-    /* Initialize Modules */
-    BathyViewer::init();
-
     /* Extend Lua */
     LuaEngine::extend(LUA_BATHY_LIBNAME, bathy_open);
 

@@ -116,8 +116,6 @@ class ArrowBuilder: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int              luaCreate       (lua_State* L);
-        static void             init            (void);
-        static void             deinit          (void);
 
         static const char*      getSubField     (const char* field_name);
         const char*             getFileName     (void);

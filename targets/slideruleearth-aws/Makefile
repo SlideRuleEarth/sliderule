@@ -139,7 +139,7 @@ buildenv-docker: ## build sliderule build environment docker image
 buildenv-docker-push: ## push build environment docker image to registry
 	docker push $(ECR)/sliderule-buildenv:$(VERSION)
 
-buildenv-docker-push: ## push build environment docker image to GitHub registry
+buildenv-docker-push-github: ## push build environment docker image to GitHub registry
 	docker push $(GHCR)/sliderule-buildenv:$(VERSION)
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION

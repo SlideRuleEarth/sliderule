@@ -60,9 +60,6 @@ class ProvisioningSystemLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void         init                (void);
-        static void         deinit              (void);
-
         static const char*  login               (const char* username, const char* password, const char* organization, bool verbose=false);
         static bool         validate            (const char* access_token, bool verbose=false);
 
