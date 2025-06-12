@@ -88,7 +88,6 @@ void initgedi (void)
     Gedi01bReader::init();
     Gedi02aReader::init();
     Gedi04aReader::init();
-    GediRaster::init();
 
     /* Register GEDI IO Driver */
     Asset::registerDriver(GediIODriver::FORMAT, GediIODriver::create);

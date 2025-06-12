@@ -71,11 +71,6 @@ int gedtm_open (lua_State *L)
 extern "C" {
 void initgedtm(void)
 {
-    /* Initialize Modules */
-    GEDTM30meterRaster::init();
-    GEDTMstdRaster::init();
-    GEDTMdfmRaster::init();
-
     /* Register Rasters */
     RasterObject::registerRaster(LUA_GEDTM30_METER_RASTER_NAME, GEDTM30meterRaster::create);
     RasterObject::registerRaster(LUA_GEDTM_STD_RASTER_NAME, GEDTMstdRaster::create);
@@ -93,9 +88,5 @@ void initgedtm(void)
 
 void deinitgedtm (void)
 {
-    /* Uninitialize Modules */
-    GEDTM30meterRaster::deinit();
-    GEDTMstdRaster::deinit();
-    GEDTMdfmRaster::deinit();
 }
 }

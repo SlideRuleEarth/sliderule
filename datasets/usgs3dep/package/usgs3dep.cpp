@@ -69,9 +69,6 @@ int usgs3dep_open (lua_State *L)
 extern "C" {
 void initusgs3dep(void)
 {
-    /* Initialize Modules */
-    Usgs3dep1meterDemRaster::init();
-
     /* Register Rasters */
     RasterObject::registerRaster(LUA_USGS3DEP_1METER_DEM_RASTER_NAME, Usgs3dep1meterDemRaster::create);
 
@@ -87,7 +84,5 @@ void initusgs3dep(void)
 
 void deinitusgs3dep (void)
 {
-    /* Uninitialize Modules */
-    Usgs3dep1meterDemRaster::deinit();
 }
 }

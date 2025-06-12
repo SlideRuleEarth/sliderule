@@ -76,11 +76,6 @@ int arrow_open (lua_State* L)
 extern "C" {
 void initarrow (void)
 {
-    /* Initialize Modules */
-    ArrowBuilder::init();
-    ArrowSampler::init();
-    ArrowEndpoint::init();
-
     /* Extend Lua */
     LuaEngine::extend(LUA_ARROW_LIBNAME, arrow_open);
 
@@ -93,7 +88,5 @@ void initarrow (void)
 
 void deinitarrow (void)
 {
-    ArrowBuilder::deinit();
-    ArrowSampler::deinit();
 }
 }

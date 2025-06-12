@@ -327,8 +327,6 @@ void initgeo (void)
     test_projlib();
 
     /* Initialize Modules */
-    GeoRaster::init();
-    GeoIndexedRaster::init();
     RasterSampler::init();
     GeoLib::init();
 
@@ -355,8 +353,6 @@ void initgeo (void)
 
 void deinitgeo (void)
 {
-    GeoRaster::deinit();
-    GeoIndexedRaster::deinit();
     RasterSampler::deinit();
     GDALDestroy();
 }

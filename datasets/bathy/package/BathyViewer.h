@@ -78,7 +78,6 @@ class BathyViewer: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int  luaCreate   (lua_State* L);
-        static void init        (void);
 
     private:
 

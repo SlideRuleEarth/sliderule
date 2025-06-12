@@ -79,9 +79,6 @@ int aws_open (lua_State *L)
 extern "C" {
 void initaws (void)
 {
-    /* Initialize Modules */
-    CredentialStore::init();
-
     /* Register I/O Drivers */
     Asset::registerDriver(S3CacheIODriver::CACHE_FORMAT, S3CacheIODriver::create);
     Asset::registerDriver(S3CurlIODriver::CURL_FORMAT, S3CurlIODriver::create);
@@ -98,7 +95,5 @@ void initaws (void)
 
 void deinitaws (void)
 {
-    /* Uninitialize Modules */
-    CredentialStore::deinit();
 }
 }

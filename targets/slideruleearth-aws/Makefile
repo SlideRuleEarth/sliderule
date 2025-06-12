@@ -139,10 +139,13 @@ buildenv-docker: ## build sliderule build environment docker image
 buildenv-docker-push: ## push build environment docker image to registry
 	docker push $(ECR)/sliderule-buildenv:$(VERSION)
 
+buildenv-docker-push-github: ## push build environment docker image to GitHub registry
+	docker push $(GHCR)/sliderule-buildenv:$(VERSION)
+
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
 	-rm -Rf $(SLIDERULE_STAGE_DIR)
 	mkdir -p $(SLIDERULE_STAGE_DIR)
-	rsync -a $(ROOT) $(SLIDERULE_STAGE_DIR)/sliderule --exclude build --exclude stage
+	rsync -a $(ROOT) $(SLIDERULE_STAGE_DIR) --exclude build --exclude stage
 	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
 	cp docker/sliderule/config.json $(SLIDERULE_STAGE_DIR)
 	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:$(VERSION) $(DOCKER_PLATFORM) .
@@ -275,7 +278,7 @@ static-website-docker: ## make the static website docker image; needs VERSION
 	mkdir -p $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
-	rsync -a $(ROOT) $(STATIC_WEB_STAGE_DIR)/sliderule --exclude build --exclude stage
+	rsync -a $(ROOT) $(STATIC_WEB_STAGE_DIR) --exclude build --exclude stage
 	-cp $(PYTHON_EXAMPLES_DIR)/examples/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp $(PYTHON_EXAMPLES_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	-cp -R /data/web $(STATIC_WEB_STAGE_DIR)/rtd/source/_static/html

@@ -102,9 +102,8 @@ class ArrowSampler: public LuaObject
          *--------------------------------------------------------------------*/
 
         static int                           luaCreate       (lua_State* L);
-        static void                          init            (void);
-        static void                          deinit          (void);
-        const OutputFields*                   getParms        (void);
+
+        const OutputFields*                  getParms        (void);
         const char*                          getDataFile     (void);
         const char*                          getMetadataFile (void);
         const std::vector<batch_sampler_t*>& getBatchSamplers(void);

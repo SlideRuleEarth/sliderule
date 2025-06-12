@@ -43,7 +43,7 @@ Make sure that the curl library development files are installed on your system:
 $ sudo apt install libcurl4-openssl-dev
 ```
 
-Download Yet Another JSON Library and install it. (For more information go to https://lloyd.github.io/yajl/. Note that the REST-VOL connetor needs at least version  2.1).
+Download Yet Another JSON Library and install it. (For more information go to https://lloyd.github.io/yajl/. Note that the REST-VOL connector needs at least version  2.1).
 ```bash
 $ git clone https://github.com/lloyd/yajl.git
 $ cd yajl

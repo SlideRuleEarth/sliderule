@@ -60,7 +60,6 @@ class ArrowEndpoint: public EndpointObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void         init            (void);
         static int          luaCreate       (lua_State* L);
 
     protected:

@@ -147,9 +147,6 @@ class CredentialStore
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void                 init    (void);
-        static void                 deinit  (void);
-
         static const Credential&    get     (const char* identity);
         static bool                 put     (const char* identity, const Credential& credential);
 

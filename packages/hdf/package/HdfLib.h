@@ -79,8 +79,6 @@ struct HdfLib
     static const long ALL_ROWS = -1;
     static const long ALL_COLS = -1;
 
-    static const dataset_t PARENT_DATASET;
-
     /*--------------------------------------------------------------------
      * Methods
      *--------------------------------------------------------------------*/

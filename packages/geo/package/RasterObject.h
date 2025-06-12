@@ -100,8 +100,6 @@ class RasterObject: public LuaObject
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void          init            (void);
-        static void          deinit          (void);
         static int           luaCreate       (lua_State* L);
         static RasterObject* cppCreate       (RequestFields* rqst_parms, const char* key);
         static RasterObject* cppCreate       (const RasterObject* obj);

@@ -84,9 +84,6 @@ class OrchestratorLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static void             init                (void);
-        static void             deinit              (void);
-
         static rsps_t           request             (EndpointObject::verb_t verb, const char* resource, const char* data);
 
         static bool             registerService     (const char* service, int lifetime, const char* address, bool initial_registration, bool verbose=false);
