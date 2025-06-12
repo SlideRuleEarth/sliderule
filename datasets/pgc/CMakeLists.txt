@@ -21,7 +21,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/PgcWkt.h
         ${CMAKE_CURRENT_LIST_DIR}/package/PgcDemStripsRaster.h
     DESTINATION
-        ${INCDIR}/pgc
+        ${INCDIR}
 )
 
 install (

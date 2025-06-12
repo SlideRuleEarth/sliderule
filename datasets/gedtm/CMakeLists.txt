@@ -18,5 +18,5 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/gedtm.h
         ${CMAKE_CURRENT_LIST_DIR}/package/GEDTM30meterRaster.h
     DESTINATION
-        ${INCDIR}/gedtm
+        ${INCDIR}
 )

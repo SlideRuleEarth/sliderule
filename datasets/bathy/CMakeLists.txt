@@ -39,7 +39,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/BathyViewer.h
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_BathyRefractionCorrector.h>
     DESTINATION
-        ${INCDIR}/bathy
+        ${INCDIR}
 )
 
 install (

@@ -58,7 +58,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/SurfaceFitter.h
         $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Atl06Dispatch.h>
     DESTINATION
-        ${INCDIR}/icesat2
+        ${INCDIR}
 )
 
 install (

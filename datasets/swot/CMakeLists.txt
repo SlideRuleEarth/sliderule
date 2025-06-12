@@ -21,7 +21,7 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/package/SwotFields.h
         ${CMAKE_CURRENT_LIST_DIR}/package/SwotL2Reader.h
     DESTINATION
-        ${INCDIR}/swot
+        ${INCDIR}
 )
 
 install (
