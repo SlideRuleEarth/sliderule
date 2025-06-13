@@ -34,6 +34,13 @@ local function getFileSize(filePath)
     return fileSize
 end
 
+local function findMatchingString(filePath, searchTerm)
+    local file = assert(io.open(filePath, "rb"))
+    local data = file:read("*all")
+    file:close()
+    return string.find(data, searchTerm, 1, true)
+end
+
 -- Self Test --
 
 local dem1 = geo.raster(geo.parms({asset="arcticdem-mosaic", algorithm="NearestNeighbour", radius=30, zonal_stats=true}))
@@ -45,26 +52,18 @@ runner.assert(dem2 ~= nil)
 print('\n--------------------------------------\nTest01: input/output geoparquet (geo)\n--------------------------------------')
 local parquet_sampler = arrow.sampler(core.parms({output={path=out_geoparquet, format="parquet"}}), in_geoparquet, outq_name, {["mosaic"] = dem1})
 runner.assert(parquet_sampler ~= nil)
-
-local in_file_size = getFileSize(in_geoparquet);
-print("Input  geoparquet file size: " .. in_file_size .. " bytes")
-
 local status = parquet_sampler:waiton()
 local out_file_size = getFileSize(_out_geoparquet);
-print("Output geoparquet file size: " .. out_file_size .. " bytes")
-runner.assert(out_file_size > in_file_size, "Output file size is not greater than input file size: ")
+runner.assert(out_file_size > 0, "Output file is empty")
+runner.assert(findMatchingString(_out_geoparquet, "mosaic"), "Could not find key in output file")
 
 print('\n--------------------------------------\nTest02: input/output parquet (x, y)\n--------------------------------------')
 parquet_sampler = arrow.sampler(core.parms({output={path=out_parquet, format="parquet"}}), in_parquet, outq_name, {["mosaic"] = dem1})
 runner.assert(parquet_sampler ~= nil)
-
-in_file_size = getFileSize(in_parquet);
-print("Input  parquet file size: "  .. in_file_size .. " bytes")
-
 status = parquet_sampler:waiton()
 out_file_size = getFileSize(_out_parquet);
-print("Output parquet file size: " .. out_file_size .. " bytes")
-runner.assert(out_file_size > in_file_size, "Output file size is not greater than input file size: ")
+runner.assert(out_file_size > 0, "Output file is empty")
+runner.assert(findMatchingString(_out_parquet, "mosaic"), "Could not find key in output file")
 
 --NOTE: generated CSV and FEATHER files are much smaller than the input parquet/geoparquet files
 
@@ -139,14 +138,11 @@ os.remove(_out_metadata)
 print('\n--------------------------------------\nTest07: input/output geoparquet (geo)\n--------------------------------------')
 parquet_sampler = arrow.sampler(core.parms({output={path=out_geoparquet, format="parquet"}}), in_geoparquet, outq_name, {["mosaic"] = dem1, ["strips"] = dem2})
 runner.assert(parquet_sampler ~= nil)
-
-in_file_size = getFileSize(in_geoparquet);
-print("Input  geoparquet file size: " .. in_file_size .. " bytes")
-
 status = parquet_sampler:waiton()
 out_file_size = getFileSize(_out_geoparquet);
-print("Output geoparquet file size: " .. out_file_size .. " bytes")
-runner.assert(out_file_size > in_file_size, "Output file size is not greater than input file size: ")
+runner.assert(out_file_size > in_file_size, "Output file is empty")
+runner.assert(findMatchingString(_out_geoparquet, "mosaic"), "Could not find key in output file")
+runner.assert(findMatchingString(_out_geoparquet, "strips"), "Could not find key in output file")
 
 -- Negative tests
 
@@ -171,7 +167,7 @@ runner.assert(parquet_sampler == nil)
 
 -- Clean Up --
 
-os.remove(_out_geoparquet)
+--os.remove(_out_geoparquet)
 os.remove(_out_parquet)
 os.remove(_out_feather)
 os.remove(_out_csv)
