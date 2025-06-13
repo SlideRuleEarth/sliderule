@@ -60,7 +60,7 @@ The output returned in the DataFrame can take two different forms depending on t
 The standard columns added to a GeoDataFrame for each sampled raster dataset are:
 
 - __"value"__: the sampled value from the raster at the point of interest
-- __"time"__: the best time provided by the raster dataset for when the sampled value was measured
+- __"time"__: the best time provided by the raster dataset for when the sampled value was measured; in x-series APIs this value is returned in Unix(ns) time, and in the older s-series and p-series APIs this value is returned in GPS time.
 - __"file_id"__: a number used to identify the name of the file the sample value came from; this is used in conjunction with the `file_directory` provided in the metadata of a GeoDataFrame
 - __"flags"__: any flags (if requested) that acompany the sampled data in the raster it was read from
 
