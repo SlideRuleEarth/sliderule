@@ -578,7 +578,7 @@ num_startups %d
 
 # TYPE num_active_locks counter
 num_active_locks %d
-%s%s%s
+%s
 ]], StatData["numRequests"],
     StatData["numComplete"],
     StatData["numFailures"],
