@@ -284,6 +284,10 @@ void Atl13DataFrame::AreaOfInterest::polyregion (const Atl13DataFrame* df)
     {
         numSegments = segment - firstSegment;
     }
+    else
+    {
+        numSegments = 0;
+    }
 }
 
 /*----------------------------------------------------------------------------
