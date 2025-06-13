@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "TimeLib.h"
 #include "RasterObject.h"
 #include "DataFrameSampler.h"
 
@@ -208,7 +209,7 @@ bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_in
 {
     // create standard columns
     FieldColumn<FieldList<double>>* value_column = new FieldColumn<FieldList<double>>(Field::NESTED_LIST);
-    FieldColumn<FieldList<double>>* time_column = new FieldColumn<FieldList<double>>(Field::NESTED_LIST);
+    FieldColumn<FieldList<time8_t>>* time_column = new FieldColumn<FieldList<time8_t>>(Field::NESTED_LIST);
     FieldColumn<FieldList<uint64_t>>* fileid_column = new FieldColumn<FieldList<uint64_t>>(Field::NESTED_LIST);
 
     // create flag column
@@ -242,7 +243,7 @@ bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_in
     for(int i = 0; i < sampler->samples.length(); i++)
     {
         FieldList<double> value_list;
-        FieldList<double> time_list;
+        FieldList<time8_t> time_list;
         FieldList<uint64_t> fileid_list;
         FieldList<uint32_t> flags_list;
         FieldList<string> band_list;
@@ -258,7 +259,7 @@ bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_in
         {
             const RasterSample* sample = slist->get(j);
             value_list.append(sample->value);
-            time_list.append(sample->time);
+            time_list.append(TimeLib::gps2systimeex(sample->time));
             fileid_list.append(sample->fileId);
             if(flags_column)    flags_list.append(sample->flags);
             if(band_column)     band_list.append(sample->bandName);
@@ -309,7 +310,7 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
 {
     // create standard columns
     FieldColumn<double>* value_column = new FieldColumn<double>;
-    FieldColumn<double>* time_column = new FieldColumn<double>;
+    FieldColumn<time8_t>* time_column = new FieldColumn<time8_t>;
     FieldColumn<uint64_t>* fileid_column = new FieldColumn<uint64_t>;
 
     // create flag column
@@ -347,7 +348,7 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
         {
             const RasterSample* sample = slist->get(0);
             value_column->append(sample->value);
-            time_column->append(sample->time);
+            time_column->append(TimeLib::gps2systimeex(sample->time));
             fileid_column->append(sample->fileId);
             if(flags_column)    flags_column->append(sample->flags);
             if(band_column)     band_column->append(sample->bandName);
@@ -363,7 +364,7 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
         {
             const string empty("na");
             value_column->append(std::numeric_limits<double>::quiet_NaN());
-            time_column->append(0);
+            time_column->append(TimeLib::gps2systimeex(0));
             fileid_column->append(0);
             if(flags_column)    flags_column->append(0);
             if(band_column)     band_column->append(empty);
