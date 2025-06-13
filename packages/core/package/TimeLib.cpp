@@ -96,7 +96,7 @@ Timer*   TimeLib::heartBeat = NULL;
 void TimeLib::init(void)
 {
     /* Setup Base Time */
-    FString leap_second_filename("%s%s%s", CONFDIR, PATH_DELIMETER_STR, NIST_LIST_FILENAME);
+    const FString leap_second_filename("%s%s%s", CONFDIR, PATH_DELIMETER_STR, NIST_LIST_FILENAME);
     parsenistfile(leap_second_filename.c_str());
 
     /* Initialize Tick Frequency */
