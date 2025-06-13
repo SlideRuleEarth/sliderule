@@ -74,6 +74,7 @@ const struct luaL_Reg LuaLibrarySys::sysLibs [] = {
     {"fileexists",  LuaLibrarySys::lsys_fileexists},
     {"deletefile",  LuaLibrarySys::lsys_deletefile},
     {"memu",        LuaLibrarySys::lsys_memu},
+    {"upleap",      LuaLibrarySys::lsys_updateleapsecs},
     {"lsdev",       DeviceObject::luaList},
     {"initcfg",     SystemConfig::luaPopulate},
     {"getcfg",      SystemConfig::luaGetField},
@@ -562,5 +563,23 @@ int LuaLibrarySys::lsys_memu (lua_State* L)
 {
     const double m = OsApi::memusage();
     lua_pushnumber(L, m);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * lsys_updateleapsecs - update leap seconds
+ *----------------------------------------------------------------------------*/
+int LuaLibrarySys::lsys_updateleapsecs (lua_State* L)
+{
+    bool status = false;
+    if(lua_isstring(L, 1))
+    {
+        const char* filename = lua_tostring(L, 1);
+        if(fs::exists(filename))
+        {
+            status = TimeLib::parsenistfile(filename);
+        }
+    }
+    lua_pushboolean(L, status);
     return 1;
 }

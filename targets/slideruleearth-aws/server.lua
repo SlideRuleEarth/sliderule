@@ -30,6 +30,14 @@ core.logmon(core.DEBUG):global("LogMonitor") -- monitor logs and write to stdout
 core.tlmmon(core.DEBUG):global("TelemetryMonitor") -- monitor telementry and push to orchestrator and manager
 core.alrmon(core.DEBUG):global("AlertMonitor") -- monitor alerts and push to manager
 
+-- Update Leap Seconds File --
+local leap_seconds_file = "/tmp/leap-seconds.list"
+local leap_seconds_service = "https://data.iana.org/time-zones/tzdb/leap-seconds.list"
+core.download(leap_seconds_service, leap_seconds_file)
+if sys.upleap(leap_seconds_file) then
+    sys.log(core.CRITICAL, "Successfully updated leap seconds from "..leap_seconds_service)
+end
+
 -- Configure Assets --
 asset.loaddir(sys.getcfg("asset_directory"))
 

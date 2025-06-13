@@ -620,6 +620,83 @@ int CurlLib::luaCheck (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * luaDownload
+ *----------------------------------------------------------------------------*/
+int CurlLib::luaDownload (lua_State* L)
+{
+    bool status = false;
+    FILE* fd = NULL;
+    CURL* curl = NULL;
+    struct curl_slist* hdr_slist = NULL;
+    List<const string*> header_list(EXPECTED_MAX_HEADERS);
+
+    try
+    {
+        /* Get Parameters */
+        const char* url             = LuaObject::getLuaString(L, 1);
+        const char* dst_filename    = LuaObject::getLuaString(L, 2);
+        const int   timeout         = LuaObject::getLuaInteger(L, 3, true, DATA_TIMEOUT);
+        const int   num_hdrs        = CurlLib::getHeaders(L, 4, header_list); (void)num_hdrs;
+
+        /* Open Local File for Writing */
+        fd = fopen(dst_filename, "wb");
+        if(!fd) throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to open file: %s", dst_filename);
+
+        /* Open cURL Handle */
+        curl = curl_easy_init();
+        if(!curl) throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to open cURL handle");
+
+        /* Initialize cURL */
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, CONNECTION_TIMEOUT); // seconds
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout); // seconds
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlLib::writeFile);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, fd);
+        curl_easy_setopt(curl, CURLOPT_NETRC, 1L);
+        curl_easy_setopt(curl, CURLOPT_COOKIEFILE, ".cookies");
+        curl_easy_setopt(curl, CURLOPT_COOKIEJAR, ".cookies");
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
+
+        /* Add Headers */
+        if(!header_list.empty())
+        {
+            for(int i = 0; i < header_list.length(); i++)
+            {
+                hdr_slist = curl_slist_append(hdr_slist, header_list.get(i)->c_str());
+            }
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hdr_slist);
+        }
+
+        /* Perform the request, res will get the return code */
+        const CURLcode res = curl_easy_perform(curl);
+        if(res != CURLE_OK) throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to perform curl call: %s", curl_easy_strerror(res));
+
+        /* Check HTTP Code */
+        long http_code;
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+        if(http_code < 200 || http_code >= 300)
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Curl operation returned error code: %ld", http_code);
+        }
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error performing download: %s", e.what());
+        status = false;
+    }
+
+    /* Cleanup */
+    if(fd) fclose(fd);
+    if(curl) curl_easy_cleanup(curl);
+    if(hdr_slist) curl_slist_free_all(hdr_slist);
+
+    /* Return Status */
+    lua_pushboolean(L, status);
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * CurlLib::combineResponse
  *----------------------------------------------------------------------------*/
 void CurlLib::combineResponse (List<data_t>* rsps_set, const char** response, int* size)
@@ -788,4 +865,14 @@ size_t CurlLib::writerHeader(const void* buffer, size_t size, size_t nmemb, void
     rsps_headers->add(header);
     const size_t total_size = size * nmemb;
     return total_size;
+}
+
+/*----------------------------------------------------------------------------
+ * CurlLib::writeFile
+ *----------------------------------------------------------------------------*/
+size_t CurlLib::writeFile(const void *buffer, size_t size, size_t nmemb, void *userp)
+{
+    FILE* fd = static_cast<FILE*>(userp);
+    fwrite(buffer, size, nmemb, fd);
+    return size * nmemb;
 }

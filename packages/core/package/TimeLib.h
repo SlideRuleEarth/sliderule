@@ -90,6 +90,7 @@ class TimeLib
 
         static const int64_t USE_CURRENT_TIME = -1;
         static const int LEAP_SECS_AT_GPS_EPOCH  = 10; // seconds
+        static const int LEAP_SECS_MINIMUM_COUNT = 28; // minimal entries allowed in leap seconds file
         static const int GPS_EPOCH_START = 315964800; // seconds
 
         /*--------------------------------------------------------------------
@@ -137,6 +138,8 @@ class TimeLib
         static bool         gmtinrange      (const gmt_time_t& gmt_time, const gmt_time_t& gmt_start, const gmt_time_t& gmt_end); // returns true if in range
         static bool         str2doyrange    (const char* doy_range_str, int& doy_start, int& doy_end);
         static bool         doyinrange      (const gmt_time_t& gmt_time, int doy_start, int doy_end); // returns true if in range
+        static int          getleapsecs     (int64_t sysnow, int64_t start_secs);
+        static bool         parsenistfile   (const char* filename);
 
     private:
 
@@ -146,8 +149,6 @@ class TimeLib
 
         static const char* NIST_LIST_FILENAME;
 
-        static const int HEARTBEAT_PERIOD_MS = 1;
-        static const int HEARTBEATS_PER_SECOND = 1000; // must be consistent with HEARTBEAT_PERIOD
         static const int MAX_GPS_YEARS = 100;
         static const int MONTHS_IN_YEAR = 12;
 
@@ -159,12 +160,6 @@ class TimeLib
          * Data
          *--------------------------------------------------------------------*/
 
-        static int64_t  baseTimeMs;
-        static int64_t  runningTimeUs;
-        static int64_t  stepTimeUs;
-        static int64_t  currentTimeMs;
-        static int64_t  lastTime;
-        static Timer*   heartBeat;
         static int64_t  tickFreq;
         static int16_t  leapCount;
         static int64_t* leapSeconds;
@@ -173,14 +168,26 @@ class TimeLib
          * Methods
          *--------------------------------------------------------------------*/
 
-        static int getleapsecs (int64_t sysnow, int64_t start_secs);
-        static void heartbeat (void);
-        static void parsenistfile (void);
-
         static int64_t GPS_TO_SYS (int64_t gpsnow) { return (((gpsnow) + 315964800000LL) * 1000); }   // IN: milliseconds, OUT: microseconds
         static int64_t SYS_TO_GPS (int64_t sysnow) { return (((sysnow) - 315964800000000LL) / 1000); } // IN: microseconds, OUT: milliseconds
         static int64_t NTP_TO_SYS (int64_t ntpnow) { return (((ntpnow) - 2208988800LL)); } // IN: seconds, OUT: seconds
         static double GPS_TO_SYS_EX (double gps_secs) { return (((gps_secs) + 315964800.0)); }   // IN: seconds, OUT: seconds
+
+        /*--------------------------------------------------------------------
+         * Heartbeat Declarations
+         *--------------------------------------------------------------------*/
+        #ifdef TIME_HEARTBEAT
+        static const int HEARTBEAT_PERIOD_MS = 1;
+        static const int HEARTBEATS_PER_SECOND = 1000; // must be consistent with HEARTBEAT_PERIOD
+        static int64_t  baseTimeMs;
+        static int64_t  runningTimeUs;
+        static int64_t  stepTimeUs;
+        static int64_t  currentTimeMs;
+        static int64_t  lastTime;
+        static Timer*   heartBeat;
+        static void heartbeat (void);
+        #endif
+
 };
 
 #endif  /* __time_lib__ */

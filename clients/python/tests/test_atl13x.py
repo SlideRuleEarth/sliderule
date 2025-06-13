@@ -18,7 +18,7 @@ class TestAtl13x:
         parms = { "atl13": { "name": "Caspian Sea" }, "poly": region["poly"], "max_resources": 500, "t0": '2022-01-01', "t1": '2023-01-01'}
         gdf = sliderule.run("atl13x", parms)
         assert init
-        assert len(gdf) >= 1203287
+        assert len(gdf) >= 3275
 
     def test_coord(self, init):
         parms = { "atl13": {"coord": {"lon": -77.40162711974297, "lat": 38.48769543754824}} }

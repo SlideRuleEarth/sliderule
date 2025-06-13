@@ -73,15 +73,18 @@ const char* TimeLib::MonthNames[TimeLib::MONTHS_IN_YEAR] =
     "May",          "June",         "July",         "August",
     "September",    "October",      "November",     "December"  };
 
+int64_t  TimeLib::tickFreq = 1;
+int16_t  TimeLib::leapCount = 0;
+int64_t* TimeLib::leapSeconds = NULL;
+
+#ifdef TIME_HEARTBEAT
 int64_t  TimeLib::baseTimeMs = 0;
 int64_t  TimeLib::runningTimeUs = 0;
 int64_t  TimeLib::stepTimeUs = 0;
 int64_t  TimeLib::currentTimeMs = 0;
 int64_t  TimeLib::lastTime = 0;
 Timer*   TimeLib::heartBeat = NULL;
-int64_t  TimeLib::tickFreq = 1;
-int16_t  TimeLib::leapCount = 0;
-int64_t* TimeLib::leapSeconds = NULL;
+#endif
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -93,12 +96,8 @@ int64_t* TimeLib::leapSeconds = NULL;
 void TimeLib::init(void)
 {
     /* Setup Base Time */
-    parsenistfile();
-    lastTime = OsApi::time(OsApi::SYS_CLK);
-    baseTimeMs = sys2gpstime(lastTime);
-    currentTimeMs = baseTimeMs;
-    runningTimeUs = 0;
-    stepTimeUs = 1000;
+    FString leap_second_filename("%s%s%s", CONFDIR, PATH_DELIMETER_STR, NIST_LIST_FILENAME);
+    parsenistfile(leap_second_filename.c_str());
 
     /* Initialize Tick Frequency */
     tickFreq = OsApi::timeres(OsApi::CPU_CLK);
@@ -107,9 +106,12 @@ void TimeLib::init(void)
     try
     {
 #ifdef TIME_HEARTBEAT
+        lastTime = OsApi::time(OsApi::SYS_CLK);
+        baseTimeMs = sys2gpstime(lastTime);
+        currentTimeMs = baseTimeMs;
+        runningTimeUs = 0;
+        stepTimeUs = 1000;
         heartBeat = new Timer(TimeLib::heartbeat, HEARTBEAT_PERIOD_MS);
-#else
-        heartBeat = NULL;
 #endif
     }
     catch(RunTimeException& e)
@@ -124,7 +126,9 @@ void TimeLib::init(void)
  *----------------------------------------------------------------------------*/
 void TimeLib::deinit(void)
 {
+#ifdef TIME_HEARTBEAT
     delete heartBeat;
+#endif
     delete [] leapSeconds;
 }
 
@@ -764,10 +768,6 @@ bool TimeLib::doyinrange(const gmt_time_t& gmt_time, int doy_start, int doy_end)
     return ((doy >= doy_start) && (doy <= doy_end));
 }
 
-/******************************************************************************
- * PRIVATE METHODS
- ******************************************************************************/
-
 /*----------------------------------------------------------------------------
  * getleapsecs
  *  sysnow - microseconds
@@ -811,8 +811,80 @@ int TimeLib::getleapsecs(int64_t sysnow, int64_t start_secs)
 }
 
 /*----------------------------------------------------------------------------
+ * parsenistfile - parses leap-seconds.list file from NIST
+ *----------------------------------------------------------------------------*/
+bool TimeLib::parsenistfile(const char* filename)
+{
+    bool status = false;
+    List<int64_t> ntp_leap_seconds;
+
+    /* Read contents of file and store in temporary array */
+    FILE* fd = fopen(filename, "r");
+    if(fd != NULL)
+    {
+        char line[MAX_STR_SIZE];
+        while(fgets(line, MAX_STR_SIZE, fd) != NULL)
+        {
+            /* If the line starts with a '#', then it is a comment */
+            if(line[0] != '#')
+            {
+                /* Trim everything after the first space */
+                char leap_second_str[1][MAX_STR_SIZE];
+                const int num_vals = StringLib::tokenizeLine(line, MAX_STR_SIZE, ' ', 1, leap_second_str);
+                if(num_vals > 0)
+                {
+                    /* Convert to long and assign to array */
+                    long long leap_second;
+                    if(StringLib::str2llong(leap_second_str[0], &leap_second, 10))
+                    {
+                        const int64_t ls = (int64_t)leap_second;
+                        ntp_leap_seconds.add(ls);
+                    }
+                    else
+                    {
+                        mlog(CRITICAL, "Failed to parse leap second: %s", leap_second_str[0]);
+                    }
+                }
+            }
+        }
+
+        /* Close Leap Seconds File */
+        fclose(fd);
+
+        /* Populate Leap Second Array */
+        if(ntp_leap_seconds.length() >= LEAP_SECS_MINIMUM_COUNT)
+        {
+            leapCount = ntp_leap_seconds.length();
+            status = true; // success
+
+            /* Allocate Array */
+            delete [] leapSeconds;
+            leapSeconds = new int64_t[leapCount];
+
+            /* Convert from NTP to UNIX epoch */
+            for(int i = 0; i < leapCount; i++)
+            {
+                leapSeconds[i] = NTP_TO_SYS(ntp_leap_seconds.get(i));
+            }
+        }
+        else
+        {
+            mlog(CRITICAL, "Failed to read leap seconds from %s", filename);
+        }
+    }
+    else
+    {
+        mlog(CRITICAL, "Unable to open leap seconds file %s", filename);
+    }
+
+    /* Return Status */
+    return status;
+}
+
+/*----------------------------------------------------------------------------
  * handler - 1KHz Signal Handler for LocalLib Time Keeping
  *----------------------------------------------------------------------------*/
+#ifdef TIME_HEARTBEAT
 void TimeLib::heartbeat(void)
 {
     static int counter = 0;
@@ -845,63 +917,4 @@ void TimeLib::heartbeat(void)
     /* Set Current Time */
     currentTimeMs = baseTimeMs + (runningTimeUs / 1000);
 }
-
-/*----------------------------------------------------------------------------
- * parsenistfile - parses leap-seconds.list file from NIST
- *----------------------------------------------------------------------------*/
-void TimeLib::parsenistfile(void)
-{
-    List<int64_t> ntp_leap_seconds;
-
-    /* Read contents of file and store in temporary array */
-    string leap_second_file_name;
-    leap_second_file_name += CONFDIR;
-    leap_second_file_name += PATH_DELIMETER_STR;
-    leap_second_file_name += NIST_LIST_FILENAME;
-    FILE* fd = fopen( leap_second_file_name.c_str(), "r" );
-    if( fd != NULL )
-    {
-        char line[MAX_STR_SIZE];
-        while (fgets(line, MAX_STR_SIZE, fd) != NULL)
-        {
-            /* If the line starts with a '#', then it is a comment */
-            if (line[0] != '#')
-            {
-                /* Trim everything after the first space */
-                char leap_second_str[1][MAX_STR_SIZE];
-                const int num_vals = StringLib::tokenizeLine(line, MAX_STR_SIZE, ' ', 1, leap_second_str);
-                if(num_vals > 0)
-                {
-                    /* Convert to long and assign to array */
-                    long long leap_second;
-                    if(StringLib::str2llong(leap_second_str[0], &leap_second, 10))
-                    {
-                        const int64_t ls = (int64_t)leap_second;
-                        ntp_leap_seconds.add(ls);
-                    }
-                    else
-                    {
-                        mlog(CRITICAL, "Failed to parse leap second: %s", leap_second_str[0]);
-                    }
-                }
-            }
-        }
-
-        fclose( fd );
-    }
-    else
-    {
-        mlog(CRITICAL, "Fatal error: Unable to open leap-seconds.list");
-    }
-
-    /* Allocate Leap Second Array */
-    leapCount = ntp_leap_seconds.length();
-    leapSeconds = new int64_t[leapCount];
-    assert(leapCount); // fail if no leap seconds read
-
-    /* Populate Leap Second Array - Convert from NTP to UNIX epoch */
-    for (int i = 0; i < leapCount; i++)
-    {
-        leapSeconds[i]  = NTP_TO_SYS(ntp_leap_seconds.get(i));
-    }
-}
+#endif

@@ -275,9 +275,8 @@ void* ArrowEndpoint::responseThread (void* parm)
                     complete = true;
                 }
             }
-
             /* Handle Terminator */
-            if(ref.size == 0)
+            else if(ref.size == 0)
             {
                 /* Send Header */
                 if(!hdr_sent)
@@ -285,7 +284,7 @@ void* ArrowEndpoint::responseThread (void* parm)
                     hdr_sent = sendHeader(&rspq, Service_Unavailable, "Failed execution");
                 }
 
-                /* Mark Failure */
+                /* Mark Failure - `complete` should have been set above when all bytes received */
                 mlog(CRITICAL, "Unexpectedly received terminator on <%s>", inq.getName());
                 complete = true;
             }

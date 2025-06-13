@@ -88,6 +88,7 @@ class LuaLibrarySys
         static int      lsys_fileexists     (lua_State* L);
         static int      lsys_deletefile     (lua_State* L);
         static int      lsys_memu           (lua_State* L);
+        static int      lsys_updateleapsecs (lua_State* L);
 };
 
 #endif  /* __lua_library_sys__ */

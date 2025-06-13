@@ -75,6 +75,7 @@ class CurlLib
         static int          luaPut          (lua_State* L);
         static int          luaPost         (lua_State* L);
         static int          luaCheck        (lua_State* L);
+        static int          luaDownload     (lua_State* L);
 
     private:
 
@@ -118,7 +119,7 @@ class CurlLib
         static size_t   writeData       (const void *buffer, size_t size, size_t nmemb, void *userp);
         static size_t   readData        (void* buffer, size_t size, size_t nmemb, void *userp);
         static size_t   writerHeader    (const void* buffer, size_t size, size_t nmemb, void *userp);
-
+        static size_t   writeFile       (const void *buffer, size_t size, size_t nmemb, void *userp);
 };
 
 #endif  /* __curl_lib__ */

@@ -286,7 +286,7 @@ int RequestFields::luaHasArrowOutput (lua_State* L)
     try
     {
         RequestFields* lua_obj = dynamic_cast<RequestFields*>(getLuaSelf(L, 1));
-        lua_pushboolean(L, !lua_obj->output.path.value.empty() && OutputLib::isArrow(lua_obj->output.format.value));
+        lua_pushboolean(L, OutputLib::isArrow(lua_obj->output.format.value));
     }
     catch(const RunTimeException& e)
     {
