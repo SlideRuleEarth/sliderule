@@ -118,7 +118,7 @@ class TestAtl03x:
         assert gdf["cycle"].mean() == 2
         assert abs(gdf["mosaic.value"].mean() - 1498.9387766321345) < 0.0001
         assert gdf["mosaic.fileid"].mean() == 0
-        assert gdf["mosaic.time"].iloc[0] == datetime.strptime('2023-01-18 20:23:42', '%Y-%m-%d %H:%M:%S')
+        assert gdf["mosaic.time_ns"].iloc[0] == datetime.strptime('2023-01-18 20:23:42', '%Y-%m-%d %H:%M:%S')
 
     def test_atl03_sampler(self, init):
         parms = {

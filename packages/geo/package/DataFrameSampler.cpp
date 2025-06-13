@@ -287,7 +287,7 @@ bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_in
 
     // add new columns to dataframe
     dataframe->addExistingColumn(FString("%s.value",    sampler->rkey).c_str(), value_column);
-    dataframe->addExistingColumn(FString("%s.time",     sampler->rkey).c_str(), time_column);
+    dataframe->addExistingColumn(FString("%s.time_ns",  sampler->rkey).c_str(), time_column);
     dataframe->addExistingColumn(FString("%s.fileid",   sampler->rkey).c_str(), fileid_column);
     if(band_column)     dataframe->addExistingColumn(FString("%s.band",         sampler->rkey).c_str(), band_column);
     if(flags_column)    dataframe->addExistingColumn(FString("%s.flags",        sampler->rkey).c_str(), flags_column);
@@ -380,7 +380,7 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
 
     // add new columns to dataframe
     dataframe->addExistingColumn(FString("%s.value",    sampler->rkey).c_str(), value_column);
-    dataframe->addExistingColumn(FString("%s.time",     sampler->rkey).c_str(), time_column);
+    dataframe->addExistingColumn(FString("%s.time_ns",  sampler->rkey).c_str(), time_column);
     dataframe->addExistingColumn(FString("%s.fileid",   sampler->rkey).c_str(), fileid_column);
     if(band_column)     dataframe->addExistingColumn(FString("%s.band",         sampler->rkey).c_str(), band_column);
     if(flags_column)    dataframe->addExistingColumn(FString("%s.flags",        sampler->rkey).c_str(), flags_column);

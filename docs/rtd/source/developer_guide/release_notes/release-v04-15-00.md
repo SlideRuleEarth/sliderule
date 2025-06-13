@@ -8,6 +8,8 @@ Version description of the v4.15.0 release of SlideRule Earth.
 
 * The `h_mean` value in the `atl03x` API when running the ATL06 surface fitting algorithm was changed from a double to a float.  This was to make it consistent with the ATL06 standard data product and to normalize all DataFrames with *z* columns to floating point precision.
 
+* The x-series APIs provide a different column for the sample time - `time_ns` instead of `time`.  This is to reflect that the new `time_ns` is provided as a Unix(ns) time, whereas the old `time` was provided as a GPS seconds time.  The Unix(ns) time makes it compatible with Pandas and easier to display for human readability.
+
 ## New/Improved Functionality
 
 * NISAR sample dataset support
