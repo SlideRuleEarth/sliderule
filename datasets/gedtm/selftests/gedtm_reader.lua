@@ -1,5 +1,4 @@
 local runner = require("test_executive")
-local asset = require("asset")
 
 -- Requirements --
 

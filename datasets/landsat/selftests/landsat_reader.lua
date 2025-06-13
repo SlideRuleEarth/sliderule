@@ -1,6 +1,4 @@
 local runner = require("test_executive")
-local asset = require("asset")
-local json = require("json")
 local srcfile, dirpath = runner.srcscript()
 
 -- Requirements --

@@ -130,6 +130,7 @@ static int core_open (lua_State *L)
         {"pointindex",      PointIndex::luaCreate},
         {"intervalindex",   IntervalIndex::luaCreate},
         {"spatialindex",    SpatialIndex::luaCreate},
+        {"iodrivers",       Asset::luaDrivers},
         {"get",             CurlLib::luaGet},
         {"put",             CurlLib::luaPut},
         {"post",            CurlLib::luaPost},

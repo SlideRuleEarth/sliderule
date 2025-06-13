@@ -1,5 +1,4 @@
 local runner = require("test_executive")
-local asset = require("asset")
 local prettyprint = require("prettyprint")
 
 -- get default parameters

@@ -17,7 +17,6 @@
 --
 
 local json = require("json")
-local asset = require("asset")
 
 -- Create User Log --
 local userlog = msg.publish(rspq)

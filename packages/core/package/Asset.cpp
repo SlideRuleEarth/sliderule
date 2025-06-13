@@ -162,6 +162,26 @@ bool Asset::registerDriver (const char* _format, io_driver_f factory)
 }
 
 /*----------------------------------------------------------------------------
+ * luaDrivers - .drivers -> list of all registered drivers
+ *----------------------------------------------------------------------------*/
+int Asset::luaDrivers (lua_State* L)
+{
+    lua_newtable(L);
+
+    char** driver_names = NULL;
+    int num_drivers = ioDrivers.getKeys(&driver_names);
+    for(int i = 0; i < num_drivers; i++)
+    {
+        lua_pushstring(L, driver_names[i]);
+        lua_rawseti(L, -2, i + 1);
+        delete [] driver_names[i];
+    }
+    delete [] driver_names;
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * createDriver
  *----------------------------------------------------------------------------*/
 Asset::IODriver* Asset::createDriver (const char* resource) const

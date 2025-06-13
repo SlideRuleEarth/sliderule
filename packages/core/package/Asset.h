@@ -101,6 +101,7 @@ class Asset: public LuaObject
 
         static int      luaCreate       (lua_State* L);
         static bool     registerDriver  (const char* _format, io_driver_f factory);
+        static int      luaDrivers      (lua_State* L);
 
         IODriver*       createDriver    (const char* resource) const;
 
