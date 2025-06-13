@@ -1,4 +1,4 @@
-FROM openresty/openresty:buster
+FROM openresty/openresty:jammy
 
 # install build dependencies
 RUN apt-get update && \
@@ -20,11 +20,11 @@ RUN cd lua-5.1.5 && \
     make install
 
 # download luarocks
-RUN wget https://luarocks.org/releases/luarocks-3.8.0.tar.gz && \
-    tar -zxpf luarocks-3.8.0.tar.gz
+RUN wget https://luarocks.org/releases/luarocks-3.12.0.tar.gz && \
+    tar -zxpf luarocks-3.12.0.tar.gz
 
 # build and install luarocks
-RUN cd luarocks-3.8.0 && \
+RUN cd luarocks-3.12.0 && \
     ./configure --with-lua-include=/usr/local/include && \
     make && \
     make install
