@@ -263,6 +263,7 @@ int geo_open (lua_State* L)
         {"geojson",         GeoJsonRaster::luaCreate},
         {"userraster",      GeoUserRaster::luaCreate},
         {"raster",          RasterObject::luaCreate},
+        {"factories",       RasterObject::luaFatories},
         {"sampler",         RasterSampler::luaCreate},
         {"framesampler",    DataFrameSampler::luaCreate},
         {"parms",           GeoFields::luaCreate},

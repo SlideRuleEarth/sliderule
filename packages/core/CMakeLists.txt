@@ -183,6 +183,7 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/ace.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/ams.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/assets.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/defaults.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/definition.lua
         ${CMAKE_CURRENT_LIST_DIR}/endpoints/earthdata.lua

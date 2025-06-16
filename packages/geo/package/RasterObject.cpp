@@ -183,6 +183,26 @@ bool RasterObject::registerRaster (const char* _name, factory_f create)
 }
 
 /*----------------------------------------------------------------------------
+ * luaFatories
+ *----------------------------------------------------------------------------*/
+int RasterObject::luaFatories (lua_State* L)
+{
+    lua_newtable(L);
+
+    char** registered_rasters = NULL;
+    int num_registered = factories.getKeys(&registered_rasters);
+    for(int i = 0; i < num_registered; i++)
+    {
+        lua_pushstring(L, registered_rasters[i]);
+        lua_rawseti(L, -2, i + 1);
+        delete [] registered_rasters[i];
+    }
+    delete [] registered_rasters;
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
  * getSamples
  *----------------------------------------------------------------------------*/
 uint32_t RasterObject::getSamples(const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param)

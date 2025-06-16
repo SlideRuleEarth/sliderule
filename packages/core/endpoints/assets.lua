@@ -6,7 +6,7 @@
 -- OUTPUT:      json string of all the assets
 --
 local json = require("json")
-local asset = require("assets")
+local asset = require("asset")
 
 local assets = asset.loaddir()
 local directory =  {}
@@ -17,7 +17,8 @@ end
 
 local response = {
     directory = directory,
-    drivers = core.iodrivers()
+    drivers = core.iodrivers(),
+    rasters = geo.factories()
 }
 
 return json.encode(response)

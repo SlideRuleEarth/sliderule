@@ -104,6 +104,7 @@ class RasterObject: public LuaObject
         static RasterObject* cppCreate       (RequestFields* rqst_parms, const char* key);
         static RasterObject* cppCreate       (const RasterObject* obj);
         static bool          registerRaster  (const char* _name, factory_f create);
+        static int           luaFatories     (lua_State* L);
         virtual uint32_t     getSamples      (const point_info_t& pinfo, sample_list_t& slist, void* param=NULL) = 0;
         virtual uint32_t     getSamples      (const std::vector<point_info_t>& points, List<sample_list_t*>& sllist, void* param=NULL);
         virtual uint32_t     getSubsets      (const MathLib::extent_t&  extent, int64_t gps, List<RasterSubset*>& slist, void* param=NULL) = 0;
