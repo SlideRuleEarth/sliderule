@@ -190,7 +190,7 @@ int RasterObject::luaFatories (lua_State* L)
     lua_newtable(L);
 
     char** registered_rasters = NULL;
-    int num_registered = factories.getKeys(&registered_rasters);
+    const int num_registered = factories.getKeys(&registered_rasters);
     for(int i = 0; i < num_registered; i++)
     {
         lua_pushstring(L, registered_rasters[i]);
