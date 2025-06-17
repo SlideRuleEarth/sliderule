@@ -12,6 +12,12 @@ The source code for all of these notebooks can be found in our `repository <http
    :caption: Examples
 
    ../assets/boulder_watershed
+   ../assets/grandmesa
+   ../assets/phoreal
+   ../assets/arcticdem_mosaic
+   ../assets/grandmesa_atl03_classification
+   ../assets/atl13_access
+   ../assets/atl24_access
 
 Additional files are necessary to run some of the notebooks locally.  They are:
 

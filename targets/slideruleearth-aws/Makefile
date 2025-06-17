@@ -52,10 +52,12 @@ STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
 STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
 STATIC_WEB_ASSET_DIR ?= /data/web
-STATIC_WEB_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
 PYTHON_EXAMPLES_DIR = $(ROOT)/clients/python/examples
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
+
+STATIC_WEB_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
+STATIC_WEB_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(STATIC_WEB_CONDA_ENV)
 
 VERSION ?= latest
 ECR ?= 742127912612.dkr.ecr.us-west-2.amazonaws.com
@@ -276,18 +278,16 @@ public-cluster-take-offline: ## destroy dns entry of public cluster; uses DOMAIN
 ########################
 
 static-website-render-notebooks: ## execute the notebooks used in the documentation
-	mkdir -p $(STATIC_WEB_STAGE_DIR)
-	conda activate #(STATIC_WEB_CONDA_ENV)
-	jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/boulder_watershed.ipynb --output $(STATIC_WEB_ASSET_DIR)/boulder_watershed.ipynb --debug
-	jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa.ipynb --output $(STATIC_WEB_ASSET_DIR)/grandmesa.ipynb --debug
-	jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/phoreal.ipynb --output $(STATIC_WEB_ASSET_DIR)/phoreal.ipynb --debug
-	jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/arcticdem_mosaic.ipynb --output $(STATIC_WEB_ASSET_DIR)/arcticdem_mosaic.ipynb --debug
-	jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa_atl03_classification.ipynb --output $(STATIC_WEB_ASSET_DIR)/grandmesa_atl03_classification.ipynb --debug
-	jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl13_access.ipynb --output $(STATIC_WEB_ASSET_DIR)/atl13_access.ipynb --debug
-	jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl24_access.ipynb --output $(STATIC_WEB_ASSET_DIR)/atl24_access.ipynb --debug
-	conda deactivate
+	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/boulder_watershed.ipynb --output $(STATIC_WEB_ASSET_DIR)/boulder_watershed.ipynb --debug
+	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa.ipynb --output $(STATIC_WEB_ASSET_DIR)/grandmesa.ipynb --debug
+	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/phoreal.ipynb --output $(STATIC_WEB_ASSET_DIR)/phoreal.ipynb --debug
+	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/arcticdem_mosaic.ipynb --output $(STATIC_WEB_ASSET_DIR)/arcticdem_mosaic.ipynb --debug
+	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa_atl03_classification.ipynb --output $(STATIC_WEB_ASSET_DIR)/grandmesa_atl03_classification.ipynb --debug
+	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl13_access.ipynb --output $(STATIC_WEB_ASSET_DIR)/atl13_access.ipynb --debug
+	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl24_access.ipynb --output $(STATIC_WEB_ASSET_DIR)/atl24_access.ipynb --debug
 
 static-website-docker: ## make the static website docker image; needs VERSION
+	rm -Rf $(STATIC_WEB_STAGE_DIR)
 	mkdir -p $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
@@ -319,6 +319,11 @@ static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
 	cd terraform/static-website && terraform init
 	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
 	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+
+static-website: ## build and update static website
+	make static-website-render-notebooks
+	make static-website-docker
+	make static-website-live-update
 
 ########################
 # Certbot Targets
@@ -359,12 +364,9 @@ tag: ## create version tag in this repository and release it on GitHub
 release: ## release a version of sliderule; needs VERSION
 	make buildenv-docker
 	make buildenv-docker-push
-	make static-website-render-notebooks
 	make manager-lock
 	make tag
 	make cluster
-	make static-website-docker
-	make static-website-live-update
 
 ########################
 # Clean Up Targets
