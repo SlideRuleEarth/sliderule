@@ -14,6 +14,7 @@ RUN apt-get update && \
   python3-dev \
   git \
   nginx \
+  pandoc \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Jekyll
@@ -25,7 +26,7 @@ RUN pip3 install shapely numpy
 
 # Install RTD Dependencies
 RUN pip3 install 'sphinx>=5.0' docutils sphinx_markdown_tables sphinx_panels sphinx_rtd_theme
-RUN pip3 install myst-parser
+RUN pip3 install myst-parser nbsphinx jupyterlab geopandas matplotlib
 
 # Build Jekyll Website
 COPY jekyll /jekyll

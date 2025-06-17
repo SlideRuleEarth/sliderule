@@ -54,7 +54,8 @@ extensions = [
     "sphinx.ext.napoleon",
     'sphinx_markdown_tables',
     "sphinx_panels",
-    "myst_parser"
+    "myst_parser",
+    "nbsphinx"
 ]
 
 myst_enable_extensions = [
@@ -77,6 +78,7 @@ master_doc = 'index'
 
 # -- Configuration options ---------------------------------------------------
 autosummary_generate = True
+#jupyter_execute_notebooks = "force"
 
 # -- Options for HTML output -------------------------------------------------
 

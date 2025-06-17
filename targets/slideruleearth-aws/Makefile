@@ -51,7 +51,9 @@ TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
 STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
-PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
+STATIC_WEB_ASSET_DIR ?= /data/web
+STATIC_WEB_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
+PYTHON_EXAMPLES_DIR = $(ROOT)/clients/python/examples
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 
@@ -273,15 +275,24 @@ public-cluster-take-offline: ## destroy dns entry of public cluster; uses DOMAIN
 # Static Website Targets
 ########################
 
+static-website-render-notebooks: ## execute the notebooks used in the documentation
+	mkdir -p $(STATIC_WEB_STAGE_DIR)
+	conda activate #(STATIC_WEB_CONDA_ENV)
+	jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/boulder_watershed.ipynb --output $(STATIC_WEB_ASSET_DIR)/boulder_watershed.ipynb --debug
+	jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa.ipynb --output $(STATIC_WEB_ASSET_DIR)/grandmesa.ipynb --debug
+	jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/phoreal.ipynb --output $(STATIC_WEB_ASSET_DIR)/phoreal.ipynb --debug
+	jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/arcticdem_mosaic.ipynb --output $(STATIC_WEB_ASSET_DIR)/arcticdem_mosaic.ipynb --debug
+	jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa_atl03_classification.ipynb --output $(STATIC_WEB_ASSET_DIR)/grandmesa_atl03_classification.ipynb --debug
+	jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl13_access.ipynb --output $(STATIC_WEB_ASSET_DIR)/atl13_access.ipynb --debug
+	jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl24_access.ipynb --output $(STATIC_WEB_ASSET_DIR)/atl24_access.ipynb --debug
+	conda deactivate
+
 static-website-docker: ## make the static website docker image; needs VERSION
-	-rm -Rf $(STATIC_WEB_STAGE_DIR)
 	mkdir -p $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
 	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
 	rsync -a $(ROOT) $(STATIC_WEB_STAGE_DIR) --exclude build --exclude stage
-	-cp $(PYTHON_EXAMPLES_DIR)/examples/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
-	-cp $(PYTHON_EXAMPLES_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
-	-cp -R /data/web $(STATIC_WEB_STAGE_DIR)/rtd/source/_static/html
+	cp $(STATIC_WEB_ASSET_DIR)/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
 	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
 	cp docker/static-website/nginx.conf $(STATIC_WEB_STAGE_DIR)
 	cp docker/static-website/docker-entrypoint.sh $(STATIC_WEB_STAGE_DIR)
@@ -348,12 +359,10 @@ tag: ## create version tag in this repository and release it on GitHub
 release: ## release a version of sliderule; needs VERSION
 	make buildenv-docker
 	make buildenv-docker-push
+	make static-website-render-notebooks
 	make manager-lock
 	make tag
-	make cluster-docker
-	make cluster-docker-push
-	make cluster-build-packer
-	make cluster-upload-terraform
+	make cluster
 	make static-website-docker
 	make static-website-live-update
 
