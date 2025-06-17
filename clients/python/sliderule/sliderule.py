@@ -428,11 +428,10 @@ def check_version (plugins=[], session=None):
     Returns
     -------
     bool
-        True if at least minor version matches; False if major or minor version doesn't match
+        True (always; kept for backward compatibility)
     '''
     session = checksession(session)
     info = get_version(session=session)
-    status = True
 
     # check response from server
     if info == None:
@@ -440,30 +439,25 @@ def check_version (plugins=[], session=None):
 
     # populate version info
     versions = {}
-    for entity in ['server', 'client'] + plugins:
+    for entity in ['server', 'client']:
         s = info[entity]['version'][1:].split('.')
         versions[entity] = (int(s[0]), int(s[1]), int(s[2]))
 
     # check major version mismatches
     if versions['server'][0] != versions['client'][0]:
-        raise FatalError("Client (version {}) is incompatible with the server (version {})".format(versions['client'], versions['server']))
-    else:
-        for pkg in plugins:
-            if versions[pkg][0] != versions['client'][0]:
-                raise FatalError("Client (version {}) is incompatible with the {} plugin (version {})".format(versions['client'], pkg, versions[pkg]))
+        raise FatalError(f'Client {info['client']['version']} is incompatible with the server {info['server']['version']}')
+
+    # check plugins
+    for plugin in plugins:
+        if versions[plugin][0] != versions['client'][0]:
+            raise FatalError(f'Client {info['client']['version']} is incompatible with the {plugin} plugin {info[plugin]['version']}')
 
     # check minor version mismatches
     if versions['server'][1] > versions['client'][1]:
-        logger.warning("Client (version {}) is out of date with the server (version {})".format(versions['client'], versions['server']))
-        status = False
-    else:
-        for pkg in plugins:
-            if versions[pkg][1] > versions['client'][1]:
-                logger.warning("Client (version {}) is out of date with the {} plugin (version {})".format(versions['client'], pkg, versions['server']))
-                status = False
+        logger.warning(f'The server is running a newer version of the code ({info['server']['version']}) than the client ({info['client']['version']}), you may want to update your client')
 
-    # return if version check is successful
-    return status
+    # return boolean for backward compatibility
+    return True
 
 #
 # Run: API Request to SlideRule
@@ -605,7 +599,7 @@ def toregion(source, tolerance=0.0, cellsize=0.01, n_clusters=1):
     '''
     # GeoDataFrame
     if isinstance(source, geopandas.GeoDataFrame):
-        gdf = source 
+        gdf = source
         datafile = gdf.to_json()
 
     # Polygon
