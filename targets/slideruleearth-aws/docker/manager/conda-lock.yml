@@ -402,22 +402,22 @@ package:
   category: main
   optional: false
 - name: boto3
-  version: 1.38.36
+  version: 1.38.37
   manager: conda
   platform: linux-aarch64
   dependencies:
-    botocore: '>=1.38.36,<1.39.0'
+    botocore: '>=1.38.37,<1.39.0'
     jmespath: '>=0.7.1,<2.0.0'
     python: '>=3.9'
     s3transfer: '>=0.13.0,<0.14.0'
-  url: https://conda.anaconda.org/conda-forge/noarch/boto3-1.38.36-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/boto3-1.38.37-pyhd8ed1ab_0.conda
   hash:
-    md5: 99add7376a983a0f7974fa9ba9034176
-    sha256: 86ab9ec1be83ac7392300155e1e83765cb29496ae61baab55fce3d8983ffa02a
+    md5: 353bba4f846340540ad02a6260e1e55a
+    sha256: c4b5c979fab71948d5cff9e7cbbc4ae111694a92bd496608296e4a8ac1841f12
   category: main
   optional: false
 - name: botocore
-  version: 1.38.36
+  version: 1.38.37
   manager: conda
   platform: linux-aarch64
   dependencies:
@@ -425,10 +425,10 @@ package:
     python: '>=3.10'
     python-dateutil: '>=2.1,<3.0.0'
     urllib3: '>=1.25.4,!=2.2.0,<3'
-  url: https://conda.anaconda.org/conda-forge/noarch/botocore-1.38.36-pyge310_1234567_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/botocore-1.38.37-pyge310_1234567_0.conda
   hash:
-    md5: ffe1034d39ded65a111fbb8d89c71986
-    sha256: 78b86911aa24bcfec10e87c1741f8c0a920248a63dfd805456183924a5128e47
+    md5: dcc8f88ec976df270619c3e50963ae17
+    sha256: f05340e6afc4942c555ed8478cc151ac762ad74e9c8d0898894883e9c7e2b47b
   category: main
   optional: false
 - name: branca
@@ -665,7 +665,7 @@ package:
   category: main
   optional: false
 - name: folium
-  version: 0.19.7
+  version: 0.20.0
   manager: conda
   platform: linux-aarch64
   dependencies:
@@ -675,10 +675,10 @@ package:
     python: '>=3.9'
     requests: ''
     xyzservices: ''
-  url: https://conda.anaconda.org/conda-forge/noarch/folium-0.19.7-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/folium-0.20.0-pyhd8ed1ab_0.conda
   hash:
-    md5: 1a0ace71ddcbb17aa146f5f9b0746dd3
-    sha256: 01adf2e15fa6eb352e869951f6f5e3e94ab5e6d3bb8b08db88dbf1603a9a767c
+    md5: a6997a7dcd6673c0692c61dfeaea14ab
+    sha256: 782fa186d7677fd3bc1ff7adb4cc3585f7d2c7177c30bcbce21f8c177135c520
   category: main
   optional: false
 - name: fonttools
@@ -1749,16 +1749,16 @@ package:
   category: main
   optional: false
 - name: libpng
-  version: 1.6.47
+  version: 1.6.49
   manager: conda
   platform: linux-aarch64
   dependencies:
     libgcc: '>=13'
     libzlib: '>=1.3.1,<2.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libpng-1.6.47-hec79eb8_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libpng-1.6.49-hec79eb8_0.conda
   hash:
-    md5: c4b1ba0d7cef5002759d2f156722feee
-    sha256: 3861a65106a5f876eff3fc19042c3edb528216114b9f8e64b37aebf003deda11
+    md5: a665eccfe09f815de0cdda657598a5b3
+    sha256: d9b2e2c1b47ea8889fa4407ad2ffbf6388b9608031a98acd9f9876d0b15a20cc
   category: main
   optional: false
 - name: libprotobuf
