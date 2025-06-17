@@ -1099,7 +1099,7 @@ class widgets:
                 return key
         # return empty string if no match
         return ''
-        
+
     @property
     def suffix(self) -> str:
         """return the file suffix
@@ -1582,7 +1582,7 @@ class widgets:
                 df = gdf[(gdf['rgt'] == RGT) & (gdf['gt'] == GT) &
                     (gdf['cycle'] == cycle)]
                 # plot reduced data frame
-                sc = ax.scatter(df.index.values, df["h_mean"].values,
+                sc = ax.scatter(df.index.values, df[column].values,
                     c='red', s=2.5, rasterized=True)
                 legend_elements.append(matplotlib.lines.Line2D([0], [0],
                     color='red', lw=6, label='ATL06-SR'))
@@ -3039,7 +3039,7 @@ class ICESat2:
                 atl06.set_index('x_atc', inplace=True)
                 # plot reduced data frame
                 sc = ax.scatter(atl06.index.values,
-                    atl06["h_mean"].values,
+                    atl06[column].values,
                     c='red', s=2.5, rasterized=True)
                 handle = matplotlib.lines.Line2D([0], [0],
                     color='red', lw=6, label='ATL06-SR')

@@ -454,7 +454,7 @@ def check_version (plugins=[], session=None):
 
     # check minor version mismatches
     if versions['server'][1] > versions['client'][1]:
-        logger.warning(f'The server is running a newer version of the code ({info['server']['version']}) than the client ({info['client']['version']}), you may want to update your client')
+        logger.warning(f'Warning, this environment is using an outdated client ({info['client']['version']}). The code will run but some functionality supported by the server ({info['server']['version']}) may not be available.')
 
     # return boolean for backward compatibility
     return True
