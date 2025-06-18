@@ -223,7 +223,7 @@ int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publi
     {
         /* Launch Engine */
         engine = new LuaEngine(scriptpath, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
-        engine->setString(LUA_REQUEST_ID, request->id);
+        request->setLuaTable(engine->getLuaState(), request->id, "");
         const bool status = engine->executeEngine(SystemConfig::settings().requestTimeoutSec.value);
 
         /* Send Response */
@@ -304,8 +304,7 @@ int LuaEndpoint::streamResponse (const char* scriptpath, Request* request, Publi
         engine = new LuaEngine(scriptpath, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
 
         /* Supply Global Variables to Script */
-        engine->setString(LUA_RESPONSE_QUEUE, rspq->getName());
-        engine->setString(LUA_REQUEST_ID, request->id);
+        request->setLuaTable(engine->getLuaState(), request->id, rspq->getName());
 
         /* Execute Engine
          *  The call to execute the script blocks on completion of the script. The lua state context

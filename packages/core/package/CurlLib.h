@@ -57,6 +57,12 @@ class CurlLib
         static const int DATA_TIMEOUT = 60L; // seconds
 
         /*--------------------------------------------------------------------
+         * Typedefs
+         *--------------------------------------------------------------------*/
+
+        typedef List<const FString*> hdrs_t;
+
+        /*--------------------------------------------------------------------
          * Methods
          *--------------------------------------------------------------------*/
 
@@ -65,12 +71,11 @@ class CurlLib
 
         static long         request         (EndpointObject::verb_t verb, const char* url, const char* data, const char** response, int* size,
                                              bool verify_peer=false, bool verify_hostname=false, int timeout=DATA_TIMEOUT,
-                                             List<const string*>* headers=NULL,
-                                             const char* unix_socket=NULL,
-                                             List<const string*>* rsps_headers=NULL);
+                                             hdrs_t* headers=NULL, const char* unix_socket=NULL, hdrs_t* rsps_headers=NULL);
         static long         postAsStream    (const char* url, const char* data, Publisher* outq, bool with_terminator);
-        static long         postAsRecord    (const char* url, const char* data, Publisher* outq, bool with_terminator, int timeout, const bool* active=NULL);
-        static int          getHeaders      (lua_State* L, int index, List<const string*>& header_list);
+        static long         postAsRecord    (const char* url, const char* data, Publisher* outq, bool with_terminator,
+                                             int timeout, const bool* active=NULL, hdrs_t* headers=NULL);
+        static int          getHeaders      (lua_State* L, int index, hdrs_t& header_list);
         static int          luaGet          (lua_State* L);
         static int          luaPut          (lua_State* L);
         static int          luaPost         (lua_State* L);

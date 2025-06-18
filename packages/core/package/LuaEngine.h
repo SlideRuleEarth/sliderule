@@ -103,6 +103,7 @@ class LuaEngine
         static const char*  sanitize        (const char* filename);
         static void         abortHook       (lua_State* L, lua_Debug *ar);
 
+        lua_State*          getLuaState     (void);
         uint64_t            getEngineId     (void) const;
         bool                executeEngine   (int timeout_ms);
         bool                isActive        (void) const;

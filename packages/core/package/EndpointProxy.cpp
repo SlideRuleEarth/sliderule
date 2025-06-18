@@ -390,6 +390,11 @@ void* EndpointProxy::proxyThread (void* parm)
 {
     EndpointProxy* proxy = reinterpret_cast<EndpointProxy*>(parm);
 
+    // build headers
+    CurlLib::hdrs_t headers;
+    const FString* content_type_header = new const FString("x-forwarded-for: %s", "0.0.0.0");
+    headers.add(content_type_header);
+
     while(proxy->active)
     {
         /* Receive Request */
@@ -416,7 +421,7 @@ void* EndpointProxy::proxyThread (void* parm)
                     {
                         const FString url("%s/source/%s", node->member, proxy->endpoint);
                         const FString data("{\"resource\": \"%s\", \"key_space\": %d, \"parms\": %s}", resource, current_resource, proxy->parameters);
-                        const long http_code = CurlLib::postAsRecord(url.c_str(), data.c_str(), proxy->outQ, false, proxy->timeout, &proxy->active);
+                        const long http_code = CurlLib::postAsRecord(url.c_str(), data.c_str(), proxy->outQ, false, proxy->timeout, &proxy->active, &headers);
                         if(http_code == EndpointObject::OK) valid = true;
                         else throw RunTimeException(CRITICAL, RTE_FAILURE, "Error code returned from request to %s: %d", node->member, (int)http_code);
                     }

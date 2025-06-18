@@ -43,8 +43,6 @@
  ******************************************************************************/
 
 const char* EndpointObject::OBJECT_TYPE = "EndpointObject";
-const char* EndpointObject::LUA_RESPONSE_QUEUE = "rspq";
-const char* EndpointObject::LUA_REQUEST_ID = "rqstid";
 
 FString EndpointObject::serverHead("sliderule/%s", LIBID);
 
@@ -104,6 +102,19 @@ EndpointObject::Request::~Request (void)
 }
 
 /*----------------------------------------------------------------------------
+ * setLuaTable
+ *----------------------------------------------------------------------------*/
+int EndpointObject::Request::setLuaTable(lua_State* L, const char* rqst_id, const char* rspq_name) const
+{
+    lua_newtable(L);
+    LuaEngine::setAttrStr(L, "id", rqst_id);
+    LuaEngine::setAttrStr(L, "rspq", rspq_name);
+    LuaEngine::setAttrStr(L, "srcip", getHdrSourceIp());
+    lua_setglobal(L, "_rqst");
+    return 1;
+}
+
+ /*----------------------------------------------------------------------------
  * getHdrSourceIp
  *----------------------------------------------------------------------------*/
 const char* EndpointObject::Request::getHdrSourceIp (void) const

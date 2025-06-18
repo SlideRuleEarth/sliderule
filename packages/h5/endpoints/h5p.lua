@@ -18,8 +18,6 @@
 --                  ]
 --              }
 --
---              rspq - output queue to stream results
---
 -- OUTPUT:      h5file records containing values in datasets
 --
 -- NOTES:       1. The arg[1] input is a json object provided by caller
@@ -36,18 +34,18 @@ local datasets = parm["datasets"]
 
 local asset = core.getbyname(asset_name)
 if not asset then
-    local userlog = msg.publish(rspq)
+    local userlog = msg.publish(_rqst.rspq)
     userlog:alert(core.INFO, core.RTE_FAILURE, string.format("invalid asset specified: %s", asset_name))
     return
 end
 
 local f = h5.file(asset, resource)
 if not f then
-    local userlog = msg.publish(rspq)
+    local userlog = msg.publish(_rqst.rspq)
     userlog:alert(core.INFO, core.RTE_FAILURE, string.format("failed to open resource: %s", resource))
     return
 end
 
-f:read(datasets, rspq)
+f:read(datasets, _rqst.rspq)
 
 return

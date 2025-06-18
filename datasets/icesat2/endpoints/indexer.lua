@@ -7,8 +7,6 @@
 --                  "timeout":      <seconds to wait for first response>
 --              }
 --
---              rspq - output queue to stream results
---
 -- OUTPUT:      Index records (atl03rec.index)
 --
 -- NOTES:       1. The rqst is provided by arg[1] which is a json object provided by caller
@@ -19,7 +17,7 @@
 local json = require("json")
 
 -- Create User Log --
-local userlog = msg.publish(rspq)
+local userlog = msg.publish(_rqst.rspq)
 
 -- Request Parameters --
 local rqst = json.decode(arg[1])
@@ -33,7 +31,7 @@ userlog:alert(core.DEBUG, core.RTE_STATUS, string.format("atl03 indexing initiat
 -- Index Asset --
 local atl03 = core.getbyname(atl03_asset)
 local name, format, url, index_filename, region, endpoint, status = atl03:info()
-local indexer = icesat2.atl03indexer(atl03, resources, rspq)
+local indexer = icesat2.atl03indexer(atl03, resources, _rqst.rspq)
 
 -- Wait Until Completion --
 local duration = 0

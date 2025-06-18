@@ -386,26 +386,34 @@ const char* LuaEngine::sanitize (const char* filename)
 /*----------------------------------------------------------------------------
  * luaAbortHook
  *----------------------------------------------------------------------------*/
-void LuaEngine::abortHook (lua_State *L, lua_Debug *ar)
+void LuaEngine::abortHook (lua_State* l, lua_Debug *ar)
 {
-    if(L == NULL) return;
+    if(l == NULL) return;
     (void)ar;
-    lua_pushstring(L, LUA_SELFKEY);
-    lua_gettable(L, LUA_REGISTRYINDEX); /* retrieve value */
-    LuaEngine* li = static_cast<LuaEngine*>(lua_touserdata(L, -1));
+    lua_pushstring(l, LUA_SELFKEY);
+    lua_gettable(l, LUA_REGISTRYINDEX); /* retrieve value */
+    LuaEngine* li = static_cast<LuaEngine*>(lua_touserdata(l, -1));
     if(!li)
     {
-        luaL_error(L, "Unable to access Lua engine - aborting!");
+        luaL_error(l, "Unable to access Lua engine - aborting!");
     }
     else if(!li->engineActive)
     {
         char error_msg[512];
         StringLib::format(error_msg, 256, "Lua engine no longer active - exiting script <%s>", li->dInfo != NULL ? li->dInfo->script : li->pInfo->argv[0]);
-        luaL_error(L, error_msg);
+        luaL_error(l, error_msg);
     }
 }
 
 /*----------------------------------------------------------------------------
+ * getLuaState
+ *----------------------------------------------------------------------------*/
+lua_State* LuaEngine::getLuaState (void)
+{
+    return L;
+}
+
+ /*----------------------------------------------------------------------------
  * getEngineId
  *----------------------------------------------------------------------------*/
 uint64_t LuaEngine::getEngineId(void) const

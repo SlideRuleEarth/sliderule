@@ -120,8 +120,7 @@ void* ArrowEndpoint::requestThread (void* parm)
         LuaEngine* engine = new LuaEngine(script_pathname, reinterpret_cast<const char*>(request->body), trace_id, NULL, true);
 
         /* Supply Global Variables to Script */
-        engine->setString(LUA_RESPONSE_QUEUE, rspq->getName());
-        engine->setString(LUA_REQUEST_ID, request->id);
+        request->setLuaTable(engine->getLuaState(), request->id, rspq->getName());
 
         /* Execute Engine
          *  The call to execute the script blocks on completion of the script. The lua state context

@@ -47,8 +47,6 @@ def captureit(endpoint, duration):
         gauge_metrics[endpoint + "_sum"] = gauge_metrics.get(endpoint + "_sum", 0.0) + duration
         count_metrics[endpoint + "_count"] = count_metrics.get(endpoint + "_count", 0) + 1
 
-
-
 def get_metrics():
     global gauge_metrics, count_metrics
     return gauge_metrics, count_metrics
@@ -67,11 +65,12 @@ def record():
         client = data['client']
         endpoint = data['endpoint']
         duration = data['duration']
+        source_ip = data['source_ip'].split(",")[0]
         captureit(endpoint, duration)
         if endpoint not in current_app.config['ENDPOINT_TLM_EXCLUSION']:
             entry = ( data["record_time"],
-                      hashit(data['source_ip']),
-                      locateit(data['source_ip'], f'{client},{endpoint}'),
+                      hashit(source_ip),
+                      locateit(source_ip, f'{client},{endpoint}'),
                       data['aoi']['x'],
                       data['aoi']['y'],
                       client,
