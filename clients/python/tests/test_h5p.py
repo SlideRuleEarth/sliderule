@@ -1,12 +1,10 @@
 """Tests for h5p endpoint"""
 
 import pytest
-import sliderule
 from sliderule import h5
 
 ATL06_FILE1 = "ATL06_20181019065445_03150111_005_01.h5"
 
-@pytest.mark.network
 class TestApi:
     def test_happy_case(self, init):
         datasets = [
@@ -64,7 +62,7 @@ class TestApi:
         ], resource, "icesat2")
         assert "/gt2r/signal_find_output/ocean/delta_time" in r2
         assert "/gt2l/signal_find_output/ocean/delta_time" not in r2
- 
+
     def test_missing_valid_numrows_too_high(self, init):
         resource = "ATL03_20181014012500_02350113_006_02.h5"
         r3 = h5.h5p([
@@ -82,7 +80,7 @@ class TestApi:
         ], resource, "icesat2")
         assert "/gt2r/signal_find_output/ocean/delta_time" in r4
         assert "/gt2l/signal_find_output/ocean/delta_time" not in r4
- 
+
     def test_numrows_zero(self, init):
         resource = "ATL03_20181014012500_02350113_006_02.h5"
         r5 = h5.h5p([
@@ -95,4 +93,4 @@ class TestApi:
         resource = "ATL03_20181014012500_02350113_006_02.h5"
         r6 = h5.h5("/gt1r/signal_find_output/ocean/delta_time", resource, "icesat2", numrows=100000)
         assert len(r6) == 0
- 
+

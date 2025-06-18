@@ -2,9 +2,7 @@
 
 import pytest
 from pathlib import Path
-import os.path
-import sliderule
-from sliderule import raster
+from sliderule import sliderule, raster
 
 TESTDIR = Path(__file__).parent
 
@@ -14,10 +12,9 @@ vrtLon = -80.0
 vrtLat = -80.0
 
 vrtElevation = 328.0156250
-vrtFile      = '/vsis3/pgc-opendata-dems/rema/mosaics/v2.0/2m/2m_dem_tiles.vrt'
+vrtFile      = '/vsis3/sliderule/data/PGC/rema_2m_v2_0_tiles.vrt'
 vrtFileTime  = 1361299922
 
-@pytest.mark.network
 class TestMosaic:
     def test_vrt(self, init):
         rqst = {"samples": {"asset": "rema-mosaic"}, "coordinates": [[vrtLon,vrtLat]]}

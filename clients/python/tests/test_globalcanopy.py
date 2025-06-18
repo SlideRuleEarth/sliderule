@@ -16,7 +16,6 @@ vrtValue     = 20
 vrtFile      = '/vsis3/sliderule/data/GLOBALCANOPY/META_GlobalCanopyHeight_1m_2024_v1.vrt'
 vrtFileTime  = 1396483218
 
-@pytest.mark.network
 class TestGlobalCanopy:
     def test_samples(self, init):
         rqst = {"samples": {"asset": "meta-globalcanopy-1meter"}, "coordinates": [[vrtLon,vrtLat]]}

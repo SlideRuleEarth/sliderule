@@ -1,9 +1,7 @@
 import pytest
 from sliderule import sliderule
 
-@pytest.mark.network
 class TestAtl13x:
-
     def test_refid(self, init):
         parms = { "atl13": { "refid": 5952002394 } }
         gdf = sliderule.run("atl13x", parms)

@@ -1,11 +1,8 @@
 """Tests for sliderule merit-dem raster support."""
 
 import pytest
-from pathlib import Path
-from sliderule import raster
-import sliderule
+from sliderule import sliderule, raster
 
-@pytest.mark.network
 class TestMerit:
     def test_sample(self, init):
         sliderule.set_rqst_timeout((10,600))

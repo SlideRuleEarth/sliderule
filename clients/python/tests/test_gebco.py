@@ -20,7 +20,6 @@ expected_file_2023  = '/vsis3/sliderule/data/GEBCO/2023/cog_gebco_2023_sub_ice_n
 expected_depth_2024 = -4940  # different from 2023
 expected_file_2024  = '/vsis3/sliderule/data/GEBCO/2024/cog_gebco_2024_sub_ice_n0.0_s-90.0_w-90.0_e0.0.tif'
 
-@pytest.mark.network
 class TestGebco:
     def test_samples_2023(self, init):
         rqst = {"samples": {"asset": "gebco-bathy", "with_flags": True, "bands": ["2023"]}, "coordinates": [[lon,lat]]}

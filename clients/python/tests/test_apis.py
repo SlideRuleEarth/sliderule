@@ -15,7 +15,6 @@ sliderule.set_rqst_timeout((1, 60))
 #
 # Time API
 #
-@pytest.mark.network
 class TestTime:
     def test_time(self, init):
         rqst = {
@@ -44,7 +43,6 @@ class TestTime:
 #
 # Definition API
 #
-@pytest.mark.network
 class TestDefinition:
     def test_definition(self, init):
         rqst = {
@@ -57,7 +55,6 @@ class TestDefinition:
 #
 # Version API
 #
-@pytest.mark.network
 class TestVersion:
     def test_version_endpoint(self, init):
         rsps = sliderule.source("version", {})
@@ -92,7 +89,6 @@ class TestVersion:
 #
 # Initialization APIs
 #
-@pytest.mark.network
 class TestInitialization:
     def test_loop_init(self, domain, organization, desired_nodes):
         for _ in range(10):
@@ -130,7 +126,6 @@ class TestInitialization:
 #
 # Region of Interest APIs
 #
-@pytest.mark.network
 class TestRegion:
     def test_toregion_empty_raises(self):
         with pytest.raises(TypeError, match=('source')):

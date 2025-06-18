@@ -14,11 +14,10 @@ from sliderule import icesat2, gedi
 
 TESTDIR = Path(__file__).parent
 
-@pytest.mark.network
 class TestParquet:
     def test_atl06(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
                   "srt": 3,
@@ -46,7 +45,7 @@ class TestParquet:
 
     def test_atl06_non_geo(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
                   "srt": 3,
@@ -68,7 +67,7 @@ class TestParquet:
 
     def test_atl06s(self, init):
         resource = "ATL06_20190314093716_11600203_005_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
                   "srt": 3,
@@ -94,7 +93,7 @@ class TestParquet:
 
     def test_atl03(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
                   "srt": 3,
@@ -116,7 +115,7 @@ class TestParquet:
 
     def test_atl03v(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
                   "srt": 3,
@@ -134,7 +133,7 @@ class TestParquet:
 
     def test_atl06_index(self, init):
         resource = "ATL03_20181017222812_02950102_005_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
             "srt": icesat2.SRT_LAND,
@@ -197,7 +196,7 @@ class TestParquet:
 
     def test_atl03_index(self, init):
         resource = "ATL03_20181017222812_02950102_005_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
             "srt": icesat2.SRT_LAND,
@@ -270,7 +269,7 @@ class TestParquet:
 
     def test_atl06_csv(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
                   "srt": 3,
@@ -311,10 +310,9 @@ class TestParquet:
                 csv_val = gdf_from_csv[column].iloc[row]
                 assert abs(parquet_val - csv_val) < 0.0001, f'mismatch in column <{column}>: {parquet_val} != {csv_val}'
 
-
     def test_atl06_feather(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
                   "srt": 3,
@@ -358,7 +356,7 @@ class TestParquet:
 
     def test_gedi01b(self, init):
         resource = 'GEDI01_B_2019109210809_O01988_03_T02056_02_005_01_V002.h5'
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
             "beams": 0,
@@ -373,7 +371,7 @@ class TestParquet:
 
     def test_gedi02a(self, init):
         resource = 'GEDI02_A_2022243081308_O21052_02_T04087_02_003_02_V002.h5'
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
             "degrade_filter": True,
@@ -388,7 +386,7 @@ class TestParquet:
 
     def test_gedi04a(self, init):
         resource = 'GEDI04_A_2019123154305_O02202_03_T00174_02_002_02_V002.h5'
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
             "degrade_filter": True,

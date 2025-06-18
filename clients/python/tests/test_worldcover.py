@@ -18,7 +18,6 @@ vrtFile      = '/vsis3/sliderule/data/WORLDCOVER/ESA_WorldCover_10m_2021_v200_Ma
 timeAsDateStr  = '2021-06-30 00:00:18'
 timeAsUnixSecs = 1309046418  # includes 18 leap seconds
 
-@pytest.mark.network
 class TestMosaic:
     def test_vrt(self, init):
         rqst = {"samples": {"asset": "esa-worldcover-10meter"}, "coordinates": [[vrtLon,vrtLat]]}

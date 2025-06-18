@@ -10,12 +10,10 @@ import numpy as np
 
 TESTDIR = Path(__file__).parent
 
-@pytest.mark.network
 class TestSubsetting:
-
     def test_rasterize(self, init):
         resource = "ATL03_20181017222812_02950102_005_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region['poly'],
             "region_mask": region['raster'],
@@ -35,7 +33,7 @@ class TestSubsetting:
         # Compare values for h_mean and y_atc and validate segment_ids against expected values
 
         # Load expected data
-        expected_df = pd.read_csv(os.path.join(TESTDIR, "expected_subsetting_values.txt"))
+        expected_df = pd.read_csv(os.path.join(TESTDIR, "data", "expected_subsetting_values.txt"))
 
         # Ensure same length
         assert len(expected_df) == len(gdf), "Mismatch in row count"
@@ -45,7 +43,6 @@ class TestSubsetting:
             assert expected_df["segment_id"].iloc[i] == gdf["segment_id"].iloc[i], f"Row {i} mismatch in segment_id"
             assert np.isclose(expected_df["h_mean"].iloc[i], gdf["h_mean"].iloc[i], atol=1e-14), f"Row {i} mismatch in h_mean"
             assert np.isclose(expected_df["y_atc"].iloc[i], gdf["y_atc"].iloc[i], atol=1e-14), f"Row {i} mismatch in y_atc"
-
 
     def test_180_edge(self, init):
         resource = "ATL03_20221012073759_03291712_005_01.h5"

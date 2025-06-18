@@ -8,7 +8,6 @@ from sliderule import icesat2
 
 TESTDIR = Path(__file__).parent
 
-@pytest.mark.network
 class TestGeoJson:
     def test_atl03(self, init):
         for testfile in ["data/grandmesa.geojson", "data/grandmesa.shp"]:

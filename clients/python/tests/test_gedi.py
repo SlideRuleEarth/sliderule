@@ -7,11 +7,10 @@ import os.path
 
 TESTDIR = Path(__file__).parent
 
-@pytest.mark.network
 class TestL1B:
     def test_gedi(self, init):
         resource = "GEDI01_B_2019109210809_O01988_03_T02056_02_005_01_V002.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
             "degrade_filter": True,
@@ -30,16 +29,15 @@ class TestL1B:
         assert abs(gdf.describe()["solar_elevation"]["min"] - 42.839184) < 0.001
 
     def test_cmr(self):
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         granules = earthdata.cmr(short_name="GEDI01_B", polygon=region["poly"])
         assert len(granules) >= 130
         assert 'GEDI01_B_' in granules[0]
 
-@pytest.mark.network
 class TestL2A:
     def test_gedi(self, init):
         resource = "GEDI02_A_2022288203631_O21758_03_T00021_02_003_02_V002.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
             "degrade_filter": True,
@@ -57,16 +55,15 @@ class TestL2A:
         assert abs(gdf.describe()["solar_elevation"]["min"] - 30.522356) < 0.001
 
     def test_cmr(self):
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         granules = earthdata.cmr(short_name="GEDI02_A", polygon=region["poly"])
         assert len(granules) >= 130
         assert 'GEDI02_A_' in granules[0]
 
-@pytest.mark.network
 class TestL3:
     def test_gedi(self, init):
         resource = "ATL03_20220105023009_02111406_005_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region['poly'],
             "cnf": "atl03_high",
@@ -85,11 +82,10 @@ class TestL3:
         assert gdf.describe()["gedi.file_id"]["max"] == 0.0
         assert gdf.describe()["gedi.flags"]["max"] == 0.0
 
-@pytest.mark.network
 class TestL4A:
     def test_gedi(self, init):
         resource = "GEDI04_A_2019123154305_O02202_03_T00174_02_002_02_V002.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
             "degrade_filter": True,
@@ -107,16 +103,15 @@ class TestL4A:
         assert abs(gdf.describe()["solar_elevation"]["min"] - 49.353821) < 0.001
 
     def test_cmr(self):
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         granules = earthdata.cmr(short_name="GEDI_L4A_AGB_Density_V2_1_2056", polygon=region["poly"])
         assert len(granules) >= 130
         assert 'GEDI04_A_' in granules[0]
 
-@pytest.mark.network
 class TestL4B:
     def test_gedi(self, init):
         resource = "ATL03_20220105023009_02111406_005_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region['poly'],
             "srt": icesat2.SRT_LAND,

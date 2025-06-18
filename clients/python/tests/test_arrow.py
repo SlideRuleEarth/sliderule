@@ -36,9 +36,7 @@ def make_rqst(endpoint, domain, organization, data):
         os.remove(tmpname)
     return df
 
-@pytest.mark.network
 class TestArrow:
-
     def test_atl24x(self, domain, organization):
         df = make_rqst("atl24x", domain, organization, {
             "output": {"format": "parquet"},

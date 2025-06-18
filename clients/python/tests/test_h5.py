@@ -1,7 +1,6 @@
 """Tests for h5 endpoint."""
 
 import pytest
-import sliderule
 from sliderule import h5 as h5coro
 
 ATL03_FILE1 = "ATL03_20181019065445_03150111_005_01.h5"
@@ -10,7 +9,6 @@ ATL06_FILE1 = "ATL06_20181019065445_03150111_005_01.h5"
 ATL06_FILE2 = "ATL06_20181110092841_06530106_005_01.h5"
 INVALID_FILE = "ATL99_20032_2342.h5"
 
-@pytest.mark.network
 class TestApi:
     def test_happy_case(self, init):
         epoch_offset = h5coro.h5("ancillary_data/atlas_sdp_gps_epoch", ATL03_FILE1, "icesat2")[0]

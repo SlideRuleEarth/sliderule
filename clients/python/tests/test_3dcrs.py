@@ -3,7 +3,6 @@
 import pytest
 from sliderule import icesat2
 
-@pytest.mark.network
 class Test3dCRS:
     def test_atl06p(self, init):
         resource = "ATL03_20181019065445_03150111_005_01.h5"

@@ -14,10 +14,9 @@ sigma = 1.0e-9
 vrtLon = -150.0
 vrtLat =  70.0
 vrtElevation = 116.25
-vrtFile      = '/vsis3/pgc-opendata-dems/arcticdem/mosaics/v4.1/2m_dem_tiles.vrt'
+vrtFile      = '/vsis3/sliderule/data/PGC/arcticdem_2m_v4_1_tiles.vrt'
 vrtFileTime  = 1358108640.0
 
-@pytest.mark.network
 class TestMosaic:
     def test_vrt(self, init):
         rqst = {"samples": {"asset": "arcticdem-mosaic"}, "coordinates": [[vrtLon,vrtLat]]}
@@ -63,7 +62,7 @@ class TestMosaic:
 
     def test_nearestneighbour(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
                   "srt": 3,
@@ -85,7 +84,7 @@ class TestMosaic:
 
     def test_zonal_stats(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
                   "srt": 3,
@@ -108,7 +107,6 @@ class TestMosaic:
         assert gdf["mosaic.stdev"].describe()["count"] == 957
         assert gdf["mosaic.time"].iloc[0] == vrtFileTime
 
-@pytest.mark.network
 class TestStrips:
     def test_indexed_raster(self, init):
         region_of_interest = [  {'lon': -46.76533411521963, 'lat': 65.4938164756588},
