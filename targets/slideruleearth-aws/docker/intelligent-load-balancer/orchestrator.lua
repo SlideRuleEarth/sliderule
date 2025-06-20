@@ -705,11 +705,8 @@ local function ratelimit(txn)
     if blocked_until then
         local now = os.time()
         if blocked_until > now then
-            txn.res:set_status(429)
-            txn.res:add_header("Content-Type", "text/plain")
-            txn.res:add_header("Retry-After", tostring(blocked_until - now))
-            txn.res:send("Your request has been rate limited, please reach out to support@mail.slideruleearth.io for possible use of a private cluster\n")
-            txn:done() -- Stop processing this request
+            txn:set_var("txn.block_this_ip", true)
+            txn:set_var("txn.retry_after", tostring(blocked_until - now))
         else
             BlockedIPs[client_ip] = nil
         end
@@ -864,7 +861,7 @@ core.register_service("orchestrator_prometheus", "http", api_prometheus)
 core.register_service("orchestrator_health", "http", api_health)
 core.register_service("orchestrator_status", "http", api_status)
 core.register_service("orchestrator_block", "http", api_block)
-core.register_action("block_bad_ips", { "http-req" }, ratelimit)
+core.register_action("orchestrator_ratelimit", { "http-req" }, ratelimit)
 core.register_task(backgroud_scrubber)
 core.register_fetches("next_node", orchestrator_next_node)
 core.register_converters("extract_ip", orchestrator_extract_ip)

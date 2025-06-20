@@ -3,6 +3,7 @@ from werkzeug.exceptions import abort
 from manager.db import execute_command_db, columns_db
 from manager.geo import get_geo
 from datetime import date
+import json
 import requests
 import hashlib
 
@@ -53,27 +54,26 @@ def captureit(endpoint, duration):
         count_metrics[endpoint + "_count"] = count_metrics.get(endpoint + "_count", 0) + 1
 
 def ratelimitit(source_ip, account):
-    # determine request counts
+    # update request times
     now = date.today().isocalendar()
     this_request_time = (now.week, now.year)
     last_request_time = user_request_time.get(source_ip, (0,0))
+    user_request_time[source_ip] = this_request_time
+    # update request count
     if this_request_time == last_request_time:
         user_request_count[source_ip] += 1
+        # check request rate
+        if user_request_count[source_ip] >= current_app.config['RATELIMIT_WEEKLY_COUNT']:
+            print(f'Requests originating from {source_ip} will be rate limited for {current_app.config['RATELIMIT_BACKOFF_PERIOD']} minutes')
+            orchestrator_url = current_app.config['ORCHESTRATOR'] + "/discovery/block"
+            requests.post(orchestrator_url, data=json.dumps({"address": source_ip, "duration": current_app.config['RATELIMIT_BACKOFF_PERIOD']}))
+            user_request_count[source_ip] -= current_app.config['RATELIMIT_BACKOFF_COUNT']
+            return True # ip is being rate limited
     else:
+        # initialize (restart) request count
         user_request_count[source_ip] = 1
-    user_request_time[source_ip] = this_request_time
-    # check request rates
-    MAX_WEEKLY_COUNT = 100000 # maximum number of requests that can be made in one week
-    MAX_COUNT_BACKOFF = 10 # after the max count is reached, this is the number of new requests that can be made before the next backoff
-    BACKOFF_PERIOD = 10 * 60 # seconds, this user will not be able to make requests for this long
-    if user_request_count[source_ip] >= MAX_WEEKLY_COUNT:
-        print(f'User {source_ip} will be rate limited for {BACKOFF_PERIOD} minutes')
-        orchestrator_url = current_app.config['ORCHESTRATOR'] + "/discovery/block"
-        requests.post(orchestrator_url, data={"address": source_ip, "duration": BACKOFF_PERIOD})
-        user_request_count[source_ip] -= MAX_COUNT_BACKOFF
-        return True
     # nominal return
-    return False
+    return False # no rate limiting
 
 def get_metrics():
     global gauge_metrics, count_metrics

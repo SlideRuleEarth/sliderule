@@ -88,3 +88,6 @@ services:
     environment:
       - DUCKDB_REMOTE_FILE=s3://sliderule/data/manager/manager-localhost-latest.db
       - ORCHESTRATOR=http://127.0.0.1:8050
+      - RATELIMIT_WEEKLY_COUNT=$RATELIMIT_WEEKLY_COUNT
+      - RATELIMIT_BACKOFF_COUNT=$RATELIMIT_BACKOFF_COUNT
+      - RATELIMIT_BACKOFF_PERIOD=$RATELIMIT_BACKOFF_PERIOD
