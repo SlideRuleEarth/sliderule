@@ -71,9 +71,11 @@ class Usgs3dep10meterDemRaster: public GeoRaster
                          1,                   /* elevationBandNum */
                          GdalRaster::NO_BAND, /* maskBandNum      */
                          NULL,                /* overrideGeoTransform */
-                         NULL) {}             /* overrideCRS */
+                         overrideTargetCRS) {}
 
                ~Usgs3dep10meterDemRaster (void) = default;
+
+        static OGRErr overrideTargetCRS(OGRSpatialReference& target, const void* param=NULL);
 
         /*--------------------------------------------------------------------
          * Data

@@ -23,7 +23,7 @@ heights = { 0 }
 print(string.format("\n-------------------------------------------------\nusgs3dep 10meter DEM sample (serial)\n-------------------------------------------------"))
 
 
-local expResults = {{2653.932630497031, 1354129161.0, '/vsis3/prd-tnm/StagedProducts/Elevation/13/TIFF/USGS_Seamless_DEM_13.vrt'}}
+local expResults = {{2638.235986840923, 1354129161.0, '/vsis3/prd-tnm/StagedProducts/Elevation/13/TIFF/USGS_Seamless_DEM_13.vrt'}}
 
 
 local demType = "usgs3dep-10meter-dem"

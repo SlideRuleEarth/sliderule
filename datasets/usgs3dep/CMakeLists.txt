@@ -6,6 +6,7 @@ target_sources(slideruleLib
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/package/usgs3dep.cpp
         ${CMAKE_CURRENT_LIST_DIR}/package/Usgs3dep1meterDemRaster.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/Usgs3dep10meterDemRaster.cpp
 )
 
 target_include_directories (slideruleLib
