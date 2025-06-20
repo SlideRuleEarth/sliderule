@@ -165,6 +165,15 @@ StatData = {
 }
 
 --
+-- BlockedIPs
+--
+--  {
+--      "<ip_address>": <timestamp when ip is no longer blocked>
+--  }
+--
+BlockedIPs = {}
+
+--
 -- Constants
 --
 MaxLocksPerNode = 3 -- must be coordinated with proxy.lua extension
@@ -659,6 +668,55 @@ local function api_status(applet)
 end
 
 --
+-- API: /discovery/block
+--
+--  Rate limits listed IP address
+--
+--  INPUT:
+--  {
+--      "address": "<ip address>"
+--      "duration": <seconds to block>
+--  }
+--
+local function api_block(applet)
+
+    -- process request
+    local body = applet:receive()
+    local request = json.decode(body)
+    local address = request["address"]
+    local duration = request["duration"]
+
+    -- block ip for duration specified
+    local now = os.time()
+    BlockedIPs[address] = now + duration
+
+    -- send response
+    applet:set_status(200)
+    applet:start_response()
+
+end
+
+--
+-- Action: ratelimit
+--
+local function ratelimit(txn)
+    local client_ip = txn.sf:src()
+    if BlockedIPs[client_ip] then
+        local now = os.time()
+        if BlockedIPs[client_ip] > now then
+            txn:Info("Rate limiting request from" .. client_ip)
+            txn.res:set_status(429)
+            txn.res:add_header("Content-Type", "text/plain")
+            txn.res:add_header("Retry-After", tostring(BlockedIPs[client_ip] - now))
+            txn.res:send("Your request has been rate limited, please reach out to support@mail.slideruleearth.io for possible use of a private cluster\n")
+            txn:done() -- Stop processing this request
+        else
+            BlockedIPs[client_ip] = nil
+        end
+    end
+end
+
+--
 -- Task: scrubber
 --
 local function backgroud_scrubber()
@@ -805,6 +863,8 @@ core.register_service("orchestrator_unlock", "http", api_unlock)
 core.register_service("orchestrator_prometheus", "http", api_prometheus)
 core.register_service("orchestrator_health", "http", api_health)
 core.register_service("orchestrator_status", "http", api_status)
+core.register_service("orchestrator_block", "http", api_block)
+core.register_action("block_bad_ips", { "http-req" }, ratelimit)
 core.register_task(backgroud_scrubber)
 core.register_fetches("next_node", orchestrator_next_node)
 core.register_converters("extract_ip", orchestrator_extract_ip)

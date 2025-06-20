@@ -2,6 +2,7 @@ from flask import (Blueprint, request, current_app)
 from werkzeug.exceptions import abort
 from manager.db import execute_command_db, columns_db
 from manager.geo import get_geo
+from datetime import date
 import hashlib
 
 ####################
@@ -10,6 +11,9 @@ import hashlib
 
 gauge_metrics = {}
 count_metrics = {}
+
+user_request_count = {} # the number of times this user has made a request
+user_request_time = {} # last time this user made a request
 
 telemetry = Blueprint('telemetry', __name__, url_prefix='/manager/telemetry')
 
@@ -47,6 +51,27 @@ def captureit(endpoint, duration):
         gauge_metrics[endpoint + "_sum"] = gauge_metrics.get(endpoint + "_sum", 0.0) + duration
         count_metrics[endpoint + "_count"] = count_metrics.get(endpoint + "_count", 0) + 1
 
+def ratelimitit(source_ip, account):
+    # determine request counts
+    now = date.today().isocalendar()
+    this_request_time = (now.week, now.year)
+    last_request_time = user_request_time.get(source_ip, (0,0))
+    if this_request_time == last_request_time:
+        user_request_count[source_ip] += 1
+    else:
+        user_request_count[source_ip] = 1
+    user_request_time[source_ip] = this_request_time
+    # check request rates
+    MAX_WEEKLY_COUNT = 100000 # maximum number of requests that can be made in one week
+    MAX_COUNT_BACKOFF = 10 # after the max count is reached, this is the number of new requests that can be made before the next backoff
+    BACKOFF_PERIOD = 10 * 60 # seconds, this user will not be able to make requests for this long
+    if user_request_count[source_ip] >= MAX_WEEKLY_COUNT:
+        print(f'User {source_ip} will be rate limited for {BACKOFF_PERIOD} minutes')
+        user_request_count[source_ip] -= MAX_COUNT_BACKOFF
+        return True
+    # nominal return
+    return False
+
 def get_metrics():
     global gauge_metrics, count_metrics
     return gauge_metrics, count_metrics
@@ -66,7 +91,9 @@ def record():
         endpoint = data['endpoint']
         duration = data['duration']
         source_ip = data['source_ip'].split(",")[0]
+        account = data['account']
         captureit(endpoint, duration)
+        ratelimitit(source_ip, account)
         if endpoint not in current_app.config['ENDPOINT_TLM_EXCLUSION']:
             entry = ( data["record_time"],
                       hashit(source_ip),
@@ -77,7 +104,7 @@ def record():
                       endpoint,
                       duration,
                       data['status_code'],
-                      data['account'],
+                      account,
                       data['version'] )
             cmd = f"""
                 INSERT INTO telemetry ({', '.join(columns_db("telemetry"))})
