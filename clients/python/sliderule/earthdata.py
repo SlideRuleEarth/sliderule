@@ -483,10 +483,19 @@ def __stac_search(provider, short_name, collections, polygons, time_start, time_
 
     # add polygon if provided
     if polygons:
-        rqst["intersects"] = {
-            "type": "Polygon",
-            "coordinates": [[[coord["lon"], coord["lat"]] for coord in polygon] for polygon in polygons]
-        }
+        if len(polygons) == 1 and len(polygons[0]) == 1:
+            # Single point
+            coord = polygons[0][0]
+            rqst["intersects"] = {
+                "type": "Point",
+                "coordinates": [coord["lon"], coord["lat"]]
+            }
+        else:
+            # Regular polygon handling
+            rqst["intersects"] = {
+                "type": "Polygon",
+                "coordinates": [[[coord["lon"], coord["lat"]] for coord in polygon] for polygon in polygons]
+            }
 
     # make initial stac request
     data = context.post(url, data=json.dumps(rqst), headers=headers)

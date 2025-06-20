@@ -34,6 +34,12 @@ arcticdem_test_region = [
     ]
 ]
 
+arcticdem_test_point = [
+    [
+        { "lon": -152.0, "lat": 68.5 }
+    ]
+]
+
 # Ellsworth Mountains, West Antarctica
 rema_test_region = [
     [
@@ -41,6 +47,12 @@ rema_test_region = [
         { "lon": -86.0, "lat": -79.0 },
         { "lon": -82.0, "lat": -79.0 },
         { "lon": -82.0, "lat": -78.0 },
+        { "lon": -86.0, "lat": -78.0 }
+    ]
+]
+
+rema_test_point = [
+    [
         { "lon": -86.0, "lat": -78.0 }
     ]
 ]
@@ -84,9 +96,17 @@ class TestSTAC:
         assert len(catalog["features"]) == 702
         assert catalog["features"][0]['properties']['datetime'] == "2022-05-16T21:47:36Z"
 
+        catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_point, time_start="2000-01-01T00:00:00Z", as_str=False)
+        assert len(catalog["features"]) == 16
+        assert catalog["features"][0]['properties']['datetime'] == "2022-03-24T22:38:46Z"
+
         catalog = earthdata.stac(short_name="rema-strips", polygon=rema_test_region, time_start="2000-01-01T00:00:00Z", as_str=False)
         assert len(catalog["features"]) == 603
         assert catalog["features"][0]['properties']['datetime'] == "2024-12-21T14:07:17Z"
+
+        catalog = earthdata.stac(short_name="rema-strips", polygon=rema_test_point, time_start="2000-01-01T00:00:00Z", as_str=False)
+        assert len(catalog["features"]) == 49
+        assert catalog["features"][0]['properties']['datetime'] == "2024-11-07T14:25:48Z"
 
     def test_asstr(self):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
