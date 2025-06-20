@@ -701,13 +701,13 @@ end
 --
 local function ratelimit(txn)
     local client_ip = txn.sf:src()
-    if BlockedIPs[client_ip] then
+    local blocked_until = BlockedIPs[client_ip]
+    if blocked_until then
         local now = os.time()
-        if BlockedIPs[client_ip] > now then
-            txn:Info("Rate limiting request from" .. client_ip)
+        if blocked_until > now then
             txn.res:set_status(429)
             txn.res:add_header("Content-Type", "text/plain")
-            txn.res:add_header("Retry-After", tostring(BlockedIPs[client_ip] - now))
+            txn.res:add_header("Retry-After", tostring(blocked_until - now))
             txn.res:send("Your request has been rate limited, please reach out to support@mail.slideruleearth.io for possible use of a private cluster\n")
             txn:done() -- Stop processing this request
         else

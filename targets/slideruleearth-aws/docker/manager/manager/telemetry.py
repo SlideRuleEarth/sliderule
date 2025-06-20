@@ -3,6 +3,7 @@ from werkzeug.exceptions import abort
 from manager.db import execute_command_db, columns_db
 from manager.geo import get_geo
 from datetime import date
+import requests
 import hashlib
 
 ####################
@@ -67,6 +68,8 @@ def ratelimitit(source_ip, account):
     BACKOFF_PERIOD = 10 * 60 # seconds, this user will not be able to make requests for this long
     if user_request_count[source_ip] >= MAX_WEEKLY_COUNT:
         print(f'User {source_ip} will be rate limited for {BACKOFF_PERIOD} minutes')
+        orchestrator_url = current_app.config['ORCHESTRATOR'] + "/discovery/block"
+        requests.post(orchestrator_url, data={"address": source_ip, "duration": BACKOFF_PERIOD})
         user_request_count[source_ip] -= MAX_COUNT_BACKOFF
         return True
     # nominal return

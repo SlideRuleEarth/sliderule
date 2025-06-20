@@ -19,7 +19,8 @@ def app():
         'GEOLITE2_COUNTRY': '/data/GeoLite2-Country.mmdb',
         'ATL13_MAPPINGS': '/data/ATL13/atl13_mappings.json',
         'ATL13_MASK': '/data/ATL13/inland_water_body.parquet',
-        'ENDPOINT_TLM_EXCLUSION': []
+        'ENDPOINT_TLM_EXCLUSION': [],
+        'ORCHESTRATOR': "http:127.0.0.1:8050"
     })
 
     with app.app_context():

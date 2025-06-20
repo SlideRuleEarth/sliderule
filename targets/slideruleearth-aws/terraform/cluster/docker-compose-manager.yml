@@ -15,6 +15,7 @@ services:
       - MANAGER_API_KEY=$MANAGER_API_KEY
       - DUCKDB_LOCAL_FILE=$DUCKDB_LOCAL_FILE
       - DUCKDB_REMOTE_FILE=$DUCKDB_REMOTE_FILE
+      - ORCHESTRATOR=http://10.0.1.5:8050
   autoheal:
     image: willfarrell/autoheal:latest
     tty: true
