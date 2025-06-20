@@ -89,6 +89,7 @@ class EndpointProxy: public LuaObject
         Cond                    completion;
         const char*             endpoint;
         const char*             parameters;
+        const char*             sourceIP;
         int                     timeout;
         int                     locksPerNode;
         Publisher*              outQ;
@@ -101,7 +102,7 @@ class EndpointProxy: public LuaObject
 
                             EndpointProxy           (lua_State* L, const char* _endpoint, const char** _resources, int _num_resources,
                                                      const char* _parameters, int _timeout_secs, int _locks_per_node, const char* _outq_name,
-                                                     bool _send_terminator, int _cluster_size_hint);
+                                                     bool _send_terminator, int _cluster_size_hint, const char* _source_ip);
                             ~EndpointProxy          (void) override;
 
         static int          luaTotalResources       (lua_State* L);

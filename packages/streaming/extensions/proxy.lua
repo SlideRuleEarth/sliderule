@@ -84,7 +84,7 @@ local function proxy(resources, parms_tbl, endpoint, rec)
     local locks_per_node = (parms["poly"] and not parms["ignore_poly_for_cmr"]) and 1 or core.MAX_LOCKS_PER_NODE
 
     -- Proxy Request --
-    local endpoint_proxy = core.proxy(endpoint, resources, json.encode(parms_tbl), node_timeout, locks_per_node, rsps_from_nodes, terminate_proxy_stream, cluster_size_hint)
+    local endpoint_proxy = core.proxy(endpoint, resources, json.encode(parms_tbl), node_timeout, locks_per_node, rsps_from_nodes, terminate_proxy_stream, cluster_size_hint, _rqst.srcip)
 
     -- Wait Until Proxy Completes --
     local duration = 0
