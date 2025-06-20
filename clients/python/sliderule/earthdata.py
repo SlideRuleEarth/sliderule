@@ -68,7 +68,9 @@ DATASETS = {
     "HLS":                                                 {"provider": "LPCLOUD",     "version": None,   "api": "stac",  "formats": [".tiff"],  "collections": ["HLSS30.v2.0", "HLSL30.v2.0"]},
     "Digital Elevation Model (DEM) 1 meter":               {"provider": "USGS",        "version": None,   "api": "tnm",   "formats": [".tiff"],  "collections": []},
     "SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1":  {"provider": "POCLOUD",     "version": None,   "api": "cmr",   "formats": [".nc"],    "collections": ["C2147947806-POCLOUD"]},
-    "SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1":        {"provider": "POCLOUD",     "version": None,   "api": "cmr",   "formats": [".nc"],    "collections": ["C2152046451-POCLOUD"]}
+    "SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1":        {"provider": "POCLOUD",     "version": None,   "api": "cmr",   "formats": [".nc"],    "collections": ["C2152046451-POCLOUD"]},
+    "arcticdem-strips":                                    {"provider": "PGC",         "version": None,   "api": "stac",  "formats": [".tiff"],  "collections": ["arcticdem-strips-s2s041-2m"]},
+    "rema-strips":                                         {"provider": "PGC",         "version": None,   "api": "stac",  "formats": [".tiff"],  "collections": ["rema-strips-s2s041-2m"]}
 }
 
 # best effort match of sliderule assets to earthdata datasets
@@ -92,7 +94,9 @@ ASSETS_TO_DATASETS = {
     "icesat2-atl09": "ATL09",
     "icesat2-atl13": "ATL13",
     "atlas-local": "ATL03",
-    "nsidc-s3": "ATL03"
+    "nsidc-s3": "ATL03",
+    "arcticdem-strips": "arcticdem-strips",
+    "rema-strips": "rema-strips"
 }
 
 # upper limit on resources returned from CMR query per request
@@ -409,7 +413,11 @@ def __build_geojson(rsps):
     if "links" in geojson:
         for link in geojson["links"]:
             if link["rel"] == "next":
-                next = link["href"]
+                if link.get("method", "GET") == "POST":  # POST based pagination (PGC STAC)
+                    next = (link["href"], link["body"])
+                else:
+                    next = link["href"]                  # GET based pagination (CMR STAC)
+                break
         del geojson["links"]
     if 'numberMatched' in geojson:
         del geojson['numberMatched']
@@ -431,6 +439,14 @@ def __build_geojson(rsps):
             if "href" in assetsDict[val]:
                 propertiesDict[val] = assetsDict[val]["href"]
         del geojson["features"][i]["assets"]
+
+    # Additional logic for PGC strips
+    for i in reversed(range(len(geojson["features"]))):
+        props = geojson["features"][i]["properties"]
+        if "dem" in props and "mask" in props:
+            keep = {"datetime", "start_datetime", "end_datetime", "dem", "mask"}
+            geojson["features"][i]["properties"] = {k: v for k, v in props.items() if k in keep}
+
     return geojson, next
 
 #
@@ -453,7 +469,11 @@ def __stac_search(provider, short_name, collections, polygons, time_start, time_
     context.trust_env = False # prevent requests from attaching credentials from environment
 
     # build stac request
-    url = 'https://cmr.earthdata.nasa.gov/stac/{}/search'.format(provider)
+    if provider == 'PGC':
+        url = 'https://stac.pgc.umn.edu/api/v1/search'
+    else:
+        url = 'https://cmr.earthdata.nasa.gov/stac/{}/search'.format(provider)
+
     headers = {'Content-Type': 'application/json'}
     rqst = {
         "limit": STAC_PAGE_SIZE,
@@ -475,7 +495,12 @@ def __stac_search(provider, short_name, collections, polygons, time_start, time_
 
     # Continue fetching pages if 'next' link is available
     while next_link:
-        data = context.get(next_link, headers=headers)
+        if isinstance(next_link, tuple):
+            next_url, next_body = next_link
+            data = context.post(next_url, data=json.dumps(next_body), headers=headers)
+        else:
+            data = context.get(next_link, headers=headers)
+
         data.raise_for_status()
         _geojson, next_link = __build_geojson(data)
         geojson["features"] += _geojson["features"]

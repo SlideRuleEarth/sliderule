@@ -13,6 +13,9 @@ import json
 # Set test directory
 TESTDIR = Path(__file__).parent
 
+# Change connection timeout from default 10s to 1s
+sliderule.set_rqst_timeout((1, 60))
+
 # Define region of interest
 grandmesa = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
               {"lon": -107.7677425431139, "lat": 38.90611184543033},
@@ -20,8 +23,27 @@ grandmesa = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
               {"lon": -108.3605610678553, "lat": 39.25086131372244},
               {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
 
-# Change connection timeout from default 10s to 1s
-sliderule.set_rqst_timeout((1, 60))
+# Central Brooks Range, northern Alaska
+arcticdem_test_region = [
+    [
+        { "lon": -152.0, "lat": 68.5 },
+        { "lon": -152.0, "lat": 67.5 },
+        { "lon": -147.0, "lat": 67.5 },
+        { "lon": -147.0, "lat": 68.5 },
+        { "lon": -152.0, "lat": 68.5 }
+    ]
+]
+
+# Ellsworth Mountains, West Antarctica
+rema_test_region = [
+    [
+        { "lon": -86.0, "lat": -78.0 },
+        { "lon": -86.0, "lat": -79.0 },
+        { "lon": -82.0, "lat": -79.0 },
+        { "lon": -82.0, "lat": -78.0 },
+        { "lon": -86.0, "lat": -78.0 }
+    ]
+]
 
 #
 # CMR
@@ -53,8 +75,18 @@ class TestCMR:
 class TestSTAC:
     def test_asdict(self):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
-        catalog = earthdata.stac(short_name="HLS", polygon=region["poly"], time_start="2022-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z", as_str=False)
-        assert catalog["features"][0]['properties']['eo:cloud_cover'] == 99
+        catalog = earthdata.stac(short_name="HLS", polygon=region["poly"], time_start="2021-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z", as_str=False)
+        assert len(catalog["features"]) == 590
+        assert catalog["features"][0]['properties']['eo:cloud_cover'] == 2
+
+    def test_asdict_pgc(self):
+        catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_region, time_start="2000-01-01T00:00:00Z", as_str=False)
+        assert len(catalog["features"]) == 702
+        assert catalog["features"][0]['properties']['datetime'] == "2022-05-16T21:47:36Z"
+
+        catalog = earthdata.stac(short_name="rema-strips", polygon=rema_test_region, time_start="2000-01-01T00:00:00Z", as_str=False)
+        assert len(catalog["features"]) == 603
+        assert catalog["features"][0]['properties']['datetime'] == "2024-12-21T14:07:17Z"
 
     def test_asstr(self):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
@@ -66,7 +98,6 @@ class TestSTAC:
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         with pytest.raises(sliderule.FatalError):
             earthdata.stac(short_name="DOES_NOT_EXIST", polygon=region["poly"], time_start="2022-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z")
-
 #
 # TNM
 #

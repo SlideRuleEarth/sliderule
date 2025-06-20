@@ -14,7 +14,7 @@ sigma = 1.0e-9
 vrtLon = -150.0
 vrtLat =  70.0
 vrtElevation = 116.25
-vrtFile      = '/vsis3/pgc-opendata-dems/arcticdem/mosaics/v4.1/2m_dem_tiles.vrt'
+vrtFile      = '/vsis3/sliderule/data/PGC/arcticdem_2m_v4_1_tiles.vrt'
 vrtFileTime  = 1358108640.0
 
 @pytest.mark.network
