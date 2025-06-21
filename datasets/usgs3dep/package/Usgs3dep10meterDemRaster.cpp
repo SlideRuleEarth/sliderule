@@ -38,34 +38,52 @@
 
 /*----------------------------------------------------------------------------
  * overrideTargetCRS
+ *
+ * This function sets the target CRS to a compound coordinate system using
+ * EPSG:6318 (NAD83(2011)) for horizontal and EPSG:5703 (NAVD88) for vertical.
+ *
+ * NOTE: The only way to fully control the geoid realization (e.g., selecting
+ * the specific geoid offset grid like us_noaa_g2018u0.tif) is to explicitly
+ * define the transformation using a PROJ pipeline string. If a pipeline is
+ * provided in parms->proj_pipeline, it will be used in GdalRaster::createTransform()
+ * and will take precedence over any default CRS-based transformation logic.
+ *
+ * This pipeline will be later provided by the science team. When it is provided,
+ * the constructor for Usgs3dep10meterDemRaster should set it as parms->proj_pipeline
+ * and the rest of the code should stay as is, including this method.
  *----------------------------------------------------------------------------*/
 OGRErr Usgs3dep10meterDemRaster::overrideTargetCRS(OGRSpatialReference& target, const void* param)
 {
     static_cast<void>(param);
     OGRErr ogrerr = OGRERR_FAILURE;
-    const int HORIZONTAL_EPSG = 4269;  // NAD83
-    const int VERTICAL_EPSG   = 5703;  // NAVD88 height
+
+    const int EXPECTED_INPUT_EPSG = 4269;  // NAD83
+    const int TARGET_EPSG         = 6318;  // NAD83(2011)
+    const int VERTICAL_EPSG       = 5703;  // NAVD88 height
 
     const int input_epsg = target.GetEPSGGeogCS();
-    if (input_epsg != HORIZONTAL_EPSG)
+    if (input_epsg != EXPECTED_INPUT_EPSG)
     {
-        mlog(ERROR, "Unsupported CRS EPSG:%d, only EPSG:4269 is supported for 10m tiles", input_epsg);
+        mlog(ERROR, "Unsupported CRS EPSG:%d, only EPSG:%d (NAD83) is accepted as input", input_epsg, EXPECTED_INPUT_EPSG);
         return ogrerr;
     }
 
     OGRSpatialReference horizontal;
     OGRSpatialReference vertical;
 
-    const OGRErr er1 = horizontal.importFromEPSG(HORIZONTAL_EPSG);
+    const OGRErr er1 = horizontal.importFromEPSG(TARGET_EPSG);
     const OGRErr er2 = vertical.importFromEPSG(VERTICAL_EPSG);
     const OGRErr er3 = target.SetCompoundCS("sliderule", &horizontal, &vertical);
 
-    if(er1 == OGRERR_NONE && er2 == OGRERR_NONE && er3 == OGRERR_NONE)
+    if (er1 == OGRERR_NONE && er2 == OGRERR_NONE && er3 == OGRERR_NONE)
     {
-        mlog(DEBUG, "Successfully constructed compound CRS EPSG:%d+%d", HORIZONTAL_EPSG, VERTICAL_EPSG);
+        mlog(DEBUG, "Constructed compound CRS using EPSG:%d+%d", TARGET_EPSG, VERTICAL_EPSG);
         ogrerr = OGRERR_NONE;
     }
-    else mlog(ERROR, "Failed to overried target CRS");
+    else
+    {
+        mlog(ERROR, "Failed to construct compound CRS EPSG:%d+%d", TARGET_EPSG, VERTICAL_EPSG);
+    }
 
     return ogrerr;
 }
