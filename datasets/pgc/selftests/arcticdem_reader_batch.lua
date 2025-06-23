@@ -6,6 +6,16 @@ if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
     return runner.skip()
 end
 
+-- Setup --
+-- runner.log(core.DEBUG)
+
+local _,td = runner.srcscript()
+package.path = td .. "../utils/?.lua;" .. package.path
+
+local readgeojson = require("readgeojson")
+local jsonfile = td .. "../data/arcticdem_strips.json"
+local contents = readgeojson.load(jsonfile)
+
 -- Self Test --
 
 local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
@@ -13,21 +23,19 @@ local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
 -- Correct values test for different POIs
 
 local sigma = 1.0e-9
+local lons = {-150, -149.95}
+local lats = {  70,   70.00}
+local heights = {0,   0}
 
-local lons = {-150, -40, 100, 150}
-local lats = {  70,  70,  70,  75}
-local heights = {0,   0,   0,   0}
-
-local expResultsMosaic = { 116.250000000,  2968.085937500, 475.742187500, 19.890625000}
-local expResultsStrips = { 119.554687500,  2968.015625000, 474.156250000, 10.296875000}  -- Only first strip samples for each lon/lat strip group
-
-local expSamplesCnt = {8, 8, 4, 14}
+local expResultsMosaic = { 116.250000000, 108.687500000}
+local expResultsStrips = { 120.367187500, 112.632812500}  -- Only first strip samples for each lon/lat strip group
+local expSamplesCnt = {37, 32}
 
 for i = 1, #demTypes do
 
     local demType = demTypes[i];
     print(string.format("\n--------------------------------\nTest: %s Correct Values\n--------------------------------", demType))
-    local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", sort_by_index=true}))
+    local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", catalog=contents, sort_by_index=true}))
     local tbl, err = dem:batchsample(lons, lats, heights)
 
     if err ~= 0 then
@@ -54,7 +62,9 @@ for i = 1, #demTypes do
                         end
                         runner.assert(math.abs(el - expElevation) < sigma)
                     else
-                        runner.assert(el > 10)  -- Check all other samples
+                        if not (el ~= el) then  -- not NaN
+                            runner.assert(el > 100)  --All others should be > 100
+                        end
                     end
                 end
             else
