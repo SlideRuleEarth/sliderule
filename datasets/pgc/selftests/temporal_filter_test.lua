@@ -23,8 +23,6 @@ local sigma = 1.0e-9
 local lon = -150.0
 local lat =   70.0
 local height = 0
-
-
 local demType = "arcticdem-strips"
 
 local expResults = {
