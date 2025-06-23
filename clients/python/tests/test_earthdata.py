@@ -60,7 +60,7 @@ rema_test_point = [
 #
 # CMR
 #
-@pytest.mark.network
+@pytest.mark.external
 class TestCMR:
     def test_grandmesa_time_range(self, init):
         granules = earthdata.cmr(short_name='ATL03', polygon=grandmesa, time_start='2018-10-01', time_end='2018-12-01')
@@ -83,7 +83,7 @@ class TestCMR:
 #
 # STAC
 #
-@pytest.mark.network
+@pytest.mark.external
 class TestSTAC:
     def test_asdict(self):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
@@ -121,7 +121,7 @@ class TestSTAC:
 #
 # TNM
 #
-@pytest.mark.network
+@pytest.mark.external
 class TestTNM:
     def test_asdict(self):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
@@ -142,7 +142,7 @@ class TestTNM:
 #
 # SlideRule Endpoint
 #
-@pytest.mark.network
+@pytest.mark.external
 class TestSlideRule:
     def test_atl03(self, init):
         parms = {"asset": "icesat2", "poly": grandmesa, "t0": '2018-10-01', "t1": '2019-12-01'}

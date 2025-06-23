@@ -41,3 +41,7 @@ def init(domain, organization, desired_nodes):
 @pytest.fixture(scope='session')
 def performance(request):
     return request.config.option.performance
+
+def pytest_runtest_setup(item):
+    if item.get_closest_marker("external"):
+        item.add_marker(pytest.mark.xfail(reason="external service", strict=False))

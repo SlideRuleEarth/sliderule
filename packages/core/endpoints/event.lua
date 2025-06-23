@@ -7,8 +7,6 @@
 --                  "duration": <seconds to hold connection open | 0 for indefinite>
 --              }
 --
---              rspq - output queue to stream log messages
---
 -- OUTPUT:      application event messages
 --
 
@@ -22,7 +20,7 @@ local duration = parm["duration"] or 600
 
 -- Create dispatcher and publisher
 local dispatcher = streaming.dispatcher(core.EVENTQ)
-local publisher = streaming.publish(rspq)
+local publisher = streaming.publish(_rqst.rspq)
 
 -- Attach publisher to specified record types
 if type & core.LOG          then dispatcher:attach(publisher, "eventrec")       end
@@ -34,7 +32,7 @@ if type & core.ALERT        then dispatcher:attach(publisher, "exceptrec")      
 dispatcher:run()
 
 -- Watch response queue
-local watchq = msg.publish(rspq)
+local watchq = msg.publish(_rqst.rspq)
 
 -- Pend for duration (in 1 second intervals to allow hooks to execute) --
 local seconds = 0

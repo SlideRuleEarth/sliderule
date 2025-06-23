@@ -8,10 +8,9 @@ import os.path
 
 TESTDIR = Path(__file__).parent
 
-@pytest.mark.network
 class TestIcesat2:
     def test_geo(self, init):
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly":             region["poly"],
             "cnf":              0,
@@ -24,7 +23,7 @@ class TestIcesat2:
         assert gdf['solar_elevation'].describe()["min"] - 20.803468704223633 < 0.0000001
 
     def test_ph(self, init):
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly":             region["poly"],
             "cnf":              0,
@@ -37,7 +36,7 @@ class TestIcesat2:
         assert len(gdf["ph_id_count"]) == 403462
 
     def test_atl06(self, init):
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly":             region["poly"],
             "cnf":              0,
@@ -53,7 +52,7 @@ class TestIcesat2:
 # This test takes too long currently.  Need to get GeoParquet support for ATL03 and ancillary data.
 #
 #    def test_atl08_ph(self, init):
-#        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+#        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
 #        parms = {
 #            "poly":             region["poly"],
 #            "srt":              icesat2.SRT_LAND,
@@ -65,7 +64,7 @@ class TestIcesat2:
 #        assert abs(gdf["h_dif_ref"].quantile(q=.75) - 10.342773) < 0.000001
 
     def test_atl08_phoreal(self, init):
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly":             region["poly"],
             "cnf":              0,
@@ -80,10 +79,9 @@ class TestIcesat2:
         assert abs(gdf["sigma_atlas_land%"].quantile(q=.50) - 0.24470525979995728) < 0.000001
         assert abs(gdf["cloud_flag_atm%"].quantile(q=.50) - 1.0) < 0.000001
 
-@pytest.mark.network
 class TestGedi:
     def test_l1b(self, init):
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "asset": "gedil1b",
             "poly": region["poly"],
@@ -99,7 +97,7 @@ class TestGedi:
         assert gdf.rx_open.describe()["max"] == 2851996.0
 
     def test_l2a(self, init):
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "asset": "gedil2a",
             "poly": region["poly"],
@@ -115,7 +113,7 @@ class TestGedi:
         assert abs(gdf["geolocation/elev_highestreturn_a1"].describe()["max"] - 2892) < 1.0
 
     def test_l4a(self, init):
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "asset": "gedil4a",
             "poly": region["poly"],
@@ -131,7 +129,7 @@ class TestGedi:
         assert abs(gdf["geolocation/elev_lowestmode_a1"].describe()["max"] - 2886) < 1.0
 
     def test_l1b_failure(self, init):
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "asset": "gedil1b",
             "poly": region["poly"],
@@ -144,7 +142,7 @@ class TestGedi:
         assert len(gdf) == 0
 
     def test_l2a_failure(self, init):
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "asset": "gedil2a",
             "poly": region["poly"],
@@ -157,7 +155,7 @@ class TestGedi:
         assert len(gdf) == 0
 
     def test_l4a_failure(self, init):
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "asset": "gedil4a",
             "poly": region["poly"],
@@ -170,7 +168,7 @@ class TestGedi:
         assert len(gdf) == 0
 
     def test_l2a_rh_2D(self, init):
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "asset": "gedil2a",
             "poly": region["poly"],

@@ -7,7 +7,6 @@ import pandas as pd
 from sliderule import icesat2, h5
 import time
 
-@pytest.mark.network
 class TestAlgorithm:
     def test_atl06(self, init, performance):
         resource = "ATL03_20181019065445_03150111_005_01.h5"

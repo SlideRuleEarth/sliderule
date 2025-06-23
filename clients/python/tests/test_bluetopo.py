@@ -18,7 +18,6 @@ expElevation   = -14.10
 expUncertainty =   2.58
 expContributor =  63846
 
-@pytest.mark.network
 class TestBlueTopo:
     def test_samples(self, init):
         rqst = {"samples": {"asset": "bluetopo-bathy", "bands": ["Elevation", "Uncertainty", "Contributor"]}, "coordinates": [[lon,lat]]}

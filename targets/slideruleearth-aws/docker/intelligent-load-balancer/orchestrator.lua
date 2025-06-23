@@ -165,6 +165,15 @@ StatData = {
 }
 
 --
+-- BlockedIPs
+--
+--  {
+--      "<ip_address>": <timestamp when ip is no longer blocked>
+--  }
+--
+BlockedIPs = {}
+
+--
 -- Constants
 --
 MaxLocksPerNode = 3 -- must be coordinated with proxy.lua extension
@@ -659,6 +668,52 @@ local function api_status(applet)
 end
 
 --
+-- API: /discovery/block
+--
+--  Rate limits listed IP address
+--
+--  INPUT:
+--  {
+--      "address": "<ip address>"
+--      "duration": <seconds to block>
+--  }
+--
+local function api_block(applet)
+
+    -- process request
+    local body = applet:receive()
+    local request = json.decode(body)
+    local address = request["address"]
+    local duration = request["duration"]
+
+    -- block ip for duration specified
+    local now = os.time()
+    BlockedIPs[address] = now + duration
+
+    -- send response
+    applet:set_status(200)
+    applet:start_response()
+
+end
+
+--
+-- Action: ratelimit
+--
+local function ratelimit(txn)
+    local client_ip = txn.sf:src()
+    local blocked_until = BlockedIPs[client_ip]
+    if blocked_until then
+        local now = os.time()
+        if blocked_until > now then
+            txn:set_var("txn.block_this_ip", true)
+            txn:set_var("txn.retry_after", tostring(blocked_until - now))
+        else
+            BlockedIPs[client_ip] = nil
+        end
+    end
+end
+
+--
 -- Task: scrubber
 --
 local function backgroud_scrubber()
@@ -805,6 +860,8 @@ core.register_service("orchestrator_unlock", "http", api_unlock)
 core.register_service("orchestrator_prometheus", "http", api_prometheus)
 core.register_service("orchestrator_health", "http", api_health)
 core.register_service("orchestrator_status", "http", api_status)
+core.register_service("orchestrator_block", "http", api_block)
+core.register_action("orchestrator_ratelimit", { "http-req" }, ratelimit)
 core.register_task(backgroud_scrubber)
 core.register_fetches("next_node", orchestrator_next_node)
 core.register_converters("extract_ip", orchestrator_extract_ip)

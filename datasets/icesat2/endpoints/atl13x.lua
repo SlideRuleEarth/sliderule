@@ -28,16 +28,16 @@ if parms["key_space"] == core.INVALID_KEY then
             rqst["parms"]["resources"] = data["granules"]
             resources_set_by_ams = true
         else
-            local userlog = msg.publish(rspq)
-            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed to parse response from manager: %s", rspq, response))
+            local userlog = msg.publish(_rqst.rspq)
+            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed to parse response from manager: %s", _rqst.id, response))
             return
         end
     end
     -- apply polygon if supplied
     if resources_set_by_ams and parms:length("poly") > 0 then
-        local userlog = msg.publish(rspq)
+        local userlog = msg.publish(_rqst.rspq)
         rqst["parms"]["asset"] = parms["asset"] -- needed by earth data search function inside get_resources
-        local status, cmr_response = dataframe.get_resources(rqst["parms"], rspq, userlog)
+        local status, cmr_response = dataframe.get_resources(rqst["parms"], _rqst.rspq, userlog)
         if status == RC_SUCCESS and type(cmr_response) == 'table' then
 
             -- pull out all resources from cmr query
@@ -56,21 +56,21 @@ if parms["key_space"] == core.INVALID_KEY then
             rqst["parms"]["resources"] = resources
         else
             -- report error back to user
-            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> earthdata queury failed: %d", rspq, status))
+            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> earthdata queury failed: %d", _rqst.id, status))
         end
     end
 end
 
 -- proxy request
-dataframe.proxy("atl13x", parms, rqst["parms"], rspq, channels, function(userlog)
+dataframe.proxy("atl13x", parms, rqst["parms"], _rqst.rspq, channels, function(userlog)
     local dataframes = {}
     local runners = {}
     local resource = parms["resource"]
     local h5obj = h5.object(parms["asset"], resource)
     for _, beam in ipairs(parms["beams"]) do
-        dataframes[beam] = icesat2.atl13x(beam, parms, h5obj, rspq)
+        dataframes[beam] = icesat2.atl13x(beam, parms, h5obj, _rqst.rspq)
         if not dataframes[beam] then
-            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> on %s failed to create dataframe for beam %s", rspq, resource, beam))
+            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> on %s failed to create dataframe for beam %s", _rqst.id, resource, beam))
         end
     end
     return dataframes, runners

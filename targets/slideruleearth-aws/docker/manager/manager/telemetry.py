@@ -2,6 +2,9 @@ from flask import (Blueprint, request, current_app)
 from werkzeug.exceptions import abort
 from manager.db import execute_command_db, columns_db
 from manager.geo import get_geo
+from datetime import date
+import json
+import requests
 import hashlib
 
 ####################
@@ -10,6 +13,9 @@ import hashlib
 
 gauge_metrics = {}
 count_metrics = {}
+
+user_request_count = {} # the number of times this user has made a request
+user_request_time = {} # last time this user made a request
 
 telemetry = Blueprint('telemetry', __name__, url_prefix='/manager/telemetry')
 
@@ -47,7 +53,27 @@ def captureit(endpoint, duration):
         gauge_metrics[endpoint + "_sum"] = gauge_metrics.get(endpoint + "_sum", 0.0) + duration
         count_metrics[endpoint + "_count"] = count_metrics.get(endpoint + "_count", 0) + 1
 
-
+def ratelimitit(source_ip, account):
+    # update request times
+    now = date.today().isocalendar()
+    this_request_time = (now.week, now.year)
+    last_request_time = user_request_time.get(source_ip, (0,0))
+    user_request_time[source_ip] = this_request_time
+    # update request count
+    if this_request_time == last_request_time:
+        user_request_count[source_ip] += 1
+        # check request rate
+        if user_request_count[source_ip] >= current_app.config['RATELIMIT_WEEKLY_COUNT']:
+            print(f'Requests originating from {source_ip} will be rate limited for {current_app.config['RATELIMIT_BACKOFF_PERIOD']} minutes')
+            orchestrator_url = current_app.config['ORCHESTRATOR'] + "/discovery/block"
+            requests.post(orchestrator_url, data=json.dumps({"address": source_ip, "duration": current_app.config['RATELIMIT_BACKOFF_PERIOD']}))
+            user_request_count[source_ip] -= current_app.config['RATELIMIT_BACKOFF_COUNT']
+            return True # ip is being rate limited
+    else:
+        # initialize (restart) request count
+        user_request_count[source_ip] = 1
+    # nominal return
+    return False # no rate limiting
 
 def get_metrics():
     global gauge_metrics, count_metrics
@@ -67,18 +93,21 @@ def record():
         client = data['client']
         endpoint = data['endpoint']
         duration = data['duration']
+        source_ip = data['source_ip'].split(",")[0]
+        account = data['account']
         captureit(endpoint, duration)
+        ratelimitit(source_ip, account)
         if endpoint not in current_app.config['ENDPOINT_TLM_EXCLUSION']:
             entry = ( data["record_time"],
-                      hashit(data['source_ip']),
-                      locateit(data['source_ip'], f'{client},{endpoint}'),
+                      hashit(source_ip),
+                      locateit(source_ip, f'{client},{endpoint}'),
                       data['aoi']['x'],
                       data['aoi']['y'],
                       client,
                       endpoint,
                       duration,
                       data['status_code'],
-                      data['account'],
+                      account,
                       data['version'] )
             cmd = f"""
                 INSERT INTO telemetry ({', '.join(columns_db("telemetry"))})

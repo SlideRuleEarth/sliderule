@@ -2,7 +2,6 @@
 
 import pytest
 import sliderule
-from sliderule import icesat2
 
 def catchlogs(rec, session):
     global GLOBAL_message
@@ -15,7 +14,6 @@ def catchexceptions(rec, session):
 GLOBAL_message = ""
 GLOBAL_callbacks = {'eventrec': catchlogs, 'exceptrec': catchexceptions}
 
-@pytest.mark.network
 class TestAtl03s:
     def test_badasset(self, init):
         invalid_asset = "invalid-asset"
@@ -27,7 +25,6 @@ class TestAtl03s:
         assert init
         assert(len(rsps) == 0)
 
-@pytest.mark.network
 class TestAtl06:
     def test_badasset(self, init):
         invalid_asset = "invalid-asset"

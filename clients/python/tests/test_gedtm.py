@@ -14,7 +14,6 @@ lon = -62.0
 lat = -3.0
 
 
-@pytest.mark.network
 class TestGedtm:
     def test_gedtm_30meter(self, init):
         rqst = {"samples": {"asset": "gedtm-30meter"}, "coordinates": [[lon,lat]]}

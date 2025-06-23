@@ -7,9 +7,7 @@ from sliderule import sliderule
 TESTDIR = Path(__file__).parent
 RESOURCES = ["ATL24_20181014001920_02350103_006_02_001_01.h5"]
 
-@pytest.mark.network
 class TestAtl24x:
-
     def test_nominal(self, init):
         gdf = sliderule.run("atl24x", {}, resources=RESOURCES)
         assert init

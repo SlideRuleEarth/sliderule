@@ -12,9 +12,9 @@
 
 local json = require("json")
 local parm = json.decode(arg[1])
-local outp = msg.publish(rspq)
+local outp = msg.publish(_rqst.rspq)
 
-print("Output Queue", rspq)
+print("Output Queue", _rqst.rspq)
 
 outp:sendstring(parm["var4"]["type"].."\n")
 outp:sendstring(parm["var4"]["files"].."\n")

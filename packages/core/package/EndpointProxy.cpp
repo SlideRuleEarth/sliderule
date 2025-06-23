@@ -107,9 +107,10 @@ int EndpointProxy::luaCreate (lua_State* L)
         const char* _outq_name          = getLuaString(L, 6); // get output queue
         const bool  _send_terminator    = getLuaBoolean(L, 7, true, false); // get send terminator flag
         const long  _cluster_size_hint  = getLuaInteger(L, 8, true, 0);
+        const char* _source_ip          = getLuaString(L, 9, true, NULL);
 
         /* Return Endpoint Proxy Object */
-        EndpointProxy* ep = new EndpointProxy(L, _endpoint, _resources, _num_resources, _parameters, _timeout_secs, _locks_per_node, _outq_name, _send_terminator, _cluster_size_hint);
+        EndpointProxy* ep = new EndpointProxy(L, _endpoint, _resources, _num_resources, _parameters, _timeout_secs, _locks_per_node, _outq_name, _send_terminator, _cluster_size_hint, _source_ip);
         const int retcnt = createLuaObject(L, ep);
         delete [] _resources;
         return retcnt;
@@ -127,7 +128,7 @@ int EndpointProxy::luaCreate (lua_State* L)
  *----------------------------------------------------------------------------*/
 EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** _resources, int _num_resources,
                               const char* _parameters, int _timeout_secs, int _locks_per_node, const char* _outq_name,
-                              bool _send_terminator, int _cluster_size_hint):
+                              bool _send_terminator, int _cluster_size_hint, const char* _source_ip):
     LuaObject(L, OBJECT_TYPE, LUA_META_NAME, LUA_META_TABLE)
 {
     assert(_resources);
@@ -162,21 +163,10 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
     /* Completion Condition */
     numResourcesComplete = 0;
 
-    /* Proxy Active */
-    active = true;
-
-    /* Create Proxy Threads */
-    rqstPub = new Publisher(NULL, NULL, PROXY_QUEUE_DEPTH);
-    rqstSub = new Subscriber(*rqstPub);
-    proxyPids = new Thread* [numProxyThreads];
-    for(int t = 0; t < numProxyThreads; t++)
-    {
-        proxyPids[t] = new Thread(proxyThread, this);
-    }
-
     /* Allocate Data Members */
     endpoint    = StringLib::duplicate(_endpoint);
     parameters  = StringLib::duplicate(_parameters);
+    sourceIP    = StringLib::duplicate(_source_ip);
     outQ        = new Publisher(_outq_name, Publisher::defaultFree, numProxyThreads);
 
     /* Populate Resources Array */
@@ -189,6 +179,18 @@ EndpointProxy::EndpointProxy (lua_State* L, const char* _endpoint, const char** 
     /* Initialize Nodes Array */
     nodes = new OrchestratorLib::Node* [numResources];
     memset(nodes, 0, sizeof(OrchestratorLib::Node*) * numResources); // set all to NULL
+
+    /* Proxy Active */
+    active = true;
+
+    /* Create Proxy Threads */
+    rqstPub = new Publisher(NULL, NULL, PROXY_QUEUE_DEPTH);
+    rqstSub = new Subscriber(*rqstPub);
+    proxyPids = new Thread* [numProxyThreads];
+    for(int t = 0; t < numProxyThreads; t++)
+    {
+        proxyPids[t] = new Thread(proxyThread, this);
+    }
 
     /* Start Collator Thread */
     collatorPid = new Thread(collatorThread, this);
@@ -230,6 +232,7 @@ EndpointProxy::~EndpointProxy (void)
     /* Delete Allocated Memory */
     delete [] endpoint;
     delete [] parameters;
+    delete [] sourceIP;
 }
 
 /*----------------------------------------------------------------------------
@@ -390,6 +393,11 @@ void* EndpointProxy::proxyThread (void* parm)
 {
     EndpointProxy* proxy = reinterpret_cast<EndpointProxy*>(parm);
 
+    // build headers
+    CurlLib::hdrs_t headers;
+    const FString* content_type_header = new const FString("x-forwarded-for: %s", proxy->sourceIP ? proxy->sourceIP : "0.0.0.0");
+    headers.add(content_type_header);
+
     while(proxy->active)
     {
         /* Receive Request */
@@ -416,7 +424,7 @@ void* EndpointProxy::proxyThread (void* parm)
                     {
                         const FString url("%s/source/%s", node->member, proxy->endpoint);
                         const FString data("{\"resource\": \"%s\", \"key_space\": %d, \"parms\": %s}", resource, current_resource, proxy->parameters);
-                        const long http_code = CurlLib::postAsRecord(url.c_str(), data.c_str(), proxy->outQ, false, proxy->timeout, &proxy->active);
+                        const long http_code = CurlLib::postAsRecord(url.c_str(), data.c_str(), proxy->outQ, false, proxy->timeout, &proxy->active, &headers);
                         if(http_code == EndpointObject::OK) valid = true;
                         else throw RunTimeException(CRITICAL, RTE_FAILURE, "Error code returned from request to %s: %d", node->member, (int)http_code);
                     }

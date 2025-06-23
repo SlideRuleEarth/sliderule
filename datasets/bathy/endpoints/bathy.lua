@@ -16,14 +16,14 @@ local channels      = 6 -- number of dataframes per resource
 -------------------------------------------------------
 -- proxy request
 -------------------------------------------------------
-dataframe.proxy("atl24x", parms, rqst["parms"], rspq, channels, function(userlog)
+dataframe.proxy("atl24x", parms, rqst["parms"], _rqst.rspq, channels, function(userlog)
 
     local resource      = parms["resource"]
     local bathymask     = bathy.mask()
     local atl03h5       = h5.object(parms["asset"], resource)
     local atl09h5       = util.get_atl09(parms, t0, t1, userlog, resource)
 --    local ndwi          = parms["generate_ndwi"] and util.get_ndwi(parms, resource) or nil
---    local granule       = (parms["output"]["format"] == "h5") and bathy.granule(parms, atl03h5, rspq) or nil
+--    local granule       = (parms["output"]["format"] == "h5") and bathy.granule(parms, atl03h5, _rqst.rspq) or nil
     local kd490         = util.get_viirs(parms, rgps)
     local seasurface    = bathy.seasurface(parms)
     local refraction    = bathy.refraction(parms)
@@ -32,9 +32,9 @@ dataframe.proxy("atl24x", parms, rqst["parms"], rspq, channels, function(userlog
     local runners = {seasurface, refraction, uncertainty}
     local dataframes = {}
     for _, beam in ipairs(parms["beams"]) do
-        dataframes[beam] = bathy.dataframe(beam, parms, bathymask, atl03h5, atl09h5, rspq)
+        dataframes[beam] = bathy.dataframe(beam, parms, bathymask, atl03h5, atl09h5, _rqst.rspq)
         if not dataframes[beam] then
-            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> on %s failed to create bathy dataframe for beam %s", rspq, resource, beam))
+            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> on %s failed to create bathy dataframe for beam %s", _rqst.rspq, resource, beam))
         end
     end
 

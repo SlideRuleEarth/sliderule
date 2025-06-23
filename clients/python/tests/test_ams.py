@@ -1,10 +1,7 @@
 import pytest
-import json
 from sliderule import sliderule
 
-@pytest.mark.network
 class TestAtl13:
-
     def test_refid(self, init):
         response = sliderule.source("ams", {"refid": 5952002394})
         assert init

@@ -445,16 +445,16 @@ def check_version (plugins=[], session=None):
 
     # check major version mismatches
     if versions['server'][0] != versions['client'][0]:
-        raise FatalError(f'Client {info['client']['version']} is incompatible with the server {info['server']['version']}')
+        raise FatalError(f'Client {info["client"]["version"]} is incompatible with the server {info["server"]["version"]}')
 
     # check plugins
     for plugin in plugins:
         if versions[plugin][0] != versions['client'][0]:
-            raise FatalError(f'Client {info['client']['version']} is incompatible with the {plugin} plugin {info[plugin]['version']}')
+            raise FatalError(f'Client {info["client"]["version"]} is incompatible with the {plugin} plugin {info[plugin]["version"]}')
 
     # check minor version mismatches
     if versions['server'][1] > versions['client'][1]:
-        logger.warning(f'Warning, this environment is using an outdated client ({info['client']['version']}). The code will run but some functionality supported by the server ({info['server']['version']}) may not be available.')
+        logger.warning(f'Warning, this environment is using an outdated client ({info["client"]["version"]}). The code will run but some functionality supported by the server ({info["server"]["version"]}) may not be available.')
 
     # return boolean for backward compatibility
     return True

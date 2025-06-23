@@ -11,7 +11,7 @@ region = [  {"lon": -108.3435200747503, "lat": 38.89102961045247},
             {"lon": -108.3605610678553, "lat": 39.25086131372244},
             {"lon": -108.3435200747503, "lat": 38.89102961045247}  ]
 
-@pytest.mark.network
+@pytest.mark.external
 class Test3DEP_1meter:
     def test_sample(self, init):
         geojson = earthdata.tnm(short_name='Digital Elevation Model (DEM) 1 meter', polygon=region)
@@ -53,7 +53,6 @@ class Test3DEP_1meter:
                         non_array_count += 1
         assert non_array_count > 0
 
-@pytest.mark.network
 class Test3DEP_10meter:
     def test_sample(self, init):
         gdf = raster.sample("usgs3dep-10meter-dem", [[-108.0,39.0]])

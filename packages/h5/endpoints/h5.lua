@@ -9,8 +9,6 @@
 --                  "id":           <integer id to attach to data>
 --              }
 --
---              rspq - output queue to stream results
---
 -- OUTPUT:      Array of integers containing the values in the dataset
 --
 -- NOTES:       1. The arg[1] input is a json object provided by caller
@@ -32,14 +30,14 @@ local id = parm["id"] or 0
 
 local asset = core.getbyname(asset_name)
 if not asset then
-    local userlog = msg.publish(rspq)
+    local userlog = msg.publish(_rqst.rspq)
     userlog:alert(core.ERROR, core.RTE_FAILURE, string.format("invalid asset specified: %s", asset_name))
     return
 end
 
 local f = h5.dataset(streaming.READER, asset, resource, dataset, id, false, datatype, col, startrow, numrows)
 if f:connected() then
-    local r = streaming.reader(f, rspq)
+    local r = streaming.reader(f, _rqst.rspq)
     r:waiton() -- waits until reader completes
 end
 

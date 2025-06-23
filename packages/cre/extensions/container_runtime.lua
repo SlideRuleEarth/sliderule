@@ -5,7 +5,7 @@ local json  = require("json")
 --
 local function setup ()
 
-    local host_sandbox_directory = string.format("%s/%s", cre.HOST_DIRECTORY, rqstid)
+    local host_sandbox_directory = string.format("%s/%s", cre.HOST_DIRECTORY, _rqst.id)
     if not cre.createunique(host_sandbox_directory) then
         sys.log(core.WARNING, "Overwriting existing unique shared directory "..host_sandbox_directory)
     end

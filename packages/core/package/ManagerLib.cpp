@@ -66,8 +66,8 @@ void ManagerLib::deinit (void)
 ManagerLib::rsps_t ManagerLib::request (EndpointObject::verb_t verb, const char* resource, const char* data)
 {
     // build headers
-    List<const string*> headers;
-    const string* content_type_header = new const string("Content-Type: application/json");
+    CurlLib::hdrs_t headers;
+    const FString* content_type_header = new const FString("Content-Type: application/json");
     headers.add(content_type_header);
 
     // make request
@@ -113,7 +113,7 @@ int ManagerLib::luaRequest(lua_State* L)
             if(rsps.response) mlog(CRITICAL, "%s", rsps.response);
             throw RunTimeException(CRITICAL, RTE_FAILURE, "<%ld> returned from %s", rsps.code, resource);
         }
-        
+
         // return response
         lua_pushlstring(L, rsps.response, rsps.size);
     }

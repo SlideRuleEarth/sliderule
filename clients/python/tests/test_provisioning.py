@@ -4,7 +4,6 @@ import pytest
 import sliderule
 from sliderule.session import Session
 
-@pytest.mark.network
 class TestProvisioning:
     def test_authenticate(self, domain, organization):
         sliderule.set_url(domain)

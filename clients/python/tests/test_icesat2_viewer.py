@@ -1,8 +1,5 @@
 import pytest
-from pyproj import Transformer
-from shapely.geometry import Polygon, Point
-import pandas as pd
-from sliderule import icesat2, h5
+from sliderule import icesat2
 import time
 
 resource = "ATL03_20181019065445_03150111_005_01.h5"
@@ -30,7 +27,6 @@ def assert_gdf(gdf):
     assert max(gdf["spot"]) == 6
 
 
-@pytest.mark.network
 class TestAlgorithm:
     def test_atl03v(self, init, performance):
         perf_start = time.perf_counter()

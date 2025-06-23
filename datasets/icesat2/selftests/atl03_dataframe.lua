@@ -145,7 +145,7 @@ runner.unittest("ATL06 Surface Fitter", function()
     df:run(fitter)
     df:run(core.TERMINATE)
 
-    runner.assert(df:finished(30000, rspq), "failed to wait for dataframe to finish")
+    runner.assert(df:finished(30000), "failed to wait for dataframe to finish")
     runner.assert(df:inerror() == false, "dataframe encountered error")
 
     runner.assert(df:numrows() == 99364, string.format("incorrect number of rows: %d", df:numrows()))

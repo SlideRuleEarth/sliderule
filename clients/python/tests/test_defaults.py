@@ -1,12 +1,11 @@
 """Tests for sliderule APIs."""
 
 import pytest
-from sliderule import sliderule, icesat2
+from sliderule import sliderule
 
 #
 # Default parms
 #
-@pytest.mark.network
 class TestDefaultParms:
     def test_parms(self, init):
         d = sliderule.source("defaults")

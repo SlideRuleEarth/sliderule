@@ -14,9 +14,7 @@ AOI = [ { "lat": -80.75, "lon": -70.00 },
         { "lat": -80.75, "lon": -65.00 },
         { "lat": -80.75, "lon": -70.00 } ]
 
-@pytest.mark.network
 class TestAtl03x:
-
     def test_nominal(self, init):
         parms = { "track": 1,
                   "cnf": 0,
@@ -83,7 +81,7 @@ class TestAtl03x:
 
     def test_phoreal(self, init):
         resource = "ATL03_20181017222812_02950102_005_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "track": 3,
             "cnf": 0,
@@ -103,7 +101,7 @@ class TestAtl03x:
 
     def test_sampler(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/dicksonfjord.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = {
             "track": 1,
             "cnf": 0,

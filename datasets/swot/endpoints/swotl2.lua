@@ -8,7 +8,7 @@ local rqst          = json.decode(arg[1])
 local parms         = swot.parms(rqst["parms"], rqst["key_space"], "swot-sim-ecco-llc4320", rqst["resource"])
 
 local args = {
-    result_q        = (parms:withsamplers() and not parms:hasoutput()) and "result." .. parms["resource"] .. "." .. rspq or rspq,
+    result_q        = georesource.result_q_name(parms),
     result_rec      = "swotl2geo",
 }
 

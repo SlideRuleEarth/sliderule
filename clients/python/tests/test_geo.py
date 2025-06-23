@@ -7,7 +7,6 @@ from sliderule import icesat2
 # Change connection timeout from default 10s to 1s
 sliderule.set_rqst_timeout((1, 60))
 
-@pytest.mark.network
 class TestGeo:
     def test_geospatial1(self, init):
         test = {

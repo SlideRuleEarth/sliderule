@@ -8,7 +8,7 @@ local rqst          = json.decode(arg[1])
 local parms         = gedi.parms(rqst["parms"], rqst["key_space"], "gedil4a", rqst["resource"])
 
 local args = {
-    result_q        = (parms:withsamplers() and not parms:hasoutput()) and "result." .. parms["resource"] .. "." .. rspq or rspq,
+    result_q        = georesource.result_q_name(parms),
     result_rec      = "gedi04arec",
 }
 

@@ -7,7 +7,7 @@ from sliderule import sliderule, earthdata, icesat2
 
 TESTDIR = Path(__file__).parent
 
-@pytest.mark.network
+@pytest.mark.external
 class TestHLS:
     def test_samples(self, init):
         time_start = "2021-01-01T00:00:00Z"
@@ -37,7 +37,6 @@ class TestHLS:
         catalog = earthdata.stac(short_name="HLS", polygon=polygon, time_start=time_start, time_end=time_end, as_str=True)
         assert len(catalog) >= 6359
 
-
     def test_subset1(self, init):
         time_start = "2021-01-01T00:00:00Z"
         time_end = "2021-02-01T23:59:59Z"
@@ -54,7 +53,6 @@ class TestHLS:
         assert len(rsps['subsets'][0][0]['file']) > 0
         assert rsps['subsets'][0][0]['size'] == 5158240
         assert rsps['subsets'][0][0]['poolsize'] == 6396026784
-
 
     def test_subset167(self, init):
         time_start = "2021-01-01T00:00:00Z"
@@ -76,9 +74,8 @@ class TestHLS:
             assert rsps['subsets'][0][0]['size'] > 0
             assert rsps['subsets'][0][0]['poolsize'] > 0
 
-
     def test_ndvi(self, init):
-        region = sliderule.toregion(os.path.join(TESTDIR, "data/grandmesa.geojson"))
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         resource = "ATL03_20181017222812_02950102_005_01.h5"
         parms = { "poly": region['poly'],
                   "srt": icesat2.SRT_LAND,
