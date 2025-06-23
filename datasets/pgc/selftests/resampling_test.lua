@@ -9,13 +9,6 @@ end
 -- Setup --
 -- runner.log(core.DEBUG)
 
-local _,td = runner.srcscript()
-package.path = td .. "../utils/?.lua;" .. package.path
-
-local readgeojson = require("readgeojson")
-local jsonfile = td .. "../data/arcticdem_strips.json"
-local contents = readgeojson.load(jsonfile)
-
 -- Self Test --
 
 local sigma = 1.0e-9
@@ -34,7 +27,7 @@ for radius = 0, 100, 50
 do
     print(string.format("\n-------------------------------------------------\nTest %s: Resampling with radius %d meters\n-------------------------------------------------", demType, radius))
     for i = 1, #samplingAlgs do
-        local dem = geo.raster(geo.parms({asset=demType, algorithm=samplingAlgs[i], radius=radius, catalog=contents}))
+        local dem = geo.raster(geo.parms({asset=demType, algorithm=samplingAlgs[i], radius=radius}))
         local tbl, err = dem:sample(lon, lat, height)
         if err ~= 0 then
             print(string.format("======> FAILED to read",lon, lat))
