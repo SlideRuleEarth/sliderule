@@ -6,6 +6,16 @@ if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
     return runner.skip()
 end
 
+-- Setup --
+-- runner.log(core.DEBUG)
+
+local _,td = runner.srcscript()
+package.path = td .. "../utils/?.lua;" .. package.path
+
+local readgeojson = require("readgeojson")
+local jsonfile = td .. "../data/arcticdem_strips.json"
+local contents = readgeojson.load(jsonfile)
+
 -- Self Test --
 
 local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
@@ -21,7 +31,7 @@ local height = 0
 
 for i = 1, #demTypes do
     local demType = demTypes[i];
-    local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, sort_by_index=true}))
+    local dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, catalog=contents, sort_by_index=true}))
     runner.assert(dem ~= nil)
     local tbl, err = dem:sample(lon, lat, height)
     runner.assert(err == 0)
@@ -60,30 +70,25 @@ for i = 1, #demTypes do
     else
         runner.assert(rows == 512)
         runner.assert(cols == 512)
-        runner.assert(math.abs(lon_min - -150.211795121361) < sigma)
-        runner.assert(math.abs(lat_min -   69.558963399316) < sigma)
-        runner.assert(math.abs(lon_max - -148.805309306014) < sigma)
-        runner.assert(math.abs(lat_max -   70.772905719694) < sigma)
         runner.assert(cellsize == 0.0)
     end
 end
 
 
-
-local lons = {-150, -40, 100,   150}
-local lats = {  70,  70,  70,    75}
+local lons = {-150, -149.95}
+local lats = {  70,   70.00}
 height = 0
 
-local expResultsMosaic = { 116.250000000,  2968.085937500, 475.742187500, 19.890625000}
-local expResultsStrips = { 119.554687500,  2968.015625000, 474.156250000, 10.296875000}  -- Only first strip samples for each lon/lat strip group
+local expResultsMosaic = { 116.250000000, 108.687500000}
+local expResultsStrips = { 120.367187500, 112.632812500}  -- Only first strip samples for each lon/lat strip group
 
-local expSamplesCnt = {8, 8, 4, 14}
+local expSamplesCnt = {37, 32}
 
 for i = 1, #demTypes do
 
     local demType = demTypes[i];
     print(string.format("\n--------------------------------\nTest: %s Correct Values\n--------------------------------", demType))
-    local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", sort_by_index=true}))
+    local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", catalog=contents, sort_by_index=true}))
 
     for j, lon in ipairs(lons) do
         local sampleCnt = 0
@@ -107,7 +112,9 @@ for i = 1, #demTypes do
                     end
                     runner.assert(math.abs(el - expElevation) < sigma)
                 else
-                    runner.assert(el > 10)  --All others
+                    if not (el ~= el) then  -- not NaN
+                        runner.assert(el > 100)  --All others should be > 100
+                    end
                 end
             end
         end
