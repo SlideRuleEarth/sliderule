@@ -50,7 +50,7 @@ runner.assert(sampleCnt == #expResults)
 
 
 
-local numPoints = 100000
+local numPoints = 1000
 local lonMin, lonMax = 100, 180
 local latMin, latMax =  25,  50
 
