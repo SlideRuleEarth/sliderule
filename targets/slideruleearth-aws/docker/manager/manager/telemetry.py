@@ -54,24 +54,25 @@ def captureit(endpoint, duration):
         count_metrics[endpoint + "_count"] = count_metrics.get(endpoint + "_count", 0) + 1
 
 def ratelimitit(source_ip, account):
-    # update request times
+    # determine request times
     now = date.today().isocalendar()
     this_request_time = (now.week, now.year)
     last_request_time = user_request_time.get(source_ip, (0,0))
-    user_request_time[source_ip] = this_request_time
     # update request count
     if this_request_time == last_request_time:
         user_request_count[source_ip] += 1
-        # check request rate
-        if user_request_count[source_ip] >= current_app.config['RATELIMIT_WEEKLY_COUNT']:
-            print(f'Requests originating from {source_ip} will be rate limited for {current_app.config['RATELIMIT_BACKOFF_PERIOD']} minutes')
-            orchestrator_url = current_app.config['ORCHESTRATOR'] + "/discovery/block"
-            requests.post(orchestrator_url, data=json.dumps({"address": source_ip, "duration": current_app.config['RATELIMIT_BACKOFF_PERIOD']}))
-            user_request_count[source_ip] -= current_app.config['RATELIMIT_BACKOFF_COUNT']
-            return True # ip is being rate limited
     else:
         # initialize (restart) request count
         user_request_count[source_ip] = 1
+    # update request time
+    user_request_time[source_ip] = this_request_time
+    # check request rate
+    if user_request_count[source_ip] >= current_app.config['RATELIMIT_WEEKLY_COUNT']:
+        print(f'Requests originating from {source_ip} will be rate limited for {current_app.config['RATELIMIT_BACKOFF_PERIOD']} minutes')
+        orchestrator_url = current_app.config['ORCHESTRATOR'] + "/discovery/block"
+        requests.post(orchestrator_url, data=json.dumps({"address": source_ip, "duration": current_app.config['RATELIMIT_BACKOFF_PERIOD']}))
+        user_request_count[source_ip] -= current_app.config['RATELIMIT_BACKOFF_COUNT']
+        return True # ip is being rate limited
     # nominal return
     return False # no rate limiting
 
