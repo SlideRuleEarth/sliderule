@@ -30,7 +30,7 @@ local height = 0
 local extentbox = {-151, 69, -149, 71}
 
 local expResultsMosaic = {116.250000000000}
-local expResultsStrips = {119.554687500000}  -- Only first strip samples for each lon/lat strip group
+local expResultsStrips = {120.367187500000}  -- Only first strip samples for each lon/lat strip group
 local expSamplesCnt = {37}
 
 for i = 1, #demTypes do
