@@ -24,6 +24,7 @@ The photon-input parameters allow the user to select an area, a time range, or a
 * ``"region_mask"``: geojson describing region of interest which enables rasterized subsetting on servers (see `geojson </web/rtd/user_guide/SlideRule.html#geojson>`_)
 * ``"track"``: reference pair track number (1, 2, 3, or 0 to include for all three; defaults to 0); note that this is combined with the beam selection as a union of the two
 * ``"beams"``: list of beam identifiers (gt1l, gt1r, gt2l, gt2r, gt3l, gt3r; defaults to all)
+* ``"spots"``: list of spots (1, 2, 3, 4, 5, 6); this is only supporting by the _atl03x_ endpoint
 * ``"rgt"``: reference ground track (defaults to all if not specified)
 * ``"cycle"``: counter of 91-day repeat cycles completed by the mission (defaults to all if not specified)
 * ``"region"``: geographic region for corresponding standard product (defaults to all if not specified)
