@@ -80,10 +80,13 @@ LandsatHlsRaster::LandsatHlsRaster(lua_State *L, RequestFields* rqst_parms, cons
 
     if(!validateBandNames())
     {
-        VSIUnlink(indexFile.c_str());
-        throw RunTimeException(DEBUG, RTE_FAILURE, "Invalid band names specified");
+        throw RunTimeException(DEBUG, RTE_FAILURE, "Failed to create LandsatHlsRaster, invalid band names specified");
     }
 
+    if (parms->catalog.value.empty())
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create LandsatHlsRaster, catalog with STAC query results is empty");
+    }
 
     /* Create in memory index file (geojson) */
     VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(),

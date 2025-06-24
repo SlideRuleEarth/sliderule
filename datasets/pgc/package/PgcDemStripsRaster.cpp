@@ -52,6 +52,11 @@ PgcDemStripsRaster::PgcDemStripsRaster(lua_State *L, RequestFields* rqst_parms, 
     indexFile("/vsimem/" + GdalRaster::getUUID() + ".geojson"),
     demName(dem_name)
 {
+    if (parms->catalog.value.empty())
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to create PgcDemStripsRaster, catalog with STAC query results is empty");
+    }
+
     /* Create in memory index file (geojson) */
     VSILFILE* fp = VSIFileFromMemBuffer(indexFile.c_str(),
                                         const_cast<GByte*>(reinterpret_cast<const GByte*>(parms->catalog.value.c_str())), // source bytes
