@@ -2,9 +2,10 @@
 
 import os
 import pytest
+import numpy as np
 from pathlib import Path
 from datetime import datetime
-from sliderule import sliderule
+from sliderule import sliderule, icesat2
 
 TESTDIR = Path(__file__).parent
 RESOURCES = ["ATL03_20181019065445_03150111_006_02.h5"]
@@ -42,6 +43,30 @@ class TestAtl03x:
         assert gdf.spot.value_counts()[6] == 101953
         assert gdf.cycle.describe()["mean"] == 1.0
         assert gdf.atl03_cnf.value_counts()[1] == 46768
+
+    def test_spot_beam_filter(self, init):
+        poly = [{'lat': -68.36177715438129, 'lon': 151.9541166015127},
+                {'lat': -68.58236183989223, 'lon': 151.8438344989098},
+                {'lat': -68.52516138552262, 'lon': 151.0200874351817},
+                {'lat': -68.69420600399343, 'lon': 151.0186339046389},
+                {'lat': -68.73791835254544, 'lon': 151.5665007283068},
+                {'lat': -68.70011166045259, 'lon': 151.972856443959},
+                {'lat': -68.80666559883542, 'lon': 152.7456805072033},
+                {'lat': -68.33401220826397, 'lon': 152.7400123843097},
+                {'lat': -68.36177715438129, 'lon': 151.9541166015127}]
+        parms= {
+            "poly":poly,
+            "t0": "2019-12-02T01:00:00Z",
+            "t1": "2020-01-30T17:58:49Z",
+            "rgt":1320,
+            "srt":icesat2.SRT_LAND_ICE,
+            "cnf":-2,
+            "beams": "gt2l"
+        }
+        gdf = sliderule.run("atl03x", parms)
+        assert init
+        assert len(gdf) == 430618
+        assert 4 in np.unique(gdf.spot)
 
     def test_fitter(self, init):
         parms = {

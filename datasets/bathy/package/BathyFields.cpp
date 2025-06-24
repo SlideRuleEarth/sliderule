@@ -97,7 +97,6 @@ BathyFields::BathyFields(lua_State* L, uint64_t key_space, const char* asset_nam
           {"ph_in_extent",        &phInExtent},
           {"generate_ndwi",       &generateNdwi},
           {"use_bathy_mask",      &useBathyMask},
-          {"spots",               &spots},
           {"surface",             &surface},
           {"refraction",          &refraction},
           {"uncertainty",         &uncertainty} })

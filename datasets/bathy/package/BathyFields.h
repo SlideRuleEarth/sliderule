@@ -168,7 +168,6 @@ class BathyFields: public Icesat2Fields
         FieldElement<int>                               phInExtent {8192};          // number of photons in each extent
         FieldElement<bool>                              generateNdwi {false};       // use HLS data to generate NDWI for each segment lat,lon
         FieldElement<bool>                              useBathyMask {true};        // global bathymetry mask downloaded in atl24 init lua routine
-        FieldEnumeration<spot_t, NUM_SPOTS>             spots = {true, true, true, true, true, true}; // only used by downstream algorithms
         SurfaceFields                                   surface;                    // surface finding fields
         RefractionFields                                refraction;                 // refraction correction fields
         UncertaintyFields                               uncertainty;                // uncertaintly calculation fields

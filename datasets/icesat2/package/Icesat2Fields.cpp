@@ -502,6 +502,7 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset
         {"cnf",                 &atl03Cnf},
         {"quality_ph",          &qualityPh},
         {"atl08_class",         &atl08Class},
+        {"spots",               &spots},
         {"beams",               &beams},
         {"track",               &track},
         {"cnt",                 &minPhotonCount},

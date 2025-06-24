@@ -164,7 +164,7 @@ struct Atl13Fields: public FieldDictionary
         GSHHG_SHORELINE                     = 4,
         GLOBAL_RIVER_WIDTHS_FROM_LANDSAT    = 5
     } body_source_t;
-    
+
     FieldElement<int64_t>           reference_id {0};       // atl13refid
     FieldElement<string>            name;                   // lake name
     FieldElement<MathLib::coord_t>  coordinate {{0.0, 0.0}};// lake coordinate (contains)
@@ -493,6 +493,7 @@ class Icesat2Fields: public RequestFields
         FieldEnumeration<signal_conf_t,NUM_SIGNAL_CONF>     atl03Cnf {false, false, false, false, true, true, true}; // list of desired signal confidences of photons from atl03 classification
         FieldEnumeration<quality_ph_t,NUM_PHOTON_QUALITY>   qualityPh {true, false, false, false};                  // list of desired photon quality levels from atl03
         FieldEnumeration<atl08_class_t,NUM_ATL08_CLASSES>   atl08Class {false, false, false, false, false};         // list of surface classifications to use (leave empty to skip)
+        FieldEnumeration<spot_t, NUM_SPOTS>                 spots = {true, true, true, true, true, true};           // list of which spots (1,2,3,4,5,6)
         FieldEnumeration<gt_t,NUM_SPOTS>                    beams {true, true, true, true, true, true};             // list of which beams (gt[l|r][1|2|3])
         FieldElement<int>                                   track {ALL_TRACKS};                                     // reference pair track number (1, 2, 3, or 0 for all tracks)
         FieldElement<int>                                   minPhotonCount {10};                                    // PE

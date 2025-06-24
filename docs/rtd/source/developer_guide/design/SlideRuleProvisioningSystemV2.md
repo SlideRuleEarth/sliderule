@@ -22,7 +22,7 @@ The primary purpose of the provisioning system is to manage the deployment of re
 * Cluster configuration
 * Server version
 * Minimum and maximum nodes
-* Availabilty zone
+* Availability zone
 * Public vs. private
 * Capacity requests
 

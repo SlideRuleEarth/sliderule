@@ -772,6 +772,12 @@ void* Atl03DataFrame::subsettingThread (void* parm)
         df->spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], df->beam);
         df->gt = Icesat2Fields::getGroundTrack(df->beam);
 
+        /* Check Spot Filter */
+        if(!parms.spots[static_cast<Icesat2Fields::spot_t>(df->spot.value)])
+        {
+            throw RunTimeException(DEBUG, RTE_STATUS, "spot %d filtered out", df->spot.value);
+        }
+
         /* Perform ATL08 Classification (if requested) */
         atl08.classify(df, aoi, atl03);
 
