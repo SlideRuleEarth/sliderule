@@ -119,15 +119,9 @@ bool PgcDemStripsRaster::findRasters(raster_finder_t* finder)
 
     /*
      * Find rasters and their dates.
-     * geojson index file contains two dates: 'start_date' and 'end_date'
+     * geojson index file contains two dates: start_date, end_date, datatime.
+     * Unfortunately, the datatime is often the same as start_date.
      * Calculate the rster date as mid point between start and end dates.
-     *
-     * The file name/path contains a date in it.
-     * We cannot use it because it is the date of the earliest image of the stereo pair.
-     * For intrack pairs (pairs collected intended for stereo) the two images are acquired within a few minutes of each other.
-     * For cross-track images (opportunistic stereo pairs made from mono collects)
-     * the two images can be up to 30 days apart.
-     *
      */
     try
     {
@@ -157,6 +151,7 @@ bool PgcDemStripsRaster::findRasters(raster_finder_t* finder)
                 /* bitmask raster, ie flags_file */
                 if(parms->flags_file)
                 {
+                    /* Replace _dem.tif with _bitmask.tif since the file name is the same per PGC documentation */
                     const std::string endToken    = "_dem.tif";
                     const std::string newEndToken = "_bitmask.tif";
                     pos = fileName.rfind(endToken);
