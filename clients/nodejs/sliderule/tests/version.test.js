@@ -3,9 +3,9 @@ const sliderule = require('../../sliderule');
 function checkVersion (result) {
     expect(result.server.duration).toBeGreaterThan(0);
     expect(result).toHaveProperty('server');
-    expect(result.server).toHaveProperty('environment', 'version', 'commit', 'packages', 'launch');
+    expect(result.server).toHaveProperty('environment', 'version', 'build', 'packages', 'launch');
     expect(result.server.packages).toContain('core');
-    expect(result.server.commit.includes('v')).toBeTruthy();
+    expect(result.server.build.includes('v')).toBeTruthy();
 }
 
 test('node version api', () => {
