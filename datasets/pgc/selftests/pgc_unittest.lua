@@ -13,7 +13,7 @@ local _,td = runner.srcscript()
 package.path = td .. "../utils/?.lua;" .. package.path
 
 local readgeojson = require("readgeojson")
-local jsonfile = td .. "../data/rema_strips.json"
+local jsonfile = td .. "../data/rema_strips.geojson"
 local contents = readgeojson.load(jsonfile)
 
 -- Self Test --
@@ -60,7 +60,7 @@ ut = nil
 
 
 readgeojson = require("readgeojson")
-jsonfile = td .. "../data/arcticdem_strips.json"
+jsonfile = td .. "../data/arcticdem_strips.geojson"
 contents = readgeojson.load(jsonfile)
 
 -- Use temporal filter for range t0 to t1 to limit number of strips per point

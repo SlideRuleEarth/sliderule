@@ -13,7 +13,7 @@ local _,td = runner.srcscript()
 package.path = td .. "../utils/?.lua;" .. package.path
 
 local readgeojson = require("readgeojson")
-local jsonfile = td .. "../data/rema_strips.json"
+local jsonfile = td .. "../data/rema_strips.geojson"
 local contents = readgeojson.load(jsonfile)
 
 -- Self Test --
