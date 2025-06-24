@@ -1,6 +1,5 @@
 {
   "name": "@sliderule/sliderule",
-  "type": "module",
   "description": "client for the SlideRule on-demand science data processing service",
   "version": "4.15.5",
   "keywords": [
@@ -13,7 +12,8 @@
   "license": "BSD-3-Clause",
   "devDependencies": {
     "jest": "^29.5.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "playwright": "^1.53.1"
   },
   "scripts": {
     "test": "jest"
