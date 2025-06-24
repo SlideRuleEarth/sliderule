@@ -9,5 +9,5 @@ test('read icesat2 dataset using h5coro', () => {
             throw new Error(error);
         }
     );
-});
+}, 10000);
 

@@ -17,12 +17,36 @@ async function browserFetchCurrentNodes() {
     return result.nodes;
 }
 
+async function browserFetchVersion() {
+    const browser = await chromium.launch();
+    const page = await browser.newPage();
+    await page.goto(`https://client.slideruleearth.io`);
+    const result = await page.evaluate(async () => {
+        const response = await fetch('https://sliderule.slideruleearth.io/source/version', {
+            method: 'GET',
+        });
+        return await response.json();
+    });
+    await browser.close();
+    return result;
+}
+
 test('fetch number of nodes', () => {
     return browserFetchCurrentNodes().then(
         result => {
-            console.log('Your message here:', result);
             expect(result).toBeGreaterThan(0);
         },
         error => {throw new Error(error);}
     );
 });
+
+test('fetch server version', () => {
+    return browserFetchVersion().then(
+        result => {
+            expect(result).toHaveProperty('server');
+            expect(result.server.packages).toContain('core');
+        },
+        error => {throw new Error(error);}
+    );
+});
+

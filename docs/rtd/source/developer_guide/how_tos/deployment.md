@@ -31,7 +31,7 @@ The `<cold>` is the _cold_ color identified in the step above.  The `<new releas
 
 #### (3) Test out the _cold_ cluster
 
-Using `sliderule-<cold>` as the organization, run the __pytests__ against the newly deployed cluster.
+Using `sliderule-<cold>` as the organization, run the __pytests__ and __nodejs__ tests against the newly deployed cluster.
 
 #### (4) Switch to the _cold_ cluster
 
