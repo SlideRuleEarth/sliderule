@@ -304,8 +304,6 @@ end
 --
 local function stac (parms, poly)
 
-    local geotable = {}
-
     -- get parameters of request
     local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
     local dataset       = DATASETS[short_name] or {}
@@ -343,7 +341,8 @@ local function stac (parms, poly)
     end
 
     -- parse response into a table
-    local next_page = nil
+    local geotable = {}
+    local next_page = {}
     status, geotable, next_page = build_geojson(rsps)
     if not status then
         return RC_RSPS_UNPARSEABLE, "could not parse json in response from stac"
@@ -355,7 +354,7 @@ local function stac (parms, poly)
         return RC_RSPS_TRUNCATED, string.format("number of matched resources truncated from %d to %d", num_matched, max_resources)
     end
 
-    while next_page do
+    while next_page["link"] do
         -- post paged request
         rsps, status = core.post(next_page["link"], next_page["body"], headers)
         if not status then
