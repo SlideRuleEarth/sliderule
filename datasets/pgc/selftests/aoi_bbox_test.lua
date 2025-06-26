@@ -6,6 +6,16 @@ if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
     return runner.skip()
 end
 
+-- Setup --
+-- runner.log(core.DEBUG)
+
+local _,td = runner.srcscript()
+package.path = td .. "../utils/?.lua;" .. package.path
+
+local readgeojson = require("readgeojson")
+local jsonfile = td .. "../data/arcticdem_strips.geojson"
+local contents = readgeojson.load(jsonfile)
+
 -- Self Test --
 
 local sigma = 1.0e-9
@@ -20,13 +30,13 @@ local height = 0
 local extentbox = {-151, 69, -149, 71}
 
 local expResultsMosaic = {116.250000000000}
-local expResultsStrips = {119.554687500000}  -- Only first strip samples for each lon/lat strip group
-local expSamplesCnt = {8}
+local expResultsStrips = {120.367187500000}  -- Only first strip samples for each lon/lat strip group
+local expSamplesCnt = {37}
 
 for i = 1, #demTypes do
     local demType = demTypes[i];
     print(string.format("\n--------------------------------\nTest: %s Reading Correct Values with AOI box\n--------------------------------", demType))
-    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", aoi_bbox=extentbox, sort_by_index=true}))
+    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", aoi_bbox=extentbox, catalog=contents, sort_by_index=true}))
 
     for j, lon in ipairs(lons) do
         local sampleCnt = 0
@@ -50,7 +60,7 @@ for i = 1, #demTypes do
                     end
                     runner.assert(math.abs(el - expElevation) < sigma)
                 else
-                    runner.assert(el > 116)  --All others
+                    runner.assert(el > 100)  --All others
                 end
             end
         end

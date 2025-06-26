@@ -25,9 +25,9 @@ gebco-bathy,                iam-role,       s3,         sliderule/data/GEBCO,   
 bluetopo-bathy,             iam-role,       s3,         /vsis3/noaa-ocs-nationalbathymetry-pds/BlueTopo/,                       _BlueTopo_Tile_Scheme, us-east-1,   https://s3.us-east-1.amazonaws.com
 landsat-hls,                lpdaac-cloud,   nil,        /vsis3/lp-prod-protected,                                               nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
 arcticdem-mosaic,           nil,            nil,        /vsis3/pgc-opendata-dems/arcticdem/mosaics/v4.1,                        /vsis3/sliderule/data/PGC/arcticdem_2m_v4_1_tiles.vrt, us-west-2,      https://s3.us-west-2.amazonaws.com
-arcticdem-strips,           nil,            nil,        /vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m,                    nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
+arcticdem-strips,           nil,            nil,        /vsis3/pgc-opendata-dems/,                                              nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
 rema-mosaic,                nil,            nil,        /vsis3/pgc-opendata-dems/rema/mosaics/v2.0/2m,                          /vsis3/sliderule/data/PGC/rema_2m_v2_0_tiles.vrt,      us-west-2,      https://s3.us-west-2.amazonaws.com
-rema-strips,                nil,            nil,        /vsis3/pgc-opendata-dems/rema/strips/s2s041/2m,                         nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
+rema-strips,                nil,            nil,        /vsis3/pgc-opendata-dems/,                                              nil,                us-west-2,      https://s3.us-west-2.amazonaws.com
 atlas-local,                local,          file,       /data/ATLAS,                                                            nil,                local,          local
 gedi-local,                 local,          file,       /data/GEDI,                                                             nil,                local,          local
 swot-local,                 nil,            file,       /data/SWOT,                                                             nil,                local,          local

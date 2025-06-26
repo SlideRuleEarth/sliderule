@@ -444,7 +444,7 @@ def __build_geojson(rsps):
     for i in reversed(range(len(geojson["features"]))):
         props = geojson["features"][i]["properties"]
         if "dem" in props and "mask" in props:
-            keep = {"datetime", "start_datetime", "end_datetime", "dem", "mask"}
+            keep = {"datetime", "start_datetime", "end_datetime", "dem"}
             geojson["features"][i]["properties"] = {k: v for k, v in props.items() if k in keep}
 
     return geojson, next

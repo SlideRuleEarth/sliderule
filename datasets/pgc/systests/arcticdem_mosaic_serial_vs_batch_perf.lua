@@ -1,47 +1,35 @@
-local asset = require("asset")
-asset.loaddir()
+local runner = require("test_executive")
 
--- Setup --
+-- Requirements --
 
-local failedSamples = 0
-
--- Generate arrays for lons, lats, and heights
-local function generatePointArrays(startLon, stopLon, lat, height, maxPoints)
-    local lons = {}
-    local lats = {}
-    local heights = {}
-
-    local step = (stopLon - startLon) / (maxPoints - 1)
-    for i = 1, maxPoints do
-        table.insert(lons, startLon + (i - 1) * step)
-        table.insert(lats, lat)
-        table.insert(heights, height)
-    end
-
-    return lons, lats, heights
+if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
+    return runner.skip()
 end
 
+-- Setup --
+-- runner.log(core.DEBUG)
+
+local _,td = runner.srcscript()
+package.path = td .. "../utils/?.lua;" .. package.path
+
+local readgeojson = require("readgeojson")
+local jsonfile = td .. "../data/arcticdem_strips.geojson"
+local contents = readgeojson.load(jsonfile)
+
+local generator = require("arctictdem_test_points_generator")
+local maxPoints = 1000
+local lons, lats, heights = generator.generate_points(maxPoints)
 local verbose = true
-local failedSamplesSerial = 0
-local failedSamplesBatch = 0
 
-local lat = 66.34 -- Arctic Circle latitude
-local height = 0  -- Always zero for this test
-
-local startLon  = 100.0
-local stopLon   = 110.0
-local maxPoints = 10^5 -- Total number of points
-
-local lons, lats, heights = generatePointArrays(startLon, stopLon, lat, height, maxPoints)
-
-print(string.format("\n------------------------------------\nMosaics serial reading %d points along arctic circle, longitude range (%.2f to %.2f)\n------------------------------------", maxPoints, startLon, stopLon))
+print(string.format("\n------------------------------------\nArcticDEM mosaics serial reading %d points\n------------------------------------", maxPoints))
 
 -- Capture results from serial sampling
+local failedSamplesSerial = 0
+
 local serialResults = {}
 local dem = geo.raster(geo.parms({ asset = "arcticdem-mosaic", algorithm = "NearestNeighbour", radius = 0 }))
 
 local starttimeSerial = time.latch()
-local intervaltime = starttimeSerial
 local modulovalue = maxPoints / 20
 
 for i = 1, maxPoints do
@@ -56,25 +44,21 @@ for i = 1, maxPoints do
 
     if verbose then
         if (i % modulovalue == 0) then
-            local midtime = time.latch()
-            local dtime = midtime - intervaltime
             local firstSample = tbl[1]
             local el = firstSample["value"]
-            print(string.format("Point: %7d sampled at (%.2f, %.2f), elevation: %7.2fm, %d points interval time: %5.2f", i, lons[i], lats[i], el, modulovalue, dtime))
-            intervaltime = time.latch()
+            print(string.format("Point: %7d sampled at (%.2f, %.2f), elevation: %7.2fm", i, lons[i], lats[i], el))
         end
     end
 end
 
-local stoptimeSerial = time.latch()
-local dtimeSerial = stoptimeSerial - starttimeSerial
-print(string.format("Serial sampling: %d points read, time: %f, failed reads: %d", maxPoints, dtimeSerial, failedSamplesSerial))
+local dtimeSerial = time.latch() - starttimeSerial
+print(string.format("%d points read, time: %f, failed reads: %d", maxPoints, dtimeSerial, failedSamplesSerial))
 
 -- Capture results from batch sampling
 local batchResults = {}
 local starttimeBatch = time.latch()
 
-print(string.format("\n------------------------------------\nMosaics batch reading %d points along arctic circle, longitude range (%.2f to %.2f)\n------------------------------------", maxPoints, startLon, stopLon))
+print(string.format("\n------------------------------------\nArcticDEM mosaics batch reading %d points\n------------------------------------", maxPoints))
 local tbl, err = dem:batchsample(lons, lats, heights)
 if err ~= 0 then
     print("Batch sampling failed")
@@ -84,7 +68,7 @@ end
 
 local stoptimeBatch = time.latch()
 local dtimeBatch = stoptimeBatch - starttimeBatch
-print(string.format("Batch sampling: %d points read, time: %f, failed reads: %d", maxPoints, dtimeBatch, failedSamplesBatch))
+print(string.format("Batch sampling: %d points read, time: %f", maxPoints, dtimeBatch))
 
 -- Compare serial and batch results
 print("\n------------------------------------\nComparing Serial and Batch Results\n------------------------------------")

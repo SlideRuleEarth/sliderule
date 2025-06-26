@@ -6,6 +6,13 @@ import os.path
 import sliderule
 from sliderule import icesat2
 from sliderule import raster
+from sliderule import earthdata
+from sliderule import earthdata
+from sliderule.earthdata import __cmr_collection_query as cmr_collection_query
+from sliderule.earthdata import __cmr_max_version as cmr_max_version
+
+# Change connection timeout from default 10s to 1s
+sliderule.set_rqst_timeout((1, 60))
 
 TESTDIR = Path(__file__).parent
 
@@ -114,6 +121,8 @@ class TestStrips:
                                 {'lon': -46.35015561146599, 'lat': 65.67523503534576},
                                 {'lon': -46.77853429879463, 'lat': 65.67041017142712},
                                 {'lon': -46.76533411521963, 'lat': 65.4938164756588}  ]
+
+        catalog = earthdata.stac(short_name="arcticdem-strips", polygon=region_of_interest, as_str=True)
         parms = { "poly": region_of_interest,
                   "cnf": "atl03_high",
                   "srt": 3,
@@ -125,22 +134,40 @@ class TestStrips:
                   "rgt": 658,
                   "time_start":'2020-01-01',
                   "time_end":'2021-01-01',
-                  "samples": {"strips": {"asset": "arcticdem-strips", "with_flags": True}} }
+                  "samples": {"strips": {"asset": "arcticdem-strips", "with_flags": True, "catalog": catalog}} }
         gdf = icesat2.atl06p(parms, resources=['ATL03_20191108234307_06580503_005_01.h5'])
         assert init
-        assert len(gdf.attrs['file_directory']) == 16
+        assert len(gdf.attrs['file_directory']) == 14
         for file_id in range(0, 16, 2):
             assert file_id in gdf.attrs['file_directory'].keys()
             assert '/pgc-opendata-dems/arcticdem/strips/' in gdf.attrs['file_directory'][file_id]
             assert '_dem.tif' in gdf.attrs['file_directory'][file_id]  # only dems, no flags
 
     def test_sample_api_serial(self, init):
-        gdf = raster.sample("arcticdem-strips", [[vrtLon,vrtLat]])
+        arcticdem_test_point = [
+            [
+                { "lon": -150.0, "lat": 70.0 }
+            ]
+        ]
+
+        catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_point, as_str=True)
+        gdf = raster.sample("arcticdem-strips", [[vrtLon,vrtLat]], parms={"catalog": catalog})
         assert init
-        assert len(gdf) == 8
+        assert len(gdf) == 11
 
     def test_sample_api_batch(self, init):
-        gdf = raster.sample("arcticdem-strips", [[vrtLon,vrtLat],[vrtLon+0.01,vrtLat+0.01]])
+        arcticdem_test_region = [
+            [
+                { "lon": -150.0, "lat": 70.0 },
+                { "lon": -150.0, "lat": 71.0 },
+                { "lon": -149.0, "lat": 71.0 },
+                { "lon": -149.0, "lat": 70.0 },
+                { "lon": -150.0, "lat": 70.0 }
+            ]
+        ]
+
+        catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_region, as_str=True)
+        gdf = raster.sample("arcticdem-strips", [[vrtLon,vrtLat],[vrtLon+0.01,vrtLat+0.01]], parms={"catalog": catalog})
         assert init
-        assert len(gdf) == 16
+        assert len(gdf) == 22
 

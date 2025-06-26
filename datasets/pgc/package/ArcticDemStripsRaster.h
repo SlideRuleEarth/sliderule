@@ -61,7 +61,7 @@ class ArcticDemStripsRaster: public PgcDemStripsRaster
          *--------------------------------------------------------------------*/
 
         ArcticDemStripsRaster(lua_State* L, RequestFields* rqst_parms, const char* key):
-          PgcDemStripsRaster(L, rqst_parms, key, "arcticdem", "/n", &overrideTargetCRS) {}
+          PgcDemStripsRaster(L, rqst_parms, key, "arcticdem", &overrideTargetCRS) {}
 
         static OGRErr overrideTargetCRS(OGRSpatialReference& target, const void* param=NULL)
         {

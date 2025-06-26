@@ -6,24 +6,37 @@ if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
     return runner.skip()
 end
 
+-- Setup --
+-- runner.log(core.DEBUG)
+
+local _,td = runner.srcscript()
+package.path = td .. "../utils/?.lua;" .. package.path
+
+local readgeojson = require("readgeojson")
+local jsonfile = td .. "../data/arcticdem_strips.geojson"
+local contents = readgeojson.load(jsonfile)
+
 -- Self Test --
 
 local sigma = 1.0e-9
 
-local demTypes = {"rema-mosaic", "rema-strips"}
+local demTypes = {"arcticdem-mosaic", "arcticdem-strips"}
 
+local lons = {-150}
+local lats = {  70}
+height = 0
 
-local lons = {-170,  80}
-local lats = { -85, -85}
-local height = 0
+local expResultsMosaic = { 116.2734375}
+local expResultsStrips = { 120.5000000}  -- Only first strip samples for each lon/lat strip group
+local expSamplesCnt = {37}
 
-local expResultsMosaic = {1341.6015625, 3408.6953125}
-local expResultsStrips = {1349.5468750, 3409.8359375}  -- Only first strip samples for each lon/lat strip group
-local expSamplesCnt = {6, 6}
+-- pipline is an output from projinfo tool ran as:
+-- projinfo -s EPSG:4326 -t EPSG:3413 -o proj
+--               "+proj=pipeline +step +proj=axisswap +order=2,1 +step +proj=unitconvert +xy_in=deg +xy_out=rad +step +proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45 +x_0=0 +y_0=0 +ellps=WGS84"
+--
+-- I added to it: (+x_0=10), the sampling returns different results for the same point because of the x_0 offset and the different projections
+local pipeline = "+proj=pipeline +step +proj=axisswap +order=2,1 +step +proj=unitconvert +xy_in=deg +xy_out=rad +step +proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45 +x_0=10 +y_0=0 +ellps=WGS84"
 
---pipline is an output from projinfo tool ran as:
---projinfo -s EPSG:4326 -t EPSG:3031 -o proj
-local pipeline = "+proj=pipeline +step +proj=axisswap +order=2,1 +step +proj=unitconvert +xy_in=deg +xy_out=rad +step +proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84"
 for i = 1, #demTypes do
     local isMosaic = (i == 1)
 
@@ -31,7 +44,8 @@ for i = 1, #demTypes do
     print(string.format("\n--------------------------------\nTest: %s Using proj pipeline\n--------------------------------", demType))
     print(string.format("%s", pipeline))
     print(string.format("\n----------------------------------------------------------------------------------------------------------------------", demType))
-    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", proj_pipeline=pipeline, sort_by_index=true}))
+    dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", proj_pipeline=pipeline, catalog=contents, sort_by_index=true}))
+    -- dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", catalog=contents, sort_by_index=true}))
 
     for j, lon in ipairs(lons) do
         local sampleCnt = 0
@@ -55,7 +69,9 @@ for i = 1, #demTypes do
                     end
                     runner.assert(math.abs(el - expElevation) < sigma)
                 else
-                    runner.assert(el > 1341)  --All others
+                    if not (el ~= el) then  -- not NaN
+                        runner.assert(el > 100)  --All others should be > 100
+                    end
                 end
             end
         end

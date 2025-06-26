@@ -1,0 +1,3 @@
+# Ignore decompressed GeoJSON files
+arcticdem_strips.geojson
+rema_strips.geojson
