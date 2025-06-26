@@ -55,22 +55,22 @@ max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
 
 # best effort match of datasets to providers and versions for earthdata
 DATASETS = {
-    "ATL03":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": []},
-    "ATL06":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": []},
-    "ATL08":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": []},
-    "ATL09":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": []},
-    "ATL13":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": {".h5"},    "collections": {}},
-    "GEDI01_B":                                            {"provider": "LPCLOUD",     "version": "002",  "api": "cmr",   "formats": [".h5"],    "collections": []},
-    "GEDI02_A":                                            {"provider": "LPCLOUD",     "version": "002",  "api": "cmr",   "formats": [".h5"],    "collections": []},
-    "GEDI_L3_LandSurface_Metrics_V2_1952":                 {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".h5"],    "collections": []},
-    "GEDI_L4A_AGB_Density_V2_1_2056":                      {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".h5"],    "collections": []},
-    "GEDI_L4B_Gridded_Biomass_2017":                       {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".tiff"],  "collections": []},
-    "HLS":                                                 {"provider": "LPCLOUD",     "version": None,   "api": "stac",  "formats": [".tiff"],  "collections": ["HLSS30.v2.0", "HLSL30.v2.0"]},
-    "Digital Elevation Model (DEM) 1 meter":               {"provider": "USGS",        "version": None,   "api": "tnm",   "formats": [".tiff"],  "collections": []},
-    "SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1":  {"provider": "POCLOUD",     "version": None,   "api": "cmr",   "formats": [".nc"],    "collections": ["C2147947806-POCLOUD"]},
-    "SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1":        {"provider": "POCLOUD",     "version": None,   "api": "cmr",   "formats": [".nc"],    "collections": ["C2152046451-POCLOUD"]},
-    "arcticdem-strips":                                    {"provider": "PGC",         "version": None,   "api": "stac",  "formats": [".tiff"],  "collections": ["arcticdem-strips-s2s041-2m"]},
-    "rema-strips":                                         {"provider": "PGC",         "version": None,   "api": "stac",  "formats": [".tiff"],  "collections": ["rema-strips-s2s041-2m"]}
+    "ATL03":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "ATL06":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "ATL08":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "ATL09":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "ATL13":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": {".h5"},    "collections": [],                                 "url": None},
+    "GEDI01_B":                                            {"provider": "LPCLOUD",     "version": "002",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "GEDI02_A":                                            {"provider": "LPCLOUD",     "version": "002",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "GEDI_L3_LandSurface_Metrics_V2_1952":                 {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "GEDI_L4A_AGB_Density_V2_1_2056":                      {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "GEDI_L4B_Gridded_Biomass_2017":                       {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".tiff"],  "collections": [],                                 "url": None},
+    "HLS":                                                 {"provider": "LPCLOUD",     "version": None,   "api": "stac",  "formats": [".tiff"],  "collections": ["HLSS30.v2.0", "HLSL30.v2.0"],     "url": 'https://cmr.earthdata.nasa.gov/stac/LPCLOUD/search'},
+    "Digital Elevation Model (DEM) 1 meter":               {"provider": "USGS",        "version": None,   "api": "tnm",   "formats": [".tiff"],  "collections": [],                                 "url": None},
+    "SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1":  {"provider": "POCLOUD",     "version": None,   "api": "cmr",   "formats": [".nc"],    "collections": ["C2147947806-POCLOUD"],            "url": None},
+    "SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1":        {"provider": "POCLOUD",     "version": None,   "api": "cmr",   "formats": [".nc"],    "collections": ["C2152046451-POCLOUD"],            "url": None},
+    "arcticdem-strips":                                    {"provider": "PGC",         "version": None,   "api": "stac",  "formats": [".tiff"],  "collections": ["arcticdem-strips-s2s041-2m"],     "url": 'https://stac.pgc.umn.edu/api/v1/search'},
+    "rema-strips":                                         {"provider": "PGC",         "version": None,   "api": "stac",  "formats": [".tiff"],  "collections": ["rema-strips-s2s041-2m"],          "url": 'https://stac.pgc.umn.edu/api/v1/search'}
 }
 
 # best effort match of sliderule assets to earthdata datasets
@@ -316,11 +316,26 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
 #
 # Perform a CMR Search Request
 #
-def __cmr_search(provider, short_name, version, polygons, time_start, time_end, return_metadata, name_filter):
+def __cmr_search(short_name, version, polygons, time_start, time_end, return_metadata, name_filter):
 
     global max_requested_resources
 
     tstart = time.perf_counter()
+
+    # check parameters
+    if short_name == None:
+        raise sliderule.FatalError("Must supply short name to CMR query")
+    elif short_name not in DATASETS:
+        raise sliderule.FatalError("Must supply a supported dataset: " + short_name)
+
+    # attempt to fill in provider
+    provider = DATASETS[short_name]["provider"]
+    if provider == None:
+        raise sliderule.FatalError("Unable to determine provider for CMR query")
+
+    # attempt to fill in version
+    if version == None:
+        version = DATASETS[short_name]["version"]
 
     # initialize return value
     resources = {} # [<url>] = <polygon>
@@ -409,14 +424,13 @@ def __cmr_max_version(provider, short_name):
 #
 def __build_geojson(rsps):
     geojson = rsps.json()
-    next = None
+    next_page = {"link": None, "body": None}
     if "links" in geojson:
         for link in geojson["links"]:
             if link["rel"] == "next":
-                if link.get("method", "GET") == "POST":  # POST based pagination (PGC STAC)
-                    next = (link["href"], link["body"])
-                else:
-                    next = link["href"]                  # GET based pagination (CMR STAC)
+                next_page["link"] = link["href"]
+                if "body" in link:
+                    next_page["body"] = json.dumps(link["body"]) # POST based pagination
                 break
         del geojson["links"]
     if 'numberMatched' in geojson:
@@ -433,52 +447,37 @@ def __build_geojson(rsps):
             del geojson["features"][i]["assets"]["browse"]
         if "metadata" in geojson["features"][i]["assets"]:
             del geojson["features"][i]["assets"]["metadata"]
-        propertiesDict = geojson["features"][i]["properties"]
         assetsDict = geojson["features"][i]["assets"]
         for val in assetsDict:
             if "href" in assetsDict[val]:
-                propertiesDict[val] = assetsDict[val]["href"]
+                geojson["features"][i]["properties"][val] = assetsDict[val]["href"]
         del geojson["features"][i]["assets"]
 
-    # Additional logic for PGC strips
-    for i in reversed(range(len(geojson["features"]))):
-        props = geojson["features"][i]["properties"]
-        if "dem" in props and "mask" in props:
-            keep = {"datetime", "start_datetime", "end_datetime", "dem"}
-            geojson["features"][i]["properties"] = {k: v for k, v in props.items() if k in keep}
-
-    return geojson, next
+    return geojson, next_page
 
 #
 # Perform a STAC Query
 #
 #   See https://cmr.earthdata.nasa.gov/stac/docs/index.html for details on API
 #
-def __stac_search(provider, short_name, collections, polygons, time_start, time_end):
+def __stac_search(short_name, collections, polygons, time_start, time_end):
     global max_requested_resources
 
-    # attempt to fill in collections
-    if collections == None:
-        if short_name in DATASETS:
-            collections = DATASETS[short_name]["collections"]
-        else:
-            raise sliderule.FatalError("Unable to determine collections for CMR query")
+    # check short name
+    if short_name not in DATASETS:
+        raise sliderule.FatalError(f'{short_name} is not a supported dataset for STAC queries')
 
     # create requests context
     context = requests.Session()
     context.trust_env = False # prevent requests from attaching credentials from environment
 
     # build stac request
-    if provider == 'PGC':
-        url = 'https://stac.pgc.umn.edu/api/v1/search'
-    else:
-        url = 'https://cmr.earthdata.nasa.gov/stac/{}/search'.format(provider)
-
+    url = DATASETS[short_name]["url"]
     headers = {'Content-Type': 'application/json'}
     rqst = {
         "limit": STAC_PAGE_SIZE,
         "datetime": '{}/{}'.format(time_start, time_end),
-        "collections": collections,
+        "collections": collections or DATASETS[short_name]["collections"],
     }
 
     # add polygon if provided
@@ -500,18 +499,13 @@ def __stac_search(provider, short_name, collections, polygons, time_start, time_
     # make initial stac request
     data = context.post(url, data=json.dumps(rqst), headers=headers)
     data.raise_for_status()
-    geojson, next_link = __build_geojson(data)
+    geojson, next_page = __build_geojson(data)
 
     # Continue fetching pages if 'next' link is available
-    while next_link:
-        if isinstance(next_link, tuple):
-            next_url, next_body = next_link
-            data = context.post(next_url, data=json.dumps(next_body), headers=headers)
-        else:
-            data = context.get(next_link, headers=headers)
-
+    while next_page["link"]:
+        data = context.post(next_page["link"], data=next_page["body"], headers=headers)
         data.raise_for_status()
-        _geojson, next_link = __build_geojson(data)
+        _geojson, next_page = __build_geojson(data)
         geojson["features"] += _geojson["features"]
 
     geojson["context"]["returned"] = len(geojson["features"])
@@ -519,25 +513,6 @@ def __stac_search(provider, short_name, collections, polygons, time_start, time_
 
     # return geojson dictionary
     return geojson
-
-#
-# Get Provider from DATASETS
-#
-def __get_provider(short_name):
-
-    # check parameters
-    if short_name == None:
-        raise sliderule.FatalError("Must supply short name to CMR query")
-    elif short_name not in DATASETS:
-        raise sliderule.FatalError("Must supply a supported dataset: " + short_name)
-
-    # attempt to fill in provider
-    provider = DATASETS[short_name]["provider"]
-    if provider == None:
-        raise sliderule.FatalError("Unable to determine provider for CMR query")
-
-    # return provider string (cannot be None)
-    return provider
 
 #
 # Format Polygons for Request
@@ -621,18 +596,11 @@ def cmr(short_name=None, version=None, polygon=None, time_start='2018-01-01T00:0
         >>> granules
         ['ATL03_20181017222812_02950102_003_01.h5', 'ATL03_20181110092841_06530106_003_01.h5', ... 'ATL03_20201111102237_07370902_003_01.h5']
     '''
-    # get provider
-    provider = __get_provider(short_name)
-
-    # attempt to fill in version
-    if version == None:
-        version = DATASETS[short_name]["version"]
-
     # create list of polygons
     polygons = __format_polygons(polygon)
 
     # perform query
-    return __cmr_search(provider, short_name, version, polygons, time_start, time_end, return_metadata, name_filter)
+    return __cmr_search(short_name, version, polygons, time_start, time_end, return_metadata, name_filter)
 
 #
 #  SpatioTemporal Asset Catalog
@@ -698,20 +666,13 @@ def stac(short_name=None, collections=None, polygon=None, time_start='2018-01-01
         ...            {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
         >>> geojson = earthdata.stac(short_name='HLS', polygon=region)
     '''
-    # get provider
-    provider = __get_provider(short_name)
-
-    # check collections
-    if collections == None:
-        collections = DATASETS[short_name]["collections"]
-
     # create list of polygons
     polygons = None
     if polygon:
         polygons = __format_polygons(polygon)
 
     # perform query
-    geojson = __stac_search(provider, short_name, collections, polygons, time_start, time_end)
+    geojson = __stac_search(short_name, collections, polygons, time_start, time_end)
 
     # return
     if as_str:

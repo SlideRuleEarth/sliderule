@@ -16,46 +16,12 @@ TESTDIR = Path(__file__).parent
 # Change connection timeout from default 10s to 1s
 sliderule.set_rqst_timeout((1, 60))
 
-# Define region of interest
+# Define regions of interest
 grandmesa = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
               {"lon": -107.7677425431139, "lat": 38.90611184543033},
               {"lon": -107.7818591266989, "lat": 39.26613714985466},
               {"lon": -108.3605610678553, "lat": 39.25086131372244},
               {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
-
-# Central Brooks Range, northern Alaska
-arcticdem_test_region = [
-    [
-        { "lon": -152.0, "lat": 68.5 },
-        { "lon": -152.0, "lat": 67.5 },
-        { "lon": -147.0, "lat": 67.5 },
-        { "lon": -147.0, "lat": 68.5 },
-        { "lon": -152.0, "lat": 68.5 }
-    ]
-]
-
-arcticdem_test_point = [
-    [
-        { "lon": -152.0, "lat": 68.5 }
-    ]
-]
-
-# Ellsworth Mountains, West Antarctica
-rema_test_region = [
-    [
-        { "lon": -86.0, "lat": -78.0 },
-        { "lon": -86.0, "lat": -79.0 },
-        { "lon": -82.0, "lat": -79.0 },
-        { "lon": -82.0, "lat": -78.0 },
-        { "lon": -86.0, "lat": -78.0 }
-    ]
-]
-
-rema_test_point = [
-    [
-        { "lon": -86.0, "lat": -78.0 }
-    ]
-]
 
 #
 # CMR
@@ -85,34 +51,57 @@ class TestCMR:
 #
 @pytest.mark.external
 class TestSTAC:
-    def test_asdict(self):
+    def test_hls_asdict(self):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         catalog = earthdata.stac(short_name="HLS", polygon=region["poly"], time_start="2021-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z", as_str=False)
         assert len(catalog["features"]) == 590
         assert catalog["features"][0]['properties']['eo:cloud_cover'] == 2
 
-    def test_asdict_pgc(self):
-        catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_region, time_start="2000-01-01T00:00:00Z", as_str=False)
-        assert len(catalog["features"]) == 702
-        assert catalog["features"][0]['properties']['datetime'] == "2022-05-16T21:47:36Z"
-
-        catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_point, time_start="2000-01-01T00:00:00Z", as_str=False)
-        assert len(catalog["features"]) == 16
-        assert catalog["features"][0]['properties']['datetime'] == "2022-03-24T22:38:46Z"
-
-        catalog = earthdata.stac(short_name="rema-strips", polygon=rema_test_region, time_start="2000-01-01T00:00:00Z", as_str=False)
-        assert len(catalog["features"]) == 603
-        assert catalog["features"][0]['properties']['datetime'] == "2024-12-21T14:07:17Z"
-
-        catalog = earthdata.stac(short_name="rema-strips", polygon=rema_test_point, time_start="2000-01-01T00:00:00Z", as_str=False)
-        assert len(catalog["features"]) == 49
-        assert catalog["features"][0]['properties']['datetime'] == "2024-11-07T14:25:48Z"
-
-    def test_asstr(self):
+    def test_hls_asstr(self):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))
         response = earthdata.stac(short_name="HLS", polygon=region["poly"], time_start="2022-01-01T00:00:00Z", time_end="2022-03-01T00:00:00Z", as_str=True)
         catalog = json.loads(response)
         assert catalog["features"][0]['properties']['eo:cloud_cover'] == 99
+
+    def test_arcticdem_region(self):
+        arcticdem_test_region = [[ # Central Brooks Range, northern Alaska
+            { "lon": -152.0, "lat": 68.5 },
+            { "lon": -152.0, "lat": 67.5 },
+            { "lon": -147.0, "lat": 67.5 },
+            { "lon": -147.0, "lat": 68.5 },
+            { "lon": -152.0, "lat": 68.5 }
+        ]]
+        catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_region, time_start="2000-01-01T00:00:00Z", as_str=False)
+        assert len(catalog["features"]) == 702
+        assert catalog["features"][0]['properties']['datetime'] == "2022-05-16T21:47:36Z"
+
+    def test_arcticdem_point(self):
+        arcticdem_test_point = [[
+            { "lon": -152.0, "lat": 68.5 }
+        ]]
+        catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_point, time_start="2000-01-01T00:00:00Z", as_str=False)
+        assert len(catalog["features"]) == 16
+        assert catalog["features"][0]['properties']['datetime'] == "2022-03-24T22:38:46Z"
+
+    def test_rema_region(self):
+        rema_test_region = [[ # Ellsworth Mountains, West Antarctica
+            { "lon": -86.0, "lat": -78.0 },
+            { "lon": -86.0, "lat": -79.0 },
+            { "lon": -82.0, "lat": -79.0 },
+            { "lon": -82.0, "lat": -78.0 },
+            { "lon": -86.0, "lat": -78.0 }
+        ]]
+        catalog = earthdata.stac(short_name="rema-strips", polygon=rema_test_region, time_start="2000-01-01T00:00:00Z", as_str=False)
+        assert len(catalog["features"]) == 603
+        assert catalog["features"][0]['properties']['datetime'] == "2024-12-21T14:07:17Z"
+
+    def test_rema_point(self):
+        rema_test_point = [[
+            { "lon": -86.0, "lat": -78.0 }
+        ]]
+        catalog = earthdata.stac(short_name="rema-strips", polygon=rema_test_point, time_start="2000-01-01T00:00:00Z", as_str=False)
+        assert len(catalog["features"]) == 49
+        assert catalog["features"][0]['properties']['datetime'] == "2024-11-07T14:25:48Z"
 
     def test_bad_short_name(self):
         region = sliderule.toregion(os.path.join(TESTDIR, 'data/polygon.geojson'))

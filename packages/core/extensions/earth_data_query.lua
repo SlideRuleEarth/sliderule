@@ -15,21 +15,23 @@ DEFAULT_MAX_REQUESTED_RESOURCES = 300
 
 -- best effort match of datasets to providers and versions for earthdata
 DATASETS = {
-    ATL03 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
-    ATL06 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
-    ATL08 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
-    ATL09 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
-    ATL13 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {}},
-    ATL24 =                                               {provider = "NSIDC_CPRD",  version = "001",  api = "cmr",   formats = {".h5"},    collections = {}},
-    GEDI01_B =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {}},
-    GEDI02_A =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {}},
-    GEDI_L3_LandSurface_Metrics_V2_1952 =                 {provider = "ORNL_CLOUD",  version = nil,    api = nil,     formats = {".tiff"},  collections = {}},
-    GEDI_L4A_AGB_Density_V2_1_2056 =                      {provider = "ORNL_CLOUD",  version = nil,    api = "cmr",   formats = {".h5"},    collections = {}},
-    GEDI_L4B_Gridded_Biomass_2017 =                       {provider = "ORNL_CLOUD",  version = nil,    api = nil,     formats = {".tiff"},  collections = {}},
-    HLS =                                                 {provider = "LPCLOUD",     version = nil,    api = "stac",  formats = {".tiff"},  collections = {"HLSS30.v2.0", "HLSL30.v2.0"}},
-    ["Digital Elevation Model (DEM) 1 meter"] =           {provider = "USGS",        version = nil,    api = "tnm",   formats = {".tiff"},  collections = {}},
-    SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1 =  {provider = "POCLOUD",     version = nil,    api = "cmr",   formats = {".nc"},    collections = {"C2147947806-POCLOUD"}},
-    SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1 =        {provider = "POCLOUD",     version = nil,    api = "cmr",   formats = {".nc"},    collections = {"C2152046451-POCLOUD"}}
+    ATL03 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
+    ATL06 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
+    ATL08 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
+    ATL09 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
+    ATL13 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
+    ATL24 =                                               {provider = "NSIDC_CPRD",  version = "001",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
+    GEDI01_B =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
+    GEDI02_A =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
+    GEDI_L3_LandSurface_Metrics_V2_1952 =                 {provider = "ORNL_CLOUD",  version = nil,    api = nil,     formats = {".tiff"},  collections = {},                               url = nil},
+    GEDI_L4A_AGB_Density_V2_1_2056 =                      {provider = "ORNL_CLOUD",  version = nil,    api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
+    GEDI_L4B_Gridded_Biomass_2017 =                       {provider = "ORNL_CLOUD",  version = nil,    api = nil,     formats = {".tiff"},  collections = {},                               url = nil},
+    HLS =                                                 {provider = "LPCLOUD",     version = nil,    api = "stac",  formats = {".tiff"},  collections = {"HLSS30.v2.0", "HLSL30.v2.0"},   url = "https://cmr.earthdata.nasa.gov/stac/LPCLOUD/search"},
+    ["Digital Elevation Model (DEM) 1 meter"] =           {provider = "USGS",        version = nil,    api = "tnm",   formats = {".tiff"},  collections = {},                               url = nil},
+    SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1 =  {provider = "POCLOUD",     version = nil,    api = "cmr",   formats = {".nc"},    collections = {"C2147947806-POCLOUD"},          url = nil},
+    SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1 =        {provider = "POCLOUD",     version = nil,    api = "cmr",   formats = {".nc"},    collections = {"C2152046451-POCLOUD"},          url = nil},
+    ["arcticdem-strips"] =                                {provider = "PGC",         version = nil,    api = "stac",  formats = {".tiff"},  collections = {"arcticdem-strips-s2s041-2m"},   url = "https://stac.pgc.umn.edu/api/v1/search"},
+    ["rema-strips"] =                                     {provider = "PGC",         version = nil,    api = "stac",  formats = {".tiff"},  collections = {"rema-strips-s2s041-2m"},        url = "https://stac.pgc.umn.edu/api/v1/search"}
 }
 
 -- best effort match of sliderule assets to earthdata datasets
@@ -56,7 +58,9 @@ ASSETS_TO_DATASETS = {
     ["atlas-local"] = "ATL03",
     ["atlas-s3"] = "ATL03",
     ["atl24-s3"] = "ATL24",
-    ["nsidc-s3"] = "ATL03"
+    ["nsidc-s3"] = "ATL03",
+    ["articdem-strips"] = "arcticdem-strips",
+    ["rema-strips"] = "rema-strips"
 }
 
 -- upper limit on resources returned from CMR query per request
@@ -82,12 +86,12 @@ RC_UNSUPPORTED = -6
 --
 local function build_geojson(rsps)
     local status, geotable = pcall(json.decode, rsps)
-    local next_page = nil
+    local next_page = {link=nil, body=nil}
     if status then
         if geotable["links"] then
             for _,link in ipairs(geotable["links"]) do
                 if link["link"] == "next" then
-                    next_page = link["href"]
+                    next_page = {link=link["href"], body=link["body"] and json.encode(link["body"]) or nil}
                 end
             end
         end
@@ -305,7 +309,7 @@ local function stac (parms, poly)
     -- get parameters of request
     local short_name    = parms["short_name"] or ASSETS_TO_DATASETS[parms["asset"]]
     local dataset       = DATASETS[short_name] or {}
-    local provider      = dataset["provider"] or error("unable to determine provider for query")
+    local url           = dataset["url"]
     local collections   = parms["collections"] or dataset["collections"]
     local polygon       = parms["poly"] or poly
     local t0            = parms["t0"] or '2018-01-01T00:00:00Z'
@@ -313,7 +317,6 @@ local function stac (parms, poly)
     local max_resources = parms["max_resources"] or DEFAULT_MAX_REQUESTED_RESOURCES
 
     -- build stac request
-    local url = string.format("https://cmr.earthdata.nasa.gov/stac/%s/search", provider)
     local headers = {["Content-Type"] = "application/json"}
     local rqst = {
         ["limit"] = STAC_PAGE_SIZE,
@@ -354,7 +357,7 @@ local function stac (parms, poly)
 
     while next_page do
         -- post paged request
-        rsps, status = core.post(next_page, nil, headers)
+        rsps, status = core.post(next_page["link"], next_page["body"], headers)
         if not status then
             return RC_RQST_FAILED, "http request to stac server failed"
         end

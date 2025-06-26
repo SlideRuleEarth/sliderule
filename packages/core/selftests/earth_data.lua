@@ -83,6 +83,60 @@ runner.unittest("TNM Query", function()
     end
 end)
 
+
+--[[
+    STAC Query - ArcticDEM Strips
+--]]
+runner.unittest("STAC Query - ArcticDEM Strips", function()
+    local parms = {
+        ["asset"] = "arcticdem-strips",
+        ["t0"] = "2000-01-01T00:00:00Z",
+        ["poly"] = { -- Central Brooks Range, northern Alaska
+            {["lon"] = -152.0, ["lat"] = 68.5},
+            {["lon"] = -152.0, ["lat"] = 67.5},
+            {["lon"] = -147.0, ["lat"] = 67.5},
+            {["lon"] = -147.0, ["lat"] = 68.5},
+            {["lon"] = -152.0, ["lat"] = 68.5}
+        }
+    }
+    local rc, rsps = earthdata.stac(parms)
+    runner.assert(rc == earthdata.SUCCESS, string.format("failed stac request: %d", rc))
+    if rc == earthdata.SUCCESS then
+        runner.assert(rsps["context"]["returned"] >= 702)
+        runner.assert(rsps["context"]["returned"] == #rsps["features"])
+        runner.assert(rsps["features"][1]["properties"]['datetime'] == "2022-05-16T21:47:36Z")
+    end
+end)
+
+--[[
+    def test_arcticdem_point(self):
+        arcticdem_test_point = [
+            { "lon": -152.0, "lat": 68.5 }
+        ]
+        catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_point, time_start="2000-01-01T00:00:00Z", as_str=False)
+        assert len(catalog["features"]) == 16
+        assert catalog["features"][0]['properties']['datetime'] == "2022-03-24T22:38:46Z"
+
+    def test_rema_region(self):
+        rema_test_region = [ # Ellsworth Mountains, West Antarctica
+            { "lon": -86.0, "lat": -78.0 },
+            { "lon": -86.0, "lat": -79.0 },
+            { "lon": -82.0, "lat": -79.0 },
+            { "lon": -82.0, "lat": -78.0 },
+            { "lon": -86.0, "lat": -78.0 }
+        ]
+        catalog = earthdata.stac(short_name="rema-strips", polygon=rema_test_region, time_start="2000-01-01T00:00:00Z", as_str=False)
+        assert len(catalog["features"]) == 603
+        assert catalog["features"][0]['properties']['datetime'] == "2024-12-21T14:07:17Z"
+
+    def test_rema_point(self):
+        rema_test_point = [
+            { "lon": -86.0, "lat": -78.0 }
+        ]
+        catalog = earthdata.stac(short_name="rema-strips", polygon=rema_test_point, time_start="2000-01-01T00:00:00Z", as_str=False)
+        assert len(catalog["features"]) == 49
+        assert catalog["features"][0]['properties']['datetime'] == "2024-11-07T14:25:48Z"
+--]]
 -- Clean Up --
 
 -- Report Results --
