@@ -461,7 +461,6 @@ def __build_geojson(rsps):
 #   See https://cmr.earthdata.nasa.gov/stac/docs/index.html for details on API
 #
 def __stac_search(short_name, collections, polygons, time_start, time_end):
-    global max_requested_resources
 
     # check short name
     if short_name not in DATASETS:
@@ -508,8 +507,8 @@ def __stac_search(short_name, collections, polygons, time_start, time_end):
         _geojson, next_page = __build_geojson(data)
         geojson["features"] += _geojson["features"]
 
+    # set number of returned features
     geojson["context"]["returned"] = len(geojson["features"])
-    geojson["context"]["limit"] = max_requested_resources
 
     # return geojson dictionary
     return geojson
