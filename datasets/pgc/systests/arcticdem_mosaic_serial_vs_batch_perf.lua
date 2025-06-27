@@ -44,9 +44,9 @@ for i = 1, maxPoints do
 
     if verbose then
         if (i % modulovalue == 0) then
-            local firstSample = tbl[1]
-            local el = firstSample["value"]
-            print(string.format("Point: %7d sampled at (%.2f, %.2f), elevation: %7.2fm", i, lons[i], lats[i], el))
+           local firstSample = tbl[1]
+           local el = firstSample["value"]
+           print(string.format("Point: %7d sampled at (%.2f, %.2f), elevation: %7.2fm", i, lons[i], lats[i], el))
         end
     end
 end
@@ -70,42 +70,37 @@ local stoptimeBatch = time.latch()
 local dtimeBatch = stoptimeBatch - starttimeBatch
 print(string.format("Batch sampling: %d points read, time: %f", maxPoints, dtimeBatch))
 
--- Compare serial and batch results
-print("\n------------------------------------\nComparing Serial and Batch Results\n------------------------------------")
-local totalMismatches = 0
-local totalFailedSerial = 0
-local totalFailedBatch = 0
+function print_table(tbl, indent)
+    indent = indent or 0
+    local prefix = string.rep("  ", indent)
 
-for i = 1, maxPoints do
-    local serialSample = serialResults[i]
-    local batchSample = batchResults[i]
+    if type(tbl) ~= "table" then
+        print(prefix .. tostring(tbl))
+        return
+    end
 
-    if (serialSample == nil and batchSample == nil) then
-        -- Both failed
-        totalFailedSerial = totalFailedSerial + 1
-        totalFailedBatch = totalFailedBatch + 1
-        print(string.format("Point %d: Both methods failed", i))
-    elseif (serialSample == nil) then
-        -- Serial failed
-        totalFailedSerial = totalFailedSerial + 1
-        totalMismatches = totalMismatches + 1
-        print(string.format("Point %d: Serial failed, Batch succeeded", i))
-    elseif (batchSample == nil) then
-        -- Batch failed
-        totalFailedBatch = totalFailedBatch + 1
-        totalMismatches = totalMismatches + 1
-        print(string.format("Point %d: Batch failed, Serial succeeded", i))
-    else
-        -- Compare values
-        for j, serialValue in ipairs(serialSample) do
-            local batchValue = batchSample[j]
-            if not batchValue or math.abs(serialValue["value"] - batchValue["value"]) > 1e-6 then
-                totalMismatches = totalMismatches + 1
-                print(string.format("Point %d, Sample %d: Serial %.6f != Batch %.6f", i, j, serialValue["value"], batchValue["value"]))
-            end
+    local isEmpty = true
+    for k, v in pairs(tbl) do
+        isEmpty = false
+        if type(v) == "table" then
+            print(prefix .. tostring(k) .. " = {")
+            print_table(v, indent + 1)
+            print(prefix .. "}")
+        else
+            print(prefix .. tostring(k) .. " = " .. tostring(v))
         end
     end
+
+    if isEmpty then
+        print(prefix .. "{} (empty table)")
+    end
 end
+
+-- Compare serial and batch results
+local fileio = require("samples_fileio")
+local mismatches = fileio.compare_samples_tables(serialResults, batchResults)
+print(string.format("Detected %d mismatches", mismatches))
+
 
 -- Print summary
 print("\n------------------------------------\nPerformance Summary\n------------------------------------")
@@ -113,8 +108,7 @@ print(string.format("Total Points: %d", maxPoints))
 print(string.format("Serial Sampling Time: %6.2f seconds", dtimeSerial))
 print(string.format("Batch  Sampling Time: %6.2f seconds", dtimeBatch))
 print(string.format("Speedup (Serial/Batch): %.2fx", dtimeSerial / dtimeBatch))
-print(string.format("Failed Points (Serial): %d", totalFailedSerial))
-print(string.format("Failed Points (Batch):  %d", totalFailedBatch))
-print(string.format("Mismatched Points:      %d", totalMismatches))
 
-sys.quit()
+
+-- Report Results --
+runner.report()
