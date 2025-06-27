@@ -52,7 +52,9 @@ STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
 STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
 STATIC_WEB_ASSET_DIR ?= /data/web
-PYTHON_EXAMPLES_DIR = $(ROOT)/clients/python/examples
+PYTHON_CLIENT_DIR = $(ROOT)/clients/python
+PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
+NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
 
 INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 
@@ -350,8 +352,8 @@ tag: ## create version tag in this repository and release it on GitHub
 	echo $(VERSION) > $(ROOT)/version.txt
 	node $(ROOT)/clients/nodejs/utils/modpkg.js $(VERSION)
 	git add $(ROOT)/clients/nodejs/sliderule/package.json
-	cp $(ROOT)/version.txt $(ROOT)/clients/python/version.txt
-	git add $(ROOT)/version.txt $(ROOT)/clients/python/version.txt
+	cp $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
+	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git add $(ROOT)/targets/slideruleearth-aws/docker/manager/conda-linux-${ARCH}.lock
 	git add $(ROOT)/targets/slideruleearth-aws/docker/manager/conda-lock.yml
 	git add $(ROOT)/targets/slideruleearth-aws/docker/sliderule/libdep-${ARCH}.lock
@@ -387,7 +389,7 @@ distclean: ## fully remove all non-version controlled files and directories
 	- rm -Rf $(BUILD)
 	- rm -Rf $(STAGE)
 	- cd $(ROOT)/docs && ./clean.sh
-	- cd $(ROOT)/clients/python && ./clean.sh
+	- cd $(PYTHON_CLIENT_DIR) && ./clean.sh
 	- cd $(ROOT)/targets/slideruleearth-aws/docker/manager && ./clean.sh
 	- find $(ROOT) -name ".cookies" -exec rm {} \;
 	- rm -f utilities/report.pdf
@@ -398,15 +400,28 @@ distclean: ## fully remove all non-version controlled files and directories
 ########################
 
 TEST ?= $(ROOT)/targets/slideruleearth-aws/test_runner.lua cloud
+PYTEST ?= # specific pytests and additional pytest options can be supplied here
+JEST ?= # specific jest tests and additional jest options can be supplied here
+MNGRTEST ?= # specific manager tests and additional pytest options can be supplied here
+
 MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arcticdem_mosaic_perf.lua
 STRIPS_PERFORMANCE_TEST ?=  $(ROOT)/datasets/pgc/systests/arcticdem_strips_perf.lua
 SUBSET_PERFORMANCE_TEST ?=  $(ROOT)/targets/slideruleearth-aws/systests/subset_perf_test.lua
-
 MOSAICS_SERIAL_VS_BATCH_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arcticdem_mosaic_serial_vs_batch_perf.lua
 STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST  ?= $(ROOT)/datasets/pgc/systests/arcticdem_strips_serial_vs_batch_perf.lua
 
 selftest: ## run the self test on the server code
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
+
+pytest: ## run python client tests; needs special conda environment
+	cd $(PYTHON_CLIENT_DIR) && coverage run -m pytest --domain $(DOMAIN) --organization $(ORGANIZATION) $(PYTEST)
+	cd $(PYTHON_CLIENT_DIR) && coverage report -m
+
+jest: ## run node.js client self tests
+	make -C $(NODEJS_CLIENT_DIR) test DOMAIN=$(DOMAIN) ORGANIZATION=$(ORGANIZATION) TEST=$(JEST)
+
+mngrtest: ## run manager tests; needs special conda environment
+	make -C docker/manager test TEST=$(MNGRTEST)
 
 perfmtest: ## run mosaics performance test on the server code
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
