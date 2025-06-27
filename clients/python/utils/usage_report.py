@@ -33,6 +33,7 @@ import sys
 import argparse
 import boto3
 import duckdb
+from datetime import datetime, timedelta
 from sliderule.session import Session
 
 # Command Line Arguments
@@ -78,7 +79,7 @@ def display_sorted(title, counts):
     print(f'\n===================\n{title}\n===================')
     sorted_counts = sort_counts(counts)
     for count in sorted_counts:
-        print(f'{count[0]}: {count[1]}')    
+        print(f'{count[0]}: {count[1]}')
 
 def value_counts(table, field, db=None):
     if db != None:
@@ -94,8 +95,26 @@ def value_counts(table, field, db=None):
         # return response
         return {key:value for (key,value) in result}
     else:
-        table = {"telemetry": "telemetry_counts", "alerts": "alert_counts"}.get(table)
-        return session.manager(f'status/{table}/{field}')
+        api = {"telemetry": "telemetry_counts", "alerts": "alert_counts"}.get(table)
+        return session.manager(f'status/{api}/{field}')
+
+def timespan(table, field, db=None):
+    if db != None:
+        table = {"telemetry": "combined_telemetry", "alerts": "combined_alerts"}.get(table)
+        # build initial query
+        cmd = f"""
+            SELECT
+                MIN({field}) AS start_time,
+                MAX({field}) AS end_time
+            FROM {table};
+        """
+        # execute request
+        data = db.execute(cmd).fetchall()
+        result = {"start": data[0][0].isoformat(), "end": data[0][1].isoformat(), "span": (data[0][1] - data[0][0]).total_seconds()}
+    else:
+        result = session.manager(f'status/timespan/{field}')
+    # return response
+    return {"start": datetime.fromisoformat(result["start"]), "end": datetime.fromisoformat(result["end"]), "span": timedelta(seconds=result["span"])}
 
 ##############################
 # Export Database - Exits
@@ -137,7 +156,7 @@ if len(args.imports) > 0:
     cmd = "CREATE VIEW combined_telemetry AS\n"
     cmd += 'UNION ALL\n'.join([f'SELECT * FROM db{i}.telemetry\n' for i in range(len(db_files))])
     db.execute(cmd)
-        
+
     # combine telemetry tables
     cmd = "CREATE VIEW combined_alerts AS\n"
     cmd += 'UNION ALL\n'.join([f'SELECT * FROM db{i}.alerts\n' for i in range(len(db_files))])
@@ -147,13 +166,16 @@ if len(args.imports) > 0:
 # Collect Statistics
 ##############################
 
+# Calculate Time Statistics
+time_stats                      = timespan('telemetry', 'record_time', db)
+
 # Gather Statistics on Usage
-unique_ip_counts                =  value_counts('telemetry', 'source_ip_hash', db) 
-source_location_counts          =  value_counts('telemetry', 'source_ip_location', db) 
-client_counts                   =  value_counts('telemetry', 'client', db) 
-endpoint_counts                 =  value_counts('telemetry', 'endpoint', db) 
-telemetry_status_code_counts    =  value_counts('telemetry', 'status_code', db) 
-alert_status_code_counts        =  value_counts('alerts', 'status_code', db) 
+unique_ip_counts                =  value_counts('telemetry', 'source_ip_hash', db)
+source_location_counts          =  value_counts('telemetry', 'source_ip_location', db)
+client_counts                   =  value_counts('telemetry', 'client', db)
+endpoint_counts                 =  value_counts('telemetry', 'endpoint', db)
+telemetry_status_code_counts    =  value_counts('telemetry', 'status_code', db)
+alert_status_code_counts        =  value_counts('alerts', 'status_code', db)
 
 # Process Request Counts
 total_requests                  = sum_counts(endpoint_counts)
@@ -165,6 +187,11 @@ total_gedi_proxied_requests     = sum_counts(endpoint_counts, ['gedi01bp', 'gedi
 ##############################
 # Report Statistics
 ##############################
+
+# Report Time Statistics
+print(f'Start: {time_stats["start"].strftime("%Y-%m-%d %H:%M:%S")}')
+print(f'End: {time_stats["end"].strftime("%Y-%m-%d %H:%M:%S")}')
+print(f'Duration: {time_stats["span"].days} days, {(time_stats["span"].total_seconds() / 3600) % 24:.2f} hours')
 
 # Report Usage Statistics
 print(f'Unique IPs: {len(unique_ip_counts)}')

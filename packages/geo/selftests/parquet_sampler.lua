@@ -8,6 +8,13 @@ local outq_name = "outq-luatest"
 local in_geoparquet  = dirpath.."../data/atl06_10rows.geoparquet"
 local in_parquet     = dirpath.."../data/atl06_10rows.parquet"
 
+local geojsonfile = dirpath.."../data/arcticdem_strips.geojson"
+local f = io.open(geojsonfile, "r")
+runner.assert(f, "failed to open geojson file")
+if not f then return end
+local contents = f:read("*all")
+f:close()
+
 -- Indicates local file system (no s3 or client)
 local prefix = "file://"
 
@@ -46,7 +53,7 @@ end
 local dem1 = geo.raster(geo.parms({asset="arcticdem-mosaic", algorithm="NearestNeighbour", radius=30, zonal_stats=true}))
 runner.assert(dem1 ~= nil)
 
-local dem2 = geo.raster(geo.parms({asset="arcticdem-strips", algorithm="NearestNeighbour", radius=0, with_flags=true, use_poi_time=true}))
+local dem2 = geo.raster(geo.parms({asset="arcticdem-strips", algorithm="NearestNeighbour", catalog=contents, radius=0, with_flags=true, use_poi_time=true}))
 runner.assert(dem2 ~= nil)
 
 print('\n--------------------------------------\nTest01: input/output geoparquet (geo)\n--------------------------------------')

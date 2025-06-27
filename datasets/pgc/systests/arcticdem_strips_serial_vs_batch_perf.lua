@@ -1,44 +1,41 @@
-local asset = require("asset")
-asset.loaddir()
+local runner = require("test_executive")
 
--- Setup --
+-- Requirements --
 
-local failedSamples = 0
-
--- Generate arrays for lons, lats, and heights
-local function generatePointArrays(startLon, stopLon, lat, height, maxPoints)
-    local lons = {}
-    local lats = {}
-    local heights = {}
-
-    local step = (stopLon - startLon) / (maxPoints - 1)
-    for i = 1, maxPoints do
-        table.insert(lons, startLon + (i - 1) * step)
-        table.insert(lats, lat)
-        table.insert(heights, height)
-    end
-
-    return lons, lats, heights
+if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
+    return runner.skip()
 end
 
+-- Setup --
+-- runner.log(core.DEBUG)
+
+local _,td = runner.srcscript()
+package.path = td .. "../utils/?.lua;" .. package.path
+
+local readgeojson = require("readgeojson")
+local jsonfile = td .. "../data/arcticdem_strips.geojson"
+local contents = readgeojson.load(jsonfile)
+
+local generator = require("arctictdem_test_points_generator")
+local maxPoints = 5
+local lons, lats, heights = generator.generate_points(maxPoints)
 local verbose = true
+
+local sample_fileio = require("samples_fileio")
+
+print(string.format("\n------------------------------------\nArcticDEM strips serial reading %d points\n------------------------------------", maxPoints))
+
 local failedSamplesSerial = 0
 local failedSamplesBatch = 0
 
-local lat = 66.34 -- Arctic Circle latitude
-local height = 0  -- Always zero for this test
+local function is_empty(tbl)
+    return next(tbl) == nil
+end
 
-local startLon  = 100.0
-local stopLon   = 110.0
-local maxPoints = 10^5 -- Total number of points
-
-local lons, lats, heights = generatePointArrays(startLon, stopLon, lat, height, maxPoints)
-
-print(string.format("\n------------------------------------\nStrips serial reading %d points along arctic circle, longitude range (%.2f to %.2f)\n------------------------------------", maxPoints, startLon, stopLon))
 
 -- Capture results from serial sampling
 local serialResults = {}
-local dem = geo.raster(geo.parms({ asset = "arcticdem-strips", algorithm = "NearestNeighbour", radius = 0, sort_by_index = true }))
+local dem = geo.raster(geo.parms({ asset = "arcticdem-strips", catalog = contents, algorithm = "NearestNeighbour", radius = 0, sort_by_index = true }))
 
 local starttimeSerial = time.latch()
 local intervaltime = starttimeSerial
@@ -56,12 +53,13 @@ for i = 1, maxPoints do
 
     if verbose then
         if (i % modulovalue == 0) then
-            local midtime = time.latch()
-            local dtime = midtime - intervaltime
-            local firstSample = tbl[1]
-            local el = firstSample["value"]
-            print(string.format("Point: %7d sampled at (%.2f, %.2f), strips: %3d, first strip elevation: %7.2fm, %d points interval time: %5.2f", i, lons[i], lats[i], #tbl, el, modulovalue, dtime))
-            intervaltime = time.latch()
+            if not is_empty(tbl) then
+                local firstSample = tbl[1]
+                local el = firstSample["value"]
+                print(string.format("Point: %7d sampled at (%.2f, %.2f), elevation: %7.2fm", i, lons[i], lats[i], el))
+            else
+                print(string.format("Point: %7d sampled at (%.2f, %.2f), elevation: EMPTY_TABLE", i, lons[i], lats[i]))
+            end
         end
     end
 end
@@ -74,7 +72,7 @@ print(string.format("Serial sampling: %d points read, time: %f, failed reads: %d
 local batchResults = {}
 local starttimeBatch = time.latch()
 
-print(string.format("\n------------------------------------\nStrips batch reading %d points along arctic circle, longitude range (%.2f to %.2f)\n------------------------------------", maxPoints, startLon, stopLon))
+print(string.format("\n------------------------------------\nArcticDEM stript batch reading %d points\n------------------------------------", maxPoints))
 local tbl, err = dem:batchsample(lons, lats, heights)
 if err ~= 0 then
     print("Batch sampling failed")
@@ -82,74 +80,12 @@ else
     batchResults = tbl
 end
 
-local stoptimeBatch = time.latch()
-local dtimeBatch = stoptimeBatch - starttimeBatch
+local dtimeBatch = time.latch() - starttimeBatch
 print(string.format("Batch sampling: %d points read, time: %f, failed reads: %d", maxPoints, dtimeBatch, failedSamplesBatch))
 
-
--- Helper function to check if two numbers are equal, considering NaN
-local function areEqual(num1, num2)
-    if num1 ~= num1 and num2 ~= num2 then
-        -- Both are NaN
-        return true
-    else
-        -- Regular comparison
-        return math.abs(num1 - num2) <= 1e-6
-    end
-end
-
-
--- Compare serial and batch results
-print("\n------------------------------------\nComparing Serial and Batch Results\n------------------------------------")
-local totalMismatches = 0
-local totalFailedSerial = 0
-local totalFailedBatch = 0
-
-for i = 1, maxPoints do
-    local serialSample = serialResults[i]
-    local batchSample = batchResults[i]
-
-    if (serialSample == nil and batchSample == nil) then
-        -- Both failed
-        totalFailedSerial = totalFailedSerial + 1
-        totalFailedBatch = totalFailedBatch + 1
-        print(string.format("Point %d: Both methods failed", i))
-    elseif (serialSample == nil) then
-        -- Serial failed
-        totalFailedSerial = totalFailedSerial + 1
-        totalMismatches = totalMismatches + 1
-        print(string.format("Point %d: Serial failed, Batch succeeded", i))
-    elseif (batchSample == nil) then
-        -- Batch failed
-        totalFailedBatch = totalFailedBatch + 1
-        totalMismatches = totalMismatches + 1
-        print(string.format("Point %d: Batch failed, Serial succeeded", i))
-    else
-        -- Compare number of samples
-        if #serialSample > #batchSample then
-            totalMismatches = totalMismatches + 1
-            print(string.format("Point %d: (%.2f, %.2f), Error: Serial samples (%d) > Batch samples (%d)", i, lons[i], lats[i], #serialSample, #batchSample))
-        else
-            -- Check if each serial sample matches any batch sample
-            local mismatchFound = false
-            for j = 1, #serialSample do
-                local foundMatch = false
-                for k = 1, #batchSample do
-                    if areEqual(serialSample[j]["value"], batchSample[k]["value"]) then
-                        foundMatch = true
-                        break
-                    end
-                end
-
-                if not foundMatch then
-                    mismatchFound = true
-                    totalMismatches = totalMismatches + 1
-                    print(string.format("Point %d, Serial Sample %d: %.6f has no match in Batch samples", i, j, serialSample[j]["value"]))
-                end
-            end
-        end
-    end
-end
+local fileio = require("samples_fileio")
+local mismatches = fileio.compare_samples_tables(serialResults, batchResults)
+print(string.format("Detected %d mismatches", mismatches))
 
 -- Print summary
 print("\n------------------------------------\nPerformance Summary\n------------------------------------")
@@ -157,8 +93,6 @@ print(string.format("Total Points: %d", maxPoints))
 print(string.format("Serial Sampling Time: %6.2f seconds", dtimeSerial))
 print(string.format("Batch  Sampling Time: %6.2f seconds", dtimeBatch))
 print(string.format("Speedup (Serial/Batch): %.2fx", dtimeSerial / dtimeBatch))
-print(string.format("Failed Points (Serial): %d", totalFailedSerial))
-print(string.format("Failed Points (Batch):  %d", totalFailedBatch))
-print(string.format("Mismatched Points:      %d", totalMismatches))
 
-sys.quit()
+-- Report Results --
+runner.report()

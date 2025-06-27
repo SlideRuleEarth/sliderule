@@ -1,5 +1,5 @@
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 def test_nominal(client):
     request = {
@@ -143,6 +143,46 @@ def test_list(client):
     assert len(data) == 2
     assert data[0]['record_time'] == two_years_ago + ' 00:00:00'
     assert data[1]['record_time'] == three_years_ago + ' 00:00:00'
+
+def test_timespan(client):
+    # first request - now
+    now = date.today()
+    response = client.post('/manager/telemetry/record', json={
+        "record_time": f'{now.strftime('%Y-%m-%d')}',
+        "source_ip": "128.154.178.80",
+        "aoi": {"x": 30.0, "y": 57.0},
+        "client": "pytest",
+        "endpoint":"defaults",
+        "duration": 1.0,
+        "status_code": 0,
+        "account": "sliderule",
+        "version": "v4.5.1"
+    })
+    assert response.data == b'Telemetry record successfully posted'
+    # second request - 2 years ago
+    two_years_ago = date.today() - timedelta(days=730)
+    response = client.post('/manager/telemetry/record', json={
+        "record_time": f'{two_years_ago.strftime('%Y-%m-%d')}',
+        "source_ip": "128.154.178.80",
+        "aoi": {"x": 30.0, "y": 57.0},
+        "client": "pytest",
+        "endpoint":"defaults",
+        "duration": 1.0,
+        "status_code": 0,
+        "account": "sliderule",
+        "version": "v4.5.1"
+    })
+    assert response.data == b'Telemetry record successfully posted'
+    # list - 1 year (and a day)
+    response = client.get('/manager/status/timespan/record_time')
+    data = json.loads(response.data.decode("utf-8"))
+    assert response.status_code == 200
+    start = datetime.fromisoformat(data["start"])
+    end = datetime.fromisoformat(data["end"])
+    span = timedelta(seconds=data["span"])
+    assert start.date() == two_years_ago
+    assert end.date() == now
+    assert span == now - two_years_ago
 
 def test_geo(client):
     response = client.post('/manager/telemetry/record', json={

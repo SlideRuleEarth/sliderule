@@ -6,19 +6,22 @@ if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
     return runner.skip()
 end
 
--- Unit Test For Temporal filter --
+-- Setup --
+-- runner.log(core.DEBUG)
+
+-- Self Test --
 
 local sigma = 1.0e-9
 
 local demType = "arcticdem-mosaic"
 local samplingRadius = 30
 
-local  lon = 100.00
-local  lat = 66.34  -- Arctic Circle lat
-local  height = 0
+local lon = -150.0
+local lat =   70.0
+local height = 0
 
 local samplingAlgs = {"NearestNeighbour", "Bilinear", "Cubic", "CubicSpline", "Lanczos", "Average", "Mode", "Gauss"}
-local minElevation = 638
+local minElevation = 100
 
 for radius = 0, 100, 50
 do
@@ -34,7 +37,7 @@ do
                 el = v["value"]
                 if i == 1 then
                     --NearestNeighbour has always the same value, regardless of sampling radius
-                    runner.assert(math.abs(el - 653.148437500) < sigma)
+                    runner.assert(math.abs(el - 116.250) < sigma)
                 else
                     runner.assert(el > minElevation)
                 end
