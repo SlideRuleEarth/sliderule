@@ -4,6 +4,7 @@ run:
 init:
 	flask --app manager init-db
 
+TEST ?=
 test:
-	coverage run -m pytest
+	coverage run -m pytest $(TEST)
 	coverage report -m

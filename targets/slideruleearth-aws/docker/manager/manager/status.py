@@ -82,7 +82,7 @@ def calc_timespan(table, field, valid_fields):
             # execute request
             result = execute_command_db(cmd).fetchall()
             # return response
-            response = {"start": result[0][0], "end": result[0][1], "span": result[0][1] - result[0][0]}
+            response = {"start": result[0][0].isoformat(), "end": result[0][1].isoformat(), "span": (result[0][1] - result[0][0]).total_seconds()}
             return json.dumps(response)
         else:
             raise RuntimeError(f'Unable to calculate timespan of {field}')

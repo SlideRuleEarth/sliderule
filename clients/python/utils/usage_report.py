@@ -33,6 +33,7 @@ import sys
 import argparse
 import boto3
 import duckdb
+from datetime import datetime, timedelta
 from sliderule.session import Session
 
 # Command Line Arguments
@@ -108,11 +109,12 @@ def timespan(table, field, db=None):
             FROM {table};
         """
         # execute request
-        result = db.execute(cmd).fetchall()
-        # return response
-        return {"start": result[0][0], "end": result[0][1], "span": result[0][1] - result[0][0]}
+        data = db.execute(cmd).fetchall()
+        result = {"start": data[0][0].isoformat(), "end": data[0][1].isoformat(), "span": (data[0][1] - data[0][0]).total_seconds()}
     else:
-        return session.manager(f'status/timespan/{field}')
+        result = session.manager(f'status/timespan/{field}')
+    # return response
+    return {"start": datetime.fromisoformat(result["start"]), "end": datetime.fromisoformat(result["end"]), "span": timedelta(seconds=result["span"])}
 
 ##############################
 # Export Database - Exits
