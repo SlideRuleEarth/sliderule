@@ -234,3 +234,25 @@ class TestAtl03x:
         assert init
         assert len(gdf1) == len(gdf2)
         assert gdf1.height.mean() < gdf2.height.mean()
+
+    def test_final_fields(self, init):
+        parms = {
+            "t0": "2019-12-02T01:00:00Z",
+            "t1": "2020-01-30T17:58:49Z",
+            "rgt":1322,
+            "region": 9,
+            "srt":icesat2.SRT_DYNAMIC,
+            "cnf":icesat2.CNF_SURFACE_LOW,
+            "spots": [3],
+            "output":{
+                "fields": ['height', 'x_atc', 'atl03_cnf']
+            }
+        }
+        gdf = sliderule.run("atl03x", parms)
+        assert init
+        assert len(gdf) == 1774972
+        assert len(gdf.keys()) == 4
+        assert "height" in gdf.keys()
+        assert "x_atc" in gdf.keys()
+        assert "atl03_cnf" in gdf.keys()
+        assert "geometry" in gdf.keys()

@@ -863,7 +863,7 @@ class Session:
         if rec["code"] == EXCEPTION_CODES["SIMPLIFY"]:
             raise RetryRequest("cmr simplification requested")
         elif rec["code"] < 0:
-            eventlogger[rec["level"]]("Exception <%d>: %s", rec["code"], rec["text"])
+            eventlogger[rec["level"]]("Alert <%d>: %s", rec["code"], rec["text"])
         else:
             eventlogger[rec["level"]]("%s", rec["text"])
 

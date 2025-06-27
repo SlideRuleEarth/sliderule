@@ -84,7 +84,8 @@ class OutputFields: public FieldDictionary
         FieldElement<bool>      withValidation {false};     // whether to validate the arrow structure before outputing
         FieldElement<string>    assetName;
         FieldElement<string>    region;
-        FieldList<string>       ancillaryFields;
+        FieldList<string>       ancillaryFields;            // legacy functionality in support of ancillary fields for streamed results
+        FieldList<string>       finalFields;                // which fields to include in the output
 
         #ifdef __aws__
         CredentialStore::Credential credentials;

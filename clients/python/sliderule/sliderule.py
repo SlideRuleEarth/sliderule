@@ -493,7 +493,7 @@ def run(api, parms, aoi=None, resources=None, session=None):
     if type(resources) == list:
         parms["resources"] = resources
 
-    # add output
+    # manage output for convenience
     delete_tempfile = False
     if "output" not in parms:
         delete_tempfile = True
@@ -502,6 +502,12 @@ def run(api, parms, aoi=None, resources=None, session=None):
             "format": "geoparquet",
             "open_on_complete": True
         }
+    elif ("path" not in parms["output"]) and ("asset" not in parms["output"]):
+        delete_tempfile = True
+        parms["output"]["path"] = tempfile.mktemp()
+        parms["output"]["open_on_complete"] = True
+        if "format" not in parms["output"]:
+            parms["output"]["format"] = "geoparquet"
 
     # make request
     rsps = source(api, {"parms": parms}, stream=True, session=session)

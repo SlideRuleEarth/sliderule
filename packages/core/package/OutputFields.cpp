@@ -63,7 +63,8 @@ OutputFields::OutputFields (void):
         #ifdef __aws__
         {"credentials",         &credentials},
         #endif
-        {"ancillary",           &ancillaryFields}
+        {"ancillary",           &ancillaryFields},
+        {"fields",              &finalFields}
     })
 {
 }

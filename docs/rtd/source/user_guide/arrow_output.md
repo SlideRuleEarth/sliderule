@@ -23,6 +23,7 @@ To control writing the data to an Arrow supported format, the `output` parameter
       - `aws_access_key_id`: AWS access key id
       - `aws_secret_access_key`: AWS secret access key
       - `aws_session_token`: AWS session token
+    * `fields`: the list of fields to include in the file output, trimming anything not found in this list; this is only supported in ***x-series*** endpoints (e.g. atl03x, atl13x, atl24x, etc.)
 
 ```python
 parms {

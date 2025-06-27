@@ -289,88 +289,6 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
 }
 
 /*----------------------------------------------------------------------------
-* buildFieldList
-*----------------------------------------------------------------------------*/
-void buildFieldList (vector<shared_ptr<arrow::Field>>& fields, const OutputFields& parms, const GeoDataFrame& dataframe)
-{
-    // loop through columns in data frame
-    const vector<string> column_names = dataframe.getColumnNames();
-    for(const string& name: column_names)
-    {
-        Field* field = dataframe.getColumn(name.c_str());
-
-        // check for geometry columns
-        if(parms.format == OutputFields::GEOPARQUET)
-        {
-            // skip over source columns for geometry as they will be added
-            // separately as a part of the dedicated geometry column
-            if (field->encoding & Field::X_COLUMN ||
-                field->encoding & Field::Y_COLUMN)
-            {
-                continue;
-            }
-        }
-
-        /* Add to Schema */
-        if(field->type == Field::COLUMN)
-        {
-            const uint32_t field_encoding = field->getValueEncoding();
-            const uint32_t type_encoding = field->getEncodedType();
-            if(field_encoding & (Field::NESTED_ARRAY | Field::NESTED_LIST | Field::NESTED_COLUMN))
-            {
-                switch(type_encoding)
-                {
-                    case Field::BOOL:   fields.push_back(arrow::field(name, arrow::list(arrow::boolean())));    break;
-                    case Field::INT8:   fields.push_back(arrow::field(name, arrow::list(arrow::int8())));       break;
-                    case Field::INT16:  fields.push_back(arrow::field(name, arrow::list(arrow::int16())));      break;
-                    case Field::INT32:  fields.push_back(arrow::field(name, arrow::list(arrow::int32())));      break;
-                    case Field::INT64:  fields.push_back(arrow::field(name, arrow::list(arrow::int64())));      break;
-                    case Field::UINT8:  fields.push_back(arrow::field(name, arrow::list(arrow::uint8())));      break;
-                    case Field::UINT16: fields.push_back(arrow::field(name, arrow::list(arrow::uint16())));     break;
-                    case Field::UINT32: fields.push_back(arrow::field(name, arrow::list(arrow::uint32())));     break;
-                    case Field::UINT64: fields.push_back(arrow::field(name, arrow::list(arrow::uint64())));     break;
-                    case Field::FLOAT:  fields.push_back(arrow::field(name, arrow::list(arrow::float32())));    break;
-                    case Field::DOUBLE: fields.push_back(arrow::field(name, arrow::list(arrow::float64())));    break;
-                    case Field::TIME8:  fields.push_back(arrow::field(name, arrow::list(arrow::timestamp(arrow::TimeUnit::NANO)))); break;
-                    case Field::STRING: fields.push_back(arrow::field(name, arrow::list(arrow::utf8())));       break;
-                    default: mlog(WARNING, "Skipping field %s with encoding %d", name.c_str(), field->getValueEncoding());                break;
-                }
-            }
-            else
-            {
-                switch(type_encoding)
-                {
-                    case Field::BOOL:   fields.push_back(arrow::field(name, arrow::boolean()));                 break;
-                    case Field::INT8:   fields.push_back(arrow::field(name, arrow::int8()));                    break;
-                    case Field::INT16:  fields.push_back(arrow::field(name, arrow::int16()));                   break;
-                    case Field::INT32:  fields.push_back(arrow::field(name, arrow::int32()));                   break;
-                    case Field::INT64:  fields.push_back(arrow::field(name, arrow::int64()));                   break;
-                    case Field::UINT8:  fields.push_back(arrow::field(name, arrow::uint8()));                   break;
-                    case Field::UINT16: fields.push_back(arrow::field(name, arrow::uint16()));                  break;
-                    case Field::UINT32: fields.push_back(arrow::field(name, arrow::uint32()));                  break;
-                    case Field::UINT64: fields.push_back(arrow::field(name, arrow::uint64()));                  break;
-                    case Field::FLOAT:  fields.push_back(arrow::field(name, arrow::float32()));                 break;
-                    case Field::DOUBLE: fields.push_back(arrow::field(name, arrow::float64()));                 break;
-                    case Field::TIME8:  fields.push_back(arrow::field(name, arrow::timestamp(arrow::TimeUnit::NANO))); break;
-                    case Field::STRING: fields.push_back(arrow::field(name, arrow::utf8()));                    break;
-                    default: mlog(WARNING, "Skipping field %s with encoding %d", name.c_str(), field->getValueEncoding());                break;
-                }
-            }
-        }
-        else
-        {
-            mlog(WARNING, "Skipping field %s with type %d", name.c_str(), static_cast<int>(field->type));
-        }
-    }
-
-    // add geometry column
-    if(parms.format == OutputFields::GEOPARQUET)
-    {
-        fields.push_back(arrow::field("geometry", arrow::binary()));
-    }
-}
-
-/*----------------------------------------------------------------------------
 * appendGeoMetaData
 *----------------------------------------------------------------------------*/
 void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
@@ -520,7 +438,7 @@ void appendPandasMetaData (const char* index_column_name, const shared_ptr<arrow
 /*----------------------------------------------------------------------------
 * processDataFrame
 *----------------------------------------------------------------------------*/
-void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const OutputFields& parms, const GeoDataFrame& dataframe, const uint32_t trace_id)
+void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, vector<shared_ptr<arrow::Field>>& fields, const OutputFields& parms, const GeoDataFrame& dataframe, const uint32_t trace_id)
 {
     // build columns
     Dictionary<FieldMap<FieldUntypedColumn>::entry_t>::Iterator iter(dataframe.getColumns());
@@ -538,63 +456,86 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const OutputFi
             continue;
         }
 
+        // check user's final field list (if provided)
+        if(parms.finalFields.length() > 0)
+        {
+            // when parquet, must include time column becuase it is used as the index
+            if( ((parms.format == OutputFields::PARQUET) ||
+                 (parms.format == OutputFields::GEOPARQUET)) &&
+                ((field->encoding & Field::TIME_COLUMN) == 0))
+            {
+                // look for field in list of fields provided by user
+                bool found = false;
+                for(int i = 0; i < parms.finalFields.length(); i++)
+                {
+                    if(StringLib::match(parms.finalFields[i].c_str(), name))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                // if field is not in list then continue (skipping logic that adds it below)
+                if(!found) continue;
+            }
+        }
+
         // encode field to arrow
         const uint32_t field_trace_id = start_trace(INFO, trace_id, "encodeFields", "{\"field\": %s}", name);
         if(field->type == Field::COLUMN)
         {
             switch(field->getValueEncoding())
             {
-                case Field::INT8:                           encode<int8_t,   arrow::Int8Builder>   (dynamic_cast<const FieldColumn<int8_t>*>(field), columns);   break;
-                case Field::INT16:                          encode<int16_t,  arrow::Int16Builder>  (dynamic_cast<const FieldColumn<int16_t>*>(field), columns);  break;
-                case Field::INT32:                          encode<int32_t,  arrow::Int32Builder>  (dynamic_cast<const FieldColumn<int32_t>*>(field), columns);  break;
-                case Field::INT64:                          encode<int64_t,  arrow::Int64Builder>  (dynamic_cast<const FieldColumn<int64_t>*>(field), columns);  break;
-                case Field::UINT8:                          encode<uint8_t,  arrow::UInt8Builder>  (dynamic_cast<const FieldColumn<uint8_t>*>(field), columns);  break;
-                case Field::UINT16:                         encode<uint16_t, arrow::UInt16Builder> (dynamic_cast<const FieldColumn<uint16_t>*>(field), columns); break;
-                case Field::UINT32:                         encode<uint32_t, arrow::UInt32Builder> (dynamic_cast<const FieldColumn<uint32_t>*>(field), columns); break;
-                case Field::UINT64:                         encode<uint64_t, arrow::UInt64Builder> (dynamic_cast<const FieldColumn<uint64_t>*>(field), columns); break;
-                case Field::FLOAT:                          encode<float,    arrow::FloatBuilder>  (dynamic_cast<const FieldColumn<float>*>(field), columns);    break;
-                case Field::DOUBLE:                         encode<double,   arrow::DoubleBuilder> (dynamic_cast<const FieldColumn<double>*>(field), columns);   break;
-                case Field::TIME8:                          encodeTime8(dynamic_cast<const FieldColumn<time8_t>*>(field), columns); break;
-                case Field::STRING:                         encode<string,   arrow::StringBuilder> (dynamic_cast<const FieldColumn<string>*>(field), columns);   break;
+                case Field::INT8:                           encode<int8_t,         arrow::Int8Builder>      (dynamic_cast<const FieldColumn<int8_t>*>(field), columns);                 fields.push_back(arrow::field(name, arrow::int8()));                                        break;
+                case Field::INT16:                          encode<int16_t,        arrow::Int16Builder>     (dynamic_cast<const FieldColumn<int16_t>*>(field), columns);                fields.push_back(arrow::field(name, arrow::int16()));                                       break;
+                case Field::INT32:                          encode<int32_t,        arrow::Int32Builder>     (dynamic_cast<const FieldColumn<int32_t>*>(field), columns);                fields.push_back(arrow::field(name, arrow::int32()));                                       break;
+                case Field::INT64:                          encode<int64_t,        arrow::Int64Builder>     (dynamic_cast<const FieldColumn<int64_t>*>(field), columns);                fields.push_back(arrow::field(name, arrow::int64()));                                       break;
+                case Field::UINT8:                          encode<uint8_t,        arrow::UInt8Builder>     (dynamic_cast<const FieldColumn<uint8_t>*>(field), columns);                fields.push_back(arrow::field(name, arrow::uint8()));                                       break;
+                case Field::UINT16:                         encode<uint16_t,       arrow::UInt16Builder>    (dynamic_cast<const FieldColumn<uint16_t>*>(field), columns);               fields.push_back(arrow::field(name, arrow::uint16()));                                      break;
+                case Field::UINT32:                         encode<uint32_t,       arrow::UInt32Builder>    (dynamic_cast<const FieldColumn<uint32_t>*>(field), columns);               fields.push_back(arrow::field(name, arrow::uint32()));                                      break;
+                case Field::UINT64:                         encode<uint64_t,       arrow::UInt64Builder>    (dynamic_cast<const FieldColumn<uint64_t>*>(field), columns);               fields.push_back(arrow::field(name, arrow::uint64()));                                      break;
+                case Field::FLOAT:                          encode<float,          arrow::FloatBuilder>     (dynamic_cast<const FieldColumn<float>*>(field), columns);                  fields.push_back(arrow::field(name, arrow::float32()));                                     break;
+                case Field::DOUBLE:                         encode<double,         arrow::DoubleBuilder>    (dynamic_cast<const FieldColumn<double>*>(field), columns);                 fields.push_back(arrow::field(name, arrow::float64()));                                     break;
+                case Field::TIME8:                          encodeTime8                                     (dynamic_cast<const FieldColumn<time8_t>*>(field), columns);                fields.push_back(arrow::field(name, arrow::timestamp(arrow::TimeUnit::NANO)));              break;
+                case Field::STRING:                         encode<string,         arrow::StringBuilder>    (dynamic_cast<const FieldColumn<string>*>(field), columns);                 fields.push_back(arrow::field(name, arrow::utf8()));                                        break;
 
-                case Field::NESTED_ARRAY | Field::INT8:     encodeArray<int8_t,   arrow::Int8Builder>   (field, columns); break;
-                case Field::NESTED_ARRAY | Field::INT16:    encodeArray<int16_t,  arrow::Int16Builder>  (field, columns); break;
-                case Field::NESTED_ARRAY | Field::INT32:    encodeArray<int32_t,  arrow::Int32Builder>  (field, columns); break;
-                case Field::NESTED_ARRAY | Field::INT64:    encodeArray<int64_t,  arrow::Int64Builder>  (field, columns); break;
-                case Field::NESTED_ARRAY | Field::UINT8:    encodeArray<uint8_t,  arrow::UInt8Builder>  (field, columns); break;
-                case Field::NESTED_ARRAY | Field::UINT16:   encodeArray<uint16_t, arrow::UInt16Builder> (field, columns); break;
-                case Field::NESTED_ARRAY | Field::UINT32:   encodeArray<uint32_t, arrow::UInt32Builder> (field, columns); break;
-                case Field::NESTED_ARRAY | Field::UINT64:   encodeArray<uint64_t, arrow::UInt64Builder> (field, columns); break;
-                case Field::NESTED_ARRAY | Field::FLOAT:    encodeArray<float,    arrow::FloatBuilder>  (field, columns); break;
-                case Field::NESTED_ARRAY | Field::DOUBLE:   encodeArray<double,   arrow::DoubleBuilder> (field, columns); break;
-                case Field::NESTED_ARRAY | Field::TIME8:    encodeArrayTime8(field, columns); break;
-                case Field::NESTED_ARRAY | Field::STRING:   encodeArray<string,   arrow::StringBuilder> (field, columns); break;
+                case Field::NESTED_ARRAY | Field::INT8:     encodeArray<int8_t,    arrow::Int8Builder>      (field, columns);                                                           fields.push_back(arrow::field(name, arrow::list(arrow::int8())));                           break;
+                case Field::NESTED_ARRAY | Field::INT16:    encodeArray<int16_t,   arrow::Int16Builder>     (field, columns);                                                           fields.push_back(arrow::field(name, arrow::list(arrow::int16())));                          break;
+                case Field::NESTED_ARRAY | Field::INT32:    encodeArray<int32_t,   arrow::Int32Builder>     (field, columns);                                                           fields.push_back(arrow::field(name, arrow::list(arrow::int32())));                          break;
+                case Field::NESTED_ARRAY | Field::INT64:    encodeArray<int64_t,   arrow::Int64Builder>     (field, columns);                                                           fields.push_back(arrow::field(name, arrow::list(arrow::int64())));                          break;
+                case Field::NESTED_ARRAY | Field::UINT8:    encodeArray<uint8_t,   arrow::UInt8Builder>     (field, columns);                                                           fields.push_back(arrow::field(name, arrow::list(arrow::uint8())));                          break;
+                case Field::NESTED_ARRAY | Field::UINT16:   encodeArray<uint16_t,  arrow::UInt16Builder>    (field, columns);                                                           fields.push_back(arrow::field(name, arrow::list(arrow::uint16())));                         break;
+                case Field::NESTED_ARRAY | Field::UINT32:   encodeArray<uint32_t,  arrow::UInt32Builder>    (field, columns);                                                           fields.push_back(arrow::field(name, arrow::list(arrow::uint32())));                         break;
+                case Field::NESTED_ARRAY | Field::UINT64:   encodeArray<uint64_t,  arrow::UInt64Builder>    (field, columns);                                                           fields.push_back(arrow::field(name, arrow::list(arrow::uint64())));                         break;
+                case Field::NESTED_ARRAY | Field::FLOAT:    encodeArray<float,     arrow::FloatBuilder>     (field, columns);                                                           fields.push_back(arrow::field(name, arrow::list(arrow::float32())));                        break;
+                case Field::NESTED_ARRAY | Field::DOUBLE:   encodeArray<double,    arrow::DoubleBuilder>    (field, columns);                                                           fields.push_back(arrow::field(name, arrow::list(arrow::float64())));                        break;
+                case Field::NESTED_ARRAY | Field::TIME8:    encodeArrayTime8                                (field, columns);                                                           fields.push_back(arrow::field(name, arrow::list(arrow::timestamp(arrow::TimeUnit::NANO)))); break;
+                case Field::NESTED_ARRAY | Field::STRING:   encodeArray<string,    arrow::StringBuilder>    (field, columns);                                                           fields.push_back(arrow::field(name, arrow::utf8()));                                        break;
 
-                case Field::NESTED_LIST | Field::INT8:      encodeList<int8_t,   arrow::Int8Builder>   (dynamic_cast<const FieldColumn<FieldList<int8_t>>*>(field), columns);   break;
-                case Field::NESTED_LIST | Field::INT16:     encodeList<int16_t,  arrow::Int16Builder>  (dynamic_cast<const FieldColumn<FieldList<int16_t>>*>(field), columns);  break;
-                case Field::NESTED_LIST | Field::INT32:     encodeList<int32_t,  arrow::Int32Builder>  (dynamic_cast<const FieldColumn<FieldList<int32_t>>*>(field), columns);  break;
-                case Field::NESTED_LIST | Field::INT64:     encodeList<int64_t,  arrow::Int64Builder>  (dynamic_cast<const FieldColumn<FieldList<int64_t>>*>(field), columns);  break;
-                case Field::NESTED_LIST | Field::UINT8:     encodeList<uint8_t,  arrow::UInt8Builder>  (dynamic_cast<const FieldColumn<FieldList<uint8_t>>*>(field), columns);  break;
-                case Field::NESTED_LIST | Field::UINT16:    encodeList<uint16_t, arrow::UInt16Builder> (dynamic_cast<const FieldColumn<FieldList<uint16_t>>*>(field), columns); break;
-                case Field::NESTED_LIST | Field::UINT32:    encodeList<uint32_t, arrow::UInt32Builder> (dynamic_cast<const FieldColumn<FieldList<uint32_t>>*>(field), columns); break;
-                case Field::NESTED_LIST | Field::UINT64:    encodeList<uint64_t, arrow::UInt64Builder> (dynamic_cast<const FieldColumn<FieldList<uint64_t>>*>(field), columns); break;
-                case Field::NESTED_LIST | Field::FLOAT:     encodeList<float,    arrow::FloatBuilder>  (dynamic_cast<const FieldColumn<FieldList<float>>*>(field), columns);    break;
-                case Field::NESTED_LIST | Field::DOUBLE:    encodeList<double,   arrow::DoubleBuilder> (dynamic_cast<const FieldColumn<FieldList<double>>*>(field), columns);   break;
-                case Field::NESTED_LIST | Field::TIME8:     encodeListTime8(dynamic_cast<const FieldColumn<FieldList<time8_t>>*>(field), columns); break;
-                case Field::NESTED_LIST | Field::STRING:    encodeList<string,   arrow::StringBuilder> (dynamic_cast<const FieldColumn<FieldList<string>>*>(field), columns);   break;
+                case Field::NESTED_LIST | Field::INT8:      encodeList<int8_t,     arrow::Int8Builder>      (dynamic_cast<const FieldColumn<FieldList<int8_t>>*>(field), columns);      fields.push_back(arrow::field(name, arrow::list(arrow::int8())));                           break;
+                case Field::NESTED_LIST | Field::INT16:     encodeList<int16_t,    arrow::Int16Builder>     (dynamic_cast<const FieldColumn<FieldList<int16_t>>*>(field), columns);     fields.push_back(arrow::field(name, arrow::list(arrow::int16())));                          break;
+                case Field::NESTED_LIST | Field::INT32:     encodeList<int32_t,    arrow::Int32Builder>     (dynamic_cast<const FieldColumn<FieldList<int32_t>>*>(field), columns);     fields.push_back(arrow::field(name, arrow::list(arrow::int32())));                          break;
+                case Field::NESTED_LIST | Field::INT64:     encodeList<int64_t,    arrow::Int64Builder>     (dynamic_cast<const FieldColumn<FieldList<int64_t>>*>(field), columns);     fields.push_back(arrow::field(name, arrow::list(arrow::int64())));                          break;
+                case Field::NESTED_LIST | Field::UINT8:     encodeList<uint8_t,    arrow::UInt8Builder>     (dynamic_cast<const FieldColumn<FieldList<uint8_t>>*>(field), columns);     fields.push_back(arrow::field(name, arrow::list(arrow::uint8())));                          break;
+                case Field::NESTED_LIST | Field::UINT16:    encodeList<uint16_t,   arrow::UInt16Builder>    (dynamic_cast<const FieldColumn<FieldList<uint16_t>>*>(field), columns);    fields.push_back(arrow::field(name, arrow::list(arrow::uint16())));                         break;
+                case Field::NESTED_LIST | Field::UINT32:    encodeList<uint32_t,   arrow::UInt32Builder>    (dynamic_cast<const FieldColumn<FieldList<uint32_t>>*>(field), columns);    fields.push_back(arrow::field(name, arrow::list(arrow::uint32())));                         break;
+                case Field::NESTED_LIST | Field::UINT64:    encodeList<uint64_t,   arrow::UInt64Builder>    (dynamic_cast<const FieldColumn<FieldList<uint64_t>>*>(field), columns);    fields.push_back(arrow::field(name, arrow::list(arrow::uint64())));                         break;
+                case Field::NESTED_LIST | Field::FLOAT:     encodeList<float,      arrow::FloatBuilder>     (dynamic_cast<const FieldColumn<FieldList<float>>*>(field), columns);       fields.push_back(arrow::field(name, arrow::list(arrow::float32())));                        break;
+                case Field::NESTED_LIST | Field::DOUBLE:    encodeList<double,     arrow::DoubleBuilder>    (dynamic_cast<const FieldColumn<FieldList<double>>*>(field), columns);      fields.push_back(arrow::field(name, arrow::list(arrow::float64())));                        break;
+                case Field::NESTED_LIST | Field::TIME8:     encodeListTime8                                 (dynamic_cast<const FieldColumn<FieldList<time8_t>>*>(field), columns);     fields.push_back(arrow::field(name, arrow::list(arrow::timestamp(arrow::TimeUnit::NANO)))); break;
+                case Field::NESTED_LIST | Field::STRING:    encodeList<string,     arrow::StringBuilder>    (dynamic_cast<const FieldColumn<FieldList<string>>*>(field), columns);      fields.push_back(arrow::field(name, arrow::utf8()));                                        break;
 
-                case Field::NESTED_COLUMN | Field::INT8:    encodeColumn<int8_t,   arrow::Int8Builder>   (dynamic_cast<const FieldColumn<FieldColumn<int8_t>>*>(field), columns);   break;
-                case Field::NESTED_COLUMN | Field::INT16:   encodeColumn<int16_t,  arrow::Int16Builder>  (dynamic_cast<const FieldColumn<FieldColumn<int16_t>>*>(field), columns);  break;
-                case Field::NESTED_COLUMN | Field::INT32:   encodeColumn<int32_t,  arrow::Int32Builder>  (dynamic_cast<const FieldColumn<FieldColumn<int32_t>>*>(field), columns);  break;
-                case Field::NESTED_COLUMN | Field::INT64:   encodeColumn<int64_t,  arrow::Int64Builder>  (dynamic_cast<const FieldColumn<FieldColumn<int64_t>>*>(field), columns);  break;
-                case Field::NESTED_COLUMN | Field::UINT8:   encodeColumn<uint8_t,  arrow::UInt8Builder>  (dynamic_cast<const FieldColumn<FieldColumn<uint8_t>>*>(field), columns);  break;
-                case Field::NESTED_COLUMN | Field::UINT16:  encodeColumn<uint16_t, arrow::UInt16Builder> (dynamic_cast<const FieldColumn<FieldColumn<uint16_t>>*>(field), columns); break;
-                case Field::NESTED_COLUMN | Field::UINT32:  encodeColumn<uint32_t, arrow::UInt32Builder> (dynamic_cast<const FieldColumn<FieldColumn<uint32_t>>*>(field), columns); break;
-                case Field::NESTED_COLUMN | Field::UINT64:  encodeColumn<uint64_t, arrow::UInt64Builder> (dynamic_cast<const FieldColumn<FieldColumn<uint64_t>>*>(field), columns); break;
-                case Field::NESTED_COLUMN | Field::FLOAT:   encodeColumn<float,    arrow::FloatBuilder>  (dynamic_cast<const FieldColumn<FieldColumn<float>>*>(field), columns);    break;
-                case Field::NESTED_COLUMN | Field::DOUBLE:  encodeColumn<double,   arrow::DoubleBuilder> (dynamic_cast<const FieldColumn<FieldColumn<double>>*>(field), columns);   break;
-                case Field::NESTED_COLUMN | Field::TIME8:   encodeColumnTime8(dynamic_cast<const FieldColumn<FieldColumn<time8_t>>*>(field), columns); break;
-                case Field::NESTED_COLUMN | Field::STRING:  encodeColumn<string,   arrow::StringBuilder> (dynamic_cast<const FieldColumn<FieldColumn<string>>*>(field), columns);   break;
+                case Field::NESTED_COLUMN | Field::INT8:    encodeColumn<int8_t,   arrow::Int8Builder>      (dynamic_cast<const FieldColumn<FieldColumn<int8_t>>*>(field), columns);    fields.push_back(arrow::field(name, arrow::list(arrow::int8())));                           break;
+                case Field::NESTED_COLUMN | Field::INT16:   encodeColumn<int16_t,  arrow::Int16Builder>     (dynamic_cast<const FieldColumn<FieldColumn<int16_t>>*>(field), columns);   fields.push_back(arrow::field(name, arrow::list(arrow::int16())));                          break;
+                case Field::NESTED_COLUMN | Field::INT32:   encodeColumn<int32_t,  arrow::Int32Builder>     (dynamic_cast<const FieldColumn<FieldColumn<int32_t>>*>(field), columns);   fields.push_back(arrow::field(name, arrow::list(arrow::int32())));                          break;
+                case Field::NESTED_COLUMN | Field::INT64:   encodeColumn<int64_t,  arrow::Int64Builder>     (dynamic_cast<const FieldColumn<FieldColumn<int64_t>>*>(field), columns);   fields.push_back(arrow::field(name, arrow::list(arrow::int64())));                          break;
+                case Field::NESTED_COLUMN | Field::UINT8:   encodeColumn<uint8_t,  arrow::UInt8Builder>     (dynamic_cast<const FieldColumn<FieldColumn<uint8_t>>*>(field), columns);   fields.push_back(arrow::field(name, arrow::list(arrow::uint8())));                          break;
+                case Field::NESTED_COLUMN | Field::UINT16:  encodeColumn<uint16_t, arrow::UInt16Builder>    (dynamic_cast<const FieldColumn<FieldColumn<uint16_t>>*>(field), columns);  fields.push_back(arrow::field(name, arrow::list(arrow::uint16())));                         break;
+                case Field::NESTED_COLUMN | Field::UINT32:  encodeColumn<uint32_t, arrow::UInt32Builder>    (dynamic_cast<const FieldColumn<FieldColumn<uint32_t>>*>(field), columns);  fields.push_back(arrow::field(name, arrow::list(arrow::uint32())));                         break;
+                case Field::NESTED_COLUMN | Field::UINT64:  encodeColumn<uint64_t, arrow::UInt64Builder>    (dynamic_cast<const FieldColumn<FieldColumn<uint64_t>>*>(field), columns);  fields.push_back(arrow::field(name, arrow::list(arrow::uint64())));                         break;
+                case Field::NESTED_COLUMN | Field::FLOAT:   encodeColumn<float,    arrow::FloatBuilder>     (dynamic_cast<const FieldColumn<FieldColumn<float>>*>(field), columns);     fields.push_back(arrow::field(name, arrow::list(arrow::float32())));                        break;
+                case Field::NESTED_COLUMN | Field::DOUBLE:  encodeColumn<double,   arrow::DoubleBuilder>    (dynamic_cast<const FieldColumn<FieldColumn<double>>*>(field), columns);    fields.push_back(arrow::field(name, arrow::list(arrow::float64())));                        break;
+                case Field::NESTED_COLUMN | Field::TIME8:   encodeColumnTime8                               (dynamic_cast<const FieldColumn<FieldColumn<time8_t>>*>(field), columns);   fields.push_back(arrow::field(name, arrow::list(arrow::timestamp(arrow::TimeUnit::NANO)))); break;
+                case Field::NESTED_COLUMN | Field::STRING:  encodeColumn<string,   arrow::StringBuilder>    (dynamic_cast<const FieldColumn<FieldColumn<string>>*>(field), columns);    fields.push_back(arrow::field(name, arrow::utf8()));                                        break;
 
                 default: mlog(WARNING, "Skipping column %s with encoding %X", name, static_cast<int>(field->encoding)); break;
             }
@@ -611,6 +552,7 @@ void processDataFrame (vector<shared_ptr<arrow::Array>>& columns, const OutputFi
     {
         const uint32_t geo_trace_id = start_trace(INFO, trace_id, "encodeGeometry", "%s", "{}");
         encodeGeometry(dataframe, columns);
+        fields.push_back(arrow::field("geometry", arrow::binary()));
         stop_trace(INFO, geo_trace_id);
     }
 }
@@ -678,14 +620,11 @@ int ArrowDataFrame::luaExport (lua_State* L)
         const uint32_t parent_trace_id = EventLib::grabId();
         const uint32_t trace_id = start_trace(INFO, parent_trace_id, "ArrowDataFrame", "{\"num_rows\": %ld}", dataframe.length());
 
-        // process dataframe to arrow array
-        vector<shared_ptr<arrow::Array>> columns;
-        processDataFrame(columns, arrow_parms, dataframe, trace_id);
-
-        // create schema
-        vector<shared_ptr<arrow::Field>> field_list;
-        buildFieldList(field_list, arrow_parms, dataframe);
-        shared_ptr<arrow::Schema> schema = make_shared<arrow::Schema>(field_list);
+        // process dataframe to arrow table
+        vector<shared_ptr<arrow::Array>> columns; // data
+        vector<shared_ptr<arrow::Field>> field_list; // schema
+        processDataFrame(columns, field_list, arrow_parms, dataframe, trace_id);
+        shared_ptr<arrow::Schema> schema = make_shared<arrow::Schema>(field_list); // create schema
 
         // write out table
         const uint32_t write_trace_id = start_trace(INFO, trace_id, "write_table", "%s", "{}");
