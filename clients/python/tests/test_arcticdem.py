@@ -66,7 +66,6 @@ class TestMosaic:
         assert rsps["samples"][0][0]["file"] ==  vrtFile
         assert rsps["samples"][0][0]["time"] ==  vrtFileTime
 
-
     def test_nearestneighbour(self, init):
         resource = "ATL03_20190314093716_11600203_005_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
@@ -114,6 +113,7 @@ class TestMosaic:
         assert gdf["mosaic.stdev"].describe()["count"] == 957
         assert gdf["mosaic.time"].iloc[0] == vrtFileTime
 
+@pytest.mark.external
 class TestStrips:
     def test_indexed_raster(self, init):
         region_of_interest = [  {'lon': -46.76533411521963, 'lat': 65.4938164756588},
@@ -121,7 +121,6 @@ class TestStrips:
                                 {'lon': -46.35015561146599, 'lat': 65.67523503534576},
                                 {'lon': -46.77853429879463, 'lat': 65.67041017142712},
                                 {'lon': -46.76533411521963, 'lat': 65.4938164756588}  ]
-
         catalog = earthdata.stac(short_name="arcticdem-strips", polygon=region_of_interest, as_str=True)
         parms = { "poly": region_of_interest,
                   "cnf": "atl03_high",
@@ -149,7 +148,6 @@ class TestStrips:
                 { "lon": -150.0, "lat": 70.0 }
             ]
         ]
-
         catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_point, as_str=True)
         gdf = raster.sample("arcticdem-strips", [[vrtLon,vrtLat]], parms={"catalog": catalog})
         assert init
@@ -165,7 +163,6 @@ class TestStrips:
                 { "lon": -150.0, "lat": 70.0 }
             ]
         ]
-
         catalog = earthdata.stac(short_name="arcticdem-strips", polygon=arcticdem_test_region, as_str=True)
         gdf = raster.sample("arcticdem-strips", [[vrtLon,vrtLat],[vrtLon+0.01,vrtLat+0.01]], parms={"catalog": catalog})
         assert init
