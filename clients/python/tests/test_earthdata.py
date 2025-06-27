@@ -249,3 +249,35 @@ class TestSlideRule:
             assert resource in rsps
             assert datetime.strptime(resource[9:16], '%Y%j') >= datetime.strptime(parms["t0"], '%Y-%m-%d')
             assert datetime.strptime(resource[9:16], '%Y%j') <= datetime.strptime(parms["t1"], '%Y-%m-%d')
+
+#
+# GEDI Earthdata Search
+#
+@pytest.mark.external
+class TestGedi:
+    def test_l1b(self):
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
+        parms = {
+            "asset": "gedil1b",
+            "poly": region["poly"],
+        }
+        granules = earthdata.search(parms)
+        assert 'GEDI01_B_2019109210809_O01988_03_T02056_02_005_01_V002.h5' in granules
+
+    def test_l2a(self):
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
+        parms = {
+            "asset": "gedil2a",
+            "poly": region["poly"],
+        }
+        granules = earthdata.search(parms)
+        assert 'GEDI02_A_2019109210809_O01988_03_T02056_02_003_01_V002.h5' in granules
+
+    def test_l4a(self):
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
+        parms = {
+            "asset": "gedil4a",
+            "poly": region["poly"],
+        }
+        granules = earthdata.search(parms)
+        assert 'GEDI04_A_2019109210809_O01988_03_T02056_02_002_02_V002.h5' in granules

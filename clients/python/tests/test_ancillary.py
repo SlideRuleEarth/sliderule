@@ -83,13 +83,11 @@ class TestGedi:
     def test_l1b(self, init):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
-            "asset": "gedil1b",
             "poly": region["poly"],
             "beam": 0,
             "anc_fields": ["master_frac", "rx_open"]
         }
-        granules = earthdata.search(parms)
-        gdf = gedi.gedi01bp(parms, resources=granules[0:1])
+        gdf = gedi.gedi01bp(parms, resources=['GEDI01_B_2019109210809_O01988_03_T02056_02_005_01_V002.h5'])
         assert init
         assert len(gdf) == 22
         assert gdf["beam"].unique()[0] == 0
@@ -99,13 +97,11 @@ class TestGedi:
     def test_l2a(self, init):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
-            "asset": "gedil2a",
             "poly": region["poly"],
             "beam": 0,
             "anc_fields": ["energy_total", "geolocation/elev_highestreturn_a1"]
         }
-        granules = earthdata.search(parms)
-        gdf = gedi.gedi02ap(parms, resources=granules[0:1])
+        gdf = gedi.gedi02ap(parms, resources=['GEDI02_A_2019109210809_O01988_03_T02056_02_003_01_V002.h5'])
         assert init
         assert len(gdf) == 22
         assert gdf["beam"].unique()[0] == 0
@@ -115,13 +111,11 @@ class TestGedi:
     def test_l4a(self, init):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
-            "asset": "gedil4a",
             "poly": region["poly"],
             "beam": 0,
             "anc_fields": ["selected_algorithm", "geolocation/elev_lowestmode_a1"]
         }
-        granules = earthdata.search(parms)
-        gdf = gedi.gedi04ap(parms, resources=granules[0:1])
+        gdf = gedi.gedi04ap(parms, resources=['GEDI04_A_2019109210809_O01988_03_T02056_02_002_02_V002.h5'])
         assert init
         assert len(gdf) == 22
         assert gdf["beam"].unique()[0] == 0
@@ -131,51 +125,43 @@ class TestGedi:
     def test_l1b_failure(self, init):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
-            "asset": "gedil1b",
             "poly": region["poly"],
             "beam": 0,
             "anc_fields": ["non_existent_field", "rx_open"]
         }
-        granules = earthdata.search(parms)
-        gdf = gedi.gedi01bp(parms, resources=granules[0:1])
+        gdf = gedi.gedi01bp(parms, resources=['GEDI01_B_2019109210809_O01988_03_T02056_02_005_01_V002.h5'])
         assert init
         assert len(gdf) == 0
 
     def test_l2a_failure(self, init):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
-            "asset": "gedil2a",
             "poly": region["poly"],
             "beam": 0,
             "anc_fields": ["non_existent_field", "geolocation/elev_highestreturn_a1"]
         }
-        granules = earthdata.search(parms)
-        gdf = gedi.gedi02ap(parms, resources=granules[0:1])
+        gdf = gedi.gedi02ap(parms, resources=['GEDI02_A_2019109210809_O01988_03_T02056_02_003_01_V002.h5'])
         assert init
         assert len(gdf) == 0
 
     def test_l4a_failure(self, init):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
-            "asset": "gedil4a",
             "poly": region["poly"],
             "beam": 0,
             "anc_fields": ["non_existent_field", "geolocation/elev_lowestmode_a1"]
         }
-        granules = earthdata.search(parms)
-        gdf = gedi.gedi04ap(parms, resources=granules[0:1])
+        gdf = gedi.gedi04ap(parms, resources=['GEDI04_A_2019109210809_O01988_03_T02056_02_002_02_V002.h5'])
         assert init
         assert len(gdf) == 0
 
     def test_l2a_rh_2D(self, init):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
-            "asset": "gedil2a",
             "poly": region["poly"],
             "beam": 0,
             "anc_fields": ["rh", "geolocation/elev_highestreturn_a1"]
         }
-        granules = earthdata.search(parms)
-        gdf = gedi.gedi02ap(parms, resources=granules[2:3])
+        gdf = gedi.gedi02ap(parms, resources=['GEDI02_A_2019123154305_O02202_03_T00174_02_003_01_V002.h5'])
         assert init
         assert gdf.iloc[4].rh[3] == -2.5
