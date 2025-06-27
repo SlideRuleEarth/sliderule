@@ -53,28 +53,30 @@ def captureit(endpoint, duration):
         gauge_metrics[endpoint + "_sum"] = gauge_metrics.get(endpoint + "_sum", 0.0) + duration
         count_metrics[endpoint + "_count"] = count_metrics.get(endpoint + "_count", 0) + 1
 
-def ratelimitit(source_ip, account):
+def ratelimitit(source_ip, source_ip_location):
     # determine request times
     now = date.today().isocalendar()
     this_request_time = (now.week, now.year)
-    last_request_time = user_request_time.get(source_ip, (0,0))
+    last_request_time = user_request_time.get(source_ip_location, (0,0))
     # update request count
     if this_request_time == last_request_time:
-        user_request_count[source_ip] += 1
+        user_request_count[source_ip_location] += 1
     else:
         # initialize (restart) request count
-        user_request_count[source_ip] = 1
+        user_request_count[source_ip_location] = 1
     # update request time
-    user_request_time[source_ip] = this_request_time
+    user_request_time[source_ip_location] = this_request_time
     # check request rate
-    if user_request_count[source_ip] >= current_app.config['RATELIMIT_WEEKLY_COUNT']:
-        print(f'Requests originating from {source_ip} will be rate limited for {current_app.config['RATELIMIT_BACKOFF_PERIOD']} minutes')
-        orchestrator_url = current_app.config['ORCHESTRATOR'] + "/discovery/block"
-        requests.post(orchestrator_url, data=json.dumps({"address": source_ip, "duration": current_app.config['RATELIMIT_BACKOFF_PERIOD']}))
-        user_request_count[source_ip] -= current_app.config['RATELIMIT_BACKOFF_COUNT']
+    if user_request_count[source_ip_location] >= current_app.config['RATELIMIT_WEEKLY_COUNT']:
+        user_request_count[source_ip_location] -= current_app.config['RATELIMIT_BACKOFF_COUNT']
+        blockit(source_ip) # for a short period of time
         return True # ip is being rate limited
     # nominal return
     return False # no rate limiting
+
+def blockit(source_ip):
+    print(f'Requests originating from {source_ip} will be rate limited for {current_app.config['RATELIMIT_BACKOFF_PERIOD']} seconds')
+    requests.post(current_app.config['ORCHESTRATOR'] + "/discovery/block", data=json.dumps({"address": source_ip, "duration": current_app.config['RATELIMIT_BACKOFF_PERIOD']}))
 
 def get_metrics():
     global gauge_metrics, count_metrics
@@ -97,11 +99,13 @@ def record():
         source_ip = data['source_ip'].split(",")[0]
         account = data['account']
         captureit(endpoint, duration)
-        ratelimitit(source_ip, account)
         if endpoint not in current_app.config['ENDPOINT_TLM_EXCLUSION']:
+            source_ip_hash = hashit(source_ip)
+            source_ip_location = locateit(source_ip, f'{client},{endpoint}')
+            ratelimitit(source_ip, source_ip_location)
             entry = ( data["record_time"],
-                      hashit(source_ip),
-                      locateit(source_ip, f'{client},{endpoint}'),
+                      source_ip_hash,
+                      source_ip_location,
                       data['aoi']['x'],
                       data['aoi']['y'],
                       client,
