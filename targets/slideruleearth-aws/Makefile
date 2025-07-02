@@ -90,6 +90,7 @@ COMMON_CFG += $(USERCFG)
 DEBUG_CFG := -DCMAKE_BUILD_TYPE=Debug
 DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 DEBUG_CFG += -DENABLE_ADDRESS_SANITIZER=ON
+DEBUG_CFG += -DSKIP_STATIC_ANALYSIS=OFF      # ON to disable static analysis for faster debug builds, set to OFF before committing
 DEBUG_CFG += $(COMMON_CFG)
 
 RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
@@ -405,8 +406,6 @@ JEST ?= # specific jest tests and additional jest options can be supplied here
 MNGRTEST ?= # specific manager tests and additional pytest options can be supplied here
 
 MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arcticdem_mosaic_perf.lua
-STRIPS_PERFORMANCE_TEST ?=  $(ROOT)/datasets/pgc/systests/arcticdem_strips_perf.lua
-SUBSET_PERFORMANCE_TEST ?=  $(ROOT)/targets/slideruleearth-aws/systests/subset_perf_test.lua
 MOSAICS_SERIAL_VS_BATCH_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arcticdem_mosaic_serial_vs_batch_perf.lua
 STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST  ?= $(ROOT)/datasets/pgc/systests/arcticdem_strips_serial_vs_batch_perf.lua
 
@@ -425,12 +424,6 @@ mngrtest: ## run manager tests; needs special conda environment
 
 perfmtest: ## run mosaics performance test on the server code
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
-
-perfstest: ## run strips performance test on the server code
-	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(STRIPS_PERFORMANCE_TEST)
-
-perfsubsetest: ## run subset performance test
-	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(SUBSET_PERFORMANCE_TEST)
 
 perfmsbtest: ## run mosaics serial and batch performance test comparing results
 	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(MOSAICS_SERIAL_VS_BATCH_PERFORMANCE_TEST)
