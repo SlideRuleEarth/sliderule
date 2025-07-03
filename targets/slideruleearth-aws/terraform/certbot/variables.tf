@@ -11,12 +11,6 @@ variable "emails" {
   default     = ["jp.swinski@nasa.gov"]
 }
 
-variable  "sys_bucket" {
-  description = "S3 bucket used to store the sliderule system configuration"
-  type        = string
-  default     = "sliderule"
-}
-
 variable "upload_s3" {
   description = "The S3 bucket to upload certificates."
   type = object({
@@ -25,10 +19,10 @@ variable "upload_s3" {
     region = string,
   })
   default = {
-    bucket = var.sys_bucket
+    bucket = "sliderule"
     prefix = "config"
     region  = "us-west-2"
-  }  
+  }
 }
 
 # https://certbot.eff.org/docs/using.html#dns-plugins
@@ -47,7 +41,7 @@ variable "lambda_architectures" {
 variable "lambda_runtime" {
   description = "Name of the runtime for lambda function."
   type        = string
-  default     = "python3.8"
+  default     = "python3.9"
 }
 
 variable "lambda_memory_size" {

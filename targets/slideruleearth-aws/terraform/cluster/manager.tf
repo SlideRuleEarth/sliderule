@@ -2,7 +2,7 @@ resource "aws_instance" "manager" {
     ami                         = data.aws_ami.sliderule_cluster_ami.id
     availability_zone           = var.availability_zone
     ebs_optimized               = false
-    instance_type               = "r8g.large"
+    instance_type               = "r8g.xlarge"
     monitoring                  = false
     key_name                    = var.key_pair_name
     vpc_security_group_ids      = [aws_security_group.manager-sg.id]
