@@ -17,7 +17,7 @@ local jsonfile = td .. "../data/arcticdem_strips.geojson"
 local contents = readgeojson.load(jsonfile)
 
 local generator = require("arctictdem_test_points_generator")
-local maxPoints = 1000
+local maxPoints = 10000
 local lons, lats, heights = generator.generate_points(maxPoints)
 local verbose = true
 
@@ -30,7 +30,7 @@ local serialResults = {}
 local dem = geo.raster(geo.parms({ asset = "arcticdem-mosaic", algorithm = "NearestNeighbour", radius = 0 }))
 
 local starttimeSerial = time.latch()
-local modulovalue = maxPoints / 20
+local modulovalue = maxPoints / 50
 
 for i = 1, maxPoints do
     local tbl, err = dem:sample(lons[i], lats[i], heights[i])
@@ -46,7 +46,8 @@ for i = 1, maxPoints do
         if (i % modulovalue == 0) then
            local firstSample = tbl[1]
            local el = firstSample["value"]
-           print(string.format("Point: %7d sampled at (%.2f, %.2f), elevation: %7.2fm", i, lons[i], lats[i], el))
+           local samplesCnt = #tbl
+           print(string.format("Point: %7d sampled at (%.2f, %.2f), elevation from first sample: %7.2fm, samples: %d", i, lons[i], lats[i], el, samplesCnt))
         end
     end
 end
@@ -69,32 +70,6 @@ end
 local stoptimeBatch = time.latch()
 local dtimeBatch = stoptimeBatch - starttimeBatch
 print(string.format("Batch sampling: %d points read, time: %f", maxPoints, dtimeBatch))
-
-function print_table(tbl, indent)
-    indent = indent or 0
-    local prefix = string.rep("  ", indent)
-
-    if type(tbl) ~= "table" then
-        print(prefix .. tostring(tbl))
-        return
-    end
-
-    local isEmpty = true
-    for k, v in pairs(tbl) do
-        isEmpty = false
-        if type(v) == "table" then
-            print(prefix .. tostring(k) .. " = {")
-            print_table(v, indent + 1)
-            print(prefix .. "}")
-        else
-            print(prefix .. tostring(k) .. " = " .. tostring(v))
-        end
-    end
-
-    if isEmpty then
-        print(prefix .. "{} (empty table)")
-    end
-end
 
 -- Compare serial and batch results
 local fileio = require("samples_fileio")

@@ -17,7 +17,7 @@ local jsonfile = td .. "../data/arcticdem_strips.geojson"
 local contents = readgeojson.load(jsonfile)
 
 local generator = require("arctictdem_test_points_generator")
-local maxPoints = 5
+local maxPoints = 100
 local lons, lats, heights = generator.generate_points(maxPoints)
 local verbose = true
 
@@ -56,9 +56,10 @@ for i = 1, maxPoints do
             if not is_empty(tbl) then
                 local firstSample = tbl[1]
                 local el = firstSample["value"]
-                print(string.format("Point: %7d sampled at (%.2f, %.2f), elevation: %7.2fm", i, lons[i], lats[i], el))
+                local samplesCnt = #tbl
+                print(string.format("Point: %4d sampled at (%.2f, %.2f), elevation from first sample: %7.2fm, samples: %d", i, lons[i], lats[i], el, samplesCnt))
             else
-                print(string.format("Point: %7d sampled at (%.2f, %.2f), elevation: EMPTY_TABLE", i, lons[i], lats[i]))
+                print(string.format("Point: %4d sampled at (%.2f, %.2f), NO SAMPLES", i, lons[i], lats[i]))
             end
         end
     end

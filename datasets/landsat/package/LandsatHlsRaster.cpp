@@ -308,8 +308,9 @@ bool LandsatHlsRaster::validateBand(band_type_t type, const char* bandName)
 }
 
 
-uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_group_t* rgroup,
-                                            List<RasterSample*>* slist, uint32_t flags, uint32_t pointIndx)
+uint32_t LandsatHlsRaster::getBatchGroupSamples(const rasters_group_t* rgroup,
+                                                List<RasterSample*>* slist,
+                                                uint32_t flags, uint32_t pointIndx)
 {
     uint32_t errors = SS_NO_ERRORS;
 
@@ -341,133 +342,79 @@ uint32_t LandsatHlsRaster::_getGroupSamples(sample_mode_t mode, const rasters_gr
     /* Samples to be returned to the user */
     std::vector<RasterSample*> sampleVect;
 
-    /* Collect samples for all rasters */
-    if(mode == SERIAL)
+    for(const auto& rinfo : rgroup->infovect)
     {
-        for(const auto& rinfo : rgroup->infovect)
+        /* This is the unique raster we are looking for, it cannot be NULL */
+        unique_raster_t* ur = rinfo.uraster;
+        assert(ur);
+
+        /* Get the sample for this point from unique raster */
+        for(point_sample_t& ps : ur->pointSamples)
         {
-            const char* key = fileDictGet(rinfo.fileId);
-            cacheitem_t* item;
-            if(cache.find(key, &item) && !item->bandSample.empty())
+            if(ps.pointIndex == pointIndx)
             {
-                RasterSample* sample = item->bandSample[INNER_BAND_INDX];
+                RasterSample* sample = NULL;
+
+                /* bandSample can be empty if raster failed to open */
+                if(!ps.bandSample.empty())
+                {
+                    sample = ps.bandSample[INNER_BAND_INDX];
+                }
 
                 /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
-                if(sample == NULL) continue;;
-
-                sample->flags = flags;
+                if(sample == NULL) break;
 
                 /* Is this band's sample to be returned to the user? */
                 const char* bandName = rinfo.tag.c_str();
+
                 auto it = bandsDict.find(bandName);
                 if(it != bandsDict.end())
                 {
                     const bool returnBandSample = it->second;
                     if(returnBandSample)
                     {
-                        sample->bandName = bandName;
-                        sampleVect.push_back(sample);
-                        item->bandSample[INNER_BAND_INDX] = NULL;
+                        RasterSample* s;
+                        if(!ps.bandSampleReturned[INNER_BAND_INDX]->exchange(true))
+                        {
+                            s = sample;
+                        }
+                        else
+                        {
+                            /* Sample has already been returned, must create a copy */
+                            s = new RasterSample(*sample);
+                        }
+
+                        /* Set band name for this sample */
+                        s->bandName = bandName;
+
+                        /* Set time for this sample */
+                        s->time = rgroup->gpsTime;
+
+                        /* Set flags for this sample, add it to the list */
+                        s->flags = flags;
+                        sampleVect.push_back(s);
+                        errors |= ps.ssErrors;
                     }
                 }
+                errors |= ps.ssErrors;
 
                 /* green and red bands are the same for L8 and S2 */
                 if(rinfo.tag == "B03") green = sample->value;
-                if(rinfo.tag == "B04") red = sample->value;
+                if(rinfo.tag == "B04") red   = sample->value;
 
                 if(isL8)
                 {
-                    if(rinfo.tag == "B05") nir08 = sample->value;
+                    if(rinfo.tag == "B05") nir08  = sample->value;
                     if(rinfo.tag == "B06") swir16 = sample->value;
                 }
                 else /* Must be Sentinel2 */
                 {
-                    if(rinfo.tag == "B8A") nir08 = sample->value;
+                    if(rinfo.tag == "B8A") nir08  = sample->value;
                     if(rinfo.tag == "B11") swir16 = sample->value;
                 }
+                break;
             }
         }
-    }
-    else if(mode == BATCH)
-    {
-        for(const auto& rinfo : rgroup->infovect)
-        {
-            /* This is the unique raster we are looking for, it cannot be NULL */
-            unique_raster_t* ur = rinfo.uraster;
-            assert(ur);
-
-            /* Get the sample for this point from unique raster */
-            for(point_sample_t& ps : ur->pointSamples)
-            {
-                if(ps.pointIndex == pointIndx)
-                {
-                    RasterSample* sample = NULL;
-
-                    /* bandSample can be empty if raster failed to open */
-                    if(!ps.bandSample.empty())
-                    {
-                        sample = ps.bandSample[INNER_BAND_INDX];
-                    }
-
-                    /* sample can be NULL if raster read failed, (e.g. point out of bounds) */
-                    if(sample == NULL) break;
-
-                    /* Is this band's sample to be returned to the user? */
-                    const char* bandName = rinfo.tag.c_str();
-
-                    auto it = bandsDict.find(bandName);
-                    if(it != bandsDict.end())
-                    {
-                        const bool returnBandSample = it->second;
-                        if(returnBandSample)
-                        {
-                            RasterSample* s;
-                            if(!ps.bandSampleReturned[INNER_BAND_INDX]->exchange(true))
-                            {
-                                s = sample;
-                            }
-                            else
-                            {
-                                /* Sample has already been returned, must create a copy */
-                                s = new RasterSample(*sample);
-                            }
-
-                            /* Set band name for this sample */
-                            s->bandName = bandName;
-
-                            /* Set time for this sample */
-                            s->time = rgroup->gpsTime;
-
-                            /* Set flags for this sample, add it to the list */
-                            s->flags = flags;
-                            sampleVect.push_back(s);
-                            errors |= ps.ssErrors;
-                        }
-                    }
-                    errors |= ps.ssErrors;
-
-                    /* green and red bands are the same for L8 and S2 */
-                    if(rinfo.tag == "B03") green = sample->value;
-                    if(rinfo.tag == "B04") red   = sample->value;
-
-                    if(isL8)
-                    {
-                        if(rinfo.tag == "B05") nir08  = sample->value;
-                        if(rinfo.tag == "B06") swir16 = sample->value;
-                    }
-                    else /* Must be Sentinel2 */
-                    {
-                        if(rinfo.tag == "B8A") nir08  = sample->value;
-                        if(rinfo.tag == "B11") swir16 = sample->value;
-                    }
-                    break;
-                }
-            }
-        }
-    }
-    else
-    {
-        throw RunTimeException(DEBUG, RTE_FAILURE, "Invalid sample mode");
     }
 
     const double groupTime = rgroup->gpsTime;

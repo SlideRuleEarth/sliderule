@@ -56,6 +56,7 @@
 #define SS_SUBRASTER_ERROR        (1 << 5)
 #define SS_INDEX_FILE_ERROR       (1 << 6)
 #define SS_RESOURCE_LIMIT_ERROR   (1 << 7)
+#define SS_FAILURE_ERROR          (1 << 8)
 
 /******************************************************************************
  * CLASSES

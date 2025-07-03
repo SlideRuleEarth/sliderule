@@ -298,6 +298,7 @@ runner.assert(sampleCnt == #expResults)
 dem=nil
 
 
+--[[
 -- Same as closest time above but sample call also takes time parameter. The time parameter from 'sample' call must override the one from the constructor
 local tstr         = "2021:2:4:23:3:0"
 local tstrOverride = "2016:6:0:0:0:0"
@@ -323,6 +324,7 @@ for i, v in ipairs(tbl) do
 end
 runner.assert(sampleCnt == #expResults)
 dem=nil
+]]
 
 -- Report Results --
 

@@ -80,67 +80,31 @@ GeoIndexedRaster::Reader::~Reader (void)
  *----------------------------------------------------------------------------*/
 uint32_t GeoIndexedRaster::getSamples(const point_info_t& pinfo, sample_list_t& slist, void* param)
 {
-    static_cast<void>(param);
+    std::vector<point_info_t> points;
+    points.push_back(pinfo);
+    List<sample_list_t*> sllist;
 
-    lockSampling();
-    try
+    ssErrors = getSamples(points, sllist, param);
+
+    /* sllist should have only one element which is a list of samples for one point */
+    if(sllist.length() != 1)
     {
-        GroupOrdering groupList;
-        OGRPoint      ogrPoint(pinfo.point3d.x, pinfo.point3d.y, pinfo.point3d.z);
-
-        ssErrors = SS_NO_ERRORS;
-
-        /* Sample Rasters */
-        if(serialSample(&ogrPoint, pinfo.gps, &groupList))
-        {
-            /* Populate Return List of Samples (slist) */
-            const GroupOrdering::Iterator iter(groupList);
-            for(int i = 0; i < iter.length; i++)
-            {
-                const rasters_group_t* rgroup = iter[i].value;
-                uint32_t flags = 0;
-
-                /* Get flags value for this group of rasters */
-                if(parms->flags_file)
-                    flags = getSerialGroupFlags(rgroup);
-
-                getSerialGroupSamples(rgroup, slist, flags);
-            }
-        }
-
-        /* Update file dictionary */
-        fileDictSetSamples(&slist);
-    }
-    catch (const RunTimeException &e)
-    {
-        mlog(e.level(), "Error getting samples: %s", e.what());
+        mlog(CRITICAL, "getSamples returned %u elements", sllist.length());
+        return SS_FAILURE_ERROR;
     }
 
-    /* Free Unreturned Results */
-    cacheitem_t* item;
-    const char* key = cache.first(&item);
-    while(key != NULL)
+    sample_list_t* _slist = sllist[0];
+    if(_slist)
     {
-        for(uint32_t i = 0; i < item->bandSample.size(); i++)
+        for(int i = 0; i < _slist->length(); i++)
         {
-            if(item->bandSample[i])
-            {
-                delete item->bandSample[i];
-                item->bandSample[i] = NULL;
-            }
-        }
+            RasterSample* sp = _slist->get(i);
+            slist.add(sp);
 
-        for(uint32_t i = 0; i < item->bandSubset.size(); i++)
-        {
-            if(item->bandSubset[i])
-            {
-                delete item->bandSubset[i];
-                item->bandSubset[i] = NULL;
-            }
+            /* Set sample to NULL, don't delete since slist owns samples now */
+            _slist->set(i, NULL, false);
         }
-        key = cache.next(&item);
     }
-    unlockSampling();
 
     return ssErrors;
 }
@@ -185,43 +149,6 @@ uint32_t GeoIndexedRaster::getSubsets(const MathLib::extent_t& extent, int64_t g
  ******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * getSerialGroupSamples
- *----------------------------------------------------------------------------*/
-void GeoIndexedRaster::getSerialGroupSamples(const rasters_group_t* rgroup, List<RasterSample*>& slist, uint32_t flags)
-{
-    for(const auto& rinfo: rgroup->infovect)
-    {
-        if(strcmp(VALUE_TAG, rinfo.tag.c_str()) != 0) continue;
-
-        const char* key = fileDict.get(rinfo.fileId);
-        cacheitem_t* item;
-        if(cache.find(key, &item))
-        {
-            for(uint32_t i = 0; i < item->bandSample.size(); i++)
-            {
-                RasterSample* _sample = item->bandSample[i];
-                if(_sample)
-                {
-                    _sample->flags = flags;
-                    slist.add(_sample);
-                    item->bandSample[i] = NULL;
-                }
-            }
-
-            /* Get sampling/subset error status */
-            ssErrors |= item->raster->getSSerror();
-
-           /*
-            * This function assumes that there is only one raster with VALUE_TAG in a group.
-            * If group has other value rasters the dataset must override this function.
-            */
-            break;
-        }
-    }
-}
-
-
-/*----------------------------------------------------------------------------
  * getSerialGroupSubsets
  *----------------------------------------------------------------------------*/
 void GeoIndexedRaster::getSerialGroupSubsets(const rasters_group_t* rgroup, List<RasterSubset*>& slist)
@@ -248,35 +175,6 @@ void GeoIndexedRaster::getSerialGroupSubsets(const rasters_group_t* rgroup, List
     }
 }
 
-
-/*----------------------------------------------------------------------------
- * getSerialGroupFlags
- *----------------------------------------------------------------------------*/
-uint32_t GeoIndexedRaster::getSerialGroupFlags(const rasters_group_t* rgroup)
-{
-    for(const auto& rinfo: rgroup->infovect)
-    {
-        if(strcmp(FLAGS_TAG, rinfo.tag.c_str()) != 0) continue;
-
-        cacheitem_t* item;
-        const char* key = fileDict.get(rinfo.fileId);
-        if(cache.find(key, &item) && !item->bandSample.empty())
-        {
-            /*
-             * This function assumes that there is only one raster with FLAGS_TAG in a group.
-             * The flags value must be in the first band.
-             * If these assumptions are not met the dataset must override this function.
-             */
-            const RasterSample* _sample = item->bandSample[0];
-            if(_sample)
-            {
-                return _sample->value;
-            }
-        }
-    }
-
-    return 0;
-}
 
 /*----------------------------------------------------------------------------
  * sampleRasters

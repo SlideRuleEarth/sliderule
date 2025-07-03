@@ -74,6 +74,7 @@ local gm_urx = -107.7292
 local gm_ury =   39.1956
 
 local starttime = time.latch();
+local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, catalog = contents, sort_by_index = true }))
 local tbl, err = dem:subset(gm_llx, gm_lly, gm_llx+0.01, gm_lly+0.4)
 local stoptime = time.latch();
 
