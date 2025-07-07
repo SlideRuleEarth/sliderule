@@ -372,7 +372,6 @@ end
 -- Grand Mesa test has 26183 samples/ndvi Results
 -- Limit the number of samples for selftest.
 local maxSamples = 100
-local linesRead = 0
 
 local geojsonfile = dirpath.."../data/grand_mesa.geojson"
 local f = io.open(geojsonfile, "r")
@@ -383,16 +382,19 @@ local poifile = dirpath.."../data/grand_mesa_poi.txt"
 local f = io.open(poifile, "r")
 -- read in array of POI from file
 local arr = {}
+local lons, lats, heights = {}, {}, {}
+local height = 0  -- assumed constant height
+local linesRead = 0
+
 for l in f:lines() do
-  local row = {}
-  for snum in l:gmatch("(%S+)") do
-    table.insert(row, tonumber(snum))
-  end
-  table.insert(arr, row)
+  local lon, lat = l:match("(%S+)%s+(%S+)")
+  lon, lat = tonumber(lon), tonumber(lat)
+  table.insert(arr, {lon, lat})
+  table.insert(lons, lon)
+  table.insert(lats, lat)
+  table.insert(heights, height)
   linesRead = linesRead + 1
-  if linesRead > maxSamples then
-    break
-  end
+  if linesRead >= maxSamples then break end
 end
 f:close()
 
@@ -416,31 +418,29 @@ local expectedFile = "HLS.S30.T12SYJ.2022004T180729.v2.0 {\"algo\": \"NDVI\"}"
 print(string.format("\n-------------------------------------------------\nLandsat Grand Mesa test\n-------------------------------------------------"))
 
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0, closest_time = "2022-01-05T00:00:00Z", bands = {"NDVI"}, catalog = contents, sort_by_index = true }))
-sampleCnt = 0
 
-local starttime = time.latch();
-for i=1, maxSamples do
-    local  lon = arr[i][1]
-    local  lat = arr[i][2]
-    local  tbl, err = dem:sample(lon, lat, height)
-    if err ~= 0 then
-        print(string.format("======> FAILED to read", lon, lat, height))
-    else
-        local ndvi, fname
-        for j, v in ipairs(tbl) do
-            ndvi = v["value"]
-            fname = v["file"]
+starttime = time.latch()
+local batchResults, err = dem:batchsample(lons, lats, heights)
 
-            local expectedNDVI = ndvi_results[i]
-            runner.assert(math.abs(ndvi - expectedNDVI) < sigma)
-            runner.assert(fname == expectedFile)
-        end
+runner.assert(batchResults ~= nil)
+runner.assert(#batchResults == maxSamples)
+
+for i = 1, maxSamples do
+    local sample = batchResults[i]
+    local ndvi, fname = nil, nil
+    for j, v in ipairs(sample) do
+        ndvi = v["value"]
+        fname = v["file"]
+        break  -- assume first entry is sufficient
     end
-    sampleCnt = sampleCnt + 1
+    local expectedNDVI = ndvi_results[i]
+    runner.assert(math.abs(ndvi - expectedNDVI) < sigma)
+    runner.assert(fname == expectedFile)
 end
-local stoptime = time.latch();
-print(string.format("POI sample %d points time: %.2f", sampleCnt, stoptime - starttime))
-runner.assert(sampleCnt == maxSamples)
+
+local stoptime = time.latch()
+print(string.format("POI sample %d points time: %.2f", maxSamples, stoptime - starttime))
+runner.assert(#batchResults == maxSamples)
 dem = nil
 
 -- Report Results --
