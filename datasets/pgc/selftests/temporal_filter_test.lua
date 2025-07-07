@@ -297,15 +297,13 @@ end
 runner.assert(sampleCnt == #expResults)
 dem=nil
 
-
---[[
 -- Same as closest time above but sample call also takes time parameter. The time parameter from 'sample' call must override the one from the constructor
 local tstr         = "2021:2:4:23:3:0"
 local tstrOverride = "2016:6:0:0:0:0"
 expResults = {{121.41406250, 0x0, '/vsis3/pgc-opendata-dems/arcticdem/strips/s2s041/2m/n69w150/SETSM_s2s041_WV02_20160607_10300100578F9400_10300100587BCE00_2m_lsf_seg1_dem.tif'}}
 
 print(string.format("\n--------------------------------\nTest: %s Temporal Filter Override closest_time: %s with %s\n--------------------------------", demType, tstr, tstrOverride))
-dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, catalog=contents, with_flags=true, closest_time=tstr, sort_by_index=true}))
+dem = geo.raster(geo.parms({asset=demType, algorithm="NearestNeighbour", radius=0, catalog=contents, with_flags=true, closest_time=tstr, use_poi_time=true, sort_by_index=true}))
 tbl, err = dem:sample(lon, lat, height, tstrOverride)
 runner.assert(err == 0)
 runner.assert(tbl ~= nil)
@@ -324,7 +322,6 @@ for i, v in ipairs(tbl) do
 end
 runner.assert(sampleCnt == #expResults)
 dem=nil
-]]
 
 -- Report Results --
 
