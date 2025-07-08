@@ -1,4 +1,5 @@
 {
+    "log_level": "INFO",
     "log_format": "FMT_TEXT",
     "post_startup_scripts": ["bathy_init"]
 }

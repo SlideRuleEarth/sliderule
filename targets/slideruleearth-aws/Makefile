@@ -72,7 +72,7 @@ DOMAIN ?= slideruleearth.io
 DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
 ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
-USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
+USERCFG ?= # e.g.
 DISTRIBUTION_ID = $(shell aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" --output text)
 RUNNER ?= # e.g. valgrind
 
@@ -90,7 +90,7 @@ COMMON_CFG += $(USERCFG)
 DEBUG_CFG := -DCMAKE_BUILD_TYPE=Debug
 DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 DEBUG_CFG += -DENABLE_ADDRESS_SANITIZER=ON
-DEBUG_CFG += -DSKIP_STATIC_ANALYSIS=OFF      # ON to disable static analysis for faster debug builds, set to OFF before committing
+DEBUG_CFG += -DENABLE_STATIC_ANALYSIS=ON    # ON by default, set to OFF to skip static analysis for faster debug builds
 DEBUG_CFG += $(COMMON_CFG)
 
 RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release

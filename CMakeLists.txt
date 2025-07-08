@@ -19,8 +19,10 @@ if(NOT CMAKE_BUILD_PLATFORM)
     set(CMAKE_BUILD_PLATFORM "Linux" CACHE STRING "Choose the target platform." FORCE)
 endif()
 
+option (ENABLE_STATIC_ANALYSIS "Enable static analysis" ON)
+
 # Configure static analysis
-if(CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT SKIP_STATIC_ANALYSIS)
+if(CMAKE_BUILD_TYPE MATCHES "Debug" AND ENABLE_STATIC_ANALYSIS)
     message(STATUS "Enabling static analysis")
 
     # clang-tidy, tested with version 18.1.3
