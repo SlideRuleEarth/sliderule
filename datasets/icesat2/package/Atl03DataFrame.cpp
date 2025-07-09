@@ -419,6 +419,10 @@ void Atl03DataFrame::AreaOfInterest::rasterregion (const Atl03DataFrame* df)
                 }
             }
         }
+        else
+        {
+            inclusion_mask[segment] = false;
+        }
 
         /* Bump Segment */
         segment++;
@@ -431,6 +435,10 @@ void Atl03DataFrame::AreaOfInterest::rasterregion (const Atl03DataFrame* df)
 
         /* Trim Inclusion Mask */
         inclusion_ptr = &inclusion_mask[first_segment];
+    }
+    else
+    {
+        num_segments = 0;
     }
 }
 

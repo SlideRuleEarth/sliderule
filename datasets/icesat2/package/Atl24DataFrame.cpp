@@ -352,6 +352,10 @@ void Atl24DataFrame::AreaOfInterest::rasterregion (const Atl24DataFrame* df)
                 }
             }
         }
+        else
+        {
+            inclusion_mask[photon] = false;
+        }
 
         /* Bump Photon */
         photon++;
@@ -364,6 +368,10 @@ void Atl24DataFrame::AreaOfInterest::rasterregion (const Atl24DataFrame* df)
 
         /* Trim Inclusion Mask */
         inclusion_ptr = &inclusion_mask[first_photon];
+    }
+    else
+    {
+        num_photons = 0;
     }
 }
 

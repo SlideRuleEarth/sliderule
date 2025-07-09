@@ -82,6 +82,7 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
         } point_t;
 
         struct result_t {
+            int32_t     n_fit_photons = 0;  // number of photons in final fit
             uint16_t    pflags = 0;         // processing flags
             time8_t     time_ns {0};        // nanoseconds from GPS epoch
             double      latitude = 0;

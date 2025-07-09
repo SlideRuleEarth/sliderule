@@ -169,37 +169,44 @@ okey_t Atl13DataFrame::getKey(void) const
  * AreaOfInterest::Constructor
  *----------------------------------------------------------------------------*/
 Atl13DataFrame::AreaOfInterest::AreaOfInterest (const Atl13DataFrame* df):
-    atl13refid      (df->hdf13, FString("%s/%s", df->beam, "atl13refid").c_str()),
+    useRefId        (df->parms->atl13.reference_id.value > 0),
+    atl13refid      (useRefId ? df->hdf13 : NULL, FString("%s/%s", df->beam, "atl13refid").c_str()),
     latitude        (df->hdf13, FString("%s/%s", df->beam, "segment_lat").c_str()),
     longitude       (df->hdf13, FString("%s/%s", df->beam, "segment_lon").c_str()),
-    inclusionMask  {NULL},
-    inclusionPtr   {NULL}
+    inclusionMask   {NULL},
+    inclusionPtr    {NULL}
 {
     try
     {
-        /* Join ATL13 Reference ID Read */
-        atl13refid.join(df->readTimeoutMs, true);
-
-        /* Perform Initial Reference ID Search */
+        /* Initialize Segment Range */
         lastSegment = -1;
         firstSegment = 0;
-        bool first_segment_found = false;
-        for(long i = 0; i < atl13refid.size; i++)
-        {
-            if(atl13refid[i] == df->parms->atl13.reference_id.value)
-            {
-                if(!first_segment_found)
-                {
-                    first_segment_found = true;
-                    firstSegment = i;
-                }
-                lastSegment = i;
-            }
-        }
+        numSegments = -1;
 
-        /* Calculate Initial Number of Segments */
-        numSegments = lastSegment - firstSegment + 1;
-        if(numSegments <= 0) throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "reference id not found");
+        /* Perform Initial Reference ID Search */
+        if(useRefId)
+        {
+            /* Join ATL13 Reference ID Read */
+            atl13refid.join(df->readTimeoutMs, true);
+
+            bool first_segment_found = false;
+            for(long i = 0; i < atl13refid.size; i++)
+            {
+                if(atl13refid[i] == df->parms->atl13.reference_id.value)
+                {
+                    if(!first_segment_found)
+                    {
+                        first_segment_found = true;
+                        firstSegment = i;
+                    }
+                    lastSegment = i;
+                }
+            }
+
+            /* Calculate Initial Number of Segments */
+            numSegments = lastSegment - firstSegment + 1;
+            if(numSegments <= 0) throw RunTimeException(DEBUG, RTE_EMPTY_SUBSET, "reference id not found");
+        }
 
         /* Join Latitude/Longitude Reads */
         latitude.join(df->readTimeoutMs, true);
@@ -257,7 +264,8 @@ void Atl13DataFrame::AreaOfInterest::polyregion (const Atl13DataFrame* df)
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
     int segment = firstSegment;
-    while(segment < lastSegment)
+    int max_segment = (numSegments < 0) ? longitude.size : numSegments;
+    while(segment < max_segment)
     {
         /* Test Inclusion */
         const bool inclusion = df->parms->polyIncludes(longitude[segment], latitude[segment]);
@@ -303,9 +311,9 @@ void Atl13DataFrame::AreaOfInterest::rasterregion (const Atl13DataFrame* df)
     inclusionPtr = inclusionMask;
 
     /* Loop Throuh Segments */
-    const long orig_last_segment = lastSegment;
     int segment = firstSegment;
-    while(segment < orig_last_segment)
+    int max_segment = (numSegments < 0) ? longitude.size : numSegments;
+    while(segment < max_segment)
     {
         /* Check Inclusion */
         const bool inclusion = df->parms->maskIncludes(longitude[segment], latitude[segment]);
@@ -331,6 +339,10 @@ void Atl13DataFrame::AreaOfInterest::rasterregion (const Atl13DataFrame* df)
 
         /* Trim Inclusion Mask */
         inclusionPtr = &inclusionMask[firstSegment];
+    }
+    else
+    {
+        numSegments = 0;
     }
 }
 

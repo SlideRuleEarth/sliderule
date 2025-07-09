@@ -114,11 +114,11 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     FieldColumn<double>*    x_atc           = new FieldColumn<double>;                      // distance from the equator
     FieldColumn<float>*     y_atc           = new FieldColumn<float>;                       // distance from reference track
     FieldColumn<uint32_t>*  photon_start    = new FieldColumn<uint32_t>;                    // photon index of start of extent
-    FieldColumn<uint32_t>*  photon_count    = new FieldColumn<uint32_t>;                    // number of photons used in final elevation calculation
     FieldColumn<uint16_t>*  pflags          = new FieldColumn<uint16_t>;                    // processing flags
     FieldColumn<float>*     h_mean          = new FieldColumn<float>(Field::Z_COLUMN);      // meters from ellipsoid
     FieldColumn<float>*     dh_fit_dx       = new FieldColumn<float>;                       // along track slope
-    FieldColumn<float>*     window_height   = new FieldColumn<float>;
+    FieldColumn<float>*     window_height   = new FieldColumn<float>;                       // height in meters of final window used in fit
+    FieldColumn<int32_t>*   n_fit_photons   = new FieldColumn<int32_t>;                     // number of photons used in final elevation calculation
     FieldColumn<float>*     rms_misfit      = new FieldColumn<float>;
     FieldColumn<float>*     h_sigma         = new FieldColumn<float>;
 
@@ -179,11 +179,11 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
             x_atc->append(result.x_atc);
             y_atc->append(result.y_atc);
             photon_start->append(df.ph_index[i0]);
-            photon_count->append(static_cast<uint32_t>(num_photons));
             pflags->append(result.pflags | _pflags);
             h_mean->append(static_cast<float>(result.h_mean));
             dh_fit_dx->append(result.dh_fit_dx);
             window_height->append(result.window_height);
+            n_fit_photons->append(static_cast<uint32_t>(result.n_fit_photons));
             rms_misfit->append(result.rms_misfit);
             h_sigma->append(result.h_sigma);
 
@@ -217,11 +217,11 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     dataframe->addExistingColumn("x_atc",           x_atc);
     dataframe->addExistingColumn("y_atc",           y_atc);
     dataframe->addExistingColumn("photon_start",    photon_start);
-    dataframe->addExistingColumn("photon_count",    photon_count);
     dataframe->addExistingColumn("pflags",          pflags);
     dataframe->addExistingColumn("h_mean",          h_mean);
     dataframe->addExistingColumn("dh_fit_dx",       dh_fit_dx);
     dataframe->addExistingColumn("window_height",   window_height);
+    dataframe->addExistingColumn("n_fit_photons",   n_fit_photons);
     dataframe->addExistingColumn("rms_misfit",      rms_misfit);
     dataframe->addExistingColumn("h_sigma",         h_sigma);
 
@@ -428,6 +428,7 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
     }
 
     /* Calculate RMS and Scale h_sigma */
+    result.n_fit_photons = photons_in_window;
     if(photons_in_window > 0)
     {
         result.rms_misfit = sqrt(delta_sum / (double)photons_in_window);
