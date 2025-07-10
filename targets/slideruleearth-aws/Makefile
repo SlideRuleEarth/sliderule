@@ -61,7 +61,7 @@ INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
 STATIC_WEB_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
 STATIC_WEB_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(STATIC_WEB_CONDA_ENV)
 
-VERSION ?= latest
+VERSION ?= unstable
 ECR ?= 742127912612.dkr.ecr.us-west-2.amazonaws.com
 GHCR ?= ghcr.io/slideruleearth
 DOCKEROPTS ?= # --progress=plain --no-cache
