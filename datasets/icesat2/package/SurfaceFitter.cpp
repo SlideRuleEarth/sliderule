@@ -173,23 +173,27 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
             // run least squares fit
             const result_t result = iterativeFitStage(df, i0, num_photons, center_of_extent);
 
-            // populate surface fit columns
-            time_ns->append(static_cast<time8_t>(result.time_ns));
-            latitude->append(result.latitude);
-            longitude->append(result.longitude);
-            x_atc->append(center_of_extent);
-            y_atc->append(result.y_atc);
-            photon_start->append(df.ph_index[i0]);
-            pflags->append(result.pflags | _pflags);
-            h_mean->append(static_cast<float>(result.h_mean));
-            dh_fit_dx->append(result.dh_fit_dx);
-            window_height->append(result.window_height);
-            n_fit_photons->append(static_cast<uint32_t>(result.n_fit_photons));
-            rms_misfit->append(result.rms_misfit);
-            h_sigma->append(result.h_sigma);
+            // build dataframe columns
+            if(result.pflags == 0 || parms->passInvalid)
+            {
+                // populate surface fit columns
+                time_ns->append(static_cast<time8_t>(result.time_ns));
+                latitude->append(result.latitude);
+                longitude->append(result.longitude);
+                x_atc->append(center_of_extent);
+                y_atc->append(result.y_atc);
+                photon_start->append(df.ph_index[i0]);
+                pflags->append(result.pflags | _pflags);
+                h_mean->append(static_cast<float>(result.h_mean));
+                dh_fit_dx->append(result.dh_fit_dx);
+                window_height->append(result.window_height);
+                n_fit_photons->append(static_cast<uint32_t>(result.n_fit_photons));
+                rms_misfit->append(result.rms_misfit);
+                h_sigma->append(result.h_sigma);
 
-            // populate ancillary columns
-            GeoDataFrame::populateAncillaryColumns(ancillary_columns, df, i0, num_photons);
+                // populate ancillary columns
+                GeoDataFrame::populateAncillaryColumns(ancillary_columns, df, i0, num_photons);
+            }
         }
 
         while(i0 < df.length())
@@ -215,19 +219,19 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     dataframe->clear(); // frees memory
 
     // install new columns into dataframe
-    dataframe->addExistingColumn("time_ns",         time_ns);
-    dataframe->addExistingColumn("latitude",        latitude);
-    dataframe->addExistingColumn("longitude",       longitude);
-    dataframe->addExistingColumn("x_atc",           x_atc);
-    dataframe->addExistingColumn("y_atc",           y_atc);
-    dataframe->addExistingColumn("photon_start",    photon_start);
-    dataframe->addExistingColumn("pflags",          pflags);
-    dataframe->addExistingColumn("h_mean",          h_mean);
-    dataframe->addExistingColumn("dh_fit_dx",       dh_fit_dx);
-    dataframe->addExistingColumn("window_height",   window_height);
-    dataframe->addExistingColumn("n_fit_photons",   n_fit_photons);
-    dataframe->addExistingColumn("rms_misfit",      rms_misfit);
-    dataframe->addExistingColumn("h_sigma",         h_sigma);
+    dataframe->addExistingColumn("time_ns",                 time_ns);
+    dataframe->addExistingColumn("latitude",                latitude);
+    dataframe->addExistingColumn("longitude",               longitude);
+    dataframe->addExistingColumn("x_atc",                   x_atc);
+    dataframe->addExistingColumn("y_atc",                   y_atc);
+    dataframe->addExistingColumn("photon_start",            photon_start);
+    dataframe->addExistingColumn("pflags",                  pflags);
+    dataframe->addExistingColumn("h_mean",                  h_mean);
+    dataframe->addExistingColumn("dh_fit_dx",               dh_fit_dx);
+    dataframe->addExistingColumn("w_surface_window_final",  window_height);
+    dataframe->addExistingColumn("n_fit_photons",           n_fit_photons);
+    dataframe->addExistingColumn("rms_misfit",              rms_misfit);
+    dataframe->addExistingColumn("h_sigma",                 h_sigma);
 
     // install ancillary columns into dataframe
     GeoDataFrame::addAncillaryColumns (ancillary_columns, dataframe);
