@@ -23,6 +23,7 @@ resource "aws_instance" "manager" {
       #!/bin/bash
       echo ${var.cluster_name} > ./clustername.txt
       aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${var.container_repo}
+      export IS_PUBLIC=${var.is_public}
       export DOMAIN=${var.domain}
       export MANAGER_SECRET_SALT='${local.secrets.manager_secret_salt}'
       export MANAGER_API_KEY='${local.secrets.manager_api_key}'

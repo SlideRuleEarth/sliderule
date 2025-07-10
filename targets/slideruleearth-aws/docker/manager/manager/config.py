@@ -1,4 +1,5 @@
 import os
+IS_PUBLIC = os.getenv("IS_PUBLIC") and (os.getenv("IS_PUBLIC") == "True") or False
 DATABASE = os.getenv("DUCKDB_LOCAL_FILE") or '/data/manager.db'
 REMOTE_DATABASE = os.getenv("DUCKDB_REMOTE_FILE") or None
 SECRET_SALT = os.getenv("MANAGER_SECRET_SALT") or ""

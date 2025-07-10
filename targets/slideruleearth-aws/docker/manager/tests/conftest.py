@@ -11,6 +11,7 @@ def app():
 
     app = create_app({
         'TESTING': True,
+        'IS_PUBLIC': False,
         'DATABASE': tmpname,
         'SECRET_SALT': '',
         'API_KEY': '',
