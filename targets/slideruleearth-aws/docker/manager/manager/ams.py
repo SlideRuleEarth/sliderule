@@ -2,19 +2,19 @@
 # Asset Metadata Service
 #
 
-from flask import (Blueprint, request, current_app)
+from flask import (Blueprint, request, current_app, g)
 from werkzeug.exceptions import abort
 import time
 import json
-import geopandas as gpd
-from shapely.geometry import Point
+import duckdb
+import threading
 
 ####################
 # Initialization
 ####################
 
-atl13_mask = None
-atl13_mappings = None
+metadata = {}
+metalock = threading.Lock()
 
 ams = Blueprint('ams', __name__, url_prefix='/manager/ams')
 
@@ -22,34 +22,30 @@ ams = Blueprint('ams', __name__, url_prefix='/manager/ams')
 # Module Functions
 ####################
 
-def load_database():
-    global atl13_mask, atl13_mappings
-    # read mappings
-    with open(current_app.config['ATL13_MAPPINGS'], "r") as file:
-        print(f'Loading ATL13 mappings... ', end='')
-        start_time = time.perf_counter()
-        atl13_mappings = json.loads(file.read())
-        print(f'completed in {time.perf_counter() - start_time:.2f} secs.')
-    # read body mask
-    print(f'Loading ATL13 body mask... ', end='')
-    start_time = time.perf_counter()
-    atl13_mask = gpd.read_parquet(current_app.config['ATL13_MASK'])
-    print(f'completed in {time.perf_counter() - start_time:.2f} secs.')
+def __get_atl13():
+    global metadata, metalock
+    # get mask
+    if 'db' not in g:
+        g.db = duckdb.connect(current_app.config['ATL13_MASK'])
+        g.db.execute("LOAD spatial;")
+    # get mappings
+    with metalock:
+        if "atl13" not in metadata:
+            with open(current_app.config['ATL13_MAPPINGS'], "r") as file:
+                print(f'Loading ATL13 mappings... ', end='')
+                start_time = time.perf_counter()
+                metadata["atl13"] = {}
+                metadata["atl13"]["mappings"] = json.loads(file.read())
+                print(f'completed in {time.perf_counter() - start_time:.2f} secs.')
+    return g.db, metadata["atl13"]["mappings"]
 
-def get_ams():
-    global atl13_mask, atl13_mappings
-    if type(atl13_mask) == type(None):
-        load_database()
-    return {
-        "atl13_mask": atl13_mask,
-        "atl13_mappings": atl13_mappings
-    }
-
-def close_ams(e=None):
-    pass
+def close_atl13(e=None):
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
 
 def init_app(app):
-    app.teardown_appcontext(close_ams)
+    app.teardown_appcontext(close_atl13)
 
 ####################
 # APIs
@@ -67,29 +63,39 @@ def atl13():
         lon = request.args.get('lon') # longitude coordinate
         lat = request.args.get('lat') # latitude coordinate
         # get metadata
-        metadata = get_ams()
-        mask = metadata["atl13_mask"]
-        mappings = metadata["atl13_mappings"]
+        mask, mappings = __get_atl13()
         # get refid
         if refid != None:
-            refid = int(refid) # directly supplied
+            data = mask.execute(f"""
+                SELECT *
+                FROM atl13_mask
+                WHERE ATL13refID == {refid};
+            """).df().iloc[0]
         elif name != None:
-            refid = mask[mask["Lake_name"] == name].index[0]
+            data = mask.execute(f"""
+                SELECT *
+                FROM atl13_mask
+                WHERE Lake_name == '{name}';
+            """).df().iloc[0]
         elif lon != None and lat != None:
-            refid = mask[mask.geometry.contains(Point(lon, lat))].index[0]
+            data = mask.execute(f"""
+                SELECT *
+                FROM atl13_mask
+                WHERE ST_Contains(geometry, ST_Point({lon}, {lat}));
+            """).df().iloc[0]
         else:
             raise RuntimeError("must supply at least one query parameter (refid, name, lon and lat)")
         # build response
         response = {
-            "refid": int(refid),
-            "hylak": int(mask.loc[refid, "Hylak_id"]),
-            "name": mask.loc[refid, "Lake_name"],
-            "country": mask.loc[refid, "Country"],
-            "continent": mask.loc[refid, "Continent"],
-            "type": int(mask.loc[refid, "Lake_type"]),
-            "area": mask.loc[refid, "Lake_area"],
-            "basin": int(mask.loc[refid, "Basin_ID"]),
-            "source": mask.loc[refid, "Source"],
+            "refid": int(data["ATL13refID"]),
+            "hylak": int(data["Hylak_id"]),
+            "name": data["Lake_name"],
+            "country": data["Country"],
+            "continent": data["Continent"],
+            "type": int(data["Lake_type"]),
+            "area": data["Lake_area"],
+            "basin": int(data["Basin_ID"]),
+            "source": data["Source"],
             "granules": []
         }
         for granule_id in mappings["refids"][str(refid)]:
