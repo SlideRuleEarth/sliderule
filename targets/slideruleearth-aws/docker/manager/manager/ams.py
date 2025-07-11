@@ -98,7 +98,7 @@ def atl13():
             "source": data["Source"],
             "granules": []
         }
-        for granule_id in mappings["refids"][str(refid)]:
+        for granule_id in mappings["refids"][str(response["refid"])]:
             response["granules"].append(mappings["granules"][str(granule_id)])
         return json.dumps(response)
     except Exception as e:

@@ -37,7 +37,7 @@ resource "aws_instance" "manager" {
       aws s3 cp s3://sliderule/config/GeoLite2-City.mmdb /data/GeoLite2-City.mmdb
       aws s3 cp s3://sliderule/config/GeoLite2-Country.mmdb /data/GeoLite2-Country.mmdb
       aws s3 cp s3://sliderule/config/atl13_mappings.json /data/ATL13/atl13_mappings.json
-      aws s3 cp s3://sliderule/config/inland_water_body.parquet /data/ATL13/inland_water_body.parquet
+      aws s3 cp s3://sliderule/config/inland_water_body.db /data/ATL13/inland_water_body.db
       aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-manager.yml ./docker-compose.yml
       docker-compose -p cluster up --detach
     EOF
