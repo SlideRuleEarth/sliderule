@@ -291,6 +291,9 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
                     rasterKey, lon_val, lat_val, height_val, GeoIndexedRaster::MAX_READER_THREADS);
         }
 
+        /*
+         * NOTE: this code only handles Zonal Stats or 'naked' samples, spatial derivatives (slope/aspect) are not handled here
+         */
         if(raster->hasZonalStats())
         {
             /* Create and Post Sample Record */
