@@ -86,6 +86,25 @@ const RecordObject::fieldDef_t RasterSampler::zsGeoRecDef[] = {
     {"samples",         RecordObject::USER,     offsetof(zs_geo_t, samples),        0,  zsSampleRecType, NATIVE_FLAGS} // variable length
 };
 
+const char* RasterSampler::sdSampleRecType = "sdrec.sample";
+const RecordObject::fieldDef_t RasterSampler::sdSampleRecDef[] = {
+    {"value",           RecordObject::DOUBLE,   offsetof(deriv_t, value),           1,  NULL, NATIVE_FLAGS},
+    {"time",            RecordObject::DOUBLE,   offsetof(deriv_t, time),            1,  NULL, NATIVE_FLAGS},
+    {"file_id",         RecordObject::UINT64,   offsetof(deriv_t, file_id),         1,  NULL, NATIVE_FLAGS},
+    {"flags",           RecordObject::UINT32,   offsetof(deriv_t, flags),           1,  NULL, NATIVE_FLAGS},
+    {"count",           RecordObject::UINT32,   offsetof(deriv_t, derivs.count),    1,  NULL, NATIVE_FLAGS},
+    {"slope",           RecordObject::DOUBLE,   offsetof(deriv_t, derivs.slopeDeg), 1,  NULL, NATIVE_FLAGS},
+    {"aspect",          RecordObject::DOUBLE,   offsetof(deriv_t, derivs.aspectDeg),1,  NULL, NATIVE_FLAGS}
+};
+
+const char* RasterSampler::sdGeoRecType = "sdrec";
+const RecordObject::fieldDef_t RasterSampler::sdGeoRecDef[] = {
+    {"index",           RecordObject::UINT64,   offsetof(sd_geo_t, index),          1,  NULL, NATIVE_FLAGS},
+    {"key",             RecordObject::STRING,   offsetof(sd_geo_t, raster_key),     RASTER_KEY_MAX_LEN,  NULL, NATIVE_FLAGS},
+    {"num_samples",     RecordObject::UINT32,   offsetof(sd_geo_t, num_samples),    1,  NULL, NATIVE_FLAGS},
+    {"samples",         RecordObject::USER,     offsetof(sd_geo_t, samples),        0,  sdSampleRecType, NATIVE_FLAGS} // variable length
+};
+
 const char* RasterSampler::fileIdRecType = "fileidrec";
 const RecordObject::fieldDef_t RasterSampler::fileIdRecDef[] = {
     {"file_id",         RecordObject::UINT64,   offsetof(file_directory_entry_t, file_id),      1,  NULL, NATIVE_FLAGS},
@@ -131,6 +150,8 @@ void RasterSampler::init (void)
     RECDEF(rsGeoRecType,    rsGeoRecDef,    sizeof(rs_geo_t), NULL);
     RECDEF(zsSampleRecType, zsSampleRecDef, sizeof(RasterSample), NULL);
     RECDEF(zsGeoRecType,    zsGeoRecDef,    sizeof(zs_geo_t), NULL);
+    RECDEF(sdSampleRecType, sdSampleRecDef, sizeof(RasterSample), NULL);
+    RECDEF(sdGeoRecType,    sdGeoRecDef,    sizeof(sd_geo_t), NULL);
     RECDEF(fileIdRecType,   fileIdRecDef,   sizeof(file_directory_entry_t), NULL);
 }
 
@@ -292,7 +313,7 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
         }
 
         /*
-         * NOTE: this code only handles Zonal Stats or 'naked' samples, spatial derivatives (slope/aspect) are not handled here
+         * NOTE: this code handles either zonal stats or spatial derivative but not both at the same time.
          */
         if(raster->hasZonalStats())
         {
@@ -312,6 +333,29 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
                 data->samples[i].stats      = slist[i]->stats;
             }
             if(!stats_rec.post(outQ))
+            {
+                status = false;
+                break; // exit early, unlikely to recover from error
+            }
+        }
+        else if(raster->hasSpatialDerivs())
+        {
+            /* Create and Post Sample Record */
+            const int size_of_record = offsetof(sd_geo_t, samples) + (sizeof(RasterSample) * num_samples);
+            RecordObject deriv_rec(sdGeoRecType, size_of_record);
+            sd_geo_t* data = reinterpret_cast<sd_geo_t*>(deriv_rec.getRecordData());
+            data->index = index;
+            StringLib::copy(data->raster_key, rasterKey, RASTER_KEY_MAX_LEN);
+            data->num_samples = num_samples;
+            for(int i = 0; i < num_samples; i++)
+            {
+                data->samples[i].value      = slist[i]->value;
+                data->samples[i].time       = slist[i]->time;
+                data->samples[i].file_id    = slist[i]->fileId;
+                data->samples[i].flags      = slist[i]->flags;
+                data->samples[i].derivs     = slist[i]->derivs;
+            }
+            if(!deriv_rec.post(outQ))
             {
                 status = false;
                 break; // exit early, unlikely to recover from error

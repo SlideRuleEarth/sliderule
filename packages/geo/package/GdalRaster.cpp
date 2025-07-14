@@ -1083,6 +1083,7 @@ void GdalRaster::computeSlopeAspect(const OGRPoint* poi, GDALRasterBand* band, R
     catch (const RunTimeException& e)
     {
         mlog(e.level(), "Error computing slope/aspect: %s", e.what());
+        /* Don't rethrow, pixel may have been sampled successfully but zonal stats calculation failed */
     }
 }
 

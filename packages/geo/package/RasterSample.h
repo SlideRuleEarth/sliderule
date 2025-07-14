@@ -63,7 +63,7 @@ public:
         double mad;
     } stats;
 
-    struct derivs_t
+    struct deriv_t
     {
         uint32_t count;
         double slopeDeg;

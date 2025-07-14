@@ -568,7 +568,7 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
             PARQUET_THROW_NOT_OK(stdev_list_builder.Append());
             PARQUET_THROW_NOT_OK(mad_list_builder.Append());
         }
-        if(robj->hasDerivs())
+        if(robj->hasSpatialDerivs())
         {
             PARQUET_THROW_NOT_OK(slope_count_list_builder.Append());
             PARQUET_THROW_NOT_OK(slope_list_builder.Append());
@@ -604,7 +604,7 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
                 PARQUET_THROW_NOT_OK(stdev_builder->Append(sample->stats.stdev));
                 PARQUET_THROW_NOT_OK(mad_builder->Append(sample->stats.mad));
             }
-            if(robj->hasDerivs())
+            if(robj->hasSpatialDerivs())
             {
                 PARQUET_THROW_NOT_OK(slope_count_builder->Append(sample->derivs.count));
                 PARQUET_THROW_NOT_OK(slope_builder->Append(sample->derivs.slopeDeg));
@@ -635,7 +635,7 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
         PARQUET_THROW_NOT_OK(stdev_list_builder.Finish(&stdev_list_array));
         PARQUET_THROW_NOT_OK(mad_list_builder.Finish(&mad_list_array));
     }
-    if(robj->hasDerivs())
+    if(robj->hasSpatialDerivs())
     {
         PARQUET_THROW_NOT_OK(slope_count_list_builder.Finish(&slope_count_list_array));
         PARQUET_THROW_NOT_OK(slope_list_builder.Finish(&slope_list_array));
@@ -690,7 +690,7 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
             newFields.push_back(stdev_field);
             newFields.push_back(mad_field);
         }
-        if(robj->hasDerivs())
+        if(robj->hasSpatialDerivs())
         {
             newFields.push_back(slope_count_field);
             newFields.push_back(slope_field);
@@ -719,7 +719,7 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
             newColumns.push_back(std::make_shared<arrow::ChunkedArray>(stdev_list_array));
             newColumns.push_back(std::make_shared<arrow::ChunkedArray>(mad_list_array));
         }
-        if(robj->hasDerivs())
+        if(robj->hasSpatialDerivs())
         {
             newColumns.push_back(std::make_shared<arrow::ChunkedArray>(slope_count_list_array));
             newColumns.push_back(std::make_shared<arrow::ChunkedArray>(slope_list_array));
@@ -805,7 +805,7 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
             PARQUET_THROW_NOT_OK(stdev_builder.Append(sample->stats.stdev));
             PARQUET_THROW_NOT_OK(mad_builder.Append(sample->stats.mad));
         }
-        if(robj->hasDerivs())
+        if(robj->hasSpatialDerivs())
         {
             PARQUET_THROW_NOT_OK(slope_count_builder.Append(sample->derivs.count));
             PARQUET_THROW_NOT_OK(slope_builder.Append(sample->derivs.slopeDeg));
@@ -835,7 +835,7 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
         PARQUET_THROW_NOT_OK(stdev_builder.Finish(&stdev_array));
         PARQUET_THROW_NOT_OK(mad_builder.Finish(&mad_array));
     }
-    if(robj->hasDerivs())
+    if(robj->hasSpatialDerivs())
     {
         PARQUET_THROW_NOT_OK(slope_count_builder.Finish(&slope_count_array));
         PARQUET_THROW_NOT_OK(slope_builder.Finish(&slope_array));
@@ -913,7 +913,7 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
             newColumns.push_back(std::make_shared<arrow::ChunkedArray>(stdev_array));
             newColumns.push_back(std::make_shared<arrow::ChunkedArray>(mad_array));
         }
-        if(robj->hasDerivs())
+        if(robj->hasSpatialDerivs())
         {
             newColumns.push_back(std::make_shared<arrow::ChunkedArray>(slope_count_array));
             newColumns.push_back(std::make_shared<arrow::ChunkedArray>(slope_array));

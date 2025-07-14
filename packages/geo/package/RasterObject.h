@@ -151,7 +151,7 @@ class RasterObject: public LuaObject
             return fileDict.copy();
         }
 
-        bool hasDerivs(void) const
+        bool hasSpatialDerivs(void) const
         {
             return parms->slope_aspect;
         }
