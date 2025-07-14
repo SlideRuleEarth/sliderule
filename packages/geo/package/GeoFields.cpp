@@ -179,6 +179,8 @@ GeoFields::GeoFields (void):
         {"t1",                  &t1},
         {"closest_time",        &tc},
         {"zonal_stats",         &zonal_stats},
+        {"slope_aspect",        &slope_aspect},
+        {"slope_scale_length",  &slope_scale_length},
         {"with_flags",          &flags_file},
         {"substr",              &url_substring},
         {"use_poi_time",        &use_poi_time},
