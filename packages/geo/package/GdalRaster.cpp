@@ -1210,7 +1210,7 @@ int GdalRaster::radius2pixels(int radiusMeters, double dx, bool unitsAreDegrees,
 
     /* Convert pixel size to metres */
     if (unitsAreDegrees)
-        dx = metersPerDegLon(lat);
+        dx *= metersPerDegLon(lat);
 
     /* Round up radius to an integer multiple of pixel size */
     const int pixels = static_cast<int>(std::ceil(radiusMeters / dx));
