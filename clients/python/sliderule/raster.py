@@ -126,7 +126,7 @@ def sample(asset, coordinates, parms={}, crs=sliderule.DEFAULT_CRS):
         stdev_nptype    = sliderule.getdefinition("zsrec.sample", "stdev")['nptype']
         mad_nptype      = sliderule.getdefinition("zsrec.sample", "mad")['nptype']
         columns         = {
-            'count': numpy.empty(num_records, stats_count_nptype),  # kept collumn name for backwards compatibility
+            'count': numpy.empty(num_records, stats_count_nptype),  # kept column name for backwards compatibility
             'min': numpy.empty(num_records, min_nptype),
             'max': numpy.empty(num_records, max_nptype),
             'mean': numpy.empty(num_records, mean_nptype),
