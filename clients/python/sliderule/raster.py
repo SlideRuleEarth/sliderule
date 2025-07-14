@@ -32,7 +32,6 @@ import base64
 import geopandas
 from shapely.geometry import Polygon
 import sliderule
-import json
 
 ###############################################################################
 # GLOBALS
@@ -93,8 +92,6 @@ def sample(asset, coordinates, parms={}, crs=sliderule.DEFAULT_CRS):
     rqst = {"samples": {"asset": asset, **parms}, "coordinates": coordinates}
     rsps = sliderule.source("samples", rqst)
 
-    print(json.dumps(rsps, indent=4))
-
     # Sanity Check Response
     if len(rsps) <= 0:
         return sliderule.emptyframe(crs=crs)
@@ -129,7 +126,7 @@ def sample(asset, coordinates, parms={}, crs=sliderule.DEFAULT_CRS):
         stdev_nptype    = sliderule.getdefinition("zsrec.sample", "stdev")['nptype']
         mad_nptype      = sliderule.getdefinition("zsrec.sample", "mad")['nptype']
         columns         = {
-            'stats_count': numpy.empty(num_records, stats_count_nptype),
+            'count': numpy.empty(num_records, stats_count_nptype),  # kept collumn name for backwards compatibility
             'min': numpy.empty(num_records, min_nptype),
             'max': numpy.empty(num_records, max_nptype),
             'mean': numpy.empty(num_records, mean_nptype),
@@ -167,7 +164,7 @@ def sample(asset, coordinates, parms={}, crs=sliderule.DEFAULT_CRS):
                 columns['flags'][i] = flags_nptype(raster_sample['flags'])
 
             if parms.get('zonal_stats'):
-                columns['stats_count'][i] = stats_count_nptype (raster_sample['count'])
+                columns['count'][i]       = stats_count_nptype (raster_sample['count'])
                 columns['min'][i]         = min_nptype   (raster_sample['min'])
                 columns['max'][i]         = max_nptype   (raster_sample['max'])
                 columns['mean'][i]        = mean_nptype  (raster_sample['mean'])
@@ -176,7 +173,7 @@ def sample(asset, coordinates, parms={}, crs=sliderule.DEFAULT_CRS):
                 columns['mad'][i]         = mad_nptype   (raster_sample['mad'])
 
             if parms.get('slope_aspect'):
-                columns['slope_count'][i] = slope_count_nptype (raster_sample['count'])
+                columns['slope_count'][i] = slope_count_nptype (raster_sample['slope_count'])
                 columns['slope'][i]       = slope_nptype (raster_sample['slope'])
                 columns['aspect'][i]      = aspect_nptype(raster_sample['aspect'])
 

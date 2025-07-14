@@ -313,8 +313,14 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
         }
 
         /*
-         * NOTE: this code handles either zonal stats or spatial derivative but not both at the same time.
+         * NOTE: this code handles either zonal stats or spatial derivatives but not both at the same time.
          */
+        if(raster->hasZonalStats() && raster->hasSpatialDerivs())
+        {
+            alert(WARNING, RTE_FAILURE, outQ, NULL,
+                    "Zonal Stats and Spatial Derivatives are mutually exclusive for legacy RasterSamplers, only Zonal Stats will be returned");
+        }
+
         if(raster->hasZonalStats())
         {
             /* Create and Post Sample Record */

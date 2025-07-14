@@ -744,7 +744,7 @@ void RasterObject::setLuaSamples(lua_State *L, const List<RasterSample*> &slist,
         {
             LuaEngine::setAttrNum(L, "slope", sample->derivs.slopeDeg);
             LuaEngine::setAttrNum(L, "aspect", sample->derivs.aspectDeg);
-            LuaEngine::setAttrNum(L, "count", sample->derivs.count);
+            LuaEngine::setAttrNum(L, "slope_count", sample->derivs.count);
         }
 
         /* Add flags if enabled */
