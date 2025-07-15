@@ -868,8 +868,8 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, GDALRasterBand* band, Ra
         double max = std::numeric_limits<double>::min();
         double sum = 0;
 
-        int hasNoData = FALSE;
-        const double nodata = band->GetNoDataValue(&hasNoData);
+        int hasNodata = FALSE;
+        const double nodata = band->GetNoDataValue(&hasNodata);
         std::vector<double> validSamples;
         /*
          * Only use pixels within radius from pixel containing point of interest.
@@ -883,7 +883,7 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, GDALRasterBand* band, Ra
             for(int _x = 0; _x < windowSize; _x++)
             {
                 double value = samplesArray[_y*windowSize + _x];
-                if(hasNoData && !nodataCheck(value, nodata))
+                if(hasNodata && isNodata(value, nodata))
                     continue;
 
                 if(band == elevationBand)
@@ -1028,8 +1028,8 @@ void GdalRaster::computeSlopeAspect(const OGRPoint* poi, GDALRasterBand* band, R
         double dzdx = 0.0, dzdy = 0.0;
         double wsum_dx = 0.0, wsum_dy = 0.0;     // track how much weight is valid
 
-        int hasNoData = FALSE;
-        const double nodata = band->GetNoDataValue(&hasNoData);
+        int hasNodata = FALSE;
+        const double nodata = band->GetNoDataValue(&hasNodata);
         uint32_t validSamplesCnt = 0;
 
         for (int r = -kHalf; r <= kHalf; ++r)
@@ -1037,7 +1037,7 @@ void GdalRaster::computeSlopeAspect(const OGRPoint* poi, GDALRasterBand* band, R
             for (int c = -kHalf; c <= kHalf; ++c)
             {
                 const double val = buf[idx(r + kHalf, c + kHalf)];
-                if(hasNoData && !nodataCheck(val, nodata))
+                if(hasNodata && isNodata(val, nodata))
                     continue;
 
                 validSamplesCnt++;
@@ -1089,58 +1089,49 @@ void GdalRaster::computeSlopeAspect(const OGRPoint* poi, GDALRasterBand* band, R
 
 
 /*----------------------------------------------------------------------------
- * nodataCheck
+ * nodataCheck – GDAL‑style mutating test
+ *   Returns true  ⇢  sample->value is valid
+ *   Returns false ⇢  sample->value is nodata (rewrites it to NaN)
  *----------------------------------------------------------------------------*/
 bool GdalRaster::nodataCheck(RasterSample* sample, GDALRasterBand* band)
 {
-    int hasNoData = FALSE;
-    const double ndValue   = band->GetNoDataValue(&hasNoData);
+    int hasNodata = FALSE;
+    const double nd = band->GetNoDataValue(&hasNodata);
 
-    /* No NoData defined → everything is valid */
-    if(!hasNoData)
+    /* No nodata defined → everything is valid */
+    if(!hasNodata)
         return true;
 
-    const double v = sample->value;
+    double& v = sample->value;
 
-    /* ---------- 1. Handle NaN-as-NoData ------------------------------ */
-    if (std::isnan(ndValue))
+    /* NaN-as-nodata */
+    if (std::isnan(nd))
+        return !std::isnan(v);
+
+    const double eps = std::max(1e-11, std::fabs(nd) * 1e-6);
+    if (std::fabs(v - nd) <= eps)
     {
-        if (std::isnan(v))
-        {
-            sample->value = std::numeric_limits<double>::quiet_NaN();
-            return false;                       // this pixel is NoData
-        }
-        return true;                            // value is real data
+        /* Replace sample's nodata value with NaN */
+        v = std::numeric_limits<double>::quiet_NaN();
+        return false;
     }
 
-    /* ---------- 2. Finite NoData: tolerant comparison --------------- */
-    //
-    // Relative tolerance = 1 ppm of the larger magnitude,
-    // with an absolute floor of 1 × 10⁻⁹ for tiny values.
-    //
-    const double eps = 1e-6 * std::max({1.0, std::fabs(v), std::fabs(ndValue)});
-
-    if (std::fabs(v - ndValue) <= eps)
-    {
-        sample->value = std::numeric_limits<double>::quiet_NaN();
-        return false;                           // value matches NoData
-    }
-
-    return true;                                // valid data
+    return true;
 }
 
 /*----------------------------------------------------------------------------
- * nodataCheck
+ * isNodata   –  GDAL‑style nodata test
+ *   Returns true  ⇢  value should be treated as nodata
+ *   Returns false ⇢  value is valid data
  *----------------------------------------------------------------------------*/
-bool GdalRaster::nodataCheck(const double& value, const double& nodataValue)
+bool GdalRaster::isNodata(const double& v, const double& nd)
 {
-    /* NaN-as-NoData */
-    if (std::isnan(nodataValue))
-        return !std::isnan(value);
+    /* NaN-as-nodata */
+    if (std::isnan(nd))
+        return !std::isnan(v);
 
-    /* Relative tolerance: 1 ppm (1 × 10⁻⁶) of larger magnitude */
-    const double eps = 1e-6 * std::max({1.0, std::fabs(value), std::fabs(nodataValue)});
-    return std::fabs(value - nodataValue) > eps;
+    const double eps = std::max(1e-11, std::fabs(nd) * 1e-6);
+    return std::fabs(v - nd) <= eps;
 }
 
 /*----------------------------------------------------------------------------

@@ -187,7 +187,7 @@ class GdalRaster
         }
 
         static inline bool nodataCheck   (RasterSample* sample, GDALRasterBand* band);
-        static inline bool nodataCheck   (const double& value, const double& nodataValue);
+        static inline bool isNodata      (const double& v, const double& nd);
         static int         radius2pixels (int radiusMeters, double dx, bool unitsAreDegrees, double lat);
 
         /*--------------------------------------------------------------------
