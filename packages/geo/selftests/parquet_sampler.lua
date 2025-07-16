@@ -50,10 +50,10 @@ end
 
 -- Self Test --
 
-local dem1 = geo.raster(geo.parms({asset="arcticdem-mosaic", algorithm="NearestNeighbour", radius=30, zonal_stats=true}))
+local dem1 = geo.raster(geo.parms({asset="arcticdem-mosaic", algorithm="NearestNeighbour", radius=30, zonal_stats=true, with_flags=true, slope_aspect=true, slope_scale_length=40 }))
 runner.assert(dem1 ~= nil)
 
-local dem2 = geo.raster(geo.parms({asset="arcticdem-strips", algorithm="NearestNeighbour", catalog=contents, radius=0, with_flags=true, use_poi_time=true}))
+local dem2 = geo.raster(geo.parms({asset="arcticdem-strips", algorithm="NearestNeighbour", catalog=contents, radius=0, with_flags=true, slope_aspect=true, slope_scale_length=0, use_poi_time=true}))
 runner.assert(dem2 ~= nil)
 
 print('\n--------------------------------------\nTest01: input/output geoparquet (geo)\n--------------------------------------')

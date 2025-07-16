@@ -75,9 +75,13 @@ GdalRaster::GdalRaster(const GeoFields* _parms, const std::string& _fileName,
    xsize      (0),
    ysize      (0),
    cellSize   (0),
+   isGeographic(false),
+   pixelDxMeters(0),
+   pixelDyMeters(0),
+   degDxFactor(0),
+   degDyMeters(0),
    bbox       (),
    aoi_bbox   (), // override of parameters
-   radiusInPixels(0),
    geoTransform(),
    invGeoTransform(),
    ssError    (SS_NO_ERRORS)
@@ -182,19 +186,50 @@ void GdalRaster::open(void)
         mlog(DEBUG, "Extent: (%.2lf, %.2lf), (%.2lf, %.2lf)", bbox.lon_min, bbox.lat_min, bbox.lon_max, bbox.lat_max);
 
         cellSize = geoTransform[1];
-        radiusInPixels = radius2pixels(parms->sampling_radius.value);
 
-        /* Limit maximum sampling radius */
-        if(radiusInPixels > MAX_SAMPLING_RADIUS_IN_PIXELS)
-        {
-            throw RunTimeException(CRITICAL, RTE_FAILURE,
-                "Sampling radius is too big: %d: max allowed %d meters",
-                parms->sampling_radius.value, MAX_SAMPLING_RADIUS_IN_PIXELS * static_cast<int>(cellSize));
-        }
+        /* Check sampling radius */
+        const int sr = parms->sampling_radius.value;
+        if(sr < 0 || sr > 1000)
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Sampling radius %d out of range, must be between 0 and 1000 meters", sr);
+
+        /* Check slope_scale_length */
+        const int ss = parms->slope_scale_length.value;
+        if(ss < 0 || ss > 1000)
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Slope scale length %d out of range, must be between 0 and 1000 meters", ss);
 
         /* Create coordinates transform for raster */
         createTransform();
 
+        /* Calculate scale factors, pixel dx/dy in meters.
+         * These are later used for computing slope aspect, zonal stats, etc. */
+
+        const double dx = std::fabs(geoTransform[1]);
+        const double dy = std::fabs(geoTransform[5]);
+        double unitScale = 1.0;
+        const bool haveCRS = !targetCRS.IsEmpty();
+        if(haveCRS)
+        {
+            isGeographic = targetCRS.IsGeographic();
+            if(!isGeographic)
+                unitScale = targetCRS.GetLinearUnits();
+        }
+        else
+        {
+            /* Raster is missing coordinate system, assume geographic if dx < 0.1 */
+            isGeographic = (dx < 0.1);
+        }
+
+        if(isGeographic)
+        {
+            degDxFactor = dx * 111320.0;  // meters per pixel at equator
+            degDyMeters = dy * 111132.0;  // approx. meters per degree latitude
+        }
+        else
+        {
+            /* Projected CRS use meters per pixel */
+            pixelDxMeters = dx * unitScale;
+            pixelDyMeters = dy * unitScale;
+        }
     }
     catch (const RunTimeException &e)
     {
@@ -260,6 +295,9 @@ RasterSample* GdalRaster::samplePOI(OGRPoint* poi, int bandNum)
 
                 if(parms->zonal_stats)
                     computeZonalStats(poi, band, sample);
+
+                if(parms->slope_aspect)
+                    computeSlopeAspect(poi, band, sample);
             }
         }
         else
@@ -612,8 +650,7 @@ void GdalRaster::readPixel(const OGRPoint* poi, GDALRasterBand* band, RasterSamp
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
     {
-        int x;
-        int y;
+        int x, y;
         map2pixel(poi, x, y);
 
         // mlog(DEBUG, "%dP, %dL\n", x, y);
@@ -767,9 +804,6 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, GDALRasterBand* band, Raster
     {
         int windowSize;
         int offset;
-        int x;
-        int y;
-        map2pixel(poi, x, y);
 
         /* If zero radius provided, use defaul kernels for each sampling algorithm */
         if(parms->sampling_radius == 0)
@@ -796,9 +830,13 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, GDALRasterBand* band, Raster
         }
         else
         {
+            const int radiusInPixels = radius2pixels(parms->sampling_radius.value, poi->getY());
             windowSize = radiusInPixels * 2 + 1;  // Odd window size around pixel
             offset = radiusInPixels;
         }
+
+        int x, y;
+        map2pixel(poi, x, y);
 
         const int _x = x - offset;
         const int _y = y - offset;
@@ -839,10 +877,10 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, GDALRasterBand* band, Ra
 
     try
     {
-        int x;
-        int y;
+        int x, y;
         map2pixel(poi, x, y);
 
+        const int radiusInPixels = radius2pixels(parms->sampling_radius.value, poi->getY());
         const int windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
         const int newx = x - radiusInPixels;
         const int newy = y - radiusInPixels;
@@ -850,131 +888,279 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, GDALRasterBand* band, Ra
         GDALRasterIOExtraArg args;
         INIT_RASTERIO_EXTRA_ARG(args);
         args.eResampleAlg = static_cast<GDALRIOResampleAlg>(parms->sampling_algo.value);
-        samplesArray = new double[windowSize*windowSize];
 
-        const bool validWindow = containsWindow(newx, newy, xsize, ysize, windowSize);
-        if(validWindow)
-        {
-            readWithRetry(band, newx, newy, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
-
-            /* One of the windows (raster or index data set) was valid. Compute zonal stats */
-            double min = std::numeric_limits<double>::max();
-            double max = std::numeric_limits<double>::min();
-            double sum = 0;
-
-            const double nodata = band->GetNoDataValue();
-            std::vector<double> validSamples;
-            /*
-             * Only use pixels within radius from pixel containing point of interest.
-             * Ignore nodata values.
-             */
-            const double x1 = x;
-            const double y1 = y;
-
-            for(int _y = 0; _y < windowSize; _y++)
-            {
-                for(int _x = 0; _x < windowSize; _x++)
-                {
-                    double value = samplesArray[_y*windowSize + _x];
-                    if(value == nodata) continue;
-
-                    if(band == elevationBand)
-                        value += sample->verticalShift;
-
-                    const double x2 = _x + newx;  /* Current pixel in buffer */
-                    const double y2 = _y + newy;
-                    const double xd = std::pow(x2 - x1, 2);
-                    const double yd = std::pow(y2 - y1, 2);
-                    const double d  = std::sqrt(xd + yd);
-
-                    if(std::islessequal(d, radiusInPixels))
-                    {
-                        if(value < min) min = value;
-                        if(value > max) max = value;
-                        sum += value;
-                        validSamples.push_back(value);
-                    }
-                }
-            }
-
-            const int validSamplesCnt = validSamples.size();
-            if(validSamplesCnt > 0)
-            {
-                double stdev = 0;  /* Standard deviation */
-                double mad   = 0;  /* Median absolute deviation (MAD) */
-                const double mean  = sum / validSamplesCnt;
-
-                for(int i = 0; i < validSamplesCnt; i++)
-                {
-                    const double value = validSamples[i];
-                    stdev += std::pow(value - mean, 2);
-                    mad   += std::fabs(value - mean);
-                }
-
-                stdev = std::sqrt(stdev / validSamplesCnt);
-                mad   = mad / validSamplesCnt;
-
-                /*
-                 * Calculate median
-                 * For performance use nth_element algorithm from std library since it sorts only part of the vector
-                 * NOTE: (vector will be reordered by nth_element)
-                 */
-                const std::size_t n = validSamplesCnt / 2;
-                std::nth_element(validSamples.begin(), validSamples.begin() + n, validSamples.end());
-                double median = validSamples[n];
-                if(!(validSamplesCnt & 0x1))
-                {
-                    /* Even number of samples, calculate average of two middle samples */
-                    std::nth_element(validSamples.begin(), validSamples.begin() + n-1, validSamples.end());
-                    median = (median + validSamples[n-1]) / 2;
-                }
-
-                /* Store calculated zonal stats */
-                sample->stats.count  = validSamplesCnt;
-                sample->stats.min    = min;
-                sample->stats.max    = max;
-                sample->stats.mean   = mean;
-                sample->stats.median = median;
-                sample->stats.stdev  = stdev;
-                sample->stats.mad    = mad;
-            }
-        }
-        else
+        if(!containsWindow(newx, newy, xsize, ysize, windowSize))
         {
             throw RunTimeException(WARNING, RTE_FAILURE, "sampling window outside of raster bbox");
+        }
+
+        samplesArray = new double[windowSize*windowSize];
+        readWithRetry(band, newx, newy, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
+
+        /* One of the windows (raster or index data set) was valid. Compute zonal stats */
+        double min = std::numeric_limits<double>::max();
+        double max = std::numeric_limits<double>::min();
+        double sum = 0;
+
+        int hasNodata = FALSE;
+        const double nodata = band->GetNoDataValue(&hasNodata);
+        std::vector<double> validSamples;
+        /*
+         * Only use pixels within radius from pixel containing point of interest.
+         * Ignore nodata values.
+         */
+        const double r2 = static_cast<double>(radiusInPixels) * static_cast<double>(radiusInPixels);
+
+        for(int _y = 0; _y < windowSize; _y++)
+        {
+            for(int _x = 0; _x < windowSize; _x++)
+            {
+                double value = samplesArray[_y*windowSize + _x];
+                if(hasNodata && isNodata(value, nodata))
+                    continue;
+
+                if(band == elevationBand)
+                    value += sample->verticalShift;
+
+                const double dxp = _x - radiusInPixels;
+                const double dyp = _y - radiusInPixels;
+                const double d2  = dxp*dxp + dyp*dyp;
+
+                if (d2 <= r2)
+                {
+                    if(value < min) min = value;
+                    if(value > max) max = value;
+                    sum += value;
+                    validSamples.push_back(value);
+                }
+            }
+        }
+
+        const int validSamplesCnt = validSamples.size();
+        if(validSamplesCnt > 0)
+        {
+            double stdev = 0;  /* Standard deviation */
+            double mad   = 0;  /* Median absolute deviation (MAD) */
+            const double mean  = sum / validSamplesCnt;
+
+            for(int i = 0; i < validSamplesCnt; i++)
+            {
+                const double value = validSamples[i];
+                stdev += std::pow(value - mean, 2);
+                mad   += std::fabs(value - mean);
+            }
+
+            stdev = std::sqrt(stdev / validSamplesCnt);
+            mad   = mad / validSamplesCnt;
+
+            /*
+             * Calculate median
+             * For performance use nth_element algorithm from std library since it sorts only part of the vector
+             * NOTE: (vector will be reordered by nth_element)
+             */
+            const std::size_t n = validSamplesCnt / 2;
+            std::nth_element(validSamples.begin(), validSamples.begin() + n, validSamples.end());
+            double median = validSamples[n];
+            if(!(validSamplesCnt & 0x1))
+            {
+                /* Even number of samples, calculate average of two middle samples */
+                std::nth_element(validSamples.begin(), validSamples.begin() + n-1, validSamples.end());
+                median = (median + validSamples[n-1]) / 2;
+            }
+
+            /* Store calculated zonal stats */
+            sample->stats.count  = validSamplesCnt;
+            sample->stats.min    = min;
+            sample->stats.max    = max;
+            sample->stats.mean   = mean;
+            sample->stats.median = median;
+            sample->stats.stdev  = stdev;
+            sample->stats.mad    = mad;
         }
     }
     catch(const RunTimeException& e)
     {
         mlog(e.level(), "Error computing zonal stats: %s", e.what());
-        delete[] samplesArray;
-        throw;
+        /* Don't rethrow, pixel may have been sampled successfully but zonal stats calculation failed */
     }
 
     delete[] samplesArray;
 }
 
 /*----------------------------------------------------------------------------
- * nodataCheck
+ * computeSlopeAspect
+ *
+ *  – Returns slope in degrees [0…90] and aspect in degrees CW from north;
+ *    aspect = 0 if the cell is perfectly flat or Nan if slope is undefined.
+ *----------------------------------------------------------------------------*/
+void GdalRaster::computeSlopeAspect(const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample)
+{
+    try
+    {
+        /* Convert geographic to pixel coordinates */
+        int x, y;
+        map2pixel(poi, x, y);
+
+        double dx, dy;
+        if(isGeographic)
+        {
+            const double lat = poi->getY();                       // degrees
+            dx = degDxFactor * std::cos(lat * M_PI / 180.0);      // meters per pixel (lon)
+            dy = degDyMeters;                                     // meters per pixel (lat)
+        }
+        else
+        {
+            dx = pixelDxMeters;
+            dy = pixelDyMeters;
+        }
+
+        /* Desired length-scale in metres (0 → native roughness) */
+        const double L = parms->slope_scale_length.value;
+
+        /* Kernel half-width: kHalf = 1 ⇒ 3×3 */
+        const int kHalf = (L <= dx || L <= 0.0) ? 1 : std::max(1, static_cast<int>(std::round(L / dx / 2.0)));
+
+        /* Kernel size in pixels */
+        const int windowSize = 2 * kHalf + 1;
+
+        /* Init outputs to NaN */
+        sample->derivs.count     = 0;
+        sample->derivs.slopeDeg  = std::numeric_limits<double>::quiet_NaN();
+        sample->derivs.aspectDeg = std::numeric_limits<double>::quiet_NaN();
+
+        /* Guard window inside raster */
+        if (!containsWindow(x - kHalf, y - kHalf, xsize, ysize, windowSize))
+            throw RunTimeException(WARNING, RTE_FAILURE, "sampling window outside of raster bbox");
+
+        /* Read window */
+        std::vector<double> buf(windowSize * windowSize);
+        GDALRasterIOExtraArg args;
+        INIT_RASTERIO_EXTRA_ARG(args);
+        args.eResampleAlg = static_cast<GDALRIOResampleAlg>(parms->sampling_algo.value);
+
+        readWithRetry(band,
+                      x - kHalf, y - kHalf,
+                      windowSize, windowSize,
+                      buf.data(), windowSize, windowSize, &args);
+
+        /* Vertical shift if this band is the DEM */
+        if (band == elevationBand)
+        {
+            for (double& v : buf)
+                v += sample->verticalShift;
+        }
+
+        /* Generalised Horn derivatives */
+        auto idx = [&](int r, int c){ return r * windowSize + c; };
+
+        double dzdx = 0.0, dzdy = 0.0;
+        double wsum_dx = 0.0, wsum_dy = 0.0;     // track how much weight is valid
+
+        int hasNodata = FALSE;
+        const double nodata = band->GetNoDataValue(&hasNodata);
+        uint32_t validSamplesCnt = 0;
+
+        for (int r = -kHalf; r <= kHalf; ++r)
+        {
+            for (int c = -kHalf; c <= kHalf; ++c)
+            {
+                const double val = buf[idx(r + kHalf, c + kHalf)];
+                if(hasNodata && isNodata(val, nodata))
+                    continue;
+
+                validSamplesCnt++;
+
+                /* Skip center pixel */
+                if (r == 0 && c == 0) continue;
+
+                const double w = (r == 0 || c == 0) ? 2.0 : 1.0;   // Horn edge/corner
+                dzdx     += w * val * c;
+                dzdy     += w * val * r;
+                wsum_dx  += w * std::abs(c);    // use |c|,|r| so corner & edge sum right
+                wsum_dy  += w * std::abs(r);
+            }
+        }
+
+        /* Abort if we lost all weight in one direction */
+        if (wsum_dx == 0.0 || wsum_dy == 0.0)
+            throw RunTimeException(WARNING, RTE_FAILURE, "Cannot compute slope/aspect, too many no-data pixels");
+
+        dzdx /= (wsum_dx * dx * kHalf);
+        dzdy /= (wsum_dy * dy * kHalf);
+
+        /* Slope & aspect */
+        constexpr double RAD2DEG = 180.0 / M_PI;
+        const double slopeRad = std::atan(std::hypot(dzdx, dzdy));
+        const double slopeDeg = slopeRad * RAD2DEG;
+
+        double aspectDeg;
+        if (slopeRad == 0.0)
+            aspectDeg = 0.0;
+        else
+        {
+            double aRad = std::atan2(dzdy, -dzdx);
+            if(aRad < 0) aRad += 2 * M_PI;
+            aspectDeg = aRad * RAD2DEG;
+        }
+
+        /* Store */
+        sample->derivs.count     = validSamplesCnt;
+        sample->derivs.slopeDeg  = slopeDeg;
+        sample->derivs.aspectDeg = aspectDeg;
+    }
+    catch (const RunTimeException& e)
+    {
+        mlog(e.level(), "Error computing slope/aspect: %s", e.what());
+        /* Don't rethrow, pixel may have been sampled successfully but zonal stats calculation failed */
+    }
+}
+
+
+/*----------------------------------------------------------------------------
+ * nodataCheck – GDAL‑style mutating test
+ *   Returns true  ⇢  sample->value is valid
+ *   Returns false ⇢  sample->value is nodata (rewrites it to NaN)
  *----------------------------------------------------------------------------*/
 bool GdalRaster::nodataCheck(RasterSample* sample, GDALRasterBand* band)
 {
-    /*
-     * Replace nodata with NAN
-     */
-    const double a = band->GetNoDataValue();
-    const double b = sample->value;
-    const double epsilon = 0.000001;
+    int hasNodata = FALSE;
+    const double nd = band->GetNoDataValue(&hasNodata);
 
-    if(std::fabs(a-b) < epsilon)
+    /* No nodata defined → everything is valid */
+    if(!hasNodata)
+        return true;
+
+    double& v = sample->value;
+
+    /* NaN-as-nodata */
+    if (std::isnan(nd))
+        return !std::isnan(v);
+
+    const double eps = std::max(1e-11, std::fabs(nd) * 1e-6);
+    if (std::fabs(v - nd) <= eps)
     {
-        sample->value = std::nan("");
+        /* Replace sample's nodata value with NaN */
+        v = std::numeric_limits<double>::quiet_NaN();
         return false;
     }
 
     return true;
 }
 
+/*----------------------------------------------------------------------------
+ * isNodata   –  GDAL‑style nodata test
+ *   Returns true  ⇢  value should be treated as nodata
+ *   Returns false ⇢  value is valid data
+ *----------------------------------------------------------------------------*/
+bool GdalRaster::isNodata(const double& v, const double& nd)
+{
+    /* NaN-as-nodata */
+    if (std::isnan(nd))
+        return !std::isnan(v);
+
+    const double eps = std::max(1e-11, std::fabs(nd) * 1e-6);
+    return std::fabs(v - nd) <= eps;
+}
 
 /*----------------------------------------------------------------------------
  * createTransform
@@ -1037,18 +1223,26 @@ void GdalRaster::createTransform(void)
 /*----------------------------------------------------------------------------
  * radius2pixels
  *----------------------------------------------------------------------------*/
-int GdalRaster::radius2pixels(int _radius) const
+int GdalRaster::radius2pixels(int radiusMeters, double lat) const
 {
-    /*
-     * Code supports only rasters with units in meters (cellSize and radius must be in meters).
-     */
-    int csize = static_cast<int>(cellSize);
+    if (radiusMeters <= 0) return 0;
 
-    if(_radius == 0) return 0;
-    if(csize == 0) csize = 1;
+    double dx, dy;
+    if(isGeographic)
+    {
+        dx = degDxFactor * std::cos(lat * M_PI / 180.0);      // meters per pixel (lon)
+        dy = degDyMeters;                                     // meters per pixel (lat)
+    }
+    else
+    {
+        dx = pixelDxMeters;
+        dy = pixelDyMeters;
+    }
 
-    const int radiusInMeters = ((_radius + csize - 1) / csize) * csize; // Round up to multiples of cell size
-    return radiusInMeters / csize;
+    /* In case pixel's x and y dimensions are different use the largest one */
+    const double pixelSize =  std::max(dx, dy);
+    const int r = static_cast<int>(std::ceil(radiusMeters / pixelSize));
+    return r == 0 ? 1 : r;
 }
 
 /*----------------------------------------------------------------------------
@@ -1240,4 +1434,3 @@ void GdalRaster::pixel2map(int x, int y, double& mapx, double& mapy)
     mapx = (geoTransform[0] + ((geoTransform[1] * _x) + (geoTransform[2] * _y)));
     mapy = (geoTransform[3] + ((geoTransform[4] * _y) + (geoTransform[5] * _y)));
 }
-

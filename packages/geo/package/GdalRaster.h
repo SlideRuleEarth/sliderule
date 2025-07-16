@@ -81,9 +81,8 @@ class GdalRaster
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int MAX_SAMPLING_RADIUS_IN_PIXELS = 50;
-        static const int SLIDERULE_EPSG                = 7912;
-        static const int NO_BAND                       = 0;
+        static const int SLIDERULE_EPSG = 7912;
+        static const int NO_BAND        = 0;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -170,14 +169,26 @@ class GdalRaster
         uint32_t        xsize;
         uint32_t        ysize;
         double          cellSize;
+
+        bool            isGeographic;
+        double          pixelDxMeters;
+        double          pixelDyMeters;
+        double          degDxFactor;
+        double          degDyMeters;
+
         bbox_t          bbox;
         bbox_t          aoi_bbox; // override of parameters
-        uint32_t        radiusInPixels;
         double          geoTransform[6];
         double          invGeoTransform[6];
         uint32_t        ssError;
 
         std::unordered_map<std::string, int> bandMap; /* Maps raster band names to band numbers */
+
+        /*--------------------------------------------------------------------
+         * Static Methods
+         *--------------------------------------------------------------------*/
+        static inline bool nodataCheck   (RasterSample* sample, GDALRasterBand* band);
+        static inline bool isNodata      (const double& v, const double& nd);
 
         /*--------------------------------------------------------------------
         * Methods
@@ -186,9 +197,10 @@ class GdalRaster
         void        readPixel            (const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample);
         void        resamplePixel        (const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample);
         void        computeZonalStats    (const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample);
-        static inline bool nodataCheck   (RasterSample* sample, GDALRasterBand* band);
+        void        computeSlopeAspect   (const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample);
         void        createTransform      (void);
-        int         radius2pixels        (int _radius) const;
+        int         radius2pixels        (int radiusMeters, double lat) const;
+
         static inline bool containsWindow(int x, int y, int maxx, int maxy, int windowSize);
         inline void readWithRetry        (GDALRasterBand* band, int x, int y, int xsize, int ysize, void* data, int dataXsize, int dataYsize, GDALRasterIOExtraArg* args);
         RasterSubset* getSubset          (uint32_t ulx, uint32_t uly, uint32_t _xsize, uint32_t _ysize, int bandNum);

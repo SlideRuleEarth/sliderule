@@ -528,8 +528,18 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
     arrow::ListBuilder mad_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
     auto* mad_builder = dynamic_cast<arrow::DoubleBuilder*>(mad_list_builder.value_builder());
 
+    arrow::ListBuilder slope_count_list_builder(pool, std::make_shared<arrow::UInt32Builder>());
+    auto* slope_count_builder = dynamic_cast<arrow::UInt32Builder*>(slope_count_list_builder.value_builder());
+
+    arrow::ListBuilder slope_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
+    auto* slope_builder = dynamic_cast<arrow::DoubleBuilder*>(slope_list_builder.value_builder());
+
+    arrow::ListBuilder aspect_list_builder(pool, std::make_shared<arrow::DoubleBuilder>());
+    auto* aspect_builder = dynamic_cast<arrow::DoubleBuilder*>(aspect_list_builder.value_builder());
+
     std::shared_ptr<arrow::Array> band_list_array, value_list_array, time_list_array, fileid_list_array, flags_list_array;
     std::shared_ptr<arrow::Array> count_list_array, min_list_array, max_list_array, mean_list_array, median_list_array, stdev_list_array, mad_list_array;
+    std::shared_ptr<arrow::Array> slope_count_list_array, slope_list_array, aspect_list_array;
 
     /* Iterate over each sample in a vector of lists of samples */
     for(int i = 0; i < sampler->samples.length(); i++)
@@ -557,6 +567,12 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
             PARQUET_THROW_NOT_OK(median_list_builder.Append());
             PARQUET_THROW_NOT_OK(stdev_list_builder.Append());
             PARQUET_THROW_NOT_OK(mad_list_builder.Append());
+        }
+        if(robj->hasSpatialDerivs())
+        {
+            PARQUET_THROW_NOT_OK(slope_count_list_builder.Append());
+            PARQUET_THROW_NOT_OK(slope_list_builder.Append());
+            PARQUET_THROW_NOT_OK(aspect_list_builder.Append());
         }
 
         /* Iterate over each sample and add it to the list
@@ -588,6 +604,12 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
                 PARQUET_THROW_NOT_OK(stdev_builder->Append(sample->stats.stdev));
                 PARQUET_THROW_NOT_OK(mad_builder->Append(sample->stats.mad));
             }
+            if(robj->hasSpatialDerivs())
+            {
+                PARQUET_THROW_NOT_OK(slope_count_builder->Append(sample->derivs.count));
+                PARQUET_THROW_NOT_OK(slope_builder->Append(sample->derivs.slopeDeg));
+                PARQUET_THROW_NOT_OK(aspect_builder->Append(sample->derivs.aspectDeg));
+            }
         }
     }
 
@@ -613,6 +635,12 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
         PARQUET_THROW_NOT_OK(stdev_list_builder.Finish(&stdev_list_array));
         PARQUET_THROW_NOT_OK(mad_list_builder.Finish(&mad_list_array));
     }
+    if(robj->hasSpatialDerivs())
+    {
+        PARQUET_THROW_NOT_OK(slope_count_list_builder.Finish(&slope_count_list_array));
+        PARQUET_THROW_NOT_OK(slope_list_builder.Finish(&slope_list_array));
+        PARQUET_THROW_NOT_OK(aspect_list_builder.Finish(&aspect_list_array));
+    }
 
     const std::string prefix = sampler->rkey;
 
@@ -630,6 +658,10 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
     auto median_field = std::make_shared<arrow::Field>(prefix + ".stats.median", arrow::list(arrow::float64()));
     auto stdev_field = std::make_shared<arrow::Field>(prefix + ".stats.stdev", arrow::list(arrow::float64()));
     auto mad_field = std::make_shared<arrow::Field>(prefix + ".stats.mad", arrow::list(arrow::float64()));
+
+    auto slope_count_field = std::make_shared<arrow::Field>(prefix + ".derivs.count", arrow::list(arrow::uint32()));
+    auto slope_field = std::make_shared<arrow::Field>(prefix + ".derivs.slope", arrow::list(arrow::float64()));
+    auto aspect_field = std::make_shared<arrow::Field>(prefix + ".derivs.aspect", arrow::list(arrow::float64()));
 
     /* Multiple threads may be updating the new fields and columns
      * No throwing exceptions here, since the mutex is locked
@@ -658,6 +690,12 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
             newFields.push_back(stdev_field);
             newFields.push_back(mad_field);
         }
+        if(robj->hasSpatialDerivs())
+        {
+            newFields.push_back(slope_count_field);
+            newFields.push_back(slope_field);
+            newFields.push_back(aspect_field);
+        }
 
         /* Add new columns */
         if(robj->hasBands())
@@ -680,6 +718,12 @@ bool ArrowSamplerImpl::makeColumnsWithLists(ArrowSampler::batch_sampler_t* sampl
             newColumns.push_back(std::make_shared<arrow::ChunkedArray>(median_list_array));
             newColumns.push_back(std::make_shared<arrow::ChunkedArray>(stdev_list_array));
             newColumns.push_back(std::make_shared<arrow::ChunkedArray>(mad_list_array));
+        }
+        if(robj->hasSpatialDerivs())
+        {
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(slope_count_list_array));
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(slope_list_array));
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(aspect_list_array));
         }
     }
     mutex.unlock();
@@ -711,8 +755,15 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
     arrow::DoubleBuilder stdev_builder(pool);
     arrow::DoubleBuilder mad_builder(pool);
 
+    /* Create builder for slope/aspect */
+    arrow::UInt32Builder slope_count_builder(pool);
+    arrow::DoubleBuilder slope_builder(pool);
+    arrow::DoubleBuilder aspect_builder(pool);
+
     std::shared_ptr<arrow::Array> band_array, value_array, time_array, fileid_array, flags_array;
     std::shared_ptr<arrow::Array> count_array, min_array, max_array, mean_array, median_array, stdev_array, mad_array;
+
+    std::shared_ptr<arrow::Array> slope_count_array, slope_array, aspect_array;
 
     RasterSample fakeSample(0.0, 0);
     fakeSample.value = std::nan("");
@@ -754,6 +805,12 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
             PARQUET_THROW_NOT_OK(stdev_builder.Append(sample->stats.stdev));
             PARQUET_THROW_NOT_OK(mad_builder.Append(sample->stats.mad));
         }
+        if(robj->hasSpatialDerivs())
+        {
+            PARQUET_THROW_NOT_OK(slope_count_builder.Append(sample->derivs.count));
+            PARQUET_THROW_NOT_OK(slope_builder.Append(sample->derivs.slopeDeg));
+            PARQUET_THROW_NOT_OK(aspect_builder.Append(sample->derivs.aspectDeg));
+        }
     }
 
     /* Finish the builders */
@@ -778,6 +835,12 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
         PARQUET_THROW_NOT_OK(stdev_builder.Finish(&stdev_array));
         PARQUET_THROW_NOT_OK(mad_builder.Finish(&mad_array));
     }
+    if(robj->hasSpatialDerivs())
+    {
+        PARQUET_THROW_NOT_OK(slope_count_builder.Finish(&slope_count_array));
+        PARQUET_THROW_NOT_OK(slope_builder.Finish(&slope_array));
+        PARQUET_THROW_NOT_OK(aspect_builder.Finish(&aspect_array));
+    }
 
     const std::string prefix = sampler->rkey;
 
@@ -795,6 +858,10 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
     auto median_field = std::make_shared<arrow::Field>(prefix + ".stats.median", arrow::float64());
     auto stdev_field = std::make_shared<arrow::Field>(prefix + ".stats.stdev", arrow::float64());
     auto mad_field = std::make_shared<arrow::Field>(prefix + ".stats.mad", arrow::float64());
+
+    auto slope_count_field = std::make_shared<arrow::Field>(prefix + ".derivs.count", arrow::uint32());
+    auto slope_field = std::make_shared<arrow::Field>(prefix + ".derivs.slope", arrow::float64());
+    auto aspect_field = std::make_shared<arrow::Field>(prefix + ".derivs.aspect", arrow::float64());
 
     /* Multiple threads may be updating the new fields and columns
      * No throwing exceptions here, since the mutex is locked
@@ -845,6 +912,12 @@ bool ArrowSamplerImpl::makeColumnsWithOneSample(ArrowSampler::batch_sampler_t* s
             newColumns.push_back(std::make_shared<arrow::ChunkedArray>(median_array));
             newColumns.push_back(std::make_shared<arrow::ChunkedArray>(stdev_array));
             newColumns.push_back(std::make_shared<arrow::ChunkedArray>(mad_array));
+        }
+        if(robj->hasSpatialDerivs())
+        {
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(slope_count_array));
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(slope_array));
+            newColumns.push_back(std::make_shared<arrow::ChunkedArray>(aspect_array));
         }
     }
     mutex.unlock();

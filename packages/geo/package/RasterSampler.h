@@ -70,6 +70,12 @@ class RasterSampler: public DispatchObject
         static const char* zsGeoRecType;
         static const RecordObject::fieldDef_t zsGeoRecDef[];
 
+        static const char* sdSampleRecType;
+        static const RecordObject::fieldDef_t sdSampleRecDef[];
+
+        static const char* sdGeoRecType;
+        static const RecordObject::fieldDef_t sdGeoRecDef[];
+
         static const char* fileIdRecType;
         static const RecordObject::fieldDef_t fileIdRecDef[];
 
@@ -96,6 +102,15 @@ class RasterSampler: public DispatchObject
             RasterSample::zonal_t   stats;
         } zonal_t;
 
+        /* Sample */
+        typedef struct {
+            double                  value;
+            double                  time;
+            uint64_t                file_id;
+            uint32_t                flags;
+            RasterSample::deriv_t   derivs;
+        } deriv_t;
+
         /* Extent Sample Record */
         typedef struct {
             uint64_t                index;
@@ -111,6 +126,14 @@ class RasterSampler: public DispatchObject
             uint32_t                num_samples;
             zonal_t                 samples[];
         } zs_geo_t;
+
+        /* Spatial Derivatives Record */
+        typedef struct {
+            uint64_t                index;
+            char                    raster_key[RASTER_KEY_MAX_LEN];
+            uint32_t                num_samples;
+            deriv_t                 samples[];
+        } sd_geo_t;
 
         /* File Directory Entry Record */
         typedef struct {

@@ -63,6 +63,13 @@ public:
         double mad;
     } stats;
 
+    struct deriv_t
+    {
+        uint32_t count;
+        double slopeDeg;
+        double aspectDeg;
+    } derivs;
+
    RasterSample(double _time, double _fileId, double _verticalShift = 0.0):
     value(0),
     time(_time),
@@ -75,7 +82,10 @@ public:
           .mean = 0.0,
           .median = 0.0,
           .stdev = 0.0,
-          .mad = 0.0}
+          .mad = 0.0},
+    derivs{.count = 0,
+           .slopeDeg = 0.0,
+           .aspectDeg = 0.0}
     {
     }
 
@@ -85,13 +95,16 @@ public:
         flags = sample.flags;
         bandName = sample.bandName;
         stats = sample.stats;
+        derivs = sample.derivs;
     }
 
     std::string toString(void) const
     {
         char buffer[1024];
-        snprintf(buffer, sizeof(buffer), "time: %.2lf, value: %.2lf, verticalShift: %.2lf, fileId: %lu, flags: %u, stats: {count: %u, min: %.2lf, max: %.2lf, mean: %.2lf, median: %.2lf, stdev: %.2lf, mad: %.2lf}",
-            time, value, verticalShift, fileId, flags, stats.count, stats.min, stats.max, stats.mean, stats.median, stats.stdev, stats.mad);
+        snprintf(buffer, sizeof(buffer), "time: %.2lf, value: %.2lf, verticalShift: %.2lf, fileId: %lu, flags: %u, \
+                                          stats: {count: %u, min: %.2lf, max: %.2lf, mean: %.2lf, median: %.2lf, stdev: %.2lf, mad: %.2lf}, \
+                                          slope_aspect: { count: %u, slope: %.2lf, aspect: %.2lf}",
+                time, value, verticalShift, fileId, flags, stats.count, stats.min, stats.max, stats.mean, stats.median, stats.stdev, stats.mad, derivs.count, derivs.slopeDeg, derivs.aspectDeg);
         return std::string(buffer);
     }
 

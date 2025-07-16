@@ -33,19 +33,35 @@ class TestMosaic:
         assert rsps["samples"][0][0]["file"] ==  vrtFile
         assert rsps["samples"][0][0]["time"] ==  vrtFileTime
 
-    def test_sample_api_serial(self, init):
-        gdf = raster.sample("arcticdem-mosaic", [[vrtLon,vrtLat]])
+    def test_sample_api_serial_zonal_and_slope_aspect(self, init):
+        gdf = raster.sample("arcticdem-mosaic", [[vrtLon,vrtLat]], parms={"zonal_stats": True, "radius": 100, "slope_aspect": True, "slope_scale_length": 40})
         assert init
         assert len(gdf) == 1
         assert abs(gdf["value"].iat[0] - vrtElevation) < sigma
         assert gdf["file"].iat[0] ==  vrtFile
+        assert gdf["count"].iat[0] == 7845         # zonal stats count - valid pixels used for calculation of zonal stats
+        assert gdf["slope_count"].iat[0] == 441    # slope aspect count - valid pixels used for calculation of spatial derivatives
+        assert abs(gdf["slope"].iat[0] - 0.21147272317954) < sigma
+        assert abs(gdf["aspect"].iat[0] - 288.63621380242) < sigma
 
-    def test_sample_api_batch(self, init):
-        gdf = raster.sample("arcticdem-mosaic", [[vrtLon,vrtLat],[vrtLon+0.01,vrtLat+0.01]])
+    def test_sample_api_batch_zonal_and_slope_aspect(self, init):
+        gdf = raster.sample("arcticdem-mosaic", [[vrtLon,vrtLat],[vrtLon+0.01,vrtLat+0.01]], parms={"zonal_stats": True, "radius": 100, "slope_aspect": True, "slope_scale_length": 40})
         assert init
         assert len(gdf) == 2
+        # First point
         assert abs(gdf["value"].iat[0] - vrtElevation) < sigma
         assert gdf["file"].iat[0] ==  vrtFile
+        assert gdf["count"].iat[0] == 7845         # zonal stats count - valid pixels used for calculation of zonal stats
+        assert gdf["slope_count"].iat[0] == 441    # slope aspect count - valid pixels used for calculation of spatial derivatives
+        assert abs(gdf["slope"].iat[0] - 0.21147272317954) < sigma
+        assert abs(gdf["aspect"].iat[0] - 288.63621380242) < sigma
+        # Second point
+        assert abs(gdf["value"].iat[1] - 111.515625) < sigma
+        assert gdf["file"].iat[1] ==  vrtFile
+        assert gdf["count"].iat[1] == 7845         # zonal stats count - valid pixels used for calculation of zonal stats
+        assert gdf["slope_count"].iat[1] == 441    # slope aspect count - valid pixels used for calculation of spatial derivatives
+        assert abs(gdf["slope"].iat[1] - 0.43360241027112) < sigma
+        assert abs(gdf["aspect"].iat[1] - 248.46500670648) < sigma
 
     def test_vrt_with_aoi(self, init):
         bbox = [-179, 50, -177, 52]

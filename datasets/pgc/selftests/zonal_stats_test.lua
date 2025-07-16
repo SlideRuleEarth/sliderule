@@ -6,7 +6,8 @@ if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
     return runner.skip()
 end
 
--- Unit Test For Temporal filter --
+-- Setup --
+-- runner.log(core.DEBUG)
 
 local sigma = 1.0e-9
 

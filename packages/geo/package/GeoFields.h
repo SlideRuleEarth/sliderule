@@ -117,6 +117,8 @@ class GeoFields: public FieldDictionary
         FieldElement<string>            t1;
         FieldElement<string>            tc; // closest time
         FieldElement<bool>              zonal_stats {false};
+        FieldElement<bool>              slope_aspect {false};
+        FieldElement<int>               slope_scale_length {0};
         FieldElement<bool>              flags_file {false};
         FieldElement<string>            url_substring;
         FieldElement<bool>              use_poi_time {false};

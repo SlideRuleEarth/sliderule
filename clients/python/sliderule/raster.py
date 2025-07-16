@@ -117,8 +117,8 @@ def sample(asset, coordinates, parms={}, crs=sliderule.DEFAULT_CRS):
             'flags': numpy.empty(num_records, flags_nptype),
             **columns
         }
-    if 'zonal_stats' in parms:
-        count_nptype    = sliderule.getdefinition("zsrec.sample", "count")['nptype']
+    if parms.get('zonal_stats'):
+        stats_count_nptype    = sliderule.getdefinition("zsrec.sample", "count")['nptype']
         min_nptype      = sliderule.getdefinition("zsrec.sample", "min")['nptype']
         max_nptype      = sliderule.getdefinition("zsrec.sample", "max")['nptype']
         mean_nptype     = sliderule.getdefinition("zsrec.sample", "mean")['nptype']
@@ -126,7 +126,7 @@ def sample(asset, coordinates, parms={}, crs=sliderule.DEFAULT_CRS):
         stdev_nptype    = sliderule.getdefinition("zsrec.sample", "stdev")['nptype']
         mad_nptype      = sliderule.getdefinition("zsrec.sample", "mad")['nptype']
         columns         = {
-            'count': numpy.empty(num_records, count_nptype),
+            'count': numpy.empty(num_records, stats_count_nptype),  # kept column name for backwards compatibility
             'min': numpy.empty(num_records, min_nptype),
             'max': numpy.empty(num_records, max_nptype),
             'mean': numpy.empty(num_records, mean_nptype),
@@ -135,30 +135,48 @@ def sample(asset, coordinates, parms={}, crs=sliderule.DEFAULT_CRS):
             'mad': numpy.empty(num_records, mad_nptype),
             **columns
         }
+    if parms.get('slope_aspect'):
+        slope_count_nptype = sliderule.getdefinition("sdrec.sample", "count")['nptype']
+        slope_nptype = sliderule.getdefinition("sdrec.sample", "slope")['nptype']
+        aspect_nptype= sliderule.getdefinition("sdrec.sample", "aspect")['nptype']
+        columns            = {
+            'slope_count': numpy.empty(num_records, slope_count_nptype),
+            'slope': numpy.empty(num_records, slope_nptype),
+            'aspect': numpy.empty(num_records, aspect_nptype),
+            **columns
+        }
 
     # Populate Columns
     i = 0
     per_coord_index = 0
     for input_coord_response in rsps["samples"]:
-        longitude = coordinates[per_coord_index][0]
-        latitude = coordinates[per_coord_index][1]
+        lon, lat = coordinates[per_coord_index]
         per_coord_index += 1
         for raster_sample in input_coord_response:
-            columns['time'][i] = numpy.int64((raster_sample['time'] + 315964800.0) * 1e9)
-            columns['longitude'][i] = numpy.double(longitude)
-            columns['latitude'][i] = numpy.double(latitude)
-            columns['file'] += raster_sample['file'],
-            columns['value'][i] = value_nptype(raster_sample['value'])
-            if 'with_flags' in parms:
-                columns[i] = flags_nptype(raster_sample['flags'])
-            if 'zonal_stats' in parms:
-                columns[i] = count_nptype(raster_sample['count'])
-                columns[i] = min_nptype(raster_sample['min'])
-                columns[i] = max_nptype(raster_sample['max'])
-                columns[i] = mean_nptype(raster_sample['mean'])
-                columns[i] = median_nptype(raster_sample['median'])
-                columns[i] = stdev_nptype(raster_sample['stdev'])
-                columns[i] = mad_nptype(raster_sample['mad'])
+
+            columns['time'][i]      = numpy.int64((raster_sample['time'] + 315964800.0) * 1e9)
+            columns['longitude'][i] = numpy.double(lon)
+            columns['latitude'][i]  = numpy.double(lat)
+            columns['file'].append(raster_sample['file'])
+            columns['value'][i]     = value_nptype(raster_sample['value'])
+
+            if parms.get('with_flags'):
+                columns['flags'][i] = flags_nptype(raster_sample['flags'])
+
+            if parms.get('zonal_stats'):
+                columns['count'][i]       = stats_count_nptype (raster_sample['count'])
+                columns['min'][i]         = min_nptype   (raster_sample['min'])
+                columns['max'][i]         = max_nptype   (raster_sample['max'])
+                columns['mean'][i]        = mean_nptype  (raster_sample['mean'])
+                columns['median'][i]      = median_nptype(raster_sample['median'])
+                columns['stdev'][i]       = stdev_nptype (raster_sample['stdev'])
+                columns['mad'][i]         = mad_nptype   (raster_sample['mad'])
+
+            if parms.get('slope_aspect'):
+                columns['slope_count'][i] = slope_count_nptype (raster_sample['slope_count'])
+                columns['slope'][i]       = slope_nptype (raster_sample['slope'])
+                columns['aspect'][i]      = aspect_nptype(raster_sample['aspect'])
+
             i += 1
 
     # Build GeoDataFrame
