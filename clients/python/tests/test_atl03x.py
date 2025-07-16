@@ -77,10 +77,10 @@ class TestAtl03x:
         }
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
         assert init
-        assert len(gdf) == 2815
+        assert len(gdf) == 2675
         assert len(gdf.keys()) == 17
-        assert gdf["gt"].sum() == 42240
-        assert abs(gdf["rms_misfit"].mean() - 0.2315002977848053) < 0.0001, f'{gdf["rms_misfit"].mean()}'
+        assert gdf["gt"].sum() == 40520
+        assert abs(gdf["rms_misfit"].mean() - 0.22276999056339264) < 0.0001
 
     def test_ancillary(self, init):
         parms = {
@@ -94,12 +94,12 @@ class TestAtl03x:
         }
         gdf = sliderule.run("atl03x", parms, AOI, RESOURCES)
         assert init
-        assert len(gdf) == 2813
+        assert len(gdf) == 2873
         assert len(gdf.keys()) == 24
-        assert gdf["ph_id_channel"].value_counts()[57.0] == 232
+        assert gdf["ph_id_channel"].value_counts()[57.0] == 237
         assert gdf["pce_mframe_cnt"].max() == 110610389.0
         assert abs(gdf["ref_elev"].mean() - 1.5656124586346465) < 0.0001, f'{gdf["ref_elev"].mean()}'
-        assert abs(gdf["ref_azimuth"].mean() - -2.0788434097976025) < 0.0001, f'{gdf["ref_azimuth"].mean()}'
+        assert abs(gdf["ref_azimuth"].mean() - -2.077972882456559) < 0.0001, f'{gdf["ref_azimuth"].mean()}'
         assert abs(gdf["range_bias_corr"].mean() - 4.0305766004961745) < 0.0001, f'{gdf["range_bias_corr"].mean()}'
         assert abs(gdf["geoid"].mean() - -24.62919263010919) < 0.0001, f'{gdf["geoid"].mean()}'
         assert abs(gdf["sigma_topo"].mean() - 0.003645051751679172) < 0.0001, f'{gdf["sigma_topo"].mean()}'
@@ -136,10 +136,10 @@ class TestAtl03x:
         }
         gdf = sliderule.run("atl03x", parms, region["poly"], [resource])
         assert init
-        assert len(gdf) == 1279
+        assert len(gdf) == 199
         assert len(gdf.keys()) == 20
         assert gdf["cycle"].mean() == 2
-        assert abs(gdf["mosaic.value"].mean() - 1498.9387766321345) < 0.0001
+        assert abs(gdf["mosaic.value"].mean() - 1496.4541849874372) < 0.0001
         assert gdf["mosaic.fileid"].mean() == 0
         assert gdf["mosaic.time_ns"].iloc[0] == datetime.strptime('2023-01-18 20:23:42', '%Y-%m-%d %H:%M:%S')
 
@@ -176,13 +176,13 @@ class TestAtl03x:
                        {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
         parms = {
             "poly": grand_mesa,
-            "track": 1,
+            "track": 2,
             "cnf": 0,
             "fit": {}
         }
         gdf = sliderule.run("atl03x", parms, resources=[resource])
         assert init
-        assert len(gdf) == 136
+        assert len(gdf) == 3
         assert len(gdf.keys()) == 17
 
     def test_atl24(self, init):

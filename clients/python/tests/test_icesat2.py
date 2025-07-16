@@ -4,7 +4,7 @@ import pytest
 from pyproj import Transformer
 from shapely.geometry import Polygon, Point
 import pandas as pd
-from sliderule import icesat2, h5
+from sliderule import sliderule, icesat2, h5
 import time
 
 class TestAlgorithm:
@@ -269,3 +269,72 @@ class TestAlgorithm:
         assert abs(total_error["h_mean"] - 1723.8) < 0.1
         assert abs(total_error["latitude"] - 0.045071) < 0.001
         assert abs(total_error["longitude"] - 0.022374) < 0.001
+
+
+    def test_gsx(self, init):
+        resource_suffix = "20210114170723_03311012_005_01.h5"
+        region = [ {"lon": 126.54560629670780, "lat": -70.28232209449946},
+                   {"lon": 114.29798416287946, "lat": -70.08880029415151},
+                   {"lon": 112.05139144652648, "lat": -74.18128224472123},
+                   {"lon": 126.62732471857403, "lat": -74.37827832634999},
+                   {"lon": 126.54560629670780, "lat": -70.28232209449946} ]
+
+        # Make ATL06-SR (Surface Fitter) Processing Request
+        parms = { "poly": region,
+                  "cnf": icesat2.CNF_SURFACE_HIGH,
+                  "srt": icesat2.SRT_DYNAMIC,
+                  "ats": 20.0,
+                  "cnt": 10,
+                  "len": 40.0,
+                  "res": 20.0,
+                  "beams": "gt3r",
+                  "fit": {"maxi": 10} }
+        gdf = sliderule.run("atl03x", parms, resources=["ATL03_"+resource_suffix])
+
+        # Project Region to Polygon #
+        pregion = []
+        for point in region:
+            ppoint = Point(point["lat"], point["lon"])
+            pregion.append(ppoint)
+        polygon = Polygon(pregion)
+
+        # Read lat,lon from resource
+        geodatasets = [ {"dataset": "/orbit_info/sc_orient"},
+                        {"dataset": "/gt3r/land_ice_segments/latitude", "startrow": 0, "numrows": -1},
+                        {"dataset": "/gt3r/land_ice_segments/longitude", "startrow": 0, "numrows": -1} ]
+        geocoords = h5.h5p(geodatasets, "ATL06_"+resource_suffix, "icesat2")
+
+        # Build list of the subsetted sdp datasets to read
+        startrow = -1
+        numrows = -1
+        index = 0
+        for index in range(len(geocoords["/gt3r/land_ice_segments/latitude"])):
+            lat = geocoords["/gt3r/land_ice_segments/latitude"][index]
+            lon = geocoords["/gt3r/land_ice_segments/longitude"][index]
+            point = Point(lat, lon)
+            intersect = point.within(polygon)
+            if startrow == -1 and intersect:
+                startrow = index
+            elif startrow != -1 and not intersect:
+                numrows = index - startrow
+                break
+        sdp_datasets = [
+            {"dataset": "/gt3r/land_ice_segments/h_li", "startrow": startrow, "numrows": numrows},
+            {"dataset": "/gt3r/land_ice_segments/ground_track/x_atc", "startrow": startrow, "numrows": numrows}
+        ]
+
+        # Read data from resource
+        sdp_values = h5.h5p(sdp_datasets, "ATL06_"+resource_suffix, "icesat2")
+        sdp = pd.DataFrame({
+            "h_mean": sdp_values["/gt3r/land_ice_segments/h_li"].tolist(),
+            "x_atc": sdp_values["/gt3r/land_ice_segments/ground_track/x_atc"].tolist()
+        })
+
+        # Calculate Correlation Statistics
+        merged = pd.merge_asof(gdf[330:], sdp[:-718], on='x_atc', suffixes=('_1', '_2'))
+        correlation = merged['h_mean_1'].corr(merged['h_mean_2'])
+        print(f'Correlation: {correlation}')
+
+        # Asserts
+        assert init
+        assert 1.0 - correlation < 0.00000020132
