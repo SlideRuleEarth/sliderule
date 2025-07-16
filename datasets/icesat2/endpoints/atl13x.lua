@@ -25,8 +25,10 @@ if parms["key_space"] == core.INVALID_KEY then
         local rc, data = pcall(json.decode, response)
         if rc then
             rqst["parms"]["atl13"]["refid"] = data["refid"]
-            rqst["parms"]["resources"] = data["granules"]
-            resources_set_by_ams = true
+            if not rqst["parms"]["resources"] then
+                rqst["parms"]["resources"] = data["granules"]
+                resources_set_by_ams = true
+            end
         else
             local userlog = msg.publish(_rqst.rspq)
             userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed to parse response from manager: %s", _rqst.id, response))

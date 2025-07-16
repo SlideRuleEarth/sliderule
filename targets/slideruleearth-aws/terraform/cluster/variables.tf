@@ -20,11 +20,6 @@ variable  "availability_zone" {
   type        = string
   default     = "us-west-2d"
 }
-variable  "sys_bucket" {
-  description = "S3 bucket used to store the sliderule system configuration"
-  type        = string
-  default     = "sliderule"
-}
 
 # -------------------------------------------------------------
 # Network Variables

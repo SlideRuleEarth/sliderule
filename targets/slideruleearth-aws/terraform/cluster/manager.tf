@@ -2,7 +2,7 @@ resource "aws_instance" "manager" {
     ami                         = data.aws_ami.sliderule_cluster_ami.id
     availability_zone           = var.availability_zone
     ebs_optimized               = false
-    instance_type               = "r8g.large"
+    instance_type               = "r8g.xlarge"
     monitoring                  = false
     key_name                    = var.key_pair_name
     vpc_security_group_ids      = [aws_security_group.manager-sg.id]
@@ -23,6 +23,7 @@ resource "aws_instance" "manager" {
       #!/bin/bash
       echo ${var.cluster_name} > ./clustername.txt
       aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${var.container_repo}
+      export IS_PUBLIC=${var.is_public}
       export DOMAIN=${var.domain}
       export MANAGER_SECRET_SALT='${local.secrets.manager_secret_salt}'
       export MANAGER_API_KEY='${local.secrets.manager_api_key}'
@@ -36,7 +37,7 @@ resource "aws_instance" "manager" {
       aws s3 cp s3://sliderule/config/GeoLite2-City.mmdb /data/GeoLite2-City.mmdb
       aws s3 cp s3://sliderule/config/GeoLite2-Country.mmdb /data/GeoLite2-Country.mmdb
       aws s3 cp s3://sliderule/config/atl13_mappings.json /data/ATL13/atl13_mappings.json
-      aws s3 cp s3://sliderule/config/inland_water_body.parquet /data/ATL13/inland_water_body.parquet
+      aws s3 cp s3://sliderule/config/inland_water_body.db /data/ATL13/inland_water_body.db
       aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-manager.yml ./docker-compose.yml
       docker-compose -p cluster up --detach
     EOF

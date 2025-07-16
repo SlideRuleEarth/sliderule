@@ -102,6 +102,8 @@ class Atl13DataFrame: public GeoDataFrame
                 void polyregion         (const Atl13DataFrame* df);
                 void rasterregion       (const Atl13DataFrame* df);
 
+                bool                    useRefId;
+
                 H5Array<int64_t>        atl13refid;
                 H5Array<double>         latitude;
                 H5Array<double>         longitude;

@@ -114,11 +114,11 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     FieldColumn<double>*    x_atc           = new FieldColumn<double>;                      // distance from the equator
     FieldColumn<float>*     y_atc           = new FieldColumn<float>;                       // distance from reference track
     FieldColumn<uint32_t>*  photon_start    = new FieldColumn<uint32_t>;                    // photon index of start of extent
-    FieldColumn<uint32_t>*  photon_count    = new FieldColumn<uint32_t>;                    // number of photons used in final elevation calculation
     FieldColumn<uint16_t>*  pflags          = new FieldColumn<uint16_t>;                    // processing flags
     FieldColumn<float>*     h_mean          = new FieldColumn<float>(Field::Z_COLUMN);      // meters from ellipsoid
     FieldColumn<float>*     dh_fit_dx       = new FieldColumn<float>;                       // along track slope
-    FieldColumn<float>*     window_height   = new FieldColumn<float>;
+    FieldColumn<float>*     window_height   = new FieldColumn<float>;                       // height in meters of final window used in fit
+    FieldColumn<int32_t>*   n_fit_photons   = new FieldColumn<int32_t>;                     // number of photons used in final elevation calculation
     FieldColumn<float>*     rms_misfit      = new FieldColumn<float>;
     FieldColumn<float>*     h_sigma         = new FieldColumn<float>;
 
@@ -129,6 +129,13 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     GeoDataFrame::createAncillaryColumns(&ancillary_columns, parms->atl03PhFields);
     GeoDataFrame::createAncillaryColumns(&ancillary_columns, parms->atl08Fields);
 
+    // initialize
+    double start_distance = 0;
+    if(df.length() > 0)
+    {
+        start_distance = df.x_atc[0];
+    }
+
     // for each photon
     int32_t i0 = 0; // start row
     while(i0 < df.length())
@@ -137,20 +144,10 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
 
         // find end of extent
         int32_t i1 = i0; // end row
-        while( (i1 < df.length()) &&
-               ((df.x_atc[i1] - df.x_atc[i0]) < parms->extentLength.value) )
+        while( (i1 < (df.length() - 1)) &&
+               ((df.x_atc[i1 + 1] - start_distance) < parms->extentLength.value) )
         {
             i1++;
-        }
-
-        // check for end of dataframe
-        if(i1 == df.length()) i1--;
-
-        // check for valid extent
-        if (i1 < i0)
-        {
-            mlog(CRITICAL, "Invalid extent (%d, %d)\n", i0, i1);
-            break;
         }
 
         // calculate number of photons in extent
@@ -171,39 +168,50 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
         // add result row to surface fitter dataframe
         if(_pflags == 0 || parms->passInvalid)
         {
+            const double center_of_extent = start_distance + (parms->extentLength.value / 2.0);
+
             // run least squares fit
-            const result_t result = iterativeFitStage(df, i0, num_photons);
-            time_ns->append(static_cast<time8_t>(result.time_ns));
-            latitude->append(result.latitude);
-            longitude->append(result.longitude);
-            x_atc->append(result.x_atc);
-            y_atc->append(result.y_atc);
-            photon_start->append(df.ph_index[i0]);
-            photon_count->append(static_cast<uint32_t>(num_photons));
-            pflags->append(result.pflags | _pflags);
-            h_mean->append(static_cast<float>(result.h_mean));
-            dh_fit_dx->append(result.dh_fit_dx);
-            window_height->append(result.window_height);
-            rms_misfit->append(result.rms_misfit);
-            h_sigma->append(result.h_sigma);
+            const result_t result = iterativeFitStage(df, i0, num_photons, center_of_extent);
 
-            // populate ancillary columns
-            GeoDataFrame::populateAncillaryColumns(ancillary_columns, df, i0, num_photons);
+            // build dataframe columns
+            if(result.pflags == 0 || parms->passInvalid)
+            {
+                // populate surface fit columns
+                time_ns->append(static_cast<time8_t>(result.time_ns));
+                latitude->append(result.latitude);
+                longitude->append(result.longitude);
+                x_atc->append(center_of_extent);
+                y_atc->append(result.y_atc);
+                photon_start->append(df.ph_index[i0]);
+                pflags->append(result.pflags | _pflags);
+                h_mean->append(static_cast<float>(result.h_mean));
+                dh_fit_dx->append(result.dh_fit_dx);
+                window_height->append(result.window_height);
+                n_fit_photons->append(static_cast<uint32_t>(result.n_fit_photons));
+                rms_misfit->append(result.rms_misfit);
+                h_sigma->append(result.h_sigma);
+
+                // populate ancillary columns
+                GeoDataFrame::populateAncillaryColumns(ancillary_columns, df, i0, num_photons);
+            }
         }
 
-        // find start of next extent
-        const int32_t prev_i0 = i0;
-        while( (i0 < df.length()) &&
-               ((df.x_atc[i0] - df.x_atc[prev_i0]) < parms->extentStep.value) )
+        while(i0 < df.length())
         {
-            i0++;
-        }
+            // update the start distance
+            start_distance += parms->extentStep.value;
 
-        // check extent moved
-        if(i0 == prev_i0)
-        {
-            mlog(CRITICAL, "Failed to move to next extent in track");
-            break;
+            // find first index past new start distance
+            while( (i0 < df.length()) && (df.x_atc[i0] < start_distance) )
+            {
+                i0++;
+            }
+
+            // check if this extent has any photons
+            if( (i0 < df.length()) && ((df.x_atc[i0] - start_distance) < parms->extentLength.value) )
+            {
+                break;
+            }
         }
     }
 
@@ -211,19 +219,19 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
     dataframe->clear(); // frees memory
 
     // install new columns into dataframe
-    dataframe->addExistingColumn("time_ns",         time_ns);
-    dataframe->addExistingColumn("latitude",        latitude);
-    dataframe->addExistingColumn("longitude",       longitude);
-    dataframe->addExistingColumn("x_atc",           x_atc);
-    dataframe->addExistingColumn("y_atc",           y_atc);
-    dataframe->addExistingColumn("photon_start",    photon_start);
-    dataframe->addExistingColumn("photon_count",    photon_count);
-    dataframe->addExistingColumn("pflags",          pflags);
-    dataframe->addExistingColumn("h_mean",          h_mean);
-    dataframe->addExistingColumn("dh_fit_dx",       dh_fit_dx);
-    dataframe->addExistingColumn("window_height",   window_height);
-    dataframe->addExistingColumn("rms_misfit",      rms_misfit);
-    dataframe->addExistingColumn("h_sigma",         h_sigma);
+    dataframe->addExistingColumn("time_ns",                 time_ns);
+    dataframe->addExistingColumn("latitude",                latitude);
+    dataframe->addExistingColumn("longitude",               longitude);
+    dataframe->addExistingColumn("x_atc",                   x_atc);
+    dataframe->addExistingColumn("y_atc",                   y_atc);
+    dataframe->addExistingColumn("photon_start",            photon_start);
+    dataframe->addExistingColumn("pflags",                  pflags);
+    dataframe->addExistingColumn("h_mean",                  h_mean);
+    dataframe->addExistingColumn("dh_fit_dx",               dh_fit_dx);
+    dataframe->addExistingColumn("w_surface_window_final",  window_height);
+    dataframe->addExistingColumn("n_fit_photons",           n_fit_photons);
+    dataframe->addExistingColumn("rms_misfit",              rms_misfit);
+    dataframe->addExistingColumn("h_sigma",                 h_sigma);
 
     // install ancillary columns into dataframe
     GeoDataFrame::addAncillaryColumns (ancillary_columns, dataframe);
@@ -243,7 +251,7 @@ bool SurfaceFitter::run (GeoDataFrame* dataframe)
  *  Note: Section 5.5 - Signal selection based on ATL03 flags
  *        Procedures 4b and after
  *----------------------------------------------------------------------------*/
-SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons)
+SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons, double center_of_extent)
 {
     assert(num_photons > 0);
 
@@ -254,10 +262,6 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
     const double pulses_in_extent = (parms->extentLength * PULSE_REPITITION_FREQUENCY) / df.spacecraft_velocity[start_photon]; // N_seg_pulses, section 5.4, procedure 1d
     const double background_density = pulses_in_extent * df.background_rate[start_photon] / (SPEED_OF_LIGHT / 2.0); // BG_density, section 5.7, procedure 1c
 
-    /* Generate Along-Track Coordinate */
-    const int32_t i_center = start_photon + (num_photons / 2);
-    result.x_atc = df.x_atc[i_center];
-
     /* Initialize Photons Variables */
     point_t* photons = new point_t[num_photons];
     int32_t photons_in_window = num_photons;
@@ -265,7 +269,7 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
     {
         photons[i].p = start_photon + i;
         photons[i].r = 0;
-        photons[i].x = df.x_atc[start_photon + i] - result.x_atc;
+        photons[i].x = df.x_atc[start_photon + i] - center_of_extent;
     }
 
     /* Iterate Processing of Photons */
@@ -428,6 +432,7 @@ SurfaceFitter::result_t SurfaceFitter::iterativeFitStage (const Atl03DataFrame& 
     }
 
     /* Calculate RMS and Scale h_sigma */
+    result.n_fit_photons = photons_in_window;
     if(photons_in_window > 0)
     {
         result.rms_misfit = sqrt(delta_sum / (double)photons_in_window);

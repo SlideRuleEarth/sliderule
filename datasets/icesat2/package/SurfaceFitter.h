@@ -82,13 +82,13 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
         } point_t;
 
         struct result_t {
+            int32_t     n_fit_photons = 0;  // number of photons in final fit
             uint16_t    pflags = 0;         // processing flags
             time8_t     time_ns {0};        // nanoseconds from GPS epoch
             double      latitude = 0;
             double      longitude = 0;
             double      h_mean = 0;         // meters from ellipsoid
             double      dh_fit_dx = 0;      // along track slope
-            double      x_atc = 0;          // distance from equator
             double      y_atc = 0;          // distance from reference track
             double      h_sigma = 0;
             double      rms_misfit = 0;
@@ -102,7 +102,7 @@ class SurfaceFitter: public GeoDataFrame::FrameRunner
         SurfaceFitter  (lua_State* L, Icesat2Fields* _parms);
         ~SurfaceFitter (void) override;
 
-        result_t        iterativeFitStage       (const Atl03DataFrame& df, int32_t start_photon, int32_t num_photons);
+        result_t        iterativeFitStage       (const Atl03DataFrame& df, int32_t start_photon, int32_t num_photon, double center_of_extent);
         static void     leastSquaresFit         (const Atl03DataFrame& df, point_t* array, int32_t size, bool final, result_t& result);
         static void     quicksort               (point_t* array, int32_t start, int32_t end);
         static int      quicksortpartition      (point_t* array, int32_t start, int32_t end);

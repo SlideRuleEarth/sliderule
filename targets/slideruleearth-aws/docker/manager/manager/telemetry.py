@@ -2,7 +2,7 @@ from flask import (Blueprint, request, current_app)
 from werkzeug.exceptions import abort
 from manager.db import execute_command_db, columns_db
 from manager.geo import get_geo
-from datetime import date
+from datetime import date, datetime
 import json
 import requests
 import hashlib
@@ -54,6 +54,9 @@ def captureit(endpoint, duration):
         count_metrics[endpoint + "_count"] = count_metrics.get(endpoint + "_count", 0) + 1
 
 def ratelimitit(source_ip, source_ip_location):
+    # only rate limit public clusters
+    if not current_app.config['IS_PUBLIC']:
+        return False
     # determine request times
     now = date.today().isocalendar()
     this_request_time = (now.week, now.year)
@@ -75,7 +78,7 @@ def ratelimitit(source_ip, source_ip_location):
     return False # no rate limiting
 
 def blockit(source_ip):
-    print(f'Requests originating from {source_ip} will be rate limited for {current_app.config['RATELIMIT_BACKOFF_PERIOD']} seconds')
+    print(f'Requests originating from {source_ip} will be rate limited for {current_app.config['RATELIMIT_BACKOFF_PERIOD']} seconds starting from {datetime.now()}')
     requests.post(current_app.config['ORCHESTRATOR'] + "/discovery/block", data=json.dumps({"address": source_ip, "duration": current_app.config['RATELIMIT_BACKOFF_PERIOD']}))
 
 def get_metrics():

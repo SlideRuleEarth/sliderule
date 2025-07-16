@@ -2,7 +2,6 @@ import duckdb
 import click
 from flask import Blueprint, current_app, request, g
 from werkzeug.exceptions import abort
-import threading
 import boto3
 
 ####################
@@ -18,10 +17,7 @@ db = Blueprint('db', __name__, url_prefix='/manager/db')
 def __getdb():
     if 'db' not in g:
         g.db = duckdb.connect(current_app.config['DATABASE'])
-        g.db.execute("""
-            INSTALL spatial;
-            LOAD spatial;
-        """)
+        g.db.execute("LOAD spatial;")
     return g.db
 
 ####################
@@ -70,6 +66,9 @@ def init_db_command():
     click.echo('Initialized the database.')
 
 def init_app(app):
+    db = duckdb.connect(app.config['DATABASE'])
+    db.execute("INSTALL spatial;")
+    db.close()
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
 

@@ -419,6 +419,10 @@ void Atl03DataFrame::AreaOfInterest::rasterregion (const Atl03DataFrame* df)
                 }
             }
         }
+        else
+        {
+            inclusion_mask[segment] = false;
+        }
 
         /* Bump Segment */
         segment++;
@@ -431,6 +435,10 @@ void Atl03DataFrame::AreaOfInterest::rasterregion (const Atl03DataFrame* df)
 
         /* Trim Inclusion Mask */
         inclusion_ptr = &inclusion_mask[first_segment];
+    }
+    else
+    {
+        num_segments = 0;
     }
 }
 
@@ -1030,7 +1038,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
     }
 
     /* Dataframe Complete */
-    mlog(INFO, "Completed processing resource %s beam %s", df->hdf03->name, df->beam);
+    mlog(INFO, "Completed processing resource %s beam %s (%ld rows)", df->hdf03->name, df->beam, df->length());
     df->signalComplete();
 
     /* Stop Trace */
