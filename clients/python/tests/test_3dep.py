@@ -55,9 +55,13 @@ class Test3DEP_1meter:
 
 class Test3DEP_10meter:
     def test_sample(self, init):
-        gdf = raster.sample("usgs3dep-10meter-dem", [[-108.0,39.0]])
+        sigma = 1.0e-9
+        gdf = raster.sample("usgs3dep-10meter-dem", [[-108.0,39.0]], {"slope_aspect": True, "slope_scale_length": 40})
         assert init
         assert len(gdf) == 1
+        assert gdf["slope_count"].iat[0] == 25    # number of valid pixels used for spatial derivative calculation
+        assert abs(gdf["slope"].iat[0]  - 6.4923495863514) < sigma
+        assert abs(gdf["aspect"].iat[0] - 334.33081719763) < sigma
 
     def test_batch_sample(self, init):
         # Create 10,000 points in the bounding box (-108.2, 38.9) to (-107.8, 39.1)
