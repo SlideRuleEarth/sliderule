@@ -169,6 +169,13 @@ class GdalRaster
         uint32_t        xsize;
         uint32_t        ysize;
         double          cellSize;
+
+        bool            isGeographic;
+        double          pixelDxMeters;
+        double          pixelDyMeters;
+        double          degDxFactor;
+        double          degDyMeters;
+
         bbox_t          bbox;
         bbox_t          aoi_bbox; // override of parameters
         double          geoTransform[6];
@@ -180,15 +187,8 @@ class GdalRaster
         /*--------------------------------------------------------------------
          * Static Methods
          *--------------------------------------------------------------------*/
-        static double metersPerDegLon(double latDeg)
-        {
-            /* WGS-84 ellipsoid mean formula (±0.1 %) */
-            return 111320.0 * std::cos(latDeg * M_PI / 180.0);
-        }
-
         static inline bool nodataCheck   (RasterSample* sample, GDALRasterBand* band);
         static inline bool isNodata      (const double& v, const double& nd);
-        static int         radius2pixels (int radiusMeters, double dx, bool unitsAreDegrees, double lat);
 
         /*--------------------------------------------------------------------
         * Methods
@@ -199,6 +199,7 @@ class GdalRaster
         void        computeZonalStats    (const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample);
         void        computeSlopeAspect   (const OGRPoint* poi, GDALRasterBand* band, RasterSample* sample);
         void        createTransform      (void);
+        int         radius2pixels        (int radiusMeters, double lat) const;
 
         static inline bool containsWindow(int x, int y, int maxx, int maxy, int windowSize);
         inline void readWithRetry        (GDALRasterBand* band, int x, int y, int xsize, int ysize, void* data, int dataXsize, int dataYsize, GDALRasterIOExtraArg* args);

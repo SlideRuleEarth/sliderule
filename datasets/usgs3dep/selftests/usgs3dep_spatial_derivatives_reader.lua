@@ -77,7 +77,7 @@ for sindx, scale in ipairs(scales) do
         runner.assert(math.abs(aspect - expSlopeResults[sindx][2]) < sigma)
         runner.assert(slope_count == expSlopeResults[sindx][3])
 
-        runner.assert(stats_count == 529)  -- from 100 meter radius
+        runner.assert(stats_count == 317)  -- from 100 meter radius
     end
     runner.assert(sampleCnt == #expResults)
 end

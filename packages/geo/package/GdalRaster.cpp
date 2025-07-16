@@ -75,6 +75,11 @@ GdalRaster::GdalRaster(const GeoFields* _parms, const std::string& _fileName,
    xsize      (0),
    ysize      (0),
    cellSize   (0),
+   isGeographic(false),
+   pixelDxMeters(0),
+   pixelDyMeters(0),
+   degDxFactor(0),
+   degDyMeters(0),
    bbox       (),
    aoi_bbox   (), // override of parameters
    geoTransform(),
@@ -182,9 +187,49 @@ void GdalRaster::open(void)
 
         cellSize = geoTransform[1];
 
+        /* Check sampling radius */
+        const int sr = parms->sampling_radius.value;
+        if(sr < 0 || sr > 1000)
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Sampling radius %d out of range, must be between 0 and 1000 meters", sr);
+
+        /* Check slope_scale_length */
+        const int ss = parms->slope_scale_length.value;
+        if(ss < 0 || ss > 1000)
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Slope scale length %d out of range, must be between 0 and 1000 meters", ss);
+
         /* Create coordinates transform for raster */
         createTransform();
 
+        /* Calculate scale factors, pixel dx/dy in meters.
+         * These are later used for computing slope aspect, zonal stats, etc. */
+
+        const double dx = std::fabs(geoTransform[1]);
+        const double dy = std::fabs(geoTransform[5]);
+        double unitScale = 1.0;
+        const bool haveCRS = !targetCRS.IsEmpty();
+        if(haveCRS)
+        {
+            isGeographic = targetCRS.IsGeographic();
+            if(!isGeographic)
+                unitScale = targetCRS.GetLinearUnits();
+        }
+        else
+        {
+            /* Raster is missing coordinate system, assume geographic if dx < 0.1 */
+            isGeographic = (dx < 0.1);
+        }
+
+        if(isGeographic)
+        {
+            degDxFactor = dx * 111320.0;  // meters per pixel at equator
+            degDyMeters = dy * 111132.0;  // approx. meters per degree latitude
+        }
+        else
+        {
+            /* Projected CRS use meters per pixel */
+            pixelDxMeters = dx * unitScale;
+            pixelDyMeters = dy * unitScale;
+        }
     }
     catch (const RunTimeException &e)
     {
@@ -605,8 +650,7 @@ void GdalRaster::readPixel(const OGRPoint* poi, GDALRasterBand* band, RasterSamp
     /* Use fast method recomended by GDAL docs to read individual pixel */
     try
     {
-        int x;
-        int y;
+        int x, y;
         map2pixel(poi, x, y);
 
         // mlog(DEBUG, "%dP, %dL\n", x, y);
@@ -760,15 +804,6 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, GDALRasterBand* band, Raster
     {
         int windowSize;
         int offset;
-        int x;
-        int y;
-        map2pixel(poi, x, y);
-
-        const double dx = geoTransform[1];            // pixel width (° or m)
-        const bool unitsDeg = std::abs(dx) < 0.1;     // crude heuristic: <10 cm ⇒ degrees
-        const double lat = poi->getY();               // latitude (° or m)
-
-        const int radiusInPixels = radius2pixels(parms->sampling_radius.value, dx, unitsDeg, lat);
 
         /* If zero radius provided, use defaul kernels for each sampling algorithm */
         if(parms->sampling_radius == 0)
@@ -795,9 +830,13 @@ void GdalRaster::resamplePixel(const OGRPoint* poi, GDALRasterBand* band, Raster
         }
         else
         {
+            const int radiusInPixels = radius2pixels(parms->sampling_radius.value, poi->getY());
             windowSize = radiusInPixels * 2 + 1;  // Odd window size around pixel
             offset = radiusInPixels;
         }
+
+        int x, y;
+        map2pixel(poi, x, y);
 
         const int _x = x - offset;
         const int _y = y - offset;
@@ -838,15 +877,10 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, GDALRasterBand* band, Ra
 
     try
     {
-        int x;
-        int y;
+        int x, y;
         map2pixel(poi, x, y);
 
-        const double dx = geoTransform[1];            // pixel width (° or m)
-        const bool unitsDeg = std::abs(dx) < 0.1;     // crude heuristic: <10 cm ⇒ degrees
-        const double lat = poi->getY();               // latitude (° or m)
-
-        const int radiusInPixels = radius2pixels(parms->sampling_radius.value, dx, unitsDeg, lat);
+        const int radiusInPixels = radius2pixels(parms->sampling_radius.value, poi->getY());
         const int windowSize = radiusInPixels * 2 + 1; // Odd window size around pixel
         const int newx = x - radiusInPixels;
         const int newy = y - radiusInPixels;
@@ -875,8 +909,7 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, GDALRasterBand* band, Ra
          * Only use pixels within radius from pixel containing point of interest.
          * Ignore nodata values.
          */
-        const double x1 = x;
-        const double y1 = y;
+        const double r2 = static_cast<double>(radiusInPixels) * static_cast<double>(radiusInPixels);
 
         for(int _y = 0; _y < windowSize; _y++)
         {
@@ -889,13 +922,11 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, GDALRasterBand* band, Ra
                 if(band == elevationBand)
                     value += sample->verticalShift;
 
-                const double x2 = _x + newx;  /* Current pixel in buffer */
-                const double y2 = _y + newy;
-                const double xd = std::pow(x2 - x1, 2);
-                const double yd = std::pow(y2 - y1, 2);
-                const double d  = std::sqrt(xd + yd);
+                const double dxp = _x - radiusInPixels;
+                const double dyp = _y - radiusInPixels;
+                const double d2  = dxp*dxp + dyp*dyp;
 
-                if(std::islessequal(d, radiusInPixels))
+                if (d2 <= r2)
                 {
                     if(value < min) min = value;
                     if(value > max) max = value;
@@ -970,20 +1001,17 @@ void GdalRaster::computeSlopeAspect(const OGRPoint* poi, GDALRasterBand* band, R
         int x, y;
         map2pixel(poi, x, y);
 
-        /* Native pixel size (metres) */
-        double dx = geoTransform[1];
-        double dy = std::fabs(geoTransform[5]);
-
-        /* For some rasters pixel width may be in degrees, not metres (e.g. USGS 30m DEM)
-         * Detect and convert to metres */
-        const bool unitsDeg = std::abs(dx) < 0.1;  // pixel dx < 10 cm ⇒ deg grid
-        if (unitsDeg)
+        double dx, dy;
+        if(isGeographic)
         {
-            const double lat = poi->getY();
-            const double mPerDegLon = 111320.0 * std::cos(lat * M_PI / 180.0);
-            const double mPerDegLat = 111132.0;    // average
-            dx *= mPerDegLon;
-            dy *= mPerDegLat;
+            const double lat = poi->getY();                       // degrees
+            dx = degDxFactor * std::cos(lat * M_PI / 180.0);      // meters per pixel (lon)
+            dy = degDyMeters;                                     // meters per pixel (lat)
+        }
+        else
+        {
+            dx = pixelDxMeters;
+            dy = pixelDyMeters;
         }
 
         /* Desired length-scale in metres (0 → native roughness) */
@@ -1195,17 +1223,26 @@ void GdalRaster::createTransform(void)
 /*----------------------------------------------------------------------------
  * radius2pixels
  *----------------------------------------------------------------------------*/
-int GdalRaster::radius2pixels(int radiusMeters, double dx, bool unitsAreDegrees, double lat)
+int GdalRaster::radius2pixels(int radiusMeters, double lat) const
 {
     if (radiusMeters <= 0) return 0;
 
-    /* Convert pixel size to metres */
-    if (unitsAreDegrees)
-        dx *= metersPerDegLon(lat);
+    double dx, dy;
+    if(isGeographic)
+    {
+        dx = degDxFactor * std::cos(lat * M_PI / 180.0);      // meters per pixel (lon)
+        dy = degDyMeters;                                     // meters per pixel (lat)
+    }
+    else
+    {
+        dx = pixelDxMeters;
+        dy = pixelDyMeters;
+    }
 
-    /* Round up radius to an integer multiple of pixel size */
-    const int pixels = static_cast<int>(std::ceil(radiusMeters / dx));
-    return pixels;
+    /* In case pixel's x and y dimensions are different use the largest one */
+    const double pixelSize =  std::max(dx, dy);
+    const int r = static_cast<int>(std::ceil(radiusMeters / pixelSize));
+    return r == 0 ? 1 : r;
 }
 
 /*----------------------------------------------------------------------------
