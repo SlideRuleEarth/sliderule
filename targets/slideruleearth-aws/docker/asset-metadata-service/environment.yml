@@ -1,0 +1,12 @@
+# conda env create -f environment.yml
+name: flaskr
+channels:
+  - conda-forge
+dependencies:
+  - flask
+  - python-duckdb
+  - gunicorn
+  - boto3
+  - pytest
+  - coverage
+  - pip

@@ -1,0 +1,12 @@
+[project]
+name = "ams"
+description = "sliderule asset metadata service"
+dynamic = ["version"]
+dependencies = ["flask", "duckdb"]
+
+[build-system]
+requires = ["flit_core<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.flit]
+module = "ams"

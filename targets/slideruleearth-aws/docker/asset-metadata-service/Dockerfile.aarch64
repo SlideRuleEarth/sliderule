@@ -1,0 +1,34 @@
+#
+# RUNTIME
+#
+FROM fedora:latest
+
+# runtime dependencies
+RUN dnf update -y \
+    && dnf install -y \
+        wget \
+        awk \
+    && dnf clean all \
+    && rm -rf /var/cache/yum
+
+# install mamba for python based algorithms
+RUN wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-aarch64.sh \
+    && bash Miniforge3-Linux-aarch64.sh -b
+
+# install python dependencies for python based algorithms
+COPY conda-linux-aarch64.lock .
+RUN /root/miniforge3/bin/mamba create --copy -p /env --file conda-linux-aarch64.lock \
+    && /root/miniforge3/bin/conda clean -afy
+RUN /env/bin/pip install build
+
+# install python applications
+COPY ams /ams
+COPY pyproject.toml /
+COPY docker-entrypoint.sh /
+COPY version.txt /
+RUN cd / && /env/bin/python -m build --wheel
+RUN /env/bin/pip install /dist/ams-*.whl
+
+# container defaults
+SHELL ["/bin/bash", "-c"]
+CMD ["/bin/bash"]
