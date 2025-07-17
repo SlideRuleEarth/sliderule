@@ -26,7 +26,7 @@ def __get_atl13():
     global metadata, metalock
     # get mask
     if 'db' not in g:
-        g.db = duckdb.connect(current_app.config['ATL13_MASK'])
+        g.db = duckdb.connect(current_app.config['ATL13_MASK'], read_only=True)
         g.db.execute("LOAD spatial;")
     # get mappings
     with metalock:
@@ -45,7 +45,7 @@ def close_atl13(e=None):
         db.close()
 
 def init_app(app):
-    db = duckdb.connect(app.config['ATL13_MAPPINGS'])
+    db = duckdb.connect()
     db.execute("INSTALL spatial;")
     db.close()
     app.teardown_appcontext(close_atl13)
