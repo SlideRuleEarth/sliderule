@@ -22,9 +22,11 @@
 #        $ aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
 #     3. Login to GitHub
 #        $ gh auth login
-#     4. Login to NPMJS
+#     4. Select version of `npm`
+#        $ nvm use 20
+#     5. Login to NPMJS
 #        $ cd sliderule/clients/nodejs && make login
-#     5. Execute the makefile target to release the code; X.Y.Z is the version
+#     6. Execute the makefile target to release the code; X.Y.Z is the version
 #        $ make release VERSION=vX.Y.Z
 #
 # To update the build environment for GitHub actions
@@ -380,8 +382,8 @@ release: buildenv-docker buildenv-docker-push manager-lock ams-lock ## tag and r
 	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git add $(ROOT)/targets/slideruleearth-aws/docker/manager/conda-linux-${ARCH}.lock
 	git add $(ROOT)/targets/slideruleearth-aws/docker/manager/conda-lock.yml
-	git add $(ROOT)/targets/slideruleearth-aws/docker/ams/conda-linux-${ARCH}.lock
-	git add $(ROOT)/targets/slideruleearth-aws/docker/ams/conda-lock.yml
+	git add $(ROOT)/targets/slideruleearth-aws/docker/asset-metadata-service/conda-linux-${ARCH}.lock
+	git add $(ROOT)/targets/slideruleearth-aws/docker/asset-metadata-service/conda-lock.yml
 	git add $(ROOT)/targets/slideruleearth-aws/docker/sliderule/libdep-${ARCH}.lock
 	git commit -m "Version $(VERSION)"
 	git tag -a $(VERSION) -m "Version $(VERSION)"
