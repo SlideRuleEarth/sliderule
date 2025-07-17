@@ -256,15 +256,15 @@ package:
   category: main
   optional: false
 - name: libexpat
-  version: 2.7.0
+  version: 2.7.1
   manager: conda
   platform: linux-aarch64
   dependencies:
-    libgcc: '>=13'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libexpat-2.7.0-h5ad3122_0.conda
+    libgcc: '>=14'
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libexpat-2.7.1-hfae3067_0.conda
   hash:
-    md5: d41a057e7968705dae8dcb7c8ba2c8dd
-    sha256: e3a0d95fe787cccf286f5dced9fa9586465d3cd5ec8e04f7ad7f0e72c4afd089
+    md5: f75d19f3755461db2eb69401f5514f4c
+    sha256: 378cabff44ea83ce4d9f9c59f47faa8d822561d39166608b3e65d1e06c927415
   category: main
   optional: false
 - name: libffi
