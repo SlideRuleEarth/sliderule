@@ -14,11 +14,11 @@ if parms["key_space"] == core.INVALID_KEY then
     local resources_set_by_ams = false
     local response = nil
     if atl13_parms["refid"] > 0 then
-        response = core.manager("GET", string.format("/manager/ams/atl13?refid=%d", atl13_parms["refid"]))
+        response = core.ams("GET", string.format("atl13?refid=%d", atl13_parms["refid"]))
     elseif #atl13_parms["name"] > 0 then
-        response = core.manager("GET", string.format("/manager/ams/atl13?name=%s", string.gsub(atl13_parms["name"], " ", "%%20")))
+        response = core.ams("GET", string.format("atl13?name=%s", string.gsub(atl13_parms["name"], " ", "%%20")))
     elseif atl13_parms["coord"]["lat"] ~= 0.0 or atl13_parms["coord"]["lon"] ~= 0.0 then
-        response = core.manager("GET", string.format("/manager/ams/atl13?lon=%f&lat=%f", atl13_parms["coord"]["lon"], atl13_parms["coord"]["lat"]))
+        response = core.ams("GET", string.format("atl13?lon=%f&lat=%f", atl13_parms["coord"]["lon"], atl13_parms["coord"]["lat"]))
     end
     -- get resources
     if response then
@@ -31,7 +31,7 @@ if parms["key_space"] == core.INVALID_KEY then
             end
         else
             local userlog = msg.publish(_rqst.rspq)
-            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed to parse response from manager: %s", _rqst.id, response))
+            userlog:alert(core.CRITICAL, core.RTE_FAILURE, string.format("request <%s> failed to parse response from asset metadata service: %s", _rqst.id, response))
             return
         end
     end

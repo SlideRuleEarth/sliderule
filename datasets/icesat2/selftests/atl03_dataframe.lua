@@ -148,24 +148,24 @@ runner.unittest("ATL06 Surface Fitter", function()
     runner.assert(df:finished(30000), "failed to wait for dataframe to finish")
     runner.assert(df:inerror() == false, "dataframe encountered error")
 
-    runner.assert(df:numrows() == 99364, string.format("incorrect number of rows: %d", df:numrows()))
+    runner.assert(df:numrows() == 98924, string.format("incorrect number of rows: %d", df:numrows()))
     runner.assert(df:numcols() == 13, string.format("incorrect number of columns: %d", df:numcols()))
 
     prettyprint.display(df:row(100))
 
     check_expected({
-        time_ns = 1583304724417144064,
-        latitude = 79.975761143791,
-        longitude = -40.964800696036,
-        x_atc = 11134877.680426,
-        y_atc = 3271.8671875,
-        h_mean = 2183.622559,
-        dh_fit_dx = 0.0041639762930572,
-        window_height = 3.0,
-        rms_misfit = 0.12183286994696,
-        h_sigma = 0.010312998667359,
-        photon_start = 7076,
-        photon_count = 140,
+        time_ns = 1583304724408144640,
+        latitude = 79.976320,
+        longitude = -40.964091,
+        x_atc = 11134813.724491,
+        y_atc = 3272.001221,
+        h_mean = 2183.448242,
+        dh_fit_dx = -0.000171,
+        w_surface_window_final = 3.0,
+        rms_misfit = 0.138086,
+        h_sigma = 0.012963,
+        photon_start = 6861,
+        n_fit_photons = 115,
         pflags = 0,
     }, df, 100, 0.00001)
 

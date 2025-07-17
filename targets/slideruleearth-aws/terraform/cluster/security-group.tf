@@ -18,8 +18,8 @@ resource "aws_security_group" "monitor-sg" {
   # HAProxy - NGINX (proxy) - TCP
   ingress {
     cidr_blocks = [var.vpcCIDRblock]
-    from_port   = 8080
-    to_port     = 8080
+    from_port   = 8040
+    to_port     = 8040
     protocol    = "tcp"
   }
 
@@ -86,8 +86,8 @@ resource "aws_security_group" "manager-sg" {
   # HAProxy - TCP
   ingress {
     cidr_blocks = [var.vpcCIDRblock]
-    from_port   = 8000
-    to_port     = 8000
+    from_port   = 8030
+    to_port     = 8030
     protocol    = "tcp"
   }
 

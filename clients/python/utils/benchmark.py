@@ -177,7 +177,7 @@ def atl06_sample_zonal_arcticdem():
         "len": 20.0,
         "res": 10.0,
         "maxi": 1,
-        "samples": {"mosaic": {"asset": "arcticdem-mosaic", "radius": 10.0, "zonal_stats": True}} }
+        "samples": {"mosaic": {"asset": "arcticdem-mosaic", "radius": 10, "zonal_stats": True}} }
     return icesat2.atl06p(parms, resources=[ATL03_GRANULE_DICKSONFJORD])
 
 # ------------------------------------

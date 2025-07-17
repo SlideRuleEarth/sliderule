@@ -44,12 +44,6 @@ def create_app(test_config=None):
     from . import geo
     geo.init_app(app)
 
-    # initialize asset metadata service
-    # bring in ams subsystem
-    from . import ams
-    ams.init_app(app)
-    app.register_blueprint(ams.ams)
-
     # bring in telemetry subsystem
     from . import telemetry
     app.register_blueprint(telemetry.telemetry)

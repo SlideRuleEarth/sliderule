@@ -6,7 +6,7 @@ dependencies:
   - flask
   - python-duckdb
   - gunicorn
-  - boto3
+  - pandas
   - pytest
   - coverage
   - pip

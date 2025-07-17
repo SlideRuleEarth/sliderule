@@ -264,7 +264,7 @@ void Atl13DataFrame::AreaOfInterest::polyregion (const Atl13DataFrame* df)
     /* Find First Segment In Polygon */
     bool first_segment_found = false;
     int segment = firstSegment;
-    int max_segment = (numSegments < 0) ? longitude.size : numSegments;
+    const int max_segment = (numSegments < 0) ? longitude.size : numSegments;
     while(segment < max_segment)
     {
         /* Test Inclusion */
@@ -312,7 +312,7 @@ void Atl13DataFrame::AreaOfInterest::rasterregion (const Atl13DataFrame* df)
 
     /* Loop Throuh Segments */
     int segment = firstSegment;
-    int max_segment = (numSegments < 0) ? longitude.size : numSegments;
+    const int max_segment = (numSegments < 0) ? longitude.size : numSegments;
     while(segment < max_segment)
     {
         /* Check Inclusion */

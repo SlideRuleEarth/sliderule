@@ -47,6 +47,7 @@ ILB_STAGE_DIR = $(STAGE)/ilb
 PROXY_STAGE_DIR = $(STAGE)/proxy
 MONITOR_STAGE_DIR = $(STAGE)/monitor
 MANAGER_STAGE_DIR = $(STAGE)/manager
+AMS_STAGE_DIR = $(STAGE)/ams
 TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
@@ -179,11 +180,31 @@ monitor-docker: ## build monitor docker image; needs VERSION
 	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
 	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:$(VERSION) $(DOCKER_PLATFORM) .
 
+ams-lock: ## update dependencies of ams
+	cd docker/asset-metadata-service && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd docker/asset-metadata-service && conda-lock render -p linux-$(ARCH)
+
+ams-docker: ## build ams docker image; uses VERSION
+	-rm -Rf $(AMS_STAGE_DIR)
+	mkdir -p $(AMS_STAGE_DIR)
+	cp docker/asset-metadata-service/Dockerfile.$(ARCH) $(AMS_STAGE_DIR)/Dockerfile
+	cp docker/asset-metadata-service/conda-* $(AMS_STAGE_DIR)
+	cp docker/asset-metadata-service/pyproject.toml $(AMS_STAGE_DIR)
+	cp docker/asset-metadata-service/docker-entrypoint.sh $(AMS_STAGE_DIR)
+	cp $(ROOT)/version.txt $(AMS_STAGE_DIR)
+	chmod +x $(AMS_STAGE_DIR)/docker-entrypoint.sh
+	mkdir $(AMS_STAGE_DIR)/ams
+	cp docker/asset-metadata-service/ams/*.py $(AMS_STAGE_DIR)/ams
+	cd $(AMS_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ams:$(VERSION) $(DOCKER_PLATFORM) .
+
+ams-run: ## run ams locally; uses VERSION
+	docker run -it -p 8060:8060 --rm --name ams $(ECR)/ams:$(VERSION) /bin/bash /docker-entrypoint.sh
+
 manager-lock: ## update dependencies of manager
 	cd docker/manager && conda-lock -p linux-$(ARCH) -f environment.yml
 	cd docker/manager && conda-lock render -p linux-$(ARCH)
 
-manager-docker: ## build manager docker image; needs VERSION
+manager-docker: ## build manager docker image; uses VERSION
 	-rm -Rf $(MANAGER_STAGE_DIR)
 	mkdir -p $(MANAGER_STAGE_DIR)
 	cp docker/manager/Dockerfile.$(ARCH) $(MANAGER_STAGE_DIR)/Dockerfile
@@ -197,8 +218,8 @@ manager-docker: ## build manager docker image; needs VERSION
 	cp docker/manager/manager/*.sql $(MANAGER_STAGE_DIR)/manager
 	cd $(MANAGER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/manager:$(VERSION) $(DOCKER_PLATFORM) .
 
-manager-run:
-	docker run -it -p 8000:8000 --rm --name manager $(ECR)/manager:$(VERSION) /bin/bash /docker-entrypoint.sh
+manager-run: ## run manager locally; uses VERSION
+	docker run -it -p 8040:8040 --rm --name manager $(ECR)/manager:$(VERSION) /bin/bash /docker-entrypoint.sh
 
 ########################
 # Cluster Targets
@@ -210,6 +231,7 @@ cluster-docker: ## build all cluster docker images
 	make proxy-docker
 	make monitor-docker
 	make manager-docker
+	make ams-docker
 
 cluster-docker-push: ## push all cluster images to docker container registries
 	docker push $(ECR)/sliderule:$(VERSION)
@@ -217,6 +239,7 @@ cluster-docker-push: ## push all cluster images to docker container registries
 	docker push $(ECR)/proxy:$(VERSION)
 	docker push $(ECR)/monitor:$(VERSION)
 	docker push $(ECR)/manager:$(VERSION)
+	docker push $(ECR)/ams:$(VERSION)
 
 cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
 	cd packer; packer build -var version=$(VERSION) -var-file=arm64_cpu.json sliderule-base.pkr.hcl

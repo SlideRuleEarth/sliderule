@@ -355,7 +355,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(atl03sp{job=\"manager_app\"}[1y])",
+          "expr": "max_over_time(atl03x{job=\"manager_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -366,7 +366,7 @@
           "step": 40
         }
       ],
-      "title": "max atl03sp",
+      "title": "max atl03x",
       "type": "stat"
     },
     {
@@ -441,7 +441,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(atl06p{job=\"manager_app\"}[1y])",
+          "expr": "max_over_time(atl24x{job=\"manager_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -452,7 +452,7 @@
           "step": 40
         }
       ],
-      "title": "max atl06p",
+      "title": "max atl24x",
       "type": "stat"
     },
     {
@@ -527,7 +527,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(atl08p{job=\"manager_app\"}[1y])",
+          "expr": "max_over_time(atl13x{job=\"manager_app\"}[1y])",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -538,7 +538,7 @@
           "step": 40
         }
       ],
-      "title": "max atl08p",
+      "title": "max atl13x",
       "type": "stat"
     },
     {
@@ -613,7 +613,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "atl03s_count{job=\"manager_app\"} + atl06_count{job=\"manager_app\"} + atl08_count{job=\"manager_app\"}",
+          "expr": "(atl03s_count{job=\"manager_app\"} OR on() vector(0)) + (atl06_count{job=\"manager_app\"} OR on() vector(0)) + (atl08_count{job=\"manager_app\"} OR on() vector(0)) + (atl03x_count{job=\"manager_app\"} OR on() vector(0)) + (atl24x_count{job=\"manager_app\"} OR on() vector(0)) + (atl13x_count{job=\"manager_app\"} OR on() vector(0))",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -699,7 +699,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "atl03sp_count{job=\"manager_app\"} + atl06p_count{job=\"manager_app\"} + atl08p_count{job=\"manager_app\"}",
+          "expr": "(atl03sp_count{job=\"manager_app\"} OR on() vector(0)) + (atl06p_count{job=\"manager_app\"} OR on() vector(0)) + (atl08p_count{job=\"manager_app\"} OR on() vector(0))",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -785,7 +785,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "gedi01bp_count{job=\"manager_app\"} + gedi02ap_count{job=\"manager_app\"} + gedi04ap_count{job=\"manager_app\"}",
+          "expr": "(gedi01bp_count{job=\"manager_app\"} OR on() vector(0)) + (gedi02ap_count{job=\"manager_app\"} OR on() vector(0)) + (gedi04ap_count{job=\"manager_app\"} OR on() vector(0))",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -871,7 +871,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "gedi01b_count{job=\"manager_app\"} + gedi02a_count{job=\"manager_app\"} + gedi04a_count{job=\"manager_app\"}",
+          "expr": "(gedi01b_count{job=\"manager_app\"} OR on() vector(0)) + (gedi02a_count{job=\"manager_app\"} OR on() vector(0)) + (gedi04a_count{job=\"manager_app\"} OR on() vector(0))",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -1043,7 +1043,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "samples_count{job=\"manager_app\"} + subsets_count{job=\"manager_app\"}",
+          "expr": "(samples_count{job=\"manager_app\"} OR on() vector(0)) + (subsets_count{job=\"manager_app\"} OR on() vector(0))",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -1129,14 +1129,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "atl03s_count{job=\"manager_app\"}",
+          "expr": "(atl03s_count{job=\"manager_app\"} OR on() vector(0))",
           "interval": "",
           "legendFormat": "atl03s",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "atl06_count{job=\"manager_app\"}",
+          "expr": "(atl06_count{job=\"manager_app\"} OR on() vector(0))",
           "hide": false,
           "interval": "",
           "legendFormat": "atl06",
@@ -1144,7 +1144,7 @@
         },
         {
           "exemplar": true,
-          "expr": "atl08_count{job=\"manager_app\"}",
+          "expr": "(atl08_count{job=\"manager_app\"} OR on() vector(0))",
           "hide": false,
           "interval": "",
           "legendFormat": "atl08",
@@ -1152,7 +1152,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi01b_count{job=\"manager_app\"}",
+          "expr": "(gedi01b_count{job=\"manager_app\"} OR on() vector(0))",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi01b",
@@ -1160,7 +1160,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi02a_count{job=\"manager_app\"}",
+          "expr": "(gedi02a_count{job=\"manager_app\"} OR on() vector(0))",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi02a",
@@ -1168,7 +1168,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi04a_count{job=\"manager_app\"}",
+          "expr": "(gedi04a_count{job=\"manager_app\"} OR on() vector(0))",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi04a",
@@ -1176,11 +1176,35 @@
         },
         {
           "exemplar": true,
-          "expr": "h5_count{job=\"manager_app\"}",
+          "expr": "(h5_count{job=\"manager_app\"} OR on() vector(0))",
           "hide": false,
           "interval": "",
           "legendFormat": "h5",
           "refId": "G"
+        },
+        {
+          "exemplar": true,
+          "expr": "(atl03x_count{job=\"manager_app\"} OR on() vector(0))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl03x",
+          "refId": "H"
+        },
+        {
+          "exemplar": true,
+          "expr": "(atl24x_count{job=\"manager_app\"} OR on() vector(0))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl24x",
+          "refId": "I"
+        },
+        {
+          "exemplar": true,
+          "expr": "(atl13x_count{job=\"manager_app\"} OR on() vector(0))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl13x",
+          "refId": "J"
         }
       ],
       "title": "Endpoint Counts",
@@ -1258,14 +1282,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "atl03sp_count{job=\"manager_app\"}",
+          "expr": "(atl03sp_count{job=\"manager_app\"} OR on() vector(0))",
           "interval": "",
           "legendFormat": "atl03sp",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "atl06p_count{job=\"manager_app\"}",
+          "expr": "(atl06p_count{job=\"manager_app\"} OR on() vector(0))",
           "hide": false,
           "interval": "",
           "legendFormat": "atl06p",
@@ -1273,7 +1297,7 @@
         },
         {
           "exemplar": true,
-          "expr": "atl08p_count{job=\"manager_app\"}",
+          "expr": "(atl08p_count{job=\"manager_app\"} OR on() vector(0))",
           "hide": false,
           "interval": "",
           "legendFormat": "atl08p",
@@ -1281,7 +1305,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi01bp_count{job=\"manager_app\"}",
+          "expr": "(gedi01bp_count{job=\"manager_app\"} OR on() vector(0))",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi01bp",
@@ -1289,7 +1313,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi02ap_count{job=\"manager_app\"}",
+          "expr": "(gedi02ap_count{job=\"manager_app\"} OR on() vector(0))",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi02ap",
@@ -1297,7 +1321,7 @@
         },
         {
           "exemplar": true,
-          "expr": "gedi04ap_count{job=\"manager_app\"}",
+          "expr": "(gedi04ap_count{job=\"manager_app\"} OR on() vector(0))",
           "hide": false,
           "interval": "",
           "legendFormat": "gedi04ap",
@@ -1305,7 +1329,7 @@
         },
         {
           "exemplar": true,
-          "expr": "h5p_count{job=\"manager_app\"}",
+          "expr": "(h5p_count{job=\"manager_app\"} OR on() vector(0))",
           "hide": false,
           "interval": "",
           "legendFormat": "h5p",
@@ -1439,6 +1463,30 @@
           "interval": "",
           "legendFormat": "h5",
           "refId": "G"
+        },
+        {
+          "exemplar": true,
+          "expr": "rate(atl03x_count{job=\"manager_app\"}[1m])  ",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl03x",
+          "refId": "H"
+        },
+        {
+          "exemplar": true,
+          "expr": "rate(atl24x_count{job=\"manager_app\"}[1m])  ",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl24x",
+          "refId": "I"
+        },
+        {
+          "exemplar": true,
+          "expr": "rate(atl13x_count{job=\"manager_app\"}[1m])  ",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "atl13x",
+          "refId": "J"
         }
       ],
       "title": "Endpoint Rates",

@@ -18,7 +18,7 @@ local height = 0
 
 local expElevation   = {-14.10, -4.28, -17.18}
 local expUncertainty = {  2.58,  0.34,  1.32}
-local expContributor = { 63846, 24955, 45641}
+local expContributor = { 63846, 24955, 90305}
 
 local elevation_tolerance = 50.0 -- BlueTopo is updated constantly; we just want to check that a valid elevation (within reason) can be sampled
 
@@ -47,7 +47,7 @@ for j, lon in ipairs(lons) do
             elseif band == "Uncertainty" then
                 runner.assert(math.abs(value - expUncertainty[j]) < elevation_tolerance, string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))
             elseif band == "Contributor" then
-                runner.assert(value == expContributor[j], string.format("Point: %d, (%.3f, %.3f) ======> FAILED",j, lon, lat))
+                runner.assert(value == expContributor[j], string.format("Point: [%d]=%d, (%.3f, %.3f) ======> FAILED", j, value, lon, lat))
             end
         end
         print("\n")

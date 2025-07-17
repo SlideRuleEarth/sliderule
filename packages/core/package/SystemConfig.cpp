@@ -137,6 +137,7 @@ SystemConfig::SystemConfig(void):
         {"cluster",                     &cluster},
         {"prov_sys_url",                &provSysURL},
         {"manager_url",                 &managerURL},
+        {"ams_url",                     &amsURL},
         {"container_registry",          &containerRegistry}
     })
 {
@@ -148,6 +149,7 @@ SystemConfig::SystemConfig(void):
     setIfProvided(cluster, "CLUSTER");
     setIfProvided(provSysURL, "PROVISIONING_SYSTEM");
     setIfProvided(managerURL, "MANAGER");
+    setIfProvided(amsURL, "AMS");
     setIfProvided(containerRegistry, "CONTAINER_REGISTRY");
 }
 

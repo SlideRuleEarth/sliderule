@@ -31,9 +31,13 @@ resource "aws_launch_template" "sliderule_template" {
     export CLUSTER=${var.cluster_name}
     export IS_PUBLIC=${var.is_public}
     export SLIDERULE_IMAGE=${var.container_repo}/sliderule:${var.cluster_version}
+    export AMS_IMAGE=${var.container_repo}/ams:${var.cluster_version}
     export PROVISIONING_SYSTEM="https://ps.${var.domain}"
     export CONTAINER_REGISTRY=${var.container_repo}
     aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${var.container_repo}
+    mkdir -p /data/ATL13
+    aws s3 cp s3://sliderule/config/atl13_mappings.json /data/ATL13/atl13_mappings.json
+    aws s3 cp s3://sliderule/config/inland_water_body.db /data/ATL13/inland_water_body.db
     aws s3 cp s3://sliderule/config/ /plugin/ --recursive --exclude "*" --include "*.so"
     aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-node.yml ./docker-compose.yml
     docker-compose -p cluster up --detach

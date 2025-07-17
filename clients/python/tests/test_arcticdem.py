@@ -115,7 +115,7 @@ class TestMosaic:
                   "len": 40.0,
                   "res": 20.0,
                   "maxi": 1,
-                  "samples": {"mosaic": {"asset": "arcticdem-mosaic", "radius": 10.0, "zonal_stats": True}} }
+                  "samples": {"mosaic": {"asset": "arcticdem-mosaic", "radius": 10, "zonal_stats": True}} }
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
         assert len(gdf) == 957

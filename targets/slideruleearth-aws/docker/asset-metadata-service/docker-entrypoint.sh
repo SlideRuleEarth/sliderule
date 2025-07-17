@@ -1,2 +1,2 @@
 #!/bin/bash
-/env/bin/gunicorn 'manager:create_app()' --bind 0.0.0.0:8000 # --log-level debug
+/env/bin/gunicorn 'ams:create_app()' --bind 0.0.0.0:9082 # --log-level debug

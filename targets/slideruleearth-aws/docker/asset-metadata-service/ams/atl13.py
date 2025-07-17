@@ -45,6 +45,9 @@ def close_atl13(e=None):
         db.close()
 
 def init_app(app):
+    db = duckdb.connect(app.config['ATL13_MAPPINGS'])
+    db.execute("INSTALL spatial;")
+    db.close()
     app.teardown_appcontext(close_atl13)
 
 ####################

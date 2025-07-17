@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "AlertMonitor.h"
+#include "AmsLib.h"
 #include "Asset.h"
 #include "AssetIndex.h"
 #include "CurlLib.h"
@@ -149,6 +150,7 @@ static int core_open (lua_State *L)
         {"psvalidate",      ProvisioningSystemLib::luaValidate},
         {"psauth",          ProvisioningSystemLib::Authenticator::luaCreate},
         {"manager",         ManagerLib::luaRequest},
+        {"ams",             AmsLib::luaRequest},
         {"parms",           RequestFields::luaCreate},
         {"send2user",       OutputLib::luaSend2User},
 #ifdef __unittesting__

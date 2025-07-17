@@ -1,8 +1,5 @@
 run:
-	flask --app ams run --debug --port 8000
-
-init:
-	flask --app ams init-db
+	flask --app ams run --debug --port 9082
 
 TEST ?=
 test:

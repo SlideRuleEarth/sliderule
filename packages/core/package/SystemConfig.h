@@ -114,7 +114,8 @@ class SystemConfig: public FieldDictionary
         FieldElement<string>            organization                {"localhost"};
         FieldElement<string>            cluster                     {"localhost"};
         FieldElement<string>            provSysURL                  {"https://ps.localhost"};
-        FieldElement<string>            managerURL                  {"http://127.0.0.1:8000"};
+        FieldElement<string>            managerURL                  {"http://127.0.0.1:8030"};
+        FieldElement<string>            amsURL                      {"http://127.0.0.1:9082"};
         FieldElement<string>            containerRegistry           {"742127912612.dkr.ecr.us-west-2.amazonaws.com"};
 
     private:
