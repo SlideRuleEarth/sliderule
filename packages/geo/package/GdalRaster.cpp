@@ -890,9 +890,7 @@ void GdalRaster::computeZonalStats(const OGRPoint* poi, GDALRasterBand* band, Ra
         args.eResampleAlg = static_cast<GDALRIOResampleAlg>(parms->sampling_algo.value);
 
         if(!containsWindow(newx, newy, xsize, ysize, windowSize))
-        {
-            throw RunTimeException(WARNING, RTE_FAILURE, "sampling window outside of raster bbox");
-        }
+            throw RunTimeException(DEBUG, RTE_FAILURE, "sampling window outside of raster bbox");
 
         samplesArray = new double[windowSize*windowSize];
         readWithRetry(band, newx, newy, windowSize, windowSize, samplesArray, windowSize, windowSize, &args);
@@ -1030,7 +1028,7 @@ void GdalRaster::computeSlopeAspect(const OGRPoint* poi, GDALRasterBand* band, R
 
         /* Guard window inside raster */
         if (!containsWindow(x - kHalf, y - kHalf, xsize, ysize, windowSize))
-            throw RunTimeException(WARNING, RTE_FAILURE, "sampling window outside of raster bbox");
+            throw RunTimeException(DEBUG, RTE_FAILURE, "sampling window outside of raster bbox");
 
         /* Read window */
         std::vector<double> buf(windowSize * windowSize);
@@ -1083,7 +1081,7 @@ void GdalRaster::computeSlopeAspect(const OGRPoint* poi, GDALRasterBand* band, R
 
         /* Abort if we lost all weight in one direction */
         if (wsum_dx == 0.0 || wsum_dy == 0.0)
-            throw RunTimeException(WARNING, RTE_FAILURE, "Cannot compute slope/aspect, too many no-data pixels");
+            throw RunTimeException(DEBUG, RTE_FAILURE, "Cannot compute slope/aspect, too many no-data pixels");
 
         dzdx /= (wsum_dx * dx * kHalf);
         dzdy /= (wsum_dy * dy * kHalf);
