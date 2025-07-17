@@ -1,8 +1,8 @@
-# Release v.4.16.0
+# Release v4.16.0
 
 2025-06-27
 
-Version description of the v.4.16.0 release of SlideRule Earth.
+Version description of the v4.16.0 release of SlideRule Earth.
 
 ## New/Improved Functionality
 
@@ -34,7 +34,7 @@ Version description of the v.4.16.0 release of SlideRule Earth.
 
 ## Getting This Release
 
-[https://github.com/SlideRuleEarth/sliderule/releases/tag/v.4.16.0](https://github.com/SlideRuleEarth/sliderule/releases/tag/v.4.16.0)
+[https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.16.0](https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.16.0)
 
 ## Benchmarks
 > clients/python/utils/benchmark.py

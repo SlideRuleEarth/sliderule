@@ -20,6 +20,8 @@ To request raster sampling, the ``"samples"`` parameter must be populated as a d
         - ``"algorithm"``: algorithm to use to sample the raster; the available algorithms for sampling rasters are: NearestNeighbour, Bilinear, Cubic, CubicSpline, Lanczos, Average, Mode, Gauss
         - ``"radius"``: the size of the kernel in meters when sampling a raster; the size of the region in meters for zonal statistics
         - ``"zonal_stats"``: boolean whether to calculate and return zonal statistics for the region around the location being sampled
+        - ``"slope_aspect"``: boolean whether to calculate slope and aspect for the region around the location being sampled
+        - ``"slope_scale_length"``: the size of the region in meters to use when calculating the slope and aspect
         - ``"with_flags"``: boolean whether to include auxiliary information about the sampled pixel in the form of a 32-bit flag
         - ``"t0"``: start time for filtering rasters to be sampled (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
         - ``"t1"``: stop time for filtering rasters to be sampled (format %Y-%m-%dT%H:%M:%SZ, e.g. 2018-10-13T00:00:00Z)
@@ -74,6 +76,12 @@ The zonal statistic columns added to a GeoDataFrame for each sampled raster data
 - __"median"__: average/median pixel value of pixels that contributed to sample value
 - __"stdev"__: standard deviation of pixel values of pixels that contributed to sample value
 - __"mad"__: median absolute deviation of pixel values of pixels that contributed to sample value
+
+The slope and aspect derivative columns added to a GeoDataFrame for each sampled raster dataset are:
+
+- __"slope_count"__: number of pixels read to calculate slope and aspect
+- __"slope"__: the calculated slope at the location being sampled
+- __"aspect"__: the calculated aspect at the location being sampled
 
 ## Providing your own catalog
 

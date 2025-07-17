@@ -1,6 +1,8 @@
 # DataFrames
 
-SlideRule includes a set of APIs that are specifically geared for generating and processing DataFrames.  These APIs were made public in early 2025 starting with version 4.11.0, and have a common methodology for processing the data which makes interfacing to them consistent across multiple datasets.
+:::{note}
+This page documents the `x-series` APIs that are specifically geared for generating and processing DataFrames.  These APIs were made public in early 2025 starting with version 4.11.0, and have a common methodology for processing the data which makes interfacing to them consistent across multiple datasets.  Much of the funcionality described here is duplicated in older-style `p-seriers` and `s-series` APIs described elsewhere.  While the older-style APIs will continue to be supported, most of the new development effort is focused on these new DataFrame centric APIs.
+:::
 
 DataFrame APIs are accessed via the following ***sliderule*** function and always produce a __GeoDataFrame__:
 ```python
@@ -269,17 +271,6 @@ curl https://sliderule.slideruleearth.io/source/defaults
 |maxi|Maximum iterations on least squares fit|int|5|
 |h_win|Minimum window|double; meters|3.0|
 |sigma_r|Maximum robust dispersion|double; meters|5.0|
-
-#### YAPC
-
-|Parameter|Description|Units|Default|
-|---------|-----------|-----|-------|
-|score|Minimum allowed weight of photon|int|0|
-|version|YAPC algorithm version|0:read from ATL03 granule, 1-3:algorithm version (not supported by `atl03x`)|0|
-|knn|k-nearest neighbors (version 2 only)|int|0|
-|min_knn|minimum number of k-nearest neighbors (version 3 only)|int|5|
-|win_h|window height (overrides calculated value if non-zero)|double|6.0|
-|win_x|window width|double|15.0|
 
 #### PhoREAL
 

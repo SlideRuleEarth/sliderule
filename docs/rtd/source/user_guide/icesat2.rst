@@ -56,10 +56,11 @@ The experimental YAPC (Yet Another Photon Classifier) photon-classification sche
 
 * ``"yapc"``: settings for the yapc algorithm; if provided then SlideRule will execute the YAPC classification on all photons
     - ``"score"``: the minimum yapc classification score of a photon to be used in the processing request
-    - ``"knn"``: the number of nearest neighbors to use, or specify 0 to allow automatic selection of the number of neighbors (recommended)
-    - ``"win_h"``: the window height used to filter the nearest neighbors
+    - ``"knn"``: the number of nearest neighbors to use, or specify 0 to allow automatic selection of the number of neighbors (version 2 only)
+    - ``"min_knn"``: minimum number of k-nearest neighbors (version 3 only)
+    - ``"win_h"``: the window height used to filter the nearest neighbors (overrides calculated value if non-zero)
     - ``"win_x"``: the window width used to filter the nearest neighbors
-    - ``"version"``: the version of the YAPC algorithm to use
+    - ``"version"``: the version of the YAPC algorithm to use; 0:read from ATL03 granule, 1-3:algorithm version (not supported by `atl03x`)
 
 To run the YAPC algorithm, specify the YAPC settings as a sub-dictionary. Here is an example set of parameters that runs YAPC:
 
