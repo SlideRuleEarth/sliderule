@@ -402,6 +402,7 @@ docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(ECR)/proxy:$(VERSION)
 	- docker image rm $(ECR)/monitor:$(VERSION)
 	- docker image rm $(ECR)/manager:$(VERSION)
+	- docker image rm $(ECR)/ams:$(VERSION)
 	- docker image rm $(ECR)/static-website:$(VERSION)
 	- docker system prune -f
 
@@ -411,6 +412,7 @@ distclean: ## fully remove all non-version controlled files and directories
 	- cd $(ROOT)/docs && ./clean.sh
 	- cd $(PYTHON_CLIENT_DIR) && ./clean.sh
 	- cd $(ROOT)/targets/slideruleearth-aws/docker/manager && ./clean.sh
+	- cd $(ROOT)/targets/slideruleearth-aws/docker/asset-metadata-service && ./clean.sh
 	- find $(ROOT) -name ".cookies" -exec rm {} \;
 	- rm -f utilities/report.pdf
 	- rm -f utilities/report.xml
