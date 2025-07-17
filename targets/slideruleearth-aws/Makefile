@@ -369,10 +369,10 @@ certbot-destroy: certbot-package ## destroy certbot using terraform; needs DOMAI
 	cd terraform/certbot && terraform destroy
 
 ########################
-# Tag & Release Targets
+# Release Target
 ########################
 
-tag: ## create version tag in this repository and release it on GitHub
+release: buildenv-docker buildenv-docker-push manager-lock ams-lock ## tag and release sliderule; needs VERSION
 	echo $(VERSION) > $(ROOT)/version.txt
 	node $(ROOT)/clients/nodejs/utils/modpkg.js $(VERSION)
 	git add $(ROOT)/clients/nodejs/sliderule/package.json
@@ -380,18 +380,14 @@ tag: ## create version tag in this repository and release it on GitHub
 	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
 	git add $(ROOT)/targets/slideruleearth-aws/docker/manager/conda-linux-${ARCH}.lock
 	git add $(ROOT)/targets/slideruleearth-aws/docker/manager/conda-lock.yml
+	git add $(ROOT)/targets/slideruleearth-aws/docker/ams/conda-linux-${ARCH}.lock
+	git add $(ROOT)/targets/slideruleearth-aws/docker/ams/conda-lock.yml
 	git add $(ROOT)/targets/slideruleearth-aws/docker/sliderule/libdep-${ARCH}.lock
 	git commit -m "Version $(VERSION)"
 	git tag -a $(VERSION) -m "Version $(VERSION)"
 	git push --tags && git push
 	gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/web/rtd/developer_guide/release_notes/release_notes.html"
 	make -C $(ROOT)/clients/nodejs publish
-
-release: ## release a version of sliderule; needs VERSION
-	make buildenv-docker
-	make buildenv-docker-push
-	make manager-lock
-	make tag
 	make cluster
 
 ########################
