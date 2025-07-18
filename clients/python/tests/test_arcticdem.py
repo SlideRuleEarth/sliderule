@@ -129,6 +129,57 @@ class TestMosaic:
         assert gdf["mosaic.stdev"].describe()["count"] == 957
         assert gdf["mosaic.time"].iloc[0] == vrtFileTime
 
+    def test_slope_aspect(self, init):
+        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
+        parms = { "poly": region['poly'],
+                  "cnf": "atl03_high",
+                  "srt": 3,
+                  "ats": 20.0,
+                  "cnt": 10,
+                  "len": 40.0,
+                  "res": 20.0,
+                  "maxi": 1,
+                  "samples": {"mosaic": {"asset": "arcticdem-mosaic", "slope_aspect": True, "slope_scale_length": 40}} }
+        gdf = icesat2.atl06p(parms, resources=[resource])
+        assert init
+        assert len(gdf) == 957
+        assert len(gdf.keys()) == 23
+        assert gdf["rgt"].iloc[0] == 1160
+        assert gdf["cycle"].iloc[0] == 2
+        assert gdf['segment_id'].describe()["min"] == 405231
+        assert gdf['segment_id'].describe()["max"] == 405902
+        assert abs(gdf["mosaic.value"].describe()["min"] - 600.4140625) < sigma
+        assert gdf["mosaic.slope"].describe()["count"] == 957
+        assert gdf["mosaic.aspect"].describe()["count"] == 957
+        assert gdf["mosaic.time"].iloc[0] == vrtFileTime
+
+        assert gdf["mosaic.count"].iloc[0] == 441
+        assert abs(gdf["mosaic.slope"].iloc[0]  - 17.764184149536096) < sigma
+        assert abs(gdf["mosaic.aspect"].iloc[0] - 266.8953482375976) < sigma
+        # print(gdf[["mosaic.slope", "mosaic.aspect", "mosaic.count"]])
+
+    def test_slope_aspect_and_zonal_stats(self, init):
+        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
+        parms = { "poly": region['poly'],
+                  "cnf": "atl03_high",
+                  "srt": 3,
+                  "ats": 20.0,
+                  "cnt": 10,
+                  "len": 40.0,
+                  "res": 20.0,
+                  "maxi": 1,
+                  "samples": {"mosaic": {"asset": "arcticdem-mosaic", "zonal_stats": True, "radius": 100, "slope_aspect": True}} }
+        gdf = icesat2.atl06p(parms, resources=[resource])
+        assert init
+        assert len(gdf) == 957
+        assert len(gdf.keys()) == 27
+        # The legacy streaming sampling code does not support zonal stats and slope/aspect together, if both are requested only zonal stats is returned
+        assert 'mosaic.stdev' in gdf.columns
+        assert 'mosaic.slope' not in gdf.columns
+
+
 @pytest.mark.external
 class TestStrips:
     def test_indexed_raster(self, init):

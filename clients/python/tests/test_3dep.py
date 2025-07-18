@@ -3,13 +3,15 @@
 import pytest
 import numpy
 import math
-from sliderule import earthdata, raster, gedi
+from sliderule import earthdata, raster, gedi, icesat2
 
 region = [  {"lon": -108.3435200747503, "lat": 38.89102961045247},
             {"lon": -107.7677425431139, "lat": 38.90611184543033},
             {"lon": -107.7818591266989, "lat": 39.26613714985466},
             {"lon": -108.3605610678553, "lat": 39.25086131372244},
             {"lon": -108.3435200747503, "lat": 38.89102961045247}  ]
+
+sigma = 1.0e-9
 
 @pytest.mark.external
 class Test3DEP_1meter:
@@ -55,7 +57,6 @@ class Test3DEP_1meter:
 
 class Test3DEP_10meter:
     def test_sample(self, init):
-        sigma = 1.0e-9
         gdf = raster.sample("usgs3dep-10meter-dem", [[-108.0,39.0]], {"slope_aspect": True, "slope_scale_length": 40})
         assert init
         assert len(gdf) == 1
@@ -71,3 +72,44 @@ class Test3DEP_10meter:
         gdf = raster.sample("usgs3dep-10meter-dem", points)
         assert init
         assert len(gdf) == 10000
+
+    def test_legacy_sample_with_slope_aspect(self, init):
+        small_region = [
+            {"lon": -108.05, "lat": 39.00},
+            {"lon": -108.00, "lat": 39.00},
+            {"lon": -108.00, "lat": 39.05},
+            {"lon": -108.05, "lat": 39.05},
+            {"lon": -108.05, "lat": 39.00}
+        ]
+
+        parms = {
+            "poly": small_region,
+            "srt": icesat2.SRT_LAND,
+            "cnf": icesat2.CNF_SURFACE_HIGH,
+            "atl08_class": "atl08_ground",
+            "ats": 10.0,
+            "cnt": 10,
+            "len": 40.0,
+            "res": 20.0,
+            "maxi": 10,
+            "atl06_fields": ["ground_track/ref_azimuth"],
+            "atl08_fields": ["segment_snowcover", "segment_landcover", "beam_azimuth", "segment_watermask", "urban_flag"],
+            "samples": {
+                "3dep": {"asset": "usgs3dep-10meter-dem", "slope_aspect":True}
+                        },
+            't0': '2020-10-13T00:00:00Z',
+            't1': '2021-10-13T00:00:00Z'
+        }
+
+        gdf = icesat2.atl06p(parms)
+        assert init
+        assert len(gdf) == 1073
+        assert gdf["3dep.slope"].describe()["count"] == 1073
+        assert gdf["3dep.aspect"].describe()["count"] == 1073
+        assert gdf["3dep.count"].describe()["count"] == 1073
+
+        assert gdf["3dep.count"].iloc[0] == 9
+        assert abs(gdf["3dep.slope"].iloc[0]  - 5.615220456398121) < sigma
+        assert abs(gdf["3dep.aspect"].iloc[0] - 68.08075892919926) < sigma
+        # print(gdf[["3dep.slope", "3dep.aspect", "3dep.count"]])
+

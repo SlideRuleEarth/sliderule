@@ -217,6 +217,12 @@ RasterSampler::RasterSampler (lua_State* L, RasterObject* _raster, const char* r
     raster = _raster;
     rasterKey = StringLib::duplicate(raster_key);
     outQ = new Publisher(outq_name);
+
+    if(raster->hasZonalStats() && raster->hasSpatialDerivs())
+    {
+        alert(WARNING, RTE_FAILURE, outQ, NULL,
+            "Zonal Stats and Spatial Derivatives are mutually exclusive for legacy RasterSamplers, only Zonal Stats will be returned");
+    }
 }
 
 /*----------------------------------------------------------------------------
@@ -310,15 +316,6 @@ bool RasterSampler::processRecord (RecordObject* record, okey_t key, recVec_t* r
             alert(CRITICAL, RTE_FAILURE, outQ, NULL,
                     "Too many rasters to sample %s at %.3lf,%.3lf,%3lf: max allowed: %d, limit your AOI/temporal range or use filters",
                     rasterKey, lon_val, lat_val, height_val, GeoIndexedRaster::MAX_READER_THREADS);
-        }
-
-        /*
-         * NOTE: this code handles either zonal stats or spatial derivatives but not both at the same time.
-         */
-        if(raster->hasZonalStats() && raster->hasSpatialDerivs())
-        {
-            alert(WARNING, RTE_FAILURE, outQ, NULL,
-                    "Zonal Stats and Spatial Derivatives are mutually exclusive for legacy RasterSamplers, only Zonal Stats will be returned");
         }
 
         if(raster->hasZonalStats())

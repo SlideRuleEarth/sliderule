@@ -601,7 +601,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
                         field_dictionary[field_name] = {'extent_id': [], field_name: []}
                     field_dictionary[field_name]['extent_id'] += extent_id,
                     field_dictionary[field_name][field_name] += sliderule.getvalues(field_rec['value'], field_rec['datatype'], len(field_rec['value']), num_elements=1)[0],
-            elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype']:
+            elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype'] or 'sdrec' == rsp['__rectype']:
                 if rsp["num_samples"] <= 0:
                     continue
                 # Get field names and set
