@@ -54,6 +54,7 @@ extensions = [
     "sphinx.ext.napoleon",
     'sphinx_markdown_tables',
     "sphinx_panels",
+    "sphinx_redirects",
     "myst_parser",
     "nbsphinx"
 ]
@@ -64,6 +65,10 @@ myst_enable_extensions = [
     "deflist",
     "dollarmath",
 ]
+
+redirects = {
+    'dataframe.html': 'x_series_apis.html',
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
