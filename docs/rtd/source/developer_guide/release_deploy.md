@@ -188,7 +188,7 @@ Note - when a new release is created, there is a GitHub action that automaticall
 
 * Check which color the _hot_ cluster is running as. Only one of the colors should have actively deployed resources in AWS.  Consider the active color as the _hot_ cluster, and use the inactive color for the _cold_ cluster.
 
-From `targets/slideruleearth-aws/`
+From `sliderule/targets/slideruleearth-aws/`
 ```bash
 make public-cluster-status COLOR=green
 make public-cluster-status COLOR=blue
@@ -196,7 +196,7 @@ make public-cluster-status COLOR=blue
 
 * Deploy the new release as the _cold_ cluster color. The `<cold>` is the _cold_ color identified in the step above.  The `<new release version>` is the version of the code that is to be deployed.
 
-From `targets/slideruleearth-aws/`
+From `sliderule/targets/slideruleearth-aws/`
 ```bash
 make public-cluster-deploy COLOR=<cold> VERSION=<new release version>
 ```
@@ -218,7 +218,7 @@ ORGANIZATION=sliderule-<cold> make test
 
 * Switch to the _cold_ cluster by pointing the `sliderule.slideruleearth.io` domain to the newly deployed cluster.  The `<ip>` address supplied in the command is the `ilb_ip_address` output from the deployment of the _cold_ cluster.
 
-From `targets/slideruleearth-aws/`
+From `sliderule/targets/slideruleearth-aws/`
 ```bash
 make public-cluster-go-live PUBLIC_IP=<ip>
 ```
@@ -233,7 +233,7 @@ python utils/usage_report.py --organization sliderule-<color>
 
 * Destroy the old cluster. The `<hot>` color is the color of the old cluster that we want to now destroy.
 
-from `targets/slideruleearth-aws/`
+from `sliderule/targets/slideruleearth-aws/`
 ```bash
 make public-cluster-destroy COLOR=<hot>
 ```
