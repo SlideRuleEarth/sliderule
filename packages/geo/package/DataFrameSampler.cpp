@@ -243,7 +243,7 @@ bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_in
     FieldColumn<FieldList<uint32_t>>* scount_column = NULL;
     FieldColumn<FieldList<double>>* slope_column = NULL;
     FieldColumn<FieldList<double>>* aspect_column = NULL;
-    if(sampler->robj->hasZonalStats())
+    if(sampler->robj->hasSpatialDerivs())
     {
         scount_column   = new FieldColumn<FieldList<uint32_t>>(Field::NESTED_LIST);
         slope_column    = new FieldColumn<FieldList<double>>(Field::NESTED_LIST);
@@ -385,7 +385,7 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
     FieldColumn<uint32_t>* scount_column = NULL;
     FieldColumn<double>* slope_column = NULL;
     FieldColumn<double>* aspect_column = NULL;
-    if(sampler->robj->hasZonalStats())
+    if(sampler->robj->hasSpatialDerivs())
     {
         scount_column   = new FieldColumn<uint32_t>;
         slope_column    = new FieldColumn<double>;
