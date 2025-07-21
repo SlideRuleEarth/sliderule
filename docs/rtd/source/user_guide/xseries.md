@@ -1,7 +1,7 @@
-# DataFrames
+# X-Series APIs
 
 :::{note}
-This page documents the `x-series` APIs that are specifically geared for generating and processing DataFrames.  These APIs were made public in early 2025 starting with version 4.11.0, and have a common methodology for processing the data which makes interfacing to them consistent across multiple datasets.  Much of the funcionality described here is duplicated in older-style `p-seriers` and `s-series` APIs described elsewhere.  While the older-style APIs will continue to be supported, most of the new development effort is focused on these new DataFrame centric APIs.
+This page documents the `x-series` APIs that are specifically geared for generating and processing DataFrames.  These APIs were made public in early 2025 starting with version 4.11.0, and have a common methodology for processing the data which makes interfacing to them consistent across multiple datasets.  Much of the funcionality described here is duplicated in older-style `p-series` and `s-series` APIs described elsewhere.  While the older-style APIs will continue to be supported, most of the new development effort is focused on these new DataFrame centric APIs.
 :::
 
 DataFrame APIs are accessed via the following ***sliderule*** function and always produce a __GeoDataFrame__:

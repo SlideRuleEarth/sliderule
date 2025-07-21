@@ -1,5 +1,5 @@
 # conda env create -f environment.yml
-name: flaskr
+name: ams
 channels:
   - conda-forge
 dependencies:

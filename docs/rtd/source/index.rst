@@ -100,7 +100,7 @@ The SlideRule project is funded by NASA's ICESat-2 program and is led by the Uni
 
    user_guide/overview.rst
    user_guide/basic_usage.rst
-   user_guide/dataframe.md
+   user_guide/xseries.md
    user_guide/raster_sampling.md
    user_guide/arrow_output.md
    user_guide/icesat2.rst
@@ -126,6 +126,7 @@ The SlideRule project is funded by NASA's ICESat-2 program and is led by the Uni
 
    developer_guide/Project-Map.rst
    developer_guide/Under-the-Hood.rst
+   developer_guide/release_deploy.md
    developer_guide/endpoints.rst
    developer_guide/how_tos/how_tos.rst
    developer_guide/articles/articles.rst

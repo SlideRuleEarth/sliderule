@@ -239,50 +239,88 @@ bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_in
         mad_column      = new FieldColumn<FieldList<double>>(Field::NESTED_LIST);
     }
 
+    // create slope derivative columns
+    FieldColumn<FieldList<uint32_t>>* scount_column = NULL;
+    FieldColumn<FieldList<double>>* slope_column = NULL;
+    FieldColumn<FieldList<double>>* aspect_column = NULL;
+    if(sampler->robj->hasSpatialDerivs())
+    {
+        scount_column   = new FieldColumn<FieldList<uint32_t>>(Field::NESTED_LIST);
+        slope_column    = new FieldColumn<FieldList<double>>(Field::NESTED_LIST);
+        aspect_column   = new FieldColumn<FieldList<double>>(Field::NESTED_LIST);
+    }
+
     // iterate over each sample in a vector of lists of samples
     for(int i = 0; i < sampler->samples.length(); i++)
     {
+        sample_list_t* slist = sampler->samples[i];
+
+        // populate core sample fields
         FieldList<double> value_list;
         FieldList<time8_t> time_list;
         FieldList<uint64_t> fileid_list;
         FieldList<uint32_t> flags_list;
         FieldList<string> band_list;
-        FieldList<uint32_t> count_list;
-        FieldList<double> min_list;
-        FieldList<double> max_list;
-        FieldList<double> mean_list;
-        FieldList<double> median_list;
-        FieldList<double> stdev_list;
-        FieldList<double> mad_list;
-        sample_list_t* slist = sampler->samples[i];
         for(int j = 0; j < slist->length(); j++)
         {
             const RasterSample* sample = slist->get(j);
             value_list.append(sample->value);
             time_list.append(TimeLib::gps2systimeex(sample->time));
             fileid_list.append(sample->fileId);
-            if(flags_column)    flags_list.append(sample->flags);
-            if(band_column)     band_list.append(sample->bandName);
-            if(count_column)    count_list.append(sample->stats.count);
-            if(min_column)      min_list.append(sample->stats.min);
-            if(max_column)      max_list.append(sample->stats.max);
-            if(mean_column)     mean_list.append(sample->stats.mean);
-            if(median_column)   median_list.append(sample->stats.median);
-            if(stdev_column)    stdev_list.append(sample->stats.stdev);
-            if(mad_column)      mad_list.append(sample->stats.mad);
+            if(flags_column) flags_list.append(sample->flags);
+            if(band_column) band_list.append(sample->bandName);
         }
         value_column->append(value_list);
         time_column->append(time_list);
         fileid_column->append(fileid_list);
-        if(flags_column)    flags_column->append(flags_list);
-        if(band_column)     band_column->append(band_list);
-        if(count_column)    count_column->append(count_list);
-        if(min_column)      min_column->append(min_list);
-        if(max_column)      max_column->append(max_list);
-        if(mean_column)     mean_column->append(mean_list);
-        if(median_column)   median_column->append(median_list);
-        if(stdev_column)    stdev_column->append(stdev_list);
-        if(mad_column)      mad_column->append(mad_list);
+
+        // populate zonal stats fields
+        if(sampler->robj->hasZonalStats())
+        {
+            FieldList<uint32_t> count_list;
+            FieldList<double> min_list;
+            FieldList<double> max_list;
+            FieldList<double> mean_list;
+            FieldList<double> median_list;
+            FieldList<double> stdev_list;
+            FieldList<double> mad_list;
+            for(int j = 0; j < slist->length(); j++)
+            {
+                const RasterSample* sample = slist->get(j);
+                count_list.append(sample->stats.count);
+                min_list.append(sample->stats.min);
+                max_list.append(sample->stats.max);
+                mean_list.append(sample->stats.mean);
+                median_list.append(sample->stats.median);
+                stdev_list.append(sample->stats.stdev);
+                mad_list.append(sample->stats.mad);
+            }
+            assert(count_column);   count_column->append(count_list);
+            assert(min_column);     min_column->append(min_list);
+            assert(max_column);     max_column->append(max_list);
+            assert(mean_column);    mean_column->append(mean_list);
+            assert(median_column);  median_column->append(median_list);
+            assert(stdev_column);   stdev_column->append(stdev_list);
+            assert(mad_column);     mad_column->append(mad_list);
+        }
+
+        // populate slope derivative fields
+        if(sampler->robj->hasSpatialDerivs())
+        {
+            FieldList<uint32_t> scount_list;
+            FieldList<double> slope_list;
+            FieldList<double> aspect_list;
+            for(int j = 0; j < slist->length(); j++)
+            {
+                const RasterSample* sample = slist->get(j);
+                scount_list.append(sample->derivs.count);
+                slope_list.append(sample->derivs.slopeDeg);
+                aspect_list.append(sample->derivs.aspectDeg);
+            }
+            assert(scount_column);  scount_column->append(scount_list);
+            assert(slope_column);   slope_column->append(slope_list);
+            assert(aspect_column);  aspect_column->append(aspect_list);
+        }
     }
 
     // add new columns to dataframe
@@ -298,6 +336,9 @@ bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_in
     if(median_column)   dataframe->addExistingColumn(FString("%s.stats.median", sampler->rkey).c_str(), median_column);
     if(stdev_column)    dataframe->addExistingColumn(FString("%s.stats.stdev",  sampler->rkey).c_str(), stdev_column);
     if(mad_column)      dataframe->addExistingColumn(FString("%s.stats.mad",    sampler->rkey).c_str(), mad_column);
+    if(scount_column)   dataframe->addExistingColumn(FString("%s.deriv.count",  sampler->rkey).c_str(), scount_column);
+    if(slope_column)    dataframe->addExistingColumn(FString("%s.deriv.slope",  sampler->rkey).c_str(), slope_column);
+    if(aspect_column)   dataframe->addExistingColumn(FString("%s.deriv.aspect", sampler->rkey).c_str(), aspect_column);
 
     // success
     return true;
@@ -340,41 +381,81 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
         mad_column = new FieldColumn<double>;
     }
 
+    // create slope derivative columns
+    FieldColumn<uint32_t>* scount_column = NULL;
+    FieldColumn<double>* slope_column = NULL;
+    FieldColumn<double>* aspect_column = NULL;
+    if(sampler->robj->hasSpatialDerivs())
+    {
+        scount_column   = new FieldColumn<uint32_t>;
+        slope_column    = new FieldColumn<double>;
+        aspect_column   = new FieldColumn<double>;
+    }
+
     // iterate over each sample in a vector of lists of samples
     for(int i = 0; i < sampler->samples.length(); i++)
     {
         sample_list_t* slist = sampler->samples[i];
+
         if(slist->length() > 0)
         {
+            // populate core sample fields
             const RasterSample* sample = slist->get(0);
             value_column->append(sample->value);
             time_column->append(TimeLib::gps2systimeex(sample->time));
             fileid_column->append(sample->fileId);
-            if(flags_column)    flags_column->append(sample->flags);
-            if(band_column)     band_column->append(sample->bandName);
-            if(count_column)    count_column->append(sample->stats.count);
-            if(min_column)      min_column->append(sample->stats.min);
-            if(max_column)      max_column->append(sample->stats.max);
-            if(mean_column)     mean_column->append(sample->stats.mean);
-            if(median_column)   median_column->append(sample->stats.median);
-            if(stdev_column)    stdev_column->append(sample->stats.stdev);
-            if(mad_column)      mad_column->append(sample->stats.mad);
+            if(flags_column) flags_column->append(sample->flags);
+            if(band_column) band_column->append(sample->bandName);
+
+            // populate zonal stats fields
+            if(sampler->robj->hasZonalStats())
+            {
+                assert(count_column);   count_column->append(sample->stats.count);
+                assert(min_column);     min_column->append(sample->stats.min);
+                assert(max_column);     max_column->append(sample->stats.max);
+                assert(mean_column);    mean_column->append(sample->stats.mean);
+                assert(median_column);  median_column->append(sample->stats.median);
+                assert(stdev_column);   stdev_column->append(sample->stats.stdev);
+                assert(mad_column);     mad_column->append(sample->stats.mad);
+            }
+
+            // populate slope derivative fields
+            if(sampler->robj->hasSpatialDerivs())
+            {
+                assert(scount_column);  scount_column->append(sample->derivs.count);
+                assert(slope_column);   slope_column->append(sample->derivs.slopeDeg);
+                assert(aspect_column);  aspect_column->append(sample->derivs.aspectDeg);
+            }
         }
         else
         {
+            // populate core sample fields
             const string empty("na");
             value_column->append(std::numeric_limits<double>::quiet_NaN());
             time_column->append(TimeLib::gps2systimeex(0));
             fileid_column->append(0);
-            if(flags_column)    flags_column->append(0);
-            if(band_column)     band_column->append(empty);
-            if(count_column)    count_column->append(0);
-            if(min_column)      min_column->append(0);
-            if(max_column)      max_column->append(0);
-            if(mean_column)     mean_column->append(0);
-            if(median_column)   median_column->append(0);
-            if(stdev_column)    stdev_column->append(0);
-            if(mad_column)      mad_column->append(0);
+            if(flags_column) flags_column->append(0);
+            if(band_column) band_column->append(empty);
+
+            // populate zonal stats fields
+            if(sampler->robj->hasZonalStats())
+            {
+                assert(count_column);   count_column->append(0);
+                assert(min_column);     min_column->append(0);
+                assert(max_column);     max_column->append(0);
+                assert(mean_column);    mean_column->append(0);
+                assert(median_column);  median_column->append(0);
+                assert(stdev_column);   stdev_column->append(0);
+                assert(mad_column);     mad_column->append(0);
+            }
+
+            // populate slope derivative fields
+            if(sampler->robj->hasSpatialDerivs())
+            {
+                assert(scount_column);  scount_column->append(0);
+                assert(slope_column);   slope_column->append(0);
+                assert(aspect_column);  aspect_column->append(0);
+            }
         }
     }
 
@@ -391,6 +472,9 @@ bool DataFrameSampler::populateColumns (GeoDataFrame* dataframe, sampler_info_t*
     if(median_column)   dataframe->addExistingColumn(FString("%s.stats.median", sampler->rkey).c_str(), median_column);
     if(stdev_column)    dataframe->addExistingColumn(FString("%s.stats.stdev",  sampler->rkey).c_str(), stdev_column);
     if(mad_column)      dataframe->addExistingColumn(FString("%s.stats.mad",    sampler->rkey).c_str(), mad_column);
+    if(scount_column)   dataframe->addExistingColumn(FString("%s.deriv.count",  sampler->rkey).c_str(), scount_column);
+    if(slope_column)    dataframe->addExistingColumn(FString("%s.deriv.slope",  sampler->rkey).c_str(), slope_column);
+    if(aspect_column)   dataframe->addExistingColumn(FString("%s.deriv.aspect", sampler->rkey).c_str(), aspect_column);
 
     // success
     return true;
