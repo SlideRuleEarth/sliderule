@@ -106,22 +106,22 @@ package:
   category: main
   optional: false
 - name: boto3
-  version: 1.39.7
+  version: 1.39.9
   manager: conda
   platform: linux-aarch64
   dependencies:
-    botocore: '>=1.39.7,<1.40.0'
+    botocore: '>=1.39.9,<1.40.0'
     jmespath: '>=0.7.1,<2.0.0'
     python: '>=3.9'
     s3transfer: '>=0.13.0,<0.14.0'
-  url: https://conda.anaconda.org/conda-forge/noarch/boto3-1.39.7-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/boto3-1.39.9-pyhd8ed1ab_0.conda
   hash:
-    md5: d108adc2e6bbf0bde9fd87ec11d335b6
-    sha256: 93ff8f00bcd7688643420d6e972af3fdaac12d1e44ab58040f4cf9311a7559a4
+    md5: 9b7aa638cbf6b6337754bf60d12662a7
+    sha256: 30efba3fa0079fac006ffc618de9ec7bac3ae303c026470f29e0fa45603c130b
   category: main
   optional: false
 - name: botocore
-  version: 1.39.7
+  version: 1.39.9
   manager: conda
   platform: linux-aarch64
   dependencies:
@@ -129,10 +129,10 @@ package:
     python: '>=3.10'
     python-dateutil: '>=2.1,<3.0.0'
     urllib3: '>=1.25.4,!=2.2.0,<3'
-  url: https://conda.anaconda.org/conda-forge/noarch/botocore-1.39.7-pyge310_1234567_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/botocore-1.39.9-pyge310_1234567_0.conda
   hash:
-    md5: cc69e96d51930bef6b9f68c074b034aa
-    sha256: bc63943573063a08395f492b4df35a472e4165a6a19313874079cec3ca236620
+    md5: 18cf3641aa37cba724be1ba60210dce6
+    sha256: 97243999d8b1f68a688a7fbc9df97a0c519fa835e15cd2b548d42a00ba4c6ef1
   category: main
   optional: false
 - name: brotli-python
@@ -369,19 +369,6 @@ package:
     sha256: 77af6f5fe8b62ca07d09ac60127a30d9069fdc3c68d6b256754d0ffb1f7779f8
   category: main
   optional: false
-- name: icu
-  version: '75.1'
-  manager: conda
-  platform: linux-aarch64
-  dependencies:
-    libgcc-ng: '>=12'
-    libstdcxx-ng: '>=12'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/icu-75.1-hf9b3779_0.conda
-  hash:
-    md5: 268203e8b983fddb6412b36f2024e75c
-    sha256: 813298f2e54ef087dbfc9cc2e56e08ded41de65cff34c639cc8ba4e27e4540c9
-  category: main
-  optional: false
 - name: idna
   version: '3.10'
   manager: conda
@@ -551,17 +538,16 @@ package:
   category: main
   optional: false
 - name: libsqlite
-  version: 3.50.2
+  version: 3.50.3
   manager: conda
   platform: linux-aarch64
   dependencies:
-    icu: '>=75.1,<76.0a0'
     libgcc: '>=14'
     libzlib: '>=1.3.1,<2.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libsqlite-3.50.2-hdbb6186_2.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libsqlite-3.50.3-h022381a_0.conda
   hash:
-    md5: 2d1cea763d68d7d8668a12bcf0758eae
-    sha256: e456420b39dfbf2fdf8c77d14cd90a39042f154323c76064c9e98f81f28e8f0c
+    md5: 94498365d25343e93a7708add6ae86b0
+    sha256: 45c8edeabea6d9800a084aad833b7b2e625cd649c27d87f43e35afb986038758
   category: main
   optional: false
 - name: libstdcxx
@@ -574,18 +560,6 @@ package:
   hash:
     md5: 4e2d5a407e0ecfe493d8b2a65a437bd8
     sha256: 916a8c2530992140d23c4d3f63502f250ff36df7298ed9a8b72d3629c347d4ce
-  category: main
-  optional: false
-- name: libstdcxx-ng
-  version: 15.1.0
-  manager: conda
-  platform: linux-aarch64
-  dependencies:
-    libstdcxx: 15.1.0
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libstdcxx-ng-15.1.0-hf1166c9_3.conda
-  hash:
-    md5: f981af71cbd4c67c9e6acc7d4cc3f163
-    sha256: cb93360dce004fda2f877fd6071c8c0d19ab67b161ff406d5c0d63b7658ad77c
   category: main
   optional: false
 - name: libuuid
@@ -843,10 +817,10 @@ package:
   manager: conda
   platform: linux-aarch64
   dependencies: {}
-  url: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.13-7_cp313.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.13-8_cp313.conda
   hash:
-    md5: e84b44e6300f1703cb25d29120c5b1d8
-    sha256: 0595134584589064f56e67d3de1d8fcbb673a972946bce25fb593fb092fdcd97
+    md5: 94305520c52a4aa3f6c2b1ff6008d9f8
+    sha256: 210bffe7b121e651419cb196a2a63687b087497595c9be9d20ebe97dd06060a7
   category: main
   optional: false
 - name: readline
@@ -879,16 +853,16 @@ package:
   category: main
   optional: false
 - name: s3transfer
-  version: 0.13.0
+  version: 0.13.1
   manager: conda
   platform: linux-aarch64
   dependencies:
     botocore: '>=1.37.4,<2.0a.0'
     python: '>=3.9'
-  url: https://conda.anaconda.org/conda-forge/noarch/s3transfer-0.13.0-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/s3transfer-0.13.1-pyhd8ed1ab_0.conda
   hash:
-    md5: fc03973db0d41d9dcd84dc0dfc824b86
-    sha256: d26ec145364a34e0e57028ee270dad3d8dec9c0b03c382595b43524162c68889
+    md5: d66713a183295206013e8f93db001e99
+    sha256: a9cc762b0a472ed3bb69784ebe71e99a72661cdf38001c5e717cb4c2a2505d6f
   category: main
   optional: false
 - name: setuptools

@@ -157,19 +157,6 @@ package:
     sha256: 8c4f336cd306d127010138845821fe3ee40312d11b1a8860e17fd3685565efae
   category: main
   optional: false
-- name: icu
-  version: '75.1'
-  manager: conda
-  platform: linux-aarch64
-  dependencies:
-    libgcc-ng: '>=12'
-    libstdcxx-ng: '>=12'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/icu-75.1-hf9b3779_0.conda
-  hash:
-    md5: 268203e8b983fddb6412b36f2024e75c
-    sha256: 813298f2e54ef087dbfc9cc2e56e08ded41de65cff34c639cc8ba4e27e4540c9
-  category: main
-  optional: false
 - name: importlib-metadata
   version: 8.7.0
   manager: conda
@@ -389,17 +376,16 @@ package:
   category: main
   optional: false
 - name: libsqlite
-  version: 3.50.2
+  version: 3.50.3
   manager: conda
   platform: linux-aarch64
   dependencies:
-    icu: '>=75.1,<76.0a0'
     libgcc: '>=14'
     libzlib: '>=1.3.1,<2.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libsqlite-3.50.2-hdbb6186_2.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libsqlite-3.50.3-h022381a_0.conda
   hash:
-    md5: 2d1cea763d68d7d8668a12bcf0758eae
-    sha256: e456420b39dfbf2fdf8c77d14cd90a39042f154323c76064c9e98f81f28e8f0c
+    md5: 94498365d25343e93a7708add6ae86b0
+    sha256: 45c8edeabea6d9800a084aad833b7b2e625cd649c27d87f43e35afb986038758
   category: main
   optional: false
 - name: libstdcxx
@@ -412,18 +398,6 @@ package:
   hash:
     md5: 4e2d5a407e0ecfe493d8b2a65a437bd8
     sha256: 916a8c2530992140d23c4d3f63502f250ff36df7298ed9a8b72d3629c347d4ce
-  category: main
-  optional: false
-- name: libstdcxx-ng
-  version: 15.1.0
-  manager: conda
-  platform: linux-aarch64
-  dependencies:
-    libstdcxx: 15.1.0
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libstdcxx-ng-15.1.0-hf1166c9_3.conda
-  hash:
-    md5: f981af71cbd4c67c9e6acc7d4cc3f163
-    sha256: cb93360dce004fda2f877fd6071c8c0d19ab67b161ff406d5c0d63b7658ad77c
   category: main
   optional: false
 - name: libuuid
@@ -665,10 +639,10 @@ package:
   manager: conda
   platform: linux-aarch64
   dependencies: {}
-  url: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.13-7_cp313.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.13-8_cp313.conda
   hash:
-    md5: e84b44e6300f1703cb25d29120c5b1d8
-    sha256: 0595134584589064f56e67d3de1d8fcbb673a972946bce25fb593fb092fdcd97
+    md5: 94305520c52a4aa3f6c2b1ff6008d9f8
+    sha256: 210bffe7b121e651419cb196a2a63687b087497595c9be9d20ebe97dd06060a7
   category: main
   optional: false
 - name: pytz
