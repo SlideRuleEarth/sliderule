@@ -147,7 +147,7 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
 
     -- Initialize Variables
     local proxyq_name = "proxy."..rspq
-    local locks_per_node = (rqst["poly"] and not parms["ignore_poly_for_cmr"]) and 1 or core.MAX_LOCKS_PER_NODE
+    local locks_per_node = rqst["locks"] or (rqst["poly"] and 1 or core.MAX_LOCKS_PER_NODE)
 
     -- Create Receiving DataFrame
     local df = core.dataframe({}, {endpoint=endpoint})
