@@ -30,6 +30,7 @@
 import os
 import netrc
 import requests
+import threading
 import socket
 import json
 import struct
@@ -172,6 +173,7 @@ class Session:
         self.ps_refresh_token = None
         self.ps_access_token = None
         self.ps_token_exp = None
+        self.ps_lock = threading.Lock()
         self.console = None
         self.recdef_table = {}
         self.arrow_file_table = {} # for processing arrowrec records
@@ -606,14 +608,19 @@ class Session:
         '''
         if self.ps_access_token:
             # Check if Refresh Needed
-            if time.time() > self.ps_token_exp or force_refresh:
-                host = "https://ps." + self.service_domain + "/api/org_token/refresh/"
-                rqst = {"refresh": self.ps_refresh_token}
-                hdrs = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + self.ps_access_token}
-                rsps = self.session.post(host, data=json.dumps(rqst), headers=hdrs, timeout=self.rqst_timeout).json()
-                self.ps_refresh_token = rsps["refresh"]
-                self.ps_access_token = rsps["access"]
-                self.ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
+            with self.ps_lock:
+                if time.time() > self.ps_token_exp or force_refresh:
+                    host = "https://ps." + self.service_domain + "/api/org_token/refresh/"
+                    rqst = {"refresh": self.ps_refresh_token}
+                    hdrs = {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + self.ps_access_token}
+                    try:
+                        rsps = self.session.post(host, data=json.dumps(rqst), headers=hdrs, timeout=self.rqst_timeout).json()
+                        self.ps_refresh_token = rsps["refresh"]
+                        self.ps_access_token = rsps["access"]
+                        self.ps_token_exp =  time.time() + (float(rsps["access_lifetime"]) / 2)
+                    except Exception as e:
+                        logger.error(f'Failed to refresh token: {e}')
+                        logger.error(f'Provisioning system response: {rsps}')
             # Build Authentication Header
             headers['Authorization'] = 'Bearer ' + self.ps_access_token
 
