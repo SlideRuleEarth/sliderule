@@ -6,9 +6,16 @@ resource "aws_autoscaling_group" "sliderule-cluster" {
   health_check_type     = "EC2"
   vpc_zone_identifier   = [ aws_subnet.sliderule-subnet.id ]
 
-  launch_template {
-    id      = aws_launch_template.sliderule_template.id
-    version = "$Latest"
+  mixed_instances_policy {
+    launch_template {
+      launch_template_specification {
+        launch_template_id = "${aws_launch_template.sliderule_template.id}"
+      }
+
+      override {
+        instance_type = "m8g.2xlarge"
+      }
+    }
   }
 
   tag {
