@@ -116,7 +116,7 @@ class FieldColumn: public FieldUntypedColumn
         double          median          (long start_index = 0, long num_elements = -1) const override;
         double          mode            (long start_index = 0, long num_elements = -1) const override;
         unique_map_t    unique          (long start_index = 0, long num_elements = -1, long scale = 1) const override;
-        
+
         string          toJson          (void) const override;
         int             toLua           (lua_State* L) const override;
         int             toLua           (lua_State* L, long key) const override;
@@ -548,17 +548,13 @@ long FieldColumn<T>::serialize (uint8_t* buffer, size_t size) const
     for(size_t i = 0; i < chunks.size(); i++) // for each chunk
     {
         // get elements in chunk
-        size_t elements_in_chunk = chunkSize;
-        if(i == chunks.size() - 1) // last chunk
-        {
-            elements_in_chunk = numElements % chunkSize;
-        }
+        long elements_in_chunk = MIN(chunkSize, static_cast<long>(numElements - (i * chunkSize)));
 
         // get pointer to chunk
         T* chunk_ptr = chunks[i];
 
         // copy data elements out of chunk
-        for(size_t j = 0; j < elements_in_chunk; j++)
+        for(long j = 0; j < elements_in_chunk; j++)
         {
             memcpy(&buffer[buff_index], reinterpret_cast<void*>(&chunk_ptr[j]), sizeof(T));
             buff_index += sizeof(T);
@@ -725,7 +721,7 @@ typename FieldColumn<T>::unique_map_t FieldColumn<T>::unique (long start_index, 
         {
             double value = column.data[i] * scale;
             if(value >= static_cast<double>(std::numeric_limits<int64_t>::min()) &&
-            value <= static_cast<double>(std::numeric_limits<int64_t>::max())) 
+            value <= static_cast<double>(std::numeric_limits<int64_t>::max()))
             {
                 int64_t scaled_key = static_cast<int64_t>(value);
                 unique_map[scaled_key]++; // no need to check, defaults to zero when doesn't exist

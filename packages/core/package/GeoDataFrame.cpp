@@ -1201,7 +1201,7 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, int time
 
             // serialize column data into record
             const long bytes_serialized = kv.value.field->serialize(gdf_rec_data->data, column_size);
-            if(bytes_serialized != column_size) throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to serialize column %s: %ld", gdf_rec_data->name, bytes_serialized);
+            if(bytes_serialized != column_size) throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to serialize column %s: %ld != %ld", gdf_rec_data->name, bytes_serialized, column_size);
 
             // send column record
             gdf_rec.post(&pub, 0, NULL, true, timeout);

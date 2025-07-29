@@ -428,7 +428,6 @@ void* Atl13DataFrame::subsettingThread (void* parm)
     }
 
     /* Dataframe Complete */
-    mlog(INFO, "Completed processing resource %s beam %s", df->hdf13->name, df->beam);
     df->signalComplete();
 
     /* Stop Trace */

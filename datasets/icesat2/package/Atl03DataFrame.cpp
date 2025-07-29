@@ -1038,7 +1038,6 @@ void* Atl03DataFrame::subsettingThread (void* parm)
     }
 
     /* Dataframe Complete */
-    mlog(INFO, "Completed processing resource %s beam %s (%ld rows)", df->hdf03->name, df->beam, df->length());
     df->signalComplete();
 
     /* Stop Trace */
