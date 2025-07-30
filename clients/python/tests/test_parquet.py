@@ -399,3 +399,16 @@ class TestParquet:
         assert len(gdf.keys()) == 10
         assert gdf["flags"].nunique() == 2
         assert gdf["flags"].min() == 130
+
+    def test_metadata(self, init):
+        parms = {
+            "atl24": {
+                "compact": False,
+            }
+        }
+        gdf = sliderule.run("atl24x", parms, resources=["ATL24_20181014001920_02350103_006_02_001_01.h5"])
+        assert gdf.attrs["meta"]["endpoint"] == "atl24x"
+        assert gdf.attrs["meta"]["request"]["atl24"]["compact"] == False
+        assert gdf.attrs["recordinfo"]["time"] == "time_ns"
+        assert gdf.attrs["sliderule"]["points_in_polygon"] == 0
+        assert init

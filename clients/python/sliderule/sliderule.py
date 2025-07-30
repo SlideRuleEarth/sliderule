@@ -806,12 +806,11 @@ def procoutputfile(parm, rsps):
             import json
             # pull out metadata
             metadata = pq.read_metadata(path)
-            sliderule_metadata = ctypes.create_string_buffer(metadata.metadata[b'sliderule']).value.decode('ascii')
-            local_file.attrs['sliderule'] = json.loads(sliderule_metadata)
-            recordinfo_metadata = ctypes.create_string_buffer(metadata.metadata[b'recordinfo']).value.decode('ascii')
-            local_file.attrs['recordinfo'] = json.loads(recordinfo_metadata)
-            meta_metadata = ctypes.create_string_buffer(metadata.metadata[b'meta']).value.decode('ascii')
-            local_file.attrs['meta'] = json.loads(meta_metadata)
+            for key in metadata.metadata:
+                if key in [b'ARROW:schema', b'pandas', b'geo']:
+                    continue
+                metadata_str = ctypes.create_string_buffer(metadata.metadata[key]).value.decode('ascii')
+                local_file.attrs[key.decode('ascii')] = json.loads(metadata_str)
         except Exception as e:
             # could fail for a multitude of reasons; just log and move on
             logger.debug(f'Failed to read metadata from {path}: {e}')

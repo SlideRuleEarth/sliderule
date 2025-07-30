@@ -150,12 +150,13 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
     local locks_per_node = rqst["locks"] or (rqst["poly"] and 1 or core.MAX_LOCKS_PER_NODE)
 
     -- Create Receiving DataFrame
-    local df = core.dataframe({}, {endpoint=endpoint})
+    local rqst_str = json.encode(rqst)
+    local df = core.dataframe({}, {endpoint=endpoint, request=rqst_str})
     local expected_concurrent_channels = #resources * channels
     df:receive(proxyq_name, rspq, expected_concurrent_channels, parms["rqst_timeout"] * 1000)
 
     -- Proxy Request
-    local endpoint_proxy = core.proxy(endpoint, resources, json.encode(rqst), parms["node_timeout"], locks_per_node, proxyq_name, true, parms["num_nodes"], _rqst.srcip)
+    local endpoint_proxy = core.proxy(endpoint, resources, rqst_str, parms["node_timeout"], locks_per_node, proxyq_name, true, parms["num_nodes"], _rqst.srcip)
 
     -- Receive DataFrame (blocks until dataframe complete or timeout)
     if not df:waiton(parms["rqst_timeout"] * 1000) then

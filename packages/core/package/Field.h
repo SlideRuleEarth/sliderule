@@ -202,7 +202,10 @@ inline static string convertToJson(const time8_t& v)  {
     const FString str("%04d-%02d-%02dT%02d:%02d:%.03lfZ ", date.year, date.month, date.day, gmt.hour, gmt.minute, seconds);
     return str.c_str();
 }
-inline static string convertToJson(const string& v)   { return "\"" + string(v) + "\""; }
+inline static string convertToJson(const string& v) {
+    if(!v.empty() && v.front() == '{' && v.back() == '}') return v; // SPECIAL CASE: return json strings as is
+    else return "\"" + string(v) + "\""; // quote the string
+}
 
 // tolua
 inline int convertToLua(lua_State* L, const bool& v)     { lua_pushboolean(L, v); return 1; }
