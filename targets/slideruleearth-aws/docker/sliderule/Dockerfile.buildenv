@@ -45,7 +45,7 @@ RUN git clone https://github.com/apache/arrow.git && \
     git checkout apache-arrow-19.0.1 && \
     mkdir -p /build/arrow && \
     cd /build/arrow && \
-    cmake /arrow/cpp -DARROW_PARQUET=ON -DARROW_WITH_ZLIB=ON -DARROW_WITH_SNAPPY=ON -D ARROW_CSV=ON -DARROW_FILESYSTEM=ON && \
+    cmake /arrow/cpp -DARROW_PARQUET=ON -DARROW_WITH_ZSTD=ON -DARROW_WITH_ZLIB=ON -DARROW_WITH_SNAPPY=ON -DARROW_CSV=ON -DARROW_FILESYSTEM=ON && \
     make -j8 && \
     make install && \
     ldconfig

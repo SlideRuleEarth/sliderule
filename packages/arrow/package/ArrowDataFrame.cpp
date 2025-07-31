@@ -639,7 +639,16 @@ int ArrowDataFrame::luaExport (lua_State* L)
 
                 // set writer properties
                 parquet::WriterProperties::Builder writer_props_builder;
-                writer_props_builder.compression(parquet::Compression::SNAPPY);
+
+                // ZSTD compression good compromize between speed (SNAPPY) and file size (GZIP)
+                writer_props_builder.compression(parquet::Compression::ZSTD);
+
+                // Improves compression and read/write efficiency by grouping more rows per chunk, default is 64k
+                writer_props_builder.max_row_group_length(500000);
+
+                // Enables dictionary encoding for repeated values (e.g. strings)
+                writer_props_builder.enable_dictionary();
+
                 writer_props_builder.version(parquet::ParquetVersion::PARQUET_2_6);
                 const shared_ptr<parquet::WriterProperties> writer_props = writer_props_builder.build();
 
