@@ -1,4 +1,4 @@
-name: Self Tests
+name: SlideRule Lua Self Tests
 
 on:
   workflow_dispatch:
