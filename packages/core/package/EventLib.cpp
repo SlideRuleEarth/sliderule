@@ -55,7 +55,7 @@
  * the corresponding RecordObject and MsgQ headers are not needed in the
  * EventLib header, which creates a cyclic dependency.
  */
-static Publisher* outq;
+static Publisher* outq = NULL;
 
 static RecordObject::fieldDef_t logRecDef[] =
 {

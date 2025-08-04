@@ -1,3 +1,8 @@
+This is really an overview of SlideRule's objectives (statement of purpose)
+This should include the diagram of how SlideRule fits into the larger picture
+
+Then there should be another document that is Under-The-Hood and details how SlideRule works from an architecture standpoint.
+
 ==============
 Under the Hood
 ==============
@@ -5,11 +10,11 @@ Under the Hood
 What Is SlideRule?
 ##################
 
-SlideRule is a server-side framework implemented in C++/Lua that provides REST APIs for processing science data and returning results in real-time. SlideRule can be used by researchers and other data systems for low-latency access to customized data products that are generated using processing parameters supplied at the time of the request.
+SlideRule is a server-side framework implemented in C++/Lua that provides APIs for processing science data and returning results in real-time. SlideRule can be used by researchers and other data systems for low-latency access to customized data products that are generated using processing parameters supplied at the time of the request.
 
-The development of SlideRule is led by the University of Washington in conjunction with NASA’s ICESat-2 program. The University of Washington is currently running a public instantiation of SlideRule in AWS us-west-2, accessible at https://slideruleearth.io.  This deployment supports science investigations using ICESat-2’s ATL03, ATL06, and ATL08 datasets, and has direct access to those datasets in AWS S3 through NASA’s Cumulus program.
+The development of SlideRule is led by the University of Washington in conjunction with NASA’s ICESat-2 program. The University of Washington is currently running a public instantiation of SlideRule in AWS us-west-2, accessible at https://slideruleearth.io.  This deployment supports science investigations using  the ICESat-2, GEDI, REMA, ArcticDEM, HLS, 3DEP, and a growing list of other datasets.
 
-Every deployment of SlideRule consists of three major sets of components which are supported by the SlideRule framework: the REST APIs (or web services), the data access interfaces, and the science algorithms.
+Every deployment of SlideRule consists of three major sets of components which are supported by the SlideRule framework: the APIs (or web services), the data access interfaces, and the science algorithms.
 
 .. figure:: ../assets/hlsysorg.png
     :align: center
@@ -25,12 +30,12 @@ Web services provided by SlideRule can be accessed by any http client (e.g. curl
 Data Access
 -----------
 
-Data accessed by SlideRule can reside anywhere and be in any format, as long as an appropriate driver is provided.  SlideRule treats all datasets as “assets” and requires each asset to be registered in an “asset directory” which provides the asset’s location, format, and associated code needed to access and read the asset.  Currently, SlideRule supports HDF5 data, and Cloud Optimized GeoTIFFS (COGS), both stored locally and in S3.  New data formats and storage systems are added as needed and will be included in future releases.
+Data accessed by SlideRule can reside anywhere and be in any format, as long as an appropriate driver is provided.  SlideRule treats all datasets as “assets” and requires each asset to be registered in an “asset directory” which provides the asset’s location, format, and associated code needed to access and read the asset.  Currently, SlideRule supports (Geo)Parquet, HDF5, and (Geo)TIFFS, both stored locally and in S3.  New data formats and storage systems are added as needed and will be included in future releases.
 
 Science Algorithms
 ------------------
 
-Science algorithms available to SlideRule are implemented in C++ and Lua code and run inside the SlideRule framework on each server.  They are invoked by calls to the web services, and utilize the data access code to pull in the requested datasets for processing.  Currently, the customization of the algorithm processing is limited to predefined parameters made available by the code and exposed to the web service.  Future releases of SlideRule will support running sandboxed Lua code provided by users at the time of the request.
+Science algorithms available to SlideRule are implemented in C++ and Lua code and run inside the SlideRule framework on each server.  They are invoked by calls to the web services, and utilize the data access code to pull in the requested datasets for processing.  On the public cluster, the customization of the algorithm processing is limited to predefined parameters made available by the code and exposed to the web service. On private clusters, users can run sandboxed Lua code provided at the time of the request.
 
 
 Why Develop SlideRule?
@@ -40,7 +45,7 @@ Our goal is to model a fundamental change in the way Earth science data is distr
 
 Another way to explain this shift is to see that the historical approach to science data distribution revolved around files.  Science data product files were generated by large processing pipelines and stored in large data centers to be downloaded by users.  In the historical approach, users accessed science data products through files - files that they had to download, manage, store, organize, and understand.  The approach moduled by SlideRule removes the file from the picture; similar to the way we interact with services like Google Maps or weather apps, we interact with the SlideRule services without ever having to download or worry about a file.  Client side applications issue web service requests to servers running services, and immediately get back the data in memory in a format understood by the the client application.
 
-The tremendous growth in the size of Earth science datasets being produced by institutions over the past ten to fifteen years has broken the historical data archive model. When datasets changed from being a few hundred Gigabytes to hundreds of Terabytes (and now Petabytes), comprehensive analysis of those datasets using existing technology became impossible.  For example, ICESat (the original mission), launched in 2003 and in its lifetime produced 148GB of global elevation data. That data could be downloaded at 6MBps in just under 1 day, and stored on a single harddrive on a single workstation. ICESat-2 (the follow-on mission), launched in 2018 and has produced 320TB of data as of 2021, with 100TB of data being added each year. In order to download the existing dataset at 100MBps, it would take 296 days, and require 40 workstations with 8TBs of storage each to hold.
+The tremendous growth in the size of Earth science datasets being produced by institutions over the past ten to fifteen years has broken the historical data archive model. When datasets changed from being a few hundred Gigabytes to hundreds of Terabytes (and now Petabytes), comprehensive analysis of those datasets using existing technology became impossible.  For example, ICESat (the original mission), launched in 2003 and in its lifetime produced 148GB of global elevation data. That data could be downloaded at 6MBps in just under 1 day, and stored on a single hard drive on a single workstation. ICESat-2 (the follow-on mission), launched in 2018 and has produced 320TB of data as of 2021, with 100TB of data being added each year. In order to download the existing dataset at 100MBps, it would take 296 days, and require 40 workstations with 8TBs of storage each to hold.
 
 Performing comprehensive analysis on current Earth science datasets requires sophisticated compute and storage infrastructure, and high bandwidth connectivity to the data sources; both of which are insurmountable barriers of entry to all but the most funded institutions.
 
@@ -111,7 +116,7 @@ The shift away from static files to using real-time data services must not sacri
 How Does SlideRule Work?
 ########################
 
-.. figure:: ../assets/sys_block_diagram.png
+.. figure:: ../assets/sysarchv4.png
     :align: center
     :alt: SlideRule Processing Workflow
 
@@ -144,13 +149,6 @@ What Technology is Used by SlideRule?
 #####################################
 
 The main technologies used to implement SlideRule are **Terraform** for provisioning resources in AWS, **Docker** for containerizing the components of the application, and **Grafana** / **Prometheus** / **Loki** for observability.
-
-
-.. figure:: ../assets/sysarchv2.png
-    :align: center
-    :alt: SlideRule’s Technology
-
-    Figure 4: Sliderule's Technology Stack
 
 The primary unit of deployment for SlideRule is the “provisioned cluster” which consists of an **AWS Autoscaling Group** that runs the SlideRule processing nodes and a stand-alone **EC2** instance that runs SlideRule’s monitoring system.
 
