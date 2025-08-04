@@ -1,10 +1,5 @@
-This is really an overview of SlideRule's objectives (statement of purpose)
-This should include the diagram of how SlideRule fits into the larger picture
-
-Then there should be another document that is Under-The-Hood and details how SlideRule works from an architecture standpoint.
-
 ==============
-Under the Hood
+Why SlideRule
 ==============
 
 What Is SlideRule?
@@ -14,28 +9,37 @@ SlideRule is a server-side framework implemented in C++/Lua that provides APIs f
 
 The development of SlideRule is led by the University of Washington in conjunction with NASA’s ICESat-2 program. The University of Washington is currently running a public instantiation of SlideRule in AWS us-west-2, accessible at https://slideruleearth.io.  This deployment supports science investigations using  the ICESat-2, GEDI, REMA, ArcticDEM, HLS, 3DEP, and a growing list of other datasets.
 
-Every deployment of SlideRule consists of three major sets of components which are supported by the SlideRule framework: the APIs (or web services), the data access interfaces, and the science algorithms.
 
-.. figure:: ../assets/hlsysorg.png
+Where does SlideRule fit?
+###########################
+
+SlideRule is not trying to be the end-all solution for science data processing.  If the ultimate goal is producing actionable scientific information, SlideRule plays a small but important part in the ecosystem of tools and processes needed to get there.  Frustration with SlideRule can be the result of misunderstanding where we fit in and wanting SlideRule to perform tasks that should be met by other systems.  Conversely, the need for SlideRule is best understood in the light of how it fits in with the overall Earth data system and the specific roles we a fulfilling.
+
+The diagram below attempts to capture an opinionated realization of what a public Earth data system should look like and how SlideRule fits in.  It is **not** a diagram of how things are; nor does it represent the policy of any institution involved in the development of SlideRule.  Instead it represents the architecture the SlideRule team is advocating for and building towards.
+
+As seen below, the role SlideRule plays in this overall Earth data system is providing web-services for the generation and distribution of level 3 and level 4 science data products.
+
+.. figure:: ../assets/earth_data_system.png
     :align: center
-    :alt: SlideRule System Components
+    :alt: Proposed Earth Data System
 
-    Figure 1: SlideRule Overview
+    Proposed Earth Data System
 
-Web Services
-------------
+The SlideRule development team advocates for the following characteristics in any future Earth data system:
 
-Web services provided by SlideRule can be accessed by any http client (e.g. curl); but a Python client (https://github.com/SlideRuleEarth/sliderule) is provided by the project to make it easier to interact with SlideRule. The Python client provides functional interfaces for processing science data: processing parameters are passed to the client’s API, all the necessary requests to the SlideRule servers are performed inside the client and the responses handled, and then the results are collected into a GeoDataFrame and returned back to the calling code.  Future releases of SlideRule will include clients for other popular programming languages like Julia and R.
+* Level 0 science data should be streamed directly from ground stations to project-managed **private S3 buckets**.
 
-Data Access
------------
+* An agency funded **data processing engine** should be leveraged by projects to run project-funded pipelines that produce level 1 and level 2 science data products.
 
-Data accessed by SlideRule can reside anywhere and be in any format, as long as an appropriate driver is provided.  SlideRule treats all datasets as “assets” and requires each asset to be registered in an “asset directory” which provides the asset’s location, format, and associated code needed to access and read the asset.  Currently, SlideRule supports (Geo)Parquet, HDF5, and (Geo)TIFFS, both stored locally and in S3.  New data formats and storage systems are added as needed and will be included in future releases.
+* Level 1 and level 2 science data products should be hosted in **public S3 buckets** in **cloud-optimized formats**.
 
-Science Algorithms
-------------------
+* **Rich metadata** should be automatically generated for all science data products according to community standards and posted to an agency-funded metadata service that supports standardized access.
 
-Science algorithms available to SlideRule are implemented in C++ and Lua code and run inside the SlideRule framework on each server.  They are invoked by calls to the web services, and utilize the data access code to pull in the requested datasets for processing.  On the public cluster, the customization of the algorithm processing is limited to predefined parameters made available by the code and exposed to the web service. On private clusters, users can run sandboxed Lua code provided at the time of the request.
+* Agency, project, and third-party funded **web-services** should provide level 3 and level 4 science data products on demand using the publicly available level 1 and level 2 data along with the publicly accessible metadata services.
+
+* An agency-funded **compute platform** should be provided to researchers for ease of access, data discoverability, modest compute needs, and community building.
+
+* Community driven **documentation, communication, and tooling** should be promoted as a primary goal for all missions and explicitly supported by projects.
 
 
 Why Develop SlideRule?
@@ -55,8 +59,8 @@ Moving to a service model for data distribution addresses all of these problems.
 
 :L1 & L2 Generation: Lower-level datasets are still produced via pipelines developed and maintained by the institution.
 :L1 & L2 Distribution: Instead of being made available for download only, the lower-level data is stored in cloud-based object stores and data users are given direct access to the datasets when they run locally in the data center.
-:L3 Generation: Higher-level products are not generated via pipelines, but are provided through services.  Institutions take the same investment they would make in developing the algorithms for higher-level product generation, and instead of hard-coding all the parameters that go into a processing run and statically producing and archiving the resulting files, they expose those algorithms as services and let users supply the processing parameters they need for their specific science application.
-:L3 Distribution: Data users can access the higher-level products not just from inside the data center, but from anywhere, including their local infrastructure.
+:L3 & L4 Generation: Higher-level products are not generated via pipelines, but are provided through services.  Institutions take the same investment they would make in developing the algorithms for higher-level product generation, and instead of hard-coding all the parameters that go into a processing run and statically producing and archiving the resulting files, they expose those algorithms as services and let users supply the processing parameters they need for their specific science application.
+:L3 & L4 Distribution: Data users can access the higher-level products not just from inside the data center, but from anywhere, including their local infrastructure.
 
 A service model for data distribution has many benefits:
 
@@ -70,7 +74,7 @@ A service model for data distribution has many benefits:
 
 - **Multiple science applications benefit from a single investment**: By parameterizing algorithms, the resources spent developing an algorithm can serve  different science applications.
 
-Lastly, when institutions move to a service-based model for data distribution, those services can be integrated into other systems and produce synergetic benefits.  A data archive stands alone, and the only way to avoid duplicating efforts between different archives is to combine and centralize the functionality.  On the other hand, a data service can be integrated with and leverage other data services while still remaining decentralized.  For example, one university could build a data service that leverages the public API of another university’s data service to produce a combined data product without ever having to rehost the other university’s data.  From a technical implementation standpoint, the two universities remain distinct, decentralized entities, yet by providing their data as a service, they allow for combined data products.
+- **Services integrate with other services**: When institutions move to a service-based model for data distribution, those services can be integrated into other systems and produce synergetic benefits.  A data archive stands alone, and the only way to avoid duplicating efforts between different archives is to combine and centralize the functionality.  On the other hand, a data service can be integrated with and leverage other data services while still remaining decentralized.  For example, one university could build a data service that leverages the public API of another university’s data service to produce a combined data product without ever having to rehost the other university’s data.  From a technical implementation standpoint, the two universities remain distinct and decentralized entities, yet by providing their data as a service, they allow for combined data products.
 
 
 What are SlideRule’s Goals?
@@ -79,81 +83,29 @@ What are SlideRule’s Goals?
 In developing SlideRule, the team has six goals we believe are necessary to successfully demonstrate a viable service-based data distribution approach.
 
 1. Cost Effective
------------------
 
 The system must have near zero costs when not in use, and be able to scale in a cost-controlled way when demand increases.  If there is a recurring cost to support each service, then there is a disincentive to provide more services.  By designing a system that scales to zero when there is no demand, the development of different processing algorithms can be done without the burden of having to support large recurring costs once it is deployed.
 
 Scaling costs to zero also protects against funding gaps and allows smaller institutions to use the system when funded by grants and awards, and not lose all that they’ve invested when that funding runs out.
 
 2. Responsive Results
----------------------
 
 If results can be returned fast enough, the user can interact with the data in ways that are impossible in batch processing systems where they have to wait hours (or even days) to get their results.  Data analysis is often iterative, and a system that supports iterative exploration of the data and customization of the algorithms that process the data, supports the users in the way they want to work with the data.
 
 Also, keeping latencies low allows the system to integrate with other systems with low latency requirements.  For instance, systems that provide situational awareness cannot wait hours to get a response.  If a data service takes hours to respond to a processing request, it disqualifies itself from being able to be integrated with those types of systems.
 
 3. Simple API
--------------
 
 Learning a new system incurs a real and possibly large upfront cost.  If we are building a system that is attempting to lower the cost burden of data users and relieve them of the need to make investments in their compute and storage infrastructure, we cannot then require large investments of time and personnel to be able to use our system.  That would be merely shifting the costs and creating a different barrier to entry.
 
 4. Expandable
--------------
 
 There are two ways in which a data service needs to be expandable to support new science applications: (1) the addition of new science processing algorithms, (2) the addition of new datasets.  In both cases, the data service needs to add the new functionality without increasing the overall complexity of the system and without introducing risk or regressions in the current set of available services.
 
 5. Scalable
------------
 
 As demand increases, the system needs to scale to meet the demand. And the way the system scales needs to match the objectives and charter of the institution funding the service.  For instance, a private university may want to allow privileged access to compute resources for its own members, whereas a government agency may want to allow equal access to all available compute resources for any of its citizens. For a data service framework to be successful in the different situations it will be used in, it must be flexible enough to support the different ways its service can scale.
 
 6. Open
--------
 
 The shift away from static files to using real-time data services must not sacrifice the ability for independent review of the processes that produced the results and the ability to reproduce those results.  The former is greatly aided by open sourcing the software; the later is supported by robust configuration management processes.
-
-
-How Does SlideRule Work?
-########################
-
-.. figure:: ../assets/sysarchv4.png
-    :align: center
-    :alt: SlideRule Processing Workflow
-
-    Figure 2: SlideRule's Processing Workflow
-
-The University of Washington’s deployment of SlideRule runs in AWS us-west-2 and consists of a set of public and private EC2 instances that have access to NASA’s Cumulus datasets in S3, and NASA’s CMR system.  A user Python script can be running anywhere as long as it has access to the internet.  When using SlideRule’s Python client, a processing request from a user script has three primary stages:
-
-:1. Authentication: If accessing the public SlideRule service, authentication is unnecessary.  But, if accessing a private cluster, the user authenticate themselves to the provisioning system which associates a profile with them that identifies what they can and cannot do.
-
-:2. Querying available data resources: The datasets necessary to fulfill the request are queried using either geo-spatial or temporal filters, and a set of data resources (e.g. granules) are returned.  For ICESat-2, NASA’s CMR system is used to query which resources are available.
-
-:3. Processing the data: The set of resources that need to be processed are distributed across the available compute nodes and results are collected into a GeoDataFrame which is returned to the user upon completion of the request.
-
-Diving down a little deeper, the third stage of each request – processing the data – can be further broken down into three parallel processes, each owned by the three main components of SlideRule:
-
-.. figure:: ../assets/processing_components.png
-    :align: center
-    :alt: SlideRule Processing Components
-
-    Figure 3: SlideRule's Processing Components
-
-:Web Service: When a processing request is made to a SlideRule server, the code that handles the request instantiates a self-contained Lua runtime environment and kicks off a Lua script that is associated with the service being requested.  It then creates a pipe from the Lua script back to the end-user’s client so that any data generated by the Lua script flows back to the user as a response.
-
-:Science Algorithms: One of the necessary steps the Lua script performs is kicking off the science algorithms that are responsible for processing the data.  Each algorithm is internally coded to process the data in parallel and therefore may kick off multiple processing threads.
-
-:Data Interface: At the start of every algorithm, the set of data needed by the algorithm is internally requested.  SlideRule maintains a thread pool of data fetchers that receive those internal requests and perform the data reads asynchronously.  The algorithms will do as much as they can with the data they have available and will block until notified by the data fetchers when they need more data to proceed.
-
-
-What Technology is Used by SlideRule?
-#####################################
-
-The main technologies used to implement SlideRule are **Terraform** for provisioning resources in AWS, **Docker** for containerizing the components of the application, and **Grafana** / **Prometheus** / **Loki** for observability.
-
-The primary unit of deployment for SlideRule is the “provisioned cluster” which consists of an **AWS Autoscaling Group** that runs the SlideRule processing nodes and a stand-alone **EC2** instance that runs SlideRule’s monitoring system.
-
-Each provisioned cluster is self-contained and ephemeral, meaning it is provisioned when needed, performs its tasks without requiring any other infrastructure, and is then torn down.  To do this, the entire system is defined in Terraform HCL files and created and destroyed using Terraform commands issued by the Provisioning System.  The consequence of this approach is that nothing is changed in-place.  New versions of the code are deployed when new clusters are provisioned.  Security patches are applied by rebuilding base AMIs and redeploying the cluster.
-
-When a provisioned cluster comes up, it fetches a specific set of Docker images specified in the code and starts the necessary containers from them.  For a release, those images are specific tags associated with the release.  Each container then runs code that periodically registers itself with the Orchestrator running inside the Intelligent Load Balancer.  A registration identifies the service that the container fulfills, and provides a lifetime for the registration.  The Orchestrator keeps track of all valid registrations and provides that information to HAProxy when a request needs to be proxied.
-
-Each EC2 instance in the cluster runs **Promtail** for log collection and **Node Exporter** for metric collection.  Those processes feed data back to the Monitor which is running **Loki** for log aggregation, and **Prometheus** for metric aggregation.  The Monitor also runs **Grafana** which is connected to both Loki and Prometheus and provides dashboard access to developers of the logs and metrics generated by the cluster.
