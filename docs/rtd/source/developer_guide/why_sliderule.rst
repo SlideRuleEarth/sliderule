@@ -64,17 +64,29 @@ Moving to a service model for data distribution addresses all of these problems.
 
 A service model for data distribution has many benefits:
 
-- **Users choose the science application, not the institution**: Instead of data users downloading pre-generated data products, data users make processing requests to the data service and receive back customized data products tailored to their science application based on the parameters they supplied in their request.
+1. **Users choose the science application, not the institution**
 
-- **Institutions provide the compute as well as the data**: Instead of data users needing to set up a cluster in order to run their data analysis, the sophisticated compute and storage infrastructure needed to manage and process the lower level data is provided by the institution, freeing up the data user to focus on their scientific investigation.
+Instead of data users downloading pre-generated data products, data users make processing requests to the data service and receive back customized data products tailored to their science application based on the parameters they supplied in their request.
 
-- **New algorithms can be added at any time**: Instead of institutions running multiple pipelines to produce data products that are released on fixed schedules, institutions run multiple services and new services can be added at any time and have access to all of the data (current and historic) immediately.
+2. **Compute requirements are no longer a barrier to data access**
 
-- **Improvements and fixes are immediately available**: Instead of institutions having to replace old versions of data products when processing improvements and fixes are made, and then requiring data users to redownload those data products, institutions deploy improvements and fixes to their services and it immediately becomes available to data users.
+Instead of data users needing to set up their own distributed storage system and processgin cluster in order to run basic data analysis, the sophisticated compute and storage infrastructure needed to manage and process the lower level data is provided by the institution, freeing up the data user to focus on their scientific investigation.
 
-- **Multiple science applications benefit from a single investment**: By parameterizing algorithms, the resources spent developing an algorithm can serve  different science applications.
+3. **New algorithms can be added at any time**
 
-- **Services integrate with other services**: When institutions move to a service-based model for data distribution, those services can be integrated into other systems and produce synergetic benefits.  A data archive stands alone, and the only way to avoid duplicating efforts between different archives is to combine and centralize the functionality.  On the other hand, a data service can be integrated with and leverage other data services while still remaining decentralized.  For example, one university could build a data service that leverages the public API of another university’s data service to produce a combined data product without ever having to rehost the other university’s data.  From a technical implementation standpoint, the two universities remain distinct and decentralized entities, yet by providing their data as a service, they allow for combined data products.
+Instead of institutions running multiple pipelines to produce data products that are released on fixed schedules, institutions run multiple services and new services can be added at any time and have access to all of the data (current and historic) immediately.
+
+4. **Improvements and fixes are immediately available**
+
+Instead of institutions having to replace old versions of data products when processing improvements and fixes are made, and then requiring data users to redownload those data products, institutions deploy improvements and fixes to their services and it immediately becomes available to data users.
+
+5. **Multiple science applications benefit from a single investment**
+
+By parameterizing algorithms, the resources spent developing an algorithm can serve  different science applications.
+
+6. **Services integrate with other services**
+
+When institutions move to a service-based model for data distribution, those services can be integrated into other systems and produce synergetic benefits.  A data archive stands alone, and the only way to avoid duplicating efforts between different archives is to combine and centralize the functionality.  On the other hand, a data service can be integrated with and leverage other data services while still remaining decentralized.  For example, one university could build a data service that leverages the public API of another university’s data service to produce a combined data product without ever having to rehost the other university’s data.  From a technical implementation standpoint, the two universities remain distinct and decentralized entities, yet by providing their data as a service, they allow for combined data products.
 
 
 What are SlideRule’s Goals?
@@ -82,30 +94,30 @@ What are SlideRule’s Goals?
 
 In developing SlideRule, the team has six goals we believe are necessary to successfully demonstrate a viable service-based data distribution approach.
 
-1. Cost Effective
+1. **Cost Effective**
 
 The system must have near zero costs when not in use, and be able to scale in a cost-controlled way when demand increases.  If there is a recurring cost to support each service, then there is a disincentive to provide more services.  By designing a system that scales to zero when there is no demand, the development of different processing algorithms can be done without the burden of having to support large recurring costs once it is deployed.
 
 Scaling costs to zero also protects against funding gaps and allows smaller institutions to use the system when funded by grants and awards, and not lose all that they’ve invested when that funding runs out.
 
-2. Responsive Results
+2. **Responsive Results**
 
 If results can be returned fast enough, the user can interact with the data in ways that are impossible in batch processing systems where they have to wait hours (or even days) to get their results.  Data analysis is often iterative, and a system that supports iterative exploration of the data and customization of the algorithms that process the data, supports the users in the way they want to work with the data.
 
 Also, keeping latencies low allows the system to integrate with other systems with low latency requirements.  For instance, systems that provide situational awareness cannot wait hours to get a response.  If a data service takes hours to respond to a processing request, it disqualifies itself from being able to be integrated with those types of systems.
 
-3. Simple API
+3. **Simple API**
 
 Learning a new system incurs a real and possibly large upfront cost.  If we are building a system that is attempting to lower the cost burden of data users and relieve them of the need to make investments in their compute and storage infrastructure, we cannot then require large investments of time and personnel to be able to use our system.  That would be merely shifting the costs and creating a different barrier to entry.
 
-4. Expandable
+4. **Expandable**
 
 There are two ways in which a data service needs to be expandable to support new science applications: (1) the addition of new science processing algorithms, (2) the addition of new datasets.  In both cases, the data service needs to add the new functionality without increasing the overall complexity of the system and without introducing risk or regressions in the current set of available services.
 
-5. Scalable
+5. **Scalable**
 
 As demand increases, the system needs to scale to meet the demand. And the way the system scales needs to match the objectives and charter of the institution funding the service.  For instance, a private university may want to allow privileged access to compute resources for its own members, whereas a government agency may want to allow equal access to all available compute resources for any of its citizens. For a data service framework to be successful in the different situations it will be used in, it must be flexible enough to support the different ways its service can scale.
 
-6. Open
+6. **Open**
 
 The shift away from static files to using real-time data services must not sacrifice the ability for independent review of the processes that produced the results and the ability to reproduce those results.  The former is greatly aided by open sourcing the software; the later is supported by robust configuration management processes.
