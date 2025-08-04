@@ -16,7 +16,7 @@ TESTDIR = Path(__file__).parent
 
 class TestParquet:
     def test_atl06(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -44,7 +44,7 @@ class TestParquet:
         assert metadata_dict["y"] == "latitude", f'invalid y column: {metadata_dict["y"]}'
 
     def test_atl06_non_geo(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -66,7 +66,7 @@ class TestParquet:
         assert gdf['segment_id'].describe()["max"] == 405902
 
     def test_atl06s(self, init):
-        resource = "ATL06_20190314093716_11600203_005_01.h5"
+        resource = "ATL06_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -92,7 +92,7 @@ class TestParquet:
         assert metadata_dict["y"] == "latitude", f'invalid y column: {metadata_dict["y"]}'
 
     def test_atl03(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -114,7 +114,7 @@ class TestParquet:
         assert gdf['segment_id'].describe()["max"] == 405902
 
     def test_atl03v(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -132,7 +132,7 @@ class TestParquet:
         assert init
 
     def test_atl06_index(self, init):
-        resource = "ATL03_20181017222812_02950102_005_01.h5"
+        resource = "ATL03_20181017222812_02950102_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
@@ -195,7 +195,7 @@ class TestParquet:
 
 
     def test_atl03_index(self, init):
-        resource = "ATL03_20181017222812_02950102_005_01.h5"
+        resource = "ATL03_20181017222812_02950102_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
@@ -268,7 +268,7 @@ class TestParquet:
             assert num_mismatches == 0, f'there were mismatches in {anc_field}'
 
     def test_atl06_csv(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -311,7 +311,7 @@ class TestParquet:
                 assert abs(parquet_val - csv_val) < 0.0001, f'mismatch in column <{column}>: {parquet_val} != {csv_val}'
 
     def test_atl06_feather(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",

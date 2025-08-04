@@ -75,7 +75,7 @@ def gedi_3dep():
 
 # ICESat-2 / ArcticDEM
 def icesat2_arcticdem():
-    resource = "ATL03_20190314093716_11600203_005_01.h5"
+    resource = "ATL03_20190314093716_11600203_007_01.h5"
     region = sliderule.toregion("tests/data/dicksonfjord.geojson")
     parms = { "poly": region['poly'],
               "cnf": "atl03_high",
@@ -91,7 +91,7 @@ def icesat2_arcticdem():
 
 # ICESat-2 / ATL06p
 def icesat2_atl06p():
-    resource = "ATL03_20181019065445_03150111_005_01.h5"
+    resource = "ATL03_20181019065445_03150111_007_01.h5"
     parms = { "cnf": "atl03_high",
                 "srt": 3,
                 "ats": 20.0,
@@ -111,13 +111,13 @@ def icesat2_phoreal():
         "srt": icesat2.SRT_LAND,
         "len": 100,
         "res": 100,
-        "pass_invalid": True, 
+        "pass_invalid": True,
         "atl08_class": ["atl08_ground", "atl08_canopy", "atl08_top_of_canopy"],
         "phoreal": {"binsize": 1.0, "geoloc": "center"}
     }
     gdf = sliderule.run("atl03x", parms)
     return gdf["h_mean_canopy"].mean()
-# 
+#
 # Main
 #
 print(f'GEDI / 3DEP = {gedi_3dep()}')

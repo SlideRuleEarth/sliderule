@@ -105,7 +105,7 @@ class TestAtl03x:
         assert abs(gdf["sigma_topo"].mean() - 0.003645051751679172) < 0.0001, f'{gdf["sigma_topo"].mean()}'
 
     def test_phoreal(self, init):
-        resource = "ATL03_20181017222812_02950102_005_01.h5"
+        resource = "ATL03_20181017222812_02950102_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "track": 3,
@@ -125,7 +125,7 @@ class TestAtl03x:
         assert abs(gdf["sigma_topo"].mean() - 0.430706130944393362) < 0.0001, f'{gdf["sigma_topo"].mean()}'
 
     def test_sampler(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = {
             "track": 1,

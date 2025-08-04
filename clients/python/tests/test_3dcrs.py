@@ -5,7 +5,7 @@ from sliderule import icesat2
 
 class Test3dCRS:
     def test_atl06p(self, init):
-        resource = "ATL03_20181019065445_03150111_005_01.h5"
+        resource = "ATL03_20181019065445_03150111_007_01.h5"
         parms = { "cnf": "atl03_high",
                   "srt": 3,
                   "ats": 20.0,
@@ -20,7 +20,7 @@ class Test3dCRS:
         assert len(gdf["h_mean"]) == 622419
 
     def test_atl03sp(self, init):
-        resource = "ATL03_20181019065445_03150111_005_01.h5"
+        resource = "ATL03_20181019065445_03150111_007_01.h5"
         region = [ { "lat": -80.75, "lon": -70.00 },
                    { "lat": -81.00, "lon": -70.00 },
                    { "lat": -81.00, "lon": -65.00 },
@@ -45,7 +45,7 @@ class Test3dCRS:
         assert len(gdf["height"]) == 488690
 
     def test_atl08p(self, init):
-        resource = "ATL03_20181213075606_11560106_005_01.h5"
+        resource = "ATL03_20181213075606_11560106_007_01.h5"
         region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
                    {"lon": -107.7677425431139, "lat": 38.90611184543033},
                    {"lon": -107.7818591266989, "lat": 39.26613714985466},

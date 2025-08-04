@@ -17,7 +17,7 @@ print('\n------------------\nTest01: Atl03 Viewer Extent Record\n---------------
 
 local recq = msg.subscribe("atl03-reader-recq")
 local tstart = time.latch()
-local f1 = icesat2.atl03v("atl03-reader-recq", icesat2.parms({resource="ATL03_20200304065203_10470605_005_01.h5", track=icesat2.RPT_1}))
+local f1 = icesat2.atl03v("atl03-reader-recq", icesat2.parms({resource="ATL03_20200304065203_10470605_007_01.h5", track=icesat2.RPT_1}))
 local extentrec = recq:recvrecord(15000)
 print("Time to execute: "..tostring(time.latch() - tstart))
 

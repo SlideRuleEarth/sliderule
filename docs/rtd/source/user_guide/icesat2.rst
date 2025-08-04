@@ -92,7 +92,7 @@ If ATL24 classification parameters are specified, the ATL24 (bathymetry) files c
 2.3 Photon-extent parameters
 ----------------------------
 
-Selected photons are collected into extents, each of which may be suitable for elevation fitting.  The _len_ parameter specifies the length of each extent, and the _res_parameter specifies the distance between subsequent extent centers.  If _res_ is less than _len_, subsequent segments will contain duplicate photons.  The API may also select photons based on their along-track distance, or based on the segment-id parameters in the ATL03 product (see the _dist_in_seg_ parameter).
+Selected photons are divided and aggregated using along-track samples (“extents”) with user-specified length. These extends may or may not align with the original 20-m segments of ATL03 photons.  The _len_ parameter specifies the length of each extent, and the _res_parameter specifies the distance between subsequent extent centers.  If _res_ is less than _len_, subsequent segments will contain duplicate photons.  The API may also select photons based on their along-track distance, or based on the segment-id parameters in the ATL03 product (see the _dist_in_seg_ parameter).
 
 * ``"len"``: length of each extent in meters
 * ``"res"``: step distance for successive extents in meters
@@ -101,7 +101,7 @@ Selected photons are collected into extents, each of which may be suitable for e
 Extents are optionally filtered based on the number of photons in each extent and the distribution of those photons.  If the ``"pass_invalid"`` parameter is set to _False_, only those extents fulfilling these criteria will be returned.
 
 * ``"pass_invalid"``: true|false flag indicating whether or not extents that fail validation checks are still used and returned in the results
-* ``"ats"``: minimum along track spread
+* ``"ats"``: minimum along track spread, which is the distance in meters between the outermost valid photons in the variable length segment
 * ``"cnt"``: minimum photon count in segment
 
 2.4 ATL06-SR algorithm parameters

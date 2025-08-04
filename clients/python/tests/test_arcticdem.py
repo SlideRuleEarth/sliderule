@@ -83,7 +83,7 @@ class TestMosaic:
         assert rsps["samples"][0][0]["time"] ==  vrtFileTime
 
     def test_nearestneighbour(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -105,7 +105,7 @@ class TestMosaic:
         assert abs(gdf["mosaic.value"].describe()["min"] - 600.4140625) < sigma
 
     def test_zonal_stats(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -130,7 +130,7 @@ class TestMosaic:
         assert gdf["mosaic.time"].iloc[0] == vrtFileTime
 
     def test_slope_aspect(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -160,7 +160,7 @@ class TestMosaic:
         # print(gdf[["mosaic.slope", "mosaic.aspect", "mosaic.count"]])
 
     def test_slope_aspect_and_zonal_stats(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -201,7 +201,7 @@ class TestStrips:
                   "time_start":'2020-01-01',
                   "time_end":'2021-01-01',
                   "samples": {"strips": {"asset": "arcticdem-strips", "with_flags": True, "catalog": catalog}} }
-        gdf = icesat2.atl06p(parms, resources=['ATL03_20191108234307_06580503_005_01.h5'])
+        gdf = icesat2.atl06p(parms, resources=['ATL03_20191108234307_06580503_007_01.h5'])
         assert init
         assert len(gdf.attrs['file_directory']) == 14
         for file_id in range(0, 16, 2):

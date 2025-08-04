@@ -17,7 +17,7 @@ class TestIcesat2:
             "srt":              icesat2.SRT_LAND,
             "atl03_geo_fields": ["solar_elevation"]
         }
-        gdf = icesat2.atl06p(parms, resources=["ATL03_20181017222812_02950102_005_01.h5"])
+        gdf = icesat2.atl06p(parms, resources=["ATL03_20181017222812_02950102_007_01.h5"])
         assert init
         assert len(gdf["solar_elevation"]) == 1180
         assert gdf['solar_elevation'].describe()["min"] - 20.803468704223633 < 0.0000001
@@ -30,7 +30,7 @@ class TestIcesat2:
             "srt":              icesat2.SRT_LAND,
             "atl03_ph_fields":  ["ph_id_count"]
         }
-        gdf = icesat2.atl03s(parms, "ATL03_20181017222812_02950102_005_01.h5")
+        gdf = icesat2.atl03s(parms, "ATL03_20181017222812_02950102_007_01.h5")
         assert init
         assert sum(gdf["ph_id_count"]) == 626032
         assert len(gdf["ph_id_count"]) == 403462

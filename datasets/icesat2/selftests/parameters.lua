@@ -25,9 +25,9 @@ runner.unittest("ICESat-2 Fields", function()
             { lon = -70.0, lat = -80.75 },
             { lon = -70.0, lat = -81.0  }
         },
-        resource = "ATL03_20181019065445_03150111_005_01.h5",
+        resource = "ATL03_20181019065445_03150111_007_01.h5",
         resources = {
-            "ATL03_20181019065445_03150111_005_01.h5"
+            "ATL03_20181019065445_03150111_007_01.h5"
         },
         output = {
             path = "/tmp/tmpbary5z1t",

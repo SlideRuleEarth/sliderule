@@ -12,7 +12,7 @@ TESTDIR = Path(__file__).parent
 
 class TestSubsetting:
     def test_rasterize(self, init):
-        resource = "ATL03_20181017222812_02950102_005_01.h5"
+        resource = "ATL03_20181017222812_02950102_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region['poly'],
@@ -45,7 +45,7 @@ class TestSubsetting:
             assert np.isclose(expected_df["y_atc"].iloc[i], gdf["y_atc"].iloc[i], atol=1e-14), f"Row {i} mismatch in y_atc"
 
     def test_180_edge(self, init):
-        resource = "ATL03_20221012073759_03291712_005_01.h5"
+        resource = "ATL03_20221012073759_03291712_007_01.h5"
         poly = [ { "lat": -73.0, "lon": 155.00 },
                  { "lat": -74.0, "lon": 155.00 },
                  { "lat": -74.0, "lon": 180.00 },
@@ -66,7 +66,7 @@ class TestSubsetting:
         assert abs(gdf["y_atc"].describe()["mean"] - 1.438330888748169) < 0.01
 
     def test_180_edge_plate_carree(self, init):
-        resource = "ATL03_20221012073759_03291712_005_01.h5"
+        resource = "ATL03_20221012073759_03291712_007_01.h5"
         poly = [ { "lat": -73.0, "lon": -180.00 },
                  { "lat": -74.0, "lon": -180.00 },
                  { "lat": -74.0, "lon": 180.00 },
@@ -88,7 +88,7 @@ class TestSubsetting:
         assert abs(gdf["y_atc"].describe()["mean"] - -0.3240036070346832) < 0.01
 
     def test_150_translation(self, init):
-        resource = "ATL03_20221009072040_02831712_005_01.h5"
+        resource = "ATL03_20221009072040_02831712_007_01.h5"
         poly = [ { "lat": -73.0, "lon": 160.00 },
                  { "lat": -74.0, "lon": 160.00 },
                  { "lat": -74.0, "lon": 170.00 },

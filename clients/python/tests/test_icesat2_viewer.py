@@ -2,7 +2,7 @@ import pytest
 from sliderule import icesat2
 import time
 
-resource = "ATL03_20181019065445_03150111_005_01.h5"
+resource = "ATL03_20181019065445_03150111_007_01.h5"
 region = [ { "lat": -80.75, "lon": -70.00 },
            { "lat": -81.00, "lon": -70.00 },
            { "lat": -81.00, "lon": -65.00 },

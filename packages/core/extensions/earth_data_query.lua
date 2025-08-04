@@ -14,11 +14,11 @@ DEFAULT_MAX_REQUESTED_RESOURCES = 300
 
 -- best effort match of datasets to providers and versions for earthdata
 DATASETS = {
-    ATL03 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    ATL06 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    ATL08 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    ATL09 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
-    ATL13 =                                               {provider = "NSIDC_CPRD",  version = "006",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
+    ATL03 =                                               {provider = "NSIDC_CPRD",  version = "007",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
+    ATL06 =                                               {provider = "NSIDC_CPRD",  version = "007",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
+    ATL08 =                                               {provider = "NSIDC_CPRD",  version = "007",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
+    ATL09 =                                               {provider = "NSIDC_CPRD",  version = "007",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
+    ATL13 =                                               {provider = "NSIDC_CPRD",  version = "007",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     ATL24 =                                               {provider = "NSIDC_CPRD",  version = "001",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     GEDI01_B =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},
     GEDI02_A =                                            {provider = "LPCLOUD",     version = "002",  api = "cmr",   formats = {".h5"},    collections = {},                               url = nil},

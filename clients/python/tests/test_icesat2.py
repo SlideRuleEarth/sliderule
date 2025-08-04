@@ -9,7 +9,7 @@ import time
 
 class TestAlgorithm:
     def test_atl06(self, init, performance):
-        resource = "ATL03_20181019065445_03150111_005_01.h5"
+        resource = "ATL03_20181019065445_03150111_007_01.h5"
         parms = { "cnf": "atl03_high",
                   "srt": 3,
                   "ats": 20.0,
@@ -26,7 +26,7 @@ class TestAlgorithm:
         assert not performance or (time.perf_counter() - perf_start) < 50
 
     def test_atl06p(self, init, performance):
-        resource = "ATL03_20181019065445_03150111_005_01.h5"
+        resource = "ATL03_20181019065445_03150111_007_01.h5"
         parms = { "cnf": "atl03_high",
                   "srt": 3,
                   "ats": 20.0,
@@ -43,7 +43,7 @@ class TestAlgorithm:
         assert not performance or (time.perf_counter() - perf_start) < 50
 
     def test_atl03s(self, init, performance):
-        resource = "ATL03_20181019065445_03150111_005_01.h5"
+        resource = "ATL03_20181019065445_03150111_007_01.h5"
         region = [ { "lat": -80.75, "lon": -70.00 },
                    { "lat": -81.00, "lon": -70.00 },
                    { "lat": -81.00, "lon": -65.00 },
@@ -70,7 +70,7 @@ class TestAlgorithm:
         assert not performance or (time.perf_counter() - perf_start) < 40
 
     def test_atl03sp(self, init, performance):
-        resource = "ATL03_20181019065445_03150111_005_01.h5"
+        resource = "ATL03_20181019065445_03150111_007_01.h5"
         region = [ { "lat": -80.75, "lon": -70.00 },
                    { "lat": -81.00, "lon": -70.00 },
                    { "lat": -81.00, "lon": -65.00 },
@@ -97,7 +97,7 @@ class TestAlgorithm:
         assert not performance or (time.perf_counter() - perf_start) < 40
 
     def test_atl08(self, init, performance):
-        resource = "ATL03_20181213075606_11560106_005_01.h5"
+        resource = "ATL03_20181213075606_11560106_007_01.h5"
         track = 1
         region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
                    {"lon": -107.7677425431139, "lat": 38.90611184543033},
@@ -129,7 +129,7 @@ class TestAlgorithm:
         assert not performance or (time.perf_counter() - perf_start) < 30
 
     def test_gs(self, init):
-        resource_prefix = "20210114170723_03311012_005_01.h5"
+        resource_prefix = "20210114170723_03311012_007_01.h5"
         region = [ {"lon": 126.54560629670780, "lat": -70.28232209449946},
                    {"lon": 114.29798416287946, "lat": -70.08880029415151},
                    {"lon": 112.05139144652648, "lat": -74.18128224472123},
@@ -272,7 +272,7 @@ class TestAlgorithm:
 
 
     def test_gsx(self, init):
-        resource_suffix = "20210114170723_03311012_005_01.h5"
+        resource_suffix = "20210114170723_03311012_007_01.h5"
         region = [ {"lon": 126.54560629670780, "lat": -70.28232209449946},
                    {"lon": 114.29798416287946, "lat": -70.08880029415151},
                    {"lon": 112.05139144652648, "lat": -74.18128224472123},

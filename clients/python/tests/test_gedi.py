@@ -62,7 +62,7 @@ class TestL2A:
 
 class TestL3:
     def test_gedi(self, init):
-        resource = "ATL03_20220105023009_02111406_005_01.h5"
+        resource = "ATL03_20220105023009_02111406_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region['poly'],
@@ -110,7 +110,7 @@ class TestL4A:
 
 class TestL4B:
     def test_gedi(self, init):
-        resource = "ATL03_20220105023009_02111406_005_01.h5"
+        resource = "ATL03_20220105023009_02111406_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region['poly'],
