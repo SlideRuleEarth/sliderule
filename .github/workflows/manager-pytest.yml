@@ -41,18 +41,19 @@ jobs:
           environment-file: targets/slideruleearth-aws/docker/manager/environment.yml
           use-only-tar-bz2: true
 
-      - name: Download DuckDB spatial extension
+      - name: Download and install DuckDB spatial extension
         shell: bash -l {0}
         run: |
-          EXT=$(python - <<EOF
-          import duckdb
-          print(duckdb.__version__)
-          EOF
-          )
-          mkdir -p ~/.duckdb/extensions
-          curl -L -o ~/.duckdb/extensions/spatial.duckdb_extension.gz \
-          https://extensions.duckdb.org/v${EXT}/linux_amd64/spatial.duckdb_extension.gz
-          gunzip -f ~/.duckdb/extensions/spatial.duckdb_extension.gz
+          EXT=$(python -c "import duckdb; print(duckdb.__version__)")
+          echo "Using DuckDB version: $EXT"
+
+          EXT_DIR="${HOME}/.duckdb/extensions/spatial/${EXT}"
+          mkdir -p "$EXT_DIR"
+
+          curl -fL -o "${EXT_DIR}/spatial.duckdb_extension.gz" \
+            "https://extensions.duckdb.org/v${EXT}/linux_amd64/spatial.duckdb_extension.gz"
+
+          gunzip -f "${EXT_DIR}/spatial.duckdb_extension.gz"
 
 
       - name: Initialize manager database
