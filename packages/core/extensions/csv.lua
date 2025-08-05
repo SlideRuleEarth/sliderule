@@ -1,5 +1,3 @@
-local pp = require("prettyprint")
-
 local function get_next_row (contents, position)
     if position >= #contents then return end
     local i, new_position = contents:find("\n", position)

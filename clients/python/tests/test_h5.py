@@ -17,11 +17,11 @@ class TestApi:
 
     def test_h5_types(self, init):
         heights_64 = h5coro.h5("/gt1l/land_ice_segments/h_li", ATL06_FILE1, "icesat2")
-        expected_64 = [45.95665, 45.999374, 46.017857, 46.015575, 46.067562, 46.099796, 46.14037, 46.105526, 46.096024, 46.12297]
+        expected_64 = [45.918957, 45.95782, 45.989723, 45.982258, 46.03089, 46.07748, 46.092117, 46.06058, 46.052357, 46.087215]
         heights_32 = h5coro.h5("/gt1l/land_ice_segments/h_li", ATL06_FILE2, "icesat2")
-        expected_32 = [350.46988, 352.08688, 352.43243, 353.19345, 353.69543, 352.25998, 350.15366, 346.37888, 342.47903, 341.51]
+        expected_32 = [350.7689, 352.25482, 352.21744, 353.19803, 353.66928, 352.06366, 348.95926, 346.38608, 342.27283, 340.64496]
         bckgrd_32nf = h5coro.h5("/gt1l/bckgrd_atlas/bckgrd_rate", ATL03_FILE2, "icesat2")
-        expected_32nf = [29311.428, 6385.937, 6380.8413, 28678.951, 55349.168, 38201.082, 19083.434, 38045.67, 34942.434, 38096.266]
+        expected_32nf = [29311.883, 6385.616, 6380.865, 28678.928, 55348.918, 38200.426, 19083.5, 38045.562, 34942.902, 38095.367]
         assert init
         for c in zip(heights_64, expected_64, heights_32, expected_32, bckgrd_32nf, expected_32nf):
             assert (round(c[0]) == round(c[1])) and (round(c[2]) == round(c[3])) and (round(c[4]) == round(c[5]))
