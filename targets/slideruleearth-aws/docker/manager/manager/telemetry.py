@@ -78,7 +78,7 @@ def ratelimitit(source_ip, source_ip_location):
     return False # no rate limiting
 
 def blockit(source_ip):
-    print(f'Requests originating from {source_ip} will be rate limited for {current_app.config['RATELIMIT_BACKOFF_PERIOD']} seconds starting from {datetime.now()}')
+    print(f"Requests originating from {source_ip} will be rate limited for {current_app.config['RATELIMIT_BACKOFF_PERIOD']} seconds starting from {datetime.now()}")
     requests.post(current_app.config['ORCHESTRATOR'] + "/discovery/block", data=json.dumps({"address": source_ip, "duration": current_app.config['RATELIMIT_BACKOFF_PERIOD']}))
 
 def get_metrics():
