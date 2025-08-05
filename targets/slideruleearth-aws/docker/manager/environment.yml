@@ -11,4 +11,5 @@ dependencies:
   - boto3
   - pytest
   - coverage
+  - requests
   - pip
