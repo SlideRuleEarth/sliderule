@@ -48,9 +48,16 @@ jobs:
           PLATFORM="linux_amd64"
           EXT_DIR="$HOME/.duckdb/extensions/v${EXT}/${PLATFORM}"
           mkdir -p "${EXT_DIR}"
+          printf "Downloading spatial extension to ${EXT_DIR}"
 
           curl -L "https://extensions.duckdb.org/v${EXT}/${PLATFORM}/spatial.duckdb_extension.gz" \
             | gunzip -c > "${EXT_DIR}/spatial.duckdb_extension"
+
+      - name: Download MaxMind GeoLite2-Country.mmdb
+        shell: bash -l {0}
+        run: |
+          mkdir -p /data
+          curl -L -o /data/GeoLite2-Country.mmdb "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-Country.mmdb"
 
       - name: Initialize manager database
         shell: bash -l {0}
