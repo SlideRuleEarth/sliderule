@@ -37,7 +37,7 @@ def build_time_range_query(time_field):
 #
 def build_exclude_list(exclude_list):
     if exclude_list != None and len(exclude_list) > 0:
-        return f'EXCLUDE ({', '.join(exclude_list)})'
+        return f"EXCLUDE ({', '.join(exclude_list)})"
     else:
         return ''
 
