@@ -26,7 +26,7 @@ runner.unittest("CMR Query", function()
     if type(rsps) == "table" then
         local found = false
         for _,resource in ipairs(rsps) do
-            if resource == "ATL03_20210104122558_01761002_006_01.h5" then
+            if resource == "ATL03_20210104122558_01761002_007_01.h5" then
                 found = true
             end
         end

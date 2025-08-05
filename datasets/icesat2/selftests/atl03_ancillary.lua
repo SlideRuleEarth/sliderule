@@ -24,7 +24,7 @@ while true do
     runner.assert(rec:getvalue("count") == 2, rec:getvalue("count"))
 end
 
-local expected_cnt = 21748
+local expected_cnt = 20658
 runner.assert(cnt == expected_cnt, string.format('failed to read sufficient number of container records, expected: %d, got: %d', expected_cnt, cnt))
 
 -- Clean Up --
