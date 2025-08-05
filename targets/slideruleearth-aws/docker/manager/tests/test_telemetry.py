@@ -148,7 +148,7 @@ def test_timespan(client):
     # first request - now
     now = date.today()
     response = client.post('/manager/telemetry/record', json={
-        "record_time": f'{now.strftime('%Y-%m-%d')}',
+        "record_time": f"{now.strftime('%Y-%m-%d')}",
         "source_ip": "128.154.178.80",
         "aoi": {"x": 30.0, "y": 57.0},
         "client": "pytest",
@@ -162,7 +162,7 @@ def test_timespan(client):
     # second request - 2 years ago
     two_years_ago = date.today() - timedelta(days=730)
     response = client.post('/manager/telemetry/record', json={
-        "record_time": f'{two_years_ago.strftime('%Y-%m-%d')}',
+        "record_time": f"{two_years_ago.strftime('%Y-%m-%d')}",
         "source_ip": "128.154.178.80",
         "aoi": {"x": 30.0, "y": 57.0},
         "client": "pytest",
@@ -186,7 +186,7 @@ def test_timespan(client):
 
 def test_geo(client):
     response = client.post('/manager/telemetry/record', json={
-        "record_time": f'{date.today().strftime('%Y-%m-%d')}',
+        "record_time": f"{date.today().strftime('%Y-%m-%d')}",
         "source_ip": "128.154.178.80",
         "aoi": {"x": 30.0, "y": 57.0},
         "client": "pytest",
