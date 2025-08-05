@@ -23,7 +23,7 @@ jobs:
       - name: Cache conda environment
         uses: actions/cache@v4
         env:
-          CACHE_NUMBER: 1
+          CACHE_NUMBER: 2
         with:
           path: ~/conda_pkgs_dir
           key: >
@@ -40,10 +40,6 @@ jobs:
           activate-environment: manager
           environment-file: targets/slideruleearth-aws/docker/manager/environment.yml
           use-only-tar-bz2: true
-
-      - name: Add defaults channel to silence warnings
-        shell: bash -l {0}
-        run: conda config --add channels defaults
 
       - name: Download and install DuckDB spatial extension
         shell: bash -l {0}
