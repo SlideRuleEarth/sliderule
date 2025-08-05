@@ -1,0 +1,47 @@
+name: Manager Python Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 22 * * 5' # Every Sunday at 10 pm
+
+jobs:
+  test:
+    name: manager-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Cache conda environment
+        uses: actions/cache@v4
+        env:
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key: >
+            ${{ format('{0}-conda-{1}-{2}',
+              runner.os,
+              env.CACHE_NUMBER,
+              hashFiles('targets/slideruleearth-aws/docker/manager/environment.yml')) }}
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-update-conda: true
+          auto-activate-base: false
+          activate-environment: manager
+          environment-file: targets/slideruleearth-aws/docker/manager/environment.yml
+          use-only-tar-bz2: true
+
+      - name: Run manager tests with coverage
+        shell: bash -l {0}
+        working-directory: targets/slideruleearth-aws/docker/manager
+        run: |
+          coverage run -m pytest
+          coverage report -m
