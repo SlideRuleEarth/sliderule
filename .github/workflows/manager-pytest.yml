@@ -39,9 +39,15 @@ jobs:
           environment-file: targets/slideruleearth-aws/docker/manager/environment.yml
           use-only-tar-bz2: true
 
+      - name: Initialize manager database
+        shell: bash -l {0}
+        working-directory: targets/slideruleearth-aws/docker/manager
+        run: |
+          # Build the DuckDB database
+          make init
+
       - name: Run manager tests with coverage
         shell: bash -l {0}
         working-directory: targets/slideruleearth-aws/docker/manager
         run: |
-          coverage run -m pytest
-          coverage report -m
+          make test
