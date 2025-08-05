@@ -45,16 +45,12 @@ jobs:
         shell: bash -l {0}
         run: |
           EXT=$(python -c "import duckdb; print(duckdb.__version__)")
-          echo "Using DuckDB version: $EXT"
+          PLATFORM="linux_amd64"
+          EXT_DIR="$HOME/.duckdb/extensions/v${EXT}/${PLATFORM}"
+          mkdir -p "${EXT_DIR}"
 
-          EXT_DIR="${HOME}/.duckdb/extensions/spatial/${EXT}"
-          mkdir -p "$EXT_DIR"
-
-          curl -fL -o "${EXT_DIR}/spatial.duckdb_extension.gz" \
-            "https://extensions.duckdb.org/v${EXT}/linux_amd64/spatial.duckdb_extension.gz"
-
-          gunzip -f "${EXT_DIR}/spatial.duckdb_extension.gz"
-
+          curl -L "https://extensions.duckdb.org/v${EXT}/${PLATFORM}/spatial.duckdb_extension.gz" \
+            | gunzip -c > "${EXT_DIR}/spatial.duckdb_extension"
 
       - name: Initialize manager database
         shell: bash -l {0}
