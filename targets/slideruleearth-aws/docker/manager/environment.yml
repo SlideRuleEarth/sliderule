@@ -4,7 +4,7 @@ channels:
   - conda-forge
 dependencies:
   - flask
-  - python-duckdb
+  - python-duckdb>=0.9.2
   - geoip2
   - gunicorn
   - boto3
