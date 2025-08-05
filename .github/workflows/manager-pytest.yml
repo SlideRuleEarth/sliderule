@@ -52,6 +52,7 @@ jobs:
           mkdir -p ~/.duckdb/extensions
           curl -L -o ~/.duckdb/extensions/spatial.duckdb_extension.gz \
           https://extensions.duckdb.org/v${EXT}/linux_amd64/spatial.duckdb_extension.gz
+          gunzip -f ~/.duckdb/extensions/spatial.duckdb_extension.gz
 
 
       - name: Initialize manager database
