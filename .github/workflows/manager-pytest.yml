@@ -44,6 +44,8 @@ jobs:
         working-directory: targets/slideruleearth-aws/docker/manager
         run: |
           # Build the DuckDB database
+          sudo mkdir -p /data
+          sudo chmod 777 /data
           make init
 
       - name: Run manager tests with coverage
