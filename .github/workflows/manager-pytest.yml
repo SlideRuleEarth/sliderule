@@ -56,7 +56,8 @@ jobs:
       - name: Download MaxMind GeoLite2-Country.mmdb
         shell: bash -l {0}
         run: |
-          mkdir -p /data
+          sudo mkdir -p /data
+          sudo chmod 777 /data
           curl -L -o /data/GeoLite2-Country.mmdb "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-Country.mmdb"
 
       - name: Initialize manager database
@@ -64,8 +65,6 @@ jobs:
         working-directory: targets/slideruleearth-aws/docker/manager
         run: |
           # Build the DuckDB database
-          sudo mkdir -p /data
-          sudo chmod 777 /data
           make init
 
       - name: Run manager tests with coverage
