@@ -42,6 +42,8 @@ jobs:
       - name: Initialize manager database
         shell: bash -l {0}
         working-directory: targets/slideruleearth-aws/docker/manager
+        env:
+          DUCKDB_EXTENSION_REPOSITORY: https://extensions.duckdb.org
         run: |
           # Build the DuckDB database
           sudo mkdir -p /data
