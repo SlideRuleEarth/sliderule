@@ -41,6 +41,10 @@ jobs:
           environment-file: targets/slideruleearth-aws/docker/manager/environment.yml
           use-only-tar-bz2: true
 
+      - name: Add defaults channel to silence warnings
+        shell: bash -l {0}
+        run: conda config --add channels defaults
+
       - name: Download and install DuckDB spatial extension
         shell: bash -l {0}
         run: |
