@@ -3,6 +3,7 @@ import click
 from flask import Blueprint, current_app, request, g
 from werkzeug.exceptions import abort
 import boto3
+import os
 
 ####################
 # Initialization
