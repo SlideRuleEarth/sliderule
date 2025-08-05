@@ -224,7 +224,7 @@ FootprintReader<footprint_t>::FootprintReader ( lua_State* L, const char* outq_n
         context = new H5Coro::Context(parms->asset.asset, parms->getResource());
 
         /* Read Beam Data */
-        threadMut.unlock();
+        threadMut.lock();
         {
             for(int i = 0; i < GediFields::NUM_BEAMS; i++)
             {
@@ -436,12 +436,11 @@ bool FootprintReader<footprint_t>::readAncillaryData (const info_t* info, long f
     /* Read Ancillary Fields */
     for(int i = 0; i < parms->anc_fields.length(); i++)
     {
-        const string& field_name = parms->anc_fields[i];
-        const FString dataset_name("%s/%s", info->group, field_name.c_str());
+        const FString dataset_name("%s/%s", info->group, parms->anc_fields[i].c_str());
         H5DArray* array = new H5DArray(context, dataset_name.c_str(), H5Coro::ALL_COLS, first_footprint, num_footprints);
         threadMut.lock();
         {
-            const bool status = ancData.add(field_name.c_str(), array);
+            const bool status = ancData.add(dataset_name.c_str(), array);
             if(!status) delete array;
             else arrays_to_join.push_back(array);
             assert(status); // the dictionary add should never fail
@@ -474,8 +473,8 @@ void FootprintReader<footprint_t>::populateAncillaryFields (const info_t* info, 
     vector<AncillaryFields::field_t> field_vec;
     for(int i = 0; i < parms->anc_fields.length(); i++)
     {
-        const string& field_name = parms->anc_fields[i];
-        H5DArray* array = ancData[field_name.c_str()];
+        const FString dataset_name("%s/%s", info->group, parms->anc_fields[i].c_str());
+        H5DArray* array = ancData[dataset_name.c_str()];
 
         if(array->numDimensions() > 1)
         {

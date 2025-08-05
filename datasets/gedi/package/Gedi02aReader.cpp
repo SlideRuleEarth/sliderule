@@ -231,33 +231,41 @@ void* Gedi02aReader::subsettingThread (void* parm)
 
             reader->threadMut.lock();
             {
-                /* Populate Entry in Batch Structure */
-                g02a_footprint_t* fp = &reader->batchData->footprint[reader->batchIndex];
-                fp->shot_number             = gedi02a.shot_number[footprint];
-                fp->time_ns                 = GediFields::deltatime2timestamp(gedi02a.delta_time[footprint]);
-                fp->latitude                = region.lat[footprint];
-                fp->longitude               = region.lon[footprint];
-                fp->elevation_lowestmode    = gedi02a.elev_lowestmode[footprint];
-                fp->elevation_highestreturn = gedi02a.elev_highestreturn[footprint];
-                fp->solar_elevation         = gedi02a.solar_elevation[footprint];
-                fp->sensitivity             = gedi02a.sensitivity[footprint];
-                fp->orbit                   = parms->granule_fields.orbit.value;
-                fp->beam                    = static_cast<uint8_t>(info->beam);
-                fp->flags                   = 0;
-                fp->track                   = parms->granule_fields.track.value;
-                if(gedi02a.degrade_flag[footprint]) fp->flags |= GediFields::DEGRADE_FLAG_MASK;
-                if(gedi02a.quality_flag[footprint]) fp->flags |= GediFields::L2_QUALITY_FLAG_MASK;
-                if(gedi02a.surface_flag[footprint]) fp->flags |= GediFields::SURFACE_FLAG_MASK;
-
-                /* Populate Ancillary Fields */
-                reader->populateAncillaryFields(info, footprint, fp->shot_number);
-
-                /* Send Record */
-                reader->batchIndex++;
-                if(reader->batchIndex >= BATCH_SIZE)
+                try
                 {
-                    reader->postRecordBatch(&local_stats);
-                    reader->batchIndex = 0;
+                    /* Populate Entry in Batch Structure */
+                    g02a_footprint_t* fp = &reader->batchData->footprint[reader->batchIndex];
+                    fp->shot_number             = gedi02a.shot_number[footprint];
+                    fp->time_ns                 = GediFields::deltatime2timestamp(gedi02a.delta_time[footprint]);
+                    fp->latitude                = region.lat[footprint];
+                    fp->longitude               = region.lon[footprint];
+                    fp->elevation_lowestmode    = gedi02a.elev_lowestmode[footprint];
+                    fp->elevation_highestreturn = gedi02a.elev_highestreturn[footprint];
+                    fp->solar_elevation         = gedi02a.solar_elevation[footprint];
+                    fp->sensitivity             = gedi02a.sensitivity[footprint];
+                    fp->orbit                   = parms->granule_fields.orbit.value;
+                    fp->beam                    = static_cast<uint8_t>(info->beam);
+                    fp->flags                   = 0;
+                    fp->track                   = parms->granule_fields.track.value;
+                    if(gedi02a.degrade_flag[footprint]) fp->flags |= GediFields::DEGRADE_FLAG_MASK;
+                    if(gedi02a.quality_flag[footprint]) fp->flags |= GediFields::L2_QUALITY_FLAG_MASK;
+                    if(gedi02a.surface_flag[footprint]) fp->flags |= GediFields::SURFACE_FLAG_MASK;
+
+                    /* Populate Ancillary Fields */
+                    reader->populateAncillaryFields(info, footprint, fp->shot_number);
+
+                    /* Send Record */
+                    reader->batchIndex++;
+                    if(reader->batchIndex >= BATCH_SIZE)
+                    {
+                        reader->postRecordBatch(&local_stats);
+                        reader->batchIndex = 0;
+                    }
+                }
+                catch(const RunTimeException& e)
+                {
+                    reader->threadMut.unlock();
+                    throw;
                 }
             }
             reader->threadMut.unlock();
