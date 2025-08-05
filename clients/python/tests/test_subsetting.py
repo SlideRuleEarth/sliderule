@@ -25,9 +25,9 @@ class TestSubsetting:
             "res": 20.0 }
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
-        assert len(gdf) == 953
-        assert abs(gdf["h_mean"].describe()["mean"] - 1749.8443895024502) < 0.1
-        assert abs(gdf["y_atc"].describe()["mean"] - -5516.94775390625) < 0.1
+        assert len(gdf) == 956
+        assert abs(gdf["h_mean"].describe()["mean"] - 1750.5657658961802) < 0.1, f'h_mean = {gdf["h_mean"].describe()["mean"]}'
+        assert abs(gdf["y_atc"].describe()["mean"] - -5517.46630859375) < 0.1, f'y_atc = {gdf["y_atc"].describe()["mean"]}'
 
         # This part is a regression test for issue #358
         # Compare values for h_mean and y_atc and validate segment_ids against expected values
@@ -62,8 +62,8 @@ class TestSubsetting:
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
         assert len(gdf) == 33998
-        assert abs(gdf["h_mean"].describe()["mean"] - 1963.3553175453283) < 0.01
-        assert abs(gdf["y_atc"].describe()["mean"] - 1.438330888748169) < 0.01
+        assert abs(gdf["h_mean"].describe()["mean"] - 1963.296349059903) < 0.01, f'h_mean = {gdf["h_mean"].describe()["mean"]}'
+        assert abs(gdf["y_atc"].describe()["mean"] - 1.9260876178741455) < 0.01, f'y_atc = {gdf["y_atc"].describe()["mean"]}'
 
     def test_180_edge_plate_carree(self, init):
         resource = "ATL03_20221012073759_03291712_007_01.h5"
@@ -83,9 +83,9 @@ class TestSubsetting:
             "res": 20.0 }
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
-        assert len(gdf) == 33973
-        assert abs(gdf["h_mean"].describe()["mean"] - 2105.1968807146873) < 0.01
-        assert abs(gdf["y_atc"].describe()["mean"] - -0.3240036070346832) < 0.01
+        assert len(gdf) == 33972
+        assert abs(gdf["h_mean"].describe()["mean"] - 2105.146177305181) < 0.01, f'h_mean = {gdf["h_mean"].describe()["mean"]}'
+        assert abs(gdf["y_atc"].describe()["mean"] - 0.1547791212797165) < 0.01, f'y_atc = {gdf["y_atc"].describe()["mean"]}'
 
     def test_150_translation(self, init):
         resource = "ATL03_20221009072040_02831712_007_01.h5"
@@ -104,6 +104,6 @@ class TestSubsetting:
             "res": 20.0 }
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
-        assert len(gdf) == 26663
-        assert abs(gdf["h_mean"].describe()["mean"] - 95.01306951414814) < 0.01
-        assert abs(gdf["y_atc"].describe()["mean"] - 77.65707397460938) < 0.01
+        assert len(gdf) == 25860
+        assert abs(gdf["h_mean"].describe()["mean"] - 100.34022015114549) < 0.01, f'h_mean = {gdf["h_mean"].describe()["mean"]}'
+        assert abs(gdf["y_atc"].describe()["mean"] - 80.0853271484375) < 0.01, f'y_atc = {gdf["y_atc"].describe()["mean"]}'

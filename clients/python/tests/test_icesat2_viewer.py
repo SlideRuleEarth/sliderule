@@ -21,8 +21,8 @@ def assert_gdf(gdf):
     assert min(gdf["rgt"]) == 315
     assert min(gdf["segment_id"]) == 1453625
     assert max(gdf["segment_id"]) == 1455074
-    assert min(gdf["segment_ph_cnt"]) == 53
-    assert max(gdf["segment_ph_cnt"]) == 312
+    assert min(gdf["segment_ph_cnt"]) == 54
+    assert max(gdf["segment_ph_cnt"]) == 309
     assert min(gdf["spot"]) == 5
     assert max(gdf["spot"]) == 6
 

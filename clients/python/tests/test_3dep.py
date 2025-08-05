@@ -103,13 +103,13 @@ class Test3DEP_10meter:
 
         gdf = icesat2.atl06p(parms)
         assert init
-        assert len(gdf) == 1073
-        assert gdf["3dep.slope"].describe()["count"] == 1073
-        assert gdf["3dep.aspect"].describe()["count"] == 1073
-        assert gdf["3dep.count"].describe()["count"] == 1073
+        assert len(gdf) == 1047
+        assert gdf["3dep.slope"].describe()["count"] == 1047
+        assert gdf["3dep.aspect"].describe()["count"] == 1047
+        assert gdf["3dep.count"].describe()["count"] == 1047
 
         assert gdf["3dep.count"].iloc[0] == 9
-        assert abs(gdf["3dep.slope"].iloc[0]  - 5.615220456398121) < sigma
-        assert abs(gdf["3dep.aspect"].iloc[0] - 68.08075892919926) < sigma
+        assert abs(gdf["3dep.slope"].iloc[0]  - 5.916130247703099) < sigma, f'slope = {gdf["3dep.slope"].iloc[0]}'
+        assert abs(gdf["3dep.aspect"].iloc[0] - 94.73778788249915) < sigma, f'aspect = {gdf["3dep.aspect"].iloc[0]}'
         # print(gdf[["3dep.slope", "3dep.aspect", "3dep.count"]])
 

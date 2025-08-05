@@ -26,4 +26,4 @@ class TestGeoJson:
             assert init
             assert gdf["rgt"].unique()[0] == 295
             assert gdf["cycle"].unique()[0] == 1
-            assert len(gdf) == 21006
+            assert len(gdf) == 21090

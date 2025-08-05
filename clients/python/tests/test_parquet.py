@@ -33,12 +33,12 @@ class TestParquet:
         metadata_dict = json.loads(recordinfo_metadata)
         os.remove("testfile1.parquet")
         assert init
-        assert len(gdf) == 957
+        assert len(gdf) == 965
         assert len(gdf.keys()) == 17, f'{list(gdf.keys())}'
         assert gdf["rgt"].iloc[0] == 1160
         assert gdf["cycle"].iloc[0] == 2
-        assert gdf['segment_id'].describe()["min"] == 405231
-        assert gdf['segment_id'].describe()["max"] == 405902
+        assert gdf['segment_id'].describe()["min"] == 405229
+        assert gdf['segment_id'].describe()["max"] == 405901
         assert metadata_dict["time"] == "time", f'invalid time column: {metadata_dict["time"]}'
         assert metadata_dict["x"] == "longitude", f'invalid x column: {metadata_dict["x"]}'
         assert metadata_dict["y"] == "latitude", f'invalid y column: {metadata_dict["y"]}'
@@ -58,12 +58,12 @@ class TestParquet:
         gdf = icesat2.atl06p(parms, resources=[resource])
         os.remove("testfile2.parquet")
         assert init
-        assert len(gdf) == 957
+        assert len(gdf) == 965
         assert len(gdf.keys()) == 18, f'{list(gdf.keys())}'
         assert gdf["rgt"].iloc[0] == 1160
         assert gdf["cycle"].iloc[0] == 2
-        assert gdf['segment_id'].describe()["min"] == 405231
-        assert gdf['segment_id'].describe()["max"] == 405902
+        assert gdf['segment_id'].describe()["min"] == 405229
+        assert gdf['segment_id'].describe()["max"] == 405901
 
     def test_atl06s(self, init):
         resource = "ATL06_20190314093716_11600203_007_01.h5"
@@ -106,12 +106,12 @@ class TestParquet:
         gdf = icesat2.atl03sp(parms, resources=[resource])
         os.remove("testfile4.parquet")
         assert init
-        assert len(gdf) == 190491
+        assert len(gdf) == 189149
         assert len(gdf.keys()) == 22
         assert gdf["rgt"].iloc[0] == 1160
         assert gdf["cycle"].iloc[0] == 2
-        assert gdf['segment_id'].describe()["min"] == 405231
-        assert gdf['segment_id'].describe()["max"] == 405902
+        assert gdf['segment_id'].describe()["min"] == 405229
+        assert gdf['segment_id'].describe()["max"] == 405901
 
     def test_atl03v(self, init):
         resource = "ATL03_20190314093716_11600203_007_01.h5"
@@ -146,7 +146,7 @@ class TestParquet:
         gdf = icesat2.atl06p(parms, resources=[resource])
         os.remove("testfile6.parquet")
         assert init
-        assert len(gdf) == 265
+        assert len(gdf) == 261
 
         # NOTE: Since version 4.6.2, the assertions below fail when running in release mode.
         # Previously (before v4.6.2), the expected values worked in both debug and release modes:
@@ -209,7 +209,7 @@ class TestParquet:
         gdf = icesat2.atl03sp(parms, resources=[resource])
         os.remove("testfile7.parquet")
         assert init
-        assert len(gdf) == 20642
+        assert len(gdf) == 20735
         assert gdf.index.values.min() == numpy.datetime64('2018-10-17T22:31:17.349347328')
         assert gdf.index.values.max() == numpy.datetime64('2018-10-17T22:31:19.582347520')
 
@@ -299,9 +299,9 @@ class TestParquet:
 
         # checks
         assert init
-        assert len(gdf_from_parquet) == 957
+        assert len(gdf_from_parquet) == 965
         assert len(gdf_from_parquet.keys()) == 18, f'keys are {list(gdf_from_parquet.keys())}'
-        assert len(gdf_from_csv) == 957
+        assert len(gdf_from_csv) == 965
         assert len(gdf_from_csv.keys()) == 19, f'keys are {list(gdf_from_csv.keys())}' # time column counts as a key
         columns_to_check = ["dh_fit_dx","n_fit_photons","longitude"]
         for column in columns_to_check:
@@ -343,9 +343,9 @@ class TestParquet:
 
         # checks
         assert init
-        assert len(gdf_from_parquet) == 957
+        assert len(gdf_from_parquet) == 965
         assert len(gdf_from_parquet.keys()) == 18, f'parquet keys are {list(gdf_from_parquet.keys())}'
-        assert len(gdf_from_feather) == 957
+        assert len(gdf_from_feather) == 965
         assert len(gdf_from_feather.keys()) == 19, f'fetaher keys are {list(gdf_from_feather.keys())}' # parquet treats time as an index, where feather treats time as a regular column
         columns_to_check = ["dh_fit_dx","n_fit_photons","longitude"]
         for column in columns_to_check:

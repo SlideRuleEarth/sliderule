@@ -96,13 +96,13 @@ class TestMosaic:
                   "samples": {"mosaic": {"asset": "arcticdem-mosaic"}} }
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
-        assert len(gdf) == 957
+        assert len(gdf) == 965
         assert len(gdf.keys()) == 20
         assert gdf["rgt"].iloc[0] == 1160
         assert gdf["cycle"].iloc[0] == 2
-        assert gdf['segment_id'].describe()["min"] == 405231
-        assert gdf['segment_id'].describe()["max"] == 405902
-        assert abs(gdf["mosaic.value"].describe()["min"] - 600.4140625) < sigma
+        assert gdf['segment_id'].describe()["min"] == 405229
+        assert gdf['segment_id'].describe()["max"] == 405901
+        assert abs(gdf["mosaic.value"].describe()["min"] - 575.7265625) < sigma, gdf["mosaic.value"].describe()["min"]
 
     def test_zonal_stats(self, init):
         resource = "ATL03_20190314093716_11600203_007_01.h5"
@@ -118,15 +118,15 @@ class TestMosaic:
                   "samples": {"mosaic": {"asset": "arcticdem-mosaic", "radius": 10, "zonal_stats": True}} }
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
-        assert len(gdf) == 957
+        assert len(gdf) == 965
         assert len(gdf.keys()) == 27
         assert gdf["rgt"].iloc[0] == 1160
         assert gdf["cycle"].iloc[0] == 2
-        assert gdf['segment_id'].describe()["min"] == 405231
-        assert gdf['segment_id'].describe()["max"] == 405902
-        assert abs(gdf["mosaic.value"].describe()["min"] - 600.4140625) < sigma
+        assert gdf['segment_id'].describe()["min"] == 405229
+        assert gdf['segment_id'].describe()["max"] == 405901
+        assert abs(gdf["mosaic.value"].describe()["min"] - 575.7265625) < sigma, gdf["mosaic.value"].describe()["min"]
         assert gdf["mosaic.count"].describe()["max"] == 81
-        assert gdf["mosaic.stdev"].describe()["count"] == 957
+        assert gdf["mosaic.stdev"].describe()["count"] == 965
         assert gdf["mosaic.time"].iloc[0] == vrtFileTime
 
     def test_slope_aspect(self, init):
@@ -143,21 +143,19 @@ class TestMosaic:
                   "samples": {"mosaic": {"asset": "arcticdem-mosaic", "slope_aspect": True, "slope_scale_length": 40}} }
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
-        assert len(gdf) == 957
+        assert len(gdf) == 965
         assert len(gdf.keys()) == 23
         assert gdf["rgt"].iloc[0] == 1160
         assert gdf["cycle"].iloc[0] == 2
-        assert gdf['segment_id'].describe()["min"] == 405231
-        assert gdf['segment_id'].describe()["max"] == 405902
-        assert abs(gdf["mosaic.value"].describe()["min"] - 600.4140625) < sigma
-        assert gdf["mosaic.slope"].describe()["count"] == 957
-        assert gdf["mosaic.aspect"].describe()["count"] == 957
+        assert gdf['segment_id'].describe()["min"] == 405229
+        assert gdf['segment_id'].describe()["max"] == 405901
+        assert abs(gdf["mosaic.value"].describe()["min"] - 575.7265625) < sigma, gdf["mosaic.value"].describe()["min"]
+        assert gdf["mosaic.slope"].describe()["count"] == 965
+        assert gdf["mosaic.aspect"].describe()["count"] == 965
         assert gdf["mosaic.time"].iloc[0] == vrtFileTime
-
         assert gdf["mosaic.count"].iloc[0] == 441
-        assert abs(gdf["mosaic.slope"].iloc[0]  - 17.764184149536096) < sigma
-        assert abs(gdf["mosaic.aspect"].iloc[0] - 266.8953482375976) < sigma
-        # print(gdf[["mosaic.slope", "mosaic.aspect", "mosaic.count"]])
+        assert abs(gdf["mosaic.slope"].iloc[0]  - 28.91345377886832) < sigma, f'slope = {gdf["mosaic.slope"].iloc[0]}'
+        assert abs(gdf["mosaic.aspect"].iloc[0] - 284.7521782959533) < sigma, f'aspect = {gdf["mosaic.aspect"].iloc[0]}'
 
     def test_slope_aspect_and_zonal_stats(self, init):
         resource = "ATL03_20190314093716_11600203_007_01.h5"
@@ -173,7 +171,7 @@ class TestMosaic:
                   "samples": {"mosaic": {"asset": "arcticdem-mosaic", "zonal_stats": True, "radius": 100, "slope_aspect": True}} }
         gdf = icesat2.atl06p(parms, resources=[resource])
         assert init
-        assert len(gdf) == 957
+        assert len(gdf) == 965
         assert len(gdf.keys()) == 27
         # The legacy streaming sampling code does not support zonal stats and slope/aspect together, if both are requested only zonal stats is returned
         assert 'mosaic.stdev' in gdf.columns

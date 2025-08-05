@@ -17,7 +17,7 @@ class Test3dCRS:
         assert init
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["h_mean"]) == 622419
+        assert len(gdf["h_mean"]) == 622281
 
     def test_atl03sp(self, init):
         resource = "ATL03_20181019065445_03150111_007_01.h5"
@@ -42,7 +42,7 @@ class Test3dCRS:
         assert init
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["height"]) == 488690
+        assert len(gdf["height"]) == 368348
 
     def test_atl08p(self, init):
         resource = "ATL03_20181213075606_11560106_007_01.h5"

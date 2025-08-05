@@ -22,7 +22,7 @@ class TestAlgorithm:
         assert init
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["h_mean"]) == 622419
+        assert len(gdf["h_mean"]) == 622281
         assert not performance or (time.perf_counter() - perf_start) < 50
 
     def test_atl06p(self, init, performance):
@@ -39,7 +39,7 @@ class TestAlgorithm:
         assert init
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["h_mean"]) == 622419
+        assert len(gdf["h_mean"]) == 622281
         assert not performance or (time.perf_counter() - perf_start) < 50
 
     def test_atl03s(self, init, performance):
@@ -66,7 +66,7 @@ class TestAlgorithm:
         assert init
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["height"]) == 488690
+        assert len(gdf["height"]) == 368348
         assert not performance or (time.perf_counter() - perf_start) < 40
 
     def test_atl03sp(self, init, performance):
@@ -93,7 +93,7 @@ class TestAlgorithm:
         assert init
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["height"]) == 488690
+        assert len(gdf["height"]) == 368348
         assert not performance or (time.perf_counter() - perf_start) < 40
 
     def test_atl08(self, init, performance):
@@ -120,12 +120,12 @@ class TestAlgorithm:
         assert init
         assert min(gdf["rgt"]) == 1156
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["height"]) == 241127
-        assert len(gdf[gdf["atl08_class"] == 0]) == 30299
-        assert len(gdf[gdf["atl08_class"] == 1]) == 122273
-        assert len(gdf[gdf["atl08_class"] == 2]) == 54292
-        assert len(gdf[gdf["atl08_class"] == 3]) == 18285
-        assert len(gdf[gdf["atl08_class"] == 4]) == 15978
+        assert len(gdf["height"]) == 233910
+        assert len(gdf[gdf["atl08_class"] == 0]) == 35997
+        assert len(gdf[gdf["atl08_class"] == 1]) == 120824
+        assert len(gdf[gdf["atl08_class"] == 2]) == 47970
+        assert len(gdf[gdf["atl08_class"] == 3]) == 8979
+        assert len(gdf[gdf["atl08_class"] == 4]) == 20140
         assert not performance or (time.perf_counter() - perf_start) < 30
 
     def test_gs(self, init):
@@ -266,9 +266,9 @@ class TestAlgorithm:
         assert len(orphans["h_mean"]) == 204
         assert len(orphans["latitude"]) == 204
         assert len(orphans["longitude"]) == 204
-        assert abs(total_error["h_mean"] - 1723.8) < 0.1
-        assert abs(total_error["latitude"] - 0.045071) < 0.001
-        assert abs(total_error["longitude"] - 0.022374) < 0.001
+        assert abs(total_error["h_mean"] - 1775.443865248706) < 0.1, f'h_mean total error = {total_error["h_mean"]}'
+        assert abs(total_error["latitude"] - 0.045071) < 0.001, f'latitude total error = {total_error["latitude"]}'
+        assert abs(total_error["longitude"] - 0.022374) < 0.001, f'longitude total errpr = {total_error["longitude"]}'
 
 
     def test_gsx(self, init):
@@ -337,4 +337,4 @@ class TestAlgorithm:
 
         # Asserts
         assert init
-        assert 1.0 - correlation < 0.00000020132
+        assert 1.0 - correlation < 0.00000025

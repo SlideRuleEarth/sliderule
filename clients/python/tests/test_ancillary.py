@@ -32,8 +32,8 @@ class TestIcesat2:
         }
         gdf = icesat2.atl03s(parms, "ATL03_20181017222812_02950102_007_01.h5")
         assert init
-        assert sum(gdf["ph_id_count"]) == 626032
-        assert len(gdf["ph_id_count"]) == 403462
+        assert sum(gdf["ph_id_count"]) == 625394
+        assert len(gdf["ph_id_count"]) == 402985
 
     def test_atl06(self, init):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))

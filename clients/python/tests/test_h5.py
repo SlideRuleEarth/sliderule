@@ -29,7 +29,7 @@ class TestApi:
     def test_variable_length(self, init):
         v = h5coro.h5("/gt1r/geolocation/segment_ph_cnt", ATL03_FILE1, "icesat2")
         assert init
-        assert v[0] == 258 and v[1] == 256 and v[2] == 273
+        assert v[0] == 234 and v[1] == 263 and v[2] == 282
 
     def test_invalid_file(self, init):
         v = h5coro.h5("/gt1r/geolocation/segment_ph_cnt", INVALID_FILE, "icesat2")
