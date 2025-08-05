@@ -9,7 +9,7 @@ import time
 
 class TestAlgorithm:
     def test_atl06(self, init, performance):
-        resource = "ATL03_20181019065445_03150111_005_01.h5"
+        resource = "ATL03_20181019065445_03150111_007_01.h5"
         parms = { "cnf": "atl03_high",
                   "srt": 3,
                   "ats": 20.0,
@@ -22,11 +22,11 @@ class TestAlgorithm:
         assert init
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["h_mean"]) == 622419
+        assert len(gdf["h_mean"]) == 622281
         assert not performance or (time.perf_counter() - perf_start) < 50
 
     def test_atl06p(self, init, performance):
-        resource = "ATL03_20181019065445_03150111_005_01.h5"
+        resource = "ATL03_20181019065445_03150111_007_01.h5"
         parms = { "cnf": "atl03_high",
                   "srt": 3,
                   "ats": 20.0,
@@ -39,11 +39,11 @@ class TestAlgorithm:
         assert init
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["h_mean"]) == 622419
+        assert len(gdf["h_mean"]) == 622281
         assert not performance or (time.perf_counter() - perf_start) < 50
 
     def test_atl03s(self, init, performance):
-        resource = "ATL03_20181019065445_03150111_005_01.h5"
+        resource = "ATL03_20181019065445_03150111_007_01.h5"
         region = [ { "lat": -80.75, "lon": -70.00 },
                    { "lat": -81.00, "lon": -70.00 },
                    { "lat": -81.00, "lon": -65.00 },
@@ -66,11 +66,11 @@ class TestAlgorithm:
         assert init
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["height"]) == 488690
+        assert len(gdf["height"]) == 368348
         assert not performance or (time.perf_counter() - perf_start) < 40
 
     def test_atl03sp(self, init, performance):
-        resource = "ATL03_20181019065445_03150111_005_01.h5"
+        resource = "ATL03_20181019065445_03150111_007_01.h5"
         region = [ { "lat": -80.75, "lon": -70.00 },
                    { "lat": -81.00, "lon": -70.00 },
                    { "lat": -81.00, "lon": -65.00 },
@@ -93,11 +93,11 @@ class TestAlgorithm:
         assert init
         assert min(gdf["rgt"]) == 315
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["height"]) == 488690
+        assert len(gdf["height"]) == 368348
         assert not performance or (time.perf_counter() - perf_start) < 40
 
     def test_atl08(self, init, performance):
-        resource = "ATL03_20181213075606_11560106_005_01.h5"
+        resource = "ATL03_20181213075606_11560106_007_01.h5"
         track = 1
         region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
                    {"lon": -107.7677425431139, "lat": 38.90611184543033},
@@ -120,16 +120,16 @@ class TestAlgorithm:
         assert init
         assert min(gdf["rgt"]) == 1156
         assert min(gdf["cycle"]) == 1
-        assert len(gdf["height"]) == 241127
-        assert len(gdf[gdf["atl08_class"] == 0]) == 30299
-        assert len(gdf[gdf["atl08_class"] == 1]) == 122273
-        assert len(gdf[gdf["atl08_class"] == 2]) == 54292
-        assert len(gdf[gdf["atl08_class"] == 3]) == 18285
-        assert len(gdf[gdf["atl08_class"] == 4]) == 15978
+        assert len(gdf["height"]) == 233910
+        assert len(gdf[gdf["atl08_class"] == 0]) == 35997
+        assert len(gdf[gdf["atl08_class"] == 1]) == 120824
+        assert len(gdf[gdf["atl08_class"] == 2]) == 47970
+        assert len(gdf[gdf["atl08_class"] == 3]) == 8979
+        assert len(gdf[gdf["atl08_class"] == 4]) == 20140
         assert not performance or (time.perf_counter() - perf_start) < 30
 
     def test_gs(self, init):
-        resource_prefix = "20210114170723_03311012_005_01.h5"
+        resource_prefix = "20210114170723_03311012_007_01.h5"
         region = [ {"lon": 126.54560629670780, "lat": -70.28232209449946},
                    {"lon": 114.29798416287946, "lat": -70.08880029415151},
                    {"lon": 112.05139144652648, "lat": -74.18128224472123},
@@ -266,13 +266,13 @@ class TestAlgorithm:
         assert len(orphans["h_mean"]) == 204
         assert len(orphans["latitude"]) == 204
         assert len(orphans["longitude"]) == 204
-        assert abs(total_error["h_mean"] - 1723.8) < 0.1
-        assert abs(total_error["latitude"] - 0.045071) < 0.001
-        assert abs(total_error["longitude"] - 0.022374) < 0.001
+        assert abs(total_error["h_mean"] - 1775.443865248706) < 0.1, f'h_mean total error = {total_error["h_mean"]}'
+        assert abs(total_error["latitude"] - 0.045071) < 0.001, f'latitude total error = {total_error["latitude"]}'
+        assert abs(total_error["longitude"] - 0.022374) < 0.001, f'longitude total errpr = {total_error["longitude"]}'
 
 
     def test_gsx(self, init):
-        resource_suffix = "20210114170723_03311012_005_01.h5"
+        resource_suffix = "20210114170723_03311012_007_01.h5"
         region = [ {"lon": 126.54560629670780, "lat": -70.28232209449946},
                    {"lon": 114.29798416287946, "lat": -70.08880029415151},
                    {"lon": 112.05139144652648, "lat": -74.18128224472123},
@@ -337,4 +337,4 @@ class TestAlgorithm:
 
         # Asserts
         assert init
-        assert 1.0 - correlation < 0.00000020132
+        assert 1.0 - correlation < 0.00000025

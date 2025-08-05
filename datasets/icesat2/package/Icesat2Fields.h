@@ -309,7 +309,19 @@ class Icesat2Fields: public RequestFields
             QUALITY_POSSIBLE_AFTERPULSE = 1,
             QUALITY_POSSIBLE_IMPULSE_RESPONSE = 2,
             QUALITY_POSSIBLE_TEP = 3,
-            NUM_PHOTON_QUALITY = 4,
+            QUALITY_NOISE_BURST = 4,
+            QUALITY_NOISE_STREAK = 5,
+            QUALITY_TX_PART_SAT = 10,
+            QUALITY_TX_PART_SAT_AFTERPULSE = 11,
+            QUALITY_TX_PART_SAT_IR_EFFECT = 12,
+            QUALITY_TX_PART_SAT_BURST = 14,
+            QUALITY_TX_PART_SAT_STREAK = 15,
+            QUALITY_TX_FULL_SAT = 20,
+            QUALITY_TX_FULL_SAT_AFTERPULSE = 21,
+            QUALITY_TX_FULL_SAT_IR_EFFECT = 22,
+            QUALITY_TX_FULL_SAT_BURST = 24,
+            QUALITY_TX_FULL_SAT_STREAK = 25,
+            NUM_PHOTON_QUALITY = 26
         } quality_ph_t;
 
         /* Surface Types for Signal Confidence */
@@ -491,7 +503,11 @@ class Icesat2Fields: public RequestFields
         FieldElement<bool>                                  passInvalid {false};                                    // post extent even if each pair is invalid
         FieldElement<bool>                                  distInSeg {false};                                      // the extent length and step are expressed in segments, not meters
         FieldEnumeration<signal_conf_t,NUM_SIGNAL_CONF>     atl03Cnf {false, false, false, false, true, true, true}; // list of desired signal confidences of photons from atl03 classification
-        FieldEnumeration<quality_ph_t,NUM_PHOTON_QUALITY>   qualityPh {true, false, false, false};                  // list of desired photon quality levels from atl03
+        FieldEnumeration<quality_ph_t,NUM_PHOTON_QUALITY>   qualityPh { true,  false, false, false, false, false,   // list of desired photon quality levels from atl03
+                                                                        false, false, false, false, false, false,
+                                                                        false, false, false, false, false, false,
+                                                                        false, false, false, false, false, false,
+                                                                        false, false };
         FieldEnumeration<atl08_class_t,NUM_ATL08_CLASSES>   atl08Class {false, false, false, false, false};         // list of surface classifications to use (leave empty to skip)
         FieldEnumeration<spot_t, NUM_SPOTS>                 spots = {true, true, true, true, true, true};           // list of which spots (1,2,3,4,5,6)
         FieldEnumeration<gt_t,NUM_SPOTS>                    beams {true, true, true, true, true, true};             // list of which beams (gt[l|r][1|2|3])

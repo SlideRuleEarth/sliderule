@@ -48,7 +48,7 @@ __Step 3__: Specify sampling the ArcticDEM mosaic.
 
 __Step 4__: Issue the processing request to SlideRule, for only a single granule (to keep the data volume down).
 ```python
->>> resource = "ATL03_20190314093716_11600203_005_01.h5"
+>>> resource = "ATL03_20190314093716_11600203_007_01.h5"
 >>> gdf = icesat2.atl06p(parms, resources=[resource])
 ```
 When this completes (~10 seconds), the _gdf_ variable should now contain all of the results of the elevations calculated by SlideRule with a corresponding column for the "arcticdem-mosaic".  Note that the granule provided must be in the region of interest.

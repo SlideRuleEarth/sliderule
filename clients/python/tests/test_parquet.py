@@ -16,7 +16,7 @@ TESTDIR = Path(__file__).parent
 
 class TestParquet:
     def test_atl06(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -33,18 +33,18 @@ class TestParquet:
         metadata_dict = json.loads(recordinfo_metadata)
         os.remove("testfile1.parquet")
         assert init
-        assert len(gdf) == 957
+        assert len(gdf) == 965
         assert len(gdf.keys()) == 17, f'{list(gdf.keys())}'
         assert gdf["rgt"].iloc[0] == 1160
         assert gdf["cycle"].iloc[0] == 2
-        assert gdf['segment_id'].describe()["min"] == 405231
-        assert gdf['segment_id'].describe()["max"] == 405902
+        assert gdf['segment_id'].describe()["min"] == 405229
+        assert gdf['segment_id'].describe()["max"] == 405901
         assert metadata_dict["time"] == "time", f'invalid time column: {metadata_dict["time"]}'
         assert metadata_dict["x"] == "longitude", f'invalid x column: {metadata_dict["x"]}'
         assert metadata_dict["y"] == "latitude", f'invalid y column: {metadata_dict["y"]}'
 
     def test_atl06_non_geo(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -58,15 +58,15 @@ class TestParquet:
         gdf = icesat2.atl06p(parms, resources=[resource])
         os.remove("testfile2.parquet")
         assert init
-        assert len(gdf) == 957
+        assert len(gdf) == 965
         assert len(gdf.keys()) == 18, f'{list(gdf.keys())}'
         assert gdf["rgt"].iloc[0] == 1160
         assert gdf["cycle"].iloc[0] == 2
-        assert gdf['segment_id'].describe()["min"] == 405231
-        assert gdf['segment_id'].describe()["max"] == 405902
+        assert gdf['segment_id'].describe()["min"] == 405229
+        assert gdf['segment_id'].describe()["max"] == 405901
 
     def test_atl06s(self, init):
-        resource = "ATL06_20190314093716_11600203_005_01.h5"
+        resource = "ATL06_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -92,7 +92,7 @@ class TestParquet:
         assert metadata_dict["y"] == "latitude", f'invalid y column: {metadata_dict["y"]}'
 
     def test_atl03(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -106,15 +106,15 @@ class TestParquet:
         gdf = icesat2.atl03sp(parms, resources=[resource])
         os.remove("testfile4.parquet")
         assert init
-        assert len(gdf) == 190491
+        assert len(gdf) == 189149
         assert len(gdf.keys()) == 22
         assert gdf["rgt"].iloc[0] == 1160
         assert gdf["cycle"].iloc[0] == 2
-        assert gdf['segment_id'].describe()["min"] == 405231
-        assert gdf['segment_id'].describe()["max"] == 405902
+        assert gdf['segment_id'].describe()["min"] == 405229
+        assert gdf['segment_id'].describe()["max"] == 405901
 
     def test_atl03v(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -132,7 +132,7 @@ class TestParquet:
         assert init
 
     def test_atl06_index(self, init):
-        resource = "ATL03_20181017222812_02950102_005_01.h5"
+        resource = "ATL03_20181017222812_02950102_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
@@ -146,7 +146,7 @@ class TestParquet:
         gdf = icesat2.atl06p(parms, resources=[resource])
         os.remove("testfile6.parquet")
         assert init
-        assert len(gdf) == 265
+        assert len(gdf) == 261
 
         # NOTE: Since version 4.6.2, the assertions below fail when running in release mode.
         # Previously (before v4.6.2), the expected values worked in both debug and release modes:
@@ -195,7 +195,7 @@ class TestParquet:
 
 
     def test_atl03_index(self, init):
-        resource = "ATL03_20181017222812_02950102_005_01.h5"
+        resource = "ATL03_20181017222812_02950102_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region["poly"],
@@ -209,7 +209,7 @@ class TestParquet:
         gdf = icesat2.atl03sp(parms, resources=[resource])
         os.remove("testfile7.parquet")
         assert init
-        assert len(gdf) == 20642
+        assert len(gdf) == 20735
         assert gdf.index.values.min() == numpy.datetime64('2018-10-17T22:31:17.349347328')
         assert gdf.index.values.max() == numpy.datetime64('2018-10-17T22:31:19.582347520')
 
@@ -268,7 +268,7 @@ class TestParquet:
             assert num_mismatches == 0, f'there were mismatches in {anc_field}'
 
     def test_atl06_csv(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -299,9 +299,9 @@ class TestParquet:
 
         # checks
         assert init
-        assert len(gdf_from_parquet) == 957
+        assert len(gdf_from_parquet) == 965
         assert len(gdf_from_parquet.keys()) == 18, f'keys are {list(gdf_from_parquet.keys())}'
-        assert len(gdf_from_csv) == 957
+        assert len(gdf_from_csv) == 965
         assert len(gdf_from_csv.keys()) == 19, f'keys are {list(gdf_from_csv.keys())}' # time column counts as a key
         columns_to_check = ["dh_fit_dx","n_fit_photons","longitude"]
         for column in columns_to_check:
@@ -311,7 +311,7 @@ class TestParquet:
                 assert abs(parquet_val - csv_val) < 0.0001, f'mismatch in column <{column}>: {parquet_val} != {csv_val}'
 
     def test_atl06_feather(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = { "poly": region['poly'],
                   "cnf": "atl03_high",
@@ -343,9 +343,9 @@ class TestParquet:
 
         # checks
         assert init
-        assert len(gdf_from_parquet) == 957
+        assert len(gdf_from_parquet) == 965
         assert len(gdf_from_parquet.keys()) == 18, f'parquet keys are {list(gdf_from_parquet.keys())}'
-        assert len(gdf_from_feather) == 957
+        assert len(gdf_from_feather) == 965
         assert len(gdf_from_feather.keys()) == 19, f'fetaher keys are {list(gdf_from_feather.keys())}' # parquet treats time as an index, where feather treats time as a regular column
         columns_to_check = ["dh_fit_dx","n_fit_photons","longitude"]
         for column in columns_to_check:

@@ -15,8 +15,8 @@ runner.authenticate({'nsidc-cloud'})
 
 print('\n------------------\nTest01: Atl03 Indexer \n------------------')
 
-local filelist = { "ATL03_20181019065445_03150111_005_01.h5",
-                   "ATL03_20200304065203_10470605_005_01.h5" }
+local filelist = { "ATL03_20181019065445_03150111_007_01.h5",
+                   "ATL03_20200304065203_10470605_007_01.h5" }
 
 -- get index filename
 local nsidc_s3 = core.getbyname("icesat2")

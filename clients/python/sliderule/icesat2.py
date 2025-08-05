@@ -146,7 +146,7 @@ def atl06p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
-                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_005_01.h5", ...])
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_007_01.h5", ...])
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
         as_numpy_array: bool
@@ -235,7 +235,7 @@ def atl06sp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fa
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
-                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_005_01.h5", ...])
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_007_01.h5", ...])
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
         as_numpy_array: bool
@@ -294,7 +294,7 @@ def atl13sp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fa
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
-                        a list of granules to process (e.g. ["ATL13_20181019065445_03150111_005_01.h5", ...])
+                        a list of granules to process (e.g. ["ATL13_20181019065445_03150111_007_01.h5", ...])
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
         as_numpy_array: bool
@@ -359,7 +359,7 @@ def atl03sp(parm, callbacks={}, resources=None, keep_id=False, height_key=None):
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
-                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_005_01.h5", ...])
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_007_01.h5", ...])
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
         height_key:     str
@@ -421,7 +421,7 @@ def atl03vp(parm, callbacks={}, resources=None, keep_id=False):
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
-                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_005_01.h5", ...])
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_007_01.h5", ...])
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
 
@@ -483,7 +483,7 @@ def atl08p(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=Fal
         callbacks:      dictionary
                         a callback function that is called for each result record
         resources:      list
-                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_005_01.h5", ...])
+                        a list of granules to process (e.g. ["ATL03_20181019065445_03150111_007_01.h5", ...])
         keep_id:        bool
                         whether to retain the "extent_id" column in the GeoDataFrame for future merges
         as_numpy_array: bool

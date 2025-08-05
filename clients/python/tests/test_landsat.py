@@ -76,7 +76,7 @@ class TestHLS:
 
     def test_ndvi(self, init):
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
-        resource = "ATL03_20181017222812_02950102_005_01.h5"
+        resource = "ATL03_20181017222812_02950102_007_01.h5"
         parms = { "poly": region['poly'],
                   "srt": icesat2.SRT_LAND,
                   "cnf": icesat2.CNF_SURFACE_HIGH,

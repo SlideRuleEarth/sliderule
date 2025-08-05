@@ -113,7 +113,7 @@ __Step 3__: Add ancillary fields to the request.
 
 __Step 4__: Issue the processing request to SlideRule.
 ```python
->>> gdf = icesat2.atl03sp(parms, resources=['ATL03_20181017222812_02950102_005_01.h5'])
+>>> gdf = icesat2.atl03sp(parms, resources=['ATL03_20181017222812_02950102_007_01.h5'])
 ```
 When this completes (~45 seconds), the _gdf_ variable should now contain all of the results of the photons read by SlideRule with corresponding columns for the "ph_id_channel", "ref_azimuth". and "ref_elev" fields.
 

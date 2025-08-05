@@ -3,7 +3,7 @@
 import pytest
 from sliderule import h5
 
-ATL06_FILE1 = "ATL06_20181019065445_03150111_005_01.h5"
+ATL06_FILE1 = "ATL06_20181019065445_03150111_007_01.h5"
 
 class TestApi:
     def test_happy_case(self, init):

@@ -13,6 +13,7 @@ RUN dnf update \
   sqlite-devel \
   curl-devel \
   python-devel \
+  libzstd-devel \
   jq \
   meson \
   llvm \
