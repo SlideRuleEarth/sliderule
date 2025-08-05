@@ -53,12 +53,14 @@ jobs:
           curl -L "https://extensions.duckdb.org/v${EXT}/${PLATFORM}/spatial.duckdb_extension.gz" \
             | gunzip -c > "${EXT_DIR}/spatial.duckdb_extension"
 
-      - name: Download MaxMind GeoLite2-Country.mmdb
+      - name: Download MaxMind GeoLite2 databases
         shell: bash -l {0}
         run: |
           sudo mkdir -p /data
           sudo chmod 777 /data
           curl -L -o /data/GeoLite2-Country.mmdb "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-Country.mmdb"
+          curl -L -o /data/GeoLite2-City.mmdb "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb"
+          curl -L -o data/GeoLite2-ASN.mmdb "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-ASN.mmdb"
 
       - name: Initialize manager database
         shell: bash -l {0}
