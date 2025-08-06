@@ -19,17 +19,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Cache conda environment
-        uses: actions/cache@v4
-        env:
-          CACHE_NUMBER: 1
-        with:
-          path: ~/conda_pkgs_dir
-          key: >
-            ${{ format('{0}-conda-{1}-{2}',
-              runner.os,
-              env.CACHE_NUMBER,
-              hashFiles('targets/slideruleearth-aws/docker/manager/environment.yml')) }}
+      # - name: Cache conda environment
+      #   uses: actions/cache@v4
+      #   env:
+      #     CACHE_NUMBER: 1
+      #   with:
+      #     path: ~/conda_pkgs_dir
+      #     key: >
+      #       ${{ format('{0}-conda-{1}-{2}',
+      #         runner.os,
+      #         env.CACHE_NUMBER,
+      #         hashFiles('targets/slideruleearth-aws/docker/manager/environment.yml')) }}
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
@@ -39,13 +39,6 @@ jobs:
           activate-environment: manager
           environment-file: targets/slideruleearth-aws/docker/manager/environment.yml
           use-only-tar-bz2: false
-
-      # - name: Install maxminddb and requests (not available via conda when on CI)
-      #   # `geoip2` depends on `maxminddb` and `requests`, but both are pip-only dependencies.
-      #   # When `geoip2` is installed via conda (especially in CI), these pip dependencies are not automatically resolved.
-      #   shell: bash -l {0}
-      #   run: |
-      #     pip install maxminddb requests
 
       - name: Download and install DuckDB spatial extension
         shell: bash -l {0}
