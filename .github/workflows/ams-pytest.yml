@@ -29,9 +29,13 @@ jobs:
           echo "::group::ID Token Claims"
           token_response=$(curl -sH "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL")
           id_token=$(echo "$token_response" | jq -r '.value')
-          # Decode JWT payload (middle part of the token)
-          payload=$(echo "$id_token" | cut -d '.' -f2 | base64 -d 2>/dev/null | jq)
-          echo "$payload"
+
+          # Extract payload part and add missing padding
+          payload_b64=$(echo "$id_token" | cut -d '.' -f2)
+          padded=$(echo "$payload_b64" | awk '{ l=length($0)%4; if (l==2) print $0"=="; else if (l==3) print $0"="; else print $0; }')
+
+          # Decode and print
+          echo "$padded" | base64 -d | jq
           echo "::endgroup::"
 
       - name: Configure AWS Credentials
