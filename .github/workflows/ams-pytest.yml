@@ -23,26 +23,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Debug GitHub OIDC token claims
-        shell: bash
-        run: |
-          echo "::group::ID Token Claims"
-          token_response=$(curl -sH "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL")
-          id_token=$(echo "$token_response" | jq -r '.value')
-
-          # Extract payload part and add missing padding
-          payload_b64=$(echo "$id_token" | cut -d '.' -f2)
-          padded=$(echo "$payload_b64" | awk '{ l=length($0)%4; if (l==2) print $0"=="; else if (l==3) print $0"="; else print $0; }')
-
-          # Decode and print
-          echo "$padded" | base64 -d | jq
-          echo "::endgroup::"
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::742127912612:role/GitHubAction-AssumeRoleWithAction
           aws-region: us-east-1
+          audience: sts.amazonaws.com
 
       - name: Cache conda environment
         uses: actions/cache@v4
