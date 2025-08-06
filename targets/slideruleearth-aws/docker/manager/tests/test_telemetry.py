@@ -201,5 +201,4 @@ def test_geo(client):
     data = json.loads(response.data.decode("utf-8"))
     assert response.status_code == 200
     assert len(data) == 1
-    # GeoLite2 may return varying nearby city names (Catonsville or Pikesville) due to database version or IP metadata changes.
-    assert data[0]['source_ip_location'] in ["United States, Catonsville", "United States, Pikesville"]
+    assert data[0]['source_ip_location'] == "United States, Catonsville"

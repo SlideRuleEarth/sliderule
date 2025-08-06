@@ -12,12 +12,32 @@ jobs:
   test:
     name: manager-test
     runs-on: ubuntu-latest
+    # These permissions are needed to interact with GitHub's OIDC Token endpoint.
+    permissions:
+      id-token: write
+      contents: read
     env:
       DUCKDB_ALREADY_INSTALLED: "1"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::742127912612:role/GitHubAction-S3ReadAssets
+          aws-region: us-east-1
+          audience: sts.amazonaws.com
+
+      - name: Download MaxMind GeoLite2 databases
+        shell: bash -l {0}
+        run: |
+          sudo mkdir -p /data
+          sudo chmod 777 /data
+          aws s3 cp s3://sliderule/config/GeoLite2-Country.mmdb /data/GeoLite2-Country.mmdb --no-progress
+          aws s3 cp s3://sliderule/config/GeoLite2-City.mmdb /data/GeoLite2-City.mmdb --no-progress
+          aws s3 cp s3://sliderule/config/GeoLite2-ASN.mmdb /data/GeoLite2-ASN.mmdb --no-progress
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
@@ -39,15 +59,6 @@ jobs:
 
           curl -L "https://extensions.duckdb.org/v${EXT}/${PLATFORM}/spatial.duckdb_extension.gz" \
             | gunzip -c > "${EXT_DIR}/spatial.duckdb_extension"
-
-      - name: Download MaxMind GeoLite2 databases
-        shell: bash -l {0}
-        run: |
-          sudo mkdir -p /data
-          sudo chmod 777 /data
-          curl -L -o /data/GeoLite2-Country.mmdb "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-Country.mmdb"
-          curl -L -o /data/GeoLite2-City.mmdb "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb"
-          curl -L -o /data/GeoLite2-ASN.mmdb "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-ASN.mmdb"
 
       - name: Initialize manager database
         shell: bash -l {0}
