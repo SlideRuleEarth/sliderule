@@ -23,10 +23,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Decode GitHub OIDC token
+      - name: Debug GitHub OIDC token claims
+        shell: bash
         run: |
           echo "::group::ID Token Claims"
-          curl -sH "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq
+          token_response=$(curl -sH "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL")
+          id_token=$(echo "$token_response" | jq -r '.value')
+          # Decode JWT payload (middle part of the token)
+          payload=$(echo "$id_token" | cut -d '.' -f2 | base64 -d 2>/dev/null | jq)
+          echo "$payload"
           echo "::endgroup::"
 
       - name: Configure AWS Credentials
