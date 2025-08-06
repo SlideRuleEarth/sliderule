@@ -7,10 +7,10 @@ dependencies:
   - flask
   - python-duckdb>=0.9.2
   - geoip2
-  - maxminddb
+#  - maxminddb
   - gunicorn
   - boto3
   - pytest
   - coverage
-  - requests
+#  - requests
   - pip

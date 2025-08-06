@@ -22,7 +22,7 @@ jobs:
       - name: Cache conda environment
         uses: actions/cache@v4
         env:
-          CACHE_NUMBER: 2
+          CACHE_NUMBER: 3
         with:
           path: ~/conda_pkgs_dir
           key: >
