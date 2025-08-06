@@ -23,6 +23,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::742127912612:role/GitHubAction-AssumeRoleWithAction
+          aws-region: us-east-1
+
       - name: Cache conda environment
         uses: actions/cache@v4
         env:
@@ -43,12 +49,6 @@ jobs:
           activate-environment: ams
           environment-file: targets/slideruleearth-aws/docker/asset-metadata-service/environment.yml
           use-only-tar-bz2: true
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: arn:aws:iam::742127912612:role/GitHubAction-AssumeRoleWithAction
-          aws-region: us-east-1
 
       - name: Download ATL13 config files from S3
         shell: bash -l {0}
