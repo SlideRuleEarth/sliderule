@@ -69,12 +69,8 @@ def init_db_command():
 def init_app(app):
     db = duckdb.connect(app.config['DATABASE'])
 
-    # Use LOAD instead of INSTALL in CI
-    if os.getenv('DUCKDB_LOAD_ONLY') == '1':
-        db.execute("LOAD spatial;")
-    else:
+    if os.getenv('DUCKDB_ALREADY_INSTALLED') != "1":
         db.execute("INSTALL spatial;")
-        db.execute("LOAD spatial;")
 
     db.close()
     app.teardown_appcontext(close_db)

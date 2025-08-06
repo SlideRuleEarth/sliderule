@@ -13,7 +13,7 @@ jobs:
     name: manager-test
     runs-on: ubuntu-latest
     env:
-      DUCKDB_LOAD_ONLY: "1"
+      DUCKDB_ALREADY_INSTALLED: "1"
 
     steps:
       - name: Checkout
