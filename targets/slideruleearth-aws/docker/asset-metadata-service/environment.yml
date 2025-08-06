@@ -2,9 +2,10 @@
 name: ams
 channels:
   - conda-forge
+  - defaults
 dependencies:
   - flask
-  - python-duckdb
+  - python-duckdb>=0.9.2
   - gunicorn
   - pandas
   - pytest
