@@ -40,6 +40,14 @@ jobs:
           environment-file: targets/slideruleearth-aws/docker/asset-metadata-service/environment.yml
           use-only-tar-bz2: true
 
+      - name: Download ATL13 config files from S3
+        shell: bash -l {0}
+        run: |
+          sudo mkdir -p /data/ATL13
+          sudo chmod -R 777 /data/ATL13
+          aws s3 cp s3://sliderule/config/inland_water_body.db /data/ATL13/inland_water_body.db
+          aws s3 cp s3://sliderule/config/atl13_mappings.json /data/ATL13/atl13_mappings.json
+
       - name: Run AMS tests with coverage
         shell: bash -l {0}
         working-directory: targets/slideruleearth-aws/docker/asset-metadata-service
