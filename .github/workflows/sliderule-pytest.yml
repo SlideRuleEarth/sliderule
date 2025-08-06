@@ -28,7 +28,6 @@ jobs:
           auto-activate-base: false
           activate-environment: sliderule-ci
           environment-file: clients/python/ci/environment-${{ matrix.CONDA_ENV }}.yml
-          use-only-tar-bz2: false
 
       - name: Install sliderule from current commit
         shell: bash -l {0}

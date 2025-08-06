@@ -46,7 +46,6 @@ jobs:
           auto-activate-base: false
           activate-environment: manager
           environment-file: targets/slideruleearth-aws/docker/manager/environment.yml
-          use-only-tar-bz2: false
 
       - name: Download and install DuckDB spatial extension
         shell: bash -l {0}
