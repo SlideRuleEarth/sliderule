@@ -36,7 +36,7 @@ jobs:
         with:
           auto-update-conda: true
           auto-activate-base: false
-          activate-environment: manager
+          activate-environment: ams
           environment-file: targets/slideruleearth-aws/docker/asset-metadata-service/environment.yml
           use-only-tar-bz2: true
 
