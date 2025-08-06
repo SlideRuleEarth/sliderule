@@ -19,17 +19,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Cache conda environment
-        uses: actions/cache@v4
-        env:
-          CACHE_NUMBER: 3
-        with:
-          path: ~/conda_pkgs_dir
-          key: >
-            ${{ format('{0}-conda-{1}-{2}',
-              runner.os,
-              env.CACHE_NUMBER,
-              hashFiles('targets/slideruleearth-aws/docker/manager/environment.yml')) }}
+      # - name: Cache conda environment
+      #   uses: actions/cache@v4
+      #   env:
+      #     CACHE_NUMBER: 3
+      #   with:
+      #     path: ~/conda_pkgs_dir
+      #     key: >
+      #       ${{ format('{0}-conda-{1}-{2}',
+      #         runner.os,
+      #         env.CACHE_NUMBER,
+      #         hashFiles('targets/slideruleearth-aws/docker/manager/environment.yml')) }}
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
