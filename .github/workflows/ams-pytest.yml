@@ -12,6 +12,10 @@ jobs:
   test:
     name: ams-test
     runs-on: ubuntu-latest
+    # These permissions are needed to interact with GitHub's OIDC Token endpoint.
+    permissions:
+      id-token: write
+      contents: read
     env:
       DUCKDB_LOAD_ONLY: "1"
 
