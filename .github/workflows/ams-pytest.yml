@@ -3,6 +3,8 @@ name: Asset Metadata Service (AMS) Python Tests
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
   schedule:
     - cron: '0 22 * * 5' # Every Sunday at 10 pm
 
@@ -22,7 +24,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: arn:aws:iam::742127912612:role/GitHubAction-AssumeRoleWithAction
+          role-to-assume: arn:aws:iam::742127912612:role/GitHubAction-S3ReadAssets
           aws-region: us-east-1
           audience: sts.amazonaws.com
 
@@ -33,18 +35,6 @@ jobs:
           sudo chmod -R 777 /data/ATL13
           aws s3 cp s3://sliderule/config/atl13_mappings.json /data/ATL13/atl13_mappings.json --no-progress
           aws s3 cp s3://sliderule/config/inland_water_body.db /data/ATL13/inland_water_body.db  --no-progress
-
-      - name: Cache conda environment
-        uses: actions/cache@v4
-        env:
-          CACHE_NUMBER: 1
-        with:
-          path: ~/conda_pkgs_dir
-          key: >
-            ${{ format('{0}-conda-{1}-{2}',
-              runner.os,
-              env.CACHE_NUMBER,
-              hashFiles('targets/slideruleearth-aws/docker/asset-metadata-service/environment.yml')) }}
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
