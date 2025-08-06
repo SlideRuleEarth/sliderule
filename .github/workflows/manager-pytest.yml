@@ -40,6 +40,11 @@ jobs:
           environment-file: targets/slideruleearth-aws/docker/manager/environment.yml
           use-only-tar-bz2: true
 
+      - name: Install maxminddb and requests (not available via conda when on CI)
+        shell: bash -l {0}
+        run: |
+          pip install maxminddb requests
+
       - name: Download and install DuckDB spatial extension
         shell: bash -l {0}
         run: |
