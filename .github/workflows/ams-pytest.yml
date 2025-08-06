@@ -30,6 +30,14 @@ jobs:
           aws-region: us-east-1
           audience: sts.amazonaws.com
 
+      - name: Download ATL13 config files from S3
+        shell: bash -l {0}
+        run: |
+          sudo mkdir -p /data/ATL13
+          sudo chmod -R 777 /data/ATL13
+          aws s3 cp s3://sliderule/config/atl13_mappings.json /data/ATL13/atl13_mappings.json
+          aws s3 cp s3://sliderule/config/inland_water_body.db /data/ATL13/inland_water_body.db
+
       - name: Cache conda environment
         uses: actions/cache@v4
         env:
@@ -50,26 +58,6 @@ jobs:
           activate-environment: ams
           environment-file: targets/slideruleearth-aws/docker/asset-metadata-service/environment.yml
           use-only-tar-bz2: true
-
-      - name: Download ATL13 config files from S3
-        shell: bash -l {0}
-        run: |
-          sudo mkdir -p /data/ATL13
-          sudo chmod -R 777 /data/ATL13
-
-          echo "Starting download of atl13_mappings.json (2MB)... "
-          START_TIME=$(date +%s)
-          aws s3 cp s3://sliderule/config/atl13_mappings.json /data/ATL13/atl13_mappings.json
-          END_TIME=$(date +%s)
-          DURATION=$((END_TIME - START_TIME))
-          echo "Finished download of atl13_mappings.json in $((DURATION / 60)) min $((DURATION % 60)) sec."
-
-          echo "Starting download of inland_water_body.db (2GB)... "
-          START_TIME=$(date +%s)
-          aws s3 cp s3://sliderule/config/inland_water_body.db /data/ATL13/inland_water_body.db
-          END_TIME=$(date +%s)
-          DURATION=$((END_TIME - START_TIME))
-          echo "Finished download of inland_water_body.db in $((DURATION / 60)) min $((DURATION % 60)) sec."
 
       - name: Run AMS tests with coverage
         shell: bash -l {0}
