@@ -52,4 +52,8 @@ atl03_polygon_subset <50615 x 22> - 2.450325 secs
 ## Baseline
 > clients/python/utils/baseline.py
 ```
+GEDI / 3DEP = 2660.2507194650643
+ICESat-2 / ArcticDEM = 1598.2301327720206
+ICESat-2 / ATL06p = 1809.8936901734673
+ICESat-2 / PhoREAL = 3.245903730392456
 ```
