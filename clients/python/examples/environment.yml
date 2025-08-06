@@ -2,6 +2,7 @@
 name: sliderule_env
 channels:
   - conda-forge
+  - defaults
 dependencies:
   - geopandas
   - h5py
