@@ -56,14 +56,14 @@ jobs:
           sudo mkdir -p /data/ATL13
           sudo chmod -R 777 /data/ATL13
 
-          echo "Starting download of atl13_mappings.json..."
+          echo "Starting download of atl13_mappings.json (2MB)... "
           START_TIME=$(date +%s)
           aws s3 cp s3://sliderule/config/atl13_mappings.json /data/ATL13/atl13_mappings.json
           END_TIME=$(date +%s)
           DURATION=$((END_TIME - START_TIME))
           echo "Finished download of atl13_mappings.json in $((DURATION / 60)) min $((DURATION % 60)) sec."
 
-          echo "Starting download of inland_water_body.db..."
+          echo "Starting download of inland_water_body.db (2GB)... "
           START_TIME=$(date +%s)
           aws s3 cp s3://sliderule/config/inland_water_body.db /data/ATL13/inland_water_body.db
           END_TIME=$(date +%s)
