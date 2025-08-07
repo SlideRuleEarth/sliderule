@@ -1,0 +1,41 @@
+name: SlideRule Node.js Tests
+
+on:
+  workflow_run:
+    # For main branch we use cicd private cluster from "Build and Deploy" workflow
+    workflows: ["Build and Deploy"]
+    branches: [main]
+    types:
+      - completed
+
+  # For pull requests to main branch we use public cluster
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: sliderule-nodejs-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: clients/nodejs
+        run: npm ci
+
+      - name: Run tests
+        shell: bash -l {0}
+        working-directory: clients/nodejs
+        env:
+          DOMAIN: ${{ github.event_name == 'pull_request' && 'slideruleearth.io' || 'local' }}
+          ORGANIZATION: ${{ github.event_name == 'pull_request' && 'sliderule' || 'none' }}
+        run: |
+          echo "Running tests against DOMAIN=$DOMAIN, ORGANIZATION=$ORGANIZATION"
+          make test
