@@ -11,12 +11,9 @@ on:
 
 jobs:
   test:
-    name: ${{ matrix.CONDA_ENV }}-test
+    name: sliderule-test
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        CONDA_ENV: [unpinned]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -26,8 +23,8 @@ jobs:
         with:
           auto-update-conda: true
           auto-activate-base: false
-          activate-environment: sliderule-ci
-          environment-file: clients/python/ci/environment-${{ matrix.CONDA_ENV }}.yml
+          activate-environment: sliderule
+          environment-file: clients/python/environment.yml
 
       - name: Install sliderule from current commit
         shell: bash -l {0}
