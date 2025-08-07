@@ -710,6 +710,18 @@ string convertToJson(const Icesat2Fields::quality_ph_t& v)
         case Icesat2Fields::QUALITY_POSSIBLE_AFTERPULSE:        return "\"atl03_quality_afterpulse\"";
         case Icesat2Fields::QUALITY_POSSIBLE_IMPULSE_RESPONSE:  return "\"atl03_quality_impulse_response\"";
         case Icesat2Fields::QUALITY_POSSIBLE_TEP:               return "\"atl03_quality_tep\"";
+        case Icesat2Fields::QUALITY_NOISE_BURST:                return "\"atl03_quality_noise_burst\"";
+        case Icesat2Fields::QUALITY_NOISE_STREAK:               return "\"atl03_quality_noise_streak\"";
+        case Icesat2Fields::QUALITY_TX_PART_SAT:                return "\"atl03_quality_tx_part_sat\"";
+        case Icesat2Fields::QUALITY_TX_PART_SAT_AFTERPULSE:     return "\"atl03_quality_tx_part_sat_afterpulse\"";
+        case Icesat2Fields::QUALITY_TX_PART_SAT_IR_EFFECT:      return "\"atl03_quality_tx_part_sat_ir_effect\"";
+        case Icesat2Fields::QUALITY_TX_PART_SAT_BURST:          return "\"atl03_quality_tx_part_sat_burst\"";
+        case Icesat2Fields::QUALITY_TX_PART_SAT_STREAK:         return "\"atl03_quality_tx_part_sat_streak\"";
+        case Icesat2Fields::QUALITY_TX_FULL_SAT:                return "\"atl03_quality_tx_full_sat\"";
+        case Icesat2Fields::QUALITY_TX_FULL_SAT_AFTERPULSE:     return "\"atl03_quality_tx_full_sat_afterpulse\"";
+        case Icesat2Fields::QUALITY_TX_FULL_SAT_IR_EFFECT:      return "\"atl03_quality_tx_full_sat_ir_effect\"";
+        case Icesat2Fields::QUALITY_TX_FULL_SAT_BURST:          return "\"atl03_quality_tx_full_sat_burst\"";
+        case Icesat2Fields::QUALITY_TX_FULL_SAT_STREAK:         return "\"atl03_quality_tx_full_sat_streak\"";
         default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid photon quality: %d", static_cast<int>(v));
     }
 }
@@ -721,10 +733,22 @@ int convertToLua(lua_State* L, const Icesat2Fields::quality_ph_t& v)
 {
     switch(v)
     {
-        case Icesat2Fields::QUALITY_NOMINAL:                    lua_pushstring(L, "atl03_quality_nominal");             break;
-        case Icesat2Fields::QUALITY_POSSIBLE_AFTERPULSE:        lua_pushstring(L, "atl03_quality_afterpulse");          break;
-        case Icesat2Fields::QUALITY_POSSIBLE_IMPULSE_RESPONSE:  lua_pushstring(L, "atl03_quality_impulse_response");    break;
-        case Icesat2Fields::QUALITY_POSSIBLE_TEP:               lua_pushstring(L, "atl03_quality_tep");                 break;
+        case Icesat2Fields::QUALITY_NOMINAL:                    lua_pushstring(L, "atl03_quality_nominal");                 break;
+        case Icesat2Fields::QUALITY_POSSIBLE_AFTERPULSE:        lua_pushstring(L, "atl03_quality_afterpulse");              break;
+        case Icesat2Fields::QUALITY_POSSIBLE_IMPULSE_RESPONSE:  lua_pushstring(L, "atl03_quality_impulse_response");        break;
+        case Icesat2Fields::QUALITY_POSSIBLE_TEP:               lua_pushstring(L, "atl03_quality_tep");                     break;
+        case Icesat2Fields::QUALITY_NOISE_BURST:                lua_pushstring(L, "atl03_quality_noise_burst");             break;
+        case Icesat2Fields::QUALITY_NOISE_STREAK:               lua_pushstring(L, "atl03_quality_noise_streak");            break;
+        case Icesat2Fields::QUALITY_TX_PART_SAT:                lua_pushstring(L, "atl03_quality_tx_part_sat");             break;
+        case Icesat2Fields::QUALITY_TX_PART_SAT_AFTERPULSE:     lua_pushstring(L, "atl03_quality_tx_part_sat_afterpulse");  break;
+        case Icesat2Fields::QUALITY_TX_PART_SAT_IR_EFFECT:      lua_pushstring(L, "atl03_quality_tx_part_sat_ir_effect");   break;
+        case Icesat2Fields::QUALITY_TX_PART_SAT_BURST:          lua_pushstring(L, "atl03_quality_tx_part_sat_burst");       break;
+        case Icesat2Fields::QUALITY_TX_PART_SAT_STREAK:         lua_pushstring(L, "atl03_quality_tx_part_sat_streak");      break;
+        case Icesat2Fields::QUALITY_TX_FULL_SAT:                lua_pushstring(L, "atl03_quality_tx_full_sat");             break;
+        case Icesat2Fields::QUALITY_TX_FULL_SAT_AFTERPULSE:     lua_pushstring(L, "atl03_quality_tx_full_sat_afterpulse");  break;
+        case Icesat2Fields::QUALITY_TX_FULL_SAT_IR_EFFECT:      lua_pushstring(L, "atl03_quality_tx_full_sat_ir_effect");   break;
+        case Icesat2Fields::QUALITY_TX_FULL_SAT_BURST:          lua_pushstring(L, "atl03_quality_tx_full_sat_burst");       break;
+        case Icesat2Fields::QUALITY_TX_FULL_SAT_STREAK:         lua_pushstring(L, "atl03_quality_tx_full_sat_streak");      break;
         default: throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid photon quality: %d", static_cast<int>(v));
     }
 
@@ -743,10 +767,22 @@ void convertFromLua(lua_State* L, int index, Icesat2Fields::quality_ph_t& v)
     else if(lua_isstring(L, index))
     {
         const char* str = LuaObject::getLuaString(L, index);
-        if     (StringLib::match(str, "atl03_quality_nominal"))             v = Icesat2Fields::QUALITY_NOMINAL;
-        else if(StringLib::match(str, "atl03_quality_afterpulse"))          v = Icesat2Fields::QUALITY_POSSIBLE_AFTERPULSE;
-        else if(StringLib::match(str, "atl03_quality_impulse_response"))    v = Icesat2Fields::QUALITY_POSSIBLE_IMPULSE_RESPONSE;
-        else if(StringLib::match(str, "atl03_quality_tep"))                 v = Icesat2Fields::QUALITY_POSSIBLE_TEP;
+        if     (StringLib::match(str, "atl03_quality_nominal"))                 v = Icesat2Fields::QUALITY_NOMINAL;
+        else if(StringLib::match(str, "atl03_quality_afterpulse"))              v = Icesat2Fields::QUALITY_POSSIBLE_AFTERPULSE;
+        else if(StringLib::match(str, "atl03_quality_impulse_response"))        v = Icesat2Fields::QUALITY_POSSIBLE_IMPULSE_RESPONSE;
+        else if(StringLib::match(str, "atl03_quality_tep"))                     v = Icesat2Fields::QUALITY_POSSIBLE_TEP;
+        else if(StringLib::match(str, "atl03_quality_noise_burst"))             v = Icesat2Fields::QUALITY_NOISE_BURST;
+        else if(StringLib::match(str, "atl03_quality_noise_streak"))            v = Icesat2Fields::QUALITY_NOISE_STREAK;
+        else if(StringLib::match(str, "atl03_quality_tx_part_sat"))             v = Icesat2Fields::QUALITY_TX_PART_SAT;
+        else if(StringLib::match(str, "atl03_quality_tx_part_sat_afterpulse"))  v = Icesat2Fields::QUALITY_TX_PART_SAT_AFTERPULSE;
+        else if(StringLib::match(str, "atl03_quality_tx_part_sat_ir_effect"))   v = Icesat2Fields::QUALITY_TX_PART_SAT_IR_EFFECT;
+        else if(StringLib::match(str, "atl03_quality_tx_part_sat_burst"))       v = Icesat2Fields::QUALITY_TX_PART_SAT_BURST;
+        else if(StringLib::match(str, "atl03_quality_tx_part_sat_streak"))      v = Icesat2Fields::QUALITY_TX_PART_SAT_STREAK;
+        else if(StringLib::match(str, "atl03_quality_tx_full_sat"))             v = Icesat2Fields::QUALITY_TX_FULL_SAT;
+        else if(StringLib::match(str, "atl03_quality_tx_full_sat_afterpulse"))  v = Icesat2Fields::QUALITY_TX_FULL_SAT_AFTERPULSE;
+        else if(StringLib::match(str, "atl03_quality_tx_full_sat_ir_effect"))   v = Icesat2Fields::QUALITY_TX_FULL_SAT_IR_EFFECT;
+        else if(StringLib::match(str, "atl03_quality_tx_full_sat_burst"))       v = Icesat2Fields::QUALITY_TX_FULL_SAT_BURST;
+        else if(StringLib::match(str, "atl03_quality_tx_full_sat_streak"))      v = Icesat2Fields::QUALITY_TX_FULL_SAT_STREAK;
         else throw RunTimeException(CRITICAL, RTE_FAILURE, "photon quality is an invalid value: %d", static_cast<int>(v));
     }
     else if(!lua_isnil(L, index))

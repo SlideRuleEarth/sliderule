@@ -62,7 +62,7 @@ class TestL2A:
 
 class TestL3:
     def test_gedi(self, init):
-        resource = "ATL03_20220105023009_02111406_005_01.h5"
+        resource = "ATL03_20220105023009_02111406_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region['poly'],
@@ -110,7 +110,7 @@ class TestL4A:
 
 class TestL4B:
     def test_gedi(self, init):
-        resource = "ATL03_20220105023009_02111406_005_01.h5"
+        resource = "ATL03_20220105023009_02111406_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "poly": region['poly'],
@@ -132,6 +132,6 @@ class TestL4B:
                     'geometry', 'gedi.flags', 'gedi.time', 'gedi.value', 'gedi.file_id']
         for key in exp_keys:
             assert key in gdf.keys()
-        assert abs(gdf.describe()["canopy_openness"]["max"] - 10.241324424743652) < 0.001 # TODO: this changed by ~.15
+        assert abs(gdf.describe()["canopy_openness"]["max"] - 41.835209) < 0.001
         df = gdf[gdf["gedi.value"] > -9999.0]
-        assert abs(sum(df["gedi.value"]) - 42767.289459228516) < 400 # TODO: this deterministically changes by 211.76079576369375 depending on the build environment
+        assert abs(sum(df["gedi.value"]) - 42859.93671417236) < 1

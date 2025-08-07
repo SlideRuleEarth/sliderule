@@ -37,7 +37,7 @@ class TestAtl06:
         assert(len(rsps) == 0)
 
     def test_timeout(self, init):
-        resource = "ATL03_20220208000041_07291401_005_01.h5"
+        resource = "ATL03_20220208000041_07291401_007_01.h5"
         rqst = {
             "resource": resource,
             "parms": {"track": 0, "srt": 0, "pass_invalid":True, "yapc": {"score":0}, "timeout": 1},

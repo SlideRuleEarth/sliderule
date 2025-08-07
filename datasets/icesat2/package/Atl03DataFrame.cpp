@@ -859,7 +859,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
 
             /* Set and Check ATL03 Photon Quality Level */
             const Icesat2Fields::quality_ph_t quality_ph = static_cast<Icesat2Fields::quality_ph_t>(atl03.quality_ph[current_photon]);
-            if(quality_ph < Icesat2Fields::QUALITY_NOMINAL || quality_ph > Icesat2Fields::QUALITY_POSSIBLE_TEP)
+            if(quality_ph < Icesat2Fields::QUALITY_NOMINAL || quality_ph >= Icesat2Fields::NUM_PHOTON_QUALITY)
             {
                 throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid atl03 photon quality: %d", quality_ph);
             }

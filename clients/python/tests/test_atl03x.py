@@ -65,7 +65,7 @@ class TestAtl03x:
         }
         gdf = sliderule.run("atl03x", parms)
         assert init
-        assert len(gdf) == 430618
+        assert len(gdf) == 429954
         assert 4 in np.unique(gdf.spot)
 
     def test_fitter(self, init):
@@ -105,7 +105,7 @@ class TestAtl03x:
         assert abs(gdf["sigma_topo"].mean() - 0.003645051751679172) < 0.0001, f'{gdf["sigma_topo"].mean()}'
 
     def test_phoreal(self, init):
-        resource = "ATL03_20181017222812_02950102_005_01.h5"
+        resource = "ATL03_20181017222812_02950102_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "grandmesa.geojson"))
         parms = {
             "track": 3,
@@ -115,17 +115,17 @@ class TestAtl03x:
         }
         gdf = sliderule.run("atl03x", parms, region["poly"], [resource])
         assert init
-        assert len(gdf) == 774
+        assert len(gdf) == 630
         assert len(gdf.keys()) == 25
-        assert gdf["gt"].sum() == 43210
-        assert gdf["vegetation_photon_count"].sum() == 23127
-        assert abs(gdf["canopy_openness"].mean() - 3.8784506) < 0.000001
-        assert abs(gdf["h_min_canopy"].mean() - 1.6553754) < 0.000001
-        assert abs(gdf["h_te_median"].mean() - 1487.2678) < 0.0001
-        assert abs(gdf["sigma_topo"].mean() - 0.430706130944393362) < 0.0001, f'{gdf["sigma_topo"].mean()}'
+        assert gdf["gt"].sum() == 35580
+        assert gdf["vegetation_photon_count"].sum() == 16932
+        assert abs(gdf["canopy_openness"].mean() - 3.6688475608825684) < 0.000001, f'canopy_openness = {gdf["canopy_openness"].mean()}'
+        assert abs(gdf["h_min_canopy"].mean() - 1.0815950632095337) < 0.000001, f'h_min_canopy = {gdf["h_min_canopy"].mean()}'
+        assert abs(gdf["h_te_median"].mean() - 1715.3670654296875) < 0.0001, f'h_te_median = {gdf["h_te_median"].mean()}'
+        assert abs(gdf["sigma_topo"].mean() - 0.453180570587699) < 0.0001, f'sigma_topo = {gdf["sigma_topo"].mean()}'
 
     def test_sampler(self, init):
-        resource = "ATL03_20190314093716_11600203_005_01.h5"
+        resource = "ATL03_20190314093716_11600203_007_01.h5"
         region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
         parms = {
             "track": 1,
@@ -136,10 +136,10 @@ class TestAtl03x:
         }
         gdf = sliderule.run("atl03x", parms, region["poly"], [resource])
         assert init
-        assert len(gdf) == 199
+        assert len(gdf) == 197
         assert len(gdf.keys()) == 20
         assert gdf["cycle"].mean() == 2
-        assert abs(gdf["mosaic.value"].mean() - 1496.4541849874372) < 0.0001
+        assert abs(gdf["mosaic.value"].mean() - 1474.8950269670052) < 0.0001, f'mosaic = {gdf["mosaic.value"].mean()}'
         assert gdf["mosaic.fileid"].mean() == 0
         assert gdf["mosaic.time_ns"].iloc[0] == datetime.strptime('2023-01-18 20:23:42', '%Y-%m-%d %H:%M:%S')
 
@@ -214,6 +214,9 @@ class TestAtl03x:
             "atl24": {
                 "class_ph": [ "unclassified", "bathymetry", "sea_surface" ]
             },
+            "cmr": {
+                "version": '006'
+            },
             "yapc": {
                 "version": 0,
                 "score": 0
@@ -250,7 +253,7 @@ class TestAtl03x:
         }
         gdf = sliderule.run("atl03x", parms)
         assert init
-        assert len(gdf) == 1774972
+        assert len(gdf) == 1774988
         assert len(gdf.keys()) == 4
         assert "height" in gdf.keys()
         assert "x_atc" in gdf.keys()

@@ -20,7 +20,7 @@ RUN dnf update \
   openssl \
   libtiff \
   zlib \
-  libzstd-devel \
+  zstd \
   gmp \
   libomp \
   && dnf clean all \

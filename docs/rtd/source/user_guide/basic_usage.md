@@ -85,7 +85,7 @@ When making a request to the SlideRule servers, the parameters of the request (i
 
 For example, to set the __confidence__ filter on an ATL03 subsetting request, the parameter structure needed by the endpoint can be passed into the `sliderule.run()` function as a dictionary, like so:
 ```python
-sliderule.run("atl03x", {"cnf":-1}, resources=["ATL03_20181019065445_03150111_005_01.h5"])
+sliderule.run("atl03x", {"cnf":-1}, resources=["ATL03_20181019065445_03150111_007_01.h5"])
 ```
 
 ### Issue the Processing Request
@@ -105,7 +105,7 @@ A user is always free to use one of the routines above for making requests to Sl
 ### Resources
 
 All requests must provide some way for the server side code to know which resources to process.  Typically, that is accomplished via specifying an area of interest or other query parameters; but sometimes it is necessary to manually specify which resources to process.  When that is the case, there are a few parameters the user can use to do so:
-* `resources`: a list of resources to process (e.g. granule names like "ATL03_20181019065445_03150111_005_01.h5")
+* `resources`: a list of resources to process (e.g. granule names like "ATL03_20181019065445_03150111_007_01.h5")
 * `asset`: the name of a collection of resources; this rarely needs to be specified because the default value for most endpoints are sufficient
 
 ### Polygons

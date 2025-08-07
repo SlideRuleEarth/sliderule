@@ -55,7 +55,7 @@ max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
 
 # best effort match of datasets to providers and versions for earthdata
 DATASETS = {
-    "ATL03":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "ATL03":                                               {"provider": "NSIDC_CPRD",  "version": "007",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
     "ATL06":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
     "ATL08":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
     "ATL09":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},

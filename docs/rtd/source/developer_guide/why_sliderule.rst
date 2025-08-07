@@ -13,7 +13,7 @@ The development of SlideRule is led by the University of Washington in conjuncti
 Where does SlideRule fit?
 ###########################
 
-SlideRule is not trying to be the end-all solution for science data processing.  If the ultimate goal is producing actionable scientific information, SlideRule plays a small but important part in the ecosystem of tools and processes needed to get there.  Frustration with SlideRule can be the result of misunderstanding where we fit in and wanting SlideRule to perform tasks that should be met by other systems.  Conversely, the need for SlideRule is best understood in the light of how it fits in with the overall Earth data system and the specific roles we a fulfilling.
+SlideRule is not trying to be the end-all solution for science data processing.  If the ultimate goal is producing actionable scientific information, SlideRule plays a small but important part in the ecosystem of tools and processes needed to get there.  Frustration with SlideRule can be the result of misunderstanding where we fit in and wanting SlideRule to perform tasks that should be met by other systems.  Conversely, the need for SlideRule is best understood in the light of how it fits in with the overall Earth data system and the specific roles we are fulfilling.
 
 The diagram below attempts to capture an opinionated realization of what a public Earth data system should look like and how SlideRule fits in.  It is **not** a diagram of how things are; nor does it represent the policy of any institution involved in the development of SlideRule.  Instead it represents the architecture the SlideRule team is advocating for and building towards.
 

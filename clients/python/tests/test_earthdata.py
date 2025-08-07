@@ -32,7 +32,7 @@ class TestCMR:
         granules = earthdata.cmr(short_name='ATL03', polygon=grandmesa, time_start='2018-10-01', time_end='2018-12-01')
         assert init
         assert isinstance(granules, list)
-        assert 'ATL03_20181017222812_02950102_006_02.h5' in granules
+        assert 'ATL03_20181017222812_02950102_007_01.h5' in granules
 
     def test_collection(self, init):
         entries = cmr_collection_query('NSIDC_ECS', 'ATL03')
