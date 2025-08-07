@@ -41,7 +41,7 @@ jobs:
         working-directory: clients/nodejs/sliderule
         env:
           DOMAIN: 'slideruleearth.io'
-          ORGANIZATION: 'sliderule' # cheng to 'cicd'
+          ORGANIZATION: 'sliderule' # change to 'cicd'
           ROOT: ${{ github.workspace }}/clients/nodejs/sliderule
         run: |
           echo "Running tests against DOMAIN=$DOMAIN, ORGANIZATION=$ORGANIZATION"
