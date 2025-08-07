@@ -39,6 +39,8 @@ jobs:
           DOMAIN: ${{ github.event_name == 'pull_request' && 'slideruleearth.io' || 'local' }}
           ORGANIZATION: ${{ github.event_name == 'pull_request' && 'sliderule' || 'none' }}
           ROOT: ${{ github.workspace }}/clients/nodejs/sliderule
+          ps_username: 'github-tester'
+          ps_password: 'none'
         run: |
           echo "Running tests against DOMAIN=$DOMAIN, ORGANIZATION=$ORGANIZATION"
           ./node_modules/.bin/jest ${ROOT}/tests --setupFiles ${ROOT}/tests/test.config.js
