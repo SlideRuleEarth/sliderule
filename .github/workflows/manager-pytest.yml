@@ -16,8 +16,6 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    env:
-      DUCKDB_ALREADY_INSTALLED: "1"
 
     steps:
       - name: Checkout
