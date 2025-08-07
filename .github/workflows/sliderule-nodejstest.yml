@@ -2,13 +2,11 @@ name: SlideRule Node.js Tests
 
 on:
   workflow_run:
-    # For main branch we use cicd private cluster from "Build and Deploy" workflow
-    workflows: ["Build and Deploy"]
+    workflows: ["SlideRule Python Test"]
     branches: [main]
     types:
       - completed
 
-  # For pull requests to main branch we use public cluster
   pull_request:
     branches: [ main ]
 
@@ -32,12 +30,18 @@ jobs:
           npm ci
           npx playwright install --with-deps
 
+      - name: Install netrc for authentication
+        shell: bash -l {0}
+        run: |
+          echo "${{ secrets.NETRC }}" > $HOME/.netrc
+          chmod 600 $HOME/.netrc
+
       - name: Run tests
         shell: bash -l {0}
         working-directory: clients/nodejs/sliderule
         env:
-          DOMAIN: ${{ github.event_name == 'pull_request' && 'slideruleearth.io' || 'local' }}
-          ORGANIZATION: ${{ github.event_name == 'pull_request' && 'sliderule' || 'none' }}
+          DOMAIN: 'slideruleearth.io'
+          ORGANIZATION: 'sliderule' # cheng to 'cicd'
           ROOT: ${{ github.workspace }}/clients/nodejs/sliderule
         run: |
           echo "Running tests against DOMAIN=$DOMAIN, ORGANIZATION=$ORGANIZATION"
