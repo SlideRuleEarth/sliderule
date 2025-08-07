@@ -32,11 +32,11 @@ jobs:
 
       - name: Run tests
         shell: bash -l {0}
-        working-directory: clients/nodejs
+        working-directory: clients/nodejs/sliderule
         env:
           DOMAIN: ${{ github.event_name == 'pull_request' && 'slideruleearth.io' || 'local' }}
           ORGANIZATION: ${{ github.event_name == 'pull_request' && 'sliderule' || 'none' }}
-          ROOT: ${{ github.workspace }}/clients/nodejs
+          ROOT: ${{ github.workspace }}/clients/nodejs/sliderule
         run: |
           echo "Running tests against DOMAIN=$DOMAIN, ORGANIZATION=$ORGANIZATION"
-          make test-ci
+          ./node_modules/.bin/jest $(ROOT)/tests --setupFiles $(ROOT)/tests/test.config.js
