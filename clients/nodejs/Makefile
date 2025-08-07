@@ -9,6 +9,9 @@ test: ## run unit tests against public cluster
 publish: ## publish package to npm registry
 	cd sliderule; npm publish --access public
 
+publish-dry-run: ## test publishing package to npm registry
+	cd sliderule; npm publish --access public --dry-run
+
 login: ## login to npm registry
 	npm login --scope sliderule --auth-type legacy
 

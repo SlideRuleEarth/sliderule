@@ -1,0 +1,45 @@
+name: SlideRule Node.js Tests
+
+on:
+  workflow_run:
+    workflows: ["SlideRule Python Test"]
+    branches: [main]
+    types:
+      - completed
+
+jobs:
+  test:
+    name: sliderule-nodejs-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: clients/nodejs/sliderule
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
+      - name: Install netrc for authentication
+        shell: bash -l {0}
+        run: |
+          echo "${{ secrets.NETRC }}" > $HOME/.netrc
+          chmod 600 $HOME/.netrc
+
+      - name: Run tests
+        shell: bash -l {0}
+        working-directory: clients/nodejs/sliderule
+        env:
+          DOMAIN: 'slideruleearth.io'
+          ORGANIZATION: 'cicd'
+          ROOT: ${{ github.workspace }}/clients/nodejs/sliderule
+        run: |
+          echo "Running tests against DOMAIN=$DOMAIN, ORGANIZATION=$ORGANIZATION"
+          ./node_modules/.bin/jest ${ROOT}/tests --setupFiles ${ROOT}/tests/test.config.js
