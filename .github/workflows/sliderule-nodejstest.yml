@@ -7,7 +7,7 @@ on:
     types:
       - completed
 
-  pull_request:
+  pull_request:  # remove this before merging to main
     branches: [ main ]
 
 jobs:
@@ -41,7 +41,7 @@ jobs:
         working-directory: clients/nodejs/sliderule
         env:
           DOMAIN: 'slideruleearth.io'
-          ORGANIZATION: 'sliderule' # change to 'cicd'
+          ORGANIZATION: 'sliderule' # change to 'cicd' before merging to main
           ROOT: ${{ github.workspace }}/clients/nodejs/sliderule
         run: |
           echo "Running tests against DOMAIN=$DOMAIN, ORGANIZATION=$ORGANIZATION"

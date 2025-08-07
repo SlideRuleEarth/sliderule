@@ -7,7 +7,7 @@ test: ## run unit tests against public cluster
 	cd sliderule; DOMAIN=$(DOMAIN) ORGANIZATION=$(ORGANIZATION) jest $(TEST) --setupFiles $(ROOT)/sliderule/tests/test.config.js
 
 publish: ## publish package to npm registry
-	cd sliderule; npm publish --access public
+	cd sliderule; npm publish --access public --dry-run
 
 login: ## login to npm registry
 	npm login --scope sliderule --auth-type legacy
