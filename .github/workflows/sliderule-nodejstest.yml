@@ -27,7 +27,7 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        working-directory: clients/nodejs
+        working-directory: clients/nodejs/sliderule
         run: npm ci
 
       - name: Run tests
