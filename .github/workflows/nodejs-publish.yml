@@ -33,4 +33,4 @@ jobs:
       working-directory: clients/nodejs
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      run: make publish
+      run: make publish-dry-run
