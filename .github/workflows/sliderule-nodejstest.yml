@@ -39,4 +39,4 @@ jobs:
           ROOT: ${{ github.workspace }}/clients/nodejs/sliderule
         run: |
           echo "Running tests against DOMAIN=$DOMAIN, ORGANIZATION=$ORGANIZATION"
-          ./node_modules/.bin/jest $(ROOT)/tests --setupFiles $(ROOT)/tests/test.config.js
+          ./node_modules/.bin/jest ${ROOT}/tests --setupFiles $(ROOT)/tests/test.config.js
