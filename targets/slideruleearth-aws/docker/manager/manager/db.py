@@ -3,6 +3,7 @@ import click
 from flask import Blueprint, current_app, request, g
 from werkzeug.exceptions import abort
 import boto3
+import os
 
 ####################
 # Initialization
@@ -67,7 +68,10 @@ def init_db_command():
 
 def init_app(app):
     db = duckdb.connect(app.config['DATABASE'])
-    db.execute("INSTALL spatial;")
+    try:
+        db.execute("INSTALL spatial;")
+    except Exception as e:
+        print(f"Unable to load spatial extension, assuming it's already loaded: {e}")
     db.close()
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)

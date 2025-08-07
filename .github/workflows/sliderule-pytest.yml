@@ -11,37 +11,20 @@ on:
 
 jobs:
   test:
-    name: ${{ matrix.CONDA_ENV }}-test
+    name: sliderule-test
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        CONDA_ENV: [unpinned]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
-      - name: Cache conda environment
-        uses: actions/cache@v4
-        env:
-          # Increase this value to reset cache if environment.yml has not changed
-          CACHE_NUMBER: 0
-        with:
-          path: ~/conda_pkgs_dir
-          key: >
-            ${{ format('{0}-conda-{1}-{2}',
-            runner.os,
-            env.CACHE_NUMBER,
-            hashFiles(format('clients/python/ci/environment-{0}.yml', matrix.CONDA_ENV))) }}
 
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
           auto-activate-base: false
-          activate-environment: sliderule-ci
-          environment-file: clients/python/ci/environment-${{ matrix.CONDA_ENV }}.yml
-          use-only-tar-bz2: true
+          activate-environment: sliderule
+          environment-file: clients/python/environment.yml
 
       - name: Install sliderule from current commit
         shell: bash -l {0}
