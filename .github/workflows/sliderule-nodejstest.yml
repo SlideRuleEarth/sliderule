@@ -38,4 +38,4 @@ jobs:
           ORGANIZATION: ${{ github.event_name == 'pull_request' && 'sliderule' || 'none' }}
         run: |
           echo "Running tests against DOMAIN=$DOMAIN, ORGANIZATION=$ORGANIZATION"
-          make test
+          npx jest tests --setupFiles sliderule/tests/test.config.js

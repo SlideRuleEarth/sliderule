@@ -6,6 +6,8 @@ ORGANIZATION ?= sliderule
 test: ## run unit tests against public cluster
 	cd sliderule; DOMAIN=$(DOMAIN) ORGANIZATION=$(ORGANIZATION) jest $(TEST) --setupFiles $(ROOT)/sliderule/tests/test.config.js
 
+	DOMAIN=$(DOMAIN) ORGANIZATION=$(ORGANIZATION) jest $(TEST) --setupFiles $(ROOT)/sliderule/tests/test.config.js
+
 publish: ## publish package to npm registry
 	cd sliderule; npm publish --access public
 
