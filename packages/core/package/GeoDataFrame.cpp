@@ -1480,7 +1480,7 @@ void* GeoDataFrame::runThread (void* parm)
                     if(!runner->run(dataframe))
                     {
                         // exit loop on error
-                        mlog(CRITICAL, "error encountered in frame runner: %s", runner->getName());
+                        mlog(CRITICAL, "error encountered in frame runner: %s", runner->getType());
                         dataframe->active = false;
                     }
 
