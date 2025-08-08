@@ -30,7 +30,9 @@ jobs:
       - name: Install netrc for authentication
         shell: bash -l {0}
         run: |
-          echo "${{ secrets.NETRC }}" > $HOME/.netrc
+          cat <<EOF > $HOME/.netrc
+          machine cicd.slideruleearth.io login ${{ secrets.CICD_USERNAME }} password ${{ secrets.CICD_PASSWORD }}
+          EOF
           chmod 600 $HOME/.netrc
 
       - name: Run tests
