@@ -2,7 +2,7 @@ name: SlideRule Node.js Tests
 
 on:
   workflow_run:
-    workflows: ["SlideRule Python Test"]
+    workflows: ["SlideRule Python Tests"]
     branches: [main]
     types:
       - completed
