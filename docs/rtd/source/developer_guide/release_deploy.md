@@ -6,7 +6,7 @@
 
 This guide provides step by step instructions for releasing and deploying a new version of SlideRule to the public cluster.  All steps are performed via Makefile targets running on an EC2 instance provisioned in the SlideRule AWS environment.  The EC2 instance must be setup with access to the SlideRule S3 buckets, container registries, and Git Hub repositories.
 
-SlideRule uses a Blue-Green deployment strategy where the new release is first deployed as a _cold_ cluster to "sliderule-<color>.slideruleearth.io" and put through a series of tests. Once all tests have passed, the "sliderule.slideruleearth.io" domain is updated to point to the cluster, thereby switching it to become the live or _hot_ cluster.  The previously deployed cluster is left running until the time-to-live on the DNS entries expire and all processing requests have completed.  This should take at most 15 minutes (TTL of 5 minutes + Maximum Request Time of 10 minutes).  The old cluster is then destroyed.
+SlideRule uses a Blue-Green deployment strategy where the new release is first deployed as a hidden cluster to "sliderule-<color>.slideruleearth.io" and put through a series of tests. Once all tests have passed, the "sliderule.slideruleearth.io" domain is updated to point to the cluster, thereby switching it to become the live cluster.  The previously deployed cluster is no hidden and is left running until the time-to-live on the DNS entries expire and all processing requests have completed.  This should take at most 15 minutes (TTL of 5 minutes + Maximum Request Time of 10 minutes).  The old (and now hidden) cluster is then destroyed.
 
 ## Checklist:
 
@@ -98,7 +98,7 @@ make
 make run
 ```
 
-* Run the pytest suite of tests against it, which checks for memory leaks and invalid memory access across the entire pytest suite.
+* Run the pytest suite of tests against it, which checks for memory leaks and invalid memory access across the entire pytest suite.  Note that tests involving the provisioning system will fail when running against a locally running instance of sliderule.
 
 From `sliderule/clients/python` in a new terminal window
 ```bash
@@ -107,12 +107,12 @@ pip install .
 pytest --domain localhost --organization None
 ```
 
-* Run the Node.js client suite of tests using `jest`, which test the client and also try to test some of the functionality needed by the web client.
+* Run the Node.js client suite of tests using `jest`, which test the client and also try to test some of the functionality needed by the web client.  Note that the authentication tests will fail when running against a locally running instance of sliderule.
 
 From `sliderule/clients/nodejs`
 ```bash
 nvm use 20
-DOMAIN=localhost ORGANIZATION=None make test
+ORGANIZATION=null make test
 ```
 
 #### (3) Test Deployment to Private Cluster
@@ -186,7 +186,7 @@ Note - when a new release is created, there is a GitHub action that automaticall
 
 #### (5) Deploy the Newly Released Version to the Public Cluster
 
-* Check which color the _hot_ cluster is running as. Only one of the colors should have actively deployed resources in AWS.  Consider the active color as the _hot_ cluster, and use the inactive color for the _cold_ cluster.
+* Check which color the live cluster is running as. Only one of the colors should have actively deployed resources in AWS.  Consider the active color as the live cluster, and use the inactive color for the new cluster.
 
 From `sliderule/targets/slideruleearth-aws/`
 ```bash
@@ -194,29 +194,29 @@ make public-cluster-status COLOR=green
 make public-cluster-status COLOR=blue
 ```
 
-* Deploy the new release as the _cold_ cluster color. The `<cold>` is the _cold_ color identified in the step above.  The `<new release version>` is the version of the code that is to be deployed.
+* Deploy the new release as the _new_ cluster color. The `<new>` is the _new_ color identified in the step above.  The `<new release version>` is the version of the code that is to be deployed.
 
 From `sliderule/targets/slideruleearth-aws/`
 ```bash
-make public-cluster-deploy COLOR=<cold> VERSION=<new release version>
+make public-cluster-deploy COLOR=<new> VERSION=<new release version>
 ```
 
-* Test out the _cold_ cluster, using `sliderule-<cold>` as the organization.
+* Test out the _new_ cluster, using `sliderule-<new>` as the organization.
 
 From `sliderule/clients/python`
 ```bash
 conda activate sliderule
 pip install .
-pytest --organization sliderule-<cold>
+pytest --organization sliderule-<new>
 ```
 
 From `sliderule/clients/nodejs`
 ```bash
 nvm use 20
-ORGANIZATION=sliderule-<cold> make test
+ORGANIZATION=sliderule-<new> make test
 ```
 
-* Switch to the _cold_ cluster by pointing the `sliderule.slideruleearth.io` domain to the newly deployed cluster.  The `<ip>` address supplied in the command is the `ilb_ip_address` output from the deployment of the _cold_ cluster.
+* Switch to the _new_ cluster by pointing the `sliderule.slideruleearth.io` domain to the newly deployed cluster.  The `<ip>` address supplied in the command is the `ilb_ip_address` output from the deployment of the _new_ cluster.
 
 From `sliderule/targets/slideruleearth-aws/`
 ```bash
@@ -231,9 +231,9 @@ python utils/usage_report.py --organization sliderule-<color> --export --apikey 
 python utils/usage_report.py --organization sliderule-<color>
 ```
 
-* Destroy the old cluster. The `<hot>` color is the color of the old cluster that we want to now destroy.
+* Destroy the old cluster. The `<old>` color is the color of the old cluster that we want to now destroy.
 
 from `sliderule/targets/slideruleearth-aws/`
 ```bash
-make public-cluster-destroy COLOR=<hot>
+make public-cluster-destroy COLOR=<old>
 ```
