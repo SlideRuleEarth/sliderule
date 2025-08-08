@@ -396,28 +396,34 @@ async function httpRequest(options, body, callbacks) {
 //
 // Initialize Client
 //
-exports.init = (config) => {
-  sysConfig = Object.assign(sysConfig, config)
+exports.init = async (config) => {
+  sysConfig = Object.assign(sysConfig, config);
+  await exports.authenticate(config.ps_password, config.ps_username);
 }
 
 //
 // Source Endpoint
 //
-exports.source = (api, parm=null, stream=false, callbacks={}) => {
+exports.source = async (api, parm=null, stream=false, callbacks={}) => {
 
   // Setup Request Options
   const options = {
     host: sysConfig.organization && (sysConfig.organization + '.' + sysConfig.domain) || sysConfig.domain,
     path: '/source/' + api,
     method: stream && 'POST' || 'GET',
+    headers: {}
   };
 
   // Build Body
   let body = null;
   if (parm != null) {
     body = JSON.stringify(parm);
-    options["headers"] = {'Content-Type': 'application/json', 'Content-Length': body.length};
+    options['headers']['Content-Type'] = 'application/json';
+    options['headers']['Content-Length'] = body.length;
   }
+
+  // Add Authentication
+  options["headers"]['Authorization'] = 'Bearer ' + sysCredentials.access;
 
   // Make API Request
   return httpRequest(options, body, callbacks);
@@ -426,7 +432,7 @@ exports.source = (api, parm=null, stream=false, callbacks={}) => {
 //
 // Authenticate User
 //
-exports.authenticate = (ps_username=null, ps_password=null) => {
+exports.authenticate = async (ps_username=null, ps_password=null) => {
 
     // Build Provisioning System URL
     let psHost = 'ps.' + sysConfig.domain;
@@ -480,7 +486,7 @@ exports.authenticate = (ps_username=null, ps_password=null) => {
 //
 // Get Version
 //
-exports.get_version = () => {
+exports.get_version = async () => {
   return exports.source('version').then(
     result => {
       result['client'] = {version: pkg['version']};

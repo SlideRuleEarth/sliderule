@@ -27,7 +27,6 @@
 // OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 // ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-const https = require('https');
 const core = require('./core.js')
 const events = require('events');
 
