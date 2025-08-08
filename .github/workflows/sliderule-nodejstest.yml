@@ -6,6 +6,8 @@ on:
     branches: [main]
     types:
       - completed
+  pull_request:
+    branches: [ main ]
 
 jobs:
   test:
