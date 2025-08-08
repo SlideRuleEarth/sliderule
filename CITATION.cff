@@ -1,0 +1,98 @@
+cff-version: 1.2.0
+title: SlideRule
+message: >-
+  If you use the SlideRule service, software, and/or data products 
+  for scientific research resulting in a publication or other outlet, 
+  please cite using the metadata from this file. 
+  For academic research publications, please cite the JOSS paper: https://doi.org/10.21105/joss.04982
+    Shean, D., Swinski, J.P., Smith, B., Sutterley, T., Henderson, S., Ugarte, C., Lidwa, E., and T. Neumann (2023). 
+      SlideRule: Enabling rapid, scalable, open science for the NASA ICESat-2 mission and beyond.
+      Journal of Open Source Software, 8(81), 4982, doi:10.21105/joss.04982.
+  and the Zenodo DOI for the X.Y.Z version of SlideRule used to prepare your data products: https://doi.org/10.5281/zenodo.4660020
+
+type: software
+authors:
+  - given-names: David
+    family-names: Shean
+    email: dshean@uw.edu
+    affiliation: >-
+      University of Washington, Civil & Environmental
+      Engineering
+    orcid: 'https://orcid.org/0000-0003-3840-3860'
+  - given-names: J.P.
+    family-names: Swinski
+    affiliation: NASA Goddard Space Flight Center
+    email: joseph-paul.a.swinski@nasa.gov
+  - given-names: Carlos
+    family-names: Ugarte
+    affiliation: NASA Goddard Space Flight Center
+  - given-names: Eric
+    family-names: Lidwa
+    affiliation: NASA Goddard Space Flight Center
+  - given-names: Ben
+    family-names: Smith
+    email: besmith@uw.edu
+    affiliation: 'University of Washington, Applied Physics Laboratory'
+  - given-names: Tyler
+    family-names: Sutterley
+    email: tsutterl@uw.edu
+    affiliation: 'University of Washington, Applied Physics Laboratory'
+    orcid: 'https://orcid.org/0000-0003-0624-4965'
+  - given-names: Scott
+    family-names: Henderson
+    email: scottyh@uw.edu
+    affiliation: >-
+      University of Washington, eScience Institute, Earth &
+      Space Sciences
+    orcid: 'https://orcid.org/0000-0003-0624-4965'
+  - given-names: Thomas
+    family-names: Neumann
+    affiliation: NASA Goddard Space Flight Center
+    orcid: 'https://orcid.org/0000-0002-6926-937X'
+    email: thomas.neumann@nasa.gov
+identifiers:
+  - type: doi
+    value: 10.21105/joss.04982
+    description: JOSS publication
+  - type: doi
+    value: 10.5281/zenodo.4660020
+    description: Zenodo repository
+repository-code: 'https://github.com/SlideRuleEarth/sliderule'
+url: 'https://slideruleearth.io/'
+repository: 'https://joss.theoj.org/papers/10.21105/joss.04982'
+repository-artifact: 'https://doi.org/10.5281/zenodo.4660020'
+abstract: >-
+  SlideRule is an open source server-side framework for
+  on-demand processing of science data in the cloud. The
+  SlideRule project offers a new paradigm for NASA archival
+  data management – rapid delivery of customizable on-demand
+  data products, rather than hosting large volumes of
+  standard derivative products, which will inevitably be
+  insufficient for some science applications. The scalable
+  server-side components of SlideRule run in the AWS cloud
+  with optimized functions to read HDF5 data hosted by NASA
+  in S3 cloud object storage. While SlideRule can be
+  accessed by any HTTP client (e.g., curl) through GET and
+  POST requests, the sliderule-python client provides a
+  user-friendly API for synchronous interaction with the
+  SlideRule service. The client library returns standard
+  Python data containers (i.e., Pandas DataFrame) and
+  facilitates serialization with provenance metadata for
+  reproducible science. SlideRule uses a plugin framework to
+  support different NASA missions and data products. The
+  ICESat-2 SlideRule plugin offers customizable algorithms
+  to process the archive of low-level data products from the
+  NASA Ice Cloud and land Elevation Satellite-2 (ICESat-2)
+  laser altimetry mission. The user defines a geographic
+  area of interest and key processing parameters via an
+  interactive web interface or the API, and SlideRule
+  returns high-level surface elevation point cloud products
+  in seconds to minutes, enabling rapid algorithm
+  development, visualization and scientific interpretation.
+keywords:
+  - Earth data
+  - ICESat-2
+  - GEDI
+  - Laser altimetry
+  - Topography
+license: BSD-3-Clause
