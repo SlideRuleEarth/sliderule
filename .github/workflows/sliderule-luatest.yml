@@ -1,0 +1,35 @@
+name: SlideRule Lua Self Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ main ]
+  schedule:
+    - cron: '0 22 * * 5' # Every Sunday at 10 pm
+
+
+jobs:
+  self_test:
+    name: Sliderule regression test
+    runs-on: ubuntu-latest
+    container: ghcr.io/slideruleearth/sliderule-buildenv:latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        path: sliderule
+
+    - name: Build sliderule
+      run: |
+       cd sliderule/targets/slideruleearth-aws
+       make config-debug
+       make
+
+    - name: Run test
+      run: |
+       cd sliderule/targets/slideruleearth-aws
+       make selftest TEST=../../targets/slideruleearth-aws/test_runner.lua

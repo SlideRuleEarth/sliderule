@@ -1,5 +1,5 @@
 
-resource "aws_s3_bucket_object" "docker-compose-config" {
+resource "aws_s3_object" "docker-compose-config" {
   for_each = fileset("./", "docker-compose-*.yml")
   bucket = "sliderule"
   key = "infrastructure/software/${var.cluster_name}-${each.value}"
@@ -7,7 +7,7 @@ resource "aws_s3_bucket_object" "docker-compose-config" {
   etag = filemd5("./${each.value}")
 }
 
-resource "aws_s3_bucket_object" "nginx-config" {
+resource "aws_s3_object" "nginx-config" {
   for_each = fileset("./", "*_nginx.service")
   bucket = "sliderule"
   key = "infrastructure/software/${var.cluster_name}-${each.value}"
@@ -15,7 +15,7 @@ resource "aws_s3_bucket_object" "nginx-config" {
   etag = filemd5("./${each.value}")
 }
 
-resource "aws_s3_bucket_object" "export-log-script" {
+resource "aws_s3_object" "export-log-script" {
   for_each = fileset("./", "export_logs.sh")
   bucket = "sliderule"
   key = "infrastructure/software/${var.cluster_name}-${each.value}"
@@ -23,7 +23,7 @@ resource "aws_s3_bucket_object" "export-log-script" {
   etag = filemd5("./${each.value}")
 }
 
-resource "aws_s3_bucket_object" "cron-job" {
+resource "aws_s3_object" "cron-job" {
   for_each = fileset("./", "cronjob.txt")
   bucket = "sliderule"
   key = "infrastructure/software/${var.cluster_name}-${each.value}"

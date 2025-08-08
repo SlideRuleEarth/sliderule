@@ -43,6 +43,16 @@
 #include <poll.h>
 #include <assert.h>
 
+#include <memory>
+#include <vector>
+#include <string>
+
+using std::shared_ptr;
+using std::unique_ptr;
+using std::make_shared;
+using std::vector;
+using std::string;
+
 /******************************************************************************
  * PLATFORM DEFINES
  ******************************************************************************/
@@ -55,6 +65,10 @@
 
 #ifndef CONFDIR
 #define CONFDIR "."
+#endif
+
+#ifndef PLUGINDIR
+#define PLUGINDIR "."
 #endif
 
 /******************************************************************************
@@ -100,6 +114,10 @@
 #define MAX_STR_SIZE 1024
 #endif
 
+#ifndef EVENTQ
+#define EVENTQ  "eventq"
+#endif
+
 /******************************************************************************
  * TYPEDEFS
  ******************************************************************************/
@@ -114,8 +132,30 @@ typedef enum {
     INVALID_EVENT_LEVEL = 5
 } event_level_t;
 
+/* Exceptions */
+typedef enum {
+    RTE_STATUS                  =  0,
+    RTE_FAILURE                 = -1,
+    RTE_TIMEOUT                 = -2,
+    RTE_RESOURCE_DOES_NOT_EXIST = -3,
+    RTE_EMPTY_SUBSET            = -4,
+    RTE_SIMPLIFY                = -5,
+    RTE_NOT_ENOUGH_MEMORY       = -6,
+    RTE_SCRIPT_DOES_NOT_EXIST   = -7,
+    RTE_UNAUTHORIZED            = -8,
+    RTE_DID_NOT_COMPLETE        = -9
+} alert_code_t;
+
 /* Ordered Key */
 typedef unsigned long okey_t;
+
+/* Extended System Time - nanoseconds since Unix epoch, no leap seconds */
+typedef struct Time8 {
+    int64_t nanoseconds;
+    Time8(void): nanoseconds(0) {};
+    explicit Time8(int64_t value): nanoseconds(value) {};
+    Time8& operator= (const int64_t& v) {nanoseconds = v; return *this; };
+} time8_t;
 
 /* File */
 typedef FILE* fileptr_t;
@@ -141,6 +181,7 @@ CompileTimeAssert(sizeof(bool)==1, TypeboolWrongSize);
 #define ACC_ERR_RC                  (-10)
 
 /* I/O Definitions */
+#define IO_INVALID_TIMEOUT          (-2)
 #define IO_PEND                     (-1)
 #define IO_CHECK                    (0)
 #define IO_DEFAULT_TIMEOUT          (1000) // ms
@@ -166,7 +207,7 @@ CompileTimeAssert(sizeof(bool)==1, TypeboolWrongSize);
 #endif
 
 /******************************************************************************
- * INCLUDES
+ * OS API INCLUDES
  ******************************************************************************/
 
 #include "RunTimeException.h"
@@ -194,8 +235,9 @@ class OsApi
 
         static void         init                (print_func_t _print_func);
         static void         deinit              (void);
+
         static void         sleep               (double secs); // sleep at highest resolution available on system
-        static void         dupstr              (char** dst, const char* src);
+        static void         dupstr              (const char** dst, const char* src);
         static int64_t      time                (int clkid);
         static int64_t      timeres             (int clkid); // returns the resolution of the clock
         static uint16_t     swaps               (uint16_t val);
@@ -206,14 +248,14 @@ class OsApi
         static int          nproc               (void);
         static double       memusage            (void);
         static void         print               (const char* file_name, unsigned int line_number, const char* format_string, ...)  __attribute__((format(printf, 3, 4)));
+
+        /* system configuration */
         static bool         setIOMaxsize        (int maxsize);
         static int          getIOMaxsize        (void);
         static void         setIOTimeout        (int timeout);
         static int          getIOTimeout        (void);
         static int          performIOTimeout    (void);
         static int64_t      getLaunchTime       (void);
-        static void         setEnvVersion       (const char* verstr);
-        static const char*  getEnvVersion       (void);
 
     private:
 
@@ -222,7 +264,6 @@ class OsApi
         static int io_timeout;
         static int io_maxsize;
         static int64_t launch_time;
-        static char* environment_version;
 };
 
 #endif  /* __osapi__ */

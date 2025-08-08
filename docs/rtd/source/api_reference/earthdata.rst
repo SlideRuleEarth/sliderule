@@ -32,3 +32,9 @@ stac
 tnm
 ---
 .. autofunction:: sliderule.earthdata.tnm
+
+""""""""""""""""
+
+search
+------
+.. autofunction:: sliderule.earthdata.search

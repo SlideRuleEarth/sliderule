@@ -14,3 +14,9 @@ output "monitor_state" {
 output "monitor_id" {
     value = aws_instance.monitor.id
 }
+output "prov_sys_handshake" {
+    value = var.prov_sys_handshake
+}
+output "cluster_name" {
+    value = var.cluster_name
+}

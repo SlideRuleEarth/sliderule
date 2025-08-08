@@ -1,0 +1,44 @@
+name: SlideRule Python Tests
+
+on:
+  workflow_run:
+    workflows: ["Build and Deploy"]
+    branches: [main]
+    types:
+      - completed
+
+jobs:
+  test:
+    name: sliderule-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-update-conda: true
+          auto-activate-base: false
+          activate-environment: sliderule
+          environment-file: clients/python/environment.yml
+
+      - name: Install sliderule from current commit
+        shell: bash -l {0}
+        run: |
+          cd clients/python
+          python -m pip install .
+          conda list
+
+      - name: Install netrc for authentication
+        shell: bash -l {0}
+        run: |
+          echo "${{ secrets.NETRC }}" > $HOME/.netrc
+          chmod 600 $HOME/.netrc
+
+      - name: Run tests
+        shell: bash -l {0}
+        run: |
+          cd clients/python
+          python -m pytest --verbose --organization cicd --desired_nodes 3

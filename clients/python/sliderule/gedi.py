@@ -27,33 +27,19 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import time
 import logging
 import numpy
 import geopandas
 import sliderule
-from sliderule import earthdata
+from sliderule import logger
+from sliderule.session import Session
 
 ###############################################################################
-# GLOBALS
+# GLOBAL DATA
 ###############################################################################
 
-# create logger
-logger = logging.getLogger(__name__)
-
-# profiling times for each major function
-profiles = {}
-
-# default assets
-DEFAULT_L1B_ASSET="gedil1b"
-DEFAULT_L2A_ASSET="gedil2a"
-DEFAULT_L4A_ASSET="gedil4a"
-
-# default GEDI standard data product version
-DEFAULT_GEDI_SDP_VERSION = '2'
-
-# gedi parameters
-ALL_BEAMS = -1
+# CRS used in GEDI Standard Data Products
+GEDI_CRS = "EPSG:7912"
 
 ###############################################################################
 # LOCAL FUNCTIONS
@@ -64,13 +50,13 @@ ALL_BEAMS = -1
 #
 def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array, height_key):
 
-    # Latch Start Time
-    tstart_flatten = time.perf_counter()
+    # Check Responses
+    if rsps == None:
+        return sliderule.emptyframe(crs=GEDI_CRS)
 
     # Check for Output Options
     if "output" in parm:
-        gdf = sliderule.procoutputfile(parm)
-        profiles["flatten"] = time.perf_counter() - tstart_flatten
+        gdf = sliderule.procoutputfile(parm, rsps)
         return gdf
 
     # Flatten Records
@@ -85,6 +71,21 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
             if rectype in rsp['__rectype']:
                 records += rsp,
                 num_records += len(rsp[batch_column])
+            elif 'ancfrec' == rsp['__rectype']:
+                for field_rec in rsp['fields']:
+                    shot_number = numpy.uint64(rsp['extent_id'])
+                    field_name = parm['anc_fields'][field_rec['field_index']]
+                    if field_name not in field_dictionary:
+                        field_dictionary[field_name] = {'shot_number': [], field_name: []}
+                    field_dictionary[field_name]['shot_number'] += shot_number,
+                    field_dictionary[field_name][field_name] += sliderule.getvalues(field_rec['value'], field_rec['datatype'], len(field_rec['value']), num_elements=1)[0],
+            elif 'ancerec' == rsp['__rectype']:
+                shot_number = numpy.uint64(rsp['extent_id'])
+                field_name = parm['anc_fields'][rsp['field_index']]
+                if field_name not in field_dictionary:
+                    field_dictionary[field_name] = {'shot_number': [], field_name: []}
+                field_dictionary[field_name]['shot_number'] += shot_number,
+                field_dictionary[field_name][field_name] += sliderule.getvalues(rsp['data'], rsp['datatype'], len(rsp['data']), num_elements=rsp['num_elements']),
             elif 'rsrec' == rsp['__rectype'] or 'zsrec' == rsp['__rectype']:
                 if rsp["num_samples"] <= 0:
                     continue
@@ -118,7 +119,7 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
             # Initialize Columns
             sample_record = records[0][batch_column][0]
             for field in sample_record.keys():
-                fielddef = sliderule.get_definition(sample_record['__rectype'], field)
+                fielddef = sliderule.getdefinition(sample_record['__rectype'], field)
                 if len(fielddef) > 0:
                     if type(sample_record[field]) == tuple:
                         columns[field] = numpy.empty(num_records, dtype=object)
@@ -135,14 +136,12 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
         logger.debug("No response returned")
 
     # Build Initial GeoDataFrame
-    gdf = sliderule.todataframe(columns, height_key=height_key)
+    gdf = sliderule.todataframe(columns, height_key=height_key, crs=GEDI_CRS)
 
     # Merge Ancillary Fields
-    tstart_merge = time.perf_counter()
     for field_set in field_dictionary:
         df = geopandas.pd.DataFrame(field_dictionary[field_set])
         gdf = geopandas.pd.merge(gdf, df, how='left', on='shot_number').set_axis(gdf.index)
-    profiles["merge"] = time.perf_counter() - tstart_merge
 
     # Delete Shot Number Column
     if len(gdf) > 0 and not keep_id:
@@ -153,84 +152,29 @@ def __flattenbatches(rsps, rectype, batch_column, parm, keep_id, as_numpy_array,
         gdf.attrs['file_directory'] = file_dictionary
 
     # Return GeoDataFrame
-    profiles["flatten"] = time.perf_counter() - tstart_flatten
     return gdf
-
-#
-#  Query Resources from CMR
-#
-def __query_resources(parm, dataset, **kwargs):
-
-    # Latch Start Time
-    tstart = time.perf_counter()
-
-    # Check Parameters are Valid
-    if ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
-        logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
-        return []
-
-    # Submission Arguments for CMR
-    kwargs.setdefault('return_metadata', False)
-
-    # Pull Out Polygon
-    if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
-        kwargs['polygon'] = parm["clusters"]
-    elif "poly" in parm and parm["poly"] and len(parm["poly"]) > 0:
-        kwargs['polygon'] = parm["poly"]
-
-    # Pull Out Time Period
-    if "t0" in parm:
-        kwargs['time_start'] = parm["t0"]
-    if "t1" in parm:
-        kwargs['time_end'] = parm["t1"]
-
-    # Make CMR Request
-    if kwargs['return_metadata']:
-        resources,metadata = earthdata.cmr(short_name=dataset, **kwargs)
-    else:
-        resources = earthdata.cmr(short_name=dataset, **kwargs)
-
-    # Update Profile
-    profiles[__query_resources.__name__] = time.perf_counter() - tstart
-
-    # Return Resources
-    if kwargs['return_metadata']:
-        return (resources,metadata)
-    else:
-        return resources
 
 #
 #  Perform Processing Request
 #
-def __processing_request(parm, asset, callbacks, resources, keep_id, as_numpy_array, dataset, api, rec, height_key, profile):
-    try:
-        tstart = time.perf_counter()
+def __processing_request(parm, asset, callbacks, resources, keep_id, as_numpy_array, api, rec, height_key):
 
-        # Get List of Resources from CMR (if not supplied)
-        if resources == None:
-            resources = __query_resources(parm, dataset)
+    # Default the Asset
+    rqst_parm = parm.copy()
+    if "asset" not in rqst_parm:
+        rqst_parm["asset"] = asset
 
-        # Build GEDI Request
-        parm["asset"] = asset
-        rqst = {
-            "resources": resources,
-            "parms": parm
-        }
+    # Build GEDI Request
+    rqst = {
+        "resources": resources,
+        "parms": rqst_parm
+    }
 
-        # Make API Processing Request
-        rsps = sliderule.source(api, rqst, stream=True, callbacks=callbacks)
+    # Make API Processing Request
+    rsps = sliderule.source(api, rqst, stream=True, callbacks=callbacks)
 
-        # Flatten Responses
-        gdf = __flattenbatches(rsps, rec, 'footprint', parm, keep_id, as_numpy_array, height_key)
-
-        # Return Response
-        profiles[profile] = time.perf_counter() - tstart
-        return gdf
-
-    # Handle Runtime Errors
-    except RuntimeError as e:
-        logger.critical(e)
-        return sliderule.emptyframe()
+    # Return GeoDataFrame
+    return __flattenbatches(rsps, rec, 'footprint', parm, keep_id, as_numpy_array, height_key)
 
 ###############################################################################
 # APIs
@@ -239,7 +183,7 @@ def __processing_request(parm, asset, callbacks, resources, keep_id, as_numpy_ar
 #
 #  Initialize
 #
-def init (url=sliderule.service_url, verbose=False, loglevel=logging.CRITICAL, organization=sliderule.service_org, desired_nodes=None, time_to_live=60, bypass_dns=False):
+def init (url=Session.PUBLIC_URL, verbose=False, loglevel=logging.CRITICAL, organization=Session.PUBLIC_ORG, desired_nodes=None, time_to_live=60, bypass_dns=False):
     '''
     Initializes the Python client for use with SlideRule and should be called before other GEDI API calls.
     This function is a wrapper for the `sliderule.init(...) function </web/rtds/api_reference/sliderule.html#init>`_.
@@ -249,12 +193,12 @@ def init (url=sliderule.service_url, verbose=False, loglevel=logging.CRITICAL, o
         >>> from sliderule import gedi
         >>> gedi.init()
     '''
-    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, bypass_dns, plugins=['gedi'])
+    sliderule.init(url, verbose, loglevel, organization, desired_nodes, time_to_live, bypass_dns)
 
 #
 #  GEDI L4A
 #
-def gedi04a (parm, resource, asset=DEFAULT_L4A_ASSET):
+def gedi04a (parm, resource):
     '''
     Performs GEDI L4A subsetting of elevation footprints
 
@@ -272,12 +216,12 @@ def gedi04a (parm, resource, asset=DEFAULT_L4A_ASSET):
     GeoDataFrame
         gridded footrpints
     '''
-    return gedi04ap(parm, asset=asset, resources=[resource])
+    return gedi04ap(parm, resources=[resource])
 
 #
 #  Parallel GEDI04A
 #
-def gedi04ap(parm, asset=DEFAULT_L4A_ASSET, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_key=None):
+def gedi04ap(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_key=None):
     '''
     Performs subsetting in parallel on GEDI data and returns elevation footprints.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -319,12 +263,12 @@ def gedi04ap(parm, asset=DEFAULT_L4A_ASSET, callbacks={}, resources=None, keep_i
         >>> asset = "ornldaac-s3"
         >>> rsps = gedi.gedi04ap(parms, asset=asset, resources=resources)
     '''
-    return __processing_request(parm, asset, callbacks, resources, keep_id, as_numpy_array, 'GEDI_L4A_AGB_Density_V2_1_2056', 'gedi04ap', 'gedi04arec', height_key, gedi04ap.__name__)
+    return __processing_request(parm, "gedil4a", callbacks, resources, keep_id, as_numpy_array, 'gedi04ap', 'gedi04arec', height_key)
 
 #
 #  GEDI L2A
 #
-def gedi02a (parm, resource, asset=DEFAULT_L2A_ASSET):
+def gedi02a (parm, resource):
     '''
     Performs GEDI L2A subsetting of elevation footprints
 
@@ -342,12 +286,12 @@ def gedi02a (parm, resource, asset=DEFAULT_L2A_ASSET):
     GeoDataFrame
         gridded footrpints
     '''
-    return gedi02ap(parm, asset=asset, resources=[resource])
+    return gedi02ap(parm, resources=[resource])
 
 #
 #  Parallel GEDI02A
 #
-def gedi02ap(parm, asset=DEFAULT_L2A_ASSET, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_key=None):
+def gedi02ap(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_key=None):
     '''
     Performs subsetting in parallel on GEDI data and returns geolocated footprints.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -389,12 +333,12 @@ def gedi02ap(parm, asset=DEFAULT_L2A_ASSET, callbacks={}, resources=None, keep_i
         >>> asset = "gedi-local"
         >>> rsps = gedi.gedi02ap(parms, asset=asset, resources=resources)
     '''
-    return __processing_request(parm, asset, callbacks, resources, keep_id, as_numpy_array, 'GEDI02_A', 'gedi02ap', 'gedi02arec', height_key, gedi02ap.__name__)
+    return __processing_request(parm, "gedil2a", callbacks, resources, keep_id, as_numpy_array, 'gedi02ap', 'gedi02arec', height_key)
 
 #
 #  GEDI L1B
 #
-def gedi01b (parm, resource, asset=DEFAULT_L1B_ASSET):
+def gedi01b (parm, resource):
     '''
     Performs GEDI L1B subsetting of elevation waveforms
 
@@ -412,12 +356,12 @@ def gedi01b (parm, resource, asset=DEFAULT_L1B_ASSET):
     GeoDataFrame
         gridded footrpints
     '''
-    return gedi01bp(parm, asset=asset, resources=[resource])
+    return gedi01bp(parm, resources=[resource])
 
 #
 #  Parallel GEDI01B
 #
-def gedi01bp(parm, asset=DEFAULT_L1B_ASSET, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_key=None):
+def gedi01bp(parm, callbacks={}, resources=None, keep_id=False, as_numpy_array=False, height_key=None):
     '''
     Performs subsetting in parallel on GEDI data and returns geolocated footprints.  This function expects that the **parm** argument
     includes a polygon which is used to fetch all available resources from the CMR system automatically.  If **resources** is specified
@@ -459,4 +403,4 @@ def gedi01bp(parm, asset=DEFAULT_L1B_ASSET, callbacks={}, resources=None, keep_i
         >>> asset = "gedi-local"
         >>> rsps = gedi.gedi01bp(parms, asset=asset, resources=resources)
     '''
-    return __processing_request(parm, asset, callbacks, resources, keep_id, as_numpy_array, 'GEDI01_B', 'gedi01bp', 'gedi01brec', height_key, gedi01bp.__name__)
+    return __processing_request(parm, "gedil1b", callbacks, resources, keep_id, as_numpy_array, 'gedi01bp', 'gedi01brec', height_key)

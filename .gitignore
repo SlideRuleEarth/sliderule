@@ -1,4 +1,8 @@
 .vscode/
+.DS_Store
+
+# excces nc file
+*.nc
 
 # Prerequisites
 *.d
@@ -44,3 +48,5 @@ cscope.*
 compile_commands.json
 report.pdf
 report.xml
+# infracost
+.infracost/

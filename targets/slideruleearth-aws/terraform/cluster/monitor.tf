@@ -2,7 +2,7 @@ resource "aws_instance" "monitor" {
     ami                         = data.aws_ami.sliderule_cluster_ami.id
     availability_zone           = var.availability_zone
     ebs_optimized               = false
-    instance_type               = "c7g.large"
+    instance_type               = "c8g.large"
     monitoring                  = false
     key_name                    = var.key_pair_name
     vpc_security_group_ids      = [aws_security_group.monitor-sg.id]
@@ -17,22 +17,17 @@ resource "aws_instance" "monitor" {
       delete_on_termination     = true
     }
     tags = {
-      "Name" = "${var.cluster_name}-monitor"
+      "Name" = "${local.organization}-monitor"
     }
     user_data = <<-EOF
       #!/bin/bash
       echo ${var.cluster_name} > ./clustername.txt
-      aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-export_logs.sh ./export_logs.sh
-      chmod +x ./export_logs.sh
-      aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-cronjob.txt ./cronjob.txt
-      crontab ./cronjob.txt
-      aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
+      aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin ${var.container_repo}
       export CLIENT_ID='${local.secrets.client_id}'
       export CLIENT_SECRET='${local.secrets.client_secret}'
       export DOMAIN=${var.domain}
       export MONITOR_IMAGE=${var.container_repo}/monitor:${var.cluster_version}
       export PROXY_IMAGE=${var.container_repo}/proxy:${var.cluster_version}
-      export STATIC_WEBSITE_IMAGE=${var.container_repo}/static-website:${var.cluster_version}
       aws s3 cp s3://sliderule/infrastructure/software/${var.cluster_name}-docker-compose-monitor.yml ./docker-compose.yml
       docker-compose -p cluster up --detach
     EOF

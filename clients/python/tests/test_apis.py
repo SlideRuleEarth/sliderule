@@ -15,10 +15,8 @@ sliderule.set_rqst_timeout((1, 60))
 #
 # Time API
 #
-@pytest.mark.network
 class TestTime:
-    def test_time(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_time(self, init):
         rqst = {
             "time": "NOW",
             "input": "NOW",
@@ -34,55 +32,49 @@ class TestTime:
         rqst["output"] = "GPS"
         d = sliderule.source("time", rqst)
         again = d["time"]
+        assert init
         assert now == again
 
-    def test_gps2utc(self, domain, organization, desired_nodes):
-        sliderule.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_gps2utc(self, init):
         utc = sliderule.gps2utc(1235331234)
+        assert init
         assert utc == '2019-02-27T19:33:36Z'
 
 #
 # Definition API
 #
-@pytest.mark.network
 class TestDefinition:
-    def test_definition(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_definition(self, init):
         rqst = {
             "rectype": "atl06rec.elevation",
         }
         d = sliderule.source("definition", rqst)
+        assert init
         assert d["time"]["offset"] == 192
 
 #
 # Version API
 #
-@pytest.mark.network
 class TestVersion:
-    def test_version_endpoint(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_version_endpoint(self, init):
         rsps = sliderule.source("version", {})
+        assert init
         assert 'server' in rsps
         assert 'version' in rsps['server']
-        assert 'commit' in rsps['server']
+        assert 'build' in rsps['server']
         assert 'launch' in rsps['server']
         assert 'duration' in rsps['server']
         assert 'packages' in rsps['server']
         assert '.' in rsps['server']['version']
-        assert '-g' in rsps['server']['commit']
+        assert len(rsps['server']['build']) > 0
         assert ':' in rsps['server']['launch']
         assert rsps['server']['duration'] > 0
-        assert 'icesat2' in rsps['server']['packages']
-        assert 'version' in rsps['icesat2']
-        assert 'commit' in rsps['icesat2']
-        assert '.' in rsps['icesat2']['version']
-        assert '-g' in rsps['icesat2']['commit']
 
-    def test_get_version_api(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_get_version_api(self, init):
         version = sliderule.get_version()
+        assert init
         assert isinstance(version, dict)
-        assert {'icesat2', 'server', 'client'} <= version.keys()
+        assert {'server', 'client'} <= version.keys()
 
     def test_client_version(self):
         assert hasattr(sliderule, '__version__')
@@ -92,32 +84,32 @@ class TestVersion:
         sliderule.set_url(domain)
         sliderule.authenticate(organization)
         sliderule.scaleout(desired_nodes, 15, True)
-        sliderule.check_version(plugins=['icesat2'])
+        assert sliderule.check_version()
 
 #
 # Initialization APIs
 #
-@pytest.mark.network
 class TestInitialization:
     def test_loop_init(self, domain, organization, desired_nodes):
         for _ in range(10):
             icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
 
-    def test_loop_versions(self, domain, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_loop_versions(self, init):
+        assert init
         for _ in range(10):
-            sliderule.source("version", {})
+            rsps = sliderule.source("version", {})
+            assert len(rsps) > 0
 
     def test_init_badurl(self):
-        with pytest.raises( (sliderule.FatalError) ):
-            icesat2.init('incorrect.org:8877')
-            sliderule.source("version")
+        with pytest.raises( (sliderule.session.FatalError) ):
+            icesat2.init('incorrect.org:8877', rethrow=True)
 
     def test_set_badurl(self):
-        with pytest.raises( (sliderule.FatalError) ):
-            sliderule.set_rqst_timeout((1, 60))
-            sliderule.set_url('incorrect.org:8877')
-            sliderule.source("version")
+        sliderule.init() # resets session state
+        sliderule.set_rqst_timeout((1, 60))
+        sliderule.set_url('incorrect.org:8877')
+        rsps = sliderule.source("version")
+        assert rsps == None
 
     def test_seturl_empty(self):
         with pytest.raises(TypeError, match=('url')):
@@ -127,10 +119,13 @@ class TestInitialization:
         with pytest.raises(TypeError):
             icesat2.init(url=[])
 
+    def test_init_restore(self):
+            sliderule.init()
+            assert len(sliderule.source("version")) > 0
+
 #
 # Region of Interest APIs
 #
-@pytest.mark.network
 class TestRegion:
     def test_toregion_empty_raises(self):
         with pytest.raises(TypeError, match=('source')):

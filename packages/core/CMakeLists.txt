@@ -1,130 +1,201 @@
+# dependencies
 find_package (Lua "5.3" REQUIRED)
+find_package (CURL REQUIRED)
+find_package (RapidJSON REQUIRED)
 find_library (READLINE_LIB readline REQUIRED)
 
+# core
 message (STATUS "Including core package")
-
 target_compile_definitions (slideruleLib PUBLIC __core__)
-target_compile_definitions (slideruleLib PUBLIC LUA_USE_READLINE)
 
+# lua
 target_link_libraries (slideruleLib PUBLIC ${LUA_LIBRARIES})
 target_include_directories (slideruleLib PUBLIC ${LUA_INCLUDE_DIR})
 
+# curl
+target_link_libraries (slideruleLib PUBLIC ${CURL_LIBRARIES})
+target_include_directories (slideruleLib PUBLIC ${CURL_INCLUDE_DIR})
+
+# rapidjson
+target_include_directories (slideruleLib PUBLIC ${RapidJSON_INCLUDE_DIR})
+
+# readline
+target_compile_definitions (slideruleLib PUBLIC "$<$<CONFIG:Release>:LUA_USE_READLINE>")
 target_link_libraries (slideruleLib PUBLIC ${READLINE_LIB})
 
+# sources
 target_sources (slideruleLib
     PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/core.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/Asset.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/CaptureDispatch.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/ClusterSocket.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/ContainerRecord.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/CsvDispatch.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/DeviceIO.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/DeviceObject.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/DeviceReader.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/DeviceWriter.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/DispatchObject.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/EventLib.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/PointIndex.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/File.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/FileIODriver.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/HttpClient.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/HttpServer.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/LimitDispatch.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/LimitRecord.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/LuaEndpoint.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/LuaEngine.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/LuaLibraryMsg.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/LuaLibrarySys.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/LuaLibraryTime.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/LuaObject.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/LuaScript.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/MathLib.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/MetricDispatch.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/MetricRecord.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/Monitor.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/MsgBridge.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/MsgProcessor.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/MsgQ.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/PublisherDispatch.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/RecordObject.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/RecordDispatcher.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/ReportDispatch.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/SpatialIndex.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/StringLib.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/TcpSocket.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/IntervalIndex.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/TimeLib.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/Uart.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/UdpSocket.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/core.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/AlertMonitor.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/AmsLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/Asset.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/AssetField.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/CurlLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/EndpointObject.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/EndpointProxy.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/EventLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/FileIODriver.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/GeoDataFrame.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/HttpServer.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/IntervalIndex.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/LogMonitor.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/LuaEndpoint.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/LuaEngine.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/LuaLibraryMsg.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/LuaLibrarySys.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/LuaLibraryTime.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/LuaObject.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/LuaScript.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/ManagerLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/MathLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/Monitor.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/MsgQ.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/OrchestratorLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/OutputFields.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/OutputLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/PointIndex.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/ProvisioningSystemLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/RecordObject.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/RegionMask.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/RequestFields.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/RequestMetrics.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/SpatialIndex.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/StringLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/SystemConfig.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/TelemetryMonitor.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/TimeLib.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/package/UnitTest.cpp
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Dictionary.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Field.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_List.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_MsgQ.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Ordering.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_String.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Table.cpp>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_TimeLib.cpp>
 )
 
+# includes
 target_include_directories (slideruleLib
     PUBLIC
         $<INSTALL_INTERFACE:${INCDIR}>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/package>
 )
 
+# header install
 install (
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/core.h
-        ${CMAKE_CURRENT_LIST_DIR}/Asset.h
-        ${CMAKE_CURRENT_LIST_DIR}/AssetIndex.h
-        ${CMAKE_CURRENT_LIST_DIR}/CaptureDispatch.h
-        ${CMAKE_CURRENT_LIST_DIR}/ClusterSocket.h
-        ${CMAKE_CURRENT_LIST_DIR}/ContainerRecord.h
-        ${CMAKE_CURRENT_LIST_DIR}/CsvDispatch.h
-        ${CMAKE_CURRENT_LIST_DIR}/DeviceIO.h
-        ${CMAKE_CURRENT_LIST_DIR}/DeviceObject.h
-        ${CMAKE_CURRENT_LIST_DIR}/DeviceReader.h
-        ${CMAKE_CURRENT_LIST_DIR}/DeviceWriter.h
-        ${CMAKE_CURRENT_LIST_DIR}/Dictionary.h
-        ${CMAKE_CURRENT_LIST_DIR}/DispatchObject.h
-        ${CMAKE_CURRENT_LIST_DIR}/EndpointObject.h
-        ${CMAKE_CURRENT_LIST_DIR}/PointIndex.h
-        ${CMAKE_CURRENT_LIST_DIR}/File.h
-        ${CMAKE_CURRENT_LIST_DIR}/FileIODriver.h
-        ${CMAKE_CURRENT_LIST_DIR}/HttpClient.h
-        ${CMAKE_CURRENT_LIST_DIR}/HttpServer.h
-        ${CMAKE_CURRENT_LIST_DIR}/LimitDispatch.h
-        ${CMAKE_CURRENT_LIST_DIR}/LimitRecord.h
-        ${CMAKE_CURRENT_LIST_DIR}/List.h
-        ${CMAKE_CURRENT_LIST_DIR}/EventLib.h
-        ${CMAKE_CURRENT_LIST_DIR}/LuaEndpoint.h
-        ${CMAKE_CURRENT_LIST_DIR}/LuaEngine.h
-        ${CMAKE_CURRENT_LIST_DIR}/LuaLibraryMsg.h
-        ${CMAKE_CURRENT_LIST_DIR}/LuaLibrarySys.h
-        ${CMAKE_CURRENT_LIST_DIR}/LuaLibraryTime.h
-        ${CMAKE_CURRENT_LIST_DIR}/LuaObject.h
-        ${CMAKE_CURRENT_LIST_DIR}/LuaScript.h
-        ${CMAKE_CURRENT_LIST_DIR}/MathLib.h
-        ${CMAKE_CURRENT_LIST_DIR}/MetricDispatch.h
-        ${CMAKE_CURRENT_LIST_DIR}/MetricRecord.h
-        ${CMAKE_CURRENT_LIST_DIR}/Monitor.h
-        ${CMAKE_CURRENT_LIST_DIR}/MsgBridge.h
-        ${CMAKE_CURRENT_LIST_DIR}/MsgProcessor.h
-        ${CMAKE_CURRENT_LIST_DIR}/MsgQ.h
-        ${CMAKE_CURRENT_LIST_DIR}/Ordering.h
-        ${CMAKE_CURRENT_LIST_DIR}/PublisherDispatch.h
-        ${CMAKE_CURRENT_LIST_DIR}/RecordObject.h
-        ${CMAKE_CURRENT_LIST_DIR}/RecordDispatcher.h
-        ${CMAKE_CURRENT_LIST_DIR}/ReportDispatch.h
-        ${CMAKE_CURRENT_LIST_DIR}/SpatialIndex.h
-        ${CMAKE_CURRENT_LIST_DIR}/StringLib.h
-        ${CMAKE_CURRENT_LIST_DIR}/Table.h
-        ${CMAKE_CURRENT_LIST_DIR}/TcpSocket.h
-        ${CMAKE_CURRENT_LIST_DIR}/IntervalIndex.h
-        ${CMAKE_CURRENT_LIST_DIR}/TimeLib.h
-        ${CMAKE_CURRENT_LIST_DIR}/Uart.h
-        ${CMAKE_CURRENT_LIST_DIR}/UdpSocket.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/core.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/AlertMonitor.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/AmsLib.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Asset.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/AssetField.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/AssetIndex.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/CurlLib.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Dictionary.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/EndpointObject.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/EndpointProxy.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/EventLib.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Field.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/FieldArray.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/FieldColumn.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/FieldDictionary.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/FieldElement.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/FieldEnumeration.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/FieldList.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/FieldMap.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/FileIODriver.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/GeoDataFrame.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/HttpServer.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/IntervalIndex.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/List.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/LogMonitor.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/LuaEndpoint.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/LuaEngine.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/LuaLibraryMsg.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/LuaLibrarySys.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/LuaLibraryTime.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/LuaObject.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/LuaScript.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/ManagerLib.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/MathLib.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Monitor.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/MsgQ.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/OrchestratorLib.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Ordering.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/OutputFields.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/OutputLib.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/PointIndex.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/ProvisioningSystemLib.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/RecordObject.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/RegionMask.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/RequestFields.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/RequestMetrics.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/SpatialIndex.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/StringLib.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/SystemConfig.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Table.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/TelemetryMonitor.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/TimeLib.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/UnitTest.h
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Dictionary.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Field.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_List.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_MsgQ.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Ordering.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_String.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_Table.h>
+        $<$<CONFIG:Debug>:${CMAKE_CURRENT_LIST_DIR}/package/UT_TimeLib.h>
     DESTINATION
         ${INCDIR}
 )
 
+# config install
 install (
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/leap-seconds.list
+        ${CMAKE_CURRENT_LIST_DIR}/data/leap-seconds.list
     DESTINATION
         ${CONFDIR}
+)
+
+# Extensions #
+install (
+    FILES
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/asset.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/base64.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/console.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/csv.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/dataframe.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/global.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/iam_role_auth.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/earth_data_auth.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/earth_data_query.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/json.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/packet.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/prettyprint.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/service_registry.lua
+        ${CMAKE_CURRENT_LIST_DIR}/extensions/test_executive.lua
+    DESTINATION
+        ${CONFDIR}
+)
+
+# Endpoints #
+install (
+    FILES
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/ace.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/ams.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/assets.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/defaults.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/definition.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/earthdata.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/event.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/geo.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/health.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/index.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/prometheus.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/time.lua
+        ${CMAKE_CURRENT_LIST_DIR}/endpoints/version.lua
+    DESTINATION
+        ${CONFDIR}/api
 )

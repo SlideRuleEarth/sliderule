@@ -1,0 +1,55 @@
+version: "3.9"
+services:
+  sliderule:
+    image: ${SLIDERULE_IMAGE}
+    network_mode: "host"
+    restart: always
+    pull_policy: if_not_present
+    entrypoint: /usr/local/bin/sliderule /usr/local/etc/sliderule/server.lua /usr/local/etc/sliderule/config.json
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 8192
+    volumes:
+      - /etc/ssl/certs:/etc/ssl/certs
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /data:/data
+      - /plugin:/usr/local/lib/sliderule
+    environment:
+      - IPV4=${IPV4}
+      - ORCHESTRATOR=http://10.0.1.5:8050
+      - MANAGER=http://10.0.1.3:8030
+      - AMS=http://127.0.0.1:9082
+      - ORGANIZATION=$ORGANIZATION
+      - CLUSTER=$CLUSTER
+      - IS_PUBLIC=$IS_PUBLIC
+      - PROVISIONING_SYSTEM=$PROVISIONING_SYSTEM
+      - CONTAINER_REGISTRY=$CONTAINER_REGISTRY
+      - ENVIRONMENT_VERSION=$ENVIRONMENT_VERSION
+    healthcheck:
+      test: curl -X GET -d "{}" http://localhost:9081/source/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 1
+      start_period: 30s
+  ams:
+    image: ${AMS_IMAGE}
+    network_mode: "host"
+    restart: always
+    pull_policy: if_not_present
+    entrypoint: /docker-entrypoint.sh
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    volumes:
+      - /data:/data
+  autoheal:
+    image: willfarrell/autoheal:latest
+    tty: true
+    container_name: autoheal
+    restart: always
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

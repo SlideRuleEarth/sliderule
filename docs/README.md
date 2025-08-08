@@ -32,7 +32,7 @@ The SlideRule **website** can be built and hosted locally for development purpos
     $ gem install jekyll bundler
     ```
 
-    Then go into the `jekyll` directory and install all depedencies.
+    Then go into the `jekyll` directory and install all dependencies.
 
     ```bash
     $ bundle install
@@ -58,7 +58,7 @@ The SlideRule **website** can be built and hosted locally for development purpos
     ```
 
     Note: docutils version 0.17.x breaks certain formatting in Sphinx (e.g. lists).  Therefore it is recommended that docutils version 0.16 be installed.
-2. chruby using [Homebrew](https://brew.sh/) (install if neccessary)
+2. chruby using [Homebrew](https://brew.sh/) (install if necessary)
 
     ```bash
     $ brew install chruby ruby-install
@@ -83,7 +83,7 @@ The SlideRule **website** can be built and hosted locally for development purpos
     $ gem install jekyll
     ```
 
-    Then go into the `jekyll` directory and install all depedencies.
+    Then go into the `jekyll` directory and install all dependencies.
 
     ```bash
     $ bundle install
@@ -97,22 +97,14 @@ The SlideRule **website** can be built and hosted locally for development purpos
 4. Docker (see [Install Docker on Mac](https://docs.docker.com/desktop/mac/install/) )
 
 
-### Build Instructions for local host
+### Build Instructions for docker container
 
 To build, in the slideruleearth-aws target directory:
 ```bash
-$ make website
+$ make static-website-docker
 ```
 
 To run locally (exposed as http://localhost:4000) in the root of the repository:
 ```bash
-$ make run
-```
-
-
-### Build Instructions for docker container
-
-To build a fully contained docker container, in the root of the repository:
-```bash
-$ make website-docker
+$ make static-website-run
 ```

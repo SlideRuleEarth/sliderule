@@ -9,24 +9,11 @@ The ICESat-2 Python API ``icesat2.py`` is used to access the services provided b
     from sliderule import icesat2
 
 
-
 """"""""""""""""
 
 init
 ----
 .. autofunction:: sliderule.icesat2.init
-
-""""""""""""""""
-
-atl06
------
-.. autofunction:: sliderule.icesat2.atl06
-
-""""""""""""""""
-
-atl06p
-------
-.. autofunction:: sliderule.icesat2.atl06p
 
 """"""""""""""""
 
@@ -42,6 +29,42 @@ atl03sp
 
 """"""""""""""""
 
+atl03v
+------
+.. autofunction:: sliderule.icesat2.atl03v
+
+""""""""""""""""
+
+atl03vp
+-------
+.. autofunction:: sliderule.icesat2.atl03vp
+
+""""""""""""""""
+
+atl06
+-----
+.. autofunction:: sliderule.icesat2.atl06
+
+""""""""""""""""
+
+atl06p
+------
+.. autofunction:: sliderule.icesat2.atl06p
+
+""""""""""""""""
+
+atl06s
+------
+.. autofunction:: sliderule.icesat2.atl06s
+
+""""""""""""""""
+
+atl06sp
+-------
+.. autofunction:: sliderule.icesat2.atl06sp
+
+""""""""""""""""
+
 atl08
 ------
 .. autofunction:: sliderule.icesat2.atl08
@@ -54,36 +77,20 @@ atl08p
 
 """"""""""""""""
 
-h5
---
-.. autofunction:: sliderule.icesat2.h5
+atl13s
+------
+.. autofunction:: sliderule.icesat2.atl13s
 
 """"""""""""""""
 
-h5p
----
-.. autofunction:: sliderule.icesat2.h5p
+atl13sp
+-------
+.. autofunction:: sliderule.icesat2.atl13sp
 
 """"""""""""""""
 
-toregion
---------
-.. autofunction:: sliderule.icesat2.toregion
+atl24v
+------
+.. autofunction:: sliderule.icesat2.atl24v
 
 """"""""""""""""
-
-get_version
------------
-.. autofunction:: sliderule.icesat2.get_version
-
-""""""""""""""""
-
-set_max_resources
------------------
-.. autofunction:: sliderule.icesat2.set_max_resources
-
-""""""""""""""""
-
-cmr
----
-.. autofunction:: sliderule.icesat2.cmr

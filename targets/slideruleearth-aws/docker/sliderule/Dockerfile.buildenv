@@ -1,92 +1,131 @@
-FROM ubuntu:20.04
+FROM amazonlinux:2023
 
 # install build dependencies
-RUN apt-get update && \
-  DEBIAN_FRONTEND=noninteractive \
-  apt-get install -y --no-install-recommends \
-  build-essential \
-  ca-certificates \
-  pkg-config \
+RUN dnf update \
+  && dnf groupinstall -y "Development Tools" \
+  && dnf install -y \
   cmake \
-  git \
-  libreadline-dev \
-  liblua5.3-dev \
-  libcurl4-openssl-dev \
-  libssl-dev \
-  uuid-dev \
-  zlib1g-dev \
-  libtiff-dev \
-  libsqlite3-dev \
-  sqlite3 \
-  && rm -rf /var/lib/apt/lists/*
+  readline-devel \
+  lua-devel \
+  openssl-devel \
+  libuuid-devel \
+  libtiff-devel \
+  sqlite-devel \
+  curl-devel \
+  python-devel \
+  libzstd-devel \
+  jq \
+  meson \
+  llvm \
+  clang \
+  clang-tools-extra \
+  cppcheck \
+  && dnf clean all \
+  && rm -rf /var/cache/yum
+
+# set working directory to root
+WORKDIR /
 
 # install rapidjson dependency
-WORKDIR /
-RUN git clone https://github.com/Tencent/rapidjson.git
-RUN mkdir -p /build/rapidjson
-WORKDIR /build/rapidjson
-RUN cmake /rapidjson
-RUN make -j8
-RUN make install
+RUN git clone https://github.com/Tencent/rapidjson.git && \
+    cd rapidjson && \
+    #    VERSION=`curl -s https://api.github.com/repos/Tencent/rapidjson/releases/latest | jq '.tag_name' | tr -d "\""` && \
+    #    git checkout $VERSION && \    ### version v1.1.0 (latest as of 8/25/16) is broken with recent compilers
+    mkdir -p /build/rapidjson && \
+    cd /build/rapidjson && \
+    cmake /rapidjson && \
+    make -j8 && \
+    make install && \
+    ldconfig
 
 # install arrow dependency
-WORKDIR /
-RUN git clone https://github.com/apache/arrow.git
-RUN mkdir -p /build/arrow
-WORKDIR /build/arrow
-RUN cmake /arrow/cpp -DARROW_PARQUET=ON -DARROW_WITH_ZLIB=ON -DARROW_WITH_SNAPPY=ON
-RUN make -j8
-RUN make install
+RUN git clone https://github.com/apache/arrow.git && \
+    cd arrow && \
+    #    VERSION=`git describe --tags --abbrev=0` && \  ### arrow does not have releases, only tags
+    #    git checkout $VERSION && \                     ### and often the latest tagged versions are not stable (e.g. *.dev tags)
+    git checkout apache-arrow-19.0.1 && \
+    mkdir -p /build/arrow && \
+    cd /build/arrow && \
+    cmake /arrow/cpp -DARROW_PARQUET=ON -DARROW_WITH_ZSTD=ON -DARROW_WITH_ZLIB=ON -DARROW_WITH_SNAPPY=ON -DARROW_CSV=ON -DARROW_FILESYSTEM=ON && \
+    make -j8 && \
+    make install && \
+    ldconfig
 
-# install proj9 gdal/pdal dependency
-WORKDIR /
-RUN git clone https://github.com/OSGeo/PROJ.git
-RUN mkdir -p /build/proj9
-WORKDIR /build/proj9
-RUN cmake /PROJ -DCMAKE_BUILD_TYPE=Release
-RUN make -j8
-RUN make install
-RUN ldconfig
+# install libtiff dependency (not officially on github)
+RUN curl -LO https://download.osgeo.org/libtiff/tiff-4.6.0.tar.gz && \
+    tar -xvzf tiff-4.6.0.tar.gz && \
+    mkdir /build/libtiff && \
+    cd /build/libtiff && \
+    cmake /tiff-4.6.0 -DCMAKE_BUILD_TYPE=Release && \
+    make -j8 && \
+    make install && \
+    ldconfig
 
-# install geotiff gdal/pdal dependency
-WORKDIR /
-RUN git clone https://github.com/OSGeo/libgeotiff.git
-RUN mkdir -p /build/geotiff
-WORKDIR /build/geotiff
-RUN cmake /libgeotiff/libgeotiff -DCMAKE_BUILD_TYPE=Release
-RUN make -j4
-RUN make install
-RUN ldconfig
+# install proj9 dependency
+RUN git clone https://github.com/OSGeo/PROJ.git && \
+    cd PROJ && \
+    VERSION=`curl -s https://api.github.com/repos/OSGeo/PROJ/releases/latest | jq '.tag_name' | tr -d "\""` && \
+    git checkout $VERSION && \
+    mkdir -p /build/proj && \
+    cd /build/proj && \
+    cmake /PROJ -DCMAKE_BUILD_TYPE=Release && \
+    make -j8 && \
+    make install && \
+    ldconfig
 
-# install geos gdal dependency
-WORKDIR /
-RUN git clone https://github.com/libgeos/geos.git
-RUN mkdir -p /build/geos
-WORKDIR /build/geos
-RUN cmake /geos -DCMAKE_BUILD_TYPE=Release
-RUN make -j8
-RUN make install
-RUN ldconfig
+# install geotiff dependency
+RUN git clone https://github.com/OSGeo/libgeotiff.git && \
+    cd libgeotiff && \
+    VERSION=`curl -s https://api.github.com/repos/OSGeo/libgeotiff/releases/latest | jq '.tag_name' | tr -d "\""` && \
+    git checkout $VERSION && \
+    mkdir -p /build/geotiff && \
+    cd /build/geotiff && \
+    cmake /libgeotiff/libgeotiff -DCMAKE_BUILD_TYPE=Release && \
+    make -j8 && \
+    make install && \
+    ldconfig
+
+# install geos dependency
+RUN git clone https://github.com/libgeos/geos.git && \
+    cd geos && \
+    VERSION=`curl -s https://api.github.com/repos/libgeos/geos/releases/latest | jq '.tag_name' | tr -d "\""` && \
+    git checkout $VERSION && \
+    mkdir -p /build/geos && \
+    cd /build/geos && \
+    cmake /geos -DCMAKE_BUILD_TYPE=Release && \
+    make -j8 && \
+    make install && \
+    ldconfig
+
+# install hdf5 library dependency
+RUN git clone https://github.com/HDFGroup/hdf5.git && \
+    cd hdf5 && \
+    VERSION=`curl -s https://api.github.com/repos/HDFGroup/hdf5/releases/latest | jq '.tag_name' | tr -d "\""` && \
+    git checkout $VERSION && \
+    mkdir -p /build/hdf5 && \
+    cd /build/hdf5 && \
+    CFLAGS=-fPIC /hdf5/configure --prefix=/usr/local --disable-shared --enable-build-mode=production --enable-threadsafe --disable-hl && \
+    make install -j8 && \
+    ldconfig
 
 # install gdal dependency
-WORKDIR /
-RUN git clone https://github.com/OSGeo/gdal.git
-RUN mkdir -p /build/gdal
-WORKDIR /build/gdal
-RUN cmake /gdal -DCMAKE_BUILD_TYPE=Release
-RUN make -j8
-RUN make install
-RUN ldconfig
+RUN git clone https://github.com/OSGeo/gdal.git && \
+    cd gdal && \
+    VERSION=`curl -s https://api.github.com/repos/OSGeo/gdal/releases/latest | jq '.tag_name' | tr -d "\""` && \
+    git checkout $VERSION && \
+    mkdir -p /build/gdal && \
+    cd /build/gdal && \
+    cmake /gdal -DCMAKE_BUILD_TYPE=Release -DBUILD_APPS=OFF -DGDAL_USE_SWIG:BOOL=OFF -DBUILD_PYTHON_BINDINGS:BOOL=OFF -DGDAL_USE_HDF5=ON -DGDAL_ENABLE_HDF5_GLOBAL_LOCK=OFF && \
+    make -j8 install && \
+    ldconfig
 
-# install pdal dependency
-WORKDIR /
-RUN git clone https://github.com/PDAL/PDAL.git
-RUN mkdir -p /build/pdal
-WORKDIR /build/pdal
-RUN cmake /PDAL -DCMAKE_BUILD_TYPE=Release
-RUN make -j8
-RUN make install
+# configure any new shared libraries
+RUN echo "/usr/local/lib64" > /etc/ld.so.conf.d/local.conf
+RUN echo "/usr/local/lib" >> /etc/ld.so.conf.d/local.conf
 RUN ldconfig
 
 # support interactive mode
+COPY .bashrc /root/.bashrc
 CMD ["/bin/bash"]
+
+

@@ -27,27 +27,27 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import time
 import itertools
 import copy
 import json
 import ssl
 import urllib.request
+import http
 import requests
-import logging
 import numpy
 import geopandas
 from datetime import datetime
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.geometry import Polygon
-import sliderule
-
+from sliderule import sliderule, logger
 
 ###############################################################################
 # GLOBALS
 ###############################################################################
 
-# create logger
-logger = logging.getLogger(__name__)
+# profiling times for each major function
+profiles = {}
 
 # default maximum number of resources to process in one request
 DEFAULT_MAX_REQUESTED_RESOURCES = 300
@@ -55,19 +55,48 @@ max_requested_resources = DEFAULT_MAX_REQUESTED_RESOURCES
 
 # best effort match of datasets to providers and versions for earthdata
 DATASETS = {
-    "ATL03":                                               {"provider": "NSIDC_ECS",   "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [] },
-    "ATL06":                                               {"provider": "NSIDC_ECS",   "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": []},
-    "ATL08":                                               {"provider": "NSIDC_ECS",   "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": []},
-    "GEDI01_B":                                            {"provider": "LPDAAC_ECS",  "version": "002",  "api": "cmr",   "formats": [".h5"],    "collections": []},
-    "GEDI02_A":                                            {"provider": "LPDAAC_ECS",  "version": "002",  "api": "cmr",   "formats": [".h5"],    "collections": []},
-    "GEDI02_B":                                            {"provider": "LPDAAC_ECS",  "version": "002",  "api": "cmr",   "formats": [".tiff"],  "collections": []},
-    "GEDI_L3_LandSurface_Metrics_V2_1952":                 {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".h5"],    "collections": []},
-    "GEDI_L4A_AGB_Density_V2_1_2056":                      {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".h5"],    "collections": []},
-    "GEDI_L4B_Gridded_Biomass_2017":                       {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".tiff"],  "collections": []},
-    "HLS":                                                 {"provider": "LPCLOUD",     "version": None,   "api": "stac",  "formats": [".tiff"],  "collections": ["HLSS30.v2.0", "HLSL30.v2.0"]},
-    "Digital Elevation Model (DEM) 1 meter":               {"provider": "USGS",        "version": None,   "api": "tnm",   "formats": [".tiff"],  "collections": []},
-    "SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1":  {"provider": "POCLOUD",     "version": None,   "api": "cmr",   "formats": [".nc"],    "collections": ["C2147947806-POCLOUD"]},
-    "SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1":        {"provider": "POCLOUD",     "version": None,   "api": "cmr",   "formats": [".nc"],    "collections": ["C2152046451-POCLOUD"]}
+    "ATL03":                                               {"provider": "NSIDC_CPRD",  "version": "007",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "ATL06":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "ATL08":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "ATL09":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "ATL13":                                               {"provider": "NSIDC_CPRD",  "version": "006",  "api": "cmr",   "formats": {".h5"},    "collections": [],                                 "url": None},
+    "GEDI01_B":                                            {"provider": "LPCLOUD",     "version": "002",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "GEDI02_A":                                            {"provider": "LPCLOUD",     "version": "002",  "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "GEDI_L3_LandSurface_Metrics_V2_1952":                 {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "GEDI_L4A_AGB_Density_V2_1_2056":                      {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".h5"],    "collections": [],                                 "url": None},
+    "GEDI_L4B_Gridded_Biomass_2017":                       {"provider": "ORNL_CLOUD",  "version": None,   "api": "cmr",   "formats": [".tiff"],  "collections": [],                                 "url": None},
+    "HLS":                                                 {"provider": "LPCLOUD",     "version": None,   "api": "stac",  "formats": [".tiff"],  "collections": ["HLSS30.v2.0", "HLSL30.v2.0"],     "url": 'https://cmr.earthdata.nasa.gov/stac/LPCLOUD/search'},
+    "Digital Elevation Model (DEM) 1 meter":               {"provider": "USGS",        "version": None,   "api": "tnm",   "formats": [".tiff"],  "collections": [],                                 "url": None},
+    "SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1":  {"provider": "POCLOUD",     "version": None,   "api": "cmr",   "formats": [".nc"],    "collections": ["C2147947806-POCLOUD"],            "url": None},
+    "SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1":        {"provider": "POCLOUD",     "version": None,   "api": "cmr",   "formats": [".nc"],    "collections": ["C2152046451-POCLOUD"],            "url": None},
+    "arcticdem-strips":                                    {"provider": "PGC",         "version": None,   "api": "stac",  "formats": [".tiff"],  "collections": ["arcticdem-strips-s2s041-2m"],     "url": 'https://stac.pgc.umn.edu/api/v1/search'},
+    "rema-strips":                                         {"provider": "PGC",         "version": None,   "api": "stac",  "formats": [".tiff"],  "collections": ["rema-strips-s2s041-2m"],          "url": 'https://stac.pgc.umn.edu/api/v1/search'}
+}
+
+# best effort match of sliderule assets to earthdata datasets
+ASSETS_TO_DATASETS = {
+    "gedil4a": "GEDI_L4A_AGB_Density_V2_1_2056",
+    "gedil4b": "GEDI_L4B_Gridded_Biomass_2017",
+    "gedil3-elevation": "GEDI_L3_LandSurface_Metrics_V2_1952",
+    "gedil3-canopy": "GEDI_L3_LandSurface_Metrics_V2_1952",
+    "gedil3-elevation-stddev": "GEDI_L3_LandSurface_Metrics_V2_1952",
+    "gedil3-canopy-stddev": "GEDI_L3_LandSurface_Metrics_V2_1952",
+    "gedil3-counts": "GEDI_L3_LandSurface_Metrics_V2_1952",
+    "gedil2a": "GEDI02_A",
+    "gedil1b": "GEDI01_B",
+    "swot-sim-ecco-llc4320": "SWOT_SIMULATED_L2_KARIN_SSH_ECCO_LLC4320_CALVAL_V1",
+    "swot-sim-glorys": "SWOT_SIMULATED_L2_KARIN_SSH_GLORYS_CALVAL_V1",
+    "usgs3dep-1meter-dem": "Digital Elevation Model (DEM) 1 meter",
+    "landsat-hls": "HLS",
+    "icesat2": "ATL03",
+    "icesat2-atl06": "ATL06",
+    "icesat2-atl08": "ATL08",
+    "icesat2-atl09": "ATL09",
+    "icesat2-atl13": "ATL13",
+    "atlas-local": "ATL03",
+    "nsidc-s3": "ATL03",
+    "arcticdem-strips": "arcticdem-strips",
+    "rema-strips": "rema-strips"
 }
 
 # upper limit on resources returned from CMR query per request
@@ -133,10 +162,10 @@ def __cmr_filter_urls(search_results, data_formats):
     # return filtered urls
     return urls
 
-def __cmr_granule_metadata(search_results):
+def __cmr_granule_metadata(search_results, crs=sliderule.DEFAULT_CRS):
     """Get the metadata for CMR returned granules"""
     # GeoDataFrame with granule metadata
-    granule_metadata = sliderule.emptyframe()
+    granule_metadata = sliderule.emptyframe(crs=crs)
     # return empty dataframe if no CMR entries
     if 'feed' not in search_results or 'entry' not in search_results['feed']:
         return granule_metadata
@@ -168,7 +197,7 @@ def __cmr_granule_metadata(search_results):
         else:
             geometry, = geopandas.points_from_xy([None], [None])
         # Build GeoDataFrame (default geometry is crs=EPSG_MERCATOR)
-        gdf = geopandas.GeoDataFrame(df, geometry=[geometry], crs=sliderule.EPSG_MERCATOR)
+        gdf = geopandas.GeoDataFrame(df, geometry=[geometry], crs=crs)
         # append to combined GeoDataFrame and catch warnings
         granule_metadata = geopandas.pd.concat([granule_metadata, gdf])
     # return granule metadata
@@ -208,60 +237,77 @@ def __cmr_collection_query(provider, short_name):
         return search_results['feed']['entry']
 
 def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
-    """Perform a scrolling CMR query for files matching input criteria."""
+    """Perform a search-after CMR query for files matching input criteria."""
     kwargs.setdefault('polygon',None)
     kwargs.setdefault('name_filter',None)
     kwargs.setdefault('return_metadata',False)
+    kwargs.setdefault('crs',sliderule.DEFAULT_CRS)
     # build params
     params = '&short_name={0}'.format(short_name)
     if version != None:
         params += '&version={0}'.format(version)
-    if time_start != None and time_end != None:
+    if time_start is not None and time_end is not None:
         params += '&temporal[]={0},{1}'.format(time_start, time_end)
     if kwargs['polygon']:
         params += '&polygon={0}'.format(kwargs['polygon'])
     if kwargs['name_filter']:
         params += '&options[producer_granule_id][pattern]=true'
         params += '&producer_granule_id[]=' + kwargs['name_filter']
+
     CMR_URL = 'https://cmr.earthdata.nasa.gov'
     cmr_query_url = ('{0}/search/granules.json?provider={1}'
                      '&sort_key[]=start_date&sort_key[]=producer_granule_id'
-                     '&scroll=true&page_size={2}'.format(CMR_URL, provider, CMR_PAGE_SIZE))
+                     '&page_size={2}'.format(CMR_URL, provider, CMR_PAGE_SIZE))
     cmr_query_url += params
-    logger.debug('cmr request={0}\n'.format(cmr_query_url))
+    logger.debug(f'Initial CMR request: {cmr_query_url}')
 
-    cmr_scroll_id = None
+    cmr_search_after = None
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
 
     urls = []
     # GeoDataFrame with granule metadata
-    metadata = sliderule.emptyframe()
+    metadata = sliderule.emptyframe(crs=kwargs['crs'])
     while True:
         req = urllib.request.Request(cmr_query_url)
-        if cmr_scroll_id:
-            req.add_header('cmr-scroll-id', cmr_scroll_id)
+        if cmr_search_after:
+            req.add_header('CMR-Search-After', cmr_search_after)
+            logger.debug(f'Requesting next page with CMR-Search-After: {cmr_search_after}')
+
         response = urllib.request.urlopen(req, context=ctx)
-        if not cmr_scroll_id:
-            # Python 2 and 3 have different case for the http headers
-            headers = {k.lower(): v for k, v in dict(response.info()).items()}
-            cmr_scroll_id = headers['cmr-scroll-id']
+
+        headers = {k.lower(): v for k, v in dict(response.info()).items()}
+        cmr_search_after = headers.get('cmr-search-after')
+
         search_page = response.read()
         search_page = json.loads(search_page.decode('utf-8'))
+
         url_scroll_results = __cmr_filter_urls(search_page, DATASETS[short_name]["formats"])
         if not url_scroll_results:
             break
         urls += url_scroll_results
         # query for granule metadata and polygons
         if kwargs['return_metadata']:
-            metadata_results = __cmr_granule_metadata(search_page)
+            metadata_results = __cmr_granule_metadata(search_page, crs=kwargs['crs'])
         else:
             metadata_results = geopandas.pd.DataFrame([None for _ in url_scroll_results])
+
         # append granule metadata
         metadata = geopandas.pd.concat([metadata, metadata_results])
 
-    return (urls,metadata)
+        # Two ways to determine that there is no more data available:
+        # 1. The number of granules in the current response is less than the requested 'page_size':
+        # 2. The absence of the 'CMR-Search-After' header
+        result_count = len(search_page['feed']['entry'])
+        if result_count < CMR_PAGE_SIZE:
+            logger.debug(f'Received {result_count} results, fewer than page size. Ending pagination after processing.')
+            break
+        if not cmr_search_after:
+            logger.debug('No CMR-Search-After header found, no more pages.')
+            break
+
+    return urls, metadata
 
 ###############################################################################
 # CMR UTILITIES
@@ -270,9 +316,26 @@ def __cmr_query(provider, short_name, version, time_start, time_end, **kwargs):
 #
 # Perform a CMR Search Request
 #
-def __cmr_search(provider, short_name, version, polygons, time_start, time_end, return_metadata, name_filter):
+def __cmr_search(short_name, version, polygons, time_start, time_end, return_metadata, name_filter):
 
     global max_requested_resources
+
+    tstart = time.perf_counter()
+
+    # check parameters
+    if short_name == None:
+        raise sliderule.FatalError("Must supply short name to CMR query")
+    elif short_name not in DATASETS:
+        raise sliderule.FatalError("Must supply a supported dataset: " + short_name)
+
+    # attempt to fill in provider
+    provider = DATASETS[short_name]["provider"]
+    if provider == None:
+        raise sliderule.FatalError("Unable to determine provider for CMR query")
+
+    # attempt to fill in version
+    if version == None:
+        version = DATASETS[short_name]["version"]
 
     # initialize return value
     resources = {} # [<url>] = <polygon>
@@ -300,9 +363,11 @@ def __cmr_search(provider, short_name, version, polygons, time_start, time_end, 
                 urls,metadata = __cmr_query(provider, short_name, version, time_start, time_end, polygon=polystr, return_metadata=return_metadata, name_filter=name_filter)
                 break # exit loop because cmr search was successful
             except urllib.error.HTTPError as e:
-                logger.error('HTTP Request Error: {}'.format(e.reason))
+                logger.error('HTTP Request Error: {}'.format(e))
+            except http.client.HTTPException as e:
+                logger.error('HTTP Client Error: {}'.format(e))
             except RuntimeError as e:
-                logger.error("Runtime Error:", e)
+                logger.error('Runtime Error: {}'.format(e))
 
             # simplify polygon
             if polygon and tolerance:
@@ -334,6 +399,8 @@ def __cmr_search(provider, short_name, version, polygons, time_start, time_end, 
     else:
         logger.info("Identified %d resources to process", len(url_list))
 
+    profiles[__cmr_search.__name__] = time.perf_counter() - tstart
+
     if return_metadata:
         return (url_list,meta_list)
     else:
@@ -357,7 +424,15 @@ def __cmr_max_version(provider, short_name):
 #
 def __build_geojson(rsps):
     geojson = rsps.json()
-    del geojson["links"]
+    next_page = {"link": None, "body": None}
+    if "links" in geojson:
+        for link in geojson["links"]:
+            if link["rel"] == "next":
+                next_page["link"] = link["href"]
+                if "body" in link:
+                    next_page["body"] = json.dumps(link["body"]) # POST based pagination
+                break
+        del geojson["links"]
     if 'numberMatched' in geojson:
         del geojson['numberMatched']
     if 'numberReturned' in geojson:
@@ -368,93 +443,75 @@ def __build_geojson(rsps):
         del geojson["features"][i]["stac_extensions"]
         del geojson["features"][i]["collection"]
         del geojson["features"][i]["bbox"]
-        del geojson["features"][i]["assets"]["browse"]
-        del geojson["features"][i]["assets"]["metadata"]
-        propertiesDict = geojson["features"][i]["properties"]
+        if "browse" in geojson["features"][i]["assets"]:
+            del geojson["features"][i]["assets"]["browse"]
+        if "metadata" in geojson["features"][i]["assets"]:
+            del geojson["features"][i]["assets"]["metadata"]
         assetsDict = geojson["features"][i]["assets"]
         for val in assetsDict:
             if "href" in assetsDict[val]:
-                propertiesDict[val] = assetsDict[val]["href"]
+                geojson["features"][i]["properties"][val] = assetsDict[val]["href"]
         del geojson["features"][i]["assets"]
-    return geojson
+
+    return geojson, next_page
 
 #
 # Perform a STAC Query
 #
 #   See https://cmr.earthdata.nasa.gov/stac/docs/index.html for details on API
 #
-def __stac_search(provider, short_name, collections, polygons, time_start, time_end):
-    global max_requested_resources
+def __stac_search(short_name, collections, polygons, time_start, time_end):
 
-    # attempt to fill in collections
-    if collections == None:
-        if short_name in DATASETS:
-            collections = DATASETS[short_name]["collections"]
-        else:
-            raise sliderule.FatalError("Unable to determine collections for CMR query")
+    # check short name
+    if short_name not in DATASETS:
+        raise sliderule.FatalError(f'{short_name} is not a supported dataset for STAC queries')
 
     # create requests context
     context = requests.Session()
     context.trust_env = False # prevent requests from attaching credentials from environment
 
     # build stac request
-    url = 'https://cmr.earthdata.nasa.gov/stac/{}/search'.format(provider)
+    url = DATASETS[short_name]["url"]
     headers = {'Content-Type': 'application/json'}
     rqst = {
         "limit": STAC_PAGE_SIZE,
         "datetime": '{}/{}'.format(time_start, time_end),
-        "collections": collections,
+        "collections": collections or DATASETS[short_name]["collections"],
     }
 
     # add polygon if provided
     if polygons:
-        rqst["intersects"] = {
-            "type": "Polygon",
-            "coordinates": [[[coord["lon"], coord["lat"]] for coord in polygon] for polygon in polygons]
-        }
+        if len(polygons) == 1 and len(polygons[0]) == 1:
+            # Single point
+            coord = polygons[0][0]
+            rqst["intersects"] = {
+                "type": "Point",
+                "coordinates": [coord["lon"], coord["lat"]]
+            }
+        else:
+            # Regular polygon handling
+            rqst["intersects"] = {
+                "type": "Polygon",
+                "coordinates": [[[coord["lon"], coord["lat"]] for coord in polygon] for polygon in polygons]
+            }
 
     # make initial stac request
     data = context.post(url, data=json.dumps(rqst), headers=headers)
     data.raise_for_status()
-    geojson = __build_geojson(data)
+    geojson, next_page = __build_geojson(data)
 
-    # iterate through additional pages if not all returned
-    num_returned = geojson["context"]["returned"]
-    num_matched = geojson["context"]["matched"]
-    if num_matched > max_requested_resources:
-        logger.warn("Number of matched resources truncated from {} to {}".format(num_matched, max_requested_resources))
-        num_matched = max_requested_resources
-    num_pages = int((num_matched  + (num_returned - 1)) / num_returned)
-    for page in range(2, num_pages+1):
-        rqst["page"] = page
-        data = context.post(url, data=json.dumps(rqst), headers=headers)
+    # Continue fetching pages if 'next' link is available
+    while next_page["link"]:
+        data = context.post(next_page["link"], data=next_page["body"], headers=headers)
         data.raise_for_status()
-        _geojson = __build_geojson(data)
+        _geojson, next_page = __build_geojson(data)
         geojson["features"] += _geojson["features"]
-    geojson["context"]["returned"] = num_matched
-    geojson["context"]["limit"] = max_requested_resources
+
+    # set number of returned features
+    geojson["context"]["returned"] = len(geojson["features"])
 
     # return geojson dictionary
     return geojson
-
-#
-# Get Provider from DATASETS
-#
-def __get_provider(short_name):
-
-    # check parameters
-    if short_name == None:
-        raise sliderule.FatalError("Must supply short name to CMR query")
-    elif short_name not in DATASETS:
-        raise sliderule.FatalError("Must supply a supported dataset: " + short_name)
-
-    # attempt to fill in provider
-    provider = DATASETS[short_name]["provider"]
-    if provider == None:
-        raise sliderule.FatalError("Unable to determine provider for CMR query")
-
-    # return provider string (cannot be None)
-    return provider
 
 #
 # Format Polygons for Request
@@ -492,7 +549,7 @@ def set_max_resources (max_resources):
     Examples
     --------
         >>> from sliderule import icesat2
-        >>> icesat2.set_max_resources(1000)
+        >>> earthdata.set_max_resources(1000)
     '''
     global max_requested_resources
     max_requested_resources = max_resources
@@ -538,19 +595,11 @@ def cmr(short_name=None, version=None, polygon=None, time_start='2018-01-01T00:0
         >>> granules
         ['ATL03_20181017222812_02950102_003_01.h5', 'ATL03_20181110092841_06530106_003_01.h5', ... 'ATL03_20201111102237_07370902_003_01.h5']
     '''
-
-    # get provider
-    provider = __get_provider(short_name)
-
-    # attempt to fill in version
-    if version == None:
-        version = DATASETS[short_name]["version"]
-
     # create list of polygons
     polygons = __format_polygons(polygon)
 
     # perform query
-    return __cmr_search(provider, short_name, version, polygons, time_start, time_end, return_metadata, name_filter)
+    return __cmr_search(short_name, version, polygons, time_start, time_end, return_metadata, name_filter)
 
 #
 #  SpatioTemporal Asset Catalog
@@ -616,20 +665,13 @@ def stac(short_name=None, collections=None, polygon=None, time_start='2018-01-01
         ...            {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
         >>> geojson = earthdata.stac(short_name='HLS', polygon=region)
     '''
-    # get provider
-    provider = __get_provider(short_name)
-
-    # check collections
-    if collections == None:
-        collections = DATASETS[short_name]["collections"]
-
     # create list of polygons
     polygons = None
     if polygon:
         polygons = __format_polygons(polygon)
 
     # perform query
-    geojson = __stac_search(provider, short_name, collections, polygons, time_start, time_end)
+    geojson = __stac_search(short_name, collections, polygons, time_start, time_end)
 
     # return
     if as_str:
@@ -640,7 +682,7 @@ def stac(short_name=None, collections=None, polygon=None, time_start='2018-01-01
 #
 #  The National Map
 #
-def tnm(short_name, polygon, time_start=None, time_end=datetime.utcnow().strftime("%Y-%m-%d"), as_str=True):
+def tnm(short_name, polygon=None, time_start=None, time_end=datetime.utcnow().strftime("%Y-%m-%d"), as_str=True):
     '''
     Query `USGS National Map API <https://tnmaccess.nationalmap.gov/api/v1/products>`_ for a list of data within temporal and spatial parameters.  See https://apps.nationalmap.gov/help/documents/TNMAccessAPIDocumentation/TNMAccessAPIDocumentation.pdf for more details on the API.
 
@@ -672,7 +714,7 @@ def tnm(short_name, polygon, time_start=None, time_end=datetime.utcnow().strftim
         >>> geojson
         {'type': 'FeatureCollection', 'features': [{'type': 'Feature', 'id': '5eaa4a0582cefae35a21ee8c', 'geometry': {'type': 'Polygon'...
     '''
-    # Flatten polygon (the list must be formated as 'x y, x y, x y, x y, x y', the documentation is incorrect)
+    # Flatten polygon (the list must be formatted as 'x y, x y, x y, x y, x y', the documentation is incorrect)
     coord_list = []
     for coord in polygon:
         coord_list.append('{} {}'.format(coord["lon"], coord["lat"]))
@@ -705,7 +747,11 @@ def tnm(short_name, polygon, time_start=None, time_end=datetime.utcnow().strftim
         # Make request
         rsps = context.get(url, params=rqst)
         rsps.raise_for_status()
-        data = json.loads(rsps.content)
+        try:
+            data = json.loads(rsps.content)
+        except:
+            print(rsps.content)
+            raise
         items += data['items']
         if len(items) == data['total']:
             break
@@ -745,3 +791,114 @@ def tnm(short_name, polygon, time_start=None, time_end=datetime.utcnow().strftim
     else:
         return geojson
 
+
+#
+#  Search
+#
+def search(parm, resources=None):
+    '''
+    Return granules and populate catalogs for all required resources using the supplied parameters.  This is the highest-level API call and attempts to automatically determine which services need to be queried when making a request.
+
+    Parameters
+    ----------
+        parm:               dict
+                            request parameters
+        resources:          list
+                            list of granules to process
+
+    Returns
+    -------
+    list
+        list of granules to process
+
+    Notes
+    -----
+    The ``parm`` argument will be modified in place.
+    The ``asset`` parameter must be supplied
+
+    Examples
+    --------
+        >>> from sliderule import earthdata
+        >>> region = [ {"lon": -108.3435200747503, "lat": 38.89102961045247},
+        ...            {"lon": -107.7677425431139, "lat": 38.90611184543033},
+        ...            {"lon": -107.7818591266989, "lat": 39.26613714985466},
+        ...            {"lon": -108.3605610678553, "lat": 39.25086131372244},
+        ...            {"lon": -108.3435200747503, "lat": 38.89102961045247} ]
+        >>> parms = {"asset": "icesat2", "poly": region, "cycle": 20, "rgt": 232}
+        >>> resources = earthdata.search(parms)
+    '''
+    # Initialize Resources
+    if resources == None:
+        resources = []
+
+    # Initialize CMR Keyword Arguments
+    cmr_kwargs = {}
+
+    # Pull Out Polygon
+    if "ignore_poly_for_cmr" not in parm or not parm["ignore_poly_for_cmr"]:
+        if "clusters" in parm and parm["clusters"] and len(parm["clusters"]) > 0:
+            cmr_kwargs['polygon'] = parm["clusters"]
+        elif "poly" in parm and parm["poly"] and len(parm["poly"]) > 0:
+            cmr_kwargs['polygon'] = parm["poly"]
+
+    # Pull Out Time Period
+    if "t0" in parm:
+        cmr_kwargs['time_start'] = parm["t0"]
+    if "t1" in parm:
+        cmr_kwargs['time_end'] = parm["t1"]
+
+    # Build Name Filter
+    name_filter_enabled = False
+    if "asset" in parm:
+        if "icesat2" in parm["asset"]:
+            rgt_filter = '????'
+            if "rgt" in parm and parm["rgt"] != None:
+                rgt_filter = f'{parm["rgt"]}'.zfill(4)
+                name_filter_enabled = True
+            cycle_filter = '??'
+            if "cycle" in parm and parm["cycle"] != None:
+                cycle_filter = f'{parm["cycle"]}'.zfill(2)
+                name_filter_enabled = True
+            region_filter = '??'
+            if "region" in parm and parm["region"] != None:
+                region_filter = f'{parm["region"]}'.zfill(2)
+                name_filter_enabled = True
+            if name_filter_enabled:
+                cmr_kwargs['name_filter'] = '*_' + rgt_filter + cycle_filter + region_filter + '_*'
+
+    # Get Resources (CMR)
+    if len(resources) == 0 and "asset" in parm:
+        if (not name_filter_enabled) and ("poly" not in parm) and ("t0" not in parm) and ("t1" not in parm):
+            logger.error("Must supply some bounding parameters with request (poly, t0, t1)")
+            return resources
+        elif parm["asset"] not in ASSETS_TO_DATASETS:
+            logger.error(f'Unrecognized asset: {parm["asset"]}')
+            return resources
+        else:
+            short_name = ASSETS_TO_DATASETS[parm["asset"]]
+            resources = cmr(short_name=short_name, **cmr_kwargs)
+
+    # Get Raster Catalogs (STAC, TNM)
+    if "samples" in parm:
+        for raster in parm["samples"].keys():
+            sample_parm = parm["samples"][raster]
+            if "catalog" not in sample_parm:
+                try:
+                    samples_kwargs = {"polygon": cmr_kwargs['polygon']}
+                    dataset_name = ASSETS_TO_DATASETS[sample_parm["asset"]]
+                    dataset = DATASETS[dataset_name]
+                    # Pull Out Time Period
+                    if "t0" in sample_parm:
+                        samples_kwargs['time_start'] = sample_parm["t0"]
+                    if "t1" in sample_parm:
+                        samples_kwargs['time_end'] = sample_parm["t1"]
+                    # Make GeoJSON Query
+                    if dataset["api"] == "stac":
+                        parm["samples"][raster]["catalog"] = stac(short_name=dataset_name, as_str=True, **samples_kwargs)
+                    elif dataset["api"] == "tnm":
+                        parm["samples"][raster]["catalog"] = tnm(short_name=dataset_name, as_str=True, **samples_kwargs)
+                except Exception:
+                    pass # best effort; many raster datasets don't need a catalog
+
+    # Return Resources
+    return resources

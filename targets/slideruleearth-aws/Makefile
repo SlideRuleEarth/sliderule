@@ -1,6 +1,4 @@
-# Notes:
-#
-# (1) In order to complete the release process, the following must be installed and configured in your environment:
+# In order to complete the release process, the following must be installed and configured in your environment:
 #     * GitHub command line client (gh)
 #           See https://github.com/cli/cli/blob/trunk/docs/install_linux.md for installation instructions.
 #           The user must authenticate to GitHub via `gh auth login`
@@ -14,193 +12,167 @@
 #           The binaries are sufficient, but pay close attention to the local package versions
 #     * Node.js
 #			The javascript npm package for SlideRule is updated via a node.js script on release
+#     * conda-lock
+#           The Python base image used for the container runtime environment uses conda-lock to create the conda dependency file
 #
-# (2) To release a version of SlideRule:
+# To release a version of SlideRule:
 #     1. Update .aws/credentials file with a temporary session token; {profile} references your long term aws credentials, {username} is your aws account, {code} is your MFA token
 #        $ aws --profile={profile} sts get-session-token --serial-number arn:aws:iam::742127912612:mfa/{username} --token-code={code}
 #     2. Login to AWS Elastic Container Registry
 #        $ aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 742127912612.dkr.ecr.us-west-2.amazonaws.com
-#     3. Login to GitHub Container Registry; {my_github_key} is a file storing an access key created for your account
-#        $ cat {my_github_key} | docker login ghcr.io -u jpswinski --password-stdin
-#     4. Login to GitHub
+#     3. Login to GitHub
 #        $ gh auth login
-#     5. Execute the makefile target to release the code; X.Y.Z is the version
-#        $ make cluster-release VERSION=vX.Y.Z DOCKEROPTS=--no-cache
+#     4. Select version of `npm`
+#        $ nvm use 20
+#     5. Login to NPMJS
+#        $ cd sliderule/clients/nodejs && make login
+#     6. Execute the makefile target to release the code; X.Y.Z is the version
+#        $ make release VERSION=vX.Y.Z
+#
+# To update the build environment for GitHub actions
+#     1. Login to GitHub Container Registry; {my_github_key} is a file storing an access key created for your account
+#        $ cat {my_github_key} | docker login ghcr.io -u jpswinski --password-stdin
+#     2. Build the docker build environment on x86 machine (x86 is IMPORTANT to match GitHub actions environment)
+#        $ make buildenv-docker
+#     3. Push to GitHub container registry
+#        $ docker push ghcr.io/slideruleearth/sliderule-buildenv:latest
 #
 
-ROOT = $(shell pwd)/../..
+ROOT = $(shell realpath $(shell pwd)/../..)
 BUILD = $(ROOT)/build
 STAGE = $(ROOT)/stage
 
-SLIDERULE_SOURCE_DIR = $(ROOT)
 SLIDERULE_BUILD_DIR = $(BUILD)/sliderule
-ICESAT2_BUILD_DIR = $(BUILD)/icesat2
-PGC_BUILD_DIR = $(BUILD)/pgc
-LANDSAT_BUILD_DIR = $(BUILD)/landsat
-GEDI_BUILD_DIR = $(BUILD)/gedi
-USGS3DEP_BUILD_DIR = $(BUILD)/usgs3dep
-OPENDATA_BUILD_DIR = $(BUILD)/opendata
-SWOT_BUILD_DIR = $(BUILD)/swot
-PYTHON_EXAMPLES_DIR = $(ROOT)/../sliderule-python
-PYTHON_CLIENT_DIR = $(ROOT)/clients/python
-NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
-SERVER_STAGE_DIR = $(STAGE)/sliderule
+SLIDERULE_STAGE_DIR = $(STAGE)/sliderule
 BUILDENV_STAGE_DIR = $(STAGE)/buildenv
-MONITOR_STAGE_DIR = $(STAGE)/monitor
 ILB_STAGE_DIR = $(STAGE)/ilb
 PROXY_STAGE_DIR = $(STAGE)/proxy
+MONITOR_STAGE_DIR = $(STAGE)/monitor
+MANAGER_STAGE_DIR = $(STAGE)/manager
+AMS_STAGE_DIR = $(STAGE)/ams
 TF_STAGE_DIR = $(STAGE)/tf
 STATIC_WEB_SOURCE_DIR = $(ROOT)/docs
 STATIC_WEB_STAGE_DIR = $(STAGE)/website
+STATIC_WEB_EXPORT_DIR = $(STATIC_WEB_STAGE_DIR)/dist
+STATIC_WEB_ASSET_DIR ?= /data/web
+PYTHON_CLIENT_DIR = $(ROOT)/clients/python
+PYTHON_EXAMPLES_DIR = $(PYTHON_CLIENT_DIR)/examples
+NODEJS_CLIENT_DIR = $(ROOT)/clients/nodejs
+
+INSTALLDIR ?= $(SLIDERULE_STAGE_DIR)
+
+STATIC_WEB_CONDA_ENV ?= sliderule_env # clients/python/examples/environment.yml
+STATIC_WEB_CONDA_ACTIVATE = source "$(shell conda info --base)/etc/profile.d/conda.sh" && conda activate $(STATIC_WEB_CONDA_ENV)
 
 VERSION ?= latest
-VERSION_TOKENS := $(subst ., ,$(lastword $(VERSION)))
-MAJOR_VERSION := $(word 1,$(VERSION_TOKENS))
-ECR := 742127912612.dkr.ecr.us-west-2.amazonaws.com
-GHCR := ghcr.io/icesat2-sliderule
-DOCKEROPTS ?=
-ARCH ?= arm
-DOMAIN ?= testsliderule.org
+ECR ?= 742127912612.dkr.ecr.us-west-2.amazonaws.com
+GHCR ?= ghcr.io/slideruleearth
+DOCKEROPTS ?= # --progress=plain --no-cache
+BUILDX ?= # buildx
+DOCKER_PLATFORM ?= # --platform linux/arm64 | linux/amd64
+ARCH ?= $(shell arch)
+DOMAIN ?= slideruleearth.io
 DOMAIN_ROOT = $(firstword $(subst ., ,$(DOMAIN)))
-CLANG_VER = "-12"
-CLANG_OPT = -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(SLIDERULE_SOURCE_DIR)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
 MYIP ?= $(shell (ip route get 1 | sed -n 's/^.*src \([0-9.]*\) .*$$/\1/p'))
-ENVVER = $(shell git --git-dir ../../.git --work-tree ../../.git describe --abbrev --dirty --always --tags --long)
-TEST ?= $(SLIDERULE_SOURCE_DIR)/scripts/selftests/test_runner.lua
-MOSAICS_PERFORMANCE_TEST ?= $(SLIDERULE_SOURCE_DIR)/plugins/pgc/systests/arcticdem_mosaic_perf.lua
-STRIPS_PERFORMANCE_TEST ?=  $(SLIDERULE_SOURCE_DIR)/plugins/pgc/systests/arcticdem_strips_perf.lua
-USERCFG ?=
-SLIDERULECFG := -DMAX_FREE_STACK_SIZE=1
-SLIDERULECFG += -DUSE_ARROW_PACKAGE=ON
-SLIDERULECFG += -DUSE_AWS_PACKAGE=ON
-SLIDERULECFG += -DUSE_H5_PACKAGE=ON
-SLIDERULECFG += -DUSE_NETSVC_PACKAGE=ON
-SLIDERULECFG += -DUSE_GEO_PACKAGE=ON
-SLIDERULECFG += -DUSE_LEGACY_PACKAGE=OFF
-SLIDERULECFG += -DUSE_CCSDS_PACKAGE=OFF
-SLIDERULECFG += $(USERCFG)
+ENVVER = $(shell cd ../../ && git describe --abbrev --dirty --always --tags --long)
+USERCFG ?= # e.g. -DSKIP_STATIC_ANALYSIS=1
+DISTRIBUTION_ID = $(shell aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" --output text)
+RUNNER ?= # e.g. valgrind
+
+ORGANIZATION ?= sliderule
+PUBLIC_IP ?= # output from public-cluster-deploy
+COLOR ?=
+
+CLANG_VER ?= ""
+CLANG_CFG = export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER)
+
+COMMON_CFG := -DINSTALLDIR=$(INSTALLDIR)
+COMMON_CFG += -DUSE_HDF_PACKAGE=ON
+COMMON_CFG += $(USERCFG)
+
+DEBUG_CFG := -DCMAKE_BUILD_TYPE=Debug
+DEBUG_CFG += -DCMAKE_USER_MAKE_RULES_OVERRIDE=$(ROOT)/platforms/linux/ClangOverrides.txt -D_CMAKE_TOOLCHAIN_PREFIX=llvm-
+DEBUG_CFG += -DENABLE_ADDRESS_SANITIZER=ON
+DEBUG_CFG += -DSKIP_STATIC_ANALYSIS=OFF      # ON to disable static analysis for faster debug builds, set to OFF before committing
+DEBUG_CFG += $(COMMON_CFG)
+
+RELEASE_CFG := -DCMAKE_BUILD_TYPE=Release
+RELEASE_CFG += $(COMMON_CFG)
+
+########################
+# Build Targets
+########################
 
 all: sliderule
 
 prep: ## create temporary directories needed for build
 	mkdir -p $(SLIDERULE_BUILD_DIR)
-	mkdir -p $(ICESAT2_BUILD_DIR)
-	mkdir -p $(PGC_BUILD_DIR)
-	mkdir -p $(LANDSAT_BUILD_DIR)
-	mkdir -p $(GEDI_BUILD_DIR)
-	mkdir -p $(USGS3DEP_BUILD_DIR)
-	mkdir -p $(OPENDATA_BUILD_DIR)
-	mkdir -p $(SWOT_BUILD_DIR)
 
-config-debug: prep ## configure the server for running locally with debug symbols
-	cd $(SLIDERULE_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug $(SLIDERULECFG) -DENABLE_TRACING=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
-	cd $(ICESAT2_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
-	cd $(PGC_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
-	cd $(GEDI_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
-	cd $(USGS3DEP_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/usgs3dep
-	cd $(OPENDATA_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/opendata
-	cd $(SWOT_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/swot
+config-debug: prep ## configure the server for running locally with debug symbols, optimizations off, static analysis, and address sanitizer
+	cd $(SLIDERULE_BUILD_DIR) && $(CLANG_CFG) && cmake $(DEBUG_CFG) -DMAX_FREE_STACK_SIZE=1 -DENABLE_TRACING=ON $(ROOT)
 
-config-release: prep ## configure server to run release version locally (useful for using valgrind)
-	cd $(SLIDERULE_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
-	cd $(ICESAT2_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
-	cd $(PGC_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
-	cd $(GEDI_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
-	cd $(USGS3DEP_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/usgs3dep
-	cd $(OPENDATA_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/opendata
-	cd $(SWOT_BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/swot
-
-config-asan: prep ## configure server to run with address sanitizer locally
-	cd $(SLIDERULE_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON $(SLIDERULECFG) -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)
-	cd $(ICESAT2_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/icesat2
-	cd $(PGC_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/pgc
-	cd $(LANDSAT_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/landsat
-	cd $(GEDI_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/gedi
-	cd $(USGS3DEP_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/usgs3dep
-	cd $(OPENDATA_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/opendata
-	cd $(SWOT_BUILD_DIR) && export CC=clang$(CLANG_VER) && export CXX=clang++$(CLANG_VER) && cmake -DCMAKE_BUILD_TYPE=Debug $(CLANG_OPT) -DENABLE_ADDRESS_SANITIZER=ON -DINSTALLDIR=$(SERVER_STAGE_DIR) $(SLIDERULE_SOURCE_DIR)/plugins/swot
+config-release: prep ## configure server to run a release version locally
+	cd $(SLIDERULE_BUILD_DIR) && cmake $(RELEASE_CFG) -DMAX_FREE_STACK_SIZE=1 $(ROOT)
 
 sliderule: ## build the server using the local configuration
-	make -j4 -C $(SLIDERULE_BUILD_DIR)
+	make -j8 -C $(SLIDERULE_BUILD_DIR)
 	make -C $(SLIDERULE_BUILD_DIR) install
-	make -j4 -C $(ICESAT2_BUILD_DIR)
-	make -C $(ICESAT2_BUILD_DIR) install
-	make -j4 -C $(PGC_BUILD_DIR)
-	make -C $(PGC_BUILD_DIR) install
-	make -j4 -C $(LANDSAT_BUILD_DIR)
-	make -C $(LANDSAT_BUILD_DIR) install
-	make -j4 -C $(GEDI_BUILD_DIR)
-	make -C $(GEDI_BUILD_DIR) install
-	make -j4 -C $(USGS3DEP_BUILD_DIR)
-	make -C $(USGS3DEP_BUILD_DIR) install
-	make -j4 -C $(OPENDATA_BUILD_DIR)
-	make -C $(OPENDATA_BUILD_DIR) install
-	make -j4 -C $(SWOT_BUILD_DIR)
-	make -C $(SWOT_BUILD_DIR) install
 
 run: ## run the server locally
-	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) $(SERVER_STAGE_DIR)/bin/sliderule $(SLIDERULE_SOURCE_DIR)/scripts/apps/server.lua config.json
+	IPV4=$(MYIP) ENVIRONMENT_VERSION=$(ENVVER) IS_PUBLIC=False $(RUNNER) $(INSTALLDIR)/bin/sliderule $(ROOT)/targets/slideruleearth-aws/server.lua config.json
 
-selftest: ## run the self test on the server code
-	$(SERVER_STAGE_DIR)/bin/sliderule $(TEST)
+buildenv: ## run the build environment docker container
+	docker run \
+		-it \
+		--network host \
+		--user $(id -u):$(id -g) \
+		-v $(shell realpath ~/.ssh):/root/.ssh \
+		-v $(ROOT):$(ROOT) \
+		-v /data:/data \
+		-e MYIP=$(MYIP) \
+		-e ROOT=$(ROOT) \
+		-e GITNAME="$(shell git config user.name)" \
+		-e GITEMAIL="$(shell git config user.email)" \
+		--rm \
+		--name buildenv \
+		$(ECR)/sliderule-buildenv:$(VERSION)
 
-perfmtest: ## run mosaics performance test on the server code
-	$(SERVER_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
-
-perfstest: ## run strips performance test on the server code
-	$(SERVER_STAGE_DIR)/bin/sliderule $(STRIPS_PERFORMANCE_TEST)
-
-static-website-docker: ## make the static website docker image; needs VERSION
-	-rm -Rf $(STATIC_WEB_STAGE_DIR)
-	mkdir -p $(STATIC_WEB_STAGE_DIR)
-	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
-	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
-	rsync -a $(SLIDERULE_SOURCE_DIR) $(STATIC_WEB_STAGE_DIR)/sliderule --exclude build --exclude stage
-	-cp $(PYTHON_EXAMPLES_DIR)/examples/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
-	-cp $(PYTHON_EXAMPLES_DIR)/environment.yml $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
-	-cp -R /data/web $(STATIC_WEB_STAGE_DIR)/rtd/source/_static/html
-	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
-	cp docker/static-website/nginx.conf $(STATIC_WEB_STAGE_DIR)
-	cp docker/static-website/docker-entrypoint.sh $(STATIC_WEB_STAGE_DIR)
-	cd $(STATIC_WEB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/static-website:latest .
-	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(VERSION)
-	docker tag $(ECR)/static-website:latest $(ECR)/static-website:$(MAJOR_VERSION)
-
-static-website-deploy: ## deploy static-website using terraform; needs VERSION, DOMAIN
-	cd terraform/static-website && terraform init
-	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform apply -var docker_image_url_static-website=$(ECR)/static-website:$(VERSION) -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
-
-static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
-	cd terraform/static-website && terraform init
-	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
-	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
-
-sliderule-buildenv-docker: ## build sliderule build environment docker image
+buildenv-docker: ## build sliderule build environment docker image
 	-rm -Rf $(BUILDENV_STAGE_DIR)
 	mkdir -p $(BUILDENV_STAGE_DIR)
 	cp docker/sliderule/Dockerfile.buildenv $(BUILDENV_STAGE_DIR)/Dockerfile
-	cd $(BUILDENV_STAGE_DIR); docker build $(DOCKEROPTS) -t $(GHCR)/sliderule-buildenv:latest .
-	docker tag $(GHCR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(VERSION)
-	docker tag $(GHCR)/sliderule-buildenv:latest $(GHCR)/sliderule-buildenv:$(MAJOR_VERSION)
+	cp docker/sliderule/.bashrc $(BUILDENV_STAGE_DIR)
+	cd $(BUILDENV_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/sliderule-buildenv:$(VERSION) $(DOCKER_PLATFORM) .
+	docker run -it -v ./docker/sliderule:/host --rm --name buildenv $(ECR)/sliderule-buildenv:$(VERSION) /bin/bash /host/libdep.sh /host/libdep-$(ARCH).lock
+	docker tag $(ECR)/sliderule-buildenv:$(VERSION) $(GHCR)/sliderule-buildenv:$(VERSION)
 
-sliderule-buildenv-docker-push: ## push sliderule build environment docker image (must be x86 arch)
+buildenv-docker-push: ## push build environment docker image to registry
+	docker push $(ECR)/sliderule-buildenv:$(VERSION)
+
+buildenv-docker-push-github: ## push build environment docker image to GitHub registry
 	docker push $(GHCR)/sliderule-buildenv:$(VERSION)
-	docker push $(GHCR)/sliderule-buildenv:$(MAJOR_VERSION)
 
 sliderule-docker: ## build sliderule docker image using buildenv container; needs VERSION
-	-rm -Rf $(SERVER_STAGE_DIR)
-	mkdir -p $(SERVER_STAGE_DIR)/etc
-	rsync -a $(SLIDERULE_SOURCE_DIR) $(SERVER_STAGE_DIR)/sliderule --exclude build --exclude stage
-	cp docker/sliderule/Dockerfile.runtime $(SERVER_STAGE_DIR)/Dockerfile
-	cp docker/sliderule/*.* $(SERVER_STAGE_DIR)/etc
-	cd $(SERVER_STAGE_DIR); docker build $(DOCKEROPTS) --build-arg repo=$(GHCR) -t $(ECR)/sliderule:latest .
-	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(VERSION)
-	docker tag $(ECR)/sliderule:latest $(ECR)/sliderule:$(MAJOR_VERSION)
+	-rm -Rf $(SLIDERULE_STAGE_DIR)
+	mkdir -p $(SLIDERULE_STAGE_DIR)
+	rsync -a $(ROOT) $(SLIDERULE_STAGE_DIR) --exclude build --exclude stage
+	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
+	cp docker/sliderule/config.json $(SLIDERULE_STAGE_DIR)
+	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:$(VERSION) $(DOCKER_PLATFORM) .
 
-sliderule-full-docker: sliderule-buildenv-docker sliderule-docker ## build sliderule docker container from scratch; needs VERSION
+ilb-docker: ## build intelligent load balancer docker image; needs VERSION
+	-rm -Rf $(ILB_STAGE_DIR)
+	mkdir -p $(ILB_STAGE_DIR)
+	cp docker/intelligent-load-balancer/* $(ILB_STAGE_DIR)
+	cp $(ROOT)/packages/core/extensions/json.lua $(ILB_STAGE_DIR)
+	cp $(ROOT)/packages/core/extensions/prettyprint.lua $(ILB_STAGE_DIR)
+	cd $(ILB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ilb:$(VERSION) $(DOCKER_PLATFORM) .
+
+proxy-docker: # make the reverse proxy docker image; needs VERSION
+	-rm -Rf $(PROXY_STAGE_DIR)
+	mkdir -p $(PROXY_STAGE_DIR)
+	cp docker/proxy/* $(PROXY_STAGE_DIR)
+	cd $(PROXY_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/proxy:$(VERSION) $(DOCKER_PLATFORM) .
 
 monitor-docker: ## build monitor docker image; needs VERSION
 	-rm -Rf $(MONITOR_STAGE_DIR)
@@ -208,99 +180,289 @@ monitor-docker: ## build monitor docker image; needs VERSION
 	cp docker/monitor/* $(MONITOR_STAGE_DIR)
 	cp docker/monitor/Dockerfile.$(ARCH) $(MONITOR_STAGE_DIR)/Dockerfile
 	chmod +x $(MONITOR_STAGE_DIR)/docker-entrypoint.sh
-	cd $(MONITOR_STAGE_DIR); docker build $(DOCKEROPTS) -t $(ECR)/monitor:latest .
-	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(VERSION)
-	docker tag $(ECR)/monitor:latest $(ECR)/monitor:$(MAJOR_VERSION)
+	cd $(MONITOR_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/monitor:$(VERSION) $(DOCKER_PLATFORM) .
 
-proxy-docker: # make the reverse proxy docker image; needs VERSION
-	-rm -Rf $(PROXY_STAGE_DIR)
-	mkdir -p $(PROXY_STAGE_DIR)
-	cp docker/proxy/* $(PROXY_STAGE_DIR)
-	cd $(PROXY_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/proxy:latest .
-	docker tag $(ECR)/proxy:latest $(ECR)/proxy:$(VERSION)
-	docker tag $(ECR)/proxy:latest $(ECR)/proxy:$(MAJOR_VERSION)
+ams-lock: ## update dependencies of ams
+	cd docker/asset-metadata-service && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd docker/asset-metadata-service && conda-lock render -p linux-$(ARCH)
 
-ilb-docker: ## build intelligent load balancer docker image; needs VERSION
-	-rm -Rf $(ILB_STAGE_DIR)
-	mkdir -p $(ILB_STAGE_DIR)
-	cp docker/intelligent-load-balancer/* $(ILB_STAGE_DIR)
-	cp $(SLIDERULE_SOURCE_DIR)/targets/orchestrator-haproxy/orchestrator.lua $(ILB_STAGE_DIR)
-	cp $(SLIDERULE_SOURCE_DIR)/scripts/extensions/json.lua $(ILB_STAGE_DIR)
-	cp $(SLIDERULE_SOURCE_DIR)/scripts/extensions/prettyprint.lua $(ILB_STAGE_DIR)
-	cd $(ILB_STAGE_DIR) && docker build $(DOCKEROPTS) -t $(ECR)/ilb:latest .
-	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(VERSION)
-	docker tag $(ECR)/ilb:latest $(ECR)/ilb:$(MAJOR_VERSION)
+ams-docker: ## build ams docker image; uses VERSION
+	-rm -Rf $(AMS_STAGE_DIR)
+	mkdir -p $(AMS_STAGE_DIR)
+	cp docker/asset-metadata-service/Dockerfile.$(ARCH) $(AMS_STAGE_DIR)/Dockerfile
+	cp docker/asset-metadata-service/conda-* $(AMS_STAGE_DIR)
+	cp docker/asset-metadata-service/pyproject.toml $(AMS_STAGE_DIR)
+	cp docker/asset-metadata-service/docker-entrypoint.sh $(AMS_STAGE_DIR)
+	cp $(ROOT)/version.txt $(AMS_STAGE_DIR)
+	chmod +x $(AMS_STAGE_DIR)/docker-entrypoint.sh
+	mkdir $(AMS_STAGE_DIR)/ams
+	cp docker/asset-metadata-service/ams/*.py $(AMS_STAGE_DIR)/ams
+	cd $(AMS_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/ams:$(VERSION) $(DOCKER_PLATFORM) .
+
+ams-run: ## run ams locally; uses VERSION
+	docker run -it -p 8060:8060 --rm --name ams $(ECR)/ams:$(VERSION) /bin/bash /docker-entrypoint.sh
+
+manager-lock: ## update dependencies of manager
+	cd docker/manager && conda-lock -p linux-$(ARCH) -f environment.yml
+	cd docker/manager && conda-lock render -p linux-$(ARCH)
+
+manager-docker: ## build manager docker image; uses VERSION
+	-rm -Rf $(MANAGER_STAGE_DIR)
+	mkdir -p $(MANAGER_STAGE_DIR)
+	cp docker/manager/Dockerfile.$(ARCH) $(MANAGER_STAGE_DIR)/Dockerfile
+	cp docker/manager/conda-* $(MANAGER_STAGE_DIR)
+	cp docker/manager/pyproject.toml $(MANAGER_STAGE_DIR)
+	cp docker/manager/docker-entrypoint.sh $(MANAGER_STAGE_DIR)
+	cp $(ROOT)/version.txt $(MANAGER_STAGE_DIR)
+	chmod +x $(MANAGER_STAGE_DIR)/docker-entrypoint.sh
+	mkdir $(MANAGER_STAGE_DIR)/manager
+	cp docker/manager/manager/*.py $(MANAGER_STAGE_DIR)/manager
+	cp docker/manager/manager/*.sql $(MANAGER_STAGE_DIR)/manager
+	cd $(MANAGER_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/manager:$(VERSION) $(DOCKER_PLATFORM) .
+
+manager-run: ## run manager locally; uses VERSION
+	docker run -it -p 8040:8040 --rm --name manager $(ECR)/manager:$(VERSION) /bin/bash /docker-entrypoint.sh
+
+########################
+# Cluster Targets
+########################
 
 cluster-docker: ## build all cluster docker images
-	make sliderule-buildenv-docker
 	make sliderule-docker
+	make ilb-docker
 	make proxy-docker
 	make monitor-docker
-	make ilb-docker
-	make static-website-docker
+	make manager-docker
+	make ams-docker
 
 cluster-docker-push: ## push all cluster images to docker container registries
 	docker push $(ECR)/sliderule:$(VERSION)
-	docker push $(ECR)/sliderule:$(MAJOR_VERSION)
-	docker push $(ECR)/proxy:$(VERSION)
-	docker push $(ECR)/proxy:$(MAJOR_VERSION)
-	docker push $(ECR)/monitor:$(VERSION)
-	docker push $(ECR)/monitor:$(MAJOR_VERSION)
 	docker push $(ECR)/ilb:$(VERSION)
-	docker push $(ECR)/ilb:$(MAJOR_VERSION)
-	docker push $(ECR)/static-website:$(VERSION)
-	docker push $(ECR)/static-website:$(MAJOR_VERSION)
+	docker push $(ECR)/proxy:$(VERSION)
+	docker push $(ECR)/monitor:$(VERSION)
+	docker push $(ECR)/manager:$(VERSION)
+	docker push $(ECR)/ams:$(VERSION)
 
 cluster-build-packer: ## build Amazon Machine Image (AMI) for release; needs VERSION
-	cd packer; packer build -var version=$(MAJOR_VERSION) sliderule-base.pkr.hcl
+	cd packer; packer build -var version=$(VERSION) -var-file=arm64_cpu.json sliderule-base.pkr.hcl
 
 cluster-upload-terraform: ## upload the Cluster terraform for provisioning system; needs VERSION
 	-rm -Rf $(TF_STAGE_DIR)
 	mkdir -p $(TF_STAGE_DIR)
 	cp terraform/cluster/*.* $(TF_STAGE_DIR)
 	cp terraform/cluster/.terraform.lock.hcl $(TF_STAGE_DIR)
-	echo "variable \"environment_version\" {\n  default = \"$(ENVVER)\"\n}" > $(TF_STAGE_DIR)/version.tf
+	printf "variable \"environment_version\" {\n  default = \"$(ENVVER)\"\n}" > $(TF_STAGE_DIR)/version.tf
 	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(VERSION)
-	cd $(TF_STAGE_DIR) && aws s3 sync --delete . s3://sliderule/prov-sys/cluster_tf_versions/$(MAJOR_VERSION)
 
-cluster-tag: ## create version tag in this repository and release it on GitHub
-	echo $(VERSION) > $(ROOT)/version.txt
-	node $(ROOT)/clients/nodejs/utils/modpkg.js $(VERSION)
-	git add $(ROOT)/clients/nodejs/sliderule/package.json
-	cp $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
-	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
-	git commit -m "Version $(VERSION)"
-	git tag -a $(VERSION) -m "Version $(VERSION)"
-	git push --tags && git push
-	gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/web/rtd/release_notes/release_notes.html"
-	make -C $(ROOT)/clients/nodejs publish
-
-cluster-release: ## release a version of the cluster; needs VERSION
-	make cluster-tag
+cluster: ## build all targets related to a cluster deployment and push to aws; needs VERSION
 	make cluster-docker
 	make cluster-docker-push
 	make cluster-build-packer
 	make cluster-upload-terraform
 
-cluster-docker-clean: ## clean out old version of docker images; needs VERSION
+########################
+# Deployment Targets
+########################
+
+public-cluster-test-color:
+	@if [ -z "$(COLOR)" ]; then \
+		echo "Error: COLOR must be set to green or blue"; \
+		exit 1; \
+	fi
+
+public-cluster-test-ip:
+	@if [ -z "$(PUBLIC_IP)" ]; then \
+		echo "Error: COLOR must be set to green or blue"; \
+		exit 1; \
+	fi
+
+public-cluster-status: public-cluster-test-color ## deploy public cluster using terraform; needs COLOR, uses DOMAIN
+	cd terraform/cluster && terraform init
+	cd terraform/cluster && terraform workspace select $(DOMAIN)-$(ORGANIZATION)-$(COLOR) || terraform workspace new $(DOMAIN)-$(ORGANIZATION)-$(COLOR)
+	cd terraform/cluster && terraform plan -refresh-only && terraform show
+
+public-cluster-deploy: public-cluster-test-color ## deploy public cluster using terraform; needs COLOR, VERSION, uses DOMAIN, ORGANIZATION, ENVVER
+	cd terraform/cluster && terraform init
+	cd terraform/cluster && terraform workspace select $(DOMAIN)-$(ORGANIZATION)-$(COLOR) || terraform workspace new $(DOMAIN)-$(ORGANIZATION)-$(COLOR)
+	cd terraform/cluster && terraform apply -var is_public=True -var cluster_name=$(ORGANIZATION)-$(COLOR) -var domain=$(DOMAIN) -var cluster_version=$(VERSION) -var organization_name=$(ORGANIZATION) -var environment_version=$(ENVVER)
+
+public-cluster-destroy: public-cluster-test-color ## destroy public using terraform; needs COLOR, uses DOMAIN
+	cd terraform/cluster && terraform init
+	cd terraform/cluster && terraform workspace select $(DOMAIN)-$(ORGANIZATION)-$(COLOR)
+	cd terraform/cluster && terraform destroy
+
+public-cluster-go-live: public-cluster-test-ip ## switch dns entry of public cluster; needs PUBLIC_IP, uses DOMAIN, ORGANIZATION
+	cd terraform/dns && terraform init
+	cd terraform/dns && terraform workspace select dns-$(DOMAIN)-$(ORGANIZATION) || terraform workspace new dns-$(DOMAIN)-$(ORGANIZATION)
+	cd terraform/dns && terraform apply -var domain=$(DOMAIN) -var organization=$(ORGANIZATION) -var public_ip=$(PUBLIC_IP)
+
+public-cluster-take-offline: ## destroy dns entry of public cluster; uses DOMAIN, ORGANIZATION
+	cd terraform/dns && terraform init
+	cd terraform/dns && terraform workspace select dns-$(DOMAIN)-$(ORGANIZATION)
+	cd terraform/dns && terraform destroy
+
+########################
+# Static Website Targets
+########################
+
+static-website-render-notebooks: ## execute the notebooks used in the documentation
+	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/boulder_watershed.ipynb --output $(STATIC_WEB_ASSET_DIR)/boulder_watershed.ipynb --debug
+	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa.ipynb --output $(STATIC_WEB_ASSET_DIR)/grandmesa.ipynb --debug
+	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/phoreal.ipynb --output $(STATIC_WEB_ASSET_DIR)/phoreal.ipynb --debug
+	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/arcticdem_mosaic.ipynb --output $(STATIC_WEB_ASSET_DIR)/arcticdem_mosaic.ipynb --debug
+	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/grandmesa_atl03_classification.ipynb --output $(STATIC_WEB_ASSET_DIR)/grandmesa_atl03_classification.ipynb --debug
+	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl13_access.ipynb --output $(STATIC_WEB_ASSET_DIR)/atl13_access.ipynb --debug
+	$(STATIC_WEB_CONDA_ACTIVATE) && jupyter nbconvert --to notebook --execute $(PYTHON_EXAMPLES_DIR)/atl24_access.ipynb --output $(STATIC_WEB_ASSET_DIR)/atl24_access.ipynb --debug
+
+static-website-docker: ## make the static website docker image; needs VERSION
+	rm -Rf $(STATIC_WEB_STAGE_DIR)
+	mkdir -p $(STATIC_WEB_STAGE_DIR)
+	cp -R $(STATIC_WEB_SOURCE_DIR)/rtd $(STATIC_WEB_STAGE_DIR)
+	cp -R $(STATIC_WEB_SOURCE_DIR)/jekyll $(STATIC_WEB_STAGE_DIR)
+	rsync -a $(ROOT) $(STATIC_WEB_STAGE_DIR) --exclude build --exclude stage
+	cp $(STATIC_WEB_ASSET_DIR)/* $(STATIC_WEB_STAGE_DIR)/rtd/source/assets
+	cp docker/static-website/Dockerfile.$(ARCH) $(STATIC_WEB_STAGE_DIR)/Dockerfile
+	cp docker/static-website/nginx.conf $(STATIC_WEB_STAGE_DIR)
+	cp docker/static-website/docker-entrypoint.sh $(STATIC_WEB_STAGE_DIR)
+	cd $(STATIC_WEB_STAGE_DIR) && docker $(BUILDX) build $(DOCKEROPTS) -t $(ECR)/static-website:$(VERSION) $(DOCKER_PLATFORM) .
+
+static-website-run: ## locally run the static website; needs VERSION
+	docker run -it -p 4000:4000 --rm --name website $(ECR)/static-website:$(VERSION)
+
+static-website-export: ## export static website to local host directory; needs VERSION
+	-rm -Rf $(STATIC_WEB_EXPORT_DIR)
+	mkdir -p $(STATIC_WEB_EXPORT_DIR)
+	docker run -it --entrypoint /bin/bash  -v ./docker/static-website:/host -v $(STATIC_WEB_EXPORT_DIR):/output --rm --name website $(ECR)/static-website:$(VERSION) /host/export_dist.sh
+
+static-website-live-update: static-website-export # Update the static web site docs in the S3 bucket and invalidate the CloudFront cache
+	aws s3 sync $(STATIC_WEB_EXPORT_DIR)/jekyll/_site s3://$(DOMAIN) --delete
+	aws cloudfront create-invalidation --distribution-id $(DISTRIBUTION_ID) --paths "/*"
+
+static-website-deploy: ## deploy static-website using terraform; needs DOMAIN
+	cd terraform/static-website && terraform init
+	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
+	cd terraform/static-website && terraform apply -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+
+static-website-destroy: ## destroy static-website using terraform; needs DOMAIN
+	cd terraform/static-website && terraform init
+	cd terraform/static-website && terraform workspace select $(DOMAIN)-static-website || terraform workspace new $(DOMAIN)-static-website
+	cd terraform/static-website && terraform destroy -var domain=$(DOMAIN) -var domain_root=$(DOMAIN_ROOT)
+
+static-website: ## build and update static website
+	make static-website-render-notebooks
+	make static-website-docker
+	make static-website-live-update
+
+########################
+# Certbot Targets
+########################
+
+certbot-package: ## create the lambda python package for the certbot
+	cd terraform/certbot/python && ./package.sh
+
+certbot-deploy: certbot-package ## deploy certbot using terraform; needs DOMAIN
+	cd terraform/certbot && terraform init
+	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot || terraform workspace new $(DOMAIN)-certbot
+	cd terraform/certbot && terraform apply
+
+certbot-destroy: certbot-package ## destroy certbot using terraform; needs DOMAIN
+	cd terraform/certbot && terraform init
+	cd terraform/certbot && terraform workspace select $(DOMAIN)-certbot|| terraform workspace new $(DOMAIN)-certbot
+	cd terraform/certbot && terraform destroy
+
+########################
+# Release Target
+########################
+
+release: buildenv-docker buildenv-docker-push manager-lock ams-lock ## tag and release sliderule; needs VERSION
+	echo $(VERSION) > $(ROOT)/version.txt
+	node $(ROOT)/clients/nodejs/utils/modpkg.js $(VERSION)
+	git add $(ROOT)/clients/nodejs/sliderule/package.json
+	cp $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
+	git add $(ROOT)/version.txt $(PYTHON_CLIENT_DIR)/version.txt
+	git add $(ROOT)/targets/slideruleearth-aws/docker/manager/conda-linux-${ARCH}.lock
+	git add $(ROOT)/targets/slideruleearth-aws/docker/manager/conda-lock.yml
+	git add $(ROOT)/targets/slideruleearth-aws/docker/asset-metadata-service/conda-linux-${ARCH}.lock
+	git add $(ROOT)/targets/slideruleearth-aws/docker/asset-metadata-service/conda-lock.yml
+	git add $(ROOT)/targets/slideruleearth-aws/docker/sliderule/libdep-${ARCH}.lock
+	git commit -m "Version $(VERSION)"
+	git tag -a $(VERSION) -m "Version $(VERSION)"
+	git push --tags && git push
+	gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/web/rtd/developer_guide/release_notes/release_notes.html"
+	make -C $(ROOT)/clients/nodejs publish
+	make cluster
+
+########################
+# Clean Up Targets
+########################
+
+docker-clean: ## clean out old version of docker images; needs VERSION
 	- docker image rm $(GHCR)/sliderule-buildenv:$(VERSION)
+	- docker image rm $(ECR)/sliderule-buildenv:$(VERSION)
 	- docker image rm $(ECR)/sliderule:$(VERSION)
 	- docker image rm $(ECR)/ilb:$(VERSION)
 	- docker image rm $(ECR)/proxy:$(VERSION)
 	- docker image rm $(ECR)/monitor:$(VERSION)
+	- docker image rm $(ECR)/manager:$(VERSION)
+	- docker image rm $(ECR)/ams:$(VERSION)
 	- docker image rm $(ECR)/static-website:$(VERSION)
 	- docker system prune -f
 
-clean: ## remove build artifacts
-	make -C $(SLIDERULE_SOURCE_DIR) clean
-
 distclean: ## fully remove all non-version controlled files and directories
-	make -C $(SLIDERULE_SOURCE_DIR) distclean
+	- rm -Rf $(BUILD)
+	- rm -Rf $(STAGE)
+	- cd $(ROOT)/docs && ./clean.sh
+	- cd $(PYTHON_CLIENT_DIR) && ./clean.sh
+	- cd $(ROOT)/targets/slideruleearth-aws/docker/manager && ./clean.sh
+	- cd $(ROOT)/targets/slideruleearth-aws/docker/asset-metadata-service && ./clean.sh
+	- find $(ROOT) -name ".cookies" -exec rm {} \;
+	- rm -f utilities/report.pdf
+	- rm -f utilities/report.xml
+
+########################
+# Test Targets
+########################
+
+TEST ?= $(ROOT)/targets/slideruleearth-aws/test_runner.lua cloud
+PYTEST ?= # specific pytests and additional pytest options can be supplied here
+JEST ?= # specific jest tests and additional jest options can be supplied here
+MNGRTEST ?= # specific manager tests and additional pytest options can be supplied here
+
+MOSAICS_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arcticdem_mosaic_perf.lua
+MOSAICS_SERIAL_VS_BATCH_PERFORMANCE_TEST ?= $(ROOT)/datasets/pgc/systests/arcticdem_mosaic_serial_vs_batch_perf.lua
+STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST  ?= $(ROOT)/datasets/pgc/systests/arcticdem_strips_serial_vs_batch_perf.lua
+
+selftest: ## run the self test on the server code
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(TEST)
+
+pytest: ## run python client tests; needs special conda environment
+	cd $(PYTHON_CLIENT_DIR) && coverage run -m pytest --domain $(DOMAIN) --organization $(ORGANIZATION) $(PYTEST)
+	cd $(PYTHON_CLIENT_DIR) && coverage report -m
+
+jest: ## run node.js client self tests
+	make -C $(NODEJS_CLIENT_DIR) test DOMAIN=$(DOMAIN) ORGANIZATION=$(ORGANIZATION) TEST=$(JEST)
+
+mngrtest: ## run manager tests; needs special conda environment
+	make -C docker/manager test TEST=$(MNGRTEST)
+
+perfmtest: ## run mosaics performance test on the server code
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(MOSAICS_PERFORMANCE_TEST)
+
+perfmsbtest: ## run mosaics serial and batch performance test comparing results
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(MOSAICS_SERIAL_VS_BATCH_PERFORMANCE_TEST)
+
+perfssbtest: ## run strips serial and batch performance test comparing results
+	$(SLIDERULE_STAGE_DIR)/bin/sliderule $(STRIPS_SERIAL_VS_BATCH_PERFORMANCE_TEST)
+
+########################
+# Help Target
+########################
 
 help: ## That's me!
-	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
-	@printf "\033[37m%-30s\033[0m %s\n" "# Makefile Help                                                                          |"
-	@printf "\033[37m%-30s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
 	@printf "\033[37m%-30s\033[0m %s\n" "#-target-----------------------description------------------------------------------------"
 	@grep -E '^[a-zA-Z_-].+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 	@echo ENVVER:$(ENVVER)
+	@echo DOMAIN: $(DOMAIN)
+	@echo DOMAIN_ROOT: $(DOMAIN_ROOT)
+	@echo DISTRIBUTION_ID: $(DISTRIBUTION_ID)
+	@echo MYIP: $(MYIP)

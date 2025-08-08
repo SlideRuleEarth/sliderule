@@ -8,17 +8,28 @@ services:
     entrypoint: /usr/local/bin/sliderule /usr/local/etc/sliderule/server.lua /usr/local/etc/sliderule/config.json
     stdin_open: true # docker run -i
     tty: true # docker run -t
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 8192
     volumes:
       - /etc/ssl/certs:/etc/ssl/certs
+      - /var/run/docker.sock:/var/run/docker.sock
       - /data:/data
+      - /usr/local/lib/sliderule:/usr/local/lib/sliderule
     environment:
       - IPV4=127.0.0.1
       - ORCHESTRATOR=http://127.0.0.1:8050
-      - CLUSTER=sliderule
+      - MANAGER=http://127.0.0.1:8030
+      - AMS=http://127.0.0.1:9082
+      - IS_PUBLIC=False
+      - ORGANIZATION=localhost
+      - CLUSTER=localhost
       - PROVISIONING_SYSTEM=https://ps.localhost
+      - CONTAINER_REGISTRY=742127912612.dkr.ecr.us-west-2.amazonaws.com
       - ENVIRONMENT_VERSION=$ENVIRONMENT_VERSION
     healthcheck:
-      test: curl -X GET -d "{}" http://localhost:10081/probe/health || exit 1
+      test: curl -X GET -d "{}" http://localhost:9081/source/health || exit 1
       interval: 30s
       timeout: 10s
       retries: 1
@@ -34,7 +45,7 @@ services:
       - ./:/haproxy
       - /etc/ssl/private:/etc/ssl/private
     environment:
-      - CLUSTER=localhost
+      - ORGANIZATION=localhost
       - IS_PUBLIC=True
     healthcheck:
       test: curl http://localhost:8050/discovery/health || exit 1
@@ -65,10 +76,30 @@ services:
       - CLIENT_SECRET=$CLIENT_SECRET
       - DOMAIN=$DOMAIN
       - REDIRECT_URI_SCHEME=http
-  website:
-    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/static-website:latest
+  ams:
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/ams:latest
+    network_mode: "host"
+    restart: always
+    pull_policy: if_not_present
+    entrypoint: /docker-entrypoint.sh
+    stdin_open: true # docker run -i
+    tty: true # docker run -t
+    volumes:
+      - /data:/data
+  manager:
+    image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/manager:latest
     network_mode: "host"
     restart: unless-stopped
     pull_policy: if_not_present
+    entrypoint: /docker-entrypoint.sh
     stdin_open: true # docker run -i
     tty: true # docker run -t
+    volumes:
+      - /data:/data # manager.db
+    environment:
+      - IS_PUBLIC=True
+      - DUCKDB_REMOTE_FILE=s3://sliderule/data/manager/manager-localhost-latest.db
+      - ORCHESTRATOR=http://127.0.0.1:8050
+      - RATELIMIT_WEEKLY_COUNT=$RATELIMIT_WEEKLY_COUNT
+      - RATELIMIT_BACKOFF_COUNT=$RATELIMIT_BACKOFF_COUNT
+      - RATELIMIT_BACKOFF_PERIOD=$RATELIMIT_BACKOFF_PERIOD

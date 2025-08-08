@@ -1,0 +1,5 @@
+# Ignore decompressed GeoJSON files
+arcticdem_strips.geojson
+rema_strips.geojson
+arcticdem_mosaic_results_1k_points.lua
+arcticdem_strips_results_1k_points.lua

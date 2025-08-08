@@ -24,15 +24,25 @@ copyright = f"2020\u2013{year}, University of Washington"
 author = 'The SlideRule Developers'
 
 # The full version, including alpha/beta/rc tags
-release = '0.3.0'
+with open('../../sliderule/clients/python/version.txt') as fh:
+    release = fh.read().strip()
+    version = release[1:]
+
+rst_prolog = """
+.. |LatestRelease| replace:: {releasestr}
+""".format(
+releasestr = release,
+)
+
 
 
 # -- General configuration ---------------------------------------------------
 
 # Markdown Support
-from recommonmark.parser import CommonMarkParser
-source_parsers = {'.md': CommonMarkParser}
-source_suffix = ['.rst', '.md']
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -42,9 +52,17 @@ extensions = [
     'sphinx.ext.graphviz',
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
-    'recommonmark',
     'sphinx_markdown_tables',
     "sphinx_panels",
+    "myst_parser",
+    "nbsphinx"
+]
+
+myst_enable_extensions = [
+    "amsmath",
+    "colon_fence",  # Enables ::: note, ::: warning, etc.
+    "deflist",
+    "dollarmath",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -60,6 +78,7 @@ master_doc = 'index'
 
 # -- Configuration options ---------------------------------------------------
 autosummary_generate = True
+#jupyter_execute_notebooks = "force"
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -83,7 +102,8 @@ html_theme_options = {
 html_logo = "../../jekyll/assets/images/SlideRule-blueBG.png"
 html_favicon = "../../jekyll/favicon.ico"
 html_static_path = ['_static']
-repository_url = f"https://github.com/ICESat2-SlideRule/sliderule"
+html_css_files = ['custom.css']
+repository_url = f"https://github.com/SlideRuleEarth/sliderule"
 html_context = {
     "menu_links": [
         (
@@ -99,6 +119,8 @@ html_context = {
             "/",
         )
     ],
+    "build_id": f' {release}',
+    "build_url": "https://github.com/SlideRuleEarth/sliderule/releases/tag/v4.0.1"
 }
 
 # Load the custom CSS files (needs sphinx >= 1.6 for this to work)

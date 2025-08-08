@@ -25,7 +25,7 @@ To install and setup JupyterLab to run the provided example notebooks, you must 
     conda install -c conda-forge jupyterlab
 
 Then make sure the conda environment with the `sliderule python` client installed in it is available to use as one of the Python kernels.
-To gaurantee that JuypterLab is using the correct Python kernel, you can start JupyterLab from the conda environment with `sliderule python` installed.
+To guarantee that JuypterLab is using the correct Python kernel, you can start JupyterLab from the conda environment with `sliderule python` installed.
 
 .. code-block:: bash
 
@@ -57,17 +57,17 @@ Alternatively, you can use the PyPI package manager to install the SlideRule Pyt
 Developer Install
 -----------------
 
-For developers and contributors, to get the latest unreleased version of the Python client, the contents of the `sliderule` repository can be cloned or download as a `zipped file <https://github.com/ICESat2-SlideRule/sliderule/archive/main.zip>`_.
+For developers and contributors, to get the latest unreleased version of the Python client, the contents of the `sliderule` repository can be cloned or download as a `zipped file <https://github.com/SlideRuleEarth/sliderule/archive/main.zip>`_.
 If cloning, please consider forking into your own account before cloning onto your system.
 
 .. warning::
-    The `main` branch is used to match the public cluster running at `slideruleearth.io`.  Private clusters may be running versions of the server code provided in other branches or even forks of the repository.
+    The `main` branch is used for the public cluster running at `slideruleearth.io`.  Private clusters may be running versions of the server code provided in other branches or even forks of the repository.
 
 To clone the repository:
 
 .. code-block:: bash
 
-    git clone https://github.com/ICESat2-SlideRule/sliderule.git
+    git clone https://github.com/SlideRuleEarth/sliderule.git
 
 You can then install the `sliderule python` client using `setuptools`:
 

@@ -65,12 +65,6 @@ gps2utc
 
 """"""""""""""""
 
-get_definition
---------------
-.. autofunction:: sliderule.get_definition
-
-""""""""""""""""
-
 get_version
 --------------
 .. autofunction:: sliderule.get_version
@@ -86,3 +80,9 @@ check_version
 toregion
 --------
 .. autofunction:: sliderule.toregion
+
+""""""""""""""""
+
+run
+---
+.. autofunction:: sliderule.run

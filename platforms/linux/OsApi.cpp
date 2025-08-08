@@ -40,12 +40,12 @@
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 #include <limits.h>
 #include <assert.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/types.h>
-#include <sys/time.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -61,7 +61,6 @@ OsApi::print_func_t OsApi::print_func = NULL;
 int OsApi::io_timeout = IO_DEFAULT_TIMEOUT;
 int OsApi::io_maxsize = IO_DEFAULT_MAXSIZE;
 int64_t OsApi::launch_time = 0;
-char* OsApi::environment_version = NULL;
 
 /******************************************************************************
  * PUBLIC METHODS
@@ -74,7 +73,6 @@ void OsApi::init(print_func_t _print_func)
 {
     memfd = open("/proc/meminfo", O_RDONLY);
     launch_time = OsApi::time(OsApi::SYS_CLK);
-    OsApi::dupstr(&environment_version, "unknown");
     print_func = _print_func;
 }
 
@@ -93,24 +91,25 @@ void OsApi::sleep(double secs)
 {
     struct timespec waittime;
 
-    waittime.tv_sec  = (time_t)secs;
-    waittime.tv_nsec = (long)((secs - (long)secs) * 1000000000L);
+    waittime.tv_sec  = static_cast<time_t>(secs);
+    waittime.tv_nsec = static_cast<long>((secs - static_cast<long>(secs)) * 1000000000L);
 
-    while( nanosleep(&waittime, &waittime) == -1 ) continue;
+    while(nanosleep(&waittime, &waittime) == -1 && errno == EINTR);
 }
 
 /*----------------------------------------------------------------------------
  *  dupstr
  *----------------------------------------------------------------------------*/
-void OsApi::dupstr (char** dst, const char* src)
+void OsApi::dupstr (const char** dst, const char* src)
 {
     assert(dst);
-    if(*dst) delete [] *dst;
+    assert(src);
     int len = 0;
-    while( (len < (MAX_STR_SIZE - 1)) && (src[len] != '\0') ) len++;
-    *dst = new char[len + 1];
-    for(int k = 0; k < len; k++) (*dst)[k] = src[k];
-    (*dst)[len] = '\0';
+    while(src[len] != '\0') len++;
+    char* buf = new char[len + 1];
+    for(int k = 0; k < len; k++) buf[k] = src[k];
+    buf[len] = '\0';
+    *dst = buf;
 }
 
 /*----------------------------------------------------------------------------
@@ -121,7 +120,7 @@ void OsApi::dupstr (char** dst, const char* src)
 *-----------------------------------------------------------------------------*/
 int64_t OsApi::time(int clkid)
 {
-    struct timespec now;
+    struct timespec now = {0, 0};
 
     if (clkid == SYS_CLK)
     {
@@ -136,7 +135,7 @@ int64_t OsApi::time(int clkid)
         return 0;
     }
 
-    return ((int64_t)now.tv_sec * 1000000) + (now.tv_nsec / 1000);
+    return (static_cast<int64_t>(now.tv_sec) * 1000000) + (now.tv_nsec / 1000);
 }
 
 /*----------------------------------------------------------------------------
@@ -150,14 +149,13 @@ int64_t OsApi::timeres(int clkid)
     {
         return 1000000; // microseconds
     }
-    else if (clkid == CPU_CLK)
+
+    if (clkid == CPU_CLK)
     {
         return 1000000; // microseconds
     }
-    else
-    {
-        return 0;
-    }
+
+    return 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -189,10 +187,18 @@ uint64_t OsApi::swapll(uint64_t val)
  *----------------------------------------------------------------------------*/
 float OsApi::swapf(float val)
 {
-    float rtrndata = 0.0;
-    uint8_t* dataptr = (uint8_t*)&rtrndata;
-    uint32_t* tempf = (uint32_t*)&val;
-    *(uint32_t*)(dataptr) = bswap_32(*tempf);
+    float rtrndata = 0.0F;
+    uint32_t tempf = 0;
+
+    // Copy the float into a uint32_t
+    memcpy(&tempf, &val, sizeof(float));
+
+    // Swap the bytes
+    tempf = bswap_32(tempf);
+
+    // Copy the swapped uint32_t back into a float
+    memcpy(&rtrndata, &tempf, sizeof(float));
+
     return rtrndata;
 }
 
@@ -202,9 +208,17 @@ float OsApi::swapf(float val)
 double OsApi::swaplf(double val)
 {
     double rtrndata = 0.0;
-    uint8_t* dataptr = (uint8_t*)&rtrndata;
-    uint64_t* tempd = (uint64_t*)&val;
-    *(uint64_t*)(dataptr) = bswap_64(*tempd);
+    uint64_t tempd = 0;
+
+    // Copy the double into a uint64_t
+    memcpy(&tempd, &val, sizeof(double));
+
+    // Swap the bytes
+    tempd = bswap_64(tempd);
+
+    // Copy the swapped uint64_t back into a double
+    memcpy(&rtrndata, &tempd, sizeof(double));
+
     return rtrndata;
 }
 
@@ -224,20 +238,19 @@ double OsApi::memusage (void)
     const int BUFSIZE = 128;
     const char* mem_total_ptr = NULL;
     const char* mem_available_ptr = NULL;
-    int i = 0;
     char buffer[BUFSIZE];
     char *endptr;
 
     if(memfd)
     {
         lseek(memfd, 0, SEEK_SET);
-        int bytes_read = read(memfd, buffer, BUFSIZE - 1);
+        const int bytes_read = read(memfd, buffer, BUFSIZE - 1);
         if(bytes_read > 0)
         {
             buffer[bytes_read] = '\0';
 
             /* Find MemTotal */
-            i = 9; // start after colon
+            int i = 9; // start after colon
             while(buffer[i] == ' ') i++; // moves one past space
             mem_total_ptr = &buffer[i]; // mark start
             while(buffer[i] != ' ') i++; // stays at first space
@@ -255,7 +268,7 @@ double OsApi::memusage (void)
 
             /* Convert MemTotal */
             errno = 0;
-            long mem_total = strtol(mem_total_ptr, &endptr, 10);
+            const long mem_total = strtol(mem_total_ptr, &endptr, 10);
             if( (endptr == mem_total_ptr) ||
                 (errno == ERANGE && (mem_total == LONG_MAX || mem_total == LONG_MIN)) )
             {
@@ -264,7 +277,7 @@ double OsApi::memusage (void)
 
             /* Convert MemAvailable */
             errno = 0;
-            long mem_available = strtol(mem_available_ptr, &endptr, 10);
+            const long mem_available = strtol(mem_available_ptr, &endptr, 10);
             if( (endptr == mem_available_ptr) ||
                 (errno == ERANGE && (mem_available == LONG_MAX || mem_available == LONG_MIN)) )
             {
@@ -280,15 +293,11 @@ double OsApi::memusage (void)
             /* Calculate Memory Usage */
             return 1.0 - ((double)mem_available / (double)mem_total);
         }
-        else
-        {
-            return 0.0;
-        }
-    }
-    else
-    {
+
         return 0.0;
     }
+
+    return 0.0;
 }
 
 /*----------------------------------------------------------------------------
@@ -314,7 +323,7 @@ void OsApi::print (const char* file_name, unsigned int line_number, const char* 
     else
     {
         /* Default */
-        printf("%s:%d %s\n", file_name, line_number, message);
+        printf("%s:%u %s\n", file_name, line_number, message);
     }
 }
 
@@ -372,20 +381,4 @@ int OsApi::performIOTimeout(void)
 int64_t OsApi::getLaunchTime (void)
 {
     return launch_time;
-}
-
-/*----------------------------------------------------------------------------
- * setEnvVersion
- *----------------------------------------------------------------------------*/
-void OsApi::setEnvVersion (const char* verstr)
-{
-    OsApi::dupstr(&environment_version, verstr);
-}
-
-/*----------------------------------------------------------------------------
- * getEnvVersion
- *----------------------------------------------------------------------------*/
-const char* OsApi::getEnvVersion (void)
-{
-    return environment_version;
 }

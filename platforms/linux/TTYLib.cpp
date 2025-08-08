@@ -34,6 +34,7 @@
  ******************************************************************************/
 
 #include "OsApi.h"
+#include "TTYLib.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -52,22 +53,14 @@
 #include <sys/sysinfo.h>
 
 /******************************************************************************
- * PUBLIC METHODS
+ * DEFINES
  ******************************************************************************/
 
-/*----------------------------------------------------------------------------
- * init
- *----------------------------------------------------------------------------*/
-void TTYLib::init()
-{
-}
+#define ERRMSG_BUF_SIZE 256
 
-/*----------------------------------------------------------------------------
- * deinit
- *----------------------------------------------------------------------------*/
-void TTYLib::deinit(void)
-{
-}
+/******************************************************************************
+ * PUBLIC METHODS
+ ******************************************************************************/
 
 /*----------------------------------------------------------------------------
  * ttyopen
@@ -128,7 +121,8 @@ int TTYLib::ttyopen(const char* _device, int _baud, char _parity)
         fd = open(_device, O_RDWR | O_NOCTTY | O_NDELAY);
         if(fd < 0)
         {
-            dlog("Failed (%d) to open %s: %s", errno, _device, strerror(errno));
+            char err_buf[ERRMSG_BUF_SIZE];
+            dlog("Failed (%d) to open %s: %s", errno, _device, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
             fd = INVALID_RC;
         }
         else
@@ -137,7 +131,8 @@ int TTYLib::ttyopen(const char* _device, int _baud, char _parity)
             memset(&tty, 0, sizeof(tty));
             if(tcgetattr (fd, &tty) != 0)
             {
-                dlog("Failed (%d) tcgetattr for %s: %s", errno, _device, strerror(errno));
+                char err_buf[ERRMSG_BUF_SIZE];
+                dlog("Failed (%d) tcgetattr for %s: %s", errno, _device, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
                 fd = INVALID_RC;
             }
             else
@@ -161,7 +156,8 @@ int TTYLib::ttyopen(const char* _device, int _baud, char _parity)
 
                 if(tcsetattr (fd, TCSANOW, &tty) != 0)
                 {
-                    dlog("Failed (%d) tcsetattr for %s: %s", errno, _device, strerror(errno));
+                    char err_buf[ERRMSG_BUF_SIZE];
+                    dlog("Failed (%d) tcsetattr for %s: %s", errno, _device, strerror_r(errno, err_buf, sizeof(err_buf))); // Get thread-safe error message
                     fd = INVALID_RC;
                 }
             }
@@ -185,7 +181,7 @@ void TTYLib::ttyclose(int fd)
  *----------------------------------------------------------------------------*/
 int TTYLib::ttywrite(int fd, const void* buf, int size, int timeout)
 {
-    unsigned char* cbuf = (unsigned char*)buf;
+    unsigned char* cbuf = const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(buf));
     int activity = 1;
     int revents = POLLOUT;
 
@@ -225,9 +221,9 @@ int TTYLib::ttywrite(int fd, const void* buf, int size, int timeout)
         }
         else if(revents & POLLOUT)
         {
-            int ret = write(fd, &cbuf[c], size - c);
-            if(ret > 0)         c += ret;
-            else if(ret <= 0)   c = TTY_ERR_RC;
+            const int ret = write(fd, &cbuf[c], size - c);
+            if(ret > 0) c += ret;
+            else c = TTY_ERR_RC;
         }
     }
 

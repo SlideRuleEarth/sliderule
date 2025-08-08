@@ -1,0 +1,71 @@
+name: Manager Python Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 22 * * 5' # Every Sunday at 10 pm
+
+jobs:
+  test:
+    name: manager-test
+    runs-on: ubuntu-latest
+    # These permissions are needed to interact with GitHub's OIDC Token endpoint.
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::742127912612:role/GitHubAction-S3ReadAssets
+          aws-region: us-east-1
+          audience: sts.amazonaws.com
+
+      - name: Download MaxMind GeoLite2 databases
+        shell: bash -l {0}
+        run: |
+          sudo mkdir -p /data
+          sudo chmod 777 /data
+          aws s3 cp s3://sliderule/config/GeoLite2-Country.mmdb /data/GeoLite2-Country.mmdb --no-progress
+          aws s3 cp s3://sliderule/config/GeoLite2-City.mmdb /data/GeoLite2-City.mmdb --no-progress
+          aws s3 cp s3://sliderule/config/GeoLite2-ASN.mmdb /data/GeoLite2-ASN.mmdb --no-progress
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-update-conda: true
+          auto-activate-base: false
+          activate-environment: manager
+          environment-file: targets/slideruleearth-aws/docker/manager/environment.yml
+
+      - name: Download and install DuckDB spatial extension
+        shell: bash -l {0}
+        run: |
+          EXT=$(python -c "import duckdb; print(duckdb.__version__)")
+          PLATFORM="linux_amd64"
+          EXT_DIR="$HOME/.duckdb/extensions/v${EXT}/${PLATFORM}"
+          mkdir -p "${EXT_DIR}"
+          printf "Downloading spatial extension to ${EXT_DIR}"
+
+          curl -L "https://extensions.duckdb.org/v${EXT}/${PLATFORM}/spatial.duckdb_extension.gz" \
+            | gunzip -c > "${EXT_DIR}/spatial.duckdb_extension"
+
+      - name: Initialize manager database
+        shell: bash -l {0}
+        working-directory: targets/slideruleearth-aws/docker/manager
+        run: |
+          # Build the DuckDB database
+          make init
+
+      - name: Run manager tests with coverage
+        shell: bash -l {0}
+        working-directory: targets/slideruleearth-aws/docker/manager
+        run: |
+          make test

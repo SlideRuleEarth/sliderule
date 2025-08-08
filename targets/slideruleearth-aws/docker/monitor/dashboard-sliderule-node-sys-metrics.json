@@ -22,8 +22,21 @@
   "fiscalYearStartMonth": 0,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 4,
-  "links": [],
+  "id": 9,
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": true,
+      "title": "Pages",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
   "liveNow": false,
   "panels": [
     {
@@ -770,7 +783,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "node_filesystem_avail_bytes{device=\"/dev/root\",job=\"sliderule_node_sys\"}",
+          "expr": "node_filesystem_avail_bytes{device=\"/dev/nvme0n1p1\",job=\"sliderule_node_sys\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -787,6 +800,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisLabel": "",
             "axisPlacement": "auto",
             "axisWidth": 75,
             "barAlignment": 0,
@@ -876,6 +890,6 @@
   "timepicker": {},
   "timezone": "",
   "title": "SlideRule Node System Metrics",
-  "uid": "SfBoY8Knk",
-  "version": 1
+  "uid": "b6dgh-WIz",
+  "version": 4
 }

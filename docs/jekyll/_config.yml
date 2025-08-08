@@ -12,7 +12,7 @@
 
 theme                    : "minimal-mistakes-jekyll"
 # remote_theme           : "mmistakes/minimal-mistakes"
-minimal_mistakes_skin    : "air" # "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum", "sunrise"
+minimal_mistakes_skin    : "dark" # "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum", "sunrise"
 
 # Site Settings
 locale                   : "en-US"
@@ -20,7 +20,7 @@ title                    : "SlideRule Earth"
 title_separator          : "|"
 subtitle                 : "science data processing as a service"
 name                     : "University of Washington"
-description              : "A C++/Lua framework for on-demand science data processing"
+description              : "A cloud-native framework for on-demand science data processing"
 url                      : # the base hostname & protocol for your site e.g. "https://mmistakes.github.io"
 baseurl                  : "/web"
 repository               : # GitHub username/repo-name e.g. "mmistakes/minimal-mistakes"
@@ -96,39 +96,44 @@ analytics:
 author:
   name             : "SlideRule"
   avatar           : # path of avatar image, e.g. "/assets/images/bio-photo.jpg"
-  bio              : # "github.com/ICESat2-SlideRule"
+  bio              : # "github.com/SlideRuleEarth"
   location         : # "Somewhere"
   email            :
   links:
     - label: "Email"
       icon: "fas fa-fw fa-envelope-square"
       # url: "mailto:your.name@email.com"
-    - label: "Website"
-      icon: "fas fa-fw fa-link"
-      # url: "https://your-website.com"
+    - label: "Documentation"
+      icon: "fas fa-fw fa-book"
+      url: "https://slideruleearth.io/web/rtd/"
     - label: "Source Code"
       icon: "fab fa-fw fa-github"
-      url: "https://github.com/ICESat2-SlideRule/sliderule"
+      url: "https://github.com/SlideRuleEarth/sliderule"
     - label: "PyPi"
       icon: "fab fa-fw fa-python"
       url: "https://pypi.org/project/sliderule/"
     - label: "conda-forge"
       icon: "fab fa-fw fa-python"
       url: "https://anaconda.org/conda-forge/sliderule"
+    - label: "node.js"
+      icon: "fab fa-fw fa-npm"
+      url: "https://www.npmjs.com/package/@sliderule/sliderule"
 
 # Site Footer
 footer:
   links:
     - label: "Source Code"
       icon: "fab fa-fw fa-github"
-      url: "https://github.com/ICESat2-SlideRule/sliderule"
+      url: "https://github.com/SlideRuleEarth/sliderule"
     - label: "PyPi"
       icon: "fab fa-fw fa-python"
       url: "https://pypi.org/project/sliderule/"
     - label: "conda-forge"
       icon: "fab fa-fw fa-python"
       url: "https://anaconda.org/conda-forge/sliderule"
-
+    - label: "node.js"
+      icon: "fab fa-fw fa-npm"
+      url: "https://www.npmjs.com/package/@sliderule/sliderule"
 
 # Collections
 collections:
@@ -141,6 +146,7 @@ collections:
 include:
   - .htaccess
   - _pages
+  - favicon.ico
 exclude:
   - "*.sublime-project"
   - "*.sublime-workspace"

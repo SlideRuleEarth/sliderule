@@ -1,6 +1,6 @@
 # Arrow Package
 
-This package provides classses for building and using Apache Arrow in-memory and file formats.
+This package provides classes for building and using Apache Arrow in-memory and file formats.
 
 ## Install Arrow Library
 

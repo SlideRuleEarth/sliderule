@@ -1,5 +1,0 @@
-{
-    "loglvl": "ERROR",
-    "server_port": 9082,
-    "rec_path": "/data/rec/atlas/fsw/*.rec"
-}

@@ -4,7 +4,7 @@ resource "aws_security_group" "monitor-sg" {
   name         = "${var.cluster_name}-monitor-sg"
   description  = "Monitor Security Group"
   tags = {
-    Name = "${var.cluster_name}-monitor-sg"
+    Name = "${local.organization}-monitor-sg"
   }
 
   # Loki - TCP
@@ -18,8 +18,8 @@ resource "aws_security_group" "monitor-sg" {
   # HAProxy - NGINX (proxy) - TCP
   ingress {
     cidr_blocks = [var.vpcCIDRblock]
-    from_port   = 8080
-    to_port     = 8080
+    from_port   = 8040
+    to_port     = 8040
     protocol    = "tcp"
   }
 
@@ -38,7 +38,7 @@ resource "aws_security_group" "ilb-sg" {
   name         = "${var.cluster_name}-ilb-sg"
   description  = "Intelligent Load Balancer Security Group"
   tags = {
-    Name = "${var.cluster_name}-ilb-sg"
+    Name = "${local.organization}-ilb-sg"
   }
 
   # HAProxy - HTTPS
@@ -74,13 +74,39 @@ resource "aws_security_group" "ilb-sg" {
   }
 }
 
+# Security Group for Manager
+resource "aws_security_group" "manager-sg" {
+  vpc_id       = aws_vpc.sliderule-vpc.id
+  name         = "${var.cluster_name}-manager-sg"
+  description  = "Manager Security Group"
+  tags = {
+    Name = "${local.organization}-manager-sg"
+  }
+
+  # HAProxy - TCP
+  ingress {
+    cidr_blocks = [var.vpcCIDRblock]
+    from_port   = 8030
+    to_port     = 8030
+    protocol    = "tcp"
+  }
+
+  # Outbound - ALL
+  egress {
+    cidr_blocks = [var.publicCIDRblock]
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+  }
+}
+
 # Security Group for SlideRule
 resource "aws_security_group" "sliderule-sg" {
   vpc_id       = aws_vpc.sliderule-vpc.id
   name         = "${var.cluster_name}-sliderule-sg"
   description  = "SlideRule Security Group"
   tags = {
-    Name = "${var.cluster_name}-sliderule-sg"
+    Name = "${local.organization}-sliderule-sg"
   }
 
   # SlideRule (from ILB) - TCP
@@ -88,14 +114,6 @@ resource "aws_security_group" "sliderule-sg" {
     cidr_blocks = [var.vpcCIDRblock]
     from_port   = 9081
     to_port     = 9081
-    protocol    = "tcp"
-  }
-
-  # SlideRule (from Prometheus) - TCP
-  ingress {
-    cidr_blocks = [var.vpcCIDRblock]
-    from_port   = 10081
-    to_port     = 10081
     protocol    = "tcp"
   }
 

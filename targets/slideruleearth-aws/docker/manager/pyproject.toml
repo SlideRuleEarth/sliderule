@@ -1,0 +1,12 @@
+[project]
+name = "manager"
+description = "sliderule manager application"
+dynamic = ["version"]
+dependencies = ["flask", "duckdb", "geoip2"]
+
+[build-system]
+requires = ["flit_core<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.flit]
+module = "manager"

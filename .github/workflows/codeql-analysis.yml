@@ -27,7 +27,7 @@ jobs:
   analyze_server:
     name: Analyze SlideRule
     runs-on: ubuntu-latest
-    container: ghcr.io/icesat2-sliderule/sliderule-buildenv:latest
+    container: ghcr.io/slideruleearth/sliderule-buildenv:latest
 
     strategy:
       fail-fast: false
@@ -36,7 +36,9 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
+      with:
+        path: sliderule
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
@@ -46,7 +48,7 @@ jobs:
 
     # Build SlideRule
     - run: |
-       cd targets/slideruleearth-aws
+       cd sliderule/targets/slideruleearth-aws
        make config-release
        make
 

@@ -1,6 +1,6 @@
 # AWS Package
 
-This package provides classses to access data in S3 and to manage AWS credentials.
+This package provides classes to access data in S3 and to manage AWS credentials.
 
 ## Install cURL Library
 

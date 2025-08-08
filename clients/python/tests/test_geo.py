@@ -7,12 +7,10 @@ from sliderule import icesat2
 # Change connection timeout from default 10s to 1s
 sliderule.set_rqst_timeout((1, 60))
 
-@pytest.mark.network
 class TestGeo:
-    def test_geospatial1(self, domain, asset, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_geospatial1(self, init):
         test = {
-            "asset": asset,
+            "asset": "icesat2",
             "pole": "north",
             "lat": 40.0,
             "lon": 60.0,
@@ -38,6 +36,7 @@ class TestGeo:
             }
         }
         d = sliderule.source("geo", test)
+        assert init
         assert d["intersect"] == True
         assert abs(d["combine"]["lat0"] - 44.4015)  < 0.001
         assert abs(d["combine"]["lon0"] - 108.6949) < 0.001
@@ -54,10 +53,9 @@ class TestGeo:
         assert d["lat"] == 40.0 and d["lon"] == 60.0
         assert d["x"] == 0.466307658155 and d["y"] == 0.80766855588292
 
-    def test_geospatial2(self, domain, asset, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_geospatial2(self, init):
         test = {
-            "asset": asset,
+            "asset": "icesat2",
             "pole": "north",
             "lat": 30.0,
             "lon": 100.0,
@@ -65,12 +63,12 @@ class TestGeo:
             "y": 1.1371580426033,
         }
         d = sliderule.source("geo", test)
+        assert init
         assert abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == 100.0
 
-    def test_geospatial3(self, domain, asset, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_geospatial3(self, init):
         test = {
-            "asset": asset,
+            "asset": "icesat2",
             "pole": "north",
             "lat": 30.0,
             "lon": 100.0,
@@ -78,12 +76,12 @@ class TestGeo:
             "y": -1.1371580426033,
         }
         d = sliderule.source("geo", test)
+        assert init
         assert abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -100.0
 
-    def test_geospatial4(self, domain, asset, organization, desired_nodes):
-        icesat2.init(domain, organization=organization, desired_nodes=desired_nodes, bypass_dns=True)
+    def test_geospatial4(self, init):
         test = {
-            "asset": asset,
+            "asset": "icesat2",
             "pole": "north",
             "lat": 30.0,
             "lon": 100.0,
@@ -91,4 +89,5 @@ class TestGeo:
             "y": -1.1371580426033,
         }
         d = sliderule.source("geo", test)
+        assert init
         assert abs(d["lat"] - 30.0) < 0.0001 and d["lon"] == -80.0
