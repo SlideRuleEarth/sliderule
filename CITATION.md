@@ -1,4 +1,7 @@
 # Citing SlideRule
+
+See [`CITATION.cff`](https://github.com/SlideRuleEarth/sliderule/blob/main/CITATION.cff) for latest, machine-readable citation information.
+
 ## Citing SlideRule project
 If you use the SlideRule service and/or data products for scientific research resulting in a publication or other report/website with references, please cite the following:
 
@@ -20,11 +23,10 @@ If you use the SlideRule service and/or data products for scientific research re
 > journal = {Journal of Open Source Software} } 
 
 ## Citing SlideRule data products
-Please include a citation for the specific `sliderule` version used to prepare your data products, replacing the X.Y.Z version number below:
+Please include a citation for the specific `sliderule` version used to prepare your data products, replacing the X.Y.Z version number and version-specific DOI:
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4658805.svg)](https://doi.org/10.5281/zenodo.4658805)
->JP Swinski, Eric Lidwa, Tyler Sutterley, Scott Henderson, David Shean, Carlos E. Ugarte, James (Jake) Gearon, Joseph H Kennedy (2023). ICESat2-SlideRule/sliderule: vX.Y.Z. Zenodo. [https://doi.org/10.5281/zenodo.7927340](https://doi.org/10.5281/zenodo.7927340)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4660020.svg)](https://doi.org/10.5281/zenodo.4660020)
 
-We recommend that you document the key processing parameters used for custom ATL06-SR product generation (e.g., segment length, step size, photon classification used, etc.) in your methods section.  Better yet, release your documented, reproducible open code/notebooks, including the full SlideRule API call used to prepare the data!
+We recommend that you document the essential processing parameters used for any custom SlideRule product generation in the methods section of a publication. Better yet, release your documented, reproducible open code/notebooks, including the full SlideRule API call used to prepare the data!
 
 In the future, we hope to bundle improved metadata with products returned by SlideRule, for improved reproducibility and data provenance.
