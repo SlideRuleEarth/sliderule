@@ -120,6 +120,7 @@ class BathyFields: public Icesat2Fields
         static const double MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY;
         static const double MINIMUM_VERTICAL_SUBAQUEOUS_UNCERTAINTY;
         static const double DEFAULT_WIND_SPEED;
+        static const char* const missionCRS;
 
         /*--------------------------------------------------------------------
          * Typedefs

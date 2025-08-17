@@ -6,7 +6,7 @@ local prettyprint = require("prettyprint")
 runner.unittest("DataFrame Import and Export", function()
 
     local table_in = {a = {1,2,3,4}, b = {11,12,13,14}, c = {21,22,23,24}}
-    local meta_in = {bob = 100, bill = 200, cynthia = 300}
+    local meta_in = {bob = 100, bill = 200, cynthia = 300, crs = "EPSG:7912"}
     local df = core.dataframe(table_in, meta_in)
     local df_out = df:export()
     local table_out = df_out["gdf"]
@@ -20,19 +20,21 @@ runner.unittest("DataFrame Import and Export", function()
     end
 
     for k,_ in pairs(meta_in) do
-        runner.assert(meta_in[k] == meta_out[k], string.format("metadata mismatch on key %s: %f != %f", k, meta_in[k], meta_out[k]))
+        if k ~= "crs" then
+            runner.assert(meta_in[k] == meta_out[k], string.format("metadata mismatch on key %s: %f != %f", k, meta_in[k], meta_out[k]))
+        else
+            runner.assert(meta_out["crs"] == "EPSG:7912", "crs missing or wrong")
+        end
     end
-
 end)
 
--- Self Test --
 
 runner.unittest("DataFrame Send and Receive", function()
 
     local table_in = {a = {100,200,300,400}, b = {110,120,130,140}, c = {210,220,230,240}}
-    local meta_in = {bob = 10, bill = 20, cynthia = 30}
+    local meta_in = {bob = 10, bill = 20, cynthia = 30, crs = "EPSG:7912"}
     local df_in = core.dataframe(table_in, meta_in)
-    local df_out = core.dataframe()
+    local df_out = core.dataframe({}, { crs = "EPSG:7912" })
     local dfq = msg.publish("dfq")
 
     df_out:receive("dfq", "rspq") -- non-blocking
@@ -47,25 +49,29 @@ runner.unittest("DataFrame Send and Receive", function()
         end
     end
 
-    for k,_ in pairs(meta_in) do
-        for i = 1,4 do
-            runner.assert(meta_in[k] == df_out[k][i], string.format("metadata mismatch on key %s: %f != %f", k, meta_in[k], df_out[k][i]))
+    -- broadcast metas: only numbers become columns
+    for k,v in pairs(meta_in) do
+        if type(v) == "number" then
+            for i = 1,4 do
+                runner.assert(v == df_out[k][i], string.format("metadata mismatch on key %s: %f != %f", k, v, df_out[k][i]))
+            end
         end
     end
 
+    -- scalar metas: strings (like crs) stay in metadata
+    local meta_out = df_out:export().meta
+    runner.assert(meta_out["crs"] == meta_in["crs"], "crs metadata missing or wrong")
 end)
-
--- Self Test --
 
 runner.unittest("DataFrame Multiple Senders and Merged Receive", function()
 
     local table1_in = {a = {101,102,103,104}, b = {111,112,113,114}, c = {121,122,123,124}}
-    local meta1_in = {bob = 11, bill = 12, cynthia = 13}
+    local meta1_in = {bob = 11, bill = 12, cynthia = 13, crs = "EPSG:7912"}
     local df1_in = core.dataframe(table1_in, meta1_in)
     local table2_in = {a = {201,202,203,204}, b = {211,212,213,214}, c = {221,222,223,224}}
-    local meta2_in = {bob = 21, bill = 22, cynthia = 23}
+    local meta2_in = {bob = 21, bill = 22, cynthia = 23, crs = "EPSG:7912"}
     local df2_in = core.dataframe(table2_in, meta2_in)
-    local df_out = core.dataframe()
+    local df_out = core.dataframe({}, { crs = "EPSG:7912" })
     local dfq = msg.publish("dfq")
 
     df_out:receive("dfq", "rspq", 2) -- non-blocking
@@ -86,15 +92,20 @@ runner.unittest("DataFrame Multiple Senders and Merged Receive", function()
         end
     end
 
-    for k,_ in pairs(meta1_in) do
-        for i = 1,4 do
-            runner.assert(meta1_in[k] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, meta1_in[k], df_out[k][i]))
-        end
-        for i = 5,8 do
-            runner.assert(meta2_in[k] == df_out[k][i], string.format("dataframe mismatch on key %s, row %d: %d != %d", k, i, meta1_in[k], df_out[k][i]))
+    -- broadcast metas: ONLY numeric keys become columns
+    for k,v in pairs(meta1_in) do
+        if type(v) == "number" then
+            for i = 1,4 do
+                runner.assert(v == df_out[k][i], string.format("metadata mismatch on key %s, row %d: %f != %f", k, i, v, df_out[k][i]))
+            end
+            for i = 5,8 do
+                runner.assert(meta2_in[k] == df_out[k][i], string.format("metadata mismatch on key %s, row %d: %f != %f", k, i, meta2_in[k], df_out[k][i]))
+            end
         end
     end
 
+    local meta_out = df_out:export().meta
+    runner.assert(meta_out["crs"] == "EPSG:7912", "crs metadata missing or wrong")
 end)
 
 -- Report Results --

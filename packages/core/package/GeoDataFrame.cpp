@@ -83,6 +83,8 @@ const struct luaL_Reg GeoDataFrame::FrameSender::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
+const char* GeoDataFrame::CRS_KEY = "crs";
+
 /******************************************************************************
  * CLASS METHODS
  ******************************************************************************/
@@ -256,8 +258,20 @@ int GeoDataFrame::luaCreate (lua_State* L)
         const int column_table_index = 1;
         const int meta_table_index = 2;
 
+        // Get required crs from meta table
+        const char* crs = NULL;
+        if(lua_gettop(L) >= 2 && lua_istable(L, meta_table_index))
+        {
+            lua_getfield(L, meta_table_index, GeoDataFrame::CRS_KEY);
+            if(lua_isstring(L, -1)) crs = lua_tostring(L, -1);
+            lua_pop(L, 1);
+        }
+
+        if(crs == NULL)
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "%s is required", GeoDataFrame::CRS_KEY);
+
         // create initial dataframe
-        dataframe = new GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {});
+        dataframe = new GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {}, crs);
         lua_pop(L, 2);
 
         // column table
@@ -317,6 +331,14 @@ int GeoDataFrame::luaCreate (lua_State* L)
                 if(lua_isstring(L, -2))
                 {
                     const char* key = lua_tostring(L, -2);
+
+                    // skip crs since it was already set in GedoDataFrame constructor
+                    if(strcmp(key, GeoDataFrame::CRS_KEY) == 0)
+                    {
+                        lua_pop(L, 1);
+                        continue;
+                    }
+
                     if(lua_isnumber(L, -1)) // treat as a double
                     {
                         FieldElement<double>* element = new FieldElement<double>();
@@ -755,6 +777,31 @@ string GeoDataFrame::getInfoAsJson (void) const
 }
 
 /*----------------------------------------------------------------------------
+ * getCRS
+ *----------------------------------------------------------------------------*/
+const char* GeoDataFrame::getCRS(void) const
+{
+    if(auto* f = getMetaData(CRS_KEY, Field::FIELD, true))
+    {
+        if(const auto* el = dynamic_cast<const FieldElement<string>*>(f))
+            return el->value.c_str();
+    }
+    return NULL;
+}
+
+/*----------------------------------------------------------------------------
+ * setCRS
+ *----------------------------------------------------------------------------*/
+bool GeoDataFrame::setCRS(const char* crs)
+{
+    if(crs == NULL) return false;
+
+    auto* el = new FieldElement<string>(string(crs));
+    /* keep CRS as scalar metadata, don't add to columns */
+    return metaFields.add(CRS_KEY, el, true);
+}
+
+/*----------------------------------------------------------------------------
  * waitRunComplete
  *----------------------------------------------------------------------------*/
 bool GeoDataFrame::waitRunComplete (int timeout)
@@ -917,7 +964,8 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
                             const char* meta_name,
                             const struct luaL_Reg meta_table[],
                             const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
-                            const std::initializer_list<FieldDictionary::init_entry_t>& meta_list):
+                            const std::initializer_list<FieldDictionary::init_entry_t>& meta_list,
+                            const char* crs):
     LuaObject (L, OBJECT_TYPE, meta_name, meta_table),
     Field(DATAFRAME, 0),
     inError(false),
@@ -935,6 +983,12 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     subRunQ(pubRunQ),
     runComplete(false)
 {
+    if(crs == NULL)
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "CRS is required at GeoDataFrame construction");
+
+    if(!setCRS(crs))
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to set CRS at GeoDataFrame construction");
+
     // set lua functions
     LuaEngine::setAttrFunc(L, "inerror",    luaInError);
     LuaEngine::setAttrFunc(L, "numrows",    luaNumRows);
@@ -1117,12 +1171,34 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_
        (gdf_rec_data->encoding & GeoDataFrame::META_SOURCE_ID))
     {
         add_source_column(this, gdf_rec_data, source_id);
+        return;
     }
-    else if(value_encoding & (Field::NESTED_LIST | Field::NESTED_ARRAY | Field::NESTED_COLUMN))
+
+    // NOTE: "crs" is a special case for now
+    // if this is a META record for a plain (non-broadcast) string named "crs",
+    // store it as scalar metadata and return. Let everything else fall through.
+    if(gdf_rec_data->type == GeoDataFrame::META_REC &&
+        !(gdf_rec_data->encoding & META_COLUMN) &&
+        encoded_type == STRING &&
+        std::strcmp(gdf_rec_data->name, GeoDataFrame::CRS_KEY) == 0)
+    {
+        std::string value(reinterpret_cast<const char*>(gdf_rec_data->data), gdf_rec_data->size);
+        auto* el = new FieldElement<std::string>(value);
+        // ensure META_COLUMN is not set
+        el->setEncodingFlags(gdf_rec_data->encoding & ~META_COLUMN);
+        if(!addMetaData(gdf_rec_data->name, el, true))
+        {
+            delete el;
+            throw RunTimeException(ERROR, RTE_FAILURE, "failed to add metadata <%s>", gdf_rec_data->name);
+        }
+        return;
+    }
+
+    if(value_encoding & (Field::NESTED_LIST | Field::NESTED_ARRAY | Field::NESTED_COLUMN))
     {
         switch(encoded_type)
         {
-//            case BOOL:      add_status = add_list_column<bool>    (this, gdf_rec_data); break;
+            // case BOOL:      add_status = add_list_column<bool>    (this, gdf_rec_data); break;
             case INT8:      add_list_column<int8_t>  (this, gdf_rec_data); break;
             case INT16:     add_list_column<int16_t> (this, gdf_rec_data); break;
             case INT32:     add_list_column<int32_t> (this, gdf_rec_data); break;

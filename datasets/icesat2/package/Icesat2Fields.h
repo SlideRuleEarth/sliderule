@@ -241,6 +241,7 @@ class Icesat2Fields: public RequestFields
         static const uint32_t PFLAG_OUT_OF_BOUNDS           = 0x0008;
         static const uint32_t PFLAG_BIN_UNDERFLOW           = 0x0010;
         static const uint32_t PFLAG_BIN_OVERFLOW            = 0x0020;
+        static const char*    const missionCRS;
 
         /*--------------------------------------------------------------------
          * Typedefs

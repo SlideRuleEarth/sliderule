@@ -141,7 +141,8 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"utm_is_north",        &utm_is_north},
         {"bounding_polygon_lat",&bounding_polygon_lat},
         {"bounding_polygon_lon",&bounding_polygon_lon}
-    }),
+    },
+    BathyFields::missionCRS),
     beam(beam_str),
     parmsPtr(_parms),
     parms(*_parms),
