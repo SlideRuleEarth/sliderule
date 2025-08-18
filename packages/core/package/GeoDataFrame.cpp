@@ -1174,15 +1174,14 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_
         return;
     }
 
-    // NOTE: "crs" is a special case for now
-    // if this is a META record for a plain (non-broadcast) string named "crs",
-    // store it as scalar metadata and return. Let everything else fall through.
     if(gdf_rec_data->type == GeoDataFrame::META_REC &&
         !(gdf_rec_data->encoding & META_COLUMN) &&
         encoded_type == STRING &&
         std::strcmp(gdf_rec_data->name, GeoDataFrame::CRS_KEY) == 0)
     {
-        std::string value(reinterpret_cast<const char*>(gdf_rec_data->data), gdf_rec_data->size);
+        // Special case: this is a META record for a plain (non-broadcast) string named "crs",
+        // store it as scalar metadata and return.
+        const std::string value(reinterpret_cast<const char*>(gdf_rec_data->data), gdf_rec_data->size);
         auto* el = new FieldElement<std::string>(value);
         // ensure META_COLUMN is not set
         el->setEncodingFlags(gdf_rec_data->encoding & ~META_COLUMN);

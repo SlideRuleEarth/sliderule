@@ -1165,8 +1165,15 @@ bool GdalRaster::isNodata(const double& v, const double& nd)
  *----------------------------------------------------------------------------*/
 void GdalRaster::createTransform(void)
 {
-    OGRErr ogrerr = sourceCRS.importFromEPSG(SLIDERULE_EPSG);
-    CHECK_GDALERR(ogrerr);
+    const char* crs = !parms->source_crs.value.empty() ? parms->source_crs.value.c_str() : "EPSG:7912";
+
+    /* SetFromUserInput handles "EPSG:####", WKT1/2, PROJ strings, etc. */
+    OGRErr ogrerr = sourceCRS.SetFromUserInput(crs);
+    if(ogrerr != OGRERR_NONE)
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to parse source CRS: %s", crs);
+    }
+
     const char* projref = dset->GetProjectionRef();
 
     /* Use projref from raster if specified and not and empty string */

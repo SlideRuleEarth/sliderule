@@ -191,6 +191,7 @@ GeoFields::GeoFields (void):
         {"aoi_bbox",            &aoi_bbox},
         {"catalog",             &catalog},
         {"bands",               &bands},
+        {"source_crs",          &source_crs},
         {"asset",               &asset}
     }),
     filter_time(false),

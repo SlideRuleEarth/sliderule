@@ -156,6 +156,11 @@ class RasterObject: public LuaObject
             return parms->slope_aspect;
         }
 
+        const GeoFields* getGeoParms(void) const
+        {
+            return parms;
+        }
+
 
     protected:
 
