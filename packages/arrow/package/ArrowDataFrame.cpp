@@ -43,8 +43,8 @@
 #include <arrow/builder.h>
 #include <parquet/file_writer.h>
 #include <arrow/csv/writer.h>
+#include <ogr_spatialref.h>
 #include <regex>
-
 #include "OsApi.h"
 #include "GeoDataFrame.h"
 #include "FieldList.h"
@@ -289,59 +289,91 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
 }
 
 /*----------------------------------------------------------------------------
+ * normalizeCRS - brings in GDAL dependency
+ *----------------------------------------------------------------------------*/
+std::string normalizeCRS(const char* crs)
+{
+    OGRSpatialReference srs;
+    const OGRErr err = srs.SetFromUserInput(crs);
+    if (err != OGRERR_NONE)
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to normalize source CRS: %s", crs);
+    }
+
+    char* str = NULL;
+    srs.exportToPROJJSON(&str, NULL);
+    std::string projjson(str ? str : "");
+    CPLFree(str);
+
+    return projjson;
+}
+
+/*----------------------------------------------------------------------------
 * appendGeoMetaData
 *----------------------------------------------------------------------------*/
-void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
+void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata, const char* crs)
 {
-    /* Initialize Meta Data String */
-    string geostr(R"json({
-        "version": "1.0.0-beta.1",
-        "primary_column": "geometry",
-        "columns": {
-            "geometry": {
-                "encoding": "WKB",
-                "geometry_types": ["Point"],
-                "crs": {
-                    "$schema": "https://proj.org/schemas/v0.5/projjson.schema.json",
-                    "type": "GeographicCRS",
-                    "name": "WGS 84 longitude-latitude",
-                    "datum": {
-                        "type": "GeodeticReferenceFrame",
-                        "name": "World Geodetic System 1984",
-                        "ellipsoid": {
-                            "name": "WGS 84",
-                            "semi_major_axis": 6378137,
-                            "inverse_flattening": 298.257223563
+    std::string geostr;
+
+    if(crs == NULL || crs[0] == '\0')
+    {
+        /* Initialize Meta Data String */
+        geostr = R"json({
+            "version": "1.0.0",
+            "primary_column": "geometry",
+            "columns": {
+                "geometry": {
+                    "encoding": "WKB",
+                    "geometry_types": ["Point"],
+                    "crs": {
+                        "$schema": "https://proj.org/schemas/v0.5/projjson.schema.json",
+                        "type": "GeographicCRS",
+                        "name": "WGS 84 longitude-latitude",
+                        "datum": {
+                            "type": "GeodeticReferenceFrame",
+                            "name": "World Geodetic System 1984",
+                            "ellipsoid": {
+                                "name": "WGS 84",
+                                "semi_major_axis": 6378137,
+                                "inverse_flattening": 298.257223563
+                            }
+                        },
+                        "coordinate_system": {
+                            "subtype": "ellipsoidal",
+                            "axis": [
+                                {
+                                    "name": "Geodetic longitude",
+                                    "abbreviation": "Lon",
+                                    "direction": "east",
+                                    "unit": "degree"
+                                },
+                                {
+                                    "name": "Geodetic latitude",
+                                    "abbreviation": "Lat",
+                                    "direction": "north",
+                                    "unit": "degree"
+                                }
+                            ]
+                        },
+                        "id": {
+                            "authority": "OGC",
+                            "code": "CRS84"
                         }
                     },
-                    "coordinate_system": {
-                        "subtype": "ellipsoidal",
-                        "axis": [
-                            {
-                                "name": "Geodetic longitude",
-                                "abbreviation": "Lon",
-                                "direction": "east",
-                                "unit": "degree"
-                            },
-                            {
-                                "name": "Geodetic latitude",
-                                "abbreviation": "Lat",
-                                "direction": "north",
-                                "unit": "degree"
-                            }
-                        ]
-                    },
-                    "id": {
-                        "authority": "OGC",
-                        "code": "CRS84"
-                    }
-                },
-                "edges": "planar",
-                "bbox": [-180.0, -90.0, 180.0, 90.0],
-                "epoch": 2018.0
+                    "edges": "planar",
+                    "bbox": [-180.0, -90.0, 180.0, 90.0],
+                    "epoch": 2018.0
+                }
             }
-        }
-    })json");
+        })json";
+    }
+    else
+    {
+        const std::string norm = normalizeCRS(crs);  // always PROJJSON
+        geostr = R"({"version":"1.0.0","primary_column":"geometry","columns":{"geometry":{
+            "encoding":"WKB","geometry_types":["Point"],"crs":)" + norm + R"(}}})";
+    }
+
 
     /* Reformat JSON */
     geostr = std::regex_replace(geostr, std::regex("    "), "");
@@ -657,7 +689,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
 
                 // set metadata
                 auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-                if(format == OutputFields::GEOPARQUET) appendGeoMetaData(metadata);
+                if(format == OutputFields::GEOPARQUET) appendGeoMetaData(metadata, dataframe.getCRS());
                 appendPandasMetaData(dataframe.getTimeColumnName().c_str(), metadata, schema);
                 metadata->Append("sliderule", parms.toJson());
                 metadata->Append("meta", dataframe.metaFields.toJson());

@@ -1167,7 +1167,7 @@ void GdalRaster::createTransform(void)
 {
     const char* crs = !parms->source_crs.value.empty() ? parms->source_crs.value.c_str() : "EPSG:7912";
 
-    /* SetFromUserInput handles "EPSG:####", WKT1/2, PROJ strings, etc. */
+    /* SetFromUserInput handles "EPSG:####", WKT1/2, PROJ strings, PROJJSON, etc. */
     OGRErr ogrerr = sourceCRS.SetFromUserInput(crs);
     if(ogrerr != OGRERR_NONE)
     {
