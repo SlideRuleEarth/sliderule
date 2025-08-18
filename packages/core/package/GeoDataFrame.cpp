@@ -1179,17 +1179,31 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_
         encoded_type == STRING &&
         std::strcmp(gdf_rec_data->name, GeoDataFrame::CRS_KEY) == 0)
     {
-        // Special case: this is a META record for a plain (non-broadcast) string named "crs",
-        // store it as scalar metadata and return.
-        const std::string value(reinterpret_cast<const char*>(gdf_rec_data->data), gdf_rec_data->size);
-        auto* el = new FieldElement<std::string>(value);
-        // ensure META_COLUMN is not set
-        el->setEncodingFlags(gdf_rec_data->encoding & ~META_COLUMN);
-        if(!addMetaData(gdf_rec_data->name, el, true))
+        // Special case: META record for a plain (non-broadcast) string named "crs"
+        const std::string incoming_crs(reinterpret_cast<const char*>(gdf_rec_data->data), gdf_rec_data->size);
+
+        const char* frame_crs = getCRS();
+        if(frame_crs == NULL || frame_crs[0] == '\0')
         {
-            delete el;
-            throw RunTimeException(ERROR, RTE_FAILURE, "failed to add metadata <%s>", gdf_rec_data->name);
+            // Frame has no CRS assigned yet, adopt the CRS from the incoming dataframe
+            auto* el = new FieldElement<std::string>(incoming_crs);
+            el->setEncodingFlags(gdf_rec_data->encoding & ~META_COLUMN);
+            if(!addMetaData(gdf_rec_data->name, el, true))
+            {
+                delete el;
+                throw RunTimeException(ERROR, RTE_FAILURE, "failed to add metadata <%s>", gdf_rec_data->name);
+            }
         }
+        else
+        {
+            // Already have a frame CRS: enforce consistency
+            if(std::strcmp(frame_crs, incoming_crs.c_str()) != 0)
+            {
+                throw RunTimeException(CRITICAL, RTE_FAILURE, "CRS mismatch: existing=%s incoming=%s", frame_crs, incoming_crs.c_str());
+            }
+            // If it matches, we just ignore the new record (no overwrite needed).
+        }
+
         return;
     }
 

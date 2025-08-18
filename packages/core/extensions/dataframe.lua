@@ -151,7 +151,7 @@ local function proxy(endpoint, parms, rqst, rspq, channels, create)
 
     -- Create Receiving DataFrame
     local rqst_str = json.encode(rqst)
-    local df = core.dataframe({}, {endpoint=endpoint, request=rqst_str})
+    local df = core.dataframe({}, {endpoint=endpoint, request=rqst_str, crs=""})
     local expected_concurrent_channels = #resources * channels
     df:receive(proxyq_name, rspq, expected_concurrent_channels, parms["rqst_timeout"] * 1000)
 
