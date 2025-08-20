@@ -120,7 +120,6 @@ class BathyFields: public Icesat2Fields
         static const double MINIMUM_HORIZONTAL_SUBAQUEOUS_UNCERTAINTY;
         static const double MINIMUM_VERTICAL_SUBAQUEOUS_UNCERTAINTY;
         static const double DEFAULT_WIND_SPEED;
-        static const char* const missionCRS;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -156,6 +155,8 @@ class BathyFields: public Icesat2Fields
         static int  luaCreate       (lua_State* L);
         static int  luaClassifier   (lua_State* L);
         void        fromLua         (lua_State* L, int index) override;
+
+        static const char* missionCRS(MathLib::datum_t datum) { return Icesat2Fields::missionCRS(datum); }
 
         /*--------------------------------------------------------------------
          * Data

@@ -43,7 +43,6 @@
 #include <arrow/builder.h>
 #include <parquet/file_writer.h>
 #include <arrow/csv/writer.h>
-#include <ogr_spatialref.h>
 #include <regex>
 #include "OsApi.h"
 #include "GeoDataFrame.h"
@@ -289,23 +288,22 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
 }
 
 /*----------------------------------------------------------------------------
- * normalizeCRS - brings in GDAL dependency
- *----------------------------------------------------------------------------*/
-std::string normalizeCRS(const char* crs)
+* validateProjjson
+*----------------------------------------------------------------------------*/
+static bool validateProjjson(const std::string& crs)
 {
-    OGRSpatialReference srs;
-    const OGRErr err = srs.SetFromUserInput(crs);
-    if (err != OGRERR_NONE)
-    {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to normalize source CRS: %s", crs);
-    }
+    // Quick sanity checks for expected structure
+    if (crs.find('{') == std::string::npos) return false;
+    if (crs.find("$schema") == std::string::npos) return false;
+    if (crs.find("coordinate_system") == std::string::npos) return false;
+    if (crs.find("type") == std::string::npos) return false;
 
-    char* str = NULL;
-    srs.exportToPROJJSON(&str, NULL);
-    std::string projjson(str ? str : "");
-    CPLFree(str);
+    // Optional but good: must start with '{' and end with '}'
+    const char first = crs.find_first_not_of(" \t\n\r") != std::string::npos ? crs[crs.find_first_not_of(" \t\n\r")] : 0;
+    const char last  = crs.find_last_not_of(" \t\n\r")  != std::string::npos ? crs[crs.find_last_not_of(" \t\n\r")]  : 0;
+    if (first != '{' || last != '}') return false;
 
-    return projjson;
+    return true;
 }
 
 /*----------------------------------------------------------------------------
@@ -313,67 +311,20 @@ std::string normalizeCRS(const char* crs)
 *----------------------------------------------------------------------------*/
 void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata, const char* crs)
 {
-    std::string geostr;
+    if (crs == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "CRS is required");
 
-    if(crs == NULL || crs[0] == '\0')
+    const std::string projjson(crs);
+
+    // Validate CRS is PROJJSON-like
+    if (!validateProjjson(projjson))
     {
-        /* Initialize Meta Data String */
-        geostr = R"json({
-            "version": "1.0.0",
-            "primary_column": "geometry",
-            "columns": {
-                "geometry": {
-                    "encoding": "WKB",
-                    "geometry_types": ["Point"],
-                    "crs": {
-                        "$schema": "https://proj.org/schemas/v0.5/projjson.schema.json",
-                        "type": "GeographicCRS",
-                        "name": "WGS 84 longitude-latitude",
-                        "datum": {
-                            "type": "GeodeticReferenceFrame",
-                            "name": "World Geodetic System 1984",
-                            "ellipsoid": {
-                                "name": "WGS 84",
-                                "semi_major_axis": 6378137,
-                                "inverse_flattening": 298.257223563
-                            }
-                        },
-                        "coordinate_system": {
-                            "subtype": "ellipsoidal",
-                            "axis": [
-                                {
-                                    "name": "Geodetic longitude",
-                                    "abbreviation": "Lon",
-                                    "direction": "east",
-                                    "unit": "degree"
-                                },
-                                {
-                                    "name": "Geodetic latitude",
-                                    "abbreviation": "Lat",
-                                    "direction": "north",
-                                    "unit": "degree"
-                                }
-                            ]
-                        },
-                        "id": {
-                            "authority": "OGC",
-                            "code": "CRS84"
-                        }
-                    },
-                    "edges": "planar",
-                    "bbox": [-180.0, -90.0, 180.0, 90.0],
-                    "epoch": 2018.0
-                }
-            }
-        })json";
-    }
-    else
-    {
-        const std::string norm = normalizeCRS(crs);  // always PROJJSON
-        geostr = R"({"version":"1.0.0","primary_column":"geometry","columns":{"geometry":{
-            "encoding":"WKB","geometry_types":["Point"],"crs":)" + norm + R"(}}})";
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid CRS string: expected PROJJSON");
     }
 
+    std::string geostr = R"({"version":"1.0.0","primary_column":"geometry","columns":{"geometry":{
+                          "encoding":"WKB","geometry_types":["Point"],"crs":)" + projjson + R"(}}})";
+
+    print2term("GeoJSON: %s\n", geostr.c_str());
 
     /* Reformat JSON */
     geostr = std::regex_replace(geostr, std::regex("    "), "");

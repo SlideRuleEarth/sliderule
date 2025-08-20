@@ -235,7 +235,7 @@ class BathyDataFrame: public GeoDataFrame
 
         #ifdef __unittesting__
             BathyDataFrame(BathyFields* _parms):
-                GeoDataFrame(NULL, LUA_META_NAME, LUA_META_TABLE, {}, {}, BathyFields::missionCRS),
+                GeoDataFrame(NULL, LUA_META_NAME, LUA_META_TABLE, {}, {}, Icesat2Fields::missionCRS(_parms->datum.value)),
                 active(false),
                 pid(NULL),
                 parmsPtr(_parms),

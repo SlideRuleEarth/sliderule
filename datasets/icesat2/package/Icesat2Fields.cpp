@@ -37,12 +37,17 @@
 #include "Icesat2Fields.h"
 #include "FieldDictionary.h"
 #include "LuaObject.h"
+#include <fstream>
+#include <sstream>
+
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
 
- const char* const Icesat2Fields::missionCRS = "EPSG:7912";
+// Used for loaded CRS string and last datum
+static std::string crs;
+static MathLib::datum_t lastDatum = MathLib::UNSPECIFIED_DATUM;
 
 /******************************************************************************
  * METHODS
@@ -566,6 +571,62 @@ int Icesat2Fields::luaStage (lua_State* L)
 
     return 1;
 }
+
+/*----------------------------------------------------------------------------
+ * loadCRSFile
+ *----------------------------------------------------------------------------*/
+static void loadCRSFile(std::string& str, const std::string& crsPath)
+{
+    const std::ifstream f(crsPath);
+    if(f)
+    {
+        std::ostringstream ss;
+        ss << f.rdbuf();
+        str = ss.str();
+    }
+    else
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to open CRS file: %s", crsPath.c_str());
+    }
+}
+
+/*----------------------------------------------------------------------------
+ * missionCRS
+ *----------------------------------------------------------------------------*/
+const char* Icesat2Fields::missionCRS(MathLib::datum_t datum)
+{
+    // Reload only if different from last datum
+    if(datum != lastDatum || crs.empty())
+    {
+        const char* baseFile = NULL;
+        std::stringstream ss;
+
+        switch(datum)
+        {
+            case MathLib::EGM08:
+                baseFile = "EPSG7912_EGM08.projjson";
+                break;
+
+            case MathLib::NAVD88:
+                baseFile = "EPSG7912_NAVD88.projjson";
+                break;
+
+            case MathLib::ITRF2014:
+            case MathLib::UNSPECIFIED_DATUM:
+            default:
+                baseFile = "EPSG7912.projjson";
+                break;
+        }
+
+        ss << CONFDIR << PATH_DELIMETER << baseFile;
+        loadCRSFile(crs, ss.str());
+
+        lastDatum = datum;  // update cache key
+    }
+
+    return crs.c_str();
+}
+
 
 /******************************************************************************
  * FUNCTIONS

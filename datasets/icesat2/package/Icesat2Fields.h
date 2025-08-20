@@ -241,7 +241,6 @@ class Icesat2Fields: public RequestFields
         static const uint32_t PFLAG_OUT_OF_BOUNDS           = 0x0008;
         static const uint32_t PFLAG_BIN_UNDERFLOW           = 0x0010;
         static const uint32_t PFLAG_BIN_OVERFLOW            = 0x0020;
-        static const char*    const missionCRS;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -495,6 +494,8 @@ class Icesat2Fields: public RequestFields
 
         // returns resource as a string
         const char* getResource (void) const { return resource.value.c_str(); }
+
+        static const char* missionCRS(MathLib::datum_t datum);
 
         /*--------------------------------------------------------------------
          * Data
