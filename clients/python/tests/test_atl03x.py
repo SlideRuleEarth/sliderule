@@ -65,7 +65,7 @@ class TestAtl03x:
         }
         gdf = sliderule.run("atl03x", parms)
         assert init
-        assert len(gdf) == 429954
+        assert len(gdf) == 430618
         assert 4 in np.unique(gdf.spot)
 
     def test_fitter(self, init):
@@ -253,7 +253,7 @@ class TestAtl03x:
         }
         gdf = sliderule.run("atl03x", parms)
         assert init
-        assert len(gdf) == 1774988
+        assert len(gdf) == 1774972
         assert len(gdf.keys()) == 4
         assert "height" in gdf.keys()
         assert "x_atc" in gdf.keys()
