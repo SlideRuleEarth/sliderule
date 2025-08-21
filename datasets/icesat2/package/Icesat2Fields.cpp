@@ -45,9 +45,9 @@
  * STATIC DATA
  ******************************************************************************/
 
-// Used for loaded CRS string and last datum
-static std::string crs;
-static MathLib::datum_t lastDatum = MathLib::UNSPECIFIED_DATUM;
+static std::string crsICESAT2;
+static std::string crsICESAT2_EGM08;
+static std::string crsICESAT2_NAVD88;
 
 /******************************************************************************
  * METHODS
@@ -503,6 +503,74 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
 }
 
 /*----------------------------------------------------------------------------
+ * loadCRSFile
+ *----------------------------------------------------------------------------*/
+static bool loadCRSFile(std::string& str, const std::string& crsPath)
+{
+    const std::ifstream f(crsPath);
+    if(!f) return false;
+
+    std::ostringstream ss;
+    ss << f.rdbuf();
+    str = ss.str();
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * loadCRSFiles - Loads all required CRS files.
+ *----------------------------------------------------------------------------*/
+static void loadCRSFiles(void)
+{
+    /* lambda function to sanity check projjson string */
+    auto validateProjjson = [](const std::string& crs) -> bool
+    {
+        // Sanity checks for expected structure
+        if (crs.find('{') == std::string::npos) return false;
+        if (crs.find("$schema") == std::string::npos) return false;
+        if (crs.find("coordinate_system") == std::string::npos) return false;
+        if (crs.find("type") == std::string::npos) return false;
+
+        // Must start with '{' and end with '}'
+        const size_t firstPos = crs.find_first_not_of(" \t\n\r");
+        const size_t lastPos  = crs.find_last_not_of(" \t\n\r");
+        if (firstPos == std::string::npos || lastPos == std::string::npos) return false;
+
+        const char first = crs[firstPos];
+        const char last  = crs[lastPos];
+        return (first == '{' && last == '}');
+    };
+
+    struct CRSInfo
+    {
+        const char* filename;
+        std::string* target;
+    };
+
+    const CRSInfo crsList[] =
+    {
+        { "EPSG7912.projjson",         &crsICESAT2        },
+        { "EPSG7912_EGM08.projjson",   &crsICESAT2_EGM08  },
+        { "EPSG7912_NAVD88.projjson",  &crsICESAT2_NAVD88 }
+    };
+
+    for (const auto& entry : crsList)
+    {
+        std::stringstream ss;
+        ss << CONFDIR << PATH_DELIMETER << entry.filename;
+
+        if(!loadCRSFile(*entry.target, ss.str()))
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to open CRS file: %s", ss.str().c_str());
+        }
+
+        if(!validateProjjson(*entry.target))
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid CRS file: %s", ss.str().c_str());
+        }
+    }
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldDictionary::init_entry_t>& init_list):
@@ -543,6 +611,9 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset
         fields.add(elem.name, entry);
     }
 
+    // load all supported CRS files
+    loadCRSFiles();
+
     // add additional functions
     LuaEngine::setAttrFunc(L, "stage", luaStage);
 }
@@ -573,58 +644,20 @@ int Icesat2Fields::luaStage (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
- * loadCRSFile
- *----------------------------------------------------------------------------*/
-static void loadCRSFile(std::string& str, const std::string& crsPath)
-{
-    const std::ifstream f(crsPath);
-    if(f)
-    {
-        std::ostringstream ss;
-        ss << f.rdbuf();
-        str = ss.str();
-    }
-    else
-    {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to open CRS file: %s", crsPath.c_str());
-    }
-}
-
-/*----------------------------------------------------------------------------
  * missionCRS
  *----------------------------------------------------------------------------*/
 const char* Icesat2Fields::missionCRS(MathLib::datum_t datum)
 {
-    // Reload only if different from last datum
-    if(datum != lastDatum || crs.empty())
+    switch(datum)
     {
-        const char* baseFile = NULL;
-        std::stringstream ss;
+    case MathLib::EGM08:  return crsICESAT2_EGM08.c_str();
+    case MathLib::NAVD88: return crsICESAT2_NAVD88.c_str();
 
-        switch(datum)
-        {
-            case MathLib::EGM08:
-                baseFile = "EPSG7912_EGM08.projjson";
-                break;
-
-            case MathLib::NAVD88:
-                baseFile = "EPSG7912_NAVD88.projjson";
-                break;
-
-            case MathLib::ITRF2014:
-            case MathLib::UNSPECIFIED_DATUM:
-            default:
-                baseFile = "EPSG7912.projjson";
-                break;
-        }
-
-        ss << CONFDIR << PATH_DELIMETER << baseFile;
-        loadCRSFile(crs, ss.str());
-
-        lastDatum = datum;  // update cache key
+    case MathLib::ITRF2014:
+    case MathLib::UNSPECIFIED_DATUM:
+    default:
+        return crsICESAT2.c_str();
     }
-
-    return crs.c_str();
 }
 
 

@@ -138,7 +138,7 @@ bool DataFrameSampler::run (GeoDataFrame* dataframe)
         const GeoFields* geoparms = sampler->robj->getGeoParms();
         GeoFields* mutable_parms = const_cast<GeoFields*>(geoparms);
 
-        // Dirty hack but putting source_crs in a GeoFields is the eastiest, least code impact change for propagating frame_crs
+        // Putting frame_crs in a GeoFields is the eastiest, least code impact change for propagating frame_crs
         mutable_parms->source_crs = frame_crs;
         mlog(DEBUG, "DataFrameSampler: source CRS = %s", frame_crs);
 

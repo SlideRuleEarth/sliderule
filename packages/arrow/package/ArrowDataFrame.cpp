@@ -288,25 +288,6 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
 }
 
 /*----------------------------------------------------------------------------
-* validateProjjson
-*----------------------------------------------------------------------------*/
-static bool validateProjjson(const std::string& crs)
-{
-    // Quick sanity checks for expected structure
-    if (crs.find('{') == std::string::npos) return false;
-    if (crs.find("$schema") == std::string::npos) return false;
-    if (crs.find("coordinate_system") == std::string::npos) return false;
-    if (crs.find("type") == std::string::npos) return false;
-
-    // Optional but good: must start with '{' and end with '}'
-    const char first = crs.find_first_not_of(" \t\n\r") != std::string::npos ? crs[crs.find_first_not_of(" \t\n\r")] : 0;
-    const char last  = crs.find_last_not_of(" \t\n\r")  != std::string::npos ? crs[crs.find_last_not_of(" \t\n\r")]  : 0;
-    if (first != '{' || last != '}') return false;
-
-    return true;
-}
-
-/*----------------------------------------------------------------------------
 * appendGeoMetaData
 *----------------------------------------------------------------------------*/
 void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata, const char* crs)
@@ -315,16 +296,8 @@ void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata
 
     const std::string projjson(crs);
 
-    // Validate CRS is PROJJSON-like
-    if (!validateProjjson(projjson))
-    {
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid CRS string: expected PROJJSON");
-    }
-
     std::string geostr = R"({"version":"1.0.0","primary_column":"geometry","columns":{"geometry":{
                           "encoding":"WKB","geometry_types":["Point"],"crs":)" + projjson + R"(}}})";
-
-    print2term("GeoJSON: %s\n", geostr.c_str());
 
     /* Reformat JSON */
     geostr = std::regex_replace(geostr, std::regex("    "), "");
