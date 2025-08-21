@@ -142,7 +142,7 @@ BathyDataFrame::BathyDataFrame (lua_State* L, const char* beam_str, BathyFields*
         {"bounding_polygon_lat",&bounding_polygon_lat},
         {"bounding_polygon_lon",&bounding_polygon_lon}
     },
-    BathyFields::missionCRS(_parms->datum.value)),
+    Icesat2Fields::missionCRS(_parms->datum.value)),
     beam(beam_str),
     parmsPtr(_parms),
     parms(*_parms),

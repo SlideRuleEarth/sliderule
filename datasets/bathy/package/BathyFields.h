@@ -156,8 +156,6 @@ class BathyFields: public Icesat2Fields
         static int  luaClassifier   (lua_State* L);
         void        fromLua         (lua_State* L, int index) override;
 
-        static const char* missionCRS(MathLib::datum_t datum) { return Icesat2Fields::missionCRS(datum); }
-
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/

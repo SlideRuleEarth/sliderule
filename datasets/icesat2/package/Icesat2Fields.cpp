@@ -45,9 +45,21 @@
  * STATIC DATA
  ******************************************************************************/
 
-static std::string crsICESAT2;
-static std::string crsICESAT2_EGM08;
-static std::string crsICESAT2_NAVD88;
+std::map<std::string, std::string> Icesat2Fields::crs_files;
+
+struct CRSInfo
+{
+    MathLib::datum_t datum;
+    const char*      key;
+    const char*      filename;
+};
+
+static const CRSInfo crsList[] =
+{
+    { MathLib::ITRF2014, "ITRF2014", "EPSG7912.projjson"        },
+    { MathLib::EGM08,    "EGM08",    "EPSG7912_EGM08.projjson"  },
+    { MathLib::NAVD88,   "NAVD88",   "EPSG7912_NAVD88.projjson" }
+};
 
 /******************************************************************************
  * METHODS
@@ -519,7 +531,7 @@ static bool loadCRSFile(std::string& str, const std::string& crsPath)
 /*----------------------------------------------------------------------------
  * loadCRSFiles - Loads all required CRS files.
  *----------------------------------------------------------------------------*/
-static void loadCRSFiles(void)
+void Icesat2Fields::loadCRSFiles(void)
 {
     /* lambda function to sanity check projjson string */
     auto validateProjjson = [](const std::string& crs) -> bool
@@ -540,34 +552,32 @@ static void loadCRSFiles(void)
         return (first == '{' && last == '}');
     };
 
-    struct CRSInfo
+    if (!crs_files.empty())
     {
-        const char* filename;
-        std::string* target;
-    };
+        return; // already loaded
+    }
 
-    const CRSInfo crsList[] =
-    {
-        { "EPSG7912.projjson",         &crsICESAT2        },
-        { "EPSG7912_EGM08.projjson",   &crsICESAT2_EGM08  },
-        { "EPSG7912_NAVD88.projjson",  &crsICESAT2_NAVD88 }
-    };
 
     for (const auto& entry : crsList)
     {
+        std::string contents;
         std::stringstream ss;
         ss << CONFDIR << PATH_DELIMETER << entry.filename;
 
-        if(!loadCRSFile(*entry.target, ss.str()))
+        if(!loadCRSFile(contents, ss.str()))
         {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to open CRS file: %s", ss.str().c_str());
         }
 
-        if(!validateProjjson(*entry.target))
+        if(!validateProjjson(contents))
         {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid CRS file: %s", ss.str().c_str());
         }
+
+        crs_files[entry.key] = std::move(contents);
     }
+
+    mlog(INFO, "Loaded %zu CRS files", crs_files.size());
 }
 
 /*----------------------------------------------------------------------------
@@ -611,9 +621,6 @@ Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset
         fields.add(elem.name, entry);
     }
 
-    // load all supported CRS files
-    loadCRSFiles();
-
     // add additional functions
     LuaEngine::setAttrFunc(L, "stage", luaStage);
 }
@@ -644,20 +651,35 @@ int Icesat2Fields::luaStage (lua_State* L)
 }
 
 /*----------------------------------------------------------------------------
+ * initCRSFiles
+ *----------------------------------------------------------------------------*/
+void Icesat2Fields::initCRSFiles()
+{
+    if (!crs_files.empty())
+    {
+        return;  // already initialized
+    }
+
+    loadCRSFiles();
+}
+
+/*----------------------------------------------------------------------------
  * missionCRS
  *----------------------------------------------------------------------------*/
 const char* Icesat2Fields::missionCRS(MathLib::datum_t datum)
 {
-    switch(datum)
-    {
-    case MathLib::EGM08:  return crsICESAT2_EGM08.c_str();
-    case MathLib::NAVD88: return crsICESAT2_NAVD88.c_str();
+    if(datum == MathLib::UNSPECIFIED_DATUM)
+        datum = MathLib::ITRF2014;
 
-    case MathLib::ITRF2014:
-    case MathLib::UNSPECIFIED_DATUM:
-    default:
-        return crsICESAT2.c_str();
+    for(const auto& entry : crsList)
+    {
+        if(entry.datum == datum)
+        {
+            return crs_files.at(entry.key).c_str();
+        }
     }
+
+    throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid datum: %d", static_cast<int>(datum));
 }
 
 
