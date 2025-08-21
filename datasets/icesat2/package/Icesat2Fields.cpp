@@ -533,6 +533,8 @@ static bool loadCRSFile(std::string& str, const std::string& crsPath)
  *----------------------------------------------------------------------------*/
 void Icesat2Fields::loadCRSFiles(void)
 {
+    if (!crs_files.empty()) return; // already loaded
+
     /* lambda function to sanity check projjson string */
     auto validateProjjson = [](const std::string& crs) -> bool
     {
@@ -551,12 +553,6 @@ void Icesat2Fields::loadCRSFiles(void)
         const char last  = crs[lastPos];
         return (first == '{' && last == '}');
     };
-
-    if (!crs_files.empty())
-    {
-        return; // already loaded
-    }
-
 
     for (const auto& entry : crsList)
     {
@@ -648,19 +644,6 @@ int Icesat2Fields::luaStage (lua_State* L)
     }
 
     return 1;
-}
-
-/*----------------------------------------------------------------------------
- * initCRSFiles
- *----------------------------------------------------------------------------*/
-void Icesat2Fields::initCRSFiles()
-{
-    if (!crs_files.empty())
-    {
-        return;  // already initialized
-    }
-
-    loadCRSFiles();
 }
 
 /*----------------------------------------------------------------------------

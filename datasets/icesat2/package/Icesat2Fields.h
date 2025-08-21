@@ -496,8 +496,8 @@ class Icesat2Fields: public RequestFields
         // returns resource as a string
         const char* getResource (void) const { return resource.value.c_str(); }
 
-        static void initCRSFiles(void);
         static const char* missionCRS(MathLib::datum_t datum);
+        static void loadCRSFiles(void);
 
         /*--------------------------------------------------------------------
          * Data
@@ -556,11 +556,6 @@ class Icesat2Fields: public RequestFields
 
         static std::map<std::string, std::string> crs_files;
 
-        /*--------------------------------------------------------------------
-         * Methods
-         *--------------------------------------------------------------------*/
-
-        static void loadCRSFiles(void);
 };
 
 /******************************************************************************

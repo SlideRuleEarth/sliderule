@@ -152,7 +152,7 @@ void initicesat2 (void)
     Atl13Reader::init();
 
     /* Load CRS Files */
-    Icesat2Fields::initCRSFiles();
+    Icesat2Fields::loadCRSFiles();
 
     /* Register IO Drivers */
     Asset::registerDriver(CumulusIODriver::FORMAT, CumulusIODriver::create);
