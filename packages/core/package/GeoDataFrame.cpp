@@ -796,7 +796,11 @@ bool GeoDataFrame::setCRS(const char* crs)
 {
     if(crs == NULL) return false;
 
+    /* Skip empty crs */
+    if(crs[0] == '\0') return true;
+
     auto* el = new FieldElement<string>(string(crs));
+
     /* keep CRS as scalar metadata, don't add to columns */
     return metaFields.add(CRS_KEY, el, true);
 }
