@@ -117,6 +117,13 @@ bool DataFrameSampler::run (GeoDataFrame* dataframe)
     // latch start time for later runtime calculation
     const double start = TimeLib::latchtime();
 
+    const char* frame_crs = dataframe->getCRS();
+    if(frame_crs == NULL || frame_crs[0] == '\0')
+    {
+        mlog(CRITICAL, "DataFrameSampler: incoming dataframe missing CRS");
+        return false;
+    }
+
     // populate points vector
     if(!populatePoints(dataframe))
     {
@@ -127,6 +134,14 @@ bool DataFrameSampler::run (GeoDataFrame* dataframe)
     // get samples for all user RasterObjects
     for(sampler_info_t* sampler: samplers)
     {
+        // Cast away const on RasterObject::parms so we can set source_crs.
+        const GeoFields* geoparms = sampler->robj->getGeoParms();
+        GeoFields* mutable_parms = const_cast<GeoFields*>(geoparms);
+
+        // Storing frame_crs in GeoFields is the simplest, lowest-impact way to propagate frame_crs.
+        mutable_parms->source_crs = frame_crs;
+        mlog(DEBUG, "DataFrameSampler: source CRS = %s", frame_crs);
+
         // sample the rasters
         sampler->robj->getSamples(sampler->obj->points, sampler->samples);
 

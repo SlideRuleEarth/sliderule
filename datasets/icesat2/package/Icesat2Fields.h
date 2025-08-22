@@ -44,6 +44,7 @@
 #include "FieldDictionary.h"
 #include "FieldList.h"
 #include "TimeLib.h"
+#include <map>
 
 /******************************************************************************
  * CLASSES
@@ -495,6 +496,9 @@ class Icesat2Fields: public RequestFields
         // returns resource as a string
         const char* getResource (void) const { return resource.value.c_str(); }
 
+        static const char* missionCRS(MathLib::datum_t datum);
+        static void loadCRSFiles(void);
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
@@ -544,6 +548,13 @@ class Icesat2Fields: public RequestFields
         virtual ~Icesat2Fields  (void) override = default;
 
         static int luaStage (lua_State* L);
+
+    private:
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        static std::map<std::string, std::string> crs_files;
 
 };
 

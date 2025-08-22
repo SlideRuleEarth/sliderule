@@ -37,6 +37,29 @@
 #include "Icesat2Fields.h"
 #include "FieldDictionary.h"
 #include "LuaObject.h"
+#include <fstream>
+#include <sstream>
+
+
+/******************************************************************************
+ * STATIC DATA
+ ******************************************************************************/
+
+std::map<std::string, std::string> Icesat2Fields::crs_files;
+
+struct CRSInfo
+{
+    MathLib::datum_t datum;
+    const char*      key;
+    const char*      filename;
+};
+
+static const CRSInfo crsList[] =
+{
+    { MathLib::ITRF2014, "ITRF2014", "EPSG7912.projjson"        },
+    { MathLib::EGM08,    "EGM08",    "EPSG7912_EGM08.projjson"  },
+    { MathLib::NAVD88,   "NAVD88",   "EPSG7912_NAVD88.projjson" }
+};
 
 /******************************************************************************
  * METHODS
@@ -492,6 +515,68 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
 }
 
 /*----------------------------------------------------------------------------
+ * loadCRSFile
+ *----------------------------------------------------------------------------*/
+static bool loadCRSFile(std::string& str, const std::string& crsPath)
+{
+    const std::ifstream f(crsPath);
+    if(!f) return false;
+
+    std::ostringstream ss;
+    ss << f.rdbuf();
+    str = ss.str();
+    return true;
+}
+
+/*----------------------------------------------------------------------------
+ * loadCRSFiles - Loads all required CRS files.
+ *----------------------------------------------------------------------------*/
+void Icesat2Fields::loadCRSFiles(void)
+{
+    if (!crs_files.empty()) return; // already loaded
+
+    /* lambda function to sanity check projjson string */
+    auto validateProjjson = [](const std::string& crs) -> bool
+    {
+        // Sanity checks for expected structure
+        if (crs.find('{') == std::string::npos) return false;
+        if (crs.find("$schema") == std::string::npos) return false;
+        if (crs.find("coordinate_system") == std::string::npos) return false;
+        if (crs.find("type") == std::string::npos) return false;
+
+        // Must start with '{' and end with '}'
+        const size_t firstPos = crs.find_first_not_of(" \t\n\r");
+        const size_t lastPos  = crs.find_last_not_of(" \t\n\r");
+        if (firstPos == std::string::npos || lastPos == std::string::npos) return false;
+
+        const char first = crs[firstPos];
+        const char last  = crs[lastPos];
+        return (first == '{' && last == '}');
+    };
+
+    for (const auto& entry : crsList)
+    {
+        std::string contents;
+        std::stringstream ss;
+        ss << CONFDIR << PATH_DELIMETER << entry.filename;
+
+        if(!loadCRSFile(contents, ss.str()))
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to open CRS file: %s", ss.str().c_str());
+        }
+
+        if(!validateProjjson(contents))
+        {
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid CRS file: %s", ss.str().c_str());
+        }
+
+        crs_files[entry.key] = std::move(contents);
+    }
+
+    mlog(INFO, "Loaded %zu CRS files", crs_files.size());
+}
+
+/*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
 Icesat2Fields::Icesat2Fields(lua_State* L, uint64_t key_space, const char* asset_name, const char* _resource, const std::initializer_list<FieldDictionary::init_entry_t>& init_list):
@@ -560,6 +645,26 @@ int Icesat2Fields::luaStage (lua_State* L)
 
     return 1;
 }
+
+/*----------------------------------------------------------------------------
+ * missionCRS
+ *----------------------------------------------------------------------------*/
+const char* Icesat2Fields::missionCRS(MathLib::datum_t datum)
+{
+    if(datum == MathLib::UNSPECIFIED_DATUM)
+        datum = MathLib::ITRF2014;
+
+    for(const auto& entry : crsList)
+    {
+        if(entry.datum == datum)
+        {
+            return crs_files.at(entry.key).c_str();
+        }
+    }
+
+    throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid datum: %d", static_cast<int>(datum));
+}
+
 
 /******************************************************************************
  * FUNCTIONS

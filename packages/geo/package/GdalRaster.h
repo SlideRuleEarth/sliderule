@@ -81,8 +81,7 @@ class GdalRaster
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int SLIDERULE_EPSG = 7912;
-        static const int NO_BAND        = 0;
+        static const int NO_BAND = 0;
 
         /*--------------------------------------------------------------------
          * Typedefs

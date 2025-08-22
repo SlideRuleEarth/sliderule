@@ -82,3 +82,12 @@ install (
     DESTINATION
         ${CONFDIR}/api
 )
+
+install (
+    FILES
+        ${CMAKE_CURRENT_LIST_DIR}/crsfiles/EPSG7912_EGM08.projjson
+        ${CMAKE_CURRENT_LIST_DIR}/crsfiles/EPSG7912_NAVD88.projjson
+        ${CMAKE_CURRENT_LIST_DIR}/crsfiles/EPSG7912.projjson
+    DESTINATION
+        ${CONFDIR}
+)

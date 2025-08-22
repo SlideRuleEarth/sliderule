@@ -697,9 +697,9 @@ void convertFromLua(lua_State* L, int index, MathLib::datum_t& v)
     else if(lua_isstring(L, index))
     {
         const char* proj_str = LuaObject::getLuaString(L, index);
-        if(StringLib::match(proj_str, "unspecified"))   v = MathLib::UNSPECIFIED_DATUM;
-        else if(StringLib::match(proj_str, "ITRF2014")) v = MathLib::ITRF2014;
+        if     (StringLib::match(proj_str, "ITRF2014")) v = MathLib::ITRF2014;
         else if(StringLib::match(proj_str, "EGM08"))    v = MathLib::EGM08;
         else if(StringLib::match(proj_str, "NAVD88"))   v = MathLib::NAVD88;
+        else throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid datum: %s", proj_str);
    }
 }
