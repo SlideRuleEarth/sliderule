@@ -987,9 +987,6 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     subRunQ(pubRunQ),
     runComplete(false)
 {
-    if(crs == NULL)
-        throw RunTimeException(CRITICAL, RTE_FAILURE, "CRS is required at GeoDataFrame construction");
-
     if(!setCRS(crs))
         throw RunTimeException(CRITICAL, RTE_FAILURE, "failed to set CRS at GeoDataFrame construction");
 
