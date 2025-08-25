@@ -44,7 +44,6 @@
 #include "FieldDictionary.h"
 #include "FieldList.h"
 #include "TimeLib.h"
-#include <map>
 
 /******************************************************************************
  * CLASSES
@@ -496,8 +495,11 @@ class Icesat2Fields: public RequestFields
         // returns resource as a string
         const char* getResource (void) const { return resource.value.c_str(); }
 
-        static const char* missionCRS(MathLib::datum_t datum);
         static void loadCRSFiles(void);
+
+        static const char* crsITRF2014() { return crs_ITRF2014.c_str(); }
+        static const char* crsEGM08()    { return crs_EGM08.c_str(); }
+        static const char* crsNAVD88()   { return crs_NAVD88.c_str(); }
 
         /*--------------------------------------------------------------------
          * Data
@@ -554,7 +556,9 @@ class Icesat2Fields: public RequestFields
          * Data
          *--------------------------------------------------------------------*/
 
-        static std::map<std::string, std::string> crs_files;
+        static std::string crs_ITRF2014;
+        static std::string crs_EGM08;
+        static std::string crs_NAVD88;
 
 };
 

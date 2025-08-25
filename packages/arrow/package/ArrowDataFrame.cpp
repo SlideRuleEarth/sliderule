@@ -294,14 +294,8 @@ void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata
 {
     if (crs == NULL) throw RunTimeException(CRITICAL, RTE_FAILURE, "CRS is required");
 
-    const std::string projjson(crs);
-
-    std::string geostr = R"({"version":"1.0.0","primary_column":"geometry","columns":{"geometry":{
-                          "encoding":"WKB","geometry_types":["Point"],"crs":)" + projjson + R"(}}})";
-
-    /* Reformat JSON */
-    geostr = std::regex_replace(geostr, std::regex("    "), "");
-    geostr = std::regex_replace(geostr, std::regex("\n"), " ");
+    const std::string geostr = R"({"version":"1.0.0","primary_column":"geometry","columns":{"geometry":{
+                              "encoding":"WKB","geometry_types":["Point"],"crs":)" + std::string(crs) + R"(}}})";
 
     /* Append Meta String */
     metadata->Append("geo", geostr);
@@ -613,7 +607,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
 
                 // set metadata
                 auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-                if(format == OutputFields::GEOPARQUET) appendGeoMetaData(metadata, dataframe.getCRS());
+                if(format == OutputFields::GEOPARQUET) appendGeoMetaData(metadata, dataframe.getCRS().c_str());
                 appendPandasMetaData(dataframe.getTimeColumnName().c_str(), metadata, schema);
                 metadata->Append("sliderule", parms.toJson());
                 metadata->Append("meta", dataframe.metaFields.toJson());

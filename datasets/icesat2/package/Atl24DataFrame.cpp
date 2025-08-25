@@ -108,7 +108,7 @@ Atl24DataFrame::Atl24DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"gt",                  &gt},
         {"granule",             &granule}
     },
-    Icesat2Fields::missionCRS(_parms->datum.value)),
+    Icesat2Fields::crsEGM08()),
     granule(_hdf24->name, META_SOURCE_ID),
     active(false),
     readerPid(NULL),

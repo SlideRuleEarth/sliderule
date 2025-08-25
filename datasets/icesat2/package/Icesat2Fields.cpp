@@ -39,27 +39,16 @@
 #include "LuaObject.h"
 #include <fstream>
 #include <sstream>
-
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
 
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
-
-std::map<std::string, std::string> Icesat2Fields::crs_files;
-
-struct CRSInfo
-{
-    MathLib::datum_t datum;
-    const char*      key;
-    const char*      filename;
-};
-
-static const CRSInfo crsList[] =
-{
-    { MathLib::ITRF2014, "ITRF2014", "EPSG7912.projjson"        },
-    { MathLib::EGM08,    "EGM08",    "EPSG7912_EGM08.projjson"  },
-    { MathLib::NAVD88,   "NAVD88",   "EPSG7912_NAVD88.projjson" }
-};
+std::string Icesat2Fields::crs_ITRF2014;
+std::string Icesat2Fields::crs_EGM08;
+std::string Icesat2Fields::crs_NAVD88;
 
 /******************************************************************************
  * METHODS
@@ -533,47 +522,45 @@ static bool loadCRSFile(std::string& str, const std::string& crsPath)
  *----------------------------------------------------------------------------*/
 void Icesat2Fields::loadCRSFiles(void)
 {
-    if (!crs_files.empty()) return; // already loaded
+    if(!crs_ITRF2014.empty()) return; // already loaded
 
-    /* lambda function to sanity check projjson string */
-    auto validateProjjson = [](const std::string& crs) -> bool
+    struct CRSInfo
     {
-        // Sanity checks for expected structure
-        if (crs.find('{') == std::string::npos) return false;
-        if (crs.find("$schema") == std::string::npos) return false;
-        if (crs.find("coordinate_system") == std::string::npos) return false;
-        if (crs.find("type") == std::string::npos) return false;
-
-        // Must start with '{' and end with '}'
-        const size_t firstPos = crs.find_first_not_of(" \t\n\r");
-        const size_t lastPos  = crs.find_last_not_of(" \t\n\r");
-        if (firstPos == std::string::npos || lastPos == std::string::npos) return false;
-
-        const char first = crs[firstPos];
-        const char last  = crs[lastPos];
-        return (first == '{' && last == '}');
+        std::string* target;
+        const char* filename;
     };
 
-    for (const auto& entry : crsList)
+    const CRSInfo crsList[] =
+    {
+        { &crs_ITRF2014, "EPSG7912.projjson" },
+        { &crs_EGM08,    "EPSG7912_EGM08.projjson" },
+        { &crs_NAVD88,   "EPSG7912_NAVD88.projjson" }
+    };
+
+    for(const auto& entry : crsList)
     {
         std::string contents;
         std::stringstream ss;
         ss << CONFDIR << PATH_DELIMETER << entry.filename;
 
         if(!loadCRSFile(contents, ss.str()))
-        {
             throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to open CRS file: %s", ss.str().c_str());
-        }
 
-        if(!validateProjjson(contents))
-        {
-            throw RunTimeException(CRITICAL, RTE_FAILURE, "Invalid CRS file: %s", ss.str().c_str());
-        }
+        // Serialize into a compact JSON string
+        rapidjson::Document doc;
+        doc.Parse(contents.c_str());
 
-        crs_files[entry.key] = std::move(contents);
+        if(doc.HasParseError())
+            throw RunTimeException(CRITICAL, RTE_FAILURE, "JSON parse error in %s", ss.str().c_str());
+
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        doc.Accept(writer);
+
+        *entry.target = buffer.GetString();
     }
 
-    mlog(INFO, "Loaded %zu CRS files", crs_files.size());
+    mlog(INFO, "Loaded CRS files: ITRF2014=%zu, EGM08=%zu, NAVD88=%zu", crs_ITRF2014.size(), crs_EGM08.size(), crs_NAVD88.size());
 }
 
 /*----------------------------------------------------------------------------
@@ -645,26 +632,6 @@ int Icesat2Fields::luaStage (lua_State* L)
 
     return 1;
 }
-
-/*----------------------------------------------------------------------------
- * missionCRS
- *----------------------------------------------------------------------------*/
-const char* Icesat2Fields::missionCRS(MathLib::datum_t datum)
-{
-    if(datum == MathLib::UNSPECIFIED_DATUM)
-        datum = MathLib::ITRF2014;
-
-    for(const auto& entry : crsList)
-    {
-        if(entry.datum == datum)
-        {
-            return crs_files.at(entry.key).c_str();
-        }
-    }
-
-    throw RunTimeException(CRITICAL, RTE_FAILURE, "invalid datum: %d", static_cast<int>(datum));
-}
-
 
 /******************************************************************************
  * FUNCTIONS

@@ -117,8 +117,8 @@ bool DataFrameSampler::run (GeoDataFrame* dataframe)
     // latch start time for later runtime calculation
     const double start = TimeLib::latchtime();
 
-    const char* frame_crs = dataframe->getCRS();
-    if(frame_crs == NULL || frame_crs[0] == '\0')
+    const std::string& frame_crs = dataframe->getCRS();
+    if(frame_crs.empty())
     {
         mlog(CRITICAL, "DataFrameSampler: incoming dataframe missing CRS");
         return false;
@@ -140,7 +140,7 @@ bool DataFrameSampler::run (GeoDataFrame* dataframe)
 
         // Storing frame_crs in GeoFields is the simplest, lowest-impact way to propagate frame_crs.
         mutable_parms->source_crs = frame_crs;
-        mlog(DEBUG, "DataFrameSampler: source CRS = %s", frame_crs);
+        mlog(DEBUG, "DataFrameSampler: source CRS = %s", frame_crs.c_str());
 
         // sample the rasters
         sampler->robj->getSamples(sampler->obj->points, sampler->samples);
