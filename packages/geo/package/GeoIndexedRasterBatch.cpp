@@ -357,7 +357,7 @@ void* GeoIndexedRaster::batchReaderThread(void *param)
 
             try
             {
-                raster = new GdalRaster(breader->obj->parms,
+                raster = new GdalRaster(breader->obj,
                                         breader->obj->fileDict.get(ur->rinfo->fileId),
                                         0,                     /* Sample collecting code will set it to group's gpsTime */
                                         ur->rinfo->fileId,

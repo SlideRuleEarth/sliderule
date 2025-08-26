@@ -541,7 +541,7 @@ bool GeoIndexedRaster::updateSerialCache(uint32_t& rasters2sample, const GroupOr
                     note use of bbox in construcutor - it limits area
                     of interest to the extent of vector index file */
                 item = new cacheitem_t;
-                item->raster = new GdalRaster(parms,
+                item->raster = new GdalRaster(this,
                                               key,
                                               static_cast<double>(rgroup->gpsTime),
                                               rinfo.fileId,

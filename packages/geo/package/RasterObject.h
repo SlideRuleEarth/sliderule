@@ -161,6 +161,19 @@ class RasterObject: public LuaObject
             return parms;
         }
 
+        void setCRS(const string& _crs)
+        {
+            // setting the crs can only be done before sampling starts
+            lockSampling();
+            crs = _crs;
+            unlockSampling();
+        }
+
+        const string& getCRS(void) const
+        {
+            return crs;
+        }
+
 
     protected:
 
@@ -181,8 +194,7 @@ class RasterObject: public LuaObject
         bool sampling(void)
         {
             return samplingEnabled;
-        };
-
+        }
 
                     RasterObject    (lua_State* L, RequestFields* rqst_parms, const char* key);
         static int  luaBatchSamples (lua_State* L);
@@ -229,6 +241,8 @@ class RasterObject: public LuaObject
         Mutex                           samplingMut;
         std::atomic<bool>               samplingEnabled;  /* Used by batch getSample code */
         std::vector<reader_t*>          readers;
+
+        string                          crs;
 };
 
 #endif  /* __raster_object__ */

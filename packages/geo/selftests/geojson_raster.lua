@@ -3,9 +3,7 @@ local srcfile, dirpath = runner.srcscript()
 
 -- Setup --
 
--- local console = require("console")
--- console.monitor:config(core.DEBUG)
--- sys.setlvl(core.LOG, core.DEBUG)
+-- runner.log(core.DEBUG)
 
 local geojsonfile = dirpath.."../data/grandmesa.geojson"
 

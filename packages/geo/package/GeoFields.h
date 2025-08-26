@@ -129,7 +129,6 @@ class GeoFields: public FieldDictionary
         FieldElement<bbox_t>            aoi_bbox;
         FieldElement<string>            catalog;
         FieldList<string>               bands;
-        FieldElement<string>            source_crs;
         AssetField                      asset;
 
         bool                            filter_time;
