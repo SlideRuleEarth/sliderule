@@ -199,7 +199,7 @@ class GeoDataFrame: public LuaObject, public Field
         const string&               getYColumnName      (void) const;
         const string&               getZColumnName      (void) const;
         string                      getInfoAsJson       (void) const;
-        const std::string&          getCRS              (void) const { return crs; }
+        const string&               getCRS              (void) const { return crs; }
         void                        setCRS              (const string& _crs) { crs = _crs; }
 
         bool                        waitRunComplete     (int timeout);
@@ -306,7 +306,7 @@ class GeoDataFrame: public LuaObject, public Field
         string                      yColumnName;
         string                      zColumnName;
 
-        std::string                 crs;
+        string                      crs;
 
         bool                        active;
         Thread*                     receivePid;

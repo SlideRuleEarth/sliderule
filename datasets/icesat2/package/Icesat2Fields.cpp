@@ -46,9 +46,9 @@
 /******************************************************************************
  * STATIC DATA
  ******************************************************************************/
-std::string Icesat2Fields::crs_ITRF2014;
-std::string Icesat2Fields::crs_EGM08;
-std::string Icesat2Fields::crs_NAVD88;
+string Icesat2Fields::crs_ITRF2014;
+string Icesat2Fields::crs_EGM08;
+string Icesat2Fields::crs_NAVD88;
 
 /******************************************************************************
  * METHODS
@@ -506,7 +506,7 @@ void Icesat2Fields::fromLua (lua_State* L, int index)
 /*----------------------------------------------------------------------------
  * loadCRSFile
  *----------------------------------------------------------------------------*/
-static bool loadCRSFile(std::string& str, const std::string& crsPath)
+static bool loadCRSFile(string& str, const string& crsPath)
 {
     const std::ifstream f(crsPath);
     if(!f) return false;
@@ -526,7 +526,7 @@ void Icesat2Fields::loadCRSFiles(void)
 
     struct CRSInfo
     {
-        std::string* target;
+        string* target;
         const char* filename;
     };
 
@@ -539,7 +539,7 @@ void Icesat2Fields::loadCRSFiles(void)
 
     for(const auto& entry : crsList)
     {
-        std::string contents;
+        string contents;
         std::stringstream ss;
         ss << CONFDIR << PATH_DELIMETER << entry.filename;
 

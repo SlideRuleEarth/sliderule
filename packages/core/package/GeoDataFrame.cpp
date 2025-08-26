@@ -1131,10 +1131,8 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_
        (gdf_rec_data->encoding & GeoDataFrame::META_SOURCE_ID))
     {
         add_source_column(this, gdf_rec_data, source_id);
-        return;
     }
-
-    if(value_encoding & (Field::NESTED_LIST | Field::NESTED_ARRAY | Field::NESTED_COLUMN))
+    else if(value_encoding & (Field::NESTED_LIST | Field::NESTED_ARRAY | Field::NESTED_COLUMN))
     {
         switch(encoded_type)
         {
@@ -1400,7 +1398,7 @@ void* GeoDataFrame::receiveThread (void* parm)
                     // Handle CRS record
                     if(rec_data->type == CRS_REC)
                     {
-                        const std::string crs(reinterpret_cast<const char*>(rec_data->data), rec_data->size);
+                        const string crs(reinterpret_cast<const char*>(rec_data->data), rec_data->size);
 
                         if(info->dataframe->getCRS().empty())
                         {
@@ -1846,11 +1844,9 @@ int GeoDataFrame::luaGetCRS (lua_State* L)
     {
         GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
 
-        const std::string& crs = lua_obj->getCRS();
-        if(crs.empty())
-            lua_pushnil(L);
-        else
-            lua_pushstring(L, crs.c_str());
+        const string& crs = lua_obj->getCRS();
+        if(crs.empty()) lua_pushnil(L);
+        else            lua_pushstring(L, crs.c_str());
     }
     catch(const RunTimeException& e)
     {
