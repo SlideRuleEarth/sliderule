@@ -556,9 +556,9 @@ class Icesat2Fields: public RequestFields
          * Data
          *--------------------------------------------------------------------*/
 
-        static std::string crs_ITRF2014;
-        static std::string crs_EGM08;
-        static std::string crs_NAVD88;
+        static string crs_ITRF2014;
+        static string crs_EGM08;
+        static string crs_NAVD88;
 
 };
 
