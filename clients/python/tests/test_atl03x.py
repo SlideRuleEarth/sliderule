@@ -190,8 +190,6 @@ class TestAtl03x:
         assert len(gdf) == 527
         assert len(gdf.keys()) == 19
         assert "mosaic.value" in gdf
-        print(gdf["mosaic.value"].min())
-        print(gdf["mosaic.value"].max())
 
     def test_mixed_empty_beams(self, init):
         resource = 'ATL03_20200512071854_07140706_006_01.h5'
