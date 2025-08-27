@@ -44,7 +44,6 @@
 #include <parquet/file_writer.h>
 #include <arrow/csv/writer.h>
 #include <regex>
-
 #include "OsApi.h"
 #include "GeoDataFrame.h"
 #include "FieldList.h"
@@ -291,61 +290,12 @@ void encodeGeometry(const GeoDataFrame& dataframe, vector<shared_ptr<arrow::Arra
 /*----------------------------------------------------------------------------
 * appendGeoMetaData
 *----------------------------------------------------------------------------*/
-void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata)
+void appendGeoMetaData (const std::shared_ptr<arrow::KeyValueMetadata>& metadata, const string& crs)
 {
-    /* Initialize Meta Data String */
-    string geostr(R"json({
-        "version": "1.0.0-beta.1",
-        "primary_column": "geometry",
-        "columns": {
-            "geometry": {
-                "encoding": "WKB",
-                "geometry_types": ["Point"],
-                "crs": {
-                    "$schema": "https://proj.org/schemas/v0.5/projjson.schema.json",
-                    "type": "GeographicCRS",
-                    "name": "WGS 84 longitude-latitude",
-                    "datum": {
-                        "type": "GeodeticReferenceFrame",
-                        "name": "World Geodetic System 1984",
-                        "ellipsoid": {
-                            "name": "WGS 84",
-                            "semi_major_axis": 6378137,
-                            "inverse_flattening": 298.257223563
-                        }
-                    },
-                    "coordinate_system": {
-                        "subtype": "ellipsoidal",
-                        "axis": [
-                            {
-                                "name": "Geodetic longitude",
-                                "abbreviation": "Lon",
-                                "direction": "east",
-                                "unit": "degree"
-                            },
-                            {
-                                "name": "Geodetic latitude",
-                                "abbreviation": "Lat",
-                                "direction": "north",
-                                "unit": "degree"
-                            }
-                        ]
-                    },
-                    "id": {
-                        "authority": "OGC",
-                        "code": "CRS84"
-                    }
-                },
-                "edges": "planar",
-                "bbox": [-180.0, -90.0, 180.0, 90.0],
-                "epoch": 2018.0
-            }
-        }
-    })json");
+    if (crs.empty()) throw RunTimeException(CRITICAL, RTE_FAILURE, "CRS is required");
 
-    /* Reformat JSON */
-    geostr = std::regex_replace(geostr, std::regex("    "), "");
-    geostr = std::regex_replace(geostr, std::regex("\n"), " ");
+    const string geostr = R"({"version":"1.0.0","primary_column":"geometry","columns":{"geometry":{
+                              "encoding":"WKB","geometry_types":["Point"],"crs":)" + crs + R"(}}})";
 
     /* Append Meta String */
     metadata->Append("geo", geostr);
@@ -657,7 +607,7 @@ int ArrowDataFrame::luaExport (lua_State* L)
 
                 // set metadata
                 auto metadata = schema->metadata() ? schema->metadata()->Copy() : std::make_shared<arrow::KeyValueMetadata>();
-                if(format == OutputFields::GEOPARQUET) appendGeoMetaData(metadata);
+                if(format == OutputFields::GEOPARQUET) appendGeoMetaData(metadata, dataframe.getCRS());
                 appendPandasMetaData(dataframe.getTimeColumnName().c_str(), metadata, schema);
                 metadata->Append("sliderule", parms.toJson());
                 metadata->Append("meta", dataframe.metaFields.toJson());

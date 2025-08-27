@@ -83,6 +83,8 @@ const struct luaL_Reg GeoDataFrame::FrameSender::LUA_META_TABLE[] = {
     {NULL,          NULL}
 };
 
+const char* GeoDataFrame::CRS_KEY = "crs";
+
 /******************************************************************************
  * CLASS METHODS
  ******************************************************************************/
@@ -243,7 +245,7 @@ void GeoDataFrame::init(void)
 }
 
 /*----------------------------------------------------------------------------
- * luaCreate - dataframe([<column table>], [<meta table>])
+ * luaCreate - dataframe([<column table>], [<meta table>]), [<crs>]
  *----------------------------------------------------------------------------*/
 int GeoDataFrame::luaCreate (lua_State* L)
 {
@@ -254,14 +256,22 @@ int GeoDataFrame::luaCreate (lua_State* L)
     {
         // parameter indices
         const int column_table_index = 1;
-        const int meta_table_index = 2;
+        const int meta_table_index   = 2;
+        const int crs_index          = 3;
+        const int nargs = lua_gettop(L);
+
+        // optional CRS
+        const char* crs = NULL;
+        if(nargs >= crs_index && lua_isstring(L, crs_index))
+        {
+            crs = lua_tostring(L, crs_index);
+        }
 
         // create initial dataframe
-        dataframe = new GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {});
-        lua_pop(L, 2);
+        dataframe = new GeoDataFrame(L, LUA_META_NAME, LUA_META_TABLE, {}, {}, crs);
 
         // column table
-        if(lua_gettop(L) >= column_table_index)
+        if(lua_istable(L, column_table_index))
         {
             // build columns of dataframe
             lua_pushnil(L); // prime the stack for the next key
@@ -308,7 +318,7 @@ int GeoDataFrame::luaCreate (lua_State* L)
         }
 
         //  meta table
-        if(lua_gettop(L) >= meta_table_index)
+        if(lua_istable(L, meta_table_index))
         {
             // build keys of metadata
             lua_pushnil(L); // prime the stack for the next key
@@ -317,6 +327,7 @@ int GeoDataFrame::luaCreate (lua_State* L)
                 if(lua_isstring(L, -2))
                 {
                     const char* key = lua_tostring(L, -2);
+
                     if(lua_isnumber(L, -1)) // treat as a double
                     {
                         FieldElement<double>* element = new FieldElement<double>();
@@ -917,7 +928,8 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
                             const char* meta_name,
                             const struct luaL_Reg meta_table[],
                             const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
-                            const std::initializer_list<FieldDictionary::init_entry_t>& meta_list):
+                            const std::initializer_list<FieldDictionary::init_entry_t>& meta_list,
+                            const char* _crs):
     LuaObject (L, OBJECT_TYPE, meta_name, meta_table),
     Field(DATAFRAME, 0),
     inError(false),
@@ -928,6 +940,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     xColumn(NULL),
     yColumn(NULL),
     zColumn(NULL),
+    crs(_crs == NULL ? "" : _crs),
     active(true),
     receivePid(NULL),
     runPid(NULL),
@@ -945,6 +958,7 @@ GeoDataFrame::GeoDataFrame( lua_State* L,
     LuaEngine::setAttrFunc(L, "row",        luaGetRowData);
     LuaEngine::setAttrFunc(L, "__index",    luaGetColumnData);
     LuaEngine::setAttrFunc(L, "meta",       luaGetMetaData);
+    LuaEngine::setAttrFunc(L, "crs",        luaGetCRS);
     LuaEngine::setAttrFunc(L, "run",        luaRun);
     LuaEngine::setAttrFunc(L, "finished",   luaRunComplete);
 
@@ -1122,7 +1136,7 @@ void GeoDataFrame::appendDataframe(GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_
     {
         switch(encoded_type)
         {
-//            case BOOL:      add_status = add_list_column<bool>    (this, gdf_rec_data); break;
+            // case BOOL:      add_status = add_list_column<bool>    (this, gdf_rec_data); break;
             case INT8:      add_list_column<int8_t>  (this, gdf_rec_data); break;
             case INT16:     add_list_column<int16_t> (this, gdf_rec_data); break;
             case INT32:     add_list_column<int32_t> (this, gdf_rec_data); break;
@@ -1284,6 +1298,24 @@ void GeoDataFrame::sendDataframe (const char* rspq, uint64_t key_space, int time
         gdf_rec.post(&pub, 0, NULL, true, timeout);
     }
 
+    // create and send CRS record
+    if (!crs.empty())
+    {
+        const long crs_size = crs.size();
+        const long rec_size = offsetof(gdf_rec_t, data) + crs_size;
+
+        RecordObject gdf_rec(gdfRecType, rec_size);
+        gdf_rec_t* gdf_rec_data = reinterpret_cast<gdf_rec_t*>(gdf_rec.getRecordData());
+        gdf_rec_data->key       = key_space;
+        gdf_rec_data->type      = CRS_REC;
+        gdf_rec_data->size      = crs_size;
+        gdf_rec_data->encoding  = Field::STRING;
+        gdf_rec_data->num_rows  = 1;
+        StringLib::copy(gdf_rec_data->name, CRS_KEY, MAX_NAME_SIZE);
+        memcpy(gdf_rec_data->data, crs.data(), crs_size);
+        gdf_rec.post(&pub, 0, NULL, true, timeout);
+    }
+
     // create and send eof record
     {
         const long rec_size = offsetof(gdf_rec_t, data) + sizeof(uint32_t); // for number of columns
@@ -1362,6 +1394,25 @@ void* GeoDataFrame::receiveThread (void* parm)
                     // get dataframe key
                     gdf_rec_t* rec_data = reinterpret_cast<gdf_rec_t*>(rec.getRecordData());
                     const uint64_t key = rec_data->key;
+
+                    // Handle CRS record
+                    if(rec_data->type == CRS_REC)
+                    {
+                        const string crs(reinterpret_cast<const char*>(rec_data->data), rec_data->size);
+
+                        if(info->dataframe->getCRS().empty())
+                        {
+                            info->dataframe->setCRS(crs);
+                        }
+                        else if(info->dataframe->getCRS() != crs)
+                        {
+                            inq.dereference(ref);
+                            throw RunTimeException(CRITICAL, RTE_FAILURE, "CRS mismatch: existing=%s new=%s", info->dataframe->getCRS().c_str(), crs.c_str());
+                        }
+
+                        inq.dereference(ref);
+                        continue;
+                    }
 
                     // get reference to list of key'ed dataframe
                     vector<rec_ref_t>* df_rec_list = NULL;
@@ -1774,6 +1825,28 @@ int GeoDataFrame::luaGetMetaData (lua_State* L)
         GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
         const char* field_name = getLuaString(L, 2);
         return lua_obj->metaFields[field_name].toLua(L);
+    }
+    catch(const RunTimeException& e)
+    {
+        mlog(e.level(), "Error getting metadata: %s", e.what());
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/*----------------------------------------------------------------------------
+ * luaGetCRS - crs()
+ *----------------------------------------------------------------------------*/
+int GeoDataFrame::luaGetCRS (lua_State* L)
+{
+    try
+    {
+        GeoDataFrame* lua_obj = dynamic_cast<GeoDataFrame*>(getLuaSelf(L, 1));
+
+        const string& crs = lua_obj->getCRS();
+        if(crs.empty()) lua_pushnil(L);
+        else            lua_pushstring(L, crs.c_str());
     }
     catch(const RunTimeException& e)
     {

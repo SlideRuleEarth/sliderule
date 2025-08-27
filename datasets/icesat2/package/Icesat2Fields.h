@@ -495,6 +495,12 @@ class Icesat2Fields: public RequestFields
         // returns resource as a string
         const char* getResource (void) const { return resource.value.c_str(); }
 
+        static void loadCRSFiles(void);
+
+        static const char* crsITRF2014() { return crs_ITRF2014.c_str(); }
+        static const char* crsEGM08()    { return crs_EGM08.c_str(); }
+        static const char* crsNAVD88()   { return crs_NAVD88.c_str(); }
+
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
@@ -544,6 +550,15 @@ class Icesat2Fields: public RequestFields
         virtual ~Icesat2Fields  (void) override = default;
 
         static int luaStage (lua_State* L);
+
+    private:
+        /*--------------------------------------------------------------------
+         * Data
+         *--------------------------------------------------------------------*/
+
+        static string crs_ITRF2014;
+        static string crs_EGM08;
+        static string crs_NAVD88;
 
 };
 

@@ -35,6 +35,7 @@
 
 #include "RasterSample.h"
 #include "GdalRaster.h"
+#include "RasterObject.h"
 
 #ifdef __aws__
 #include "aws.h"
@@ -55,12 +56,13 @@
 /*----------------------------------------------------------------------------
  * Constructor
  *----------------------------------------------------------------------------*/
-GdalRaster::GdalRaster(const GeoFields* _parms, const std::string& _fileName,
+GdalRaster::GdalRaster(const RasterObject* _robj, const std::string& _fileName,
                        double _gpsTime, uint64_t _fileId,
                        int _elevationBandNum, int _flagsBandNum,
                        overrideGeoTransform_t gtf_cb, overrideCRS_t crs_cb,
                        bbox_t* aoi_bbox_override):
-   parms      (_parms),
+   robj       (_robj),
+   parms      (NULL),
    gpsTime    (_gpsTime),
    fileId     (_fileId),
    transf     (NULL),
@@ -86,6 +88,11 @@ GdalRaster::GdalRaster(const GeoFields* _parms, const std::string& _fileName,
    invGeoTransform(),
    ssError    (SS_NO_ERRORS)
 {
+    if(robj == NULL)
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "RasterObject is NULL");
+
+    parms = robj->getGeoParms();
+
     if(aoi_bbox_override)
     {
         aoi_bbox = *aoi_bbox_override;
@@ -1165,8 +1172,15 @@ bool GdalRaster::isNodata(const double& v, const double& nd)
  *----------------------------------------------------------------------------*/
 void GdalRaster::createTransform(void)
 {
-    OGRErr ogrerr = sourceCRS.importFromEPSG(SLIDERULE_EPSG);
-    CHECK_GDALERR(ogrerr);
+    const char* crs = !robj->getCRS().empty() ? robj->getCRS().c_str() : "EPSG:7912";
+
+    /* SetFromUserInput handles "EPSG:####", WKT1/2, PROJ strings, PROJJSON, etc. */
+    OGRErr ogrerr = sourceCRS.SetFromUserInput(crs);
+    if(ogrerr != OGRERR_NONE)
+    {
+        throw RunTimeException(CRITICAL, RTE_FAILURE, "Failed to parse source CRS: %s", crs);
+    }
+
     const char* projref = dset->GetProjectionRef();
 
     /* Use projref from raster if specified and not and empty string */

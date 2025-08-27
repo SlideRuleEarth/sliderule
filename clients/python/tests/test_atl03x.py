@@ -6,6 +6,8 @@ import numpy as np
 from pathlib import Path
 from datetime import datetime
 from sliderule import sliderule, icesat2
+import geopandas as gpd
+from pyproj import CRS
 
 TESTDIR = Path(__file__).parent
 RESOURCES = ["ATL03_20181019065445_03150111_006_02.h5"]
@@ -14,6 +16,28 @@ AOI = [ { "lat": -80.75, "lon": -70.00 },
         { "lat": -81.00, "lon": -65.00 },
         { "lat": -80.75, "lon": -65.00 },
         { "lat": -80.75, "lon": -70.00 } ]
+
+
+# Check that a GeoDataFrame is valid and can be reprojected
+def assert_valid_geodataframe(gdf: gpd.GeoDataFrame):
+    assert isinstance(gdf, gpd.GeoDataFrame), "Not a GeoDataFrame"
+
+    # CRS must be parseable by pyproj
+    assert gdf.crs is not None, "GeoDataFrame has no CRS"
+    crs = CRS.from_user_input(gdf.crs)   # raises if invalid
+
+    # Must have a geometry column
+    assert gdf.geometry is not None, "GeoDataFrame has no geometry"
+    assert not gdf.geometry.isna().all(), "Geometry column is entirely empty"
+
+    # Basic operations should not fail
+    # total bounds: requires valid geometry
+    bounds = gdf.total_bounds
+    assert len(bounds) == 4, "Total bounds not valid"
+
+    # reproject (smoke test): should succeed
+    _ = gdf.head(5).to_crs(4326 if not crs.is_geographic else 3857)
+
 
 class TestAtl03x:
     def test_nominal(self, init):
@@ -231,12 +255,40 @@ class TestAtl03x:
         assert gdf["atl24_class"].value_counts()[40] == 4
 
     def test_datum(self, init):
+        def _squash_ws(s: str) -> str:
+            # remove all whitespace characters (spaces, tabs, newlines, etc.)
+            return ''.join(s.split())
+
         resource = "ATL03_20181014001920_02350103_006_02.h5"
+
+        # Valid and currently supported datums
         gdf1 = sliderule.run("atl03x", {"track": 1, "cnf": 4, "datum": "ITRF2014"}, resources=[resource])
         gdf2 = sliderule.run("atl03x", {"track": 1, "cnf": 4, "datum": "EGM08"}, resources=[resource])
+
         assert init
         assert len(gdf1) == len(gdf2)
         assert gdf1.height.mean() < gdf2.height.mean()
+
+        # Compare CRS against files (skip NAVD88)
+        crs_dir = (Path(__file__).parent / "../../../datasets/icesat2/crsfiles").resolve()
+        itrf_file_str  = _squash_ws((crs_dir / "EPSG7912.projjson").read_text(encoding="utf-8"))
+        egm08_file_str = _squash_ws((crs_dir / "EPSG7912_EGM08.projjson").read_text(encoding="utf-8"))
+
+        itrf_gdf_str  = _squash_ws(gdf1.crs.to_json())
+        egm08_gdf_str = _squash_ws(gdf2.crs.to_json())
+
+        assert itrf_file_str  == itrf_gdf_str
+        assert egm08_file_str == egm08_gdf_str
+
+        # Assert both are valid GeoDataFrames for geopandas
+        assert_valid_geodataframe(gdf1)
+        assert_valid_geodataframe(gdf2)
+
+        # Invalid datum: expect an exception from the server
+        # TODO: re-enable when github issue #234 is fixed
+        # with pytest.raises(Exception):
+        #     sliderule.run("atl03x", {"track": 1, "cnf": 4, "datum": "NOSUCH_DATUM"}, resources=[resource])
+
 
     def test_final_fields(self, init):
         parms = {

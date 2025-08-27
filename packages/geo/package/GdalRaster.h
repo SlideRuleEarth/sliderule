@@ -81,8 +81,7 @@ class GdalRaster
          * Constants
          *--------------------------------------------------------------------*/
 
-        static const int SLIDERULE_EPSG = 7912;
-        static const int NO_BAND        = 0;
+        static const int NO_BAND = 0;
 
         /*--------------------------------------------------------------------
          * Typedefs
@@ -109,7 +108,7 @@ class GdalRaster
          * Methods
          *--------------------------------------------------------------------*/
 
-                           GdalRaster     (const GeoFields* _parms, const std::string& _fileName,
+                           GdalRaster     (const RasterObject* _robj, const std::string& _fileName,
                                            double _gpsTime, uint64_t _fileId,
                                            int _elevationBandNum, int _flagsBandNum,
                                            overrideGeoTransform_t gtf_cb, overrideCRS_t crs_cb,
@@ -150,6 +149,7 @@ class GdalRaster
         * Data
         *--------------------------------------------------------------------*/
 
+        const RasterObject* robj;
         const GeoFields*    parms;
         double              gpsTime;  /* Time the raster data was collected and/or generated */
         uint64_t            fileId;   /* unique identifier of raster file used for downstream processing */

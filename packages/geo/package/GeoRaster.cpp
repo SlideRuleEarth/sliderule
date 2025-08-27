@@ -45,7 +45,7 @@
 GeoRaster::GeoRaster(lua_State *L, RequestFields* rqst_parms, const char* key, const std::string& _fileName, double _gpsTime,
                      int elevationBandNum, int flagsBandNum, GdalRaster::overrideGeoTransform_t gtf_cb, GdalRaster::overrideCRS_t crs_cb):
     RasterObject(L, rqst_parms, key),
-    raster(parms, _fileName, _gpsTime, fileDict.add(_fileName, true), elevationBandNum, flagsBandNum, gtf_cb, crs_cb)
+    raster(this, _fileName, _gpsTime, fileDict.add(_fileName, true), elevationBandNum, flagsBandNum, gtf_cb, crs_cb)
 {
     /* Add Lua Functions */
     LuaEngine::setAttrFunc(L, "dim", luaDimensions);

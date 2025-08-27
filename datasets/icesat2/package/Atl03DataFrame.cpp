@@ -116,7 +116,8 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         {"rgt",                 &rgt},
         {"gt",                  &gt},
         {"granule",             &granule}
-    }),
+    },
+    Icesat2Fields::crsITRF2014()),
     spot(0, META_COLUMN),
     cycle(_parms->granuleFields.cycle.value, META_COLUMN),
     region(_parms->granuleFields.region.value, META_COLUMN),
@@ -775,6 +776,9 @@ void* Atl03DataFrame::subsettingThread (void* parm)
 
         /* Read ATL03 Datasets */
         const Atl03Data atl03(df, aoi);
+
+        /* Set CRS */
+        if(atl03.read_geoid) df->crs = Icesat2Fields::crsEGM08();
 
         /* Set MetaData */
         df->spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], df->beam);

@@ -117,6 +117,13 @@ bool DataFrameSampler::run (GeoDataFrame* dataframe)
     // latch start time for later runtime calculation
     const double start = TimeLib::latchtime();
 
+    const string& frame_crs = dataframe->getCRS();
+    if(frame_crs.empty())
+    {
+        mlog(CRITICAL, "DataFrameSampler: incoming dataframe missing CRS");
+        return false;
+    }
+
     // populate points vector
     if(!populatePoints(dataframe))
     {
@@ -127,6 +134,8 @@ bool DataFrameSampler::run (GeoDataFrame* dataframe)
     // get samples for all user RasterObjects
     for(sampler_info_t* sampler: samplers)
     {
+        sampler->robj->setCRS(frame_crs);
+
         // sample the rasters
         sampler->robj->getSamples(sampler->obj->points, sampler->samples);
 

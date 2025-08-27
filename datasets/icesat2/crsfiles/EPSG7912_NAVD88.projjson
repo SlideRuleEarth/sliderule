@@ -1,0 +1,65 @@
+{
+  "$schema": "https://proj.org/schemas/v0.7/projjson.schema.json",
+  "type": "CompoundCRS",
+  "name": "Horizontal + NAVD88 height",
+  "components": [
+    {
+      "type": "GeographicCRS",
+      "name": "ITRF2014",
+      "datum": {
+        "type": "DynamicGeodeticReferenceFrame",
+        "name": "International Terrestrial Reference Frame 2014",
+        "frame_reference_epoch": 2010,
+        "ellipsoid": {
+          "name": "GRS 1980",
+          "semi_major_axis": 6378137,
+          "inverse_flattening": 298.257222101
+        }
+      },
+      "coordinate_system": {
+        "subtype": "ellipsoidal",
+        "axis": [
+          {
+            "name": "Geodetic latitude",
+            "abbreviation": "Lat",
+            "direction": "north",
+            "unit": "degree"
+          },
+          {
+            "name": "Geodetic longitude",
+            "abbreviation": "Lon",
+            "direction": "east",
+            "unit": "degree"
+          }
+        ]
+      },
+      "id": {
+        "authority": "EPSG",
+        "code": 9000
+      }
+    },
+    {
+      "type": "VerticalCRS",
+      "name": "NAVD88 height",
+      "datum": {
+        "type": "VerticalReferenceFrame",
+        "name": "North American Vertical Datum 1988"
+      },
+      "coordinate_system": {
+        "subtype": "vertical",
+        "axis": [
+          {
+            "name": "Gravity-related height",
+            "abbreviation": "H",
+            "direction": "up",
+            "unit": "metre"
+          }
+        ]
+      },
+      "id": {
+        "authority": "EPSG",
+        "code": 5703
+      }
+    }
+  ]
+}

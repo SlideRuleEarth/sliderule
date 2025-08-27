@@ -74,6 +74,8 @@ class GeoDataFrame: public LuaObject, public Field
         static const char* gdfRecType;
         static const RecordObject::fieldDef_t gdfRecDef[];
 
+        static const char* CRS_KEY;
+
         /*--------------------------------------------------------------------
          * Typedefs
          *--------------------------------------------------------------------*/
@@ -81,7 +83,8 @@ class GeoDataFrame: public LuaObject, public Field
         typedef enum {
             COLUMN_REC = 0,
             META_REC = 1,
-            EOF_REC = 2
+            CRS_REC = 2,
+            EOF_REC = 3
         } rec_type_t;
 
         typedef struct {
@@ -196,6 +199,8 @@ class GeoDataFrame: public LuaObject, public Field
         const string&               getYColumnName      (void) const;
         const string&               getZColumnName      (void) const;
         string                      getInfoAsJson       (void) const;
+        const string&               getCRS              (void) const { return crs; }
+        void                        setCRS              (const string& _crs) { crs = _crs; }
 
         bool                        waitRunComplete     (int timeout);
         void                        signalRunComplete   (void);
@@ -262,7 +267,7 @@ class GeoDataFrame: public LuaObject, public Field
                                             const char* meta_name,
                                             const struct luaL_Reg meta_table[],
                                             const std::initializer_list<FieldMap<FieldUntypedColumn>::init_entry_t>& column_list,
-                                            const std::initializer_list<FieldDictionary::init_entry_t>& meta_list);
+                                            const std::initializer_list<FieldDictionary::init_entry_t>& meta_list, const char* _crs=NULL);
         virtual         ~GeoDataFrame       (void) override;
 
         void            appendDataframe     (GeoDataFrame::gdf_rec_t* gdf_rec_data, int32_t source_id);
@@ -283,6 +288,7 @@ class GeoDataFrame: public LuaObject, public Field
         static int      luaGetRowData       (lua_State* L);
         static int      luaGetColumnData    (lua_State* L);
         static int      luaGetMetaData      (lua_State* L);
+        static int      luaGetCRS           (lua_State* L);
         static int      luaRun              (lua_State* L);
         static int      luaRunComplete      (lua_State* L);
 
@@ -299,6 +305,8 @@ class GeoDataFrame: public LuaObject, public Field
         string                      xColumnName;
         string                      yColumnName;
         string                      zColumnName;
+
+        string                      crs;
 
         bool                        active;
         Thread*                     receivePid;
