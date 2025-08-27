@@ -317,10 +317,9 @@ class TestAtl03x:
         assert len(gdf_itrf.keys()) == len(gdf_egm08.keys()) == 19
         assert "mosaic.value" in gdf_itrf and "mosaic.value" in gdf_egm08
 
-        # All offsets should be positive (~43 meters higher for ITRF vs EGM08)
         v_itrf = np.asarray(gdf_itrf["mosaic.value"], dtype=float)
         v_egm  = np.asarray(gdf_egm08["mosaic.value"], dtype=float)
-        dv     = v_itrf - v_egm  # aproximately 43 meters
+        dv     = v_itrf - v_egm  # Difference between ITRF and EGM08 is ~43 meters
 
         # Must be strictly positive everywhere
         assert np.all(dv > 0)
