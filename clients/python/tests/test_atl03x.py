@@ -180,16 +180,18 @@ class TestAtl03x:
             "samples": {
                 "mosaic": {
                     "asset": "arcticdem-mosaic",
-                    "algorithm": "NearestNeighbour",
-                    "force_single_sample": True
+                    "algorithm": "NearestNeighbour"
                 }
             }
         }
-        gdf = sliderule.run("atl03x", parms, resources=["ATL03_20190105024336_01170205_006_02.h5"])
+        resource = "ATL03_20190105024336_01170205_006_02.h5"
+        gdf = sliderule.run("atl03x", parms, resources=[resource])
         assert init
         assert len(gdf) == 527
         assert len(gdf.keys()) == 19
         assert "mosaic.value" in gdf
+        print(gdf["mosaic.value"].min())
+        print(gdf["mosaic.value"].max())
 
     def test_mixed_empty_beams(self, init):
         resource = 'ATL03_20200512071854_07140706_006_01.h5'
@@ -289,6 +291,46 @@ class TestAtl03x:
         # with pytest.raises(Exception):
         #     sliderule.run("atl03x", {"track": 1, "cnf": 4, "datum": "NOSUCH_DATUM"}, resources=[resource])
 
+    def test_atl03_sampler_with_datum(self, init):
+        # Run with mission CRS + ITRF2014
+        parms_itrf = {
+            "asset": "icesat2",
+            "poly": [
+                {"lat": 59.86856921063384, "lon": -44.34985645709006},
+                {"lat": 59.85613150141896, "lon": -44.34985645709006},
+                {"lat": 59.85613150141896, "lon": -44.30692727565953},
+                {"lat": 59.86856921063384, "lon": -44.30692727565953},
+                {"lat": 59.86856921063384, "lon": -44.34985645709006},
+            ],
+            "datum": "ITRF2014",
+            "samples": {"mosaic": {"asset": "arcticdem-mosaic", "algorithm": "NearestNeighbour"}},
+        }
+        resource = "ATL03_20190105024336_01170205_006_02.h5"
+        gdf_itrf = sliderule.run("atl03x", parms_itrf, resources=[resource])
+
+        # Run with mission CRS + EGM08
+        parms_egm08 = dict(parms_itrf)
+        parms_egm08["datum"] = "EGM08"
+        gdf_egm08 = sliderule.run("atl03x", parms_egm08, resources=[resource])
+
+        # Basic invariants
+        assert init
+        assert len(gdf_itrf) == len(gdf_egm08) == 527
+        assert len(gdf_itrf.keys()) == len(gdf_egm08.keys()) == 19
+        assert "mosaic.value" in gdf_itrf and "mosaic.value" in gdf_egm08
+
+        # All offsets should be positive (~43 meters higher for ITRF vs EGM08)
+        v_itrf = np.asarray(gdf_itrf["mosaic.value"], dtype=float)
+        v_egm  = np.asarray(gdf_egm08["mosaic.value"], dtype=float)
+        dv     = v_itrf - v_egm  # aproximately 43 meters
+
+        # Must be strictly positive everywhere
+        assert np.all(dv > 0)
+
+        # Check that the offset is close to 43 m (allow ±1 m)
+        expected_offset = 43.0
+        offset = float(np.median(dv))
+        assert abs(offset - expected_offset) < 1.0, f"Unexpected offset: {offset} m"
 
     def test_final_fields(self, init):
         parms = {

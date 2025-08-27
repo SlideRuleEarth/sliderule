@@ -1399,15 +1399,18 @@ void* GeoDataFrame::receiveThread (void* parm)
                     if(rec_data->type == CRS_REC)
                     {
                         const string crs(reinterpret_cast<const char*>(rec_data->data), rec_data->size);
-
                         if(info->dataframe->getCRS().empty())
                         {
                             info->dataframe->setCRS(crs);
                         }
                         else if(info->dataframe->getCRS() != crs)
                         {
-                            inq.dereference(ref);
-                            throw RunTimeException(CRITICAL, RTE_FAILURE, "CRS mismatch: existing=%s new=%s", info->dataframe->getCRS().c_str(), crs.c_str());
+                            // NOTE: If multiple CRS values arrive, the last one wins.
+                            // We cannot throw here: the receiving DataFrame may have a constructor-selected
+                            // default CRS which is later updated by the subsetting thread. The receiver
+                            // will first see the default CRS and only later the correct mission+datum CRS.
+                            // To ensure the final state is correct, we overwrite with the newest CRS.
+                            info->dataframe->setCRS(crs);
                         }
 
                         inq.dereference(ref);

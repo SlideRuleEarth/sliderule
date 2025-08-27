@@ -162,7 +162,11 @@ RasterObject* RasterObject::cppCreate(RequestFields* rqst_parms, const char* key
  *----------------------------------------------------------------------------*/
 RasterObject* RasterObject::cppCreate(const RasterObject* obj)
 {
-    return cppCreate(obj->rqstParms, obj->samplerKey);
+    RasterObject* robj = cppCreate(obj->rqstParms, obj->samplerKey);
+
+    /* Copy CRS */
+    if(robj) robj->crs = obj->crs;
+    return robj;
 }
 
 /*----------------------------------------------------------------------------
