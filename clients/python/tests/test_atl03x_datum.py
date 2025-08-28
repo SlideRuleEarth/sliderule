@@ -9,6 +9,17 @@ from sliderule import sliderule, icesat2
 import geopandas as gpd
 from pyproj import CRS
 
+
+poly = [
+    {"lat": 59.86856921063384, "lon": -44.34985645709006},
+    {"lat": 59.85613150141896, "lon": -44.34985645709006},
+    {"lat": 59.85613150141896, "lon": -44.30692727565953},
+    {"lat": 59.86856921063384, "lon": -44.30692727565953},
+    {"lat": 59.86856921063384, "lon": -44.34985645709006},
+]
+
+resource = "ATL03_20190105024336_01170205_006_02.h5"
+
 # Check that a GeoDataFrame is valid and can be reprojected
 def assert_valid_geodataframe(gdf: gpd.GeoDataFrame):
     assert isinstance(gdf, gpd.GeoDataFrame), "Not a GeoDataFrame"
@@ -26,12 +37,12 @@ def assert_valid_geodataframe(gdf: gpd.GeoDataFrame):
     bounds = gdf.total_bounds
     assert len(bounds) == 4, "Total bounds not valid"
 
-    # reproject (smoke test): should succeed
-    _ = gdf.head(5).to_crs(4326 if not crs.is_geographic else 3857)
+    # reproject (smoke test): should succeed and preserve row count
+    gdf_reproj = gdf.head(5).to_crs(4326 if not crs.is_geographic else 3857)
+    assert len(gdf_reproj) == min(len(gdf), 5), "Reprojection changed row count unexpectedly"
+    assert gdf_reproj.crs is not None, "Reprojected GeoDataFrame lost CRS"
 
-def check_offset_block(gdf_itrf, gdf_egm08):
-    import numpy as np
-    # Structure invariants
+def check_offset(gdf_itrf, gdf_egm08):
     assert len(gdf_itrf) == len(gdf_egm08)
     assert len(gdf_itrf.keys()) == len(gdf_egm08.keys())
     assert "mosaic.value" in gdf_itrf or "strips.value" in gdf_itrf
@@ -43,12 +54,14 @@ def check_offset_block(gdf_itrf, gdf_egm08):
     v_egm  = np.asarray(gdf_egm08[col], dtype=float)
     dv     = v_itrf - v_egm
 
-    # Offsets should be positive (~43 m higher for ITRF vs EGM08)
-    assert (dv > 0).all()
+    # Offsets should be ~43 meters higher for ITRF vs EGM08 fot the area used
+    expected_offset = 43.0
+    margin = 1.0
 
-    # Offset should be nearly constant across AOI (few cm spread)
-    spread = float(dv.max() - dv.min())
-    assert spread < 0.05, f"Offset not consistent: spread={spread} m"
+    # Check every offset is within expected ± margin
+    assert np.all((dv > expected_offset - margin) & (dv < expected_offset + margin)), \
+                  f"Offsets not within {margin} m of {expected_offset}: " f"min={dv.min()}, max={dv.max()}"
+
 
 class TestAtl03x_Datum:
     def test_datum(self, init):
@@ -56,11 +69,9 @@ class TestAtl03x_Datum:
             # remove all whitespace characters (spaces, tabs, newlines, etc.)
             return ''.join(s.split())
 
-        resource = "ATL03_20181014001920_02350103_006_02.h5"
-
         # Valid and currently supported datums
-        gdf1 = sliderule.run("atl03x", {"track": 1, "cnf": 4, "datum": "ITRF2014"}, resources=[resource])
-        gdf2 = sliderule.run("atl03x", {"track": 1, "cnf": 4, "datum": "EGM08"}, resources=[resource])
+        gdf1 = sliderule.run("atl03x", {"track": 1, "cnf": 4, "datum": "ITRF2014"}, resources=["ATL03_20181014001920_02350103_006_02.h5"])
+        gdf2 = sliderule.run("atl03x", {"track": 1, "cnf": 4, "datum": "EGM08"}, resources=["ATL03_20181014001920_02350103_006_02.h5"])
 
         assert init
         assert len(gdf1) == len(gdf2)
@@ -87,14 +98,6 @@ class TestAtl03x_Datum:
         #     sliderule.run("atl03x", {"track": 1, "cnf": 4, "datum": "NOSUCH_DATUM"}, resources=[resource])
 
     def test_atl03_sampler_geo_raster(self, init):
-        resource = "ATL03_20190105024336_01170205_006_02.h5"
-        poly = [
-            {"lat": 59.86856921063384, "lon": -44.34985645709006},
-            {"lat": 59.85613150141896, "lon": -44.34985645709006},
-            {"lat": 59.85613150141896, "lon": -44.30692727565953},
-            {"lat": 59.86856921063384, "lon": -44.30692727565953},
-            {"lat": 59.86856921063384, "lon": -44.34985645709006},
-        ]
         assert init
 
         parms_base = {
@@ -111,23 +114,15 @@ class TestAtl03x_Datum:
         # Both runs should return the same structure (527 rows, 19 columns)
         assert len(gdf_itrf) == 527 and len(gdf_egm) == 527
         assert len(gdf_itrf.keys()) == 19 and len(gdf_egm.keys()) == 19
-        check_offset_block(gdf_itrf, gdf_egm)
+        check_offset(gdf_itrf, gdf_egm)
 
     def test_atl03_sampler_geo_index_raster(self, init):
-        resource = "ATL03_20190105024336_01170205_006_02.h5"
-        poly = [
-            {"lat": 59.86856921063384, "lon": -44.34985645709006},
-            {"lat": 59.85613150141896, "lon": -44.34985645709006},
-            {"lat": 59.85613150141896, "lon": -44.30692727565953},
-            {"lat": 59.86856921063384, "lon": -44.30692727565953},
-            {"lat": 59.86856921063384, "lon": -44.34985645709006},
-        ]
         assert init
 
         parms_base = {
             "asset": "icesat2",
             "poly": poly,
-            "samples": {"strips": {"asset": "arcticdem-strips", "algorithm": "NearestNeighbour", "zonal_stats": "true", "closest_time": "2021:2:4:23:3:0"}},
+            "samples": {"strips": {"asset": "arcticdem-strips", "algorithm": "NearestNeighbour", "closest_time": "2021:2:4:23:3:0"}},
         }
         parms_itrf = dict(parms_base); parms_itrf["datum"] = "ITRF2014"
         parms_egm  = dict(parms_base); parms_egm["datum"]  = "EGM08"
@@ -138,4 +133,4 @@ class TestAtl03x_Datum:
         # Both runs should return the same structure (527 rows, 19 columns)
         assert len(gdf_itrf) == 527 and len(gdf_egm) == 527
         assert len(gdf_itrf.keys()) == 19 and len(gdf_egm.keys()) == 19
-        check_offset_block(gdf_itrf, gdf_egm)
+        check_offset(gdf_itrf, gdf_egm)
