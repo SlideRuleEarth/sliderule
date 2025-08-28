@@ -183,9 +183,10 @@ runner.unittest("DataFrame Multiple Senders CRS Mismatch", function()
     runner.assert(ok1 and ok2, "failed to send input dataframes", true)
     dfq:sendstring("") -- terminator
 
-    -- Mismatch happened, server should throw an ecception (inerror == true) and not complete
-    runner.assert(df_out:waiton(2000), "receiver did not complete", true)
-    runner.assert(df_out:inerror() == true, "expected CRS mismatch error but inerror==false")
+    -- With new behavior: mismatch is not an error, last CRS wins
+    runner.assert(df_out:waiton(10000), "receiver did not complete", true)
+    runner.assert(df_out:inerror() == false, "did not expect error on CRS mismatch")
+    runner.assert(df_out:crs() == "EPSG:4979", "expected last CRS (EPSG:4979) to win")
 end)
 
 
