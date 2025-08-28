@@ -104,8 +104,16 @@ GdalRaster::GdalRaster(const RasterObject* _robj, const std::string& _fileName,
  *----------------------------------------------------------------------------*/
 GdalRaster::~GdalRaster(void)
 {
-    GDALClose((GDALDatasetH)dset);
+    /*
+     * Destroy the coordinate transformation before closing the dataset.
+     * Some PROJ grid resources may be tied to the dataset; releasing the
+     * transform first ensures they are still valid during teardown.
+     */
     OGRCoordinateTransformation::DestroyCT(transf);
+    transf = NULL;
+
+    GDALClose((GDALDatasetH)dset);
+    dset = NULL;
 }
 
 /*----------------------------------------------------------------------------
