@@ -1405,12 +1405,8 @@ void* GeoDataFrame::receiveThread (void* parm)
                         }
                         else if(info->dataframe->getCRS() != crs)
                         {
-                            // NOTE: If multiple CRS values arrive, the last one wins.
-                            // We cannot throw here: the receiving DataFrame may have a constructor-selected
-                            // default CRS which is later updated by the subsetting thread. The receiver
-                            // will first see the default CRS and only later the correct mission+datum CRS.
-                            // To ensure the final state is correct, we overwrite with the newest CRS.
-                            info->dataframe->setCRS(crs);
+                            inq.dereference(ref);
+                            throw RunTimeException(CRITICAL, RTE_FAILURE, "frame crs mismatch");
                         }
 
                         inq.dereference(ref);

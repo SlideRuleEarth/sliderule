@@ -133,7 +133,9 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     parms(_parms),
     hdf03(_hdf03),
     hdf08(_hdf08),
-    hdf24(_hdf24)
+    hdf24(_hdf24),
+    useYapc(parms->stages[Icesat2Fields::STAGE_YAPC] && (parms->yapc.version == 0) && (parms->granuleFields.version.value >= 6)),
+    useGeoid(parms->datum == MathLib::EGM08)
 {
     assert(_parms);
     assert(_hdf03);
@@ -164,6 +166,9 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
         addColumn("atl24_class",        &atl24_class,       false);
         addColumn("atl24_confidence",   &atl24_confidence,  false);
     }
+
+    /* Set CRS */
+    if(useGeoid) crs = Icesat2Fields::crsEGM08();
 
     /* Call Parent Class Initialization of GeoColumns */
     populateDataframe();
@@ -447,8 +452,6 @@ void Atl03DataFrame::AreaOfInterest::rasterregion (const Atl03DataFrame* df)
  * Atl03Data::Constructor
  *----------------------------------------------------------------------------*/
 Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest& aoi):
-    read_yapc           (df->parms->stages[Icesat2Fields::STAGE_YAPC] && (df->parms->yapc.version == 0) && (df->parms->granuleFields.version.value >= 6)),
-    read_geoid          (df->parms->datum == MathLib::EGM08),
     sc_orient           (df->hdf03,                            "/orbit_info/sc_orient"),
     velocity_sc         (df->hdf03, FString("%s/%s", df->beam, "geolocation/velocity_sc").c_str(),      H5Coro::ALL_COLS, aoi.first_segment, aoi.num_segments),
     segment_delta_time  (df->hdf03, FString("%s/%s", df->beam, "geolocation/delta_time").c_str(),       0, aoi.first_segment, aoi.num_segments),
@@ -460,13 +463,13 @@ Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest& 
     h_ph                (df->hdf03, FString("%s/%s", df->beam, "heights/h_ph").c_str(),                 0, aoi.first_photon,  aoi.num_photons),
     signal_conf_ph      (df->hdf03, FString("%s/%s", df->beam, "heights/signal_conf_ph").c_str(),       df->signalConfColIndex, aoi.first_photon,  aoi.num_photons),
     quality_ph          (df->hdf03, FString("%s/%s", df->beam, "heights/quality_ph").c_str(),           0, aoi.first_photon,  aoi.num_photons),
-    weight_ph           (read_yapc ? df->hdf03 : NULL, FString("%s/%s", df->beam, "heights/weight_ph").c_str(), 0, aoi.first_photon,  aoi.num_photons),
+    weight_ph           (df->useYapc ? df->hdf03 : NULL, FString("%s/%s", df->beam, "heights/weight_ph").c_str(), 0, aoi.first_photon,  aoi.num_photons),
     lat_ph              (df->hdf03, FString("%s/%s", df->beam, "heights/lat_ph").c_str(),               0, aoi.first_photon,  aoi.num_photons),
     lon_ph              (df->hdf03, FString("%s/%s", df->beam, "heights/lon_ph").c_str(),               0, aoi.first_photon,  aoi.num_photons),
     delta_time          (df->hdf03, FString("%s/%s", df->beam, "heights/delta_time").c_str(),           0, aoi.first_photon,  aoi.num_photons),
     bckgrd_delta_time   (df->hdf03, FString("%s/%s", df->beam, "bckgrd_atlas/delta_time").c_str()),
     bckgrd_rate         (df->hdf03, FString("%s/%s", df->beam, "bckgrd_atlas/bckgrd_rate").c_str()),
-    geoid               (read_geoid ? df->hdf03 : NULL,         FString("%s/%s", df->beam, "geophys_corr/geoid").c_str(), 0, aoi.first_segment, aoi.num_segments),
+    geoid               (df->useGeoid ? df->hdf03 : NULL,       FString("%s/%s", df->beam, "geophys_corr/geoid").c_str(), 0, aoi.first_segment, aoi.num_segments),
     anc_geo_data        (df->parms->atl03GeoFields,  df->hdf03, FString("%s/%s", df->beam, "geolocation").c_str(),        0, aoi.first_segment, aoi.num_segments),
     anc_corr_data       (df->parms->atl03CorrFields, df->hdf03, FString("%s/%s", df->beam, "geophys_corr").c_str(),       0, aoi.first_segment, aoi.num_segments),
     anc_ph_data         (df->parms->atl03PhFields,   df->hdf03, FString("%s/%s", df->beam, "heights").c_str(),            0, aoi.first_photon,  aoi.num_photons)
@@ -483,13 +486,13 @@ Atl03DataFrame::Atl03Data::Atl03Data (Atl03DataFrame* df, const AreaOfInterest& 
     h_ph.join(df->readTimeoutMs, true);
     signal_conf_ph.join(df->readTimeoutMs, true);
     quality_ph.join(df->readTimeoutMs, true);
-    if(read_yapc) weight_ph.join(df->readTimeoutMs, true);
+    if(df->useYapc) weight_ph.join(df->readTimeoutMs, true);
     lat_ph.join(df->readTimeoutMs, true);
     lon_ph.join(df->readTimeoutMs, true);
     delta_time.join(df->readTimeoutMs, true);
     bckgrd_delta_time.join(df->readTimeoutMs, true);
     bckgrd_rate.join(df->readTimeoutMs, true);
-    if(read_geoid) geoid.join(df->readTimeoutMs, true);
+    if(df->useGeoid) geoid.join(df->readTimeoutMs, true);
 
     /* Join and Add Ancillary Columns */
     anc_geo_data.joinToGDF(df, df->readTimeoutMs, true);
@@ -777,9 +780,6 @@ void* Atl03DataFrame::subsettingThread (void* parm)
         /* Read ATL03 Datasets */
         const Atl03Data atl03(df, aoi);
 
-        /* Set CRS */
-        if(atl03.read_geoid) df->crs = Icesat2Fields::crsEGM08();
-
         /* Set MetaData */
         df->spot = Icesat2Fields::getSpotNumber((Icesat2Fields::sc_orient_t)atl03.sc_orient[0], df->beam);
         df->gt = Icesat2Fields::getGroundTrack(df->beam);
@@ -889,7 +889,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
 
             /* Set and Check YAPC Score */
             uint8_t yapc_score = 0;
-            if(atl03.read_yapc) // read from atl03 granule
+            if(df->useYapc) // read from atl03 granule
             {
                 yapc_score = atl03.weight_ph[current_photon];
                 if(yapc_score < parms.yapc.score)
@@ -985,7 +985,7 @@ void* Atl03DataFrame::subsettingThread (void* parm)
 
             /* Calculate Height */
             float height = atl03.h_ph[current_photon];
-            if(atl03.read_geoid) height -= atl03.geoid[current_segment];
+            if(df->useGeoid) height -= atl03.geoid[current_segment];
 
             /* Add Photon to DataFrame */
             df->addRow();

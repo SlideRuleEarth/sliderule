@@ -137,9 +137,6 @@ class Atl03DataFrame: public GeoDataFrame
                 Atl03Data           (Atl03DataFrame* df, const AreaOfInterest& aoi);
                 ~Atl03Data          (void) = default;
 
-                bool                read_yapc;
-                bool                read_geoid;
-
                 H5Array<int8_t>     sc_orient;
                 H5Array<float>      velocity_sc;
                 H5Array<double>     segment_delta_time;
@@ -250,6 +247,8 @@ class Atl03DataFrame: public GeoDataFrame
         H5Object*           hdf08;  // atl08 granule
         H5Object*           hdf24;  // atl24 granule
         okey_t              dfKey;
+        bool                useYapc;
+        bool                useGeoid;
 
         /*--------------------------------------------------------------------
          * Methods
