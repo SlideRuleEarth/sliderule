@@ -54,7 +54,7 @@ def check_offset(gdf_itrf, gdf_egm08):
     v_egm  = np.asarray(gdf_egm08[col], dtype=float)
     dv     = v_itrf - v_egm
 
-    # Offsets should be ~43 meters higher for ITRF vs EGM08 fot the area used
+    # Offsets should be ~43 meters higher for ITRF vs EGM08 for the area used
     expected_offset = 43.0
     margin = 1.0
 
