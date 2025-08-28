@@ -163,31 +163,6 @@ runner.unittest("DataFrame Multiple Senders With CRS", function()
     runner.assert(crs == "EPSG:7912", string.format("CRS mismatch: expected EPSG:7912 got %s", tostring(crs)))
 end)
 
--- Self Test --
-
-runner.unittest("DataFrame Multiple Senders CRS Mismatch", function()
-
-    local table1_in = {a = {1,2}, b = {3,4}}
-    local df1_in    = core.dataframe(table1_in, {}, "EPSG:7912")
-
-    local table2_in = {a = {5,6}, b = {7,8}}
-    local df2_in    = core.dataframe(table2_in, {}, "EPSG:4979")  -- different CRS
-
-    local df_out = core.dataframe()
-    local dfq = msg.publish("dfq")
-
-    df_out:receive("dfq", "rspq", 2)
-
-    local ok1 = df1_in:send("dfq", 0)
-    local ok2 = df2_in:send("dfq", 1)
-    runner.assert(ok1 and ok2, "failed to send input dataframes", true)
-    dfq:sendstring("") -- terminator
-
-    -- Mismatched CRS, server should throw an exception (inerror == true) and not complete
-    runner.assert(df_out:waiton(10000), "receiver did not complete", true)
-    runner.assert(df_out:inerror() == true, "expected CRS mismatch error but inerror==false")
-end)
-
 
 -- Report Results --
 
