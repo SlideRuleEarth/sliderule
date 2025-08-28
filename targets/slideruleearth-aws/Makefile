@@ -389,7 +389,6 @@ release: buildenv-docker buildenv-docker-push manager-lock ams-lock ## tag and r
 	git tag -a $(VERSION) -m "Version $(VERSION)"
 	git push --tags && git push
 	gh release create $(VERSION) -t $(VERSION) --notes "see https://slideruleearth.io/web/rtd/developer_guide/release_notes/release_notes.html"
-	make -C $(ROOT)/clients/nodejs publish
 	make cluster
 
 ########################
