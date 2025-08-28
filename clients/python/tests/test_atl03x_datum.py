@@ -103,7 +103,7 @@ class TestAtl03x_Datum:
         parms_base = {
             "asset": "icesat2",
             "poly": poly,
-            "samples": {"mosaic": {"asset": "arcticdem-mosaic", "algorithm": "NearestNeighbour"}},
+            "samples": {"mosaic": {"asset": "arcticdem-mosaic", "algorithm": "NearestNeighbour", "with_flags": True}},
         }
         parms_itrf = dict(parms_base); parms_itrf["datum"] = "ITRF2014"
         parms_egm  = dict(parms_base); parms_egm["datum"]  = "EGM08"
@@ -111,9 +111,9 @@ class TestAtl03x_Datum:
         gdf_itrf = sliderule.run("atl03x", parms_itrf, resources=[resource])
         gdf_egm  = sliderule.run("atl03x", parms_egm,  resources=[resource])
 
-        # Both runs should return the same structure (527 rows, 19 columns)
+        # Both runs should return the same structure (527 rows, 20 columns)
         assert len(gdf_itrf) == 527 and len(gdf_egm) == 527
-        assert len(gdf_itrf.keys()) == 19 and len(gdf_egm.keys()) == 19
+        assert len(gdf_itrf.keys()) == 20 and len(gdf_egm.keys()) == 20
         check_offset(gdf_itrf, gdf_egm)
 
     def test_atl03_sampler_geo_index_raster(self, init):
@@ -122,7 +122,7 @@ class TestAtl03x_Datum:
         parms_base = {
             "asset": "icesat2",
             "poly": poly,
-            "samples": {"strips": {"asset": "arcticdem-strips", "algorithm": "NearestNeighbour", "closest_time": "2021:2:4:23:3:0"}},
+            "samples": {"strips": {"asset": "arcticdem-strips", "algorithm": "NearestNeighbour", "closest_time": "2021:2:4:23:3:0", "zonal_stats": True}},
         }
         parms_itrf = dict(parms_base); parms_itrf["datum"] = "ITRF2014"
         parms_egm  = dict(parms_base); parms_egm["datum"]  = "EGM08"
@@ -130,7 +130,7 @@ class TestAtl03x_Datum:
         gdf_itrf = sliderule.run("atl03x", parms_itrf, resources=[resource])
         gdf_egm  = sliderule.run("atl03x", parms_egm,  resources=[resource])
 
-        # Both runs should return the same structure (527 rows, 19 columns)
+        # Both runs should return the same structure (527 rows, 26 columns)
         assert len(gdf_itrf) == 527 and len(gdf_egm) == 527
-        assert len(gdf_itrf.keys()) == 19 and len(gdf_egm.keys()) == 19
+        assert len(gdf_itrf.keys()) == 26 and len(gdf_egm.keys()) == 26
         check_offset(gdf_itrf, gdf_egm)

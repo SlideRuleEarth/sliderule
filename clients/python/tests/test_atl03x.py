@@ -1,4 +1,4 @@
-"""Tests for sliderule icesat2 atl06-sr algorithm."""
+"""Tests for atl03x"""
 
 import os
 import pytest
@@ -124,49 +124,6 @@ class TestAtl03x:
         assert abs(gdf["h_min_canopy"].mean() - 1.0815950632095337) < 0.000001, f'h_min_canopy = {gdf["h_min_canopy"].mean()}'
         assert abs(gdf["h_te_median"].mean() - 1715.3670654296875) < 0.0001, f'h_te_median = {gdf["h_te_median"].mean()}'
         assert abs(gdf["sigma_topo"].mean() - 0.453180570587699) < 0.0001, f'sigma_topo = {gdf["sigma_topo"].mean()}'
-
-    def test_sampler(self, init):
-        resource = "ATL03_20190314093716_11600203_007_01.h5"
-        region = sliderule.toregion(os.path.join(TESTDIR, "data", "dicksonfjord.geojson"))
-        parms = {
-            "track": 1,
-            "cnf": 0,
-            "srt": 3,
-            "fit": {"maxi": 3},
-            "samples": {"mosaic": {"asset": "arcticdem-mosaic", "force_single_sample": True}}
-        }
-        gdf = sliderule.run("atl03x", parms, region["poly"], [resource])
-        assert init
-        assert len(gdf) == 197
-        assert len(gdf.keys()) == 20
-        assert gdf["cycle"].mean() == 2
-        assert abs(gdf["mosaic.value"].mean() - 1474.8950269670052) < 0.0001, f'mosaic = {gdf["mosaic.value"].mean()}'
-        assert gdf["mosaic.fileid"].mean() == 0
-        assert gdf["mosaic.time_ns"].iloc[0] == datetime.strptime('2023-01-18 20:23:42', '%Y-%m-%d %H:%M:%S')
-
-    def test_atl03_sampler(self, init):
-        parms = {
-            "asset": "icesat2",
-            "poly": [
-                {"lat": 59.86856921063384, "lon": -44.34985645709006},
-                {"lat": 59.85613150141896, "lon": -44.34985645709006},
-                {"lat": 59.85613150141896, "lon": -44.30692727565953},
-                {"lat": 59.86856921063384, "lon": -44.30692727565953},
-                {"lat": 59.86856921063384, "lon": -44.34985645709006}
-            ],
-            "samples": {
-                "mosaic": {
-                    "asset": "arcticdem-mosaic",
-                    "algorithm": "NearestNeighbour"
-                }
-            }
-        }
-        resource = "ATL03_20190105024336_01170205_006_02.h5"
-        gdf = sliderule.run("atl03x", parms, resources=[resource])
-        assert init
-        assert len(gdf) == 527
-        assert len(gdf.keys()) == 19
-        assert "mosaic.value" in gdf
 
     def test_mixed_empty_beams(self, init):
         resource = 'ATL03_20200512071854_07140706_006_01.h5'

@@ -282,6 +282,8 @@ bool DataFrameSampler::populateMultiColumns (GeoDataFrame* dataframe, sampler_in
         value_column->append(value_list);
         time_column->append(time_list);
         fileid_column->append(fileid_list);
+        if(flags_column) flags_column->append(flags_list);
+        if(band_column) band_column->append(band_list);
 
         // populate zonal stats fields
         if(sampler->robj->hasZonalStats())

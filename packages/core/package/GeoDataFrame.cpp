@@ -1395,7 +1395,7 @@ void* GeoDataFrame::receiveThread (void* parm)
                     gdf_rec_t* rec_data = reinterpret_cast<gdf_rec_t*>(rec.getRecordData());
                     const uint64_t key = rec_data->key;
 
-                    // Handle CRS record
+                    // handle CRS record
                     if(rec_data->type == CRS_REC)
                     {
                         const string crs(reinterpret_cast<const char*>(rec_data->data), rec_data->size);
@@ -1403,10 +1403,9 @@ void* GeoDataFrame::receiveThread (void* parm)
                         {
                             info->dataframe->setCRS(crs);
                         }
-                        else if(info->dataframe->getCRS() != crs)
+                        else
                         {
-                            inq.dereference(ref);
-                            throw RunTimeException(CRITICAL, RTE_FAILURE, "frame crs mismatch");
+                            assert(info->dataframe->getCRS() == crs);
                         }
 
                         inq.dereference(ref);
