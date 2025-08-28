@@ -96,7 +96,7 @@ package:
   category: main
   optional: false
 - name: coverage
-  version: 7.10.2
+  version: 7.10.5
   manager: conda
   platform: linux-aarch64
   dependencies:
@@ -104,10 +104,10 @@ package:
     python: '>=3.13,<3.14.0a0'
     python_abi: 3.13.*
     tomli: ''
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/coverage-7.10.2-py313hfa222a2_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/coverage-7.10.5-py313hfa222a2_0.conda
   hash:
-    md5: 99a0aabf079e9e24511181ddeaa774ce
-    sha256: 1b6a33d517dacc8d2f770230b87c28b14ce8f89ab587ce15ac35b8a876276ee1
+    md5: 15c31fe775f0190075e6faf99df021f0
+    sha256: 5804ed0646684e9c3df18d05d7849e1a75514670ea92988c224f3c609f0c1b78
   category: main
   optional: false
 - name: exceptiongroup
@@ -124,22 +124,22 @@ package:
   category: main
   optional: false
 - name: flask
-  version: 3.1.1
+  version: 3.1.2
   manager: conda
   platform: linux-aarch64
   dependencies:
-    blinker: '>=1.9'
+    blinker: '>=1.9.0'
     click: '>=8.1.3'
     importlib-metadata: '>=3.6.0'
-    itsdangerous: '>=2.2'
+    itsdangerous: '>=2.2.0'
     jinja2: '>=3.1.2'
     markupsafe: '>=2.1.1'
     python: '>=3.9'
-    werkzeug: '>=3.1'
-  url: https://conda.anaconda.org/conda-forge/noarch/flask-3.1.1-pyhd8ed1ab_0.conda
+    werkzeug: '>=3.1.0'
+  url: https://conda.anaconda.org/conda-forge/noarch/flask-3.1.2-pyhd8ed1ab_0.conda
   hash:
-    md5: ffad1a6161226d41e3735b73bae5c71c
-    sha256: 41c2dc7648acc51a2fd4715b916f04b166e5aa472ac62c5b34f314e0c96146dc
+    md5: ba67a9febeda36948fee26a3dec3d914
+    sha256: 8a97eba37e0723720706d4636cc89c6b07eea1b7cc66fd8994fa8983a81ed988
   category: main
   optional: false
 - name: gunicorn
@@ -224,10 +224,10 @@ package:
   platform: linux-aarch64
   dependencies:
     libopenblas: '>=0.3.30,<1.0a0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libblas-3.9.0-33_h1a9f1db_openblas.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libblas-3.9.0-34_h1a9f1db_openblas.conda
   hash:
-    md5: e0c4537339c8023654619b4e6e93173e
-    sha256: 52c1fd13960e6c6a7fd63219236f667cbd58e6a509bf3d6be835186c9b8bd0e9
+    md5: fa386090d063f7d763d9e74d33202279
+    sha256: a7758c6170d390240a9ead10e8a46e82c63035132bbe6a6821c6c652c9182922
   category: main
   optional: false
 - name: libcblas
@@ -236,10 +236,10 @@ package:
   platform: linux-aarch64
   dependencies:
     libblas: 3.9.0
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libcblas-3.9.0-33_hab92f65_openblas.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libcblas-3.9.0-34_hab92f65_openblas.conda
   hash:
-    md5: 50c94d8f4030118d35fd9fd35a1ed9a2
-    sha256: 40633601c9fd35bc2ed11c3e0931eb1d1669b571ef6ab7e5eed664183ca39f22
+    md5: 1abb083ef60123a9f952d6c3ee94f05b
+    sha256: 4bb4f0ccff3073f2cbc7762483caf034893b2ed61b6f8b9eef36bcafd189901c
   category: main
   optional: false
 - name: libexpat
@@ -331,10 +331,10 @@ package:
   platform: linux-aarch64
   dependencies:
     libblas: 3.9.0
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/liblapack-3.9.0-33_h411afd4_openblas.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/liblapack-3.9.0-34_h411afd4_openblas.conda
   hash:
-    md5: 2a303c1821ca533a324c5617540cc8a2
-    sha256: 7f08aa78caf9c51b51aa02ddba5212c6ea2fecbdc4f00c0a71c09e0a55c315fb
+    md5: 69ba75c281b54b7849ae3e1b3c326383
+    sha256: 365c688762c471abb42ead8bd265f98afcd6ea1a3a136b4d027383e61765d44a
   category: main
   optional: false
 - name: liblzma
@@ -369,10 +369,10 @@ package:
     libgcc: '>=14'
     libgfortran: ''
     libgfortran5: '>=14.3.0'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libopenblas-0.3.30-pthreads_h9d3fd7e_1.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/libopenblas-0.3.30-pthreads_h9d3fd7e_2.conda
   hash:
-    md5: 3c9373eae4610a24c1eca14554a6425b
-    sha256: 827f99a6ecfdd4dd6145e0e4cd34ac4edd8f01e7129304439f63f0dc26272435
+    md5: e0aa272c985b320f56dd38c31eefde0e
+    sha256: 423cc9181b1518db5eb460d3055ac0ff5eb6d35f4f3d47688f914e88653230b3
   category: main
   optional: false
 - name: libsqlite
@@ -456,16 +456,16 @@ package:
   platform: linux-aarch64
   dependencies:
     python: 3.13.*
-    libgcc: '>=14'
     libstdcxx: '>=14'
-    liblapack: '>=3.9.0,<4.0a0'
-    libcblas: '>=3.9.0,<4.0a0'
+    libgcc: '>=14'
     libblas: '>=3.9.0,<4.0a0'
+    libcblas: '>=3.9.0,<4.0a0'
+    liblapack: '>=3.9.0,<4.0a0'
     python_abi: 3.13.*
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/numpy-2.3.2-py313h11e5ff7_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/numpy-2.3.2-py313h11e5ff7_2.conda
   hash:
-    md5: f826402e98c8bbf4cff3ab6c33818aad
-    sha256: 706745411cb53fada16c733feccf32351b12a622d280d704880997c62fa0a6a1
+    md5: 48e69607a9da894be0f404bff1d085fc
+    sha256: 959ea9aac1d62f7255308b1828c1e2e23004ffb13fb59d17270f658582d8da5a
   category: main
   optional: false
 - name: openssl
@@ -494,7 +494,7 @@ package:
   category: main
   optional: false
 - name: pandas
-  version: 2.3.1
+  version: 2.3.2
   manager: conda
   platform: linux-aarch64
   dependencies:
@@ -506,10 +506,10 @@ package:
     python-tzdata: '>=2022.7'
     python_abi: 3.13.*
     pytz: '>=2020.1'
-  url: https://conda.anaconda.org/conda-forge/linux-aarch64/pandas-2.3.1-py313h9de0199_0.conda
+  url: https://conda.anaconda.org/conda-forge/linux-aarch64/pandas-2.3.2-py313h9de0199_0.conda
   hash:
-    md5: 7bd130c33b3b24e3b8b356d098c6199a
-    sha256: 3631d03385330d65e785862328ced35e1068ce6d97e733a813ae18fd585a4ea0
+    md5: f21d6a5ae8cf6f3bf61f5097cb510eb6
+    sha256: f50b6f88fdfd5d58b1aa5ff6ef2d7ad36c2594c7bb83597e49ea9b938b8eeb8d
   category: main
   optional: false
 - name: pip
@@ -720,15 +720,15 @@ package:
   category: main
   optional: false
 - name: typing_extensions
-  version: 4.14.1
+  version: 4.15.0
   manager: conda
   platform: linux-aarch64
   dependencies:
     python: ''
-  url: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.14.1-pyhe01879c_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.15.0-pyhcf101f3_0.conda
   hash:
-    md5: e523f4f1e980ed7a4240d7e27e9ec81f
-    sha256: 4f52390e331ea8b9019b87effaebc4f80c6466d09f68453f52d5cdc2a3e1194f
+    md5: 0caa1af407ecff61170c9437a808404d
+    sha256: 032271135bca55aeb156cee361c81350c6f3fb203f57d024d7e5a1fc9ef18731
   category: main
   optional: false
 - name: tzdata
