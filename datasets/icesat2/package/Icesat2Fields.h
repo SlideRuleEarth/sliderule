@@ -497,9 +497,10 @@ class Icesat2Fields: public RequestFields
 
         static void loadCRSFiles(void);
 
-        static const char* crsITRF2014() { return crs_ITRF2014.c_str(); }
-        static const char* crsEGM08()    { return crs_EGM08.c_str(); }
-        static const char* crsNAVD88()   { return crs_NAVD88.c_str(); }
+        static const char* crsITRF2014()       { return crs_ITRF2014.c_str(); }
+        static const char* crsITRF2014_EGM08() { return crs_ITRF2014_EGM08.c_str(); }
+        static const char* crsITRF2020()       { return crs_ITRF2020.c_str(); }
+        static const char* crsITRF2020_EGM08() { return crs_ITRF2020_EGM08.c_str(); }
 
         /*--------------------------------------------------------------------
          * Data
@@ -557,8 +558,9 @@ class Icesat2Fields: public RequestFields
          *--------------------------------------------------------------------*/
 
         static string crs_ITRF2014;
-        static string crs_EGM08;
-        static string crs_NAVD88;
+        static string crs_ITRF2014_EGM08;
+        static string crs_ITRF2020;
+        static string crs_ITRF2020_EGM08;
 
 };
 

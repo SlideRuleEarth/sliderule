@@ -72,16 +72,19 @@ def _build_crs(base_text: str, datum: str, warnings: list[str]) -> CRS:
     # If base CRS is 3D, downgrade to 2D
     if len(base.axis_info) > 2:
         try:
-            downgraded = base.to_2d()
-            warnings.append(
-                f"Base CRS '{base_text}' is 3D and cannot be combined with a vertical CRS. "
-                f"Downgrading to 2D equivalent ({downgraded.to_authority() or 'no EPSG code'})."
-            )
+            auth = base.to_authority()
+            if auth == ('EPSG', '9989'):  # ITRF2020 3D → use official 2D
+                downgraded = CRS.from_user_input('EPSG:9990')
+            elif auth == ('EPSG', '7789'):  # ITRF2014 3D → use official 2D
+                downgraded = CRS.from_user_input('EPSG:7790')
+            else:
+                downgraded = base.to_2d()
+
             base = downgraded
         except Exception:
             raise RuntimeError(
                 f"Base CRS '{base_text}' is 3D and cannot be combined with a vertical CRS; "
-                "try specifying the 2D equivalent directly (e.g. EPSG:7789 for ITRF2014)."
+                "try specifying the 2D equivalent directly (e.g. EPSG:9990 for ITRF2020, EPSG:7790 for ITRF2014)."
             )
 
     # Build vertical CRS

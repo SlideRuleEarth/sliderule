@@ -1,15 +1,15 @@
 {
   "$schema": "https://proj.org/schemas/v0.7/projjson.schema.json",
   "type": "CompoundCRS",
-  "name": "Horizontal + NAVD88 height",
+  "name": "Horizontal + EGM08 height",
   "components": [
     {
       "type": "GeographicCRS",
-      "name": "ITRF2014",
+      "name": "ITRF2020",
       "datum": {
         "type": "DynamicGeodeticReferenceFrame",
-        "name": "International Terrestrial Reference Frame 2014",
-        "frame_reference_epoch": 2010,
+        "name": "International Terrestrial Reference Frame 2020",
+        "frame_reference_epoch": 2015,
         "ellipsoid": {
           "name": "GRS 1980",
           "semi_major_axis": 6378137,
@@ -35,15 +35,15 @@
       },
       "id": {
         "authority": "EPSG",
-        "code": 9000
+        "code": 9990
       }
     },
     {
       "type": "VerticalCRS",
-      "name": "NAVD88 height",
+      "name": "EGM2008 height",
       "datum": {
         "type": "VerticalReferenceFrame",
-        "name": "North American Vertical Datum 1988"
+        "name": "EGM2008 geoid"
       },
       "coordinate_system": {
         "subtype": "vertical",
@@ -58,7 +58,7 @@
       },
       "id": {
         "authority": "EPSG",
-        "code": 5703
+        "code": 3855
       }
     }
   ]

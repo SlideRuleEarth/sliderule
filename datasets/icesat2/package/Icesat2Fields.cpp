@@ -47,8 +47,9 @@
  * STATIC DATA
  ******************************************************************************/
 string Icesat2Fields::crs_ITRF2014;
-string Icesat2Fields::crs_EGM08;
-string Icesat2Fields::crs_NAVD88;
+string Icesat2Fields::crs_ITRF2014_EGM08;
+string Icesat2Fields::crs_ITRF2020;
+string Icesat2Fields::crs_ITRF2020_EGM08;
 
 /******************************************************************************
  * METHODS
@@ -532,9 +533,10 @@ void Icesat2Fields::loadCRSFiles(void)
 
     const CRSInfo crsList[] =
     {
-        { &crs_ITRF2014, "EPSG7912.projjson" },
-        { &crs_EGM08,    "EPSG7912_EGM08.projjson" },
-        { &crs_NAVD88,   "EPSG7912_NAVD88.projjson" }
+        { &crs_ITRF2014,       "EPSG7912.projjson" },
+        { &crs_ITRF2014_EGM08, "EPSG7912_EGM08.projjson" },
+        { &crs_ITRF2020,       "EPSG9989.projjson" },
+        { &crs_ITRF2020_EGM08, "EPSG9989_EGM08.projjson" },
     };
 
     for(const auto& entry : crsList)
@@ -558,9 +560,9 @@ void Icesat2Fields::loadCRSFiles(void)
         doc.Accept(writer);
 
         *entry.target = buffer.GetString();
-    }
 
-    mlog(INFO, "Loaded CRS files: ITRF2014=%zu, EGM08=%zu, NAVD88=%zu", crs_ITRF2014.size(), crs_EGM08.size(), crs_NAVD88.size());
+        mlog(INFO, "Loaded CRS file: %s", entry.filename);
+    }
 }
 
 /*----------------------------------------------------------------------------

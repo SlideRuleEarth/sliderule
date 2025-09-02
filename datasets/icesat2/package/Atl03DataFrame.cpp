@@ -168,7 +168,7 @@ Atl03DataFrame::Atl03DataFrame (lua_State* L, const char* beam_str, Icesat2Field
     }
 
     /* Set CRS */
-    if(useGeoid) crs = Icesat2Fields::crsEGM08();
+    if(useGeoid) crs = Icesat2Fields::crsITRF2014_EGM08();
 
     /* Call Parent Class Initialization of GeoColumns */
     populateDataframe();
