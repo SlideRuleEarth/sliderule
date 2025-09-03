@@ -13,7 +13,7 @@
 --                      "duration": 304233,                             # ms since launch
 --                      "packages": ["core", "aws", h5", "icesat2"],    # packages (and plugins) loaded
 --                  },
---                  "icesat2":                                          # package/plugin version information when available
+--                  "icesat2":                                          # package version information when available
 --                  {
 --                      "version": "1.0.1",
 --                      "build": "v1.0.1-15-ga52359e",

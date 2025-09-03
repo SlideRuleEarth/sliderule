@@ -693,7 +693,7 @@ lua_State* LuaEngine::createState(luaStepHook hook)
     lua_setglobal(l, LUA_CONFDIR);
 
     /* Set Starting Lua Path */
-    const FString lpath("%s/?.lua;%s/api/?.lua", CONFDIR, CONFDIR);
+    const FString lpath("%s/ext/?.lua;%s/api/?.lua", CONFDIR, CONFDIR);
     lua_getglobal(l, "package" );
     lua_getfield(l, -1, "path" ); // get field "path" from table at top of stack (-1)
     lua_pop(l, 1 ); // get rid of the string on the stack we just pushed on line 5

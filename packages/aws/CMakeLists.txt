@@ -39,5 +39,5 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/extensions/aws_utils.lua
     DESTINATION
-        ${CONFDIR}
+        ${CONFDIR}/ext
 )

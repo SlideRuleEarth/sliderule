@@ -157,6 +157,7 @@ sliderule-docker: ## build sliderule docker image using buildenv container; need
 	mkdir -p $(SLIDERULE_STAGE_DIR)
 	rsync -a $(ROOT) $(SLIDERULE_STAGE_DIR) --exclude build --exclude stage
 	cp docker/sliderule/Dockerfile.runtime $(SLIDERULE_STAGE_DIR)/Dockerfile
+	cp docker/sliderule/docker-entrypoint.sh $(SLIDERULE_STAGE_DIR)/
 	cp docker/sliderule/config.json $(SLIDERULE_STAGE_DIR)
 	cd $(SLIDERULE_STAGE_DIR); docker $(BUILDX) build $(DOCKEROPTS) --build-arg repo=$(ECR) -t $(ECR)/sliderule:$(VERSION) $(DOCKER_PLATFORM) .
 
@@ -272,7 +273,7 @@ public-cluster-test-color:
 
 public-cluster-test-ip:
 	@if [ -z "$(PUBLIC_IP)" ]; then \
-		echo "Error: COLOR must be set to green or blue"; \
+		echo "Error: PUBLIC_IP must be provided"; \
 		exit 1; \
 	fi
 

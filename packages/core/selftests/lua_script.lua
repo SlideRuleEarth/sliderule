@@ -3,7 +3,7 @@ local json = require("json")
 
 -- Self Test --
 
-local script = core.script("api/health", "")
+local script = core.script("health", "", true)
 
 local total_time_allowed = 5
 while script:active() and total_time_allowed > 0 do

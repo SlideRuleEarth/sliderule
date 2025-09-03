@@ -207,7 +207,6 @@ if(CMAKE_BUILD_PLATFORM MATCHES "Linux")
     set (INSTALLDIR /usr/local CACHE STRING "Installation prefix directory for sliderule application")
     set (CONFDIR ${INSTALLDIR}/etc/sliderule)
     set (INCDIR ${INSTALLDIR}/include/sliderule)
-    set (PLUGINDIR ${INSTALLDIR}/lib/sliderule)
 
 endif()
 
@@ -276,7 +275,6 @@ endif ()
 
 set_property(GLOBAL APPEND PROPERTY platform "#define LIBID \"${TGTVER}\"\n")
 set_property(GLOBAL APPEND PROPERTY platform "#define CONFDIR \"${CONFDIR}\"\n")
-set_property(GLOBAL APPEND PROPERTY platform "#define PLUGINDIR \"${PLUGINDIR}\"\n")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set_property(GLOBAL APPEND PROPERTY platform "#define __unittesting__\n")

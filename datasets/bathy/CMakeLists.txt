@@ -55,5 +55,5 @@ install (
         ${CMAKE_CURRENT_LIST_DIR}/extensions/bathy_init.lua
         ${CMAKE_CURRENT_LIST_DIR}/extensions/bathy_utils.lua
     DESTINATION
-        ${CONFDIR}
+        ${CONFDIR}/ext
 )

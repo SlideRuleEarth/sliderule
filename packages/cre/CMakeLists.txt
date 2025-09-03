@@ -35,7 +35,7 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/extensions/container_runtime.lua
     DESTINATION
-        ${CONFDIR}
+        ${CONFDIR}/ext
 )
 
 install (

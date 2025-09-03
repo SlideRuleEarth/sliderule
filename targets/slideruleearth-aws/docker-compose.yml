@@ -5,7 +5,6 @@ services:
     network_mode: "host"
     restart: unless-stopped
     pull_policy: if_not_present
-    entrypoint: /usr/local/bin/sliderule /usr/local/etc/sliderule/server.lua /usr/local/etc/sliderule/config.json
     stdin_open: true # docker run -i
     tty: true # docker run -t
     ulimits:
@@ -16,7 +15,7 @@ services:
       - /etc/ssl/certs:/etc/ssl/certs
       - /var/run/docker.sock:/var/run/docker.sock
       - /data:/data
-      - /usr/local/lib/sliderule:/usr/local/lib/sliderule
+      - /plugins:/plugins
     environment:
       - IPV4=127.0.0.1
       - ORCHESTRATOR=http://127.0.0.1:8050
