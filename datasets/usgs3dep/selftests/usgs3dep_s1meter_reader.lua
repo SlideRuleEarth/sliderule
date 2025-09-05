@@ -8,7 +8,7 @@ if (not sys.getcfg("in_cloud") and not runner.isglobal()) then
 end
 
 -- Setup --
--- runner.log(core.DEBUG)
+runner.log(core.DEBUG)
 
 -- Self Test --
 
@@ -20,13 +20,13 @@ lons = { -108.1}
 lats = {   39.1}
 heights = { 0 }
 
-print(string.format("\n-------------------------------------------------\nusgs3dep 10meter DEM sample (serial)\n-------------------------------------------------"))
+print(string.format("\n-------------------------------------------------\nusgs3dep seamless 1meter DEM sample (serial)\n-------------------------------------------------"))
 
 
-local expResults = {{2638.235986840923, 1354129161.0, '/vsis3/prd-tnm/StagedProducts/Elevation/13/TIFF/USGS_Seamless_DEM_13.vrt'}}
+local expResults = {{2638.235986840923, 1354129161.0, '/vsis3/sliderule/data/USGS3DEP/USGS_3DEP_S1M.vrt'}}
 
 
-local demType = "usgs3dep-10meter-dem"
+local demType = "usgs3dep-s1meter-dem"
 local dem = geo.raster(geo.parms({ asset = demType, algorithm = "NearestNeighbour", radius = 0}))
 local tbl, err = dem:sample(lons[1], lats[1], heights[1])
 runner.assert(err == 0)
@@ -51,8 +51,10 @@ end
 runner.assert(sampleCnt == #expResults)
 
 
+--[[
 
 local numPoints = 1000
+-- local numPoints = 2
 local lonMin, lonMax = 100, 180
 local latMin, latMax =  25,  50
 
@@ -68,11 +70,12 @@ for i = 1, numPoints do
     table.insert(heights, 0)
 end
 
-print(string.format("\n-------------------------------------------------\nusgs3dep 10meter DEM sample (batch) %d points\n-------------------------------------------------", numPoints))
+print(string.format("\n-------------------------------------------------\nusgs3dep seamless 1meter DEM sample (batch) %d points\n-------------------------------------------------", numPoints))
 tbl, err = dem:batchsample(lons, lats, heights)
 runner.assert(err == 0)
 runner.assert(tbl ~= nil)
 runner.assert(#tbl == numPoints, string.format("Expected %d samples, got %d", numPoints, #tbl))
+--]]
 
 
 

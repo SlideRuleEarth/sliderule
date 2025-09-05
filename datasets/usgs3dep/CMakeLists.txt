@@ -19,6 +19,7 @@ install (
     FILES
         ${CMAKE_CURRENT_LIST_DIR}/package/usgs3dep.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Usgs3dep1meterDemRaster.h
+        ${CMAKE_CURRENT_LIST_DIR}/package/Usgs3depS1meterDemRaster.h
         ${CMAKE_CURRENT_LIST_DIR}/package/Usgs3dep10meterDemRaster.h
     DESTINATION
         ${INCDIR}

@@ -42,6 +42,7 @@
 
 #define LUA_USGS3DEP_LIBNAME                 "usgs3dep"
 #define LUA_USGS3DEP_1METER_DEM_RASTER_NAME  "usgs3dep-1meter-dem"
+#define LUA_USGS3DEP_S1METER_DEM_RASTER_NAME "usgs3dep-s1meter-dem"
 #define LUA_USGS3DEP_10METER_DEM_RASTER_NAME "usgs3dep-10meter-dem"
 
 /******************************************************************************
@@ -72,6 +73,7 @@ void initusgs3dep(void)
 {
     /* Register Rasters */
     RasterObject::registerRaster(LUA_USGS3DEP_1METER_DEM_RASTER_NAME,  Usgs3dep1meterDemRaster::create);
+    RasterObject::registerRaster(LUA_USGS3DEP_S1METER_DEM_RASTER_NAME,  Usgs3depS1meterDemRaster::create);
     RasterObject::registerRaster(LUA_USGS3DEP_10METER_DEM_RASTER_NAME, Usgs3dep10meterDemRaster::create);
 
     /* Extend Lua */
