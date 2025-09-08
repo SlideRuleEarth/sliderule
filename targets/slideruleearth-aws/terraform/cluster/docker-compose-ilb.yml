@@ -16,7 +16,7 @@ services:
       - DOMAIN=$DOMAIN
       - OAUTH_HMAC_SECRET=$OAUTH_HMAC_SECRET
     healthcheck:
-      test: curl http://localhost:8050/discovery/health || exit 1
+      test: curl -f http://localhost:8050/discovery/health
       interval: 30s
       timeout: 10s
       retries: 1

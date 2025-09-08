@@ -30,7 +30,7 @@ services:
     labels:
       - autoheal=true
     healthcheck:
-      test: curl -X GET -d "{}" http://localhost:9081/source/health || exit 1
+      test: curl -f -X GET -d "{}" http://localhost:9081/source/health
       interval: 30s
       timeout: 10s
       retries: 1

@@ -229,12 +229,18 @@ int LuaEndpoint::normalResponse (const char* scriptpath, Request* request, Publi
         /* Send Response */
         if(status)
         {
-            const char* result = engine->getResult();
+            bool in_error = false;
+            const char* result = engine->getResult(&in_error);
             if(result)
             {
-                /* Success */
+                /* Set Success/Failure */
+                EndpointObject::code_t http_code;
+                if(!in_error)   http_code = OK;
+                else            http_code = Internal_Server_Error;
+
+                /* Return Results */
                 const int result_length = StringLib::size(result);
-                const int header_length = buildheader(header, OK, "text/plain", result_length, NULL, serverHead.c_str());
+                const int header_length = buildheader(header, http_code, "text/plain", result_length, NULL, serverHead.c_str());
                 rspq->postCopy(header, header_length, SystemConfig::settings().publishTimeoutMs.value);
                 rspq->postCopy(result, result_length, SystemConfig::settings().publishTimeoutMs.value);
             }

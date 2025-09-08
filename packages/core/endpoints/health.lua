@@ -7,4 +7,5 @@
 --
 
 local json = require("json")
-return json.encode({healthy=sys.healthy()})
+local healthy = sys.healthy()
+return json.encode({healthy=healthy}), healthy

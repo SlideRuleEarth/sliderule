@@ -552,14 +552,28 @@ void LuaEngine::setObject (const char* name, void* val)
 /*----------------------------------------------------------------------------
  * getResult
  *----------------------------------------------------------------------------*/
-const char* LuaEngine::getResult (void)
+const char* LuaEngine::getResult (bool* in_error)
 {
-    if(lua_isstring(L, 1))
+    if(in_error != NULL)
     {
-        return lua_tostring(L, 1);
+        if( (lua_gettop(L) >= 2) && // the lua context has a variable for the error status
+            (lua_isboolean(L, 2)) ) // the variable is of the boolean type
+        {
+            *in_error = !lua_toboolean(L, 2); // set the error status
+        }
+        else
+        {
+            *in_error = false; // default to no error if not provided
+        }
     }
 
-    return NULL;
+    if( (lua_gettop(L) >= 1) && // the lua context has a variable for the results
+        lua_isstring(L, 1) )    // the result variable is a string
+    {
+        return lua_tostring(L, 1); // return results
+    }
+
+    return NULL; // return null to indicate results were no obtainable
 }
 
 /******************************************************************************
