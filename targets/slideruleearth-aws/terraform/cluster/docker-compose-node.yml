@@ -27,6 +27,8 @@ services:
       - PROVISIONING_SYSTEM=$PROVISIONING_SYSTEM
       - CONTAINER_REGISTRY=$CONTAINER_REGISTRY
       - ENVIRONMENT_VERSION=$ENVIRONMENT_VERSION
+    labels:
+      - autoheal=true
     healthcheck:
       test: curl -X GET -d "{}" http://localhost:9081/source/health || exit 1
       interval: 30s
@@ -43,6 +45,8 @@ services:
     tty: true # docker run -t
     volumes:
       - /data:/data
+    labels:
+      - autoheal=true
   autoheal:
     image: willfarrell/autoheal:latest
     tty: true
@@ -50,5 +54,6 @@ services:
     restart: always
     environment:
       - AUTOHEAL_CONTAINER_LABEL=all
+      - AUTOHEAL_INTERVAL=30
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
