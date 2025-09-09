@@ -85,7 +85,7 @@ services:
       - REDIRECT_URI_SCHEME=http
   ams:
     image: 742127912612.dkr.ecr.us-west-2.amazonaws.com/ams:latest
-    container_name: amz
+    container_name: ams
     network_mode: "host"
     restart: always
     pull_policy: if_not_present

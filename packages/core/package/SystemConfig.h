@@ -63,6 +63,9 @@ class SystemConfig: public FieldDictionary
          * Methods
          *--------------------------------------------------------------------*/
 
+        static const char* getBuildInformation  (void);
+        static const char* getLibraryVersion    (void);
+
         static int luaPopulate (lua_State* L);
         static int luaGetField (lua_State* L);
         static int luaSetField (lua_State* L);
