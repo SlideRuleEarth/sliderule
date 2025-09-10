@@ -123,7 +123,12 @@ def init (
         log_handler=log_handler,
         rethrow=rethrow)
     # verify compatibility between client and server versions
-    return check_version(plugins=plugins)
+    try:
+        status = check_version(plugins=plugins)
+    except Exception as e:
+        logger.error(f'Version check failed: {e}')
+        status = False
+    return status
 
 #
 #  source
@@ -410,7 +415,8 @@ def get_version (session=None):
     '''
     session = checksession(session)
     rsps = session.source("version", {})
-    rsps["client"] = {"version": version.full_version, "organization": session.service_org}
+    if rsps != None:
+        rsps["client"] = {"version": version.full_version, "organization": session.service_org}
     return rsps
 
 #

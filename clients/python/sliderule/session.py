@@ -29,6 +29,7 @@
 
 import os
 import netrc
+import getpass
 import requests
 import threading
 import socket
@@ -491,8 +492,13 @@ class Session:
                 ps_username = login_credentials[0]
                 ps_password = login_credentials[2]
             except Exception as e:
-                if ps_organization != self.PUBLIC_ORG:
-                    logger.warning("Unable to retrieve username and password from netrc file for machine: {}".format(e))
+                pass
+
+        # prompt user for username and password
+        if not github_token and not ps_username and not ps_password:
+            if ps_organization != self.PUBLIC_ORG:
+                ps_username = input("Username: ")
+                ps_password = getpass.getpass("Password: ")
 
         # build authentication request
         user = None
