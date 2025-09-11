@@ -77,10 +77,7 @@ extern "C" {
 void initarrow (void)
 {
     /* Extend Lua */
-    LuaEngine::extend(LUA_ARROW_LIBNAME, arrow_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_ARROW_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_ARROW_LIBNAME, arrow_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_ARROW_LIBNAME, LIBID);

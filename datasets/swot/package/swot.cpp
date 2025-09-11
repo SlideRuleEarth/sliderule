@@ -75,10 +75,7 @@ void initswot (void)
     SwotL2Reader::init();
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_SWOT_LIBNAME, swot_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_SWOT_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_SWOT_LIBNAME, swot_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_SWOT_LIBNAME, LIBID);

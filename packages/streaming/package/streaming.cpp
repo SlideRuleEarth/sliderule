@@ -135,10 +135,7 @@ void initstreaming (void)
     AncillaryFields::init();
 
     /* Add Lua Extensions */
-    LuaEngine::extend(LUA_STREAMING_LIBNAME, stream_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_STREAMING_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_STREAMING_LIBNAME, stream_open, LIBID);
 
     /* Print Status */
     print2term("%s package initialized (%s)\n", LUA_STREAMING_LIBNAME, LIBID);

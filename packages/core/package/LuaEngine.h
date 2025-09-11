@@ -89,8 +89,7 @@ class LuaEngine
 
         static void         init            (void);
         static void         deinit          (void);
-        static void         extend          (const char* lib_name, luaOpenLibFunc lib_func);
-        static void         indicate        (const char* pkg_name, const char* pkg_version);
+        static void         extend          (const char* name, luaOpenLibFunc function, const char* version);
         static const char** getPkgList      (void);
         static mode_t       str2mode        (const char* str);
         static const char*  mode2str        (mode_t _mode);
@@ -127,14 +126,10 @@ class LuaEngine
          * Types
          *--------------------------------------------------------------------*/
 
-        struct libInitEntry_t {
-            const char*     lib_name = NULL;
-            luaOpenLibFunc  lib_func = NULL;
-        };
-
         struct pkgInitEntry_t {
-            const char*     pkg_name = NULL;
-            const char*     pkg_version = NULL;
+            const char*     name = NULL;
+            luaOpenLibFunc  function = NULL;
+            const char*     version = NULL;
         };
 
         typedef struct {
@@ -152,9 +147,6 @@ class LuaEngine
         /*--------------------------------------------------------------------
          * Data
          *--------------------------------------------------------------------*/
-
-        static List<libInitEntry_t>     libInitTable;
-        static Mutex                    libInitTableMutex;
 
         static List<pkgInitEntry_t>     pkgInitTable;
         static Mutex                    pkgInitTableMutex;

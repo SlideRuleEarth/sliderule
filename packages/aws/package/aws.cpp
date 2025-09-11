@@ -84,10 +84,7 @@ void initaws (void)
     Asset::registerDriver(S3CurlIODriver::CURL_FORMAT, S3CurlIODriver::create);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_AWS_LIBNAME, aws_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_AWS_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_AWS_LIBNAME, aws_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_AWS_LIBNAME, LIBID);

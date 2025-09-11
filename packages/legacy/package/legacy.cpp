@@ -271,10 +271,7 @@ void initlegacy (void)
 
     /* Add Lua Extension */
     LuaLibraryCmd::lcmd_init(cmdProc);
-    LuaEngine::extend(LuaLibraryCmd::LUA_CMDLIBNAME, LuaLibraryCmd::luaopen_cmdlib);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate("legacy", LIBID);
+    LuaEngine::extend(LuaLibraryCmd::LUA_CMDLIBNAME, LuaLibraryCmd::luaopen_cmdlib, LIBID);
 
     /* Print Status */
     print2term("legacy package initialized (%s)\n", LIBID);

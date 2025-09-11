@@ -77,10 +77,7 @@ void initgedtm(void)
     RasterObject::registerRaster(LUA_GEDTM_DFM_RASTER_NAME, GEDTMdfmRaster::create);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_GEDTM_LIBNAME, gedtm_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_GEDTM_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_GEDTM_LIBNAME, gedtm_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_GEDTM_LIBNAME, LIBID);

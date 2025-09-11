@@ -95,10 +95,7 @@ extern "C" {
 void initbathy (void)
 {
     /* Extend Lua */
-    LuaEngine::extend(LUA_BATHY_LIBNAME, bathy_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_BATHY_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_BATHY_LIBNAME, bathy_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_BATHY_LIBNAME, LIBID);

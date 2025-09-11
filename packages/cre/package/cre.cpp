@@ -79,10 +79,7 @@ extern "C" {
 void initcre (void)
 {
     /* Extend Lua */
-    LuaEngine::extend(LUA_CRE_LIBNAME, cre_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_CRE_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_CRE_LIBNAME, cre_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_CRE_LIBNAME, LIBID);

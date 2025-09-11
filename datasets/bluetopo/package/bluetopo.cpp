@@ -73,10 +73,7 @@ void initbluetopo(void)
     RasterObject::registerRaster(LUA_BLUETOPO_RASTER_NAME, BlueTopoBathyRaster::create);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_BLUETOPO_LIBNAME, bluetopo_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_BLUETOPO_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_BLUETOPO_LIBNAME, bluetopo_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_BLUETOPO_LIBNAME, LIBID);

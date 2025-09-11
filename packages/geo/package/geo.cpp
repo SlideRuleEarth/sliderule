@@ -343,10 +343,7 @@ void initgeo (void)
     RegionMask::registerRasterizer(GeoLib::burnGeoJson);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_GEO_LIBNAME, geo_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_GEO_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_GEO_LIBNAME, geo_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_GEO_LIBNAME, LIBID);

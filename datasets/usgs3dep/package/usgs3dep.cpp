@@ -75,10 +75,7 @@ void initusgs3dep(void)
     RasterObject::registerRaster(LUA_USGS3DEP_10METER_DEM_RASTER_NAME, Usgs3dep10meterDemRaster::create);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_USGS3DEP_LIBNAME, usgs3dep_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_USGS3DEP_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_USGS3DEP_LIBNAME, usgs3dep_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_USGS3DEP_LIBNAME, LIBID);

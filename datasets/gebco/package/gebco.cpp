@@ -73,10 +73,7 @@ void initgebco(void)
     RasterObject::registerRaster(LUA_GEBCO_RASTER_NAME, GebcoBathyRaster::create);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_GEBCO_LIBNAME, gebco_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_GEBCO_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_GEBCO_LIBNAME, gebco_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_GEBCO_LIBNAME, LIBID);

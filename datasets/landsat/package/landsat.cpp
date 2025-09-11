@@ -73,10 +73,7 @@ void initlandsat(void)
     RasterObject::registerRaster(LUA_LANDSAT_HLS_RASTER_NAME, LandsatHlsRaster::create);
 
     /* Extend Lua */
-    LuaEngine::extend(LUA_LANDSAT_LIBNAME, landsat_open);
-
-    /* Indicate Presence of Package */
-    LuaEngine::indicate(LUA_LANDSAT_LIBNAME, LIBID);
+    LuaEngine::extend(LUA_LANDSAT_LIBNAME, landsat_open, LIBID);
 
     /* Display Status */
     print2term("%s package initialized (%s)\n", LUA_LANDSAT_LIBNAME, LIBID);
